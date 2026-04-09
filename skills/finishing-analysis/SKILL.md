@@ -37,11 +37,43 @@ Guide completion of analysis work by verifying reproducibility, generating repor
 4. **Plan file up to date?**
    All steps marked `- [x]` with result notes? Discovery notes captured? Upcoming steps (if any) reflect current understanding?
 
+5. **RESULTS_UPDATE.md up to date?**
+   Has findings for all completed tasks? Figure attachments in `results_attachments/` committed?
+
 **If any check fails:** Fix it before proceeding. Don't offer completion options for unreproducible work.
+
+### Step 1.5: Archive Development Documents
+
+`PLAN.md` and `RESULTS_UPDATE.md` are development artifacts — they cannot remain at project root on the main branch.
+
+**Ask the user:**
+```
+PLAN.md and RESULTS_UPDATE.md are development documents. Options:
+1. Archive to docs/analysis-archive/YYYY-MM-DD-<name>/ (preserves in repo)
+2. Delete (git history preserves them on this branch)
+Which option?
+```
+
+**Option 1 (Archive):**
+```bash
+mkdir -p docs/analysis-archive/YYYY-MM-DD-<name>
+git mv PLAN.md docs/analysis-archive/YYYY-MM-DD-<name>/
+git mv RESULTS_UPDATE.md docs/analysis-archive/YYYY-MM-DD-<name>/
+git mv results_attachments/ docs/analysis-archive/YYYY-MM-DD-<name>/ 2>/dev/null
+git commit -m "archive analysis plan and results"
+```
+
+**Option 2 (Delete):**
+```bash
+git rm PLAN.md RESULTS_UPDATE.md
+rm -rf results_attachments/
+git add -A results_attachments/ 2>/dev/null
+git commit -m "remove development documents (preserved in branch history)"
+```
 
 ### Step 2: Generate Report
 
-Create a work journal entry documenting the analysis results.
+Create a work journal entry documenting the analysis results. Use `RESULTS_UPDATE.md` as source material — the finishing report is the polished version; RESULTS_UPDATE.md was the development log.
 
 **Entry file:** `[WORK_JOURNAL_DIR]/YYYY-MM-DD-[Author]-[Description].md`
 - Resolve path from project guidance (AGENTS.md, CLAUDE.md, README)

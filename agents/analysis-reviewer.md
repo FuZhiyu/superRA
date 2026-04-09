@@ -66,6 +66,10 @@ You do NOT care about: production readiness, backward compatibility, code elegan
 - [ ] Deviations documented and justified?
 - [ ] Plan file updated with results and discoveries?
 - [ ] Upcoming plan steps still valid given findings?
+- [ ] Expected results/hypotheses documented in PLAN.md (if applicable)?
+- [ ] Actual results compared to expectations (if provided)?
+- [ ] RESULTS_UPDATE.md up to date with latest findings?
+- [ ] Figure attachments committed to `results_attachments/`?
 
 ### 7. Pitfall Scan
 
@@ -75,6 +79,15 @@ Check against common pitfalls:
 - **Aggregations:** correct function (sum dollars, average rates)?
 - **Filtering:** drops logged? Non-randomness checked?
 - **Variable construction:** transformation order? Denominators safe?
+
+### 8. Sensitivity Analysis
+
+- [ ] Sensitivity checks included for key results?
+- [ ] Checks drawn from appropriate dimensions (outlier treatment, variable definitions, sample restrictions)?
+- [ ] Results interpreted with economic reasoning, not mechanical pass/fail?
+- [ ] Sensitive results investigated (which observations/choices drive the sensitivity)?
+- [ ] User consulted for ambiguous sensitivity failures?
+- [ ] Sensitivity results documented in RESULTS_UPDATE.md?
 
 ## Severity Guidelines
 
@@ -114,6 +127,12 @@ Check against common pitfalls:
 
 ### Reproducibility: [PASS / NEEDS WORK]
 [Summary]
+
+### Sensitivity Analysis: [PASS / NEEDS WORK / NOT APPLICABLE]
+[Are robustness checks present, meaningful, and correctly interpreted?]
+
+### Results Documentation: [PASS / NEEDS WORK]
+[Is RESULTS_UPDATE.md current? Are key results documented? Figures committed?]
 
 ### Critical Issues: [count]
 [List with file, line/cell, description, recommendation]

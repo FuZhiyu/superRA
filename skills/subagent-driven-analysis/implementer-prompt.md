@@ -17,6 +17,18 @@ Task tool (general-purpose):
     [Scene-setting: what analysis this is part of, what prior steps produced,
     what data is available]
 
+    ## Expected Results / Hypotheses (if provided in PLAN.md)
+
+    [What the user expects to find — can be hypotheses, conjectures, objectives,
+    or prior intuition. Use this to sanity-check your results. If your findings
+    diverge significantly from expectations, flag it — don't assume you're wrong,
+    but don't assume you're right either. Skip this section for exploratory tasks.]
+
+    ## Prior Results (from RESULTS_UPDATE.md)
+
+    [Key findings from completed tasks that provide context for this task.
+    For sensitivity tasks: the baseline results to compare against.]
+
     ## Before You Begin
 
     If you have questions about:
@@ -99,6 +111,10 @@ Task tool (general-purpose):
     - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
     - What you implemented
     - Key data findings (row counts, distributions, any surprises)
+    - **Results summary** (key numbers, figures produced, comparison to
+      expectations if available — this feeds into RESULTS_UPDATE.md)
+    - **Sensitivity assessment** (if this is a sensitivity task: does the
+      result hold? What is the economic interpretation of any divergence?)
     - Files changed
     - Self-review findings (if any)
     - Any data quality concerns

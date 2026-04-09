@@ -17,13 +17,14 @@ Load plan, review critically, execute all steps with data-first discipline, chec
 
 ### Step 1: Load and Review Plan
 
-1. Read plan file
-2. Review critically — identify any questions or concerns:
+1. Read `PLAN.md` and `RESULTS_UPDATE.md`
+2. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources available and accessible?
    - Are the steps in the right order?
    - Is the pipeline file included (for multi-script analyses)?
-3. If concerns: Raise them with your human partner before starting
-4. If no concerns: Create TodoWrite with all steps and proceed
+3. Review RESULTS_UPDATE.md for context on any completed steps (if resuming)
+4. If concerns: Raise them with your human partner before starting
+5. If no concerns: Create TodoWrite with all steps and proceed
 
 ### Step 2: Execute Steps
 
@@ -40,15 +41,20 @@ For each step in the plan:
    git add <script-files>
    git commit -m "<descriptive message for this step>"
    ```
-4. **Update the plan file:**
-   - Mark step `- [x]` with brief result note
-   - If findings change upcoming steps, update them now
-   - Add discovery notes for the next agent/session
+4. **Update PLAN.md and RESULTS_UPDATE.md:**
+   - PLAN.md: Mark step `- [x]` with brief result note. If findings change upcoming steps, update them now. Add discovery notes for the next agent/session.
+   - RESULTS_UPDATE.md: Add key findings for this step (row counts, summary stats, figures). Save any figures/tables to `results_attachments/` as PNG.
    ```bash
-   git add <plan-file>
-   git commit -m "update plan: step N complete, <brief note>"
+   git add PLAN.md RESULTS_UPDATE.md results_attachments/
+   git commit -m "update plan + results: step N complete"
    ```
 5. Mark as completed
+
+**For sensitivity analysis steps:**
+- Compare results to baseline (from RESULTS_UPDATE.md) and expected results (from PLAN.md, if provided)
+- If a sensitivity check fails: assess **economic significance**, not just statistical significance
+- If unsure whether a failure is meaningful: **stop and ask the user**
+- Document the assessment in RESULTS_UPDATE.md
 
 ### Step 3: Verify Pipeline
 
@@ -76,7 +82,11 @@ After all steps complete and pipeline verified:
 - Update upcoming steps if findings require changes
 - Add discovery notes: "Unmatched rate higher than expected — added validation step before regression"
 
-**The plan at any point should be a complete handoff document.** If the session ends, the next agent reads the plan and knows: what's done, what changed, what's next.
+**RESULTS_UPDATE.md evolves alongside PLAN.md.** Together they are the handoff:
+- **PLAN.md** = what to do + what changed
+- **RESULTS_UPDATE.md** = what was found + figures + key numbers
+
+If the session ends, the next agent reads both and knows: what's done, what was found, what changed, what's next.
 
 ## When to Stop and Ask for Help
 

@@ -70,7 +70,7 @@ HEAD_SHA=$(git rev-parse HEAD)
 
 [Dispatch econ-superpowers:data-analysis-reviewer subagent]
   WHAT_WAS_IMPLEMENTED: Merged fund holdings with characteristics, constructed portfolio weights
-  PLAN_OR_REQUIREMENTS: Task 2 from docs/analysis-plans/2026-04-08-portfolio-sorts.md
+  PLAN_OR_REQUIREMENTS: Task 2 from PLAN.md
   BASE_SHA: a7981ec
   HEAD_SHA: 3df7661
   DESCRIPTION: Left join on fund_id × date, 4.7M rows, 2% unmatched

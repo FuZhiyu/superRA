@@ -33,13 +33,19 @@ If CLAUDE.md says "skip data description for this dataset" and a skill says "alw
 # Check if currently in a worktree
 git rev-parse --is-inside-work-tree 2>/dev/null && git worktree list 2>/dev/null
 
-# Check for plan files with unchecked steps
-find docs/analysis-plans/ -name "*.md" -exec grep -l "\- \[ \]" {} \; 2>/dev/null
+# Check for PLAN.md at project root
+[ -f "PLAN.md" ] && grep -c "\- \[ \]" PLAN.md 2>/dev/null
+
+# Check for RESULTS_UPDATE.md for context
+[ -f "RESULTS_UPDATE.md" ] && echo "Results document found"
+
+# Fallback: check docs/ for archived or legacy plans
+find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/null | head -5
 ```
 
-**If an incomplete plan is found** (has unchecked `- [ ]` steps):
-- Summarize: "Found in-progress analysis: `<plan-name>` (N/M steps done). Last completed step: `<step>`. Resume?"
-- If user confirms: load the plan, check git log for latest state, continue from next unchecked step
+**If an incomplete plan is found** (PLAN.md with unchecked `- [ ]` steps):
+- Summarize: "Found in-progress analysis: `PLAN.md` (N/M steps done). RESULTS_UPDATE.md has findings through Task K. Resume?"
+- If user confirms: load PLAN.md and RESULTS_UPDATE.md, check git log for latest state, continue from next unchecked step
 - If user declines: proceed normally
 
 **If in a worktree with no plan file:**

@@ -85,12 +85,30 @@ digraph process {
 
 **After each task completes both reviews:**
 
-1. Mark step `- [x]` in the plan file with brief result note
-2. If findings change upcoming steps, update them now
-3. Add discovery notes (e.g., "high unmatched rate in merge — investigate before regression")
-4. Commit the plan update
+1. Mark step `- [x]` in PLAN.md with brief result note
+2. Update RESULTS_UPDATE.md with key findings, figures, row counts from this task
+3. Save any figure attachments to `results_attachments/`
+4. If findings change upcoming steps, update PLAN.md
+5. Add discovery notes (e.g., "high unmatched rate in merge — investigate before regression")
+6. Commit: `git add PLAN.md RESULTS_UPDATE.md results_attachments/ && git commit -m "update plan + results: Task N complete"`
 
-The plan is a living document. It must always reflect current understanding so the next agent (or session) can pick up where this one left off.
+PLAN.md and RESULTS_UPDATE.md are living documents. Together they form the handoff: PLAN.md = what to do, RESULTS_UPDATE.md = what was found. They must always reflect current understanding so the next agent (or session) can pick up where this one left off.
+
+**When dispatching implementer subagents, provide:**
+- Full task text from PLAN.md
+- Relevant prior results from RESULTS_UPDATE.md (so implementer has context)
+- Expected results/hypotheses from PLAN.md header (if provided, so implementer knows what to expect)
+- For sensitivity tasks: baseline results to compare against
+
+## Sensitivity Analysis Tasks
+
+When executing sensitivity analysis tasks:
+
+- Provide implementer with baseline results from RESULTS_UPDATE.md
+- If sensitivity check shows divergence from baseline: assess **economic significance**, not just statistical
+- If unsure whether a sensitivity failure is meaningful: **escalate to human partner** before proceeding
+- Document the assessment in RESULTS_UPDATE.md
+- Not all sensitivity failures are problems — use economic reasoning
 
 ## Model Selection
 

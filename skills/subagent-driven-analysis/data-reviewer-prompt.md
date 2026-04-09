@@ -69,6 +69,11 @@ Task tool (general-purpose):
     - [ ] File paths correct and relative?
     - [ ] Can be re-run to produce same output?
 
+    **Results documentation:**
+    - [ ] Key findings reported in format suitable for RESULTS_UPDATE.md?
+    - [ ] Figures saved to results_attachments/ (if applicable)?
+    - [ ] Results compared to expected values/hypotheses from PLAN.md (if provided)?
+
     **Verify by reading code, not by trusting report.**
 
     Report:

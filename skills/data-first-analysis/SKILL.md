@@ -119,6 +119,7 @@ Compare before and after. Does the result make sense?
 - Magnitudes plausible? GDP growth of 300% is wrong.
 - Signs correct? Correlations match known stylized facts?
 - Spot-check a few observations by hand
+- When expected results or hypotheses are provided in PLAN.md, compare findings to them — flag and investigate divergences
 
 **If something looks unexpected:** STOP. Investigate before proceeding. Do NOT use a variable downstream until its distribution is understood.
 

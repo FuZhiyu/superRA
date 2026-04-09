@@ -15,7 +15,8 @@ Assume the analyst is skilled at data work, but knows nothing about this specifi
 
 **Context:** This should be run in a dedicated worktree (created by using-analysis-worktrees skill).
 
-**Save plans to:** `docs/analysis-plans/YYYY-MM-DD-<analysis-name>.md`
+**Save plan to:** `PLAN.md` at the project root (each worktree has its own root)
+- Create `RESULTS_UPDATE.md` alongside (see Results Update Document section)
 - (User preferences for plan location override this default)
 
 ## Scope Check
@@ -90,6 +91,10 @@ The pipeline file must:
 
 **Output:** [What files/tables/figures will this produce?]
 
+**Expected Results / Hypotheses (optional):** [What does the user expect to find? Can be hypotheses, conjectures, objectives, or prior intuition. Helps agents interpret results and judge sensitivity tests. Leave blank for purely exploratory work.]
+
+**Sensitivity Analysis:** [What robustness checks should be performed? Discuss with user which checks matter most for this analysis. Reference econ-data-analysis skill's `references/data-robustness-checklist.md` for a menu of options.]
+
 **Pipeline:** [Path to pipeline file, e.g., `run_all.sh`]
 
 ---
@@ -155,15 +160,32 @@ git add Code/01_clean_data.py
 git commit -m "merge holdings with fund characteristics"
 ```
 
-- [ ] **Step 4: Update plan with results**
+- [ ] **Step 4: Update plan and results, commit**
 
-Update this plan file: mark steps [x], note any findings that affect downstream steps (e.g., "unmatched rate is 15%, higher than expected — investigate in Task 2").
+Update PLAN.md: mark steps [x], note findings affecting downstream steps.
+Update RESULTS_UPDATE.md: add key results for this task (row counts, summary stats, figures).
+Save any figures to `results_attachments/`.
 
 ```bash
-git add docs/analysis-plans/YYYY-MM-DD-analysis.md
-git commit -m "update plan: Task 1 complete, note high unmatched rate"
+git add PLAN.md RESULTS_UPDATE.md results_attachments/
+git commit -m "update plan + results: Task 1 complete"
 ```
 ````
+
+## Sensitivity Analysis Design
+
+Every analysis plan should include sensitivity analysis tasks. At the planning stage:
+
+1. **Discuss with user:** What robustness checks matter for this analysis? Not all checks are meaningful for every study — the user knows which dimensions are most important.
+2. **Reference `data-robustness-checklist.md`** for a menu of options:
+   - Alternative outlier treatment (winsorization cutoffs, trimming vs no treatment)
+   - Alternative variable definitions (functional form, denominators, lag structure, aggregation)
+   - Alternative sample restrictions (time windows, geographic subsets, balanced vs unbalanced panel)
+   - Leave-one-out / influential observations
+   - Alternative data sources (when the same concept is measured by multiple providers)
+3. **Design as dedicated task(s):** Sensitivity checks are their own task(s) in the plan, typically after the main analysis produces baseline results.
+4. **Document expected sensitivity:** For each check, note what you expect and what would be concerning.
+5. **Not all failures are problems:** A result that's sensitive to outlier treatment may be fine if the outliers are legitimate data points. Use economic reasoning, not mechanical pass/fail. **If unsure whether a sensitivity failure is meaningful, ask the user.**
 
 ## Living Plan Document
 
@@ -175,6 +197,32 @@ git commit -m "update plan: Task 1 complete, note high unmatched rate"
 4. The plan at any point should be a complete handoff document: what's done, what changed, what's next
 
 **Reviewers check:** Does the plan reflect what actually happened? Are upcoming steps still valid given what was found?
+
+## Results Update Document
+
+After saving `PLAN.md`, create `RESULTS_UPDATE.md` at the project root:
+
+```markdown
+# [Analysis Name] — Results Update
+
+> Mirrors PLAN.md structure. Updated after each step with key findings.
+> New agents: read PLAN.md for what to do, RESULTS_UPDATE.md for what was found.
+
+**Last updated:** [date] (Task N, Step M)
+**Status:** In Progress
+
+---
+
+[Sections added as tasks complete — initially empty]
+```
+
+**Rules:**
+- Update after each completed step (alongside PLAN.md update)
+- Include: key row counts, summary statistics, figures, surprising findings
+- Save figures and tables as PNG in `results_attachments/` at project root (committed to git)
+- Reference full output files for detailed results (these may be gitignored)
+- Commit `RESULTS_UPDATE.md` and `results_attachments/` with each checkpoint commit
+- Together with PLAN.md, this forms a complete handoff: context + what happened + what was found
 
 ## No Placeholders
 
@@ -204,7 +252,9 @@ After writing the complete plan:
 
 **4. Validation coverage:** Does every merge, filter, and variable construction have a corresponding validation step?
 
-**5. Plan serves as handoff:** If you stopped here and a new agent read only this plan, could they continue? Is there enough context?
+**5. Plan serves as handoff:** If you stopped here and a new agent read only this plan and RESULTS_UPDATE.md, could they continue? Is there enough context?
+
+**6. Sensitivity coverage:** Are sensitivity analysis tasks included? Were they discussed with the user to determine which checks matter most for this analysis?
 
 Fix issues inline. No need to re-review — just fix and move on.
 
@@ -212,7 +262,7 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 After saving the plan, offer execution choice:
 
-**"Plan complete and saved to `docs/analysis-plans/<filename>.md`. Two execution options:**
+**"Plan complete and saved to `PLAN.md`. RESULTS_UPDATE.md created. Two execution options:**
 
 **1. Subagent-Driven (recommended for independent tasks)** - I dispatch a fresh subagent per task, review between tasks, fast iteration. Best when tasks don't heavily depend on each other's outputs.
 
