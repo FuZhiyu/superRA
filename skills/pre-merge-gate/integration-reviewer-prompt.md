@@ -123,4 +123,17 @@ Task tool (general-purpose):
     - **Drift tests:** Confirmation that tests exist, pass, and have
       appropriate tolerances
     - **Overall assessment:** APPROVE or REVISE with specific actionable items
+
+    ## If Running as Agent Team Teammate
+
+    If you are part of an Agent Team (not a standalone subagent):
+    - Use the shared task list to claim your review task when unblocked
+    - When you assess REVISE: message the refactorer directly with your
+      specific feedback — what naming issue to fix, what utility to adopt,
+      what data discipline artifact was removed, what diff pollution to
+      clean up
+    - When re-reviewing after fixes: verify all previous issues are
+      addressed and drift tests still pass before marking APPROVE
+    - Message the lead for escalation decisions
+    - Mark your task as completed when integration is approved
 ```

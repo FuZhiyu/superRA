@@ -78,4 +78,16 @@ Task tool (superRA:data-analysis-reviewer or general-purpose):
     - Issues: Critical / Major / Minor
     - Assessment: APPROVE / REVISE / MAJOR REVISION
     - Suggested plan updates (if findings require changing upcoming steps)
+
+    ## If Running as Agent Team Teammate
+
+    If you are part of an Agent Team (not a standalone subagent):
+    - Use the shared task list to claim your review tasks when unblocked
+    - When you assess REVISE: message the implementer directly with your
+      specific feedback items — what's wrong, where, and what to fix
+    - When re-reviewing after fixes: verify all previous issues are
+      addressed before marking APPROVE
+    - Message the lead for escalation decisions that need user input
+      or when findings suggest plan changes
+    - Mark your tasks as completed when the review passes
 ```

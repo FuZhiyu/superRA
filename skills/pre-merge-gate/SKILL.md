@@ -184,6 +184,14 @@ This is the critical judgment call in the process. When drift tests fail after r
 - `./refactor-prompt.md` -- Dispatch code refactoring subagent
 - `./integration-reviewer-prompt.md` -- Dispatch integration review subagent
 
+## Agent Teams Mode
+
+When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the 3-stage gate can be orchestrated as a team instead of sequential subagent dispatches. This enables direct iteration between creator/reviewer and refactorer/reviewer without the orchestrator relaying messages.
+
+**Invoke `superRA:using-agent-teams` for the Pre-Merge Gate Team recipe** — it has the full team composition (4 teammates), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
+
+The lead still handles user-facing decisions (drift test candidates, meaningful drift escalation), commits at stage boundaries, and team cleanup after final APPROVE.
+
 ## Red Flags
 
 **Never:**
