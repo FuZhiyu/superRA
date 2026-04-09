@@ -48,6 +48,10 @@ Skip any step = lying, not verifying
 | Regression test works | Red-green cycle verified | Test passes once |
 | Agent completed | VCS diff shows changes | Agent reports "success" |
 | Requirements met | Line-by-line checklist | Tests passing |
+| Analysis complete | Output files exist + pipeline runs | "Code looks right" |
+| Data merge correct | Row counts logged + unmatched checked | "Row count seems fine" |
+| Results validated | Benchmarked against published data | "Numbers look reasonable" |
+| Pipeline runs | Execute pipeline, exit 0, outputs match | "It ran last time" |
 
 ## Red Flags - STOP
 

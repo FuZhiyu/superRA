@@ -1,20 +1,17 @@
 {
-  "name": "superpowers",
-  "description": "Core skills library for Claude Code: TDD, debugging, collaboration patterns, and proven techniques",
-  "version": "5.0.7",
+  "name": "econ-superpowers",
+  "description": "Workflow skills for economic data analysis: data-first discipline, analysis planning, reproducibility, and rigorous data validation",
+  "version": "0.1.0",
   "author": {
-    "name": "Jesse Vincent",
-    "email": "jesse@fsck.com"
+    "name": "Zhiyu Fu"
   },
-  "homepage": "https://github.com/obra/superpowers",
-  "repository": "https://github.com/obra/superpowers",
   "license": "MIT",
   "keywords": [
     "skills",
-    "tdd",
-    "debugging",
-    "collaboration",
-    "best-practices",
+    "economics",
+    "data-analysis",
+    "reproducibility",
+    "research",
     "workflows"
   ]
 }
