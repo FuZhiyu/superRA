@@ -135,4 +135,16 @@ Task tool (general-purpose):
     - **Drift test results:** All pass, or details of any failures with
       assessment of economic significance
     - **Files modified:** List of changed files
+
+    ## If Running as Agent Team Teammate
+
+    If you are part of an Agent Team (not a standalone subagent):
+    - Use the shared task list to track your assigned tasks
+    - When the integration-reviewer messages you with REVISE feedback,
+      fix the specific issues, re-run drift tests, and message them
+      back when ready for re-review
+    - If drift tests fail with meaningful drift after refactoring,
+      message the lead — they will consult the user
+    - Message the lead for any escalation decisions
+    - Mark your tasks as completed when done
 ```

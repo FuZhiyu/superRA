@@ -13,6 +13,8 @@ Guide completion of analysis work by verifying reproducibility, presenting integ
 
 **Announce at start:** "I'm using the finishing-analysis skill to complete this work."
 
+**Agent Teams cleanup:** If an Analysis Team is still active from subagent-driven-analysis, shut down all teammates and clean up the team before proceeding. The pre-merge gate (Step 4a) may need to spawn its own team, and only one team can exist per session.
+
 ## The Process
 
 ### Step 1: Verify Reproducibility

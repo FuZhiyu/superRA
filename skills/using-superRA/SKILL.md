@@ -138,6 +138,10 @@ When multiple skills could apply, use this order:
 
 The skill itself tells you which.
 
+## Agent Teams
+
+When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled, superRA uses Agent Teams for workflows with iteration loops (pre-merge-gate, subagent-driven-analysis). This is automatic — the orchestration skills detect availability and use teams when appropriate. See `superRA:using-agent-teams` for details on team compositions, lifecycle, and session handoff.
+
 ## User Instructions
 
 Instructions say WHAT, not HOW. "Analyze X" or "Merge these datasets" doesn't mean skip data-first-analysis discipline.
