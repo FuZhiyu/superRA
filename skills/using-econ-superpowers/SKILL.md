@@ -1,6 +1,6 @@
 ---
-name: using-superpowers
-description: Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
+name: using-econ-superpowers
+description: Use when starting any conversation - establishes how to find and use skills for economic research workflows, requiring Skill tool invocation before ANY response including clarifying questions
 ---
 
 <SUBAGENT-STOP>
@@ -17,21 +17,41 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 ## Instruction Priority
 
-Superpowers skills override default system prompt behavior, but **user instructions always take precedence**:
+Econ-superpowers skills override default system prompt behavior, but **user instructions always take precedence**:
 
 1. **User's explicit instructions** (CLAUDE.md, GEMINI.md, AGENTS.md, direct requests) — highest priority
-2. **Superpowers skills** — override default system behavior where they conflict
+2. **Econ-superpowers skills** — override default system behavior where they conflict
 3. **Default system prompt** — lowest priority
 
-If CLAUDE.md, GEMINI.md, or AGENTS.md says "don't use TDD" and a skill says "always use TDD," follow the user's instructions. The user is in control.
+If CLAUDE.md says "skip data description for this dataset" and a skill says "always describe first," follow the user's instructions. The user is in control.
+
+## Cross-Session Detection
+
+**At session start, check for in-progress work:**
+
+```bash
+# Check if currently in a worktree
+git rev-parse --is-inside-work-tree 2>/dev/null && git worktree list 2>/dev/null
+
+# Check for plan files with unchecked steps
+find docs/analysis-plans/ -name "*.md" -exec grep -l "\- \[ \]" {} \; 2>/dev/null
+```
+
+**If an incomplete plan is found** (has unchecked `- [ ]` steps):
+- Summarize: "Found in-progress analysis: `<plan-name>` (N/M steps done). Last completed step: `<step>`. Resume?"
+- If user confirms: load the plan, check git log for latest state, continue from next unchecked step
+- If user declines: proceed normally
+
+**If in a worktree with no plan file:**
+- Note: "You're in worktree `<path>` on branch `<branch>`. Continue working here?"
 
 ## How to Access Skills
 
 **In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
 
-**In Copilot CLI:** Use the `skill` tool. Skills are auto-discovered from installed plugins. The `skill` tool works the same as Claude Code's `Skill` tool.
+**In Copilot CLI:** Use the `skill` tool. Skills are auto-discovered from installed plugins.
 
-**In Gemini CLI:** Skills activate via the `activate_skill` tool. Gemini loads skill metadata at session start and activates the full content on demand.
+**In Gemini CLI:** Skills activate via the `activate_skill` tool.
 
 **In other environments:** Check your platform's documentation for how skills are loaded.
 
@@ -48,9 +68,9 @@ Skills use Claude Code tool names. Non-CC platforms: see `references/copilot-too
 ```dot
 digraph skill_flow {
     "User message received" [shape=doublecircle];
-    "About to EnterPlanMode?" [shape=doublecircle];
-    "Already brainstormed?" [shape=diamond];
-    "Invoke brainstorming skill" [shape=box];
+    "Check for in-progress work" [shape=box];
+    "Resume analysis?" [shape=diamond];
+    "Load plan, continue from checkpoint" [shape=box];
     "Might any skill apply?" [shape=diamond];
     "Invoke Skill tool" [shape=box];
     "Announce: 'Using [skill] to [purpose]'" [shape=box];
@@ -59,12 +79,13 @@ digraph skill_flow {
     "Follow skill exactly" [shape=box];
     "Respond (including clarifications)" [shape=doublecircle];
 
-    "About to EnterPlanMode?" -> "Already brainstormed?";
-    "Already brainstormed?" -> "Invoke brainstorming skill" [label="no"];
-    "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
-    "Invoke brainstorming skill" -> "Might any skill apply?";
+    "User message received" -> "Check for in-progress work";
+    "Check for in-progress work" -> "Resume analysis?" [label="plan found"];
+    "Check for in-progress work" -> "Might any skill apply?" [label="no plan"];
+    "Resume analysis?" -> "Load plan, continue from checkpoint" [label="yes"];
+    "Resume analysis?" -> "Might any skill apply?" [label="no"];
+    "Load plan, continue from checkpoint" -> "Might any skill apply?";
 
-    "User message received" -> "Might any skill apply?";
     "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
     "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
     "Invoke Skill tool" -> "Announce: 'Using [skill] to [purpose]'";
@@ -83,14 +104,13 @@ These thoughts mean STOP—you're rationalizing:
 |---------|---------|
 | "This is just a simple question" | Questions are tasks. Check for skills. |
 | "I need more context first" | Skill check comes BEFORE clarifying questions. |
-| "Let me explore the codebase first" | Skills tell you HOW to explore. Check first. |
-| "I can check git/files quickly" | Files lack conversation context. Check for skills. |
-| "Let me gather information first" | Skills tell you HOW to gather information. |
+| "Let me explore the data first" | Skills tell you HOW to explore. Check first. |
+| "Let me load the data quickly" | Data loading requires description discipline. Check for skills. |
 | "This doesn't need a formal skill" | If a skill exists, use it. |
 | "I remember this skill" | Skills evolve. Read current version. |
 | "This doesn't count as a task" | Action = task. Check for skills. |
 | "The skill is overkill" | Simple things become complex. Use it. |
-| "I'll just do this one thing first" | Check BEFORE doing anything. |
+| "I'll just run this one merge first" | Check BEFORE doing anything. |
 | "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
 | "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
 
@@ -98,20 +118,20 @@ These thoughts mean STOP—you're rationalizing:
 
 When multiple skills could apply, use this order:
 
-1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
-2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+1. **Process skills first** (data-exploration, data-first-analysis) - these determine HOW to approach the task
+2. **Execution skills second** (executing-analysis, subagent-driven-analysis) - these guide execution
 
-"Let's build X" → brainstorming first, then implementation skills.
-"Fix this bug" → debugging first, then domain-specific skills.
+"Let's analyze X" → data-exploration first, then analysis-planning.
+"Something looks wrong in the data" → investigate using data-first-analysis describe step.
 
 ## Skill Types
 
-**Rigid** (TDD, debugging): Follow exactly. Don't adapt away discipline.
+**Rigid** (data-first-analysis, verification-before-completion): Follow exactly. Don't adapt away discipline.
 
-**Flexible** (patterns): Adapt principles to context.
+**Flexible** (data-exploration, econ-data-analysis): Adapt principles to context.
 
 The skill itself tells you which.
 
 ## User Instructions
 
-Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
+Instructions say WHAT, not HOW. "Analyze X" or "Merge these datasets" doesn't mean skip data-first-analysis discipline.
