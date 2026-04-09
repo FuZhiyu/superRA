@@ -99,4 +99,16 @@ Task tool (general-purpose):
       need adjustment (with suggested direction)
     - **Independence assessment:** Can tests run standalone
     - **Overall assessment:** APPROVE or REVISE with specific actionable items
+
+    ## If Running as Agent Team Teammate
+
+    If you are part of an Agent Team (not a standalone subagent):
+    - Use the shared task list to claim your review task when unblocked
+    - When you assess REVISE: message the test-creator directly with your
+      specific feedback — which tolerance needs adjusting, which result
+      lacks coverage, what independence issue to fix
+    - When re-reviewing after fixes: verify all previous issues are
+      addressed before marking APPROVE
+    - Message the lead for escalation decisions
+    - Mark your task as completed when tests are approved
 ```

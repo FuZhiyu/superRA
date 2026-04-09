@@ -142,6 +142,14 @@ Use the least powerful model that can handle each role:
 - `./data-reviewer-prompt.md` — Dispatch data integrity reviewer
 - `./implementation-reviewer-prompt.md` — Dispatch implementation and code quality reviewer
 
+## Agent Teams Mode
+
+When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per-task implementation+review cycle can be orchestrated as a persistent team. This enables direct iteration between implementer and reviewers without the orchestrator relaying feedback.
+
+**Invoke `superRA:using-agent-teams` for the Analysis Task Team recipe** — it has the full team composition (3 teammates), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
+
+**Critical:** When all tasks complete, shut down teammates and clean up the team BEFORE invoking `superRA:finishing-analysis`. This frees the session's team slot for the pre-merge-gate team if the user chooses merge/PR.
+
 ## Red Flags
 
 **Never:**

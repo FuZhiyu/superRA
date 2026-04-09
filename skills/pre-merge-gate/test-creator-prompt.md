@@ -123,4 +123,13 @@ Task tool (general-purpose):
     - **Baseline status:** All tests passing (green) or issues found
     - **Any concerns:** Results that were difficult to test or where
       tolerance choice was uncertain
+
+    ## If Running as Agent Team Teammate
+
+    If you are part of an Agent Team (not a standalone subagent):
+    - Use the shared task list to track your assigned tasks
+    - When the test-reviewer messages you with REVISE feedback, fix the
+      specific issues and message them back when ready for re-review
+    - Message the lead for escalation decisions that need user input
+    - Mark your tasks as completed when done
 ```
