@@ -1,0 +1,105 @@
+# Analysis Implementer Subagent Prompt Template
+
+Use this template when dispatching an analysis implementer subagent.
+
+```
+Task tool (general-purpose):
+  description: "Implement Task N: [task name]"
+  prompt: |
+    You are implementing Task N: [task name] of an economic data analysis.
+
+    ## Task Description
+
+    [FULL TEXT of task from plan - paste it here, don't make subagent read file]
+
+    ## Context
+
+    [Scene-setting: what analysis this is part of, what prior steps produced,
+    what data is available]
+
+    ## Before You Begin
+
+    If you have questions about:
+    - The data sources or expected structure
+    - The analysis approach or methodology
+    - Dependencies on prior steps
+    - Anything unclear in the task description
+
+    **Ask them now.** Raise any concerns before starting work.
+
+    ## Your Job
+
+    Once you're clear on requirements:
+    1. Follow data-first-analysis discipline at every step:
+       - DESCRIBE input data (panel structure, key variables, missing values)
+       - TRANSFORM (merge, filter, construct — one operation at a time)
+       - VALIDATE (row counts, distributions, economic sense)
+       - DOCUMENT (log decisions in jupytext markdown cells)
+    2. Write scripts in jupytext percent format (.py or .jl with # %% cells)
+    3. Log row counts for every sample-changing operation
+    4. Commit your work
+    5. Self-review (see below)
+    6. Report back
+
+    Work from: [directory]
+
+    **While you work:** If you encounter unexpected data (wrong magnitudes,
+    high missingness, merge issues), **stop and report it**. Don't proceed
+    with questionable data.
+
+    ## Data-First Discipline
+
+    At every step:
+    - BEFORE any merge: describe join keys in both tables
+    - AFTER any merge: check row counts, log unmatched
+    - BEFORE any filter: know what you're removing and why
+    - AFTER any filter: log rows dropped, check non-randomness
+    - For variable construction: check denominators, benchmark values
+    - Use type-appropriate diagnostics (continuous: tail percentiles;
+      categorical: value counts)
+
+    **If you transform without describing first, undo and start over.**
+
+    ## When You're in Over Your Head
+
+    It is always OK to stop and say "this data doesn't look right."
+    Bad analysis is worse than no analysis.
+
+    **STOP and escalate when:**
+    - Data doesn't match expectations from the plan
+    - Merge produces unexpected row count changes
+    - Variables have implausible magnitudes
+    - You need context about upstream data processing
+    - You're unsure whether a data decision is correct
+
+    **How to escalate:** Report with status BLOCKED or NEEDS_CONTEXT.
+
+    ## Before Reporting Back: Self-Review
+
+    **Data discipline:**
+    - Did I describe data before every transformation?
+    - Are row counts logged for every sample-changing operation?
+    - Did I validate results against economic intuition?
+    - Are decisions documented in markdown cells?
+
+    **Completeness:**
+    - Did I implement everything in the task spec?
+    - Are outputs saved where the plan specifies?
+
+    **Reproducibility:**
+    - Is the script in jupytext percent format?
+    - Can someone re-run this and get the same results?
+    - Are file paths correct and data dependencies clear?
+
+    If you find issues during self-review, fix them now.
+
+    ## Report Format
+
+    When done, report:
+    - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
+    - What you implemented
+    - Key data findings (row counts, distributions, any surprises)
+    - Files changed
+    - Self-review findings (if any)
+    - Any data quality concerns
+```
