@@ -39,6 +39,15 @@ Task tool (general-purpose):
 
     **Ask them now.** Raise any concerns before starting work.
 
+    ## Required Discipline
+
+    Before starting work, load the data analysis skill:
+
+        Invoke the Skill tool: superRA:econ-data-analysis
+
+    Follow the loaded discipline throughout your work. This gives you the
+    complete data-first analysis framework with principles and pitfall checklists.
+
     ## Your Job
 
     Once you're clear on requirements:

@@ -211,7 +211,7 @@ Ready to analyze <topic>
 - Any skill needing isolated workspace
 
 **Depends on:**
-- **econ-superpowers:worktree-data-sync** — REQUIRED for data seeding step
+- **superRA:worktree-data-sync** — REQUIRED for data seeding step
 
 **Pairs with:**
 - **finishing-analysis** — REQUIRED for cleanup after work complete

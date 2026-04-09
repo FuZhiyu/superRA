@@ -145,7 +145,7 @@ Ask the user to confirm the inventory before proceeding.
 
 ## Integration
 
-**Terminal state:** Invoke `econ-superpowers:analysis-planning` to create the implementation plan.
+**Terminal state:** Invoke `superRA:analysis-planning` to create the implementation plan.
 
 **Pairs with:**
-- **econ-superpowers:using-analysis-worktrees** — May be invoked before or after exploration, depending on whether the user wants an isolated workspace first
+- **superRA:using-analysis-worktrees** — May be invoked before or after exploration, depending on whether the user wants an isolated workspace first

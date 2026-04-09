@@ -1,11 +1,11 @@
 ---
 name: requesting-analysis-review
-description: Use when completing analysis tasks or before merging to verify data integrity, methodology, and reproducibility
+description: Use when completing analysis tasks or before merging to verify data integrity, implementation correctness, and reproducibility
 ---
 
 # Requesting Analysis Review
 
-Dispatch econ-superpowers:data-analysis-reviewer subagent to catch data integrity and methodology issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history.
+Dispatch superRA:data-analysis-reviewer subagent to catch data integrity and implementation issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history.
 
 **Core principle:** Review early, review often. Data bugs compound silently.
 
@@ -31,7 +31,7 @@ HEAD_SHA=$(git rev-parse HEAD)
 
 **2. Dispatch analysis-reviewer subagent:**
 
-Use Task tool with econ-superpowers:data-analysis-reviewer type, fill template at `analysis-reviewer.md`
+Use Task tool with superRA:data-analysis-reviewer type, fill template at `analysis-reviewer.md`
 
 **Placeholders:**
 - `{WHAT_WAS_IMPLEMENTED}` - What analysis step you completed
@@ -54,7 +54,7 @@ The reviewer evaluates across these dimensions:
 |-----------|----------------|
 | **Data integrity** | Descriptions before transforms, row counts logged, no silent data loss |
 | **Code quality** | Clean, readable, jupytext format, logical structure |
-| **Methodology** | Appropriate methods, assumptions stated, results make economic sense |
+| **Implementation** | Code correctly implements what was specified, results make economic sense |
 | **Reproducibility** | Pipeline runs, outputs from committed code, paths correct |
 | **Documentation** | Decisions justified, narrative interleaved, major choices explained |
 
@@ -68,7 +68,7 @@ You: Let me request analysis review before proceeding.
 BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
 HEAD_SHA=$(git rev-parse HEAD)
 
-[Dispatch econ-superpowers:data-analysis-reviewer subagent]
+[Dispatch superRA:data-analysis-reviewer subagent]
   WHAT_WAS_IMPLEMENTED: Merged fund holdings with characteristics, constructed portfolio weights
   PLAN_OR_REQUIREMENTS: Task 2 from PLAN.md
   BASE_SHA: a7981ec
@@ -91,7 +91,7 @@ You: [Investigate unmatched, add documentation, benchmark weights]
 ## Integration
 
 **Subagent-Driven Analysis:**
-- Built into the two-stage review (data integrity → methodology)
+- Built into the two-stage review (data integrity → implementation correctness)
 - Automatic after each task
 
 **Executing Analysis:**

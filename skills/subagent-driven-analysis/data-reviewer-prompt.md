@@ -4,7 +4,7 @@ Use this template when dispatching a data integrity reviewer subagent.
 
 **Purpose:** Verify the implementer followed data-first-analysis discipline — data described before transformed, validated after, documented throughout.
 
-**Dispatch FIRST, before methodology review.**
+**Dispatch FIRST, before implementation review.**
 
 ```
 Task tool (general-purpose):
@@ -37,6 +37,15 @@ Task tool (general-purpose):
     - Check for describe steps BEFORE every transformation
     - Verify row counts are logged for every sample-changing operation
     - Look for undocumented decisions
+
+    ## Required Discipline
+
+    Before starting work, load the data analysis skill:
+
+        Invoke the Skill tool: superRA:econ-data-analysis
+
+    Follow the loaded discipline throughout your work. This gives you the
+    complete data-first analysis framework with principles and pitfall checklists.
 
     ## Your Checklist
 

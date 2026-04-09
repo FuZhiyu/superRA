@@ -1,15 +1,15 @@
 ---
 name: finishing-analysis
-description: Use when analysis implementation is complete and you need to verify reproducibility, generate reports, and decide how to integrate the work - guides completion via merge, PR, or archival
+description: Use when analysis implementation is complete and you need to verify reproducibility, generate reports, and decide how to integrate the work - guides completion via merge, PR, keep, or discard
 ---
 
 # Finishing Analysis
 
 ## Overview
 
-Guide completion of analysis work by verifying reproducibility, generating reports, and presenting integration options.
+Guide completion of analysis work by verifying reproducibility, presenting integration options, and executing the chosen path. For merge/PR paths, invoke the pre-merge gate to protect results and integrate code.
 
-**Core principle:** Verify reproducibility → Generate report → Present options → Execute choice → Clean up.
+**Core principle:** Verify reproducibility → Present options → If keeping: pre-merge gate → Generate report → Handle documents → Execute choice → Clean up.
 
 **Announce at start:** "I'm using the finishing-analysis skill to complete this work."
 
@@ -42,36 +42,46 @@ Guide completion of analysis work by verifying reproducibility, generating repor
 
 **If any check fails:** Fix it before proceeding. Don't offer completion options for unreproducible work.
 
-### Step 1.5: Archive Development Documents
+### Step 2: Determine Base Branch
 
-`PLAN.md` and `RESULTS_UPDATE.md` are development artifacts — they cannot remain at project root on the main branch.
-
-**Ask the user:**
+```bash
+git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
 ```
-PLAN.md and RESULTS_UPDATE.md are development documents. Options:
-1. Archive to docs/analysis-archive/YYYY-MM-DD-<name>/ (preserves in repo)
-2. Delete (git history preserves them on this branch)
+
+Or ask: "This branch split from main — is that correct?"
+
+### Step 3: Present Options
+
+Present exactly these 4 options:
+
+```
+Analysis complete and reproducible. What would you like to do?
+
+1. Merge back to <base-branch> locally
+2. Push and create a Pull Request
+3. Keep the branch as-is (I'll handle it later)
+4. Discard this work
+
 Which option?
 ```
 
-**Option 1 (Archive):**
-```bash
-mkdir -p docs/analysis-archive/YYYY-MM-DD-<name>
-git mv PLAN.md docs/analysis-archive/YYYY-MM-DD-<name>/
-git mv RESULTS_UPDATE.md docs/analysis-archive/YYYY-MM-DD-<name>/
-git mv results_attachments/ docs/analysis-archive/YYYY-MM-DD-<name>/ 2>/dev/null
-git commit -m "archive analysis plan and results"
+### Step 4: Execute Choice
+
+#### Option 1 or 2: Keep the Work (Merge or PR)
+
+When the user chooses to keep the work, run the full pre-merge pipeline:
+
+**Step 4a: Pre-Merge Gate**
+
+```
+Invoke superRA:pre-merge-gate
 ```
 
-**Option 2 (Delete):**
-```bash
-git rm PLAN.md RESULTS_UPDATE.md
-rm -rf results_attachments/
-git add -A results_attachments/ 2>/dev/null
-git commit -m "remove development documents (preserved in branch history)"
-```
+This creates drift tests, refactors code for codebase integration, and runs integration review. See that skill for details.
 
-### Step 2: Generate Report
+**Only proceed to Step 4b after the pre-merge gate passes.**
+
+**Step 4b: Generate Report**
 
 Create a work journal entry documenting the analysis results. Use `RESULTS_UPDATE.md` as source material — the finishing report is the polished version; RESULTS_UPDATE.md was the development log.
 
@@ -123,33 +133,52 @@ permalink: working-journal/YYYY-MM-DD-author-description
 
 If issues found, fix before finalizing.
 
-### Step 3: Determine Base Branch
+**Step 4c: Handle Development Documents**
 
-```bash
-git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
+`PLAN.md` and `RESULTS_UPDATE.md` are development artifacts — they cannot remain at project root on the main branch.
+
+**Ask the user:**
 ```
-
-Or ask: "This branch split from main — is that correct?"
-
-### Step 4: Present Options
-
-Present exactly these 4 options:
-
-```
-Analysis complete. Report written to <path>. What would you like to do?
-
-1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
-3. Keep the branch as-is (I'll handle it later)
-4. Discard this work
-
+PLAN.md and RESULTS_UPDATE.md are development documents. Options:
+1. Move to relevant module directory (alongside the analysis code for future reference)
+2. Consolidate key findings into existing documentation
+3. Delete (git history preserves them on this branch)
 Which option?
 ```
 
-### Step 5: Execute Choice
+**Option 1 (Move to module):**
+```bash
+# User specifies target directory
+mkdir -p <target-dir>
+git mv PLAN.md <target-dir>/
+git mv RESULTS_UPDATE.md <target-dir>/
+git mv results_attachments/ <target-dir>/ 2>/dev/null
+git commit -m "move analysis plan and results to <target-dir>"
+```
 
-#### Option 1: Merge Locally
+**Option 2 (Consolidate):**
+- Identify which existing documentation should be updated
+- Extract key findings from RESULTS_UPDATE.md
+- Merge into existing docs (user guides which docs)
+- Remove original files:
+```bash
+git rm PLAN.md RESULTS_UPDATE.md
+rm -rf results_attachments/
+git add -A results_attachments/ 2>/dev/null
+git commit -m "consolidate analysis results into project docs"
+```
 
+**Option 3 (Delete):**
+```bash
+git rm PLAN.md RESULTS_UPDATE.md
+rm -rf results_attachments/
+git add -A results_attachments/ 2>/dev/null
+git commit -m "remove development documents (preserved in branch history)"
+```
+
+**Step 4d: Execute Merge or PR**
+
+**For Option 1 (Merge Locally):**
 ```bash
 git checkout <base-branch>
 git pull
@@ -158,8 +187,7 @@ git merge <analysis-branch>
 
 Verify pipeline still runs on merged result. Then cleanup worktree.
 
-#### Option 2: Push and Create PR
-
+**For Option 2 (Push and Create PR):**
 ```bash
 git push -u origin <analysis-branch>
 
@@ -175,9 +203,14 @@ gh pr create --title "<title>" --body "$(cat <<'EOF'
 - All outputs generated from committed code
 - Report: `<path-to-report>`
 
+## Pre-Merge Quality
+- Drift tests: included in `tests/` (guard key results)
+- Code refactored for codebase integration
+- Integration review: passed
+
 ## Review Checklist
 - [ ] Pipeline runs end-to-end
-- [ ] Outputs match committed code
+- [ ] Drift tests pass
 - [ ] Data descriptions present before all transformations
 - [ ] Row counts logged for all sample-changing operations
 EOF
@@ -206,7 +239,7 @@ Type 'discard' to confirm.
 
 Wait for exact confirmation. Then cleanup.
 
-### Step 6: Cleanup Worktree
+### Step 5: Cleanup Worktree
 
 **For Options 1, 2, 4:**
 
@@ -218,14 +251,18 @@ git worktree remove <worktree-path>
 
 ## Quick Reference
 
-| Option | Merge | Push | Keep Worktree | Cleanup Branch |
-|--------|-------|------|---------------|----------------|
-| 1. Merge locally | Yes | - | - | Yes |
-| 2. Create PR | - | Yes | Yes | - |
-| 3. Keep as-is | - | - | Yes | - |
-| 4. Discard | - | - | - | Yes (force) |
+| Option | Pre-Merge Gate | Report | Merge | Push | Keep Worktree | Cleanup Branch |
+|--------|---------------|--------|-------|------|---------------|----------------|
+| 1. Merge locally | Yes | Yes | Yes | - | - | Yes |
+| 2. Create PR | Yes | Yes | - | Yes | Yes | - |
+| 3. Keep as-is | - | - | - | - | Yes | - |
+| 4. Discard | - | - | - | - | - | Yes (force) |
 
 ## Common Mistakes
+
+**Skipping pre-merge gate**
+- **Problem:** Code merged without drift tests or integration review
+- **Fix:** Always run pre-merge gate for Options 1 and 2
 
 **Skipping reproducibility verification**
 - **Problem:** Report references ad-hoc outputs that can't be regenerated
@@ -237,7 +274,7 @@ git worktree remove <worktree-path>
 
 **Report with speculation**
 - **Problem:** "This suggests the market is efficient" — unsupported interpretation
-- **Fix:** Report only what was done and found. User interprets.
+- **Fix:** Report only what was done and found. The researcher interprets.
 
 **Stale plan file**
 - **Problem:** Plan doesn't reflect what actually happened
@@ -247,14 +284,17 @@ git worktree remove <worktree-path>
 
 **Never:**
 - Offer completion options without reproducibility verification
+- Skip pre-merge gate for merge/PR options
 - Skip report generation
 - Merge without verifying pipeline on merged result
 - Delete work without confirmation
 - Write reports with unsupported interpretations
+- Judge methodology in the report — the researcher decides methodology
 
 **Always:**
 - Verify all code committed
 - Verify pipeline runs end-to-end
+- Run pre-merge gate before merge/PR
 - Generate factual report with citations
 - Present exactly 4 options
 - Get typed confirmation for Option 4
@@ -262,8 +302,11 @@ git worktree remove <worktree-path>
 ## Integration
 
 **Called by:**
-- **subagent-driven-analysis** (after all tasks) — After all tasks complete and reviewed
-- **executing-analysis** (after all steps) — After all steps complete
+- **superRA:subagent-driven-analysis** (after all tasks) — After all tasks complete and reviewed
+- **superRA:executing-analysis** (after all steps) — After all steps complete
+
+**Invokes:**
+- **superRA:pre-merge-gate** — REQUIRED for Options 1 and 2 (creates drift tests, refactors, reviews integration)
 
 **Pairs with:**
-- **using-analysis-worktrees** — Cleans up worktree created by that skill
+- **superRA:using-analysis-worktrees** — Cleans up worktree created by that skill

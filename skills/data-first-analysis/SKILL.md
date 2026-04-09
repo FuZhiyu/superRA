@@ -247,9 +247,9 @@ This skill is the discipline enforced at **every step** during plan execution �
 4. Reviewers check that this discipline was followed
 
 **Related skills:**
-- **econ-superpowers:econ-data-analysis** — Detailed three-principle framework and pitfall checklists. Invoke for the full reference.
-- **econ-superpowers:verification-before-completion** — Evidence before claims, always.
-- **econ-superpowers:analysis-planning** — Creates the plan this skill enforces during execution.
+- **superRA:econ-data-analysis** — Detailed three-principle framework and pitfall checklists. Invoke for the full reference.
+- **superRA:verification-before-completion** — Evidence before claims, always.
+- **superRA:analysis-planning** — Creates the plan this skill enforces during execution.
 
 ## Final Rule
 

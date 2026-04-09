@@ -11,7 +11,7 @@ Load plan, review critically, execute all steps with data-first discipline, chec
 
 **Announce at start:** "I'm using the executing-analysis skill to implement this analysis plan."
 
-**Note:** Tell your human partner that econ-superpowers works much better with access to subagents. If subagents are available, use econ-superpowers:subagent-driven-analysis instead of this skill.
+**Note:** Tell your human partner that superRA works much better with access to subagents. If subagents are available, use superRA:subagent-driven-analysis instead of this skill.
 
 ## The Process
 
@@ -71,7 +71,7 @@ After all steps complete:
 
 After all steps complete and pipeline verified:
 - Announce: "I'm using the finishing-analysis skill to complete this work."
-- **REQUIRED SKILL:** Use econ-superpowers:finishing-analysis
+- **REQUIRED SKILL:** Use superRA:finishing-analysis
 - Follow that skill to generate report, present merge/PR options
 
 ## Plan as Living Document
@@ -107,6 +107,10 @@ If the session ends, the next agent reads both and knows: what's done, what was 
 
 **Don't force through data issues** — stop and investigate.
 
+## Review Scope
+
+**At execution checkpoints:** Focus on data integrity and implementation correctness. Codebase integration review (naming consistency, utility function adoption, code simplification) is deferred to the pre-merge gate, which runs during finishing-analysis when the user chooses to merge or create a PR.
+
 ## Remember
 - Review plan critically first
 - Follow data-first-analysis discipline at every step
@@ -119,7 +123,8 @@ If the session ends, the next agent reads both and knows: what's done, what was 
 ## Integration
 
 **Required workflow skills:**
-- **econ-superpowers:using-analysis-worktrees** — REQUIRED: Set up isolated workspace before starting
-- **econ-superpowers:analysis-planning** — Creates the plan this skill executes
-- **econ-superpowers:data-first-analysis** — REQUIRED: Discipline at every step
-- **econ-superpowers:finishing-analysis** — Complete work after all steps done
+- **superRA:using-analysis-worktrees** — REQUIRED: Set up isolated workspace before starting
+- **superRA:analysis-planning** — Creates the plan this skill executes
+- **superRA:data-first-analysis** — REQUIRED: Discipline at every step
+- **superRA:finishing-analysis** — Complete work after all steps done
+- **superRA:pre-merge-gate** — Code integration and drift tests before merge (invoked by finishing-analysis)

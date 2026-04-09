@@ -1,6 +1,6 @@
 {
-  "name": "econ-superpowers",
-  "description": "Workflow skills for economic data analysis: data-first discipline, analysis planning, reproducibility, and rigorous data validation",
+  "name": "superRA",
+  "description": "Super Research Assistant: data-first discipline, analysis planning, reproducibility, and rigorous data validation for economic research",
   "version": "0.1.0",
   "author": {
     "name": "Zhiyu Fu"

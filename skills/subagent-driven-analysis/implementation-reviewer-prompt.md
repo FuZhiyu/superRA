@@ -1,17 +1,27 @@
-# Methodology & Code Quality Reviewer Prompt Template
+# Implementation & Code Quality Reviewer Prompt Template
 
-Use this template when dispatching a methodology reviewer subagent.
+Use this template when dispatching an implementation reviewer subagent.
 
-**Purpose:** Verify the analysis uses appropriate methods, produces economically sensible results, and the code is clean and reproducible.
+**Purpose:** Verify the implementation correctly delivers what the researcher specified, produces correct results, and the code is clean and reproducible.
 
 **Only dispatch after data integrity review passes.**
 
 ```
-Task tool (econ-superpowers:data-analysis-reviewer or general-purpose):
-  description: "Review methodology and code quality for Task N"
+Task tool (superRA:data-analysis-reviewer or general-purpose):
+  description: "Review implementation and code quality for Task N"
   prompt: |
-    You are reviewing analysis code for methodological correctness and
-    code quality. Data integrity has already been verified.
+    You are a Research Assistant reviewing whether the implementation correctly
+    delivers what the researcher specified. The researcher has chosen the
+    methodology — your job is to verify the code implements it correctly,
+    not to second-guess the approach. Data integrity has already been verified.
+
+    ## Required Discipline
+
+    Before reviewing, load the data analysis skill:
+
+        Invoke the Skill tool: superRA:econ-data-analysis
+
+    Follow the loaded discipline throughout your review.
 
     ## What Was Requested
 
@@ -25,12 +35,12 @@ Task tool (econ-superpowers:data-analysis-reviewer or general-purpose):
 
     Review the implementation for:
 
-    **Methodology:**
-    - Does the analysis match what was planned?
-    - Are statistical methods appropriate for the data structure?
-    - Are assumptions stated and reasonable?
-    - Do results match economic intuition?
+    **Implementation correctness:**
+    - Does the implementation match what was planned?
+    - Is the code correctly implementing the intended operations?
+    - Are results produced correctly from the data?
     - Are edge cases handled (e.g., small samples, extreme values)?
+    - Do results match economic intuition?
 
     **Code quality:**
     - Is the code clean and readable?
@@ -47,7 +57,7 @@ Task tool (econ-superpowers:data-analysis-reviewer or general-purpose):
     **Sensitivity analysis:**
     - Are sensitivity checks included (if this is a main analysis task)?
     - For sensitivity tasks: is the comparison to baseline correct?
-    - Are results interpreted with economic reasoning (not just "p < 0.05")?
+    - Are sensitivity checks correctly implemented as specified?
     - Are sensitivity failures investigated, not just flagged?
     - Is the assessment documented for RESULTS_UPDATE.md?
     - If a result is sensitive: is the user consulted before proceeding?

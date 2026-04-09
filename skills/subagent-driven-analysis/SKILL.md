@@ -1,15 +1,15 @@
 ---
 name: subagent-driven-analysis
-description: Use when executing analysis plans with independent tasks in the current session — dispatches fresh subagent per task with two-stage review (data integrity then methodology)
+description: Use when executing analysis plans with independent tasks in the current session — dispatches fresh subagent per task with two-stage review (data integrity then implementation correctness)
 ---
 
 # Subagent-Driven Analysis
 
-Execute analysis plan by dispatching a fresh subagent per task, with two-stage review after each: data integrity review first, then methodology and code quality review.
+Execute analysis plan by dispatching a fresh subagent per task, with two-stage review after each: data integrity review first, then implementation correctness and code quality review.
 
 **Why subagents:** You delegate tasks to specialized agents with isolated context. By precisely crafting their instructions and context, you ensure they stay focused and succeed. They should never inherit your session's context — you construct exactly what they need. This also preserves your own context for coordination work.
 
-**Core principle:** Fresh subagent per task + two-stage review (data integrity then methodology) = high quality, reproducible analysis.
+**Core principle:** Fresh subagent per task + two-stage review (data integrity then implementation correctness) = high quality, reproducible analysis.
 
 ## When to Use
 
@@ -49,16 +49,16 @@ digraph process {
         "Dispatch data integrity reviewer" [shape=box];
         "Data integrity passes?" [shape=diamond];
         "Implementer fixes data issues" [shape=box];
-        "Dispatch methodology reviewer" [shape=box];
-        "Methodology passes?" [shape=diamond];
-        "Implementer fixes methodology issues" [shape=box];
+        "Dispatch implementation reviewer" [shape=box];
+        "Implementation passes?" [shape=diamond];
+        "Implementer fixes implementation issues" [shape=box];
         "Update plan file + commit" [shape=box];
     }
 
     "Read plan, extract all tasks, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final analysis reviewer for full implementation" [shape=box];
-    "Use econ-superpowers:finishing-analysis" [shape=box style=filled fillcolor=lightgreen];
+    "Use superRA:finishing-analysis" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks, create TodoWrite" -> "Dispatch implementer subagent";
     "Dispatch implementer subagent" -> "Implementer asks questions?";
@@ -69,15 +69,15 @@ digraph process {
     "Dispatch data integrity reviewer" -> "Data integrity passes?";
     "Data integrity passes?" -> "Implementer fixes data issues" [label="no"];
     "Implementer fixes data issues" -> "Dispatch data integrity reviewer" [label="re-review"];
-    "Data integrity passes?" -> "Dispatch methodology reviewer" [label="yes"];
-    "Dispatch methodology reviewer" -> "Methodology passes?";
-    "Methodology passes?" -> "Implementer fixes methodology issues" [label="no"];
-    "Implementer fixes methodology issues" -> "Dispatch methodology reviewer" [label="re-review"];
-    "Methodology passes?" -> "Update plan file + commit" [label="yes"];
+    "Data integrity passes?" -> "Dispatch implementation reviewer" [label="yes"];
+    "Dispatch implementation reviewer" -> "Implementation passes?";
+    "Implementation passes?" -> "Implementer fixes implementation issues" [label="no"];
+    "Implementer fixes implementation issues" -> "Dispatch implementation reviewer" [label="re-review"];
+    "Implementation passes?" -> "Update plan file + commit" [label="yes"];
     "Update plan file + commit" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent" [label="yes"];
     "More tasks remain?" -> "Dispatch final analysis reviewer for full implementation" [label="no"];
-    "Dispatch final analysis reviewer for full implementation" -> "Use econ-superpowers:finishing-analysis";
+    "Dispatch final analysis reviewer for full implementation" -> "Use superRA:finishing-analysis";
 }
 ```
 
@@ -91,6 +91,8 @@ digraph process {
 4. If findings change upcoming steps, update PLAN.md
 5. Add discovery notes (e.g., "high unmatched rate in merge — investigate before regression")
 6. Commit: `git add PLAN.md RESULTS_UPDATE.md results_attachments/ && git commit -m "update plan + results: Task N complete"`
+
+**Review scope at interim checkpoints:** Data integrity and implementation correctness only. Codebase integration review is deferred to the pre-merge gate (invoked during finishing-analysis when merging/PRing).
 
 PLAN.md and RESULTS_UPDATE.md are living documents. Together they form the handoff: PLAN.md = what to do, RESULTS_UPDATE.md = what was found. They must always reflect current understanding so the next agent (or session) can pick up where this one left off.
 
@@ -138,20 +140,20 @@ Use the least powerful model that can handle each role:
 
 - `./implementer-prompt.md` — Dispatch analysis implementer
 - `./data-reviewer-prompt.md` — Dispatch data integrity reviewer
-- `./methodology-reviewer-prompt.md` — Dispatch methodology and code quality reviewer
+- `./implementation-reviewer-prompt.md` — Dispatch implementation and code quality reviewer
 
 ## Red Flags
 
 **Never:**
 - Start analysis on main/master branch without explicit user consent
-- Skip reviews (data integrity OR methodology)
+- Skip reviews (data integrity OR implementation)
 - Proceed with unfixed data integrity issues
 - Dispatch multiple implementers in parallel on the same data (conflicts)
 - Make subagent read plan file (provide full text instead)
 - Skip plan file update after task completion
 - Ignore implementer data quality concerns
 - Accept "data looks fine" without verification
-- **Start methodology review before data integrity is ✅**
+- **Start implementation review before data integrity is ✅**
 - Move to next task while either review has open issues
 
 **If implementer reports data concerns:**
@@ -168,14 +170,15 @@ Use the least powerful model that can handle each role:
 ## Integration
 
 **Required workflow skills:**
-- **econ-superpowers:using-analysis-worktrees** — REQUIRED: Set up isolated workspace before starting
-- **econ-superpowers:analysis-planning** — Creates the plan this skill executes
-- **econ-superpowers:data-first-analysis** — REQUIRED: Discipline subagents must follow
-- **econ-superpowers:finishing-analysis** — Complete work after all tasks done
+- **superRA:using-analysis-worktrees** — REQUIRED: Set up isolated workspace before starting
+- **superRA:analysis-planning** — Creates the plan this skill executes
+- **superRA:data-first-analysis** — REQUIRED: Discipline subagents must follow
+- **superRA:finishing-analysis** — Complete work after all tasks done
 
 **Subagents should use:**
-- **econ-superpowers:data-first-analysis** — Describe-transform-validate at every step
-- **econ-superpowers:econ-data-analysis** — Detailed principles and pitfall checklists
+- **superRA:data-first-analysis** — Describe-transform-validate at every step
+- **superRA:econ-data-analysis** — Detailed principles and pitfall checklists
 
 **Alternative workflow:**
-- **econ-superpowers:executing-analysis** — Use for sequential pipelines instead of subagent dispatch
+- **superRA:executing-analysis** — Use for sequential pipelines instead of subagent dispatch
+- **superRA:pre-merge-gate** — Code integration and drift tests before merge (invoked by finishing-analysis)
