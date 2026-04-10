@@ -76,17 +76,10 @@ Task tool (general-purpose):
 
     ### CRITICAL: Preserve Data Discipline
 
-    Do NOT remove or simplify away:
-    - Data description steps (describe calls, summary statistics)
-    - Row count logging before/after merges and filters
-    - Data validation checks
-    - Variable distribution diagnostics
-    - Markdown documentation cells in jupytext scripts
-
-    These are not clutter — they are the analysis's audit trail. Removing
-    diagnostics to "clean up" the code destroys reproducibility evidence.
-    You may reorganize them (e.g., consolidate into a validation section)
-    but never delete them.
+    Do NOT remove data description steps, row count logging, validation
+    checks, or jupytext documentation cells — these are the analysis's
+    audit trail. You may reorganize them but never delete them. See loaded
+    econ-data-analysis for what constitutes data discipline artifacts.
 
     ### Handling Inconsistencies
 

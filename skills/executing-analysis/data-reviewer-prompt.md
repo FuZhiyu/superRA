@@ -2,7 +2,7 @@
 
 Use this template when dispatching a data integrity reviewer subagent.
 
-**Purpose:** Verify the implementer followed data-first-analysis discipline — data described before transformed, validated after, documented throughout.
+**Purpose:** Verify the implementer followed data-first discipline — data described before transformed, validated after, documented throughout.
 
 **Dispatch FIRST, before implementation review.**
 
@@ -44,53 +44,42 @@ Task tool (general-purpose):
 
         Invoke the Skill tool: superRA:econ-data-analysis
 
-    Follow the loaded discipline throughout your work. This gives you the
-    complete data-first analysis framework with principles and pitfall checklists.
+    Use the loaded Iron Law, DTV cycle, verification checklist, and pitfall
+    checklists as your review framework throughout.
 
-    ## Your Checklist
+    ## Your Review Scope
 
-    **Description before transformation:**
-    - [ ] Input data described (panel structure, key variables, missing values)?
-    - [ ] Join keys described in both tables before merges?
-    - [ ] Descriptions use appropriate diagnostics (not blanket describe())?
-    - [ ] Descriptions appear BEFORE the transformation, not after?
+    Read the actual implementation code — do not trust the report.
+    Use the loaded econ-data-analysis skill as your checklist. Key questions:
 
-    **Row count tracking:**
-    - [ ] Before/after row counts for every merge?
-    - [ ] Before/after row counts for every filter?
-    - [ ] Unmatched observations logged for joins?
-    - [ ] Rows dropped logged for filters with reason?
-
-    **Validation:**
-    - [ ] Output variables checked after construction?
-    - [ ] Magnitudes plausible (no GDP growth of 300%)?
-    - [ ] Signs and relationships consistent with priors?
-    - [ ] Unexpected findings investigated (not ignored)?
-
-    **Documentation:**
-    - [ ] Script in jupytext percent format (# %% cells)?
-    - [ ] Markdown cells explain each step?
-    - [ ] Decisions justified (filter thresholds, winsorization, etc.)?
-    - [ ] Major decisions in markdown cells, minor in inline comments?
-
-    **Reproducibility:**
-    - [ ] Code committed?
-    - [ ] File paths correct and relative?
-    - [ ] Can be re-run to produce same output?
-
-    **Results documentation:**
-    - [ ] Key findings reported in format suitable for RESULTS_UPDATE.md?
-    - [ ] Figures saved to results_attachments/ (if applicable)?
-    - [ ] Results compared to expected values/hypotheses from PLAN.md (if provided)?
+    - Describe steps present before every transformation?
+    - Row counts logged for every sample-changing operation?
+    - Join keys described in both tables before merges?
+    - Validation checks after key operations (magnitudes, signs, relationships)?
+    - Decisions documented in jupytext markdown cells?
+    - Code committed and reproducible (correct file paths)?
+    - Key findings reported in format suitable for RESULTS_UPDATE.md?
+    - Results compared to expected values/hypotheses from PLAN.md (if provided)?
 
     **Verify by reading code, not by trusting report.**
 
-    Report:
+    ## Report
+
     - ✅ Data discipline followed (if all checks pass after code inspection)
     - ❌ Issues found: [list with file:line, what's missing, severity]
 
     Severity: CRITICAL (will produce wrong results), MAJOR (likely problem),
     MINOR (incomplete compliance)
+
+    Assessment: APPROVE or REVISE
+
+    **If your assessment is REVISE:**
+    End your report with:
+
+    ---
+    ACTION REQUIRED: Re-dispatch the implementer with the above feedback,
+    then re-dispatch this data integrity review. Iterate until APPROVE.
+    Do NOT proceed to implementation review until data integrity is approved.
 
     ## If Running as Agent Team Teammate
 

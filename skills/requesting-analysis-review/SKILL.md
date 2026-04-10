@@ -5,14 +5,16 @@ description: Use when completing analysis tasks or before merging to verify data
 
 # Requesting Analysis Review
 
-Dispatch superRA:data-analysis-reviewer subagent to catch data integrity and implementation issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history.
+Dispatch a reviewer subagent to catch data integrity and implementation issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history.
 
 **Core principle:** Review early, review often. Data bugs compound silently.
+
+**Scope:** This skill is for **ad-hoc single-pass reviews** — quick checks, before-merge verification, or when data looks unexpected. For **structured per-task review** (data integrity gate then implementation correctness), use the two-stage review in `superRA:executing-analysis` instead.
 
 ## When to Request Review
 
 **Mandatory:**
-- After each task in subagent-driven analysis
+- After each task (built into executing-analysis two-stage review; this skill for ad-hoc cases)
 - After completing a major analysis phase
 - Before merge to main
 
@@ -84,23 +86,25 @@ HEAD_SHA=$(git rev-parse HEAD)
     Minor: Weight variable not benchmarked against published figures
   Assessment: REVISE
 
-You: [Investigate unmatched, add documentation, benchmark weights]
+You: [Investigate unmatched rate, add markdown cell documenting 2% unmatched, benchmark weights]
+[Re-dispatch reviewer for re-review]
+
+[Subagent returns]:
+  All checks: PASS
+  Assessment: APPROVE
+
 [Continue to Task 3]
 ```
 
 ## Integration
 
-**Subagent-Driven Analysis:**
-- Built into the two-stage review (data integrity → implementation correctness)
-- Automatic after each task
+**Executing Analysis (two-stage review):**
+- Built into the per-task review cycle (data integrity → implementation correctness)
+- Automatic after each task — uses dedicated reviewer prompt templates
 
-**Executing Analysis:**
-- Request after each major phase
-- Before finishing-analysis
-
-**Ad-Hoc Analysis:**
-- Before merge
-- When data looks unexpected
+**Ad-Hoc (this skill):**
+- Single-pass review for quick checks
+- Before merge, when data looks unexpected, after complex operations
 
 ## Red Flags
 

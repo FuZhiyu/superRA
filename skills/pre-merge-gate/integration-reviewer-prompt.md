@@ -65,14 +65,9 @@ Task tool (general-purpose):
 
     ### Data Discipline Preserved
 
-    - [ ] **Diagnostics not dropped:** Data description steps (summary
-      statistics, distribution checks) are present in the refactored code
-    - [ ] **Row counts logged:** Before/after row counts for merges, filters,
-      and other sample-changing operations are still logged
-    - [ ] **Validation intact:** Data validation checks (magnitude checks,
-      sign checks, cross-variable consistency) are preserved
-    - [ ] **Documentation cells preserved:** Jupytext markdown cells
-      explaining methodology and decisions are retained
+    - [ ] Data description steps, row count logging, validation checks, and
+      jupytext documentation cells were not removed during refactoring
+      (see loaded econ-data-analysis for the full list of artifacts)
 
     ### PR Quality
 

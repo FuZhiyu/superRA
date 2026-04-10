@@ -124,17 +124,17 @@ These thoughts mean STOP—you're rationalizing:
 
 When multiple skills could apply, use this order:
 
-1. **Process skills first** (data-exploration, data-first-analysis) - these determine HOW to approach the task
-2. **Execution skills second** (executing-analysis, subagent-driven-analysis) - these guide execution
+1. **Process skills first** (data-exploration, econ-data-analysis) - these determine HOW to approach the task
+2. **Execution skills second** (executing-analysis) - these guide execution
 
 "Let's analyze X" → data-exploration first, then analysis-planning.
-"Something looks wrong in the data" → investigate using data-first-analysis describe step.
+"Something looks wrong in the data" → investigate using econ-data-analysis describe step.
 
 ## Skill Types
 
-**Rigid** (data-first-analysis, verification-before-completion): Follow exactly. Don't adapt away discipline.
+**Rigid** (econ-data-analysis, verification-before-completion): Follow exactly. Don't adapt away discipline.
 
-**Flexible** (data-exploration, econ-data-analysis): Adapt principles to context.
+**Flexible** (data-exploration): Adapt principles to context.
 
 The skill itself tells you which.
 
@@ -144,8 +144,8 @@ When merging, rebasing, or cherry-picking branches, superRA uses intent-based co
 
 ## Agent Teams
 
-When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled, superRA uses Agent Teams for workflows with iteration loops (pre-merge-gate, subagent-driven-analysis, semantic-merge). This is automatic — the orchestration skills detect availability and use teams when appropriate. See `superRA:using-agent-teams` for details on team compositions, lifecycle, and session handoff.
+When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled, superRA uses Agent Teams for workflows with iteration loops (pre-merge-gate, executing-analysis, semantic-merge). This is automatic — the orchestration skills detect availability and use teams when appropriate. See `superRA:using-agent-teams` for details on team compositions, lifecycle, and session handoff.
 
 ## User Instructions
 
-Instructions say WHAT, not HOW. "Analyze X" or "Merge these datasets" doesn't mean skip data-first-analysis discipline.
+Instructions say WHAT, not HOW. "Analyze X" or "Merge these datasets" doesn't mean skip econ-data-analysis discipline.

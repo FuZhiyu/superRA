@@ -13,7 +13,7 @@ Guide completion of analysis work by verifying reproducibility, presenting integ
 
 **Announce at start:** "I'm using the finishing-analysis skill to complete this work."
 
-**Agent Teams cleanup:** If an Analysis Team is still active from subagent-driven-analysis, shut down all teammates and clean up the team before proceeding. The pre-merge gate (Step 4a) may need to spawn its own team, and only one team can exist per session.
+**Agent Teams cleanup:** If an Analysis Team is still active from executing-analysis, shut down all teammates and clean up the team before proceeding. The pre-merge gate (Step 4a) may need to spawn its own team, and only one team can exist per session.
 
 ## The Process
 
@@ -324,8 +324,7 @@ git worktree remove <worktree-path>
 ## Integration
 
 **Called by:**
-- **superRA:subagent-driven-analysis** (after all tasks) — After all tasks complete and reviewed
-- **superRA:executing-analysis** (after all steps) — After all steps complete
+- **superRA:executing-analysis** (after all tasks) — After all tasks complete and reviewed
 
 **Invokes:**
 - **superRA:pre-merge-gate** — REQUIRED for Options 1 and 2 (creates drift tests, refactors, reviews integration)

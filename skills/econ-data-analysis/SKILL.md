@@ -3,17 +3,39 @@ name: econ-data-analysis
 description: >
   Guide for rigorous economic data analysis. Use PROACTIVELY whenever performing
   data analysis on economic or financial datasets — importing, cleaning, merging,
-  constructing variables, or producing summary statistics. Three core principles:
-  (1) describe before and after every transformation, (2) document in jupytext
-  percent format with interleaved code/narrative/outputs, (3) validate against
-  economic intuition, literature, and cross-variable relationships. Includes
-  pitfall checklists for merges, aggregations, filtering, and variable construction.
+  constructing variables, or producing summary statistics. Enforces the Iron Law
+  (no transformation without prior description) and the Describe-Transform-Validate-Document
+  cycle. Three core principles: (1) describe before and after every transformation,
+  (2) document in jupytext percent format with interleaved code/narrative/outputs,
+  (3) validate against economic intuition, literature, and cross-variable relationships.
+  Includes pitfall checklists for merges, aggregations, filtering, and variable
+  construction. Red flags and rationalization prevention for data discipline.
   Language-agnostic (Python, Julia). Trigger: any data analysis task involving
   economic, financial, or panel data.
 user-invocable: true
 ---
 
 # Economic Data Analysis
+
+## The Iron Law
+
+```
+NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION
+```
+
+Transformed data without describing it first? Undo the transformation. Start over.
+
+**No exceptions:**
+- Don't keep the merged result as "it looks fine"
+- Don't "check it later at the end"
+- Don't rely on a description from a previous session
+- Undo means undo
+
+Describe fresh from the current data state. Period.
+
+**Violating the letter of the rules is violating the spirit of the rules.**
+
+---
 
 Three concurrent principles for rigorous data work. These are not sequential
 stages — apply all three at every point in the analysis.
@@ -178,6 +200,135 @@ indicate a data or construction error.
   (→ truly missing) — the correct treatment depends on the data source and
   research question
 - Missing returns treated as zero is almost always wrong
+
+## Describe-Transform-Validate-Document
+
+The operational cycle that implements the three principles at every step.
+
+```dot
+digraph dtv_cycle {
+    rankdir=LR;
+    describe [label="DESCRIBE\nStats on input", shape=box, style=filled, fillcolor="#ccffcc"];
+    verify_describe [label="Data\nunderstood?", shape=diamond];
+    transform [label="TRANSFORM\nExecute operation", shape=box, style=filled, fillcolor="#ccccff"];
+    validate [label="VALIDATE\nCheck output", shape=diamond];
+    document [label="DOCUMENT\nLog decisions", shape=box, style=filled, fillcolor="#ffffcc"];
+    next [label="Next step", shape=ellipse];
+
+    describe -> verify_describe;
+    verify_describe -> transform [label="yes"];
+    verify_describe -> describe [label="investigate\nfirst"];
+    transform -> validate;
+    validate -> document [label="expected"];
+    validate -> describe [label="unexpected\ninvestigate"];
+    document -> next;
+    next -> describe;
+}
+```
+
+### DESCRIBE — Understand the Input
+
+Run descriptive statistics on the data you are about to transform.
+Follow the Principle 1 protocol above for panel structure, variable diagnostics,
+and data types/missing values. Key points:
+
+**Panel structure** (if applicable):
+- Panel ID and time ID, unique counts of each
+- Date range, balancedness (periods per unit)
+- Does panel ID × time uniquely identify rows?
+
+**Variable diagnostics** (key variables only, not blanket `describe()`):
+- Continuous: mean, median, std, p1, p5, p95, p99
+- Categorical: value counts and shares
+- Missing: count, share, systematic patterns
+
+**Before a merge:** also describe the join keys in both tables — unique values, overlap.
+
+### TRANSFORM — Execute the Operation
+
+Apply the data operation: merge, filter, construct variable, aggregate.
+
+**One logical operation per step.** Don't chain merge + filter + construct in a single step.
+
+Row count printed before and after (for sample-changing operations).
+
+### VALIDATE — Check the Result
+
+Compare before and after. Does the result make sense?
+
+**Row counts:**
+- Left join: row count should match left table (if right side is m:1)
+- Inner join: expect fewer rows — how many dropped?
+- Filter: how many rows removed? Is the drop rate reasonable?
+
+**Distribution checks:**
+- Re-run descriptive stats on affected variables
+- Compare to pre-transformation values
+- Flag anything unexpected
+
+**Economic sense:**
+- Magnitudes plausible? GDP growth of 300% is wrong.
+- Signs correct? Correlations match known stylized facts?
+- Spot-check a few observations by hand
+- When expected results or hypotheses are provided in PLAN.md, compare findings to them — flag and investigate divergences
+
+**If something looks unexpected:** STOP. Investigate before proceeding.
+
+### DOCUMENT — Log Everything
+
+In jupytext markdown cells:
+- What you did and why
+- Row count changes
+- Any surprising findings
+- Decision justifications (why this filter threshold, why this join type)
+
+**Row count tracking is mandatory** for every sample-changing operation.
+
+## Common Rationalizations
+
+| Excuse | Reality |
+|--------|---------|
+| "Data looks fine" | You haven't described it. You don't know. |
+| "Just a simple merge" | Simple merges create the worst silent bugs. |
+| "I'll validate at the end" | Can't isolate which step caused the problem. |
+| "Already know this data" | Your memory ≠ current state. Describe it. |
+| "It's the same as last session" | Files change. Upstream code changes. Describe fresh. |
+| "Only filtering, not transforming" | Filters change your sample. Describe what you're losing. |
+| "Quick exploration, not formal analysis" | If results inform decisions, they must be validated. |
+| "Row counts match, so the merge is fine" | Row counts don't catch value corruption or key mismatches. |
+| "I'll add descriptions when I write it up" | After-the-fact descriptions are biased by what you built. |
+| "Describing is busywork" | 30 seconds of describing vs hours of debugging wrong results. |
+
+## Red Flags - STOP and Start Over
+
+- Transform before describe
+- Merge without checking join keys in both tables
+- No row count printed after sample-changing operation
+- "Looks fine" without running diagnostics
+- Descriptions added after the fact
+- Skipping validation because "the numbers look right"
+- Multiple transformations without intermediate validation
+- Rationalizing "just this once"
+- "I already checked this data in a previous session"
+- "This is exploratory so it doesn't matter"
+
+**All of these mean: Undo the transformation. Describe first. Start over from that step.**
+
+## Verification Checklist
+
+Before marking a step complete:
+
+- [ ] Described input data before transformation
+- [ ] Key variables examined with appropriate diagnostics
+- [ ] Panel structure documented (if applicable)
+- [ ] Transformation matches plan specification
+- [ ] Row counts logged before and after (if sample-changing)
+- [ ] Output validated against expectations
+- [ ] Economic sense checked (magnitudes, signs, relationships)
+- [ ] Decisions documented in markdown cells
+- [ ] Unexpected findings investigated before proceeding
+
+Can't check all boxes? You skipped data-first discipline. Start over from the describe step.
 
 ## Pitfalls
 

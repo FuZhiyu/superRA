@@ -60,14 +60,9 @@ Task tool (general-purpose):
 
     ### Data Discipline
 
-    - [ ] **Description cells preserved:** Data description steps
-      (summary statistics, distribution checks) are present
-    - [ ] **Row counts logged:** Before/after row counts for
-      merges, filters, and sample-changing operations still logged
-    - [ ] **Validation intact:** Data validation checks (magnitude,
-      sign, cross-variable consistency) preserved
-    - [ ] **Documentation preserved:** Methodology documentation
-      and decision rationale retained
+    - [ ] Data discipline artifacts (description steps, row counts,
+      validation checks, documentation cells) preserved through
+      the merge (see loaded econ-data-analysis for details)
 
     ### Two-Commit Structure
 
