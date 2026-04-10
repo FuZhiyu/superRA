@@ -7,7 +7,7 @@ description: Use before merging analysis work — creates drift tests to guard k
 
 Before merging analysis work, protect results with drift tests, refactor code for codebase integration, and verify integration quality. Only invoked from finishing-analysis when the user chooses merge or PR.
 
-**Core principle:** Tests guard results. Refactoring integrates code. Review verifies both.
+**Core principle:** Tests guard results. Integration review identifies what needs changing. Refactoring addresses specific issues. Nothing merges without integration reviewer approval.
 
 **Announce at start:** "I'm using the pre-merge-gate skill to prepare this work for integration."
 
@@ -30,23 +30,17 @@ digraph pre_merge_gate {
     }
 
     subgraph cluster_stage2 {
-        label="Stage 2: Code Refactoring";
+        label="Stage 2: Integration Review → Refactor Loop";
         "Identify codebase conventions" [shape=box];
-        "Dispatch refactor subagent" [shape=box];
+        "Dispatch integration-reviewer subagent" [shape=box];
+        "Integration reviewer: APPROVE?" [shape=diamond];
+        "Dispatch refactor subagent with specific feedback" [shape=box];
         "Run drift tests after refactoring" [shape=box];
         "Drift tests pass?" [shape=diamond];
         "Assess economic significance" [shape=diamond];
         "STOP — ask user with before/after" [shape=box style=filled fillcolor=lightyellow];
         "Update test expectations, document reason" [shape=box];
         "Commit refactored code" [shape=box];
-    }
-
-    subgraph cluster_stage3 {
-        label="Stage 3: Integration Review";
-        "Dispatch integration-reviewer subagent" [shape=box];
-        "Integration reviewer: APPROVE?" [shape=diamond];
-        "Refactor fixes issues" [shape=box];
-        "Re-run drift tests" [shape=box];
         "Final commit" [shape=box style=filled fillcolor=lightgreen];
     }
 
@@ -60,21 +54,18 @@ digraph pre_merge_gate {
     "Run tests — establish green baseline" -> "Commit test files";
 
     "Commit test files" -> "Identify codebase conventions";
-    "Identify codebase conventions" -> "Dispatch refactor subagent";
-    "Dispatch refactor subagent" -> "Run drift tests after refactoring";
+    "Identify codebase conventions" -> "Dispatch integration-reviewer subagent";
+    "Dispatch integration-reviewer subagent" -> "Integration reviewer: APPROVE?";
+    "Integration reviewer: APPROVE?" -> "Final commit" [label="APPROVE"];
+    "Integration reviewer: APPROVE?" -> "Dispatch refactor subagent with specific feedback" [label="REVISE"];
+    "Dispatch refactor subagent with specific feedback" -> "Run drift tests after refactoring";
     "Run drift tests after refactoring" -> "Drift tests pass?";
     "Drift tests pass?" -> "Commit refactored code" [label="pass"];
     "Drift tests pass?" -> "Assess economic significance" [label="fail"];
     "Assess economic significance" -> "STOP — ask user with before/after" [label="meaningful"];
     "Assess economic significance" -> "Update test expectations, document reason" [label="minor variation"];
     "Update test expectations, document reason" -> "Commit refactored code";
-
-    "Commit refactored code" -> "Dispatch integration-reviewer subagent";
-    "Dispatch integration-reviewer subagent" -> "Integration reviewer: APPROVE?";
-    "Integration reviewer: APPROVE?" -> "Final commit" [label="APPROVE"];
-    "Integration reviewer: APPROVE?" -> "Refactor fixes issues" [label="REVISE"];
-    "Refactor fixes issues" -> "Re-run drift tests";
-    "Re-run drift tests" -> "Dispatch integration-reviewer subagent" [label="re-review"];
+    "Commit refactored code" -> "Dispatch integration-reviewer subagent" [label="re-review"];
 }
 ```
 
@@ -110,9 +101,9 @@ Drift tests guard key results from unintended changes during refactoring or futu
    git commit -m "add drift tests for key analysis results"
    ```
 
-## Stage 2: Code Refactoring
+## Stage 2: Integration Review → Refactor Loop
 
-Refactor analysis code to integrate cleanly with the existing codebase. The drift tests from Stage 1 ensure refactoring doesn't change results.
+The integration reviewer is the gatekeeper. Review first to identify what needs changing, then refactor to address specific issues. Nothing moves forward without integration reviewer approval.
 
 ### Steps
 
@@ -121,34 +112,29 @@ Refactor analysis code to integrate cleanly with the existing codebase. The drif
    - Existing code in the repository for naming patterns, file organization, utility functions
    - Available utility functions that the new code should adopt
 
-2. **Dispatch refactor subagent** using `./refactor-prompt.md`. Provide: codebase conventions discovered above, available utility functions, drift test file locations, and the analysis code to refactor.
+2. **Dispatch integration-reviewer subagent** using `./integration-reviewer-prompt.md`. Provide: the analysis code, codebase conventions, drift test results, and the diff against the base branch.
 
-3. **After refactoring: run drift tests.**
-   - **Pass:** Proceed to commit.
-   - **Fail:** Assess economic significance of the drift.
-     - **Meaningful drift** (results change substantively): STOP. Show the user before/after values and ask how to proceed. Do not silently accept changed results.
-     - **Minor variation** (rounding, floating-point, inconsequential magnitude change): Update test expectations with the new values, document the reason in a comment, and proceed.
+3. **If APPROVE:** No refactoring needed. Proceed to final commit.
 
-4. **Commit refactored code.**
-   ```bash
-   git add -A
-   git commit -m "refactor analysis code for codebase integration"
-   ```
+4. **If REVISE:** The reviewer identified specific issues. Refactor to address them:
 
-## Stage 3: Integration Review
+   a. **Dispatch refactor subagent** using `./refactor-prompt.md`. Provide: the reviewer's specific feedback items, codebase conventions, available utility functions, drift test file locations, and the analysis code to refactor.
 
-Verify the refactored code integrates cleanly and meets quality standards for merging.
+   b. **After refactoring: run drift tests.**
+      - **Pass:** Commit and re-submit for review.
+      - **Fail:** Assess economic significance of the drift.
+        - **Meaningful drift** (results change substantively): STOP. Show the user before/after values and ask how to proceed. Do not silently accept changed results.
+        - **Minor variation** (rounding, floating-point, inconsequential magnitude change): Update test expectations with the new values, document the reason in a comment, and proceed.
 
-### Steps
+   c. **Commit refactored code.**
+      ```bash
+      git add -A
+      git commit -m "refactor analysis code for codebase integration"
+      ```
 
-1. **Dispatch integration-reviewer subagent** using `./integration-reviewer-prompt.md`. Provide: the refactored code, codebase conventions, drift test results, and the diff against the pre-refactor state.
+   d. **Re-dispatch integration-reviewer.** Loop back to step 2. Iterate until APPROVE.
 
-2. **If REVISE:** refactor subagent fixes the issues, then:
-   - Re-run drift tests (refactoring fixes must not break results)
-   - Re-dispatch integration-reviewer
-   - Iterate until APPROVE
-
-3. **Final commit** with all integration review fixes.
+5. **Final commit** after integration reviewer APPROVE.
    ```bash
    git add -A
    git commit -m "address integration review feedback"
@@ -158,12 +144,11 @@ Verify the refactored code integrates cleanly and meets quality standards for me
 
 **Standalone analysis (no existing codebase to integrate with):**
 - Stage 1 (drift tests): Always run. Tests protect results regardless of codebase context.
-- Stage 2 (refactoring): Lighter pass -- focus on code quality and clarity rather than codebase convention alignment.
-- Stage 3 (integration review): Lighter pass -- focus on PR quality and self-containedness rather than cross-codebase consistency.
+- Stage 2 (integration review → refactor): Lighter pass -- focus on code quality and clarity rather than codebase convention alignment. Integration reviewer may APPROVE with no refactoring needed.
 
 **Small changes (single-file analysis, few results):**
 - Stage 1: Still run, but fewer tests needed.
-- Stages 2-3: May combine into a single review pass.
+- Stage 2: Integration reviewer may APPROVE immediately if code is clean.
 
 ## Handling Drift Test Failures After Refactoring
 
@@ -186,7 +171,7 @@ This is the critical judgment call in the process. When drift tests fail after r
 
 ## Agent Teams Mode
 
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the 3-stage gate can be orchestrated as a team instead of sequential subagent dispatches. This enables direct iteration between creator/reviewer and refactorer/reviewer without the orchestrator relaying messages.
+When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the gate can be orchestrated as a team instead of sequential subagent dispatches. This enables direct iteration between creator/reviewer and integration-reviewer/refactorer without the orchestrator relaying messages.
 
 **Invoke `superRA:agent-orchestration` for the Pre-Merge Gate Team recipe** — it has the full team composition (4 teammates), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
 
@@ -196,15 +181,19 @@ The lead still handles user-facing decisions (drift test candidates, meaningful 
 
 **Never:**
 - Skip Stage 1 (drift tests) -- they are the safety net for everything that follows
+- Refactor before integration reviewer has identified issues -- review first, then fix
 - Proceed past failing drift tests without assessment
 - Silently update test expectations for meaningful result changes
 - Remove data diagnostics, row counts, or validation steps during refactoring
 - Judge the researcher's methodology choice -- focus on implementation correctness
 - Refactor before drift tests are committed and green
+- Merge without integration reviewer APPROVE
 
 **Always:**
 - Ask the user which results to protect before creating tests
+- Run integration review before any refactoring
 - Run drift tests after every refactoring change
+- Re-submit to integration reviewer after every refactoring round
 - Stop and ask the user when drift indicates meaningful result changes
 - Preserve all data discipline artifacts (describe steps, row counts, validation)
 - Commit at each stage boundary
