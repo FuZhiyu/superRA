@@ -46,7 +46,7 @@ Task tool (general-purpose):
         Invoke the Skill tool: superRA:econ-data-analysis
 
     Follow the loaded discipline throughout your work. This gives you the
-    Iron Law, DTV cycle, verification checklist, and pitfall checklists.
+    Iron Law, Describe-Analyze-Doc cycle, verification checklist, and pitfall checklists.
 
     ## Your Job
 

@@ -1,6 +1,6 @@
 ---
 name: using-analysis-worktrees
-description: Use when starting analysis work that needs isolation from current workspace or before executing analysis plans - creates isolated git worktrees with data seeding and environment setup
+description: Use when you want an isolated workspace for analysis — creates git worktrees with data seeding and environment setup. Optional; for simple analyses, a feature branch without a worktree is sufficient.
 ---
 
 # Using Analysis Worktrees
@@ -8,6 +8,11 @@ description: Use when starting analysis work that needs isolation from current w
 ## Overview
 
 Git worktrees create isolated workspaces sharing the same repository, allowing work on multiple analyses simultaneously without switching.
+
+**This is optional.** For simple analyses, a feature branch without a worktree is sufficient. Worktrees are recommended when:
+- Running multiple analyses simultaneously
+- The analysis may take multiple sessions and you want full isolation
+- You need separate data copies or environment setup
 
 **Core principle:** Systematic directory selection + data seeding + environment verification = reliable isolation.
 
@@ -205,8 +210,8 @@ Ready to analyze <topic>
 ## Integration
 
 **Called by:**
-- **data-exploration** — When design is approved and implementation follows
-- **executing-analysis** — REQUIRED before executing any tasks
+- **data-exploration** — When the user wants an isolated workspace
+- **executing-analysis** — Recommended for complex or multi-session analyses
 - Any skill needing isolated workspace
 
 **Depends on:**

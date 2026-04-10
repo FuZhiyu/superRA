@@ -219,7 +219,7 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 - **Preserve user work.** Never discard dirty state or unrelated edits without explicit approval.
 - **Regenerate over edit.** For generated files (tables, figures, compiled outputs), regenerate from merged source rather than hand-editing.
 - **RA framing.** You propose integration, present options, and implement the researcher's decisions. You never judge whether the methodology is correct.
-- **Data discipline.** If incoming changes affect data processing, verify describe-transform-validate artifacts are preserved in the merged result.
+- **Data discipline.** If incoming changes affect data processing, verify describe-analyze-doc artifacts are preserved in the merged result.
 - **Drift tests are the safety net.** Always run them after merge. Never skip. Never silently update expectations for meaningful changes.
 
 ## When to Ask the User
@@ -263,7 +263,7 @@ When the merge is complete, summarize:
 
 When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the propose+review cycle can be orchestrated as a team for Tier 2 and Tier 3 merges.
 
-**Invoke `superRA:using-agent-teams` for the Semantic Merge Team recipe** — it has the team composition (2 teammates), task graph, iteration patterns, and lead responsibilities.
+**Invoke `superRA:agent-orchestration` for the Semantic Merge Team recipe** — it has the team composition (2 teammates), task graph, iteration patterns, and lead responsibilities.
 
 The lead still handles tier classification, user-facing decisions (Tier 3 integration map), commits at each stage, and drift test verification.
 
@@ -298,7 +298,7 @@ The lead still handles tier classification, user-facing decisions (Tier 3 integr
 
 **Pairs with:**
 - **superRA:pre-merge-gate** — Runs before this skill in finishing-analysis (creates drift tests that this skill uses as safety net)
-- **superRA:using-agent-teams** — Semantic Merge Team recipe for Tier 2/3 merges
+- **superRA:agent-orchestration** — Semantic Merge Team recipe for Tier 2/3 merges
 
 **References:**
 - **semantic-merge-integration** (global skill) — General-purpose merge philosophy that this skill adapts for research

@@ -2,7 +2,7 @@
 
 Use this template when dispatching a data integrity reviewer subagent.
 
-**Purpose:** Verify the implementer followed data-first discipline — data described before transformed, validated after, documented throughout.
+**Purpose:** Verify the implementer followed data-first discipline — data described before analysis, verified and documented after.
 
 **Dispatch FIRST, before implementation review.**
 
@@ -44,8 +44,8 @@ Task tool (general-purpose):
 
         Invoke the Skill tool: superRA:econ-data-analysis
 
-    Use the loaded Iron Law, DTV cycle, verification checklist, and pitfall
-    checklists as your review framework throughout.
+    Use the loaded Iron Law, Describe-Analyze-Doc cycle, verification checklist,
+    and pitfall checklists as your review framework throughout.
 
     ## Your Review Scope
 
