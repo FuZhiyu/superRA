@@ -26,21 +26,20 @@ This enables `spawn_agent`, `wait`, and `close_agent` for skills like `agent-orc
 
 ## Named agent dispatch
 
-Claude Code skills reference named agent types like `superpowers:code-reviewer`.
+Claude Code skills reference named agent types like `superRA:reviewer` or `superRA:implementer`.
 Codex does not have a named agent registry — `spawn_agent` creates generic agents
 from built-in roles (`default`, `explorer`, `worker`).
 
 When a skill says to dispatch a named agent type:
 
-1. Find the agent's prompt file (e.g., `agents/code-reviewer.md` or the skill's
-   local prompt template like `code-quality-reviewer-prompt.md`)
-2. Read the prompt content
-3. Fill any template placeholders (`{BASE_SHA}`, `{WHAT_WAS_IMPLEMENTED}`, etc.)
-4. Spawn a `worker` agent with the filled content as the `message`
+1. Find the agent definition (e.g., `agents/reviewer.md` or `agents/implementer.md`)
+2. Read the agent definition content
+3. Add dispatch context (skill to load, domain reference path, task-specific details)
+4. Spawn a `worker` agent with the combined content as the `message`
 
 | Skill instruction | Codex equivalent |
 |-------------------|------------------|
-| `Task tool (superpowers:code-reviewer)` | `spawn_agent(agent_type="worker", message=...)` with `code-reviewer.md` content |
+| `Agent(subagent_type: "reviewer")` | `spawn_agent(agent_type="worker", message=...)` with `agents/reviewer.md` content |
 | `Task tool (general-purpose)` with inline prompt | `spawn_agent(message=...)` with the same prompt |
 
 ### Message framing

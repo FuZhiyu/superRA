@@ -123,27 +123,67 @@ If the user declines, proceed — they've given explicit consent to work on the 
 
 #### Per-Task Execution Steps
 
-1. **Dispatch implementer** (subagent mode: `./implementer-prompt.md`; direct mode: implement yourself following econ-data-analysis discipline)
+1. **Dispatch implementer:**
+   - Subagent mode: `Agent(subagent_type: "implementer")` — see dispatch example below
+   - Direct mode: invoke `superRA:implementer-protocol`, then implement yourself
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below)
 3. **Once DONE or DONE_WITH_CONCERNS:**
    - The implementer has already committed: code + PLAN.md (steps `[x]`, status `IMPLEMENTED`) + RESULTS_UPDATE.md (findings)
-   a. Dispatch data integrity reviewer (`./data-reviewer-prompt.md`)
+   a. Dispatch data integrity reviewer: `Agent(subagent_type: "reviewer")` — see dispatch example below
    b. **If REVISE:** The reviewer has committed review notes to PLAN.md. Clear the review notes, then re-dispatch the implementer with the reviewer's specific feedback items. Then re-dispatch the data integrity reviewer. Iterate until APPROVE. Do NOT proceed to implementation review until data integrity is approved.
 4. **Once data integrity APPROVE:**
-   a. Dispatch implementation reviewer (`./implementation-reviewer-prompt.md`)
+   a. Dispatch implementation reviewer: `Agent(subagent_type: "reviewer")` — same agent type, different handoff rules
    b. **If REVISE:** Same pattern — reviewer commits notes, you clear them, re-dispatch implementer, re-dispatch reviewer. Iterate until APPROVE.
 5. **Once implementation reviewer APPROVE:**
    - The impl reviewer has committed `**Review status:** APPROVED` to PLAN.md
    - If findings change upcoming tasks: update future task descriptions in PLAN.md and commit
    - Proceed to next task
 
-**In direct mode:** Steps 1-2 are done by the main agent directly (including doc updates). Steps 3-5 are unchanged — still dispatch reviewer subagents.
+**In direct mode:** Steps 1-2 are done by the main agent directly (invoke `superRA:implementer-protocol` for the execution protocol, invoke `superRA:econ-data-analysis` for discipline). Steps 3-5 are unchanged — still dispatch reviewer subagents.
 
-#### When dispatching implementer subagents, provide:
-- Full task text from PLAN.md
-- Relevant prior results from RESULTS_UPDATE.md (so implementer has context)
-- Expected results/hypotheses from PLAN.md header (if provided, so implementer knows what to expect)
-- For sensitivity tasks: baseline results to compare against
+#### Dispatch Examples
+
+**Implementer:**
+```
+Agent(subagent_type: "implementer"):
+  Load skill: superRA:econ-data-analysis
+  Task: Implement Task N: [task name]
+  Task description: [FULL TEXT from PLAN.md — paste it, don't make subagent read file]
+  Context: [what analysis this is, what prior steps produced, what data is available]
+  Expected results: [hypotheses from PLAN.md, if any]
+  Prior results: [key findings from RESULTS_UPDATE.md]
+  Work from: [directory]
+  Handoff: Mark steps [x] in PLAN.md, set IMPLEMENTED, write findings to RESULTS_UPDATE.md.
+    Commit together: code + PLAN.md + RESULTS_UPDATE.md
+  Counterpart: reviewer (for Agent Teams)
+```
+
+**Data integrity reviewer:**
+```
+Agent(subagent_type: "reviewer"):
+  Load skill: superRA:econ-data-analysis
+  Review scope: data integrity for Task N
+  What was requested: [task requirements from PLAN.md]
+  What implementer claims: [from implementer's report — key findings, row counts, concerns]
+  Handoff: If REVISE — set PLAN.md status to "REVISE (data integrity)" with issues blockquote, commit.
+    If APPROVE with concerns — add caveat to RESULTS_UPDATE.md, commit.
+    If APPROVE clean — no commits needed.
+  Counterpart: implementer (for Agent Teams)
+```
+
+**Implementation reviewer:**
+```
+Agent(subagent_type: "reviewer"):
+  Load skill: superRA:econ-data-analysis
+  Review scope: implementation correctness for Task N
+  What was requested: [task requirements]
+  What implementer built: [from implementer's report]
+  Expected results: [from PLAN.md, if provided]
+  Handoff: If REVISE — set PLAN.md status to "REVISE (implementation)" with issues, commit.
+    If APPROVE — set PLAN.md status to "APPROVED", commit.
+    Add reliability caveats to RESULTS_UPDATE.md if needed.
+  Counterpart: implementer (for Agent Teams)
+```
 
 ### Step 3: Verify Pipeline
 
@@ -292,11 +332,10 @@ Use the least powerful model that can handle each role:
 
 **Ask for clarification rather than guessing.**
 
-## Prompt Templates
+## Agent Types
 
-- `./implementer-prompt.md` — Dispatch analysis implementer
-- `./data-reviewer-prompt.md` — Dispatch data integrity reviewer
-- `./implementation-reviewer-prompt.md` — Dispatch implementation and code quality reviewer
+- **`implementer`** — Dispatch with `superRA:econ-data-analysis` skill. No additional domain reference needed (econ-data-analysis IS the analysis domain).
+- **`reviewer`** — Dispatch with `superRA:econ-data-analysis` skill. Provide stage-specific handoff rules (data integrity vs implementation) in the dispatch prompt.
 
 ## Agent Teams Mode
 

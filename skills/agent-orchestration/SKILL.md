@@ -196,9 +196,9 @@ executing-analysis (Analysis Team)
 **Spawn:**
 ```
 Create an agent team for analysis execution:
-- implementer: [paste implementer-prompt.md with project context filled in]
-- data-reviewer: [paste data-reviewer-prompt.md with project context filled in]
-- implementation-reviewer: [paste implementation-reviewer-prompt.md filled in]
+- implementer: [use `implementer` agent type; load superRA:econ-data-analysis; provide project context]
+- data-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; handoff: PLAN.md data integrity status]
+- implementation-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; handoff: PLAN.md APPROVED status]
 ```
 
 **Task graph (per analysis task N):**
@@ -214,7 +214,7 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 
 **Lead responsibilities:**
 - Read PLAN.md, create full task graph with all dependencies
-- Provide each teammate with their prompt template and project context
+- Provide each teammate with their agent type, skill to load, and project context
 - Verify that teammates commit their own PLAN.md and RESULTS_UPDATE.md updates atomically with their work (per executing-analysis responsibility matrix)
 - Monitor for BLOCKED or data quality escalations (teammates message lead)
 - Handle sensitivity analysis assessment
@@ -234,10 +234,10 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 **Spawn:**
 ```
 Create an agent team for pre-merge quality gate:
-- test-creator: [paste test-creator-prompt.md with filled placeholders]
-- test-reviewer: [paste test-reviewer-prompt.md with filled placeholders]
-- refactorer: [paste refactor-prompt.md with filled placeholders]
-- integration-reviewer: [paste integration-reviewer-prompt.md with filled placeholders]
+- test-creator: [use `implementer` agent type; load superRA:econ-data-analysis; domain ref: pre-merge-gate/references/drift-test-quality.md]
+- test-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; domain ref: pre-merge-gate/references/drift-test-quality.md]
+- refactorer: [use `implementer` agent type; load superRA:econ-data-analysis; domain ref: pre-merge-gate/references/codebase-integration.md]
+- integration-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; domain ref: pre-merge-gate/references/codebase-integration.md]
 
 Require plan approval before they make changes.
 ```
@@ -274,8 +274,8 @@ Require plan approval before they make changes.
 **Spawn:**
 ```
 Create an agent team for semantic merge integration:
-- merge-proposer: [paste merge-proposer-prompt.md with merge context filled in]
-- merge-reviewer: [paste merge-reviewer-prompt.md with merge context filled in]
+- merge-proposer: [use `implementer` agent type; load superRA:econ-data-analysis; domain ref: semantic-merge/references/merge-quality.md]
+- merge-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; domain ref: semantic-merge/references/merge-quality.md]
 ```
 
 **Task graph:**
