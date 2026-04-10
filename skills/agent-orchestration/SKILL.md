@@ -246,19 +246,22 @@ Require plan approval before they make changes.
 1. `create-drift-tests` → assigned: test-creator
 2. `review-drift-tests` → depends: 1, assigned: test-reviewer
 3. `establish-green-baseline` → depends: 2, assigned: test-creator (run tests)
-4. `refactor-code` → depends: 3, assigned: refactorer
-5. `run-drift-tests-post-refactor` → depends: 4, assigned: refactorer
-6. `review-integration` → depends: 5, assigned: integration-reviewer
+4. `review-integration` → depends: 3, assigned: integration-reviewer
+5. `refactor-code` → depends: 4 (only if REVISE), assigned: refactorer
+6. `run-drift-tests-post-refactor` → depends: 5, assigned: refactorer
+7. `re-review-integration` → depends: 6, assigned: integration-reviewer
 
-**Iteration:** When test-reviewer sends REVISE, they message test-creator directly with specific feedback. Test-creator fixes and marks task updated. Test-reviewer re-reviews. Same pattern for integration-reviewer ↔ refactorer.
+**Flow:** Integration reviewer runs first (task 4). If APPROVE, no refactoring needed — skip tasks 5-7. If REVISE, refactorer addresses specific feedback (task 5), drift tests verify (task 6), integration reviewer re-reviews (task 7). Loop until APPROVE.
+
+**Iteration:** When test-reviewer sends REVISE, they message test-creator directly with specific feedback. Test-creator fixes and marks task updated. Test-reviewer re-reviews. For the integration loop: integration-reviewer messages refactorer with specific issues, refactorer fixes and runs drift tests, then messages integration-reviewer to re-review.
 
 **Lead responsibilities:**
 - Present drift test candidates to user BEFORE creating team (Stage 1 user confirmation)
 - Create team and task graph with dependencies
-- Monitor for meaningful drift escalations from refactorer (Stage 2)
+- Monitor for meaningful drift escalations from refactorer
 - Handle user communication for all escalation decisions
 - Commit at stage boundaries
-- Clean up team after final APPROVE
+- Clean up team after final integration reviewer APPROVE
 
 #### Semantic Merge Team
 
