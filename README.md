@@ -14,22 +14,27 @@ Every data operation follows a Describe-Analyze-Doc cycle. Every task gets a two
 
 ## How It Works
 
-superRA activates automatically. When your agent sees a research task, it doesn't jump into code — it follows a structured workflow:
+superRA activates automatically. When your agent sees a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**.
 
 ```
-data-exploration          Inventory available data. Hard gate: no analysis until approved.
-       |
-analysis-planning         Break work into tasks with actual code at every step.
-       |
-executing-analysis        Dispatch one agent per task. Two-stage review after each.
-       |                    Implementer -> Data Review -> Implementation Review -> Next task
-       |
-finishing-analysis        Verify reproducibility. Generate report. Present merge/PR options.
-       |
-pre-merge-gate            Create drift tests to protect results. Refactor for integration.
+PLAN            data-exploration → analysis-planning
+                Inventory data (hard gate). Break work into tasks with code at every step.
+                Output: PLAN.md + RESULTS_UPDATE.md (living handoff documents)
+                    |
+IMPLEMENT       executing-analysis (implementer agent per task)
+                Follow econ-data-analysis discipline: Describe → Analyze → Doc.
+                Atomic commit per task: code + PLAN.md status + RESULTS_UPDATE.md findings.
+                    |
+VALIDATE        executing-analysis (reviewer agent after each task)
+                Two-stage review: data integrity → implementation correctness.
+                REVISE loops until APPROVED. Review is never skipped.
+                    |
+INTEGRATE       finishing-analysis → pre-merge-gate → semantic-merge
+                Verify reproducibility. Create drift tests. Refactor for codebase.
+                Integration review. Generate report. Merge or PR.
 ```
 
-Each task produces an atomic commit: code + PLAN.md status + RESULTS_UPDATE.md findings. If the session dies at any point, the next session sees exactly what's done, what's under review, and what has open issues.
+Each task produces an atomic commit. If the session dies at any point, the next session reads PLAN.md + RESULTS_UPDATE.md + git state and picks up exactly where the last one stopped.
 
 ## Installation
 
@@ -48,29 +53,35 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 ## Skills
 
-### Core Discipline
+### Core Discipline (loaded by every agent)
 
 | Skill | What It Does |
 |-------|-------------|
-| **econ-data-analysis** | Iron Law enforcement. Describe-Analyze-Doc cycle. Pitfall checklists for merges, aggregations, filtering, variable construction. Every agent loads this. |
+| **econ-data-analysis** | Iron Law enforcement. Describe-Analyze-Doc cycle. Pitfall checklists for merges, aggregations, filtering, variable construction. |
 | **verification-before-completion** | No completion claims without fresh verification evidence. Prevents "looks fine" from reaching merge. |
 
-### Research Workflow
+### PLAN Phase
 
 | Skill | What It Does |
 |-------|-------------|
 | **data-exploration** | Inventory available data, identify gaps, research sources. Hard gate: no analysis starts without approved inventory. |
 | **analysis-planning** | Create step-by-step plans with actual code. Every step has describe-validate discipline. Plans are living handoff documents. |
-| **executing-analysis** | Dispatch fresh subagent per task with two-stage review (data integrity then implementation). Falls back to direct execution when requested. |
-| **finishing-analysis** | Verify reproducibility, generate work journal, present options: merge locally, push & PR, keep branch, or discard. |
 
-### Quality Gates
+### IMPLEMENT + VALIDATE Phase
 
 | Skill | What It Does |
 |-------|-------------|
-| **pre-merge-gate** | Create drift tests to protect key results. Refactor code for integration. Review quality. Three stages with iteration. |
+| **executing-analysis** | Dispatch implementer agent per task, reviewer agent after each. Two-stage review (data integrity then implementation). Falls back to direct execution when requested. |
 | **requesting-analysis-review** | Ad-hoc single-pass review for quick checks, before-merge verification, or when data looks unexpected. |
 | **receiving-code-review** | Technical evaluation of review feedback. Verify before implementing. No performative agreement. |
+
+### INTEGRATE Phase
+
+| Skill | What It Does |
+|-------|-------------|
+| **finishing-analysis** | Verify reproducibility, generate work journal, present options: merge locally, push & PR, keep branch, or discard. |
+| **pre-merge-gate** | Create drift tests to protect key results. Refactor code for integration. Integration review with iteration. |
+| **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact. Escalates methodology decisions to user. |
 
 ### Infrastructure
 
@@ -78,8 +89,9 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 |-------|-------------|
 | **using-analysis-worktrees** | Isolated git worktrees with data seeding. Parallel analysis without branch switching. |
 | **worktree-data-sync** | Sync non-git data between worktrees (seed, diff, apply modes). |
-| **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact. Escalates methodology decisions to user. |
 | **agent-orchestration** | Multi-agent dispatch: parallel subagents for independent tasks, Agent Teams for iterative workflows. |
+| **reviewer-protocol** | Alias skill for direct mode — loads the reviewer agent protocol when the main agent reviews work itself. |
+| **implementer-protocol** | Alias skill for direct mode — loads the implementer agent protocol when the main agent implements work itself. |
 
 ### Meta
 
