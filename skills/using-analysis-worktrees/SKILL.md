@@ -206,7 +206,6 @@ Ready to analyze <topic>
 
 **Called by:**
 - **data-exploration** — When design is approved and implementation follows
-- **subagent-driven-analysis** — REQUIRED before executing any tasks
 - **executing-analysis** — REQUIRED before executing any tasks
 - Any skill needing isolated workspace
 

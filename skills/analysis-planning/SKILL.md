@@ -81,7 +81,7 @@ The pipeline file must:
 ```markdown
 # [Analysis Name] Plan
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use superRA:data-first-analysis at every step. Use superRA:subagent-driven-analysis (recommended) or superRA:executing-analysis to execute this plan. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use superRA:econ-data-analysis at every step. Use superRA:executing-analysis to execute this plan. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
 
 **Objective:** [One sentence describing what this analysis produces]
 
@@ -270,10 +270,7 @@ After saving the plan, offer execution choice:
 
 **Which approach?"**
 
-**If Subagent-Driven chosen:**
-- **REQUIRED DISCIPLINE:** Use superRA:subagent-driven-analysis
-- Fresh subagent per task + two-stage review (data integrity + implementation correctness)
-
-**If Inline Execution chosen:**
-- **REQUIRED DISCIPLINE:** Use superRA:executing-analysis
-- Sequential execution with data-first-analysis discipline at each step
+**REQUIRED DISCIPLINE:** Use superRA:executing-analysis
+- Defaults to subagent mode (fresh subagent per task + two-stage review)
+- Falls back to direct mode for simple tasks or when user requests it
+- Review always happens regardless of mode

@@ -73,11 +73,19 @@ Task tool (superRA:data-analysis-reviewer or general-purpose):
     - Should the plan be updated based on what was found?
     - Is RESULTS_UPDATE.md updated with findings from this task?
 
-    Report:
+    ## Report
+
     - Strengths (good practices observed)
     - Issues: Critical / Major / Minor
     - Assessment: APPROVE / REVISE / MAJOR REVISION
     - Suggested plan updates (if findings require changing upcoming steps)
+
+    **If your assessment is REVISE or MAJOR REVISION:**
+    End your report with:
+
+    ---
+    ACTION REQUIRED: Re-dispatch the implementer with the above feedback,
+    then re-dispatch this implementation review. Iterate until APPROVE.
 
     ## If Running as Agent Team Teammate
 

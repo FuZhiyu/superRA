@@ -46,40 +46,22 @@ Task tool (general-purpose):
         Invoke the Skill tool: superRA:econ-data-analysis
 
     Follow the loaded discipline throughout your work. This gives you the
-    complete data-first analysis framework with principles and pitfall checklists.
+    Iron Law, DTV cycle, verification checklist, and pitfall checklists.
 
     ## Your Job
 
     Once you're clear on requirements:
-    1. Follow data-first-analysis discipline at every step:
-       - DESCRIBE input data (panel structure, key variables, missing values)
-       - TRANSFORM (merge, filter, construct — one operation at a time)
-       - VALIDATE (row counts, distributions, economic sense)
-       - DOCUMENT (log decisions in jupytext markdown cells)
+    1. Follow data-first discipline throughout (as loaded via econ-data-analysis)
     2. Write scripts in jupytext percent format (.py or .jl with # %% cells)
-    3. Log row counts for every sample-changing operation
-    4. Commit your work
-    5. Self-review (see below)
-    6. Report back
+    3. Commit your work
+    4. Self-review (see below)
+    5. Report back
 
     Work from: [directory]
 
     **While you work:** If you encounter unexpected data (wrong magnitudes,
     high missingness, merge issues), **stop and report it**. Don't proceed
     with questionable data.
-
-    ## Data-First Discipline
-
-    At every step:
-    - BEFORE any merge: describe join keys in both tables
-    - AFTER any merge: check row counts, log unmatched
-    - BEFORE any filter: know what you're removing and why
-    - AFTER any filter: log rows dropped, check non-randomness
-    - For variable construction: check denominators, benchmark values
-    - Use type-appropriate diagnostics (continuous: tail percentiles;
-      categorical: value counts)
-
-    **If you transform without describing first, undo and start over.**
 
     ## When You're in Over Your Head
 
@@ -96,12 +78,6 @@ Task tool (general-purpose):
     **How to escalate:** Report with status BLOCKED or NEEDS_CONTEXT.
 
     ## Before Reporting Back: Self-Review
-
-    **Data discipline:**
-    - Did I describe data before every transformation?
-    - Are row counts logged for every sample-changing operation?
-    - Did I validate results against economic intuition?
-    - Are decisions documented in markdown cells?
 
     **Completeness:**
     - Did I implement everything in the task spec?

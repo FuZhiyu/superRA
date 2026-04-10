@@ -40,7 +40,7 @@ Only one team can exist per session. You must clean up the current team before s
 The full superRA workflow spans two team-worthy phases:
 
 ```
-subagent-driven-analysis (Analysis Team)
+executing-analysis (Analysis Team)
   → cleanup
     → finishing-analysis
       → pre-merge-gate (Pre-Merge Team)
@@ -57,7 +57,7 @@ subagent-driven-analysis (Analysis Team)
 
 ### Analysis Task Team
 
-**When:** `superRA:subagent-driven-analysis` with multiple tasks
+**When:** `superRA:executing-analysis` in subagent mode with multiple tasks
 
 **Teammates (3):**
 - `implementer` — Executes analysis tasks (data-first discipline)
@@ -224,7 +224,7 @@ On session resume, this tells the new lead exactly where to pick up.
 
 **Skills that support Agent Teams mode:**
 - **superRA:pre-merge-gate** — 4-teammate pre-merge team
-- **superRA:subagent-driven-analysis** — 3-teammate analysis team
+- **superRA:executing-analysis** — 3-teammate analysis team
 - **superRA:semantic-merge** — 2-teammate merge team
 
 **Skills that always use subagents:**
