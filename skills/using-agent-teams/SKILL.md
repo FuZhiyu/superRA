@@ -131,6 +131,37 @@ Require plan approval before they make changes.
 - Commit at stage boundaries
 - Clean up team after final APPROVE
 
+### Semantic Merge Team
+
+**When:** `superRA:semantic-merge` at Tier 2 or Tier 3
+
+**Teammates (2):**
+- `merge-proposer` — Analyzes incoming intent, proposes integration, executes two-commit merge
+- `merge-reviewer` — Reviews integration for intent preservation, research integrity, data discipline
+
+**Spawn:**
+```
+Create an agent team for semantic merge integration:
+- merge-proposer: [paste merge-proposer-prompt.md with merge context filled in]
+- merge-reviewer: [paste merge-reviewer-prompt.md with merge context filled in]
+```
+
+**Task graph:**
+1. `propose-integration` → assigned: merge-proposer
+2. `review-integration` → depends: 1, assigned: merge-reviewer
+
+**Iteration:** When merge-reviewer sends REVISE, they message merge-proposer directly with specific feedback (what conflict resolution is wrong, what reference is stale). Merge-proposer fixes and messages back. Merge-reviewer re-reviews.
+
+**Lead responsibilities:**
+- Perform tier classification before deciding whether to spawn team (Tier 1 = no team)
+- For Tier 3: present integration map to user, relay user decisions to proposer
+- Commit at each stage (mechanical commit, integration commit)
+- Run drift tests and pipeline verification after integration
+- Handle drift test failure escalation to user
+- Clean up team after final APPROVE
+
+**Team slot:** This team runs during finishing-analysis Step 4d. The pre-merge-gate team (if used) must be cleaned up before this point. The current workflow guarantees this: pre-merge gate runs in Step 4a, team cleaned up before Step 4d.
+
 ## Team Lifecycle & Session Handoff
 
 ### Cleanup Protocol
@@ -194,6 +225,7 @@ On session resume, this tells the new lead exactly where to pick up.
 **Skills that support Agent Teams mode:**
 - **superRA:pre-merge-gate** — 4-teammate pre-merge team
 - **superRA:subagent-driven-analysis** — 3-teammate analysis team
+- **superRA:semantic-merge** — 2-teammate merge team
 
 **Skills that always use subagents:**
 - **superRA:dispatching-parallel-agents** — independent tasks, no iteration needed

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# PreToolUse hook: intercept bare git merge/rebase/cherry-pick commands
+# Injects a reminder to use superRA:semantic-merge for research-aware integration.
+# Does NOT block — the discipline system handles enforcement.
+
+set -euo pipefail
+
+# Read tool input from stdin
+input=$(cat)
+
+# Fast path: grep raw input for merge keywords before any JSON parsing.
+# This makes the no-match case (vast majority of Bash calls) nearly zero-cost.
+if ! echo "$input" | grep -qE 'git (merge|rebase|cherry-pick)(\s|"|$)'; then
+  printf '{}\n'
+  exit 0
+fi
+
+# Extract the command properly via JSON parsing
+command=$(echo "$input" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print(d.get('tool_input', {}).get('command', ''))
+" 2>/dev/null || echo "")
+
+# Skip abort, continue, skip, quit — these are not new merges
+if echo "$command" | grep -qE 'git (merge|rebase|cherry-pick) --(abort|continue|skip|quit)'; then
+  printf '{}\n'
+  exit 0
+fi
+
+# Detect actual merge/rebase/cherry-pick commands
+if echo "$command" | grep -qE '(^|\s)git (merge|rebase|cherry-pick)(\s|$)'; then
+  context="<IMPORTANT>STOP. You are about to run a bare git merge/rebase/cherry-pick. In a research project, you MUST invoke superRA:semantic-merge first to classify conflicts by research impact and protect analysis results. Do not proceed with a mechanical merge.</IMPORTANT>"
+
+  # Platform-appropriate output format (matches session-start pattern)
+  if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+    printf '{"additional_context":"%s"}\n' "$context"
+  elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+    printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"%s"}}\n' "$context"
+  else
+    printf '{"additionalContext":"%s"}\n' "$context"
+  fi
+else
+  printf '{}\n'
+fi
+
+exit 0
