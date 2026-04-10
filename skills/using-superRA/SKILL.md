@@ -3,6 +3,15 @@ name: using-superRA
 description: Use when starting any conversation - establishes how to find and use skills for economic research workflows, requiring Skill tool invocation before ANY response including clarifying questions
 ---
 
+## MANDATORY: Session Start Actions
+
+Before your first substantive response, run these cross-session detection checks:
+1. Check for PLAN.md in the working directory
+2. Check for analysis worktrees (`git worktree list`)
+3. If either exists, report to the user: "Found in-progress analysis work: [details]"
+
+Do NOT skip these because the user "jumped straight into a task." The checks take 5 seconds and prevent lost work.
+
 <SUBAGENT-STOP>
 If you were dispatched as a subagent to execute a specific task, skip this skill.
 </SUBAGENT-STOP>
