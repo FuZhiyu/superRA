@@ -181,15 +181,35 @@ git commit -m "remove development documents (preserved in branch history)"
 **Step 4d: Execute Merge or PR**
 
 **For Option 1 (Merge Locally):**
+
+First, update the analysis branch from the base branch using semantic merge:
+
+```
+Invoke superRA:semantic-merge to merge <base-branch> into <analysis-branch>
+```
+
+The semantic merge skill classifies conflicts by research impact, escalates research-meaningful decisions to the user, and uses a two-commit integration structure. After semantic merge completes and drift tests pass:
+
 ```bash
 git checkout <base-branch>
 git pull
-git merge <analysis-branch>
+git merge <analysis-branch>  # Should be fast-forward after branch update
 ```
+
+Note: The merge-guard hook may remind you to use semantic-merge here. This is expected — semantic merge already ran above. Proceed with the fast-forward merge.
 
 Verify pipeline still runs on merged result. Then cleanup worktree.
 
 **For Option 2 (Push and Create PR):**
+
+First, update the analysis branch from the base branch:
+
+```
+Invoke superRA:semantic-merge to merge <base-branch> into <analysis-branch>
+```
+
+After semantic merge completes, push and create PR:
+
 ```bash
 git push -u origin <analysis-branch>
 
@@ -309,6 +329,7 @@ git worktree remove <worktree-path>
 
 **Invokes:**
 - **superRA:pre-merge-gate** — REQUIRED for Options 1 and 2 (creates drift tests, refactors, reviews integration)
+- **superRA:semantic-merge** — REQUIRED for Options 1 and 2 (intent-based branch integration in Step 4d)
 
 **Pairs with:**
 - **superRA:using-analysis-worktrees** — Cleans up worktree created by that skill

@@ -5,6 +5,11 @@
       {
         "command": "./hooks/session-start"
       }
+    ],
+    "preToolUse": [
+      {
+        "command": "./hooks/merge-guard"
+      }
     ]
   }
 }
