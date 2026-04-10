@@ -31,16 +31,17 @@ BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-**2. Dispatch analysis-reviewer subagent:**
+**2. Dispatch reviewer subagent:**
 
-Use Task tool with superRA:data-analysis-reviewer type, fill template at `analysis-reviewer.md`
-
-**Placeholders:**
-- `{WHAT_WAS_IMPLEMENTED}` - What analysis step you completed
-- `{PLAN_OR_REQUIREMENTS}` - What the plan specified
-- `{BASE_SHA}` - Starting commit
-- `{HEAD_SHA}` - Ending commit
-- `{DESCRIPTION}` - Brief summary
+```
+Agent(subagent_type: "reviewer"):
+  Load skill: superRA:econ-data-analysis
+  Review scope: [DESCRIPTION — what analysis step was completed]
+  What was implemented: [what you did]
+  Requirements: [what the plan specified]
+  Git range: BASE_SHA..HEAD_SHA
+  Handoff: Add reliability caveats to RESULTS_UPDATE.md if needed. Report only otherwise.
+```
 
 **Important:** The dispatch should contain only context (what was done, git SHAs, scope). Do NOT paraphrase review criteria — the reviewer has its own framework via econ-data-analysis.
 
@@ -77,7 +78,7 @@ You: Let me request analysis review before proceeding.
 BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
 HEAD_SHA=$(git rev-parse HEAD)
 
-[Dispatch superRA:data-analysis-reviewer subagent]
+[Dispatch Agent(subagent_type: "reviewer") with superRA:econ-data-analysis]
   WHAT_WAS_IMPLEMENTED: Merged fund holdings with characteristics, constructed portfolio weights
   PLAN_OR_REQUIREMENTS: Task 2 from PLAN.md
   BASE_SHA: a7981ec
@@ -107,7 +108,7 @@ You: [Investigate unmatched rate, add markdown cell documenting 2% unmatched, be
 
 **Executing Analysis (two-stage review):**
 - Built into the per-task review cycle (data integrity → implementation correctness)
-- Automatic after each task — uses dedicated reviewer prompt templates
+- Automatic after each task — dispatches `reviewer` agent with stage-specific handoff rules
 
 **Ad-Hoc (this skill):**
 - Single-pass review for quick checks
@@ -125,4 +126,4 @@ You: [Investigate unmatched rate, add markdown cell documenting 2% unmatched, be
 - Push back with evidence (published benchmarks, source documentation)
 - Show data that proves the approach is correct
 
-See template at: requesting-analysis-review/analysis-reviewer.md
+Uses the `reviewer` agent type with `superRA:econ-data-analysis` skill.

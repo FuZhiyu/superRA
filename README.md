@@ -92,8 +92,8 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 | Agent | Role |
 |-------|------|
-| **analysis-reviewer** | Senior RA reviewing data analysis for integrity, correctness, and reproducibility. Not production code quality — research code quality. |
-| **data-analysis-reviewer** | Constrained-tool variant for ad-hoc reviews. Same review framework, fewer tools. |
+| **reviewer** | Prototype reviewer agent. Verifies work independently using APPROVE/REVISE protocol. Dispatched with a skill and domain reference per stage. |
+| **implementer** | Prototype implementer agent. Executes tasks with data-first discipline. Dispatched with a skill and domain reference per stage. |
 
 ## Key Design Decisions
 
@@ -107,7 +107,7 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 **RA framing.** The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. It executes, validates, and escalates — but the researcher decides the approach.
 
-**Lean prompt templates.** Subagent prompts define roles, not rules. Every agent loads `superRA:econ-data-analysis` via the Skill tool for the actual discipline. One source of truth, easy to maintain.
+**Lean agent definitions.** Two prototype agents (implementer, reviewer) define roles, not rules. Domain-specific checklists come from reference files read at dispatch time. Every agent loads `superRA:econ-data-analysis` via the Skill tool for data discipline. One source of truth, easy to maintain.
 
 ## Hooks
 

@@ -133,7 +133,7 @@ No subagents needed. Execute directly.
 
 Conflicts exist but none touch research-relevant files.
 
-1. **Dispatch merge-proposer subagent** using `./merge-proposer-prompt.md`. Provide:
+1. **Dispatch merge-proposer:** `Agent(subagent_type: "implementer")` with skill `superRA:econ-data-analysis` and domain reference `./references/merge-quality.md`. Provide:
    - Merge context (branches, merge base, tier)
    - Incoming commit messages and diffs since merge base
    - List of conflicting files with their classification
@@ -143,7 +143,7 @@ Conflicts exist but none touch research-relevant files.
    - **Commit 1 (mechanical):** Resolve conflicts with lowest-assumption reconciliation. Restore buildable state. No opportunistic cleanup.
    - **Commit 2 (integration):** Adapt code, docs, tests so the branch incorporates incoming intent. Rewrite stale names, paths, references.
 
-3. **Dispatch merge-reviewer subagent** using `./merge-reviewer-prompt.md`. Provide:
+3. **Dispatch merge-reviewer:** `Agent(subagent_type: "reviewer")` with skill `superRA:econ-data-analysis` and domain reference `./references/merge-quality.md`. Provide:
    - Merge context
    - Proposer's report (integration map, decisions, rationale)
 
@@ -165,7 +165,7 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
    - Documentation (README, methodology docs)
    - Generated outputs (tables, figures)
 
-3. **Dispatch merge-proposer subagent** with Tier 3 context. Provide:
+3. **Dispatch merge-proposer** (`implementer` agent + `./references/merge-quality.md`) with Tier 3 context. Provide:
    - Everything from Tier 2, plus:
    - Classification of changes by research role
    - Drift test results (if available)
@@ -196,7 +196,7 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
    - Commit 1 (mechanical): resolve conflicts per user decisions
    - Commit 2 (integration): adapt remaining code to reflect the integrated intent
 
-6. **Dispatch merge-reviewer subagent.** Verify:
+6. **Dispatch merge-reviewer** (`reviewer` agent + `./references/merge-quality.md`). Verify:
    - User's decisions were implemented correctly
    - No stale references to pre-merge state
    - Data discipline artifacts preserved
@@ -254,10 +254,12 @@ When the merge is complete, summarize:
 - **Pipeline status:** Runs or fails
 - **Verification:** Stale references checked, data discipline preserved
 
-## Prompt Templates
+## Agent Types and Domain References
 
-- `./merge-proposer-prompt.md` — Dispatch merge proposer subagent
-- `./merge-reviewer-prompt.md` — Dispatch merge reviewer subagent
+- **`implementer`** agent + `./references/merge-quality.md` — For merge proposals
+- **`reviewer`** agent + `./references/merge-quality.md` — For merge review
+
+All agents also load `superRA:econ-data-analysis` for data discipline.
 
 ## Agent Teams Mode
 

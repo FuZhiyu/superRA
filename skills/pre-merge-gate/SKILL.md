@@ -87,9 +87,9 @@ Drift tests guard key results from unintended changes during refactoring or futu
    Which of these should be protected? Any to add or remove?
    ```
 
-3. **Dispatch test-creator subagent** using `./test-creator-prompt.md`. Provide: analysis objective, methodology context, data sources, the user-confirmed list of key results, and project test conventions.
+3. **Dispatch test-creator:** `Agent(subagent_type: "implementer")` with skill `superRA:econ-data-analysis` and domain reference `./references/drift-test-quality.md`. Provide: analysis objective, methodology context, data sources, the user-confirmed list of key results, and project test conventions.
 
-4. **Dispatch test-reviewer subagent** using `./test-reviewer-prompt.md`. Provide: the created tests and the key results they should protect.
+4. **Dispatch test-reviewer:** `Agent(subagent_type: "reviewer")` with skill `superRA:econ-data-analysis` and domain reference `./references/drift-test-quality.md`. Provide: the created tests and the key results they should protect.
 
 5. **If REVISE:** test-creator fixes the issues raised by the reviewer, then test-reviewer re-reviews. Iterate until APPROVE.
 
@@ -112,13 +112,13 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
    - Existing code in the repository for naming patterns, file organization, utility functions
    - Available utility functions that the new code should adopt
 
-2. **Dispatch integration-reviewer subagent** using `./integration-reviewer-prompt.md`. Provide: the analysis code, codebase conventions, drift test results, and the diff against the base branch.
+2. **Dispatch integration-reviewer:** `Agent(subagent_type: "reviewer")` with skill `superRA:econ-data-analysis` and domain reference `./references/codebase-integration.md`. Provide: the analysis code, codebase conventions, drift test results, and the diff against the base branch.
 
 3. **If APPROVE:** No refactoring needed. Proceed to final commit.
 
 4. **If REVISE:** The reviewer identified specific issues. Refactor to address them:
 
-   a. **Dispatch refactor subagent** using `./refactor-prompt.md`. Provide: the reviewer's specific feedback items, codebase conventions, available utility functions, drift test file locations, and the analysis code to refactor.
+   a. **Dispatch refactorer:** `Agent(subagent_type: "implementer")` with skill `superRA:econ-data-analysis` and domain reference `./references/codebase-integration.md`. Provide: the reviewer's specific feedback items, codebase conventions, available utility functions, drift test file locations, and the analysis code to refactor.
 
    b. **After refactoring: run drift tests.**
       - **Pass:** Commit and re-submit for review.
@@ -162,12 +162,14 @@ This is the critical judgment call in the process. When drift tests fail after r
 3. **If meaningful:** Do not proceed. Show the user exactly what changed and let them decide.
 4. **If minor:** Update the test expectation, add a comment explaining why (e.g., "tolerance updated: refactored merge order produces equivalent result within floating-point precision"), and proceed.
 
-## Prompt Templates
+## Agent Types and Domain References
 
-- `./test-creator-prompt.md` -- Dispatch drift test creator subagent
-- `./test-reviewer-prompt.md` -- Dispatch drift test reviewer subagent
-- `./refactor-prompt.md` -- Dispatch code refactoring subagent
-- `./integration-reviewer-prompt.md` -- Dispatch integration review subagent
+- **`implementer`** agent + `./references/drift-test-quality.md` — For test creation
+- **`reviewer`** agent + `./references/drift-test-quality.md` — For test review
+- **`implementer`** agent + `./references/codebase-integration.md` — For refactoring
+- **`reviewer`** agent + `./references/codebase-integration.md` — For integration review
+
+All agents also load `superRA:econ-data-analysis` for data discipline.
 
 ## Agent Teams Mode
 
