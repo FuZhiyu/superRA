@@ -28,7 +28,7 @@ If the analysis covers multiple independent workstreams (e.g., "analyze portfoli
 Before defining tasks, map out the analysis pipeline:
 
 - What scripts will be created? One per logical phase (data cleaning, variable construction, analysis, robustness).
-- **All scripts in jupytext percent format** (`.py` or `.jl` with `# %%` cells). See the `econ-data-analysis` skill's `references/jupytext-guide.md`.
+- **Analysis scripts**: format for notebook rendering per `superRA:script-to-notebook`. Runner/pipeline scripts use standard format.
 - What data files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 
@@ -119,7 +119,7 @@ The pipeline file must:
 ### Task N: [Phase Name]
 **Review status:** *(set during execution — do not fill at planning time)*
 
-**Script:** `Code/NN_phase_name.py` (jupytext percent format)
+**Script:** `Code/NN_phase_name.py` (notebook-compatible format)
 **Input:** `Data/input_file.parquet`
 **Output:** `Data/output_file.parquet`, `Output/figure.pdf`
 
@@ -242,7 +242,7 @@ Every step must contain the actual code an analyst needs. These are **plan failu
 
 ## Remember
 - Exact file paths always
-- Complete code in every step — jupytext percent format
+- Complete code in every step
 - Row counts logged for every sample-changing operation
 - Describe → Analyze → Doc → Commit at each step (see `econ-data-analysis` for the micro-level discipline)
 - Pipeline file for multi-script analyses

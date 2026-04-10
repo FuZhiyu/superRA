@@ -6,7 +6,7 @@ description: >
   constructing variables, or producing summary statistics. Enforces the Iron Law
   (no transformation without prior description) and the Describe-Analyze-Doc
   cycle. Three core principles: (1) describe before and after every transformation,
-  (2) document in jupytext percent format with interleaved code/narrative/outputs,
+  (2) document analysis with interleaved code, narrative, and outputs (see script-to-notebook skill for formatting),
   (3) validate against economic intuition, literature, and cross-variable relationships.
   Includes pitfall checklists for merges, aggregations, filtering, and variable
   construction. Red flags and rationalization prevention for data discipline.
@@ -95,50 +95,15 @@ Do not use a variable downstream until its distribution is understood.
 ## Principle 2: Logs and Documentation
 
 Analysis scripts should be human-readable documents that interleave code,
-narrative, and outputs. Use **jupytext percent format** as the default.
+narrative, and outputs.
 
-### Script format
+### Script categories
 
-Write `.py` or `.jl` files in percent format — `# %%` separates code cells,
-`# %% [markdown]` starts narrative cells. For full syntax and rendering
-instructions, see `references/jupytext-guide.md`.
-
-Brief example:
-
-```python
-# %% [markdown]
-"""
-## Load Holdings Data
-Source: CRSP mutual fund holdings, 2000-2020.
-Expect ~4.7M rows across ~12K funds.
-"""
-
-# %%
-df = pd.read_parquet("Data/holdings.parquet")
-print(f"Shape: {df.shape}")
-
-# Panel structure
-print(f"Funds: {df['fund_id'].nunique()}, Dates: {df['date'].nunique()}")
-print(f"Period: {df['date'].min()} to {df['date'].max()}")
-obs_per_fund = df.groupby('fund_id')['date'].nunique()
-print(f"Periods/fund — mean: {obs_per_fund.mean():.0f}, "
-      f"median: {obs_per_fund.median():.0f}, "
-      f"min: {obs_per_fund.min()}, max: {obs_per_fund.max()}")
-
-# Key continuous variables only
-df[["market_value", "weight"]].describe(percentiles=[.01, .05, .5, .95, .99])
-
-# %% [markdown]
-"""
-## Merge with Fund Characteristics
-Left join on fund_id × date. Expect same row count (fund_chars is m:1).
-"""
-
-# %%
-n_before = len(df)
-df = df.merge(chars, on=["fund_id", "date"], how="left")
-print(f"Rows: {n_before} → {len(df)} (delta: {len(df) - n_before})")
-```
+- **Analysis scripts** (data loading, cleaning, merging, variable construction,
+  diagnostics): format for notebook rendering — see `superRA:script-to-notebook`
+  for cell organization and rendering details.
+- **Runner/utility/pipeline scripts**: standard script format, no notebook
+  formatting needed.
 
 ### Row count tracking
 
@@ -153,13 +118,25 @@ share a cell as long as the count is printed.
 - **Major** decisions (excluding countries, choosing sample period, variable
   definition): markdown cell with reasoning
 
+### Visualization for key variables
+
+Supplement summary statistics with diagnostic plots. These are part of
+describing data — create them alongside the statistics they complement.
+
+- **Distributions**: histograms for continuous variables — reveals skew, modes,
+  and outliers that summary stats miss. Use for any variable you're about to
+  transform, winsorize, or filter on.
+- **Relationships**: scatter plots for variable pairs — shows nonlinearity,
+  clusters, and influential observations that correlations hide.
+- **Temporal patterns**: line plots of variable vs time — detects structural
+  breaks, trends, and seasonality. Essential for any time-series variable.
+
+Not publication quality. Clear axis labels, informative titles, readable scales.
+Save to the output directory alongside notebook renders.
+
 ### Output rendering
 
-Pair the `.py`/`.jl` script with a `.ipynb` notebook:
-- The script goes in version control (git-friendly diffs)
-- The `.ipynb` holds rendered outputs for human review
-- Render with: `jupytext --set-kernel <name> --to notebook --execute script.py`
-- See `references/jupytext-guide.md` for details
+For rendering scripts as notebooks, see `superRA:script-to-notebook`.
 
 ## Principle 3: Multi-Source Validation
 
@@ -272,7 +249,7 @@ Verify the result, then document everything. You can't document properly without
 - Spot-check a few observations by hand
 - When expected results or hypotheses are provided in PLAN.md, compare findings to them — flag and investigate divergences
 
-**Log in jupytext markdown cells:**
+**Log in markdown cells:**
 - What you did and why
 - Row count changes
 - Any surprising findings
@@ -412,7 +389,7 @@ the relevant operation.
 
 ## Key References
 
-- `references/jupytext-guide.md` — percent format syntax, rendering, pairing
+- `superRA:script-to-notebook` — cell organization, rendering (Python jupytext, Julia QuartoNotebookRunner)
 - `references/data-robustness-checklist.md` — sensitivity analysis: outlier
   alternatives, alternative definitions, sample restrictions, leave-one-out
 - Gentzkow & Shapiro (2014), "Code and Data for the Social Sciences"
