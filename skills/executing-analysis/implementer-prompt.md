@@ -90,6 +90,30 @@ Task tool (general-purpose):
 
     If you find issues during self-review, fix them now.
 
+    ## Before Reporting Back: Update Handoff Documents
+
+    After your code is ready, update the handoff documents and commit
+    everything together in a single atomic commit.
+
+    **Scope: only edit YOUR task's sections. Do not modify other tasks.**
+
+    1. In PLAN.md, under YOUR task heading only:
+       - Mark your steps `- [x]` with brief result notes
+       - Add or update: `**Review status:** IMPLEMENTED`
+
+    2. In RESULTS_UPDATE.md, add a section for YOUR task only:
+       - Key data findings (row counts, distributions, surprises)
+       - Results summary (key numbers, figures produced)
+       - Comparison to expectations (if provided in plan)
+       - For sensitivity tasks: comparison to baseline, economic significance
+       - Save any figures to `results_attachments/`
+
+    3. Commit everything together:
+       ```bash
+       git add [code files] PLAN.md RESULTS_UPDATE.md results_attachments/
+       git commit -m "Task N: [description]"
+       ```
+
     ## Report Format
 
     When done, report:
