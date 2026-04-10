@@ -27,7 +27,7 @@ Follow the loaded skill's discipline throughout. Key principles:
 - Describe data before transforming it
 - Log row counts for every sample-changing operation
 - Validate results against economic intuition
-- Document decisions in jupytext markdown cells
+- Document decisions in markdown cells
 
 ### While You Work
 
@@ -46,7 +46,7 @@ Before reporting back, check:
 - Are outputs saved where specified?
 
 **Reproducibility:**
-- Is the script in jupytext percent format?
+- Is the script in notebook-compatible format?
 - Can someone re-run this and get the same results?
 - Are file paths correct and relative?
 

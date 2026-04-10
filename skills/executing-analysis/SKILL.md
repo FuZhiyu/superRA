@@ -139,14 +139,14 @@ If the user declines, proceed — they've given explicit consent to work on the 
    - If findings change upcoming tasks: update future task descriptions in PLAN.md and commit
    - Proceed to next task
 
-**In direct mode:** Steps 1-2 are done by the main agent directly (invoke `superRA:implementer-protocol` for the execution protocol, invoke `superRA:econ-data-analysis` for discipline). Steps 3-5 are unchanged — still dispatch reviewer subagents.
+**In direct mode:** Steps 1-2 are done by the main agent directly (invoke `superRA:implementer-protocol` for the execution protocol, invoke `superRA:econ-data-analysis` for discipline, invoke `superRA:script-to-notebook` for script formatting). Steps 3-5 are unchanged — still dispatch reviewer subagents.
 
 #### Dispatch Examples
 
 **Implementer:**
 ```
 Agent(subagent_type: "implementer"):
-  Load skill: superRA:econ-data-analysis
+  Load skills: superRA:econ-data-analysis, superRA:script-to-notebook
   Task: Implement Task N: [task name]
   Task description: [FULL TEXT from PLAN.md — paste it, don't make subagent read file]
   Context: [what analysis this is, what prior steps produced, what data is available]
@@ -174,7 +174,7 @@ Agent(subagent_type: "reviewer"):
 **Implementation reviewer:**
 ```
 Agent(subagent_type: "reviewer"):
-  Load skill: superRA:econ-data-analysis
+  Load skills: superRA:econ-data-analysis, superRA:script-to-notebook
   Review scope: implementation correctness for Task N
   What was requested: [task requirements]
   What implementer built: [from implementer's report]
@@ -334,8 +334,8 @@ Use the least powerful model that can handle each role:
 
 ## Agent Types
 
-- **`implementer`** — Dispatch with `superRA:econ-data-analysis` skill. No additional domain reference needed (econ-data-analysis IS the analysis domain).
-- **`reviewer`** — Dispatch with `superRA:econ-data-analysis` skill. Provide stage-specific handoff rules (data integrity vs implementation) in the dispatch prompt.
+- **`implementer`** — Dispatch with `superRA:econ-data-analysis` and `superRA:script-to-notebook` skills.
+- **`reviewer`** — Dispatch with `superRA:econ-data-analysis` skill. Implementation reviewers also load `superRA:script-to-notebook`. Provide stage-specific handoff rules (data integrity vs implementation) in the dispatch prompt.
 
 ## Agent Teams Mode
 
@@ -372,5 +372,6 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 - **superRA:using-analysis-worktrees** — RECOMMENDED: For complex or multi-session analyses, consider an isolated workspace
 - **superRA:analysis-planning** — Creates the plan this skill executes
 - **superRA:econ-data-analysis** — REQUIRED: Data discipline all agents must follow
+- **superRA:script-to-notebook** — Script formatting and notebook rendering
 - **superRA:finishing-analysis** — Complete work after all tasks done
 - **superRA:pre-merge-gate** — Code integration and drift tests before merge (invoked by finishing-analysis)

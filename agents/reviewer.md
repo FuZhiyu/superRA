@@ -44,7 +44,7 @@ decisions.
 - Unreproducible outputs
 
 **MINOR** — suggestion or incomplete compliance:
-- Not in percent format (but otherwise documented)
+- Not in notebook-compatible format (but otherwise documented)
 - Missing markdown cells for minor decisions
 - Incomplete diagnostics
 
