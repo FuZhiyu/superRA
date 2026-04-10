@@ -1,190 +1,134 @@
-# Superpowers
+# superRA
 
-Superpowers is a complete software development workflow for your coding agents, built on top of a set of composable "skills" and some initial instructions that make sure your agent uses them.
+superRA is a complete economic research workflow for AI coding agents, built as a fork of [Superpowers](https://github.com/obra/superpowers). It turns your coding agent into a disciplined Research Assistant that follows data-first principles, enforces reproducibility, and maintains full session-to-session handoff — so you never lose work when context runs out.
 
-## How it works
+## Why superRA?
 
-It starts from the moment you fire up your coding agent. As soon as it sees that you're building something, it *doesn't* just jump into trying to write code. Instead, it steps back and asks you what you're really trying to do. 
+AI agents are eager but undisciplined. They skip data description, merge without checking row counts, and declare "looks fine" without verification. In economic research, these shortcuts produce wrong results that look right.
 
-Once it's teased a spec out of the conversation, it shows it to you in chunks short enough to actually read and digest. 
+superRA enforces a single non-negotiable rule — the **Iron Law of Data Analysis**:
 
-After you've signed off on the design, your agent puts together an implementation plan that's clear enough for an enthusiastic junior engineer with poor taste, no judgement, no project context, and an aversion to testing to follow. It emphasizes true red/green TDD, YAGNI (You Aren't Gonna Need It), and DRY. 
+> **NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION**
 
-Next up, once you say "go", it launches a *subagent-driven-development* process, having agents work through each engineering task, inspecting and reviewing their work, and continuing forward. It's not uncommon for Claude to be able to work autonomously for a couple hours at a time without deviating from the plan you put together.
+Every data operation follows a Describe-Transform-Validate cycle. Every task gets a two-stage review (data integrity, then implementation correctness). Every session leaves enough state in PLAN.md and RESULTS_UPDATE.md that a fresh agent can pick up exactly where the last one stopped.
 
-There's a bunch more to it, but that's the core of the system. And because the skills trigger automatically, you don't need to do anything special. Your coding agent just has Superpowers.
+## How It Works
 
+superRA activates automatically. When your agent sees a research task, it doesn't jump into code — it follows a structured workflow:
 
-## Sponsorship
+```
+data-exploration          Inventory available data. Hard gate: no analysis until approved.
+       |
+analysis-planning         Break work into tasks with actual code at every step.
+       |
+executing-analysis        Dispatch one agent per task. Two-stage review after each.
+       |                    Implementer -> Data Review -> Implementation Review -> Next task
+       |
+finishing-analysis        Verify reproducibility. Generate report. Present merge/PR options.
+       |
+pre-merge-gate            Create drift tests to protect results. Refactor for integration.
+```
 
-If Superpowers has helped you do stuff that makes money and you are so inclined, I'd greatly appreciate it if you'd consider [sponsoring my opensource work](https://github.com/sponsors/obra).
-
-Thanks! 
-
-- Jesse
-
+Each task produces an atomic commit: code + PLAN.md status + RESULTS_UPDATE.md findings. If the session dies at any point, the next session sees exactly what's done, what's under review, and what has open issues.
 
 ## Installation
 
-**Note:** Installation differs by platform. Claude Code or Cursor have built-in plugin marketplaces. Codex and OpenCode require manual setup.
+superRA is a fork of [Superpowers](https://github.com/obra/superpowers), adapted for economic research. Clone and install as a local plugin:
 
-### Claude Code Official Marketplace
-
-Superpowers is available via the [official Claude plugin marketplace](https://claude.com/plugins/superpowers)
-
-Install the plugin from Claude marketplace:
+### Claude Code
 
 ```bash
-/plugin install superpowers@claude-plugins-official
+git clone https://github.com/FuZhiyu/econ-superpowers.git
+# Then add as a local plugin in your project's .claude/settings.json
 ```
 
-### Claude Code (via Plugin Marketplace)
+### Other Platforms
 
-In Claude Code, register the marketplace first:
+See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plugin installation patterns on Cursor, Codex, Copilot CLI, and Gemini CLI. Point them at this repo instead of the upstream.
 
-```bash
-/plugin marketplace add obra/superpowers-marketplace
-```
+## Skills
 
-Then install the plugin from this marketplace:
+### Core Discipline
 
-```bash
-/plugin install superpowers@superpowers-marketplace
-```
+| Skill | What It Does |
+|-------|-------------|
+| **econ-data-analysis** | Iron Law enforcement. Describe-Transform-Validate cycle. Pitfall checklists for merges, aggregations, filtering, variable construction. Every agent loads this. |
+| **verification-before-completion** | No completion claims without fresh verification evidence. Prevents "looks fine" from reaching merge. |
 
-### Cursor (via Plugin Marketplace)
+### Research Workflow
 
-In Cursor Agent chat, install from marketplace:
+| Skill | What It Does |
+|-------|-------------|
+| **data-exploration** | Inventory available data, identify gaps, research sources. Hard gate: no analysis starts without approved inventory. |
+| **analysis-planning** | Create step-by-step plans with actual code. Every step has describe-validate discipline. Plans are living handoff documents. |
+| **executing-analysis** | Dispatch fresh subagent per task with two-stage review (data integrity then implementation). Falls back to direct execution when requested. |
+| **finishing-analysis** | Verify reproducibility, generate work journal, present options: merge locally, push & PR, keep branch, or discard. |
 
-```text
-/add-plugin superpowers
-```
+### Quality Gates
 
-or search for "superpowers" in the plugin marketplace.
+| Skill | What It Does |
+|-------|-------------|
+| **pre-merge-gate** | Create drift tests to protect key results. Refactor code for integration. Review quality. Three stages with iteration. |
+| **requesting-analysis-review** | Ad-hoc single-pass review for quick checks, before-merge verification, or when data looks unexpected. |
+| **receiving-code-review** | Technical evaluation of review feedback. Verify before implementing. No performative agreement. |
 
-### Codex
+### Infrastructure
 
-Tell Codex:
+| Skill | What It Does |
+|-------|-------------|
+| **using-analysis-worktrees** | Isolated git worktrees with data seeding. Parallel analysis without branch switching. |
+| **worktree-data-sync** | Sync non-git data between worktrees (seed, diff, apply modes). |
+| **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact. Escalates methodology decisions to user. |
+| **dispatching-parallel-agents** | Run independent tasks in parallel with isolated context. |
+| **using-agent-teams** | Direct peer-to-peer agent communication for iterative workflows. Requires experimental feature flag. |
 
-```
-Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.codex/INSTALL.md
-```
+### Meta
 
-**Detailed docs:** [docs/README.codex.md](docs/README.codex.md)
+| Skill | What It Does |
+|-------|-------------|
+| **using-superRA** | Session startup. Cross-session detection. Skill discovery and activation rules. |
+| **writing-skills** | Create new skills using test-driven methodology. |
 
-### OpenCode
+## Agents
 
-Tell OpenCode:
+| Agent | Role |
+|-------|------|
+| **analysis-reviewer** | Senior RA reviewing data analysis for integrity, correctness, and reproducibility. Not production code quality — research code quality. |
+| **data-analysis-reviewer** | Constrained-tool variant for ad-hoc reviews. Same review framework, fewer tools. |
 
-```
-Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.opencode/INSTALL.md
-```
+## Key Design Decisions
 
-**Detailed docs:** [docs/README.opencode.md](docs/README.opencode.md)
+**Agent-owned doc updates.** Each agent commits its doc changes atomically with its work. The implementer commits code + PLAN.md status + RESULTS_UPDATE.md findings in a single commit. Reviewers commit review notes and APPROVED status separately. No orchestrator transcription step.
 
-### GitHub Copilot CLI
+**Review status protocol.** Tasks in PLAN.md carry a status line: `IMPLEMENTED` (code done, awaiting review), `REVISE (data integrity)` or `REVISE (implementation)` (reviewer found issues — data integrity REVISE blocks implementation review from starting), `APPROVED` (both reviews passed). A fresh session can tell exactly where each task stands.
 
-```bash
-copilot plugin marketplace add obra/superpowers-marketplace
-copilot plugin install superpowers@superpowers-marketplace
-```
+**Two-stage review.** Data integrity first, implementation correctness second. Data review must pass before implementation review begins. Review is never skipped — even in direct execution mode.
 
-### Gemini CLI
+**Scope rule.** Agents only edit their own task's sections in PLAN.md and RESULTS_UPDATE.md. Never touch other tasks.
 
-```bash
-gemini extensions install https://github.com/obra/superpowers
-```
+**RA framing.** The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. It executes, validates, and escalates — but the researcher decides the approach.
 
-To update:
+**Lean prompt templates.** Subagent prompts define roles, not rules. Every agent loads `superRA:econ-data-analysis` via the Skill tool for the actual discipline. One source of truth, easy to maintain.
 
-```bash
-gemini extensions update superpowers
-```
+## Hooks
 
-### Verify Installation
-
-Start a new session in your chosen platform and ask for something that should trigger a skill (for example, "help me plan this feature" or "let's debug this issue"). The agent should automatically invoke the relevant superpowers skill.
-
-## The Basic Workflow
-
-1. **brainstorming** - Activates before writing code. Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves design document.
-
-2. **using-git-worktrees** - Activates after design approval. Creates isolated workspace on new branch, runs project setup, verifies clean test baseline.
-
-3. **writing-plans** - Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps.
-
-4. **subagent-driven-development** or **executing-plans** - Activates with plan. Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
-
-5. **test-driven-development** - Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
-
-6. **requesting-code-review** - Activates between tasks. Reviews against plan, reports issues by severity. Critical issues block progress.
-
-7. **finishing-a-development-branch** - Activates when tasks complete. Verifies tests, presents options (merge/PR/keep/discard), cleans up worktree.
-
-**The agent checks for relevant skills before any task.** Mandatory workflows, not suggestions.
-
-## What's Inside
-
-### Skills Library
-
-**Testing**
-- **test-driven-development** - RED-GREEN-REFACTOR cycle (includes testing anti-patterns reference)
-
-**Debugging**
-- **systematic-debugging** - 4-phase root cause process (includes root-cause-tracing, defense-in-depth, condition-based-waiting techniques)
-- **verification-before-completion** - Ensure it's actually fixed
-
-**Collaboration** 
-- **brainstorming** - Socratic design refinement
-- **writing-plans** - Detailed implementation plans
-- **executing-plans** - Batch execution with checkpoints
-- **dispatching-parallel-agents** - Concurrent subagent workflows
-- **requesting-code-review** - Pre-review checklist
-- **receiving-code-review** - Responding to feedback
-- **using-git-worktrees** - Parallel development branches
-- **finishing-a-development-branch** - Merge/PR decision workflow
-- **subagent-driven-development** - Fast iteration with two-stage review (spec compliance, then code quality)
-
-**Meta**
-- **writing-skills** - Create new skills following best practices (includes testing methodology)
-- **using-superpowers** - Introduction to the skills system
+| Hook | Trigger | Purpose |
+|------|---------|---------|
+| **session-start** | Session start, `/clear`, `/compact` | Inject using-superRA skill, check for Agent Teams availability |
+| **merge-guard** | Before any `git merge/rebase/cherry-pick` | Remind to use semantic-merge skill |
 
 ## Philosophy
 
-- **Test-Driven Development** - Write tests first, always
-- **Systematic over ad-hoc** - Process over guessing
-- **Complexity reduction** - Simplicity as primary goal
-- **Evidence over claims** - Verify before declaring success
+- **Data-first** — Understand before transforming. Always.
+- **Reproducibility is a requirement** — Drift tests, pipeline files, committed code. Not optional.
+- **Evidence over claims** — Run the pipeline before saying it works.
+- **Session resilience** — PLAN.md + RESULTS_UPDATE.md + git = complete handoff.
+- **Researcher decides, agent implements** — Methodology is not the agent's call.
 
-Read more: [Superpowers for Claude Code](https://blog.fsck.com/2025/10/09/superpowers/)
+## Upstream
 
-## Contributing
-
-Skills live directly in this repository. To contribute:
-
-1. Fork the repository
-2. Create a branch for your skill
-3. Follow the `writing-skills` skill for creating and testing new skills
-4. Submit a PR
-
-See `skills/writing-skills/SKILL.md` for the complete guide.
-
-## Updating
-
-Skills update automatically when you update the plugin:
-
-```bash
-/plugin update superpowers
-```
+superRA is a fork of [Superpowers](https://github.com/obra/superpowers) by [Jesse Vincent](https://blog.fsck.com). The upstream project provides the plugin infrastructure, skill system, and several general-purpose skills that superRA inherits and extends.
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Community
-
-Superpowers is built by [Jesse Vincent](https://blog.fsck.com) and the rest of the folks at [Prime Radiant](https://primeradiant.com).
-
-- **Discord**: [Join us](https://discord.gg/35wsABTejz) for community support, questions, and sharing what you're building with Superpowers
-- **Issues**: https://github.com/obra/superpowers/issues
-- **Release announcements**: [Sign up](https://primeradiant.com/superpowers/) to get notified about new versions
+MIT License — see LICENSE file for details.
