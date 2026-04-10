@@ -104,6 +104,7 @@ The pipeline file must:
 
 ````markdown
 ### Task N: [Phase Name]
+**Review status:** *(set during execution — do not fill at planning time)*
 
 **Script:** `Code/NN_phase_name.py` (jupytext percent format)
 **Input:** `Data/input_file.parquet`
@@ -151,24 +152,17 @@ print(f"Rows: {n_before} → {len(df)} (delta: {len(df) - n_before})")
 print(f"Unmatched: {df['char_var'].isna().sum()} ({df['char_var'].isna().mean():.1%})")
 ```
 
-- [ ] **Step 3: Validate merge and commit**
+- [ ] **Step 3: Validate, update handoff docs, and commit**
 
 Verify: row count unchanged, unmatched rate reasonable, merged variables have expected distributions.
-
-```bash
-git add Code/01_clean_data.py
-git commit -m "merge holdings with fund characteristics"
-```
-
-- [ ] **Step 4: Update plan and results, commit**
-
-Update PLAN.md: mark steps [x], note findings affecting downstream steps.
+Update PLAN.md: mark steps [x], set `**Review status:** IMPLEMENTED`, note findings.
 Update RESULTS_UPDATE.md: add key results for this task (row counts, summary stats, figures).
 Save any figures to `results_attachments/`.
+Commit code and docs together in a single atomic commit:
 
 ```bash
-git add PLAN.md RESULTS_UPDATE.md results_attachments/
-git commit -m "update plan + results: Task 1 complete"
+git add Code/01_clean_data.py PLAN.md RESULTS_UPDATE.md results_attachments/
+git commit -m "Task 1: merge holdings with fund characteristics"
 ```
 ````
 

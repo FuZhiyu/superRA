@@ -87,6 +87,39 @@ Task tool (superRA:data-analysis-reviewer or general-purpose):
     ACTION REQUIRED: Re-dispatch the implementer with the above feedback,
     then re-dispatch this implementation review. Iterate until APPROVE.
 
+    ## Document Your Findings
+
+    After completing your review, update the handoff documents so the
+    analysis state survives session interruptions.
+
+    **Scope: only edit the section for the task you are reviewing.
+    Do not modify other tasks' status, steps, findings, or review notes.**
+
+    **If REVISE:**
+    1. In PLAN.md, under the current task heading only:
+       - Set `**Review status:** REVISE (implementation)`
+       - Add a blockquote with your specific issues:
+         ```
+         > **Review issues (implementation):**
+         > - [issue with file:line — severity]
+         > - [issue — severity]
+         ```
+    2. Commit: `git add PLAN.md && git commit -m "review: Task N implementation issues"`
+
+    **If APPROVE (you are the final reviewer):**
+    1. In PLAN.md, under the current task heading only:
+       - Set `**Review status:** APPROVED`
+       - Remove any leftover review notes blockquote
+    2. If you have reliability concerns, in RESULTS_UPDATE.md under the
+       current task's results only:
+       - Add: `> **⚠️ Reviewer note (implementation):** [concern]`
+       - These notes persist — they are analytical caveats, not action items.
+    3. Commit: `git add PLAN.md RESULTS_UPDATE.md && git commit -m "review: Task N approved"`
+
+    **If APPROVE with no concerns and no caveats:**
+    1. In PLAN.md: set `**Review status:** APPROVED`
+    2. Commit: `git add PLAN.md && git commit -m "review: Task N approved"`
+
     ## If Running as Agent Team Teammate
 
     If you are part of an Agent Team (not a standalone subagent):

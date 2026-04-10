@@ -37,7 +37,7 @@ Guide completion of analysis work by verifying reproducibility, presenting integ
    Check that key output files (tables, figures, logs) exist and were generated from the current committed code, not ad-hoc runs.
 
 4. **Plan file up to date?**
-   All steps marked `- [x]` with result notes? Discovery notes captured? Upcoming steps (if any) reflect current understanding?
+   All tasks have `**Review status:** APPROVED`? All steps marked `- [x]` with result notes? No tasks stuck in `IMPLEMENTED` or `REVISE` status? Discovery notes captured? Upcoming steps (if any) reflect current understanding?
 
 5. **RESULTS_UPDATE.md up to date?**
    Has findings for all completed tasks? Figure attachments in `results_attachments/` committed?
