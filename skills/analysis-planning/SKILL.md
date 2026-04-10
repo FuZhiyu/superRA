@@ -1,6 +1,6 @@
 ---
 name: analysis-planning
-description: Use when you have a research objective and data inventory, before writing analysis code — creates a step-by-step analysis plan with describe-transform-validate discipline at each step
+description: Use when you have a research objective and data inventory, before writing analysis code — creates a step-by-step analysis plan with describe-analyze-doc discipline at each step
 ---
 
 # Analysis Planning
@@ -13,9 +13,9 @@ Assume the analyst is skilled at data work, but knows nothing about this specifi
 
 **Announce at start:** "I'm using the analysis-planning skill to create the analysis plan."
 
-**Context:** This should be run in a dedicated worktree (created by using-analysis-worktrees skill).
+**Data inventory:** If data exploration has not been done yet, invoke `superRA:data-exploration` first to build the inventory. The inventory is part of this plan document (see the Data Inventory section in the plan header).
 
-**Save plan to:** `PLAN.md` at the project root (each worktree has its own root)
+**Save plan to:** `PLAN.md` at the project root (if in a worktree, the worktree root; otherwise, the project root or user-specified location)
 - Create `RESULTS_UPDATE.md` alongside (see Results Update Document section)
 - (User preferences for plan location override this default)
 
@@ -87,7 +87,20 @@ The pipeline file must:
 
 **Methodology:** [Brief description — the user has already decided this]
 
-**Data:** [Key datasets and their sources — reference data inventory if available]
+**Data Inventory:**
+
+### Available
+| Dataset | Path | Format | Rows | Date Range | Key Variables |
+|---------|------|--------|------|------------|---------------|
+| ... | ... | ... | ... | ... | ... |
+
+### Needed (Not Yet Available)
+| Dataset | Source | Access Method | Notes |
+|---------|--------|---------------|-------|
+| ... | ... | ... | ... |
+
+### Data Quality Notes
+- [Any known issues, missing coverage, etc.]
 
 **Output:** [What files/tables/figures will this produce?]
 
@@ -110,7 +123,7 @@ The pipeline file must:
 **Input:** `Data/input_file.parquet`
 **Output:** `Data/output_file.parquet`, `Output/figure.pdf`
 
-- [ ] **Step 1: Describe input data**
+- [ ] **Step 1: Describe — input data**
 
 ```python
 # %% [markdown]
@@ -136,7 +149,7 @@ print(f"Periods/fund — mean: {obs_per_fund.mean():.0f}, "
 df[["market_value", "weight"]].describe(percentiles=[.01, .05, .5, .95, .99])
 ```
 
-- [ ] **Step 2: Merge with fund characteristics**
+- [ ] **Step 2: Analyze — merge with fund characteristics**
 
 ```python
 # %% [markdown]
@@ -152,7 +165,7 @@ print(f"Rows: {n_before} → {len(df)} (delta: {len(df) - n_before})")
 print(f"Unmatched: {df['char_var'].isna().sum()} ({df['char_var'].isna().mean():.1%})")
 ```
 
-- [ ] **Step 3: Validate, update handoff docs, and commit**
+- [ ] **Step 3: Doc — verify, update handoff docs, and commit**
 
 Verify: row count unchanged, unmatched rate reasonable, merged variables have expected distributions.
 Update PLAN.md: mark steps [x], set `**Review status:** IMPLEMENTED`, note findings.
@@ -231,14 +244,14 @@ Every step must contain the actual code an analyst needs. These are **plan failu
 - Exact file paths always
 - Complete code in every step — jupytext percent format
 - Row counts logged for every sample-changing operation
-- Describe → Transform → Validate → Document → Commit at each step
+- Describe → Analyze → Doc → Commit at each step (see `econ-data-analysis` for the micro-level discipline)
 - Pipeline file for multi-script analyses
 
 ## Self-Review
 
 After writing the complete plan:
 
-**1. Data inventory coverage:** Can you point to a task that handles each dataset from the data inventory?
+**1. Data inventory coverage:** Can you point to a task that handles each dataset from the Data Inventory section of this plan?
 
 **2. Placeholder scan:** Search for red flags from the "No Placeholders" section. Fix them.
 
