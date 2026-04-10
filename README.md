@@ -10,7 +10,7 @@ superRA enforces a single non-negotiable rule — the **Iron Law of Data Analysi
 
 > **NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION**
 
-Every data operation follows a Describe-Transform-Validate cycle. Every task gets a two-stage review (data integrity, then implementation correctness). Every session leaves enough state in PLAN.md and RESULTS_UPDATE.md that a fresh agent can pick up exactly where the last one stopped.
+Every data operation follows a Describe-Analyze-Doc cycle. Every task gets a two-stage review (data integrity, then implementation correctness). Every session leaves enough state in PLAN.md and RESULTS_UPDATE.md that a fresh agent can pick up exactly where the last one stopped.
 
 ## How It Works
 
@@ -52,7 +52,7 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 | Skill | What It Does |
 |-------|-------------|
-| **econ-data-analysis** | Iron Law enforcement. Describe-Transform-Validate cycle. Pitfall checklists for merges, aggregations, filtering, variable construction. Every agent loads this. |
+| **econ-data-analysis** | Iron Law enforcement. Describe-Analyze-Doc cycle. Pitfall checklists for merges, aggregations, filtering, variable construction. Every agent loads this. |
 | **verification-before-completion** | No completion claims without fresh verification evidence. Prevents "looks fine" from reaching merge. |
 
 ### Research Workflow
@@ -79,8 +79,7 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 | **using-analysis-worktrees** | Isolated git worktrees with data seeding. Parallel analysis without branch switching. |
 | **worktree-data-sync** | Sync non-git data between worktrees (seed, diff, apply modes). |
 | **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact. Escalates methodology decisions to user. |
-| **dispatching-parallel-agents** | Run independent tasks in parallel with isolated context. |
-| **using-agent-teams** | Direct peer-to-peer agent communication for iterative workflows. Requires experimental feature flag. |
+| **agent-orchestration** | Multi-agent dispatch: parallel subagents for independent tasks, Agent Teams for iterative workflows. |
 
 ### Meta
 

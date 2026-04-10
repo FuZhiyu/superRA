@@ -8,7 +8,8 @@ description: Use when starting any conversation - establishes how to find and us
 Before your first substantive response, run these cross-session detection checks:
 1. Check for PLAN.md in the working directory
 2. Check for analysis worktrees (`git worktree list`)
-3. If either exists, report to the user: "Found in-progress analysis work: [details]"
+3. Check for analysis branches (`git branch --list 'analysis/*'`)
+4. If any exist, report to the user: "Found in-progress analysis work: [details]"
 
 Do NOT skip these because the user "jumped straight into a task." The checks take 5 seconds and prevent lost work.
 
@@ -39,8 +40,14 @@ If CLAUDE.md says "skip data description for this dataset" and a skill says "alw
 **At session start, check for in-progress work:**
 
 ```bash
+# Check current branch (propose feature branch if on main/master)
+git branch --show-current
+
 # Check if currently in a worktree
 git rev-parse --is-inside-work-tree 2>/dev/null && git worktree list 2>/dev/null
+
+# Check for analysis branches
+git branch --list 'analysis/*' 2>/dev/null
 
 # Check for PLAN.md at project root
 [ -f "PLAN.md" ] && grep -c "\- \[ \]" PLAN.md 2>/dev/null
@@ -134,13 +141,16 @@ These thoughts mean STOP—you're rationalizing:
 
 ## Skill Priority
 
-When multiple skills could apply, use this order:
+The macro workflow is **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. When multiple skills could apply, follow this flow:
 
-1. **Process skills first** (data-exploration, econ-data-analysis) - these determine HOW to approach the task
-2. **Execution skills second** (executing-analysis) - these guide execution
+1. **PLAN phase skills first** (data-exploration, analysis-planning) — these determine WHAT to do
+2. **IMPLEMENT + VALIDATE phase skills second** (executing-analysis, econ-data-analysis) — these guide execution and review
+3. **INTEGRATE phase skills last** (finishing-analysis, pre-merge-gate) — these integrate work back
 
-"Let's analyze X" → data-exploration first, then analysis-planning.
+"Let's analyze X" → PLAN phase: data-exploration first, then analysis-planning.
 "Something looks wrong in the data" → investigate using econ-data-analysis describe step.
+
+Within each implementation step, the micro-level discipline is **DESCRIBE → ANALYZE → DOC** (see `econ-data-analysis`).
 
 ## Skill Types
 
@@ -156,7 +166,7 @@ When merging, rebasing, or cherry-picking branches, superRA uses intent-based co
 
 ## Agent Teams
 
-When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled, superRA uses Agent Teams for workflows with iteration loops (pre-merge-gate, executing-analysis, semantic-merge). This is automatic — the orchestration skills detect availability and use teams when appropriate. See `superRA:using-agent-teams` for details on team compositions, lifecycle, and session handoff.
+When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled, superRA uses Agent Teams for workflows with iteration loops (pre-merge-gate, executing-analysis, semantic-merge). This is automatic — the orchestration skills detect availability and use teams when appropriate. See `superRA:agent-orchestration` for details on team compositions, lifecycle, and session handoff.
 
 ## User Instructions
 

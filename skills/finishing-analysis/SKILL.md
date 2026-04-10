@@ -7,7 +7,7 @@ description: Use when analysis implementation is complete and you need to verify
 
 ## Overview
 
-Guide completion of analysis work by verifying reproducibility, presenting integration options, and executing the chosen path. For merge/PR paths, invoke the pre-merge gate to protect results and integrate code.
+Guide completion of analysis work — the **INTEGRATE** phase of the macro workflow. Verify reproducibility, present integration options, and execute the chosen path. For merge/PR paths, invoke the pre-merge gate to protect results and integrate code.
 
 **Core principle:** Verify reproducibility → Present options → If keeping: pre-merge gate → Generate report → Handle documents → Execute choice → Clean up.
 
@@ -233,7 +233,7 @@ gh pr create --title "<title>" --body "$(cat <<'EOF'
 ## Review Checklist
 - [ ] Pipeline runs end-to-end
 - [ ] Drift tests pass
-- [ ] Data descriptions present before all transformations
+- [ ] Data descriptions present before all analysis operations
 - [ ] Row counts logged for all sample-changing operations
 EOF
 )"
@@ -261,7 +261,9 @@ Type 'discard' to confirm.
 
 Wait for exact confirmation. Then cleanup.
 
-### Step 5: Cleanup Worktree
+### Step 5: Cleanup (if in a worktree)
+
+If working in a worktree:
 
 **For Options 1, 2, 4:**
 
@@ -270,6 +272,8 @@ git worktree remove <worktree-path>
 ```
 
 **For Option 3:** Keep worktree.
+
+If working on a branch (no worktree): skip this step.
 
 ## Quick Reference
 

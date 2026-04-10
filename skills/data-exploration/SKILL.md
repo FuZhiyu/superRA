@@ -23,8 +23,7 @@ You MUST create a task for each of these items and complete them in order:
 4. **Identify gaps** — what data is needed but not yet available?
 5. **Research sources** — for missing data, identify where to get it (WRDS, FRED, central banks, project-specific sources)
 6. **Present data inventory** — structured summary of available + needed data, get user approval
-7. **Save inventory** — write to `docs/analysis-specs/YYYY-MM-DD-<topic>-data-inventory.md` and commit
-8. **Transition to planning** — invoke analysis-planning skill
+7. **Hand off to planning** — the data inventory you've built will become part of PLAN.md
 
 ## The Process
 
@@ -108,44 +107,32 @@ Ask the user to confirm the inventory before proceeding.
 
 ## After the Inventory
 
-**Documentation:**
-- Save to `docs/analysis-specs/YYYY-MM-DD-<topic>-data-inventory.md`
-  - (User preferences for spec location override this default)
-- Commit the inventory document
+**Output:** The data inventory tables and notes you produce here will be incorporated into PLAN.md by the analysis-planning skill. Do not create a separate inventory document.
 
 **Transition:**
 - Invoke the analysis-planning skill to create a step-by-step analysis plan
+- The inventory becomes the **Data Inventory** section of PLAN.md
 - Do NOT invoke any other skill. analysis-planning is the next step.
 
 ## Key Principles
 
-- **Don't design the research** — the user has methodology in mind; you help with data
-- **One question at a time** — don't overwhelm with multiple questions
 - **Be specific about sources** — "try WRDS" is vague; "CRSP Monthly Stock File via WRDS" is specific
 - **Check before assuming** — explore the project before asking "do you have data?"
 - **Document everything** — the inventory is a reference for the rest of the analysis
 
 ## Common Mistakes
 
-**Proposing methodology:**
-- **Problem:** Agent starts suggesting research design, econometric methods
-- **Fix:** The user has this decided. Focus on data logistics only.
-
 **Skipping project exploration:**
 - **Problem:** Asking "what data do you have?" when the project directory has it
 - **Fix:** Always check the file system first, then ask about gaps
 
-**Vague source recommendations:**
-- **Problem:** "You could get this from various financial databases"
-- **Fix:** Name the specific database, table, and access method
-
-**Skipping the inventory document:**
+**Skipping the inventory:**
 - **Problem:** Verbal agreement on data, no written record
-- **Fix:** Always write and commit the inventory — it's the handoff to planning
+- **Fix:** Always document the inventory — it becomes part of PLAN.md
 
 ## Integration
 
-**Terminal state:** Invoke `superRA:analysis-planning` to create the implementation plan.
+**Terminal state:** Invoke `superRA:analysis-planning` to create the implementation plan. The data inventory becomes part of PLAN.md.
 
 **Pairs with:**
-- **superRA:using-analysis-worktrees** — May be invoked before or after exploration, depending on whether the user wants an isolated workspace first
+- **superRA:using-analysis-worktrees** — Pairs with this skill if the user wants an isolated workspace

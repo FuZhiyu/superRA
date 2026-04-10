@@ -61,7 +61,7 @@ The reviewer evaluates across these dimensions:
 
 | Dimension | What It Checks |
 |-----------|----------------|
-| **Data integrity** | Descriptions before transforms, row counts logged, no silent data loss |
+| **Data integrity** | Descriptions before analysis, row counts logged, no silent data loss |
 | **Code quality** | Clean, readable, jupytext format, logical structure |
 | **Implementation** | Code correctly implements what was specified, results make economic sense |
 | **Reproducibility** | Pipeline runs, outputs from committed code, paths correct |

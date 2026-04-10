@@ -4,7 +4,7 @@ description: >
   Guide for rigorous economic data analysis. Use PROACTIVELY whenever performing
   data analysis on economic or financial datasets — importing, cleaning, merging,
   constructing variables, or producing summary statistics. Enforces the Iron Law
-  (no transformation without prior description) and the Describe-Transform-Validate-Document
+  (no transformation without prior description) and the Describe-Analyze-Doc
   cycle. Three core principles: (1) describe before and after every transformation,
   (2) document in jupytext percent format with interleaved code/narrative/outputs,
   (3) validate against economic intuition, literature, and cross-variable relationships.
@@ -201,34 +201,34 @@ indicate a data or construction error.
   research question
 - Missing returns treated as zero is almost always wrong
 
-## Describe-Transform-Validate-Document
+## Describe-Analyze-Doc
 
 The operational cycle that implements the three principles at every step.
 
 ```dot
-digraph dtv_cycle {
+digraph dad_cycle {
     rankdir=LR;
     describe [label="DESCRIBE\nStats on input", shape=box, style=filled, fillcolor="#ccffcc"];
     verify_describe [label="Data\nunderstood?", shape=diamond];
-    transform [label="TRANSFORM\nExecute operation", shape=box, style=filled, fillcolor="#ccccff"];
-    validate [label="VALIDATE\nCheck output", shape=diamond];
-    document [label="DOCUMENT\nLog decisions", shape=box, style=filled, fillcolor="#ffffcc"];
+    analyze [label="ANALYZE\nExecute operation", shape=box, style=filled, fillcolor="#ccccff"];
+    doc [label="DOC\nVerify & document", shape=box, style=filled, fillcolor="#ffffcc"];
+    unexpected [label="Unexpected?", shape=diamond];
     next [label="Next step", shape=ellipse];
 
     describe -> verify_describe;
-    verify_describe -> transform [label="yes"];
+    verify_describe -> analyze [label="yes"];
     verify_describe -> describe [label="investigate\nfirst"];
-    transform -> validate;
-    validate -> document [label="expected"];
-    validate -> describe [label="unexpected\ninvestigate"];
-    document -> next;
+    analyze -> doc;
+    doc -> unexpected;
+    unexpected -> next [label="as expected"];
+    unexpected -> describe [label="investigate"];
     next -> describe;
 }
 ```
 
 ### DESCRIBE — Understand the Input
 
-Run descriptive statistics on the data you are about to transform.
+Run descriptive statistics on the data you are about to work with.
 Follow the Principle 1 protocol above for panel structure, variable diagnostics,
 and data types/missing values. Key points:
 
@@ -244,7 +244,7 @@ and data types/missing values. Key points:
 
 **Before a merge:** also describe the join keys in both tables — unique values, overlap.
 
-### TRANSFORM — Execute the Operation
+### ANALYZE — Execute the Operation
 
 Apply the data operation: merge, filter, construct variable, aggregate.
 
@@ -252,9 +252,9 @@ Apply the data operation: merge, filter, construct variable, aggregate.
 
 Row count printed before and after (for sample-changing operations).
 
-### VALIDATE — Check the Result
+### DOC — Verify and Document
 
-Compare before and after. Does the result make sense?
+Verify the result, then document everything. You can't document properly without checking — the evidence IS the documentation.
 
 **Row counts:**
 - Left join: row count should match left table (if right side is m:1)
@@ -272,15 +272,13 @@ Compare before and after. Does the result make sense?
 - Spot-check a few observations by hand
 - When expected results or hypotheses are provided in PLAN.md, compare findings to them — flag and investigate divergences
 
-**If something looks unexpected:** STOP. Investigate before proceeding.
-
-### DOCUMENT — Log Everything
-
-In jupytext markdown cells:
+**Log in jupytext markdown cells:**
 - What you did and why
 - Row count changes
 - Any surprising findings
 - Decision justifications (why this filter threshold, why this join type)
+
+**If something looks unexpected:** STOP. Investigate before proceeding.
 
 **Row count tracking is mandatory** for every sample-changing operation.
 
@@ -318,11 +316,16 @@ In jupytext markdown cells:
 
 Before marking a step complete:
 
-- [ ] Described input data before transformation
+**DESCRIBE:**
+- [ ] Described input data before the operation
 - [ ] Key variables examined with appropriate diagnostics
 - [ ] Panel structure documented (if applicable)
-- [ ] Transformation matches plan specification
+
+**ANALYZE:**
+- [ ] Operation matches plan specification
 - [ ] Row counts logged before and after (if sample-changing)
+
+**DOC:**
 - [ ] Output validated against expectations
 - [ ] Economic sense checked (magnitudes, signs, relationships)
 - [ ] Decisions documented in markdown cells

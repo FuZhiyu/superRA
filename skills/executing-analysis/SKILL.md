@@ -5,7 +5,9 @@ description: Use when executing analysis plans — dispatches subagent per task 
 
 # Executing Analysis
 
-Execute an analysis plan with data-first discipline. Default mode dispatches a fresh subagent per task with two-stage review (data integrity then implementation correctness). Falls back to direct execution when the user requests it or tasks are trivial.
+Execute an analysis plan with data-first discipline. This skill covers the **IMPLEMENT** and **VALIDATE** phases of the macro workflow: dispatching implementers (IMPLEMENT) and running two-stage review (VALIDATE).
+
+Default mode dispatches a fresh subagent per task with two-stage review (data integrity then implementation correctness). Falls back to direct execution when the user requests it or tasks are trivial.
 
 **Core principle:** Fresh subagent per task + two-stage review = high quality, reproducible analysis. Review always happens regardless of execution mode.
 
@@ -53,7 +55,7 @@ digraph process {
         "Dispatch implementer subagent" [shape=box];
         "Implementer asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
-        "Implementer: describe-transform-validate-commit" [shape=box];
+        "Implementer: describe-analyze-doc-commit" [shape=box];
         "Dispatch data integrity reviewer" [shape=box];
         "Data integrity passes?" [shape=diamond];
         "Implementer fixes data issues" [shape=box];
@@ -72,8 +74,8 @@ digraph process {
     "Dispatch implementer subagent" -> "Implementer asks questions?";
     "Implementer asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent";
-    "Implementer asks questions?" -> "Implementer: describe-transform-validate-commit" [label="no"];
-    "Implementer: describe-transform-validate-commit" -> "Dispatch data integrity reviewer";
+    "Implementer asks questions?" -> "Implementer: describe-analyze-doc-commit" [label="no"];
+    "Implementer: describe-analyze-doc-commit" -> "Dispatch data integrity reviewer";
     "Dispatch data integrity reviewer" -> "Data integrity passes?";
     "Data integrity passes?" -> "Implementer fixes data issues" [label="no"];
     "Implementer fixes data issues" -> "Dispatch data integrity reviewer" [label="re-review"];
@@ -88,6 +90,23 @@ digraph process {
     "Dispatch final analysis reviewer for full implementation" -> "Use superRA:finishing-analysis";
 }
 ```
+
+### Step 0: Branch Check
+
+Before starting execution, check if on a default branch:
+
+```bash
+git branch --show-current
+```
+
+If on `main` or `master`:
+```
+You're on main. I recommend creating a feature branch for this analysis:
+  git checkout -b analysis/<topic>
+Want me to create one?
+```
+
+If the user declines, proceed — they've given explicit consent to work on the default branch.
 
 ### Step 1: Load and Review Plan
 
@@ -283,14 +302,14 @@ Use the least powerful model that can handle each role:
 
 When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per-task implementation+review cycle can be orchestrated as a persistent team. This enables direct iteration between implementer and reviewers without the orchestrator relaying feedback.
 
-**Invoke `superRA:using-agent-teams` for the Analysis Task Team recipe** — it has the full team composition (3 teammates), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
+**Invoke `superRA:agent-orchestration` for the Analysis Task Team recipe** — it has the full team composition (3 teammates), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
 
 **Critical:** When all tasks complete, shut down teammates and clean up the team BEFORE invoking `superRA:finishing-analysis`. This frees the session's team slot for the pre-merge-gate team if the user chooses merge/PR.
 
 ## Red Flags
 
 **Never:**
-- Start analysis on main/master branch without explicit user consent
+- Start analysis on main/master branch without proposing a feature branch first (Step 0)
 - Skip reviews (data integrity OR implementation) — even in direct mode
 - Proceed with unfixed data integrity issues
 - Dispatch multiple implementers in parallel on the same data (conflicts)
@@ -311,7 +330,7 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 ## Integration
 
 **Required workflow skills:**
-- **superRA:using-analysis-worktrees** — REQUIRED: Set up isolated workspace before starting
+- **superRA:using-analysis-worktrees** — RECOMMENDED: For complex or multi-session analyses, consider an isolated workspace
 - **superRA:analysis-planning** — Creates the plan this skill executes
 - **superRA:econ-data-analysis** — REQUIRED: Data discipline all agents must follow
 - **superRA:finishing-analysis** — Complete work after all tasks done
