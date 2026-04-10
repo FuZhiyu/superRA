@@ -42,11 +42,18 @@ Use Task tool with superRA:data-analysis-reviewer type, fill template at `analys
 - `{HEAD_SHA}` - Ending commit
 - `{DESCRIPTION}` - Brief summary
 
+**Important:** The dispatch should contain only context (what was done, git SHAs, scope). Do NOT paraphrase review criteria — the reviewer has its own framework via econ-data-analysis.
+
 **3. Act on feedback:**
 - Fix Critical issues immediately (wrong results)
 - Fix Major issues before proceeding (likely problems)
 - Note Minor issues for later (suggestions)
 - Push back if reviewer is wrong (with reasoning)
+
+**4. After fixing issues, commit everything together:**
+- Update PLAN.md with any changes to the approach
+- Update RESULTS_UPDATE.md with findings
+- Stage code fixes AND doc updates in a single commit
 
 ## Review Dimensions
 
