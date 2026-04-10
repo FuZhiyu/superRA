@@ -86,7 +86,7 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 **Lead responsibilities:**
 - Read PLAN.md, create full task graph with all dependencies
 - Provide each teammate with their prompt template and project context
-- Update PLAN.md and RESULTS_UPDATE.md after each task completes (teammates commit code; lead updates plan documents)
+- Verify that teammates commit their own PLAN.md and RESULTS_UPDATE.md updates atomically with their work (per executing-analysis responsibility matrix)
 - Monitor for BLOCKED or data quality escalations (teammates message lead)
 - Handle sensitivity analysis assessment
 - Note team phase in PLAN.md (e.g., "Analysis Team active, tasks 1-3 of 5 complete")

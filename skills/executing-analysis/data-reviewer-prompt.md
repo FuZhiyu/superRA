@@ -81,6 +81,34 @@ Task tool (general-purpose):
     then re-dispatch this data integrity review. Iterate until APPROVE.
     Do NOT proceed to implementation review until data integrity is approved.
 
+    ## Document Your Findings
+
+    After completing your review, update the handoff documents so the
+    analysis state survives session interruptions.
+
+    **Scope: only edit the section for the task you are reviewing.
+    Do not modify other tasks' status, steps, findings, or review notes.**
+
+    **If REVISE:**
+    1. In PLAN.md, under the current task heading only:
+       - Set `**Review status:** REVISE (data integrity)`
+       - Add a blockquote with your specific issues:
+         ```
+         > **Review issues (data integrity):**
+         > - [issue with file:line — severity]
+         > - [issue — severity]
+         ```
+    2. Commit: `git add PLAN.md && git commit -m "review: Task N data integrity issues"`
+
+    **If APPROVE with reliability concerns:**
+    1. In RESULTS_UPDATE.md, under the current task's results only:
+       - Add: `> **⚠️ Reviewer note (data integrity):** [concern]`
+       - These notes persist — they are analytical caveats, not action items.
+    2. Commit: `git add RESULTS_UPDATE.md && git commit -m "review: Task N data integrity caveat"`
+
+    **If APPROVE with no concerns:**
+    - No document updates or commits needed.
+
     ## If Running as Agent Team Teammate
 
     If you are part of an Agent Team (not a standalone subagent):

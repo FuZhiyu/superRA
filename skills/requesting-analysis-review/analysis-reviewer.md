@@ -79,4 +79,18 @@ Task tool (general-purpose):
     ---
     ACTION REQUIRED: Fix the above issues, then re-dispatch this reviewer.
     Iterate until APPROVE.
+
+    ## Document Reliability Concerns
+
+    If you identify results that are unreliable, sensitive, or need caveats
+    (regardless of your overall verdict), add a persistent note in
+    RESULTS_UPDATE.md under the relevant task's results section only:
+
+    `> **⚠️ Reviewer note:** [analytical concern]`
+
+    These notes persist — they are caveats for the researcher, not action
+    items. Only edit the section for the task you are reviewing.
+
+    If you added a note, commit:
+    `git add RESULTS_UPDATE.md && git commit -m "review: add reliability caveat"`
 ```
