@@ -64,6 +64,26 @@ Create a task for each of these items and complete them in order:
 - **Skipping project exploration:** asking "what data do you have?" when the project directory has it. Always check the file system first, then ask about gaps.
 - **Skipping the inventory:** verbal agreement on data, no written record. Always document the inventory — it becomes part of PLAN.md.
 
+### Red Flags — Hard Gate Protection
+
+The Phase 1 data inventory is a hard gate. It applies to every analysis regardless of perceived simplicity. The following loopholes are closed:
+
+**Never:**
+- Skip Phase 1 and propose the data inventory verbally. It must be written into `PLAN.md`.
+- Proceed to Phase 2 before the user explicitly approves the inventory.
+- Say "I'll assume we have X data — we can check later." Check first, then plan.
+- Write task structure speculatively while data availability is uncertain.
+- Use phrases like "pending data availability" or "TBD sources" in task steps — every source must be grounded in a verified file or table.
+- Draft Phase 2 in parallel with Phase 1 "to save time" — the gate is sequential.
+
+**Common rationalizations that mean STOP:**
+- "This analysis is simple — the gate is overkill." The gate applies every time. Simple analyses hide the same data-shape surprises as complex ones.
+- "The user clearly knows what data they want." Write it down anyway. The doc is the record; verbal confirmation is not.
+- "We can move faster if I draft tasks in parallel with inventory." No. Gate first, then tasks.
+- "I'll sketch Phase 2 and revise after Phase 1." A sketch written against unknown data will be thrown away — the revision is a rewrite, not an edit.
+
+**Why the gate exists:** skipping Phase 1 means writing a plan for data you don't have, which means rewriting the plan after seeing the data — 2–3× the overhead. The Iron Law ("no transformation without prior description") has a planning-phase analogue: no tasks without prior data inventory.
+
 After the user approves the inventory, proceed to Phase 2 (Scope Check + Plan Creation).
 
 ## Phase 2: Scope Check
