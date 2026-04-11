@@ -36,6 +36,16 @@ INTEGRATE       integration-workflow → merge-workflow (uses semantic-merge)
 
 Each task produces an atomic commit. If the session dies at any point, the next session reads PLAN.md + RESULTS_UPDATE.md + git state and picks up exactly where the last one stopped.
 
+## Design Principles
+
+Three workflow principles are baked into every skill in the repo. Every contribution is evaluated against them (see `CLAUDE.md` for the full version).
+
+1. **Enforced implementer–reviewer pair at every step.** No result is accepted until a reviewer signs off. Two-stage review during execution (data integrity → implementation correctness), drift-test and integration reviews before merge, and a fresh integration review after semantic-merge. Review is never skipped.
+
+2. **Handoff docs are the auditable record AND the continuation point.** All material findings, decisions, and results land in committed `PLAN.md` / `RESULTS_UPDATE.md` *before* they appear in any chat reply. Any fresh agent can resume work from the docs + git state alone — no prompt history required. Atomic commits bundle code + doc edits together.
+
+3. **Fast early, strict before merge. Semantic merges always.** Analysis code is written for speed during implementation — no codebase-fit checks at interim checkpoints. Refactoring, drift tests, codebase integration, and the work-journal report happen only when the user chooses to merge. Every merge into main runs through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
+
 ## Installation
 
 superRA is a fork of [Superpowers](https://github.com/obra/superpowers), adapted for economic research. Clone and install as a local plugin:

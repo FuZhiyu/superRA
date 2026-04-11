@@ -19,17 +19,28 @@ Skills are not prose. If you modify skill content:
 - Run the skill through a realistic session to confirm it triggers when it should and doesn't when it shouldn't.
 - Be cautious editing carefully-tuned content (Red Flags tables, rationalization lists, RA-framing language, severity protocols). Changes here should be driven by observed failures, not stylistic preference.
 
-## Understand the Project Before Restructuring
+## Design Principles
 
-superRA has its own tested philosophy:
+superRA has a tested philosophy that every skill, hook, and agent file is built around. **Evaluate every proposed change against all of these principles.** If a change weakens any of them, the commit message must justify why and what compensates. These are not stylistic — they are the load-bearing structure of the plugin.
 
-- **RA framing.** The agent is a Research Assistant implementing the researcher's ideas, not judging methodology.
-- **Iron Law.** NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION. This is non-negotiable and shapes every analysis-touching skill.
-- **Living handoff docs.** PLAN.md and RESULTS_UPDATE.md are updated inline at each step, owned atomically by the agent doing the work.
-- **Two-stage review.** Data integrity first, implementation correctness second. Review is never skipped.
-- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. One source of truth per concern.
+### Foundational discipline
 
-Before proposing structural changes to skill design, workflow phases, or agent orchestration, read the existing skills in `skills/superRA/` and the workflow skills they reference.
+- **RA framing.** The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. Challenges to methodology are escalated to the human partner, never decided unilaterally.
+- **Iron Law.** NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION. Non-negotiable. Shapes every analysis-touching skill and is protected by Red Flags tables and rationalization lists in `econ-data-analysis`.
+
+### Workflow principles
+
+1. **Enforced implementer–reviewer pair at every step.** No result is accepted until a reviewer has signed off. Two-stage review (data integrity then implementation correctness) during execution; a drift-test review and an integration review before merge; a fresh integration review after semantic-merge. Review is never skipped, regardless of perceived triviality. A change that would let a step ship without review violates this principle.
+
+2. **Handoff docs are the auditable record AND the continuation point.** All material findings, decisions, methodology notes, and results land in committed `PLAN.md` / `RESULTS_UPDATE.md` *before* they appear in any status report or chat message. Any fresh agent can open the repo and resume work from the docs + git state alone — no prompt history required. Atomic commits bundle code + doc edits so every git SHA reconstructs a coherent state. A change that creates out-of-doc state (findings only in chat, caveats only in reports, decisions only in dispatch prompts) violates this principle.
+
+3. **Fast early, strict before merge. Semantic merges always.** Analysis code is written for speed during the IMPLEMENT phase — no codebase-fit checks at interim checkpoints. Codebase integration, drift tests, refactoring, and work-journal reports happen only when the user chooses to merge, inside `integration-workflow`. Every merge into main runs through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`. A change that front-loads integration concerns onto interim tasks, or bypasses semantic-merge, violates this principle.
+
+### Architectural pattern
+
+- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. One source of truth per concern — protocol skills redirect to agent files, workflow skills delegate to reference files, duplicated content is a code smell. When adding content, first ask where its authoritative home already is.
+
+Before proposing structural changes to skill design, workflow phases, or agent orchestration, read the existing skills in `skills/` and the workflow skills they reference, and verify the proposal strengthens (or at least preserves) all three workflow principles.
 
 ## General
 
