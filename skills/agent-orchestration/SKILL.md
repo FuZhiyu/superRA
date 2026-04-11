@@ -220,7 +220,7 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 **Lead responsibilities:**
 - Read PLAN.md, create full task graph with all dependencies
 - Provide each teammate with their agent type, skill to load, and project context
-- Verify that teammates commit their own PLAN.md and RESULTS_UPDATE.md updates atomically with their work (per execution-workflow responsibility matrix)
+- Verify that teammates commit their own PLAN.md and RESULTS.md updates atomically with their work (per execution-workflow responsibility matrix)
 - Monitor for BLOCKED or data quality escalations (teammates message lead)
 - Handle sensitivity analysis assessment
 - Note team phase in PLAN.md (e.g., "Analysis Team active, tasks 1-3 of 5 complete")
@@ -268,7 +268,7 @@ All teammates auto-load superRA:econ-data-analysis and superRA:script-to-noteboo
 - Adjudicate every REVISE round per orchestrator discipline; forward only accepted issues to the refactorer or test-creator
 - Monitor for meaningful drift escalations from refactorer
 - Generate the work-journal report (integration-workflow Step 3 — no team work, lead does this)
-- Handle PLAN.md / RESULTS_UPDATE.md disposition (integration-workflow Step 4 — lead asks user and executes git mv/rm)
+- Handle PLAN.md / RESULTS.md disposition (integration-workflow Step 4 — lead asks user and executes git mv/rm)
 - Handle user communication for all escalation decisions
 - Commit at stage boundaries
 - **Clean up team before proceeding to merge-workflow** (the Merge Team needs the session slot)
@@ -369,7 +369,7 @@ When a team's work is complete:
 
 If context runs out or the session ends mid-team:
 - **Teammates are lost.** `/resume` and `/rewind` do not restore teammates.
-- **Completed work is safe.** All completed tasks are committed to git and recorded in PLAN.md/RESULTS_UPDATE.md.
+- **Completed work is safe.** All completed tasks are committed to git and recorded in PLAN.md/RESULTS.md.
 - **New session detects in-progress work.** SuperRA's cross-session detection (in `using-superRA`) checks for incomplete PLAN.md.
 - **Resume with new team.** New session reads PLAN.md to find last completed task, spawns a fresh team for remaining work.
 
@@ -378,7 +378,7 @@ If context runs out or the session ends mid-team:
 Because teammates can be lost at any time, checkpointing discipline is critical:
 - Commit after each completed task (already required by superRA)
 - Update PLAN.md and mark tasks `- [x]` with result notes (already required)
-- Update RESULTS_UPDATE.md with findings (already required)
+- Update RESULTS.md with findings (already required)
 - **Additionally:** Lead records active team phase in PLAN.md when spawning a team
 
 Example PLAN.md team status note:

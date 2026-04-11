@@ -22,7 +22,7 @@ merge-workflow is invoked by `superRA:execution-workflow` Step 4 (Option 1 or 2)
 - Drift tests have been created, reviewed, and committed (integration-workflow Stage 1)
 - Code has been refactored for codebase fit and integration-reviewer-approved (integration-workflow Stage 2)
 - A work-journal report exists (integration-workflow Step 3)
-- `PLAN.md` and `RESULTS_UPDATE.md` have been disposed of (integration-workflow Step 4)
+- `PLAN.md` and `RESULTS.md` have been disposed of (integration-workflow Step 4)
 - The user has chosen Option 1 (merge locally) or Option 2 (push + PR) — execution-workflow Step 4 captured this choice
 
 If any of those preconditions are missing, stop and consult integration-workflow / execution-workflow rather than proceeding.

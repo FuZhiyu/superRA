@@ -110,12 +110,12 @@ If the user declines, proceed — they've given explicit consent to work on the 
 
 ### Step 1: Load and Review Plan
 
-1. Read `PLAN.md` and `RESULTS_UPDATE.md`
+1. Read `PLAN.md` and `RESULTS.md`
 2. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources available and accessible?
    - Are the steps in the right order?
    - Is the pipeline file included (for multi-script analyses)?
-3. Review RESULTS_UPDATE.md for context on any completed steps (if resuming)
+3. Review RESULTS.md for context on any completed steps (if resuming)
 4. If concerns: Raise them with your human partner before starting
 5. If no concerns: Create TodoWrite with all steps and proceed
 
@@ -125,7 +125,7 @@ If the user declines, proceed — they've given explicit consent to work on the 
 
 1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "implementer")` — see template below. Direct mode: invoke `superRA:implementer-protocol`, then implement yourself.
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
-3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS_UPDATE.md. Dispatch the **data integrity reviewer**. If REVISE: adjudicate the feedback in place inside the PLAN.md review-notes blockquote — append `→ orchestrator: rejected <reason>` or `→ orchestrator: <second opinion requested> <reason>` annotations to items you are rejecting or flagging, rewrite task steps in place for items you are accepting, commit, then re-dispatch the implementer. Leave the blockquote itself intact — the implementer will annotate items with `→ implemented: ...` markers on their pass, and the reviewer will delete confirmed-fixed items on re-review. See the "Handling Reviewer Feedback" section below and `agents/implementer.md` / `agents/reviewer.md` for the full annotation mechanics. Iterate until APPROVE. Do not proceed to implementation review until data integrity is approved.
+3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. Dispatch the **data integrity reviewer**. If REVISE: adjudicate the feedback in place inside the PLAN.md review-notes blockquote — append `→ orchestrator: rejected <reason>` or `→ orchestrator: <second opinion requested> <reason>` annotations to items you are rejecting or flagging, rewrite task steps in place for items you are accepting, commit, then re-dispatch the implementer. Leave the blockquote itself intact — the implementer will annotate items with `→ implemented: ...` markers on their pass, and the reviewer will delete confirmed-fixed items on re-review. See the "Handling Reviewer Feedback" section below and `agents/implementer.md` / `agents/reviewer.md` for the full annotation mechanics. Iterate until APPROVE. Do not proceed to implementation review until data integrity is approved.
 4. **Once data integrity APPROVE:** dispatch the **implementation reviewer**. Same REVISE loop with adjudication.
 5. **Once implementation reviewer APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
 
@@ -145,7 +145,7 @@ Agent(subagent_type: "implementer"):
   Counterpart: reviewer  # Agent Teams only
 ```
 
-The agent reads PLAN.md, Data Inventory, Conventions, and prior results from RESULTS_UPDATE.md directly.
+The agent reads PLAN.md, Data Inventory, Conventions, and prior results from RESULTS.md directly.
 
 **Data integrity reviewer:**
 ```
@@ -223,7 +223,7 @@ After every task is APPROVED, the analysis must be verified end-to-end before pr
 
 4. **PLAN.md up to date?** All tasks have `**Review status:** APPROVED`. All steps marked `- [x]` with result notes. No tasks stuck in `IMPLEMENTED` or `REVISE`. Discovery notes captured. Upcoming-task descriptions reflect current understanding.
 
-5. **RESULTS_UPDATE.md up to date?** Has findings for all completed tasks. Figure attachments in `results_attachments/` committed.
+5. **RESULTS.md up to date?** Has findings for all completed tasks. Figure attachments in `results_attachments/` committed.
 
 If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
 
@@ -251,7 +251,7 @@ Which option?
 **Execute the user's choice:**
 
 - **Option 1 or 2 (Merge or PR):** Dispatch the two integration-phase workflow skills in sequence — do not run their steps yourself.
-  1. Invoke `superRA:integration-workflow` for drift test creation, the refactor-review loop, work-journal report generation, and disposition of `PLAN.md` / `RESULTS_UPDATE.md`. Wait for it to return successfully.
+  1. Invoke `superRA:integration-workflow` for drift test creation, the refactor-review loop, work-journal report generation, and disposition of `PLAN.md` / `RESULTS.md`. Wait for it to return successfully.
   2. Invoke `superRA:merge-workflow` for the main update via semantic-merge, post-merge verification (drift tests AND fresh integration review), the refactor-review loop on post-merge failure, the actual local merge or PR push, and worktree cleanup.
 
   Both skills are required for Options 1 and 2. The merge-workflow assumes integration-workflow has already produced a merge-ready branch.
@@ -293,10 +293,10 @@ These are the things the orchestrator does that no subagent does:
 
 When executing sensitivity analysis tasks:
 
-- Provide implementer with baseline results from RESULTS_UPDATE.md
+- Provide implementer with baseline results from RESULTS.md
 - If sensitivity check shows divergence from baseline: assess **economic significance**, not just statistical
 - If unsure whether a sensitivity failure is meaningful: **escalate to human partner** before proceeding
-- Document the assessment in RESULTS_UPDATE.md
+- Document the assessment in RESULTS.md
 - Not all sensitivity failures are problems — use economic reasoning
 
 ## Model Selection

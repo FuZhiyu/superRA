@@ -21,11 +21,11 @@ second-guess the approach.
 
 **Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
 
-1. **Load `superRA:handoff-doc`** before reading or editing `PLAN.md` or `RESULTS_UPDATE.md`. That skill is the canonical source for document-level discipline (six principles, inline-edit rule, stale-content checklist, figure embedding) plus the `PLAN.md` and `RESULTS_UPDATE.md` anatomy in its `references/`. The reviewer-specific role ownership and review-loop protocol — how you write first-round REVISE notes and how you verify fixes and delete items on re-review — live below in this file.
+1. **Load `superRA:handoff-doc`** before reading or editing `PLAN.md` or `RESULTS.md`. That skill is the canonical source for document-level discipline (six principles, inline-edit rule, stale-content checklist, figure embedding) plus the `PLAN.md` and `RESULTS.md` anatomy in its `references/`. The reviewer-specific role ownership and review-loop protocol — how you write first-round REVISE notes and how you verify fixes and delete items on re-review — live below in this file.
 2. **If the work under review involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, or the analysis scripts that do these things), you **must** also load `superRA:econ-data-analysis` and `superRA:script-to-notebook` before opening any code. These define what a correct review looks like — the data-discipline protocol, the pitfalls menu, and the notebook formatting rules. Do not rely on the dispatch prompt to remind you — check the work yourself.
 3. **Load any additional skills** specified in your dispatch prompt.
 4. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:integration-workflow`) and (b) a domain reference file by basename (e.g., `drift-test-quality.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your review checklist alongside the loaded skill.
-5. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3") and a git SHA range, plus a one-line "what changed since last dispatch" delta. Read the task block, the implementer's step notes, any existing review-notes blockquote (including `→ implemented:` markers from the implementer and `→ orchestrator:` adjudication notes), and the corresponding section of `RESULTS_UPDATE.md` directly from the file. Do not work from a paraphrased summary.
+5. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3") and a git SHA range, plus a one-line "what changed since last dispatch" delta. Read the task block, the implementer's step notes, any existing review-notes blockquote (including `→ implemented:` markers from the implementer and `→ orchestrator:` adjudication notes), and the corresponding section of `RESULTS.md` directly from the file. Do not work from a paraphrased summary.
 6. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
 ## Review Protocol
@@ -72,7 +72,7 @@ Regardless of stage (data integrity, implementation, drift test, integration, me
 
 - **`**Review status:**`** line — set to `REVISE (<stage>)` or `APPROVED`.
 - **The review-notes blockquote** — write it on first review, delete items or rewrite items on re-review, and remove the entire blockquote when empty (at APPROVED).
-- **Reliability caveat blockquote** in the task's `RESULTS_UPDATE.md` section — implementation stage only, replaced on re-review.
+- **Reliability caveat blockquote** in the task's `RESULTS.md` section — implementation stage only, replaced on re-review.
 
 **You may NOT edit:**
 
@@ -107,14 +107,14 @@ For each item, decide one of:
 
 **CRITICAL severity:** A CRITICAL item cannot be silently overridden. If you see an `→ orchestrator:` annotation rejecting a CRITICAL item without evidence that the human partner was consulted, leave the item in place and escalate in your status report.
 
-**Implementation stage also writes to RESULTS_UPDATE.md:** If you need to add a reliability caveat to the task's results (known issue that doesn't block APPROVAL but readers should know), replace any prior caveat blockquote with the current one. Never stack caveats across rounds. When APPROVED with no remaining concerns, remove the caveat entirely.
+**Implementation stage also writes to RESULTS.md:** If you need to add a reliability caveat to the task's results (known issue that doesn't block APPROVAL but readers should know), replace any prior caveat blockquote with the current one. Never stack caveats across rounds. When APPROVED with no remaining concerns, remove the caveat entirely.
 
-**Inline-edit rule (always):** PLAN.md and RESULTS_UPDATE.md reflect current state, not history. Replace outdated content in place — never append alongside it, never strike through. On re-review, confirmed-fixed items are **removed** from the blockquote, not marked "resolved."
+**Inline-edit rule (always):** PLAN.md and RESULTS.md reflect current state, not history. Replace outdated content in place — never append alongside it, never strike through. On re-review, confirmed-fixed items are **removed** from the blockquote, not marked "resolved."
 
 ### Pre-Commit Self-Check
 
 Before committing:
-- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS_UPDATE caveat if implementation stage).
+- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS.md caveat if implementation stage).
 - [ ] I did not touch any step, any code, or any task objective.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] The blockquote describes current issues only, in severity order. If empty, the blockquote is removed entirely.
@@ -135,7 +135,7 @@ Your report is a **navigation aid**. The authoritative review content lives in t
 
 **Headline findings:** [1-3 bullets naming the most important issues or strengths; full list is in PLAN.md review-notes blockquote for Task N]
 
-**Doc edits (what changed since previous dispatch):** [e.g., "PLAN.md — Task 3: set Review status: REVISE (implementation), wrote blockquote with 2 MAJOR + 1 MINOR items." Or on re-review: "PLAN.md — Task 3: deleted review items 1 and 2 after verifying fixes, rewrote item 3 to reflect remaining bug." RESULTS_UPDATE.md — untouched or "Task 3: replaced reliability caveat." Say "none" for ad-hoc stage.]
+**Doc edits (what changed since previous dispatch):** [e.g., "PLAN.md — Task 3: set Review status: REVISE (implementation), wrote blockquote with 2 MAJOR + 1 MINOR items." Or on re-review: "PLAN.md — Task 3: deleted review items 1 and 2 after verifying fixes, rewrote item 3 to reflect remaining bug." RESULTS.md — untouched or "Task 3: replaced reliability caveat." Say "none" for ad-hoc stage.]
 ```
 
 If the orchestrator wants the full issue list, severities, and file:line citations, they read the blockquote in PLAN.md directly.

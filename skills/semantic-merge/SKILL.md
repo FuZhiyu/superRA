@@ -1,6 +1,6 @@
 ---
 name: semantic-merge
-description: Use when about to run `git merge`, `git rebase`, or `git cherry-pick` on research code — or any time incoming changes from another branch may touch results-bearing files, analysis scripts, PLAN.md, RESULTS_UPDATE.md, or drift tests — and you want thoughtful, research-aware conflict resolution rather than mechanical ours/theirs; when pulling main into an analysis branch; when integrating a sibling analysis; when a "simple" conflict might silently change results. Triggers include bare `git merge` / `git rebase` / `git cherry-pick` on a research branch (the merge-guard hook will flag these automatically), "pull main into this branch", "rebase onto main", "cherry-pick commit X", or any merge where at least one hunk touches a results-bearing file. Invoked internally by `merge-workflow` Step 1; also usable standalone for ad-hoc merges outside the analysis-finishing flow.
+description: Use when about to run `git merge`, `git rebase`, or `git cherry-pick` on research code — or any time incoming changes from another branch may touch results-bearing files, analysis scripts, PLAN.md, RESULTS.md, or drift tests — and you want thoughtful, research-aware conflict resolution rather than mechanical ours/theirs; when pulling main into an analysis branch; when integrating a sibling analysis; when a "simple" conflict might silently change results. Triggers include bare `git merge` / `git rebase` / `git cherry-pick` on a research branch (the merge-guard hook will flag these automatically), "pull main into this branch", "rebase onto main", "cherry-pick commit X", or any merge where at least one hunk touches a results-bearing file. Invoked internally by `merge-workflow` Step 1; also usable standalone for ad-hoc merges outside the analysis-finishing flow.
 ---
 
 # Semantic Merge
@@ -109,7 +109,7 @@ git merge --no-commit <incoming-branch>
 |-----------|----------|------|
 | Analysis scripts | `.py`, `.jl`, `.R` with analysis content | 3 |
 | Data processing | Variable construction, sample filters | 3 |
-| Results files | Tables, figures, RESULTS_UPDATE.md | 3 |
+| Results files | Tables, figures, RESULTS.md | 3 |
 | Research planning | PLAN.md | 3 |
 | Drift tests | `tests/` guarding analysis results | 3 |
 | Configuration | Build scripts, CI, project config | 2 |
