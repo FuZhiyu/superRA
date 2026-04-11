@@ -278,7 +278,7 @@ All teammates auto-load superRA:econ-data-analysis and superRA:script-to-noteboo
 **When:** `superRA:merge-workflow` is invoked (from execution-workflow Step 4 Option 1 or 2 after integration-workflow has returned). Spawned by the lead after the Integration Team has been cleaned up.
 
 **Teammates (4):**
-- `merge-proposer` — Invokes semantic-merge internally for tier classification; executes the two-commit main-update merge
+- `merge-proposer` — Delegates to `superRA:semantic-merge` via an explicit Skill invocation for tier classification and conflict resolution; executes the two-commit main-update merge
 - `merge-reviewer` — Reviews the main update for intent preservation, research integrity, data discipline
 - `post-merge-refactorer` — Re-refactors analysis code if the main update introduced convention drift (same role as the Integration Team's refactorer but against the merged state)
 - `post-merge-integration-reviewer` — Runs drift tests AND reviews codebase integration on the merged state; approves only when both pass
@@ -286,7 +286,7 @@ All teammates auto-load superRA:econ-data-analysis and superRA:script-to-noteboo
 **Spawn:**
 ```
 Create an agent team for the merge workflow:
-- merge-proposer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md; note: invokes semantic-merge internally for Tier classification]
+- merge-proposer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md; note: delegates to superRA:semantic-merge via an explicit Skill invocation for Tier classification]
 - merge-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
 - post-merge-refactorer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
 - post-merge-integration-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md; note: must run BOTH drift tests AND codebase integration review on the merged state]
