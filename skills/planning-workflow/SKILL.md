@@ -7,7 +7,7 @@ description: Use when starting a new empirical analysis with a research objectiv
 
 ## Overview
 
-Workflow skill for the **PLAN** phase of the superRA workflow. Owns data inventory (Phase 1) and plan creation (Phase 2+). Outputs `PLAN.md` and `RESULTS_UPDATE.md` for the execution-workflow to consume.
+Workflow skill for the **PLAN** phase of the superRA workflow. Owns data inventory (Phase 1) and plan creation (Phase 2+). Outputs `PLAN.md` and `RESULTS.md` for the execution-workflow to consume.
 
 Write comprehensive analysis plans assuming the analyst has zero context for this project. Document everything they need: which files to create, what data to load, how to transform it, what to validate, and how to document results. Give them the whole plan as bite-sized steps. Frequent commits.
 
@@ -16,7 +16,7 @@ Assume the analyst is skilled at data work, but knows nothing about this specifi
 **Announce at start:** "I'm using the planning-workflow skill to inventory data and create the analysis plan."
 
 **Save plan to:** `PLAN.md` at the project root (if in a worktree, the worktree root; otherwise, the project root or user-specified location)
-- Create `RESULTS_UPDATE.md` alongside (see Results Update Document section)
+- Create `RESULTS.md` alongside (see Results Update Document section)
 - (User preferences for plan location override this default)
 
 **Before you create directories or start editing:** if this analysis may span multiple sessions, run in parallel with another analysis, or need an isolated data copy, consider loading `superRA:using-analysis-worktrees` before any file creation. A worktree at this point is cheap; retrofitting one after Phase 1 is not. For simple single-session analyses on an existing branch, skip it — a feature branch is sufficient.
@@ -170,22 +170,22 @@ Every analysis plan should include sensitivity analysis tasks. At the planning s
 
 At each checkpoint: mark steps `[x]`, update upcoming steps if findings change the approach, edit discovery notes into the relevant task sections. Every update is an inline edit — replace outdated text, never append "Update:" blocks.
 
-**For the full discipline** — the six principles, inline-edit rule, stale-content checklist, figure embedding, and the PLAN.md / RESULTS_UPDATE.md anatomy — load `superRA:handoff-doc`. That skill is the single source of truth and is also loaded by implementer and reviewer subagents, so the rules stay consistent across roles. Role-by-role ownership and the review-loop annotation protocols (how implementers annotate fixes, how reviewers verify and delete items) live in `agents/implementer.md` and `agents/reviewer.md`.
+**For the full discipline** — the six principles, inline-edit rule, stale-content checklist, figure embedding, and the PLAN.md / RESULTS.md anatomy — load `superRA:handoff-doc`. That skill is the single source of truth and is also loaded by implementer and reviewer subagents, so the rules stay consistent across roles. Role-by-role ownership and the review-loop annotation protocols (how implementers annotate fixes, how reviewers verify and delete items) live in `agents/implementer.md` and `agents/reviewer.md`.
 
 **Reviewers check:** Does the plan reflect what actually happened? Are upcoming steps still valid given what was found?
 
 ## Results Update Document
 
-After saving `PLAN.md`, create `RESULTS_UPDATE.md` at the project root using the template at `references/results-update-template.md` inside this skill (load this skill via the Skill tool, then read `<base_dir>/references/results-update-template.md`).
+After saving `PLAN.md`, create `RESULTS.md` at the project root using the template at `references/results-template.md` inside this skill (load this skill via the Skill tool, then read `<base_dir>/references/results-template.md`). This is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record via `report-in-markdown` (see `superRA:handoff-doc` for the two-stage lifecycle).
 
 The document is updated after each completed step alongside PLAN.md. Key rules:
 
 - One section per task — replace prior content on re-implementation, never append a second version
 - Reviewer caveats appear as blockquoted notes below the implementer's findings (replaced on re-review, not stacked)
-- Save figures and tables as PNG in `results_attachments/` at project root (committed to git)
+- Save figures and tables as PNG in `results_attachments/` at project root (committed to git). Full figure/math/table discipline lives in `skills/report-in-markdown/references/rich-content.md`; load it when embedding figures.
 - The document should always read as a clean current-state summary, not a changelog
 - Reference full output files for detailed results (these may be gitignored)
-- Commit `RESULTS_UPDATE.md` and `results_attachments/` with each checkpoint commit
+- Commit `RESULTS.md` and `results_attachments/` with each checkpoint commit
 - Together with PLAN.md, this forms a complete handoff: context + what happened + what was found
 
 ## No Placeholders
@@ -216,7 +216,7 @@ After writing the complete plan:
 
 **4. Validation coverage:** Does every merge, filter, and variable construction have a corresponding validation step?
 
-**5. Plan serves as handoff:** If you stopped here and a new agent read only this plan and RESULTS_UPDATE.md, could they continue? Is there enough context?
+**5. Plan serves as handoff:** If you stopped here and a new agent read only this plan and RESULTS.md, could they continue? Is there enough context?
 
 **6. Sensitivity coverage:** Are sensitivity analysis tasks included? Were they discussed with the user to determine which checks matter most for this analysis?
 
@@ -226,7 +226,7 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 After finalizing the plan, commit the plan, then offer execution choice:
 
-**"Plan complete and saved to `PLAN.md`. RESULTS_UPDATE.md created. Two execution options:**
+**"Plan complete and saved to `PLAN.md`. RESULTS.md created. Two execution options:**
 
 **1. Subagent-Driven (recommended for independent tasks)** - I dispatch a fresh subagent per task, review between tasks, fast iteration. Best when tasks don't heavily depend on each other's outputs.
 

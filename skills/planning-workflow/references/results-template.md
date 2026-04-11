@@ -1,16 +1,16 @@
-# RESULTS_UPDATE.md Template
+# RESULTS.md Template
 
-The findings document at the project root, created alongside `PLAN.md`. Mirrors the plan's task structure and gets updated after each step with key findings.
+The findings document at the worktree root, created alongside `PLAN.md`. Mirrors the plan's task structure and gets updated after each step with key findings. This is the Stage 1 form — it matures into a permanent record at INTEGRATE Step 3 (see `superRA:handoff-doc`'s two-stage lifecycle).
 
 **The canonical anatomy and inline-edit rules live in `superRA:handoff-doc`.** Load that skill for the six principles and the full per-task section structure. This template is a minimal starter scaffold.
 
 ## Starter Scaffold
 
 ```markdown
-# [Analysis Name] — Results Update
+# [Analysis Name] — Results
 
 > Mirrors PLAN.md structure. Updated after each step with key findings.
-> New agents: read PLAN.md for what to do, RESULTS_UPDATE.md for what was found.
+> New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
 **Last updated:** YYYY-MM-DD (Task N, Step M)
 **Status:** In Progress
@@ -25,9 +25,9 @@ The findings document at the project root, created alongside `PLAN.md`. Mirrors 
 - One section per task, added as findings come in.
 - Replace prior content on re-implementation; never append a second version.
 - Reviewer caveats appear as a blockquoted note at the bottom of the section (replaced on re-review, not stacked; removed entirely when APPROVED with no remaining caveats).
-- **Figures are always embedded with markdown image syntax**: `![caption](results_attachments/fig_name.png)`. The path is relative and the image file lives in `results_attachments/` at project root, committed to git.
+- **Figures are always embedded with markdown image syntax**: `![caption](results_attachments/fig_name.png)`. The path is relative and the image file lives in `results_attachments/` at project root, committed to git. Full figure/math/table discipline in `skills/report-in-markdown/references/rich-content.md`.
 - The document always reads as a single coherent current-state summary, not a changelog.
-- Commit `RESULTS_UPDATE.md` and `results_attachments/` alongside each task's code commit.
+- Commit `RESULTS.md` and `results_attachments/` alongside each task's code commit.
 
 ## Per-Task Section Template
 

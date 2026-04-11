@@ -95,12 +95,12 @@ print(f"Unmatched: {df['char_var'].isna().sum()} ({df['char_var'].isna().mean():
 
 Verify: row count unchanged, unmatched rate reasonable, merged variables have expected distributions.
 Update PLAN.md: mark steps [x], set `**Review status:** IMPLEMENTED`, note findings.
-Update RESULTS_UPDATE.md: add key results for this task (row counts, summary stats, figures).
+Update RESULTS.md: add key results for this task (row counts, summary stats, figures).
 Save any figures to `results_attachments/`.
 Commit code and docs together in a single atomic commit:
 
 ```bash
-git add Code/01_clean_data.py PLAN.md RESULTS_UPDATE.md results_attachments/
+git add Code/01_clean_data.py PLAN.md RESULTS.md results_attachments/
 git commit -m "Task 1: merge holdings with fund characteristics"
 ```
 ````

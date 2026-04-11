@@ -19,7 +19,7 @@ approach.
 
 **Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
 
-1. **Load `superRA:handoff-doc`** before reading or editing `PLAN.md` or `RESULTS_UPDATE.md`. That skill is the canonical source for document-level discipline (six principles, inline-edit rule, stale-content checklist, figure embedding) plus the `PLAN.md` and `RESULTS_UPDATE.md` anatomy in its `references/`. The implementer-specific role ownership and the review-loop annotation protocol — how you annotate review items on a REVISE round — live below in this file.
+1. **Load `superRA:handoff-doc`** before reading or editing `PLAN.md` or `RESULTS.md`. That skill is the canonical source for document-level discipline (six principles, inline-edit rule, stale-content checklist, figure embedding) plus the `PLAN.md` and `RESULTS.md` anatomy in its `references/`. The implementer-specific role ownership and the review-loop annotation protocol — how you annotate review items on a REVISE round — live below in this file.
 2. **If the task involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, writing analysis scripts), you **must** also load `superRA:econ-data-analysis` and `superRA:script-to-notebook`. These carry the data-discipline protocol, the pitfalls menu, and the notebook formatting rules. Do not rely on the dispatch prompt to remind you — check the task yourself.
 3. **Load any additional skills** specified in your dispatch prompt.
 4. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:integration-workflow`) and (b) a domain reference file by basename (e.g., `codebase-integration.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your task-specific quality standard alongside the loaded skill.
@@ -70,7 +70,7 @@ Regardless of stage (analysis task, drift test creation, refactoring, post-merge
 - **Steps and step code.** You may rewrite, reorder, add, or remove steps when the data forces deviation from the originally planned approach — the plan reflects what was actually done, not what was originally imagined. Replace stale step text in place; do not append a "Revised:" version alongside it.
 - **`**Review status:** IMPLEMENTED`** line, set after your atomic commit.
 - **`→ implemented: ...` annotations** appended to review items on a REVISE round (see below).
-- Your assigned task's section of `RESULTS_UPDATE.md`.
+- Your assigned task's section of `RESULTS.md`.
 
 **You may NOT edit:**
 
@@ -113,15 +113,15 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 1. **Update your assigned task block in PLAN.md in place.** Mark completed steps `[x]`. Rewrite step text if you deviated from the originally planned approach. Annotate review items as described above. Set `**Review status:** IMPLEMENTED`.
 
-2. **Update `RESULTS_UPDATE.md` task section in place.** If a section for your task already exists from a prior iteration, **replace** its content with current findings. Follow the canonical per-task anatomy in `superRA:handoff-doc` (`references/results-update-anatomy.md`). Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files.
+2. **Update `RESULTS.md` task section in place.** If a section for your task already exists from a prior iteration, **replace** its content with current findings. Follow the canonical per-task anatomy in `superRA:handoff-doc` (`references/results-anatomy.md`). Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
-3. **Single atomic commit.** Stage code + `PLAN.md` + `RESULTS_UPDATE.md` together:
+3. **Single atomic commit.** Stage code + `PLAN.md` + `RESULTS.md` together:
    ```bash
-   git add [code files] PLAN.md RESULTS_UPDATE.md results_attachments/
+   git add [code files] PLAN.md RESULTS.md results_attachments/
    git commit -m "task N: [brief description]"
    ```
 
-**Inline-edit rule (always):** PLAN.md and RESULTS_UPDATE.md reflect current state, not history. Replace outdated content in place — never append alongside it, never strike through.
+**Inline-edit rule (always):** PLAN.md and RESULTS.md reflect current state, not history. Replace outdated content in place — never append alongside it, never strike through.
 
 **Stage-specific code deliverables** (what you commit differs by stage, but the handoff-doc mechanics above are identical):
 
@@ -138,21 +138,21 @@ Before staging your commit, verify:
 - [ ] Every PLAN.md edit is inside my assigned task block (no edits elsewhere).
 - [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations.
 - [ ] I replaced stale step notes in place — no "Previously..." or "Update:" blocks, no strikethroughs.
-- [ ] My RESULTS_UPDATE.md edits are confined to my task's section.
+- [ ] My RESULTS.md edits are confined to my task's section.
 - [ ] Figures are embedded with `![caption](results_attachments/...)` and the image files are committed.
 - [ ] The task block and results section read as single coherent current-state descriptions.
-- [ ] Every material finding I am about to report is already written into `PLAN.md` (task block) or `RESULTS_UPDATE.md` (task section), not only in my status report. The doc is the record; the report only points at it.
+- [ ] Every material finding I am about to report is already written into `PLAN.md` (task block) or `RESULTS.md` (task section), not only in my status report. The doc is the record; the report only points at it.
 
 ## Report Format
 
-Your status report is a **navigation aid**, not a content dump. The authoritative record of what you did is in `PLAN.md` + `RESULTS_UPDATE.md` + the committed code. Summarize in 1-3 sentences per field and point the orchestrator at the relevant doc sections for detail.
+Your status report is a **navigation aid**, not a content dump. The authoritative record of what you did is in `PLAN.md` + `RESULTS.md` + the committed code. Summarize in 1-3 sentences per field and point the orchestrator at the relevant doc sections for detail.
 
 Report:
 - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
 - **Summary:** 1-2 sentences on what you implemented. Point at PLAN.md for step-level detail.
-- **Key findings:** Headline numbers or surprises only. Point at RESULTS_UPDATE.md Task N section for tables, figures, and full context.
+- **Key findings:** Headline numbers or surprises only. Point at RESULTS.md Task N section for tables, figures, and full context.
 - **Concerns (if any):** Data quality issues, methodology questions, unexpected results. Bullet points.
-- **Doc edits (what changed since the previous dispatch):** List each file and the specific sections/fields you modified, describing the change. Example: `PLAN.md — Task 3: rewrote Step 2 (merge approach changed after data inspection), marked Steps 1-3 [x], set Review status: IMPLEMENTED, annotated review items 1 and 2 with → implemented markers. RESULTS_UPDATE.md — Task 3 section replaced with new findings and 2 figures.` Say "none" if you touched neither file.
+- **Doc edits (what changed since the previous dispatch):** List each file and the specific sections/fields you modified, describing the change. Example: `PLAN.md — Task 3: rewrote Step 2 (merge approach changed after data inspection), marked Steps 1-3 [x], set Review status: IMPLEMENTED, annotated review items 1 and 2 with → implemented markers. RESULTS.md — Task 3 section replaced with new findings and 2 figures.` Say "none" if you touched neither file.
 
 If the orchestrator needs more than this, they will read the docs directly.
 
