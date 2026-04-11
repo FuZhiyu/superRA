@@ -200,8 +200,9 @@ Every analysis plan should include sensitivity analysis tasks. At the planning s
 
 1. Mark completed steps `- [x]` with brief result notes
 2. **Update upcoming steps** if findings change the approach
-3. Add discovery notes: "Merge unmatched rate is 15% — investigate before proceeding to regression"
+3. Edit discovery notes into the relevant task sections
 4. The plan at any point should be a complete handoff document: what's done, what changed, what's next
+5. **Every update is an inline edit** — replace outdated text, don't append "Update:" blocks. The plan should always read as a single coherent document reflecting current understanding.
 
 **Reviewers check:** Does the plan reflect what actually happened? Are upcoming steps still valid given what was found?
 
@@ -225,6 +226,8 @@ After saving `PLAN.md`, create `RESULTS_UPDATE.md` at the project root:
 
 **Rules:**
 - Update after each completed step (alongside PLAN.md update)
+- Each task has one section. When re-implementing after review, **replace** the task's findings with the current version — do not append a second version.
+- The document should read as a clean current-state summary at all times, not a changelog.
 - Include: key row counts, summary statistics, figures, surprising findings
 - Save figures and tables as PNG in `results_attachments/` at project root (committed to git)
 - Reference full output files for detailed results (these may be gitignored)

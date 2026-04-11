@@ -65,6 +65,14 @@ Follow the handoff rules from your dispatch prompt. The common pattern:
 
 **Scope rule:** Only edit sections for YOUR assigned task. Never modify other tasks' status, steps, findings, or review notes.
 
+### Document Update Discipline
+
+PLAN.md and RESULTS_UPDATE.md reflect **current state, not history**. Every update is an inline edit — replace outdated content, never append alongside it.
+
+- **PLAN.md:** Edit your task's section in place. Mark steps `[x]`, set status, add brief result notes — all within the existing task block. If re-implementing after REVISE, update the existing step notes rather than adding new ones.
+- **RESULTS_UPDATE.md:** If a section for your task already exists (from a prior iteration), **replace its content** with current findings. Do not append a second version. The document should read as if written once with the latest results.
+- **When findings change your task:** Edit the existing text to reflect the current state. Do not add "Update:" or "Revised:" annotations.
+
 ## Report Format
 
 When done, report:
