@@ -145,7 +145,7 @@ The macro workflow is **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. When mu
 
 1. **PLAN phase skills first** (planning-workflow) — these determine WHAT to do
 2. **IMPLEMENT + VALIDATE phase skills second** (execution-workflow, econ-data-analysis) — these guide execution and review
-3. **INTEGRATE phase skills last** (finishing-analysis, integration-workflow) — these integrate work back
+3. **INTEGRATE phase skills last** (integration-workflow, merge-workflow) — these integrate work back
 
 "Let's analyze X" → PLAN phase: planning-workflow (Phase 1 inventory then Phase 2 plan creation).
 "Something looks wrong in the data" → investigate using econ-data-analysis describe step.

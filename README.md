@@ -79,7 +79,7 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 | Skill | What It Does |
 |-------|-------------|
-| **finishing-analysis** | Verify reproducibility, generate work journal, present options: merge locally, push & PR, keep branch, or discard. |
+| **merge-workflow** | Final phase of finishing an analysis. Update analysis branch with main via semantic-merge, run drift tests AND a fresh integration review on the merged state, re-enter the refactor-review loop on either failure, then execute local merge or push + PR, and clean up the worktree. |
 | **integration-workflow** | Create drift tests to protect key results. Refactor code for codebase integration with refactor-review loop. Generate work-journal report. Handle PLAN.md / RESULTS_UPDATE.md disposition. Hands off to merge-workflow. |
 | **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact. Escalates methodology decisions to user. |
 

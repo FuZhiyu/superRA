@@ -218,4 +218,4 @@ Ready to analyze <topic>
 - **superRA:worktree-data-sync** — REQUIRED for data seeding step
 
 **Pairs with:**
-- **finishing-analysis** — REQUIRED for cleanup after work complete
+- **merge-workflow** — REQUIRED for cleanup after work complete (final phase of finishing an analysis)
