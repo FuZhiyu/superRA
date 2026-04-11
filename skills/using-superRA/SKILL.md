@@ -1,6 +1,6 @@
 ---
 name: using-superRA
-description: Use when starting any conversation - establishes how to find and use skills for economic research workflows, requiring Skill tool invocation before ANY response including clarifying questions
+description: Meta (session start). Use at the beginning of every session to establish skill-discovery rules, cross-session detection for in-progress analysis work (PLAN.md, worktrees, analysis branches), and instruction priority (user instructions > superRA skills > default system prompt). Mandatory housekeeping before substantive responses; skill-tool invocation required before clarifying questions.
 ---
 
 ## MANDATORY: Session Start Actions

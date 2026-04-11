@@ -1,8 +1,10 @@
 ---
 name: econ-data-analysis
 description: >
-  Guide for rigorous economic data analysis. Use PROACTIVELY whenever performing
-  data analysis on economic or financial datasets — importing, cleaning, merging,
+  Utility (cross-cutting discipline, auto-loaded by implementer/reviewer
+  agents when the stage touches analysis code). Guide for rigorous economic
+  data analysis. Use PROACTIVELY whenever performing data analysis on
+  economic or financial datasets — importing, cleaning, merging,
   constructing variables, or producing summary statistics. Enforces the Iron Law
   (no transformation without prior description) and the Describe-Analyze-Doc
   cycle. Three core principles: (1) describe before and after every transformation,
