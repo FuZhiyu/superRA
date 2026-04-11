@@ -17,17 +17,17 @@ Shared domain reference for code refactoring and integration review. Both the im
 - [ ] **Transformation consistency:** Data transformations (winsorization, outlier treatment, variable construction) use codebase-standard approaches — or differences are documented
 - [ ] **Justified inconsistencies:** Any intentional deviations from codebase patterns have clear documentation explaining why
 
-## Data Discipline Preservation
+## Data Discipline Through Refactoring
 
-**CRITICAL: Never remove data discipline artifacts during refactoring.**
+**CRITICAL: Refactored code must be re-validated, not just carried forward.** Refactoring can silently change data flow, merge order, floating-point accumulation, or sample composition — the same safeguards that the original code needed, the refactored code needs again.
 
-- [ ] Data description steps preserved
-- [ ] Row count logging preserved
-- [ ] Validation checks preserved
-- [ ] Jupytext documentation cells preserved
-- [ ] You may reorganize these artifacts but never delete them
+- [ ] Data description steps are present in the refactored code and were re-run against the refactored output (not just copied over from the original).
+- [ ] Row count is logged at every sample-changing step in the refactored code, and the logged counts match the pre-refactor counts (or any change is explained).
+- [ ] Validation checks are present in the refactored code and were re-executed successfully after refactoring.
+- [ ] Jupytext documentation cells are present and describe what the refactored code actually does — not what the pre-refactor code did.
+- [ ] No data discipline artifact (description, row count log, validation check) has been deleted during refactoring. Reorganize freely; delete nothing.
 
-See the loaded `econ-data-analysis` skill for the full list of data discipline artifacts.
+See the loaded `econ-data-analysis` skill for the full list of data discipline artifacts and the Describe-Analyze-Doc cycle that every refactored step must re-run through.
 
 ## Handling Inconsistencies
 
