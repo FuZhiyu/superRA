@@ -1,6 +1,6 @@
 ---
 name: planning-workflow
-description: superRA workflow PLAN step. Use when starting an analysis with a research objective and methodology, before writing any code — runs the Phase 1 data inventory hard gate, then creates a step-by-step PLAN.md with describe-analyze-doc discipline at each step. Outputs PLAN.md and RESULTS_UPDATE.md ready for execution-workflow.
+description: Use when starting a new empirical analysis with a research objective and methodology but no code or PLAN.md yet; when you have a research idea and need to translate it into an executable plan document; when you need to inventory data sources and verify availability before any task steps are drafted; when a fresh analysis branch needs its planning artifacts bootstrapped. Triggers include "let's analyze X", "write me a plan for Y", "we're starting a new project on Z", "before writing any code", empty working directory for a new analysis, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow; hands off to `execution-workflow` once the plan is approved.
 ---
 
 # Planning Workflow

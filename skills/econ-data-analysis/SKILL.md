@@ -1,19 +1,23 @@
 ---
 name: econ-data-analysis
 description: >
-  Utility (cross-cutting discipline, auto-loaded by implementer/reviewer
-  agents when the stage touches analysis code). Guide for rigorous economic
-  data analysis. Use PROACTIVELY whenever performing data analysis on
-  economic or financial datasets — importing, cleaning, merging,
-  constructing variables, or producing summary statistics. Enforces the Iron Law
-  (no transformation without prior description) and the Describe-Analyze-Doc
-  cycle. Three core principles: (1) describe before and after every transformation,
-  (2) document analysis with interleaved code, narrative, and outputs (see script-to-notebook skill for formatting),
-  (3) validate against economic intuition, literature, and cross-variable relationships.
-  Includes pitfall checklists for merges, aggregations, filtering, and variable
-  construction. Red flags and rationalization prevention for data discipline.
-  Language-agnostic (Python, Julia). Trigger: any data analysis task involving
-  economic, financial, or panel data.
+  Use PROACTIVELY whenever performing data analysis on economic,
+  financial, or panel datasets — importing raw data, cleaning,
+  merging, filtering, constructing variables, aggregating, computing
+  summary statistics, producing regression inputs, building figures,
+  or writing analysis scripts. Also use when about to transform data
+  you have not yet described; when merging two datasets; when
+  filtering by a condition you have not yet profiled; when a number
+  "looks off"; when outputs fail to match literature or intuition;
+  when a script was just refactored and needs re-validation. Triggers
+  include CRSP / Compustat / WRDS / panel data, "merge these datasets",
+  "clean this data", "construct variable X", "check the summary stats",
+  "why is this number so large", "I'll just filter and move on",
+  or any data file with unknown structure. Language-agnostic (Python,
+  Julia, R, Stata). Auto-loaded by implementer and reviewer subagents
+  at dispatch time when the stage touches analysis code; the
+  auto-load is configured in `agents/implementer.md` and
+  `agents/reviewer.md`, not in the workflow skills themselves.
 user-invocable: true
 ---
 

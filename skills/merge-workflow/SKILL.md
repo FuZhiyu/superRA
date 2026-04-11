@@ -1,6 +1,6 @@
 ---
 name: merge-workflow
-description: superRA workflow MERGE step (final phase of finishing an analysis). Use after integration-workflow has produced a merge-ready branch (drift tests committed, refactor approved, report written, dev docs disposed). Updates the analysis branch with main via semantic-merge, runs BOTH drift tests AND a fresh integration review against the merged state, re-enters the refactor-review loop if either fails, then executes local merge or push + PR, and cleans up the worktree.
+description: Use after `integration-workflow` has produced a merge-ready branch (drift tests committed, refactor approved, work-journal report written, dev docs disposed) and you need to update the analysis branch with main, verify results survived the update, and land the work via local merge or PR; when an analysis branch is behind main and about to be finished; when you need a post-merge safety check (drift tests + integration review against the merged state); when cleaning up a worktree after merge completion. Triggers include "merge this back", "open the PR", "sync with main and merge", "finish this analysis", or the transition from `integration-workflow` completing successfully. Sits at the INTEGRATE phase, step 2 of 2 — the final phase of the superRA workflow.
 ---
 
 # Merge Workflow
