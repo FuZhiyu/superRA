@@ -14,7 +14,7 @@ Handoff docs (`PLAN.md`, `RESULTS_UPDATE.md`, and similarly-structured task-bloc
 
 **Subagent-specific execution protocol** — including the full review-loop mechanics (who writes what in the review-notes blockquote, who may delete items, the `→ implemented:` and `→ orchestrator:` annotation protocols, and the `**Doc edits:**` status-line format) — lives in `agents/implementer.md` and `agents/reviewer.md`. Each agent file carries its own view of the loop. This skill does not duplicate that; it only specifies the document-level discipline all roles (including a standalone user with no subagents) must follow.
 
-## The Five Principles
+## The Six Principles
 
 1. **Latest state only, no history.** Handoff docs reflect the current intended implementation and current findings. They are not changelogs. Git owns history. No "Previously...", no strikethroughs, no "Update:" blocks, no stacked review rounds.
 

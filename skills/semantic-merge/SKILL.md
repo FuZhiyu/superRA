@@ -7,7 +7,7 @@ description: Use when about to run `git merge`, `git rebase`, or `git cherry-pic
 
 Integrate branches by intent, not by lines. Classify conflicts by research impact, escalate research-meaningful decisions to the user, and use a two-commit structure (mechanical merge + integration commit) with subagent-driven propose+review.
 
-Adapts the general-purpose `semantic-merge-integration` skill for economics research contexts, adding tiered classification, drift test integration, data discipline preservation, and RA-framing human-in-the-loop decisions.
+Adapts the general-purpose `semantic-merge-integration` skill for economics research contexts, adding tiered classification, drift test integration, data discipline re-validation through the merge, and RA-framing human-in-the-loop decisions.
 
 **Core principle:** Treat conflicts as intent conflicts first. Research-meaningful conflicts always go to the user. The agent implements the researcher's integration decisions — never judges methodology.
 
