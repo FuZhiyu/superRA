@@ -99,7 +99,7 @@ Drift tests guard key results from unintended changes during refactoring or futu
    ```
    Agent(subagent_type: "implementer"):
      Stage: drift test creation
-     Skills: superRA:integration-workflow
+     Skills: superRA:refactor-and-integrate
      Domain reference: drift-test-quality.md
      Key results to protect: [user-confirmed list with values]
      Test conventions: [project test framework, test directory]
@@ -109,7 +109,7 @@ Drift tests guard key results from unintended changes during refactoring or futu
    ```
    Agent(subagent_type: "reviewer"):
      Stage: drift test
-     Skills: superRA:integration-workflow
+     Skills: superRA:refactor-and-integrate
      Domain reference: drift-test-quality.md
      Tests under review: [paths to created test files]
      Key results they should protect: [list]
@@ -140,7 +140,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
    ```
    Agent(subagent_type: "reviewer"):
      Stage: integration
-     Skills: superRA:integration-workflow
+     Skills: superRA:refactor-and-integrate
      Domain reference: codebase-integration.md
      Code under review: [paths]
      Codebase conventions: [where they're documented — CLAUDE.md, AGENTS.md, etc.]
@@ -156,7 +156,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
       ```
       Agent(subagent_type: "implementer"):
         Stage: refactoring
-        Skills: superRA:integration-workflow
+        Skills: superRA:refactor-and-integrate
         Domain reference: codebase-integration.md
         Reviewer issues to address: [accepted items, file:line, what to fix]
         Codebase conventions: [pointers]

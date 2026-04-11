@@ -137,7 +137,7 @@ Conflicts exist but none touch research-relevant files.
    ```
    Agent(subagent_type: "implementer"):
      Stage: merge proposer
-     Skills: superRA:semantic-merge
+     Skills: superRA:refactor-and-integrate
      Domain reference: merge-quality.md
      Merge context: branches, merge base, tier
      Incoming changes: <commit messages and diffs since merge base>
@@ -151,7 +151,7 @@ Conflicts exist but none touch research-relevant files.
    ```
    Agent(subagent_type: "reviewer"):
      Stage: merge
-     Skills: superRA:semantic-merge
+     Skills: superRA:refactor-and-integrate
      Domain reference: merge-quality.md
      Merge context: branches, merge base, tier
      Proposer's report: [integration map, decisions, rationale]
@@ -179,7 +179,7 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
    ```
    Agent(subagent_type: "implementer"):
      Stage: merge proposer (Tier 3)
-     Skills: superRA:semantic-merge
+     Skills: superRA:refactor-and-integrate
      Domain reference: merge-quality.md
      [Tier 2 fields, plus:]
      Changes classified by research role: [list]

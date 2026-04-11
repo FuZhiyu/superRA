@@ -79,7 +79,7 @@ pytest tests/  # or: julia --project test/runtests.jl
 ```
 Agent(subagent_type: "reviewer"):
   Stage: integration
-  Skills: superRA:integration-workflow
+  Skills: superRA:refactor-and-integrate
   Domain reference: codebase-integration.md
   Code under review: <analysis paths>
   Codebase conventions: <where they live in main>
@@ -100,7 +100,7 @@ When drift tests fail OR the post-merge integration reviewer returns REVISE, re-
    ```
    Agent(subagent_type: "implementer"):
      Stage: refactoring
-     Skills: superRA:integration-workflow
+     Skills: superRA:refactor-and-integrate
      Domain reference: codebase-integration.md
      Reviewer issues to address: [accepted items, file:line, what to fix]
      Drift tests: [paths — must pass after refactoring]

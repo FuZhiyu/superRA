@@ -72,8 +72,6 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 |-------|-------------|
 | **execution-workflow** | Dispatch implementer agent per task, reviewer agent after each. Two-stage review (data integrity then implementation) with orchestrator-discipline filter on reviewer feedback. Verifies pipeline + reproducibility at the end and presents the 4 completion options. |
 | **script-to-notebook** | Cell organization, markdown narrative, and rendering for analysis scripts. Python (jupytext) and Julia (QuartoNotebookRunner). Loaded by implementers and implementation reviewers. |
-| **requesting-analysis-review** | Ad-hoc single-pass review for quick checks, before-merge verification, or when data looks unexpected. |
-| **receiving-code-review** | Technical evaluation of review feedback. Verify before implementing. No performative agreement. |
 
 ### INTEGRATE Phase
 
