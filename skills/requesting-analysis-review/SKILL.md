@@ -9,12 +9,12 @@ Dispatch a reviewer subagent to catch data integrity and implementation issues b
 
 **Core principle:** Review early, review often. Data bugs compound silently.
 
-**Scope:** This skill is for **ad-hoc single-pass reviews** — quick checks, before-merge verification, or when data looks unexpected. For **structured per-task review** (data integrity gate then implementation correctness), use the two-stage review in `superRA:executing-analysis` instead.
+**Scope:** This skill is for **ad-hoc single-pass reviews** — quick checks, before-merge verification, or when data looks unexpected. For **structured per-task review** (data integrity gate then implementation correctness), use the two-stage review in `superRA:execution-workflow` instead.
 
 ## When to Request Review
 
 **Mandatory:**
-- After each task (built into executing-analysis two-stage review; this skill for ad-hoc cases)
+- After each task (built into execution-workflow two-stage review; this skill for ad-hoc cases)
 - After completing a major analysis phase
 - Before merge to main
 

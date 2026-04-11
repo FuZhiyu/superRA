@@ -13,11 +13,11 @@ Guide completion of analysis work — the **INTEGRATE** phase of the macro workf
 
 **Announce at start:** "I'm using the finishing-analysis skill to complete this work."
 
-**Agent Teams cleanup:** If an Analysis Team is still active from executing-analysis, shut down all teammates and clean up the team before proceeding. The pre-merge gate (Step 4a) may need to spawn its own team, and only one team can exist per session.
+**Agent Teams cleanup:** If an Analysis Team is still active from execution-workflow, shut down all teammates and clean up the team before proceeding. The pre-merge gate (Step 4a) may need to spawn its own team, and only one team can exist per session.
 
 ## The Process
 
-This skill is invoked by `superRA:executing-analysis` Step 4 only when the user has chosen Option 1 (merge) or Option 2 (PR). Reproducibility, base branch, and the option menu are handled by executing-analysis before this skill runs — assume the analysis is verified and the user has chosen merge/PR. If you find yourself running reproducibility checks here, something is wrong: stop and consult executing-analysis instead.
+This skill is invoked by `superRA:execution-workflow` Step 4 only when the user has chosen Option 1 (merge) or Option 2 (PR). Reproducibility, base branch, and the option menu are handled by execution-workflow before this skill runs — assume the analysis is verified and the user has chosen merge/PR. If you find yourself running reproducibility checks here, something is wrong: stop and consult execution-workflow instead.
 
 ### Step 4: Execute Choice
 
@@ -280,7 +280,7 @@ If working on a branch (no worktree): skip this step.
 ## Integration
 
 **Called by:**
-- **superRA:executing-analysis** (after all tasks) — After all tasks complete and reviewed
+- **superRA:execution-workflow** (after all tasks) — After all tasks complete and reviewed
 
 **Invokes:**
 - **superRA:pre-merge-gate** — REQUIRED for Options 1 and 2 (creates drift tests, refactors, reviews integration)

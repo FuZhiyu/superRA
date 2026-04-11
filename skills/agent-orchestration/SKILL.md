@@ -169,7 +169,7 @@ Only one team can exist per session. You must clean up the current team before s
 The full superRA workflow spans two team-worthy phases:
 
 ```
-executing-analysis (Analysis Team)
+execution-workflow (Analysis Team)
   → cleanup
     → finishing-analysis
       → pre-merge-gate (Pre-Merge Team)
@@ -186,7 +186,7 @@ executing-analysis (Analysis Team)
 
 #### Analysis Task Team
 
-**When:** `superRA:executing-analysis` in subagent mode with multiple tasks
+**When:** `superRA:execution-workflow` in subagent mode with multiple tasks
 
 **Teammates (3):**
 - `implementer` — Executes analysis tasks (data-first discipline)
@@ -215,7 +215,7 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 **Lead responsibilities:**
 - Read PLAN.md, create full task graph with all dependencies
 - Provide each teammate with their agent type, skill to load, and project context
-- Verify that teammates commit their own PLAN.md and RESULTS_UPDATE.md updates atomically with their work (per executing-analysis responsibility matrix)
+- Verify that teammates commit their own PLAN.md and RESULTS_UPDATE.md updates atomically with their work (per execution-workflow responsibility matrix)
 - Monitor for BLOCKED or data quality escalations (teammates message lead)
 - Handle sensitivity analysis assessment
 - Note team phase in PLAN.md (e.g., "Analysis Team active, tasks 1-3 of 5 complete")
@@ -358,7 +358,7 @@ On session resume, this tells the new lead exactly where to pick up.
 
 **Skills that use Agent Teams mode:**
 - **superRA:pre-merge-gate** — 4-teammate pre-merge team
-- **superRA:executing-analysis** — 3-teammate analysis team
+- **superRA:execution-workflow** — 3-teammate analysis team
 - **superRA:semantic-merge** — 2-teammate merge team
 
 **Skills that always use parallel dispatch:**

@@ -21,11 +21,11 @@ PLAN            planning-workflow (Phase 1 inventory → Phase 2 plan creation)
                 Inventory data (hard gate). Break work into tasks with code at every step.
                 Output: PLAN.md + RESULTS_UPDATE.md (living handoff documents)
                     |
-IMPLEMENT       executing-analysis (implementer agent per task)
+IMPLEMENT       execution-workflow (implementer agent per task)
                 Follow econ-data-analysis discipline: Describe → Analyze → Doc.
                 Atomic commit per task: code + PLAN.md status + RESULTS_UPDATE.md findings.
                     |
-VALIDATE        executing-analysis (reviewer agent after each task)
+VALIDATE        execution-workflow (reviewer agent after each task)
                 Two-stage review: data integrity → implementation correctness.
                 REVISE loops until APPROVED. Review is never skipped.
                     |
@@ -70,7 +70,7 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 | Skill | What It Does |
 |-------|-------------|
-| **executing-analysis** | Dispatch implementer agent per task, reviewer agent after each. Two-stage review (data integrity then implementation). Falls back to direct execution when requested. |
+| **execution-workflow** | Dispatch implementer agent per task, reviewer agent after each. Two-stage review (data integrity then implementation) with orchestrator-discipline filter on reviewer feedback. Verifies pipeline + reproducibility at the end and presents the 4 completion options. |
 | **script-to-notebook** | Cell organization, markdown narrative, and rendering for analysis scripts. Python (jupytext) and Julia (QuartoNotebookRunner). Loaded by implementers and implementation reviewers. |
 | **requesting-analysis-review** | Ad-hoc single-pass review for quick checks, before-merge verification, or when data looks unexpected. |
 | **receiving-code-review** | Technical evaluation of review feedback. Verify before implementing. No performative agreement. |
