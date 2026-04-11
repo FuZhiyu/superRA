@@ -235,12 +235,12 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 **Spawn:**
 ```
 Create an agent team for pre-merge quality gate:
-- test-creator: [use `implementer` agent type; load superRA:econ-data-analysis; domain ref: integration-workflow/references/drift-test-quality.md]
-- test-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; domain ref: integration-workflow/references/drift-test-quality.md]
-- refactorer: [use `implementer` agent type; load superRA:econ-data-analysis; domain ref: integration-workflow/references/codebase-integration.md]
-- integration-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; domain ref: integration-workflow/references/codebase-integration.md]
+- test-creator: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: drift-test-quality.md]
+- test-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: drift-test-quality.md]
+- refactorer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
+- integration-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
 
-Require plan approval before they make changes.
+All teammates auto-load superRA:econ-data-analysis and superRA:script-to-notebook via the agent definition since the stage touches analysis code. Require plan approval before they make changes.
 ```
 
 **Task graph:**
@@ -275,8 +275,10 @@ Require plan approval before they make changes.
 **Spawn:**
 ```
 Create an agent team for semantic merge integration:
-- merge-proposer: [use `implementer` agent type; load superRA:econ-data-analysis; domain ref: semantic-merge/references/merge-quality.md]
-- merge-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; domain ref: semantic-merge/references/merge-quality.md]
+- merge-proposer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
+- merge-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
+
+All teammates auto-load superRA:econ-data-analysis via the agent definition.
 ```
 
 **Task graph:**
@@ -358,11 +360,9 @@ On session resume, this tells the new lead exactly where to pick up.
 ## Integration
 
 **Skills that use Agent Teams mode:**
-- **superRA:integration-workflow** — 4-teammate pre-merge team
-- **superRA:execution-workflow** — 3-teammate analysis team
-- **superRA:semantic-merge** — 2-teammate merge team
-
-**Skills that always use parallel dispatch:**
-- **superRA:requesting-analysis-review** — one-shot review, no iteration
+- **superRA:execution-workflow** — 3-teammate analysis team (implementer + data-reviewer + implementation-reviewer)
+- **superRA:integration-workflow** — 4-teammate integration team (test-creator + test-reviewer + refactorer + integration-reviewer)
+- **superRA:merge-workflow** — 4-teammate merge team (merge-proposer + merge-reviewer + post-merge refactorer + post-merge integration-reviewer)
+- **superRA:semantic-merge** — 2-teammate merge team (merge-proposer + merge-reviewer)
 
 **When Agent Teams are unavailable:** All skills fall back to standard subagent patterns (Task tool dispatch with orchestrator-as-hub). No functionality is lost — teams are an enhancement, not a requirement.
