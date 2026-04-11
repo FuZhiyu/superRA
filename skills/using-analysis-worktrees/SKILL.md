@@ -1,6 +1,6 @@
 ---
 name: using-analysis-worktrees
-description: Utility (infrastructure, optional any phase). Use when you want an isolated workspace for parallel analysis work — creates git worktrees with data seeding and environment setup. Recommended for complex or multi-session analyses. Optional for simple analyses; a feature branch without a worktree is sufficient.
+description: Use when an analysis needs an isolated workspace — running multiple analyses simultaneously without switching branches, a multi-session analysis that should survive across sessions, work that needs its own data copy or environment setup, or parallel agents working on different analyses at once. Triggers include "set up a worktree for this", "isolate this analysis", "I want to run two analyses in parallel", "this will take multiple sessions", or planning-workflow bootstrapping an analysis that the user expects to span days. Optional for simple single-session analyses — a feature branch without a worktree is sufficient. Paired with `worktree-data-sync` for copying managed data between worktrees after setup.
 ---
 
 # Using Analysis Worktrees
@@ -9,10 +9,18 @@ description: Utility (infrastructure, optional any phase). Use when you want an 
 
 Git worktrees create isolated workspaces sharing the same repository, allowing work on multiple analyses simultaneously without switching.
 
-**This is optional.** For simple analyses, a feature branch without a worktree is sufficient. Worktrees are recommended when:
-- Running multiple analyses simultaneously
-- The analysis may take multiple sessions and you want full isolation
-- You need separate data copies or environment setup
+**This is optional.** For simple analyses, a feature branch without a worktree is sufficient.
+
+### When to Use Worktrees — Decision Table
+
+| Scenario | Recommendation |
+|---|---|
+| Single-session analysis, no parallel work, no data copy needed | **Optional.** Feature branch is sufficient — skip this skill. |
+| Multi-session analysis (expected to span days) | **Recommended.** A worktree lets you resume without affecting other work. |
+| Parallel analyses (two branches worked on concurrently) | **Recommended.** Each analysis gets its own isolated checkout. |
+| Analysis needs its own data copy or environment setup | **Recommended.** Data seeding lives cleanly inside the worktree. |
+| Parallel work involving cloud-synced data directories (e.g., Dropbox) | **Mandatory.** Sandbox + worktree isolation prevents cross-session clobbering — see `worktree-data-sync` for the data copy. |
+| Destructive refactor you want to sandbox from main work | **Recommended.** Worktree lets you experiment without touching the main checkout. |
 
 **Core principle:** Systematic directory selection + data seeding + environment verification = reliable isolation.
 

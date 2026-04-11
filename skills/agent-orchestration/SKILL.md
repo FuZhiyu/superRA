@@ -59,6 +59,10 @@ For 2+ independent tasks that can be worked on without shared state or sequentia
 - Need to understand full system state
 - Agents would interfere with each other (editing same files)
 
+### Infrastructure for Parallel Work
+
+When dispatching parallel agents that need isolated workspaces — e.g., parallel analyses on different branches, or parallel refactors touching overlapping files — load `superRA:using-analysis-worktrees` first to set up the workspaces, and `superRA:worktree-data-sync` for copying managed data between them. Do not hand-roll worktree setup or data-copy scripts. These two utilities are the canonical path for all parallel-work infrastructure in superRA.
+
 ### The Pattern
 
 #### 1. Identify Independent Domains
