@@ -307,18 +307,20 @@ This is the critical judgment call in the process. When drift tests fail after r
 
 ## Agent Types and Domain References
 
-- **`implementer`** agent + `./references/drift-test-quality.md` — For test creation
-- **`reviewer`** agent + `./references/drift-test-quality.md` — For test review
-- **`implementer`** agent + `./references/codebase-integration.md` — For refactoring
-- **`reviewer`** agent + `./references/codebase-integration.md` — For integration review
+All dispatched agents load `superRA:refactor-and-integrate` via the `Skills:` line in the dispatch prompt and read the named domain reference by basename (the runtime announces the skill's base directory on load; the agent reads `<base_dir>/references/<basename>`).
 
-All agents also load `superRA:econ-data-analysis` for data discipline.
+- **`implementer`** agent + `drift-test-quality.md` — For test creation
+- **`reviewer`** agent + `drift-test-quality.md` — For test review
+- **`implementer`** agent + `codebase-integration.md` — For refactoring
+- **`reviewer`** agent + `codebase-integration.md` — For integration review
+
+All analysis-touching agents also auto-load `superRA:econ-data-analysis` and `superRA:script-to-notebook` via the agent definition (see `agents/implementer.md` and `agents/reviewer.md`).
 
 ## Agent Teams Mode
 
 When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the gate can be orchestrated as a team instead of sequential subagent dispatches. This enables direct iteration between creator/reviewer and integration-reviewer/refactorer without the orchestrator relaying messages.
 
-**Invoke `superRA:agent-orchestration` for the Pre-Merge Gate Team recipe** — it has the full team composition (4 teammates), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
+**Invoke `superRA:agent-orchestration` for the Integration Team recipe** — it has the full team composition (4 teammates: test-creator, test-reviewer, refactorer, integration-reviewer), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
 
 The lead still handles user-facing decisions (drift test candidates, meaningful drift escalation), commits at stage boundaries, and team cleanup after final APPROVE.
 
