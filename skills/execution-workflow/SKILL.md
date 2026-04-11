@@ -229,13 +229,13 @@ If any check fails: fix it before proceeding. Do not present completion options 
 
 ### Step 4: Determine Base Branch and Present Options
 
-**Base branch:**
+**Base branch:** resolve from git first; only stop and ask if git can't tell you.
 ```bash
 git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
 ```
-Or ask: "This branch split from `main` — is that correct?"
+If the branch point is ambiguous, ask via `AskUserQuestion` (question: "Which base branch did this analysis split from?", options: `main`, `master`, other). Plain-text fallback: "This branch split from `main` — is that correct?"
 
-**Present exactly these 4 options:**
+**Present the 4 completion options via `AskUserQuestion` when the tool is available.** This is a legitimate user-defined milestone — the agent has driven the analysis to an `APPROVED` + reproducible state on its own power, and the next step is the researcher's call. Frame the question as "Analysis complete and reproducible. What would you like to do with this branch?" with the four options below; each option also gets a short description so the researcher does not have to re-derive what each one means. When `AskUserQuestion` is unavailable, fall back to the plain-text form.
 
 ```
 Analysis complete and reproducible. What would you like to do?
@@ -244,9 +244,9 @@ Analysis complete and reproducible. What would you like to do?
 2. Push and create a Pull Request
 3. Keep the branch as-is (I'll handle it later)
 4. Discard this work
-
-Which option?
 ```
+
+The researcher's answer is a user decision — the `ask-user-question-logger` PostToolUse hook will remind you to log it. Append it to the top-level `## Decisions` section in `PLAN.md` (one line: `> **User decision (YYYY-MM-DD):** chose Option N (<name>) at execution-workflow Step 4.`) before executing the choice, and include the PLAN.md edit in the first commit of whatever workflow the option dispatches to. See `handoff-doc` §User Decisions Log for the format.
 
 **Execute the user's choice:**
 
@@ -285,7 +285,7 @@ These are the things the orchestrator does that no subagent does:
 - **Task sequencing and dispatch.** Read PLAN.md, decide what to dispatch next.
 - **Adjudicate reviewer feedback in place** in the PLAN.md review-notes blockquote before re-dispatching the implementer (see Handling Reviewer Feedback above). Append `→ orchestrator: rejected <reason>` annotations to items you are rejecting, `→ orchestrator: <second opinion requested> <reason>` to items you are flagging for the reviewer, and rewrite task steps in place for items you are accepting. **Do not clear the blockquote.** The implementer appends `→ implemented: ...` annotations on their pass; the reviewer deletes confirmed-fixed items on re-review. See `agents/implementer.md` §"How You Fix Review Items on a REVISE Round" and `agents/reviewer.md` §"How You Write a Review" for the full annotation mechanics. Commit the annotated PLAN.md.
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text, don't annotate it. Commit.
-- **Escalate to the human partner** when stuck (BLOCKED, methodology disagreement, CRITICAL issue you want to override).
+- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck: BLOCKED, methodology disagreement, CRITICAL issue you want to override, repeated reviewer disagreement. Log the answer in `PLAN.md` (task-scoped blockquote or `## Decisions` section per `handoff-doc` §User Decisions Log) **before** acting on it, and commit the doc edit atomically with whatever the decision unblocks. Do not resume work until the decision is in the doc.
 
 **Review scope at interim checkpoints:** Data integrity and implementation correctness only. Codebase integration review is deferred to integration-workflow (dispatched by this skill at Step 4 when the user chooses merge or PR).
 
@@ -295,7 +295,7 @@ When executing sensitivity analysis tasks:
 
 - Provide implementer with baseline results from RESULTS.md
 - If sensitivity check shows divergence from baseline: assess **economic significance**, not just statistical
-- If unsure whether a sensitivity failure is meaningful: **escalate to human partner** before proceeding
+- If unsure whether a sensitivity failure is meaningful: escalate via `AskUserQuestion` (plain text if unavailable), log the answer per `handoff-doc` §User Decisions Log, and commit the log entry before acting on it
 - Document the assessment in RESULTS.md
 - Not all sensitivity failures are problems — use economic reasoning
 
@@ -319,20 +319,33 @@ Use the least powerful model that can handle each role:
 
 **BLOCKED:** Assess the blocker:
 1. Data not available → help locate or download
-2. Data quality too poor → escalate to human partner
-3. Task requires methodology decisions → escalate to human partner
+2. Data quality too poor → escalate via `AskUserQuestion`, log answer in PLAN.md before proceeding
+3. Task requires methodology decisions → escalate via `AskUserQuestion`, log answer in PLAN.md before proceeding
 4. Task too complex → break into smaller pieces or use more capable model
 
-## When to Stop and Ask for Help
+## Autonomy and Stop Points
 
-**STOP executing immediately when:**
-- Data description reveals unexpected issues (wrong magnitudes, high missingness)
-- Merge produces unexpected row count change
-- Validation fails (results don't match economic intuition)
-- Plan has critical gaps preventing next step
-- Pipeline file is missing and analysis has multiple scripts
+This workflow is **autonomous by default** — see CLAUDE.md workflow principle #4. The orchestrator drives task-to-task sequencing on its own power. It does not ask permission to continue, does not re-confirm an approved plan, does not solicit reassurance between steps, and does not check in after each `APPROVED` task to ask "ready for the next one?". The only question the researcher should see between stop points is a question they have to answer.
 
-**Ask for clarification rather than guessing.**
+### Proceed without asking
+
+- Task just moved to `APPROVED` → immediately dispatch the implementer for the next not-started task (or the next `REVISE (...)` task you have already adjudicated).
+- Reviewer feedback already adjudicated in the review-notes blockquote → re-dispatch the implementer; do not ask the researcher to confirm the adjudication.
+- Pipeline verification at Step 3 passed → move to Step 4 without narrating "ready to show you the completion options?".
+- Minor implementation choices that are fully inside the task's scope (variable naming, plot formatting, diagnostic printouts) → decide and proceed; commit with the work.
+- Every step of the `Process` flowchart above that has no diamond labelled "ask user".
+
+### Stop and ask via `AskUserQuestion` (plain text if unavailable)
+
+Stop for exactly three classes of pause, all of which require logging the answer via `handoff-doc` §User Decisions Log **before** acting on it:
+
+1. **Hard blocker the RA cannot resolve.** Data description reveals unexpected issues (wrong magnitudes, high missingness), merge produces an unexpected row count change, validation fails against economic intuition, plan has critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required data source unavailable.
+2. **Decision beyond the RA's authority.** Methodology disagreement with a reviewer, CRITICAL severity issue you want to override, repeated reviewer disagreement across re-dispatches, sensitivity failure of unclear economic significance, sample/variable definition call with no obvious right answer, scope change that would affect tasks not yet reached.
+3. **User-defined workflow milestone.** The 4-option completion menu at Step 4 above. These are baked into the workflow and the stop is intentional — not a check-in.
+
+**Banned phrasings** when nothing has changed since the last approved state: "Should I proceed?", "Want me to continue?", "Ready for the next task?", "Does this look right before I move on?", "Shall I move to Step N?". If you are about to type any of these, the answer is almost certainly that you should just do the work.
+
+**Ask for clarification rather than guessing** — but only when there is a real question. Fabricating a question to create a check-in violates this principle.
 
 ## Agent Types
 
