@@ -157,7 +157,7 @@ Conflicts exist but none touch research-relevant files.
      Proposer's report: [integration map, decisions, rationale]
    ```
 
-4. **If REVISE:** adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:executing-plans` (Handling Reviewer Feedback). Forward accepted issues to the merge-proposer; push back or override others with documented reasoning. Iterate until APPROVE.
+4. **If REVISE:** adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:execution-workflow` (Handling Reviewer Feedback). Forward accepted issues to the merge-proposer; push back or override others with documented reasoning. Iterate until APPROVE.
 
 5. **Run drift tests.** If pass: done. If fail: escalate to user (Tier 3 handling).
 
@@ -222,7 +222,7 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 
 8. **Run drift tests.** If drift tests fail after integration:
    - Present before/after values to user
-   - Assess economic significance (same framework as pre-merge-gate)
+   - Assess economic significance (same framework as integration-workflow)
    - **Meaningful drift:** STOP. User decides whether to accept or revise.
    - **Minor variation:** Update test expectations with documented reason.
 
@@ -315,7 +315,7 @@ The lead still handles tier classification, user-facing decisions (Tier 3 integr
 **Can invoke standalone:** User asks to merge/update branches
 
 **Pairs with:**
-- **superRA:pre-merge-gate** — Runs before this skill in finishing-analysis (creates drift tests that this skill uses as safety net)
+- **superRA:integration-workflow** — Runs before this skill in finishing-analysis (creates drift tests that this skill uses as safety net)
 - **superRA:agent-orchestration** — Semantic Merge Team recipe for Tier 2/3 merges
 
 **References:**

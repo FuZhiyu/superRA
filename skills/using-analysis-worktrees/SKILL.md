@@ -210,7 +210,7 @@ Ready to analyze <topic>
 ## Integration
 
 **Called by:**
-- **data-exploration** — When the user wants an isolated workspace
+- **planning-workflow** — When the user wants an isolated workspace before plan creation
 - **execution-workflow** — Recommended for complex or multi-session analyses
 - Any skill needing isolated workspace
 

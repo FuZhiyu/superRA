@@ -29,7 +29,7 @@ VALIDATE        execution-workflow (reviewer agent after each task)
                 Two-stage review: data integrity → implementation correctness.
                 REVISE loops until APPROVED. Review is never skipped.
                     |
-INTEGRATE       finishing-analysis → pre-merge-gate → semantic-merge
+INTEGRATE       integration-workflow → merge-workflow (uses semantic-merge)
                 Verify reproducibility. Create drift tests. Refactor for codebase.
                 Integration review. Generate report. Merge or PR.
 ```
@@ -80,7 +80,7 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 | Skill | What It Does |
 |-------|-------------|
 | **finishing-analysis** | Verify reproducibility, generate work journal, present options: merge locally, push & PR, keep branch, or discard. |
-| **pre-merge-gate** | Create drift tests to protect key results. Refactor code for integration. Integration review with iteration. |
+| **integration-workflow** | Create drift tests to protect key results. Refactor code for codebase integration with refactor-review loop. Generate work-journal report. Handle PLAN.md / RESULTS_UPDATE.md disposition. Hands off to merge-workflow. |
 | **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact. Escalates methodology decisions to user. |
 
 ### Infrastructure

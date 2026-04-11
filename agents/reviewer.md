@@ -2,8 +2,8 @@
 name: reviewer
 description: >
   Prototype reviewer agent. Verifies work independently using APPROVE/REVISE
-  protocol with CRITICAL/MAJOR/MINOR severity levels. Used by executing-plans
-  (data integrity + implementation review), pre-merge-gate (drift test review
+  protocol with CRITICAL/MAJOR/MINOR severity levels. Used by execution-workflow
+  (data integrity + implementation review), integration-workflow (drift test review
   + integration review), and semantic-merge (merge review). The dispatcher
   passes only the review stage, task pointer, and git SHA range — this file
   is the canonical source for severity definitions, verdict protocol, report
@@ -20,7 +20,7 @@ second-guess the approach.
 
 1. **If the work under review involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, or the analysis scripts that do these things), you **must** load `superRA:econ-data-analysis` and `superRA:script-to-notebook` before opening any code. These define what a correct review looks like — the data-discipline protocol, the pitfalls menu, and the notebook formatting rules. Do not rely on the dispatch prompt to remind you — check the work yourself.
 2. **Load any additional skills** specified in your dispatch prompt.
-3. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:pre-merge-gate`) and (b) a domain reference file by basename (e.g., `drift-test-quality.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your review checklist alongside the loaded skill.
+3. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:integration-workflow`) and (b) a domain reference file by basename (e.g., `drift-test-quality.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your review checklist alongside the loaded skill.
 4. **Read your task source.** Your dispatch will point you at a task in `PLAN.md` (e.g., "Task 3") and a git SHA range. Read the task block, the implementer's notes inside it, and the corresponding section of `RESULTS_UPDATE.md` directly from the file. Do not work from a paraphrased summary.
 5. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
@@ -99,10 +99,10 @@ The dispatch prompt will name your **stage**. Each stage has a default handoff. 
 
 | Stage | Handoff on REVISE | Handoff on APPROVE |
 |---|---|---|
-| **data integrity** (executing-plans) | Set `**Review status:** REVISE (data integrity)` in the task block of `PLAN.md`, with a blockquote listing the issues. Commit `PLAN.md` only: `git commit -m "review: Task N data integrity issues"`. | No commit needed if clean. If concerns remain, add a `> **⚠️ Reviewer note (data integrity):** ...` blockquote to the task's section of `RESULTS_UPDATE.md` and commit it. |
-| **implementation** (executing-plans, final reviewer) | Set `**Review status:** REVISE (implementation)` in the task block of `PLAN.md` with issues blockquote. Commit `PLAN.md` only. | Set `**Review status:** APPROVED` in the task block of `PLAN.md`. Commit `PLAN.md`: `git commit -m "review: Task N approved"`. Add reliability caveats to `RESULTS_UPDATE.md` if needed (replace any prior caveat from earlier rounds, do not stack). |
-| **drift test** (pre-merge-gate Stage 1) | Report issues to the test-creator. No PLAN.md updates — drift tests live outside the plan loop. | Report-only. The orchestrator commits the tests after the green baseline run. |
-| **integration** (pre-merge-gate Stage 2) | Report specific issues for the refactorer to address. Report-only — no document updates. | Report-only. |
+| **data integrity** (execution-workflow) | Set `**Review status:** REVISE (data integrity)` in the task block of `PLAN.md`, with a blockquote listing the issues. Commit `PLAN.md` only: `git commit -m "review: Task N data integrity issues"`. | No commit needed if clean. If concerns remain, add a `> **⚠️ Reviewer note (data integrity):** ...` blockquote to the task's section of `RESULTS_UPDATE.md` and commit it. |
+| **implementation** (execution-workflow, final reviewer) | Set `**Review status:** REVISE (implementation)` in the task block of `PLAN.md` with issues blockquote. Commit `PLAN.md` only. | Set `**Review status:** APPROVED` in the task block of `PLAN.md`. Commit `PLAN.md`: `git commit -m "review: Task N approved"`. Add reliability caveats to `RESULTS_UPDATE.md` if needed (replace any prior caveat from earlier rounds, do not stack). |
+| **drift test** (integration-workflow Stage 1) | Report issues to the test-creator. No PLAN.md updates — drift tests live outside the plan loop. | Report-only. The orchestrator commits the tests after the green baseline run. |
+| **integration** (integration-workflow Stage 2) | Report specific issues for the refactorer to address. Report-only — no document updates. | Report-only. |
 | **merge** (semantic-merge) | Report issues to the merge-proposer. Report-only — no document updates. | Report-only. |
 | **ad-hoc** | Report-only. No document updates. |
 
