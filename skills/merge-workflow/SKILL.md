@@ -214,7 +214,7 @@ Together they cover both failure modes. Skipping either leaves a hole. The post-
 - Run semantic-merge for the main update (tier classification handles conflicts properly)
 - Run drift tests AND dispatch integration reviewer post-merge (both signals required)
 - Re-enter the refactor-review loop on any post-merge failure
-- Stop and ask the user when post-merge drift indicates meaningful result changes
+- Stop and ask the researcher via `AskUserQuestion` (plain text if unavailable) when post-merge drift indicates meaningful result changes; log the answer in `PLAN.md` per `handoff-doc` §User Decisions Log before acting on it
 - Report what was merged and what was cleaned up
 
 **Drift-test integrity on the merged state is governed by the cross-cutting rules in `refactor-and-integrate` reference `drift-test-quality.md` — failing drift tests after the main update must be adjudicated, not silently re-expected. Load the reference before running post-merge tests.**

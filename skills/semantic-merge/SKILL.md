@@ -249,6 +249,8 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 
 ## When to Ask the User
 
+These are the Tier 3 escalations for semantic-merge and the only stop points in the skill — the rest of the merge proposal/review loop runs autonomously per CLAUDE.md workflow principle #4. Use `AskUserQuestion` (plain text if unavailable) at every stop below; when the conflict has a closed set of resolutions (`--ours`, `--theirs`, synthesize, regenerate, roll back), pass them as the question options. When the decision is genuinely open-ended (methodology rewrite, sample redefinition), frame the question as free-form prose but still route it through `AskUserQuestion` if available.
+
 **Always ask:**
 - Variable definition conflicts (affects economic interpretation)
 - Sample construction conflicts (changes who/what is studied)
@@ -267,6 +269,8 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 **Present ambiguity in terms of intent and consequences**, not raw diff chunks:
 - Bad: "Lines 42-58 conflict between HEAD and incoming"
 - Good: "Incoming changes redefine `excess_return` from arithmetic to log returns. Your branch uses this in regression Table 3."
+
+**Log every answer.** Each Tier 3 decision is a user decision — append it to the top-level `## Decisions` section of `PLAN.md` (if the branch still has one) using the `handoff-doc` §User Decisions Log format, and include the log entry in the integration commit that implements the resolution. If `PLAN.md` has already been disposed of, record the decision in the merge commit message instead — the commit message is the record of record once the doc is gone. The `ask-user-question-logger` hook will remind you after each `AskUserQuestion` call.
 
 ## What to Report
 
