@@ -10,6 +10,11 @@
       {
         "command": "./hooks/merge-guard"
       }
+    ],
+    "postToolUse": [
+      {
+        "command": "./hooks/ask-user-question-logger"
+      }
     ]
   }
 }
