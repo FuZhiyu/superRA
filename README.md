@@ -17,7 +17,7 @@ Every data operation follows a Describe-Analyze-Doc cycle. Every task gets a two
 superRA activates automatically. When your agent sees a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**.
 
 ```
-PLAN            data-exploration → analysis-planning
+PLAN            planning-workflow (Phase 1 inventory → Phase 2 plan creation)
                 Inventory data (hard gate). Break work into tasks with code at every step.
                 Output: PLAN.md + RESULTS_UPDATE.md (living handoff documents)
                     |
@@ -64,8 +64,7 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 | Skill | What It Does |
 |-------|-------------|
-| **data-exploration** | Inventory available data, identify gaps, research sources. Hard gate: no analysis starts without approved inventory. |
-| **analysis-planning** | Create step-by-step plans with actual code. Every step has describe-validate discipline. Plans are living handoff documents. |
+| **planning-workflow** | Phase 1: inventory available data, identify gaps, research sources (hard gate). Phase 2: create step-by-step plans with describe-validate discipline. Outputs PLAN.md and RESULTS_UPDATE.md as living handoff documents. |
 
 ### IMPLEMENT + VALIDATE Phase
 
