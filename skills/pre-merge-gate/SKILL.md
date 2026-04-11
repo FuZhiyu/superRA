@@ -69,6 +69,12 @@ digraph pre_merge_gate {
 }
 ```
 
+## Dispatch Convention
+
+Every dispatch in this skill uses the pointer-based template — pass only the stage label, the domain reference path, and any task-specific pointers (key results, code under review, prior reviewer findings). The `implementer` and `reviewer` agent definitions own the report format, handoff protocol, and skill-load defaults; do not duplicate that content into the dispatch prompt. Both agents auto-load `superRA:econ-data-analysis` and `superRA:script-to-notebook` for analysis-touching stages.
+
+When a reviewer returns REVISE in either stage, **adjudicate the feedback before forwarding it.** See "Handling Reviewer Feedback (Orchestrator Discipline)" in `superRA:executing-plans` for the protocol — the same discipline applies here. You are the senior researcher; the reviewer is an advisor. Read the cited code, classify each issue, override with documented reasoning if the reviewer is wrong, push back with counter-evidence if the reviewer misread the code.
+
 ## Stage 1: Drift Test Creation
 
 Drift tests guard key results from unintended changes during refactoring or future modifications. They are the safety net that makes refactoring safe.
@@ -87,11 +93,27 @@ Drift tests guard key results from unintended changes during refactoring or futu
    Which of these should be protected? Any to add or remove?
    ```
 
-3. **Dispatch test-creator:** `Agent(subagent_type: "implementer")` with skill `superRA:econ-data-analysis` and domain reference `./references/drift-test-quality.md`. Provide: analysis objective, methodology context, data sources, the user-confirmed list of key results, and project test conventions.
+3. **Dispatch test-creator:**
+   ```
+   Agent(subagent_type: "implementer"):
+     Stage: drift test creation
+     Skills: superRA:pre-merge-gate
+     Domain reference: drift-test-quality.md
+     Key results to protect: [user-confirmed list with values]
+     Test conventions: [project test framework, test directory]
+   ```
 
-4. **Dispatch test-reviewer:** `Agent(subagent_type: "reviewer")` with skill `superRA:econ-data-analysis` and domain reference `./references/drift-test-quality.md`. Provide: the created tests and the key results they should protect.
+4. **Dispatch test-reviewer:**
+   ```
+   Agent(subagent_type: "reviewer"):
+     Stage: drift test
+     Skills: superRA:pre-merge-gate
+     Domain reference: drift-test-quality.md
+     Tests under review: [paths to created test files]
+     Key results they should protect: [list]
+   ```
 
-5. **If REVISE:** test-creator fixes the issues raised by the reviewer, then test-reviewer re-reviews. Iterate until APPROVE.
+5. **If REVISE:** adjudicate the reviewer's issues per the orchestrator discipline above. For accepted issues, re-dispatch the test-creator with the specific feedback. Re-dispatch the test-reviewer. Iterate until APPROVE.
 
 6. **Run tests to establish green baseline.** All drift tests must pass on the current code before proceeding. If tests fail on the existing code, the tests are wrong -- fix them.
 
@@ -112,13 +134,33 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
    - Existing code in the repository for naming patterns, file organization, utility functions
    - Available utility functions that the new code should adopt
 
-2. **Dispatch integration-reviewer:** `Agent(subagent_type: "reviewer")` with skill `superRA:econ-data-analysis` and domain reference `./references/codebase-integration.md`. Provide: the analysis code, codebase conventions, drift test results, and the diff against the base branch.
+2. **Dispatch integration-reviewer:**
+   ```
+   Agent(subagent_type: "reviewer"):
+     Stage: integration
+     Skills: superRA:pre-merge-gate
+     Domain reference: codebase-integration.md
+     Code under review: [paths]
+     Codebase conventions: [where they're documented — CLAUDE.md, AGENTS.md, etc.]
+     Drift tests: [paths]
+     Diff: <BASE_SHA>..<HEAD_SHA>
+   ```
 
 3. **If APPROVE:** No refactoring needed. Proceed to final commit.
 
-4. **If REVISE:** The reviewer identified specific issues. Refactor to address them:
+4. **If REVISE:** Adjudicate the reviewer's feedback per the orchestrator discipline above. For accepted issues, refactor:
 
-   a. **Dispatch refactorer:** `Agent(subagent_type: "implementer")` with skill `superRA:econ-data-analysis` and domain reference `./references/codebase-integration.md`. Provide: the reviewer's specific feedback items, codebase conventions, available utility functions, drift test file locations, and the analysis code to refactor.
+   a. **Dispatch refactorer:**
+      ```
+      Agent(subagent_type: "implementer"):
+        Stage: refactoring
+        Skills: superRA:pre-merge-gate
+        Domain reference: codebase-integration.md
+        Reviewer issues to address: [accepted items, file:line, what to fix]
+        Codebase conventions: [pointers]
+        Drift tests: [paths — must keep passing]
+        Code to refactor: [paths]
+      ```
 
    b. **After refactoring: run drift tests.**
       - **Pass:** Commit and re-submit for review.

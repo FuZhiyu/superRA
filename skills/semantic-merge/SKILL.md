@@ -133,21 +133,31 @@ No subagents needed. Execute directly.
 
 Conflicts exist but none touch research-relevant files.
 
-1. **Dispatch merge-proposer:** `Agent(subagent_type: "implementer")` with skill `superRA:econ-data-analysis` and domain reference `./references/merge-quality.md`. Provide:
-   - Merge context (branches, merge base, tier)
-   - Incoming commit messages and diffs since merge base
-   - List of conflicting files with their classification
-   - Current branch purpose
+1. **Dispatch merge-proposer:**
+   ```
+   Agent(subagent_type: "implementer"):
+     Stage: merge proposer
+     Skills: superRA:semantic-merge
+     Domain reference: merge-quality.md
+     Merge context: branches, merge base, tier
+     Incoming changes: <commit messages and diffs since merge base>
+     Conflicting files: [list with classification]
+     Current branch purpose: [one line]
+   ```
 
-2. **Proposer executes** two-commit merge:
-   - **Commit 1 (mechanical):** Resolve conflicts with lowest-assumption reconciliation. Restore buildable state. No opportunistic cleanup.
-   - **Commit 2 (integration):** Adapt code, docs, tests so the branch incorporates incoming intent. Rewrite stale names, paths, references.
+2. **Proposer executes** the two-commit merge per the merge-quality.md domain reference (Commit 1 mechanical, Commit 2 integration).
 
-3. **Dispatch merge-reviewer:** `Agent(subagent_type: "reviewer")` with skill `superRA:econ-data-analysis` and domain reference `./references/merge-quality.md`. Provide:
-   - Merge context
-   - Proposer's report (integration map, decisions, rationale)
+3. **Dispatch merge-reviewer:**
+   ```
+   Agent(subagent_type: "reviewer"):
+     Stage: merge
+     Skills: superRA:semantic-merge
+     Domain reference: merge-quality.md
+     Merge context: branches, merge base, tier
+     Proposer's report: [integration map, decisions, rationale]
+   ```
 
-4. **If REVISE:** Proposer fixes issues, reviewer re-reviews. Iterate until APPROVE.
+4. **If REVISE:** adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:executing-plans` (Handling Reviewer Feedback). Forward accepted issues to the merge-proposer; push back or override others with documented reasoning. Iterate until APPROVE.
 
 5. **Run drift tests.** If pass: done. If fail: escalate to user (Tier 3 handling).
 
@@ -165,11 +175,17 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
    - Documentation (README, methodology docs)
    - Generated outputs (tables, figures)
 
-3. **Dispatch merge-proposer** (`implementer` agent + `./references/merge-quality.md`) with Tier 3 context. Provide:
-   - Everything from Tier 2, plus:
-   - Classification of changes by research role
-   - Drift test results (if available)
-   - Expected integration map with research-meaningful decisions flagged for user
+3. **Dispatch merge-proposer** with Tier 3 context:
+   ```
+   Agent(subagent_type: "implementer"):
+     Stage: merge proposer (Tier 3)
+     Skills: superRA:semantic-merge
+     Domain reference: merge-quality.md
+     [Tier 2 fields, plus:]
+     Changes classified by research role: [list]
+     Drift test results: [if available]
+     Integration map with research-meaningful decisions flagged for user
+   ```
 
 4. **Present integration map to user.** The proposer's report identifies conflicts and proposes resolutions. Present research-meaningful decisions:
 

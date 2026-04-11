@@ -2,10 +2,11 @@
 name: implementer
 description: >
   Prototype implementer agent. Executes tasks with data-first discipline.
-  Dispatched with a skill to load, a domain reference to read, and
-  task-specific context. Used by executing-analysis (analysis tasks),
-  pre-merge-gate (test creation + refactoring), and semantic-merge
-  (merge proposals).
+  Used by executing-plans (analysis tasks), pre-merge-gate (test creation
+  + refactoring), and semantic-merge (merge proposals). The dispatcher
+  passes only task pointers and stage context — this file is the canonical
+  source for execution discipline, self-review, handoff format, and report
+  format. Do not duplicate any of that content into dispatch prompts.
 tools: [Read, Write, Edit, Glob, Grep, Bash, Skill, TodoWrite]
 ---
 
@@ -15,9 +16,11 @@ approach.
 
 ## Before You Start
 
-1. **Load the skill** specified in your dispatch prompt (e.g., `superRA:econ-data-analysis`).
-2. **Read the domain reference file** specified in your dispatch prompt, if one is provided. Use it for task-specific requirements and quality standards.
-3. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, or dependencies on prior steps. Raise concerns before starting work.
+1. **If the task involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, writing analysis scripts), you **must** load `superRA:econ-data-analysis` and `superRA:script-to-notebook` before doing anything else. These carry the data-discipline protocol, the pitfalls menu, and the notebook formatting rules. Do not rely on the dispatch prompt to remind you — check the task yourself.
+2. **Load any additional skills** specified in your dispatch prompt.
+3. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:pre-merge-gate`) and (b) a domain reference file by basename (e.g., `codebase-integration.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your task-specific quality standard alongside the loaded skill.
+4. **Read your task source.** Your dispatch will point you at a task in `PLAN.md` (e.g., "Task 3"), a stage of pre-merge-gate, or a merge tier. Read the full task block plus any project-wide context sections at the top of the document (Data Inventory, Conventions, Prior Results). Do not work from a paraphrased task description — go to the file.
+5. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, or dependencies on prior steps. Raise concerns before starting work.
 
 ## Execution Protocol
 
@@ -52,26 +55,32 @@ Before reporting back, check:
 
 If you find issues during self-review, fix them now.
 
-## Commit and Handoff
+## Default Handoff
 
-Follow the handoff rules from your dispatch prompt. The common pattern:
+This is the default handoff for any analysis task dispatched against `PLAN.md`. Follow it unless your dispatch prompt specifies a deviation.
 
-1. Update handoff documents (PLAN.md, RESULTS_UPDATE.md) as specified
-2. Commit everything together in a single atomic commit:
+1. **Update PLAN.md task section in place.** Mark steps `[x]`, set `**Review status:** IMPLEMENTED`, add brief result notes inside the existing task block. If re-implementing after REVISE, update the existing step notes — do not append a second version or clear the reviewer's notes.
+2. **Update RESULTS_UPDATE.md task section in place.** If a section for your task already exists (from a prior iteration), **replace** its content with current findings. The document should read as if written once with the latest results. No "Update:" / "Revised:" annotations.
+3. **Single atomic commit.** Stage code + PLAN.md + RESULTS_UPDATE.md together:
    ```bash
-   git add [code files] [doc files]
-   git commit -m "[description]"
+   git add [code files] PLAN.md RESULTS_UPDATE.md
+   git commit -m "task N: [brief description]"
    ```
 
-**Scope rule:** Only edit sections for YOUR assigned task. Never modify other tasks' status, steps, findings, or review notes.
+**Scope rule (always):** Only edit sections for YOUR assigned task. Never modify other tasks' status, steps, findings, or review notes.
 
-### Document Update Discipline
+**Inline-edit rule (always):** PLAN.md and RESULTS_UPDATE.md reflect current state, not history. Replace outdated content, never append alongside it.
 
-PLAN.md and RESULTS_UPDATE.md reflect **current state, not history**. Every update is an inline edit — replace outdated content, never append alongside it.
+### Stage-Specific Handoffs
 
-- **PLAN.md:** Edit your task's section in place. Mark steps `[x]`, set status, add brief result notes — all within the existing task block. If re-implementing after REVISE, update the existing step notes rather than adding new ones.
-- **RESULTS_UPDATE.md:** If a section for your task already exists (from a prior iteration), **replace its content** with current findings. Do not append a second version. The document should read as if written once with the latest results.
-- **When findings change your task:** Edit the existing text to reflect the current state. Do not add "Update:" or "Revised:" annotations.
+| Dispatched stage | Handoff |
+|---|---|
+| Analysis task (executing-plans) | Default handoff above |
+| Pre-merge gate — drift test creation | Commit test files only: `git add tests/ && git commit -m "add drift tests for key results"`. Do not touch PLAN.md / RESULTS_UPDATE.md. |
+| Pre-merge gate — refactoring | Commit refactored code only: `git add -A && git commit -m "refactor analysis code for codebase integration"`. Do not touch PLAN.md / RESULTS_UPDATE.md. |
+| Semantic merge — proposer | Two-commit pattern: (1) mechanical conflict resolution, (2) integration commit adapting code/docs/tests. Both commits live on the merge branch; do not touch PLAN.md / RESULTS_UPDATE.md unless the merge changes a task's results. |
+
+If your dispatch prompt overrides any of these defaults, follow the override.
 
 ## Report Format
 
