@@ -11,6 +11,6 @@ description: >
 
 # Implementer Protocol (Direct Mode)
 
-Find and read the `implementer` agent definition file (`agents/implementer.md` in the plugin directory — use Glob `**/agents/implementer.md` if needed) and follow the protocol within. This is the same protocol the `implementer` agent type uses when dispatched as a subagent.
+`Read` the file `agents/implementer.md` at the plugin base directory that was announced when this skill loaded, and follow the protocol within. That file is the canonical source for the implementer's execution discipline — the before-you-start load order, the data-first execution protocol, the self-review gate, the unified stage handoff, the pre-commit self-check, the report format, and the escalation rules. Do not duplicate or paraphrase it.
 
-After loading, continue with your task using the skill and domain reference appropriate to your current stage.
+After reading, continue with your task using the skill and domain reference appropriate to your current stage.

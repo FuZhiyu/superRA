@@ -12,6 +12,6 @@ description: >
 
 # Reviewer Protocol (Direct Mode)
 
-Find and read the `reviewer` agent definition file (`agents/reviewer.md` in the plugin directory — use Glob `**/agents/reviewer.md` if needed) and follow the protocol within. This is the same protocol the `reviewer` agent type uses when dispatched as a subagent.
+`Read` the file `agents/reviewer.md` at the plugin base directory that was announced when this skill loaded, and follow the protocol within. That file is the canonical source for the reviewer's discipline — the before-you-start load order, the read-code-first rule, the CRITICAL/MAJOR/MINOR severity definitions, the APPROVE/REVISE verdict protocol, the unified stage handoff with first-review and re-review sub-protocols, the pre-commit self-check, and the report format. Do not duplicate or paraphrase it.
 
-After loading, continue with your domain-specific review using the skill and domain reference appropriate to your current stage.
+After reading, continue with your domain-specific review using the skill and domain reference appropriate to your current stage.
