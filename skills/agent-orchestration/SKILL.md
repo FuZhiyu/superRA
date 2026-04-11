@@ -230,11 +230,13 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 
 **When:** `superRA:integration-workflow` is invoked (from execution-workflow Step 4 Option 1 or 2). Spawned by the lead after the Analysis Team has been cleaned up.
 
-**Teammates (4):**
+**Teammates (6):**
 - `test-creator` — Creates drift tests for key results
 - `test-reviewer` — Reviews tests for coverage, tolerances, independence
 - `refactorer` — Refactors code for codebase integration
-- `integration-reviewer` — Reviews integration quality
+- `integration-reviewer` — Reviews integration quality (Stage 2 code)
+- `doc-writer` — Matures RESULTS.md into its permanent form and audits project-level docs (Step 3 sub-parts A + B)
+- `doc-reviewer` — Reviews the matured RESULTS.md + project docs against `final-form.md` (Step 3 gate)
 
 **Spawn:**
 ```
@@ -243,6 +245,8 @@ Create an agent team for the integration workflow:
 - test-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: drift-test-quality.md]
 - refactorer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
 - integration-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
+- doc-writer: [use `implementer` agent type; load superRA:report-in-markdown; domain ref basenames: baseline-io.md + rich-content.md + final-form.md (full mode)]
+- doc-reviewer: [use `reviewer` agent type; load superRA:report-in-markdown; domain ref basename: final-form.md]
 
 All teammates auto-load superRA:econ-data-analysis and superRA:script-to-notebook via the agent definition since the stage touches analysis code. Require plan approval before they make changes.
 ```
@@ -255,20 +259,23 @@ All teammates auto-load superRA:econ-data-analysis and superRA:script-to-noteboo
 5. `refactor-code` → depends: 4 (only if REVISE), assigned: refactorer
 6. `run-drift-tests-post-refactor` → depends: 5, assigned: refactorer
 7. `re-review-integration` → depends: 6, assigned: integration-reviewer
+8. `mature-results-and-audit-docs` → depends: 7 (or 4 if APPROVE without refactor), assigned: doc-writer
+9. `review-docs` → depends: 8, assigned: doc-reviewer
 
-**Flow:** Integration reviewer runs first (task 4). If APPROVE, no refactoring needed — skip tasks 5-7. If REVISE, refactorer addresses specific feedback (task 5), drift tests verify (task 6), integration reviewer re-reviews (task 7). Loop until APPROVE.
+**Flow:** Integration reviewer runs first (task 4). If APPROVE, no refactoring needed — skip tasks 5-7. If REVISE, refactorer addresses specific feedback (task 5), drift tests verify (task 6), integration reviewer re-reviews (task 7). Loop until APPROVE. Then Step 3 doc-writer matures RESULTS.md + audits project docs (task 8), doc-reviewer gates both together (task 9). Loop 8↔9 until APPROVE. Lead then handles PLAN.md disposition outside the team.
 
-**Iteration:** When test-reviewer sends REVISE, they message test-creator directly with specific feedback. Test-creator fixes and marks task updated. Test-reviewer re-reviews. For the integration loop: integration-reviewer messages refactorer with specific issues, refactorer fixes and runs drift tests, then messages integration-reviewer to re-review.
+**Iteration:** When test-reviewer sends REVISE, they message test-creator directly with specific feedback. Test-creator fixes and marks task updated. Test-reviewer re-reviews. For the Stage 2 integration loop: integration-reviewer messages refactorer with specific issues, refactorer fixes and runs drift tests, then messages integration-reviewer to re-review. For the Step 3 doc loop: doc-reviewer messages doc-writer with specific findings (file:line + proposed fix), doc-writer fixes in place and re-commits, doc-reviewer re-reviews.
 
-**Orchestrator discipline for reviewer feedback:** The lead adjudicates REVISE feedback from both test-reviewer and integration-reviewer per `superRA:execution-workflow` Handling Reviewer Feedback — read the cited code, classify each issue, override with documented reasoning where the reviewer is wrong, never silently dismiss CRITICAL. This applies whether or not you are using Agent Teams mode.
+**Orchestrator discipline for reviewer feedback:** The lead adjudicates REVISE feedback from test-reviewer, integration-reviewer, and doc-reviewer per `superRA:execution-workflow` Handling Reviewer Feedback — read the cited code, classify each issue, override with documented reasoning where the reviewer is wrong, never silently dismiss CRITICAL. This applies whether or not you are using Agent Teams mode.
 
 **Lead responsibilities:**
 - Present drift test candidates to user BEFORE creating team (Stage 1 user confirmation)
 - Create team and task graph with dependencies
 - Adjudicate every REVISE round per orchestrator discipline; forward only accepted issues to the refactorer or test-creator
 - Monitor for meaningful drift escalations from refactorer
-- Generate the work-journal report (integration-workflow Step 3 — no team work, lead does this)
-- Handle PLAN.md / RESULTS.md disposition (integration-workflow Step 4 — lead asks user and executes git mv/rm)
+- Resolve `RESULTS_DIR` for the matured RESULTS.md before dispatching the Step 3 doc-writer (read project guidance; ask via `AskUserQuestion` only if missing)
+- Dispatch the Step 3 doc-writer + doc-reviewer pair for documentation finalization (matured RESULTS.md + project doc audit); adjudicate REVISE rounds per orchestrator discipline
+- Handle PLAN.md disposition (integration-workflow Step 3 sub-part C — lead asks user via `AskUserQuestion` and executes git mv/rm after doc-reviewer APPROVE)
 - Handle user communication for all escalation decisions
 - Commit at stage boundaries
 - **Clean up team before proceeding to merge-workflow** (the Merge Team needs the session slot)

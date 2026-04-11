@@ -251,7 +251,7 @@ The researcher's answer is a user decision — the `ask-user-question-logger` Po
 **Execute the user's choice:**
 
 - **Option 1 or 2 (Merge or PR):** Dispatch the two integration-phase workflow skills in sequence — do not run their steps yourself.
-  1. Invoke `superRA:integration-workflow` for drift test creation, the refactor-review loop, work-journal report generation, and disposition of `PLAN.md` / `RESULTS.md`. Wait for it to return successfully.
+  1. Invoke `superRA:integration-workflow` for drift test creation, the refactor-review loop, documentation finalization (maturing `RESULTS.md` into its permanent form + project doc audit via a dedicated doc-writer + doc-reviewer pair), and PLAN.md disposition. Wait for it to return successfully.
   2. Invoke `superRA:merge-workflow` for the main update via semantic-merge, post-merge verification (drift tests AND fresh integration review), the refactor-review loop on post-merge failure, the actual local merge or PR push, and worktree cleanup.
 
   Both skills are required for Options 1 and 2. The merge-workflow assumes integration-workflow has already produced a merge-ready branch.

@@ -1,5 +1,23 @@
 # Superpowers Release Notes
 
+## integration-workflow Step 3 consolidation: one doc-writer + doc-reviewer pair (2026-04-11)
+
+Merges the previous Step 3 (mature RESULTS.md) and Step 4 (dispose of PLAN.md) into a single **Step 3: Documentation Finalization** and moves the consolidation work off the orchestrator onto a dispatched **doc-writer subagent** gated by a **doc-reviewer subagent**. Previously Step 3 was orchestrator-performed with only a reviewer dispatch — a reviewer-only gate, not a full implementer-reviewer pair. Workflow principle P1 (enforced implementer-reviewer pair at every step) now holds literally at Step 3.
+
+**The consolidated step has three sub-parts:**
+
+- **Sub-part A (doc-writer):** mature `RESULTS.md` in place per `superRA:report-in-markdown` full mode (all three references — `baseline-io.md` + `rich-content.md` + `final-form.md`), relocate to `RESULTS_DIR`.
+- **Sub-part B (doc-writer, same dispatch):** audit project-level docs. Walk up from every file in the analysis diff to each `CLAUDE.md` / `AGENTS.md` / `README.md` (plus the repo root `README.md` and root `CLAUDE.md` unconditionally). Update stale claims, add new patterns/modules, create missing `CLAUDE.md` + `AGENTS.md` symlink pairs for new module directories. This closes the long-standing gap that the macro workflow never had a project-docs update step — it's now baked into the doc-writer pass, not bolted on.
+- **Sub-part C (orchestrator, after doc-reviewer APPROVE):** PLAN.md disposition via `AskUserQuestion`, logged in `PLAN.md` `## Decisions`. Stays with the orchestrator because it is a user-facing decision, not an RA-implementable task.
+
+**One reviewer dispatch** gates both A and B together, which lets it catch cross-consistency issues (matured RESULTS.md vs. any README/CLAUDE.md that mentions the analysis). The reviewer loads `superRA:report-in-markdown` + `final-form.md` only, per the skill's load-map for the doc-reviewer role.
+
+**The orchestrator preamble** still owns the RESULTS_DIR resolution — reads project guidance first, asks via `AskUserQuestion` only if guidance is missing. This runs before the doc-writer dispatch so the subagent receives `RESULTS_DIR` as a parameter rather than having to decide it.
+
+**Files touched.** `skills/integration-workflow/SKILL.md` — rewrite of Step 3 (replaces previous Step 3 + Step 4), new process-diagram cluster, updated Agent Types table (two new rows: doc-writer and doc-reviewer; drop the "orchestrator performs the consolidation" note), updated Agent Teams Mode (Step 3 can join the team as a two-teammate sub-graph), updated Red Flags (new "do not orchestrator-perform sub-parts A and B" rule and new "do not delegate sub-part C to the doc-writer" rule), description picks up "update project docs" trigger. `skills/handoff-doc/references/results-anatomy.md` — "Transition to Stage 2" paragraph updated to state the doc-writer subagent performs the consolidation. `skills/report-in-markdown/SKILL.md` — load-map rows renamed to "Step 3 doc-writer subagent" and "Step 3 doc-reviewer subagent". `skills/report-in-markdown/references/final-form.md` — header and severity-section language updated to name the doc-writer / doc-reviewer roles explicitly. `README.md` — integration-workflow row rewritten to describe the doc-writer + doc-reviewer pair; design principle #3 picks up "documentation finalization" instead of "work-journal report"; `report-in-markdown` row updated to name the two Step 3 callers.
+
+This commit closes the follow-up gap flagged at the bottom of the previous entry ("Out of this rollout") — the external work-journal plugin dependency is now fully gone, and the P1 gap at Step 3 that the previous entry left open is now closed.
+
 ## RESULTS.md two-stage lifecycle + report-in-markdown utility skill (2026-04-11)
 
 `RESULTS_UPDATE.md` is renamed to `RESULTS.md` everywhere, and is now treated as a single-identity artifact that **matures across two stages** rather than a disposable scaffold paired with a separately-generated work-journal entry. The `_UPDATE` suffix was misleading: `handoff-doc` already enforced "latest state only, no history" on the file, so the suffix implied append semantics that the discipline forbade.
