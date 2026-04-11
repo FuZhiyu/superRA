@@ -290,11 +290,8 @@ The lead still handles tier classification, user-facing decisions (Tier 3 integr
 **Never:**
 - Run bare `git merge` without tier classification in a research context
 - Choose `--ours` or `--theirs` for research-relevant files without user input
-- Skip drift tests after merge
-- Silently update drift test expectations for meaningful result changes
 - Resolve analysis-code conflicts without presenting options to the user
-- Proceed past failing drift tests without escalation
-- Judge the researcher's methodology — you integrate, you don't evaluate
+- Judge the researcher's methodology — you integrate, you don't evaluate (see the foundational RA framing in `CLAUDE.md`)
 - Discard dirty worktree state without explicit approval
 
 **Always:**
@@ -303,8 +300,10 @@ The lead still handles tier classification, user-facing decisions (Tier 3 integr
 - Use two-commit structure (mechanical + integration)
 - Run drift tests after every merge
 - Present research-meaningful conflicts to the user with intent and consequences
-- Preserve data discipline artifacts through the merge
+- Keep and re-validate data discipline artifacts through the merge (describe steps, row counts, validation)
 - Verify pipeline runs on the merged result
+
+**Drift-test integrity after the merge is governed by the cross-cutting rules in `refactor-and-integrate` reference `drift-test-quality.md` — failing tests after a merge must be adjudicated, not silently re-expected. Load the reference before running post-merge tests.**
 
 ## Integration
 

@@ -203,8 +203,7 @@ Together they cover both failure modes. Skipping either leaves a hole. The post-
 
 **Never:**
 - Push or local-merge without running BOTH drift tests AND a fresh integration reviewer on the merged state
-- Update test expectations for meaningful drift (post-merge results changing substantively is a research conversation, not a refactor)
-- Silently swallow integration-reviewer REVISE on the merged state — adjudicate per orchestrator discipline, then either fix or document the override
+- Silently swallow integration-reviewer REVISE on the merged state — adjudicate per the orchestrator discipline in `superRA:execution-workflow` (Handling Reviewer Feedback), then either fix or document the override
 - Skip Step 1 (the semantic-merge update) and go straight to git merge — main may have moved since integration-workflow ran
 - Cleanup the worktree before the merge or push has actually completed
 
@@ -214,6 +213,8 @@ Together they cover both failure modes. Skipping either leaves a hole. The post-
 - Re-enter the refactor-review loop on any post-merge failure
 - Stop and ask the user when post-merge drift indicates meaningful result changes
 - Report what was merged and what was cleaned up
+
+**Drift-test integrity on the merged state is governed by the cross-cutting rules in `refactor-and-integrate` reference `drift-test-quality.md` — failing drift tests after the main update must be adjudicated, not silently re-expected. Load the reference before running post-merge tests.**
 
 ## Integration
 

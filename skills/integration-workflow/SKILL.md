@@ -327,12 +327,10 @@ The lead still handles user-facing decisions (drift test candidates, meaningful 
 ## Red Flags
 
 **Never:**
-- Skip Stage 1 (drift tests) -- they are the safety net for everything that follows
-- Refactor before integration reviewer has identified issues -- review first, then fix
-- Proceed past failing drift tests without assessment
-- Silently update test expectations for meaningful result changes
+- Skip Stage 1 (drift tests) — they are the safety net for everything that follows
+- Refactor before integration reviewer has identified issues — review first, then fix
 - Remove data diagnostics, row counts, or validation steps during refactoring
-- Judge the researcher's methodology choice -- focus on implementation correctness
+- Judge the researcher's methodology choice — focus on implementation correctness (see the foundational RA framing in `CLAUDE.md`)
 - Refactor before drift tests are committed and green
 - Merge without integration reviewer APPROVE
 
@@ -341,9 +339,10 @@ The lead still handles user-facing decisions (drift test candidates, meaningful 
 - Run integration review before any refactoring
 - Run drift tests after every refactoring change
 - Re-submit to integration reviewer after every refactoring round
-- Stop and ask the user when drift indicates meaningful result changes
-- Preserve all data discipline artifacts (describe steps, row counts, validation)
+- Keep and re-validate all data discipline artifacts (describe steps, row counts, validation checks) through refactoring
 - Commit at each stage boundary
+
+**Drift-test integrity is governed by the cross-cutting rules in `refactor-and-integrate` reference `drift-test-quality.md` ("Drift Test Integrity — Cross-Cutting Red Flags") — failing tests must be adjudicated, not silently re-expected; tolerance bumps require justification; and test removal during refactoring is forbidden. Load the reference before creating, reviewing, or running drift tests.**
 
 ## Integration
 
