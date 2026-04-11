@@ -1,6 +1,6 @@
 ---
 name: worktree-data-sync
-description: Utility (infrastructure). Sync non-git data files between existing git worktrees — compare, copy, or reconcile large datasets across parallel analysis workspaces without switching branches. Supports seed, diff, and apply modes using explicit --from/--to endpoints. Does not create/remove worktrees or manage sandbox settings (use using-analysis-worktrees for that).
+description: Use when syncing non-git data files between existing git worktrees — seeding a new analysis worktree from an existing one, copying managed datasets across parallel analysis workspaces without switching branches, comparing data file contents across worktrees, or reconciling changes after parallel work. Triggers include "copy data to the new worktree", "seed this worktree from main", "diff the data files between worktrees", "sync my worktree data", or any time you would otherwise hand-roll a cp/rsync between two worktrees. Does not create or remove worktrees and does not manage sandbox settings — use `using-analysis-worktrees` for those concerns. Paired with `using-analysis-worktrees` for parallel-work infrastructure.
 user-invocable: true
 ---
 

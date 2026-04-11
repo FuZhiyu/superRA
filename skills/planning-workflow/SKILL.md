@@ -19,6 +19,8 @@ Assume the analyst is skilled at data work, but knows nothing about this specifi
 - Create `RESULTS_UPDATE.md` alongside (see Results Update Document section)
 - (User preferences for plan location override this default)
 
+**Before you create directories or start editing:** if this analysis may span multiple sessions, run in parallel with another analysis, or need an isolated data copy, consider loading `superRA:using-analysis-worktrees` before any file creation. A worktree at this point is cheap; retrofitting one after Phase 1 is not. For simple single-session analyses on an existing branch, skip it — a feature branch is sufficient.
+
 Commit first before proceeding to execution.
 
 ## Phase 1: Data Inventory (Hard Gate)

@@ -371,7 +371,8 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 ## Integration
 
 **Required workflow skills:**
-- **superRA:using-analysis-worktrees** — RECOMMENDED: For complex or multi-session analyses, consider an isolated workspace
+- **superRA:using-analysis-worktrees** — RECOMMENDED: For complex or multi-session analyses, set up an isolated workspace before starting
+- **superRA:worktree-data-sync** — Load this when copying managed data between existing worktrees (e.g., seeding a new analysis worktree from the main one); do not hand-roll data copy scripts
 - **superRA:planning-workflow** — Creates the plan this skill executes
 - **superRA:econ-data-analysis** — REQUIRED: Data discipline all agents must follow
 - **superRA:script-to-notebook** — Script formatting and notebook rendering
