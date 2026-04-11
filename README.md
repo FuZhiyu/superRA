@@ -10,7 +10,7 @@ superRA enforces a single non-negotiable rule — the **Iron Law of Data Analysi
 
 > **NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION**
 
-Every data operation follows a Describe-Analyze-Doc cycle. Every task gets a two-stage review (data integrity, then implementation correctness). Every session leaves enough state in PLAN.md and RESULTS_UPDATE.md that a fresh agent can pick up exactly where the last one stopped.
+Every data operation follows a Describe-Analyze-Doc cycle. Every task gets a two-stage review (data integrity, then implementation correctness). Every session leaves enough state in PLAN.md and RESULTS.md that a fresh agent can pick up exactly where the last one stopped.
 
 ## How It Works
 
@@ -19,11 +19,11 @@ superRA activates automatically. When your agent sees a research task, it doesn'
 ```
 PLAN            planning-workflow (Phase 1 inventory → Phase 2 plan creation)
                 Inventory data (hard gate). Break work into tasks with code at every step.
-                Output: PLAN.md + RESULTS_UPDATE.md (living handoff documents)
+                Output: PLAN.md + RESULTS.md (living handoff documents)
                     |
 IMPLEMENT       execution-workflow (implementer agent per task)
                 Follow econ-data-analysis discipline: Describe → Analyze → Doc.
-                Atomic commit per task: code + PLAN.md status + RESULTS_UPDATE.md findings.
+                Atomic commit per task: code + PLAN.md status + RESULTS.md findings.
                     |
 VALIDATE        execution-workflow (reviewer agent after each task)
                 Two-stage review: data integrity → implementation correctness.
@@ -34,7 +34,7 @@ INTEGRATE       integration-workflow → merge-workflow (uses semantic-merge)
                 Integration review. Generate report. Merge or PR.
 ```
 
-Each task produces an atomic commit. If the session dies at any point, the next session reads PLAN.md + RESULTS_UPDATE.md + git state and picks up exactly where the last one stopped.
+Each task produces an atomic commit. If the session dies at any point, the next session reads PLAN.md + RESULTS.md + git state and picks up exactly where the last one stopped.
 
 ## Design Principles
 
@@ -42,7 +42,7 @@ Four workflow principles are baked into every skill in the repo. Every contribut
 
 1. **Enforced implementer–reviewer pair at every step.** No result is accepted until a reviewer signs off. Two-stage review during execution (data integrity → implementation correctness), drift-test and integration reviews before merge, and a fresh integration review after semantic-merge. Review is never skipped.
 
-2. **Handoff docs are the auditable record AND the continuation point.** All material findings, decisions, and results land in committed `PLAN.md` / `RESULTS_UPDATE.md` *before* they appear in any chat reply. Any fresh agent can resume work from the docs + git state alone — no prompt history required. Atomic commits bundle code + doc edits together.
+2. **Handoff docs are the auditable record AND the continuation point.** All material findings, decisions, and results land in committed `PLAN.md` / `RESULTS.md` *before* they appear in any chat reply. Any fresh agent can resume work from the docs + git state alone — no prompt history required. Atomic commits bundle code + doc edits together.
 
 3. **Fast early, strict before merge. Semantic merges always.** Analysis code is written for speed during implementation — no codebase-fit checks at interim checkpoints. Refactoring, drift tests, codebase integration, and the work-journal report happen only when the user chooses to merge. Every merge into main runs through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
 
@@ -65,7 +65,7 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 ## Skills
 
-superRA's 17 skills split into two categories:
+superRA's 18 skills split into two categories:
 
 - **Workflow skills** (`*-workflow`) — dispatcher-facing. Own the procedural choreography of each phase: what agent to dispatch, in what sequence, with what handoff rules. There are exactly four, one per phase: `planning-workflow`, `execution-workflow`, `integration-workflow`, `merge-workflow`.
 - **Utility skills** — agent-facing and standalone-invokable. Carry domain knowledge (data discipline, notebook formatting, drift test standards, codebase integration checklists, merge quality rules) that can be reused outside any specific workflow. `econ-data-analysis` is the most load-bearing; `refactor-and-integrate` bundles the three integration-phase reference files into one standalone-invokable source of truth.
@@ -75,14 +75,14 @@ superRA's 17 skills split into two categories:
 | Skill | What It Does |
 |-------|-------------|
 | **econ-data-analysis** | Iron Law enforcement. Describe-Analyze-Doc cycle. Pitfall checklists for merges, aggregations, filtering, variable construction. |
-| **handoff-doc** | Document-level discipline for PLAN.md / RESULTS_UPDATE.md and any task-block-structured handoff document. Six principles (latest-state-only, inline-edit, task-block structure, ownership-by-role defined in agent files, what-changed deltas, doc-is-the-record), stale-content checklist, figure embedding rule. Progressive-reveal references carry the full PLAN.md and RESULTS_UPDATE.md anatomy. Loaded by implementer and reviewer subagents; referenced by `planning-workflow`. |
+| **handoff-doc** | Document-level discipline for PLAN.md / RESULTS.md and any task-block-structured handoff document. Six principles (latest-state-only, inline-edit, task-block structure, ownership-by-role defined in agent files, what-changed deltas, doc-is-the-record), stale-content checklist, figure embedding rule. Progressive-reveal references carry the full PLAN.md and RESULTS.md anatomy. Loaded by implementer and reviewer subagents; referenced by `planning-workflow`. |
 | **verification-before-completion** | No completion claims without fresh verification evidence. Prevents "looks fine" from reaching merge. |
 
 ### PLAN Phase
 
 | Skill | What It Does |
 |-------|-------------|
-| **planning-workflow** | Phase 1: inventory available data, identify gaps, research sources (hard gate). Phase 2: create step-by-step plans with describe-validate discipline. Outputs PLAN.md and RESULTS_UPDATE.md as living handoff documents. |
+| **planning-workflow** | Phase 1: inventory available data, identify gaps, research sources (hard gate). Phase 2: create step-by-step plans with describe-validate discipline. Outputs PLAN.md and RESULTS.md as living handoff documents. |
 
 ### IMPLEMENT + VALIDATE Phase
 
@@ -97,9 +97,10 @@ Runs in sequence when the user chooses merge or PR at execution-workflow Step 4:
 
 | Skill | What It Does |
 |-------|-------------|
-| **integration-workflow** | Create drift tests to protect key results. Refactor code for codebase integration with a refactor-review loop. Generate the work-journal report. Handle PLAN.md / RESULTS_UPDATE.md disposition. Hands off to merge-workflow. |
+| **integration-workflow** | Create drift tests to protect key results. Refactor code for codebase integration with a refactor-review loop. Generate the work-journal report. Handle PLAN.md / RESULTS.md disposition. Hands off to merge-workflow. |
 | **merge-workflow** | Final phase. Update analysis branch with main via semantic-merge, run drift tests AND a fresh integration review on the merged state, re-enter the refactor-review loop on either failure, execute local merge or push + PR, clean up the worktree. |
 | **refactor-and-integrate** | Utility skill carrying the three domain-knowledge checklists loaded by dispatched agents: `drift-test-quality.md` (coverage, tolerances, independence, clarity, cross-cutting drift-test integrity Red Flags), `codebase-integration.md` (naming, utilities, data discipline through refactoring, PR quality), `merge-quality.md` (intent preservation, research integrity, two-commit structure, Tier 3 escalation). Standalone-invokable for any refactoring task. |
+| **report-in-markdown** | Format-discipline utility for markdown reports with figures, LaTeX math, tables, or human-readable prose. Lean SKILL.md body (loaded by every caller); three references loaded on demand per a load-map table — `baseline-io.md` (frontmatter, paths, metadata), `rich-content.md` (figures, math, tables, file refs), `final-form.md` (Stage 2 consolidation discipline: fact-check checklist, reader-facing restructure, figure materialization, relocation). Drives the Stage 2 maturation of `RESULTS.md` at `integration-workflow` Step 3 and is loaded by implementers in Stage 1 only when their task section embeds figures or math. |
 | **semantic-merge** | Intent-based branch integration. `merge-workflow` Step 1 delegates to it via an explicit Skill invocation for the main-branch update; the merge-guard hook also triggers it directly for ad-hoc `git merge`/`rebase`/`cherry-pick`. Classifies conflicts by research impact, escalates methodology decisions to the user. |
 
 ### Infrastructure
@@ -128,13 +129,13 @@ Runs in sequence when the user chooses merge or PR at execution-workflow Step 4:
 
 ## Key Design Decisions
 
-**Agent-owned doc updates.** Each agent commits its doc changes atomically with its work. The implementer commits code + PLAN.md status + RESULTS_UPDATE.md findings in a single commit. Reviewers commit review notes and APPROVED status separately. No orchestrator transcription step.
+**Agent-owned doc updates.** Each agent commits its doc changes atomically with its work. The implementer commits code + PLAN.md status + RESULTS.md findings in a single commit. Reviewers commit review notes and APPROVED status separately. No orchestrator transcription step.
 
 **Review status protocol.** Tasks in PLAN.md carry a status line: `IMPLEMENTED` (code done, awaiting review), `REVISE (data integrity)` or `REVISE (implementation)` (reviewer found issues — data integrity REVISE blocks implementation review from starting), `APPROVED` (both reviews passed). A fresh session can tell exactly where each task stands.
 
 **Two-stage review.** Data integrity first, implementation correctness second. Data review must pass before implementation review begins. Review is never skipped — even in direct execution mode.
 
-**Scope rule.** Agents only edit their own task's sections in PLAN.md and RESULTS_UPDATE.md. Never touch other tasks.
+**Scope rule.** Agents only edit their own task's sections in PLAN.md and RESULTS.md. Never touch other tasks.
 
 **RA framing.** The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. It executes, validates, and escalates — but the researcher decides the approach.
 
@@ -152,7 +153,7 @@ Runs in sequence when the user chooses merge or PR at execution-workflow Step 4:
 - **Data-first** — Understand before transforming. Always.
 - **Reproducibility is a requirement** — Drift tests, pipeline files, committed code. Not optional.
 - **Evidence over claims** — Run the pipeline before saying it works.
-- **Session resilience** — PLAN.md + RESULTS_UPDATE.md + git = complete handoff.
+- **Session resilience** — PLAN.md + RESULTS.md + git = complete handoff.
 - **Researcher decides, agent implements** — Methodology is not the agent's call.
 
 ## Upstream
