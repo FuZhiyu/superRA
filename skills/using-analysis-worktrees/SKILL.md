@@ -211,7 +211,7 @@ Ready to analyze <topic>
 
 **Called by:**
 - **data-exploration** — When the user wants an isolated workspace
-- **executing-analysis** — Recommended for complex or multi-session analyses
+- **execution-workflow** — Recommended for complex or multi-session analyses
 - Any skill needing isolated workspace
 
 **Depends on:**

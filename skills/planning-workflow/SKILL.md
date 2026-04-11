@@ -210,11 +210,11 @@ After finalizing the plan, commit the plan, then offer execution choice:
 
 **1. Subagent-Driven (recommended for independent tasks)** - I dispatch a fresh subagent per task, review between tasks, fast iteration. Best when tasks don't heavily depend on each other's outputs.
 
-**2. Inline Execution (recommended for sequential pipelines)** - Execute tasks in this session using executing-analysis, context preserved across steps. Best when each step's output informs the next.
+**2. Inline Execution (recommended for sequential pipelines)** - Execute tasks in this session using execution-workflow, context preserved across steps. Best when each step's output informs the next.
 
 **Which approach?"**
 
-**REQUIRED DISCIPLINE:** Use superRA:executing-analysis
+**REQUIRED DISCIPLINE:** Use superRA:execution-workflow
 - Defaults to subagent mode (fresh subagent per task + two-stage review)
 - Falls back to direct mode for simple tasks or when user requests it
 - Review always happens regardless of mode

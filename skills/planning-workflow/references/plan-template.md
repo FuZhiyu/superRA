@@ -7,7 +7,7 @@ The plan document at the project root. Every analysis plan starts with this head
 ```markdown
 # [Analysis Name] Plan
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use superRA:econ-data-analysis at every step. Use superRA:executing-analysis to execute this plan. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use superRA:econ-data-analysis at every step. Use superRA:execution-workflow to execute this plan. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
 
 **Objective:** [One sentence describing what this analysis produces]
 
