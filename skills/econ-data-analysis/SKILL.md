@@ -292,6 +292,8 @@ Verify the result, then document everything. You can't document properly without
 - Rationalizing "just this once"
 - "I already checked this data in a previous session"
 - "This is exploratory so it doesn't matter"
+- Assume a merge, rebase, or refactor preserves analysis results without re-running describe on the affected variables. Floating-point order, row-count drift, and silent sample changes are common post-integration failures.
+- Accept merged or refactored code without comparing pre- and post-change row counts and summary statistics on the key variables.
 
 **All of these mean: Undo the transformation. Describe first. Start over from that step.**
 
