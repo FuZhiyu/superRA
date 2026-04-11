@@ -1,6 +1,6 @@
 ---
 name: using-analysis-worktrees
-description: Use when you want an isolated workspace for analysis — creates git worktrees with data seeding and environment setup. Optional; for simple analyses, a feature branch without a worktree is sufficient.
+description: Utility (infrastructure, optional any phase). Use when you want an isolated workspace for parallel analysis work — creates git worktrees with data seeding and environment setup. Recommended for complex or multi-session analyses. Optional for simple analyses; a feature branch without a worktree is sufficient.
 ---
 
 # Using Analysis Worktrees

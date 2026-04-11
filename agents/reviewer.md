@@ -4,7 +4,8 @@ description: >
   Prototype reviewer agent. Verifies work independently using APPROVE/REVISE
   protocol with CRITICAL/MAJOR/MINOR severity levels. Used by execution-workflow
   (data integrity + implementation review), integration-workflow (drift test review
-  + integration review), and semantic-merge (merge review). The dispatcher
+  + integration review), merge-workflow (post-merge drift test + integration
+  review), and semantic-merge (merge review). The dispatcher
   passes only the review stage, task pointer, and git SHA range — this file
   is the canonical source for severity definitions, verdict protocol, report
   format, and stage-specific handoffs. Do not duplicate any of that content
@@ -102,8 +103,8 @@ The dispatch prompt will name your **stage**. Each stage has a default handoff. 
 | **data integrity** (execution-workflow) | Set `**Review status:** REVISE (data integrity)` in the task block of `PLAN.md`, with a blockquote listing the issues. Commit `PLAN.md` only: `git commit -m "review: Task N data integrity issues"`. | No commit needed if clean. If concerns remain, add a `> **⚠️ Reviewer note (data integrity):** ...` blockquote to the task's section of `RESULTS_UPDATE.md` and commit it. |
 | **implementation** (execution-workflow, final reviewer) | Set `**Review status:** REVISE (implementation)` in the task block of `PLAN.md` with issues blockquote. Commit `PLAN.md` only. | Set `**Review status:** APPROVED` in the task block of `PLAN.md`. Commit `PLAN.md`: `git commit -m "review: Task N approved"`. Add reliability caveats to `RESULTS_UPDATE.md` if needed (replace any prior caveat from earlier rounds, do not stack). |
 | **drift test** (integration-workflow Stage 1) | Report issues to the test-creator. No PLAN.md updates — drift tests live outside the plan loop. | Report-only. The orchestrator commits the tests after the green baseline run. |
-| **integration** (integration-workflow Stage 2) | Report specific issues for the refactorer to address. Report-only — no document updates. | Report-only. |
-| **merge** (semantic-merge) | Report issues to the merge-proposer. Report-only — no document updates. | Report-only. |
+| **integration** (integration-workflow Stage 2, or merge-workflow Step 2 post-merge) | Report specific issues for the refactorer to address. Report-only — no document updates. For the post-merge variant, explicitly verify that drift tests pass on the merged state AND that main's conventions (renamed utilities, moved files, stale imports) are honored. | Report-only. |
+| **merge** (semantic-merge ad-hoc, or merge-workflow Step 1 via semantic-merge) | Report issues to the merge-proposer. Report-only — no document updates. | Report-only. |
 | **ad-hoc** | Report-only. No document updates. |
 
 **Scope rule (always):** Only edit sections for YOUR assigned task. Never modify other tasks' status, steps, findings, or review notes.

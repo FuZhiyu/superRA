@@ -1,6 +1,6 @@
 ---
 name: agent-orchestration
-description: Use when orchestrating multi-agent work — provides decision framework for parallel dispatch (independent tasks) vs Agent Teams (iterative workflows), team recipes, and session handoff protocol
+description: Utility (any phase). Use when orchestrating multi-agent work — decision framework for parallel dispatch (independent tasks) vs Agent Teams (iterative workflows), team recipes for Analysis Team / Integration Team / Merge Team / Semantic Merge Team with teammate compositions and task graphs, and session handoff protocol for team lifecycle management.
 ---
 
 # Agent Orchestration
@@ -222,9 +222,9 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 - Note team phase in PLAN.md (e.g., "Analysis Team active, tasks 1-3 of 5 complete")
 - Clean up team before proceeding to integration-workflow
 
-#### Pre-Merge Gate Team
+#### Integration Team
 
-**When:** `superRA:integration-workflow` is invoked (from execution-workflow Step 4 Option 1 or 2)
+**When:** `superRA:integration-workflow` is invoked (from execution-workflow Step 4 Option 1 or 2). Spawned by the lead after the Analysis Team has been cleaned up.
 
 **Teammates (4):**
 - `test-creator` — Creates drift tests for key results
@@ -234,7 +234,7 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 
 **Spawn:**
 ```
-Create an agent team for pre-merge quality gate:
+Create an agent team for the integration workflow:
 - test-creator: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: drift-test-quality.md]
 - test-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: drift-test-quality.md]
 - refactorer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
@@ -256,13 +256,64 @@ All teammates auto-load superRA:econ-data-analysis and superRA:script-to-noteboo
 
 **Iteration:** When test-reviewer sends REVISE, they message test-creator directly with specific feedback. Test-creator fixes and marks task updated. Test-reviewer re-reviews. For the integration loop: integration-reviewer messages refactorer with specific issues, refactorer fixes and runs drift tests, then messages integration-reviewer to re-review.
 
+**Orchestrator discipline for reviewer feedback:** The lead adjudicates REVISE feedback from both test-reviewer and integration-reviewer per `superRA:execution-workflow` Handling Reviewer Feedback — read the cited code, classify each issue, override with documented reasoning where the reviewer is wrong, never silently dismiss CRITICAL. This applies whether or not you are using Agent Teams mode.
+
 **Lead responsibilities:**
 - Present drift test candidates to user BEFORE creating team (Stage 1 user confirmation)
 - Create team and task graph with dependencies
+- Adjudicate every REVISE round per orchestrator discipline; forward only accepted issues to the refactorer or test-creator
 - Monitor for meaningful drift escalations from refactorer
+- Generate the work-journal report (integration-workflow Step 3 — no team work, lead does this)
+- Handle PLAN.md / RESULTS_UPDATE.md disposition (integration-workflow Step 4 — lead asks user and executes git mv/rm)
 - Handle user communication for all escalation decisions
 - Commit at stage boundaries
-- Clean up team after final integration reviewer APPROVE
+- **Clean up team before proceeding to merge-workflow** (the Merge Team needs the session slot)
+
+#### Merge Team
+
+**When:** `superRA:merge-workflow` is invoked (from execution-workflow Step 4 Option 1 or 2 after integration-workflow has returned). Spawned by the lead after the Integration Team has been cleaned up.
+
+**Teammates (4):**
+- `merge-proposer` — Invokes semantic-merge internally for tier classification; executes the two-commit main-update merge
+- `merge-reviewer` — Reviews the main update for intent preservation, research integrity, data discipline
+- `post-merge-refactorer` — Re-refactors analysis code if the main update introduced convention drift (same role as the Integration Team's refactorer but against the merged state)
+- `post-merge-integration-reviewer` — Runs drift tests AND reviews codebase integration on the merged state; approves only when both pass
+
+**Spawn:**
+```
+Create an agent team for the merge workflow:
+- merge-proposer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md; note: invokes semantic-merge internally for Tier classification]
+- merge-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
+- post-merge-refactorer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
+- post-merge-integration-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md; note: must run BOTH drift tests AND codebase integration review on the merged state]
+
+All teammates auto-load superRA:econ-data-analysis and superRA:script-to-notebook via the agent definition since the stage touches analysis code.
+```
+
+**Task graph:**
+1. `propose-main-update-merge` → assigned: merge-proposer (Step 1 of merge-workflow)
+2. `review-main-update-merge` → depends: 1, assigned: merge-reviewer
+3. `run-post-merge-drift-tests` → depends: 2, assigned: post-merge-integration-reviewer (Step 2a — drift tests)
+4. `post-merge-integration-review` → depends: 3, assigned: post-merge-integration-reviewer (Step 2b — codebase integration on merged state)
+5. `post-merge-refactor` → depends: 4 (only if REVISE OR drift tests failed), assigned: post-merge-refactorer (Step 3)
+6. `re-run-drift-tests` → depends: 5, assigned: post-merge-refactorer
+7. `re-review-post-merge-integration` → depends: 6, assigned: post-merge-integration-reviewer
+
+**Flow:** Main update → review → drift tests + integration review on merged state → if either fails, refactor-review loop (tasks 5-7) → iterate until drift tests pass AND integration reviewer APPROVES → lead executes Step 4 (local merge or PR push) outside the team → lead cleans up team and worktree.
+
+**Iteration:** Same direct-message pattern as the Integration Team. post-merge-integration-reviewer messages post-merge-refactorer with specific issues, refactorer addresses them and re-runs drift tests, then messages the reviewer back.
+
+**Orchestrator discipline for reviewer feedback:** Same as Integration Team. This is especially important post-merge because main may have moved in ways that introduce false-positive integration issues — the lead must distinguish real drift from cosmetic convention drift and adjudicate accordingly. See `superRA:execution-workflow` Handling Reviewer Feedback.
+
+**Meaningful drift escalation:** When post-merge drift tests show meaningful result changes (not rounding), STOP. This is a research conversation, not a refactor. Show the user before/after values from the merge and wait for instructions. Do not update test expectations to "make it green."
+
+**Lead responsibilities:**
+- Spawn team only after Integration Team cleanup
+- Adjudicate every REVISE round per orchestrator discipline
+- Escalate meaningful drift to the user
+- Execute Step 4 (local merge `git checkout && git merge` OR `git push && gh pr create`) outside the team after reviewer APPROVE — lead does this, not a teammate
+- Execute Step 5 (worktree cleanup) outside the team
+- Clean up team after final APPROVE and merge/PR is complete
 
 #### Semantic Merge Team
 
@@ -295,7 +346,7 @@ All teammates auto-load superRA:econ-data-analysis via the agent definition.
 - Handle drift test failure escalation to user
 - Clean up team after final APPROVE
 
-**Team slot:** This team runs inside merge-workflow (the final phase of finishing an analysis). The integration-workflow team (if used) must be cleaned up before this point. The current workflow guarantees this: integration-workflow runs first under execution-workflow Step 4 Option 1/2, team cleaned up, then merge-workflow spawns the Merge Team.
+**Team slot and scope:** This team is for **ad-hoc semantic-merge invocations** — when the merge-guard hook fires on a bare `git merge` / `git rebase` / `git cherry-pick` and the user loads `superRA:semantic-merge` directly (outside the analysis-finishing flow). Inside the analysis-finishing flow, merge-workflow spawns its own Merge Team (above) which includes merge-proposer + merge-reviewer plus the post-merge refactor-review teammates. Do not spawn both teams at once — they share the same session slot.
 
 ### Team Lifecycle & Session Handoff
 

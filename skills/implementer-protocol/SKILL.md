@@ -1,10 +1,12 @@
 ---
 name: implementer-protocol
 description: >
-  Load the implementer behavioral protocol for direct-mode execution. Use when
-  the main agent implements work itself instead of dispatching an implementer
-  subagent. Provides the same execution discipline, self-review, escalation
-  protocol, and report format that the `implementer` agent uses.
+  Utility (direct-mode alias for agents/implementer.md). Use when the main
+  agent implements work in-session without dispatching a subagent. Loads
+  the same stage-handoff matrix, report format, document discipline, and
+  self-review checklist that the implementer agent uses — just inside the
+  main session instead of a dispatched one. Do not load unless running in
+  direct mode; for subagent dispatch, use the implementer agent type.
 ---
 
 # Implementer Protocol (Direct Mode)

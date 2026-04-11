@@ -1,6 +1,6 @@
 ---
 name: semantic-merge
-description: Use when merging, rebasing, or cherry-picking branches — classifies conflicts by research impact, escalates research-meaningful decisions to user, and uses two-commit integration with subagent-driven propose+review
+description: Utility (INTEGRATE phase, internal to merge-workflow; also triggered directly by the merge-guard hook for ad-hoc git merge/rebase/cherry-pick outside the analysis-finishing flow). Classifies conflicts by research impact via Tier 1/2/3 classification, escalates research-meaningful decisions to the user, and uses a two-commit integration structure (mechanical + integration commit) with subagent-driven propose+review.
 ---
 
 # Semantic Merge

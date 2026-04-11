@@ -1,7 +1,9 @@
 ---
 name: script-to-notebook
 description: >
-  Use when writing analysis scripts intended for notebook rendering, or when
+  Utility (IMPLEMENT+VALIDATE phase, auto-loaded alongside econ-data-analysis
+  by implementer/reviewer agents when the stage touches analysis code). Use
+  when writing analysis scripts intended for notebook rendering, or when
   rendering existing scripts as notebooks. Covers cell organization, markdown
   narrative, equation formatting, and language-specific rendering (Python via
   jupytext, Julia via QuartoNotebookRunner).
