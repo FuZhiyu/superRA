@@ -37,15 +37,6 @@ When you find inconsistencies between new analysis code and existing codebase:
 - **Ambiguous or conflicting conventions:** Use best judgment and document the choice
 - **Methodological question** (e.g., different control variable set): Do NOT resolve — flag for the user. This is a research decision, not a code quality decision.
 
-## Drift Assessment
-
-After refactoring, run drift tests. If all pass, proceed.
-
-If any fail:
-- **Identify what changed** — compare before/after values
-- **Minor variation** (floating-point differences from reordered operations, trivially different rounding): Update test expectation with a comment explaining the change. Proceed.
-- **Meaningful change** (coefficient changes direction, significance changes, sample size changes, economically different magnitude): **STOP.** Do not update the test. Report the drift to the orchestrator so the user can be consulted.
-
 ## PR Quality
 
 - [ ] **Focused diff:** Changes limited to analysis scope; no unrelated formatting or restructuring

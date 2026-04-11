@@ -7,19 +7,64 @@ description: Use when you have a research objective and data inventory, before w
 
 ## Overview
 
-Write comprehensive analysis plans assuming the analyst has zero context for this project. Document everything they need: which files to create, what data to load, how to transform it, what to validate, and how to document results. Give them the whole plan as bite-sized steps. Describe first. Validate always. Log everything.
+Write comprehensive analysis plans assuming the analyst has zero context for this project. Document everything they need: which files to create, what data to load, how to transform it, what to validate, and how to document results. Give them the whole plan as bite-sized steps. Frequent commits.
 
 Assume the analyst is skilled at data work, but knows nothing about this specific project, its data, or its conventions.
 
 **Announce at start:** "I'm using the analysis-planning skill to create the analysis plan."
 
-**Data inventory:** If data exploration has not been done yet, invoke `superRA:data-exploration` first to build the inventory. The inventory is part of this plan document (see the Data Inventory section in the plan header).
-
 **Save plan to:** `PLAN.md` at the project root (if in a worktree, the worktree root; otherwise, the project root or user-specified location)
 - Create `RESULTS_UPDATE.md` alongside (see Results Update Document section)
 - (User preferences for plan location override this default)
 
-## Scope Check
+Commit first before proceeding to execution.
+
+## Phase 1: Data Inventory (Hard Gate)
+
+The plan cannot be written without a data inventory. The user arrives with a research question and methodology already in mind. Your job in Phase 1 is NOT to design the research — it is to help with data logistics: what data exists, what's missing, and where to find it. The inventory becomes the **Data Inventory** section of `PLAN.md`.
+
+<HARD-GATE>
+Do NOT write any task structure, invoke any implementation skill, or take any planning action beyond Phase 1 until you have presented a data inventory and the user has approved it. This applies to EVERY analysis regardless of perceived simplicity.
+</HARD-GATE>
+
+### Phase 1 Checklist
+
+Create a task for each of these items and complete them in order:
+
+1. **Understand the analysis goal** — ask the user what they need to analyze and what data they expect to use. One question at a time; don't overwhelm.
+2. **Explore project data** — check existing data directories, symlinks, and documentation:
+   ```bash
+   ls Data/ data/ 2>/dev/null
+   ls -la *.parquet *.csv *.dta *.feather *.arrow 2>/dev/null
+   cat Data/README.md data/README.md 2>/dev/null
+   git ls-files --others --ignored --exclude-standard --directory
+   grep -ri "data" CLAUDE.md AGENTS.md README.md 2>/dev/null | head -20
+   ```
+3. **Inventory available data** — for each dataset found, document name and path, format, approximate size (rows × columns), key variables, date range, source.
+4. **Identify gaps** — compare what the user needs against what's available: missing datasets entirely, available data with wrong time period or frequency, missing variables within available datasets, data quality concerns.
+5. **Research sources** — for missing data, suggest specific sources:
+   - **Financial:** WRDS (CRSP, Compustat, IBES, TAQ), Bloomberg, Refinitiv
+   - **Macro:** FRED, IMF WEO, World Bank, central bank websites
+   - **Academic:** journal replication packages, ICPSR
+   - **Project-specific:** check project documentation for custom data pipelines
+   
+   If WRDS or Refinitiv data skills are available, note them as tools for downloading.
+6. **Present the inventory and get user approval.** Use the format from `references/plan-template.md` (the Data Inventory section of the header). Ask the user to confirm before proceeding to Phase 2.
+
+### Phase 1 Principles
+
+- **Be specific about sources** — "try WRDS" is vague; "CRSP Monthly Stock File via WRDS" is specific
+- **Check before assuming** — explore the project before asking "do you have data?"
+- **Document everything** — the inventory is a reference for the rest of the analysis
+
+### Common Phase 1 mistakes
+
+- **Skipping project exploration:** asking "what data do you have?" when the project directory has it. Always check the file system first, then ask about gaps.
+- **Skipping the inventory:** verbal agreement on data, no written record. Always document the inventory — it becomes part of PLAN.md.
+
+After the user approves the inventory, proceed to Phase 2 (Scope Check + Plan Creation).
+
+## Phase 2: Scope Check
 
 If the analysis covers multiple independent workstreams (e.g., "analyze portfolio sorts AND run Fama-MacBeth regressions AND build factor models"), suggest breaking into separate plans — one per workstream. Each plan should produce complete, documented results on its own.
 
@@ -74,110 +119,11 @@ The pipeline file must:
 - "Validate merge result (row counts, check unmatched, spot-check merged variables)" — step
 - "Document merge decisions and commit" — step
 
-## Plan Document Header
+## Plan Document Header and Task Structure
 
-**Every plan MUST start with this header:**
+The full PLAN.md template — required header (objective, methodology, data inventory, output, expected results, sensitivity analysis, pipeline) plus task block structure with describe → analyze → doc steps and worked example — lives in `references/plan-template.md` inside this skill. Load this skill via the Skill tool and read `<base_dir>/references/plan-template.md` when authoring a plan, then fill in the placeholders for the current analysis.
 
-```markdown
-# [Analysis Name] Plan
-
-> **For agentic workers:** REQUIRED DISCIPLINE: Use superRA:econ-data-analysis at every step. Use superRA:executing-analysis to execute this plan. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
-
-**Objective:** [One sentence describing what this analysis produces]
-
-**Methodology:** [Brief description — the user has already decided this]
-
-**Data Inventory:**
-
-### Available
-| Dataset | Path | Format | Rows | Date Range | Key Variables |
-|---------|------|--------|------|------------|---------------|
-| ... | ... | ... | ... | ... | ... |
-
-### Needed (Not Yet Available)
-| Dataset | Source | Access Method | Notes |
-|---------|--------|---------------|-------|
-| ... | ... | ... | ... |
-
-### Data Quality Notes
-- [Any known issues, missing coverage, etc.]
-
-**Output:** [What files/tables/figures will this produce?]
-
-**Expected Results / Hypotheses (optional):** [What does the user expect to find? Can be hypotheses, conjectures, objectives, or prior intuition. Helps agents interpret results and judge sensitivity tests. Leave blank for purely exploratory work.]
-
-**Sensitivity Analysis:** [What robustness checks should be performed? Discuss with user which checks matter most for this analysis. Reference econ-data-analysis skill's `references/data-robustness-checklist.md` for a menu of options.]
-
-**Pipeline:** [Path to pipeline file, e.g., `run_all.sh`]
-
----
-```
-
-## Task Structure
-
-````markdown
-### Task N: [Phase Name]
-**Review status:** *(set during execution — do not fill at planning time)*
-
-**Script:** `Code/NN_phase_name.py` (notebook-compatible format)
-**Input:** `Data/input_file.parquet`
-**Output:** `Data/output_file.parquet`, `Output/figure.pdf`
-
-- [ ] **Step 1: Describe — input data**
-
-```python
-# %% [markdown]
-"""
-## Load Raw Holdings
-Source: CRSP mutual fund holdings, 2000-2020.
-Expect ~4.7M rows across ~12K funds.
-"""
-
-# %%
-df = pd.read_parquet("Data/holdings.parquet")
-print(f"Shape: {df.shape}")
-print(f"Funds: {df['fund_id'].nunique()}, Dates: {df['date'].nunique()}")
-print(f"Period: {df['date'].min()} to {df['date'].max()}")
-
-# Balancedness
-obs_per_fund = df.groupby('fund_id')['date'].nunique()
-print(f"Periods/fund — mean: {obs_per_fund.mean():.0f}, "
-      f"median: {obs_per_fund.median():.0f}, "
-      f"min: {obs_per_fund.min()}, max: {obs_per_fund.max()}")
-
-# Key variables
-df[["market_value", "weight"]].describe(percentiles=[.01, .05, .5, .95, .99])
-```
-
-- [ ] **Step 2: Analyze — merge with fund characteristics**
-
-```python
-# %% [markdown]
-"""
-## Merge with Fund Characteristics
-Left join on fund_id × date. Expect same row count (fund_chars is m:1).
-"""
-
-# %%
-n_before = len(df)
-df = df.merge(chars, on=["fund_id", "date"], how="left")
-print(f"Rows: {n_before} → {len(df)} (delta: {len(df) - n_before})")
-print(f"Unmatched: {df['char_var'].isna().sum()} ({df['char_var'].isna().mean():.1%})")
-```
-
-- [ ] **Step 3: Doc — verify, update handoff docs, and commit**
-
-Verify: row count unchanged, unmatched rate reasonable, merged variables have expected distributions.
-Update PLAN.md: mark steps [x], set `**Review status:** IMPLEMENTED`, note findings.
-Update RESULTS_UPDATE.md: add key results for this task (row counts, summary stats, figures).
-Save any figures to `results_attachments/`.
-Commit code and docs together in a single atomic commit:
-
-```bash
-git add Code/01_clean_data.py PLAN.md RESULTS_UPDATE.md results_attachments/
-git commit -m "Task 1: merge holdings with fund characteristics"
-```
-````
+Required header fields and task block structure are non-negotiable. The template's example code is illustrative — adapt the content to your data and methodology, but preserve the describe → analyze → doc cycle.
 
 ## Sensitivity Analysis Design
 
@@ -208,28 +154,14 @@ Every analysis plan should include sensitivity analysis tasks. At the planning s
 
 ## Results Update Document
 
-After saving `PLAN.md`, create `RESULTS_UPDATE.md` at the project root:
+After saving `PLAN.md`, create `RESULTS_UPDATE.md` at the project root using the template at `references/results-update-template.md` inside this skill (load this skill via the Skill tool, then read `<base_dir>/references/results-update-template.md`).
 
-```markdown
-# [Analysis Name] — Results Update
+The document is updated after each completed step alongside PLAN.md. Key rules:
 
-> Mirrors PLAN.md structure. Updated after each step with key findings.
-> New agents: read PLAN.md for what to do, RESULTS_UPDATE.md for what was found.
-
-**Last updated:** [date] (Task N, Step M)
-**Status:** In Progress
-
----
-
-[Sections added as tasks complete — initially empty]
-```
-
-**Rules:**
-- Update after each completed step (alongside PLAN.md update)
-- Each task has one section. When re-implementing after review, **replace** the task's findings with the current version — do not append a second version.
-- The document should read as a clean current-state summary at all times, not a changelog.
-- Include: key row counts, summary statistics, figures, surprising findings
+- One section per task — replace prior content on re-implementation, never append a second version
+- Reviewer caveats appear as blockquoted notes below the implementer's findings (replaced on re-review, not stacked)
 - Save figures and tables as PNG in `results_attachments/` at project root (committed to git)
+- The document should always read as a clean current-state summary, not a changelog
 - Reference full output files for detailed results (these may be gitignored)
 - Commit `RESULTS_UPDATE.md` and `results_attachments/` with each checkpoint commit
 - Together with PLAN.md, this forms a complete handoff: context + what happened + what was found
@@ -270,7 +202,7 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ## Execution Handoff
 
-After saving the plan, offer execution choice:
+After finalizing the plan, commit the plan, then offer execution choice:
 
 **"Plan complete and saved to `PLAN.md`. RESULTS_UPDATE.md created. Two execution options:**
 

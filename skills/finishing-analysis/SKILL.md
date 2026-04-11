@@ -17,55 +17,7 @@ Guide completion of analysis work — the **INTEGRATE** phase of the macro workf
 
 ## The Process
 
-### Step 1: Verify Reproducibility
-
-**Before presenting options, verify the analysis is reproducible:**
-
-1. **All code committed?**
-   ```bash
-   git status
-   ```
-   If uncommitted changes exist: commit or ask the user.
-
-2. **Pipeline runs end-to-end?** (for multi-script analyses)
-   ```bash
-   bash run_all.sh  # or: julia pipeline.jl
-   ```
-   If no pipeline file exists and there are multiple scripts: create one before proceeding.
-
-3. **Outputs exist and match committed code?**
-   Check that key output files (tables, figures, logs) exist and were generated from the current committed code, not ad-hoc runs.
-
-4. **Plan file up to date?**
-   All tasks have `**Review status:** APPROVED`? All steps marked `- [x]` with result notes? No tasks stuck in `IMPLEMENTED` or `REVISE` status? Discovery notes captured? Upcoming steps (if any) reflect current understanding?
-
-5. **RESULTS_UPDATE.md up to date?**
-   Has findings for all completed tasks? Figure attachments in `results_attachments/` committed?
-
-**If any check fails:** Fix it before proceeding. Don't offer completion options for unreproducible work.
-
-### Step 2: Determine Base Branch
-
-```bash
-git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
-```
-
-Or ask: "This branch split from main — is that correct?"
-
-### Step 3: Present Options
-
-Present exactly these 4 options:
-
-```
-Analysis complete and reproducible. What would you like to do?
-
-1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
-3. Keep the branch as-is (I'll handle it later)
-4. Discard this work
-
-Which option?
-```
+This skill is invoked by `superRA:executing-analysis` Step 4 only when the user has chosen Option 1 (merge) or Option 2 (PR). Reproducibility, base branch, and the option menu are handled by executing-analysis before this skill runs — assume the analysis is verified and the user has chosen merge/PR. If you find yourself running reproducibility checks here, something is wrong: stop and consult executing-analysis instead.
 
 ### Step 4: Execute Choice
 

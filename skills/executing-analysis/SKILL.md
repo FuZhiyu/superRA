@@ -5,7 +5,7 @@ description: Use when executing analysis plans — dispatches subagent per task 
 
 # Executing Analysis
 
-Execute an analysis plan with data-first discipline. This skill covers the **IMPLEMENT** and **VALIDATE** phases of the macro workflow: dispatching implementers (IMPLEMENT) and running two-stage review (VALIDATE).
+Execute an analysis plan with data-first discipline. This skill covers the **IMPLEMENT** and **VALIDATE** phases of the workflow: dispatching implementers (IMPLEMENT) and running two-stage review (VALIDATE).
 
 Default mode dispatches a fresh subagent per task with two-stage review (data integrity then implementation correctness). Falls back to direct execution when the user requests it or tasks are trivial.
 
@@ -123,170 +123,163 @@ If the user declines, proceed — they've given explicit consent to work on the 
 
 #### Per-Task Execution Steps
 
-1. **Dispatch implementer:**
-   - Subagent mode: `Agent(subagent_type: "implementer")` — see dispatch example below
-   - Direct mode: invoke `superRA:implementer-protocol`, then implement yourself
-2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below)
-3. **Once DONE or DONE_WITH_CONCERNS:**
-   - The implementer has already committed: code + PLAN.md (steps `[x]`, status `IMPLEMENTED`) + RESULTS_UPDATE.md (findings)
-   a. Dispatch data integrity reviewer: `Agent(subagent_type: "reviewer")` — see dispatch example below
-   b. **If REVISE:** The reviewer has committed review notes to PLAN.md. Clear the review notes, then re-dispatch the implementer with the reviewer's specific feedback items. Then re-dispatch the data integrity reviewer. Iterate until APPROVE. Do NOT proceed to implementation review until data integrity is approved.
-4. **Once data integrity APPROVE:**
-   a. Dispatch implementation reviewer: `Agent(subagent_type: "reviewer")` — same agent type, different handoff rules
-   b. **If REVISE:** Same pattern — reviewer commits notes, you clear them, re-dispatch implementer, re-dispatch reviewer. Iterate until APPROVE.
-5. **Once implementation reviewer APPROVE:**
-   - The impl reviewer has committed `**Review status:** APPROVED` to PLAN.md
-   - If findings change upcoming tasks: update future task descriptions in PLAN.md and commit
-   - Proceed to next task
+1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "implementer")` — see template below. Direct mode: invoke `superRA:implementer-protocol`, then implement yourself.
+2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
+3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS_UPDATE.md. Dispatch the **data integrity reviewer**. If REVISE: adjudicate the feedback (see Handling Reviewer Feedback below), clear the review notes from PLAN.md, re-dispatch the implementer with the accepted issues, then re-dispatch the data integrity reviewer. Iterate until APPROVE. Do not proceed to implementation review until data integrity is approved.
+4. **Once data integrity APPROVE:** dispatch the **implementation reviewer**. Same REVISE loop with adjudication.
+5. **Once implementation reviewer APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
 
-**In direct mode:** Steps 1-2 are done by the main agent directly (invoke `superRA:implementer-protocol` for the execution protocol, invoke `superRA:econ-data-analysis` for discipline, invoke `superRA:script-to-notebook` for script formatting). Steps 3-5 are unchanged — still dispatch reviewer subagents.
+**In direct mode:** Steps 1–2 are done by the main agent directly (invoke `superRA:implementer-protocol`). Steps 3–5 are unchanged — still dispatch reviewer subagents.
 
-#### Dispatch Examples
+#### Dispatch Templates
 
-**Implementer:**
+The `implementer` and `reviewer` agent definitions own the report format, handoff protocol, document discipline, and per-stage default skill loads. **Dispatch prompts must not duplicate that content.** Pass only what the agent cannot derive on its own: the stage label, the task pointer, the git SHA range (for reviewers), and any deviations from defaults.
+
+**Stage implies skill defaults.** For every analysis-touching stage (analysis task, drift test creation, refactoring, merge proposer), the agent auto-loads `superRA:econ-data-analysis` and `superRA:script-to-notebook`. You only need a `Skills:` line if a task requires something unusual (e.g., a domain-specific helper skill).
+
+**Implementer (analysis task):**
 ```
 Agent(subagent_type: "implementer"):
-  Load skills: superRA:econ-data-analysis, superRA:script-to-notebook
-  Task: Implement Task N: [task name]
-  Task description: [FULL TEXT from PLAN.md — paste it, don't make subagent read file]
-  Context: [what analysis this is, what prior steps produced, what data is available]
-  Expected results: [hypotheses from PLAN.md, if any]
-  Prior results: [key findings from RESULTS_UPDATE.md]
-  Work from: [directory]
-  Handoff: Mark steps [x] in PLAN.md, set IMPLEMENTED, write findings to RESULTS_UPDATE.md
-    (edit in place — replace prior version if one exists from a REVISE cycle).
-    Commit together: code + PLAN.md + RESULTS_UPDATE.md
-  Counterpart: reviewer (for Agent Teams)
+  Stage: analysis task
+  Task: Task N in PLAN.md
+  Work from: [worktree path or "current directory"]
+  Counterpart: reviewer  # Agent Teams only
 ```
+
+The agent reads PLAN.md, Data Inventory, Conventions, and prior results from RESULTS_UPDATE.md directly.
 
 **Data integrity reviewer:**
 ```
 Agent(subagent_type: "reviewer"):
-  Load skill: superRA:econ-data-analysis
-  Review scope: data integrity for Task N
-  What was requested: [task requirements from PLAN.md]
-  What implementer claims: [from implementer's report — key findings, row counts, concerns]
-  Handoff: If REVISE — set PLAN.md status to "REVISE (data integrity)" with issues blockquote, commit.
-    If APPROVE with concerns — add caveat to RESULTS_UPDATE.md, commit.
-    If APPROVE clean — no commits needed.
-  Counterpart: implementer (for Agent Teams)
+  Stage: data integrity
+  Task: Task N in PLAN.md
+  Git range: <BASE_SHA>..<HEAD_SHA>
+  Counterpart: implementer  # Agent Teams only
 ```
 
 **Implementation reviewer:**
 ```
 Agent(subagent_type: "reviewer"):
-  Load skills: superRA:econ-data-analysis, superRA:script-to-notebook
-  Review scope: implementation correctness for Task N
-  What was requested: [task requirements]
-  What implementer built: [from implementer's report]
-  Expected results: [from PLAN.md, if provided]
-  Handoff: If REVISE — set PLAN.md status to "REVISE (implementation)" with issues, commit.
-    If APPROVE — set PLAN.md status to "APPROVED", commit.
-    Add reliability caveats to RESULTS_UPDATE.md if needed.
-  Counterpart: implementer (for Agent Teams)
+  Stage: implementation
+  Task: Task N in PLAN.md
+  Git range: <BASE_SHA>..<HEAD_SHA>
+  Counterpart: implementer  # Agent Teams only
 ```
 
-### Step 3: Verify Pipeline
+If you need a non-default skill load, an extra domain reference, or an override of the standard handoff, add a single explicit line — but do not pad the dispatch otherwise. Every extra line is a chance for the agent to follow stale guidance instead of its current definition.
 
-After all tasks complete:
+#### Handling Reviewer Feedback (Orchestrator Discipline)
 
-1. If the analysis has multiple scripts, verify the pipeline file runs end-to-end:
+The reviewer is an advisor, not a gatekeeper. **You — the orchestrator — are the senior researcher.** You know the project, the methodology decisions, and the conversations with the human partner that the reviewer has no visibility into. Your job between REVISE and re-dispatch is to evaluate each issue, not forward it mechanically.
+
+When a reviewer returns REVISE:
+
+1. **Read the actual code at the cited file:line.** Do not trust the reviewer's summary. The reviewer is also a subagent and can be wrong.
+
+2. **For each issue, classify it:**
+   - **Real bug** (the code is incorrect or missing required discipline) → forward to implementer
+   - **Pedantic but valid** (the issue is real but tiny — missing markdown cell on a trivial step, etc.) → decide whether the fix is worth the cycle. For minors, often yes; for cosmetic minors on a fast-iteration draft, often no
+   - **Wrong** (the reviewer misread the code, missed context, or is suggesting a change that conflicts with the methodology you established with the human partner) → push back on the reviewer, do not forward to the implementer
+   - **Methodology disagreement** (the reviewer is second-guessing a methodology decision rather than checking implementation) → reject. The reviewer's job is correctness against the plan, not redesigning the plan. Note in PLAN.md that the issue was raised and rejected, with reasoning.
+
+3. **If you reject reviewer feedback, document why.** Add a one-line note under the task heading in PLAN.md before marking APPROVED:
+   ```markdown
+   **Reviewer feedback adjudication:** Rejected "use log returns" — methodology specifies arithmetic returns per Section 2 of plan. Reviewer lacked methodology context.
+   ```
+   This protects you in three ways: (a) the human partner can audit the override, (b) future sessions see why the reviewer's note was ignored, (c) it forces you to articulate the reasoning rather than wave it away.
+
+4. **If you push back on the reviewer (rather than override them), re-dispatch the same reviewer with counter-evidence.** Cite the file:line that proves the reviewer wrong, the methodology section that overrides their suggestion, or the human partner conversation that established the convention. The reviewer should then either retract or escalate.
+
+5. **If you genuinely cannot tell whether the reviewer is right, escalate to the human partner.** Do not flip a coin and hope.
+
+**The orchestrator's authority:** You can override any reviewer issue with documented reasoning. You cannot silently ignore one. If you find yourself dismissing reviewer feedback without writing down why, stop — that's the slip that turns a critical filter into an excuse to skip reviews.
+
+**The orchestrator's limits:**
+- You cannot override CRITICAL severity without escalating to the human partner first. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
+- You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real and the human partner needs to settle it.
+
+This discipline applies equally to pre-merge-gate (drift test review, integration review) and semantic-merge (merge review). The orchestrator owns the final call in every loop.
+
+### Step 3: Verify Pipeline and Reproducibility
+
+After every task is APPROVED, the analysis must be verified end-to-end before presenting completion options to the user. Run all five checks; do not proceed if any fails.
+
+1. **All code committed?**
+   ```bash
+   git status
+   ```
+   If uncommitted changes exist: investigate (probably an agent missed an inline-edit), commit, or ask the user.
+
+2. **Pipeline runs end-to-end?** (multi-script analyses only)
    ```bash
    bash run_all.sh  # or: julia pipeline.jl
    ```
-2. Check that all expected outputs exist (tables, figures, logs)
-3. Verify outputs are generated from committed code (reproducibility gate)
+   If no pipeline file exists and there are multiple scripts: create one before proceeding (this should have come from analysis-planning, but late additions happen).
 
-### Step 4: Complete Analysis
+3. **Outputs exist and were generated from committed code?** Check that key output files (tables, figures, logs) exist and match the current committed code, not ad-hoc REPL runs.
 
-After all tasks complete and pipeline verified:
-- Dispatch a final analysis reviewer for the full implementation
-- **REQUIRED SKILL:** Use superRA:finishing-analysis
-- Follow that skill to generate report, present merge/PR options
+4. **PLAN.md up to date?** All tasks have `**Review status:** APPROVED`. All steps marked `- [x]` with result notes. No tasks stuck in `IMPLEMENTED` or `REVISE`. Discovery notes captured. Upcoming-task descriptions reflect current understanding.
 
-## Responsibility Matrix
+5. **RESULTS_UPDATE.md up to date?** Has findings for all completed tasks. Figure attachments in `results_attachments/` committed.
 
-Who owns what — each agent commits its own doc updates atomically with its work:
+If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
 
-| Responsibility | Owner | Committed with |
+### Step 4: Determine Base Branch and Present Options
+
+**Base branch:**
+```bash
+git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
+```
+Or ask: "This branch split from `main` — is that correct?"
+
+**Present exactly these 4 options:**
+
+```
+Analysis complete and reproducible. What would you like to do?
+
+1. Merge back to <base-branch> locally
+2. Push and create a Pull Request
+3. Keep the branch as-is (I'll handle it later)
+4. Discard this work
+
+Which option?
+```
+
+**Execute the user's choice:**
+
+- **Option 1 or 2 (Merge or PR):** Invoke `superRA:finishing-analysis` to run the full pre-merge gate, generate the report, handle development documents, and execute the merge or PR. Do not run any of those steps yourself — finishing-analysis owns them.
+- **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
+- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then:
+  ```bash
+  git checkout <base-branch>
+  git branch -D <analysis-branch>
+  git worktree remove <worktree-path>  # only if running in a worktree
+  ```
+  Stop after the branch and worktree are removed. Report what was deleted.
+
+## Review Status Reference
+
+Implementer and reviewer agents own their commits and document updates — see `agents/implementer.md` and `agents/reviewer.md` for the full discipline (scope rule, inline-edit rule, stage-specific handoff). The orchestrator only needs to know how to **read** the resulting state from `PLAN.md`:
+
+| Status line | Meaning | Orchestrator action |
 |---|---|---|
-| Code implementation | Implementer | code commit |
-| Mark own task's steps `- [x]` in PLAN.md | Implementer | code commit |
-| Set own task's status to `IMPLEMENTED` in PLAN.md | Implementer | code commit |
-| Write/update own task's findings in RESULTS_UPDATE.md (replace prior version) | Implementer | code commit |
-| Self-review before reporting | Implementer | — |
-| Set own task's status to `REVISE` + write review issues in PLAN.md | Reviewer | review commit |
-| Write reliability caveats for own task in RESULTS_UPDATE.md | Reviewer | review commit |
-| Set own task's status to `APPROVED` in PLAN.md | Impl reviewer (final reviewer) | review commit |
-| Clear review notes before re-dispatch | Orchestrator | — |
-| Edit future tasks inline when findings change the plan | Orchestrator | plan update commit |
-| Task sequencing, dispatch, REVISE loop management | Orchestrator | — |
-| User communication and escalation | Orchestrator | — |
+| *(no line)* | Not started | Dispatch implementer |
+| `IMPLEMENTED` | Code committed, awaiting review | Dispatch data integrity reviewer |
+| `REVISE (data integrity)` | Data reviewer found issues | Adjudicate (see Handling Reviewer Feedback), then re-dispatch implementer |
+| `REVISE (implementation)` | Impl reviewer found issues | Adjudicate, then re-dispatch implementer |
+| `APPROVED` | Both reviews passed | Proceed to next task |
 
-**Scope rule:** Agents only edit the PLAN.md and RESULTS_UPDATE.md sections for their own assigned task. Never modify other tasks' status, steps, findings, or review notes.
+**A task is complete only when its status is `APPROVED`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
 
-## Review Status Protocol
+### Orchestrator-Only Responsibilities
 
-Each task in PLAN.md carries a `**Review status:**` line that tracks where it stands in the execution-review cycle:
+These are the things the orchestrator does that no subagent does:
 
-| Status | Meaning | Set by |
-|--------|---------|--------|
-| *(no line)* | Not started | — |
-| `IMPLEMENTED` | Code committed, awaiting review | Implementer |
-| `REVISE (data integrity)` | Data reviewer found issues | Data reviewer |
-| `REVISE (implementation)` | Impl reviewer found issues | Impl reviewer |
-| `APPROVED` | Both reviews passed, task complete | Impl reviewer (final reviewer) |
-
-**Review notes format** — when a reviewer returns REVISE, they add issues as a blockquote under the task heading:
-
-```markdown
-### Task 3: Merge holdings with characteristics
-**Review status:** REVISE (data integrity)
-
-> **Review issues (data integrity):**
-> - Row count not logged after left join (03_merge.py:45) — MAJOR
-> - Unmatched rate (2.1%) not investigated — MAJOR
-```
-
-**Lifecycle:**
-1. Reviewer adds notes when returning REVISE
-2. Orchestrator clears the review notes blockquote before re-dispatching the implementer (feedback is given in the dispatch prompt)
-3. Implementer fixes code, re-sets `IMPLEMENTED` → commits
-4. Reviewer re-reviews — either adds new notes (REVISE) or sets APPROVED
-
-**Reliability caveats** — persistent notes in RESULTS_UPDATE.md for analytical concerns:
-
-```markdown
-> **⚠️ Reviewer note (data integrity):** Unmatched rate concentrated in small-cap funds. May bias downstream regressions.
-```
-
-These persist — only the user should remove them.
-
-**A task is complete only when its status is APPROVED.** Do not proceed to the next task while either review has open issues.
-
-## Plan File Updates
-
-**Inline-edit principle:** PLAN.md and RESULTS_UPDATE.md reflect current state, not history. Every update is an edit-in-place — replace outdated content, don't append alongside it. After any update, the document should read as a clean, current-state handoff document.
-
-Each agent updates docs at its own stage — no orchestrator transcription step:
-
-**Implementer** (after completing task code):
-1. Mark own task's steps `- [x]` in PLAN.md with brief result notes
-2. Set `**Review status:** IMPLEMENTED` under own task heading
-3. Write own task's findings to RESULTS_UPDATE.md (row counts, key results, figures) — replace prior version if re-implementing after REVISE
-4. Save any figure attachments to `results_attachments/`
-5. Commit everything together: code + PLAN.md + RESULTS_UPDATE.md + attachments
-
-**Reviewer** (after reviewing):
-- If REVISE: set status + write review issues under own task in PLAN.md, commit
-- If APPROVE with caveats: write reliability note under own task in RESULTS_UPDATE.md, commit
-- If APPROVE (final reviewer): set `**Review status:** APPROVED`, commit
-
-**Orchestrator** (after task fully approved):
-- If findings change upcoming tasks: edit future task descriptions inline in PLAN.md — rewrite stale text, don't annotate it. Commit.
-- Edit discovery notes into the relevant task sections (e.g., "high unmatched rate — investigate before regression")
-
-PLAN.md and RESULTS_UPDATE.md are living documents. Together they form the handoff: PLAN.md = what to do + review state, RESULTS_UPDATE.md = what was found + reviewer caveats. They must always reflect current understanding so the next agent (or session) can pick up where this one left off.
+- **Task sequencing and dispatch.** Read PLAN.md, decide what to dispatch next.
+- **Adjudicate reviewer feedback** before forwarding to the implementer (see Handling Reviewer Feedback above).
+- **Clear review notes** from the task block in PLAN.md before re-dispatching the implementer — the implementer should receive feedback through the dispatch prompt, not by reading stale review notes from the file. Commit the cleared PLAN.md.
+- **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text, don't annotate it. Commit.
+- **Escalate to the human partner** when stuck (BLOCKED, methodology disagreement, CRITICAL issue you want to override).
 
 **Review scope at interim checkpoints:** Data integrity and implementation correctness only. Codebase integration review is deferred to the pre-merge gate (invoked during finishing-analysis when merging/PRing).
 
