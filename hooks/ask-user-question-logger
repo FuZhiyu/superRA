@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# PostToolUse hook: fires after AskUserQuestion returns an answer.
+# Injects a reminder to log the user's decision into PLAN.md before
+# taking any other action, per CLAUDE.md workflow principle #4
+# ("autonomous with human in the loop") and the handoff-doc
+# User Decisions Log format.
+# Does NOT block — the discipline system handles enforcement.
+
+set -euo pipefail
+
+# Read tool input from stdin
+input=$(cat)
+
+# Fast path: only fire on AskUserQuestion. The matcher in hooks.json
+# should already scope us, but we double-check here so this hook is
+# cheap and safe even if registered loosely.
+tool_name=$(echo "$input" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('tool_name', '') or d.get('tool', ''))
+except Exception:
+    print('')
+" 2>/dev/null || echo "")
+
+if [ "$tool_name" != "AskUserQuestion" ]; then
+  printf '{}\n'
+  exit 0
+fi
+
+context="<IMPORTANT>You just received a user decision via AskUserQuestion. Before taking any other action (no code edits, no further tool calls that act on the answer), open PLAN.md and log the decision as a dated blockquote: task-scoped decisions go inside the relevant task block under **Review status:**, cross-task decisions go in a top-level ## Decisions section after the header. Format: three lines — **User decision (YYYY-MM-DD):** <answer>, **Question asked:** <short restatement>, **Rationale:** <only if the user gave one>. Commit PLAN.md atomically with the work the decision unblocks. See superRA:handoff-doc §User Decisions Log for the full format and the distinction from the reviewer-feedback adjudication blockquote.</IMPORTANT>"
+
+# Platform-appropriate output format (matches merge-guard / session-start pattern)
+if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+  printf '{"additional_context":"%s"}\n' "$context"
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+  printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s"}}\n' "$context"
+else
+  printf '{"additionalContext":"%s"}\n' "$context"
+fi
+
+exit 0
