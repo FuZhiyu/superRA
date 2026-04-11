@@ -1,5 +1,13 @@
 # Superpowers Release Notes
 
+## Fourth design principle: autonomous with human in the loop (2026-04-11)
+
+A fourth workflow principle now joins the three codified in the earlier skills fix pass. It governs when the agent should drive forward on its own versus stop and consult the researcher, and closes the gap where user decisions made in chat never made it back into `PLAN.md`.
+
+**Principle:** the agent proceeds autonomously between legitimate stop points — no "should I continue?" check-ins on an approved plan, no re-confirmation after an `APPROVED` task, no reassurance-seeking between workflow steps. It stops for exactly three classes of pause: hard blockers, decisions beyond the RA's authority (methodology, research intent, scope, sample/variable definition, any tradeoff that depends on the research question), and user-defined workflow milestones (e.g., execution-workflow's completion menu). At every stop point it uses the `AskUserQuestion` tool when the harness exposes it, plain text otherwise. Every user decision produced at a stop point is written into `PLAN.md` (or `RESULTS_UPDATE.md` when relevant) **before** the agent acts on it, and committed atomically with the work it unblocks — so the handoff doc remains the record of record and the researcher's judgment calls survive into every future session.
+
+This commit only adds the principle statement to `CLAUDE.md` (§Workflow principles, now four items) and `README.md` (§Design Principles). Follow-up commits will integrate the principle into `handoff-doc` (new "User Decisions Log" format), `execution-workflow` (restructured "Autonomy and Stop Points" section), `integration-workflow` / `merge-workflow` / `semantic-merge` (AskUserQuestion migration at existing stop points), a new `PostToolUse` hook that reminds the agent to log decisions into `PLAN.md` after each `AskUserQuestion` call, and a grep-sweep cleanup of remaining "escalate to human partner" phrasing across `skills/` and `agents/`.
+
 ## superRA skills fix pass (2026-04-11)
 
 Post-audit fix pass addressing findings from a four-reviewer panel that evaluated the 17 skills against the `writing-skills` rubric. Thirteen focused commits; skill count unchanged (still 17). No new skills, no deletions — this pass tightens behavior that was already in place.
