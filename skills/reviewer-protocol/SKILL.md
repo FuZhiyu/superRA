@@ -1,13 +1,18 @@
 ---
 name: reviewer-protocol
 description: >
-  Utility (direct-mode alias for agents/reviewer.md). Use when the main
-  agent reviews work in-session without dispatching a subagent. Loads the
-  same severity levels (CRITICAL/MAJOR/MINOR), APPROVE/REVISE verdict
-  protocol, stage-specific handoff matrix, and report format that the
-  reviewer agent uses — just inside the main session instead of a
-  dispatched one. Do not load unless running in direct mode; for subagent
-  dispatch, use the reviewer agent type.
+  Use when the main agent is reviewing analysis work in-session without
+  dispatching a reviewer subagent — e.g., ad-hoc code review mid-session,
+  no reviewer subagent available, user asked you to review directly,
+  a single-commit sanity check, or a quick second opinion on a change
+  you want to audit before moving on. Triggers include "review this
+  yourself", "what do you think of this commit", "sanity-check this
+  change", "look at what the implementer did", or an ad-hoc diff review
+  outside the formal two-stage execution-workflow loop. Canonical
+  direct-mode counterpart to the `reviewer` agent type — loads the
+  same severity definitions and verdict protocol the dispatched agent
+  uses. Do not use for subagent dispatch; use the `reviewer` agent type
+  instead.
 ---
 
 # Reviewer Protocol (Direct Mode)

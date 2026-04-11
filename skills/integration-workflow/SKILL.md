@@ -1,6 +1,6 @@
 ---
 name: integration-workflow
-description: superRA workflow INTEGRATE step. Use after execution-workflow has verified reproducibility and the user has chosen merge/PR — creates drift tests to guard key results, refactors code for codebase fit (with refactor-review loop), generates the work-journal report, and handles the development documents (PLAN.md / RESULTS_UPDATE.md). Hands off to merge-workflow for the actual main update + merge/PR.
+description: Use when an analysis is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when analysis code needs a refactor pass to fit existing codebase conventions before integration; when a work-journal report of the analysis still needs to be written; when the development documents (PLAN.md / RESULTS_UPDATE.md) need final disposition before merge. Triggers include "prepare this for merge", "write drift tests for the key results", "refactor this to match the codebase style", "write the work journal entry", "get this ready to PR", or the transition from `execution-workflow`'s completion menu (options 1 or 2). Sits at the INTEGRATE phase, step 1 of 2; hands off to `merge-workflow` for the main update and actual merge/PR.
 ---
 
 # Integration Workflow
