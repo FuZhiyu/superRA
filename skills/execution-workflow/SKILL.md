@@ -193,13 +193,13 @@ When a reviewer returns REVISE:
 
 4. **If you push back on the reviewer (rather than override them), re-dispatch the same reviewer with counter-evidence.** Cite the file:line that proves the reviewer wrong, the methodology section that overrides their suggestion, or the human partner conversation that established the convention. The reviewer should then either retract or escalate.
 
-5. **If you genuinely cannot tell whether the reviewer is right, escalate to the human partner.** Do not flip a coin and hope.
+5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Log the researcher's answer as a user decision in the relevant task's review-notes area per `handoff-doc` §User Decisions Log, and commit the doc edit in the same commit as the re-dispatched implementer's fix (or as the commit that records the override). The `ask-user-question-logger` hook will remind you.
 
 **The orchestrator's authority:** You can override any reviewer issue with documented reasoning. You cannot silently ignore one. If you find yourself dismissing reviewer feedback without writing down why, stop — that's the slip that turns a critical filter into an excuse to skip reviews.
 
 **The orchestrator's limits:**
-- You cannot override CRITICAL severity without escalating to the human partner first. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
-- You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real and the human partner needs to settle it.
+- You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `handoff-doc` §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
+- You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `handoff-doc` §User Decisions Log.
 
 This discipline applies equally to integration-workflow (drift test review, integration review) and semantic-merge (merge review). The orchestrator owns the final call in every loop.
 
