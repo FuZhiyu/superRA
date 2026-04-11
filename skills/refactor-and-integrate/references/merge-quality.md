@@ -38,7 +38,7 @@ Shared domain reference for merge proposals and merge review. Both the implement
 
 ## Research-Meaningful Escalation (Tier 3)
 
-These conflicts **MUST** be flagged for the user (mark as ASK USER):
+These conflicts **MUST** be flagged for the researcher. Ask via `AskUserQuestion` (plain text if unavailable) — when the resolution has a closed set of options (`--ours`, `--theirs`, synthesize, regenerate, roll back), pass them as question options; when it's methodology-level, ask in free-form prose. Mark such rows as `ASK USER` in the integration map while still open, and replace with the researcher's resolution once it comes back. Every answer is a user decision and must be logged per `handoff-doc` §User Decisions Log before the resolution is committed — into `PLAN.md`'s `## Decisions` section if the branch still has `PLAN.md`, otherwise into the integration commit message (which becomes the record of record once `PLAN.md` is gone).
 
 - **Variable definitions:** Incoming changes redefine a variable used in this branch's analysis
 - **Sample construction:** Incoming changes alter sample filters or data sources
