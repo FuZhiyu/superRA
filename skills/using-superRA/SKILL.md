@@ -143,11 +143,11 @@ These thoughts mean STOP—you're rationalizing:
 
 The macro workflow is **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. When multiple skills could apply, follow this flow:
 
-1. **PLAN phase skills first** (data-exploration, analysis-planning) — these determine WHAT to do
+1. **PLAN phase skills first** (planning-workflow) — these determine WHAT to do
 2. **IMPLEMENT + VALIDATE phase skills second** (executing-analysis, econ-data-analysis) — these guide execution and review
 3. **INTEGRATE phase skills last** (finishing-analysis, pre-merge-gate) — these integrate work back
 
-"Let's analyze X" → PLAN phase: data-exploration first, then analysis-planning.
+"Let's analyze X" → PLAN phase: planning-workflow (Phase 1 inventory then Phase 2 plan creation).
 "Something looks wrong in the data" → investigate using econ-data-analysis describe step.
 
 Within each implementation step, the micro-level discipline is **DESCRIBE → ANALYZE → DOC** (see `econ-data-analysis`).

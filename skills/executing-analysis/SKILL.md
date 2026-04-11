@@ -214,7 +214,7 @@ After every task is APPROVED, the analysis must be verified end-to-end before pr
    ```bash
    bash run_all.sh  # or: julia pipeline.jl
    ```
-   If no pipeline file exists and there are multiple scripts: create one before proceeding (this should have come from analysis-planning, but late additions happen).
+   If no pipeline file exists and there are multiple scripts: create one before proceeding (this should have come from planning-workflow, but late additions happen).
 
 3. **Outputs exist and were generated from committed code?** Check that key output files (tables, figures, logs) exist and match the current committed code, not ad-hoc REPL runs.
 
@@ -366,7 +366,7 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 
 **Required workflow skills:**
 - **superRA:using-analysis-worktrees** — RECOMMENDED: For complex or multi-session analyses, consider an isolated workspace
-- **superRA:analysis-planning** — Creates the plan this skill executes
+- **superRA:planning-workflow** — Creates the plan this skill executes
 - **superRA:econ-data-analysis** — REQUIRED: Data discipline all agents must follow
 - **superRA:script-to-notebook** — Script formatting and notebook rendering
 - **superRA:finishing-analysis** — Complete work after all tasks done
