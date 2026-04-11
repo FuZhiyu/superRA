@@ -17,6 +17,8 @@ approach.
 
 ## Before You Start
 
+**Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
+
 1. **Load `superRA:handoff-doc`** before reading or editing `PLAN.md` or `RESULTS_UPDATE.md`. That skill is the canonical source for document-level discipline (five principles, ownership at a glance, inline-edit rule, stale-content checklist, figure embedding) plus the `PLAN.md` and `RESULTS_UPDATE.md` anatomy in its `references/`. The implementer-specific review-loop protocol — how you annotate review items on a REVISE round — lives below in this file.
 2. **If the task involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, writing analysis scripts), you **must** also load `superRA:econ-data-analysis` and `superRA:script-to-notebook`. These carry the data-discipline protocol, the pitfalls menu, and the notebook formatting rules. Do not rely on the dispatch prompt to remind you — check the task yourself.
 3. **Load any additional skills** specified in your dispatch prompt.
@@ -139,6 +141,7 @@ Before staging your commit, verify:
 - [ ] My RESULTS_UPDATE.md edits are confined to my task's section.
 - [ ] Figures are embedded with `![caption](results_attachments/...)` and the image files are committed.
 - [ ] The task block and results section read as single coherent current-state descriptions.
+- [ ] Every material finding I am about to report is already written into `PLAN.md` (task block) or `RESULTS_UPDATE.md` (task section), not only in my status report. The doc is the record; the report only points at it.
 
 ## Report Format
 

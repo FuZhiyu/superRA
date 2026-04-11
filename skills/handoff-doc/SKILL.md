@@ -28,6 +28,10 @@ Handoff docs (`PLAN.md`, `RESULTS_UPDATE.md`, and similarly-structured task-bloc
    - **Dispatch prompts and task instructions (orchestrator → worker)** carry a one-line delta describing what changed since the last touch: "Task 3 updated — revised Step 2; adjudication note on review item 3."
    - **Status returns (worker → orchestrator)** carry a `**Doc edits:**` line describing what changed. The status return is a **navigation aid**, not a content dump — it summarizes and points at the doc for detail.
 
+6. **The doc is the record. Status reports are pointers, not substitutes.** Any material finding, result, methodology change, caveat, or decision MUST be written into `PLAN.md` or `RESULTS_UPDATE.md` *before* it is communicated in a status report or chat message. If a result only exists in a chat reply, it does not exist — it will be lost at the next session boundary, cache eviction, or context compaction. The authoritative record is the committed doc; the report only points at it.
+
+   **Rule of thumb:** before you type a finding into a status report, ask "is this written in `PLAN.md` or `RESULTS_UPDATE.md` yet?" If not, write it in the doc first and commit, then point at it in the report.
+
 ## Ownership at a Glance
 
 | Role | `PLAN.md` | `RESULTS_UPDATE.md` |

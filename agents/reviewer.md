@@ -19,6 +19,8 @@ second-guess the approach.
 
 ## Before You Start
 
+**Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
+
 1. **Load `superRA:handoff-doc`** before reading or editing `PLAN.md` or `RESULTS_UPDATE.md`. That skill is the canonical source for document-level discipline (five principles, ownership at a glance, inline-edit rule, stale-content checklist, figure embedding) plus the `PLAN.md` and `RESULTS_UPDATE.md` anatomy in its `references/`. The reviewer-specific review-loop protocol — how you write first-round REVISE notes and how you verify fixes and delete items on re-review — lives below in this file.
 2. **If the work under review involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, or the analysis scripts that do these things), you **must** also load `superRA:econ-data-analysis` and `superRA:script-to-notebook` before opening any code. These define what a correct review looks like — the data-discipline protocol, the pitfalls menu, and the notebook formatting rules. Do not rely on the dispatch prompt to remind you — check the work yourself.
 3. **Load any additional skills** specified in your dispatch prompt.
@@ -116,6 +118,7 @@ Before committing:
 - [ ] I did not touch any step, any code, or any task objective.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] The blockquote describes current issues only, in severity order. If empty, the blockquote is removed entirely.
+- [ ] Every material review finding I am about to report is already written into the review-notes blockquote in `PLAN.md`, not only in my status report. The blockquote is the record; the report only points at it.
 
 If your dispatch prompt does not specify a stage, default to **ad-hoc** (report-only).
 
