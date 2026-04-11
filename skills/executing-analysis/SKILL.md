@@ -153,7 +153,8 @@ Agent(subagent_type: "implementer"):
   Expected results: [hypotheses from PLAN.md, if any]
   Prior results: [key findings from RESULTS_UPDATE.md]
   Work from: [directory]
-  Handoff: Mark steps [x] in PLAN.md, set IMPLEMENTED, write findings to RESULTS_UPDATE.md.
+  Handoff: Mark steps [x] in PLAN.md, set IMPLEMENTED, write findings to RESULTS_UPDATE.md
+    (edit in place — replace prior version if one exists from a REVISE cycle).
     Commit together: code + PLAN.md + RESULTS_UPDATE.md
   Counterpart: reviewer (for Agent Teams)
 ```
@@ -212,13 +213,13 @@ Who owns what — each agent commits its own doc updates atomically with its wor
 | Code implementation | Implementer | code commit |
 | Mark own task's steps `- [x]` in PLAN.md | Implementer | code commit |
 | Set own task's status to `IMPLEMENTED` in PLAN.md | Implementer | code commit |
-| Write own task's findings to RESULTS_UPDATE.md | Implementer | code commit |
+| Write/update own task's findings in RESULTS_UPDATE.md (replace prior version) | Implementer | code commit |
 | Self-review before reporting | Implementer | — |
 | Set own task's status to `REVISE` + write review issues in PLAN.md | Reviewer | review commit |
 | Write reliability caveats for own task in RESULTS_UPDATE.md | Reviewer | review commit |
 | Set own task's status to `APPROVED` in PLAN.md | Impl reviewer (final reviewer) | review commit |
 | Clear review notes before re-dispatch | Orchestrator | — |
-| Modify future tasks when findings change the plan | Orchestrator | plan update commit |
+| Edit future tasks inline when findings change the plan | Orchestrator | plan update commit |
 | Task sequencing, dispatch, REVISE loop management | Orchestrator | — |
 | User communication and escalation | Orchestrator | — |
 
@@ -265,12 +266,14 @@ These persist — only the user should remove them.
 
 ## Plan File Updates
 
+**Inline-edit principle:** PLAN.md and RESULTS_UPDATE.md reflect current state, not history. Every update is an edit-in-place — replace outdated content, don't append alongside it. After any update, the document should read as a clean, current-state handoff document.
+
 Each agent updates docs at its own stage — no orchestrator transcription step:
 
 **Implementer** (after completing task code):
 1. Mark own task's steps `- [x]` in PLAN.md with brief result notes
 2. Set `**Review status:** IMPLEMENTED` under own task heading
-3. Add own task's findings to RESULTS_UPDATE.md (row counts, key results, figures)
+3. Write own task's findings to RESULTS_UPDATE.md (row counts, key results, figures) — replace prior version if re-implementing after REVISE
 4. Save any figure attachments to `results_attachments/`
 5. Commit everything together: code + PLAN.md + RESULTS_UPDATE.md + attachments
 
@@ -280,8 +283,8 @@ Each agent updates docs at its own stage — no orchestrator transcription step:
 - If APPROVE (final reviewer): set `**Review status:** APPROVED`, commit
 
 **Orchestrator** (after task fully approved):
-- If findings change upcoming tasks: update future task descriptions in PLAN.md, commit
-- Add discovery notes affecting the plan (e.g., "high unmatched rate — investigate before regression")
+- If findings change upcoming tasks: edit future task descriptions inline in PLAN.md — rewrite stale text, don't annotate it. Commit.
+- Edit discovery notes into the relevant task sections (e.g., "high unmatched rate — investigate before regression")
 
 PLAN.md and RESULTS_UPDATE.md are living documents. Together they form the handoff: PLAN.md = what to do + review state, RESULTS_UPDATE.md = what was found + reviewer caveats. They must always reflect current understanding so the next agent (or session) can pick up where this one left off.
 

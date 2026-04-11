@@ -112,11 +112,14 @@ Follow the handoff rules from your dispatch prompt. Common patterns:
   ```
   > **⚠️ Reviewer note ([domain]):** [analytical concern]
   ```
+  If re-reviewing the same task, **replace** your prior caveat with the current one — do not stack multiple caveats from successive review rounds.
   Commit: `git add RESULTS_UPDATE.md && git commit -m "review: Task N [domain] caveat"`
 
 - **Report only** — no document updates (just return your assessment).
 
 **Scope rule:** Only edit sections for YOUR assigned task. Never modify other tasks' status, steps, findings, or review notes.
+
+**Inline-edit rule:** PLAN.md and RESULTS_UPDATE.md reflect current state, not history. When updating your task's section, replace outdated content — never append alongside it.
 
 If your dispatch prompt does not specify handoff rules, default to "report only."
 
