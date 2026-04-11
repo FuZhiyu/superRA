@@ -1,12 +1,18 @@
 ---
 name: implementer-protocol
 description: >
-  Utility (direct-mode alias for agents/implementer.md). Use when the main
-  agent implements work in-session without dispatching a subagent. Loads
-  the same stage-handoff matrix, report format, document discipline, and
-  self-review checklist that the implementer agent uses — just inside the
-  main session instead of a dispatched one. Do not load unless running in
-  direct mode; for subagent dispatch, use the implementer agent type.
+  Use when the main agent is implementing analysis work in-session without
+  dispatching a subagent — e.g., a single-file task, no subagent
+  infrastructure available, the user has asked you to implement directly,
+  or a full dispatch would be overkill; when resuming implementation
+  mid-session after a subagent returned BLOCKED; when a trivial change
+  does not warrant the dispatch overhead. Triggers include "just
+  implement this directly", "do this yourself", "no need to dispatch",
+  "run task N in this session", or a small task the orchestrator wants
+  to handle inline. Canonical direct-mode counterpart to the `implementer`
+  agent type — loads the same execution discipline the dispatched agent
+  uses. Do not use for subagent dispatch; use the `implementer` agent
+  type instead.
 ---
 
 # Implementer Protocol (Direct Mode)

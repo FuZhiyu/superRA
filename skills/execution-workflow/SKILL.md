@@ -1,6 +1,6 @@
 ---
 name: execution-workflow
-description: superRA workflow IMPLEMENT+VALIDATE step. Use when executing a PLAN.md created by planning-workflow — dispatches a fresh implementer subagent per task with two-stage review (data integrity then implementation correctness), runs orchestrator-discipline filter on reviewer feedback, verifies pipeline + reproducibility at the end, then presents the 4 completion options (merge / PR / keep / discard). On merge/PR, dispatches integration-workflow then merge-workflow directly.
+description: Use when you have a PLAN.md in the superRA task-block format and are ready to implement its tasks; when a plan has been approved and you need per-task implementation with two-stage review; when resuming work on a plan where some tasks are `IMPLEMENTED`, some `REVISE (...)`, and some not started; when an analysis is code-complete and you want to verify reproducibility and present completion options (merge / PR / keep / discard). Triggers include "execute the plan", "run task N", "implement this PLAN.md", "finish this analysis", a branch with an APPROVED plan but no code yet, or a REVISE state that needs orchestrator adjudication before re-dispatch. Covers the IMPLEMENT and VALIDATE phases of the superRA workflow; hands off to `integration-workflow` when the user chooses merge or PR.
 ---
 
 # Execution Workflow

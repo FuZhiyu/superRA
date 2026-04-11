@@ -1,6 +1,6 @@
 ---
 name: agent-orchestration
-description: Utility (any phase). Use when orchestrating multi-agent work — decision framework for parallel dispatch (independent tasks) vs Agent Teams (iterative workflows), team recipes for Analysis Team / Integration Team / Merge Team / Semantic Merge Team with teammate compositions and task graphs, and session handoff protocol for team lifecycle management.
+description: Use when about to dispatch multiple agents and unsure whether to use parallel subagents or an Agent Team; when tasks are independent vs iterative and the right dispatch pattern is not obvious; when picking teammate composition for an analysis / integration / merge / semantic-merge job; when a previous session ended mid-workflow and team context needs to be rehydrated; when choosing lead + implementer + reviewer roles for a multi-step workflow. Triggers include "dispatch N agents", "run these in parallel", "use an Agent Team for this", "who should do the review", "spawn a team for the merge", a multi-step workflow that needs coordination across roles, or a session handoff where team state must survive. Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / VALIDATE / INTEGRATE).
 ---
 
 # Agent Orchestration
