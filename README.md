@@ -53,7 +53,12 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 ## Skills
 
-### Core Discipline (loaded by every agent)
+superRA's 16 skills split into two categories:
+
+- **Workflow skills** (`*-workflow`) — dispatcher-facing. Own the procedural choreography of each phase: what agent to dispatch, in what sequence, with what handoff rules. There are exactly four, one per phase: `planning-workflow`, `execution-workflow`, `integration-workflow`, `merge-workflow`.
+- **Utility skills** — agent-facing and standalone-invokable. Carry domain knowledge (data discipline, notebook formatting, drift test standards, codebase integration checklists, merge quality rules) that can be reused outside any specific workflow. `econ-data-analysis` is the most load-bearing; `refactor-and-integrate` bundles the three integration-phase reference files into one standalone-invokable source of truth.
+
+### Core Discipline (loaded by every analysis-touching agent)
 
 | Skill | What It Does |
 |-------|-------------|
@@ -75,11 +80,14 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 ### INTEGRATE Phase
 
+Runs in sequence when the user chooses merge or PR at execution-workflow Step 4: integration-workflow first, then merge-workflow. Both use `refactor-and-integrate` as the domain reference for dispatched agents.
+
 | Skill | What It Does |
 |-------|-------------|
-| **merge-workflow** | Final phase of finishing an analysis. Update analysis branch with main via semantic-merge, run drift tests AND a fresh integration review on the merged state, re-enter the refactor-review loop on either failure, then execute local merge or push + PR, and clean up the worktree. |
-| **integration-workflow** | Create drift tests to protect key results. Refactor code for codebase integration with refactor-review loop. Generate work-journal report. Handle PLAN.md / RESULTS_UPDATE.md disposition. Hands off to merge-workflow. |
-| **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact. Escalates methodology decisions to user. |
+| **integration-workflow** | Create drift tests to protect key results. Refactor code for codebase integration with a refactor-review loop. Generate the work-journal report. Handle PLAN.md / RESULTS_UPDATE.md disposition. Hands off to merge-workflow. |
+| **merge-workflow** | Final phase. Update analysis branch with main via semantic-merge, run drift tests AND a fresh integration review on the merged state, re-enter the refactor-review loop on either failure, execute local merge or push + PR, clean up the worktree. |
+| **refactor-and-integrate** | Utility skill carrying the three domain-knowledge checklists loaded by dispatched agents: `drift-test-quality.md` (coverage, tolerances, independence, clarity), `codebase-integration.md` (naming, utilities, data discipline preservation, PR quality), `merge-quality.md` (intent preservation, research integrity, two-commit structure, Tier 3 escalation). Standalone-invokable for any refactoring task. |
+| **semantic-merge** | Intent-based branch integration used internally by merge-workflow and triggered directly by the merge-guard hook for ad-hoc `git merge`/`rebase`/`cherry-pick`. Classifies conflicts by research impact. Escalates methodology decisions to user. |
 
 ### Infrastructure
 
