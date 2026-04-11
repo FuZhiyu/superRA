@@ -16,9 +16,9 @@ Adapts the general-purpose `semantic-merge-integration` skill for economics rese
 ## When to Use
 
 - User asks to merge, rebase, cherry-pick, or sync branches
-- Finishing-analysis Step 4d needs to merge an analysis branch (invoked automatically)
+- `superRA:merge-workflow` Step 1 needs to update an analysis branch from main (invoked automatically during the analysis-finishing flow)
 - Updating a long-lived analysis branch from main/upstream
-- The PreToolUse hook reminds you when you attempt a bare `git merge/rebase/cherry-pick`
+- The PreToolUse `merge-guard` hook reminds you when you attempt a bare `git merge/rebase/cherry-pick` outside the analysis-finishing flow
 
 ## The Process
 

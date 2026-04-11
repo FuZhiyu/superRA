@@ -351,7 +351,7 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 - Skip reviews (data integrity OR implementation) — even in direct mode
 - Proceed with unfixed data integrity issues
 - Dispatch multiple implementers in parallel on the same data (conflicts)
-- Make subagent read plan file (provide full text instead)
+- Paraphrase the task prompt into the dispatch instead of pointing the subagent at `PLAN.md` (the pointer-based convention is mandatory — subagents read the file directly so the dispatch and PLAN.md cannot drift)
 - Skip plan file update after task completion
 - Ignore implementer data quality concerns
 - Accept "data looks fine" without verification
