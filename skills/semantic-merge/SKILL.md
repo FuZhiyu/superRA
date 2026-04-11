@@ -16,9 +16,18 @@ Adapts the general-purpose `semantic-merge-integration` skill for economics rese
 ## When to Use
 
 - User asks to merge, rebase, cherry-pick, or sync branches
-- `superRA:merge-workflow` Step 1 needs to update an analysis branch from main (invoked automatically during the analysis-finishing flow)
+- `superRA:merge-workflow` Step 1 delegates to this skill to update an analysis branch from main
 - Updating a long-lived analysis branch from main/upstream
 - The PreToolUse `merge-guard` hook reminds you when you attempt a bare `git merge/rebase/cherry-pick` outside the analysis-finishing flow
+
+## Invocation Pattern
+
+semantic-merge can be invoked in two distinct ways — the mechanics are the same, but the caller and the return contract differ:
+
+- **Standalone (ad-hoc merge).** The user asks you to merge, rebase, or cherry-pick, or the `merge-guard` PreToolUse hook fires when you attempt a bare git merge command. Load this skill directly, run the process below, and report back to the user. You own the outcome.
+- **Delegated from `merge-workflow` Step 1.** The orchestrator running `merge-workflow` loads this skill via an explicit `Skill superRA:semantic-merge` invocation and hands control to it for the duration of the base-branch-into-analysis-branch update. Run the full process below, then return control to `merge-workflow` for post-merge drift tests, a fresh integration review, and the local merge or PR push. `merge-workflow` is not a passive wrapper — it owns the choreography on either side of your call.
+
+In both cases the process below is identical. The difference is only who dispatches you and what happens after you return.
 
 ## The Process
 
