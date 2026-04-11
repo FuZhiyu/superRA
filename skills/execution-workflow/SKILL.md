@@ -1,11 +1,11 @@
 ---
 name: execution-workflow
-description: superRA workflow IMPLEMENT+VALIDATE step. Use when executing a PLAN.md created by planning-workflow — dispatches a fresh implementer subagent per task with two-stage review (data integrity then implementation correctness), runs orchestrator-discipline filter on reviewer feedback, verifies pipeline + reproducibility at the end, then presents the 4 completion options (merge / PR / keep / discard). Hands off merge/PR to finishing-analysis.
+description: superRA workflow IMPLEMENT+VALIDATE step. Use when executing a PLAN.md created by planning-workflow — dispatches a fresh implementer subagent per task with two-stage review (data integrity then implementation correctness), runs orchestrator-discipline filter on reviewer feedback, verifies pipeline + reproducibility at the end, then presents the 4 completion options (merge / PR / keep / discard). On merge/PR, dispatches integration-workflow then merge-workflow directly.
 ---
 
 # Execution Workflow
 
-Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the two-stage review loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu. Hands merge/PR off to `superRA:finishing-analysis`.
+Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the two-stage review loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu. On merge/PR, dispatches `superRA:integration-workflow` then `superRA:merge-workflow` directly.
 
 Default mode dispatches a fresh subagent per task with two-stage review (data integrity then implementation correctness). Falls back to direct execution when the user requests it or tasks are trivial.
 
@@ -68,7 +68,7 @@ digraph process {
     "Read plan, extract all tasks, create TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Dispatch final analysis reviewer for full implementation" [shape=box];
-    "Use superRA:finishing-analysis" [shape=box style=filled fillcolor=lightgreen];
+    "Dispatch integration-workflow then merge-workflow" [shape=box style=filled fillcolor=lightgreen];
 
     "Read plan, extract all tasks, create TodoWrite" -> "Dispatch implementer subagent";
     "Dispatch implementer subagent" -> "Implementer asks questions?";
@@ -87,7 +87,7 @@ digraph process {
     "Update plan file + commit" -> "More tasks remain?";
     "More tasks remain?" -> "Dispatch implementer subagent" [label="yes"];
     "More tasks remain?" -> "Dispatch final analysis reviewer for full implementation" [label="no"];
-    "Dispatch final analysis reviewer for full implementation" -> "Use superRA:finishing-analysis";
+    "Dispatch final analysis reviewer for full implementation" -> "Dispatch integration-workflow then merge-workflow";
 }
 ```
 
@@ -246,7 +246,11 @@ Which option?
 
 **Execute the user's choice:**
 
-- **Option 1 or 2 (Merge or PR):** Invoke `superRA:finishing-analysis` to run integration-workflow (drift tests, refactor-review loop, report, dev doc handling) and execute the merge or PR. Do not run any of those steps yourself — finishing-analysis and integration-workflow own them.
+- **Option 1 or 2 (Merge or PR):** Dispatch the two integration-phase workflow skills in sequence — do not run their steps yourself.
+  1. Invoke `superRA:integration-workflow` for drift test creation, the refactor-review loop, work-journal report generation, and disposition of `PLAN.md` / `RESULTS_UPDATE.md`. Wait for it to return successfully.
+  2. Invoke `superRA:merge-workflow` for the main update via semantic-merge, post-merge verification (drift tests AND fresh integration review), the refactor-review loop on post-merge failure, the actual local merge or PR push, and worktree cleanup.
+
+  Both skills are required for Options 1 and 2. The merge-workflow assumes integration-workflow has already produced a merge-ready branch.
 - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
 - **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then:
   ```bash
@@ -280,7 +284,7 @@ These are the things the orchestrator does that no subagent does:
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text, don't annotate it. Commit.
 - **Escalate to the human partner** when stuck (BLOCKED, methodology disagreement, CRITICAL issue you want to override).
 
-**Review scope at interim checkpoints:** Data integrity and implementation correctness only. Codebase integration review is deferred to integration-workflow (invoked during finishing-analysis when merging/PRing).
+**Review scope at interim checkpoints:** Data integrity and implementation correctness only. Codebase integration review is deferred to integration-workflow (dispatched by this skill at Step 4 when the user chooses merge or PR).
 
 ## Sensitivity Analysis Tasks
 
@@ -338,7 +342,7 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 
 **Invoke `superRA:agent-orchestration` for the Analysis Task Team recipe** — it has the full team composition (3 teammates), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
 
-**Critical:** When all tasks complete, shut down teammates and clean up the team BEFORE invoking `superRA:finishing-analysis`. This frees the session's team slot for the integration-workflow team if the user chooses merge/PR.
+**Critical:** When all tasks complete, shut down teammates and clean up the team BEFORE dispatching `superRA:integration-workflow`. This frees the session's team slot for the integration-workflow team and the subsequent merge-workflow team.
 
 ## Red Flags
 
@@ -368,5 +372,5 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 - **superRA:planning-workflow** — Creates the plan this skill executes
 - **superRA:econ-data-analysis** — REQUIRED: Data discipline all agents must follow
 - **superRA:script-to-notebook** — Script formatting and notebook rendering
-- **superRA:finishing-analysis** — Complete work after all tasks done
-- **superRA:integration-workflow** — Drift tests, refactor-review loop, report, dev doc handling (invoked by finishing-analysis)
+- **superRA:integration-workflow** — Drift tests, refactor-review loop, report, dev doc handling (dispatched by this skill at Step 4 on merge/PR)
+- **superRA:merge-workflow** — Main update, post-merge verification, local merge or PR push, worktree cleanup (dispatched by this skill at Step 4 on merge/PR after integration-workflow returns)

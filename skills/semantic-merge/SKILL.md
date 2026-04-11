@@ -309,13 +309,13 @@ The lead still handles tier classification, user-facing decisions (Tier 3 integr
 ## Integration
 
 **Called by:**
-- **superRA:finishing-analysis** (Step 4d) — Update analysis branch from base before merging back
+- **superRA:merge-workflow** (Step 1) — Update analysis branch from base before merging back, as part of the final phase of the analysis-finishing workflow
 - **PreToolUse hook** (merge-guard) — Reminds agent to use this skill for any git merge/rebase/cherry-pick
 
 **Can invoke standalone:** User asks to merge/update branches
 
 **Pairs with:**
-- **superRA:integration-workflow** — Runs before this skill in finishing-analysis (creates drift tests that this skill uses as safety net)
+- **superRA:integration-workflow** — Runs before this skill in the integration phase (creates drift tests that this skill uses as safety net)
 - **superRA:agent-orchestration** — Semantic Merge Team recipe for Tier 2/3 merges
 
 **References:**

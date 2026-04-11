@@ -16,7 +16,7 @@ Assumes execution-workflow has already verified reproducibility and the user has
 ## The Process
 
 ```dot
-digraph pre_merge_gate {
+digraph integration_workflow {
     rankdir=TB;
 
     subgraph cluster_stage1 {

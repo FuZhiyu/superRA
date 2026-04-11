@@ -171,16 +171,17 @@ The full superRA workflow spans two team-worthy phases:
 ```
 execution-workflow (Analysis Team)
   → cleanup
-    → finishing-analysis
-      → integration-workflow (Pre-Merge Team)
-        → cleanup
+    → integration-workflow (Integration Team)
+      → cleanup
+        → merge-workflow (Merge Team)
+          → cleanup
 ```
 
-**Sequential teams with cleanup.** The lead cleans up the Analysis Team before spawning the Pre-Merge Team:
+**Sequential teams with cleanup.** The lead cleans up each team before spawning the next:
 
-1. All analysis tasks complete → shut down all teammates → clean up team
-2. Lead proceeds to finishing-analysis (no team needed)
-3. If user chooses merge/PR → spawn Pre-Merge Team → run 3 stages → clean up team
+1. All analysis tasks complete → shut down Analysis Team → clean up
+2. If user chooses merge/PR (execution-workflow Step 4 Option 1 or 2) → spawn Integration Team → run drift test creation + refactor-review loop + report + dev doc handling → clean up
+3. Spawn Merge Team → main update + post-merge verification + refactor-review loop + merge or PR + worktree cleanup → clean up
 
 ### Team Recipes
 
@@ -219,11 +220,11 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 - Monitor for BLOCKED or data quality escalations (teammates message lead)
 - Handle sensitivity analysis assessment
 - Note team phase in PLAN.md (e.g., "Analysis Team active, tasks 1-3 of 5 complete")
-- Clean up team before proceeding to finishing-analysis
+- Clean up team before proceeding to integration-workflow
 
 #### Pre-Merge Gate Team
 
-**When:** `superRA:integration-workflow` is invoked (from finishing-analysis, Options 1 or 2)
+**When:** `superRA:integration-workflow` is invoked (from execution-workflow Step 4 Option 1 or 2)
 
 **Teammates (4):**
 - `test-creator` — Creates drift tests for key results
@@ -292,7 +293,7 @@ Create an agent team for semantic merge integration:
 - Handle drift test failure escalation to user
 - Clean up team after final APPROVE
 
-**Team slot:** This team runs during finishing-analysis Step 4d. The integration-workflow team (if used) must be cleaned up before this point. The current workflow guarantees this: integration-workflow runs in Step 4a, team cleaned up before Step 4d.
+**Team slot:** This team runs inside merge-workflow (the final phase of finishing an analysis). The integration-workflow team (if used) must be cleaned up before this point. The current workflow guarantees this: integration-workflow runs first under execution-workflow Step 4 Option 1/2, team cleaned up, then merge-workflow spawns the Merge Team.
 
 ### Team Lifecycle & Session Handoff
 
