@@ -11,7 +11,7 @@ The header is the project's standing context, written at planning time and updat
 ```markdown
 # [Analysis Name] Plan
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS_UPDATE.md editing. Use `superRA:econ-data-analysis` for every step that touches data. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use `superRA:econ-data-analysis` for every step that touches data. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
 
 **Objective:** [One sentence describing what this analysis produces]
 
@@ -90,7 +90,7 @@ print(f"Rows: {n_before} → {len(df)} (delta: {len(df) - n_before})")
 
 - [ ] **Step 3: Doc — verify, update handoff docs, commit**
 
-Verify row count unchanged, unmatched rate reasonable. Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Update RESULTS_UPDATE.md (key findings, figures in `results_attachments/`). Commit code + handoff docs in a single atomic commit.
+Verify row count unchanged, unmatched rate reasonable. Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Update RESULTS.md (key findings, figures in `results_attachments/`). Commit code + handoff docs in a single atomic commit.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] Step 2 uses inner join; should be left join to preserve all rows. (`Code/03.py:42`)

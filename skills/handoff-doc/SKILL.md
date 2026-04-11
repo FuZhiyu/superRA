@@ -1,16 +1,18 @@
 ---
 name: handoff-doc
-description: Use when creating, reading, or editing PLAN.md, RESULTS_UPDATE.md, or any other task-block-structured handoff document. Defines the six discipline principles, the inline-edit rule, the stale-content checklist, and the figure embedding rule. Points at references/ for full document anatomy. Load whenever you are about to read or edit a handoff doc.
+description: Use when creating, reading, or editing PLAN.md, RESULTS.md, or any other task-block-structured handoff document. Defines the six discipline principles, the inline-edit rule, the stale-content checklist, and the figure embedding rule. Points at references/ for full document anatomy, and at `report-in-markdown` for the Stage 2 consolidation that matures RESULTS.md into its permanent form. Load whenever you are about to read or edit a handoff doc.
 ---
 
 # Handoff Doc Discipline
 
-Handoff docs (`PLAN.md`, `RESULTS_UPDATE.md`, and similarly-structured task-block docs) are the persistent state of a project. Multiple agents and sessions read and write them. This skill defines the discipline — what these docs are, how they are structured at a glance, and the universal editing rules.
+Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs) are the persistent state of a project. Multiple agents and sessions read and write them. This skill defines the discipline — what these docs are, how they are structured at a glance, and the universal editing rules.
+
+`RESULTS.md` has a **two-stage lifecycle**: a Stage 1 dev log in the worktree root during IMPLEMENT (task-indexed, agent-facing, "latest state only"), maturing into a Stage 2 permanent record at the analysis's code folder during INTEGRATE (reader-facing, fact-checked, frontmatter, figures materialized). Same file, same name, same identity across stages — the consolidation happens in place before relocation. Stage 1 discipline is defined here; Stage 2 consolidation discipline lives in `skills/report-in-markdown/references/final-form.md` and is invoked by `integration-workflow` Step 3.
 
 **This skill has progressive reveal.** The main file is concise: principles, at-a-glance structure, universal rules. Load the references below when you need deeper material:
 
 - `references/plan-anatomy.md` — the full `PLAN.md` template (header + task blocks + code-block examples + review-notes blockquote format)
-- `references/results-update-anatomy.md` — the full `RESULTS_UPDATE.md` template (header + per-task sections + figure embedding)
+- `references/results-anatomy.md` — the full Stage 1 `RESULTS.md` template (header + per-task sections + figure embedding pointers + transition-to-Stage-2 note)
 
 **Subagent-specific execution protocol** — including the full review-loop mechanics (who writes what in the review-notes blockquote, who may delete items, the `→ implemented:` and `→ orchestrator:` annotation protocols, and the `**Doc edits:**` status-line format) — lives in `agents/implementer.md` and `agents/reviewer.md`. Each agent file carries its own view of the loop. This skill does not duplicate that; it only specifies the document-level discipline all roles (including a standalone user with no subagents) must follow.
 
@@ -20,7 +22,7 @@ Handoff docs (`PLAN.md`, `RESULTS_UPDATE.md`, and similarly-structured task-bloc
 
 2. **Live and committed.** Every edit is an inline replacement, committed with the work it belongs to. Stale steps, stale review notes, and superseded discovery notes are **removed**, not struck through. The doc at any point reads as a single coherent current-state description.
 
-3. **Task-block structure.** `PLAN.md` consists of a header (project-wide context) and a sequence of task blocks. Each task block has a fixed anatomy: objective / script / I/O / steps / review status. `RESULTS_UPDATE.md` mirrors the task structure (one section per task). See `references/plan-anatomy.md` and `references/results-update-anatomy.md` for the full templates.
+3. **Task-block structure.** `PLAN.md` consists of a header (project-wide context) and a sequence of task blocks. Each task block has a fixed anatomy: objective / script / I/O / steps / review status. Stage 1 `RESULTS.md` mirrors the task structure (one section per task). See `references/plan-anatomy.md` and `references/results-anatomy.md` for the full templates.
 
 4. **Ownership by role lives in the agent files.** In a multi-agent workflow, each role's permissions on handoff docs are defined in `agents/implementer.md` and `agents/reviewer.md` (what each role may edit, what they must leave alone, and the review-loop annotation protocol). In standalone use, the single author plays all roles — the role split collapses, but the inline-edit rule and "latest state only" still apply.
 
@@ -28,9 +30,9 @@ Handoff docs (`PLAN.md`, `RESULTS_UPDATE.md`, and similarly-structured task-bloc
    - **Dispatch prompts and task instructions (orchestrator → worker)** carry a one-line delta describing what changed since the last touch: "Task 3 updated — revised Step 2; adjudication note on review item 3."
    - **Status returns (worker → orchestrator)** carry a `**Doc edits:**` line describing what changed. The status return is a **navigation aid**, not a content dump — it summarizes and points at the doc for detail.
 
-6. **The doc is the record. Status reports are pointers, not substitutes.** Any material finding, result, methodology change, caveat, or decision MUST be written into `PLAN.md` or `RESULTS_UPDATE.md` *before* it is communicated in a status report or chat message. If a result only exists in a chat reply, it does not exist — it will be lost at the next session boundary, cache eviction, or context compaction. The authoritative record is the committed doc; the report only points at it.
+6. **The doc is the record. Status reports are pointers, not substitutes.** Any material finding, result, methodology change, caveat, or decision MUST be written into `PLAN.md` or `RESULTS.md` *before* it is communicated in a status report or chat message. If a result only exists in a chat reply, it does not exist — it will be lost at the next session boundary, cache eviction, or context compaction. The authoritative record is the committed doc; the report only points at it.
 
-   **Rule of thumb:** before you type a finding into a status report, ask "is this written in `PLAN.md` or `RESULTS_UPDATE.md` yet?" If not, write it in the doc first and commit, then point at it in the report.
+   **Rule of thumb:** before you type a finding into a status report, ask "is this written in `PLAN.md` or `RESULTS.md` yet?" If not, write it in the doc first and commit, then point at it in the report.
 
 ## At-a-Glance Structure
 
@@ -62,7 +64,7 @@ A `PLAN.md` in flight looks like:
 - [ ] Step 1: ...
 ```
 
-A `RESULTS_UPDATE.md` mirrors the task structure, one section per task, with findings and embedded figures.
+A Stage 1 `RESULTS.md` mirrors the task structure, one section per task, with findings and embedded figures.
 
 See the reference templates for the full skeleton.
 
@@ -80,15 +82,15 @@ Every edit replaces stale content in place. Never append, never strike through, 
 
 ## Figure Embedding
 
-Figures in `RESULTS_UPDATE.md` and any other handoff doc are always embedded with markdown image syntax:
+Figures in Stage 1 `RESULTS.md` and any other handoff doc are embedded with markdown image syntax pointing at a committed PNG in `results_attachments/` at project root:
 
 ```markdown
 ![Descriptive caption](results_attachments/fig_name.png)
 ```
 
-- Path is relative and points at a committed PNG in `results_attachments/` at project root.
-- Caption is the figure's title; readers should understand the figure without clicking into it.
-- If the source is a PDF, convert to PNG for embedding and keep the PDF alongside for high-resolution access.
+The full figure-embedding discipline — PDF→PNG conversion, caption requirements, file reference conventions, math/table handling — lives in `skills/report-in-markdown/references/rich-content.md`. Load that reference when you are writing a handoff-doc task section that contains a figure, a table, or LaTeX math. Pass `results_attachments/` as the target attachments directory when invoking `report-in-markdown`.
+
+The Stage 2 consolidation that matures `RESULTS.md` into its permanent form — fact-check, restructure, figure materialization, relocation — is invoked from `integration-workflow` Step 3 and defined in `skills/report-in-markdown/references/final-form.md`. This skill does not duplicate that discipline.
 
 ## How This Skill Is Used
 
