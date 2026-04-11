@@ -172,7 +172,7 @@ The full superRA workflow spans two team-worthy phases:
 execution-workflow (Analysis Team)
   → cleanup
     → finishing-analysis
-      → pre-merge-gate (Pre-Merge Team)
+      → integration-workflow (Pre-Merge Team)
         → cleanup
 ```
 
@@ -223,7 +223,7 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 
 #### Pre-Merge Gate Team
 
-**When:** `superRA:pre-merge-gate` is invoked (from finishing-analysis, Options 1 or 2)
+**When:** `superRA:integration-workflow` is invoked (from finishing-analysis, Options 1 or 2)
 
 **Teammates (4):**
 - `test-creator` — Creates drift tests for key results
@@ -234,10 +234,10 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 **Spawn:**
 ```
 Create an agent team for pre-merge quality gate:
-- test-creator: [use `implementer` agent type; load superRA:econ-data-analysis; domain ref: pre-merge-gate/references/drift-test-quality.md]
-- test-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; domain ref: pre-merge-gate/references/drift-test-quality.md]
-- refactorer: [use `implementer` agent type; load superRA:econ-data-analysis; domain ref: pre-merge-gate/references/codebase-integration.md]
-- integration-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; domain ref: pre-merge-gate/references/codebase-integration.md]
+- test-creator: [use `implementer` agent type; load superRA:econ-data-analysis; domain ref: integration-workflow/references/drift-test-quality.md]
+- test-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; domain ref: integration-workflow/references/drift-test-quality.md]
+- refactorer: [use `implementer` agent type; load superRA:econ-data-analysis; domain ref: integration-workflow/references/codebase-integration.md]
+- integration-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; domain ref: integration-workflow/references/codebase-integration.md]
 
 Require plan approval before they make changes.
 ```
@@ -292,7 +292,7 @@ Create an agent team for semantic merge integration:
 - Handle drift test failure escalation to user
 - Clean up team after final APPROVE
 
-**Team slot:** This team runs during finishing-analysis Step 4d. The pre-merge-gate team (if used) must be cleaned up before this point. The current workflow guarantees this: pre-merge gate runs in Step 4a, team cleaned up before Step 4d.
+**Team slot:** This team runs during finishing-analysis Step 4d. The integration-workflow team (if used) must be cleaned up before this point. The current workflow guarantees this: integration-workflow runs in Step 4a, team cleaned up before Step 4d.
 
 ### Team Lifecycle & Session Handoff
 
@@ -357,7 +357,7 @@ On session resume, this tells the new lead exactly where to pick up.
 ## Integration
 
 **Skills that use Agent Teams mode:**
-- **superRA:pre-merge-gate** — 4-teammate pre-merge team
+- **superRA:integration-workflow** — 4-teammate pre-merge team
 - **superRA:execution-workflow** — 3-teammate analysis team
 - **superRA:semantic-merge** — 2-teammate merge team
 

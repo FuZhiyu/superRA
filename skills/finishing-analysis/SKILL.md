@@ -1,19 +1,19 @@
 ---
 name: finishing-analysis
-description: Use when analysis implementation is complete and you need to verify reproducibility, generate reports, and decide how to integrate the work - guides completion via merge, PR, keep, or discard
+description: Invoked by execution-workflow Step 4 when the user has chosen Option 1 (merge locally) or Option 2 (push + PR). Runs integration-workflow first (drift tests, refactor, report, dev doc handling), then executes the merge or PR mechanics. Assumes reproducibility is already verified by execution-workflow. Will be split into integration-workflow + merge-workflow in the next phase of the restructure.
 ---
 
 # Finishing Analysis
 
 ## Overview
 
-Guide completion of analysis work — the **INTEGRATE** phase of the macro workflow. Verify reproducibility, present integration options, and execute the chosen path. For merge/PR paths, invoke the pre-merge gate to protect results and integrate code.
+Transitional skill that invokes integration-workflow then performs the merge/PR mechanics. Reproducibility verification, base branch detection, and the 4-option menu are owned by `superRA:execution-workflow` Step 4 and have already happened by the time this skill runs.
 
-**Core principle:** Verify reproducibility → Present options → If keeping: pre-merge gate → Generate report → Handle documents → Execute choice → Clean up.
+**Core principle:** Run integration-workflow → Execute the merge/PR mechanics chosen by the user → Clean up worktree.
 
 **Announce at start:** "I'm using the finishing-analysis skill to complete this work."
 
-**Agent Teams cleanup:** If an Analysis Team is still active from execution-workflow, shut down all teammates and clean up the team before proceeding. The pre-merge gate (Step 4a) may need to spawn its own team, and only one team can exist per session.
+**Agent Teams cleanup:** If an Analysis Team is still active from execution-workflow, shut down all teammates and clean up the team before proceeding. The integration-workflow may need to spawn its own team, and only one team can exist per session.
 
 ## The Process
 
@@ -23,112 +23,17 @@ This skill is invoked by `superRA:execution-workflow` Step 4 only when the user 
 
 #### Option 1 or 2: Keep the Work (Merge or PR)
 
-When the user chooses to keep the work, run the full pre-merge pipeline:
+When the user chooses to keep the work, run the integration workflow first:
 
-**Step 4a: Pre-Merge Gate**
+**Step 4a: Integration Workflow**
 
 ```
-Invoke superRA:pre-merge-gate
+Invoke superRA:integration-workflow
 ```
 
-This creates drift tests, refactors code for codebase integration, and runs integration review. See that skill for details.
+This creates drift tests, refactors code for codebase integration with the refactor-review loop, generates the work-journal report, and handles disposition of `PLAN.md` and `RESULTS_UPDATE.md`. See that skill for details.
 
-**Only proceed to Step 4b after the pre-merge gate passes.**
-
-**Step 4b: Generate Report**
-
-Create a work journal entry documenting the analysis results. Use `RESULTS_UPDATE.md` as source material — the finishing report is the polished version; RESULTS_UPDATE.md was the development log.
-
-**Entry file:** `[WORK_JOURNAL_DIR]/YYYY-MM-DD-[Author]-[Description].md`
-- Resolve path from project guidance (AGENTS.md, CLAUDE.md, README)
-- Default: `notes/` or `work-journal/`
-
-**Frontmatter:**
-```yaml
----
-author: "[[Author]]"
-date: YYYY-MM-DD
-timestamp: "YYYY-MM-DDTHH:MM:SS"
-project: "[[ProjectName]]"
-git_commit: [current HEAD hash]
-git_message: "[latest commit message]"
-tags: ["work-journal", "analysis"]
-permalink: working-journal/YYYY-MM-DD-author-description
----
-```
-
-**Content structure** (flexible, but typically includes):
-- Objective
-- Data description (sources, sample, key variables)
-- Methodology
-- Results with tables and figures
-- Technical details
-
-**Rules:**
-- **Factual and objective** — state what was done and found
-- **Every claim cited** — link to code files, output files, or documentation
-- **No speculation** — don't interpret economic meaning unless the user explicitly asked
-- **Relative paths** — `[descriptive text](relative/path/from/report/to/file)`
-
-**Figure handling:**
-- PDF figures → convert to PNG, copy to `attachments/` subdirectory
-- Embed with relative paths and cite original source
-- ```markdown
-  ![Descriptive caption](./attachments/YYYY-MM-DD-description.png)
-  Source: [Original](relative/path/to/original/figure.pdf)
-  ```
-
-**Report verification** (inline checklist):
-- [ ] All claims cited and accurate?
-- [ ] Numbers match source files?
-- [ ] No speculation or subjective language?
-- [ ] Figures copied and cite sources?
-- [ ] File paths resolve correctly?
-
-If issues found, fix before finalizing.
-
-**Step 4c: Handle Development Documents**
-
-`PLAN.md` and `RESULTS_UPDATE.md` are development artifacts — they cannot remain at project root on the main branch.
-
-**Ask the user:**
-```
-PLAN.md and RESULTS_UPDATE.md are development documents. Options:
-1. Move to relevant module directory (alongside the analysis code for future reference)
-2. Consolidate key findings into existing documentation
-3. Delete (git history preserves them on this branch)
-Which option?
-```
-
-**Option 1 (Move to module):**
-```bash
-# User specifies target directory
-mkdir -p <target-dir>
-git mv PLAN.md <target-dir>/
-git mv RESULTS_UPDATE.md <target-dir>/
-git mv results_attachments/ <target-dir>/ 2>/dev/null
-git commit -m "move analysis plan and results to <target-dir>"
-```
-
-**Option 2 (Consolidate):**
-- Identify which existing documentation should be updated
-- Extract key findings from RESULTS_UPDATE.md
-- Merge into existing docs (user guides which docs)
-- Remove original files:
-```bash
-git rm PLAN.md RESULTS_UPDATE.md
-rm -rf results_attachments/
-git add -A results_attachments/ 2>/dev/null
-git commit -m "consolidate analysis results into project docs"
-```
-
-**Option 3 (Delete):**
-```bash
-git rm PLAN.md RESULTS_UPDATE.md
-rm -rf results_attachments/
-git add -A results_attachments/ 2>/dev/null
-git commit -m "remove development documents (preserved in branch history)"
-```
+Only proceed to Step 4d after `superRA:integration-workflow` returns successfully.
 
 **Step 4d: Execute Merge or PR**
 
@@ -238,9 +143,9 @@ If working on a branch (no worktree): skip this step.
 
 ## Common Mistakes
 
-**Skipping pre-merge gate**
+**Skipping integration-workflow**
 - **Problem:** Code merged without drift tests or integration review
-- **Fix:** Always run pre-merge gate for Options 1 and 2
+- **Fix:** Always run integration-workflow for Options 1 and 2
 
 **Skipping reproducibility verification**
 - **Problem:** Report references ad-hoc outputs that can't be regenerated
@@ -262,7 +167,7 @@ If working on a branch (no worktree): skip this step.
 
 **Never:**
 - Offer completion options without reproducibility verification
-- Skip pre-merge gate for merge/PR options
+- Skip integration-workflow for merge/PR options
 - Skip report generation
 - Merge without verifying pipeline on merged result
 - Delete work without confirmation
@@ -272,7 +177,7 @@ If working on a branch (no worktree): skip this step.
 **Always:**
 - Verify all code committed
 - Verify pipeline runs end-to-end
-- Run pre-merge gate before merge/PR
+- Run integration-workflow before merge/PR
 - Generate factual report with citations
 - Present exactly 4 options
 - Get typed confirmation for Option 4
@@ -283,7 +188,7 @@ If working on a branch (no worktree): skip this step.
 - **superRA:execution-workflow** (after all tasks) — After all tasks complete and reviewed
 
 **Invokes:**
-- **superRA:pre-merge-gate** — REQUIRED for Options 1 and 2 (creates drift tests, refactors, reviews integration)
+- **superRA:integration-workflow** — REQUIRED for Options 1 and 2 (creates drift tests, refactors, reviews integration)
 - **superRA:semantic-merge** — REQUIRED for Options 1 and 2 (intent-based branch integration in Step 4d)
 
 **Pairs with:**

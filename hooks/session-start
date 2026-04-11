@@ -17,7 +17,7 @@ fi
 # Check for Agent Teams availability
 agent_teams_note=""
 if [ -n "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-}" ]; then
-    agent_teams_note="\n\nAgent Teams: available. For workflows with iteration loops (pre-merge-gate, execution-workflow, semantic-merge), prefer Agent Teams over regular subagents. See superRA:agent-orchestration for guidance."
+    agent_teams_note="\n\nAgent Teams: available. For workflows with iteration loops (integration-workflow, execution-workflow, semantic-merge), prefer Agent Teams over regular subagents. See superRA:agent-orchestration for guidance."
 fi
 
 # Read using-superRA content

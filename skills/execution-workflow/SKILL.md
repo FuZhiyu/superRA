@@ -133,7 +133,6 @@ If the user declines, proceed — they've given explicit consent to work on the 
 
 #### Dispatch Templates
 
-The `implementer` and `reviewer` agent definitions own the report format, handoff protocol, document discipline, and per-stage default skill loads. **Dispatch prompts must not duplicate that content.** Pass only what the agent cannot derive on its own: the stage label, the task pointer, the git SHA range (for reviewers), and any deviations from defaults.
 
 **Stage implies skill defaults.** For every analysis-touching stage (analysis task, drift test creation, refactoring, merge proposer), the agent auto-loads `superRA:econ-data-analysis` and `superRA:script-to-notebook`. You only need a `Skills:` line if a task requires something unusual (e.g., a domain-specific helper skill).
 
@@ -166,7 +165,7 @@ Agent(subagent_type: "reviewer"):
   Counterpart: implementer  # Agent Teams only
 ```
 
-If you need a non-default skill load, an extra domain reference, or an override of the standard handoff, add a single explicit line — but do not pad the dispatch otherwise. Every extra line is a chance for the agent to follow stale guidance instead of its current definition.
+If you need a non-default skill load, an extra domain reference, or an override of the standard handoff, add `Skills:` and `References:` lines as needed.
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
 
@@ -198,7 +197,7 @@ When a reviewer returns REVISE:
 - You cannot override CRITICAL severity without escalating to the human partner first. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
 - You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real and the human partner needs to settle it.
 
-This discipline applies equally to pre-merge-gate (drift test review, integration review) and semantic-merge (merge review). The orchestrator owns the final call in every loop.
+This discipline applies equally to integration-workflow (drift test review, integration review) and semantic-merge (merge review). The orchestrator owns the final call in every loop.
 
 ### Step 3: Verify Pipeline and Reproducibility
 
@@ -247,7 +246,7 @@ Which option?
 
 **Execute the user's choice:**
 
-- **Option 1 or 2 (Merge or PR):** Invoke `superRA:finishing-analysis` to run the full pre-merge gate, generate the report, handle development documents, and execute the merge or PR. Do not run any of those steps yourself — finishing-analysis owns them.
+- **Option 1 or 2 (Merge or PR):** Invoke `superRA:finishing-analysis` to run integration-workflow (drift tests, refactor-review loop, report, dev doc handling) and execute the merge or PR. Do not run any of those steps yourself — finishing-analysis and integration-workflow own them.
 - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
 - **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then:
   ```bash
@@ -281,7 +280,7 @@ These are the things the orchestrator does that no subagent does:
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text, don't annotate it. Commit.
 - **Escalate to the human partner** when stuck (BLOCKED, methodology disagreement, CRITICAL issue you want to override).
 
-**Review scope at interim checkpoints:** Data integrity and implementation correctness only. Codebase integration review is deferred to the pre-merge gate (invoked during finishing-analysis when merging/PRing).
+**Review scope at interim checkpoints:** Data integrity and implementation correctness only. Codebase integration review is deferred to integration-workflow (invoked during finishing-analysis when merging/PRing).
 
 ## Sensitivity Analysis Tasks
 
@@ -339,7 +338,7 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 
 **Invoke `superRA:agent-orchestration` for the Analysis Task Team recipe** — it has the full team composition (3 teammates), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
 
-**Critical:** When all tasks complete, shut down teammates and clean up the team BEFORE invoking `superRA:finishing-analysis`. This frees the session's team slot for the pre-merge-gate team if the user chooses merge/PR.
+**Critical:** When all tasks complete, shut down teammates and clean up the team BEFORE invoking `superRA:finishing-analysis`. This frees the session's team slot for the integration-workflow team if the user chooses merge/PR.
 
 ## Red Flags
 
@@ -370,4 +369,4 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 - **superRA:econ-data-analysis** — REQUIRED: Data discipline all agents must follow
 - **superRA:script-to-notebook** — Script formatting and notebook rendering
 - **superRA:finishing-analysis** — Complete work after all tasks done
-- **superRA:pre-merge-gate** — Code integration and drift tests before merge (invoked by finishing-analysis)
+- **superRA:integration-workflow** — Drift tests, refactor-review loop, report, dev doc handling (invoked by finishing-analysis)

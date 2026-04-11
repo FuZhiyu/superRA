@@ -145,7 +145,7 @@ The macro workflow is **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. When mu
 
 1. **PLAN phase skills first** (planning-workflow) — these determine WHAT to do
 2. **IMPLEMENT + VALIDATE phase skills second** (execution-workflow, econ-data-analysis) — these guide execution and review
-3. **INTEGRATE phase skills last** (finishing-analysis, pre-merge-gate) — these integrate work back
+3. **INTEGRATE phase skills last** (finishing-analysis, integration-workflow) — these integrate work back
 
 "Let's analyze X" → PLAN phase: planning-workflow (Phase 1 inventory then Phase 2 plan creation).
 "Something looks wrong in the data" → investigate using econ-data-analysis describe step.
@@ -156,7 +156,7 @@ Within each implementation step, the micro-level discipline is **DESCRIBE → AN
 
 **Rigid** (econ-data-analysis, verification-before-completion): Follow exactly. Don't adapt away discipline.
 
-**Flexible** (data-exploration): Adapt principles to context.
+**Flexible** (planning-workflow Phase 1 data inventory): Adapt principles to context.
 
 The skill itself tells you which.
 
@@ -166,7 +166,7 @@ When merging, rebasing, or cherry-picking branches, superRA uses intent-based co
 
 ## Agent Teams
 
-When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled, superRA uses Agent Teams for workflows with iteration loops (pre-merge-gate, execution-workflow, semantic-merge). This is automatic — the orchestration skills detect availability and use teams when appropriate. See `superRA:agent-orchestration` for details on team compositions, lifecycle, and session handoff.
+When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled, superRA uses Agent Teams for workflows with iteration loops (integration-workflow, execution-workflow, semantic-merge). This is automatic — the orchestration skills detect availability and use teams when appropriate. See `superRA:agent-orchestration` for details on team compositions, lifecycle, and session handoff.
 
 ## User Instructions
 
