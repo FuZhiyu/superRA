@@ -2,7 +2,7 @@
 
 The findings document at the project root, created alongside `PLAN.md`. Mirrors the plan's task structure and gets updated after each step with key findings.
 
-**The canonical anatomy and inline-edit rules live in `superRA:handoff-doc`.** Load that skill for the five principles, ownership at a glance, and the full per-task section structure. This template is a minimal starter scaffold.
+**The canonical anatomy and inline-edit rules live in `superRA:handoff-doc`.** Load that skill for the six principles and the full per-task section structure. This template is a minimal starter scaffold.
 
 ## Starter Scaffold
 

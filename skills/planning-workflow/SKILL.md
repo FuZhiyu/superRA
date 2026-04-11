@@ -148,7 +148,7 @@ Every analysis plan should include sensitivity analysis tasks. At the planning s
 
 At each checkpoint: mark steps `[x]`, update upcoming steps if findings change the approach, edit discovery notes into the relevant task sections. Every update is an inline edit — replace outdated text, never append "Update:" blocks.
 
-**For the full discipline** — the five principles, ownership at a glance, inline-edit rule, stale-content checklist, figure embedding, and the PLAN.md / RESULTS_UPDATE.md anatomy — load `superRA:handoff-doc`. That skill is the single source of truth and is also loaded by implementer and reviewer subagents, so the rules stay consistent across roles. The role-specific review-loop protocols (how implementers annotate fixes, how reviewers verify and delete items) live in `agents/implementer.md` and `agents/reviewer.md`.
+**For the full discipline** — the six principles, inline-edit rule, stale-content checklist, figure embedding, and the PLAN.md / RESULTS_UPDATE.md anatomy — load `superRA:handoff-doc`. That skill is the single source of truth and is also loaded by implementer and reviewer subagents, so the rules stay consistent across roles. Role-by-role ownership and the review-loop annotation protocols (how implementers annotate fixes, how reviewers verify and delete items) live in `agents/implementer.md` and `agents/reviewer.md`.
 
 **Reviewers check:** Does the plan reflect what actually happened? Are upcoming steps still valid given what was found?
 

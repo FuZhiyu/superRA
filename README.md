@@ -63,7 +63,7 @@ superRA's 17 skills split into two categories:
 | Skill | What It Does |
 |-------|-------------|
 | **econ-data-analysis** | Iron Law enforcement. Describe-Analyze-Doc cycle. Pitfall checklists for merges, aggregations, filtering, variable construction. |
-| **handoff-doc** | Document-level discipline for PLAN.md / RESULTS_UPDATE.md and any task-block-structured handoff document. Five principles (latest-state-only, inline-edit, task-block structure, ownership by role, what-changed deltas), ownership matrix at a glance, stale-content checklist, figure embedding rule. Progressive-reveal references carry the full PLAN.md and RESULTS_UPDATE.md anatomy. Loaded by implementer and reviewer subagents; referenced by `planning-workflow`. |
+| **handoff-doc** | Document-level discipline for PLAN.md / RESULTS_UPDATE.md and any task-block-structured handoff document. Six principles (latest-state-only, inline-edit, task-block structure, ownership-by-role defined in agent files, what-changed deltas, doc-is-the-record), stale-content checklist, figure embedding rule. Progressive-reveal references carry the full PLAN.md and RESULTS_UPDATE.md anatomy. Loaded by implementer and reviewer subagents; referenced by `planning-workflow`. |
 | **verification-before-completion** | No completion claims without fresh verification evidence. Prevents "looks fine" from reaching merge. |
 
 ### PLAN Phase
