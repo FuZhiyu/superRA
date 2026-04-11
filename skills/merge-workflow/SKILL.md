@@ -7,7 +7,9 @@ description: Use after `integration-workflow` has produced a merge-ready branch 
 
 Workflow skill for the **MERGE** phase of the superRA workflow — the final step of finishing an analysis. Owns: pulling main into the analysis branch, post-merge verification (drift tests + integration review), the refactor-review loop on post-merge failures, the actual local merge or PR push, and worktree cleanup.
 
-This is **not** the ad-hoc merge skill. For random `git merge` / `git rebase` / `git cherry-pick` outside the analysis-finishing flow, the merge-guard hook directs callers at `superRA:semantic-merge` directly. merge-workflow internally invokes semantic-merge for tier classification + conflict resolution, then layers the post-merge verification + refactor-review loop on top.
+This is **not** the ad-hoc merge skill. For random `git merge` / `git rebase` / `git cherry-pick` outside the analysis-finishing flow, the merge-guard hook directs callers at `superRA:semantic-merge` directly.
+
+**Relationship to `semantic-merge`:** merge-workflow **delegates** the base-branch-into-analysis-branch update in Step 1 to `superRA:semantic-merge` via an explicit Skill invocation — you call it, wait for it to return, and then continue with Step 2. semantic-merge owns the tier classification and conflict resolution for that update; merge-workflow owns the outer choreography (post-merge drift tests + fresh integration review + refactor loop + the actual local merge or PR push + cleanup) that sits on either side of the semantic-merge call.
 
 **Core principle:** Update with main → drift tests + integration review on the merged state → re-enter refactor-review loop on either failure → execute the actual merge or PR → clean up.
 
@@ -53,13 +55,14 @@ digraph merge_workflow {
 
 ### Step 1: Update Analysis Branch with Main
 
-Bring the latest `main` (or whichever base branch the user is targeting) into the analysis branch via semantic-merge:
+Bring the latest `main` (or whichever base branch the user is targeting) into the analysis branch by explicitly delegating to `superRA:semantic-merge`:
 
 ```
-Invoke superRA:semantic-merge to merge <base-branch> into <analysis-branch>
+Invoke Skill `superRA:semantic-merge` with the task:
+  "merge <base-branch> into <analysis-branch>"
 ```
 
-`semantic-merge` classifies conflicts by research impact (Tier 1/2/3), escalates research-meaningful decisions to the user, and uses a two-commit integration structure (mechanical resolution + integration commit). Wait for it to return successfully before proceeding.
+This is a real Skill invocation, not a metaphor — load semantic-merge via the Skill tool and hand control to it. semantic-merge classifies conflicts by research impact (Tier 1/2/3), escalates research-meaningful decisions to the user, and uses a two-commit integration structure (mechanical resolution + integration commit). **Wait for it to return successfully** before proceeding to Step 2.
 
 Note: the merge-guard hook may fire here reminding you to use semantic-merge. That is expected — you just did. Continue.
 
