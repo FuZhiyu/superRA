@@ -72,6 +72,32 @@ See the reference templates for the full skeleton.
 
 Every edit replaces stale content in place. Never append, never strike through, never use "Update:" / "Revised:" / "Previously..." framing. If you find yourself writing a sentence that references a prior version of the doc, stop — that sentence belongs in the git commit message, not the doc.
 
+## User Decisions Log
+
+Any time the agent stops to consult the researcher — via `AskUserQuestion` or plain-text question — and the researcher gives an answer that shapes the analysis, the answer MUST be written into the handoff doc **before** the agent acts on it, and committed atomically with the work it unblocks. This is the "autonomous with human in the loop" principle in practice (see `CLAUDE.md` §Workflow principles #4): the decision is not resolved until it is in the record. A decision that only lives in chat will be lost at the next session boundary, and the next agent will re-open the same question — or worse, make a different call silently.
+
+**Where it lands:**
+
+- **Task-scoped decision** (affects one task's scope, methodology, or implementation) → appended as a blockquote inside that task block, directly under `**Review status:**`. Uses the same blockquote syntax as review notes, so it sits naturally beside the adjudication protocol defined in `agents/implementer.md` / `agents/reviewer.md`.
+- **Cross-task or project-level decision** (affects methodology across tasks, sample definition, output scope, the 4-option merge menu at execution-workflow Step 4, drift-test selection at integration-workflow Step 1) → a top-level `## Decisions` section in `PLAN.md` immediately after the header and before the first task block. Append new decisions to the bottom of that section; do not rewrite prior decisions.
+
+**Format (both locations):**
+
+```markdown
+> **User decision (2026-04-11):** Use CRSP value-weighted returns, not equal-weighted.
+> **Question asked:** Which market return definition for the benchmark?
+> **Rationale (if given):** Matches prior paper; easier reviewer comparison.
+```
+
+Three lines, blockquote, dated. The `Question asked` line is the agent's own restatement of what it asked — short enough to read at a glance, specific enough that a fresh agent sees why the decision was needed. The `Rationale` line is optional and appears only if the researcher gave one; do not invent rationale.
+
+**Not covered by this section:**
+
+- Adjudication of reviewer feedback inside the review-notes blockquote — that is the `→ orchestrator: ...` / `→ implemented: ...` protocol owned by `agents/implementer.md` and `agents/reviewer.md`. User decisions are a separate, upstream thing: the researcher answering a question the agent could not decide, not the orchestrator overriding a reviewer.
+- Ephemeral clarifications the agent could have resolved from the code ("which file holds X?") — those are not decisions, they do not belong in the log.
+
+If you are not sure whether an answer counts as a decision worth logging: if acting on it would change the code, data, or methodology in a way another agent could not reconstruct from the code alone, log it.
+
 ## What Counts as Stale (remove, don't keep)
 
 - Steps describing an approach that was abandoned after seeing the data — rewrite them to describe what was actually done.
