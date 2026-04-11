@@ -1,6 +1,6 @@
 # Final form: consolidation discipline for Stage 2 `RESULTS.md`
 
-Load this reference when you are either **maturing `RESULTS.md` at `integration-workflow` Step 3** or **reviewing a matured `RESULTS.md`** as an integration reviewer. This is the gate that the superRA IMPLEMENT phase deliberately defers so it can stay fast.
+Load this reference when you are either the **doc-writer subagent maturing `RESULTS.md` at `integration-workflow` Step 3** or the **doc-reviewer subagent reviewing that matured file**. This is the gate that the superRA IMPLEMENT phase deliberately defers so it can stay fast.
 
 The Stage 1 dev-log form of `RESULTS.md` is task-indexed, terse, agent-facing, reviewer caveats inline. The Stage 2 permanent form is reader-facing, fact-checked, and co-located with the analysis code. Consolidation **rewrites the file in place** before relocating it — it does not create a new file.
 
@@ -71,7 +71,7 @@ A "Limitations" section that lists factual caveats (unresolved reviewer notes, d
 
 ## Severity for integration review
 
-When the integration reviewer applies this checklist, classify issues:
+When the doc-reviewer applies this checklist, classify issues:
 
 - **Critical** — factual errors, unsupported claims, numbers that don't match sources. Blocks APPROVED.
 - **Major** — speculation, interpretation, subjective language, prohibited sections. Blocks APPROVED.

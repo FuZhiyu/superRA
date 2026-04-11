@@ -1,6 +1,6 @@
 ---
 name: merge-workflow
-description: Use after `integration-workflow` has produced a merge-ready branch (drift tests committed, refactor approved, work-journal report written, dev docs disposed) and you need to update the analysis branch with main, verify results survived the update, and land the work via local merge or PR; when an analysis branch is behind main and about to be finished; when you need a post-merge safety check (drift tests + integration review against the merged state); when cleaning up a worktree after merge completion. Triggers include "merge this back", "open the PR", "sync with main and merge", "finish this analysis", or the transition from `integration-workflow` completing successfully. Sits at the INTEGRATE phase, step 2 of 2 — the final phase of the superRA workflow.
+description: Use after `integration-workflow` has produced a merge-ready branch (drift tests committed, refactor approved, all docs finalized via the doc-writer + doc-reviewer pair, PLAN.md disposed) and you need to update the analysis branch with main, verify results survived the update, and land the work via local merge or PR; when an analysis branch is behind main and about to be finished; when you need a post-merge safety check (drift tests + integration review against the merged state); when cleaning up a worktree after merge completion. Triggers include "merge this back", "open the PR", "sync with main and merge", "finish this analysis", or the transition from `integration-workflow` completing successfully. Sits at the INTEGRATE phase, step 2 of 2 — the final phase of the superRA workflow.
 ---
 
 # Merge Workflow
@@ -21,8 +21,8 @@ merge-workflow is invoked by `superRA:execution-workflow` Step 4 (Option 1 or 2)
 
 - Drift tests have been created, reviewed, and committed (integration-workflow Stage 1)
 - Code has been refactored for codebase fit and integration-reviewer-approved (integration-workflow Stage 2)
-- A work-journal report exists (integration-workflow Step 3)
-- `PLAN.md` and `RESULTS.md` have been disposed of (integration-workflow Step 4)
+- `RESULTS.md` has been matured into its permanent form at `RESULTS_DIR` and project-level docs (CLAUDE.md / AGENTS.md / README.md) have been audited, both via the doc-writer + doc-reviewer pair (integration-workflow Step 3 sub-parts A + B)
+- `PLAN.md` has been disposed of (integration-workflow Step 3 sub-part C)
 - The user has chosen Option 1 (merge locally) or Option 2 (push + PR) — execution-workflow Step 4 captured this choice
 
 If any of those preconditions are missing, stop and consult integration-workflow / execution-workflow rather than proceeding.
