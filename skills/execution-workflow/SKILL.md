@@ -125,7 +125,7 @@ If the user declines, proceed — they've given explicit consent to work on the 
 
 1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "implementer")` — see template below. Direct mode: invoke `superRA:implementer-protocol`, then implement yourself.
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
-3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS_UPDATE.md. Dispatch the **data integrity reviewer**. If REVISE: adjudicate the feedback (see Handling Reviewer Feedback below), clear the review notes from PLAN.md, re-dispatch the implementer with the accepted issues, then re-dispatch the data integrity reviewer. Iterate until APPROVE. Do not proceed to implementation review until data integrity is approved.
+3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS_UPDATE.md. Dispatch the **data integrity reviewer**. If REVISE: adjudicate the feedback in place inside the PLAN.md review-notes blockquote — append `→ orchestrator: rejected <reason>` or `→ orchestrator: <second opinion requested> <reason>` annotations to items you are rejecting or flagging, rewrite task steps in place for items you are accepting, commit, then re-dispatch the implementer. Leave the blockquote itself intact — the implementer will annotate items with `→ implemented: ...` markers on their pass, and the reviewer will delete confirmed-fixed items on re-review. See the "Handling Reviewer Feedback" section below and `agents/implementer.md` / `agents/reviewer.md` for the full annotation mechanics. Iterate until APPROVE. Do not proceed to implementation review until data integrity is approved.
 4. **Once data integrity APPROVE:** dispatch the **implementation reviewer**. Same REVISE loop with adjudication.
 5. **Once implementation reviewer APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
 
@@ -181,10 +181,14 @@ When a reviewer returns REVISE:
    - **Wrong** (the reviewer misread the code, missed context, or is suggesting a change that conflicts with the methodology you established with the human partner) → push back on the reviewer, do not forward to the implementer
    - **Methodology disagreement** (the reviewer is second-guessing a methodology decision rather than checking implementation) → reject. The reviewer's job is correctness against the plan, not redesigning the plan. Note in PLAN.md that the issue was raised and rejected, with reasoning.
 
-3. **If you reject reviewer feedback, document why.** Add a one-line note under the task heading in PLAN.md before marking APPROVED:
+3. **If you reject reviewer feedback, document why in place on the review item.** Append an `→ orchestrator: rejected <reason>` annotation directly under the item in the review-notes blockquote:
    ```markdown
-   **Reviewer feedback adjudication:** Rejected "use log returns" — methodology specifies arithmetic returns per Section 2 of plan. Reviewer lacked methodology context.
+   > **Review notes:**
+   > 1. [MAJOR] Use log returns, not arithmetic. (`Code/03.py:42`)
+   >    → orchestrator: rejected — methodology specifies arithmetic returns per plan header Section 2. Reviewer lacked methodology context.
    ```
+   For items you are flagging for a second opinion, use `→ orchestrator: <second opinion requested> <reason>` instead. The implementer will see these annotations and leave those items alone; the reviewer will see them on re-review and either accept the override (by deleting the item) or escalate.
+
    This protects you in three ways: (a) the human partner can audit the override, (b) future sessions see why the reviewer's note was ignored, (c) it forces you to articulate the reasoning rather than wave it away.
 
 4. **If you push back on the reviewer (rather than override them), re-dispatch the same reviewer with counter-evidence.** Cite the file:line that proves the reviewer wrong, the methodology section that overrides their suggestion, or the human partner conversation that established the convention. The reviewer should then either retract or escalate.
@@ -279,8 +283,7 @@ Implementer and reviewer agents own their commits and document updates — see `
 These are the things the orchestrator does that no subagent does:
 
 - **Task sequencing and dispatch.** Read PLAN.md, decide what to dispatch next.
-- **Adjudicate reviewer feedback** before forwarding to the implementer (see Handling Reviewer Feedback above).
-- **Clear review notes** from the task block in PLAN.md before re-dispatching the implementer — the implementer should receive feedback through the dispatch prompt, not by reading stale review notes from the file. Commit the cleared PLAN.md.
+- **Adjudicate reviewer feedback in place** in the PLAN.md review-notes blockquote before re-dispatching the implementer (see Handling Reviewer Feedback above). Append `→ orchestrator: rejected <reason>` annotations to items you are rejecting, `→ orchestrator: <second opinion requested> <reason>` to items you are flagging for the reviewer, and rewrite task steps in place for items you are accepting. **Do not clear the blockquote.** The implementer appends `→ implemented: ...` annotations on their pass; the reviewer deletes confirmed-fixed items on re-review. See `agents/implementer.md` §"How You Fix Review Items on a REVISE Round" and `agents/reviewer.md` §"How You Write a Review" for the full annotation mechanics. Commit the annotated PLAN.md.
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text, don't annotate it. Commit.
 - **Escalate to the human partner** when stuck (BLOCKED, methodology disagreement, CRITICAL issue you want to override).
 
