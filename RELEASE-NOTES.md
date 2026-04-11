@@ -1,5 +1,43 @@
 # Superpowers Release Notes
 
+## superRA workflow/utility restructure (2026-04-10)
+
+Major structural refactor of the superRA skill namespace. Skills now split into two clear categories: **workflow skills** (dispatcher-facing, suffix `-workflow`) and **utility skills** (agent-facing, standalone-invokable). Eliminates invocation collisions, removes content duplication between skills and their references files, and makes domain knowledge (drift test standards, codebase integration checklists, merge quality rules) reusable outside the workflows that originally carried them.
+
+Skill count: **18 → 16**.
+
+**New workflow skills (4):**
+- `planning-workflow` — PLAN phase. Phase 1 data inventory hard gate + Phase 2 plan creation. Replaces `analysis-planning` + `data-exploration`.
+- `execution-workflow` — IMPLEMENT + VALIDATE phases. Per-task dispatch with two-stage review, orchestrator-discipline filter on reviewer feedback, end-of-workflow reproducibility verification, and the 4-option completion menu. Replaces `executing-analysis`, absorbs reproducibility checks and option menu from `finishing-analysis`.
+- `integration-workflow` — INTEGRATE step 1 of 2. Drift test creation, refactor-review loop, work-journal report generation, and PLAN.md / RESULTS_UPDATE.md disposition. Replaces `pre-merge-gate` workflow part and absorbs Steps 4b/4c of `finishing-analysis`.
+- `merge-workflow` — INTEGRATE step 2 of 2. Main update via semantic-merge, **post-merge verification running BOTH drift tests AND a fresh integration review**, refactor-review loop on either failure, local merge or PR push, worktree cleanup. Replaces `finishing-analysis` Steps 4d + 5.
+
+**New utility skill:**
+- `refactor-and-integrate` — Standalone-invokable utility bundling the three integration-phase domain references (`drift-test-quality.md`, `codebase-integration.md`, `merge-quality.md`). Loaded by dispatched `implementer`/`reviewer` agents for drift test creation, drift test review, refactoring, integration review, merge proposing, and merge review. Reference files moved from `pre-merge-gate/references/` and `semantic-merge/references/`.
+
+**Deleted skills (7):**
+- `analysis-planning` → renamed to `planning-workflow`
+- `data-exploration` → folded into `planning-workflow` as Phase 1 with the existing `<HARD-GATE>` enforcement
+- `executing-analysis` → renamed to `execution-workflow`
+- `pre-merge-gate` → split into `integration-workflow` (workflow) + `refactor-and-integrate` (references)
+- `finishing-analysis` → split three ways: reproducibility + option menu into `execution-workflow`, drift tests + refactor + report + dev doc handling into `integration-workflow`, main update + merge/PR + cleanup into `merge-workflow`
+- `requesting-analysis-review` → redundant with `execution-workflow`'s built-in two-stage review plus ad-hoc `Agent(reviewer)` invocation
+- `receiving-code-review` → general SWE discipline that doesn't belong in a research plugin. The useful core (verify before forwarding, push back with reasoning, override with documented rationale) is now codified in `execution-workflow`'s **Handling Reviewer Feedback (Orchestrator Discipline)** section, applied to subagent reviewers where it is load-bearing.
+
+**Agent definition consolidation:**
+- `agents/implementer.md` and `agents/reviewer.md` now own the report format, default handoff, stage-specific handoff matrix, document-update discipline (scope rule + inline-edit rule), and conditional skill auto-load. Dispatch templates pass only `Stage:`, task pointer, `Skills:`, domain reference basename, and git SHA range — no more duplicated handoff instructions in every dispatch prompt.
+
+**New: pointer-based dispatch convention:**
+- Dispatch templates name a parent skill in the `Skills:` line and the domain reference by basename. The agent loads the parent skill via the Skill tool, reads the runtime-announced base directory, and resolves `<base_dir>/references/<basename>`. No more inline absolute paths or repo-relative paths in dispatch prompts.
+
+**New: orchestrator discipline for reviewer feedback:**
+- `execution-workflow` adds a "Handling Reviewer Feedback" section that codifies the SWE filter for dispatched reviewers. The orchestrator (main agent) reads each cited issue, classifies as real bug / pedantic / wrong / methodology disagreement, can override with documented reasoning, must escalate CRITICAL to the human partner, and cannot silently ignore feedback. The same discipline is referenced by `integration-workflow` and `merge-workflow`.
+
+**Breaking changes for users:**
+- Invocations of `superRA:analysis-planning`, `superRA:executing-analysis`, `superRA:data-exploration`, `superRA:pre-merge-gate`, `superRA:finishing-analysis`, `superRA:requesting-analysis-review`, `superRA:receiving-code-review` will no longer resolve. Update to the new workflow skill names above.
+- PLAN.md templates at `skills/analysis-planning/references/` moved to `skills/planning-workflow/references/`.
+- Agent dispatch prompts using the old-style inline handoff instructions will still work (the agents ignore redundant fields), but the pointer-based convention is recommended for new code.
+
 ## v5.0.7 (2026-03-31)
 
 ### GitHub Copilot CLI Support
