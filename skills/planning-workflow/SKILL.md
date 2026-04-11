@@ -144,13 +144,11 @@ Every analysis plan should include sensitivity analysis tasks. At the planning s
 
 ## Living Plan Document
 
-**The plan is NOT a static spec.** Research reveals surprises. At each checkpoint:
+**The plan is NOT a static spec.** Research reveals surprises; the plan evolves in place.
 
-1. Mark completed steps `- [x]` with brief result notes
-2. **Update upcoming steps** if findings change the approach
-3. Edit discovery notes into the relevant task sections
-4. The plan at any point should be a complete handoff document: what's done, what changed, what's next
-5. **Every update is an inline edit** — replace outdated text, don't append "Update:" blocks. The plan should always read as a single coherent document reflecting current understanding.
+At each checkpoint: mark steps `[x]`, update upcoming steps if findings change the approach, edit discovery notes into the relevant task sections. Every update is an inline edit — replace outdated text, never append "Update:" blocks.
+
+**For the full discipline** — the five principles, ownership at a glance, inline-edit rule, stale-content checklist, figure embedding, and the PLAN.md / RESULTS_UPDATE.md anatomy — load `superRA:handoff-doc`. That skill is the single source of truth and is also loaded by implementer and reviewer subagents, so the rules stay consistent across roles. The role-specific review-loop protocols (how implementers annotate fixes, how reviewers verify and delete items) live in `agents/implementer.md` and `agents/reviewer.md`.
 
 **Reviewers check:** Does the plan reflect what actually happened? Are upcoming steps still valid given what was found?
 

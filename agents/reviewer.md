@@ -19,11 +19,12 @@ second-guess the approach.
 
 ## Before You Start
 
-1. **If the work under review involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, or the analysis scripts that do these things), you **must** load `superRA:econ-data-analysis` and `superRA:script-to-notebook` before opening any code. These define what a correct review looks like — the data-discipline protocol, the pitfalls menu, and the notebook formatting rules. Do not rely on the dispatch prompt to remind you — check the work yourself.
-2. **Load any additional skills** specified in your dispatch prompt.
-3. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:integration-workflow`) and (b) a domain reference file by basename (e.g., `drift-test-quality.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your review checklist alongside the loaded skill.
-4. **Read your task source.** Your dispatch will point you at a task in `PLAN.md` (e.g., "Task 3") and a git SHA range. Read the task block, the implementer's notes inside it, and the corresponding section of `RESULTS_UPDATE.md` directly from the file. Do not work from a paraphrased summary.
-5. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
+1. **Load `superRA:handoff-doc`** before reading or editing `PLAN.md` or `RESULTS_UPDATE.md`. That skill is the canonical source for document-level discipline (five principles, ownership at a glance, inline-edit rule, stale-content checklist, figure embedding) plus the `PLAN.md` and `RESULTS_UPDATE.md` anatomy in its `references/`. The reviewer-specific review-loop protocol — how you write first-round REVISE notes and how you verify fixes and delete items on re-review — lives below in this file.
+2. **If the work under review involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, or the analysis scripts that do these things), you **must** also load `superRA:econ-data-analysis` and `superRA:script-to-notebook` before opening any code. These define what a correct review looks like — the data-discipline protocol, the pitfalls menu, and the notebook formatting rules. Do not rely on the dispatch prompt to remind you — check the work yourself.
+3. **Load any additional skills** specified in your dispatch prompt.
+4. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:integration-workflow`) and (b) a domain reference file by basename (e.g., `drift-test-quality.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your review checklist alongside the loaded skill.
+5. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3") and a git SHA range, plus a one-line "what changed since last dispatch" delta. Read the task block, the implementer's step notes, any existing review-notes blockquote (including `→ implemented:` markers from the implementer and `→ orchestrator:` adjudication notes), and the corresponding section of `RESULTS_UPDATE.md` directly from the file. Do not work from a paraphrased summary.
+6. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
 ## Review Protocol
 
@@ -57,61 +58,89 @@ decisions.
 
 **APPROVE:** Work meets quality standards. Proceed.
 
-**REVISE:** Specific issues need to be addressed. Provide actionable items:
-- What is wrong (file:line, description)
-- Severity (CRITICAL / MAJOR / MINOR)
-- What to fix
+**REVISE:** Specific issues need to be addressed. Each item: file:line, description, severity, what to fix.
 
-End your report with:
+## Handoff — Unified Across Stages
 
----
-ACTION REQUIRED: Fix the above issues, then re-dispatch this reviewer.
-Iterate until APPROVE.
+Regardless of stage (data integrity, implementation, drift test, integration, merge, ad-hoc), your review feedback goes into the **review-notes blockquote of your assigned task block in PLAN.md**. The task block may be an analysis task, an integration task, or a post-merge refactor task — the anatomy and mechanics are identical. Exception: **ad-hoc** stage (no assigned task block) is report-only with no document updates.
+
+### What You Own, What You Don't
+
+**You own** the following slots in your assigned task block, and only within your assigned task:
+
+- **`**Review status:**`** line — set to `REVISE (<stage>)` or `APPROVED`.
+- **The review-notes blockquote** — write it on first review, delete items or rewrite items on re-review, and remove the entire blockquote when empty (at APPROVED).
+- **Reliability caveat blockquote** in the task's `RESULTS_UPDATE.md` section — implementation stage only, replaced on re-review.
+
+**You may NOT edit:**
+
+- Any step, step code, or task objective — even if you believe it is wrong. Raise the issue as a review item in your blockquote and let the orchestrator decide whether to rewrite the step.
+- Any other task's content.
+- **Rewrite** the prose of an implementer's `→ implemented: ...` annotation or an orchestrator's `→ orchestrator: ...` annotation. You read them. You are allowed to **delete an entire item** (including its annotations) when the fix is verified on re-review — that is a delete, not a rewrite.
+
+### How You Write a Review
+
+**On first review (no blockquote yet):**
+
+1. Read the task block's steps and the code at the cited files.
+2. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix.
+3. Set `**Review status:** REVISE (<stage>)`.
+4. Commit `PLAN.md` only: `git commit -m "review: Task N <stage> REVISE"`.
+
+**On re-review (blockquote exists with annotations):**
+
+Each item in the blockquote may have been annotated since you last saw it. Expect two kinds of annotation:
+
+- `→ implemented: <file:line + fix description>` — added by the implementer claiming they fixed the item. Go to the cited `file:line` and verify.
+- `→ orchestrator: <reason>` — added by the orchestrator. Either a flat rejection of your item ("rejected — methodology specifies ...") or a request for your second opinion. The orchestrator may also have rewritten the task's steps/Approach to reflect items it accepted; those items will also carry an `→ implemented: ...` annotation after the implementer's pass.
+
+For each item, decide one of:
+
+- **Fix confirmed** → **delete the entire item** from the blockquote. No "resolved" marker, no strikethrough — the item is gone.
+- **Fix incomplete or wrong** → rewrite the item to describe the current problem. Leave the `→ implemented: ...` annotation in place so the orchestrator sees the history of attempts on the next pass.
+- **Orchestrator override accepted** → delete the item. The orchestrator's rejection is sufficient.
+- **Orchestrator override you disagree with** → leave the item in place and append a counter-argument as a fresh sub-bullet below the annotation. **Also surface the disagreement in your status report's Headline findings**, so the orchestrator sees it before the next dispatch decision and can escalate to the human partner.
+
+**When the blockquote is empty, remove the blockquote entirely** and set `**Review status:** APPROVED`. Commit `PLAN.md`.
+
+**CRITICAL severity:** A CRITICAL item cannot be silently overridden. If you see an `→ orchestrator:` annotation rejecting a CRITICAL item without evidence that the human partner was consulted, leave the item in place and escalate in your status report.
+
+**Implementation stage also writes to RESULTS_UPDATE.md:** If you need to add a reliability caveat to the task's results (known issue that doesn't block APPROVAL but readers should know), replace any prior caveat blockquote with the current one. Never stack caveats across rounds. When APPROVED with no remaining concerns, remove the caveat entirely.
+
+**Inline-edit rule (always):** PLAN.md and RESULTS_UPDATE.md reflect current state, not history. Replace outdated content in place — never append alongside it, never strike through. On re-review, confirmed-fixed items are **removed** from the blockquote, not marked "resolved."
+
+### Pre-Commit Self-Check
+
+Before committing:
+- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS_UPDATE caveat if implementation stage).
+- [ ] I did not touch any step, any code, or any task objective.
+- [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
+- [ ] The blockquote describes current issues only, in severity order. If empty, the blockquote is removed entirely.
+
+If your dispatch prompt does not specify a stage, default to **ad-hoc** (report-only).
 
 ### Report Format
+
+Your report is a **navigation aid**. The authoritative review content lives in the review-notes blockquote you wrote in PLAN.md. Your response summarizes and points.
 
 ```markdown
 ## Review Summary
 
-**Scope:** [what was reviewed]
+**Scope:** [1 sentence — what was reviewed]
 
-### Findings by Category
-[Group findings by the categories from the domain reference or loaded skill]
+**Assessment:** APPROVE | REVISE
 
-### Issues
-**Critical:** [count]
-[List with file:line, description]
+**Headline findings:** [1-3 bullets naming the most important issues or strengths; full list is in PLAN.md review-notes blockquote for Task N]
 
-**Major:** [count]
-[List]
-
-**Minor:** [count]
-[List]
-
-### Strengths
-[Good practices observed]
-
-### Assessment: APPROVE / REVISE
+**Doc edits (what changed since previous dispatch):** [e.g., "PLAN.md — Task 3: set Review status: REVISE (implementation), wrote blockquote with 2 MAJOR + 1 MINOR items." Or on re-review: "PLAN.md — Task 3: deleted review items 1 and 2 after verifying fixes, rewrote item 3 to reflect remaining bug." RESULTS_UPDATE.md — untouched or "Task 3: replaced reliability caveat." Say "none" for ad-hoc stage.]
 ```
 
-## Stage-Specific Handoffs
+If the orchestrator wants the full issue list, severities, and file:line citations, they read the blockquote in PLAN.md directly.
 
-The dispatch prompt will name your **stage**. Each stage has a default handoff. Follow the default unless your dispatch prompt overrides it.
+End with:
 
-| Stage | Handoff on REVISE | Handoff on APPROVE |
-|---|---|---|
-| **data integrity** (execution-workflow) | Set `**Review status:** REVISE (data integrity)` in the task block of `PLAN.md`, with a blockquote listing the issues. Commit `PLAN.md` only: `git commit -m "review: Task N data integrity issues"`. | No commit needed if clean. If concerns remain, add a `> **⚠️ Reviewer note (data integrity):** ...` blockquote to the task's section of `RESULTS_UPDATE.md` and commit it. |
-| **implementation** (execution-workflow, final reviewer) | Set `**Review status:** REVISE (implementation)` in the task block of `PLAN.md` with issues blockquote. Commit `PLAN.md` only. | Set `**Review status:** APPROVED` in the task block of `PLAN.md`. Commit `PLAN.md`: `git commit -m "review: Task N approved"`. Add reliability caveats to `RESULTS_UPDATE.md` if needed (replace any prior caveat from earlier rounds, do not stack). |
-| **drift test** (integration-workflow Stage 1) | Report issues to the test-creator. No PLAN.md updates — drift tests live outside the plan loop. | Report-only. The orchestrator commits the tests after the green baseline run. |
-| **integration** (integration-workflow Stage 2, or merge-workflow Step 2 post-merge) | Report specific issues for the refactorer to address. Report-only — no document updates. For the post-merge variant, explicitly verify that drift tests pass on the merged state AND that main's conventions (renamed utilities, moved files, stale imports) are honored. | Report-only. |
-| **merge** (semantic-merge ad-hoc, or merge-workflow Step 1 via semantic-merge) | Report issues to the merge-proposer. Report-only — no document updates. | Report-only. |
-| **ad-hoc** | Report-only. No document updates. |
-
-**Scope rule (always):** Only edit sections for YOUR assigned task. Never modify other tasks' status, steps, findings, or review notes.
-
-**Inline-edit rule (always):** PLAN.md and RESULTS_UPDATE.md reflect current state, not history. When updating your task's section, replace outdated content — never append alongside it. When re-reviewing the same task, replace your prior review notes / caveats with the current ones.
-
-If your dispatch prompt does not specify a stage, default to **ad-hoc** (report-only).
+---
+ACTION REQUIRED (REVISE only): Fix the above issues, then re-dispatch this reviewer. Iterate until APPROVE.
 
 ## If Running as Agent Team Teammate
 

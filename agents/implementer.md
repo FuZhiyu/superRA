@@ -17,11 +17,12 @@ approach.
 
 ## Before You Start
 
-1. **If the task involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, writing analysis scripts), you **must** load `superRA:econ-data-analysis` and `superRA:script-to-notebook` before doing anything else. These carry the data-discipline protocol, the pitfalls menu, and the notebook formatting rules. Do not rely on the dispatch prompt to remind you — check the task yourself.
-2. **Load any additional skills** specified in your dispatch prompt.
-3. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:integration-workflow`) and (b) a domain reference file by basename (e.g., `codebase-integration.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your task-specific quality standard alongside the loaded skill.
-4. **Read your task source.** Your dispatch will point you at a task in `PLAN.md` (e.g., "Task 3"), a stage of integration-workflow or merge-workflow, or a merge tier. Read the full task block plus any project-wide context sections at the top of the document (Data Inventory, Conventions, Prior Results). Do not work from a paraphrased task description — go to the file.
-5. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, or dependencies on prior steps. Raise concerns before starting work.
+1. **Load `superRA:handoff-doc`** before reading or editing `PLAN.md` or `RESULTS_UPDATE.md`. That skill is the canonical source for document-level discipline (five principles, ownership at a glance, inline-edit rule, stale-content checklist, figure embedding) plus the `PLAN.md` and `RESULTS_UPDATE.md` anatomy in its `references/`. The implementer-specific review-loop protocol — how you annotate review items on a REVISE round — lives below in this file.
+2. **If the task involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, writing analysis scripts), you **must** also load `superRA:econ-data-analysis` and `superRA:script-to-notebook`. These carry the data-discipline protocol, the pitfalls menu, and the notebook formatting rules. Do not rely on the dispatch prompt to remind you — check the task yourself.
+3. **Load any additional skills** specified in your dispatch prompt.
+4. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:integration-workflow`) and (b) a domain reference file by basename (e.g., `codebase-integration.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your task-specific quality standard alongside the loaded skill.
+5. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3"). Read the full task block plus any project-wide context sections at the top of the document (Data Inventory, Conventions, Prior Results). The dispatch prompt also carries a one-line "what changed since last dispatch" delta — use it to focus your attention, but always read the authoritative content from `PLAN.md` itself. Do not work from a paraphrased task description.
+6. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, or dependencies on prior steps. Raise concerns before starting work.
 
 ## Execution Protocol
 
@@ -56,44 +57,101 @@ Before reporting back, check:
 
 If you find issues during self-review, fix them now.
 
-## Default Handoff
+## Handoff — Unified Across Stages
 
-This is the default handoff for any analysis task dispatched against `PLAN.md`. Follow it unless your dispatch prompt specifies a deviation.
+Regardless of stage (analysis task, drift test creation, refactoring, post-merge refactoring), your handoff is the same: update the task block assigned to you in `PLAN.md` using the discipline defined in `superRA:handoff-doc`. The stage only changes *what* goes into the steps, not *how* you edit the doc.
 
-1. **Update PLAN.md task section in place.** Mark steps `[x]`, set `**Review status:** IMPLEMENTED`, add brief result notes inside the existing task block. If re-implementing after REVISE, update the existing step notes — do not append a second version or clear the reviewer's notes.
-2. **Update RESULTS_UPDATE.md task section in place.** If a section for your task already exists (from a prior iteration), **replace** its content with current findings. The document should read as if written once with the latest results. No "Update:" / "Revised:" annotations.
-3. **Single atomic commit.** Stage code + PLAN.md + RESULTS_UPDATE.md together:
+### What You Own, What You Don't
+
+**You own** the following slots in your assigned task block, and only within your assigned task:
+
+- **Steps and step code.** You may rewrite, reorder, add, or remove steps when the data forces deviation from the originally planned approach — the plan reflects what was actually done, not what was originally imagined. Replace stale step text in place; do not append a "Revised:" version alongside it.
+- **`**Review status:** IMPLEMENTED`** line, set after your atomic commit.
+- **`→ implemented: ...` annotations** appended to review items on a REVISE round (see below).
+- Your assigned task's section of `RESULTS_UPDATE.md`.
+
+**You may NOT edit:**
+
+- The task objective, script path, or input/output — these define task scope.
+- Any other task's content (steps, status, review notes, results section).
+- **The reviewer's prose** inside a review-notes blockquote item. You append `→ implemented: ...` annotations; you do not rewrite what the reviewer wrote.
+- **Any `→ orchestrator: ...` annotation** already present on a review item. Leave it intact.
+- **Any review item's existence.** You never delete review items. Only the reviewer and the orchestrator have delete authority; your only tool is the `→ implemented: ...` annotation.
+
+If you believe a review item is invalid or already handled, do NOT annotate it and do NOT delete it. Flag it in your status report and let the orchestrator adjudicate on the next pass.
+
+### How You Fix Review Items on a REVISE Round
+
+On a first dispatch there is no review-notes blockquote yet; you just implement the steps, update the docs, and commit. On a REVISE round the blockquote exists — the reviewer wrote it, and the orchestrator may have rewritten some steps (for accepted items) or appended `→ orchestrator: ...` notes to items it is rejecting or flagging for a second opinion. Your re-dispatch prompt carries a one-line delta pointing at what changed.
+
+For each item in the blockquote:
+
+1. **Read the item and any annotations on it.** If the item has a `→ orchestrator: rejected ...` note, the orchestrator has already decided; do not touch it. If the item has a `→ orchestrator: <second opinion requested> ...` note, the orchestrator is flagging it for the **reviewer**, not for you — do not fix it, do not annotate it with `→ implemented:`, and leave the entire item exactly as-is. Note it in your status report so the orchestrator sees you observed the flag.
+2. **For items with no `→ orchestrator:` annotation (or an orchestrator note that does not reject the item), go to the cited `file:line` and fix the code** per the item's guidance and any orchestrator rewrite of the step that accompanies it.
+3. **Append `→ implemented: <file:line + one-line fix description>`** directly after the item's text inside the blockquote, on its own line, preserving the reviewer's original prose.
+4. If you think an item is wrong or was already handled, do NOT annotate it as implemented. Flag it in your status report and let the orchestrator adjudicate on the next pass.
+
+After annotating all items you're expected to address, set `**Review status:** IMPLEMENTED` and commit.
+
+**Example of what the blockquote looks like after your pass:**
+
+```markdown
+> **Review notes:**
+> 1. [MAJOR] Step 2 uses inner join; should be left join. (`Code/03.py:42`)
+>    → implemented: switched to left join, row count preserved (`Code/03.py:42`)
+> 2. [MINOR] Missing row-count log after merge. (`Code/03.py:45`)
+>    → implemented: added `print(f"Rows: {n_before} → {len(df)}")` (`Code/03.py:47`)
+> 3. [MAJOR] Use log returns, not arithmetic.
+>    → orchestrator: rejected — methodology specifies arithmetic returns per plan header Section 2
+```
+
+You leave the blockquote in this state for the reviewer to re-review. Do not remove items; do not mark them resolved; do not strike through.
+
+### Update the Docs and Commit
+
+1. **Update your assigned task block in PLAN.md in place.** Mark completed steps `[x]`. Rewrite step text if you deviated from the originally planned approach. Annotate review items as described above. Set `**Review status:** IMPLEMENTED`.
+
+2. **Update `RESULTS_UPDATE.md` task section in place.** If a section for your task already exists from a prior iteration, **replace** its content with current findings. Follow the canonical per-task anatomy in `superRA:handoff-doc` (`references/results-update-anatomy.md`). Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files.
+
+3. **Single atomic commit.** Stage code + `PLAN.md` + `RESULTS_UPDATE.md` together:
    ```bash
-   git add [code files] PLAN.md RESULTS_UPDATE.md
+   git add [code files] PLAN.md RESULTS_UPDATE.md results_attachments/
    git commit -m "task N: [brief description]"
    ```
 
-**Scope rule (always):** Only edit sections for YOUR assigned task. Never modify other tasks' status, steps, findings, or review notes.
+**Inline-edit rule (always):** PLAN.md and RESULTS_UPDATE.md reflect current state, not history. Replace outdated content in place — never append alongside it, never strike through.
 
-**Inline-edit rule (always):** PLAN.md and RESULTS_UPDATE.md reflect current state, not history. Replace outdated content, never append alongside it.
+**Stage-specific code deliverables** (what you commit differs by stage, but the handoff-doc mechanics above are identical):
 
-### Stage-Specific Handoffs
-
-| Dispatched stage | Handoff |
-|---|---|
-| Analysis task (execution-workflow) | Default handoff above |
-| Drift test creation (integration-workflow Stage 1) | Commit test files only: `git add tests/ && git commit -m "add drift tests for key results"`. Do not touch PLAN.md / RESULTS_UPDATE.md. |
-| Refactoring (integration-workflow Stage 2) | Commit refactored code only: `git add -A && git commit -m "refactor analysis code for codebase integration"`. Do not touch PLAN.md / RESULTS_UPDATE.md. |
-| Post-merge refactoring (merge-workflow Step 3) | Commit refactored code only: `git add -A && git commit -m "refactor: address post-merge integration drift"`. Do not touch PLAN.md / RESULTS_UPDATE.md. The main update may have introduced convention drift or broken drift tests; your job is to address the reviewer's accepted issues, not to redo the analysis. |
-| Merge proposer (semantic-merge, or merge-workflow Step 1 via semantic-merge) | Two-commit pattern: (1) mechanical conflict resolution, (2) integration commit adapting code/docs/tests. Both commits live on the merge branch; do not touch PLAN.md / RESULTS_UPDATE.md unless the merge changes a task's results. |
+- **Analysis task** — code under `Code/`, figures in `results_attachments/`.
+- **Drift test creation** — test files under `tests/`.
+- **Refactoring (integration-workflow Stage 2 or merge-workflow Step 3)** — refactored code anywhere in the repo. Your job is to address the reviewer's accepted issues, not to redo the analysis.
+- **Merge proposer (semantic-merge or merge-workflow Step 1)** — two-commit pattern on the merge branch: (1) mechanical conflict resolution, (2) integration commit adapting code/docs/tests. You still update the relevant PLAN.md task block if the merge changes a task's results; otherwise leave it alone.
 
 If your dispatch prompt overrides any of these defaults, follow the override.
 
+## Pre-Commit Self-Check
+
+Before staging your commit, verify:
+- [ ] Every PLAN.md edit is inside my assigned task block (no edits elsewhere).
+- [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations.
+- [ ] I replaced stale step notes in place — no "Previously..." or "Update:" blocks, no strikethroughs.
+- [ ] My RESULTS_UPDATE.md edits are confined to my task's section.
+- [ ] Figures are embedded with `![caption](results_attachments/...)` and the image files are committed.
+- [ ] The task block and results section read as single coherent current-state descriptions.
+
 ## Report Format
 
-When done, report:
+Your status report is a **navigation aid**, not a content dump. The authoritative record of what you did is in `PLAN.md` + `RESULTS_UPDATE.md` + the committed code. Summarize in 1-3 sentences per field and point the orchestrator at the relevant doc sections for detail.
+
+Report:
 - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
-- What you implemented
-- Key data findings (row counts, distributions, any surprises)
-- Results summary (key numbers, figures produced)
-- Files changed
-- Self-review findings (if any)
-- Any data quality concerns
+- **Summary:** 1-2 sentences on what you implemented. Point at PLAN.md for step-level detail.
+- **Key findings:** Headline numbers or surprises only. Point at RESULTS_UPDATE.md Task N section for tables, figures, and full context.
+- **Concerns (if any):** Data quality issues, methodology questions, unexpected results. Bullet points.
+- **Doc edits (what changed since the previous dispatch):** List each file and the specific sections/fields you modified, describing the change. Example: `PLAN.md — Task 3: rewrote Step 2 (merge approach changed after data inspection), marked Steps 1-3 [x], set Review status: IMPLEMENTED, annotated review items 1 and 2 with → implemented markers. RESULTS_UPDATE.md — Task 3 section replaced with new findings and 2 figures.` Say "none" if you touched neither file.
+
+If the orchestrator needs more than this, they will read the docs directly.
 
 ## Escalation
 

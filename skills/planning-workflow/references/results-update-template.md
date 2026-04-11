@@ -1,6 +1,10 @@
 # RESULTS_UPDATE.md Template
 
-The results document at the project root, created alongside `PLAN.md`. Mirrors the plan structure and gets updated after each step with key findings.
+The findings document at the project root, created alongside `PLAN.md`. Mirrors the plan's task structure and gets updated after each step with key findings.
+
+**The canonical anatomy and inline-edit rules live in `superRA:handoff-doc`.** Load that skill for the five principles, ownership at a glance, and the full per-task section structure. This template is a minimal starter scaffold.
+
+## Starter Scaffold
 
 ```markdown
 # [Analysis Name] — Results Update
@@ -8,7 +12,7 @@ The results document at the project root, created alongside `PLAN.md`. Mirrors t
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS_UPDATE.md for what was found.
 
-**Last updated:** [date] (Task N, Step M)
+**Last updated:** YYYY-MM-DD (Task N, Step M)
 **Status:** In Progress
 
 ---
@@ -16,9 +20,40 @@ The results document at the project root, created alongside `PLAN.md`. Mirrors t
 [Sections added as tasks complete — initially empty]
 ```
 
-## Rules
+## Key Rules (see `superRA:handoff-doc` for the full treatment)
 
-- One section per task — appears as findings come in
-- Replace prior content on re-implementation; never append a second version
-- Reviewer caveats appear as blockquoted notes below the implementer's findings (replaced on re-review, not stacked)
-- The document should always read as a single coherent state, not a changelog
+- One section per task, added as findings come in.
+- Replace prior content on re-implementation; never append a second version.
+- Reviewer caveats appear as a blockquoted note at the bottom of the section (replaced on re-review, not stacked; removed entirely when APPROVED with no remaining caveats).
+- **Figures are always embedded with markdown image syntax**: `![caption](results_attachments/fig_name.png)`. The path is relative and the image file lives in `results_attachments/` at project root, committed to git.
+- The document always reads as a single coherent current-state summary, not a changelog.
+- Commit `RESULTS_UPDATE.md` and `results_attachments/` alongside each task's code commit.
+
+## Per-Task Section Template
+
+```markdown
+## Task N: [Phase Name]
+
+**Status:** Completed (Task N approved YYYY-MM-DD)
+
+### Key Findings
+- [primary result, with number]
+- [secondary result]
+
+### Row Counts / Sample
+- Input: N rows
+- After [operation]: N rows (delta: Δ)
+- Final sample: N rows
+
+### Figures and Tables
+![Descriptive caption for fig A](results_attachments/fig_taskN_a.png)
+
+![Descriptive caption for fig B](results_attachments/fig_taskN_b.png)
+
+### Notes
+- [any caveat, data quirk, or decision the reader needs to interpret the results]
+
+> **⚠️ Reviewer caveat (implementation):** [only present if the implementation reviewer left one; replaced on re-review; removed when APPROVED]
+```
+
+Omit subsections that do not apply. Together with `PLAN.md`, this document forms a complete handoff: context + what happened + what was found.

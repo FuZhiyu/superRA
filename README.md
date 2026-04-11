@@ -53,7 +53,7 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 ## Skills
 
-superRA's 16 skills split into two categories:
+superRA's 17 skills split into two categories:
 
 - **Workflow skills** (`*-workflow`) — dispatcher-facing. Own the procedural choreography of each phase: what agent to dispatch, in what sequence, with what handoff rules. There are exactly four, one per phase: `planning-workflow`, `execution-workflow`, `integration-workflow`, `merge-workflow`.
 - **Utility skills** — agent-facing and standalone-invokable. Carry domain knowledge (data discipline, notebook formatting, drift test standards, codebase integration checklists, merge quality rules) that can be reused outside any specific workflow. `econ-data-analysis` is the most load-bearing; `refactor-and-integrate` bundles the three integration-phase reference files into one standalone-invokable source of truth.
@@ -63,6 +63,7 @@ superRA's 16 skills split into two categories:
 | Skill | What It Does |
 |-------|-------------|
 | **econ-data-analysis** | Iron Law enforcement. Describe-Analyze-Doc cycle. Pitfall checklists for merges, aggregations, filtering, variable construction. |
+| **handoff-doc** | Document-level discipline for PLAN.md / RESULTS_UPDATE.md and any task-block-structured handoff document. Five principles (latest-state-only, inline-edit, task-block structure, ownership by role, what-changed deltas), ownership matrix at a glance, stale-content checklist, figure embedding rule. Progressive-reveal references carry the full PLAN.md and RESULTS_UPDATE.md anatomy. Loaded by implementer and reviewer subagents; referenced by `planning-workflow`. |
 | **verification-before-completion** | No completion claims without fresh verification evidence. Prevents "looks fine" from reaching merge. |
 
 ### PLAN Phase

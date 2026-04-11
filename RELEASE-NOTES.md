@@ -1,5 +1,39 @@
 # Superpowers Release Notes
 
+## superRA handoff-doc discipline (2026-04-11)
+
+Extracted the document-level discipline for `PLAN.md`, `RESULTS_UPDATE.md`, and any other task-block-structured handoff document into a new utility skill, and consolidated the role-specific review-loop protocol into the two agent prototype files.
+
+Skill count: **16 → 17**.
+
+**New utility skill:**
+- `handoff-doc` — canonical source for the five handoff-doc principles (latest-state-only no history, live-and-committed inline-edit, task-block structure, ownership by role, what-changed deltas in both directions), the ownership matrix at a glance, the inline-edit rule, the stale-content checklist, and the figure embedding rule. Progressive-reveal references: `references/plan-anatomy.md` (full PLAN.md template with header and task blocks) and `references/results-update-anatomy.md` (full findings template). Loaded by implementer and reviewer subagents; referenced by `planning-workflow`. Also usable standalone by a single author writing handoff docs without subagents — the ownership matrix collapses and the author plays all roles.
+
+**Review-loop mechanics moved into the agent files:**
+- `agents/implementer.md` now carries a "Handoff — Unified Across Stages" section with an explicit "What You Own, What You Don't" ownership block and a "How You Fix Review Items on a REVISE Round" protocol that codifies the `→ implemented: <file:line + fix>` annotation pattern. The implementer may append annotations but never deletes review items, never rewrites reviewer prose, never touches `→ orchestrator: ...` notes, and never edits task objectives/I/O or other tasks.
+- `agents/reviewer.md` adds a parallel "What You Own, What You Don't" block and restructures the handoff into "How You Write a Review" with explicit first-review and re-review sub-protocols. On re-review, confirmed-fixed items are deleted directly from the blockquote (no "resolved" markers, no strikethroughs); the blockquote is removed entirely when empty, and `**Review status:** APPROVED` is set.
+- Delete authority: reviewer and orchestrator both hold it, implementer never does. CRITICAL-severity items cannot be silently overridden.
+
+**What-changed deltas in both directions:**
+- Because handoff docs show latest state only, readers cannot infer what changed by reading the doc alone. The skill codifies that dispatch prompts carry a one-line "what changed since last dispatch" delta and that subagent status returns carry a `**Doc edits:**` line describing the specific sections/fields modified. Status returns are navigation aids pointing at the doc, not content dumps.
+
+**Planning-workflow updates:**
+- `skills/planning-workflow/SKILL.md` Living Plan section shortened to a brief pointer at `superRA:handoff-doc` as the canonical discipline source. No behavioral change — the rules already lived there implicitly.
+- `skills/planning-workflow/references/results-update-template.md` trimmed to a minimal starter scaffold with a pointer at the full anatomy in `handoff-doc/references/results-update-anatomy.md`. Figures must now be embedded with markdown image syntax `![caption](results_attachments/fig_name.png)` — consistent with handoff-doc's figure embedding rule.
+
+**Progressive reveal:**
+- `handoff-doc/SKILL.md` is concise (~100 lines): principles, ownership at a glance, inline-edit rule, stale checklist, figure rule. Deeper material lives in `references/`. Subagent-specific execution protocol (annotation rules, status-line format, pre-commit self-checks) lives in the agent files, not in the skill — the skill defines document-level discipline usable standalone, while each agent file carries its own view of the review loop.
+
+**Workflow skills unchanged in this commit.** `execution-workflow`, `integration-workflow`, and `merge-workflow` were deliberately left untouched. The handoff-doc skill and the agent prototype files are additive: agents load `superRA:handoff-doc` via `Skill` before touching PLAN.md or RESULTS_UPDATE.md, so the new document-level discipline is in force for every dispatched subagent without any workflow skill needing to intermediate.
+
+**Known gap (follow-up required):** `execution-workflow/SKILL.md`'s "Handling Reviewer Feedback (Orchestrator Discipline)" section still prescribes the old orchestrator behavior of **clearing review notes from PLAN.md before re-dispatching the implementer** (see `execution-workflow/SKILL.md:128` and `:283`). This directly contradicts the new preserve-and-annotate protocol defined in `handoff-doc` + `agents/*.md`, where the reviewer's blockquote is left intact across rounds so the implementer can annotate items with `→ implemented: ...` and the reviewer can verify fixes on re-review. In practice the existing orchestrator instruction wins — the blockquote gets cleared, the implementer finds nothing to annotate, and the new annotate mechanism lies dormant. A follow-up commit must update `execution-workflow`'s orchestrator discipline to:
+- Stop clearing review notes before re-dispatch.
+- Adjudicate by appending `→ orchestrator: rejected <reason>` annotations (trivial rejections) or `→ orchestrator: <second opinion requested> <reason>` (uncertain rejections) directly into the review-notes blockquote in PLAN.md.
+- Rewrite task steps/Approach in place for accepted items while leaving the review item intact for the implementer to annotate.
+- Let the reviewer delete items on re-review after verifying the fix (or accepting the orchestrator's override).
+
+The integration-workflow and merge-workflow skills inherit this discipline by reference (they point at execution-workflow's "Handling Reviewer Feedback") and will pick up the fix automatically.
+
 ## superRA workflow/utility restructure (2026-04-10)
 
 Major structural refactor of the superRA skill namespace. Skills now split into two clear categories: **workflow skills** (dispatcher-facing, suffix `-workflow`) and **utility skills** (agent-facing, standalone-invokable). Eliminates invocation collisions, removes content duplication between skills and their references files, and makes domain knowledge (drift test standards, codebase integration checklists, merge quality rules) reusable outside the workflows that originally carried them.
