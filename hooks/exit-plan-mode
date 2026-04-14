@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# PostToolUse hook: fires after ExitPlanMode returns.
+# Reminds the agent that exiting plan mode is not the end of the
+# planning phase — the plan still needs to be materialized into
+# PLAN.md + RESULTS.md (and, for data analysis, the Data Inventory
+# hard gate must be satisfied) before any implementation work
+# begins. Enforces workflow principle #2 (handoff docs are the
+# auditable record) for sessions that enter through CLI plan mode
+# instead of through planning-workflow from scratch.
+# Does NOT block — discipline system handles enforcement.
+
+set -euo pipefail
+
+input=$(cat)
+
+tool_name=$(echo "$input" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('tool_name', '') or d.get('tool', ''))
+except Exception:
+    print('')
+" 2>/dev/null || echo "")
+
+if [ "$tool_name" != "ExitPlanMode" ]; then
+  printf '{}\n'
+  exit 0
+fi
+
+context="<IMPORTANT>You just exited plan mode. The approved plan lives in the plan file only — it is NOT yet a handoff doc. Before taking any implementation action (no code edits, no task dispatch), materialize the plan into committed PLAN.md + RESULTS.md at the project root using superRA:planning-workflow and superRA:handoff-doc. For data-analysis work, satisfy the Data Inventory hard gate in superRA:econ-data-analysis/references/planning.md first — no tasks without an approved inventory. Commit both files atomically before Step 1 of execution-workflow. If PLAN.md and RESULTS.md already exist and are committed, this reminder is satisfied; proceed. See CLAUDE.md workflow principle #2 (handoff docs are the auditable record) and execution-workflow Step 0a (handoff-doc existence check) for the full discipline.</IMPORTANT>"
+
+if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+  printf '{"additional_context":"%s"}\n' "$context"
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+  printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s"}}\n' "$context"
+else
+  printf '{"additionalContext":"%s"}\n' "$context"
+fi
+
+exit 0

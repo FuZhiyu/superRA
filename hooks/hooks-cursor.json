@@ -14,6 +14,9 @@
     "postToolUse": [
       {
         "command": "./hooks/ask-user-question-logger"
+      },
+      {
+        "command": "./hooks/exit-plan-mode"
       }
     ]
   }
