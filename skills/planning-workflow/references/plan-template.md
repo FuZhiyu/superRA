@@ -1,17 +1,22 @@
 # PLAN.md Template
 
-The plan document at the project root. Every analysis plan starts with this header, then has a task block per step.
+The plan document at the project root. Every plan starts with this header, then has a task block per step.
+
+The header and task examples below are written for the **data-analysis vertical** — today's only implemented domain. Three header sections (**Data Inventory**, **Sensitivity Analysis**) and the describe/analyze/doc step cycle are data-analysis specifics; the domain skill `econ-data-analysis` (and its `references/planning.md`) owns them. For other verticals, swap the data-specific sections for the domain's equivalent (e.g., a derivation-status table for theory work) as the vertical's domain skill prescribes. The overall PLAN.md skeleton — objective, methodology, output, expected results, pipeline, then task blocks — is universal.
 
 ## Header
 
 ```markdown
-# [Analysis Name] Plan
+# [Project Name] Plan
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use superRA:econ-data-analysis at every step. Use superRA:execution-workflow to execute this plan. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use the active domain skill (for data analysis: `superRA:econ-data-analysis`) at every step. Use `superRA:execution-workflow` to execute this plan. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
 
 **Objective:** [One sentence describing what this analysis produces]
 
 **Methodology:** [Brief description — the user has already decided this]
+
+<!-- Data-analysis-specific header section — comes from econ-data-analysis/references/planning.md. -->
+<!-- Other verticals omit this block and substitute the domain's equivalent. -->
 
 **Data Inventory:**
 
@@ -32,7 +37,8 @@ The plan document at the project root. Every analysis plan starts with this head
 
 **Expected Results / Hypotheses:** [What does the user expect to find? Can be hypotheses, conjectures, objectives, or prior intuition. Helps agents interpret results and judge sensitivity tests. Leave blank for purely exploratory work.]
 
-**Sensitivity Analysis:** [What robustness checks should be performed? Discuss with user which checks matter most for this analysis. Reference econ-data-analysis skill's `references/data-robustness-checklist.md` for a menu of options.]
+<!-- Data-analysis-specific header section — see econ-data-analysis/references/planning.md §Sensitivity Analysis Design. -->
+**Sensitivity Analysis:** [What robustness checks should be performed? Discuss with researcher which checks matter most. Menu of options in `econ-data-analysis/references/data-robustness-checklist.md`.]
 
 **Pipeline:** [Path to pipeline file, e.g., `run_all.sh`]
 
@@ -40,6 +46,8 @@ The plan document at the project root. Every analysis plan starts with this head
 ```
 
 ## Task Block Structure
+
+The task-block example below is a **data-analysis example** — the step cycle (describe → analyze → doc) and the Python/pandas syntax come from the data-analysis vertical. For other verticals, preserve the three-element shape (input-diagnosis → operation → verify/document) but substitute the domain's cycle and language.
 
 ````markdown
 ### Task N: [Phase Name]

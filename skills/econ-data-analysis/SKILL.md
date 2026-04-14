@@ -23,6 +23,20 @@ user-invocable: true
 
 # Economic Data Analysis
 
+superRA's flagship domain skill. Carries the cross-cutting discipline that applies at every stage of a data analysis — the Iron Law, the describe-analyze-doc cycle, the three concurrent principles, the pitfalls catalog, and the Red Flags. Main body is loaded by implementer and reviewer subagents at every analysis-touching dispatch.
+
+## Stage-Scoped References
+
+Two companion reference files carry content that applies at exactly one phase. Load them per stage; do not load them at every dispatch:
+
+| Reference | Load when |
+|---|---|
+| `references/planning.md` | PLAN phase — covers the **Data Inventory hard gate** and **Sensitivity Analysis Design**. Loaded by `planning-workflow` when the analysis involves data work. |
+| `references/integrate-drift-tests.md` | INTEGRATE phase — identifies key results worth protecting, sets econ-specific tolerances, and catalogs data-analysis failure modes drift tests catch. Loaded by `integration-workflow` Stage 1 (drift-test creation + review). |
+| `references/data-robustness-checklist.md` | PLAN phase (design) and IMPLEMENT phase (execution of sensitivity tasks) — menu of robustness checks. |
+
+The main body below is everything else — everything that applies whenever data is being touched, which is most of the time.
+
 ## The Iron Law
 
 ```
