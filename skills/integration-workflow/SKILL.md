@@ -129,7 +129,7 @@ Drift tests guard key results from unintended changes during refactoring or futu
    Agent(subagent_type: "superRA:implementer"):
      Stage: drift test creation
      Skills: superRA:refactor-and-integrate
-     Domain reference: drift-test-quality.md
+     Domain references: drift-test-quality.md (refactor-and-integrate) + integrate-drift-tests.md (econ-data-analysis)
      Key results to protect: [user-confirmed list with values]
      Test conventions: [project test framework, test directory]
    ```
@@ -139,7 +139,7 @@ Drift tests guard key results from unintended changes during refactoring or futu
    Agent(subagent_type: "superRA:reviewer"):
      Stage: drift test
      Skills: superRA:refactor-and-integrate
-     Domain reference: drift-test-quality.md
+     Domain references: drift-test-quality.md (refactor-and-integrate) + integrate-drift-tests.md (econ-data-analysis)
      Tests under review: [paths to created test files]
      Key results they should protect: [list]
    ```
@@ -409,8 +409,8 @@ Dispatched agents load a parent skill via the `Skills:` line and read a named do
 
 | Stage | Agent | Parent skill | Domain reference |
 |---|---|---|---|
-| Stage 1 test creation | `superRA:implementer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` |
-| Stage 1 test review | `superRA:reviewer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` |
+| Stage 1 test creation | `superRA:implementer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` (quality checklist) + `econ-data-analysis/references/integrate-drift-tests.md` (domain-specific framing: what to protect, econ tolerances, failure modes) |
+| Stage 1 test review | `superRA:reviewer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` + `econ-data-analysis/references/integrate-drift-tests.md` |
 | Stage 2 refactoring | `superRA:implementer` | `superRA:refactor-and-integrate` | `codebase-integration.md` |
 | Stage 2 integration review (code) | `superRA:reviewer` | `superRA:refactor-and-integrate` | `codebase-integration.md` |
 | Step 3 doc-writer (matured RESULTS.md + project doc audit) | `superRA:implementer` | `superRA:report-in-markdown` | `baseline-io.md` + `rich-content.md` + `final-form.md` (full mode) |

@@ -178,7 +178,7 @@ Within each implementation step, the micro-level discipline is **DESCRIBE → AN
 
 **Rigid** (econ-data-analysis, verification-before-completion): Follow exactly. Don't adapt away discipline.
 
-**Flexible** (planning-workflow Phase 1 data inventory): Adapt principles to context.
+**Flexible** (`econ-data-analysis/references/planning.md` Data Inventory): Adapt principles to context.
 
 The skill itself tells you which.
 

@@ -116,13 +116,6 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 | **using-superRA** | Session startup, cross-session detection, skill discovery rules, workflow principles the orchestrator internalizes. |
 | **writing-skills** | Create or modify skills using test-driven methodology. |
 
-### Meta
-
-| Skill | What It Does |
-|-------|-------------|
-| **using-superRA** | Session startup. Cross-session detection. Skill discovery and activation rules. |
-| **writing-skills** | Create new skills using test-driven methodology. |
-
 ## Agents
 
 | Agent | Role |
