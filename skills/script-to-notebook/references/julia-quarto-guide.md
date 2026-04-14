@@ -31,13 +31,20 @@ From the project root:
 ```bash
 julia --project=. -e '
   using QuartoNotebookRunner
-  QuartoNotebookRunner.run!(
+  s = QuartoNotebookRunner.Server()
+  QuartoNotebookRunner.run!(s,
       "Code/Analysis/01_clean.jl";
       output = "Output/Analysis/01_clean.ipynb",
-      options = Dict("cwd" => pwd()),
+      options = Dict{String,Any}("cwd" => pwd()),
   )
 '
 ```
+
+Notes on the API:
+
+- `run!` requires a `Server()` object as its first argument — it does not accept a bare path string.
+- `options` must be typed `Dict{String,Any}`, not `Dict{String,String}` — values are heterogeneous.
+- No `close(s)` is needed; the Julia process exits when the `-e` block finishes.
 
 `cwd => pwd()` ensures data paths resolve relative to the project root
 while `@__DIR__` independently resolves to the script's directory.
