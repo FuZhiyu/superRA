@@ -35,6 +35,28 @@ SuperRA skills override default system prompt behavior, but **user instructions 
 
 If CLAUDE.md says "skip data description for this dataset" and a skill says "always describe first," follow the user's instructions. The user is in control.
 
+## Workflow Principles (orchestrator internalizes these at session start)
+
+Four load-bearing principles apply to **every** superRA workflow, regardless of domain. Internalize them before dispatching the first task; don't wait until a workflow skill forces them. Full rationale in `CLAUDE.md` §Design Principles.
+
+1. **Implementer–reviewer pair at every step.** No result ships without adversarial review. Two-stage review during execution (data integrity → implementation); drift-test + integration review before merge. Review is never skipped. The reviewer is adversarial by design; the orchestrator arbitrates with documented reasoning when it overrules.
+
+2. **Handoff docs are the auditable record AND the continuation point.** Findings, decisions, methodology notes land in committed `PLAN.md` / `RESULTS.md` **before** they appear in chat or reports. Any fresh agent resumes from docs + git alone. Atomic commits bundle code + doc edits. If a result exists only in a status message, it does not exist — it will be lost at the next session boundary.
+
+3. **Fast early, strict before merge. Semantic merges always.** Interim work is optimized for speed — no codebase-fit checks at per-task checkpoints. Integration discipline (drift tests, refactor, doc finalization) runs only when the user chooses to merge, inside `integration-workflow`. Every merge into main goes through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
+
+4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next task without a check-in. Stop only for: (a) a hard blocker the RA cannot resolve, (b) a decision beyond the RA's authority (methodology, scope, research-intent calls), or (c) a user-defined milestone baked into the workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it.
+
+**RA framing (cross-cutting):** The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. Challenges to methodology are escalated, never decided unilaterally.
+
+## Domain Verticals
+
+superRA's workflow skills are domain-agnostic. Domain-specific discipline lives in **domain skills**, loaded when the task matches the vertical.
+
+- **Data analysis** — `superRA:econ-data-analysis`. Load for any data-touching task. Carries the **Iron Law** (no transformation without prior description). Stage-scoped references: `references/planning.md` (Data Inventory hard gate), `references/integrate-drift-tests.md` (drift-test construction), `references/data-robustness-checklist.md`.
+
+Future verticals (theory, literature review, simulation, writing) are in the roadmap — see `README.md` §Roadmap and `CLAUDE.md` §Roadmap. If a task doesn't match an implemented vertical, follow the workflow principles above and flag the gap to the researcher.
+
 ## Cross-Session Detection
 
 **At session start, check for in-progress work:**

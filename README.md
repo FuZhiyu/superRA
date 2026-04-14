@@ -1,40 +1,44 @@
 # superRA
 
-superRA is a complete economic research workflow for AI coding agents, built as a fork of [Superpowers](https://github.com/obra/superpowers). It turns your coding agent into a disciplined Research Assistant that follows data-first principles, enforces reproducibility, and maintains full session-to-session handoff — so you never lose work when context runs out.
+superRA turns AI coding agents into disciplined Research Assistants. Built as a fork of [Superpowers](https://github.com/obra/superpowers), it ships a complete PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow that enforces reviewer sign-off at every step, keeps `PLAN.md` / `RESULTS.md` as the session-to-session source of truth, runs autonomously between legitimate stop points, and merges via intent-based semantic-merge rather than bare `git merge`. Today's flagship domain is economic data analysis; the architecture is built to extend to theory, literature review, simulation, and writing.
 
 ## Why superRA?
 
-AI agents are eager but undisciplined. They skip data description, merge without checking row counts, and declare "looks fine" without verification. In economic research, these shortcuts produce wrong results that look right.
+AI agents are fast but undisciplined. They jump to implementation before understanding the task, declare "looks fine" without verification, and merge without checking what changed. Research — empirical or otherwise — cannot absorb that failure mode.
 
-superRA enforces a single non-negotiable rule — the **Iron Law of Data Analysis**:
+superRA answers with four load-bearing workflow principles that apply to every domain:
 
-> **NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION**
+1. **Implementer–reviewer pair at every step.** No result ships without adversarial review. Two-stage review during execution, drift-test + integration review before merge.
+2. **Handoff docs are the auditable record.** Findings, decisions, methodology notes land in committed `PLAN.md` / `RESULTS.md` *before* they appear in any report. Any fresh agent resumes from docs + git alone.
+3. **Fast early, strict before merge. Semantic merges always.** Interim tasks optimize for speed; integration discipline loads only when the user chooses to merge. Every merge into main is a semantic-merge.
+4. **Autonomous with human in the loop.** The agent drives work forward on its own power, and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
 
-Every data operation follows a Describe-Analyze-Doc cycle. Every task gets a two-stage review (data integrity, then implementation correctness). Every session leaves enough state in PLAN.md and RESULTS.md that a fresh agent can pick up exactly where the last one stopped.
+In the **data-analysis vertical** (today's flagship), these principles are backed by one non-negotiable domain rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION**. Every data operation follows a Describe → Analyze → Doc cycle. See `skills/econ-data-analysis/SKILL.md`.
 
 ## How It Works
 
-superRA activates automatically. When your agent sees a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**.
+When your agent receives a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase.
 
 ```
-PLAN            planning-workflow (Phase 1 inventory → Phase 2 plan creation)
-                Inventory data (hard gate). Break work into tasks with code at every step.
-                Output: PLAN.md + RESULTS.md (living handoff documents)
+PLAN            planning-workflow (domain vertical setup → scope check → task decomposition)
+                Route to the active domain skill's planning reference.
+                  (data analysis: econ-data-analysis/references/planning.md — Data Inventory hard gate, sensitivity design)
+                Break work into tasks. Output: PLAN.md + RESULTS.md (living handoff docs).
                     |
 IMPLEMENT       execution-workflow (implementer agent per task)
-                Follow econ-data-analysis discipline: Describe → Analyze → Doc.
+                Apply domain discipline at every step.
+                  (data analysis: Describe → Analyze → Doc — econ-data-analysis main body)
                 Atomic commit per task: code + PLAN.md status + RESULTS.md findings.
                     |
 VALIDATE        execution-workflow (reviewer agent after each task)
-                Two-stage review: data integrity → implementation correctness.
-                REVISE loops until APPROVED. Review is never skipped.
+                Two-stage review: data integrity → implementation correctness. REVISE loops until APPROVED.
                     |
 INTEGRATE       integration-workflow → merge-workflow (uses semantic-merge)
-                Verify reproducibility. Create drift tests. Refactor for codebase.
-                Integration review. Generate report. Merge or PR.
+                Verify reproducibility. Create drift tests (data-analysis vertical) for key results.
+                Refactor for codebase. Integration review. Mature RESULTS.md. Merge or PR.
 ```
 
-Each task produces an atomic commit. If the session dies at any point, the next session reads PLAN.md + RESULTS.md + git state and picks up exactly where the last one stopped.
+Each task produces an atomic commit. If the session dies at any point, the next session reads `PLAN.md` + `RESULTS.md` + git state and picks up exactly where the last one stopped.
 
 ## Design Principles
 
@@ -123,8 +127,8 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 | Agent | Role |
 |-------|------|
-| **reviewer** | Prototype reviewer agent. Verifies work independently using APPROVE/REVISE protocol. Dispatched with a skill and domain reference per stage. |
-| **implementer** | Prototype implementer agent. Executes tasks with data-first discipline. Dispatched with a skill and domain reference per stage. |
+| **reviewer** | Prototype reviewer agent. Verifies work independently using APPROVE/REVISE protocol. Dispatched with a workflow skill and the active domain skill's stage reference. |
+| **implementer** | Prototype implementer agent. Executes tasks under the active domain's discipline. Dispatched with a workflow skill and the active domain skill's stage reference. |
 
 ## Key Design Decisions
 
@@ -138,7 +142,7 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 **RA framing.** The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. It executes, validates, and escalates — but the researcher decides the approach.
 
-**Lean agent definitions.** Two prototype agents (implementer, reviewer) define roles, not rules. Domain-specific checklists come from reference files read at dispatch time. Every agent loads `superRA:econ-data-analysis` via the Skill tool for data discipline. One source of truth, easy to maintain.
+**Lean agent definitions.** Two prototype agents (implementer, reviewer) define roles, not rules. Domain-specific checklists come from reference files read at dispatch time — today's flagship is `superRA:econ-data-analysis`, and the agent files auto-load it (plus the stage-appropriate reference) whenever the task touches data. One source of truth per concern, easy to maintain, easy to extend to a new vertical.
 
 ## Hooks
 
@@ -149,11 +153,32 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 ## Philosophy
 
-- **Data-first** — Understand before transforming. Always.
-- **Reproducibility is a requirement** — Drift tests, pipeline files, committed code. Not optional.
-- **Evidence over claims** — Run the pipeline before saying it works.
-- **Session resilience** — PLAN.md + RESULTS.md + git = complete handoff.
-- **Researcher decides, agent implements** — Methodology is not the agent's call.
+**Workflow discipline (cross-cutting):**
+- **Adversarial review at every step** — implementer and reviewer are separate roles; nothing ships without sign-off.
+- **Docs are the record** — `PLAN.md` + `RESULTS.md` + git = complete handoff. Status reports point at the docs; they do not replace them.
+- **Autonomous with human in the loop** — the agent drives forward on its own power and stops only at legitimate decision points.
+- **Semantic merges always** — every merge into main goes through intent-based conflict resolution, never a bare `git merge`.
+
+**Data-analysis vertical (today's flagship):**
+- **Data-first** — Understand before transforming. Always. (Iron Law.)
+- **Diagnostics are the primary validity signal** — not a chore, the main tool for judging whether a result is trustworthy.
+- **Reproducibility is a requirement** — drift tests, pipeline files, committed code. Not optional.
+
+**Across every vertical:**
+- **Researcher decides, agent implements** — methodology is not the agent's call.
+
+## Roadmap: Extending Beyond Data Analysis
+
+superRA's workflow scaffolding is domain-agnostic by design. Adding a new vertical means adding a domain skill (with stage-scoped references), not forking the workflow. The four workflow principles, the implementer–reviewer pair, handoff-doc mechanics, and semantic-merge all carry over unchanged.
+
+Planned verticals (hooks for future work, not commitments):
+
+- **Theory / modeling.** Derivation discipline, notation consistency, proof checks, numerical verification of derived formulas.
+- **Literature review.** Citation integrity, claim-evidence mapping, coverage audits, systematic note-taking formats.
+- **Simulation.** Seed discipline, stochastic reproducibility, parameter-grid sensitivity, convergence diagnostics.
+- **Writing / paper drafting.** Figure/table consistency with the underlying code, cross-reference integrity, narrative coherence, manuscript versioning alongside the analysis branch.
+
+See `CLAUDE.md` §Roadmap for the checklist to add a new vertical.
 
 ## Upstream
 
