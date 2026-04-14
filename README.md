@@ -65,53 +65,52 @@ See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plu
 
 ## Skills
 
-superRA's 18 skills split into two categories:
+superRA's skills split into four categories. The directory layout stays flat (one `skills/<name>/SKILL.md` per skill); `skills/CATEGORIES.md` is the authoritative grouping index.
 
-- **Workflow skills** (`*-workflow`) — dispatcher-facing. Own the procedural choreography of each phase: what agent to dispatch, in what sequence, with what handoff rules. There are exactly four, one per phase: `planning-workflow`, `execution-workflow`, `integration-workflow`, `merge-workflow`.
-- **Utility skills** — agent-facing and standalone-invokable. Carry domain knowledge (data discipline, notebook formatting, drift test standards, codebase integration checklists, merge quality rules) that can be reused outside any specific workflow. `econ-data-analysis` is the most load-bearing; `refactor-and-integrate` bundles the three integration-phase reference files into one standalone-invokable source of truth.
+- **Workflow skills** — domain-agnostic choreography for each phase. What agent to dispatch, in what sequence, with what handoff rules. Reused across every domain vertical.
+- **Domain skills** — vertical-specific discipline (today: data analysis). Loaded by workflow skills when a task touches the matching domain. Organized with stage-scoped references so only the relevant chunk loads per phase.
+- **Utility skills** — reusable, domain-neutral tools. Handoff-doc discipline, report formatting, notebook rendering, worktree management, semantic merge, verification.
+- **Meta skills** — session bootstrap and skill authoring.
 
-### Core Discipline (loaded by every analysis-touching agent)
+### Workflow
+
+| Skill | Phase | What It Does |
+|-------|-------|-------------|
+| **planning-workflow** | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the active domain skill for domain-specific gates and templates. |
+| **execution-workflow** | IMPLEMENT + VALIDATE | Per-task dispatch, two-stage review loop with orchestrator-discipline filter, pipeline + reproducibility verification, 4-option completion menu. |
+| **integration-workflow** | INTEGRATE (pre-merge) | Drift-test creation, refactor-review loop, doc finalization (mature RESULTS.md into permanent form, audit project-level CLAUDE.md / AGENTS.md / README.md). |
+| **merge-workflow** | INTEGRATE (merge) | Update analysis branch via semantic-merge, post-merge verification (drift tests + fresh integration review), local merge or PR push, worktree cleanup. |
+| **agent-orchestration** | cross-cutting | Multi-agent dispatch patterns: parallel subagents for independent tasks, Agent Teams for iterative workflows. |
+
+### Domain — Data Analysis
 
 | Skill | What It Does |
 |-------|-------------|
-| **econ-data-analysis** | Iron Law enforcement. Describe-Analyze-Doc cycle. Pitfall checklists for merges, aggregations, filtering, variable construction. |
-| **handoff-doc** | Document-level discipline for PLAN.md / RESULTS.md and any task-block-structured handoff document. Six principles (latest-state-only, inline-edit, task-block structure, ownership-by-role defined in agent files, what-changed deltas, doc-is-the-record), stale-content checklist, figure embedding rule. Progressive-reveal references carry the full PLAN.md and RESULTS.md anatomy. Loaded by implementer and reviewer subagents; referenced by `planning-workflow`. |
+| **econ-data-analysis** | Iron Law (no transformation without prior description). Describe-Analyze-Doc cycle. Diagnostics-for-validity philosophy. Pitfall catalogs for merges, time series, aggregations, filtering, variable construction, missing data. Red Flags table. Stage-scoped references load per phase: `planning.md` (Data Inventory hard gate + sensitivity design), `integrate-drift-tests.md` (drift-test construction), `data-robustness-checklist.md` (robustness menu). |
+
+Future verticals — theory/modeling, literature review, simulation, writing/paper drafting — are planned; see the Roadmap section at the bottom.
+
+### Utility
+
+| Skill | What It Does |
+|-------|-------------|
+| **handoff-doc** | Document-level discipline for PLAN.md / RESULTS.md — six principles (latest-state-only, inline-edit, task-block structure, ownership-by-role, what-changed deltas, doc-is-the-record), stale-content checklist, figure embedding rule. Progressive-reveal references carry full PLAN.md and RESULTS.md anatomy. Single source of truth for doc mechanics. |
 | **verification-before-completion** | No completion claims without fresh verification evidence. Prevents "looks fine" from reaching merge. |
-
-### PLAN Phase
-
-| Skill | What It Does |
-|-------|-------------|
-| **planning-workflow** | Phase 1: inventory available data, identify gaps, research sources (hard gate). Phase 2: create step-by-step plans with describe-validate discipline. Outputs PLAN.md and RESULTS.md as living handoff documents. |
-
-### IMPLEMENT + VALIDATE Phase
-
-| Skill | What It Does |
-|-------|-------------|
-| **execution-workflow** | Dispatch implementer agent per task, reviewer agent after each. Two-stage review (data integrity then implementation) with orchestrator-discipline filter on reviewer feedback. Verifies pipeline + reproducibility at the end and presents the 4 completion options. |
-| **script-to-notebook** | Cell organization, markdown narrative, and rendering for analysis scripts. Python (jupytext) and Julia (QuartoNotebookRunner). Loaded by implementers and implementation reviewers. |
-
-### INTEGRATE Phase
-
-Runs in sequence when the user chooses merge or PR at execution-workflow Step 4: integration-workflow first, then merge-workflow. Both use `refactor-and-integrate` as the domain reference for dispatched agents.
-
-| Skill | What It Does |
-|-------|-------------|
-| **integration-workflow** | Create drift tests to protect key results. Refactor code for codebase integration with a refactor-review loop. Finalize all docs for merge via a dedicated doc-writer + doc-reviewer pair (mature RESULTS.md into its permanent form, audit project-level CLAUDE.md / AGENTS.md / README.md for stale claims). Dispose of PLAN.md. Hands off to merge-workflow. |
-| **merge-workflow** | Final phase. Update analysis branch with main via semantic-merge, run drift tests AND a fresh integration review on the merged state, re-enter the refactor-review loop on either failure, execute local merge or push + PR, clean up the worktree. |
-| **refactor-and-integrate** | Utility skill carrying the three domain-knowledge checklists loaded by dispatched agents: `drift-test-quality.md` (coverage, tolerances, independence, clarity, cross-cutting drift-test integrity Red Flags), `codebase-integration.md` (naming, utilities, data discipline through refactoring, PR quality), `merge-quality.md` (intent preservation, research integrity, two-commit structure, Tier 3 escalation). Standalone-invokable for any refactoring task. |
-| **report-in-markdown** | Format-discipline utility for markdown reports with figures, LaTeX math, tables, or human-readable prose. Lean SKILL.md body (loaded by every caller); three references loaded on demand per a load-map table — `baseline-io.md` (frontmatter, paths, metadata), `rich-content.md` (figures, math, tables, file refs), `final-form.md` (Stage 2 consolidation discipline: fact-check checklist, reader-facing restructure, figure materialization, relocation). Loaded in full mode by the `integration-workflow` Step 3 doc-writer subagent (Stage 2 RESULTS.md maturation + project doc audit) and by the Step 3 doc-reviewer (final-form only); loaded by implementers in Stage 1 only when their task section embeds figures or math. |
-| **semantic-merge** | Intent-based branch integration. `merge-workflow` Step 1 delegates to it via an explicit Skill invocation for the main-branch update; the merge-guard hook also triggers it directly for ad-hoc `git merge`/`rebase`/`cherry-pick`. Classifies conflicts by research impact, escalates methodology decisions to the user. |
-
-### Infrastructure
-
-| Skill | What It Does |
-|-------|-------------|
+| **script-to-notebook** | Cell organization, markdown narrative, and rendering for analysis scripts. Python (jupytext) and Julia (QuartoNotebookRunner). |
+| **refactor-and-integrate** | Three integration-phase checklists: `drift-test-quality.md`, `codebase-integration.md`, `merge-quality.md`. Standalone-invokable for any refactoring task. |
+| **report-in-markdown** | Format discipline for markdown reports with figures, LaTeX math, tables. Lean SKILL.md body; three references loaded on demand: `baseline-io.md`, `rich-content.md`, `final-form.md`. |
+| **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions to the user. Invoked by `merge-workflow` Step 1 and by the merge-guard hook. |
 | **using-analysis-worktrees** | Isolated git worktrees with data seeding. Parallel analysis without branch switching. |
 | **worktree-data-sync** | Sync non-git data between worktrees (seed, diff, apply modes). |
-| **agent-orchestration** | Multi-agent dispatch: parallel subagents for independent tasks, Agent Teams for iterative workflows. |
-| **reviewer-protocol** | Alias skill for direct mode — loads the reviewer agent protocol when the main agent reviews work itself. |
-| **implementer-protocol** | Alias skill for direct mode — loads the implementer agent protocol when the main agent implements work itself. |
+| **implementer-protocol** | Alias skill — loads the implementer agent protocol when the main agent implements work directly. |
+| **reviewer-protocol** | Alias skill — loads the reviewer agent protocol when the main agent reviews work directly. |
+
+### Meta
+
+| Skill | What It Does |
+|-------|-------------|
+| **using-superRA** | Session startup, cross-session detection, skill discovery rules, workflow principles the orchestrator internalizes. |
+| **writing-skills** | Create or modify skills using test-driven methodology. |
 
 ### Meta
 
