@@ -101,6 +101,20 @@ digraph process {
 }
 ```
 
+### Step 0a: Handoff-Doc Existence Check
+
+Before any branch check or dispatch, confirm `PLAN.md` and `RESULTS.md` exist **and** are committed:
+
+```bash
+[ -f PLAN.md ] && [ -f RESULTS.md ] && git ls-files --error-unmatch PLAN.md RESULTS.md >/dev/null 2>&1
+```
+
+If the check fails (one or both missing, or present but untracked / uncommitted), the user probably entered this workflow without going through `planning-workflow` first — for example, they exited CLI plan-mode and jumped straight to execution, or inherited an existing branch that never bootstrapped docs.
+
+**Before any task dispatch:** load `superRA:planning-workflow` and `superRA:handoff-doc`, create `PLAN.md` and `RESULTS.md` from the current session state (plan-mode plan output, chat context, whatever is available — follow `planning-workflow`'s template), satisfy the domain-specific planning gate (for data analysis: the Data Inventory hard gate from `econ-data-analysis/references/planning.md`), and commit the docs. Treat this as Task 0 of the work. Only then proceed to Step 0.
+
+If the docs exist and are committed, proceed directly to Step 0.
+
 ### Step 0: Branch Check
 
 Before starting execution, check if on a default branch:

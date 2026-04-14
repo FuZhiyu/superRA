@@ -34,6 +34,16 @@
             "async": false
           }
         ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" exit-plan-mode",
+            "async": false
+          }
+        ]
       }
     ]
   }
