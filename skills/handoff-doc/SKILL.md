@@ -7,9 +7,9 @@ description: Use when creating, reading, or editing PLAN.md, RESULTS.md, or any 
 
 Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs) are the persistent state of a project. Multiple agents and sessions read and write them. This skill defines the discipline — what these docs are, how they are structured at a glance, and the universal editing rules.
 
-`RESULTS.md` has a **two-stage lifecycle**: a Stage 1 dev log in the worktree root during IMPLEMENT (task-indexed, agent-facing, "latest state only"), maturing into a Stage 2 permanent record at the analysis's code folder during INTEGRATE (reader-facing, fact-checked, frontmatter, figures materialized). Same file, same name, same identity across stages — the consolidation happens in place before relocation. Stage 1 discipline is defined here; Stage 2 consolidation discipline lives in `skills/report-in-markdown/references/final-form.md` and is invoked by `integration-workflow` Step 3.
+`RESULTS.md` has a **two-stage lifecycle**: a Stage 1 dev log in the worktree root during IMPLEMENT (task-indexed, agent-facing, "latest state only"), maturing into a Stage 2 permanent record at the analysis's code folder during INTEGRATE (reader-facing, fact-checked, frontmatter, figures materialized). Stage 1 discipline is defined here; Stage 2 consolidation discipline lives in `skills/report-in-markdown/references/final-form.md` and is invoked by `integration-workflow` Step 3.
 
-**This skill has progressive reveal.** The main file is concise: principles, at-a-glance structure, universal rules. Load the references below when you need deeper material:
+**This skill has progressive reveal.** Load the references below when you need deeper material:
 
 - `references/plan-anatomy.md` — the full `PLAN.md` template (header + task blocks + code-block examples + review-notes blockquote format)
 - `references/results-anatomy.md` — the full Stage 1 `RESULTS.md` template (header + per-task sections + figure embedding pointers + transition-to-Stage-2 note)
