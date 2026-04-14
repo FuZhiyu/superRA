@@ -168,6 +168,10 @@ When merging, rebasing, or cherry-picking branches, superRA uses intent-based co
 
 When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled, superRA uses Agent Teams for workflows with iteration loops (execution-workflow, integration-workflow, merge-workflow, semantic-merge). This is automatic — the orchestration skills detect availability and use teams when appropriate. See `superRA:agent-orchestration` for details on team compositions, lifecycle, and session handoff.
 
+## Reviewer–Orchestrator Dynamic
+
+The reviewer is **adversarial by design** — it should be thorough, skeptical, and flag everything it is uncertain about. A false positive costs one orchestrator evaluation; a missed issue can ship wrong results. The orchestrator is the **arbitrator** — it made the plan, talks to the researcher, and has big-picture context the reviewer lacks. It expects over-flagging, evaluates each finding independently, and overrules with documented reasoning when the reviewer is wrong. This dynamic applies across all stages (execution, integration, merge, semantic-merge). See CLAUDE.md workflow principle P1 for the full statement.
+
 ## User Instructions
 
 Instructions say WHAT, not HOW. "Analyze X" or "Merge these datasets" doesn't mean skip econ-data-analysis discipline.

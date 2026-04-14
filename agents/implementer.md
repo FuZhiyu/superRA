@@ -57,7 +57,7 @@ Before reporting back, check:
 - Can someone re-run this and get the same results?
 - Are file paths correct and relative?
 
-If you find issues during self-review, fix them now.
+If you find issues during self-review, fix them now. Your self-check is internal — report its outcome through the Report Format below. The `Status` field (DONE / DONE_WITH_CONCERNS) and the `Concerns` field capture everything the orchestrator needs to know about issues you found during self-check.
 
 ## Handoff — Unified Across Stages
 

@@ -201,9 +201,9 @@ execution-workflow (Analysis Team)
 **Spawn:**
 ```
 Create an agent team for analysis execution:
-- implementer: [use `implementer` agent type; load superRA:econ-data-analysis; provide project context]
-- data-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; handoff: PLAN.md data integrity status]
-- implementation-reviewer: [use `reviewer` agent type; load superRA:econ-data-analysis; handoff: PLAN.md APPROVED status]
+- implementer: [use `superRA:implementer` agent type; load superRA:econ-data-analysis; provide project context]
+- data-reviewer: [use `superRA:reviewer` agent type; load superRA:econ-data-analysis; handoff: PLAN.md data integrity status]
+- implementation-reviewer: [use `superRA:reviewer` agent type; load superRA:econ-data-analysis; handoff: PLAN.md APPROVED status]
 ```
 
 **Task graph (per analysis task N):**
@@ -241,12 +241,12 @@ Create all tasks upfront from PLAN.md so teammates can see the full scope.
 **Spawn:**
 ```
 Create an agent team for the integration workflow:
-- test-creator: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: drift-test-quality.md]
-- test-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: drift-test-quality.md]
-- refactorer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
-- integration-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
-- doc-writer: [use `implementer` agent type; load superRA:report-in-markdown; domain ref basenames: baseline-io.md + rich-content.md + final-form.md (full mode)]
-- doc-reviewer: [use `reviewer` agent type; load superRA:report-in-markdown; domain ref basename: final-form.md]
+- test-creator: [use `superRA:implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: drift-test-quality.md]
+- test-reviewer: [use `superRA:reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: drift-test-quality.md]
+- refactorer: [use `superRA:implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
+- integration-reviewer: [use `superRA:reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
+- doc-writer: [use `superRA:implementer` agent type; load superRA:report-in-markdown; domain ref basenames: baseline-io.md + rich-content.md + final-form.md (full mode)]
+- doc-reviewer: [use `superRA:reviewer` agent type; load superRA:report-in-markdown; domain ref basename: final-form.md]
 
 All teammates auto-load superRA:econ-data-analysis and superRA:script-to-notebook via the agent definition since the stage touches analysis code. Require plan approval before they make changes.
 ```
@@ -293,10 +293,10 @@ All teammates auto-load superRA:econ-data-analysis and superRA:script-to-noteboo
 **Spawn:**
 ```
 Create an agent team for the merge workflow:
-- merge-proposer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md; note: delegates to superRA:semantic-merge via an explicit Skill invocation for Tier classification]
-- merge-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
-- post-merge-refactorer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
-- post-merge-integration-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md; note: must run BOTH drift tests AND codebase integration review on the merged state]
+- merge-proposer: [use `superRA:implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md; note: delegates to superRA:semantic-merge via an explicit Skill invocation for Tier classification]
+- merge-reviewer: [use `superRA:reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
+- post-merge-refactorer: [use `superRA:implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
+- post-merge-integration-reviewer: [use `superRA:reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md; note: must run BOTH drift tests AND codebase integration review on the merged state]
 
 All teammates auto-load superRA:econ-data-analysis and superRA:script-to-notebook via the agent definition since the stage touches analysis code.
 ```
@@ -337,8 +337,8 @@ All teammates auto-load superRA:econ-data-analysis and superRA:script-to-noteboo
 **Spawn:**
 ```
 Create an agent team for semantic merge integration:
-- merge-proposer: [use `implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
-- merge-reviewer: [use `reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
+- merge-proposer: [use `superRA:implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
+- merge-reviewer: [use `superRA:reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
 
 All teammates auto-load superRA:econ-data-analysis via the agent definition.
 ```
@@ -398,6 +398,8 @@ On session resume, this tells the new lead exactly where to pick up.
 
 ### Constraints
 
+**Task creation order:** Create the team (`TeamCreate`) before creating tasks (`TaskCreate`). Tasks created before the team exist in a separate namespace and are invisible to teammates.
+
 **File conflicts:** Never assign two teammates to edit the same file simultaneously. Task dependencies prevent this for sequential work. For parallel tasks, ensure each teammate owns different files.
 
 **Ordering guarantees:** Data integrity review MUST complete before implementation review. Enforce via task dependencies, never via convention.
@@ -423,7 +425,7 @@ On session resume, this tells the new lead exactly where to pick up.
 
 **Skills that use Agent Teams mode:**
 - **superRA:execution-workflow** — 3-teammate analysis team (implementer + data-reviewer + implementation-reviewer)
-- **superRA:integration-workflow** — 4-teammate integration team (test-creator + test-reviewer + refactorer + integration-reviewer)
+- **superRA:integration-workflow** — 6-teammate integration team (test-creator + test-reviewer + refactorer + integration-reviewer + doc-writer + doc-reviewer)
 - **superRA:merge-workflow** — 4-teammate merge team (merge-proposer + merge-reviewer + post-merge refactorer + post-merge integration-reviewer)
 - **superRA:semantic-merge** — 2-teammate merge team (merge-proposer + merge-reviewer)
 
