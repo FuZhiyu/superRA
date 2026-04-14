@@ -20,7 +20,9 @@ digraph mode_selection {
     "Have analysis plan?" [shape=diamond];
     "Subagents available?" [shape=diamond];
     "Tasks trivial or user prefers direct?" [shape=diamond];
-    "Subagent mode (default)" [shape=box style=filled fillcolor=lightgreen];
+    "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" [shape=diamond];
+    "Agent Team mode (preferred)" [shape=box style=filled fillcolor=lightblue];
+    "Subagent mode" [shape=box style=filled fillcolor=lightgreen];
     "Direct mode (fallback)" [shape=box style=filled fillcolor=lightyellow];
     "Plan first" [shape=box];
 
@@ -29,11 +31,19 @@ digraph mode_selection {
     "Subagents available?" -> "Tasks trivial or user prefers direct?" [label="yes"];
     "Subagents available?" -> "Direct mode (fallback)" [label="no"];
     "Tasks trivial or user prefers direct?" -> "Direct mode (fallback)" [label="yes"];
-    "Tasks trivial or user prefers direct?" -> "Subagent mode (default)" [label="no"];
+    "Tasks trivial or user prefers direct?" -> "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" [label="no"];
+    "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" -> "Agent Team mode (preferred)" [label="yes"];
+    "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" -> "Subagent mode" [label="no"];
 }
 ```
 
-**Subagent mode (default):**
+**Agent Team mode (preferred):**
+- Use `TeamCreate` to set up a persistent team with implementer + reviewers
+- Direct iteration between agents without orchestrator relay
+- Load `superRA:agent-orchestration` for the Analysis Task Team recipe (team composition, task graph, lifecycle)
+- Use when: `TeamCreate` tool is available AND ≥2 tasks remain
+
+**Subagent mode:**
 - Dispatch implementer subagent per task
 - Two-stage review after each: data integrity → implementation correctness
 - Fresh context per task (no pollution)
@@ -123,11 +133,11 @@ If the user declines, proceed — they've given explicit consent to work on the 
 
 #### Per-Task Execution Steps
 
-1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "implementer")` — see template below. Direct mode: invoke `superRA:implementer-protocol`, then implement yourself.
+1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "superRA:implementer")` — see template below. Direct mode: invoke `superRA:implementer-protocol`, then implement yourself.
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
 3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. Dispatch the **data integrity reviewer**. If REVISE: adjudicate the feedback in place inside the PLAN.md review-notes blockquote — append `→ orchestrator: rejected <reason>` or `→ orchestrator: <second opinion requested> <reason>` annotations to items you are rejecting or flagging, rewrite task steps in place for items you are accepting, commit, then re-dispatch the implementer. Leave the blockquote itself intact — the implementer will annotate items with `→ implemented: ...` markers on their pass, and the reviewer will delete confirmed-fixed items on re-review. See the "Handling Reviewer Feedback" section below and `agents/implementer.md` / `agents/reviewer.md` for the full annotation mechanics. Iterate until APPROVE. Do not proceed to implementation review until data integrity is approved.
 4. **Once data integrity APPROVE:** dispatch the **implementation reviewer**. Same REVISE loop with adjudication.
-5. **Once implementation reviewer APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
+5. **Once implementation reviewer APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
 
 **In direct mode:** Steps 1–2 are done by the main agent directly (invoke `superRA:implementer-protocol`). Steps 3–5 are unchanged — still dispatch reviewer subagents.
 
@@ -138,7 +148,7 @@ If the user declines, proceed — they've given explicit consent to work on the 
 
 **Implementer (analysis task):**
 ```
-Agent(subagent_type: "implementer"):
+Agent(subagent_type: "superRA:implementer"):
   Stage: analysis task
   Task: Task N in PLAN.md
   Work from: [worktree path or "current directory"]
@@ -149,7 +159,7 @@ The agent reads PLAN.md, Data Inventory, Conventions, and prior results from RES
 
 **Data integrity reviewer:**
 ```
-Agent(subagent_type: "reviewer"):
+Agent(subagent_type: "superRA:reviewer"):
   Stage: data integrity
   Task: Task N in PLAN.md
   Git range: <BASE_SHA>..<HEAD_SHA>
@@ -158,7 +168,7 @@ Agent(subagent_type: "reviewer"):
 
 **Implementation reviewer:**
 ```
-Agent(subagent_type: "reviewer"):
+Agent(subagent_type: "superRA:reviewer"):
   Stage: implementation
   Task: Task N in PLAN.md
   Git range: <BASE_SHA>..<HEAD_SHA>
@@ -169,7 +179,7 @@ If you need a non-default skill load, an extra domain reference, or an override 
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
 
-The reviewer is an advisor, not a gatekeeper. **You — the orchestrator — are the senior researcher.** You know the project, the methodology decisions, and the conversations with the human partner that the reviewer has no visibility into. Your job between REVISE and re-dispatch is to evaluate each issue, not forward it mechanically.
+The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic (see CLAUDE.md P1). **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between REVISE and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
 
 When a reviewer returns REVISE:
 
@@ -224,6 +234,8 @@ After every task is APPROVED, the analysis must be verified end-to-end before pr
 4. **PLAN.md up to date?** All tasks have `**Review status:** APPROVED`. All steps marked `- [x]` with result notes. No tasks stuck in `IMPLEMENTED` or `REVISE`. Discovery notes captured. Upcoming-task descriptions reflect current understanding.
 
 5. **RESULTS.md up to date?** Has findings for all completed tasks. Figure attachments in `results_attachments/` committed.
+
+6. **Deferred MINORs resolved?** Check PLAN.md review-notes blockquotes for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in RESULTS.md.
 
 If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
 
@@ -349,8 +361,8 @@ Stop for exactly three classes of pause, all of which require logging the answer
 
 ## Agent Types
 
-- **`implementer`** — Dispatch with `superRA:econ-data-analysis` and `superRA:script-to-notebook` skills.
-- **`reviewer`** — Dispatch with `superRA:econ-data-analysis` skill. Implementation reviewers also load `superRA:script-to-notebook`. Provide stage-specific handoff rules (data integrity vs implementation) in the dispatch prompt.
+- **`superRA:implementer`** — Dispatch with `superRA:econ-data-analysis` and `superRA:script-to-notebook` skills.
+- **`superRA:reviewer`** — Dispatch with `superRA:econ-data-analysis` skill. Implementation reviewers also load `superRA:script-to-notebook`. Provide stage-specific handoff rules (data integrity vs implementation) in the dispatch prompt.
 
 ## Agent Teams Mode
 

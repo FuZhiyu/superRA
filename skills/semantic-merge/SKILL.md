@@ -144,7 +144,7 @@ Conflicts exist but none touch research-relevant files.
 
 1. **Dispatch merge-proposer:**
    ```
-   Agent(subagent_type: "implementer"):
+   Agent(subagent_type: "superRA:implementer"):
      Stage: merge proposer
      Skills: superRA:refactor-and-integrate
      Domain reference: merge-quality.md
@@ -158,7 +158,7 @@ Conflicts exist but none touch research-relevant files.
 
 3. **Dispatch merge-reviewer:**
    ```
-   Agent(subagent_type: "reviewer"):
+   Agent(subagent_type: "superRA:reviewer"):
      Stage: merge
      Skills: superRA:refactor-and-integrate
      Domain reference: merge-quality.md
@@ -186,7 +186,7 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 
 3. **Dispatch merge-proposer** with Tier 3 context:
    ```
-   Agent(subagent_type: "implementer"):
+   Agent(subagent_type: "superRA:implementer"):
      Stage: merge proposer (Tier 3)
      Skills: superRA:refactor-and-integrate
      Domain reference: merge-quality.md
@@ -285,8 +285,8 @@ When the merge is complete, summarize:
 
 ## Agent Types and Domain References
 
-- **`implementer`** agent + `./references/merge-quality.md` — For merge proposals
-- **`reviewer`** agent + `./references/merge-quality.md` — For merge review
+- **`superRA:implementer`** agent + `./references/merge-quality.md` — For merge proposals
+- **`superRA:reviewer`** agent + `./references/merge-quality.md` — For merge review
 
 All agents also load `superRA:econ-data-analysis` for data discipline.
 

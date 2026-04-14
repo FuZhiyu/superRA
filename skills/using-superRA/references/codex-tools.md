@@ -39,7 +39,7 @@ When a skill says to dispatch a named agent type:
 
 | Skill instruction | Codex equivalent |
 |-------------------|------------------|
-| `Agent(subagent_type: "reviewer")` | `spawn_agent(agent_type="worker", message=...)` with `agents/reviewer.md` content |
+| `Agent(subagent_type: "superRA:reviewer")` | `spawn_agent(agent_type="worker", message=...)` with `agents/reviewer.md` content |
 | `Task tool (general-purpose)` with inline prompt | `spawn_agent(message=...)` with the same prompt |
 
 ### Message framing

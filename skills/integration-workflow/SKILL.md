@@ -126,7 +126,7 @@ Drift tests guard key results from unintended changes during refactoring or futu
 
 3. **Dispatch test-creator:**
    ```
-   Agent(subagent_type: "implementer"):
+   Agent(subagent_type: "superRA:implementer"):
      Stage: drift test creation
      Skills: superRA:refactor-and-integrate
      Domain reference: drift-test-quality.md
@@ -136,7 +136,7 @@ Drift tests guard key results from unintended changes during refactoring or futu
 
 4. **Dispatch test-reviewer:**
    ```
-   Agent(subagent_type: "reviewer"):
+   Agent(subagent_type: "superRA:reviewer"):
      Stage: drift test
      Skills: superRA:refactor-and-integrate
      Domain reference: drift-test-quality.md
@@ -167,7 +167,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
 
 2. **Dispatch integration-reviewer:**
    ```
-   Agent(subagent_type: "reviewer"):
+   Agent(subagent_type: "superRA:reviewer"):
      Stage: integration
      Skills: superRA:refactor-and-integrate
      Domain reference: codebase-integration.md
@@ -183,7 +183,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
 
    a. **Dispatch refactorer:**
       ```
-      Agent(subagent_type: "implementer"):
+      Agent(subagent_type: "superRA:implementer"):
         Stage: refactoring
         Skills: superRA:refactor-and-integrate
         Domain reference: codebase-integration.md
@@ -240,7 +240,7 @@ Define `RESULTS_DIR` = the resolved permanent folder. Define `RESULTS_ATTACHMENT
 ### Dispatch the doc-writer
 
 ```
-Agent(subagent_type: "implementer"):
+Agent(subagent_type: "superRA:implementer"):
   Stage: documentation finalization (Stage 2 RESULTS.md + project doc audit)
   Skills: superRA:report-in-markdown
   Domain references: baseline-io.md + rich-content.md + final-form.md (full mode)
@@ -303,7 +303,7 @@ git commit -m "update project docs for <analysis>"
 After both sub-parts commit, dispatch the reviewer:
 
 ```
-Agent(subagent_type: "reviewer"):
+Agent(subagent_type: "superRA:reviewer"):
   Stage: documentation finalization (Stage 2 RESULTS.md + project doc audit)
   Skills: superRA:report-in-markdown
   Domain reference: final-form.md
@@ -409,12 +409,12 @@ Dispatched agents load a parent skill via the `Skills:` line and read a named do
 
 | Stage | Agent | Parent skill | Domain reference |
 |---|---|---|---|
-| Stage 1 test creation | `implementer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` |
-| Stage 1 test review | `reviewer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` |
-| Stage 2 refactoring | `implementer` | `superRA:refactor-and-integrate` | `codebase-integration.md` |
-| Stage 2 integration review (code) | `reviewer` | `superRA:refactor-and-integrate` | `codebase-integration.md` |
-| Step 3 doc-writer (matured RESULTS.md + project doc audit) | `implementer` | `superRA:report-in-markdown` | `baseline-io.md` + `rich-content.md` + `final-form.md` (full mode) |
-| Step 3 doc-reviewer (final-form + project docs) | `reviewer` | `superRA:report-in-markdown` | `final-form.md` |
+| Stage 1 test creation | `superRA:implementer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` |
+| Stage 1 test review | `superRA:reviewer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` |
+| Stage 2 refactoring | `superRA:implementer` | `superRA:refactor-and-integrate` | `codebase-integration.md` |
+| Stage 2 integration review (code) | `superRA:reviewer` | `superRA:refactor-and-integrate` | `codebase-integration.md` |
+| Step 3 doc-writer (matured RESULTS.md + project doc audit) | `superRA:implementer` | `superRA:report-in-markdown` | `baseline-io.md` + `rich-content.md` + `final-form.md` (full mode) |
+| Step 3 doc-reviewer (final-form + project docs) | `superRA:reviewer` | `superRA:report-in-markdown` | `final-form.md` |
 
 Step 3 sub-parts A (mature RESULTS.md) and B (project doc audit) are performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates the whole documentation pass per workflow principle P1. Sub-part C (PLAN.md disposition) stays with the orchestrator because it is a user-facing decision, not an RA-implementable task.
 
@@ -424,7 +424,7 @@ All analysis-touching agents also auto-load `superRA:econ-data-analysis` and `su
 
 When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), Stages 1 and 2 can be orchestrated as a team instead of sequential subagent dispatches. This enables direct iteration between creator/reviewer and integration-reviewer/refactorer without the orchestrator relaying messages.
 
-**Invoke `superRA:agent-orchestration` for the Integration Team recipe** — it has the full team composition (4 teammates: test-creator, test-reviewer, refactorer, integration-reviewer), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
+**Invoke `superRA:agent-orchestration` for the Integration Team recipe** — it has the full team composition (6 teammates: test-creator, test-reviewer, refactorer, integration-reviewer, doc-writer, doc-reviewer), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
 
 Step 3 (Documentation Finalization) can join the team as a two-teammate sub-graph: a doc-writer (performing sub-parts A and B) and a doc-reviewer, iterating on their own until APPROVE. Sub-part C (PLAN.md disposition) stays with the lead because it is a user-facing decision. The relocation-target stop point (Step 3 orchestrator preamble) also stays with the lead, since it fires before the doc-writer dispatches.
 

@@ -69,6 +69,16 @@ The following sections **must not appear** unless the researcher explicitly requ
 
 A "Limitations" section that lists factual caveats (unresolved reviewer notes, data coverage gaps, known biases) is allowed and encouraged.
 
+## Project documentation accuracy
+
+When the doc-reviewer's dispatch includes project docs (CLAUDE.md / AGENTS.md / README.md), apply this checklist alongside the RESULTS.md fact-check above.
+
+- [ ] **Methodology descriptions** match the actual code — no references to dropped approaches, superseded variable definitions, or removed processing steps
+- [ ] **Output file lists** match committed outputs — every file listed is actually produced by the current code; no references to renamed or deleted outputs
+- [ ] **Headline results** (if any) match the matured RESULTS.md — no stale numbers from before the last revision
+- [ ] **Dates and version claims** ("as of ...", version numbers) reflect the current commit
+- [ ] **File paths and command names** are accurate — no references to moved, renamed, or deleted files
+
 ## Severity for integration review
 
 When the doc-reviewer applies this checklist, classify issues:

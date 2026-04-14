@@ -80,7 +80,7 @@ pytest tests/  # or: julia --project test/runtests.jl
 
 **2b. Dispatch a fresh integration reviewer on the merged state.**
 ```
-Agent(subagent_type: "reviewer"):
+Agent(subagent_type: "superRA:reviewer"):
   Stage: integration
   Skills: superRA:refactor-and-integrate
   Domain reference: codebase-integration.md
@@ -101,7 +101,7 @@ When drift tests fail OR the post-merge integration reviewer returns REVISE, re-
 
 1. **Dispatch refactorer:**
    ```
-   Agent(subagent_type: "implementer"):
+   Agent(subagent_type: "superRA:implementer"):
      Stage: refactoring
      Skills: superRA:refactor-and-integrate
      Domain reference: codebase-integration.md

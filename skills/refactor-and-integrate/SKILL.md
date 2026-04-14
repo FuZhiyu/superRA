@@ -14,8 +14,8 @@ Utility skill carrying the domain knowledge for three closely related tasks in t
 This is a utility skill, not a workflow skill. The workflow skills (`superRA:integration-workflow` and `superRA:merge-workflow`) own the procedural choreography — when to dispatch agents, how to sequence stages, how to handle iteration loops. This skill owns the content: what a good drift test looks like, what "refactored for codebase fit" means, what a clean merge commit structure is.
 
 **Used by:**
-- Dispatched `implementer` agents during drift test creation, refactoring, and merge proposal stages
-- Dispatched `reviewer` agents during drift test review, integration review, and merge review stages
+- Dispatched `superRA:implementer` agents during drift test creation, refactoring, and merge proposal stages
+- Dispatched `superRA:reviewer` agents during drift test review, integration review, and merge review stages
 - Anyone invoking this skill directly for an ad-hoc refactoring task outside the formal integration workflow
 
 ## When to Load This Skill
@@ -36,7 +36,7 @@ The runtime will announce this skill's base directory when it loads. Read the re
 Workflow skills dispatching a subagent for any of the stages above pass `Skills: superRA:refactor-and-integrate` along with the domain reference basename:
 
 ```
-Agent(subagent_type: "implementer"):
+Agent(subagent_type: "superRA:implementer"):
   Stage: drift test creation
   Skills: superRA:refactor-and-integrate
   Domain reference: drift-test-quality.md
@@ -44,7 +44,7 @@ Agent(subagent_type: "implementer"):
 ```
 
 ```
-Agent(subagent_type: "reviewer"):
+Agent(subagent_type: "superRA:reviewer"):
   Stage: integration
   Skills: superRA:refactor-and-integrate
   Domain reference: codebase-integration.md

@@ -44,3 +44,9 @@ When you find inconsistencies between new analysis code and existing codebase:
 - [ ] **Self-contained:** The analysis can be understood from the code and its documentation without external context
 - [ ] **Drift tests exist and pass** on the refactored code
 - [ ] **Appropriate tolerances** documented and economically reasonable
+
+## Documentation Currency
+
+- [ ] **Module CLAUDE.md / AGENTS.md / README.md** do not reference files, functions, outputs, or methodology that no longer exist or have been superseded by the refactored code
+- [ ] **No stale output lists:** Every output file mentioned in documentation is actually produced by the current code
+- [ ] **Dates and version claims** ("as of ...") reflect the current commit, not a prior state
