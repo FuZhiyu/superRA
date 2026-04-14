@@ -43,8 +43,60 @@ Longer narrative with multiple paragraphs.
 
 - One cell per logical operation (load, merge, filter, construct)
 - Markdown cell before each operation explaining what and why
-- Last expression in a code cell displays as output — use for diagnostics
-- `print()`/`println()` for explicit output (row counts, shape, messages)
+- `print()` for text diagnostics (row counts, shape, messages) — works in
+  both direct-script and notebook execution
+- Bare last expression for **rich objects** (DataFrames, figures) — only
+  that position triggers HTML / image MIME rendering
+
+### Rich display — Python specifics
+
+**DataFrames and summary tables.** Pandas registers `_repr_html_` so a
+DataFrame as the cell's final expression renders as an HTML table with
+column alignment, scroll overflow, and Jupyter theming. Wrapping it in
+`print()` falls back to the text `__repr__`:
+
+```python
+# good — HTML table
+df[["mv", "w"]].describe(percentiles=[.01, .5, .99])
+
+# bad — ASCII, loses formatting
+print(df[["mv", "w"]].describe())
+```
+
+When tables get truncated, adjust display options once at the top of the
+notebook rather than per-cell:
+
+```python
+import pandas as pd
+pd.set_option("display.max_columns", None)
+pd.set_option("display.width", 200)
+```
+
+**Matplotlib figures.** Prefer returning the `Figure` object as the cell's
+last expression over calling `plt.show()`:
+
+```python
+# preferred — Jupyter chooses retina/SVG/PNG via _repr_html_
+fig, ax = plt.subplots()
+ax.plot(x, y)
+fig
+```
+
+`plt.show()` also works in a notebook but bypasses the MIME negotiation;
+stick to the trailing-`fig` form unless you explicitly need `show()`'s
+blocking behavior in a script context.
+
+**Mid-cell rich output.** The "one rich object per cell" rule is the
+default. When you genuinely need two rich objects in the same cell, use
+`IPython.display.display` as the explicit escape hatch:
+
+```python
+from IPython.display import display
+display(df_top)
+display(df_bottom)
+```
+
+Reach for this sparingly — splitting the cell is almost always cleaner.
 
 ## Execution
 

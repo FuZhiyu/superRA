@@ -37,24 +37,32 @@ use standard script format.
 - Equations: inline `$formula$`, display `$$formula$$` — define variables
   before first use
 
-## Favor Explicit Printing
+## Output: diagnostics vs rich display
 
-Always use `print()`/`println()` for diagnostics — row counts, shape, summary
-statistics, validation checks. This ensures agents running the script directly
-(not as a notebook) see the same output as rendered notebooks.
+Two idioms, pick by what you're showing.
 
-Last-expression display only works in notebook/REPL contexts. Don't rely on it
-as the sole output mechanism. When in doubt, `print()`.
+- **Text diagnostics** (row counts, shapes, messages) — always
+  `print()` / `println()`. Must work in both notebook and direct-script
+  execution.
+- **Rich objects** (DataFrames, figures) — bare as the cell's last
+  expression. HTML / image MIME only fires in that position; `print(df)`
+  or `println(p)` collapses to ASCII and destroys formatting.
 
 ```python
-# Good — works in both script and notebook
-print(f"Shape: {df.shape}")
-print(f"Funds: {df['fund_id'].nunique()}")
-print(df[["market_value", "weight"]].describe(percentiles=[.01, .05, .5, .95, .99]).to_string())
-
-# Avoid as sole output — invisible when running as script
-df.describe()  # only displays in notebook/REPL
+print(f"Shape: {df.shape}")        # diagnostic
+df.describe()                      # table, last expression
+fig, ax = plt.subplots(); ax.plot(x, y); fig   # figure, last expression
 ```
+
+```julia
+println("Rows: ", nrow(df))        # diagnostic
+describe(df)                       # table, last expression
+p = plot(x, y); p                  # figure, last expression
+```
+
+One rich object per cell — split the cell if you need two. Language-specific
+idioms (pandas options, `plt.show` vs `fig`, `savefig(p, ...); p`,
+`IPython.display.display`) live in the reference files.
 
 ## Rendering: Python
 
