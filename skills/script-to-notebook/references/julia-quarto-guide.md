@@ -31,13 +31,20 @@ From the project root:
 ```bash
 julia --project=. -e '
   using QuartoNotebookRunner
-  QuartoNotebookRunner.run!(
+  s = QuartoNotebookRunner.Server()
+  QuartoNotebookRunner.run!(s,
       "Code/Analysis/01_clean.jl";
       output = "Output/Analysis/01_clean.ipynb",
-      options = Dict("cwd" => pwd()),
+      options = Dict{String,Any}("cwd" => pwd()),
   )
 '
 ```
+
+Notes on the API:
+
+- `run!` requires a `Server()` object as its first argument — it does not accept a bare path string.
+- `options` must be typed `Dict{String,Any}`, not `Dict{String,String}` — values are heterogeneous.
+- No `close(s)` is needed; the Julia process exits when the `-e` block finishes.
 
 `cwd => pwd()` ensures data paths resolve relative to the project root
 while `@__DIR__` independently resolves to the script's directory.
@@ -59,6 +66,47 @@ println("Shape: $(size(df))")
 # Include shared utilities — @__DIR__ resolves correctly
 include(joinpath(@__DIR__, "utils.jl"))
 ```
+
+### Rich display: tables and figures
+
+Julia's rich-display pipeline works the same way as Python's: an object
+renders with its HTML / image MIME **only** when it is the cell's final
+expression. `println` and `print` force the text MIME and lose formatting.
+
+**DataFrames.** `DataFrames.jl` registers `show(io, MIME"text/html"(), df)`,
+which the notebook kernel picks up for last-expression values:
+
+```julia
+# good — HTML table
+describe(df[:, [:mv, :w]])
+
+# bad — text fallback
+println(describe(df[:, [:mv, :w]]))
+```
+
+**Plots.jl / Makie.jl / CairoMakie.jl.** Leave the plot object bare:
+
+```julia
+using Plots
+p = plot(x, y, title = "Returns")
+p
+```
+
+- Do **not** wrap in `display(p)` — that bypasses MIME negotiation. The
+  bare form lets the kernel pick PNG/SVG/HTML.
+- `savefig(p, "Output/fig.png")` is for producing standalone image files
+  (figures committed to `Output/`), not for notebook rendering. You can
+  do both: `savefig(p, "Output/fig.png"); p` saves to disk **and** returns
+  `p` as the last expression so the notebook also shows it inline.
+
+**One rich object per cell.** Same rule as Python — split the cell if you
+need to show two tables or two figures.
+
+**Direct-script fallback.** When the same `.jl` file runs under plain
+`julia --project=. script.jl` (no QuartoNotebookRunner), rich objects emit
+their text repr to stdout. That is acceptable: for tables and figures, the
+rendered notebook is the authoritative artifact; direct-script output only
+needs to confirm the object was produced without erroring.
 
 ### Path Convention
 
