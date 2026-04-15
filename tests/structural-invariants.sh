@@ -333,7 +333,33 @@ else
   pass "$iw_skill free of data-specific tokens"
 fi
 
-# 17. README 'Why superRA?' lead section does not mention Iron Law.
+# 17. README Workflow Map section exists and carries a Mermaid diagram (or
+# a pipe-table fallback with >=5 data rows). The map visualizes the
+# Stage-table in agents/implementer.md and agents/reviewer.md.
+if grep -Fq '## Workflow Map' README.md; then
+  pass "README.md contains '## Workflow Map' heading"
+  # Extract the 100 lines after the heading to check for a mermaid fence or
+  # a pipe-table with >=5 data rows.
+  wm_region=$(awk '/^## Workflow Map/{flag=1} flag{print; n++; if(n>=100)exit}' README.md)
+  if echo "$wm_region" | grep -q '^```mermaid'; then
+    pass "Workflow Map contains a mermaid fenced code block"
+  else
+    # Fallback: count pipe-table data rows (lines starting with '|' and
+    # containing at least 2 '|' characters, excluding separator rows).
+    table_rows=$(echo "$wm_region" | grep -cE '^\|.*\|' | head -1)
+    sep_rows=$(echo "$wm_region" | grep -cE '^\|[ :-]+\|' | head -1)
+    data_rows=$((table_rows - sep_rows))
+    if [ "$data_rows" -ge 5 ]; then
+      pass "Workflow Map pipe-table has $data_rows data rows (>=5)"
+    else
+      fail "Workflow Map has neither a mermaid fence nor a pipe-table with >=5 data rows"
+    fi
+  fi
+else
+  fail "README.md missing '## Workflow Map' heading"
+fi
+
+# 18. README 'Why superRA?' lead section does not mention Iron Law.
 why_section=$(awk '/^## Why superRA\?/{flag=1; next} /^## /{flag=0} flag' README.md | head -10)
 if echo "$why_section" | grep -qi 'Iron Law'; then
   fail "README 'Why superRA?' lead mentions Iron Law — should be workflow-first"
