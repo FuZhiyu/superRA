@@ -58,13 +58,28 @@ done
 grep -q '^NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION$' skills/econ-data-analysis/SKILL.md \
   && pass "Iron Law in econ-data-analysis main body" \
   || fail "Iron Law missing from econ-data-analysis main body"
-for section in '## Principle 1: Description Before Analysis' '## Pitfalls' '## Red Flags'; do
+for section in '## Describe' '## Analyze' '## Validate' '## Pitfalls' '## Red Flags'; do
   if grep -Fq "$section" skills/econ-data-analysis/SKILL.md; then
     pass "main body contains '$section'"
   else
     fail "main body missing '$section'"
   fi
 done
+
+# 3b. Validate section must carry a Sensitivity analysis sub-section — this
+# is the first-class execution-phase discipline added in the DAV restructure.
+if grep -Fq '### Sensitivity analysis' skills/econ-data-analysis/SKILL.md; then
+  pass "Validate section contains Sensitivity analysis sub-section"
+else
+  fail "Validate section missing Sensitivity analysis sub-section"
+fi
+
+# 3c. No lingering DAD / describe-analyze-doc strings in the SKILL.md body.
+if grep -qiE 'describe.analyze.doc|\bDAD\b' skills/econ-data-analysis/SKILL.md; then
+  fail "SKILL.md still contains DAD / describe-analyze-doc references"
+else
+  pass "SKILL.md free of DAD / describe-analyze-doc references"
+fi
 
 # 4. planning-workflow is domain-agnostic (no data-specific strings).
 forbidden=$(grep -ciE 'WRDS|Compustat|winsoriz|CRSP' skills/planning-workflow/SKILL.md || true)
