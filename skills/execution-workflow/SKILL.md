@@ -65,7 +65,7 @@ digraph process {
         "Dispatch implementer subagent" [shape=box];
         "Implementer asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
-        "Implementer: describe-analyze-doc-commit" [shape=box];
+        "Implementer: describe-analyze-validate-commit" [shape=box];
         "Dispatch data integrity reviewer" [shape=box];
         "Data integrity passes?" [shape=diamond];
         "Implementer fixes data issues" [shape=box];
@@ -84,8 +84,8 @@ digraph process {
     "Dispatch implementer subagent" -> "Implementer asks questions?";
     "Implementer asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent";
-    "Implementer asks questions?" -> "Implementer: describe-analyze-doc-commit" [label="no"];
-    "Implementer: describe-analyze-doc-commit" -> "Dispatch data integrity reviewer";
+    "Implementer asks questions?" -> "Implementer: describe-analyze-validate-commit" [label="no"];
+    "Implementer: describe-analyze-validate-commit" -> "Dispatch data integrity reviewer";
     "Dispatch data integrity reviewer" -> "Data integrity passes?";
     "Data integrity passes?" -> "Implementer fixes data issues" [label="no"];
     "Implementer fixes data issues" -> "Dispatch data integrity reviewer" [label="re-review"];

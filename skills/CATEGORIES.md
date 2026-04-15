@@ -20,7 +20,7 @@ Carry the domain-specific knowledge that workflow skills invoke when a task touc
 
 | Skill | Vertical | Flagship discipline |
 |---|---|---|
-| `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), describe-analyze-doc cycle, diagnostics-for-validity philosophy, pitfall catalogs, red flags. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`. |
+| `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), three concurrent disciplines (describe-analyze-validate), diagnostics-for-validity philosophy, pitfall catalogs, red flags. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`. |
 
 ### Future verticals (roadmap — not yet implemented)
 
