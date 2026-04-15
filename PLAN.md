@@ -247,7 +247,7 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 ## Task 5: Companion Workflow Skills — Light Audit
 
-**Review status:** (not started)
+**Review status:** IMPLEMENTED
 
 **Objective:** Update `integration-workflow/SKILL.md` Stage 2 to cite the domain skill's §Refactor integrity. Light grep-audit of `merge-workflow`, `semantic-merge`, `planning-workflow` for residual "data integrity" / "two-stage review" phrasing. Add a top-of-file pointer in `refactor-and-integrate/references/codebase-integration.md` naming the domain skill's §Refactor integrity as primary for data-analysis work.
 
@@ -255,15 +255,18 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 **Files touched:**
 
-- `skills/integration-workflow/SKILL.md` — Stage 2 domain-reference pointer.
-- `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`, `skills/planning-workflow/SKILL.md` — scrub data-flavored residuals.
-- `skills/refactor-and-integrate/references/codebase-integration.md` — top-of-file pointer.
+- `skills/integration-workflow/SKILL.md` — Stage 2 dispatches + Agent-Types table + auto-load prose + Integration subagents list.
+- `skills/merge-workflow/SKILL.md` — post-merge integration-reviewer and refactorer dispatches: stage label + domain-reference citation.
+- `skills/semantic-merge/SKILL.md` — agent-types auto-load line rewritten to point at agent Stage tables.
+- `skills/planning-workflow/SKILL.md` — "two-stage review" residual replaced with "one-pass review per domain skill's §Review".
+- `skills/refactor-and-integrate/references/codebase-integration.md` — top-of-file pointer to domain skill's §Refactor integrity.
+- `agents/reviewer.md` — frontmatter description (Task 4 residual) + Handoff stage list updated to canonical one-pass stages.
 
 **Steps:**
 
-- [ ] **Step 1:** Grep `data integrity|two-stage review|data-integrity reviewer` across those four workflow skill files. Catalog hits.
-- [ ] **Step 2:** Rewrite each hit into domain-parametric language. Update integration-workflow Stage 2 reference. Add the codebase-integration.md preamble pointer.
-- [ ] **Step 3:** Grep proves no residuals. Atomic commit: `refactor(workflows): domain-parametric references and residual cleanup`.
+- [x] **Step 1 — Catalog.** Grep of `data integrity|two-stage review|data-integrity reviewer` in the four workflow files: zero direct hits. Broader audit surfaced residual domain-flavored / old-naming hits: (a) `integration-workflow` §Dispatch Convention L104 hardcoded the `econ-data-analysis` + `script-to-notebook` auto-load, Stage 2 dispatches L178/L199 cited only `codebase-integration.md`, Agent-Types table L435-L436 same, L442 repeated the auto-load prose, L494 "Data discipline principles"; (b) `merge-workflow` Step 2b/Step 3 dispatches L86/L109 same single `codebase-integration.md` reference + `Stage: integration`; (c) `semantic-merge` L301 "All agents also load superRA:econ-data-analysis for data discipline"; (d) `planning-workflow` L139 "fresh subagent per task + two-stage review"; (e) `agents/reviewer.md` L6-L8 frontmatter "data integrity + implementation review" and L123 Handoff stage list ("data integrity, implementation, drift test, integration, merge, ad-hoc"). The semantic-merge L237/L257 "Data discipline" mentions left intact — they refer to describe-analyze-validate artifacts preserved through a merge, not to the old review-stage nomenclature.
+- [x] **Step 2 — Rewrite.** Each hit rewritten in-place: Stage 2 refactoring + integration review dispatches across `integration-workflow` and `merge-workflow` now cite "active domain skill's §Refactor integrity (for data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + codebase-integration.md (cross-cutting code-quality checklist)"; stage label canonicalized to `integration review`; Agent-Types table row updated. `integration-workflow` L104/L442/L494 and `semantic-merge` L301 now defer to the `agents/implementer.md` / `agents/reviewer.md` Stage tables for domain-skill auto-loads. `planning-workflow` L139 now reads "one-pass review per the active domain skill's §Review & Self-Check Discipline". `codebase-integration.md` gains a top-of-file blockquote naming the domain skill's §Refactor integrity as primary for data-analysis work and this file as the cross-cutting code-quality companion. `agents/reviewer.md` frontmatter now reads "execution-workflow (implementation review), integration-workflow (drift test review + integration review), merge-workflow (post-merge drift test + integration review), and semantic-merge (merge review)"; Handoff stage list reads "implementation review, drift test review, integration review, merge review, ad-hoc".
+- [x] **Step 3 — Validate.** Grep `data integrity|two-stage review|data-integrity reviewer` across the four workflow files + `agents/reviewer.md`: 0 hits. `bash tests/structural-invariants.sh`: all PASS, 2 known WARN, 0 FAIL (same as baseline). Atomic commit to follow: `refactor(workflows+agents): domain-parametric §Refactor integrity references and one-pass stage naming`.
 
 ---
 

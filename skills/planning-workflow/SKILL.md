@@ -136,6 +136,6 @@ After finalizing the plan, commit it, then offer execution choice:
 **Which approach?"**
 
 **REQUIRED DISCIPLINE:** Use `superRA:execution-workflow`
-- Defaults to subagent mode (fresh subagent per task + two-stage review)
+- Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's §Review & Self-Check Discipline)
 - Falls back to direct mode for simple tasks or when user requests it
 - Review always happens regardless of mode
