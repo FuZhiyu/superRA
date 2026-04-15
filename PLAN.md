@@ -247,7 +247,7 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 ## Task 5: Companion Workflow Skills — Light Audit
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Objective:** Update `integration-workflow/SKILL.md` Stage 2 to cite the domain skill's §Refactor integrity. Light grep-audit of `merge-workflow`, `semantic-merge`, `planning-workflow` for residual "data integrity" / "two-stage review" phrasing. Add a top-of-file pointer in `refactor-and-integrate/references/codebase-integration.md` naming the domain skill's §Refactor integrity as primary for data-analysis work.
 
