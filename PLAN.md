@@ -86,7 +86,7 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 ## Task 2: Integrate §Review & Self-Check Discipline into `econ-data-analysis/SKILL.md`
 
-**Review status:** (not started)
+**Review status:** IMPLEMENTED
 
 **Objective:** Add a new top-level section `## Review & Self-Check Discipline — shared gating for implementer and reviewer` to the main body of `skills/econ-data-analysis/SKILL.md`. Content uses `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers so implementer self-check and reviewer verification walk the exact same list. Encode the CONDITIONAL APPROVE verdict protocol (reviewer walks the entire checklist even on gating failure; returns APPROVE / REVISE / CONDITIONAL APPROVE). Single source of truth — no new reference files.
 
@@ -96,9 +96,9 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 **Steps:**
 
-- [ ] **Step 1: Describe — locate insertion point and audit existing content.** Read SKILL.md end-to-end; identify where the new section lands (after Validate, before Pitfalls). Catalog the items already present elsewhere in the file that should be cross-referenced (not duplicated) from the new section: Iron Law, Describe panel structure / variable diagnostics / merge-key inspection, Analyze row-count logging, Validate sanity checks / multi-source / sensitivity, Pitfalls §Merges, the `script-to-notebook` pointer, `integrate-drift-tests.md`, `data-robustness-checklist.md`. Confirm the existing `## Verification Checklist` content is fully subsumed by the new section.
+- [x] **Step 1: Describe — locate insertion point and audit existing content.** Read SKILL.md end-to-end; identify where the new section lands (after Validate, before Pitfalls). Catalog the items already present elsewhere in the file that should be cross-referenced (not duplicated) from the new section: Iron Law, Describe panel structure / variable diagnostics / merge-key inspection, Analyze row-count logging, Validate sanity checks / multi-source / sensitivity, Pitfalls §Merges, the `script-to-notebook` pointer, `integrate-drift-tests.md`, `data-robustness-checklist.md`. Confirm the existing `## Verification Checklist` content is fully subsumed by the new section.
 
-- [ ] **Step 2: Analyze — write the new section.** Draft with this shape (preamble + six sub-sections + verdict protocol):
+- [x] **Step 2: Analyze — write the new section.** Drafted with this shape (preamble + verdict protocol + six sub-sections):
 
   - **Preamble.** Single source of truth. Implementer walks as pre-handoff self-check; reviewer walks as verification criteria. Markers: `[GATING]` = load-bearing non-negotiables (failure blocks unconditional APPROVE); `[STANDARD]` = required, becomes a REVISE finding if missing; `[ADVISORY]` = best-practice, reviewer MAY flag as MINOR.
 
@@ -144,7 +144,7 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
     - `[STANDARD]` PLAN.md and RESULTS.md current.
     - `[STANDARD]` Deferred MINORs resolved or documented in RESULTS.md as accepted limitations.
 
-- [ ] **Step 3: Validate — consolidate, test, commit.**
+- [x] **Step 3: Validate — consolidate, test, commit.**
   - Replace `## Verification Checklist` section (L311-L337 current) with a one-liner: "For pre-handoff self-check and reviewer verification, see §Review & Self-Check Discipline above."
   - Add one sentence under `## Stage-Scoped References` noting: "The §Review & Self-Check Discipline section below loads with the main body at every stage — it is the shared gating both implementer and reviewer walk."
   - Run `bash tests/structural-invariants.sh` — must stay green.
