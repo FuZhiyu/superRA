@@ -170,7 +170,38 @@ else
   pass "no dispatch template carries 'Work from:' or 'Counterpart:' fields"
 fi
 
-# 11. README 'Why superRA?' lead section does not mention Iron Law.
+# 11. econ-data-analysis §Review & Self-Check Discipline integration.
+# The shared-gating section in the SKILL.md main body is the single source
+# of truth both implementer self-check and reviewer verification walk.
+# Encoded here: heading exists, severity markers present (≥8 GATING), the
+# CONDITIONAL APPROVE verdict protocol is spelled out, and no separate
+# implementation-review.md / integration-review.md reference file was
+# created (shared-gating decision sanity check).
+eda_skill="skills/econ-data-analysis/SKILL.md"
+if grep -Fq '## Review & Self-Check Discipline' "$eda_skill"; then
+  pass "econ-data-analysis SKILL.md contains '## Review & Self-Check Discipline' heading"
+else
+  fail "econ-data-analysis SKILL.md missing '## Review & Self-Check Discipline' heading"
+fi
+gating_count=$(grep -c '\[GATING\]' "$eda_skill" 2>/dev/null || echo 0)
+if [ "$gating_count" -ge 8 ]; then
+  pass "econ-data-analysis SKILL.md has ${gating_count} [GATING] markers (>=8)"
+else
+  fail "econ-data-analysis SKILL.md has only ${gating_count} [GATING] markers (<8)"
+fi
+if grep -Fq 'CONDITIONAL APPROVE' "$eda_skill"; then
+  pass "econ-data-analysis SKILL.md encodes CONDITIONAL APPROVE verdict"
+else
+  fail "econ-data-analysis SKILL.md missing CONDITIONAL APPROVE verdict"
+fi
+if [ -f skills/econ-data-analysis/references/implementation-review.md ] \
+   || [ -f skills/econ-data-analysis/references/integration-review.md ]; then
+  fail "shared-gating decision violated: implementation-review.md / integration-review.md reference file exists"
+else
+  pass "no separate implementation-review.md / integration-review.md reference (shared gating in main body)"
+fi
+
+# 12. README 'Why superRA?' lead section does not mention Iron Law.
 why_section=$(awk '/^## Why superRA\?/{flag=1; next} /^## /{flag=0} flag' README.md | head -10)
 if echo "$why_section" | grep -qi 'Iron Law'; then
   fail "README 'Why superRA?' lead mentions Iron Law — should be workflow-first"

@@ -35,7 +35,7 @@ Two companion reference files carry content that applies at exactly one phase. L
 | `references/integrate-drift-tests.md` | INTEGRATE phase — identifies key results worth protecting, sets econ-specific tolerances, and catalogs data-analysis failure modes drift tests catch. Loaded by `integration-workflow` Stage 1 (drift-test creation + review). |
 | `references/data-robustness-checklist.md` | PLAN phase (design) and IMPLEMENT phase (execution of sensitivity tasks) — menu of robustness checks. |
 
-The main body below is everything else — everything that applies whenever data is being touched, which is most of the time.
+The main body below is everything else — everything that applies whenever data is being touched, which is most of the time. The §Review & Self-Check Discipline section below loads with the main body at every stage — it is the shared gating both implementer and reviewer walk.
 
 ## The Iron Law
 
@@ -276,6 +276,74 @@ change large enough to change the interpretation), **stop and
 the researcher chooses whether to revise the headline, report both, or
 investigate further.
 
+## Review & Self-Check Discipline — shared gating for implementer and reviewer
+
+Single source of truth for pre-handoff self-check and reviewer verification. The implementer walks this section before returning DONE; the reviewer walks the same items as verification criteria. No parallel checklist lives elsewhere — any drift between "what the implementer checks" and "what the reviewer checks" is a bug in this section, not a reason to fork it.
+
+**Severity markers** appear inline on each item:
+
+- `[GATING]` — load-bearing non-negotiable. Failure blocks an unconditional APPROVE. These encode the Iron Law and the handoff-doc discipline; no task ships with a failed gating item unresolved.
+- `[STANDARD]` — required. A missed item becomes a REVISE finding from the reviewer.
+- `[ADVISORY]` — best-practice. The reviewer MAY flag as MINOR; resolution is optional unless the task's specifics elevate it.
+
+### Reviewer verdict protocol (CONDITIONAL APPROVE)
+
+**Walk the entire section top to bottom even when a gating item fails.** Halting early on gating failure forces a full re-review on the next pass — reviewer dispatches are costly. One comprehensive pass, every time.
+
+Three verdicts:
+
+- **APPROVE** — no findings at any severity.
+- **REVISE** — only `[STANDARD]` items failed (no `[GATING]` failures). Implementer fixes the flagged items and re-dispatches.
+- **CONDITIONAL APPROVE** — one or more `[GATING]` items failed. The reviewer walked the rest of the checklist anyway and those downstream items look correct **conditional on the gating fix not invalidating them**. The review-notes blockquote lists the failed `[GATING]` item(s) first, then states "downstream items reviewed and currently correct; approval contingent on the gating fix not changing downstream results."
+
+On a re-dispatch following a CONDITIONAL APPROVE, the reviewer's second pass is narrow: (1) verify the gating fix is correct, (2) verify the cited downstream items still hold under the fix. If both, CONDITIONAL → unconditional APPROVE.
+
+### Gating — the Iron Law applied per step
+
+- `[GATING]` Every input described before the first transformation on it — panel structure, variable diagnostics, missing-value pattern. See §Describe.
+- `[GATING]` Every sample-changing operation logs before/after row counts. See §Analyze.
+- `[GATING]` Every merge describes join keys on both sides before execution. See §Pitfalls §Merges and joins.
+
+### Implementation standards
+
+- `[STANDARD]` Each step implements what `PLAN.md` specifies; deviations are rewritten into the step text, not layered on top.
+- `[STANDARD]` Analysis scripts follow the notebook-compatible format per `superRA:script-to-notebook`.
+- `[STANDARD]` Major decisions (filter threshold, join type, variable definition, sample period) carry a markdown-cell justification; minor decisions carry an inline comment.
+- `[STANDARD]` Outputs (tables, figures) are generated from committed code, not ad-hoc REPL state.
+
+### Validation completeness
+
+- `[STANDARD]` Distributions re-checked on affected variables after every major transformation; compared to pre-transformation values per §Validate §Sanity checks.
+- `[STANDARD]` Economic sense checked: magnitudes plausible, signs as expected, benchmarks cross-checked where applicable. See §Validate §Multi-source validation.
+- `[STANDARD]` When `PLAN.md` header states Expected Results / Hypotheses, findings are compared explicitly and divergences flagged.
+- `[ADVISORY]` Sensitivity analysis run on robustness-sensitive tasks per `references/data-robustness-checklist.md`; divergence escalated per §Validate §Sensitivity analysis.
+
+### Documentation and handoff
+
+- `[GATING]` `RESULTS.md` updated in place for this task's section per `superRA:handoff-doc`. The doc is the record — findings live there before they appear in any status report.
+- `[STANDARD]` Markdown cells explain what each block does and why; reasoning for major decisions sits alongside the code.
+- `[STANDARD]` Figures saved under `results_attachments/` and embedded in `RESULTS.md` via relative paths per `superRA:report-in-markdown`.
+- `[STANDARD]` No dangling TODO / placeholder / `XXX` strings shipped.
+
+### Refactor integrity (applies at the `refactoring` and `integration review` stages)
+
+- `[GATING]` All Describe steps preserved — or explicitly replaced by upstream-validated diagnostics the refactor relies on.
+- `[GATING]` All row-count prints preserved at sample-changing operations.
+- `[GATING]` All Validate checks preserved.
+- `[GATING]` Drift tests (where they exist) pass post-refactor; failures adjudicated per `references/integrate-drift-tests.md`, never silently re-expected.
+- `[STANDARD]` Variable definitions unchanged, or the change is documented and justified.
+- `[STANDARD]` Sample construction unchanged, or the change is documented and justified.
+- `[STANDARD]` Naming follows the nearest module-level `CLAUDE.md` / `AGENTS.md` / `README.md` conventions.
+- `[STANDARD]` Existing utility functions reused; no reinvented helpers.
+
+### Completion verification (applies at `execution-workflow` Step 3)
+
+- `[GATING]` All code committed.
+- `[GATING]` Multi-script pipeline runs end-to-end if the plan declares one.
+- `[GATING]` Outputs exist and were generated from committed code (not ad-hoc REPL).
+- `[STANDARD]` `PLAN.md` and `RESULTS.md` current, per the inline-edit rule in `superRA:handoff-doc`.
+- `[STANDARD]` Deferred MINORs either resolved or documented in `RESULTS.md` as accepted limitations with rationale.
+
 ## Common Rationalizations
 
 | Excuse | Reality |
@@ -310,31 +378,7 @@ investigate further.
 
 ## Verification Checklist
 
-Before marking a step complete:
-
-**DESCRIBE:**
-- [ ] Described input data before the operation
-- [ ] Key variables examined with appropriate diagnostics
-- [ ] Panel structure documented (if applicable)
-- [ ] Re-described affected variables after the transformation
-
-**ANALYZE:**
-- [ ] Operation matches plan specification
-- [ ] One logical operation per step
-- [ ] Row counts logged before and after (if sample-changing)
-
-**VALIDATE:**
-- [ ] Sanity checks run (row count vs. expectation, distribution shift,
-      economic sense, PLAN.md expectations)
-- [ ] Multi-source cross-check for key variables (scale / property /
-      relationship / reference)
-- [ ] Missingness pattern interpreted, not just handled
-- [ ] Sensitivity check run where applicable; divergence escalated
-- [ ] Decisions and findings documented in markdown cells
-- [ ] Unexpected findings investigated before proceeding
-
-Can't check all boxes? You skipped data-first discipline. Start over from the
-Describe step.
+For pre-handoff self-check and reviewer verification, see §Review & Self-Check Discipline above.
 
 ## Pitfalls
 
