@@ -283,7 +283,21 @@ else
   pass "execution-workflow SKILL.md no longer carries '## Dispatch Templates' as a top-level heading"
 fi
 
-# 15. README 'Why superRA?' lead section does not mention Iron Law.
+# 15. Alias-only protocol skills (implementer-protocol, reviewer-protocol) are
+# deleted. Their role is covered by agent-orchestration §Direct Mode plus
+# direct links to agents/implementer.md / agents/reviewer.md.
+protocol_dirs_present=0
+if [ -d "skills/implementer-protocol" ]; then
+  fail "skills/implementer-protocol/ should be deleted (covered by agent-orchestration §Direct Mode)"
+  protocol_dirs_present=$((protocol_dirs_present+1))
+fi
+if [ -d "skills/reviewer-protocol" ]; then
+  fail "skills/reviewer-protocol/ should be deleted (covered by agent-orchestration §Direct Mode)"
+  protocol_dirs_present=$((protocol_dirs_present+1))
+fi
+[ "$protocol_dirs_present" -eq 0 ] && pass "alias-only protocol skills (implementer-protocol, reviewer-protocol) are absent"
+
+# 16. README 'Why superRA?' lead section does not mention Iron Law.
 why_section=$(awk '/^## Why superRA\?/{flag=1; next} /^## /{flag=0} flag' README.md | head -10)
 if echo "$why_section" | grep -qi 'Iron Law'; then
   fail "README 'Why superRA?' lead mentions Iron Law — should be workflow-first"
