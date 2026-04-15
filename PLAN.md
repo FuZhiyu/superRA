@@ -188,7 +188,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 11b: Add workflow-stage-to-skill map (markdown diagram)
 
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Objective:** After Tasks 7–11 land, add a markdown diagram (Mermaid preferred so GitHub renders it, pipe-table fallback) showing how each skill is used in each workflow stage. Stages: session-start → PLAN → IMPLEMENT → VALIDATE → INTEGRATE (drift tests / refactor / doc finalization) → MERGE. For each stage: primary workflow skill + active domain skill + cross-cutting loads (`agent-orchestration`, `handoff-doc`, `semantic-merge`) + stage-scoped references + agents dispatched. Legend explains the DRY-composition pattern + extension path (new verticals swap only the domain column).
 
@@ -196,16 +196,18 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 **Files touched:**
 
-- `README.md` (preferred) — new `## Workflow Map` section after §How It Works, before §Design Principles. If the diagram is too large, create `skills/WORKFLOW.md` and link from README.
+- `README.md` — new `## Workflow Map` section between §How It Works and §Design Principles.
+- `tests/structural-invariants.sh` — new block #17 (Workflow Map heading + Mermaid fence / pipe-table fallback); prior block #17 (README 'Why superRA?' lead) renumbered to #18.
 
 **Steps:**
 
-- [ ] **Describe.** Enumerate every workflow stage end-to-end with its skill/reference/agent cells, cross-checked against the post-Task-10 agent Stage tables.
-- [ ] **Analyze — draft the diagram.** Mermaid `flowchart` with lanes for (a) workflow skill, (b) domain skill body + reference, (c) cross-cutting, (d) agents dispatched. Fall back to a pipe-table if Mermaid complexity gets out of hand. Add legend + extension note.
-- [ ] **Validate.**
-  - Confirm the map matches the agent Stage tables cell-by-cell.
-  - Add invariant block #18 (light): `README.md` (or `skills/WORKFLOW.md`) contains a `mermaid` code fence OR a workflow-map pipe-table with ≥5 stage rows.
-  - Atomic commit: `docs(readme): add workflow-stage-to-skill map`.
+- [x] **Describe.** Enumerated every workflow stage (Session start, PLAN, IMPLEMENT, VALIDATE, INTEGRATE Stage 1/2/Step 3, MERGE), cross-checked against the 11-row Stage tables in `agents/implementer.md` and `agents/reviewer.md`.
+- [x] **Analyze — draft the diagram.** Added a Mermaid `flowchart TB` with one node per stage carrying the workflow skill, domain skill / references, agent `Stage:` value, and agents dispatched. A shared `CROSS` node captures `agent-orchestration`, `handoff-doc`, and `using-superRA` (dotted edges from every stage). REVISE / APPROVE loops at VALIDATE wired explicitly. Added a legend explaining the DRY-composition pattern and an extension note that new verticals swap only the Domain column.
+- [x] **Validate.**
+  - Cross-checked every reference cell against the agent Stage tables: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `codebase-integration.md`, `drift-test-quality.md`, `merge-quality.md`, `baseline-io.md`, `rich-content.md`, `final-form.md`, plus the `econ-data-analysis` main-body §Review & Self-Check / §Refactor integrity anchors. All resolve to real files.
+  - Added invariant block #17 to `tests/structural-invariants.sh`: (a) `README.md` contains `## Workflow Map` heading; (b) within the 100 lines following that heading, a ```` ```mermaid ```` fenced code block exists OR a pipe-table with ≥5 data rows exists. Renumbered the prior README-'Why superRA?' block to #18.
+  - `bash tests/structural-invariants.sh` → all PASS, 2 known WARN (writing-skills upstream refs), 0 FAIL.
+- [x] Atomic commit: `docs(readme): add workflow-stage-to-skill map`.
 
 ---
 

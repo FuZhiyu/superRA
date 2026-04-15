@@ -42,6 +42,60 @@ INTEGRATE       integration-workflow → merge-workflow (uses semantic-merge)
 
 Each task produces an atomic commit. If the session dies at any point, the next session reads `PLAN.md` + `RESULTS.md` + git state and picks up exactly where the last one stopped.
 
+## Workflow Map
+
+The diagram below shows how each skill, reference, and agent plugs into each workflow stage. Cross-cutting skills (`agent-orchestration`, `handoff-doc`) apply at every dispatch and are shown as a shared rail at the bottom rather than repeated inside each stage node. The authoritative `Stage:` → references mapping lives in `agents/implementer.md` and `agents/reviewer.md`; this diagram visualizes that same mapping, stage-by-stage.
+
+```mermaid
+flowchart TB
+    SESSION["<b>Session start</b><br/>(every new/compacted session)"]
+    SESSION --> PLAN
+
+    PLAN["<b>PLAN</b><br/>planning-workflow<br/>+ econ-data-analysis/references/planning.md<br/>Data Inventory hard gate, sensitivity design"]
+    PLAN --> IMPL
+
+    IMPL["<b>IMPLEMENT</b> (per task)<br/>execution-workflow Step 2<br/>Stage: implementation<br/>→ implementer agent<br/>+ econ-data-analysis main body (Iron Law, Describe/Analyze/Validate)<br/>+ script-to-notebook"]
+    IMPL --> VAL
+
+    VAL["<b>VALIDATE</b> (per task)<br/>execution-workflow Step 2 review<br/>Stage: implementation review<br/>→ reviewer agent<br/>+ econ-data-analysis §Review &amp; Self-Check Discipline<br/>APPROVE / REVISE / CONDITIONAL APPROVE"]
+    VAL -->|REVISE loop| IMPL
+    VAL -->|APPROVED, next task| IMPL
+    VAL -->|all tasks APPROVED, user chooses merge| INT1
+
+    INT1["<b>INTEGRATE — Stage 1: drift tests</b><br/>integration-workflow Stage 1<br/>Stage: drift test creation / drift test review<br/>→ implementer + reviewer<br/>+ refactor-and-integrate/references/drift-test-quality.md<br/>+ econ-data-analysis/references/integrate-drift-tests.md"]
+    INT1 --> INT2
+
+    INT2["<b>INTEGRATE — Stage 2: refactor + integration review</b><br/>integration-workflow Stage 2<br/>Stage: refactoring / integration review<br/>→ implementer + reviewer<br/>+ econ-data-analysis §Refactor integrity<br/>+ econ-data-analysis/references/integration.md (data-specific)<br/>+ refactor-and-integrate/references/codebase-integration.md (generic)"]
+    INT2 --> INT3
+
+    INT3["<b>INTEGRATE — Step 3: doc finalization</b><br/>integration-workflow Step 3<br/>Stage: doc writer / doc reviewer<br/>→ implementer + reviewer<br/>+ report-in-markdown (baseline-io, rich-content, final-form)<br/>Mature RESULTS.md; audit CLAUDE.md / AGENTS.md / README.md"]
+    INT3 --> MERGE
+
+    MERGE["<b>MERGE</b><br/>merge-workflow<br/>+ semantic-merge (conflict classification)<br/>Stage: merge proposer / merge review<br/>→ implementer + reviewer<br/>+ refactor-and-integrate/references/merge-quality.md<br/>Post-merge: fresh drift-test + integration review"]
+
+    CROSS["<b>Cross-cutting (every dispatch)</b><br/>agent-orchestration — dispatch shape · return deltas · reviewer-feedback adjudication · review-status reference · direct mode<br/>handoff-doc — six principles · inline-edit · task-block anatomy · figure embedding · user-decisions log<br/>using-superRA — session bootstrap · cross-session detection · skill discovery"]
+
+    SESSION -.loads.-> CROSS
+    PLAN -.uses.-> CROSS
+    IMPL -.uses.-> CROSS
+    VAL -.uses.-> CROSS
+    INT1 -.uses.-> CROSS
+    INT2 -.uses.-> CROSS
+    INT3 -.uses.-> CROSS
+    MERGE -.uses.-> CROSS
+
+    classDef phase fill:#eef7ff,stroke:#0366d6,stroke-width:1px,color:#000
+    classDef cross fill:#fff9e6,stroke:#b58900,stroke-width:1px,color:#000
+    classDef session fill:#f0f0f0,stroke:#666,color:#000
+    class PLAN,IMPL,VAL,INT1,INT2,INT3,MERGE phase
+    class CROSS cross
+    class SESSION session
+```
+
+**Legend — the DRY-composition pattern.** Workflow skills own *choreography* — what steps run in what order at each stage. `agent-orchestration` owns cross-stage orchestration (dispatch shape, return-delta protocol, reviewer-feedback adjudication, review-status reference, direct-mode rubric). Domain skills own domain discipline (Iron Law, Describe/Analyze/Validate, the `[GATING]` / `[STANDARD]` / `[ADVISORY]` shared-flow checklists that both implementer and reviewer walk). `refactor-and-integrate` owns generic integration discipline (drift-test quality, codebase integration, merge quality). `handoff-doc` owns document-level discipline for `PLAN.md` / `RESULTS.md`. The Stage tables in `agents/implementer.md` and `agents/reviewer.md` are the authoritative map from a dispatched `Stage:` value to the exact references the agent loads — the diagram above is a visualization of those tables.
+
+**Extension note.** Adding a new vertical (theory, literature review, simulation, writing) swaps only the Domain column — the planning reference, the main-body discipline, the §Review & Self-Check Discipline checklist, and the integration reference. The workflow skills, `agent-orchestration`, `handoff-doc`, `refactor-and-integrate`, and the agent Stage-table scaffolding all stay put. A new vertical composes these pieces; it never forks a workflow skill.
+
 ## Design Principles
 
 Four workflow principles are baked into every skill in the repo. Every contribution is evaluated against them (see `CLAUDE.md` for the full version).
