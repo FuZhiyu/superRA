@@ -196,7 +196,7 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 ## Task 4: Agent-File Stage Tables + Dispatch-Prompt Contract + Self-Review Walk
 
-**Review status:** (not started)
+**Review status:** IMPLEMENTED
 
 **Objective:** Add an authoritative Stage → reference-loads table in both `agents/implementer.md` and `agents/reviewer.md`. Add a "What the dispatch prompt carries — and doesn't" contract section near the top. Extend the implementer's Self-Review to walk the domain skill's §Review & Self-Check Discipline before returning DONE. Extend the reviewer's Review Protocol with the CONDITIONAL APPROVE verdict.
 
@@ -209,9 +209,9 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 **Steps:**
 
-- [ ] **Step 1: Describe — audit current stage references in agent files.** Both files currently carry prose under "Before You Start" step 2 describing stage-scoped loading. Identify the prose lines to replace with the table.
+- [x] **Step 1: Describe — audit current stage references in agent files.** Both files carried prose under "Before You Start" step 2 describing stage-scoped loading (implementer L23; reviewer L30). Those prose blocks are replaced by a pointer to the new Stage table that sits near the top of each file.
 
-- [ ] **Step 2: Analyze — write the Stage table and dispatch contract.**
+- [x] **Step 2: Analyze — write the Stage table and dispatch contract.**
 
   Stage table (same in both agent files, adapted for implementer vs reviewer wording):
 
@@ -239,8 +239,8 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
   Reviewer §Verdict extension (CONDITIONAL APPROVE): three-verdict protocol. On CONDITIONAL APPROVE, review-notes blockquote lists the failed `[GATING]` item(s) first, then notes "downstream items reviewed and currently correct; approval contingent on the gating fix not changing downstream results." Set `**Review status:** CONDITIONAL APPROVE`. On re-review after gating fix: verify (a) the gating fix is correct, (b) cited downstream items still hold; if both, delete the blockquote and set `**Review status:** APPROVED`.
 
-- [ ] **Step 3: Validate — structural invariants + commit.**
-  - New invariants: both agent files contain a Stage table (markdown table with "Stage" header row + rows for `implementation`, `implementation review`, `refactoring`, `integration review`). Both files contain the dispatch-prompt contract phrase ("What the dispatch prompt carries — and doesn't"). `agents/reviewer.md` contains `CONDITIONAL APPROVE`.
+- [x] **Step 3: Validate — structural invariants + commit.**
+  - Added block #13 to `tests/structural-invariants.sh`: both agent files contain a Stage table (header row mentioning "Stage" + rows for `implementation`, `implementation review`, `refactoring`, `integration review`); both contain the dispatch-prompt contract phrase ("What the dispatch prompt carries — and doesn't"); `agents/reviewer.md` contains `CONDITIONAL APPROVE`. Old block #13 (README Why-superRA?) renumbered to #14. Full run: all PASS, 2 known WARN, 0 FAIL.
   - Atomic commit: `feat(agents): Stage tables + dispatch-prompt contract + CONDITIONAL APPROVE verdict`.
 
 ---

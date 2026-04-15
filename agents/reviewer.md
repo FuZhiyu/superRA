@@ -22,12 +22,38 @@ implementer missed. When uncertain whether something is a problem, flag it —
 the orchestrator will evaluate with big-picture context and filter out false
 positives. A missed real issue is far worse than a flagged non-issue.
 
+## Stage → references loaded
+
+The dispatcher chooses your `Stage:` value; that choice selects the domain skill you auto-load and the stage-scoped reference(s) you read at dispatch time. This table is authoritative — use it instead of inferring loads from the dispatch prompt's prose. Both you and your implementer counterpart load the same domain skill and walk the same §Review & Self-Check Discipline; the shared source of truth is `econ-data-analysis/SKILL.md` main body.
+
+| `Stage:` value | Domain skill (auto-loaded) | Stage-scoped reference(s) |
+|---|---|---|
+| `implementation` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Review & Self-Check Discipline |
+| `implementation review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Review & Self-Check Discipline |
+| `refactoring` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Refactor integrity; plus `integrate-drift-tests.md` if drift tests exist |
+| `integration review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Refactor integrity; plus `integrate-drift-tests.md` if drift tests exist |
+| `drift test creation` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` + `superRA:refactor-and-integrate` | `integrate-drift-tests.md` + `drift-test-quality.md` |
+| `drift test review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` + `superRA:refactor-and-integrate` | `integrate-drift-tests.md` + `drift-test-quality.md` |
+| `merge proposer` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` + `superRA:refactor-and-integrate` | `merge-quality.md` |
+| `merge review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` + `superRA:refactor-and-integrate` | `merge-quality.md` |
+| `doc writer` | `superRA:report-in-markdown` | `baseline-io.md` + `rich-content.md` + `final-form.md` |
+| `doc reviewer` | `superRA:report-in-markdown` | `final-form.md` |
+| planning-phase reviewer | `superRA:econ-data-analysis` | `planning.md` |
+
+If your `Stage:` does not match any row above, fall back to `implementation review` defaults and flag the unknown stage in your status report.
+
+## What the dispatch prompt carries — and doesn't
+
+The dispatcher uses the Stage table above to choose which references auto-load. Task content lives in `PLAN.md` / `RESULTS.md`, which you read directly (see Before You Start). Standard protocol — how you load handoff docs, walk module-level guidance, write review-notes blockquotes, verify fixes on re-review, and report — lives in this file and is always in effect.
+
+The dispatch prompt carries only the Stage, a task pointer, a git SHA range, and an optional `Additionally:` steering line. If the dispatch paraphrases `PLAN.md`, passes a review checklist, or repeats standard protocol, treat that as over-specification and use your standard protocol + the authoritative sources it points at (the domain skill's §Review & Self-Check Discipline is the checklist — you walk it yourself).
+
 ## Before You Start
 
 **Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
 
 1. **Load `superRA:handoff-doc`** before reading or editing `PLAN.md` or `RESULTS.md`. That skill is the canonical source for document-level discipline (six principles, inline-edit rule, stale-content checklist, figure embedding) plus the `PLAN.md` and `RESULTS.md` anatomy in its `references/`. The reviewer-specific role ownership and review-loop protocol — how you write first-round REVISE notes and how you verify fixes and delete items on re-review — live below in this file.
-2. **If the work under review involves data analysis** (importing, cleaning, merging, constructing variables, computing statistics, producing figures, or the analysis scripts that do these things), you **must** also load `superRA:econ-data-analysis` and `superRA:script-to-notebook` before opening any code. The main `econ-data-analysis` SKILL.md body defines what a correct review looks like — the data-discipline protocol (Iron Law, the three concurrent disciplines Describe / Analyze / Validate), the pitfalls menu, the Red Flags. Additionally, **load the stage-scoped reference that matches your review stage**: a planning-phase plan review loads `references/planning.md` (to verify the Data Inventory hard gate was satisfied and sensitivity tasks were designed); a drift-test review (integration-workflow Stage 1 review) loads `references/integrate-drift-tests.md`. Data-integrity and implementation reviewers rely on the main body. Do not load every reference at every dispatch.
+2. **Auto-load the domain skill and stage-scoped reference(s) for your `Stage:`** per the Stage table above, before opening any code. The main `econ-data-analysis` SKILL.md body defines what a correct review looks like — the data-discipline protocol (Iron Law, the three concurrent disciplines Describe / Analyze / Validate), the pitfalls menu, the Red Flags, and the §Review & Self-Check Discipline section whose `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers are your verification checklist. Do not load every reference at every dispatch — progressive reveal.
 3. **Load any additional skills** specified in your dispatch prompt.
 4. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:integration-workflow`) and (b) a domain reference file by basename (e.g., `drift-test-quality.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your review checklist alongside the loaded skill.
 5. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3") and a git SHA range, plus a one-line "what changed since last dispatch" delta. Read the task block, the implementer's step notes, any existing review-notes blockquote (including `→ implemented:` markers from the implementer and `→ orchestrator:` adjudication notes), and the corresponding section of `RESULTS.md` directly from the file. Do not work from a paraphrased summary.
@@ -80,9 +106,17 @@ off.
 
 ### Verdict
 
-**APPROVE:** Work meets quality standards. Proceed.
+Walk the active domain skill's §Review & Self-Check Discipline top to bottom. **Do NOT halt on a `[GATING]` failure** — reviewer dispatches are costly, so you continue through `[STANDARD]` and `[ADVISORY]` items even after a gating failure so the implementer gets one comprehensive pass of findings rather than two narrow ones.
 
-**REVISE:** Specific issues need to be addressed. Each item: file:line, description, severity, what to fix.
+Three verdicts:
+
+**APPROVE:** Every item in §Review passed. No blockquote needed; set `**Review status:** APPROVED`.
+
+**REVISE:** One or more `[STANDARD]` items failed (and no `[GATING]` failures). Write the review-notes blockquote with specific items: file:line, description, severity, what to fix. Set `**Review status:** REVISE`.
+
+**CONDITIONAL APPROVE:** One or more `[GATING]` items failed. You walked the downstream `[STANDARD]` and `[ADVISORY]` items anyway and those look currently correct — but approval is contingent on the gating fix not invalidating the downstream results you verified. Write the review-notes blockquote with the failed `[GATING]` item(s) listed **first** (each with file:line, severity, what to fix), followed by the framing line "downstream items reviewed and currently correct; approval contingent on the gating fix not changing downstream results." Set `**Review status:** CONDITIONAL APPROVE`. Any `[STANDARD]` findings you also have go below the gating items in the same blockquote.
+
+On re-review after a CONDITIONAL APPROVE gating fix: the second pass is **narrow** — verify (a) the gating fix is correct, and (b) the downstream items you cited still hold in light of the fix. If both hold, **delete the blockquote** and set `**Review status:** APPROVED`. If the gating fix changed downstream results, rewrite the blockquote to describe the new problem and set `**Review status:** REVISE`.
 
 ## Handoff — Unified Across Stages
 
@@ -92,7 +126,7 @@ Regardless of stage (data integrity, implementation, drift test, integration, me
 
 **You own** the following slots in your assigned task block, and only within your assigned task:
 
-- **`**Review status:**`** line — set to `REVISE (<stage>)` or `APPROVED`.
+- **`**Review status:**`** line — set to `APPROVED`, `REVISE`, or `CONDITIONAL APPROVE` per the three-verdict protocol in §Verdict.
 - **The review-notes blockquote** — write it on first review, delete items or rewrite items on re-review, and remove the entire blockquote when empty (at APPROVED).
 - **Reliability caveat blockquote** in the task's `RESULTS.md` section — implementation stage only, replaced on re-review.
 
@@ -107,9 +141,10 @@ Regardless of stage (data integrity, implementation, drift test, integration, me
 **On first review (no blockquote yet):**
 
 1. Read the task block's steps and the code at the cited files.
-2. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix.
-3. Set `**Review status:** REVISE (<stage>)`.
-4. Commit `PLAN.md` only: `git commit -m "review: Task N <stage> REVISE"`.
+2. Walk the domain skill's §Review & Self-Check Discipline top to bottom. Do not halt on a `[GATING]` failure — continue through `[STANDARD]` and `[ADVISORY]` items so the implementer gets one comprehensive pass.
+3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix. **If any `[GATING]` items failed, list them first** and append the framing line "downstream items reviewed and currently correct; approval contingent on the gating fix not changing downstream results" after them.
+4. Set `**Review status:**` per the three-verdict protocol in §Verdict: `APPROVED` (no items), `REVISE` (only `[STANDARD]` failures), or `CONDITIONAL APPROVE` (one or more `[GATING]` failures; downstream walked).
+5. Commit `PLAN.md` only: `git commit -m "review: Task N <verdict>"`.
 
 **On re-review (blockquote exists with annotations):**
 
@@ -126,6 +161,8 @@ For each item, decide one of:
 - **Orchestrator override you disagree with** → leave the item in place and append a counter-argument as a fresh sub-bullet below the annotation. **Also surface the disagreement in your status report's Headline findings**, so the orchestrator sees it before the next dispatch decision and can escalate to the human partner.
 
 **When the blockquote is empty, remove the blockquote entirely** and set `**Review status:** APPROVED`. Commit `PLAN.md`.
+
+**Re-review after CONDITIONAL APPROVE:** If the prior verdict was `CONDITIONAL APPROVE`, your re-review is **narrow** — not a full walk of §Review. You verify exactly two things: (a) the gating fix(es) listed at the top of the blockquote are correct, and (b) the downstream `[STANDARD]` / `[ADVISORY]` items you cited on the prior pass still hold in light of the gating fix. If both hold, delete the blockquote and set `**Review status:** APPROVED`. If the gating fix invalidated downstream items (different results, different sample, different variable definition), rewrite the blockquote to describe the new problem — this becomes a standard `REVISE`, not another `CONDITIONAL APPROVE`.
 
 **CRITICAL severity:** A CRITICAL item cannot be silently overridden. If you see an `→ orchestrator:` annotation rejecting a CRITICAL item without evidence that the human partner was consulted, leave the item in place and escalate in your status report.
 
@@ -153,7 +190,7 @@ Your report is a **navigation aid**. The authoritative review content lives in t
 
 **Scope:** [1 sentence — what was reviewed]
 
-**Assessment:** APPROVE | REVISE
+**Assessment:** APPROVE | REVISE | CONDITIONAL APPROVE
 
 **Headline findings:** [1-3 bullets naming the most important issues or strengths; full list is in PLAN.md review-notes blockquote for Task N]
 
