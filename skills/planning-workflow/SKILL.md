@@ -84,7 +84,7 @@ Required header fields and task block structure are non-negotiable. The template
 
 **The plan is NOT a static spec.** Work reveals surprises; the plan evolves in place.
 
-**For the full discipline** — the six principles, inline-edit rule, stale-content checklist, figure embedding, `PLAN.md` / `RESULTS.md` anatomy, and the two-stage `RESULTS.md` lifecycle — load `superRA:handoff-doc`. That skill is the single source of truth for document mechanics and is loaded by implementer and reviewer subagents, so the rules stay consistent across roles. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
+**For the full discipline** — the four principles, inline-edit rule, stale-content checklist, figure embedding, `PLAN.md` / `RESULTS.md` anatomy, and the two-stage `RESULTS.md` lifecycle — load `superRA:handoff-doc`. That skill is the single source of truth for document mechanics and is loaded by implementer and reviewer subagents, so the rules stay consistent across roles. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
 **Results document:** Create `RESULTS.md` alongside `PLAN.md` using the template at `references/results-template.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
 
