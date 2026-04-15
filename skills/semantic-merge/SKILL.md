@@ -172,7 +172,7 @@ Conflicts exist but none touch research-relevant files.
        <optional steering>.
    ```
 
-4. **If REVISE:** adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:execution-workflow` (Handling Reviewer Feedback). Forward accepted issues to the merge-proposer; push back or override others with documented reasoning. Iterate until APPROVE.
+4. **If REVISE:** adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback. Forward accepted issues to the merge-proposer; push back or override others with documented reasoning. Iterate until APPROVE.
 
 5. **Run drift tests.** If pass: done. If fail: escalate to user (Tier 3 handling).
 

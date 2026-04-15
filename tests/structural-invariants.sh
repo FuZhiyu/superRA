@@ -148,11 +148,13 @@ skills/refactor-and-integrate/SKILL.md"
 dispatch_count=0
 prefix_count=0
 for f in $dispatch_files; do
-  dc=$(grep -c 'Agent(subagent_type: "superRA:\(implementer\|reviewer\)"):' "$f" 2>/dev/null || echo 0)
+  dc=$(grep -c 'Agent(subagent_type: "superRA:\(implementer\|reviewer\)"):' "$f" 2>/dev/null)
+  dc=${dc:-0}
   dispatch_count=$((dispatch_count + dc))
 done
 for f in $dispatch_files; do
-  pc=$(grep -c 'Follow the standard stage-relevant workflow' "$f" 2>/dev/null || echo 0)
+  pc=$(grep -c 'Follow the standard stage-relevant workflow' "$f" 2>/dev/null)
+  pc=${pc:-0}
   prefix_count=$((prefix_count + pc))
 done
 if [ "$dispatch_count" -gt 0 ] && [ "$prefix_count" -ge "$dispatch_count" ]; then
@@ -254,7 +256,33 @@ else
   fail "agents/reviewer.md missing CONDITIONAL APPROVE verdict"
 fi
 
-# 14. README 'Why superRA?' lead section does not mention Iron Law.
+# 14. Cross-stage orchestration content lives in agent-orchestration, not
+# execution-workflow. agent-orchestration/SKILL.md owns four top-level
+# sections (Dispatch Templates, Handling Reviewer Feedback, Review Status
+# Reference, Direct Mode); execution-workflow/SKILL.md does NOT carry
+# '## Dispatch Templates' as a heading (pointers to agent-orchestration
+# only).
+ao_skill="skills/agent-orchestration/SKILL.md"
+ao_missing=0
+for h in '^## Dispatch Templates$' \
+         '^## Handling Reviewer Feedback' \
+         '^## Review Status Reference$' \
+         '^## Direct Mode$'; do
+  if grep -Eq "$h" "$ao_skill"; then
+    :
+  else
+    fail "agent-orchestration SKILL.md missing heading matching: $h"
+    ao_missing=$((ao_missing+1))
+  fi
+done
+[ "$ao_missing" -eq 0 ] && pass "agent-orchestration SKILL.md owns the four cross-stage orchestration sections"
+if grep -Eq '^## Dispatch Templates' "skills/execution-workflow/SKILL.md"; then
+  fail "execution-workflow SKILL.md still carries '## Dispatch Templates' as a top-level heading (should be lifted to agent-orchestration)"
+else
+  pass "execution-workflow SKILL.md no longer carries '## Dispatch Templates' as a top-level heading"
+fi
+
+# 15. README 'Why superRA?' lead section does not mention Iron Law.
 why_section=$(awk '/^## Why superRA\?/{flag=1; next} /^## /{flag=0} flag' README.md | head -10)
 if echo "$why_section" | grep -qi 'Iron Law'; then
   fail "README 'Why superRA?' lead mentions Iron Law — should be workflow-first"
