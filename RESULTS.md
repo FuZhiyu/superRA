@@ -85,3 +85,48 @@ Total of 14 `[GATING]` markers in the file.
 **Structural-invariants run.** 29 PASS, 2 known WARN (pre-existing upstream refs in writing-skills), 0 FAIL.
 
 **Out of scope (tracked for follow-on tasks 4–6).** Agent-file Stage tables that remove the need for dispatch-template preamble (Task 4), companion-workflow audit (Task 5), and final invariants + release-notes consolidation (Task 6). All depend on Task 3 APPROVE.
+
+## Task 6: Structural Invariants + RELEASE-NOTES Finalization
+
+**Outcome.** The restructure is wrapped: `tests/structural-invariants.sh` already carries every assertion the dispatch checklist calls for, and `RELEASE-NOTES.md`'s top (Unreleased) entry is rewritten as a single coherent description of the full `refactor/workflow-domain-split` restructure.
+
+**Invariant audit — no gaps found.** Walked the dispatch-specified checklist against the live script; every item resolves to an existing `pass` line:
+
+| Checklist item | Block in script |
+|---|---|
+| Dispatch prefix standardization (prefix count ≥ template count) | 10a |
+| No `Work from:` / `Counterpart:` in dispatch templates | 10b |
+| `## Review & Self-Check Discipline` heading in `econ-data-analysis/SKILL.md` | 11 |
+| `[GATING]` marker count ≥ 8 in that file | 11 |
+| `CONDITIONAL APPROVE` string in `econ-data-analysis/SKILL.md` | 11 |
+| No shadow `implementation-review.md` / `integration-review.md` reference | 11 |
+| `execution-workflow/SKILL.md` free of two-stage-review phrasing | 12 |
+| `## Sensitivity Analysis Tasks` section removed from `execution-workflow/SKILL.md` | 12 |
+| `CONDITIONAL APPROVE` in `execution-workflow/SKILL.md` | 12 |
+| Stage table with core stage rows in `agents/implementer.md` | 13 |
+| Stage table with core stage rows in `agents/reviewer.md` | 13 |
+| Dispatch-prompt contract phrase in both agent files | 13 |
+| `CONDITIONAL APPROVE` in `agents/reviewer.md` | 13 |
+
+DAV-era invariants (blocks 3 / 3b / 3c) continue to guard the DAV restructure. No new assertions added.
+
+**RELEASE-NOTES.md rewrite.** The prior Unreleased entry announced four sub-refactors and inherited the DAV paragraphs from the prior cycle, but never covered Tasks 4 (agent Stage tables + dispatch-prompt contract + implementer §Self-Review walk) or 5 (companion-workflow audit). Replaced with one coherent entry whose title names the full restructure and whose body walks seven pieces in logical order:
+
+1. DAV restructure (Describe-Analyze-Validate).
+2. Dispatch-prompt protocol standardization with the Additionally-anchor-last shape.
+3. §Review & Self-Check Discipline shared gating in `econ-data-analysis/SKILL.md` main body with `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers.
+4. CONDITIONAL APPROVE verdict protocol.
+5. `execution-workflow` domain-agnosticism (one-pass review, domain-parametric Step 3, generic completion menu, domain-neutral stage names).
+6. Agent Stage tables + dispatch-prompt contract + implementer §Self-Review walk + reviewer CONDITIONAL APPROVE mechanics.
+7. Companion-workflow light audit across `integration-workflow`, `merge-workflow`, `semantic-merge`, `planning-workflow`, `refactor-and-integrate/references/codebase-integration.md`, and `agents/reviewer.md` frontmatter.
+
+A final paragraph enumerates the structural-invariants blocks (10a, 10b, 11, 12, 13, 3+3b+3c) that anchor each piece. Prior release entries preserved verbatim.
+
+**Files touched:**
+
+- `tests/structural-invariants.sh` — no edits (audit confirmed complete).
+- `RELEASE-NOTES.md` — Unreleased entry rewritten; all prior entries preserved.
+- `PLAN.md` — Task 6 steps marked `[x]`, Review status set to `IMPLEMENTED`.
+- `RESULTS.md` — this Task 6 section added.
+
+**Structural-invariants run.** All PASS, 2 known WARN (pre-existing upstream refs in `writing-skills`), 0 FAIL.

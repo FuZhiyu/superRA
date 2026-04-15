@@ -272,7 +272,7 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 ## Task 6: Structural Invariants + RELEASE-NOTES Finalization
 
-**Review status:** (not started)
+**Review status:** IMPLEMENTED
 
 **Objective:** Consolidate all new invariants added across Tasks 2–5 into a coherent section of `tests/structural-invariants.sh`; expand the top (Unreleased) entry of `RELEASE-NOTES.md` to describe the full restructure (DAV rename + dispatch standardization + §Review integration + execution-workflow domain agnosticism + Stage tables + CONDITIONAL APPROVE + companion-workflow audit).
 
@@ -280,11 +280,13 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 **Files touched:**
 
-- `tests/structural-invariants.sh` — verify all new assertions from Tasks 2–4 are present; add any missing one.
-- `RELEASE-NOTES.md` — expand Unreleased.
+- `tests/structural-invariants.sh` — audit complete; all checklist assertions from Tasks 1–4 already present (blocks 10a, 10b, 11, 12, 13, plus DAV-era 3b/3c). No additional assertions needed.
+- `RELEASE-NOTES.md` — top (Unreleased) entry rewritten.
 
 **Steps:**
 
-- [ ] **Step 1:** Audit structural-invariants.sh for completeness; add missing assertions.
-- [ ] **Step 2:** Rewrite the top RELEASE-NOTES entry to cover all restructure pieces.
-- [ ] **Step 3:** Run the test suite — must exit 0 with the existing ≤2 WARN. Atomic commit: `test+docs: finalize invariants and release notes for workflow-domain-split restructure`.
+- [x] **Step 1: Audit structural-invariants.sh for completeness.** Walked every dispatch-checklist assertion: dispatch prefix standardization (block 10a) ✓, §Review & Self-Check Discipline heading (block 11) ✓, GATING marker count ≥ 8 (block 11) ✓, CONDITIONAL APPROVE in econ-data-analysis (block 11) ✓, absence of shadow `implementation-review.md` / `integration-review.md` references (block 11) ✓, absence of two-stage-review phrasing in execution-workflow (block 12) ✓, absence of `## Sensitivity Analysis Tasks` section (block 12) ✓, Stage table + core stage rows in both agent files (block 13) ✓, dispatch-prompt contract phrase in both agent files (block 13) ✓, CONDITIONAL APPROVE in `agents/reviewer.md` (block 13) ✓, CONDITIONAL APPROVE in execution-workflow (block 12) ✓, no `Work from:`/`Counterpart:` in any dispatch template (block 10b) ✓. DAV-era invariants (3, 3b, 3c) continue to cover the DAV restructure. No gaps found; no new assertions added.
+
+- [x] **Step 2: Rewrite the top RELEASE-NOTES entry.** The prior Unreleased entry was structured as four sub-refactors announced on top of the already-landed DAV entry, and was missing coverage of Tasks 4 (agent Stage tables + dispatch-prompt contract + implementer §Self-Review walk) and 5 (companion-workflow audit). Replaced with a single coherent entry whose title names the full restructure ("workflow-domain-split restructure") and whose body walks the seven pieces in logical order: DAV, dispatch-prompt standardization, §Review shared gating, CONDITIONAL APPROVE, execution-workflow domain-agnosticism, agent Stage tables + dispatch-prompt contract + §Self-Review walk, companion-workflow light audit, and a consolidated structural-invariants paragraph that enumerates every invariant block added or updated. Prior release entries preserved verbatim.
+
+- [x] **Step 3: Validate and commit.** `bash tests/structural-invariants.sh`: all PASS, 2 known WARN, 0 FAIL. Atomic commit to follow: `test+docs: finalize invariants and release notes for workflow-domain-split restructure`.
