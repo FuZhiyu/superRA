@@ -140,7 +140,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 16: Split `agent-orchestration/SKILL.md` — SKILL.md (high-level) + `references/agent-teams.md` (technical)
 
-**Review status:** not started
+**Review status:** IMPLEMENTED
 
 **Depends on:** Task 14 APPROVE (needs `using-superRA` §Execution Modes in place so Direct Mode pointer has a target).
 
@@ -148,15 +148,15 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 **Files touched:**
 
-- `skills/agent-orchestration/SKILL.md` — delete Team Recipes + Direct Mode; rewrite parallel-dispatch examples; keep high-level orchestration content.
-- `skills/agent-orchestration/references/agent-teams.md` — new reference.
+- `skills/agent-orchestration/SKILL.md` — deleted Team Recipes + `## Direct Mode` (replaced with one-line pointer to `superRA:using-superRA` §Execution Modes); rewrote Overview with a derived-from-manifest team-composition paragraph; kept Overview, Decision Framework, Dispatch Templates, Dispatch-Return Deltas, Handling Reviewer Feedback, Review Status Reference, Integration. Parallel-dispatch how-to lifted to the reference; SKILL.md shrank from 548 to 154 lines (~72% reduction).
+- `skills/agent-orchestration/references/agent-teams.md` — new reference carrying TeamCreate mechanics, task-graph construction, parallel-dispatch how-to (with canonical `Stage:` / `Task:` / `Additionally:` examples using placeholders), lifecycle + cleanup protocol, constraints, and known limitations. Top-of-file pointers at `superRA:using-superRA` §Skill-Load Manifest and at manifest-driven team composition.
 
 **Steps:**
 
-- [ ] **Describe.** Re-read `agent-orchestration/SKILL.md`; mark each sub-section as (a) high-level orchestration vs (b) team mechanics.
-- [ ] **Analyze.** Lift (b) to `references/agent-teams.md` with pointers: "For skill-loads per stage, see `using-superRA` §Skill-Load Manifest"; "Team composition: spawn one teammate per stage the workflow runs; `subagent_type` encodes role." Delete Team Recipes (one-paragraph replacement). Delete Direct Mode (one-line pointer to `using-superRA` §Execution Modes). Rewrite parallel-dispatch examples to canonical template.
-- [ ] **Validate.** SKILL.md length shrinks ≥30%. `grep` for `### Team Recipes` in SKILL.md → 0 hits. `TeamCreate` in SKILL.md only appears in pointers. Invariant block #22: `references/agent-teams.md` exists with `TeamCreate` content.
-- [ ] Atomic commit: `refactor(agent-orchestration): split SKILL.md into high-level + references/agent-teams.md; drop stale Team Recipes`.
+- [x] **Describe.** Re-read `agent-orchestration/SKILL.md`; mark each sub-section as (a) high-level orchestration vs (b) team mechanics.
+- [x] **Analyze.** Lift (b) to `references/agent-teams.md` with pointers: "For skill-loads per stage, see `using-superRA` §Skill-Load Manifest"; "Team composition: spawn one teammate per stage the workflow runs; `subagent_type` encodes role." Delete Team Recipes (one-paragraph replacement in Overview). Delete Direct Mode (one-line pointer to `using-superRA` §Execution Modes at the end of §Review Status Reference). Rewrite parallel-dispatch examples to canonical template (placeholders, not concrete stage names).
+- [x] **Validate.** SKILL.md length shrinks from 548 → 154 lines (~72%, ≥30%). `grep '### Team Recipes' skills/agent-orchestration/SKILL.md` → 0 hits. `grep '## Direct Mode' skills/agent-orchestration/SKILL.md` → 0 hits. `TeamCreate` in SKILL.md only appears in pointers (Overview paragraph + Rule-of-thumb paragraph). `references/agent-teams.md` exists with 3 `TeamCreate` mentions in how-to context. Invariant block #22 is Task 18's responsibility.
+- [x] Atomic commit: `refactor(agent-orchestration): split SKILL.md into high-level + references/agent-teams.md; drop stale Team Recipes`.
 
 ---
 
