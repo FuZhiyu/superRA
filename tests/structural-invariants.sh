@@ -225,29 +225,19 @@ else
   fail "execution-workflow SKILL.md missing CONDITIONAL APPROVE verdict"
 fi
 
-# 13. Agent files carry the authoritative Stage table, the dispatch-prompt
-# contract phrase, and (reviewer only) the CONDITIONAL APPROVE verdict.
-# The Stage table is the single source of truth for which references each
-# stage loads; the contract phrase tells agents the dispatch prompt is
-# additive-only; CONDITIONAL APPROVE encodes the one-pass verdict protocol
-# on the review side.
+# 13. Agent files point at the manifest for stage-based loads (Round 3
+# retired the in-agent Stage tables); the dispatch-prompt contract phrase
+# is preserved; reviewer encodes CONDITIONAL APPROVE.
 for f in agents/implementer.md agents/reviewer.md; do
-  # Markdown table whose header mentions 'Stage' and whose rows include the
-  # four core stages. We grep the rendered markdown; the table rows contain
-  # backtick-wrapped stage names like `implementation`.
-  if grep -Eq '^\|.*Stage.*\|' "$f" \
-     && grep -Fq '`implementation`' "$f" \
-     && grep -Fq '`implementation review`' "$f" \
-     && grep -Fq '`refactoring`' "$f" \
-     && grep -Fq '`integration review`' "$f"; then
-    pass "$f contains Stage table with core stages (implementation, implementation review, refactoring, integration review)"
+  if grep -Fq 'Skill-Load Manifest' "$f"; then
+    pass "$f points at using-superRA §Skill-Load Manifest"
   else
-    fail "$f missing Stage table or core stage rows"
+    fail "$f missing pointer to using-superRA §Skill-Load Manifest"
   fi
-  if grep -Fq "What the dispatch prompt carries — and doesn't" "$f"; then
-    pass "$f contains dispatch-prompt contract phrase"
+  if grep -Fq 'dispatch prompt carries' "$f"; then
+    pass "$f preserves the dispatch-prompt contract paragraph"
   else
-    fail "$f missing dispatch-prompt contract phrase"
+    fail "$f missing dispatch-prompt contract paragraph"
   fi
 done
 if grep -Fq 'CONDITIONAL APPROVE' agents/reviewer.md; then
@@ -257,18 +247,18 @@ else
 fi
 
 # 14. Cross-stage orchestration content lives in agent-orchestration, not
-# execution-workflow. agent-orchestration/SKILL.md owns five top-level
+# execution-workflow. agent-orchestration/SKILL.md owns four top-level
 # sections (Dispatch Templates, Dispatch-Return Deltas, Handling Reviewer
-# Feedback, Review Status Reference, Direct Mode); execution-workflow/SKILL.md
-# does NOT carry '## Dispatch Templates' as a heading (pointers to
+# Feedback, Review Status Reference); Direct Mode was relocated to
+# using-superRA in Round 3 and no longer appears here. execution-workflow/
+# SKILL.md does NOT carry '## Dispatch Templates' as a heading (pointers to
 # agent-orchestration only).
 ao_skill="skills/agent-orchestration/SKILL.md"
 ao_missing=0
 for h in '^## Dispatch Templates$' \
          '^## Dispatch-Return Deltas$' \
          '^## Handling Reviewer Feedback' \
-         '^## Review Status Reference$' \
-         '^## Direct Mode$'; do
+         '^## Review Status Reference$'; do
   if grep -Eq "$h" "$ao_skill"; then
     :
   else
@@ -276,7 +266,7 @@ for h in '^## Dispatch Templates$' \
     ao_missing=$((ao_missing+1))
   fi
 done
-[ "$ao_missing" -eq 0 ] && pass "agent-orchestration SKILL.md owns the five cross-stage orchestration sections"
+[ "$ao_missing" -eq 0 ] && pass "agent-orchestration SKILL.md owns the four cross-stage orchestration sections"
 if grep -Eq '^## Dispatch Templates' "skills/execution-workflow/SKILL.md"; then
   fail "execution-workflow SKILL.md still carries '## Dispatch Templates' as a top-level heading (should be lifted to agent-orchestration)"
 else
@@ -379,6 +369,142 @@ if grep -Fq 'two-stage review' README.md; then
   fail "README.md still contains stale 'two-stage review' phrasing (should be scrubbed by Task 11)"
 else
   pass "README.md free of stale 'two-stage review' phrasing"
+fi
+
+# 20. using-superRA is the master skill: carries the principles + inventory +
+# skill-load manifest + execution modes; references/session-bootstrap.md is
+# the main-agent-only bootstrap reference; <SUBAGENT-STOP> is retired.
+us_skill="skills/using-superRA/SKILL.md"
+us_missing=0
+for h in '^## Skill-Load Manifest$' \
+         '^## Skill Inventory$' \
+         '^## Execution Modes$'; do
+  if grep -Eq "$h" "$us_skill"; then
+    :
+  else
+    fail "using-superRA SKILL.md missing heading matching: $h"
+    us_missing=$((us_missing+1))
+  fi
+done
+[ "$us_missing" -eq 0 ] && pass "using-superRA SKILL.md carries Skill-Load Manifest + Skill Inventory + Execution Modes"
+# Six Stage rows in the manifest, backtick-wrapped stage names in column 1.
+stage_rows=$(grep -cE '^\| `(implementation|refactoring|drift-test|merge|documentation|planning-review)`' "$us_skill")
+if [ "$stage_rows" -eq 6 ]; then
+  pass "using-superRA Skill-Load Manifest has exactly 6 Stage rows"
+else
+  fail "using-superRA Skill-Load Manifest has $stage_rows Stage rows (expected 6)"
+fi
+handoff_hits=$(grep -c 'handoff-doc' "$us_skill")
+if [ "$handoff_hits" -ge 6 ]; then
+  pass "using-superRA SKILL.md mentions handoff-doc in >=6 places (one per Stage row)"
+else
+  fail "using-superRA SKILL.md mentions handoff-doc only $handoff_hits times (expected >=6)"
+fi
+if grep -Fq '<SUBAGENT-STOP>' "$us_skill"; then
+  fail "using-superRA SKILL.md still contains <SUBAGENT-STOP> (should be retired in Round 3)"
+else
+  pass "using-superRA SKILL.md is free of <SUBAGENT-STOP>"
+fi
+if [ -f skills/using-superRA/references/session-bootstrap.md ]; then
+  pass "exists: skills/using-superRA/references/session-bootstrap.md"
+else
+  fail "missing: skills/using-superRA/references/session-bootstrap.md"
+fi
+
+# 21. Stage tables retired on agent files; frontmatter preload applied;
+# auto-load language retired plugin-wide (PLAN.md excluded — it carries
+# self-referential retirement language describing the decision).
+for f in agents/implementer.md agents/reviewer.md; do
+  if head -20 "$f" | grep -Fq 'superRA:using-superRA'; then
+    pass "$f frontmatter preloads superRA:using-superRA"
+  else
+    fail "$f frontmatter does not preload superRA:using-superRA"
+  fi
+done
+impl_row_hits=$(grep -c '^| `implementation`' agents/implementer.md agents/reviewer.md 2>/dev/null | awk -F: '{s+=$2} END {print s+0}')
+if [ "$impl_row_hits" -eq 0 ]; then
+  pass "agent files no longer carry the old multi-row Stage table (no '| \`implementation\`' rows)"
+else
+  fail "agent files still carry $impl_row_hits '| \`implementation\`' rows (old Stage table)"
+fi
+dtc_row_hits=$(grep -c '^| `drift test creation`' agents/implementer.md agents/reviewer.md 2>/dev/null | awk -F: '{s+=$2} END {print s+0}')
+if [ "$dtc_row_hits" -eq 0 ]; then
+  pass "agent files no longer carry '| \`drift test creation\`' rows"
+else
+  fail "agent files still carry $dtc_row_hits '| \`drift test creation\`' rows"
+fi
+al_hits=$(grep -rl 'auto-load' agents/ skills/ README.md RELEASE-NOTES.md RESULTS.md 2>/dev/null | wc -l | tr -d ' ')
+if [ "$al_hits" -eq 0 ]; then
+  pass "auto-load language retired across agents/, skills/, README.md, RELEASE-NOTES.md, RESULTS.md"
+else
+  fail "auto-load still appears in $al_hits file(s) under agents/, skills/, README.md, RELEASE-NOTES.md, or RESULTS.md"
+fi
+
+# 22. agent-orchestration split: TeamCreate mechanics live in references/
+# agent-teams.md; SKILL.md no longer carries '### Team Recipes' or a top-
+# level '## Direct Mode' heading.
+at_ref="skills/agent-orchestration/references/agent-teams.md"
+if [ -f "$at_ref" ]; then
+  tc_hits=$(grep -c 'TeamCreate' "$at_ref")
+  if [ "$tc_hits" -ge 3 ]; then
+    pass "$at_ref carries TeamCreate content (>=3 mentions)"
+  else
+    fail "$at_ref has only $tc_hits TeamCreate mentions (expected >=3)"
+  fi
+else
+  fail "missing: $at_ref"
+fi
+if grep -Fq '### Team Recipes' skills/agent-orchestration/SKILL.md; then
+  fail "agent-orchestration SKILL.md still contains '### Team Recipes' (stale)"
+else
+  pass "agent-orchestration SKILL.md no longer contains '### Team Recipes'"
+fi
+if grep -Eq '^## Direct Mode$' skills/agent-orchestration/SKILL.md; then
+  fail "agent-orchestration SKILL.md still contains '## Direct Mode' heading (relocated to using-superRA)"
+else
+  pass "agent-orchestration SKILL.md no longer contains a top-level '## Direct Mode' heading"
+fi
+
+# 23. Direct Mode canonicalized in using-superRA §Execution Modes; no other
+# SKILL.md carries a §Direct Mode reference.
+if grep -Fq '## Execution Modes' "$us_skill" && grep -Fq 'Direct mode' "$us_skill"; then
+  pass "using-superRA SKILL.md carries Execution Modes and Direct mode content"
+else
+  fail "using-superRA SKILL.md missing Execution Modes or Direct mode content"
+fi
+dm_hits=$(grep -rl '§Direct Mode' skills/*/SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+if [ "$dm_hits" -eq 0 ]; then
+  pass "no SKILL.md carries a §Direct Mode reference (all retargeted to §Execution Modes)"
+else
+  fail "§Direct Mode still referenced in $dm_hits SKILL.md file(s)"
+fi
+
+# 24. handoff-doc principles pruned to four: #4 (Ownership by role) and #5
+# (Explicit what-changed deltas) are deleted; principle count = 4.
+hd_skill="skills/handoff-doc/SKILL.md"
+if grep -Eq '^4\. \*\*Ownership by role' "$hd_skill"; then
+  fail "handoff-doc SKILL.md still contains old principle #4 'Ownership by role'"
+else
+  pass "handoff-doc SKILL.md no longer contains old principle #4 'Ownership by role'"
+fi
+if grep -Eq '^5\. \*\*Explicit what-changed' "$hd_skill"; then
+  fail "handoff-doc SKILL.md still contains old principle #5 'Explicit what-changed'"
+else
+  pass "handoff-doc SKILL.md no longer contains old principle #5 'Explicit what-changed'"
+fi
+principle_count=$(grep -cE '^[0-9]+\. \*\*' "$hd_skill")
+if [ "$principle_count" -eq 4 ]; then
+  pass "handoff-doc SKILL.md has exactly 4 numbered principles"
+else
+  fail "handoff-doc SKILL.md has $principle_count numbered principles (expected 4)"
+fi
+
+# 25. econ-data-analysis/references/integration.md contains the new
+# Document-code consistency [STANDARD] item added in Round 3.
+if grep -Fq 'Document-code consistency' skills/econ-data-analysis/references/integration.md; then
+  pass "integration.md contains 'Document-code consistency' item"
+else
+  fail "integration.md missing 'Document-code consistency' item"
 fi
 
 echo

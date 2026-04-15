@@ -130,3 +130,35 @@ A final paragraph enumerates the structural-invariants blocks (10a, 10b, 11, 12,
 - `RESULTS.md` — this Task 6 section added.
 
 **Structural-invariants run.** All PASS, 2 known WARN (pre-existing upstream refs in `writing-skills`), 0 FAIL.
+
+## Task 18: Manual-Review Fixes + Structural Invariants + RELEASE-NOTES Finalization (Round 3)
+
+**Outcome.** Round 3 is wrapped. Four deliverables landed in one atomic commit:
+
+1. **handoff-doc principles pruned to four.** `skills/handoff-doc/SKILL.md` principles #4 (Ownership by role) and #5 (Explicit what-changed deltas in both directions) deleted entirely. Old #6 ("The doc is the record") renumbers to new #4. Section heading "The Six Principles" → "The Four Principles". Downstream "six principles" mentions updated to "four principles" in `skills/CATEGORIES.md`, `README.md` (twice, including the principle-list parenthetical pruned to four items), `skills/planning-workflow/references/results-template.md`, `skills/using-superRA/SKILL.md`, `agents/implementer.md`, and `agents/reviewer.md`.
+
+2. **`integration.md` Document-code consistency + restored preamble keyphrase.** `skills/econ-data-analysis/references/integration.md` gains a new `[STANDARD]` Document-code consistency item in the Integration-gates section: reconcile inconsistencies between refactored code and papers / slides / notes / long-standing downstream artifacts, or flag unreconciled ones in `RESULTS.md` §Limitations. The inline HTML-comment reminder from commit `3b25912` is removed (replaced by the materialized item). The shared-flow preamble phrase "single source of truth for data-analysis integration discipline" is restored at the top of the file — a prior manual edit had shortened it and dropped the invariant-#16 keyphrase.
+
+3. **Structural invariants updated.** `tests/structural-invariants.sh` got two block rewrites and six new blocks:
+   - **Block #13 — updated** from "both agent files carry the authoritative 11-row Stage table" to "both agent files point at `superRA:using-superRA` §Skill-Load Manifest (grep `Skill-Load Manifest`)"; both files preserve the `dispatch prompt carries` contract paragraph; `agents/reviewer.md` still encodes `CONDITIONAL APPROVE`.
+   - **Block #14 — updated** from "five cross-stage sections including `## Direct Mode`" to "four cross-stage sections (Dispatch Templates, Dispatch-Return Deltas, Handling Reviewer Feedback, Review Status Reference)". Direct Mode assertion dropped — it was relocated to `using-superRA` §Execution Modes in Round 3 Task 16.
+   - **Block #20 — new.** `using-superRA/SKILL.md` contains `## Skill-Load Manifest`, `## Skill Inventory`, `## Execution Modes`; carries exactly 6 Stage rows (grep of `^| \`(implementation|refactoring|drift-test|merge|documentation|planning-review)\``); mentions `handoff-doc` ≥ 6 times; `<SUBAGENT-STOP>` absent; `references/session-bootstrap.md` exists.
+   - **Block #21 — new.** Both agent files' frontmatter preload `superRA:using-superRA` (head-of-file grep); neither file carries the old `| \`implementation\`` or `| \`drift test creation\`` Stage-table rows; the retired `auto\-load` token (hyphen escaped) is absent across `agents/`, `skills/`, `README.md`, `RELEASE-NOTES.md`, `RESULTS.md` (PLAN.md excluded — it carries self-referential retirement language).
+   - **Block #22 — new.** `skills/agent-orchestration/references/agent-teams.md` exists with ≥ 3 TeamCreate mentions; `agent-orchestration/SKILL.md` no longer contains `### Team Recipes` or `^## Direct Mode`.
+   - **Block #23 — new.** `using-superRA/SKILL.md` contains both `## Execution Modes` and `Direct mode`; no other SKILL.md carries a `§Direct Mode` reference.
+   - **Block #24 — new.** `skills/handoff-doc/SKILL.md` has no `^4\. \*\*Ownership by role` or `^5\. \*\*Explicit what-changed` opening phrases; numbered-principle count is exactly 4.
+   - **Block #25 — new.** `skills/econ-data-analysis/references/integration.md` contains `Document-code consistency`.
+
+4. **RELEASE-NOTES extended.** The Unreleased entry header title now covers all three rounds. Four Round 3 paragraphs were added just before the Structural-invariants paragraph: (a) `using-superRA` promoted to master skill with skill-load manifest + `references/session-bootstrap.md`; (b) frontmatter preload + Stage-table retirement + auto\-load retirement; (c) `agent-orchestration` split with `references/agent-teams.md` + Team Recipes deletion + Direct Mode relocation; (d) small semantic fixes (handoff-doc principle deletion + integration.md Document-code consistency + restored shared-flow preamble). The Structural-invariants paragraph was rewritten to enumerate the new + updated invariant blocks (#13 updated, #14 updated, #20 new, #21 new, #22 new, #23 new, #24 new, #25 new).
+
+**Files touched:**
+
+- `skills/handoff-doc/SKILL.md` — principles #4 and #5 deleted; old #6 renumbered to new #4; section heading updated.
+- `skills/econ-data-analysis/references/integration.md` — Document-code consistency item added; shared-flow preamble phrase restored; HTML-comment reminder removed.
+- `skills/CATEGORIES.md`, `README.md`, `skills/planning-workflow/references/results-template.md`, `skills/using-superRA/SKILL.md`, `agents/implementer.md`, `agents/reviewer.md` — downstream "six principles" → "four principles".
+- `tests/structural-invariants.sh` — block #13 rewritten, block #14 rewritten, blocks #20–#25 added.
+- `RELEASE-NOTES.md` — Unreleased header title extended; four Round 3 paragraphs added; Structural-invariants paragraph rewritten.
+- `PLAN.md` — Task 18 steps marked `[x]`, Review status set to `IMPLEMENTED`. Tasks 13 and 17 final checkbox cleaned up.
+- `RESULTS.md` — this Task 18 section added.
+
+**Structural-invariants run.** All PASS, 2 known WARN (pre-existing upstream refs in `writing-skills`), 0 FAIL.

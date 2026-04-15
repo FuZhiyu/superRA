@@ -86,7 +86,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 - [x] Rewrite Objective to describe Round 3 master-skill promotion + manifest.
 - [x] Append Round 3 decision entries to `## Decisions`.
 - [x] Queue Tasks 14–18 as new checklist blocks (below).
-- [ ] Atomic commit: `docs(plan): condense Round 2; queue Round 3 master-skill tasks`.
+- [x] Atomic commit: `docs(plan): condense Round 2; queue Round 3 master-skill tasks`.
 
 ---
 
@@ -177,32 +177,33 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 - [x] `Grep` for `Direct Mode` / `§Direct Mode` plugin-wide. Found 3 retargetable sites + 1 preserved self-description in `using-superRA/SKILL.md:74` (§Execution Modes body).
 - [x] Retarget every non-`using-superRA` mention. execution-workflow/SKILL.md and README.md updated.
-- [ ] Invariant block #23 (deferred to Task 18 invariant consolidation): `using-superRA/SKILL.md` contains `## Execution Modes` AND `Direct mode`; no other SKILL.md carries a full §Direct Mode section.
-- [ ] Atomic commit: `refactor: finalize Direct Mode relocation to using-superRA §Execution Modes`.
+- [x] Invariant block #23 (consolidated in Task 18): `using-superRA/SKILL.md` contains `## Execution Modes` AND `Direct mode`; no other SKILL.md carries a full §Direct Mode section.
+- [x] Atomic commit: `refactor: finalize Direct Mode relocation to using-superRA §Execution Modes`.
 
 ---
 
 ## Task 18: Manual-review fixes + structural invariants + RELEASE-NOTES + push
 
-**Review status:** not started
+**Review status:** IMPLEMENTED
 
 **Depends on:** Tasks 14–17 APPROVE.
 
-**Objective:** Delete `handoff-doc` principles #4 and #5. Add `[STANDARD]` **Document-code consistency** item to `econ-data-analysis/references/integration.md`. Consolidate invariant blocks #20–#23 (renumber tail if needed). Update RELEASE-NOTES.md with Round 3 narrative. Push to PR #1.
+**Objective:** Delete `handoff-doc` principles #4 and #5 (and update downstream "six principles" mentions to "four"). Add `[STANDARD]` **Document-code consistency** item to `econ-data-analysis/references/integration.md` and restore the shared-flow preamble keyphrase that invariant #16 guards. Consolidate invariant blocks: update the stale #13 (agent-file Stage tables retired) and #14 (Direct Mode dropped from agent-orchestration); add new blocks #20 (using-superRA master skill shape), #21 (frontmatter preload + retired Stage tables + `auto-load` token absent), #22 (agent-orchestration split), #23 (Direct Mode canonicalized in `using-superRA`), #24 (handoff-doc principles pruned to four), #25 (integration.md carries Document-code consistency). Extend RELEASE-NOTES.md Unreleased entry with Round 3 narrative. Push to PR #1.
 
 **Files touched:**
 
-- `skills/handoff-doc/SKILL.md` — delete principles #4 and #5; renumber remaining.
-- `skills/econ-data-analysis/references/integration.md` — new `[STANDARD]` Document-code consistency item.
-- `tests/structural-invariants.sh` — consolidate blocks #20–#23; add handoff-doc check (no `4. **Ownership` / `5. **Explicit what-changed` lines); add integration.md check (contains `Document-code consistency`).
-- `RELEASE-NOTES.md` — append Round 3 paragraph.
+- `skills/handoff-doc/SKILL.md` — deleted principles #4 and #5; renumbered (old #6 → new #4); section heading "The Six Principles" → "The Four Principles".
+- `skills/CATEGORIES.md`, `README.md`, `skills/planning-workflow/references/results-template.md`, `skills/using-superRA/SKILL.md`, `agents/implementer.md`, `agents/reviewer.md` — downstream "six principles" → "four principles"; README principle-list parenthetical pruned to four items.
+- `skills/econ-data-analysis/references/integration.md` — new `[STANDARD]` Document-code consistency item; restored the shared-flow preamble phrase "single source of truth for data-analysis integration discipline" (commit 3b25912 had shortened it and dropped the invariant-#16 keyphrase).
+- `tests/structural-invariants.sh` — rewrote block #13 (Stage-table retirement pointer + dispatch-contract preserved); rewrote block #14 (four orchestration sections, Direct Mode dropped); added blocks #20–#25.
+- `RELEASE-NOTES.md` — extended Unreleased entry with Round 3 paragraphs (master-skill promotion, frontmatter preload + Stage-table retirement, agent-orchestration split, small semantic fixes, structural-invariants additions/updates); header title extended to cover Round 3.
 
 **Steps:**
 
-- [ ] Delete handoff-doc #4 + #5; renumber.
-- [ ] Add Document-code consistency item to integration.md (with reconciliation guidance).
-- [ ] Consolidate invariants.
-- [ ] Update RELEASE-NOTES.
-- [ ] `bash tests/structural-invariants.sh` → all PASS, 2 known WARN, 0 FAIL.
+- [x] Delete handoff-doc #4 + #5; renumber; update downstream "six principles" mentions.
+- [x] Add Document-code consistency item to integration.md; restore shared-flow preamble phrase.
+- [x] Consolidate invariants (update #13, #14; add #20–#25).
+- [x] Update RELEASE-NOTES with Round 3 narrative.
+- [x] `bash tests/structural-invariants.sh` → all PASS, 2 known WARN, 0 FAIL.
 - [ ] Atomic commit: `test+docs: finalize invariants and release notes for Round 3 master-skill refactor`.
 - [ ] Push `refactor/workflow-domain-split` to origin; PR #1 updates.
