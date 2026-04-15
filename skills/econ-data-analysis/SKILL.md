@@ -178,6 +178,7 @@ For growth rates, verify against published figures for well-known cases.
 ### Relationship check
 
 - Compute correlations between new variables and known related measures
+  (e.g., two different proxies for financial conditions should be meaningfully correlated)
 - Signs and magnitudes consistent with published stylized facts?
   (e.g., GDP growth positively correlated with employment growth)
 - Conditional means across subgroups behave as expected?
