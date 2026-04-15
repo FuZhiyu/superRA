@@ -141,14 +141,17 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 ### Step 1: Load and Review Plan
 
-1. Read `PLAN.md` and `RESULTS.md`
-2. Review PLAN.md critically — identify any questions or concerns:
+1. Read `PLAN.md` and `RESULTS.md`.
+2. **Load the active domain skill** based on what the plan does. For data-analysis plans (importing, cleaning, merging, constructing variables, regressions, figures), load `superRA:econ-data-analysis` and `superRA:script-to-notebook`. Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents also auto-load these skills at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
+3. **Read the project's guidance docs.** The harness gives you the repo-root `CLAUDE.md` automatically; module-level guidance (nested `CLAUDE.md` / `AGENTS.md` / `README.md` files near the code) is not auto-surfaced. Walk up from every directory PLAN.md says will be touched, and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` along the path. Also read `README.md` in any data directory the plan loads from, for provenance and caveats. These docs carry the conventions you will use when adjudicating reviewer findings ("is this a codebase-fit issue the reviewer correctly flagged, or noise?") and when editing upcoming tasks inline. This mirrors the walk-up the implementer and reviewer subagents perform at dispatch — the orchestrator does the same walk once, not per-task.
+4. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources available and accessible?
    - Are the steps in the right order?
    - Is the pipeline file included (for multi-script analyses)?
-3. Review RESULTS.md for context on any completed steps (if resuming)
-4. If concerns: Raise them with your human partner before starting
-5. If no concerns: Create TodoWrite with all steps and proceed
+   - Does any step conflict with a project convention you found in step 3?
+5. Review RESULTS.md for context on any completed steps (if resuming).
+6. If concerns: raise them with your human partner before starting.
+7. If no concerns: create TodoWrite with all steps and proceed.
 
 ### Step 2: Execute Tasks
 
