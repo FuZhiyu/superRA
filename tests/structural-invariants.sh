@@ -201,7 +201,29 @@ else
   pass "no separate implementation-review.md / integration-review.md reference (shared gating in main body)"
 fi
 
-# 12. README 'Why superRA?' lead section does not mention Iron Law.
+# 12. execution-workflow domain-agnosticism invariants (Task 3 restructure).
+# The workflow skill should no longer carry data-flavored two-stage review
+# language, should encode the one-pass CONDITIONAL APPROVE protocol, and
+# should have dropped the data-analysis-specific Sensitivity Analysis Tasks
+# and Model Selection sections (replaced by a one-paragraph Model Selection).
+ew_skill="skills/execution-workflow/SKILL.md"
+if grep -qE 'data integrity|two-stage review|REVISE \(data integrity\)|REVISE \(implementation\)' "$ew_skill"; then
+  fail "execution-workflow SKILL.md still contains two-stage-review phrasing (data integrity / two-stage review / REVISE (data integrity) / REVISE (implementation))"
+else
+  pass "execution-workflow SKILL.md free of two-stage-review phrasing"
+fi
+if grep -qE '^## Sensitivity Analysis Tasks' "$ew_skill"; then
+  fail "execution-workflow SKILL.md still carries '## Sensitivity Analysis Tasks' section (content lives in domain skill)"
+else
+  pass "execution-workflow SKILL.md has dropped '## Sensitivity Analysis Tasks' section"
+fi
+if grep -Fq 'CONDITIONAL APPROVE' "$ew_skill"; then
+  pass "execution-workflow SKILL.md encodes CONDITIONAL APPROVE verdict"
+else
+  fail "execution-workflow SKILL.md missing CONDITIONAL APPROVE verdict"
+fi
+
+# 13. README 'Why superRA?' lead section does not mention Iron Law.
 why_section=$(awk '/^## Why superRA\?/{flag=1; next} /^## /{flag=0} flag' README.md | head -10)
 if echo "$why_section" | grep -qi 'Iron Law'; then
   fail "README 'Why superRA?' lead mentions Iron Law — should be workflow-first"
