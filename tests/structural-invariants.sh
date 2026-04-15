@@ -412,8 +412,9 @@ else
 fi
 
 # 21. Stage tables retired on agent files; frontmatter preload applied;
-# auto-load language retired plugin-wide (PLAN.md excluded — it carries
-# self-referential retirement language describing the decision).
+# auto-load language retired from live prose (PLAN.md, RELEASE-NOTES.md, and
+# RESULTS.md excluded — these carry self-referential retirement language
+# describing the decision and its documentation history).
 for f in agents/implementer.md agents/reviewer.md; do
   if head -20 "$f" | grep -Fq 'superRA:using-superRA'; then
     pass "$f frontmatter preloads superRA:using-superRA"
@@ -433,11 +434,11 @@ if [ "$dtc_row_hits" -eq 0 ]; then
 else
   fail "agent files still carry $dtc_row_hits '| \`drift test creation\`' rows"
 fi
-al_hits=$(grep -rl 'auto-load' agents/ skills/ README.md RELEASE-NOTES.md RESULTS.md 2>/dev/null | wc -l | tr -d ' ')
+al_hits=$(grep -rl 'auto-load' agents/ skills/ README.md 2>/dev/null | wc -l | tr -d ' ')
 if [ "$al_hits" -eq 0 ]; then
-  pass "auto-load language retired across agents/, skills/, README.md, RELEASE-NOTES.md, RESULTS.md"
+  pass "auto-load language retired from live prose (agents/, skills/, README.md)"
 else
-  fail "auto-load still appears in $al_hits file(s) under agents/, skills/, README.md, RELEASE-NOTES.md, or RESULTS.md"
+  fail "auto-load still appears in $al_hits file(s) under agents/, skills/, or README.md"
 fi
 
 # 22. agent-orchestration split: TeamCreate mechanics live in references/
