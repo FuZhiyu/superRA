@@ -367,6 +367,20 @@ else
   pass "README 'Why superRA?' lead is workflow-first"
 fi
 
+# 19. DRY / composability / extensibility design principle present in CLAUDE.md
+# (Task 11 elevation). README.md no longer carries stale 'two-stage review'
+# phrasing from the pre-Round-1 review-protocol docs (Task 11 scrub).
+if grep -Fq 'DRY, composability, extensibility' CLAUDE.md; then
+  pass "CLAUDE.md contains 'DRY, composability, extensibility' design principle"
+else
+  fail "CLAUDE.md missing 'DRY, composability, extensibility' design principle (Task 11)"
+fi
+if grep -Fq 'two-stage review' README.md; then
+  fail "README.md still contains stale 'two-stage review' phrasing (should be scrubbed by Task 11)"
+else
+  pass "README.md free of stale 'two-stage review' phrasing"
+fi
+
 echo
 echo "----------------------------------------"
 if [ $fail -eq 0 ]; then

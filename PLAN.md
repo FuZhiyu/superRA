@@ -164,7 +164,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 11: Elevate DRY / composability / extensibility as a design principle in `CLAUDE.md` + `README.md`
 
-**Review status:** *(not started)*
+**Review status:** APPROVED (docs-only; user authored the principle; landed early in commit `64d31a7` without formal subagent review per orchestrator adjudication)
 
 **Objective:** Add `### DRY, composability, extensibility` to `CLAUDE.md` §Design Principles (between the Architectural pattern and Domain verticals subsections), with D-Shared-Flow-1 as a sub-bullet. Add a matching fifth principle to `README.md` §Design Principles. Refresh the stale `README.md` §Key Design Decisions (currently references two-stage review / REVISE (data integrity)) to match one-pass review + CONDITIONAL APPROVE + Stage tables.
 
@@ -177,12 +177,9 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 **Steps:**
 
-- [ ] **Describe.** Read `CLAUDE.md` §Design Principles and §Architectural pattern. Read `README.md` §Design Principles, §Key Design Decisions, §Philosophy.
-- [ ] **Analyze — write the new content.** CLAUDE.md paragraph per the D-Design-1 text in the background plan, with D-Shared-Flow-1 as a sub-bullet ("Shared-flow checklists: implementer + reviewer walk the same file, with `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers — single-source-of-truth applied to review gates"). README.md: add fifth principle; rewrite stale review-protocol sections.
-- [ ] **Validate.**
-  - Grep `README.md` for `two-stage review` / `REVISE \(data integrity\)` / `REVISE \(implementation\)` — expect 0 hits.
-  - Add invariant block #17: `CLAUDE.md` contains the string "DRY, composability, extensibility"; `README.md` does NOT contain `two-stage review`.
-  - Atomic commit: `docs(claude+readme): elevate DRY/composability as a design principle; refresh stale review language`.
+- [x] **Describe.** `CLAUDE.md` §Design Principles and `README.md` §Design Principles / §Key Design Decisions / §Philosophy audited by user.
+- [x] **Analyze — write the new content.** User-authored `### DRY, composability, extensibility` subsection added to `CLAUDE.md` §Design Principles with ownership map + shared-flow sub-bullet; matching fifth principle added to `README.md`; stale review-protocol language scrubbed from README.
+- [x] **Validate.** Grep confirmed 0 hits for `two-stage review` / `REVISE (data integrity)` / `REVISE (implementation)` in `README.md`. Invariant block #19 (added in Task 12) locks both the presence of "DRY, composability, extensibility" in `CLAUDE.md` and the absence of `two-stage review` in `README.md`. Landed in commit `64d31a7`.
 
 ---
 
@@ -213,21 +210,22 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 12: Structural invariants + RELEASE-NOTES finalization
 
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
-**Objective:** Consolidate new blocks #14–#18; renumber tail blocks if needed. Rewrite/append RELEASE-NOTES.md Unreleased entry to cover the six Round 2 pieces. Push to PR #1.
+**Objective:** Consolidate new blocks #14–#19; renumber tail blocks if needed. Rewrite/append RELEASE-NOTES.md Unreleased entry to cover the Round 2 pieces. Push to PR #1.
 
 **Depends on:** Tasks 8–11b APPROVE.
 
 **Files touched:**
 
-- `tests/structural-invariants.sh` — consolidate blocks #14–#18.
+- `tests/structural-invariants.sh` — consolidate blocks #14–#19.
 - `RELEASE-NOTES.md` — extend/rewrite Unreleased entry.
 
 **Steps:**
 
-- [ ] Walk each new invariant block for correctness.
-- [ ] Write (or extend) the Unreleased entry naming the six pieces: orchestration-out (Task 8), protocol-skill deletion (Task 9), integration-workflow genericization + `econ-data-analysis/references/integration.md` with shared-flow preamble (Tasks 10 + 10b), CLAUDE.md/README.md DRY + shared-flow principles (Task 11), workflow-stage-to-skill map (Task 11b). Reference the new invariant blocks.
-- [ ] `bash tests/structural-invariants.sh` → all PASS, 2 known WARN, 0 FAIL.
-- [ ] Atomic commit: `test+docs: finalize invariants and release notes for DRY/composability refactor`.
-- [ ] Push `refactor/workflow-domain-split` to origin.
+- [x] Walked each new invariant block (#14–#18) for correctness — all PASS on the pre-Task-12 run. Block numbering contiguous.
+- [x] Added new invariant block #19 locking the DRY/composability design-principle elevation: `CLAUDE.md` contains `DRY, composability, extensibility`; `README.md` is free of stale `two-stage review` phrasing. Both assertions PASS.
+- [x] Rewrote the `RELEASE-NOTES.md` Unreleased entry to cover both rounds as one coherent narrative: the Round 1 lede preserved; new dedicated paragraphs for Round 2 — cross-stage orchestration into `agent-orchestration` (Task 8), alias-skill retirement (Task 9), `integration-workflow` genericization + new `econ-data-analysis/references/integration.md` with shared-flow preamble (Tasks 10 + 10b), DRY/composability/extensibility design-principle elevation in `CLAUDE.md` + `README.md` with stale review-language scrub (Task 11), workflow-stage-to-skill map (Task 11b); final invariants paragraph enumerating blocks 3/3b/3c, 10a/10b, 11, 12, 13, 14, 15, 16, 17, 18, 19. Prior release entries preserved verbatim.
+- [x] `bash tests/structural-invariants.sh` → all PASS, 2 known WARN (writing-skills upstream refs), 0 FAIL.
+- [x] Atomic commit: `test+docs: finalize invariants and release notes for DRY/composability refactor`.
+- [x] Push `refactor/workflow-domain-split` to origin; PR #1 updated.
