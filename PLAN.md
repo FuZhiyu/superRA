@@ -184,11 +184,13 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 18: Manual-review fixes + structural invariants + RELEASE-NOTES + push
 
-**Review status:** REVISE (implementation)
+**Review status:** IMPLEMENTED
 
 > **Review notes:**
 > 1. [MINOR] `README.md:76` — the Mermaid `CROSS` node still reads "handoff-doc — six principles · inline-edit · ...". Task 18 scope (PLAN.md:196) lists `README.md` in the "six principles → four principles" sweep; the table at `README.md:159` was updated but this mermaid-diagram reference was missed. Update to "four principles" to match the pruned principle count.
+>    → implemented: README.md:76 CROSS node now reads "handoff-doc — four principles · inline-edit · ..."
 > 2. [MINOR] `skills/planning-workflow/SKILL.md:87` — live prose still reads "the six principles, inline-edit rule, stale-content checklist, ... load `superRA:handoff-doc`." This file was not listed in the Task 18 sweep scope but is a live-prose mention of the retired "six principles" count; the skill body should track the current count. Update to "four principles". (Recommend also extending invariant block #24 with a grep-across-live-surface check `grep -r 'six principles' agents/ skills/ README.md` = 0 to prevent future drift — or at minimum, verify the sweep was exhaustive.)
+>    → implemented: skills/planning-workflow/SKILL.md:87 now reads "the four principles, inline-edit rule, stale-content checklist, ...". Invariant hardening (grep = 0 across live surface) deferred — the two missed sites are fixed and the remaining "six principles" hits are all in historical records (PLAN.md / RELEASE-NOTES.md / RESULTS.md describing the retirement action itself, same exclusion logic as invariant #21).
 
 **Depends on:** Tasks 14–17 APPROVE.
 
