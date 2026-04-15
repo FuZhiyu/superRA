@@ -86,7 +86,7 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 ## Task 2: Integrate §Review & Self-Check Discipline into `econ-data-analysis/SKILL.md`
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Objective:** Add a new top-level section `## Review & Self-Check Discipline — shared gating for implementer and reviewer` to the main body of `skills/econ-data-analysis/SKILL.md`. Content uses `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers so implementer self-check and reviewer verification walk the exact same list. Encode the CONDITIONAL APPROVE verdict protocol (reviewer walks the entire checklist even on gating failure; returns APPROVE / REVISE / CONDITIONAL APPROVE). Single source of truth — no new reference files.
 
