@@ -297,7 +297,43 @@ if [ -d "skills/reviewer-protocol" ]; then
 fi
 [ "$protocol_dirs_present" -eq 0 ] && pass "alias-only protocol skills (implementer-protocol, reviewer-protocol) are absent"
 
-# 16. README 'Why superRA?' lead section does not mention Iron Law.
+# 16. Data-analysis integration reference exists and encodes shared-flow gating.
+# econ-data-analysis/references/integration.md is the single source of truth
+# for the data-specific refactoring / integration-review checklist; generic
+# code-integration content stays in refactor-and-integrate/references/
+# codebase-integration.md; integration-workflow/SKILL.md carries no data-
+# specific tokens (workflow-choreography only).
+int_ref="skills/econ-data-analysis/references/integration.md"
+if [ -f "$int_ref" ]; then
+  pass "exists: $int_ref"
+else
+  fail "missing: $int_ref"
+fi
+int_gating=$(grep -c '\[GATING\]' "$int_ref" 2>/dev/null || echo 0)
+if [ "$int_gating" -ge 3 ]; then
+  pass "$int_ref has ${int_gating} [GATING] markers (>=3)"
+else
+  fail "$int_ref has only ${int_gating} [GATING] markers (<3)"
+fi
+if grep -Fq 'single source of truth for data-analysis integration discipline' "$int_ref"; then
+  pass "$int_ref contains shared-flow preamble phrase"
+else
+  fail "$int_ref missing shared-flow preamble phrase"
+fi
+ci_ref="skills/refactor-and-integrate/references/codebase-integration.md"
+if grep -Eq '^## Economic Integration$|^## Data Discipline Through Refactoring$' "$ci_ref"; then
+  fail "$ci_ref still carries '## Economic Integration' or '## Data Discipline Through Refactoring' heading (should be moved to $int_ref)"
+else
+  pass "$ci_ref no longer carries data-specific headings"
+fi
+iw_skill="skills/integration-workflow/SKILL.md"
+if grep -qE 'winsorization|Economic Integration' "$iw_skill"; then
+  fail "$iw_skill still contains data-specific tokens (winsorization / Economic Integration)"
+else
+  pass "$iw_skill free of data-specific tokens"
+fi
+
+# 17. README 'Why superRA?' lead section does not mention Iron Law.
 why_section=$(awk '/^## Why superRA\?/{flag=1; next} /^## /{flag=0} flag' README.md | head -10)
 if echo "$why_section" | grep -qi 'Iron Law'; then
   fail "README 'Why superRA?' lead mentions Iron Law — should be workflow-first"
