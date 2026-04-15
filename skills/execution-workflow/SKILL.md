@@ -177,7 +177,8 @@ Every template opens with the canonical prefix "Follow the standard stage-releva
 Agent(subagent_type: "superRA:implementer"):
   Stage: implementation
   Task: Task N in PLAN.md
-  Additionally: Follow the standard stage-relevant workflow and load
+  
+  Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
     <optional one-or-two-sentence steering — focus area, prior-round
     adjudication, warning, anything non-default>.
@@ -191,7 +192,8 @@ Agent(subagent_type: "superRA:reviewer"):
   Stage: implementation review
   Task: Task N in PLAN.md
   Git range: <BASE_SHA>..<HEAD_SHA>
-  Additionally: Follow the standard stage-relevant workflow and load
+  
+  Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
     <optional steering>.
 ```

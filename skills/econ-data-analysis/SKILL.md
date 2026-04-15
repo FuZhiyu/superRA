@@ -276,9 +276,9 @@ change large enough to change the interpretation), **stop and
 the researcher chooses whether to revise the headline, report both, or
 investigate further.
 
-## Review & Self-Check Discipline — shared gating for implementer and reviewer
+## Review & Self-Check Discipline
 
-Single source of truth for pre-handoff self-check and reviewer verification. The implementer walks this section before returning DONE; the reviewer walks the same items as verification criteria. No parallel checklist lives elsewhere — any drift between "what the implementer checks" and "what the reviewer checks" is a bug in this section, not a reason to fork it.
+The implementer walks this section before returning DONE; the reviewer walks the same items as verification criteria. 
 
 **Severity markers** appear inline on each item:
 
