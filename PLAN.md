@@ -188,7 +188,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 11b: Add workflow-stage-to-skill map (markdown diagram)
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Objective:** After Tasks 7–11 land, add a markdown diagram (Mermaid preferred so GitHub renders it, pipe-table fallback) showing how each skill is used in each workflow stage. Stages: session-start → PLAN → IMPLEMENT → VALIDATE → INTEGRATE (drift tests / refactor / doc finalization) → MERGE. For each stage: primary workflow skill + active domain skill + cross-cutting loads (`agent-orchestration`, `handoff-doc`, `semantic-merge`) + stage-scoped references + agents dispatched. Legend explains the DRY-composition pattern + extension path (new verticals swap only the domain column).
 
