@@ -72,7 +72,10 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 8: Move cross-stage orchestration content into `agent-orchestration`
 
-**Review status:** IMPLEMENTED
+**Review status:** REVISE (implementation)
+
+> **Review notes:**
+> 1. [STANDARD] `skills/handoff-doc/SKILL.md:29` — Shrunk principle #5 points at `superRA:agent-orchestration` §Handling Reviewer Feedback "for how dispatch prompts and status returns carry what-changed deltas." That target section covers reviewer-feedback adjudication (classify / reject / escalate / CRITICAL limits), not the "what-changed deltas in both directions" content the principle summarizes. The authoritative home for the two deltas is `agents/implementer.md` (the "re-dispatch prompt carries a one-line delta" sentence at L122 and the `**Doc edits (what changed since the previous dispatch):**` status-line format at L190) and `agents/reviewer.md` (the `**Doc edits:**` format at L197). Grep confirmed agent-orchestration/SKILL.md carries no `delta` / `what-changed` / `Doc edits` content. Fix: repoint principle #5 at `agents/implementer.md` + `agents/reviewer.md` (their dispatch-prompt contract sections and `**Doc edits:**` status-line spec), the way shrunk principle #4 already points at the agent files for role-scoped edit permissions.
 
 **Objective:** Lift `## Dispatch Templates`, `## Handling Reviewer Feedback (Orchestrator Discipline)`, and `## Review Status Reference` out of `execution-workflow/SKILL.md` into `agent-orchestration/SKILL.md` as new top-level sections. Add `## Direct Mode` to `agent-orchestration` (one-section rubric for orchestrator-executed steps). Shrink `handoff-doc/SKILL.md` principles #4 (role ownership) and #5 (deltas in both directions) to one-line pointers. `execution-workflow` and `integration-workflow` keep only workflow-choreography prose plus one-line pointers to the new `agent-orchestration` sections.
 
