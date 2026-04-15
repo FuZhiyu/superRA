@@ -203,7 +203,7 @@ If you need a non-default skill load, an extra domain reference, or an override 
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
 
-The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic (see CLAUDE.md P1). **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between REVISE and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
+The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between REVISE and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
 
 When a reviewer returns REVISE:
 
@@ -213,7 +213,6 @@ When a reviewer returns REVISE:
    - **Real bug** (the code is incorrect or missing required discipline) → forward to implementer
    - **Pedantic but valid** (the issue is real but tiny — missing markdown cell on a trivial step, etc.) → decide whether the fix is worth the cycle. For minors, often yes; for cosmetic minors on a fast-iteration draft, often no
    - **Wrong** (the reviewer misread the code, missed context, or is suggesting a change that conflicts with the methodology you established with the human partner) → push back on the reviewer, do not forward to the implementer
-   - **Methodology disagreement** (the reviewer is second-guessing a methodology decision rather than checking implementation) → reject. The reviewer's job is correctness against the plan, not redesigning the plan. Note in PLAN.md that the issue was raised and rejected, with reasoning.
 
 3. **If you reject reviewer feedback, document why in place on the review item.** Append an `→ orchestrator: rejected <reason>` annotation directly under the item in the review-notes blockquote:
    ```markdown
@@ -286,12 +285,10 @@ The researcher's answer is a user decision — the `ask-user-question-logger` Po
 
 **Execute the user's choice:**
 
-- **Option 1 or 2 (Merge or PR):** Dispatch the two integration-phase workflow skills in sequence — do not run their steps yourself.
-  1. Invoke `superRA:integration-workflow` for drift test creation, the refactor-review loop, documentation finalization (maturing `RESULTS.md` into its permanent form + project doc audit via a dedicated doc-writer + doc-reviewer pair), and PLAN.md disposition. Wait for it to return successfully.
-  2. Invoke `superRA:merge-workflow` for the main update via semantic-merge, post-merge verification (drift tests AND fresh integration review), the refactor-review loop on post-merge failure, the actual local merge or PR push, and worktree cleanup.
+- **Option 1 or 2 (Merge or PR):** 
+  Invoke `superRA:integration-workflow` skill to proceed with the integration stage. 
 
-  Both skills are required for Options 1 and 2. The merge-workflow assumes integration-workflow has already produced a merge-ready branch.
-- **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
+  - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
 - **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then:
   ```bash
   git checkout <base-branch>
