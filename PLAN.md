@@ -196,7 +196,7 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 ## Task 4: Agent-File Stage Tables + Dispatch-Prompt Contract + Self-Review Walk
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Objective:** Add an authoritative Stage → reference-loads table in both `agents/implementer.md` and `agents/reviewer.md`. Add a "What the dispatch prompt carries — and doesn't" contract section near the top. Extend the implementer's Self-Review to walk the domain skill's §Review & Self-Check Discipline before returning DONE. Extend the reviewer's Review Protocol with the CONDITIONAL APPROVE verdict.
 
