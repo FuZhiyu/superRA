@@ -2,7 +2,7 @@
 
 The plan document at the project root. Every plan starts with this header, then has a task block per step.
 
-The header and task examples below are written for the **data-analysis vertical** — today's only implemented domain. Three header sections (**Data Inventory**, **Sensitivity Analysis**) and the describe/analyze/doc step cycle are data-analysis specifics; the domain skill `econ-data-analysis` (and its `references/planning.md`) owns them. For other verticals, swap the data-specific sections for the domain's equivalent (e.g., a derivation-status table for theory work) as the vertical's domain skill prescribes. The overall PLAN.md skeleton — objective, methodology, output, expected results, pipeline, then task blocks — is universal.
+The header and task examples below are written for the **data-analysis vertical** — today's only implemented domain. Three header sections (**Data Inventory**, **Sensitivity Analysis**) and the describe/analyze/validate step cycle are data-analysis specifics; the domain skill `econ-data-analysis` (and its `references/planning.md`) owns them. For other verticals, swap the data-specific sections for the domain's equivalent (e.g., a derivation-status table for theory work) as the vertical's domain skill prescribes. The overall PLAN.md skeleton — objective, methodology, output, expected results, pipeline, then task blocks — is universal.
 
 ## Header
 
@@ -47,7 +47,7 @@ The header and task examples below are written for the **data-analysis vertical*
 
 ## Task Block Structure
 
-The task-block example below is a **data-analysis example** — the step cycle (describe → analyze → doc) and the Python/pandas syntax come from the data-analysis vertical. For other verticals, preserve the three-element shape (input-diagnosis → operation → verify/document) but substitute the domain's cycle and language.
+The task-block example below is a **data-analysis example** — the step cycle (describe → analyze → validate) and the Python/pandas syntax come from the data-analysis vertical. For other verticals, preserve the three-element shape (input-diagnosis → operation → validate/commit) but substitute the domain's cycle and language. Documentation is written continuously inside each step, not as a separate step.
 
 ````markdown
 ### Task N: [Phase Name]
@@ -99,9 +99,9 @@ print(f"Rows: {n_before} → {len(df)} (delta: {len(df) - n_before})")
 print(f"Unmatched: {df['char_var'].isna().sum()} ({df['char_var'].isna().mean():.1%})")
 ```
 
-- [ ] **Step 3: Doc — verify, update handoff docs, and commit**
+- [ ] **Step 3: Validate — verify the result, document, and commit**
 
-Verify: row count unchanged, unmatched rate reasonable, merged variables have expected distributions.
+Validate: row count matches expectation (left join preserves left-table count), unmatched rate reasonable, merged variables have expected distributions, magnitudes make economic sense, PLAN.md expectations compared.
 Update PLAN.md: mark steps [x], set `**Review status:** IMPLEMENTED`, note findings.
 Update RESULTS.md: add key results for this task (row counts, summary stats, figures).
 Save any figures to `results_attachments/`.

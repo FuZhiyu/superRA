@@ -66,12 +66,11 @@ The pipeline file must:
 
 ### Step Granularity
 
-**Each step is one logical unit of work with full discipline applied.** For data analysis, that discipline is describe-analyze-doc (see `superRA:econ-data-analysis` main body) — typical step shapes:
+**Each step is one logical unit of work with full discipline applied.** For data analysis, that discipline is the three concurrent disciplines describe-analyze-validate (see `superRA:econ-data-analysis` main body). Documentation is written continuously alongside the three, not as a separate step. Typical step shapes:
 
 - "Describe the raw holdings data (panel structure, key variables, missing values)" — step
 - "Merge holdings with fund characteristics (left join on fund_id × date)" — step
-- "Validate merge result (row counts, check unmatched, spot-check merged variables)" — step
-- "Document merge decisions and commit" — step
+- "Validate merge result (row counts, check unmatched, spot-check merged variables), commit" — step
 
 For other verticals, the operational cycle looks different (e.g., derivation → verification → proof-check for theory work), but the granularity rule is the same: one logical operation per step, with the cycle completed in-step.
 
@@ -103,7 +102,7 @@ Every step must contain the actual code, instructions, or artifacts someone need
 - Exact file paths always
 - Complete content in every step
 - For data analysis, row counts logged for every sample-changing operation
-- Domain-appropriate cycle (for data: describe → analyze → doc → commit at each step — see `superRA:econ-data-analysis`)
+- Domain-appropriate discipline (for data: describe → analyze → validate at each step, with commit bundled into the validate step; documentation written continuously — see `superRA:econ-data-analysis`)
 - Pipeline file for multi-artifact work
 
 ## Self-Review
