@@ -13,7 +13,7 @@ superRA answers with four load-bearing workflow principles that apply to every d
 3. **Fast early, strict before merge. Semantic merges always.** Interim tasks optimize for speed; integration discipline loads only when the user chooses to merge. Every merge into main is a semantic-merge.
 4. **Autonomous with human in the loop.** The agent drives work forward on its own power, and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
 
-In the **data-analysis vertical** (today's flagship), these principles are backed by one non-negotiable domain rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION**. Every data operation follows a Describe → Analyze → Doc cycle. See `skills/econ-data-analysis/SKILL.md`.
+In the **data-analysis vertical** (today's flagship), these principles are backed by one non-negotiable domain rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION**. Every data operation is shaped by three concurrent disciplines: Describe, Analyze, and Validate. See `skills/econ-data-analysis/SKILL.md`.
 
 ## How It Works
 
@@ -27,7 +27,7 @@ PLAN            planning-workflow (domain vertical setup → scope check → tas
                     |
 IMPLEMENT       execution-workflow (implementer agent per task)
                 Apply domain discipline at every step.
-                  (data analysis: Describe → Analyze → Doc — econ-data-analysis main body)
+                  (data analysis: Describe / Analyze / Validate — econ-data-analysis main body)
                 Atomic commit per task: code + PLAN.md status + RESULTS.md findings.
                     |
 VALIDATE        execution-workflow (reviewer agent after each task)
@@ -90,7 +90,7 @@ superRA's skills split into four categories. The directory layout stays flat (on
 
 | Skill | What It Does |
 |-------|-------------|
-| **econ-data-analysis** | Iron Law (no transformation without prior description). Describe-Analyze-Doc cycle. Diagnostics-for-validity philosophy. Pitfall catalogs for merges, time series, aggregations, filtering, variable construction, missing data. Red Flags table. Stage-scoped references load per phase: `planning.md` (Data Inventory hard gate + sensitivity design), `integrate-drift-tests.md` (drift-test construction), `data-robustness-checklist.md` (robustness menu). |
+| **econ-data-analysis** | Iron Law (no transformation without prior description). Three concurrent disciplines: Describe, Analyze, Validate (with sensitivity analysis as a first-class validation discipline). Diagnostics-for-validity philosophy. Pitfall catalogs for merges, time series, aggregations, filtering, variable construction, missing data. Red Flags table. Stage-scoped references load per phase: `planning.md` (Data Inventory hard gate + sensitivity design), `integrate-drift-tests.md` (drift-test construction), `data-robustness-checklist.md` (robustness menu). |
 
 Future verticals — theory/modeling, literature review, simulation, writing/paper drafting — are planned; see the Roadmap section at the bottom.
 

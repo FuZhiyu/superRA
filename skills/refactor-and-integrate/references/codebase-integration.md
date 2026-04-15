@@ -27,7 +27,7 @@ Shared domain reference for code refactoring and integration review. Both the im
 - [ ] Jupytext documentation cells are present and describe what the refactored code actually does — not what the pre-refactor code did.
 - [ ] No data discipline artifact (description, row count log, validation check) has been deleted during refactoring. Reorganize freely; delete nothing.
 
-See the loaded `econ-data-analysis` skill for the full list of data discipline artifacts and the Describe-Analyze-Doc cycle that every refactored step must re-run through.
+See the loaded `econ-data-analysis` skill for the full list of data discipline artifacts and the three concurrent disciplines (Describe / Analyze / Validate) that every refactored step must re-run through.
 
 ## Handling Inconsistencies
 

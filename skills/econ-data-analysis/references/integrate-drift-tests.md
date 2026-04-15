@@ -18,7 +18,7 @@ Econ results are fragile. A coefficient can drift because floating-point sums re
 
 The Iron Law protects the analysis from unknown data during implementation. Drift tests protect the finalized analysis from unknown transformations (refactors, merges, future edits) after implementation is complete. They are the integration-phase analogue.
 
-Drift tests are not a substitute for the two-stage review or the describe-analyze-doc cycle. They are a safety net that guards the specific numbers the researcher has chosen as the headline results.
+Drift tests are not a substitute for the two-stage review or the describe-analyze-validate discipline. They are a safety net that guards the specific numbers the researcher has chosen as the headline results.
 
 ---
 
@@ -33,7 +33,7 @@ Drift tests should protect **headline findings**, not every number in the analys
 - Any number the researcher would read aloud when presenting the analysis
 
 **Weak candidates** (probably skip):
-- Intermediate merge row counts (covered by the describe-analyze-doc audit trail in PLAN.md / RESULTS.md)
+- Intermediate merge row counts (covered by the describe-analyze-validate audit trail in PLAN.md / RESULTS.md)
 - Descriptive statistics on raw inputs (upstream, not load-bearing for conclusions)
 - Sensitivity-analysis numbers (these are already robustness themselves — testing a robustness check against itself adds little)
 
