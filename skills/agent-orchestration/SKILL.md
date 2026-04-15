@@ -252,7 +252,7 @@ Create an agent team for the integration workflow:
 - doc-writer: [use `superRA:implementer` agent type; load superRA:report-in-markdown; domain ref basenames: baseline-io.md + rich-content.md + final-form.md (full mode)]
 - doc-reviewer: [use `superRA:reviewer` agent type; load superRA:report-in-markdown; domain ref basename: final-form.md]
 
-All teammates auto-load superRA:econ-data-analysis and superRA:script-to-notebook via the agent definition since the stage touches analysis code. Require plan approval before they make changes.
+All teammates load superRA:econ-data-analysis and superRA:script-to-notebook per the `superRA:using-superRA` §Skill-Load Manifest, since the stage touches analysis code. Require plan approval before they make changes.
 ```
 
 **Task graph:**
@@ -302,7 +302,7 @@ Create an agent team for the merge workflow:
 - post-merge-refactorer: [use `superRA:implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md]
 - post-merge-integration-reviewer: [use `superRA:reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: codebase-integration.md; note: must run BOTH drift tests AND codebase integration review on the merged state]
 
-All teammates auto-load superRA:econ-data-analysis and superRA:script-to-notebook via the agent definition since the stage touches analysis code.
+All teammates load superRA:econ-data-analysis and superRA:script-to-notebook per the `superRA:using-superRA` §Skill-Load Manifest, since the stage touches analysis code.
 ```
 
 **Task graph:**
@@ -344,7 +344,7 @@ Create an agent team for semantic merge integration:
 - merge-proposer: [use `superRA:implementer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
 - merge-reviewer: [use `superRA:reviewer` agent type; load superRA:refactor-and-integrate; domain ref basename: merge-quality.md]
 
-All teammates auto-load superRA:econ-data-analysis via the agent definition.
+All teammates load superRA:econ-data-analysis per the `superRA:using-superRA` §Skill-Load Manifest.
 ```
 
 **Task graph:**
@@ -429,7 +429,7 @@ On session resume, this tells the new lead exactly where to pick up.
 
 Every workflow skill that dispatches an `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules.
 
-Every template opens with the canonical prefix **"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …"**. The prefix tells the agent that its standard Before-You-Start + stage-reference-auto-load (per `agents/implementer.md` / `agents/reviewer.md` Stage tables) is in effect; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or additional non-default skill/reference. The dispatch prompt does not repeat the standard protocol, never paraphrases `PLAN.md` content, and never restates checklist items the agent already reads.
+Every template opens with the canonical prefix **"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …"**. The prefix tells the agent that its standard Before-You-Start is in effect and it loads what `superRA:using-superRA` §Skill-Load Manifest specifies for its Stage; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or additional non-default skill/reference. The dispatch prompt does not repeat the standard protocol, never paraphrases `PLAN.md` content, and never restates checklist items the agent already reads.
 
 **Canonical shape — required fields first, `Additionally:` anchor last:**
 
@@ -464,7 +464,7 @@ The agent reads `PLAN.md`, Data Inventory, Conventions, and prior results from `
 - `Work from:` — the worker's cwd is the default; stating it is noise.
 - `Counterpart:` — teammate pairing belongs in team-spawn config, not in the per-task dispatch.
 - Free-form `Note:` fields — fold task-specific notes into the `Additionally:` tail so all task-specific steering flows through one channel.
-- Re-statement of `PLAN.md` content, standard protocol, or Stage-table auto-loads — the agent reads those itself.
+- Re-statement of `PLAN.md` content, standard protocol, or the manifest's skill/reference loads — the agent reads those itself.
 
 ## Dispatch-Return Deltas
 

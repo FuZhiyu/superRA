@@ -228,7 +228,7 @@ fi
 # 13. Agent files carry the authoritative Stage table, the dispatch-prompt
 # contract phrase, and (reviewer only) the CONDITIONAL APPROVE verdict.
 # The Stage table is the single source of truth for which references each
-# stage auto-loads; the contract phrase tells agents the dispatch prompt is
+# stage loads; the contract phrase tells agents the dispatch prompt is
 # additive-only; CONDITIONAL APPROVE encodes the one-pass verdict protocol
 # on the review side.
 for f in agents/implementer.md agents/reviewer.md; do

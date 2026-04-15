@@ -143,7 +143,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 ### Step 1: Load and Review Plan
 
 1. Read `PLAN.md` and `RESULTS.md`.
-2. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` + `superRA:script-to-notebook`. Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents also auto-load these skills at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
+2. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` + `superRA:script-to-notebook`. Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
 3. **Read the project's guidance docs.** The harness gives you the repo-root `CLAUDE.md` automatically; module-level guidance (nested `CLAUDE.md` / `AGENTS.md` / `README.md` files near the code) is not auto-surfaced. Walk up from every directory PLAN.md says will be touched, and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` along the path. Also read `README.md` in any data directory the plan loads from, for provenance and caveats. These docs carry the conventions you will use when adjudicating reviewer findings ("is this a codebase-fit issue the reviewer correctly flagged, or noise?") and when editing upcoming tasks inline. This mirrors the walk-up the implementer and reviewer subagents perform at dispatch — the orchestrator does the same walk once, not per-task.
 4. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources / inputs available and accessible?
@@ -291,8 +291,8 @@ Stop for exactly three classes of pause, all of which require logging the answer
 
 ## Agent Types
 
-- **`superRA:implementer`** — Dispatched per task at `Stage: implementation`. See `agents/implementer.md` Stage table for stage-scoped auto-loaded references.
-- **`superRA:reviewer`** — Dispatched per task at `Stage: implementation review`. See `agents/reviewer.md` Stage table for stage-scoped auto-loaded references.
+- **`superRA:implementer`** — Dispatched per task at `Stage: implementation`. See `superRA:using-superRA` §Skill-Load Manifest for the skills and stage-scoped references it loads.
+- **`superRA:reviewer`** — Dispatched per task at `Stage: implementation review`. See `superRA:using-superRA` §Skill-Load Manifest for the skills and stage-scoped references it loads.
 
 ## Agent Teams Mode
 
@@ -329,6 +329,6 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 - **superRA:using-analysis-worktrees** — RECOMMENDED: For complex or multi-session analyses, set up an isolated workspace before starting
 - **superRA:worktree-data-sync** — Load this when copying managed data between existing worktrees (e.g., seeding a new analysis worktree from the main one); do not hand-roll data copy scripts
 - **superRA:planning-workflow** — Creates the plan this skill executes
-- **the active domain skill (for data analysis: `superRA:econ-data-analysis`)** — REQUIRED: domain discipline all agents follow, auto-loaded at dispatch-time per `agents/implementer.md` / `agents/reviewer.md` Stage tables. Carries the §Review & Self-Check Discipline that the reviewer walks on every pass.
+- **the active domain skill (for data analysis: `superRA:econ-data-analysis`)** — REQUIRED: domain discipline all agents follow, loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest. Carries the §Review & Self-Check Discipline that the reviewer walks on every pass.
 - **superRA:integration-workflow** — Drift tests, refactor-review loop, documentation finalization (dispatched by this skill at Step 4 on merge/PR)
 - **superRA:merge-workflow** — Main update, post-merge verification, local merge or PR push, worktree cleanup (dispatched by this skill at Step 4 on merge/PR after integration-workflow returns)
