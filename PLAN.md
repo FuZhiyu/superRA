@@ -162,7 +162,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 17: Finalize Direct Mode relocation + execution-workflow pointer
 
-**Review status:** IMPLEMENTED (orchestrator-executed in direct mode — trivial 3-site retarget; reviewer still dispatched per execution-workflow discipline)
+**Review status:** APPROVED
 
 **Depends on:** Task 14 APPROVE (§Execution Modes in place); Task 16 APPROVE (old §Direct Mode removed).
 
