@@ -8,7 +8,7 @@ AI agents are fast but undisciplined. They jump to implementation before underst
 
 superRA answers with four load-bearing workflow principles that apply to every domain:
 
-1. **Implementer–reviewer pair at every step.** No result ships without adversarial review. Two-stage review during execution, drift-test + integration review before merge.
+1. **Implementer–reviewer pair at every step.** No result ships without adversarial review. One comprehensive review pass per task during execution (`APPROVE` / `REVISE` / `CONDITIONAL APPROVE`), drift-test + integration review before merge.
 2. **Handoff docs are the auditable record.** Findings, decisions, methodology notes land in committed `PLAN.md` / `RESULTS.md` *before* they appear in any report. Any fresh agent resumes from docs + git alone.
 3. **Fast early, strict before merge. Semantic merges always.** Interim tasks optimize for speed; integration discipline loads only when the user chooses to merge. Every merge into main is a semantic-merge.
 4. **Autonomous with human in the loop.** The agent drives work forward on its own power, and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
@@ -31,7 +31,9 @@ IMPLEMENT       execution-workflow (implementer agent per task)
                 Atomic commit per task: code + PLAN.md status + RESULTS.md findings.
                     |
 VALIDATE        execution-workflow (reviewer agent after each task)
-                Two-stage review: data integrity → implementation correctness. REVISE loops until APPROVED.
+                One comprehensive review pass: the reviewer walks the domain skill's §Review & Self-Check Discipline
+                top to bottom. Returns APPROVE / REVISE / CONDITIONAL APPROVE. REVISE loops until APPROVED;
+                CONDITIONAL APPROVE triggers a narrow re-review after the gating fix.
                     |
 INTEGRATE       integration-workflow → merge-workflow (uses semantic-merge)
                 Verify reproducibility. Create drift tests (data-analysis vertical) for key results.
@@ -44,13 +46,15 @@ Each task produces an atomic commit. If the session dies at any point, the next 
 
 Four workflow principles are baked into every skill in the repo. Every contribution is evaluated against them (see `CLAUDE.md` for the full version).
 
-1. **Enforced implementer–reviewer pair at every step.** No result is accepted until a reviewer signs off. Two-stage review during execution (data integrity → implementation correctness), drift-test and integration reviews before merge, and a fresh integration review after semantic-merge. Review is never skipped. The reviewer's role is adversarial — flag everything, err on the side of over-criticism. The orchestrator arbitrates with big-picture context, filtering through the reviewer's over-critical bias and overruling with documented reasoning when warranted.
+1. **Enforced implementer–reviewer pair at every step.** No result is accepted until a reviewer signs off. One comprehensive review pass per task during execution — the reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom and returns `APPROVE` / `REVISE` / `CONDITIONAL APPROVE`. Drift-test and integration reviews before merge, and a fresh integration review after semantic-merge. Review is never skipped. The reviewer's role is adversarial — flag everything, err on the side of over-criticism. The orchestrator arbitrates with big-picture context, filtering through the reviewer's over-critical bias and overruling with documented reasoning when warranted.
 
 2. **Handoff docs are the auditable record AND the continuation point.** All material findings, decisions, and results land in committed `PLAN.md` / `RESULTS.md` *before* they appear in any chat reply. Any fresh agent can resume work from the docs + git state alone — no prompt history required. Atomic commits bundle code + doc edits together.
 
 3. **Fast early, strict before merge. Semantic merges always.** Analysis code is written for speed during implementation — no codebase-fit checks at interim checkpoints. Refactoring, drift tests, codebase integration, and documentation finalization (maturing RESULTS.md and auditing project docs) happen only when the user chooses to merge. Every merge into main runs through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
 
 4. **Autonomous with human in the loop.** The agent drives the workflow forward on its own between legitimate stop points — no "should I continue?" check-ins on approved plans. It stops, and uses `AskUserQuestion` when available, only for hard blockers, decisions beyond the RA's authority (methodology, scope, research intent), or user-defined milestones. Every user decision at a stop point is logged into `PLAN.md` before the agent acts on it.
+
+5. **DRY, composability, extensibility.** One source of truth per concern. Workflow skills own choreography (what steps run in what order). `agent-orchestration` owns cross-stage orchestration (dispatch shape, relay protocol, verdict adjudication, team recipes, direct-mode rubric). Domain skills own domain discipline. `refactor-and-integrate` owns generic integration discipline. `handoff-doc` owns handoff-doc mechanics. When adding content, ask *what concern does this describe?* and put it in the one skill that owns that concern; reference it from everywhere else. Duplicated content invites drift and is a code smell. Shared-flow corollary: for any gated checklist, implementer and reviewer walk the **same file**, with `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers encoding severity — one document, two perspectives. Adding a new vertical composes existing pieces; it never forks workflow skills. See `CLAUDE.md` §DRY, composability, extensibility for the full statement and ownership map.
 
 ## Installation
 
@@ -81,7 +85,7 @@ superRA's skills split into four categories. The directory layout stays flat (on
 | Skill | Phase | What It Does |
 |-------|-------|-------------|
 | **planning-workflow** | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the active domain skill for domain-specific gates and templates. |
-| **execution-workflow** | IMPLEMENT + VALIDATE | Per-task dispatch, two-stage review loop with orchestrator-discipline filter, pipeline + reproducibility verification, 4-option completion menu. |
+| **execution-workflow** | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE / CONDITIONAL APPROVE) with orchestrator-discipline filter, pipeline + reproducibility verification, 4-option completion menu. |
 | **integration-workflow** | INTEGRATE (pre-merge) | Drift-test creation, refactor-review loop, doc finalization (mature RESULTS.md into permanent form, audit project-level CLAUDE.md / AGENTS.md / README.md). |
 | **merge-workflow** | INTEGRATE (merge) | Update analysis branch via semantic-merge, post-merge verification (drift tests + fresh integration review), local merge or PR push, worktree cleanup. |
 | **agent-orchestration** | cross-cutting | Multi-agent dispatch patterns: parallel subagents for independent tasks, Agent Teams for iterative workflows. |
@@ -127,9 +131,11 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 **Agent-owned doc updates.** Each agent commits its doc changes atomically with its work. The implementer commits code + PLAN.md status + RESULTS.md findings in a single commit. Reviewers commit review notes and APPROVED status separately. No orchestrator transcription step.
 
-**Review status protocol.** Tasks in PLAN.md carry a status line: `IMPLEMENTED` (code done, awaiting review), `REVISE (data integrity)` or `REVISE (implementation)` (reviewer found issues — data integrity REVISE blocks implementation review from starting), `APPROVED` (both reviews passed). A fresh session can tell exactly where each task stands.
+**Review status protocol.** Tasks in PLAN.md carry a status line: `IMPLEMENTED` (code done, awaiting review), `REVISE` (reviewer found `[STANDARD]` issues to fix), `CONDITIONAL APPROVE` (reviewer found `[GATING]` issues; downstream items reviewed and contingent on the gating fix not invalidating them — a narrow re-review verifies the fix and promotes to APPROVED), `APPROVED` (review passed). A fresh session can tell exactly where each task stands.
 
-**Two-stage review.** Data integrity first, implementation correctness second. Data review must pass before implementation review begins. Review is never skipped — even in direct execution mode.
+**One comprehensive review pass.** The reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom — `[GATING]` / `[STANDARD]` / `[ADVISORY]` items — even on gating failure. Reviewer dispatches are costly; halting early forces a full re-review. CONDITIONAL APPROVE separates "must-fix gating items" from "downstream already verified" so the re-review can be narrow. Review is never skipped, even in direct execution mode. Implementer and reviewer walk the same checklist — one source of truth, no drift between pre-handoff self-check and reviewer verification.
+
+**Stage → references via agent Stage tables.** `agents/implementer.md` and `agents/reviewer.md` carry authoritative tables mapping each `Stage:` value (`implementation`, `implementation review`, `refactoring`, `integration review`, `drift test creation`/`review`, `merge proposer`/`review`, `doc writer`/`reviewer`, planning-phase reviewer) to the domain skill and stage-scoped references that auto-load at dispatch time. Dispatch prompts carry only Stage, task pointer, git range, and optional steering — the Stage table handles the reference-load.
 
 **Scope rule.** Agents only edit their own task's sections in PLAN.md and RESULTS.md. Never touch other tasks.
 
