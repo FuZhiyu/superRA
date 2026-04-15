@@ -24,10 +24,7 @@ Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs)
 
 3. **Task-block structure.** `PLAN.md` consists of a header (project-wide context) and a sequence of task blocks. Each task block has a fixed anatomy: objective / script / I/O / steps / review status. Stage 1 `RESULTS.md` mirrors the task structure (one section per task). See `references/plan-anatomy.md` and `references/results-anatomy.md` for the full templates.
 
-4. **Ownership by role.** Role-scoped edit permissions live in `agents/implementer.md` + `agents/reviewer.md`. In standalone use, the single author plays all roles — the role split collapses, but the inline-edit rule and "latest state only" still apply.
-
-5. **Explicit what-changed deltas in both directions.** See `superRA:agent-orchestration` §Dispatch-Return Deltas for the one-line what-changed convention used by dispatch prompts and status returns.
-
+<!-- I prefer just delete them. it's irrelevant here.  -->
 6. **The doc is the record. Status reports are pointers, not substitutes.** Any material finding, result, methodology change, caveat, or decision MUST be written into `PLAN.md` or `RESULTS.md` *before* it is communicated in a status report or chat message. If a result only exists in a chat reply, it does not exist — it will be lost at the next session boundary, cache eviction, or context compaction. The authoritative record is the committed doc; the report only points at it.
 
    **Rule of thumb:** before you type a finding into a status report, ask "is this written in `PLAN.md` or `RESULTS.md` yet?" If not, write it in the doc first and commit, then point at it in the report.

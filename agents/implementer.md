@@ -18,12 +18,20 @@ approach.
 ## Stage → references loaded
 
 The dispatcher chooses your `Stage:` value; that choice selects the domain skill you auto-load and the stage-scoped reference(s) you read at dispatch time. This table is authoritative — use it instead of inferring loads from the dispatch prompt's prose.
+<!-- what does autoload mean? I thought agent needs to load it them-selves rather than automatically? 
+also econ-data-analysis is no longer required to load unless it's data analysis work right? 
+also handoff doc is a required skill, so why it's not shown here?
 
+overall the skill loading matrix is very messy; we also need to create a single truth for it somewhere so it's more maintainable; 
+ similarly applies to the reviewer
+ -->
 | `Stage:` value | Domain skill (auto-loaded) | Stage-scoped reference(s) |
 |---|---|---|
 | `implementation` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Review & Self-Check Discipline |
 | `implementation review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Review & Self-Check Discipline |
+<!-- why implementation/implementation review are two different stages? similarly refacotring and integration reivew. Review and execution should be the same stage, and we know they will be different because different agents are invoked. -->
 | `refactoring` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Refactor integrity + `econ-data-analysis/references/integration.md` + `refactor-and-integrate/references/codebase-integration.md`; plus `integrate-drift-tests.md` if drift tests exist |
+<!-- why refactor skill not loaded in refactoring? is it documentation issue or really not loaded? it would be problematic fif not  -->
 | `integration review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Refactor integrity + `econ-data-analysis/references/integration.md` + `refactor-and-integrate/references/codebase-integration.md`; plus `integrate-drift-tests.md` if drift tests exist |
 | `drift test creation` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` + `superRA:refactor-and-integrate` | `integrate-drift-tests.md` + `drift-test-quality.md` |
 | `drift test review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` + `superRA:refactor-and-integrate` | `integrate-drift-tests.md` + `drift-test-quality.md` |
