@@ -158,7 +158,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 #### Per-Task Execution Steps
 
-1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "superRA:implementer")` — see template below. Direct mode: follow `superRA:agent-orchestration` §Direct Mode, then implement yourself.
+1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "superRA:implementer")` — see template below. Direct mode: follow `superRA:using-superRA` §Execution Modes, then implement yourself.
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
 3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom and returns one of three verdicts:
    - **APPROVE** — no findings. Proceed to the next task.
@@ -166,8 +166,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
    - **CONDITIONAL APPROVE** — one or more `[GATING]` items failed, but the reviewer walked downstream items and they look correct conditional on the gating fix not invalidating them. Adjudicate the flagged gating item(s) the same way (accept / reject / second opinion), then re-dispatch the implementer to fix them. The reviewer's re-dispatch on a CONDITIONAL APPROVE is **narrow by default**: it verifies the gating fix is correct and that the cited downstream items still hold under the fix; if both pass, it promotes to unconditional APPROVE. MAY dispatch a wider re-review via optional `Additionally:` steering when the gating fix is substantial enough to cast doubt on downstream items — documented flexibility, not the default.
 4. **Once APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
 
-**In direct mode:** Steps 1–2 are done by the main agent directly (follow `superRA:agent-orchestration` §Direct Mode). Steps 3–4 are unchanged — still dispatch reviewer subagents.
-<!-- see the other note. direct mode should not be there.  -->
+**In direct mode:** Steps 1–2 are done by the main agent directly (follow `superRA:using-superRA` §Execution Modes). Steps 3–4 are unchanged — still dispatch reviewer subagents.
 
 #### Dispatch Templates
 

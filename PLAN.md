@@ -162,24 +162,22 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 17: Finalize Direct Mode relocation + execution-workflow pointer
 
-**Review status:** not started
+**Review status:** IMPLEMENTED (orchestrator-executed in direct mode — trivial 3-site retarget; reviewer still dispatched per execution-workflow discipline)
 
 **Depends on:** Task 14 APPROVE (§Execution Modes in place); Task 16 APPROVE (old §Direct Mode removed).
 
-**Objective:** Verify `using-superRA` §Execution Modes carries the full Direct Mode prose (read agent file for role, load per manifest, no dispatch-prompt contract, self-review gate applies, review never skipped). Retarget every remaining Direct Mode pointer to `superRA:using-superRA` §Execution Modes.
+**Objective:** Retarget remaining Direct Mode pointers to `superRA:using-superRA` §Execution Modes. (§Execution Modes prose already added to `using-superRA` in Task 14; old `agent-orchestration` §Direct Mode already deleted in Task 16.)
 
 **Files touched:**
 
-- `skills/using-superRA/SKILL.md` — verify §Execution Modes is complete (touched in Task 14).
-- `skills/agent-orchestration/SKILL.md` — one-line pointer at `superRA:using-superRA` §Execution Modes.
-- `skills/execution-workflow/SKILL.md` L170 — retarget direct-mode parenthetical.
-- Any other skill mentioning Direct Mode → retarget.
+- `skills/execution-workflow/SKILL.md` — L161 Per-Task step 1 and L169 "In direct mode:" parenthetical retargeted from `superRA:agent-orchestration` §Direct Mode to `superRA:using-superRA` §Execution Modes. Obsolete HTML comment (`<!-- see the other note. direct mode should not be there. -->`) removed.
+- `README.md` — workflow-map CROSS node re-ordered: `using-superRA` moves to first position with expanded bullets (universal principles · skill inventory · skill-load manifest · execution modes (subagent/direct) · session bootstrap); `agent-orchestration` loses the `direct mode` bullet.
 
 **Steps:**
 
-- [ ] `Grep` for `Direct Mode` / `§Direct Mode` plugin-wide.
-- [ ] Retarget every non-`using-superRA` mention to a pointer.
-- [ ] Invariant block #23: `using-superRA/SKILL.md` contains `## Execution Modes` AND `Direct mode`; no other SKILL.md carries a full §Direct Mode section.
+- [x] `Grep` for `Direct Mode` / `§Direct Mode` plugin-wide. Found 3 retargetable sites + 1 preserved self-description in `using-superRA/SKILL.md:74` (§Execution Modes body).
+- [x] Retarget every non-`using-superRA` mention. execution-workflow/SKILL.md and README.md updated.
+- [ ] Invariant block #23 (deferred to Task 18 invariant consolidation): `using-superRA/SKILL.md` contains `## Execution Modes` AND `Direct mode`; no other SKILL.md carries a full §Direct Mode section.
 - [ ] Atomic commit: `refactor: finalize Direct Mode relocation to using-superRA §Execution Modes`.
 
 ---

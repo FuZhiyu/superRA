@@ -73,7 +73,7 @@ flowchart TB
 
     MERGE["<b>MERGE</b><br/>merge-workflow<br/>+ semantic-merge (conflict classification)<br/>Stage: merge proposer / merge review<br/>→ implementer + reviewer<br/>+ refactor-and-integrate/references/merge-quality.md<br/>Post-merge: fresh drift-test + integration review"]
 
-    CROSS["<b>Cross-cutting (every dispatch)</b><br/>agent-orchestration — dispatch shape · return deltas · reviewer-feedback adjudication · review-status reference · direct mode<br/>handoff-doc — six principles · inline-edit · task-block anatomy · figure embedding · user-decisions log<br/>using-superRA — session bootstrap · cross-session detection · skill discovery"]
+    CROSS["<b>Cross-cutting (every dispatch)</b><br/>using-superRA — universal principles · skill inventory · skill-load manifest · execution modes (subagent/direct) · session bootstrap<br/>agent-orchestration — dispatch shape · return deltas · reviewer-feedback adjudication · review-status reference<br/>handoff-doc — six principles · inline-edit · task-block anatomy · figure embedding · user-decisions log"]
 
     SESSION -.loads.-> CROSS
     PLAN -.uses.-> CROSS
