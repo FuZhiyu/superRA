@@ -126,7 +126,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 10: Make `integration-workflow` generic; move data-specific content to domain reference
 
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Objective:** `integration-workflow/SKILL.md` retains ONLY workflow sequencing (Stage 1 drift-test creation, Stage 2 integration review → refactor loop, Step 3 doc finalization, four stop points, handoff to `merge-workflow`). *What to check* content moves to `refactor-and-integrate/references/codebase-integration.md` (generic) and to a new `skills/econ-data-analysis/references/integration.md` (data-specific). Both references carry `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers + the shared-flow preamble.
 
@@ -146,19 +146,19 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 **Steps:**
 
-- [ ] **Describe.** Read `integration-workflow/SKILL.md`; mark every sentence that describes *what to check* (vs *what step runs*). Read `codebase-integration.md`; mark §Economic Integration + §Data Discipline Through Refactoring for move. Draft the new `econ-data-analysis/references/integration.md` outline.
-- [ ] **Analyze — write the moves.**
-  - Create `econ-data-analysis/references/integration.md` with shared-flow preamble + gated items per Task 10b.
-  - Strip moved sections from `codebase-integration.md`; add shared-flow preamble.
-  - Rewrite `integration-workflow/SKILL.md` "what to check" prose into one-line pointers.
-  - Update agent Stage tables.
-  - Add §Refactor integrity pointer in `econ-data-analysis/SKILL.md`.
-- [ ] **Validate.**
-  - Grep `integration-workflow/SKILL.md` for `winsorization` / `variable construction` / `transformation` / `describe step` / `row count` — expect 0 hits.
-  - Grep `codebase-integration.md` for the same — expect 0 hits.
-  - Grep `econ-data-analysis/references/integration.md` for `[GATING]` — expect ≥ 3 hits.
-  - Add invariant block #16 with the three greps + existence of `econ-data-analysis/references/integration.md` + absence of `## Economic Integration` / `## Data Discipline Through Refactoring` headings in `codebase-integration.md`.
-  - Atomic commit: `refactor(integration): separate workflow-choreography from integration-discipline; add econ-data-analysis/integration.md`.
+- [x] **Describe.** Read `integration-workflow/SKILL.md`; confirmed the file is already mostly workflow-sequencing; only two lines in Red Flags / Always carried data-specific tokens (`row counts`, `describe steps`). Read `codebase-integration.md`; §Economic Integration + §Data Discipline Through Refactoring marked for move. Drafted `econ-data-analysis/references/integration.md` with three sub-sections (Consistency / Data discipline preserved / Utility reuse and documented deviations).
+- [x] **Analyze — write the moves.**
+  - Created `skills/econ-data-analysis/references/integration.md` with the shared-flow preamble (Task 10b), a pointer back to `codebase-integration.md`, and 12 tiered items: 4 `[GATING]` on consistency (no redundant intermediaries, variable-construction consistency, transformation-pattern consistency) + 4 `[GATING]` on data discipline preservation (describe steps, row-count prints, validation checks, drift tests pass post-refactor) + 5 `[STANDARD]` (naming, sample preserved, jupytext cells match, no artifact deleted, shared utilities, documented deviations) + 1 `[ADVISORY]` (migration pointers). Verdict protocol section references the shared CONDITIONAL APPROVE protocol in the domain SKILL.
+  - Rewrote `codebase-integration.md`: deleted `## Economic Integration` and `## Data Discipline Through Refactoring`; kept §Code Integration, §Handling Inconsistencies, §PR Quality, §Documentation Currency; updated the top blockquote to point at BOTH the domain skill's §Refactor integrity AND the new `econ-data-analysis/references/integration.md`. Removed the orphan "Drift tests exist and pass" checkbox from §PR Quality since it is now owned by the domain reference.
+  - Updated `integration-workflow/SKILL.md`: replaced data-specific phrasing in two Red Flags / Always bullets with generic "domain-discipline artifacts" language pointing at the Stage-table references. Stripped the hardcoded `Domain reference:` line from the Stage 2 refactorer and integration-reviewer dispatch prompts; added a follow-up paragraph noting that the Stage table owns the reference load. Updated the Agent Types and Domain References table rows for Stage 2 refactoring / integration review to cite both `codebase-integration.md` (generic) and `econ-data-analysis/references/integration.md` (data-specific).
+  - Updated agent Stage tables in `agents/implementer.md` and `agents/reviewer.md`: rows for `refactoring` and `integration review` now load §Refactor integrity + `econ-data-analysis/references/integration.md` + `refactor-and-integrate/references/codebase-integration.md` (plus `integrate-drift-tests.md` when drift tests exist).
+  - Added a one-line pointer at the top of `econ-data-analysis/SKILL.md` §Refactor integrity: "For integration-stage refactoring discipline (cross-codebase consistency, no redundant intermediaries, variable-construction consistency, transformation-pattern consistency, documented deviations, migration pointers), see `references/integration.md`."
+  - Audit of `drift-test-quality.md` and `merge-quality.md`: left intact. Both are cross-cutting quality frameworks; the only data-specific phrasing (`merge-quality.md` §Data Discipline bullet and §Research Integrity bullets on variable definitions / sample construction) is load-bearing for the merge flow itself and already redirects to the loaded `econ-data-analysis` skill for the full artifact list.
+- [x] **Validate.**
+  - Grep confirmed: `integration-workflow/SKILL.md` has 0 hits for `winsorization|variable construction|transformation|describe step|row count|Data discipline|Economic Integration`. `codebase-integration.md` has 0 hits for the same tokens. `integration.md` has 9 `[GATING]` markers (≥3 required).
+  - Added invariant block #16 to `tests/structural-invariants.sh` (renumbered the prior README 'Why superRA?' block to #17): (a) `integration.md` exists; (b) ≥3 `[GATING]` markers; (c) shared-flow preamble phrase present; (d) `codebase-integration.md` does not carry `## Economic Integration` or `## Data Discipline Through Refactoring` headings; (e) `integration-workflow/SKILL.md` does not contain `winsorization` or `Economic Integration`.
+  - `bash tests/structural-invariants.sh` → all 44 PASS, 2 known WARN (writing-skills upstream refs), 0 FAIL.
+- [x] Atomic commit: `refactor(integration): separate workflow-choreography from integration-discipline; add econ-data-analysis/integration.md`.
 
 ---
 

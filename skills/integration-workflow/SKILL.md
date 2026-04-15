@@ -175,7 +175,6 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
    Agent(subagent_type: "superRA:reviewer"):
      Stage: integration review
      Skills: superRA:refactor-and-integrate
-     Domain reference: active domain skill's §Refactor integrity (for data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + codebase-integration.md (cross-cutting code-quality checklist)
      Code under review: [paths]
      Codebase conventions: [where they're documented — CLAUDE.md, AGENTS.md, etc.]
      Drift tests: [paths]
@@ -184,6 +183,8 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
        relevant skills and documents to proceed. Additionally,
        <optional steering>.
    ```
+
+   Refactoring discipline lives in the Stage-table references for `integration review` — for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` (generic cross-cutting code-quality) + `skills/econ-data-analysis/references/integration.md` (data-specific gates). The reviewer's Stage table owns the reference load; do not inline the list in this dispatch prompt.
 
 3. **If APPROVE:** No refactoring needed. Proceed to final commit.
 
@@ -194,7 +195,6 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
       Agent(subagent_type: "superRA:implementer"):
         Stage: refactoring
         Skills: superRA:refactor-and-integrate
-        Domain reference: active domain skill's §Refactor integrity (for data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + codebase-integration.md (cross-cutting code-quality checklist)
         Reviewer issues to address: [accepted items, file:line, what to fix]
         Codebase conventions: [pointers]
         Drift tests: [paths — must keep passing]
@@ -204,6 +204,8 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
           <optional steering — e.g., prior-round adjudication, items the
           orchestrator has rejected vs. accepted>.
       ```
+
+      Refactoring discipline lives in the Stage-table references for `refactoring` — for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` (generic cross-cutting code-quality) + `skills/econ-data-analysis/references/integration.md` (data-specific gates). The implementer's Stage table owns the reference load; do not inline the list in this dispatch prompt.
 
    b. **After refactoring: run drift tests.**
       - **Pass:** Commit and re-submit for review.
@@ -430,8 +432,8 @@ Dispatched agents load a parent skill via the `Skills:` line and read a named do
 |---|---|---|---|
 | Stage 1 test creation | `superRA:implementer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` (quality checklist) + `econ-data-analysis/references/integrate-drift-tests.md` (domain-specific framing: what to protect, econ tolerances, failure modes) |
 | Stage 1 test review | `superRA:reviewer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` + `econ-data-analysis/references/integrate-drift-tests.md` |
-| Stage 2 refactoring | `superRA:implementer` | `superRA:refactor-and-integrate` | active domain skill's §Refactor integrity (data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + `codebase-integration.md` (cross-cutting code-quality) |
-| Stage 2 integration review (code) | `superRA:reviewer` | `superRA:refactor-and-integrate` | active domain skill's §Refactor integrity (data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + `codebase-integration.md` (cross-cutting code-quality) |
+| Stage 2 refactoring | `superRA:implementer` | `superRA:refactor-and-integrate` | `codebase-integration.md` (generic code-quality) + active domain skill's integration reference (data analysis: `econ-data-analysis/references/integration.md` + SKILL.md §Refactor integrity) |
+| Stage 2 integration review (code) | `superRA:reviewer` | `superRA:refactor-and-integrate` | `codebase-integration.md` (generic code-quality) + active domain skill's integration reference (data analysis: `econ-data-analysis/references/integration.md` + SKILL.md §Refactor integrity) |
 | Step 3 doc-writer (matured RESULTS.md + project doc audit) | `superRA:implementer` | `superRA:report-in-markdown` | `baseline-io.md` + `rich-content.md` + `final-form.md` (full mode) |
 | Step 3 doc-reviewer (final-form + project docs) | `superRA:reviewer` | `superRA:report-in-markdown` | `final-form.md` |
 
@@ -454,7 +456,7 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 **Never:**
 - Skip Stage 1 (drift tests) — they are the safety net for everything that follows
 - Refactor before integration reviewer has identified issues — review first, then fix
-- Remove data diagnostics, row counts, or validation steps during refactoring
+- Strip domain-discipline artifacts during refactoring — see the Stage-table references for `refactoring` / `integration review` for the full list per domain
 - Judge the researcher's methodology choice — focus on implementation correctness (see the foundational RA framing in `CLAUDE.md`)
 - Refactor before drift tests are committed and green
 - Hand off to merge-workflow without integration reviewer APPROVE on the refactored code (Stage 2) AND doc-reviewer APPROVE on the matured RESULTS.md + project docs (Step 3)
@@ -468,7 +470,7 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 - Run integration review before any refactoring
 - Run drift tests after every refactoring change
 - Re-submit to integration reviewer after every refactoring round
-- Keep and re-validate all data discipline artifacts (describe steps, row counts, validation checks) through refactoring
+- Keep and re-validate all domain-discipline artifacts through refactoring — refactoring discipline lives in the Stage-table references for `refactoring` / `integration review` (for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` generic + `skills/econ-data-analysis/references/integration.md` data-specific)
 - Dispatch the Step 3 doc-writer subagent with `superRA:report-in-markdown` (full mode — all three references) to perform the matured RESULTS.md consolidation AND the project doc audit in one pass; dispatch the doc-reviewer afterward and iterate to APPROVE
 - Resolve `RESULTS_DIR` before dispatching the doc-writer — either from project guidance, or via `AskUserQuestion` if guidance is missing, logged in PLAN.md `## Decisions`
 - Commit at each stage boundary and after each Step 3 sub-part (A, B, and C each land as separate commits)

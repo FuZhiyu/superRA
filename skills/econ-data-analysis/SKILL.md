@@ -327,6 +327,8 @@ On a re-dispatch following a CONDITIONAL APPROVE, the reviewer's second pass is 
 
 ### Refactor integrity (applies at the `refactoring` and `integration review` stages)
 
+For integration-stage refactoring discipline (cross-codebase consistency, no redundant intermediaries, variable-construction consistency, transformation-pattern consistency, documented deviations, migration pointers), see `references/integration.md`. The items below are the data-discipline-preservation gates that apply inside this file regardless of codebase context.
+
 - `[GATING]` All Describe steps preserved — or explicitly replaced by upstream-validated diagnostics the refactor relies on.
 - `[GATING]` All row-count prints preserved at sample-changing operations.
 - `[GATING]` All Validate checks preserved.

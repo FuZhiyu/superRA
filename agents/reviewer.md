@@ -30,8 +30,8 @@ The dispatcher chooses your `Stage:` value; that choice selects the domain skill
 |---|---|---|
 | `implementation` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Review & Self-Check Discipline |
 | `implementation review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Review & Self-Check Discipline |
-| `refactoring` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Refactor integrity; plus `integrate-drift-tests.md` if drift tests exist |
-| `integration review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Refactor integrity; plus `integrate-drift-tests.md` if drift tests exist |
+| `refactoring` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Refactor integrity + `econ-data-analysis/references/integration.md` + `refactor-and-integrate/references/codebase-integration.md`; plus `integrate-drift-tests.md` if drift tests exist |
+| `integration review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` | main body §Refactor integrity + `econ-data-analysis/references/integration.md` + `refactor-and-integrate/references/codebase-integration.md`; plus `integrate-drift-tests.md` if drift tests exist |
 | `drift test creation` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` + `superRA:refactor-and-integrate` | `integrate-drift-tests.md` + `drift-test-quality.md` |
 | `drift test review` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` + `superRA:refactor-and-integrate` | `integrate-drift-tests.md` + `drift-test-quality.md` |
 | `merge proposer` | `superRA:econ-data-analysis` + `superRA:script-to-notebook` + `superRA:refactor-and-integrate` | `merge-quality.md` |
