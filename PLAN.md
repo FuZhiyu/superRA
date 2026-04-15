@@ -113,7 +113,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 15: Preload `using-superRA` in agent files; retire Stage tables and auto-load language
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Depends on:** Task 14 APPROVE.
 
