@@ -172,7 +172,7 @@ The macro workflow is **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. When mu
 "Let's analyze X" → PLAN phase: planning-workflow (Phase 1 inventory then Phase 2 plan creation).
 "Something looks wrong in the data" → investigate using econ-data-analysis describe step.
 
-Within each implementation step, the micro-level discipline is **DESCRIBE → ANALYZE → DOC** (see `econ-data-analysis`).
+Within each implementation step, the micro-level discipline is the three concurrent disciplines **DESCRIBE / ANALYZE / VALIDATE** — documentation is written continuously alongside them (see `econ-data-analysis`).
 
 ## Skill Types
 

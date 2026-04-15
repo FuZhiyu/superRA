@@ -244,7 +244,7 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 - **Preserve user work.** Never discard dirty state or unrelated edits without explicit approval.
 - **Regenerate over edit.** For generated files (tables, figures, compiled outputs), regenerate from merged source rather than hand-editing.
 - **RA framing.** You propose integration, present options, and implement the researcher's decisions. You never judge whether the methodology is correct.
-- **Data discipline.** If incoming changes affect data processing, verify describe-analyze-doc artifacts are preserved in the merged result.
+- **Data discipline.** If incoming changes affect data processing, verify describe-analyze-validate artifacts (row-count logs, distribution diagnostics, validation checks) are preserved in the merged result.
 - **Drift tests are the safety net.** Always run them after merge. Never skip. Never silently update expectations for meaningful changes.
 
 ## When to Ask the User
