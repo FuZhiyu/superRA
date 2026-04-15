@@ -140,7 +140,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 16: Split `agent-orchestration/SKILL.md` — SKILL.md (high-level) + `references/agent-teams.md` (technical)
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Depends on:** Task 14 APPROVE (needs `using-superRA` §Execution Modes in place so Direct Mode pointer has a target).
 
