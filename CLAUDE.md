@@ -27,7 +27,7 @@ superRA has a tested philosophy that every skill, hook, and agent file is built 
 
 These principles are domain-agnostic. They shape every workflow skill and apply to data analysis today and to any future vertical (theory, literature review, simulation, writing) tomorrow.
 
-1. **Enforced implementer–reviewer pair at every step.** No result is accepted until a reviewer has signed off. Two-stage review (data integrity then implementation correctness) during execution; a drift-test review and an integration review before merge; a fresh integration review after semantic-merge. Review is never skipped, regardless of perceived triviality. A change that would let a step ship without review violates this principle.
+1. **Enforced implementer–reviewer pair at every step.** No result is accepted until a reviewer has signed off. One comprehensive review pass per task during execution (the reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom and returns `APPROVE` / `REVISE` / `CONDITIONAL APPROVE`); a drift-test review and an integration review before merge; a fresh integration review after semantic-merge. Review is never skipped, regardless of perceived triviality. A change that would let a step ship without review violates this principle.
 
    The reviewer's role is **adversarial** — it should be thorough, skeptical, and err on the side of over-flagging. A false positive costs one iteration; a missed issue can ship wrong results. The orchestrator is the **arbitrator**: it made the plan, communicates with the researcher, and has big-picture context the reviewer lacks. It evaluates each review finding independently, understands the reviewer's over-critical bias, and overrules with documented reasoning when the reviewer is wrong. Neither role works without the other — adversarial review surfaces issues, informed arbitration filters them.
 
@@ -43,8 +43,26 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
 
 ### Architectural pattern
 
-- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. One source of truth per concern — protocol skills redirect to agent files, workflow skills delegate to reference files, duplicated content is a code smell. When adding content, first ask where its authoritative home already is.
+- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. Stage tables in `agents/implementer.md` and `agents/reviewer.md` are the authoritative map from `Stage:` value to references loaded.
 - **Flat skills/ layout.** No nested subfolders — every skill lives at `skills/<name>/SKILL.md`. Grouping into Workflow / Domain / Utility / Meta is documented in `skills/CATEGORIES.md` and mirrored in `README.md`, not in the filesystem. This preserves compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders.
+
+### DRY, composability, extensibility
+
+**One source of truth per concern.** When a piece of content appears in more than one skill, at most one copy is authoritative; the rest are one-line pointers. Duplicated content is a code smell and a source of drift — future edits will update one copy and miss the others. When adding content, first ask: *what concern does this describe?* Put it in the one skill that owns that concern, and reference it from everywhere else.
+
+Concerns and their owners:
+
+- **Workflow skills** own *choreography* — what steps run in what order, what stop points exist, what status transitions apply. `planning-workflow`, `execution-workflow`, `integration-workflow`, `merge-workflow` each own the choreography of their phase and nothing else.
+- **`agent-orchestration`** owns *cross-stage orchestration* — dispatch-prompt shape (required-fields-first, `Additionally:` anchor-last), the "Follow the standard stage-relevant workflow" prefix, the relay protocol between orchestrator and subagent (what-changed deltas, review-notes annotation mechanics), verdict-adjudication discipline (how to handle `REVISE` and `CONDITIONAL APPROVE` findings), team recipes, and the direct-mode rubric (when the orchestrator executes a step itself instead of dispatching a subagent, read the agent file for that role and follow the same protocol).
+- **Domain skills** own *domain discipline* — the Iron Law for data analysis, the gated checklist for that domain (§Review & Self-Check Discipline, domain-specific integration reference), pitfall catalogs, stage-scoped references. Adding a new vertical means adding a domain skill, not forking workflow skills.
+- **`refactor-and-integrate`** owns *generic integration discipline* — code-quality standards, drift-test construction, merge-quality standards. Domain-specific integration content lives alongside the domain skill (for data analysis: `econ-data-analysis/references/integration.md`).
+- **`handoff-doc`** owns *handoff-doc mechanics* — latest-state-only, inline-edit rule, task-block structure, `## Decisions` section shape. It does NOT own role permissions or dispatch/status-return protocols — those are orchestration concerns and live in `agent-orchestration` + the agent files.
+
+**Shared-flow checklists.** Implementer and reviewer always walk the **same file** for any gated checklist. `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers encode severity. The implementer walks the checklist as pre-handoff self-check; the reviewer walks the same checklist as verification criteria. Same content, two perspectives — no drift possible because there is no second document. Applies to `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline and to every other gated checklist in the plugin (domain-specific integration references, future vertical checklists).
+
+**Composition at the workflow edge.** A workflow step's content is assembled at dispatch time from: (a) the workflow skill for sequencing, (b) `agent-orchestration` for dispatch shape + verdict adjudication, (c) the agent file for execution / review protocol, (d) the domain skill + stage-scoped references for what to check. None of these pieces duplicate what the others carry.
+
+**Extension path.** Adding a new vertical (theory, literature review, simulation, writing) is composing existing pieces, not forking workflow skills. Create `skills/<vertical>/SKILL.md` with its Iron-Law-equivalent, add the vertical's gated checklist (§Review + §Integration), add stage-scoped references for the phases the vertical touches, add the vertical to the planning-workflow routing table. The workflow skills, `agent-orchestration`, and the agent files carry over unchanged.
 
 ### Domain verticals
 
