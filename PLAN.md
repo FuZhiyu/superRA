@@ -92,7 +92,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 14: Refactor `using-superRA` into the master skill
 
-**Review status:** not started
+**Review status:** IMPLEMENTED
 
 **Objective:** Restructure `skills/using-superRA/SKILL.md` to be the master skill every agent reads. It carries: distilled universal principles (four workflow principles + RA framing, restated since the plugin's `CLAUDE.md` is contributor-only); skill inventory (Workflow / Domain / Utility / Meta); composable-design map; §Skill-Load Manifest (six role-independent Stages, `handoff-doc` in every row, domain-routing column); §Execution Modes (subagent dispatch + direct mode, lifted from `agent-orchestration` §Direct Mode); §When to Invoke Which Skill (kept from current). Remove `<SUBAGENT-STOP>`. Move cross-session detection / resume-from-PLAN.md logic to new `references/session-bootstrap.md`.
 
@@ -104,10 +104,10 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 **Steps:**
 
-- [ ] **Describe.** Re-read current `using-superRA/SKILL.md`; catalog what moves vs stays vs deletes. Read the SessionStart hook script to confirm injection mechanism. Draft the six-row manifest with `handoff-doc` in every row and role-differentiation on `documentation` row only.
-- [ ] **Analyze.** Rewrite SKILL.md per Round-3 structure (header + Universal Principles + Skill Inventory + Composable Design + Skill-Load Manifest + Execution Modes + When to Invoke Which Skill). Create `references/session-bootstrap.md` with the lifted detection commands + a lead paragraph ("Main agent loads this at session start; subagents skip — they inherit task context from their dispatch"). Preserve the SessionStart-injection hook contract.
-- [ ] **Validate.** Invariant block #20: `using-superRA/SKILL.md` contains `## Skill-Load Manifest`, `## Skill Inventory`, `## Execution Modes`; carries exactly 6 `Stage:` rows; `handoff-doc` on every row; `<SUBAGENT-STOP>` absent. `references/session-bootstrap.md` exists with cross-session detection commands.
-- [ ] Atomic commit: `feat(using-superRA): promote to master skill with skill-load manifest; move session bootstrap to reference`.
+- [x] **Describe.** Re-read current `using-superRA/SKILL.md`; catalog what moves vs stays vs deletes. Read the SessionStart hook script to confirm injection mechanism. Draft the six-row manifest with `handoff-doc` in every row and role-differentiation on `documentation` row only.
+- [x] **Analyze.** Rewrite SKILL.md per Round-3 structure (header + Universal Principles + Skill Inventory + Composable Design + Skill-Load Manifest + Execution Modes + When to Invoke Which Skill). Create `references/session-bootstrap.md` with the lifted detection commands + a lead paragraph ("Main agent loads this at session start; subagents skip — they inherit task context from their dispatch"). Preserve the SessionStart-injection hook contract.
+- [x] **Validate.** Invariant block #20: `using-superRA/SKILL.md` contains `## Skill-Load Manifest`, `## Skill Inventory`, `## Execution Modes`; carries exactly 6 `Stage:` rows; `handoff-doc` on every row; `<SUBAGENT-STOP>` absent. `references/session-bootstrap.md` exists with cross-session detection commands.
+- [x] Atomic commit: `feat(using-superRA): promote to master skill with skill-load manifest; move session bootstrap to reference`.
 
 ---
 
