@@ -134,7 +134,43 @@ else
   fail "ordering: Workflow principles at L${wp_line:-?}, Iron Law at L${il_line:-?}"
 fi
 
-# 10. README 'Why superRA?' lead section does not mention Iron Law.
+# 10a. Dispatch-template prefix: every `Agent(subagent_type: "superRA:...")`
+# dispatch template across the live workflow surface carries the canonical
+# "Follow the standard stage-relevant workflow..." prefix. The dispatch
+# prompt is additive steering on top of the agent's standard protocol; the
+# prefix is the anchor that tells the agent the standard Before-You-Start
+# is in effect.
+dispatch_files="skills/execution-workflow/SKILL.md
+skills/integration-workflow/SKILL.md
+skills/merge-workflow/SKILL.md
+skills/semantic-merge/SKILL.md
+skills/refactor-and-integrate/SKILL.md"
+dispatch_count=0
+prefix_count=0
+for f in $dispatch_files; do
+  dc=$(grep -c 'Agent(subagent_type: "superRA:\(implementer\|reviewer\)"):' "$f" 2>/dev/null || echo 0)
+  dispatch_count=$((dispatch_count + dc))
+done
+for f in $dispatch_files; do
+  pc=$(grep -c 'Follow the standard stage-relevant workflow' "$f" 2>/dev/null || echo 0)
+  prefix_count=$((prefix_count + pc))
+done
+if [ "$dispatch_count" -gt 0 ] && [ "$prefix_count" -ge "$dispatch_count" ]; then
+  pass "dispatch templates carry 'Follow the standard stage-relevant workflow' prefix ($prefix_count prefix mentions >= $dispatch_count templates)"
+else
+  fail "dispatch-prompt prefix coverage: $prefix_count prefix mentions vs $dispatch_count templates"
+fi
+
+# 10b. No dispatch template retains `Work from:` or `Counterpart:` fields
+# (legacy over-specification; Work-from is cwd by default, Counterpart is
+# set at team-spawn time in Agent Teams mode).
+if grep -n 'Work from:\|Counterpart:' $dispatch_files 2>/dev/null | grep -v '^[^:]*:[[:space:]]*#'; then
+  fail "dispatch templates still contain 'Work from:' or 'Counterpart:' lines"
+else
+  pass "no dispatch template carries 'Work from:' or 'Counterpart:' fields"
+fi
+
+# 11. README 'Why superRA?' lead section does not mention Iron Law.
 why_section=$(awk '/^## Why superRA\?/{flag=1; next} /^## /{flag=0} flag' README.md | head -10)
 if echo "$why_section" | grep -qi 'Iron Law'; then
   fail "README 'Why superRA?' lead mentions Iron Law — should be workflow-first"

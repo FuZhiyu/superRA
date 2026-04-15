@@ -41,6 +41,9 @@ Agent(subagent_type: "superRA:implementer"):
   Skills: superRA:refactor-and-integrate
   Domain reference: drift-test-quality.md
   [task-specific pointers]
+  Additionally: Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally,
+    <optional steering>.
 ```
 
 ```
@@ -49,6 +52,9 @@ Agent(subagent_type: "superRA:reviewer"):
   Skills: superRA:refactor-and-integrate
   Domain reference: codebase-integration.md
   [task-specific pointers]
+  Additionally: Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally,
+    <optional steering>.
 ```
 
 The agent loads this skill via the Skill tool, receives the base directory, and reads the named reference file. It then uses the reference as its checklist alongside the data-discipline principles from `superRA:econ-data-analysis` (which analysis-touching agents auto-load per the agent definition).

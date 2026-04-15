@@ -88,8 +88,10 @@ Agent(subagent_type: "superRA:reviewer"):
   Codebase conventions: <where they live in main>
   Drift tests: <test paths>
   Diff: <merge-base>..HEAD  # the merged state vs the base branch tip
-  Note: Post-merge review. Verify the merge didn't break codebase fit
-        — convention drift, renamed utilities, moved files, stale imports.
+  Additionally: Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally, this is a
+    post-merge review — verify the merge didn't break codebase fit
+    (convention drift, renamed utilities, moved files, stale imports).
 ```
 
 - **APPROVE:** drift tests passed AND integration is clean. Proceed to Step 4.
@@ -108,8 +110,10 @@ When drift tests fail OR the post-merge integration reviewer returns REVISE, re-
      Reviewer issues to address: [accepted items, file:line, what to fix]
      Drift tests: [paths — must pass after refactoring]
      Code to refactor: [paths]
-     Note: Post-merge refactoring. Main has moved since integration-workflow
-           ran; address the drift introduced by the merge.
+     Additionally: Follow the standard stage-relevant workflow and load
+       relevant skills and documents to proceed. Additionally, this is
+       post-merge refactoring — main has moved since integration-workflow
+       ran; address the drift introduced by the merge.
    ```
 
 2. **After refactoring, re-run drift tests.**

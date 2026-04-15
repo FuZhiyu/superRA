@@ -28,7 +28,7 @@
 
 ## Task 1: Standardize Dispatch-Prompt Protocol Across All Workflow Skills
 
-**Review status:** *(not yet started)*
+**Review status:** IMPLEMENTED
 
 **Objective:** Rewrite every dispatch template in the plugin so it opens with the language
 
@@ -46,29 +46,33 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 **Steps:**
 
-- [ ] **Step 1: Describe — audit every dispatch template in the plugin.** Grep for `Agent(subagent_type:` across `skills/` and list every code block that looks like a dispatch template. Note current template shape (what fields it passes). Identify which templates already drop redundant fields and which still carry over-specification.
+- [x] **Step 1: Describe — audit every dispatch template in the plugin.** Grepped `Agent(subagent_type:` across `skills/`. Found 16 dispatch templates across 5 files: `execution-workflow/SKILL.md` (3), `integration-workflow/SKILL.md` (6), `merge-workflow/SKILL.md` (2), `semantic-merge/SKILL.md` (3), `refactor-and-integrate/SKILL.md` (2 illustrative). Legacy over-specification observed: `Work from:` + `Counterpart:` in `execution-workflow`'s three primary templates; free-form `Note:` fields in `merge-workflow` post-merge reviewer + post-merge refactorer and in `semantic-merge` Tier 3. `using-superRA/references/codex-tools.md` contains one mention inside a harness-mapping table (prose context, not a dispatch template) — left alone.
 
-- [ ] **Step 2: Analyze — rewrite each template to the new canonical shape.** Template form:
+- [x] **Step 2: Analyze — rewrite each template to the new canonical shape.** Template form:
 
   ```
   Agent(subagent_type: "superRA:<implementer|reviewer>"):
+    # --- REQUIRED FIELDS FIRST (dispatch cannot function without them) ---
     Stage: <stage-name>
     Task: <PLAN.md pointer or git range>
     [Git range: <BASE>..<HEAD>]     # for review stages
+    [Skills: <extras>]              # only if non-default
+    [References: <extras>]          # only if non-default
+    # --- THEN the standard-workflow anchor + optional steering ---
     Additionally: Follow the standard stage-relevant workflow and load
       relevant skills and documents to proceed. Additionally,
       <optional one-or-two-sentence steering — focus area, prior-round
       adjudication, warning, anything non-default>.
-    [Skills: <extras>]              # only if non-default
-    [References: <extras>]          # only if non-default
   ```
+
+  **Ordering rule (non-negotiable):** required identifying information (Stage, Task, Git range, Skills/References overrides) comes **first** — the agent needs it to load the right context. The `Additionally:` block comes **last** — it anchors "standard workflow is in effect" plus any free-form steering on top. Do NOT invert the order (Additionally-block on top, required fields below) — that buries required information after prose and invites the agent to miss it.
 
   - Drop `Work from:` lines (subagent runs in cwd by default).
   - Drop `Counterpart:` lines outside explicit Agent Teams subsections.
   - Drop any preamble that restates standard protocol, PLAN.md content, or checklist items the agent already reads.
   - The prefix "Follow the standard stage-relevant workflow..." is literal and common across every template. This is the anchor that tells the agent: your standard Before-You-Start + stage-reference-auto-load is in effect; what follows is additions on top.
 
-- [ ] **Step 3: Validate — verify and commit.**
+- [x] **Step 3: Validate — verify and commit.**
   - Grep: no dispatch template in `skills/` is missing the "Follow the standard stage-relevant workflow..." prefix.
   - Grep: no dispatch template retains `Work from:` (outside explicit worktree-setup prose) or `Counterpart:` (outside Agent Teams subsections).
   - `bash tests/structural-invariants.sh` passes.

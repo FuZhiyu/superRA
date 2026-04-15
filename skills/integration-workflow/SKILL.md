@@ -132,6 +132,10 @@ Drift tests guard key results from unintended changes during refactoring or futu
      Domain references: drift-test-quality.md (refactor-and-integrate) + integrate-drift-tests.md (econ-data-analysis)
      Key results to protect: [user-confirmed list with values]
      Test conventions: [project test framework, test directory]
+     Additionally: Follow the standard stage-relevant workflow and load
+       relevant skills and documents to proceed. Additionally,
+       <optional steering — e.g., tolerance conventions specific to this
+       analysis, prior-round adjudication if this is a re-dispatch>.
    ```
 
 4. **Dispatch test-reviewer:**
@@ -142,6 +146,9 @@ Drift tests guard key results from unintended changes during refactoring or futu
      Domain references: drift-test-quality.md (refactor-and-integrate) + integrate-drift-tests.md (econ-data-analysis)
      Tests under review: [paths to created test files]
      Key results they should protect: [list]
+     Additionally: Follow the standard stage-relevant workflow and load
+       relevant skills and documents to proceed. Additionally,
+       <optional steering>.
    ```
 
 5. **If REVISE:** adjudicate the reviewer's issues per the orchestrator discipline above. For accepted issues, re-dispatch the test-creator with the specific feedback. Re-dispatch the test-reviewer. Iterate until APPROVE.
@@ -175,6 +182,9 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
      Codebase conventions: [where they're documented — CLAUDE.md, AGENTS.md, etc.]
      Drift tests: [paths]
      Diff: <BASE_SHA>..<HEAD_SHA>
+     Additionally: Follow the standard stage-relevant workflow and load
+       relevant skills and documents to proceed. Additionally,
+       <optional steering>.
    ```
 
 3. **If APPROVE:** No refactoring needed. Proceed to final commit.
@@ -191,6 +201,10 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
         Codebase conventions: [pointers]
         Drift tests: [paths — must keep passing]
         Code to refactor: [paths]
+        Additionally: Follow the standard stage-relevant workflow and load
+          relevant skills and documents to proceed. Additionally,
+          <optional steering — e.g., prior-round adjudication, items the
+          orchestrator has rejected vs. accepted>.
       ```
 
    b. **After refactoring: run drift tests.**
@@ -257,6 +271,10 @@ Agent(subagent_type: "superRA:implementer"):
        AGENTS.md / README.md from every changed file; always also check root
        README.md and root CLAUDE.md). Update stale claims, add new patterns,
        create missing CLAUDE.md + AGENTS.md symlink pair for new modules.
+  Additionally: Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally,
+    <optional steering — e.g., project-specific doc conventions, prior-round
+    doc-reviewer feedback on a re-dispatch>.
 ```
 
 The doc-writer is the only subagent in this step. It loads `superRA:report-in-markdown` full mode (SKILL.md + all three references) and performs both sub-parts before returning control.
@@ -314,6 +332,9 @@ Agent(subagent_type: "superRA:reviewer"):
   Code files cited: [paths]
   Output files cited: [paths]
   Objective of the analysis: [from PLAN.md header]
+  Additionally: Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally,
+    <optional steering>.
 ```
 
 The reviewer loads `superRA:report-in-markdown` SKILL.md + `final-form.md` (and only those — per the skill's load-map for the doc-reviewer role). Scope:
