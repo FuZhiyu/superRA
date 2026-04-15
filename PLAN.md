@@ -272,7 +272,7 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 ## Task 6: Structural Invariants + RELEASE-NOTES Finalization
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Objective:** Consolidate all new invariants added across Tasks 2–5 into a coherent section of `tests/structural-invariants.sh`; expand the top (Unreleased) entry of `RELEASE-NOTES.md` to describe the full restructure (DAV rename + dispatch standardization + §Review integration + execution-workflow domain agnosticism + Stage tables + CONDITIONAL APPROVE + companion-workflow audit).
 
