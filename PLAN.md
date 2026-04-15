@@ -72,7 +72,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 8: Move cross-stage orchestration content into `agent-orchestration`
 
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Objective:** Lift `## Dispatch Templates`, `## Handling Reviewer Feedback (Orchestrator Discipline)`, and `## Review Status Reference` out of `execution-workflow/SKILL.md` into `agent-orchestration/SKILL.md` as new top-level sections. Add `## Direct Mode` to `agent-orchestration` (one-section rubric for orchestrator-executed steps). Shrink `handoff-doc/SKILL.md` principles #4 (role ownership) and #5 (deltas in both directions) to one-line pointers. `execution-workflow` and `integration-workflow` keep only workflow-choreography prose plus one-line pointers to the new `agent-orchestration` sections.
 
@@ -85,17 +85,17 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 **Steps:**
 
-- [ ] **Describe — locate the exact blocks.** Confirm the line ranges Explore mapped (execution-workflow L171–203, L205–238, L295–306; handoff-doc principles #4, #5). Catalog every other skill that references *into* the moved blocks (pointer-update sites for the rewire).
-- [ ] **Analyze — execute the moves.**
-  - Write the four new `agent-orchestration` sections with domain-neutral language (use `<stage-name>` placeholders, no `implementation` / `implementation review` bodies).
-  - Rewrite execution-workflow + integration-workflow + handoff-doc pointers.
-  - Update any other skill that linked into the moved content.
-- [ ] **Validate.**
-  - Grep `skills/execution-workflow/SKILL.md` for the moved headings — expect 0 hits (besides pointer lines).
-  - Grep `skills/agent-orchestration/SKILL.md` for each new heading — expect exactly 1.
-  - `bash tests/structural-invariants.sh` green.
-  - Add invariant block #14: `agent-orchestration/SKILL.md` contains `## Dispatch Templates`, `## Handling Reviewer Feedback`, `## Review Status Reference`, `## Direct Mode`; `execution-workflow/SKILL.md` does NOT contain `## Dispatch Templates` as a heading.
-  - Atomic commit: `refactor(agent-orchestration): own cross-stage dispatch and adjudication patterns`.
+- [x] **Describe — locate the exact blocks.** Confirmed the line ranges (execution-workflow L171–203, L205–238, L295–306; handoff-doc principles #4, #5) and audited pointer-update sites (`merge-workflow/SKILL.md`, `semantic-merge/SKILL.md`, `refactor-and-integrate/references/drift-test-quality.md`, `integration-workflow/SKILL.md` §Dispatch Convention).
+- [x] **Analyze — execute the moves.**
+  - Added four new top-level sections to `agent-orchestration/SKILL.md`: `## Dispatch Templates` (domain-neutral with `<stage-name>` placeholders + required-fields-first / `Additionally:` anchor + "Follow the standard stage-relevant workflow" prefix rule + banned-in-dispatch list), `## Handling Reviewer Feedback (Orchestrator Discipline)` (lifted verbatim), `## Review Status Reference` (verdict table), `## Direct Mode` (~10-line rubric for orchestrator-executed steps).
+  - Replaced the three lifted sections in `execution-workflow/SKILL.md` with one-line pointers; preserved Step 2 sub-steps, the CONDITIONAL APPROVE narrow re-review sentence, and flowchart node labels.
+  - Shrank `integration-workflow/SKILL.md` §Dispatch Convention to a pointer at agent-orchestration §Dispatch Templates + §Handling Reviewer Feedback.
+  - Shrank `handoff-doc/SKILL.md` principle #4 (role ownership → agents/implementer.md + agents/reviewer.md) and #5 (deltas → agent-orchestration §Handling Reviewer Feedback); preserved principle numbering 1..6.
+  - Rewired `merge-workflow/SKILL.md` (3 sites), `semantic-merge/SKILL.md` (1 site), and `refactor-and-integrate/references/drift-test-quality.md` (1 site) to point at `superRA:agent-orchestration` §Handling Reviewer Feedback instead of `superRA:execution-workflow`.
+- [x] **Validate.**
+  - Added invariant block #14 to `tests/structural-invariants.sh` checking agent-orchestration owns the four headings and execution-workflow no longer carries `## Dispatch Templates`.
+  - `bash tests/structural-invariants.sh` → all PASS, 2 known WARN (writing-skills), 0 FAIL.
+- [ ] Atomic commit: `refactor(agent-orchestration): own cross-stage dispatch and adjudication patterns`.
 
 ---
 

@@ -101,9 +101,7 @@ digraph integration_workflow {
 
 ## Dispatch Convention
 
-Every dispatch in this skill uses the pointer-based template — pass only the stage label, the domain reference path, and any task-specific pointers (key results, code under review, prior reviewer findings). The `implementer` and `reviewer` agent definitions own the report format, handoff protocol, and skill-load defaults; do not duplicate that content into the dispatch prompt. Stage-driven auto-loads (including the domain skill and any stage-scoped references) are defined in `agents/implementer.md` / `agents/reviewer.md` Stage tables — dispatches do not restate them.
-
-When a reviewer returns REVISE in either stage, **adjudicate the feedback before forwarding it.** See "Handling Reviewer Feedback (Orchestrator Discipline)" in `superRA:execution-workflow` for the protocol — the same discipline applies here. You are the senior researcher; the reviewer is an advisor. Read the cited code, classify each issue, override with documented reasoning if the reviewer is wrong, push back with counter-evidence if the reviewer misread the code.
+See `superRA:agent-orchestration` §Dispatch Templates for the canonical dispatch shape and §Handling Reviewer Feedback (Orchestrator Discipline) for the REVISE adjudication protocol. The same discipline applies at every stage of this workflow — you are the senior researcher; the reviewer is an advisor.
 
 ## Stage 1: Drift Test Creation
 
