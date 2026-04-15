@@ -2,6 +2,8 @@
 
 Shared domain reference for code refactoring and integration review. Both the implementer (refactorer) and reviewer use this checklist.
 
+> **Primary reference for data-analysis work:** the active domain skill's §Refactor integrity — for data analysis that is `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity. That section is the load-bearing domain checklist (describe steps, row-count prints, validation checks, drift-test discipline, variable/sample preservation). Load it first; use this file as the cross-cutting code-quality companion (naming, utility reuse, PR-friendly diffs, debug-artifact cleanup).
+
 ## Code Integration
 
 - [ ] **Naming consistency:** Variable names, function names, and file names follow codebase conventions

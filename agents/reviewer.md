@@ -3,9 +3,9 @@ name: reviewer
 description: >
   Prototype reviewer agent. Verifies work independently using APPROVE/REVISE
   protocol with CRITICAL/MAJOR/MINOR severity levels. Used by execution-workflow
-  (data integrity + implementation review), integration-workflow (drift test review
-  + integration review), merge-workflow (post-merge drift test + integration
-  review), and semantic-merge (merge review). The dispatcher
+  (implementation review), integration-workflow (drift test review + integration
+  review), merge-workflow (post-merge drift test + integration review), and
+  semantic-merge (merge review). The dispatcher
   passes only the review stage, task pointer, and git SHA range — this file
   is the canonical source for severity definitions, verdict protocol, report
   format, and stage-specific handoffs. Do not duplicate any of that content
@@ -120,7 +120,7 @@ On re-review after a CONDITIONAL APPROVE gating fix: the second pass is **narrow
 
 ## Handoff — Unified Across Stages
 
-Regardless of stage (data integrity, implementation, drift test, integration, merge, ad-hoc), your review feedback goes into the **review-notes blockquote of your assigned task block in PLAN.md**. The task block may be an analysis task, an integration task, or a post-merge refactor task — the anatomy and mechanics are identical. Exception: **ad-hoc** stage (no assigned task block) is report-only with no document updates.
+Regardless of stage (implementation review, drift test review, integration review, merge review, ad-hoc), your review feedback goes into the **review-notes blockquote of your assigned task block in PLAN.md**. The task block may be an analysis task, an integration task, or a post-merge refactor task — the anatomy and mechanics are identical. Exception: **ad-hoc** stage (no assigned task block) is report-only with no document updates.
 
 ### What You Own, What You Don't
 

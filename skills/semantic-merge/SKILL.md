@@ -298,7 +298,7 @@ When the merge is complete, summarize:
 - **`superRA:implementer`** agent + `./references/merge-quality.md` — For merge proposals
 - **`superRA:reviewer`** agent + `./references/merge-quality.md` — For merge review
 
-All agents also load `superRA:econ-data-analysis` for data discipline.
+Stage-driven domain-skill auto-loads are defined in the `agents/implementer.md` / `agents/reviewer.md` Stage tables (for data-analysis stages, those tables auto-load `superRA:econ-data-analysis`).
 
 ## Agent Teams Mode
 

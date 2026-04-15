@@ -101,7 +101,7 @@ digraph integration_workflow {
 
 ## Dispatch Convention
 
-Every dispatch in this skill uses the pointer-based template — pass only the stage label, the domain reference path, and any task-specific pointers (key results, code under review, prior reviewer findings). The `implementer` and `reviewer` agent definitions own the report format, handoff protocol, and skill-load defaults; do not duplicate that content into the dispatch prompt. Both agents auto-load `superRA:econ-data-analysis` and `superRA:script-to-notebook` for analysis-touching stages.
+Every dispatch in this skill uses the pointer-based template — pass only the stage label, the domain reference path, and any task-specific pointers (key results, code under review, prior reviewer findings). The `implementer` and `reviewer` agent definitions own the report format, handoff protocol, and skill-load defaults; do not duplicate that content into the dispatch prompt. Stage-driven auto-loads (including the domain skill and any stage-scoped references) are defined in `agents/implementer.md` / `agents/reviewer.md` Stage tables — dispatches do not restate them.
 
 When a reviewer returns REVISE in either stage, **adjudicate the feedback before forwarding it.** See "Handling Reviewer Feedback (Orchestrator Discipline)" in `superRA:execution-workflow` for the protocol — the same discipline applies here. You are the senior researcher; the reviewer is an advisor. Read the cited code, classify each issue, override with documented reasoning if the reviewer is wrong, push back with counter-evidence if the reviewer misread the code.
 
@@ -175,9 +175,9 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
 2. **Dispatch integration-reviewer:**
    ```
    Agent(subagent_type: "superRA:reviewer"):
-     Stage: integration
+     Stage: integration review
      Skills: superRA:refactor-and-integrate
-     Domain reference: codebase-integration.md
+     Domain reference: active domain skill's §Refactor integrity (for data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + codebase-integration.md (cross-cutting code-quality checklist)
      Code under review: [paths]
      Codebase conventions: [where they're documented — CLAUDE.md, AGENTS.md, etc.]
      Drift tests: [paths]
@@ -196,7 +196,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
       Agent(subagent_type: "superRA:implementer"):
         Stage: refactoring
         Skills: superRA:refactor-and-integrate
-        Domain reference: codebase-integration.md
+        Domain reference: active domain skill's §Refactor integrity (for data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + codebase-integration.md (cross-cutting code-quality checklist)
         Reviewer issues to address: [accepted items, file:line, what to fix]
         Codebase conventions: [pointers]
         Drift tests: [paths — must keep passing]
@@ -432,14 +432,14 @@ Dispatched agents load a parent skill via the `Skills:` line and read a named do
 |---|---|---|---|
 | Stage 1 test creation | `superRA:implementer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` (quality checklist) + `econ-data-analysis/references/integrate-drift-tests.md` (domain-specific framing: what to protect, econ tolerances, failure modes) |
 | Stage 1 test review | `superRA:reviewer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` + `econ-data-analysis/references/integrate-drift-tests.md` |
-| Stage 2 refactoring | `superRA:implementer` | `superRA:refactor-and-integrate` | `codebase-integration.md` |
-| Stage 2 integration review (code) | `superRA:reviewer` | `superRA:refactor-and-integrate` | `codebase-integration.md` |
+| Stage 2 refactoring | `superRA:implementer` | `superRA:refactor-and-integrate` | active domain skill's §Refactor integrity (data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + `codebase-integration.md` (cross-cutting code-quality) |
+| Stage 2 integration review (code) | `superRA:reviewer` | `superRA:refactor-and-integrate` | active domain skill's §Refactor integrity (data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + `codebase-integration.md` (cross-cutting code-quality) |
 | Step 3 doc-writer (matured RESULTS.md + project doc audit) | `superRA:implementer` | `superRA:report-in-markdown` | `baseline-io.md` + `rich-content.md` + `final-form.md` (full mode) |
 | Step 3 doc-reviewer (final-form + project docs) | `superRA:reviewer` | `superRA:report-in-markdown` | `final-form.md` |
 
 Step 3 sub-parts A (mature RESULTS.md) and B (project doc audit) are performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates the whole documentation pass per workflow principle P1. Sub-part C (PLAN.md disposition) stays with the orchestrator because it is a user-facing decision, not an RA-implementable task.
 
-All analysis-touching agents also auto-load `superRA:econ-data-analysis` and `superRA:script-to-notebook` via the agent definition (see `agents/implementer.md` and `agents/reviewer.md`).
+Stage-driven domain-skill and script-to-notebook auto-loads are defined in the `agents/implementer.md` and `agents/reviewer.md` Stage tables (for data-analysis stages, those tables auto-load `superRA:econ-data-analysis` and `superRA:script-to-notebook`).
 
 ## Agent Teams Mode
 
@@ -491,4 +491,4 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 - **Reproducibility already verified** by execution-workflow Step 3
 
 **Subagents should use:**
-- **superRA:econ-data-analysis** -- Data discipline principles for all subagents
+- The active domain skill (for data analysis: `superRA:econ-data-analysis`) — domain discipline auto-loaded at dispatch-time per the `agents/implementer.md` / `agents/reviewer.md` Stage tables
