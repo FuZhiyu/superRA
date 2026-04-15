@@ -223,7 +223,38 @@ else
   fail "execution-workflow SKILL.md missing CONDITIONAL APPROVE verdict"
 fi
 
-# 13. README 'Why superRA?' lead section does not mention Iron Law.
+# 13. Agent files carry the authoritative Stage table, the dispatch-prompt
+# contract phrase, and (reviewer only) the CONDITIONAL APPROVE verdict.
+# The Stage table is the single source of truth for which references each
+# stage auto-loads; the contract phrase tells agents the dispatch prompt is
+# additive-only; CONDITIONAL APPROVE encodes the one-pass verdict protocol
+# on the review side.
+for f in agents/implementer.md agents/reviewer.md; do
+  # Markdown table whose header mentions 'Stage' and whose rows include the
+  # four core stages. We grep the rendered markdown; the table rows contain
+  # backtick-wrapped stage names like `implementation`.
+  if grep -Eq '^\|.*Stage.*\|' "$f" \
+     && grep -Fq '`implementation`' "$f" \
+     && grep -Fq '`implementation review`' "$f" \
+     && grep -Fq '`refactoring`' "$f" \
+     && grep -Fq '`integration review`' "$f"; then
+    pass "$f contains Stage table with core stages (implementation, implementation review, refactoring, integration review)"
+  else
+    fail "$f missing Stage table or core stage rows"
+  fi
+  if grep -Fq "What the dispatch prompt carries — and doesn't" "$f"; then
+    pass "$f contains dispatch-prompt contract phrase"
+  else
+    fail "$f missing dispatch-prompt contract phrase"
+  fi
+done
+if grep -Fq 'CONDITIONAL APPROVE' agents/reviewer.md; then
+  pass "agents/reviewer.md encodes CONDITIONAL APPROVE verdict"
+else
+  fail "agents/reviewer.md missing CONDITIONAL APPROVE verdict"
+fi
+
+# 14. README 'Why superRA?' lead section does not mention Iron Law.
 why_section=$(awk '/^## Why superRA\?/{flag=1; next} /^## /{flag=0} flag' README.md | head -10)
 if echo "$why_section" | grep -qi 'Iron Law'; then
   fail "README 'Why superRA?' lead mentions Iron Law — should be workflow-first"
