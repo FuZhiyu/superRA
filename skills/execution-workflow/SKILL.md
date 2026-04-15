@@ -101,23 +101,9 @@ digraph process {
 }
 ```
 
-### Step 0a: Handoff-Doc Existence Check
-
-Before any branch check or dispatch, confirm `PLAN.md` and `RESULTS.md` exist **and** are committed:
-
-```bash
-[ -f PLAN.md ] && [ -f RESULTS.md ] && git ls-files --error-unmatch PLAN.md RESULTS.md >/dev/null 2>&1
-```
-
-If the check fails (one or both missing, or present but untracked / uncommitted), the user probably entered this workflow without going through `planning-workflow` first — for example, they exited CLI plan-mode and jumped straight to execution, or inherited an existing branch that never bootstrapped docs.
-
-**Before any task dispatch:** load `superRA:planning-workflow` and `superRA:handoff-doc`, create `PLAN.md` and `RESULTS.md` from the current session state (plan-mode plan output, chat context, whatever is available — follow `planning-workflow`'s template), satisfy the domain-specific planning gate (for data analysis: the Data Inventory hard gate from `econ-data-analysis/references/planning.md`), and commit the docs. Treat this as Task 0 of the work. Only then proceed to Step 0.
-
-If the docs exist and are committed, proceed directly to Step 0.
-
 ### Step 0: Branch Check
 
-Before starting execution, check if on a default branch:
+Before any handoff-doc check, dispatch, or commit, check if on a default branch:
 
 ```bash
 git branch --show-current
@@ -131,6 +117,27 @@ Want me to create one?
 ```
 
 If the user declines, proceed — they've given explicit consent to work on the default branch.
+
+### Step 0b: Handoff-Doc Existence Check
+
+After the branch check, confirm `PLAN.md` and `RESULTS.md` exist, are tracked, **and** have no uncommitted modifications (neither unstaged nor staged):
+
+```bash
+[ -f PLAN.md ] && [ -f RESULTS.md ] \
+  && git ls-files --error-unmatch PLAN.md RESULTS.md >/dev/null 2>&1 \
+  && git diff --quiet -- PLAN.md RESULTS.md \
+  && git diff --quiet --cached -- PLAN.md RESULTS.md
+```
+
+All four conjuncts must succeed. The first two confirm existence and tracking; the last two confirm the worktree copy matches the committed copy (neither a dirty edit nor a staged-but-uncommitted change). A silent pass on dirty state would let execution proceed against a handoff doc that does not actually match what is in git history — exactly the out-of-doc state Workflow Principle 2 forbids.
+
+If the check fails (one or both missing, present but untracked, or present with uncommitted edits), the user probably entered this workflow without going through `planning-workflow` first — for example, they exited CLI plan-mode and jumped straight to execution, inherited an existing branch that never bootstrapped docs, or left in-flight edits uncommitted.
+
+**Before any task dispatch:** load `superRA:planning-workflow` and `superRA:handoff-doc`, create or finish-editing `PLAN.md` and `RESULTS.md` from the current session state (plan-mode plan output, chat context, whatever is available — follow `planning-workflow`'s template), satisfy the domain-specific planning gate (for data analysis: the Data Inventory hard gate from `econ-data-analysis/references/planning.md`), and commit the docs. Treat this as Task 0 of the work.
+
+Step 0 (branch check) must have already run and granted consent to commit on the current branch — Step 0b intentionally comes after Step 0 so Task 0 cannot silently land on `main` / `master`.
+
+If the docs exist, are tracked, and the worktree is clean, proceed directly to Step 1.
 
 ### Step 1: Load and Review Plan
 
