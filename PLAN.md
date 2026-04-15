@@ -92,7 +92,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 14: Refactor `using-superRA` into the master skill
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Objective:** Restructure `skills/using-superRA/SKILL.md` to be the master skill every agent reads. It carries: distilled universal principles (four workflow principles + RA framing, restated since the plugin's `CLAUDE.md` is contributor-only); skill inventory (Workflow / Domain / Utility / Meta); composable-design map; §Skill-Load Manifest (six role-independent Stages, `handoff-doc` in every row, domain-routing column); §Execution Modes (subagent dispatch + direct mode, lifted from `agent-orchestration` §Direct Mode); §When to Invoke Which Skill (kept from current). Remove `<SUBAGENT-STOP>`. Move cross-session detection / resume-from-PLAN.md logic to new `references/session-bootstrap.md`.
 
