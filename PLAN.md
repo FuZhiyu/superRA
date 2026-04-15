@@ -101,7 +101,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 9: Delete `implementer-protocol` + `reviewer-protocol` alias skills
 
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Objective:** Remove the two 22-line wrappers. Replace their role with `agent-orchestration` §Direct Mode (added in Task 8) + direct links to `agents/implementer.md` / `agents/reviewer.md` at call sites.
 
@@ -117,9 +117,9 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 **Steps:**
 
-- [ ] **Describe — audit all references.** Grep `implementer-protocol` and `reviewer-protocol` across the plugin. Catalog each site and whether it wants (a) direct-mode rubric (→ `agent-orchestration` §Direct Mode) or (b) the agent protocol specifically (→ `agents/implementer.md` / `agents/reviewer.md`).
-- [ ] **Analyze — delete + rewire.** Remove the two directories. Update each reference site.
-- [ ] **Validate.** Grep confirms 0 remaining references. Structural-invariants green. Add invariant block #15: no files under `skills/implementer-protocol/` or `skills/reviewer-protocol/`.
+- [x] **Describe — audit all references.** Grep catalog: `skills/implementer-protocol/SKILL.md` + `skills/reviewer-protocol/SKILL.md` (delete); `skills/execution-workflow/SKILL.md` L161 and L169 (direct-mode mentions → retarget to `agent-orchestration` §Direct Mode); `README.md` L113–114 + `skills/CATEGORIES.md` L41–42 (Utility table rows → remove); `RELEASE-NOTES.md` L91+L95 (historical, leave alone); `PLAN.md` (this task block). No other sites. `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, and `skills/using-superRA/` carry no references.
+- [x] **Analyze — delete + rewire.** `git rm -r` on both skill directories. Rewrote both execution-workflow call sites to point at `superRA:agent-orchestration` §Direct Mode. Removed the two Utility rows from `README.md` and `skills/CATEGORIES.md`.
+- [x] **Validate.** Grep across the plugin shows 0 remaining non-historical references (only PLAN.md self-references, RELEASE-NOTES.md historical, and the new invariant block remain). Added invariant block #15 to `tests/structural-invariants.sh` asserting absence of both directories; renumbered the subsequent README-lead block to #16. `bash tests/structural-invariants.sh` → all PASS, 2 known WARN (writing-skills), 0 FAIL.
 - [ ] Atomic commit: `refactor(skills): remove alias-only protocol skills; agent-orchestration §Direct Mode covers direct-execution rubric`.
 
 ---

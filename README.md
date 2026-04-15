@@ -110,8 +110,6 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 | **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions to the user. Invoked by `merge-workflow` Step 1 and by the merge-guard hook. |
 | **using-analysis-worktrees** | Isolated git worktrees with data seeding. Parallel analysis without branch switching. |
 | **worktree-data-sync** | Sync non-git data between worktrees (seed, diff, apply modes). |
-| **implementer-protocol** | Alias skill — loads the implementer agent protocol when the main agent implements work directly. |
-| **reviewer-protocol** | Alias skill — loads the reviewer agent protocol when the main agent reviews work directly. |
 
 ### Meta
 
