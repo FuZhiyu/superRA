@@ -160,7 +160,7 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 ## Task 3: Rewrite `execution-workflow/SKILL.md` for Domain Agnosticism
 
-**Review status:** (not started)
+**Review status:** IMPLEMENTED
 
 **Objective:** Make `execution-workflow` speak only in domain-neutral terms. Collapse two-stage review into one comprehensive pass; rewrite Step 3 as a domain-parametric skeleton that points at the active domain skill's §Completion verification; rewrite the completion menu and Step 4 language; delete the data-flavored "Sensitivity Analysis Tasks" and hard-coded auto-loads; update dispatch templates to the new canonical form with renamed stages (`implementation`, `implementation review`).
 
@@ -172,9 +172,9 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
 
 **Steps:**
 
-- [ ] **Step 1: Describe — grep existing terminology.** Enumerate all occurrences of: `data integrity`, `two-stage review`, `REVISE (data integrity)`, `REVISE (implementation)`, `analysis task`, `Sensitivity Analysis Tasks` section, `Model Selection` section, hardcoded `superRA:econ-data-analysis` / `superRA:script-to-notebook` auto-loads in dispatch templates. Catalog lines to edit.
+- [x] **Step 1: Describe — grep existing terminology.** Audited the live file: `data integrity` / `two-stage review` / `REVISE (data integrity)` / `REVISE (implementation)` appeared throughout the intro (L8–L14), Step 2 sub-steps (L157–L167), three dispatch templates (L169–L210), Review Status table (L308–L319), Red Flags (L404–L424), and the `Note: Data integrity` interim-checkpoint clause at L331. `analysis task` appeared in the implementer dispatch template. `## Sensitivity Analysis Tasks` at L333–L341 and `## Model Selection` at L343–L351 were data-flavored. Dispatch-template preamble at L171 hardcoded the `superRA:econ-data-analysis` + `superRA:script-to-notebook` auto-loads that belong in the agent Stage tables per Task 4.
 
-- [ ] **Step 2: Analyze — rewrite.**
+- [x] **Step 2: Analyze — rewrite.**
   - **Review protocol (one pass):** replace the "two-stage review (data integrity then implementation correctness)" narrative with "one comprehensive review pass per task. The reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom and returns APPROVE / REVISE / CONDITIONAL APPROVE." Orchestrator MAY dispatch a second reviewer via steering when the CONDITIONAL's gating fix is substantial enough to cast doubt on downstream items — document this as documented flexibility, not default.
   - **Process flowchart:** replace the two-node data-integrity → implementation dispatch chain with one "Dispatch reviewer (implementation review)" node whose verdict branch includes the CONDITIONAL APPROVE path (narrow re-review).
   - **Review Status table:** collapse `REVISE (data integrity)` + `REVISE (implementation)` into `REVISE`; add `CONDITIONAL APPROVE` row. Actions re-pointed to the domain skill's §Review.
@@ -187,12 +187,10 @@ The `Additionally, ...` tail carries only steering — focus areas, prior-round 
   - **Red Flags + Integration table:** scrub remaining "data integrity" / "implementation review" references. Keep the list as Red Flags for the one-pass flow.
   - **Integration table L425-L435:** "`superRA:econ-data-analysis` — REQUIRED: Data discipline all agents must follow" → "the active domain skill (for data analysis: `superRA:econ-data-analysis`) — REQUIRED: domain discipline all agents follow at dispatch-time auto-load per `agents/implementer.md` / `agents/reviewer.md` Stage tables."
 
-- [ ] **Step 3: Validate — grep checks + commit.**
-  - `grep -E 'data integrity|two-stage review|REVISE \(data integrity\)|REVISE \(implementation\)' skills/execution-workflow/SKILL.md` returns nothing.
-  - `grep 'Sensitivity Analysis Tasks\|^## Model Selection' skills/execution-workflow/SKILL.md` returns nothing (old headings gone).
-  - `grep 'CONDITIONAL APPROVE' skills/execution-workflow/SKILL.md` returns at least one hit.
-  - Structural-invariants: add assertions for the three greps above (absence + presence).
-  - Atomic commit: `refactor(execution-workflow): one-pass review, domain-parametric Step 3, generic completion menu`.
+- [x] **Step 3: Validate — grep checks + commit.**
+  - Greps confirmed: `data integrity|two-stage review|REVISE \(data integrity\)|REVISE \(implementation\)` absent; `^## Sensitivity Analysis Tasks` absent; `CONDITIONAL APPROVE` present (3+ hits). `## Model Selection` retained as a one-paragraph section per task spec (the old data-flavored body is gone; the heading stays).
+  - `tests/structural-invariants.sh` gains assertion block #12 with three new checks: two-stage-review phrasing absent, `## Sensitivity Analysis Tasks` heading absent, `CONDITIONAL APPROVE` present. Old block #12 (README Why-superRA?) renumbered to #13. Full run: 29 PASS, 2 known WARN, 0 FAIL.
+  - Atomic commit to follow: `refactor(execution-workflow): one-pass review, domain-parametric Step 3, generic completion menu`.
 
 ---
 
