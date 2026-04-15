@@ -57,7 +57,7 @@ Agent(subagent_type: "superRA:reviewer"):
     <optional steering>.
 ```
 
-The agent loads this skill via the Skill tool, receives the base directory, and reads the named reference file. It then uses the reference as its checklist alongside the data-discipline principles from `superRA:econ-data-analysis` (which analysis-touching agents auto-load per the agent definition).
+The agent loads this skill via the Skill tool, receives the base directory, and reads the named reference file. It then uses the reference as its checklist alongside the data-discipline principles from `superRA:econ-data-analysis` (which analysis-touching agents load per the `superRA:using-superRA` §Skill-Load Manifest).
 
 ## What Each Reference Covers
 
@@ -106,5 +106,5 @@ When your dispatch prompt names multiple domain references, load them all before
 - **`superRA:semantic-merge`** — Dispatches merge proposer (`merge-quality.md`) and merge reviewer (`merge-quality.md`) for tier classification and conflict resolution
 
 **Auto-loaded alongside:**
-- **`superRA:econ-data-analysis`** — Data discipline (auto-loaded by `implementer` / `reviewer` agents whenever the stage involves analysis code)
-- **`superRA:script-to-notebook`** — Notebook formatting (same auto-load)
+- **`superRA:econ-data-analysis`** — Data discipline (loaded by `implementer` / `reviewer` agents whenever the stage involves analysis code, per the `superRA:using-superRA` §Skill-Load Manifest)
+- **`superRA:script-to-notebook`** — Notebook formatting (same manifest row)

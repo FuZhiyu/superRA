@@ -113,26 +113,28 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 15: Preload `using-superRA` in agent files; retire Stage tables and auto-load language
 
-**Review status:** not started
+**Review status:** IMPLEMENTED
 
 **Depends on:** Task 14 APPROVE.
 
-**Objective:** Guarantee `using-superRA` loads for every subagent dispatch by adding `skills: [superRA:using-superRA]` frontmatter to both agent files. Collapse the 11-row Stage tables in `agents/implementer.md` and `agents/reviewer.md` into one-line pointers at the manifest. Retire `auto-load` / `auto-loaded` language plugin-wide — replace with honest "required" / "load" phrasing without meta-preamble.
+**Objective:** Guarantee `using-superRA` loads for every subagent dispatch by adding `skills: [superRA:using-superRA]` frontmatter to both agent files. Collapse the 11-row Stage tables in `agents/implementer.md` and `agents/reviewer.md` into one-line pointers at the manifest. Retire `auto-load` / `auto-loaded` language plugin-wide — replace with honest "required" / "load" / "the manifest specifies" phrasing without meta-preamble.
 
 **Files touched:**
 
-- `agents/implementer.md` — add `skills: [superRA:using-superRA]` to frontmatter; replace Stage table with one-paragraph pointer; keep fallback rule; update §Before You Start step 2.
+- `agents/implementer.md` — added `skills: [superRA:using-superRA]` to frontmatter; replaced Stage table with one-paragraph pointer at the manifest; kept fallback rule; updated §Before You Start step 2 and the "What the dispatch prompt carries" contract paragraph.
 - `agents/reviewer.md` — same treatment.
-- `skills/agent-orchestration/SKILL.md` — retire `auto-load` in §Dispatch Templates preamble.
-- `skills/execution-workflow/SKILL.md`, `integration-workflow/SKILL.md`, `merge-workflow/SKILL.md`, `semantic-merge/SKILL.md` — grep + replace residual `auto-load` hits.
-- `README.md`, `CLAUDE.md`, `RELEASE-NOTES.md` — grep + replace residual `auto-load` hits.
+- `skills/agent-orchestration/SKILL.md` — retired `auto-load` in §Dispatch Templates preamble, §Banned in dispatch prompts, and the three remaining Team Recipes "All teammates ..." lines (Team Recipes deletion proper is Task 16).
+- `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`, `skills/script-to-notebook/SKILL.md`, `skills/econ-data-analysis/SKILL.md`, `skills/refactor-and-integrate/SKILL.md` — grep + replaced residual `auto-load` hits with manifest-anchored phrasing.
+- `README.md` — retired `auto-load` in two spots (Lean agent definitions paragraph; Stage → references paragraph now cites the manifest).
+- `RELEASE-NOTES.md`, `RESULTS.md` — retired `auto-load` in historical Unreleased-block descriptions (replaced with "load" / "stage-based loads per the manifest").
+- `tests/structural-invariants.sh` — retired `auto-load` in block #13 comment.
 
 **Steps:**
 
-- [ ] **Describe.** `Grep -r 'auto-load'` plugin-wide; enumerate sites.
-- [ ] **Analyze.** Add frontmatter preload to both agent files. Replace Stage tables with pointers. Rewrite every `auto-load` hit.
-- [ ] **Validate.** `grep -r 'auto-load'` → 0 hits plugin-wide. Invariant block #21: `agents/implementer.md` and `agents/reviewer.md` each contain `superRA:using-superRA` in frontmatter and a pointer to the manifest (not a multi-row Stage table).
-- [ ] Atomic commit: `refactor(agents): preload using-superRA; retire Stage tables in favor of the manifest`.
+- [x] **Describe.** `Grep -r 'auto-load'` plugin-wide; enumerated sites (agent files, 4 workflow skills, 3 utility skills, README, RELEASE-NOTES, RESULTS, tests comment).
+- [x] **Analyze.** Added `skills: [superRA:using-superRA]` frontmatter to both agent files. Replaced 11-row Stage tables in both with one-paragraph manifest pointers + fallback rule; updated §Before You Start step 2 and the dispatch-contract paragraph to match. Rewrote every `auto-load` / `auto-loaded` hit outside PLAN.md (PLAN.md hits are meta-references describing the retirement decision and the task spec itself).
+- [x] **Validate.** `grep -rn 'auto-load\|auto-loaded'` → hits remain only in PLAN.md as meta-references (user decisions + this task block describing the retirement). Both agent files carry `skills: [superRA:using-superRA]` in frontmatter and a `## Stage → skills and references` section pointing at `superRA:using-superRA` §Skill-Load Manifest (no multi-row table). Invariant block #21 is Task 18's responsibility.
+- [x] Atomic commit: `refactor(agents): preload using-superRA; retire Stage tables in favor of the manifest`.
 
 ---
 

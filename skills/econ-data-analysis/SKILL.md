@@ -14,10 +14,9 @@ description: >
   "clean this data", "construct variable X", "check the summary stats",
   "why is this number so large", "I'll just filter and move on",
   or any data file with unknown structure. Language-agnostic (Python,
-  Julia, R, Stata). Auto-loaded by implementer and reviewer subagents
-  at dispatch time when the stage touches analysis code; the
-  auto-load is configured in `agents/implementer.md` and
-  `agents/reviewer.md`, not in the workflow skills themselves.
+  Julia, R, Stata). Loaded by implementer and reviewer subagents
+  at dispatch time when the stage touches analysis code, per the
+  `superRA:using-superRA` §Skill-Load Manifest.
 user-invocable: true
 ---
 

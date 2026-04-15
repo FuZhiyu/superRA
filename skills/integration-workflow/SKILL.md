@@ -439,7 +439,7 @@ Dispatched agents load a parent skill via the `Skills:` line and read a named do
 
 Step 3 sub-parts A (mature RESULTS.md) and B (project doc audit) are performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates the whole documentation pass per workflow principle P1. Sub-part C (PLAN.md disposition) stays with the orchestrator because it is a user-facing decision, not an RA-implementable task.
 
-Stage-driven domain-skill and script-to-notebook auto-loads are defined in the `agents/implementer.md` and `agents/reviewer.md` Stage tables (for data-analysis stages, those tables auto-load `superRA:econ-data-analysis` and `superRA:script-to-notebook`).
+Stage-driven domain-skill and script-to-notebook loads are specified by `superRA:using-superRA` §Skill-Load Manifest (for data-analysis stages, the manifest names `superRA:econ-data-analysis` and `superRA:script-to-notebook`).
 
 ## Agent Teams Mode
 
@@ -491,4 +491,4 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 - **Reproducibility already verified** by execution-workflow Step 3
 
 **Subagents should use:**
-- The active domain skill (for data analysis: `superRA:econ-data-analysis`) — domain discipline auto-loaded at dispatch-time per the `agents/implementer.md` / `agents/reviewer.md` Stage tables
+- The active domain skill (for data analysis: `superRA:econ-data-analysis`) — domain discipline loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest

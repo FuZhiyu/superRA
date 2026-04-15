@@ -187,13 +187,13 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 **One comprehensive review pass.** The reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom — `[GATING]` / `[STANDARD]` / `[ADVISORY]` items — even on gating failure. Reviewer dispatches are costly; halting early forces a full re-review. CONDITIONAL APPROVE separates "must-fix gating items" from "downstream already verified" so the re-review can be narrow. Review is never skipped, even in direct execution mode. Implementer and reviewer walk the same checklist — one source of truth, no drift between pre-handoff self-check and reviewer verification.
 
-**Stage → references via agent Stage tables.** `agents/implementer.md` and `agents/reviewer.md` carry authoritative tables mapping each `Stage:` value (`implementation`, `implementation review`, `refactoring`, `integration review`, `drift test creation`/`review`, `merge proposer`/`review`, `doc writer`/`reviewer`, planning-phase reviewer) to the domain skill and stage-scoped references that auto-load at dispatch time. Dispatch prompts carry only Stage, task pointer, git range, and optional steering — the Stage table handles the reference-load.
+**Stage → skill and reference loads via the Skill-Load Manifest.** `superRA:using-superRA` §Skill-Load Manifest is the single source of truth mapping each `Stage:` value (`implementation`, `refactoring`, `drift-test`, `merge`, `documentation`, `planning-review`) to the required skills and stage-scoped references agents load. Every agent reads `using-superRA`, so the manifest is always reachable. Dispatch prompts carry only Stage, task pointer, git range, and optional steering — the manifest handles the rest.
 
 **Scope rule.** Agents only edit their own task's sections in PLAN.md and RESULTS.md. Never touch other tasks.
 
 **RA framing.** The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. It executes, validates, and escalates — but the researcher decides the approach.
 
-**Lean agent definitions.** Two prototype agents (implementer, reviewer) define roles, not rules. Domain-specific checklists come from reference files read at dispatch time — today's flagship is `superRA:econ-data-analysis`, and the agent files auto-load it (plus the stage-appropriate reference) whenever the task touches data. One source of truth per concern, easy to maintain, easy to extend to a new vertical.
+**Lean agent definitions.** Two prototype agents (implementer, reviewer) define roles, not rules. Domain-specific checklists come from reference files read at dispatch time — today's flagship is `superRA:econ-data-analysis`, which agents load (plus the stage-appropriate reference) whenever the task touches data, per the `superRA:using-superRA` §Skill-Load Manifest. One source of truth per concern, easy to maintain, easy to extend to a new vertical.
 
 ## Hooks
 
