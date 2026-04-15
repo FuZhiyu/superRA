@@ -95,7 +95,7 @@ Agent(subagent_type: "superRA:reviewer"):
 ```
 
 - **APPROVE:** drift tests passed AND integration is clean. Proceed to Step 4.
-- **REVISE:** integration broke during the merge. Adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:execution-workflow` (Handling Reviewer Feedback). For accepted issues, proceed to Step 3.
+- **REVISE:** integration broke during the merge. Adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback. For accepted issues, proceed to Step 3.
 
 ### Step 3: Refactor-Review Loop on Post-Merge Failure
 
@@ -123,7 +123,7 @@ When drift tests fail OR the post-merge integration reviewer returns REVISE, re-
 
 3. **Iterate until both drift tests pass AND integration reviewer APPROVES.**
 
-The orchestrator discipline applies: read each cited issue yourself before forwarding to the refactorer, override with documented reasoning if the reviewer is wrong, and never silently dismiss CRITICAL findings. See `superRA:execution-workflow` Handling Reviewer Feedback section for the full protocol.
+The orchestrator discipline applies: read each cited issue yourself before forwarding to the refactorer, override with documented reasoning if the reviewer is wrong, and never silently dismiss CRITICAL findings. See `superRA:agent-orchestration` §Handling Reviewer Feedback for the full protocol.
 
 ### Step 4: Execute Merge or PR
 
@@ -210,7 +210,7 @@ Together they cover both failure modes. Skipping either leaves a hole. The post-
 
 **Never:**
 - Push or local-merge without running BOTH drift tests AND a fresh integration reviewer on the merged state
-- Silently swallow integration-reviewer REVISE on the merged state — adjudicate per the orchestrator discipline in `superRA:execution-workflow` (Handling Reviewer Feedback), then either fix or document the override
+- Silently swallow integration-reviewer REVISE on the merged state — adjudicate per the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback, then either fix or document the override
 - Skip Step 1 (the semantic-merge update) and go straight to git merge — main may have moved since integration-workflow ran
 - Cleanup the worktree before the merge or push has actually completed
 

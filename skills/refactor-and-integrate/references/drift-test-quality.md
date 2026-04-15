@@ -78,4 +78,4 @@ These rules apply wherever drift tests are in play — during creation (`integra
 - **Remove or weaken existing drift tests during refactoring or merge integration.** Tests are part of the analysis contract.
 - **Treat the drift tests as the only safety net.** They protect key results; they do not replace the two-stage review or the data-discipline protocol.
 
-When a drift test fails, follow the orchestrator discipline in `superRA:execution-workflow` ("Handling Reviewer Feedback") — read the cited output, classify the failure, and either fix, justify, or escalate.
+When a drift test fails, follow the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback — read the cited output, classify the failure, and either fix, justify, or escalate.

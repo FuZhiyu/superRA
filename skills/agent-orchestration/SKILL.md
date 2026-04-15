@@ -266,7 +266,7 @@ All teammates auto-load superRA:econ-data-analysis and superRA:script-to-noteboo
 
 **Iteration:** When test-reviewer sends REVISE, they message test-creator directly with specific feedback. Test-creator fixes and marks task updated. Test-reviewer re-reviews. For the Stage 2 integration loop: integration-reviewer messages refactorer with specific issues, refactorer fixes and runs drift tests, then messages integration-reviewer to re-review. For the Step 3 doc loop: doc-reviewer messages doc-writer with specific findings (file:line + proposed fix), doc-writer fixes in place and re-commits, doc-reviewer re-reviews.
 
-**Orchestrator discipline for reviewer feedback:** The lead adjudicates REVISE feedback from test-reviewer, integration-reviewer, and doc-reviewer per `superRA:execution-workflow` Handling Reviewer Feedback — read the cited code, classify each issue, override with documented reasoning where the reviewer is wrong, never silently dismiss CRITICAL. This applies whether or not you are using Agent Teams mode.
+**Orchestrator discipline for reviewer feedback:** The lead adjudicates REVISE feedback from test-reviewer, integration-reviewer, and doc-reviewer per §Handling Reviewer Feedback (Orchestrator Discipline) below — read the cited code, classify each issue, override with documented reasoning where the reviewer is wrong, never silently dismiss CRITICAL. This applies whether or not you are using Agent Teams mode.
 
 **Lead responsibilities:**
 - Present drift test candidates to user BEFORE creating team (Stage 1 user confirmation)
@@ -314,7 +314,7 @@ All teammates auto-load superRA:econ-data-analysis and superRA:script-to-noteboo
 
 **Iteration:** Same direct-message pattern as the Integration Team. post-merge-integration-reviewer messages post-merge-refactorer with specific issues, refactorer addresses them and re-runs drift tests, then messages the reviewer back.
 
-**Orchestrator discipline for reviewer feedback:** Same as Integration Team. This is especially important post-merge because main may have moved in ways that introduce false-positive integration issues — the lead must distinguish real drift from cosmetic convention drift and adjudicate accordingly. See `superRA:execution-workflow` Handling Reviewer Feedback.
+**Orchestrator discipline for reviewer feedback:** Same as Integration Team. This is especially important post-merge because main may have moved in ways that introduce false-positive integration issues — the lead must distinguish real drift from cosmetic convention drift and adjudicate accordingly. See §Handling Reviewer Feedback (Orchestrator Discipline) below.
 
 **Meaningful drift escalation:** When post-merge drift tests show meaningful result changes (not rounding), STOP. This is a research conversation, not a refactor. Show the user before/after values from the merge and wait for instructions. Do not update test expectations to "make it green."
 
@@ -418,6 +418,108 @@ On session resume, this tells the new lead exactly where to pick up.
 - **No nested teams** — teammates cannot spawn their own teams (they can use subagents via Task tool)
 - **Skills/mcpServers frontmatter** — not applied to team teammates; they load from project and user settings like regular sessions
 - **Shutdown can be slow** — teammates finish current request/tool call before shutting down
+
+---
+
+## Dispatch Templates
+
+Every workflow skill that dispatches an `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules.
+
+Every template opens with the canonical prefix **"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …"**. The prefix tells the agent that its standard Before-You-Start + stage-reference-auto-load (per `agents/implementer.md` / `agents/reviewer.md` Stage tables) is in effect; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. The dispatch prompt never repeats the standard protocol, never paraphrases `PLAN.md` content, and never restates checklist items the agent already reads.
+
+**Canonical shape — required fields first, `Additionally:` anchor last:**
+
+**Implementer:**
+```
+Agent(subagent_type: "superRA:implementer"):
+  Stage: <stage-name>
+  Task: <task pointer — e.g., "Task N in PLAN.md">
+
+  Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally,
+    <optional one-or-two-sentence steering — focus area, prior-round
+    adjudication, warning, anything non-default>.
+```
+
+**Reviewer:**
+```
+Agent(subagent_type: "superRA:reviewer"):
+  Stage: <stage-name>
+  Task: <task pointer>
+  Git range: <BASE_SHA>..<HEAD_SHA>
+
+  Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally,
+    <optional steering>.
+```
+
+The agent reads `PLAN.md`, Data Inventory, Conventions, and prior results from `RESULTS.md` directly — the dispatch does not re-state them. If a non-default skill load, an extra domain reference, or an override of the standard handoff is required for this particular call, add `Skills:` and `References:` lines between the required fields and the prefix line. In Agent Teams mode, teammate pairing is set at team-spawn time (see the Team Recipes above) — not inside the per-task dispatch template.
+
+**Banned in dispatch prompts:**
+
+- `Work from:` — the worker's cwd is the default; stating it is noise.
+- `Counterpart:` — teammate pairing belongs in team-spawn config, not in the per-task dispatch.
+- Free-form `Note:` fields — fold task-specific notes into the `Additionally:` tail so all task-specific steering flows through one channel.
+- Re-statement of `PLAN.md` content, standard protocol, or Stage-table auto-loads — the agent reads those itself.
+
+## Handling Reviewer Feedback (Orchestrator Discipline)
+
+The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between a REVISE / CONDITIONAL APPROVE verdict and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
+
+When a reviewer returns REVISE or CONDITIONAL APPROVE:
+
+1. **Read the actual code at the cited file:line.** Do not trust the reviewer's summary. The reviewer is also a subagent and can be wrong.
+
+2. **For each issue, classify it:**
+   - **Real bug** (the code is incorrect or missing required discipline) → forward to implementer
+   - **Pedantic but valid** (the issue is real but tiny — missing markdown cell on a trivial step, etc.) → decide whether the fix is worth the cycle. For minors, often yes; for cosmetic minors on a fast-iteration draft, often no
+   - **Wrong** (the reviewer misread the code, missed context, or is suggesting a change that conflicts with the methodology you established with the human partner) → push back on the reviewer, do not forward to the implementer
+
+3. **If you reject reviewer feedback, document why in place on the review item.** Append an `→ orchestrator: rejected <reason>` annotation directly under the item in the review-notes blockquote:
+   ```markdown
+   > **Review notes:**
+   > 1. [MAJOR] Use log returns, not arithmetic. (`Code/03.py:42`)
+   >    → orchestrator: rejected — methodology specifies arithmetic returns per plan header Section 2. Reviewer lacked methodology context.
+   ```
+   For items you are flagging for a second opinion, use `→ orchestrator: <second opinion requested> <reason>` instead. The implementer will see these annotations and leave those items alone; the reviewer will see them on re-review and either accept the override (by deleting the item) or escalate.
+
+   This protects you in three ways: (a) the human partner can audit the override, (b) future sessions see why the reviewer's note was ignored, (c) it forces you to articulate the reasoning rather than wave it away.
+
+4. **If you push back on the reviewer (rather than override them), re-dispatch the same reviewer with counter-evidence.** Cite the file:line that proves the reviewer wrong, the methodology section that overrides their suggestion, or the human partner conversation that established the convention. The reviewer should then either retract or escalate.
+
+5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Log the researcher's answer as a user decision in the relevant task's review-notes area per `handoff-doc` §User Decisions Log, and commit the doc edit in the same commit as the re-dispatched implementer's fix (or as the commit that records the override). The `ask-user-question-logger` hook will remind you.
+
+**The orchestrator's authority:** You can override any reviewer issue with documented reasoning. You cannot silently ignore one. If you find yourself dismissing reviewer feedback without writing down why, stop — that's the slip that turns a critical filter into an excuse to skip reviews.
+
+**The orchestrator's limits:**
+- You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `handoff-doc` §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
+- You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `handoff-doc` §User Decisions Log.
+
+This discipline applies equally to `execution-workflow` (implementation review), `integration-workflow` (drift test review, integration review, doc review), `merge-workflow` (merge review, post-merge integration review), and `semantic-merge` (merge review). The orchestrator owns the final call in every loop.
+
+## Review Status Reference
+
+Implementer and reviewer agents own their commits and document updates — see `agents/implementer.md` and `agents/reviewer.md` for the full discipline (scope rule, inline-edit rule, stage-specific handoff). The orchestrator only needs to know how to **read** the resulting state from `PLAN.md`:
+
+| Status line | Meaning | Orchestrator action |
+|---|---|---|
+| *(no line)* | Not started | Dispatch implementer |
+| `IMPLEMENTED` | Code committed, awaiting review | Dispatch reviewer |
+| `REVISE` | Reviewer found `[STANDARD]` issues | Adjudicate (see Handling Reviewer Feedback), then re-dispatch implementer |
+| `CONDITIONAL APPROVE` | Reviewer found `[GATING]` issue(s); downstream walked and looks correct contingent on the gating fix | Adjudicate the gating item(s), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review |
+| `APPROVED` | Review passed | Proceed to next task |
+
+**A task is complete only when its status is `APPROVED`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
+
+## Direct Mode
+
+When the orchestrator executes a step itself — no subagent dispatch — it plays the implementer or reviewer role in-session. The discipline is the same; only the dispatch envelope is gone.
+
+- **Read the agent file for the role you are playing.** For an implementation step, read `agents/implementer.md`. For a review step, read `agents/reviewer.md`. Follow the protocol there as written.
+- **Stage tables still drive reference-loads.** Consult the Stage table in the matching agent file to see which domain skill and stage-scoped references the stage expects — load them yourself in-session.
+- **The dispatch-prompt contract does not apply — there is no dispatch.** Task context comes from `PLAN.md`, `RESULTS.md`, and the current session; you do not write an `Additionally:` line to yourself.
+- **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's §Review & Self-Check Discipline before committing. Update `PLAN.md` / `RESULTS.md` inline per `superRA:handoff-doc`. Reviewer verdicts are still APPROVE / REVISE / CONDITIONAL APPROVE even when you render them as your own conclusion.
+- **Review is never skipped.** If you implemented in direct mode, you still need a review pass — either dispatch a reviewer subagent for the review step, or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
 
 ---
 

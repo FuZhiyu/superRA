@@ -170,72 +170,11 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 #### Dispatch Templates
 
-Every template opens with the canonical prefix "Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, ...". The prefix tells the agent that its standard Before-You-Start + stage-reference-auto-load (per `agents/implementer.md` / `agents/reviewer.md` Stage tables) is in effect; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. The dispatch prompt never repeats the standard protocol, never paraphrases PLAN.md content, and never restates checklist items the agent already reads.
-
-**Implementer:**
-```
-Agent(subagent_type: "superRA:implementer"):
-  Stage: implementation
-  Task: Task N in PLAN.md
-  
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <optional one-or-two-sentence steering — focus area, prior-round
-    adjudication, warning, anything non-default>.
-```
-
-The agent reads PLAN.md, Data Inventory, Conventions, and prior results from RESULTS.md directly.
-
-**Reviewer:**
-```
-Agent(subagent_type: "superRA:reviewer"):
-  Stage: implementation review
-  Task: Task N in PLAN.md
-  Git range: <BASE_SHA>..<HEAD_SHA>
-  
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <optional steering>.
-```
-
-On a CONDITIONAL APPROVE re-dispatch, the same reviewer template is used with `Additionally:` pointing at the narrow scope: "Narrow re-review — verify the gating fix at <file:line> and confirm cited downstream items still hold."
-
-If you need a non-default skill load, an extra domain reference, or an override of the standard handoff, add `Skills:` and `References:` lines as needed. In Agent Teams mode, teammate pairing is set at team-spawn time (see `superRA:agent-orchestration` team recipes) — not inside the per-task dispatch template.
+See `superRA:agent-orchestration` §Dispatch Templates for the canonical shape (required fields first, `Additionally:` anchor last; the "Follow the standard stage-relevant workflow" prefix; banned-in-dispatch list). Stage-specific bodies for this workflow use `Stage: implementation` (implementer) and `Stage: implementation review` (reviewer). On a CONDITIONAL APPROVE re-dispatch, the same reviewer template is used with `Additionally:` pointing at the narrow scope: "Narrow re-review — verify the gating fix at <file:line> and confirm cited downstream items still hold."
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
 
-The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between a REVISE / CONDITIONAL APPROVE verdict and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
-
-When a reviewer returns REVISE or CONDITIONAL APPROVE:
-
-1. **Read the actual code at the cited file:line.** Do not trust the reviewer's summary. The reviewer is also a subagent and can be wrong.
-
-2. **For each issue, classify it:**
-   - **Real bug** (the code is incorrect or missing required discipline) → forward to implementer
-   - **Pedantic but valid** (the issue is real but tiny — missing markdown cell on a trivial step, etc.) → decide whether the fix is worth the cycle. For minors, often yes; for cosmetic minors on a fast-iteration draft, often no
-   - **Wrong** (the reviewer misread the code, missed context, or is suggesting a change that conflicts with the methodology you established with the human partner) → push back on the reviewer, do not forward to the implementer
-
-3. **If you reject reviewer feedback, document why in place on the review item.** Append an `→ orchestrator: rejected <reason>` annotation directly under the item in the review-notes blockquote:
-   ```markdown
-   > **Review notes:**
-   > 1. [MAJOR] Use log returns, not arithmetic. (`Code/03.py:42`)
-   >    → orchestrator: rejected — methodology specifies arithmetic returns per plan header Section 2. Reviewer lacked methodology context.
-   ```
-   For items you are flagging for a second opinion, use `→ orchestrator: <second opinion requested> <reason>` instead. The implementer will see these annotations and leave those items alone; the reviewer will see them on re-review and either accept the override (by deleting the item) or escalate.
-
-   This protects you in three ways: (a) the human partner can audit the override, (b) future sessions see why the reviewer's note was ignored, (c) it forces you to articulate the reasoning rather than wave it away.
-
-4. **If you push back on the reviewer (rather than override them), re-dispatch the same reviewer with counter-evidence.** Cite the file:line that proves the reviewer wrong, the methodology section that overrides their suggestion, or the human partner conversation that established the convention. The reviewer should then either retract or escalate.
-
-5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Log the researcher's answer as a user decision in the relevant task's review-notes area per `handoff-doc` §User Decisions Log, and commit the doc edit in the same commit as the re-dispatched implementer's fix (or as the commit that records the override). The `ask-user-question-logger` hook will remind you.
-
-**The orchestrator's authority:** You can override any reviewer issue with documented reasoning. You cannot silently ignore one. If you find yourself dismissing reviewer feedback without writing down why, stop — that's the slip that turns a critical filter into an excuse to skip reviews.
-
-**The orchestrator's limits:**
-- You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `handoff-doc` §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
-- You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `handoff-doc` §User Decisions Log.
-
-This discipline applies equally to integration-workflow (drift test review, integration review) and semantic-merge (merge review). The orchestrator owns the final call in every loop.
+See `superRA:agent-orchestration` §Handling Reviewer Feedback (Orchestrator Discipline).
 
 ### Step 3: Verify Pipeline and Reproducibility
 
@@ -294,17 +233,7 @@ The researcher's answer is a user decision — the `ask-user-question-logger` Po
 
 ## Review Status Reference
 
-Implementer and reviewer agents own their commits and document updates — see `agents/implementer.md` and `agents/reviewer.md` for the full discipline (scope rule, inline-edit rule, stage-specific handoff). The orchestrator only needs to know how to **read** the resulting state from `PLAN.md`:
-
-| Status line | Meaning | Orchestrator action |
-|---|---|---|
-| *(no line)* | Not started | Dispatch implementer |
-| `IMPLEMENTED` | Code committed, awaiting review | Dispatch reviewer (implementation review) |
-| `REVISE` | Reviewer found `[STANDARD]` issues | Adjudicate (see Handling Reviewer Feedback), then re-dispatch implementer |
-| `CONDITIONAL APPROVE` | Reviewer found `[GATING]` issue(s); downstream walked and looks correct contingent on the gating fix | Adjudicate the gating item(s), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review |
-| `APPROVED` | Review passed | Proceed to next task |
-
-**A task is complete only when its status is `APPROVED`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
+See `superRA:agent-orchestration` §Review Status Reference.
 
 ### Orchestrator-Only Responsibilities
 
