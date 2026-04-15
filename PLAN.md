@@ -126,7 +126,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 10: Make `integration-workflow` generic; move data-specific content to domain reference
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Objective:** `integration-workflow/SKILL.md` retains ONLY workflow sequencing (Stage 1 drift-test creation, Stage 2 integration review → refactor loop, Step 3 doc finalization, four stop points, handoff to `merge-workflow`). *What to check* content moves to `refactor-and-integrate/references/codebase-integration.md` (generic) and to a new `skills/econ-data-analysis/references/integration.md` (data-specific). Both references carry `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers + the shared-flow preamble.
 
