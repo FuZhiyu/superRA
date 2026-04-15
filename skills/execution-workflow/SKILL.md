@@ -143,7 +143,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 ### Step 1: Load and Review Plan
 
 1. Read `PLAN.md` and `RESULTS.md`.
-2. **Load the active domain skill** based on what the plan does. For data-analysis plans (importing, cleaning, merging, constructing variables, regressions, figures), load `superRA:econ-data-analysis` and `superRA:script-to-notebook`. Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents also auto-load these skills at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
+2. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` + `superRA:script-to-notebook`. Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents also auto-load these skills at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
 3. **Read the project's guidance docs.** The harness gives you the repo-root `CLAUDE.md` automatically; module-level guidance (nested `CLAUDE.md` / `AGENTS.md` / `README.md` files near the code) is not auto-surfaced. Walk up from every directory PLAN.md says will be touched, and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` along the path. Also read `README.md` in any data directory the plan loads from, for provenance and caveats. These docs carry the conventions you will use when adjudicating reviewer findings ("is this a codebase-fit issue the reviewer correctly flagged, or noise?") and when editing upcoming tasks inline. This mirrors the walk-up the implementer and reviewer subagents perform at dispatch — the orchestrator does the same walk once, not per-task.
 4. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources / inputs available and accessible?
@@ -323,13 +323,13 @@ Use the least capable model that handles the task; reviewers use the most capabl
 
 **DONE:** Proceed to review.
 
-**DONE_WITH_CONCERNS:** Read the concerns. If about data quality or unexpected findings, investigate before review. If about methodology choices, note and proceed to review.
+**DONE_WITH_CONCERNS:** Read the concerns. If about input quality or unexpected findings, investigate before review. If about methodology choices, note and proceed to review.
 
-**NEEDS_CONTEXT:** Provide missing data documentation, upstream results, or methodology details and re-dispatch.
+**NEEDS_CONTEXT:** Provide missing upstream inputs, documentation, or methodology details and re-dispatch.
 
 **BLOCKED:** Assess the blocker:
-1. Data not available → help locate or download
-2. Data quality too poor → escalate via `AskUserQuestion`, log answer in PLAN.md before proceeding
+1. Required input not available → help locate or download
+2. Input quality too poor → escalate via `AskUserQuestion`, log answer in PLAN.md before proceeding
 3. Task requires methodology decisions → escalate via `AskUserQuestion`, log answer in PLAN.md before proceeding
 4. Task too complex → break into smaller pieces or use more capable model
 
@@ -349,8 +349,8 @@ This workflow is **autonomous by default** — see CLAUDE.md workflow principle 
 
 Stop for exactly three classes of pause, all of which require logging the answer via `handoff-doc` §User Decisions Log **before** acting on it:
 
-1. **Hard blocker the RA cannot resolve.** Data description reveals unexpected issues (wrong magnitudes, high missingness), merge produces an unexpected row count change, validation fails against economic intuition, plan has critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required data source unavailable.
-2. **Decision beyond the RA's authority.** Methodology disagreement with a reviewer, CRITICAL severity issue you want to override, repeated reviewer disagreement across re-dispatches, sensitivity failure of unclear economic significance, sample/variable definition call with no obvious right answer, scope change that would affect tasks not yet reached.
+1. **Hard blocker the RA cannot resolve.** Unexpected input-quality issues surface during initial description, a transformation produces an unexpected scope change (e.g., row count shift on a merge), validation fails against domain expectation, plan has critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required input unavailable.
+2. **Decision beyond the RA's authority.** Methodology disagreement with a reviewer, CRITICAL severity issue you want to override, repeated reviewer disagreement across re-dispatches, validation failure of unclear domain significance, scope or definition call with no obvious right answer, scope change that would affect tasks not yet reached.
 3. **User-defined workflow milestone.** The 4-option completion menu at Step 4 above. These are baked into the workflow and the stop is intentional — not a check-in.
 
 **Banned phrasings** when nothing has changed since the last approved state: "Should I proceed?", "Want me to continue?", "Ready for the next task?", "Does this look right before I move on?", "Shall I move to Step N?". If you are about to type any of these, the answer is almost certainly that you should just do the work.
@@ -376,10 +376,10 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 - Start work on main/master branch without proposing a feature branch first (Step 0)
 - Skip review — even in direct mode
 - Proceed with unfixed `[GATING]` items (a CONDITIONAL APPROVE task is not complete until the narrow re-review promotes it to APPROVED)
-- Dispatch multiple implementers in parallel on the same data (conflicts)
+- Dispatch multiple implementers in parallel on the same working tree (conflicts)
 - Paraphrase the task prompt into the dispatch instead of pointing the subagent at `PLAN.md` (the pointer-based convention is mandatory — subagents read the file directly so the dispatch and PLAN.md cannot drift)
 - Skip plan file update after task completion
-- Ignore implementer data quality or methodology concerns
+- Ignore implementer input-quality or methodology concerns
 - Accept "looks fine" without verification
 - Move to the next task while the current task's review has open issues or status is not APPROVED
 
