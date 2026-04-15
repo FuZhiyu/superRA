@@ -1,292 +1,231 @@
-# superRA Plugin Restructure Plan
+# superRA Plugin Restructure Plan — Round 2 (DRY / Composability)
 
-> **For agentic workers:** this is a PLUGIN META-REFACTOR — the "analysis" is the superRA plugin itself, not a data analysis. The domain skill `superRA:econ-data-analysis` applies only when tasks touch data-analysis content; most tasks here are skill-file rewrites. Use `superRA:execution-workflow` to coordinate. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** this is a PLUGIN META-REFACTOR — the "analysis" is the superRA plugin itself. Use `superRA:execution-workflow` (one-pass review per the canonical post-Task-6 protocol). The domain skill `superRA:econ-data-analysis` applies only when tasks touch data-analysis content; most tasks here are skill-file edits.
 
-**Objective:** Make `execution-workflow` domain-agnostic; share the gating/review checklist between implementer (self-check) and reviewer (verification) by keeping it inline in `econ-data-analysis/SKILL.md` main body; standardize dispatch-prompt language across all workflow skills so the prompt carries only steering on top of the agent's standard protocol.
+**Objective (Round 2).** Remove duplication and mis-homed content across skills. Cross-stage orchestration patterns (how to dispatch, how to relay, how to adjudicate, direct-mode rubric) consolidate into `agent-orchestration`. `integration-workflow` is stripped to workflow-choreography only; *what to check* during refactor/integration moves into `refactor-and-integrate` (generic) + a new `econ-data-analysis/references/integration.md` (data-specific), both carrying `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers so implementer and reviewer always walk the same file. Delete the `implementer-protocol` / `reviewer-protocol` alias skills — one-sentence pointers in `agent-orchestration` §Direct Mode replace them. Elevate DRY / composability / extensibility + shared-flow to documented design principles in `CLAUDE.md` + `README.md`, and add a workflow-stage-to-skill map.
 
-**Methodology:** Phased commits on `refactor/workflow-domain-split`. Each commit leaves repo in a working state (structural-invariants green). PR #1 updates on push.
+**Methodology.** Implementer + reviewer pair per task (one comprehensive pass, APPROVE / REVISE / CONDITIONAL APPROVE). Atomic commits on `refactor/workflow-domain-split`. `bash tests/structural-invariants.sh` green at each step. PR #1 updates on push.
 
-**Data Inventory:** N/A — plugin meta-refactor. No datasets.
+**Data Inventory.** N/A — plugin meta-refactor. No datasets.
 
-**Output:** Rewritten skill / agent / workflow files. Updated `tests/structural-invariants.sh`. New `RELEASE-NOTES.md` entry.
+**Output.** Rewritten skill / reference / agent / doc files. New `econ-data-analysis/references/integration.md`. Deleted `implementer-protocol` / `reviewer-protocol` skill directories. Updated `tests/structural-invariants.sh`. New `RELEASE-NOTES.md` entry. New workflow-stage-to-skill map in `README.md`.
 
-**Pipeline:** `bash tests/structural-invariants.sh`.
+**Pipeline.** `bash tests/structural-invariants.sh`.
 
-**Background plan document:** `/Users/zhiyufu/.claude/plans/agile-orbiting-star.md` carries the full design rationale. This PLAN.md is the task-tracker.
+**Background plan document.** `/Users/zhiyufu/.claude/plans/agile-orbiting-star.md` carries the full design rationale, decisions, and risk-rollback. This PLAN.md is the task tracker.
 
 ---
 
 ## Decisions
 
-> **User decision (2026-04-15):** default to one comprehensive review pass per task; reviewer walks the full checklist even on gating failure and returns `CONDITIONAL APPROVE` (gating items must be fixed; downstream verified and contingent on gating fix not invalidating). Rationale: reviewer dispatches are costly; re-review on gating fix becomes narrow (verify the fix + downstream still holds).
+> **User decision (2026-04-15, Round 1):** one comprehensive review pass per task; `APPROVE` / `REVISE` / `CONDITIONAL APPROVE` verdict protocol. Reviewer walks the full checklist even on gating failure; CONDITIONAL re-review is narrow (verify gating fix + downstream still holds).
 
-> **User decision (2026-04-15):** shared gating lives in `econ-data-analysis/SKILL.md` main body, NOT as separate `implementation-review.md` / `integration-review.md` references. Single source of truth; no possibility of divergence between what implementer self-checks and what reviewer verifies.
+> **User decision (2026-04-15, Round 1):** shared gating lives in `econ-data-analysis/SKILL.md` main body. One source of truth for implementer self-check and reviewer verification.
 
-> **User decision (2026-04-15):** dispatch prompts use the prefix "Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …" so agents always treat the standard workflow (from agent files) as in effect, and the dispatch prompt is ADDITIONAL steering on top. Same protocol applies across every workflow skill that dispatches agents.
+> **User decision (2026-04-15, Round 1):** dispatch prompts use the "Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …" prefix; required fields first, `Additionally:` anchor last.
+
+> **User decision (2026-04-15, Round 2):** **DRY / composability / extensibility** becomes a first-class design principle. One source of truth per concern. Workflow skills own choreography (what steps run in what order); `agent-orchestration` owns cross-stage orchestration (dispatch shape, relay protocol, verdict adjudication, team recipes, direct-mode rubric); domain skills own domain discipline; `refactor-and-integrate` owns generic integration discipline. Adding a new vertical = compose existing pieces, don't fork workflow skills.
+
+> **User decision (2026-04-15, Round 2):** **Shared-flow** for every gated checklist. Implementer and reviewer always walk the same file; `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers encode severity. Both the existing §Review & Self-Check Discipline and the new `econ-data-analysis/references/integration.md` carry this preamble.
+
+> **User decision (2026-04-15, Round 2):** delete `implementer-protocol` + `reviewer-protocol` alias skills. `agent-orchestration` §Direct Mode covers the direct-execution rubric in one section; workflow skills link there.
+
+> **User decision (2026-04-15, Round 2):** `integration-workflow` is purely a workflow skill. Data-specific integration checks (no redundant intermediaries, variable-construction consistency, transformation-pattern consistency, etc.) move to `econ-data-analysis/references/integration.md`. Generic code-integration standards stay in `refactor-and-integrate/references/codebase-integration.md`, stripped of data-specific sections.
 
 ---
 
-## Task 1: Standardize Dispatch-Prompt Protocol Across All Workflow Skills
+## Completed (PR #1 — Workflow-Domain-Split Restructure, Round 1)
 
-**Review status:** APPROVED
+Tasks 1–6 all APPROVED and pushed through commit `b8c6239` on `refactor/workflow-domain-split`. Structural-invariants green (34 PASS, 2 known WARN, 0 FAIL).
 
-**Objective:** Rewrite every dispatch template in the plugin so it opens with the language
+Seven outcomes landed as the Round 1 restructure:
 
-> "Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, ..."
+1. **DAV rename.** `describe-analyze-doc` → `describe-analyze-validate` across agents and workflow skills; validation elevated to a first-class concurrent discipline.
+2. **Dispatch-prompt protocol standardization.** All 16 dispatch templates across 5 workflow-adjacent skills use the canonical "Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …" prefix; required fields precede the `Additionally:` anchor.
+3. **§Review & Self-Check Discipline shared gating in `econ-data-analysis/SKILL.md` main body.** 14 `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers across six sub-sections (Gating, Implementation standards, Validation completeness, Documentation and handoff, Refactor integrity, Completion verification). Single source of truth — no shadow `implementation-review.md` / `integration-review.md` references.
+4. **CONDITIONAL APPROVE verdict protocol.** Reviewer walks the entire checklist even on gating failure; CONDITIONAL APPROVE surfaces gating items for narrow re-review.
+5. **`execution-workflow` domain-agnosticism.** One-pass review, domain-parametric Step 3 via active domain skill's §Completion verification, generic completion menu, domain-neutral stage names (`implementation`, `implementation review`, `refactoring`, `integration review`, `drift test creation/review`, `merge proposer/review`, `doc writer/reviewer`). `## Sensitivity Analysis Tasks` deleted (content lives in the domain skill).
+6. **Agent Stage tables + dispatch-prompt contract + §Self-Review walk.** `agents/implementer.md` and `agents/reviewer.md` now carry authoritative 11-row Stage → references tables, a "What the dispatch prompt carries — and doesn't" contract section, an implementer §Self-Review walk of the domain §Review, and the reviewer's CONDITIONAL APPROVE mechanics.
+7. **Companion-workflow light audit.** `integration-workflow`, `merge-workflow`, `semantic-merge`, `planning-workflow`, `refactor-and-integrate/references/codebase-integration.md` aligned with the new one-pass language and Stage-table auto-load.
 
-The `Additionally, ...` tail carries only steering — focus areas, prior-round adjudication, warnings, non-default skill/reference overrides. The dispatch prompt NEVER repeats (a) the standard protocol that lives in `agents/implementer.md` / `agents/reviewer.md`, (b) PLAN.md task content (the agent reads it), or (c) domain-skill checklist content (the agent walks it per their Before-You-Start).
+Structural-invariants blocks added: 10a/10b (dispatch prefix + no `Work from:`/`Counterpart:`), 11 (§Review heading + `[GATING]` count + `CONDITIONAL APPROVE` + no shadow review files), 12 (no two-stage-review phrasing + no Sensitivity Analysis Tasks + CONDITIONAL APPROVE in execution-workflow), 13 (agent Stage tables + dispatch-prompt contract phrase + CONDITIONAL APPROVE in reviewer).
 
-**Files the dispatcher touches:**
+See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
-- `skills/execution-workflow/SKILL.md` — per-task implementer + reviewer dispatch templates (currently in §"Dispatch Templates" around L150-L200).
-- `skills/integration-workflow/SKILL.md` — Stage 1 drift-test-creator + drift-test-reviewer dispatches; Stage 2 integration-reviewer + refactorer dispatches; Step 3 doc-writer + doc-reviewer dispatches.
-- `skills/merge-workflow/SKILL.md` — any dispatch templates.
-- `skills/semantic-merge/SKILL.md` — Tier 2 merge-proposer + merge-reviewer dispatches; Tier 3 same.
-- `skills/agent-orchestration/SKILL.md` — team-recipe dispatch patterns.
+---
+
+## Task 7: Update `PLAN.md` — condense Tasks 1–6; queue Tasks 8–12
+
+**Review status:** IMPLEMENTED (orchestrator-owned; no subagent dispatch)
+
+**Objective:** This file. Rewrite the Round 1 task-by-task content as a single Completed summary; queue Round 2 tasks 8–12 (with 10b and 11b folded in); update Objective to name the DRY/composability goal; add Round 2 decision entries.
 
 **Steps:**
 
-- [x] **Step 1: Describe — audit every dispatch template in the plugin.** Grepped `Agent(subagent_type:` across `skills/`. Found 16 dispatch templates across 5 files: `execution-workflow/SKILL.md` (3), `integration-workflow/SKILL.md` (6), `merge-workflow/SKILL.md` (2), `semantic-merge/SKILL.md` (3), `refactor-and-integrate/SKILL.md` (2 illustrative). Legacy over-specification observed: `Work from:` + `Counterpart:` in `execution-workflow`'s three primary templates; free-form `Note:` fields in `merge-workflow` post-merge reviewer + post-merge refactorer and in `semantic-merge` Tier 3. `using-superRA/references/codex-tools.md` contains one mention inside a harness-mapping table (prose context, not a dispatch template) — left alone.
-
-- [x] **Step 2: Analyze — rewrite each template to the new canonical shape.** Template form:
-
-  ```
-  Agent(subagent_type: "superRA:<implementer|reviewer>"):
-    # --- REQUIRED FIELDS FIRST (dispatch cannot function without them) ---
-    Stage: <stage-name>
-    Task: <PLAN.md pointer or git range>
-    [Git range: <BASE>..<HEAD>]     # for review stages
-    [Skills: <extras>]              # only if non-default
-    [References: <extras>]          # only if non-default
-    # --- THEN the standard-workflow anchor + optional steering ---
-    Additionally: Follow the standard stage-relevant workflow and load
-      relevant skills and documents to proceed. Additionally,
-      <optional one-or-two-sentence steering — focus area, prior-round
-      adjudication, warning, anything non-default>.
-  ```
-
-  **Ordering rule (non-negotiable):** required identifying information (Stage, Task, Git range, Skills/References overrides) comes **first** — the agent needs it to load the right context. The `Additionally:` block comes **last** — it anchors "standard workflow is in effect" plus any free-form steering on top. Do NOT invert the order (Additionally-block on top, required fields below) — that buries required information after prose and invites the agent to miss it.
-
-  - Drop `Work from:` lines (subagent runs in cwd by default).
-  - Drop `Counterpart:` lines outside explicit Agent Teams subsections.
-  - Drop any preamble that restates standard protocol, PLAN.md content, or checklist items the agent already reads.
-  - The prefix "Follow the standard stage-relevant workflow..." is literal and common across every template. This is the anchor that tells the agent: your standard Before-You-Start + stage-reference-auto-load is in effect; what follows is additions on top.
-
-- [x] **Step 3: Validate — verify and commit.**
-  - Grep: no dispatch template in `skills/` is missing the "Follow the standard stage-relevant workflow..." prefix.
-  - Grep: no dispatch template retains `Work from:` (outside explicit worktree-setup prose) or `Counterpart:` (outside Agent Teams subsections).
-  - `bash tests/structural-invariants.sh` passes.
-  - Add one new assertion to `structural-invariants.sh`: every dispatch template in the live surface contains "Follow the standard stage-relevant workflow" (use a grep count >= N where N = number of templates).
-  - Update RELEASE-NOTES.md top entry to note the dispatch-protocol standardization.
-  - Atomic commit: `refactor(dispatch): standardize dispatch-prompt prefix across all workflow skills`.
-
-**Out of scope for this task (handled in follow-on tasks 2–6 below).**
+- [x] Collapse Tasks 1–6 into `## Completed (PR #1 — Workflow-Domain-Split Restructure, Round 1)`.
+- [x] Rewrite Objective to describe DRY/composability.
+- [x] Append Round 2 decision entries to `## Decisions`.
+- [x] Queue Tasks 8–12 as new checklist blocks (below).
+- [ ] Atomic commit: `docs(plan): condense completed restructure and queue DRY/composability tasks`.
 
 ---
 
-## Task 2: Integrate §Review & Self-Check Discipline into `econ-data-analysis/SKILL.md`
+## Task 8: Move cross-stage orchestration content into `agent-orchestration`
 
-**Review status:** APPROVED
+**Review status:** *(not started)*
 
-**Objective:** Add a new top-level section `## Review & Self-Check Discipline — shared gating for implementer and reviewer` to the main body of `skills/econ-data-analysis/SKILL.md`. Content uses `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers so implementer self-check and reviewer verification walk the exact same list. Encode the CONDITIONAL APPROVE verdict protocol (reviewer walks the entire checklist even on gating failure; returns APPROVE / REVISE / CONDITIONAL APPROVE). Single source of truth — no new reference files.
+**Objective:** Lift `## Dispatch Templates`, `## Handling Reviewer Feedback (Orchestrator Discipline)`, and `## Review Status Reference` out of `execution-workflow/SKILL.md` into `agent-orchestration/SKILL.md` as new top-level sections. Add `## Direct Mode` to `agent-orchestration` (one-section rubric for orchestrator-executed steps). Shrink `handoff-doc/SKILL.md` principles #4 (role ownership) and #5 (deltas in both directions) to one-line pointers. `execution-workflow` and `integration-workflow` keep only workflow-choreography prose plus one-line pointers to the new `agent-orchestration` sections.
 
 **Files touched:**
 
-- `skills/econ-data-analysis/SKILL.md` — add `## Review & Self-Check Discipline` after the three concurrent disciplines (after Validate §Sensitivity analysis, before Pitfalls). Convert the existing `## Verification Checklist` into a one-line pointer to the new section.
+- `skills/agent-orchestration/SKILL.md` — add four new top-level sections: `## Dispatch Templates` (domain-neutral: `<stage-name>` placeholders, canonical shape, required-fields-first / `Additionally:` anchor-last rule, the "Follow the standard stage-relevant workflow" prefix, the banned-in-dispatch list), `## Handling Reviewer Feedback (Orchestrator Discipline)` (lifted verbatim), `## Review Status Reference` (verdict table), `## Direct Mode` (when orchestrator executes directly, read `agents/implementer.md` / `agents/reviewer.md` and follow the same protocol; Stage tables drive reference-loads; self-review gate, handoff-doc edit discipline, and verdict protocol all apply).
+- `skills/execution-workflow/SKILL.md` — replace the three lifted sections with one-line pointers; keep the workflow-specific prose (Step 2 sub-steps, CONDITIONAL APPROVE narrow re-review sentence, flowchart node labels).
+- `skills/integration-workflow/SKILL.md` — §Dispatch Convention shrinks to a pointer to `agent-orchestration` §Dispatch Templates + §Handling Reviewer Feedback.
+- `skills/handoff-doc/SKILL.md` — principle #5 → "See `agent-orchestration` §Handling Reviewer Feedback for how dispatch prompts and status returns carry what-changed deltas." Principle #4 → "Role-scoped edit permissions live in `agents/implementer.md` + `agents/reviewer.md`."
 
 **Steps:**
 
-- [x] **Step 1: Describe — locate insertion point and audit existing content.** Read SKILL.md end-to-end; identify where the new section lands (after Validate, before Pitfalls). Catalog the items already present elsewhere in the file that should be cross-referenced (not duplicated) from the new section: Iron Law, Describe panel structure / variable diagnostics / merge-key inspection, Analyze row-count logging, Validate sanity checks / multi-source / sensitivity, Pitfalls §Merges, the `script-to-notebook` pointer, `integrate-drift-tests.md`, `data-robustness-checklist.md`. Confirm the existing `## Verification Checklist` content is fully subsumed by the new section.
-
-- [x] **Step 2: Analyze — write the new section.** Drafted with this shape (preamble + verdict protocol + six sub-sections):
-
-  - **Preamble.** Single source of truth. Implementer walks as pre-handoff self-check; reviewer walks as verification criteria. Markers: `[GATING]` = load-bearing non-negotiables (failure blocks unconditional APPROVE); `[STANDARD]` = required, becomes a REVISE finding if missing; `[ADVISORY]` = best-practice, reviewer MAY flag as MINOR.
-
-  - **Reviewer verdict protocol (CONDITIONAL APPROVE).** Walk the entire section top to bottom — do NOT halt on gating failure (reviewer dispatches are costly). Three verdicts: `APPROVE` (no findings), `REVISE` (only `[STANDARD]` items failed), `CONDITIONAL APPROVE` (one or more `[GATING]` items failed; reviewer walked downstream anyway and those look correct *conditional on the gating fix not invalidating them*). On CONDITIONAL, the re-dispatched reviewer's second pass is narrow: verify the gating fix + verify cited downstream items still hold; if both, CONDITIONAL → unconditional APPROVE.
-
-  - **§ Gating: the Iron Law applied per step**
-    - `[GATING]` Every input described before first transformation (panel structure, variable diagnostics, missing values). See §Describe.
-    - `[GATING]` Every sample-changing operation logs before/after row counts. See §Analyze.
-    - `[GATING]` Every merge describes join keys on both sides before execution. See §Pitfalls §Merges.
-
-  - **§ Implementation standards**
-    - `[STANDARD]` Each step matches PLAN.md spec.
-    - `[STANDARD]` Analysis scripts follow notebook-compatible format per `superRA:script-to-notebook`.
-    - `[STANDARD]` Major decisions (filter threshold, join type, variable definition) carry a markdown-cell justification; minor decisions carry an inline comment.
-    - `[STANDARD]` Outputs (tables, figures) generated from committed code, not ad-hoc REPL.
-
-  - **§ Validation completeness**
-    - `[STANDARD]` Distribution re-check after each major transformation; compare pre/post.
-    - `[STANDARD]` Economic sense: magnitudes plausible, signs as expected, published benchmarks where applicable.
-    - `[STANDARD]` When PLAN.md header has Expected Results / Hypotheses, compare findings and flag divergences.
-    - `[ADVISORY]` Sensitivity analysis on robustness-sensitive tasks per `references/data-robustness-checklist.md`.
-
-  - **§ Documentation and handoff**
-    - `[GATING]` RESULTS.md updated in place for the task's section per `superRA:handoff-doc`.
-    - `[STANDARD]` Markdown cells explain what/why.
-    - `[STANDARD]` Figures saved under `results_attachments/` and embedded via relative paths.
-    - `[STANDARD]` No dangling TODO / placeholder strings.
-
-  - **§ Refactor integrity (applies during `refactoring` and `integration review` stages)**
-    - `[GATING]` All describe steps preserved (or explicitly replaced by upstream-validated diagnostics).
-    - `[GATING]` All row-count prints preserved at sample-changing operations.
-    - `[GATING]` All validation checks preserved.
-    - `[GATING]` Drift tests (where they exist) pass post-refactor; failures adjudicated per `references/integrate-drift-tests.md`, never silently re-expected.
-    - `[STANDARD]` Variable definitions unchanged, or the change is documented and justified.
-    - `[STANDARD]` Sample construction unchanged, or documented.
-    - `[STANDARD]` Naming follows nearest module-level `CLAUDE.md` / `AGENTS.md` / `README.md` conventions.
-    - `[STANDARD]` Utility functions reused; no reinvented helpers.
-
-  - **§ Completion verification (applies at `execution-workflow` Step 3)**
-    - `[GATING]` All code committed.
-    - `[GATING]` Multi-script pipeline runs end-to-end if the plan declares one.
-    - `[GATING]` Outputs exist and were generated from committed code (not ad-hoc REPL).
-    - `[STANDARD]` PLAN.md and RESULTS.md current.
-    - `[STANDARD]` Deferred MINORs resolved or documented in RESULTS.md as accepted limitations.
-
-- [x] **Step 3: Validate — consolidate, test, commit.**
-  - Replace `## Verification Checklist` section (L311-L337 current) with a one-liner: "For pre-handoff self-check and reviewer verification, see §Review & Self-Check Discipline above."
-  - Add one sentence under `## Stage-Scoped References` noting: "The §Review & Self-Check Discipline section below loads with the main body at every stage — it is the shared gating both implementer and reviewer walk."
-  - Run `bash tests/structural-invariants.sh` — must stay green.
-  - Add new assertions in `tests/structural-invariants.sh`:
-    - `## Review & Self-Check Discipline` heading exists in `econ-data-analysis/SKILL.md`.
-    - `[GATING]` marker count ≥ 8 in that file.
-    - `CONDITIONAL APPROVE` string appears in that file (verdict protocol encoded).
-    - No file `implementation-review.md` or `integration-review.md` under `skills/econ-data-analysis/references/` (sanity check on shared-gating decision).
-  - Update RELEASE-NOTES.md top (Unreleased) entry to note the §Review integration.
-  - Atomic commit: `feat(econ-data-analysis): add §Review & Self-Check Discipline with shared gating markers`.
+- [ ] **Describe — locate the exact blocks.** Confirm the line ranges Explore mapped (execution-workflow L171–203, L205–238, L295–306; handoff-doc principles #4, #5). Catalog every other skill that references *into* the moved blocks (pointer-update sites for the rewire).
+- [ ] **Analyze — execute the moves.**
+  - Write the four new `agent-orchestration` sections with domain-neutral language (use `<stage-name>` placeholders, no `implementation` / `implementation review` bodies).
+  - Rewrite execution-workflow + integration-workflow + handoff-doc pointers.
+  - Update any other skill that linked into the moved content.
+- [ ] **Validate.**
+  - Grep `skills/execution-workflow/SKILL.md` for the moved headings — expect 0 hits (besides pointer lines).
+  - Grep `skills/agent-orchestration/SKILL.md` for each new heading — expect exactly 1.
+  - `bash tests/structural-invariants.sh` green.
+  - Add invariant block #14: `agent-orchestration/SKILL.md` contains `## Dispatch Templates`, `## Handling Reviewer Feedback`, `## Review Status Reference`, `## Direct Mode`; `execution-workflow/SKILL.md` does NOT contain `## Dispatch Templates` as a heading.
+  - Atomic commit: `refactor(agent-orchestration): own cross-stage dispatch and adjudication patterns`.
 
 ---
 
-## Task 3: Rewrite `execution-workflow/SKILL.md` for Domain Agnosticism
+## Task 9: Delete `implementer-protocol` + `reviewer-protocol` alias skills
 
-**Review status:** APPROVED
+**Review status:** *(not started)*
 
-**Objective:** Make `execution-workflow` speak only in domain-neutral terms. Collapse two-stage review into one comprehensive pass; rewrite Step 3 as a domain-parametric skeleton that points at the active domain skill's §Completion verification; rewrite the completion menu and Step 4 language; delete the data-flavored "Sensitivity Analysis Tasks" and hard-coded auto-loads; update dispatch templates to the new canonical form with renamed stages (`implementation`, `implementation review`).
+**Objective:** Remove the two 22-line wrappers. Replace their role with `agent-orchestration` §Direct Mode (added in Task 8) + direct links to `agents/implementer.md` / `agents/reviewer.md` at call sites.
 
-**Depends on:** Task 2 must APPROVE first so the workflow can cite `econ-data-analysis/SKILL.md §Review & Self-Check Discipline`.
+**Depends on:** Task 8 APPROVE (needs §Direct Mode in place).
 
 **Files touched:**
 
-- `skills/execution-workflow/SKILL.md` — review protocol (L8-L14, L46-L56, L82-L103), Step 2 sub-steps (L157-L167), dispatch templates (L169-L210), Step 3 (L247-L271), Step 4 (L273-L306), Review Status table (L308-L331), Sensitivity Analysis + Model Selection sections (L333-L351), Red Flags (L404-L424), Integration table (L425-L435).
+- `skills/implementer-protocol/` — delete directory.
+- `skills/reviewer-protocol/` — delete directory.
+- `skills/execution-workflow/SKILL.md` — any direct-mode reference to the protocol skills is rewired to `agent-orchestration` §Direct Mode.
+- `README.md`, `skills/CATEGORIES.md` — remove the two rows under Utility.
+- Any other file referencing the protocol skills — rewire.
 
 **Steps:**
 
-- [x] **Step 1: Describe — grep existing terminology.** Audited the live file: `data integrity` / `two-stage review` / `REVISE (data integrity)` / `REVISE (implementation)` appeared throughout the intro (L8–L14), Step 2 sub-steps (L157–L167), three dispatch templates (L169–L210), Review Status table (L308–L319), Red Flags (L404–L424), and the `Note: Data integrity` interim-checkpoint clause at L331. `analysis task` appeared in the implementer dispatch template. `## Sensitivity Analysis Tasks` at L333–L341 and `## Model Selection` at L343–L351 were data-flavored. Dispatch-template preamble at L171 hardcoded the `superRA:econ-data-analysis` + `superRA:script-to-notebook` auto-loads that belong in the agent Stage tables per Task 4.
-
-- [x] **Step 2: Analyze — rewrite.**
-  - **Review protocol (one pass):** replace the "two-stage review (data integrity then implementation correctness)" narrative with "one comprehensive review pass per task. The reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom and returns APPROVE / REVISE / CONDITIONAL APPROVE." Orchestrator MAY dispatch a second reviewer via steering when the CONDITIONAL's gating fix is substantial enough to cast doubt on downstream items — document this as documented flexibility, not default.
-  - **Process flowchart:** replace the two-node data-integrity → implementation dispatch chain with one "Dispatch reviewer (implementation review)" node whose verdict branch includes the CONDITIONAL APPROVE path (narrow re-review).
-  - **Review Status table:** collapse `REVISE (data integrity)` + `REVISE (implementation)` into `REVISE`; add `CONDITIONAL APPROVE` row. Actions re-pointed to the domain skill's §Review.
-  - **Per-task execution steps (L157-L167):** rewrite sub-steps 3+4 into a single "Dispatch reviewer" step with REVISE / CONDITIONAL APPROVE / APPROVE branches.
-  - **Dispatch templates (L169-L210):** rename stages per D-Stage-1 (`analysis task` → `implementation`, collapse `data integrity` + `implementation` reviewers → `implementation review`). Keep the canonical prefix from Task 1 (Additionally-anchor last; Stage/Task/Git range first). Drop the hardcoded "For every analysis-touching stage … auto-loads `superRA:econ-data-analysis` and `superRA:script-to-notebook`" preamble — agent files handle stage-based auto-load per Task 4's Stage table.
-  - **Step 3 (Verify Pipeline and Reproducibility):** replace specific pipeline-runs / outputs-exist checks with a short orchestrator skeleton: (1) All code committed, (2) PLAN.md current, (3) RESULTS.md current, (4) Domain completion verification — "walk the active domain skill's §Completion Verification `[GATING]` items; for data analysis: `econ-data-analysis/SKILL.md` §Review §Completion verification," (5) Deferred MINORs resolved.
-  - **Step 4 / completion menu:** "Analysis complete and reproducible" → "Work complete and verified." Option descriptions stay domain-neutral.
-  - **Delete `## Sensitivity Analysis Tasks`** (L333-L341) — content is already in `econ-data-analysis/SKILL.md` §Validate §Sensitivity analysis and in `references/data-robustness-checklist.md`.
-  - **Replace `## Model Selection`** (L343-L351) with one paragraph: "Use the least capable model that handles the task; reviewers use the most capable available model. Domain-specific complexity examples live in the domain skill, not here."
-  - **Red Flags + Integration table:** scrub remaining "data integrity" / "implementation review" references. Keep the list as Red Flags for the one-pass flow.
-  - **Integration table L425-L435:** "`superRA:econ-data-analysis` — REQUIRED: Data discipline all agents must follow" → "the active domain skill (for data analysis: `superRA:econ-data-analysis`) — REQUIRED: domain discipline all agents follow at dispatch-time auto-load per `agents/implementer.md` / `agents/reviewer.md` Stage tables."
-
-- [x] **Step 3: Validate — grep checks + commit.**
-  - Greps confirmed: `data integrity|two-stage review|REVISE \(data integrity\)|REVISE \(implementation\)` absent; `^## Sensitivity Analysis Tasks` absent; `CONDITIONAL APPROVE` present (3+ hits). `## Model Selection` retained as a one-paragraph section per task spec (the old data-flavored body is gone; the heading stays).
-  - `tests/structural-invariants.sh` gains assertion block #12 with three new checks: two-stage-review phrasing absent, `## Sensitivity Analysis Tasks` heading absent, `CONDITIONAL APPROVE` present. Old block #12 (README Why-superRA?) renumbered to #13. Full run: 29 PASS, 2 known WARN, 0 FAIL.
-  - Atomic commit to follow: `refactor(execution-workflow): one-pass review, domain-parametric Step 3, generic completion menu`.
+- [ ] **Describe — audit all references.** Grep `implementer-protocol` and `reviewer-protocol` across the plugin. Catalog each site and whether it wants (a) direct-mode rubric (→ `agent-orchestration` §Direct Mode) or (b) the agent protocol specifically (→ `agents/implementer.md` / `agents/reviewer.md`).
+- [ ] **Analyze — delete + rewire.** Remove the two directories. Update each reference site.
+- [ ] **Validate.** Grep confirms 0 remaining references. Structural-invariants green. Add invariant block #15: no files under `skills/implementer-protocol/` or `skills/reviewer-protocol/`.
+- [ ] Atomic commit: `refactor(skills): remove alias-only protocol skills; agent-orchestration §Direct Mode covers direct-execution rubric`.
 
 ---
 
-## Task 4: Agent-File Stage Tables + Dispatch-Prompt Contract + Self-Review Walk
+## Task 10: Make `integration-workflow` generic; move data-specific content to domain reference
 
-**Review status:** APPROVED
+**Review status:** *(not started)*
 
-**Objective:** Add an authoritative Stage → reference-loads table in both `agents/implementer.md` and `agents/reviewer.md`. Add a "What the dispatch prompt carries — and doesn't" contract section near the top. Extend the implementer's Self-Review to walk the domain skill's §Review & Self-Check Discipline before returning DONE. Extend the reviewer's Review Protocol with the CONDITIONAL APPROVE verdict.
+**Objective:** `integration-workflow/SKILL.md` retains ONLY workflow sequencing (Stage 1 drift-test creation, Stage 2 integration review → refactor loop, Step 3 doc finalization, four stop points, handoff to `merge-workflow`). *What to check* content moves to `refactor-and-integrate/references/codebase-integration.md` (generic) and to a new `skills/econ-data-analysis/references/integration.md` (data-specific). Both references carry `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers + the shared-flow preamble.
 
-**Depends on:** Tasks 2 and 3 must APPROVE first.
+**Task 10b (folded into the same commit):** The new `integration.md` opens with:
+> This reference is the single source of truth for data-analysis integration discipline at the `refactoring` and `integration review` stages. The implementer walks it as pre-handoff self-check; the reviewer walks it as verification criteria. Same content, two perspectives — no drift possible. `[GATING]` items block unconditional APPROVE; `[STANDARD]` items become REVISE findings; `[ADVISORY]` items are suggestions the reviewer MAY flag as MINOR. The verdict protocol is the same as `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline (APPROVE / REVISE / CONDITIONAL APPROVE).
+
+**Depends on:** Tasks 8 and 9 APPROVE.
 
 **Files touched:**
 
-- `agents/implementer.md` — add Stage table; add dispatch-prompt contract section; extend §Self-Review Before Reporting with §Review walk.
-- `agents/reviewer.md` — add Stage table; add dispatch-prompt contract section; extend §Verdict with CONDITIONAL APPROVE; extend §How You Write a Review with CONDITIONAL APPROVE mechanics (state gating item(s) that failed + "downstream reviewed, contingent on gating fix").
+- `skills/integration-workflow/SKILL.md` — strip "what to check" prose; keep workflow sequencing.
+- `skills/refactor-and-integrate/references/codebase-integration.md` — strip `## Economic Integration` + `## Data Discipline Through Refactoring` sections. Keep §Code Integration, §Handling Inconsistencies, §PR Quality, §Documentation Currency. Add shared-flow preamble.
+- **New file:** `skills/econ-data-analysis/references/integration.md` — ≥7 items across `[GATING]` / `[STANDARD]` / `[ADVISORY]` tiers covering: no redundant intermediary datasets; variable-construction consistency (log vs D-H growth, winsorization thresholds); transformation-pattern consistency (outlier treatment, sample filters, control variables); variable naming; shared utilities; documented deviations; migration pointers. Shared-flow preamble (Task 10b) at the top.
+- `skills/econ-data-analysis/SKILL.md` — §Refactor integrity gets a one-line pointer to the new `references/integration.md` for integration-stage work.
+- `agents/implementer.md` + `agents/reviewer.md` — Stage table rows for `refactoring` and `integration review` add `integration.md` (alongside `codebase-integration.md`).
+- Audit `skills/refactor-and-integrate/references/drift-test-quality.md` and `merge-quality.md` for residual data-specific language; leave generic framework intact.
 
 **Steps:**
 
-- [x] **Step 1: Describe — audit current stage references in agent files.** Both files carried prose under "Before You Start" step 2 describing stage-scoped loading (implementer L23; reviewer L30). Those prose blocks are replaced by a pointer to the new Stage table that sits near the top of each file.
-
-- [x] **Step 2: Analyze — write the Stage table and dispatch contract.**
-
-  Stage table (same in both agent files, adapted for implementer vs reviewer wording):
-
-  | `Stage:` value | Domain skill (auto-loaded) | Stage-scoped reference(s) |
-  |---|---|---|
-  | `implementation` | `econ-data-analysis` + `script-to-notebook` | main body §Review & Self-Check Discipline |
-  | `implementation review` | same | same |
-  | `refactoring` | same | main body §Refactor integrity; plus `integrate-drift-tests.md` if drift tests exist |
-  | `integration review` | same | same |
-  | `drift test creation` | same + `refactor-and-integrate` | `integrate-drift-tests.md` + `drift-test-quality.md` |
-  | `drift test review` | same + `refactor-and-integrate` | same |
-  | `merge proposer` | same + `refactor-and-integrate` | `merge-quality.md` |
-  | `merge review` | same + `refactor-and-integrate` | `merge-quality.md` |
-  | `doc writer` | `report-in-markdown` | `baseline-io.md` + `rich-content.md` + `final-form.md` |
-  | `doc reviewer` | `report-in-markdown` | `final-form.md` |
-  | planning-phase reviewer | `econ-data-analysis` | `planning.md` |
-
-  Dispatch-prompt contract section (both agents):
-
-  > **What the dispatch prompt carries — and doesn't.** The dispatcher uses the Stage table above to choose which references auto-load. Task content lives in `PLAN.md` / `RESULTS.md`, which you read directly (see Before You Start). Standard protocol — how you load handoff docs, walk module-level guidance, self-review, annotate review items, report — lives in this file and is always in effect.
-  >
-  > The dispatch prompt carries only the Stage, a task pointer, a git range (if reviewing), and an optional `Additionally:` steering line. If the dispatch paraphrases `PLAN.md`, passes a review checklist, or repeats standard protocol, treat that as over-specification and use your standard protocol + the authoritative sources it points at.
-
-  Implementer §Self-Review extension: "Before returning DONE, walk the domain skill's §Review & Self-Check Discipline yourself. Every `[GATING]` item must pass — a gating failure is a fix-first, not a handoff. Every `[STANDARD]` item should pass; if not, document the exception in RESULTS.md so the reviewer is not surprised."
-
-  Reviewer §Verdict extension (CONDITIONAL APPROVE): three-verdict protocol. On CONDITIONAL APPROVE, review-notes blockquote lists the failed `[GATING]` item(s) first, then notes "downstream items reviewed and currently correct; approval contingent on the gating fix not changing downstream results." Set `**Review status:** CONDITIONAL APPROVE`. On re-review after gating fix: verify (a) the gating fix is correct, (b) cited downstream items still hold; if both, delete the blockquote and set `**Review status:** APPROVED`.
-
-- [x] **Step 3: Validate — structural invariants + commit.**
-  - Added block #13 to `tests/structural-invariants.sh`: both agent files contain a Stage table (header row mentioning "Stage" + rows for `implementation`, `implementation review`, `refactoring`, `integration review`); both contain the dispatch-prompt contract phrase ("What the dispatch prompt carries — and doesn't"); `agents/reviewer.md` contains `CONDITIONAL APPROVE`. Old block #13 (README Why-superRA?) renumbered to #14. Full run: all PASS, 2 known WARN, 0 FAIL.
-  - Atomic commit: `feat(agents): Stage tables + dispatch-prompt contract + CONDITIONAL APPROVE verdict`.
+- [ ] **Describe.** Read `integration-workflow/SKILL.md`; mark every sentence that describes *what to check* (vs *what step runs*). Read `codebase-integration.md`; mark §Economic Integration + §Data Discipline Through Refactoring for move. Draft the new `econ-data-analysis/references/integration.md` outline.
+- [ ] **Analyze — write the moves.**
+  - Create `econ-data-analysis/references/integration.md` with shared-flow preamble + gated items per Task 10b.
+  - Strip moved sections from `codebase-integration.md`; add shared-flow preamble.
+  - Rewrite `integration-workflow/SKILL.md` "what to check" prose into one-line pointers.
+  - Update agent Stage tables.
+  - Add §Refactor integrity pointer in `econ-data-analysis/SKILL.md`.
+- [ ] **Validate.**
+  - Grep `integration-workflow/SKILL.md` for `winsorization` / `variable construction` / `transformation` / `describe step` / `row count` — expect 0 hits.
+  - Grep `codebase-integration.md` for the same — expect 0 hits.
+  - Grep `econ-data-analysis/references/integration.md` for `[GATING]` — expect ≥ 3 hits.
+  - Add invariant block #16 with the three greps + existence of `econ-data-analysis/references/integration.md` + absence of `## Economic Integration` / `## Data Discipline Through Refactoring` headings in `codebase-integration.md`.
+  - Atomic commit: `refactor(integration): separate workflow-choreography from integration-discipline; add econ-data-analysis/integration.md`.
 
 ---
 
-## Task 5: Companion Workflow Skills — Light Audit
+## Task 11: Elevate DRY / composability / extensibility as a design principle in `CLAUDE.md` + `README.md`
 
-**Review status:** APPROVED
+**Review status:** *(not started)*
 
-**Objective:** Update `integration-workflow/SKILL.md` Stage 2 to cite the domain skill's §Refactor integrity. Light grep-audit of `merge-workflow`, `semantic-merge`, `planning-workflow` for residual "data integrity" / "two-stage review" phrasing. Add a top-of-file pointer in `refactor-and-integrate/references/codebase-integration.md` naming the domain skill's §Refactor integrity as primary for data-analysis work.
+**Objective:** Add `### DRY, composability, extensibility` to `CLAUDE.md` §Design Principles (between the Architectural pattern and Domain verticals subsections), with D-Shared-Flow-1 as a sub-bullet. Add a matching fifth principle to `README.md` §Design Principles. Refresh the stale `README.md` §Key Design Decisions (currently references two-stage review / REVISE (data integrity)) to match one-pass review + CONDITIONAL APPROVE + Stage tables.
 
-**Depends on:** Tasks 2–4 APPROVE.
+**Depends on:** Tasks 8–10 APPROVE (so the text matches the post-move reality).
 
 **Files touched:**
 
-- `skills/integration-workflow/SKILL.md` — Stage 2 dispatches + Agent-Types table + auto-load prose + Integration subagents list.
-- `skills/merge-workflow/SKILL.md` — post-merge integration-reviewer and refactorer dispatches: stage label + domain-reference citation.
-- `skills/semantic-merge/SKILL.md` — agent-types auto-load line rewritten to point at agent Stage tables.
-- `skills/planning-workflow/SKILL.md` — "two-stage review" residual replaced with "one-pass review per domain skill's §Review".
-- `skills/refactor-and-integrate/references/codebase-integration.md` — top-of-file pointer to domain skill's §Refactor integrity.
-- `agents/reviewer.md` — frontmatter description (Task 4 residual) + Handoff stage list updated to canonical one-pass stages.
+- `CLAUDE.md` — new §DRY, composability, extensibility under §Design Principles.
+- `README.md` — new principle under §Design Principles; refreshed §Key Design Decisions + §Philosophy bullet on adversarial review.
 
 **Steps:**
 
-- [x] **Step 1 — Catalog.** Grep of `data integrity|two-stage review|data-integrity reviewer` in the four workflow files: zero direct hits. Broader audit surfaced residual domain-flavored / old-naming hits: (a) `integration-workflow` §Dispatch Convention L104 hardcoded the `econ-data-analysis` + `script-to-notebook` auto-load, Stage 2 dispatches L178/L199 cited only `codebase-integration.md`, Agent-Types table L435-L436 same, L442 repeated the auto-load prose, L494 "Data discipline principles"; (b) `merge-workflow` Step 2b/Step 3 dispatches L86/L109 same single `codebase-integration.md` reference + `Stage: integration`; (c) `semantic-merge` L301 "All agents also load superRA:econ-data-analysis for data discipline"; (d) `planning-workflow` L139 "fresh subagent per task + two-stage review"; (e) `agents/reviewer.md` L6-L8 frontmatter "data integrity + implementation review" and L123 Handoff stage list ("data integrity, implementation, drift test, integration, merge, ad-hoc"). The semantic-merge L237/L257 "Data discipline" mentions left intact — they refer to describe-analyze-validate artifacts preserved through a merge, not to the old review-stage nomenclature.
-- [x] **Step 2 — Rewrite.** Each hit rewritten in-place: Stage 2 refactoring + integration review dispatches across `integration-workflow` and `merge-workflow` now cite "active domain skill's §Refactor integrity (for data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + codebase-integration.md (cross-cutting code-quality checklist)"; stage label canonicalized to `integration review`; Agent-Types table row updated. `integration-workflow` L104/L442/L494 and `semantic-merge` L301 now defer to the `agents/implementer.md` / `agents/reviewer.md` Stage tables for domain-skill auto-loads. `planning-workflow` L139 now reads "one-pass review per the active domain skill's §Review & Self-Check Discipline". `codebase-integration.md` gains a top-of-file blockquote naming the domain skill's §Refactor integrity as primary for data-analysis work and this file as the cross-cutting code-quality companion. `agents/reviewer.md` frontmatter now reads "execution-workflow (implementation review), integration-workflow (drift test review + integration review), merge-workflow (post-merge drift test + integration review), and semantic-merge (merge review)"; Handoff stage list reads "implementation review, drift test review, integration review, merge review, ad-hoc".
-- [x] **Step 3 — Validate.** Grep `data integrity|two-stage review|data-integrity reviewer` across the four workflow files + `agents/reviewer.md`: 0 hits. `bash tests/structural-invariants.sh`: all PASS, 2 known WARN, 0 FAIL (same as baseline). Atomic commit to follow: `refactor(workflows+agents): domain-parametric §Refactor integrity references and one-pass stage naming`.
+- [ ] **Describe.** Read `CLAUDE.md` §Design Principles and §Architectural pattern. Read `README.md` §Design Principles, §Key Design Decisions, §Philosophy.
+- [ ] **Analyze — write the new content.** CLAUDE.md paragraph per the D-Design-1 text in the background plan, with D-Shared-Flow-1 as a sub-bullet ("Shared-flow checklists: implementer + reviewer walk the same file, with `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers — single-source-of-truth applied to review gates"). README.md: add fifth principle; rewrite stale review-protocol sections.
+- [ ] **Validate.**
+  - Grep `README.md` for `two-stage review` / `REVISE \(data integrity\)` / `REVISE \(implementation\)` — expect 0 hits.
+  - Add invariant block #17: `CLAUDE.md` contains the string "DRY, composability, extensibility"; `README.md` does NOT contain `two-stage review`.
+  - Atomic commit: `docs(claude+readme): elevate DRY/composability as a design principle; refresh stale review language`.
 
 ---
 
-## Task 6: Structural Invariants + RELEASE-NOTES Finalization
+## Task 11b: Add workflow-stage-to-skill map (markdown diagram)
 
-**Review status:** APPROVED
+**Review status:** *(not started)*
 
-**Objective:** Consolidate all new invariants added across Tasks 2–5 into a coherent section of `tests/structural-invariants.sh`; expand the top (Unreleased) entry of `RELEASE-NOTES.md` to describe the full restructure (DAV rename + dispatch standardization + §Review integration + execution-workflow domain agnosticism + Stage tables + CONDITIONAL APPROVE + companion-workflow audit).
+**Objective:** After Tasks 7–11 land, add a markdown diagram (Mermaid preferred so GitHub renders it, pipe-table fallback) showing how each skill is used in each workflow stage. Stages: session-start → PLAN → IMPLEMENT → VALIDATE → INTEGRATE (drift tests / refactor / doc finalization) → MERGE. For each stage: primary workflow skill + active domain skill + cross-cutting loads (`agent-orchestration`, `handoff-doc`, `semantic-merge`) + stage-scoped references + agents dispatched. Legend explains the DRY-composition pattern + extension path (new verticals swap only the domain column).
 
-**Depends on:** Tasks 2–5 APPROVE.
+**Depends on:** Tasks 8–11 APPROVE (so the map reflects the post-refactor reality).
 
 **Files touched:**
 
-- `tests/structural-invariants.sh` — audit complete; all checklist assertions from Tasks 1–4 already present (blocks 10a, 10b, 11, 12, 13, plus DAV-era 3b/3c). No additional assertions needed.
-- `RELEASE-NOTES.md` — top (Unreleased) entry rewritten.
+- `README.md` (preferred) — new `## Workflow Map` section after §How It Works, before §Design Principles. If the diagram is too large, create `skills/WORKFLOW.md` and link from README.
 
 **Steps:**
 
-- [x] **Step 1: Audit structural-invariants.sh for completeness.** Walked every dispatch-checklist assertion: dispatch prefix standardization (block 10a) ✓, §Review & Self-Check Discipline heading (block 11) ✓, GATING marker count ≥ 8 (block 11) ✓, CONDITIONAL APPROVE in econ-data-analysis (block 11) ✓, absence of shadow `implementation-review.md` / `integration-review.md` references (block 11) ✓, absence of two-stage-review phrasing in execution-workflow (block 12) ✓, absence of `## Sensitivity Analysis Tasks` section (block 12) ✓, Stage table + core stage rows in both agent files (block 13) ✓, dispatch-prompt contract phrase in both agent files (block 13) ✓, CONDITIONAL APPROVE in `agents/reviewer.md` (block 13) ✓, CONDITIONAL APPROVE in execution-workflow (block 12) ✓, no `Work from:`/`Counterpart:` in any dispatch template (block 10b) ✓. DAV-era invariants (3, 3b, 3c) continue to cover the DAV restructure. No gaps found; no new assertions added.
+- [ ] **Describe.** Enumerate every workflow stage end-to-end with its skill/reference/agent cells, cross-checked against the post-Task-10 agent Stage tables.
+- [ ] **Analyze — draft the diagram.** Mermaid `flowchart` with lanes for (a) workflow skill, (b) domain skill body + reference, (c) cross-cutting, (d) agents dispatched. Fall back to a pipe-table if Mermaid complexity gets out of hand. Add legend + extension note.
+- [ ] **Validate.**
+  - Confirm the map matches the agent Stage tables cell-by-cell.
+  - Add invariant block #18 (light): `README.md` (or `skills/WORKFLOW.md`) contains a `mermaid` code fence OR a workflow-map pipe-table with ≥5 stage rows.
+  - Atomic commit: `docs(readme): add workflow-stage-to-skill map`.
 
-- [x] **Step 2: Rewrite the top RELEASE-NOTES entry.** The prior Unreleased entry was structured as four sub-refactors announced on top of the already-landed DAV entry, and was missing coverage of Tasks 4 (agent Stage tables + dispatch-prompt contract + implementer §Self-Review walk) and 5 (companion-workflow audit). Replaced with a single coherent entry whose title names the full restructure ("workflow-domain-split restructure") and whose body walks the seven pieces in logical order: DAV, dispatch-prompt standardization, §Review shared gating, CONDITIONAL APPROVE, execution-workflow domain-agnosticism, agent Stage tables + dispatch-prompt contract + §Self-Review walk, companion-workflow light audit, and a consolidated structural-invariants paragraph that enumerates every invariant block added or updated. Prior release entries preserved verbatim.
+---
 
-- [x] **Step 3: Validate and commit.** `bash tests/structural-invariants.sh`: all PASS, 2 known WARN, 0 FAIL. Atomic commit to follow: `test+docs: finalize invariants and release notes for workflow-domain-split restructure`.
+## Task 12: Structural invariants + RELEASE-NOTES finalization
+
+**Review status:** *(not started)*
+
+**Objective:** Consolidate new blocks #14–#18; renumber tail blocks if needed. Rewrite/append RELEASE-NOTES.md Unreleased entry to cover the six Round 2 pieces. Push to PR #1.
+
+**Depends on:** Tasks 8–11b APPROVE.
+
+**Files touched:**
+
+- `tests/structural-invariants.sh` — consolidate blocks #14–#18.
+- `RELEASE-NOTES.md` — extend/rewrite Unreleased entry.
+
+**Steps:**
+
+- [ ] Walk each new invariant block for correctness.
+- [ ] Write (or extend) the Unreleased entry naming the six pieces: orchestration-out (Task 8), protocol-skill deletion (Task 9), integration-workflow genericization + `econ-data-analysis/references/integration.md` with shared-flow preamble (Tasks 10 + 10b), CLAUDE.md/README.md DRY + shared-flow principles (Task 11), workflow-stage-to-skill map (Task 11b). Reference the new invariant blocks.
+- [ ] `bash tests/structural-invariants.sh` → all PASS, 2 known WARN, 0 FAIL.
+- [ ] Atomic commit: `test+docs: finalize invariants and release notes for DRY/composability refactor`.
+- [ ] Push `refactor/workflow-domain-split` to origin.
