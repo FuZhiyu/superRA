@@ -101,7 +101,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 9: Delete `implementer-protocol` + `reviewer-protocol` alias skills
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Objective:** Remove the two 22-line wrappers. Replace their role with `agent-orchestration` §Direct Mode (added in Task 8) + direct links to `agents/implementer.md` / `agents/reviewer.md` at call sites.
 
