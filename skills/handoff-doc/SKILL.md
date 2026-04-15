@@ -26,7 +26,7 @@ Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs)
 
 4. **Ownership by role.** Role-scoped edit permissions live in `agents/implementer.md` + `agents/reviewer.md`. In standalone use, the single author plays all roles — the role split collapses, but the inline-edit rule and "latest state only" still apply.
 
-5. **Explicit what-changed deltas in both directions.** See `superRA:agent-orchestration` §Handling Reviewer Feedback for how dispatch prompts and status returns carry what-changed deltas.
+5. **Explicit what-changed deltas in both directions.** See `superRA:agent-orchestration` §Dispatch-Return Deltas for the one-line what-changed convention used by dispatch prompts and status returns.
 
 6. **The doc is the record. Status reports are pointers, not substitutes.** Any material finding, result, methodology change, caveat, or decision MUST be written into `PLAN.md` or `RESULTS.md` *before* it is communicated in a status report or chat message. If a result only exists in a chat reply, it does not exist — it will be lost at the next session boundary, cache eviction, or context compaction. The authoritative record is the committed doc; the report only points at it.
 
