@@ -28,7 +28,7 @@
 
 ## Task 1: Standardize Dispatch-Prompt Protocol Across All Workflow Skills
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Objective:** Rewrite every dispatch template in the plugin so it opens with the language
 
