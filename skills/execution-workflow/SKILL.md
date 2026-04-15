@@ -170,13 +170,17 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 **Stage implies skill defaults.** For every analysis-touching stage (analysis task, drift test creation, refactoring, merge proposer), the agent auto-loads `superRA:econ-data-analysis` and `superRA:script-to-notebook`. You only need a `Skills:` line if a task requires something unusual (e.g., a domain-specific helper skill).
 
+Every template opens with the canonical prefix "Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, ...". The prefix tells the agent that its standard Before-You-Start + stage-reference-auto-load (per `agents/implementer.md` / `agents/reviewer.md`) is in effect; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. The dispatch prompt never repeats the standard protocol, never paraphrases PLAN.md content, and never restates checklist items the agent already reads.
+
 **Implementer (analysis task):**
 ```
 Agent(subagent_type: "superRA:implementer"):
   Stage: analysis task
   Task: Task N in PLAN.md
-  Work from: [worktree path or "current directory"]
-  Counterpart: reviewer  # Agent Teams only
+  Additionally: Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally,
+    <optional one-or-two-sentence steering — focus area, prior-round
+    adjudication, warning, anything non-default>.
 ```
 
 The agent reads PLAN.md, Data Inventory, Conventions, and prior results from RESULTS.md directly.
@@ -187,7 +191,9 @@ Agent(subagent_type: "superRA:reviewer"):
   Stage: data integrity
   Task: Task N in PLAN.md
   Git range: <BASE_SHA>..<HEAD_SHA>
-  Counterpart: implementer  # Agent Teams only
+  Additionally: Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally,
+    <optional steering>.
 ```
 
 **Implementation reviewer:**
@@ -196,10 +202,12 @@ Agent(subagent_type: "superRA:reviewer"):
   Stage: implementation
   Task: Task N in PLAN.md
   Git range: <BASE_SHA>..<HEAD_SHA>
-  Counterpart: implementer  # Agent Teams only
+  Additionally: Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally,
+    <optional steering>.
 ```
 
-If you need a non-default skill load, an extra domain reference, or an override of the standard handoff, add `Skills:` and `References:` lines as needed.
+If you need a non-default skill load, an extra domain reference, or an override of the standard handoff, add `Skills:` and `References:` lines as needed. In Agent Teams mode, teammate pairing is set at team-spawn time (see `superRA:agent-orchestration` team recipes) — not inside the per-task dispatch template.
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
 

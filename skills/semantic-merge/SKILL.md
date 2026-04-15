@@ -152,6 +152,9 @@ Conflicts exist but none touch research-relevant files.
      Incoming changes: <commit messages and diffs since merge base>
      Conflicting files: [list with classification]
      Current branch purpose: [one line]
+     Additionally: Follow the standard stage-relevant workflow and load
+       relevant skills and documents to proceed. Additionally,
+       <optional steering>.
    ```
 
 2. **Proposer executes** the two-commit merge per the merge-quality.md domain reference (Commit 1 mechanical, Commit 2 integration).
@@ -164,6 +167,9 @@ Conflicts exist but none touch research-relevant files.
      Domain reference: merge-quality.md
      Merge context: branches, merge base, tier
      Proposer's report: [integration map, decisions, rationale]
+     Additionally: Follow the standard stage-relevant workflow and load
+       relevant skills and documents to proceed. Additionally,
+       <optional steering>.
    ```
 
 4. **If REVISE:** adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:execution-workflow` (Handling Reviewer Feedback). Forward accepted issues to the merge-proposer; push back or override others with documented reasoning. Iterate until APPROVE.
@@ -194,6 +200,10 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
      Changes classified by research role: [list]
      Drift test results: [if available]
      Integration map with research-meaningful decisions flagged for user
+     Additionally: Follow the standard stage-relevant workflow and load
+       relevant skills and documents to proceed. Additionally, this is
+       a Tier 3 semantic merge — research-relevant files are in conflict
+       and integration decisions require user-facing flags.
    ```
 
 4. **Present integration map to user.** The proposer's report identifies conflicts and proposes resolutions. Present research-meaningful decisions:
