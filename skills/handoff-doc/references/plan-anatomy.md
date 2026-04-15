@@ -88,9 +88,9 @@ df = df.merge(chars, on=["fund_id", "date"], how="left")
 print(f"Rows: {n_before} → {len(df)} (delta: {len(df) - n_before})")
 ```
 
-- [ ] **Step 3: Doc — verify, update handoff docs, commit**
+- [ ] **Step 3: Validate — verify the result, document, commit**
 
-Verify row count unchanged, unmatched rate reasonable. Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Update RESULTS.md (key findings, figures in `results_attachments/`). Commit code + handoff docs in a single atomic commit.
+Validate: row count matches expectation, unmatched rate reasonable, distributions sensible, magnitudes economically plausible. Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Update RESULTS.md (key findings, figures in `results_attachments/`). Commit code + handoff docs in a single atomic commit.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] Step 2 uses inner join; should be left join to preserve all rows. (`Code/03.py:42`)

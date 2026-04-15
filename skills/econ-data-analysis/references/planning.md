@@ -141,4 +141,4 @@ The pipeline file must:
 
 ## Handoff to Implementation
 
-After the Data Inventory is approved, the sensitivity menu is agreed, and tasks are drafted, `planning-workflow` commits the plan and hands off to `execution-workflow`. The main `econ-data-analysis` SKILL.md body carries the cross-cutting discipline that applies at every implementation step (Iron Law, describe-analyze-doc, pitfalls, validation). Agents load the main body automatically at dispatch time.
+After the Data Inventory is approved, the sensitivity menu is agreed, and tasks are drafted, `planning-workflow` commits the plan and hands off to `execution-workflow`. The main `econ-data-analysis` SKILL.md body carries the cross-cutting discipline that applies at every implementation step (Iron Law, describe-analyze-validate, pitfalls, validation). Agents load the main body automatically at dispatch time.
