@@ -462,6 +462,14 @@ The agent reads `PLAN.md`, Data Inventory, Conventions, and prior results from `
 - Free-form `Note:` fields — fold task-specific notes into the `Additionally:` tail so all task-specific steering flows through one channel.
 - Re-statement of `PLAN.md` content, standard protocol, or Stage-table auto-loads — the agent reads those itself.
 
+## Dispatch-Return Deltas
+
+Dispatch prompts and status returns both carry a one-line what-changed delta so the receiving side doesn't have to diff the doc to know what moved.
+
+**Orchestrator → worker (in the dispatch prompt):** one line describing what changed in the task since the last touch. Example: "Task 3 updated — revised Step 2; adjudication note on review item 3 accepted."
+
+**Worker → orchestrator (in the status return):** a `**Doc edits:**` line describing what the worker changed in `PLAN.md` / `RESULTS.md` this round. The status return is a navigation aid, not a content dump — it summarizes and points at the doc for detail. Full format discipline lives in `agents/implementer.md` §Report Format and `agents/reviewer.md` §Report Format; this section is the cross-stage orchestration convention that keeps the two sides in sync.
+
 ## Handling Reviewer Feedback (Orchestrator Discipline)
 
 The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between a REVISE / CONDITIONAL APPROVE verdict and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.

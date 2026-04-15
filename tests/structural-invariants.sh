@@ -257,14 +257,15 @@ else
 fi
 
 # 14. Cross-stage orchestration content lives in agent-orchestration, not
-# execution-workflow. agent-orchestration/SKILL.md owns four top-level
-# sections (Dispatch Templates, Handling Reviewer Feedback, Review Status
-# Reference, Direct Mode); execution-workflow/SKILL.md does NOT carry
-# '## Dispatch Templates' as a heading (pointers to agent-orchestration
-# only).
+# execution-workflow. agent-orchestration/SKILL.md owns five top-level
+# sections (Dispatch Templates, Dispatch-Return Deltas, Handling Reviewer
+# Feedback, Review Status Reference, Direct Mode); execution-workflow/SKILL.md
+# does NOT carry '## Dispatch Templates' as a heading (pointers to
+# agent-orchestration only).
 ao_skill="skills/agent-orchestration/SKILL.md"
 ao_missing=0
 for h in '^## Dispatch Templates$' \
+         '^## Dispatch-Return Deltas$' \
          '^## Handling Reviewer Feedback' \
          '^## Review Status Reference$' \
          '^## Direct Mode$'; do
@@ -275,7 +276,7 @@ for h in '^## Dispatch Templates$' \
     ao_missing=$((ao_missing+1))
   fi
 done
-[ "$ao_missing" -eq 0 ] && pass "agent-orchestration SKILL.md owns the four cross-stage orchestration sections"
+[ "$ao_missing" -eq 0 ] && pass "agent-orchestration SKILL.md owns the five cross-stage orchestration sections"
 if grep -Eq '^## Dispatch Templates' "skills/execution-workflow/SKILL.md"; then
   fail "execution-workflow SKILL.md still carries '## Dispatch Templates' as a top-level heading (should be lifted to agent-orchestration)"
 else
