@@ -167,6 +167,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 4. **Once APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
 
 **In direct mode:** Steps 1–2 are done by the main agent directly (follow `superRA:agent-orchestration` §Direct Mode). Steps 3–4 are unchanged — still dispatch reviewer subagents.
+<!-- see the other note. direct mode should not be there.  -->
 
 #### Dispatch Templates
 

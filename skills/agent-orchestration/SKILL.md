@@ -2,7 +2,10 @@
 name: agent-orchestration
 description: Use when about to dispatch multiple agents and unsure whether to use parallel subagents or an Agent Team; when tasks are independent vs iterative and the right dispatch pattern is not obvious; when picking teammate composition for an analysis / integration / merge / semantic-merge job; when a previous session ended mid-workflow and team context needs to be rehydrated; when choosing lead + implementer + reviewer roles for a multi-step workflow. Triggers include "dispatch N agents", "run these in parallel", "use an Agent Team for this", "who should do the review", "spawn a team for the merge", a multi-step workflow that needs coordination across roles, or a session handoff where team state must survive. Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / VALIDATE / INTEGRATE).
 ---
-
+<!-- This file needs to be sigififnicant revsied; it violates the DRy principle significantly, and the layout is also messy. 
+We don't need to give rigit template. It's also highly self inconsistent: the new dispatch template vs the original dispatch exmamples. 
+There are two aspects of it. One is the technical aspect of Team and subagent patterns; another is the high level guidance on how to coordinate and act as a orchestrator. The latter should be the focus, and for the technical reference we should put it in the reference and ask agent to read whenever they use a team. 
+ -->
 # Agent Orchestration
 
 ## Overview
@@ -83,7 +86,7 @@ Each agent gets:
 - **Expected output:** Summary of what you found and fixed
 
 #### 3. Dispatch in Parallel
-
+<!-- why these instructions are still needed? aren't they in conflict with the dispatch template we gave later? -->
 ```typescript
 // All three run concurrently
 Task("Fix agent-tool-abort.test.ts failures")
@@ -188,6 +191,7 @@ execution-workflow (Analysis Team)
 3. Spawn Merge Team → main update + post-merge verification + refactor-review loop + merge or PR + worktree cleanup → clean up
 
 ### Team Recipes
+<!-- I feel the whole team repicpes are redundant; it's also too rigid; and it violates the DRY principle   -->
 
 #### Analysis Task Team
 
@@ -425,7 +429,7 @@ On session resume, this tells the new lead exactly where to pick up.
 
 Every workflow skill that dispatches an `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules.
 
-Every template opens with the canonical prefix **"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …"**. The prefix tells the agent that its standard Before-You-Start + stage-reference-auto-load (per `agents/implementer.md` / `agents/reviewer.md` Stage tables) is in effect; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. The dispatch prompt never repeats the standard protocol, never paraphrases `PLAN.md` content, and never restates checklist items the agent already reads.
+Every template opens with the canonical prefix **"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …"**. The prefix tells the agent that its standard Before-You-Start + stage-reference-auto-load (per `agents/implementer.md` / `agents/reviewer.md` Stage tables) is in effect; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or additional non-default skill/reference. The dispatch prompt does not repeat the standard protocol, never paraphrases `PLAN.md` content, and never restates checklist items the agent already reads.
 
 **Canonical shape — required fields first, `Additionally:` anchor last:**
 
@@ -519,6 +523,7 @@ Implementer and reviewer agents own their commits and document updates — see `
 
 **A task is complete only when its status is `APPROVED`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
 
+<!-- THis should not be in this file. Probably introduce the two modes in using-superRA workflow, and briefly mention it in each workflow?; -->
 ## Direct Mode
 
 When the orchestrator executes a step itself — no subagent dispatch — it plays the implementer or reviewer role in-session. The discipline is the same; only the dispatch envelope is gone.
