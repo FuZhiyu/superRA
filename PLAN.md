@@ -210,7 +210,7 @@ See `RELEASE-NOTES.md` Unreleased entry for the full narrative.
 
 ## Task 12: Structural invariants + RELEASE-NOTES finalization
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Objective:** Consolidate new blocks #14–#19; renumber tail blocks if needed. Rewrite/append RELEASE-NOTES.md Unreleased entry to cover the Round 2 pieces. Push to PR #1.
 
