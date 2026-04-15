@@ -51,3 +51,37 @@ Total of 14 `[GATING]` markers in the file.
 **Structural-invariants run.** 27 PASS, 2 known WARN (pre-existing upstream refs in writing-skills), 0 FAIL.
 
 **Out of scope (tracked for follow-on tasks 3–6).** `execution-workflow` one-pass review rewrite, agent-file Stage tables + dispatch-prompt contract + CONDITIONAL APPROVE verdict extension, companion-workflow light audit, and final invariants+release-notes consolidation. All depend on Task 2 APPROVE.
+
+## Task 3: Rewrite `execution-workflow/SKILL.md` for Domain Agnosticism
+
+**Outcome.** `skills/execution-workflow/SKILL.md` now speaks in domain-neutral terms and delegates domain-specific verification to the active domain skill's §Review & Self-Check Discipline. The two-stage review (data integrity → implementation correctness) collapses into **one comprehensive review pass** per task whose verdict is `APPROVE` / `REVISE` / `CONDITIONAL APPROVE`, matching the verdict protocol established in Task 2's `econ-data-analysis/SKILL.md §Review & Self-Check Discipline`.
+
+**Stage renames (D-Stage-1).** Implementer dispatch: `Stage: analysis task` → `Stage: implementation`. Reviewer dispatch: the former `Stage: data integrity` + `Stage: implementation` collapse into a single `Stage: implementation review`. The two former reviewer templates become one reviewer template.
+
+**Key rewrites:**
+
+- **Intro + Core principle + announce line** dropped "two-stage review (data integrity then implementation correctness)" in favor of "one comprehensive review pass per task. The reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom and returns APPROVE / REVISE / CONDITIONAL APPROVE." The description-line trigger list swaps `REVISE (...)` for `REVISE / CONDITIONAL APPROVE`.
+- **Process flowchart** replaces the two-node data-integrity → implementation dispatch chain with a single "Dispatch reviewer (implementation review)" node whose three verdict branches are explicit: APPROVE (proceed), REVISE (fix items, re-dispatch), CONDITIONAL APPROVE (fix gating, narrow re-review that verifies the gating fix + cited downstream items still hold, loop until APPROVE).
+- **Per-task execution steps (Step 2)** collapsed from five sub-steps (with separate data-integrity and implementation reviewer phases) to four: dispatch implementer → handle NEEDS_CONTEXT / BLOCKED → dispatch reviewer (one pass, three verdicts inlined with adjudication guidance) → handle APPROVE. The CONDITIONAL APPROVE branch explicitly calls out the narrow re-review as default with documented flexibility for a wider re-review via optional `Additionally:` steering when the gating fix casts doubt on downstream items.
+- **Dispatch templates** — three templates → two templates (implementer, reviewer). Hardcoded "For every analysis-touching stage … auto-loads `superRA:econ-data-analysis` and `superRA:script-to-notebook`" preamble removed — agent Stage tables per Task 4 handle stage-based auto-load. A sentence follows the reviewer template describing the CONDITIONAL APPROVE narrow-re-review steering pattern.
+- **Step 3 (Verify Pipeline and Reproducibility)** rewritten as a five-check orchestrator skeleton: (1) all code committed, (2) PLAN.md current, (3) RESULTS.md current, (4) **domain completion verification** — "walk the active domain skill's §Completion verification `[GATING]` items. For data analysis, this is `econ-data-analysis/SKILL.md §Review & Self-Check Discipline §Completion verification` — pipeline runs end-to-end if the plan declares one, outputs from committed code, and any other domain-specific gating items. The domain skill owns the exact list; this workflow just routes you to it," (5) deferred MINORs resolved. Hardcoded data-analysis pipeline / outputs assumptions from the previous Steps 2–3 gone.
+- **Step 4 completion menu** — the question prompt "Analysis complete and reproducible" → "Work complete and verified." The heading banner and option body are otherwise unchanged. The user's hand-edited Option 1/2 collapsed narrative (Options 1 and 2 both invoke `superRA:integration-workflow`) preserved.
+- **Review Status table** collapses `REVISE (data integrity)` + `REVISE (implementation)` into a single `REVISE` row; adds a new `CONDITIONAL APPROVE` row with the orchestrator-action text pointing at gating-item adjudication + implementer re-dispatch + reviewer narrow re-review.
+- **`## Sensitivity Analysis Tasks`** section deleted entirely — content lives in `econ-data-analysis/SKILL.md §Validate §Sensitivity analysis` and `references/data-robustness-checklist.md`.
+- **`## Model Selection`** replaced with one paragraph: "Use the least capable model that handles the task; reviewers use the most capable available model. Domain-specific complexity examples live in the domain skill, not here."
+- **Red Flags** scrubbed of "data integrity" / "implementation review" references; rewritten for the one-pass flow with explicit REVISE / CONDITIONAL APPROVE handling at the bottom. New red flag: "Proceed with unfixed `[GATING]` items (a CONDITIONAL APPROVE task is not complete until the narrow re-review promotes it to APPROVED)."
+- **Agent Types section** shortened to two rows — implementer and reviewer — pointing at the agent file Stage tables for stage-scoped auto-loaded references instead of hardcoding `superRA:econ-data-analysis` / `superRA:script-to-notebook`.
+- **Integration table** line replaced: `superRA:econ-data-analysis — REQUIRED: Data discipline all agents must follow` → `the active domain skill (for data analysis: superRA:econ-data-analysis) — REQUIRED: domain discipline all agents follow, auto-loaded at dispatch-time per agents/implementer.md / agents/reviewer.md Stage tables. Carries the §Review & Self-Check Discipline that the reviewer walks on every pass.`
+
+**Preserved user edits.** The "If you need a non-default skill load, an extra domain reference, or an override of the standard handoff, add `Skills:` and `References:` lines as needed" sentence is intact. The Step 4 Option 1/2 collapsed narrative (both options dispatch `superRA:integration-workflow`) is intact.
+
+**Structural-invariants additions.** New block #12 in `tests/structural-invariants.sh` with three assertions for execution-workflow domain-agnosticism: (a) two-stage-review phrasing absent (`data integrity|two-stage review|REVISE \(data integrity\)|REVISE \(implementation\)`); (b) `## Sensitivity Analysis Tasks` heading absent; (c) `CONDITIONAL APPROVE` verdict present. Old block #12 (README Why-superRA? lead) renumbered to #13.
+
+**Files touched:**
+
+- `skills/execution-workflow/SKILL.md` — full rewrite per above.
+- `tests/structural-invariants.sh` — new assertion block #12; old #12 renumbered to #13.
+
+**Structural-invariants run.** 29 PASS, 2 known WARN (pre-existing upstream refs in writing-skills), 0 FAIL.
+
+**Out of scope (tracked for follow-on tasks 4–6).** Agent-file Stage tables that remove the need for dispatch-template preamble (Task 4), companion-workflow audit (Task 5), and final invariants + release-notes consolidation (Task 6). All depend on Task 3 APPROVE.
