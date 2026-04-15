@@ -1,6 +1,6 @@
 # Integration Discipline for Data Analysis
 
-> This reference is for data-analysis integration discipline at the `refactoring` and `integration review` stages. The implementer walks it as pre-handoff self-check; the reviewer walks it as verification criteria. Same content, two perspectives — no drift possible. `[GATING]` items block unconditional APPROVE; `[STANDARD]` items become REVISE findings; `[ADVISORY]` items are suggestions the reviewer MAY flag as MINOR. The verdict protocol is the same as `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline (APPROVE / REVISE / CONDITIONAL APPROVE).
+> This reference is the single source of truth for data-analysis integration discipline at the `refactoring` and `integration review` stages. The implementer walks it as pre-handoff self-check; the reviewer walks it as verification criteria. Same content, two perspectives — no drift possible. `[GATING]` items block unconditional APPROVE; `[STANDARD]` items become REVISE findings; `[ADVISORY]` items are suggestions the reviewer MAY flag as MINOR. The verdict protocol is the same as `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline (APPROVE / REVISE / CONDITIONAL APPROVE).
 
 Generic cross-cutting code-integration concerns (naming consistency, utility reuse, PR-friendly diffs, documentation currency) live in `refactor-and-integrate/references/codebase-integration.md`. Load both files at the `refactoring` and `integration review` stages — this one owns the data-analysis-specific gates; the generic file owns the cross-cutting code-quality gates.
 
@@ -11,7 +11,8 @@ Generic cross-cutting code-integration concerns (naming consistency, utility reu
 - `[GATING]` **Transformation-pattern consistency.** Winsorization thresholds, outlier treatment, sample filters, and control variables align with established codebase patterns — or the deviation is documented with reason.
 - `[STANDARD]` **Variable naming consistency.** Names match existing conventions for the same economic concept (e.g., if the codebase uses `ret_vw` for value-weighted returns, new code does not introduce `vw_return`).
 - `[STANDARD]` **Sample construction preserved** unless the researcher has authorized a change. Sample filters, exclusions, and the panel scope used in the new analysis match prior usage in the codebase, or the deviation is documented.
-<!-- add a document-code consistency. If the analysis results feed into the papers/slides or any other long-standing notes, we need to reconcile any inconsistency here as well -->
+- `[STANDARD]` **Document-code consistency.** If the analysis results feed into papers, slides, notes, or long-standing downstream artifacts in the repo (or in the researcher's named location), reconcile numerical and methodological inconsistencies between the refactored code and those artifacts. If reconciliation is out of scope for this refactor, flag unreconciled inconsistencies in `RESULTS.md` §Limitations.
+
 ## Data discipline preserved through refactoring
 
 **Refactored code must be re-validated, not just carried forward.** Refactoring can silently change data flow, merge order, floating-point accumulation, or sample composition — the same safeguards that the original code needed, the refactored code needs again.

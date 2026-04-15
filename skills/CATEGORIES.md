@@ -37,7 +37,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 
 | Skill | What it provides |
 |---|---|
-| `handoff-doc` | Document-level discipline for `PLAN.md` / `RESULTS.md` — the six principles, inline-edit rule, stale-content checklist, task-block anatomy. Single source of truth for doc structure. |
+| `handoff-doc` | Document-level discipline for `PLAN.md` / `RESULTS.md` — the four principles, inline-edit rule, stale-content checklist, task-block anatomy. Single source of truth for doc structure. |
 | `script-to-notebook` | Cell organization, markdown narrative, rendering for analysis scripts. Python (jupytext) and Julia (QuartoNotebookRunner). |
 | `refactor-and-integrate` | Drift-test quality, codebase integration, and merge quality checklists. Loaded by integration-phase agents. |
 | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. Progressive-reveal references by stage. |

@@ -31,7 +31,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Workflow | `merge-workflow` | INTEGRATE (merge): update with main, verify, local merge or PR. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, red flags. |
-| Utility | `handoff-doc` | Document-level discipline for PLAN.md / RESULTS.md — six principles, inline-edit rule, task-block anatomy. |
+| Utility | `handoff-doc` | Document-level discipline for PLAN.md / RESULTS.md — four principles, inline-edit rule, task-block anatomy. |
 | Utility | `script-to-notebook` | Cell organization, markdown narrative, rendering for analysis scripts (Python/Julia). |
 | Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
