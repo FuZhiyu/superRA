@@ -24,7 +24,13 @@ approach.
 3. **Load any additional skills** specified in your dispatch prompt.
 4. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:integration-workflow`) and (b) a domain reference file by basename (e.g., `codebase-integration.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your task-specific quality standard alongside the loaded skill.
 5. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3"). Read the full task block plus any project-wide context sections at the top of the document (Data Inventory, Conventions, Prior Results). The dispatch prompt also carries a one-line "what changed since last dispatch" delta — use it to focus your attention, but always read the authoritative content from `PLAN.md` itself. Do not work from a paraphrased task description.
-6. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, or dependencies on prior steps. Raise concerns before starting work.
+6. **Read the project's guidance docs.** The harness gives you the repo-root `CLAUDE.md` automatically, but **not** nested module-level guidance that superRA deliberately places near code (see `integration-workflow` Step 3 sub-part B). Before editing any file:
+   - Re-read the repo-root `CLAUDE.md` / `AGENTS.md` (short) to anchor the project-wide conventions in this session's context.
+   - For every directory you will touch, walk up from that directory to the repo root and `Read` every `CLAUDE.md`, `AGENTS.md`, and `README.md` you encounter along the way. The nearest doc carries module-specific conventions (naming, utilities to reuse, data locations, test conventions); parent-level docs carry broader rules. These are load-bearing for "fit the codebase" and cannot be skipped because the harness did not surface them.
+   - Also read the `README.md` in any data directory you will load from (`Data/README.md`, `data/README.md`), which often documents data provenance and caveats.
+
+   Do not dump these docs into your status report — they are context for your work, not output. If a doc contradicts the dispatch prompt or the task spec, raise the conflict before starting (step 7 below).
+7. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, repo conventions, or dependencies on prior steps. Raise concerns before starting work.
 
 ## Execution Protocol
 
