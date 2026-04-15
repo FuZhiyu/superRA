@@ -47,7 +47,6 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next task without a check-in. Stop only for: (a) a hard blocker the RA cannot resolve, (b) a decision beyond the RA's authority (methodology, scope, research-intent calls), or (c) a user-defined milestone baked into the workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it.
 
-**RA framing (cross-cutting):** The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. Challenges to methodology are escalated, never decided unilaterally.
 
 ## Domain Verticals
 
@@ -91,20 +90,6 @@ find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/nul
 
 **If in a worktree with no plan file:**
 - Note: "You're in worktree `<path>` on branch `<branch>`. Continue working here?"
-
-## How to Access Skills
-
-**In Claude Code:** Use the `Skill` tool. When you invoke a skill, its content is loaded and presented to you—follow it directly. Never use the Read tool on skill files.
-
-**In Copilot CLI:** Use the `skill` tool. Skills are auto-discovered from installed plugins.
-
-**In Gemini CLI:** Skills activate via the `activate_skill` tool.
-
-**In other environments:** Check your platform's documentation for how skills are loaded.
-
-## Platform Adaptation
-
-Skills use Claude Code tool names. Non-CC platforms: see `references/copilot-tools.md` (Copilot CLI), `references/codex-tools.md` (Codex) for tool equivalents. Gemini CLI users get the tool mapping loaded automatically via GEMINI.md.
 
 # Using Skills
 
