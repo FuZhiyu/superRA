@@ -55,11 +55,12 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 | `implementation` | `handoff-doc`; active domain skill (for data analysis: `econ-data-analysis` + `script-to-notebook`) | domain §Review & Self-Check Discipline |
 | `refactoring` | `handoff-doc` + `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
 | `drift-test` | `handoff-doc` + `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
+| `integration-review` | `handoff-doc` + `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
 | `merge` | `handoff-doc` + `refactor-and-integrate` + `semantic-merge`; domain skill | `merge-quality.md` |
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
-**Fallback rule.** If the dispatch prompt carries an unknown `Stage:`, default to the `implementation` row's loads and flag the unknown Stage in your status return so the orchestrator can correct it.
+**Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess. The manifest is the single source of truth for Stage→{skills, references}.
 
 ## Execution Modes
 
