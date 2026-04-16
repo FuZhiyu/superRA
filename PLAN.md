@@ -418,7 +418,7 @@ Result: SKILL.md ~210 lines. Reviewer load ~210. Implementer load ~210 + ~200 (`
 ---
 
 ### Task 15: Remove deprecated commands
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `commands/execute-plan.md`, `commands/write-plan.md`, `commands/brainstorm.md`, `using-superRA` (skill inventory references), `README.md`
 **Input:** Three stub commands point at `superpowers:*` skills that are not part of this plugin. If the user doesn't have `obra/superpowers` installed, the commands silently fail.
