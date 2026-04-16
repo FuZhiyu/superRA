@@ -170,3 +170,12 @@ The PLAN's Step 2 mentioned "Remove the 'Deprecated — use superpowers:* instea
 
 ### Key Findings
 *(to be populated)*
+
+---
+
+## Task 17: Document agent-reuse vs fresh-dispatch heuristic in agent-orchestration
+
+**Status:** *(not started)*
+
+### Key Findings
+*(to be populated)*

@@ -44,6 +44,10 @@ Other tasks have no manifest dependency and may run in any order after Task 6.
 > **Question asked:** How to handle 3 files with uncommitted modifications (version bumps in plugin.json/marketplace.json, deletion of EXTREMELY-IMPORTANT/Red Flags/Skill Types sections in using-superRA/SKILL.md) that are unrelated to Tasks 1–16.
 > **Rationale:** *(none given — user chose to preserve the prior intentional work as an atomic pre-plan commit)*
 
+> **User decision (2026-04-16):** Add Task 17 to the refactor — document the agent-reuse vs fresh-dispatch heuristic in `agent-orchestration` SKILL.md.
+> **Question asked:** *(researcher-initiated, not agent-prompted — raised after observing orchestrator behavior during parallel dispatch of Task 1 + Task 15.)*
+> **Rationale:** Each fresh dispatch reloads skills + PLAN.md + module-level guidance; for small sequential follow-ups the context-reload cost outweighs the benefit. The heuristic should be written into the skill so future orchestrators apply it automatically. Reviewer role is a named exception (always fresh — adversarial by design).
+
 ---
 
 ### Task 1: Consolidate Stage names + remove dispatch re-statements
@@ -460,6 +464,29 @@ Result: SKILL.md ~210 lines. Reviewer load ~210. Implementer load ~210 + ~200 (`
 - [ ] **Step 5: Run `superRA:writing-skills` triggering checks** for every skill whose description was modified across the refactor (at minimum: `worktree-data-sync` after Task 14, `econ-data-analysis` if its description was touched in Task 3, and `using-superRA` if Task 1 / Task 6 modified its description). Confirm each still triggers on its intended cues and doesn't trigger on cues meant for sibling skills.
 
 - [ ] **Step 6: Validate.** Final grep sweep for the strings: `script-to-notebook`, `using-analysis-worktrees`, `execute-plan`, `write-plan`, `brainstorm`, `Stage: implementation review`, `Stage: drift test creation`, `Stage: integration review`, `Stage: merge proposer`, `sub-part B`, `recipe`. None should appear in skill bodies (only in PLAN.md / CHANGELOG history, which is fine). Atomic commit.
+
+---
+
+### Task 17: Document agent-reuse vs fresh-dispatch heuristic in agent-orchestration
+**Review status:** *(not started)*
+
+**Files affected:** `skills/agent-orchestration/SKILL.md`, `skills/execution-workflow/SKILL.md` (one-line cross-reference).
+**Input:** Current `agent-orchestration` Decision Framework section (the parallel-dispatch / Agent Teams / orchestrator-relay table) and its §Integration section. Current `execution-workflow` Per-Task Execution Steps + §Dispatch Templates pointer.
+**Output:** `agent-orchestration` SKILL.md carries explicit orchestrator guidance on when to reuse a warm agent via `SendMessage` versus when to spawn a fresh dispatch. `execution-workflow` carries a one-line pointer at that guidance. The heuristic prevents reflexive fresh-dispatch of small follow-up tasks while preserving the adversarial-review property of the implementer–reviewer pair.
+
+- [ ] **Step 1: Draft the new subsection in `agent-orchestration` SKILL.md.** Place it immediately after the Decision Framework section (so the two sit together as the orchestrator's dispatch-choice toolkit). Suggested section title: **"Agent reuse vs fresh dispatch."** Cover:
+  - **Context-reload cost framing.** Each fresh dispatch pays to reload `superRA:using-superRA`, the active domain skill (where applicable), `superRA:handoff-doc`, and the module-level `CLAUDE.md` / `AGENTS.md` / `README.md` walk-up for every directory the task touches. For small follow-ups in the same context, that cost is disproportionate.
+  - **Criteria favoring reuse (via `SendMessage` to the warm agent's name/id).** Small scope, same domain context, non-overlapping file set, sequential task where the next task benefits from what the agent already knows. Good example: a grep-sweep follow-up after a prior grep-sweep task.
+  - **Criteria favoring fresh dispatch.** Large new task, different domain vertical, meaningful file-set overlap with in-flight work, task requires a perspective the warm agent cannot provide (see reviewer exception below).
+  - **Bundling as a third option.** For several tiny tasks that share context up front, a single implementer dispatch can carry a multi-task brief — list each task pointer in `Task:` and spell out the sequence and boundaries in `Additionally:`.
+  - **Reviewer-always-fresh rule (named exception).** Reviewers are adversarial by design (see §Reviewer–Orchestrator Dynamic in `using-superRA` and CLAUDE.md Workflow principle #1). Review passes always spawn a fresh reviewer agent; never send a review task to the implementer that just produced the work. Make this a hard rule in the new subsection, not a soft preference.
+  - **`SendMessage` mechanic pointer.** One sentence: the `to:` field takes the agent's id (or name, for teammates); the recipient resumes with its full session context and the new message is queued for it. No code example needed — the tool description carries the details.
+
+- [ ] **Step 2: Add the `execution-workflow` cross-reference.** In `execution-workflow` §Per-Task Execution Steps (near step 1 of the per-task loop, which is where the reuse decision actually fires), add a one-line pointer: "See `agent-orchestration` §Agent reuse vs fresh dispatch for when to reuse a warm implementer via `SendMessage` versus spawning a fresh dispatch." Do not duplicate the heuristic's content.
+
+- [ ] **Step 3: Validate.** Re-read `agent-orchestration` end-to-end — the new subsection should sit naturally between the Decision Framework and the Dispatch Templates section; no duplication with the existing parallel/teams/relay table. Re-read `execution-workflow` to confirm the pointer lands cleanly without stepping on adjacent prose. Atomic commit.
+
+**Dependency note:** Task 17 may run at any time after Task 1 lands (Task 1 touches `agent-orchestration`-adjacent files but not `agent-orchestration/SKILL.md` itself; still, running Task 17 after Task 1 avoids any chance of interaction). Task 16's final consistency pass must include Task 17's touched files in its end-to-end re-read.
 
 ---
 
