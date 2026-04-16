@@ -18,7 +18,7 @@ Econ results are fragile. A coefficient can drift because floating-point sums re
 
 The Iron Law protects the analysis from unknown data during implementation. Drift tests protect the finalized analysis from unknown transformations (refactors, merges, future edits) after implementation is complete. They are the integration-phase analogue.
 
-Drift tests are not a substitute for the two-stage review or the describe-analyze-validate discipline. They are a safety net that guards the specific numbers the researcher has chosen as the headline results.
+Drift tests are not a substitute for the one-pass review or the describe-analyze-validate discipline. They are a safety net that guards the specific numbers the researcher has chosen as the headline results.
 
 ---
 

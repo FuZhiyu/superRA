@@ -179,7 +179,7 @@ Your report is a **navigation aid**. The authoritative review content lives in t
 
 **Headline findings:** [1-3 bullets naming the most important issues or strengths; full list is in PLAN.md review-notes blockquote for Task N]
 
-**Doc edits (what changed since previous dispatch):** [e.g., "PLAN.md — Task 3: set Review status: REVISE (implementation), wrote blockquote with 2 MAJOR + 1 MINOR items." Or on re-review: "PLAN.md — Task 3: deleted review items 1 and 2 after verifying fixes, rewrote item 3 to reflect remaining bug." RESULTS.md — untouched or "Task 3: replaced reliability caveat." Say "none" for ad-hoc stage.]
+**Doc edits (what changed since previous dispatch):** [e.g., "PLAN.md — Task 3: set Review status: REVISE, wrote blockquote with 2 MAJOR + 1 MINOR items." Or on re-review: "PLAN.md — Task 3: deleted review items 1 and 2 after verifying fixes, rewrote item 3 to reflect remaining bug." RESULTS.md — untouched or "Task 3: replaced reliability caveat." Say "none" for ad-hoc stage.]
 ```
 
 If the orchestrator wants the full issue list, severities, and file:line citations, they read the blockquote in PLAN.md directly.
@@ -187,7 +187,7 @@ If the orchestrator wants the full issue list, severities, and file:line citatio
 End with:
 
 ---
-ACTION REQUIRED (REVISE only): Fix the above issues, then re-dispatch this reviewer. Iterate until APPROVE.
+ACTION REQUIRED (REVISE or CONDITIONAL APPROVE): Fix the above issues, then re-dispatch this reviewer. Iterate until APPROVE.
 
 ## If Running as Agent Team Teammate
 
