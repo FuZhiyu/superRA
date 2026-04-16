@@ -194,7 +194,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 6: Centralize agent-shared discipline in `using-superRA` (absorb handoff-doc essentials)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/using-superRA/SKILL.md`, `skills/using-superRA/references/main-agent-autonomy.md` (new), `skills/using-superRA/references/session-bootstrap.md`, `skills/handoff-doc/SKILL.md` (trimmed from 118 lines to 30), `agents/implementer.md`, `agents/reviewer.md`, `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/CATEGORIES.md`, `README.md`
 **Input:** Today, agents load BOTH `using-superRA` (for principles) AND `handoff-doc` (for doc discipline). Workflow skills restate the four principles inline. Autonomy / stop-points / banned-phrasings live only in `execution-workflow`. Result: implementer/reviewer dispatch loads ~120 lines of `handoff-doc` they could read once at the design-contract level.
