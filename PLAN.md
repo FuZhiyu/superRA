@@ -173,7 +173,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 5: Cache project conventions in PLAN.md header
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/handoff-doc/references/plan-anatomy.md`, `skills/planning-workflow/SKILL.md`, `skills/planning-workflow/references/plan-template.md`, `skills/execution-workflow/SKILL.md`, `agents/implementer.md`, `agents/reviewer.md`
 **Input:** Current "Before You Start" walk-up step in `agents/implementer.md` step 6 and `agents/reviewer.md` step 6; `execution-workflow` Step 1.3.
