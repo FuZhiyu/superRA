@@ -144,7 +144,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 4: Move `script-to-notebook` into `econ-data-analysis` as a reference
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/script-to-notebook/SKILL.md` (delete), `skills/script-to-notebook/references/*.md` (move), `skills/econ-data-analysis/references/notebook-format.md` (new), `skills/econ-data-analysis/references/jupytext-guide.md` (move), `skills/econ-data-analysis/references/julia-quarto-guide.md` (move), `skills/econ-data-analysis/SKILL.md`, `skills/using-superRA/SKILL.md`, `skills/CATEGORIES.md`, `README.md`, `agents/reviewer.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/planning-workflow/SKILL.md`, `skills/execution-workflow/SKILL.md`
 **Input:** Current `script-to-notebook` skill + its two references.
