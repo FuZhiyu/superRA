@@ -18,6 +18,9 @@
 
 ## Decisions
 
+> **User decision (2026-04-15):** Delete both RESULTS.md and PLAN.md at merge. RELEASE-NOTES.md is the permanent record; git history preserves both files on the branch.
+> **Question asked:** What should happen to RESULTS.md and PLAN.md for Step 3 doc disposition?
+
 > **User decision (2026-04-15, Round 3 post-push):** chose Option 2 (merge via PR) at `execution-workflow` Step 4. Retroactive invocation — the first three rounds pushed directly to PR #1 without running `integration-workflow` or `merge-workflow`; we now run `integration-workflow` before the actual main merge, to catch drift that the push-direct pattern skipped. Also accepted: broaden `refactor-and-integrate/references/codebase-integration.md` §Documentation Currency generically (any structural/organizational claim, not just output lists) as a Stage 2 refactor item if the integration reviewer surfaces it.
 
 > **User decision (2026-04-15, Round 1):** one comprehensive review pass per task; `APPROVE` / `REVISE` / `CONDITIONAL APPROVE` verdict protocol. Reviewer walks the full checklist even on gating failure; CONDITIONAL re-review is narrow (verify gating fix + downstream still holds).
