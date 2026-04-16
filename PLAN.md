@@ -52,6 +52,10 @@ Other tasks have no manifest dependency and may run in any order after Task 6.
 > **Question asked:** Why do we need Task 16? It duplicates what integration-workflow Stage 2 already covers.
 > **Rationale:** Task 16's six steps (inventory sync, principle consistency, end-to-end re-read, CHANGELOG/RELEASE-NOTES update, triggering checks, grep sweep) all map onto integration-workflow Stage 2's refactor + integration review + project-doc-audit that Task 9 just relocated there. Executing Task 16 in the IMPLEMENT phase would perform the work twice.
 
+> **User decision (2026-04-16):** Run integration-workflow only — do not proceed to merge-workflow afterward.
+> **Question asked:** Merge locally vs open a PR (standard execution-workflow Step 4 4-option menu)?
+> **Rationale:** Researcher chose a third path — run the integration-prep (drift tests skipped for plugin-dev, refactor + integration review, doc finalization) but stop before merge. Merge decision deferred.
+
 ---
 
 ### Task 1: Consolidate Stage names + remove dispatch re-statements
