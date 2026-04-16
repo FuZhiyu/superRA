@@ -259,17 +259,17 @@ Result: SKILL.md ~210 lines. Reviewer load ~210. Implementer load ~210 + ~200 (`
 ---
 
 ### Task 8: Step 0b — explicit handoff to `planning-workflow` (no inline degradation)
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Files affected:** `skills/execution-workflow/SKILL.md`, `skills/planning-workflow/SKILL.md`
 **Input:** `execution-workflow` Step 0b (lines 122–141) — currently inlines "load planning-workflow + handoff-doc, create or finish-editing PLAN.md/RESULTS.md, satisfy domain-specific planning gate."
 **Output:** When PLAN.md/RESULTS.md are missing or dirty, execution-workflow halts and explicitly invokes `planning-workflow` (which then runs its full Phase 1 / Phase 2 / Self-Review). No inline planning-workflow degradation.
 
-- [ ] **Step 1: Rewrite Step 0b.** Replace the "Before any task dispatch: load planning-workflow and handoff-doc, create or finish-editing PLAN.md…" paragraph with: "If the check fails, halt execution-workflow and invoke `superRA:planning-workflow` to bootstrap the docs. Do not inline planning-workflow content here. Resume execution-workflow at Step 1 after planning-workflow completes (its own self-review and execution-handoff will return control here)."
+- [x] **Step 1: Rewrite Step 0b.** Replaced the old "Before any task dispatch: load planning-workflow and handoff-doc, create or finish-editing PLAN.md…" paragraph with the halt-and-invoke instruction: "If the check fails, halt execution-workflow and invoke `superRA:planning-workflow` to bootstrap the docs. Do not inline planning-workflow content here — the docs are created through planning-workflow's full Phase 1 / Phase 2 / Self-Review (with any applicable domain-specific planning gate satisfied there, not here). Resume execution-workflow at Step 1 after planning-workflow completes; its own self-review and execution-handoff will return control here." Also updated the adjacent Step 0 cross-reference from "Task 0 cannot silently land on main / master" to "planning-workflow's bootstrap commits cannot silently land on main / master," so the surrounding paragraph stays consistent with the no-inline-degradation framing (no stray "Task 0" references left).
 
-- [ ] **Step 2: Update `planning-workflow` overview** to add: "May be invoked from `execution-workflow` Step 0b when an existing branch lacks committed PLAN.md/RESULTS.md. The bootstrap path is identical to a fresh start — no shortcut."
+- [x] **Step 2: Update `planning-workflow` overview** with the invoked-from-execution note: "May be invoked from `execution-workflow` Step 0b when an existing branch lacks committed `PLAN.md` / `RESULTS.md` (or carries uncommitted edits to them). The bootstrap path is identical to a fresh start — run the full Phase 1 / Phase 2 / Self-Review, satisfy any domain-specific planning gate, commit the docs, and hand control back. No shortcut." Placed as a second paragraph after the existing overview opening so it reads as context for readers who arrived through the execution-workflow halt.
 
-- [ ] **Step 3: Validate.** Re-read both skills end-to-end. Re-read the `Step 0b` flow: a missing PLAN should result in a clean planning-workflow handoff, not a Task-0 inline edit. Atomic commit.
+- [x] **Step 3: Validate.** Re-read `execution-workflow` Step 0b end-to-end: the check paragraph remains; the failure paragraph is now an explicit invocation of `planning-workflow`, no Task-0 framing, no inline "satisfy the domain-specific planning gate" wording. Re-read `planning-workflow` Overview: the new paragraph sits between the "Owns procedural shape" sentence and the "domain-agnostic" paragraph, reads as a legitimate entry point. `grep "Task 0\b" skills/execution-workflow/SKILL.md` returns zero matches. Atomic commit staged: `task 8: explicit planning-workflow handoff from execution Step 0b`.
 
 ---
 
