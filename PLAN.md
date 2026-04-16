@@ -373,7 +373,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 14: Consolidate worktree skills (drop `using-analysis-worktrees`)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/using-analysis-worktrees/SKILL.md` (deleted), `skills/worktree-data-sync/SKILL.md` (broadened), `skills/planning-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/agent-orchestration/references/agent-teams.md`, `skills/using-superRA/SKILL.md`, `skills/CATEGORIES.md`, `README.md`
 **Input:** `using-analysis-worktrees` was mostly judgment ("when to use") + git mechanics (every harness knows). The data-sync content was genuinely valuable; cleanup was duplicated in `merge-workflow` and `execution-workflow`.
