@@ -46,11 +46,11 @@ Skills compose by category. **Workflow skills** own sequencing — they decide w
 
 ## Skill-Load Manifest
 
-For each Stage, load the listed skills and references. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Role differentiation shows up explicitly only in the `documentation` row.
+For each Stage, load the listed skills and references. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Role differentiation shows up explicitly on the `implementation` and `documentation` rows where the implementer and reviewer load different references.
 
 | `Stage:` | Required skills | Stage-scoped references |
 |---|---|---|
-| `implementation` | `handoff-doc`; active domain skill (for data analysis: `econ-data-analysis`) | domain §Review & Self-Check Discipline; for data analysis also `econ-data-analysis/references/notebook-format.md` |
+| `implementation` | `handoff-doc`; active domain skill (for data analysis: `econ-data-analysis`) | domain §Review & Self-Check Discipline. For data analysis: **implementer** additionally loads `econ-data-analysis/references/disciplines.md` + `references/notebook-format.md`; **reviewer** loads SKILL.md only (its §Review & Self-Check Discipline is self-sufficient for verification; §Pitfalls is in SKILL.md — if the dispatcher wants a specific Pitfalls subsection highlighted for review, it names it in `Additionally:`). |
 | `refactoring` | `handoff-doc` + `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
 | `drift-test` | `handoff-doc` + `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
 | `integration-review` | `handoff-doc` + `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
