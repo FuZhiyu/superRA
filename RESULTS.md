@@ -310,19 +310,81 @@ Each in-between state is git-coherent (nothing half-staged; file-system and inde
 
 ## Task 11: Skip post-merge integration review on Tier 1 clean merges
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**Skip condition is narrow:** Tier 1 AND no analysis-path changes in the incoming diff. Any single violation (Tier 2, Tier 3, or Tier 1 with analysis-path changes) defaults to running both 2a and 2b. Rationale: drift tests alone cover both failure modes (results change + convention drift on your code) ONLY when main's diff did not touch files your analysis imports or executes; every other case leaves a hole that the integration reviewer must close.
+
+**Load-bearing data flow:**
+- `semantic-merge` (delegated) returns `Tier classification` + `Incoming impact` as named fields.
+- `merge-workflow` Step 2.0 reads those fields and gates 2b.
+- If skipped, 2c attaches an audit trailer to the merge commit (Option 1) or the PR body (Option 2).
+
+**Files changed and what's new:**
+
+`skills/semantic-merge/SKILL.md`:
+- §What to Report now has two subsections (Standalone / Delegated). Delegated mode names the required return fields verbatim — tier, incoming-impact, integration+user decisions (short), drift tests / pipeline / verification stamped `deferred to caller`. The tier and incoming-impact are flagged load-bearing.
+
+`skills/merge-workflow/SKILL.md`:
+- Step 1 rewritten to invoke semantic-merge in delegated mode with the exact task string (`"merge <base> into <analysis> — delegated mode: skip post-merge drift tests and pipeline run; the caller will verify"`), with a follow-on paragraph naming the two load-bearing return fields.
+- Step 2 introduces sub-step 2.0 (read tier + impact, decide skip) ahead of 2a. 2b re-worded with "Skip this sub-step only if 2.0 said so." 2c is a new sub-step documenting the skip in the merge commit / PR body.
+- §Why Both Drift Tests AND Integration Review Post-Merge renamed to "— and when one is redundant"; new paragraph names the provable-redundancy condition and its proof (no surface for convention drift on your code when the incoming diff didn't reach your paths).
+- Process diagram adds a "Step 2b skippable?" diamond with edges to 2b dispatch or 2c skip-documentation.
+- Red Flags rewritten: "Never push without running BOTH signals" is now "Never push without running 2a" + "Never skip 2b outside the 2.0 condition"; "Always run both" becomes explicit about 2a always / 2b unless skipped / document per 2c when skipped.
+- Step 4 Option 1 block gets a trailer-append instruction; Option 2 PR body template offers the skip-wording alternative for the Integration review line.
+
+### Validation
+
+- **Skip path** (Tier 1 + no analysis-path changes): 1 → 2.0 → 2a → 2c (document skip) → 4 (merge with trailer) → 5. Fewer dispatches than the default.
+- **Default path** (Tier 2, Tier 3, or Tier 1 with analysis-path changes): 1 → 2.0 → 2a → 2b → 4 → 5. Behavior unchanged from pre-Task-11.
+- **Failure path** (2a fails OR 2b returns REVISE): falls into Step 3 refactor-review loop — unchanged.
 
 ---
 
 ## Task 12: Clarify `semantic-merge` standalone vs delegated
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**Before:** §Invocation Pattern said "the mechanics are the same, but the caller and the return contract differ." Post-merge verification (drift tests, pipeline run, stale-reference check) ran inside every Tier in both modes, duplicating work that `merge-workflow` Step 2 then re-ran.
+
+**After:** Two explicit modes. Standalone owns all post-merge verification; delegated runs tier classification + conflict resolution only, returning tier + incoming-impact for the caller to decide next steps.
+
+**Mode-aware verification table** (new in §Invocation Pattern):
+
+| Step | Standalone | Delegated |
+|---|---|---|
+| Tier classification | yes | yes |
+| Conflict resolution | yes | yes |
+| Drift tests on merged state | yes | skip (caller runs) |
+| Pipeline run | yes | skip (caller runs) |
+| Stale-reference check | yes | skip (caller's review) |
+| Return tier + incoming-impact | n/a | yes |
+
+**Tier gating:** each of the three Tiers' post-merge steps is annotated `[standalone-only]` and followed by an explicit "Delegated: skip — the caller runs …" sentence that names the caller's step:
+- Tier 1 steps 2-5 (drift tests, pipeline, done/escalate) → caller's merge-workflow Step 2a.
+- Tier 2 step 5 (run drift tests) → caller's Step 2a.
+- Tier 3 steps 8-9 (drift tests / meaningful-drift handling, pipeline verification) → caller's Step 2a + Step 4.
+
+**Working Principles** now mode-aware: "In standalone mode, always run drift tests and verify pipeline … In delegated mode, you do NOT run drift tests — `merge-workflow` Step 2a does, against the same discipline — 'skipping' here means handing responsibility to the caller, not dropping it."
+
+**Red Flags §Always** split by mode: standalone gets "run drift tests and verify pipeline on the merged result"; delegated gets "return tier + incoming-impact per §What to Report — delegated mode; the caller runs drift tests + pipeline." The old unqualified "Run drift tests after every merge" and "Verify pipeline runs on the merged result" are gone.
+
+### Validation
+
+Re-read `semantic-merge` end-to-end in both modes:
+- **Standalone Tier 1:** merge → drift tests → pipeline → done.
+- **Standalone Tier 2:** propose → review → drift tests → done.
+- **Standalone Tier 3:** propose → present → merge → review → drift tests → pipeline → done.
+- **Delegated Tier 1:** merge → return tier+impact.
+- **Delegated Tier 2:** propose → review → return tier+impact.
+- **Delegated Tier 3:** propose → present → merge → review → return tier+impact.
+
+Standalone behavior preserved verbatim; delegated mode elides three checks that the caller re-runs.
+
+Re-read `merge-workflow` Step 1: invocation uses delegated-mode task string; return contract read at Step 2.0. No duplicate verification across the boundary — Step 2a runs the drift tests; Step 4 runs the pipeline; semantic-merge runs neither in delegated mode.
 
 ---
 
