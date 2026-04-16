@@ -91,8 +91,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
 | Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
-| Utility | `using-analysis-worktrees` | Isolated git worktrees with data seeding. |
-| Utility | `worktree-data-sync` | Sync non-git data between worktrees. |
+| Utility | `worktree-data-sync` | Isolated git worktrees, non-git data sync between them, and cleanup ritual. |
 | Meta | `using-superRA` | This skill — the master skill every agent reads. |
 | Meta | `writing-skills` | Create or modify skills using test-driven methodology. |
 
