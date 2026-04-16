@@ -112,10 +112,36 @@ During implementation, the coordinator reported that a prior reviewer agent acci
 
 ## Task 6: Centralize agent-shared discipline in `using-superRA`
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**`using-superRA` is now the agent-runtime design home.** A new `## Handoff Doc Discipline` section sits directly after §Universal Principles and absorbs the everyday-editing essentials from handoff-doc: the four document principles, the inline-edit rule, the 5-bullet stale-content checklist, the User Decisions Log format (including the `ask-user-question-logger` hook reminder), the `## Project Conventions` pointer, the figure-embedding pointer, and a `§When You Need the Full Anatomy` subsection pointing at `handoff-doc/references/plan-anatomy.md` and `results-anatomy.md` for doc-creators. Every subagent loads `using-superRA` via frontmatter; the editing rules are now always available without loading a second skill.
+
+**`handoff-doc` is now a doc-creation skill, 30 lines long.** Shrank from 118 lines. What remains: frontmatter rewritten to point at `using-superRA` §Handoff Doc Discipline for everyday rules; body carries only (a) the two-stage RESULTS.md lifecycle paragraph, (b) §References listing plan-anatomy.md / results-anatomy.md and what each template contains, (c) §How This Skill Is Used describing the three call sites (standalone authors, `planning-workflow` Phase 2, Stage 2 doc-writer in `integration-workflow` Step 3). The top-line rerouting paragraph explicitly states that "every agent already loads `using-superRA`, so the everyday editing rules are always available without loading this one."
+
+**Main-agent-autonomy contract extracted into a reference.** New file `using-superRA/references/main-agent-autonomy.md` generalizes what used to live in `execution-workflow` §Autonomy and Stop Points so the contract applies at every workflow phase (planning, execution, integration, merge, semantic-merge), not just execution. Carries §The Three Pause Classes (hard blocker / decision-beyond-authority / user-defined milestone), §Proceed Without Asking, §Banned Phrasings ("Should I proceed?" etc.), §One Question at a Time, §Log Before You Act. Top-of-file blockquote: "Loaded by the main agent at session start. Subagents inherit autonomy from their dispatch boundary; they do not load this file." The session-bootstrap reference was updated with a new final section `## After Bootstrap: Load the Autonomy Contract` hooking the load into the main agent's session-start sequence.
+
+**Manifest refactored around a new column-header rule.** Added a bold note above the Stage table: "The 'Required skills' column lists what loads *in addition to* `superRA:using-superRA` — the master skill every agent already loads at dispatch time." Dropped `handoff-doc` from five rows (`implementation`, `refactoring`, `drift-test`, `integration-review`, `merge`); kept it on `documentation` and `planning-review` where agents create or mature docs from scratch. Added a closing paragraph below the table confirming the new rule and pointing at §Handoff Doc Discipline for everyday editing.
+
+**Agent files drop the handoff-doc dependency for typical work.** `agents/implementer.md` and `agents/reviewer.md` step 1 rewrote to direct agents at `using-superRA` §Handoff Doc Discipline for the rules and to explicitly state "Load `superRA:handoff-doc` **only** if your task is creating a new `PLAN.md` / `RESULTS.md` from scratch or maturing Stage 1 RESULTS.md into Stage 2 — both rare for [implementer|reviewer] work." The implementer's §Handoff — Unified Across Stages pointer at `superRA:handoff-doc` was also updated to `superRA:using-superRA` §Handoff Doc Discipline.
+
+**Workflow skills carry no principle restatements.** `execution-workflow` §Autonomy and Stop Points shrank from ~23 lines to 8 — the autonomy contract body moved into `main-agent-autonomy.md`; what's left is a 3-bullet list of execution-workflow-specific stop points (Step 4 completion menu / hard blockers from domain signals / methodology-authority boundary decisions) plugged into the autonomy contract's three pause classes. `semantic-merge` and `integration-workflow` pointers at `CLAUDE.md workflow principle #4` (invisible at runtime — CLAUDE.md is contributor-only) were rewritten to `superRA:using-superRA` §Universal Principles (principle #4) + `references/main-agent-autonomy.md` for the full contract. All 11 instances of `per handoff-doc §User Decisions Log` across `execution-workflow`, `integration-workflow`, `merge-workflow`, `semantic-merge`, `agent-orchestration`, `refactor-and-integrate/references/drift-test-quality.md`, and `refactor-and-integrate/references/merge-quality.md` were swept to the new canonical home `per using-superRA §Handoff Doc Discipline §User Decisions Log`. (Task 7 follows up with further collapse of duplicate prose around these pointers — Task 6 just updated the pointer target.)
+
+**Inventory tables reflect the new handoff-doc scoping.** `using-superRA §Skill Inventory`, `skills/CATEGORIES.md` Utility table, and `README.md` Utility table all rewrote the `handoff-doc` row description to reflect the doc-creation scoping and to name the call sites (`planning-workflow` Phase 2, `integration-workflow` Step 3 doc-writer). Each row points at `using-superRA` §Handoff Doc Discipline as the home for everyday editing rules.
+
+### Validation
+
+End-to-end grep checks:
+- `handoff-doc. §User Decisions Log` across `skills/` — zero matches.
+- `CLAUDE.md workflow principle #4` across `skills/` and `agents/` — zero matches (the pointer moved to `using-superRA` §Universal Principles).
+- `Should I proceed|Want me to continue|Ready for the next task` — matches only in `main-agent-autonomy.md` (where they're banned) and in `session-bootstrap.md`'s sample question phrasing (intentional — the bootstrap prompt asks the user explicitly).
+
+End-to-end re-reads:
+- `using-superRA/SKILL.md` flows as the central design contract: Universal Principles → Handoff Doc Discipline → Skill Inventory → Composable Design → Skill-Load Manifest → Execution Modes → When to Invoke Which Skill → Semantic Merge → Agent Teams → Reviewer–Orchestrator Dynamic → User Instructions → Instruction Priority.
+- `handoff-doc/SKILL.md` reads as a doc-creation skill — the lede reroutes everyday rules to using-superRA; the body is only the two-stage lifecycle, the anatomy references, and the three call sites.
+- `agents/implementer.md` / `agents/reviewer.md` step 1 both point at `using-superRA` §Handoff Doc Discipline and explicitly name when `superRA:handoff-doc` should still be loaded (doc creation from scratch / Stage 2 maturation — both rare).
+- The manifest's column-header rule makes the new scoping explicit; the `implementation` / `refactoring` / `drift-test` / `integration-review` / `merge` rows no longer list `handoff-doc`.
 
 ---
 

@@ -39,7 +39,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 
 | Skill | What it provides |
 |---|---|
-| `handoff-doc` | Document-level discipline for `PLAN.md` / `RESULTS.md` — the four principles, inline-edit rule, stale-content checklist, task-block anatomy. Single source of truth for doc structure. |
+| `handoff-doc` | Doc-creation skill — the full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded by `planning-workflow` Phase 2 (new plans) and the `integration-workflow` Step 3 doc-writer (Stage 2 maturation). Everyday editing rules (four principles, inline-edit, stale-content, User Decisions Log, figure embedding) live in `using-superRA` §Handoff Doc Discipline. |
 | `refactor-and-integrate` | Drift-test quality, codebase integration, and merge quality checklists. Loaded by integration-phase agents. |
 | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. Progressive-reveal references by stage. |
 | `semantic-merge` | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions. |

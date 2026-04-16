@@ -1,118 +1,30 @@
 ---
 name: handoff-doc
-description: Use when creating, reading, or editing PLAN.md, RESULTS.md, or any other task-block-structured handoff document. Defines the four discipline principles, the inline-edit rule, the stale-content checklist, and the figure embedding rule. Points at references/ for full document anatomy, and at `report-in-markdown` for the Stage 2 consolidation that matures RESULTS.md into its permanent form. Load whenever you are about to read or edit a handoff doc.
+description: Doc-creation skill — use when authoring a PLAN.md or RESULTS.md from scratch (`planning-workflow` Phase 2) or maturing Stage 1 RESULTS.md into the Stage 2 permanent record (`integration-workflow` Step 3 doc-writer). Carries the full document-anatomy templates in `references/plan-anatomy.md` and `references/results-anatomy.md`. For everyday implementer / reviewer handoff-doc editing (the four principles, inline-edit rule, stale-content checklist, User Decisions Log, figure embedding pointer), see `superRA:using-superRA` §Handoff Doc Discipline — that is always in effect via the master skill and does not require loading this one.
 ---
 
-# Handoff Doc Discipline
+# Handoff Doc Creation
 
-Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs) are the persistent state of a project. Multiple agents and sessions read and write them. This skill defines the discipline — what these docs are, how they are structured at a glance, and the universal editing rules.
+Cross-cutting agent-runtime essentials for editing `PLAN.md` / `RESULTS.md` — the four principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure embedding pointer, `## Project Conventions` pointer — live in `superRA:using-superRA` §Handoff Doc Discipline. Every agent already loads that skill, so the everyday editing rules are always available without loading this one.
 
-`RESULTS.md` has a **two-stage lifecycle**: a Stage 1 dev log in the worktree root during IMPLEMENT (task-indexed, agent-facing, "latest state only"), maturing into a Stage 2 permanent record at the analysis's code folder during INTEGRATE (reader-facing, fact-checked, frontmatter, figures materialized). Stage 1 discipline is defined here; Stage 2 consolidation discipline lives in `skills/report-in-markdown/references/final-form.md` and is invoked by `integration-workflow` Step 3.
+This skill is for doc *creation*: invoked by `planning-workflow` Phase 2 to author a new `PLAN.md` / `RESULTS.md` from scratch, and by the Stage 2 doc-writer in `integration-workflow` Step 3 to mature the Stage 1 `RESULTS.md` into its permanent form. Both callers need the full document anatomy — section layouts, code-block examples, status-line formats, transition-to-Stage-2 mechanics — which live in the references below.
 
-**This skill has progressive reveal.** Load the references below when you need deeper material:
+## The Two-Stage RESULTS.md Lifecycle
 
-- `references/plan-anatomy.md` — the full `PLAN.md` template (header + task blocks + code-block examples + review-notes blockquote format)
-- `references/results-anatomy.md` — the full Stage 1 `RESULTS.md` template (header + per-task sections + figure embedding pointers + transition-to-Stage-2 note)
+`RESULTS.md` has two stages:
 
-**Subagent-specific execution protocol** — including the full review-loop mechanics (who writes what in the review-notes blockquote, who may delete items, the `→ implemented:` and `→ orchestrator:` annotation protocols, and the `**Doc edits:**` status-line format) — lives in `agents/implementer.md` and `agents/reviewer.md`. Each agent file carries its own view of the loop. This skill does not duplicate that; it only specifies the document-level discipline all roles (including a standalone user with no subagents) must follow.
+- **Stage 1** — a dev log in the worktree root during IMPLEMENT. Task-indexed, agent-facing, "latest state only." Created by `planning-workflow` Phase 2 alongside `PLAN.md`; updated inline by the implementer per task per `using-superRA` §Handoff Doc Discipline.
+- **Stage 2** — a permanent record at the analysis's code folder, materialized during INTEGRATE. Reader-facing, fact-checked, carries frontmatter, figures materialized into `${RESULTS_DIR}/attachments/`. Consolidation discipline lives in `skills/report-in-markdown/references/final-form.md` and is invoked by `integration-workflow` Step 3 sub-part A.
 
-## The Four Principles
+## References
 
-1. **Latest state only, no history.** Handoff docs reflect the current intended implementation and current findings. They are not changelogs. Git owns history. No "Previously...", no strikethroughs, no "Update:" blocks, no stacked review rounds.
+- `references/plan-anatomy.md` — the full `PLAN.md` template: header (objective, methodology, data inventory, conventions, output, pipeline, `## Project Conventions`, `## Decisions`), task-block structure (objective / files affected / input / output / steps / review status / review-notes blockquote), code-block examples, status-line formats.
+- `references/results-anatomy.md` — the full Stage 1 `RESULTS.md` template: header, per-task sections (status, key findings, figures, notes), figure-embedding conventions, transition-to-Stage-2 pointer.
 
-2. **Live and committed.** Every edit is an inline replacement, committed with the work it belongs to. Stale steps, stale review notes, and superseded discovery notes are **removed**, not struck through. The doc at any point reads as a single coherent current-state description.
-
-3. **Task-block structure.** `PLAN.md` consists of a header (project-wide context) and a sequence of task blocks. Each task block has a fixed anatomy: objective / script / I/O / steps / review status. Stage 1 `RESULTS.md` mirrors the task structure (one section per task). See `references/plan-anatomy.md` and `references/results-anatomy.md` for the full templates.
-
-4. **The doc is the record. Status reports are pointers, not substitutes.** Any material finding, result, methodology change, caveat, or decision MUST be written into `PLAN.md` or `RESULTS.md` *before* it is communicated in a status report or chat message. If a result only exists in a chat reply, it does not exist — it will be lost at the next session boundary, cache eviction, or context compaction. The authoritative record is the committed doc; the report only points at it.
-
-   **Rule of thumb:** before you type a finding into a status report, ask "is this written in `PLAN.md` or `RESULTS.md` yet?" If not, write it in the doc first and commit, then point at it in the report.
-
-## At-a-Glance Structure
-
-A `PLAN.md` in flight looks like:
-
-```markdown
-# [Analysis Name] Plan
-
-[header: objective, methodology, data inventory, conventions, output, pipeline]
-
----
-
-### Task 1: [Phase Name]
-**Review status:** APPROVED
-- [x] Step 1: ...
-- [x] Step 2: ...
-
-### Task 2: [Phase Name]
-**Review status:** REVISE
-- [x] Step 1: ...
-- [ ] Step 2: ...
-
-> **Review notes:**
-> 1. [MAJOR] ... (file:line)
->    → implemented: ... (file:line)
-
-### Task 3: [Phase Name]
-**Review status:** *(not started)*
-- [ ] Step 1: ...
-```
-
-A Stage 1 `RESULTS.md` mirrors the task structure, one section per task, with findings and embedded figures.
-
-See the reference templates for the full skeleton.
-
-## Inline-Edit Rule
-
-Every edit replaces stale content in place. Never append, never strike through, never use "Update:" / "Revised:" / "Previously..." framing. If you find yourself writing a sentence that references a prior version of the doc, stop — that sentence belongs in the git commit message, not the doc.
-
-## User Decisions Log
-
-Any time the agent stops to consult the researcher — via `AskUserQuestion` or plain-text question — and the researcher gives an answer that shapes the analysis, the answer MUST be written into the handoff doc **before** the agent acts on it, and committed atomically with the work it unblocks. This is the "autonomous with human in the loop" principle in practice (see `CLAUDE.md` §Workflow principles #4): the decision is not resolved until it is in the record. A decision that only lives in chat will be lost at the next session boundary, and the next agent will re-open the same question — or worse, make a different call silently.
-
-**Where it lands:**
-
-- **Task-scoped decision** (affects one task's scope, methodology, or implementation) → appended as a blockquote inside that task block, directly under `**Review status:**`. Uses the same blockquote syntax as review notes, so it sits naturally beside the adjudication protocol defined in `agents/implementer.md` / `agents/reviewer.md`.
-- **Cross-task or project-level decision** (affects methodology across tasks, sample definition, output scope, the 4-option merge menu at execution-workflow Step 4, drift-test selection at integration-workflow Step 1) → a top-level `## Decisions` section in `PLAN.md` immediately after the header and before the first task block. Append new decisions to the bottom of that section; do not rewrite prior decisions.
-
-**Format (both locations):**
-
-```markdown
-> **User decision (2026-04-11):** Use CRSP value-weighted returns, not equal-weighted.
-> **Question asked:** Which market return definition for the benchmark?
-> **Rationale (if given):** Matches prior paper; easier reviewer comparison.
-```
-
-Three lines, blockquote, dated. The `Question asked` line is the agent's own restatement of what it asked — short enough to read at a glance, specific enough that a fresh agent sees why the decision was needed. The `Rationale` line is optional and appears only if the researcher gave one; do not invent rationale.
-
-**Not covered by this section:**
-
-- Adjudication of reviewer feedback inside the review-notes blockquote — that is the `→ orchestrator: ...` / `→ implemented: ...` protocol owned by `agents/implementer.md` and `agents/reviewer.md`. User decisions are a separate, upstream thing: the researcher answering a question the agent could not decide, not the orchestrator overriding a reviewer.
-- Ephemeral clarifications the agent could have resolved from the code ("which file holds X?") — those are not decisions, they do not belong in the log.
-
-If you are not sure whether an answer counts as a decision worth logging: if acting on it would change the code, data, or methodology in a way another agent could not reconstruct from the code alone, log it.
-
-## What Counts as Stale (remove, don't keep)
-
-- Steps describing an approach that was abandoned after seeing the data — rewrite them to describe what was actually done.
-- Discovery notes that are now incorporated into the current steps.
-- Review items that have been confirmed fixed on re-review (the reviewer deletes them).
-- "Previously we tried X" / "Update:" / "Revised:" framing — delete the old text and write the new.
-- Upcoming task descriptions that assume an earlier approach which has since changed.
-
-## Figure Embedding
-
-Figures in Stage 1 `RESULTS.md` and any other handoff doc are embedded with markdown image syntax pointing at a committed PNG in `results_attachments/` at project root:
-
-```markdown
-![Descriptive caption](results_attachments/fig_name.png)
-```
-
-The full figure-embedding discipline — PDF→PNG conversion, caption requirements, file reference conventions, math/table handling — lives in `skills/report-in-markdown/references/rich-content.md`. Load that reference when you are writing a handoff-doc task section that contains a figure, a table, or LaTeX math. Pass `results_attachments/` as the target attachments directory when invoking `report-in-markdown`.
-
-The Stage 2 consolidation that matures `RESULTS.md` into its permanent form — fact-check, restructure, figure materialization, relocation — is invoked from `integration-workflow` Step 3 and defined in `skills/report-in-markdown/references/final-form.md`. This skill does not duplicate that discipline.
+Load the reference that matches the doc you are creating or maturing. The two anatomy files are independent — load `plan-anatomy.md` when authoring a plan, `results-anatomy.md` when setting up Stage 1 or editing Stage 2.
 
 ## How This Skill Is Used
 
-- **Standalone use:** a single author creating or maintaining handoff docs without subagents — read the four principles, the anatomy references, and the inline-edit rule. The role split collapses; the author plays all roles.
-- **Multi-agent workflows:** `planning-workflow` delegates handoff-doc discipline here from its Living Plan section rather than duplicating the rules. The implementer and reviewer subagents (`agents/implementer.md`, `agents/reviewer.md`) load this skill alongside their role-specific review-loop protocol. The other workflow skills (`execution-workflow`, `integration-workflow`, `merge-workflow`) inherit the discipline indirectly through the subagents they dispatch; they do not need to reference `handoff-doc` directly.
+- **Standalone use.** A single author creating handoff docs without subagents — read the anatomy reference for the doc you are creating; the cross-cutting rules in `using-superRA` §Handoff Doc Discipline apply as usual.
+- **`planning-workflow` Phase 2.** The planner loads this skill (for the templates) plus `using-superRA` (which every agent already has) for the principles. Drafts `PLAN.md` and a Stage 1 `RESULTS.md` skeleton.
+- **`integration-workflow` Step 3 doc-writer.** The Stage 2 doc-writer loads this skill (for `results-anatomy.md`) plus `report-in-markdown/references/final-form.md` for the materialization + relocation discipline. Produces the permanent `RESULTS.md` in `${RESULTS_DIR}/`.

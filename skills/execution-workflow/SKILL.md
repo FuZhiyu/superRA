@@ -217,7 +217,7 @@ Work complete and verified. What would you like to do?
 4. Discard this work
 ```
 
-The researcher's answer is a user decision — the `ask-user-question-logger` PostToolUse hook will remind you to log it. Append it to the top-level `## Decisions` section in `PLAN.md` (one line: `> **User decision (YYYY-MM-DD):** chose Option N (<name>) at execution-workflow Step 4.`) before executing the choice, and include the PLAN.md edit in the first commit of whatever workflow the option dispatches to. See `handoff-doc` §User Decisions Log for the format.
+The researcher's answer is a user decision — the `ask-user-question-logger` PostToolUse hook will remind you to log it. Append it to the top-level `## Decisions` section in `PLAN.md` (one line: `> **User decision (YYYY-MM-DD):** chose Option N (<name>) at execution-workflow Step 4.`) before executing the choice, and include the PLAN.md edit in the first commit of whatever workflow the option dispatches to. See `using-superRA` §Handoff Doc Discipline §User Decisions Log for the format.
 
 **Execute the user's choice:**
 
@@ -244,7 +244,7 @@ These are the things the orchestrator does that no subagent does:
 - **Task sequencing and dispatch.** Read PLAN.md, decide what to dispatch next.
 - **Adjudicate reviewer feedback in place** in the PLAN.md review-notes blockquote before re-dispatching the implementer (see Handling Reviewer Feedback above). Append `→ orchestrator: rejected <reason>` annotations to items you are rejecting, `→ orchestrator: <second opinion requested> <reason>` to items you are flagging for the reviewer, and rewrite task steps in place for items you are accepting. **Do not clear the blockquote.** The implementer appends `→ implemented: ...` annotations on their pass; the reviewer deletes confirmed-fixed items on re-review. See `agents/implementer.md` §"How You Fix Review Items on a REVISE Round" and `agents/reviewer.md` §"How You Write a Review" for the full annotation mechanics. Commit the annotated PLAN.md.
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text, don't annotate it. Commit.
-- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck: BLOCKED, methodology disagreement, CRITICAL issue you want to override, repeated reviewer disagreement. Log the answer in `PLAN.md` (task-scoped blockquote or `## Decisions` section per `handoff-doc` §User Decisions Log) **before** acting on it, and commit the doc edit atomically with whatever the decision unblocks. Do not resume work until the decision is in the doc.
+- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck: BLOCKED, methodology disagreement, CRITICAL issue you want to override, repeated reviewer disagreement. Log the answer in `PLAN.md` (task-scoped blockquote or `## Decisions` section per `using-superRA` §Handoff Doc Discipline §User Decisions Log) **before** acting on it, and commit the doc edit atomically with whatever the decision unblocks. Do not resume work until the decision is in the doc.
 
 **Review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Review & Self-Check Discipline). Codebase integration review is deferred to integration-workflow (dispatched by this skill at Step 4 when the user chooses merge or PR).
 
@@ -268,27 +268,13 @@ Use the least capable model that handles the task; reviewers use the most capabl
 
 ## Autonomy and Stop Points
 
-This workflow is **autonomous by default** — see CLAUDE.md workflow principle #4. The orchestrator drives task-to-task sequencing on its own power. It does not ask permission to continue, does not re-confirm an approved plan, does not solicit reassurance between steps, and does not check in after each `APPROVED` task to ask "ready for the next one?". The only question the researcher should see between stop points is a question they have to answer.
+The autonomy contract (proceed-without-asking patterns, stop-and-ask classes, banned phrasings) is in `superRA:using-superRA/references/main-agent-autonomy.md` — main-agent only. Read it at session start; it applies to every workflow phase, not just execution. This section lists only the **execution-workflow-specific stop points** — the legitimate pauses baked into this workflow that plug into the autonomy contract's three pause classes.
 
-### Proceed without asking
+- **Step 4 completion menu.** The 4-option menu (merge now / continue another task / sensitivity task / discard) is a user-defined workflow milestone. Stop and `AskUserQuestion` (plain text if unavailable); log the answer per `superRA:using-superRA` §Handoff Doc Discipline §User Decisions Log before executing the chosen option.
+- **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
+- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. Pause class (2) in the autonomy contract.
 
-- Task just moved to `APPROVED` → immediately dispatch the implementer for the next not-started task (or the next `REVISE` / `CONDITIONAL APPROVE` task you have already adjudicated).
-- Reviewer feedback already adjudicated in the review-notes blockquote → re-dispatch the implementer; do not ask the researcher to confirm the adjudication.
-- Pipeline verification at Step 3 passed → move to Step 4 without narrating "ready to show you the completion options?".
-- Minor implementation choices that are fully inside the task's scope (variable naming, plot formatting, diagnostic printouts) → decide and proceed; commit with the work.
-- Every step of the `Process` flowchart above that has no diamond labelled "ask user".
-
-### Stop and ask via `AskUserQuestion` (plain text if unavailable)
-
-Stop for exactly three classes of pause, all of which require logging the answer via `handoff-doc` §User Decisions Log **before** acting on it:
-
-1. **Hard blocker the RA cannot resolve.** Unexpected input-quality issues surface during initial description, a transformation produces an unexpected scope change (e.g., row count shift on a merge), validation fails against domain expectation, plan has critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required input unavailable.
-2. **Decision beyond the RA's authority.** Methodology disagreement with a reviewer, CRITICAL severity issue you want to override, repeated reviewer disagreement across re-dispatches, validation failure of unclear domain significance, scope or definition call with no obvious right answer, scope change that would affect tasks not yet reached.
-3. **User-defined workflow milestone.** The 4-option completion menu at Step 4 above. These are baked into the workflow and the stop is intentional — not a check-in.
-
-**Banned phrasings** when nothing has changed since the last approved state: "Should I proceed?", "Want me to continue?", "Ready for the next task?", "Does this look right before I move on?", "Shall I move to Step N?". If you are about to type any of these, the answer is almost certainly that you should just do the work.
-
-**Ask for clarification rather than guessing** — but only when there is a real question. Fabricating a question to create a check-in violates this principle.
+Every stop above requires logging the researcher's answer per `superRA:using-superRA` §Handoff Doc Discipline §User Decisions Log **before** acting on it.
 
 ## Agent Loads
 
