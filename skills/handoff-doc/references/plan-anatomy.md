@@ -47,6 +47,36 @@ The header is the project's standing context, written at planning time and updat
 
 **Header ownership:** Only the orchestrator (or standalone author) edits the header. Subagents read it but do not modify it. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
 
+## Project Conventions
+
+Sits between the header's closing `---` and the first task block (or, if a `## Decisions` section is present, directly above it). Populated by the orchestrator at `planning-workflow` Phase 3 and refreshed at `execution-workflow` Step 1 when new upstream docs are discovered. Subagents read this section instead of re-walking the project's `CLAUDE.md` / `AGENTS.md` / `README.md` tree on every dispatch; if something they need is missing, they walk on-demand and flag the omission in their status return so the orchestrator can update the section.
+
+```markdown
+## Project Conventions
+
+Walked at planning time (YYYY-MM-DD). Re-walk on-demand only.
+
+### Repo root
+- `/CLAUDE.md` (HEAD at <SHA>): [one-paragraph summary of the top-level conventions — package manager, directory layout rules, test conventions, branching model, etc.]
+- `/AGENTS.md`: symlink to `/CLAUDE.md`.
+- `/README.md` (HEAD at <SHA>): [one-paragraph summary of project purpose + pointers].
+
+### Module-level docs walked
+- `Code/pipeline/CLAUDE.md` (HEAD at <SHA>): [one-paragraph summary of pipeline-specific conventions — naming, output format, logging].
+- `Data/README.md` (HEAD at <SHA>): [provenance, caveats, known quality issues for the data in this directory].
+- `tests/README.md` (HEAD at <SHA>): [test-naming rules, helpers to reuse, drift-test location].
+
+### Not walked (not reachable from the planned diff)
+- `docs/archive/`, `sandbox/`, `Notebooks/exploratory/` — out of scope for this plan.
+```
+
+**Discipline:**
+
+- **Populated by the orchestrator.** Subagents do not edit this section. If a subagent needs a convention the section does not carry, it walks on-demand, uses the result, and reports the omission so the orchestrator can add it.
+- **Entry format: one paragraph per doc.** Not an excerpt — a summary. The subagent dispatches re-read the actual doc only if they need specifics; the summary is for fast triage.
+- **Stamp the walk date.** A convention that was true two months ago may not be true today. The walk date tells the next orchestrator whether to re-walk.
+- **List the NOT-walked paths too.** An empty section is ambiguous (orchestrator forgot? or nothing reachable?). Explicitly naming the out-of-scope directories removes the ambiguity.
+
 ## Task Block Anatomy
 
 ````markdown
