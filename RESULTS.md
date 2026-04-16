@@ -250,10 +250,40 @@ End-to-end re-reads:
 
 ## Task 10: Subdivide RESULTS.md maturation into ordered commits
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**`final-form.md` §The consolidation pass — four ordered commits** replaces the old 6-item bullet list with four subsections, one per commit. Each subsection has:
+- Scope ("what changes in this commit"),
+- `git add` + `git commit -m "<exact message>"` block,
+- Pre-commit validation gate naming what to verify *before* that commit lands.
+
+Commit messages (load-bearing — the dispatch reuses them verbatim):
+1. `results: fact-check Stage 2 RESULTS.md`
+2. `results: restructure Stage 2 RESULTS.md to reader-facing`
+3. `results: materialize figures into ${RESULTS_DIR}/attachments`
+4. `results: relocate RESULTS.md to ${RESULTS_DIR}`
+
+Validation gates per commit:
+- Commit 1: every cited number matches source, no prohibited language, no prohibited sections.
+- Commit 2: no `## Task N` headings remain, frontmatter present at top, output shape matches target.
+- Commit 3: every figure renders (paths resolve), every figure is PNG or project-mandated format, `results_attachments/` at root still exists (not deleted until after Commit 4 and the separate disposition pass).
+- Commit 4: `git log --follow` shows history back to Stage 1, file opens cleanly at new location, every embed path resolves against the new `attachments/` folder.
+
+**`integration-workflow` Step 3 sub-part A** dispatch prompt updated: doc-writer dispatch `Additionally:` now instructs the four-commit sequence + status-return listing. Sub-part A body rewritten as a commit-sequence summary (four bullets naming commit message + scope) + explicit "Do NOT bundle these into one commit." Added a Recovery-on-re-dispatch paragraph telling the orchestrator how to phrase the re-dispatch `Additionally:` line to resume at the first un-landed step (the doc-writer reads `git log --oneline` to locate the resume point).
+
+**`agents/implementer.md` §Report Format** gains a "Multi-commit stages" paragraph with a new `Sub-commits landed` field. Generic enough to cover any future multi-commit stage; the documentation Stage is cited as the current example. Single-commit dispatches omit the field.
+
+### Validation
+
+Walked each possible crash point end-to-end:
+- Crash after Commit 1 → worktree-root fact-checked dev log; re-dispatch resumes at 2.
+- Crash after Commit 2 → worktree-root restructured file still pointing at `results_attachments/...`; re-dispatch resumes at 3.
+- Crash after Commit 3 → worktree-root restructured file pointing at `attachments/...` AND materialized folder at `${RESULTS_ATTACHMENTS_DIR}`; re-dispatch just runs Commit 4.
+- Crash after Commit 4 → final state.
+
+Each in-between state is git-coherent (nothing half-staged; file-system and index agree). `final-form.md` and `integration-workflow` agree on commit messages and sequence.
 
 ---
 

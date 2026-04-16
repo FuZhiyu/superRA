@@ -254,31 +254,31 @@ Agent(subagent_type: "superRA:implementer"):
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally, this dispatch
-    matures RESULTS.md in place and relocates it to ${RESULTS_DIR} per
-    final-form.md.
+    matures RESULTS.md per `final-form.md` §The consolidation pass —
+    four ordered commits. Land each of the four commits separately (in
+    order: fact-check → restructure → materialize figures → relocate)
+    so a session interruption is recoverable. In your status return,
+    list which of the four sub-commits landed.
     <optional additional steering — e.g., project-specific doc conventions,
     prior-round doc-reviewer feedback on a re-dispatch>.
 ```
 
 The doc-writer is the only subagent in this step. It loads `superRA:report-in-markdown` full mode (SKILL.md + all three references) and performs sub-part A before returning control.
 
-#### Sub-part A: Mature RESULTS.md in place
+#### Sub-part A: Mature RESULTS.md in place — four ordered commits
 
-Drive from `final-form.md`. The pass typically does:
+Drive from `final-form.md` §The consolidation pass — four ordered commits. Each commit is independently recoverable; if the session crashes between commits, a fresh dispatch resumes from the next un-landed step (the prior commits are on the branch, the file is in a coherent in-between state).
 
-1. Restructure from task-indexed to reader-facing — by objective, data source, or result type. Task numbering disappears.
-2. Merge related findings split across tasks.
-3. Strip resolved reviewer caveats; surface unresolved limitations into a "Limitations" section.
-4. Add frontmatter per `baseline-io.md`. The file name stays `RESULTS.md` across stages — it is the identity of the artifact.
-5. Materialize figures from `results_attachments/` into `${RESULTS_ATTACHMENTS_DIR}` per `rich-content.md`. Update embed paths.
-6. Run the fact-check checklist from `final-form.md`. Open every cited file and confirm the claim matches. Strip speculation and subjective language. Remove prohibited sections (Recommendations, Conclusions, Implications) unless the researcher explicitly requested them.
-7. Relocate: `git mv RESULTS.md ${RESULTS_DIR}/RESULTS.md` and `git mv` (or copy + remove) the materialized attachments folder into place.
+Commit sequence (suggested messages match `final-form.md`):
 
-Commit sub-part A separately:
-```bash
-git add ${RESULTS_DIR}/RESULTS.md ${RESULTS_DIR}/attachments/
-git commit -m "mature RESULTS.md into permanent form at ${RESULTS_DIR}"
-```
+1. `results: fact-check Stage 2 RESULTS.md` — walk the fact-check checklist against the Stage 1 dev log at worktree root. No structural changes yet.
+2. `results: restructure Stage 2 RESULTS.md to reader-facing` — reorganize by objective/data/result, merge related findings, strip resolved caveats, add frontmatter. Task numbering disappears.
+3. `results: materialize figures into ${RESULTS_DIR}/attachments` — copy `results_attachments/*` into `${RESULTS_ATTACHMENTS_DIR}` (PDF→PNG per `rich-content.md`), update embed paths in `RESULTS.md`.
+4. `results: relocate RESULTS.md to ${RESULTS_DIR}` — `git mv RESULTS.md ${RESULTS_DIR}/RESULTS.md` so history follows the file. Attachments folder already lives at `${RESULTS_ATTACHMENTS_DIR}` after commit 3.
+
+Each commit has its own validation gate — see `final-form.md` for the per-commit checklist. Do NOT bundle these into one commit.
+
+**Recovery on re-dispatch.** If the orchestrator sees the doc-writer's status return listed commits 1 and 2 as landed but not 3 or 4 (or the doc-writer crashed without returning), the re-dispatch's `Additionally:` line names which commits still need to land. The doc-writer reads `git log --oneline` on the branch and resumes at the first un-landed step.
 
 ### Dispatch the doc-reviewer
 

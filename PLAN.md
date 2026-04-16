@@ -285,19 +285,25 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 10: Subdivide RESULTS.md maturation into ordered, recoverable commits
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
-**Files affected:** `skills/integration-workflow/SKILL.md` (Step 3 sub-part A), `skills/report-in-markdown/references/final-form.md`
-**Input:** `integration-workflow:282–298` — sub-part A currently bundles fact-check + restructure + figure materialization + relocation into one commit.
+**Files affected:** `skills/integration-workflow/SKILL.md` (Step 3 sub-part A), `skills/report-in-markdown/references/final-form.md`, `agents/implementer.md` (Report Format — multi-commit status return).
+**Input:** `integration-workflow` Step 3 sub-part A — the pass currently bundles fact-check + restructure + figure materialization + relocation into one commit.
 **Output:** Sub-part A is four ordered commits: (1) fact-check in place, (2) restructure in place, (3) materialize figures, (4) `git mv` to `RESULTS_DIR` + attachments. Each commit is independently recoverable.
 
-- [ ] **Step 1: Update `final-form.md`** with the four-step ordering. Each step gets its own validation criterion (e.g., step 1: every cited number matches its source; step 2: no task numbering remains; step 3: every figure rendered as PNG and embedded with relative path; step 4: file relocated, attachments folder relocated, history preserved).
+- [x] **Step 1: Update `final-form.md`** with the four-step ordering. §The consolidation pass — what changes was renamed to §The consolidation pass — four ordered commits, with one subsection per commit. Each subsection names the commit message, scope, `git` commands, and a pre-commit validation gate ("every cited number matches its source", "no `## Task N` headings remain / frontmatter present", "every figure renders / every figure is PNG / `results_attachments/` still at root", "git log --follow shows history back to Stage 1 / every embed path resolves at the new location").
 
-- [ ] **Step 2: Update `integration-workflow` Step 3 sub-part A** to dispatch the doc-writer with the four-step sequence and explicit "commit each separately" instruction. Suggested commit messages: `"results: fact-check Stage 2 RESULTS.md"`, `"results: restructure Stage 2 RESULTS.md to reader-facing"`, `"results: materialize figures into ${RESULTS_DIR}/attachments"`, `"results: relocate RESULTS.md to ${RESULTS_DIR}"`.
+- [x] **Step 2: Update `integration-workflow` Step 3 sub-part A** to dispatch the doc-writer with the four-step sequence. Doc-writer dispatch `Additionally:` now says "matures RESULTS.md per `final-form.md` §The consolidation pass — four ordered commits. Land each of the four commits separately (in order: fact-check → restructure → materialize figures → relocate) so a session interruption is recoverable. In your status return, list which of the four sub-commits landed." Sub-part A body rewritten as a four-step commit sequence listing each commit message and scope; closing sentence names "Each commit has its own validation gate — see `final-form.md`" + "Do NOT bundle these into one commit." Added a Recovery-on-re-dispatch paragraph instructing the re-dispatch `Additionally:` line to name which commits still need landing; the doc-writer reads `git log --oneline` to resume.
 
-- [ ] **Step 3: Update the doc-writer's report format.** Status return should list which of the four sub-commits landed (so a session interruption mid-A is recoverable: the next dispatch starts at the first un-landed step).
+- [x] **Step 3: Update the doc-writer's report format.** Added a "Multi-commit stages" paragraph to `agents/implementer.md` §Report Format carrying a new "Sub-commits landed" field. Example: `Sub-commits landed: 1 (fact-check), 2 (restructure). Did not reach 3 (materialize figures) or 4 (relocate) — blocked on PDF→PNG conversion.` Omit for single-commit dispatches. Keeps the agent file generic; the documentation Stage's four-commit expectation is named via example only.
 
-- [ ] **Step 4: Validate.** Re-read sub-part A and `final-form.md`. Confirm a session-crash mid-A produces a partially-relocated tree that is still git-coherent. Atomic commit.
+- [x] **Step 4: Validate.** Re-read Sub-part A and `final-form.md` §The consolidation pass — four ordered commits end-to-end:
+  - A session crash after Commit 1 leaves the tree with a fact-checked dev-log at the worktree root — re-dispatch resumes at Commit 2.
+  - A crash after Commit 2 leaves the tree with a restructured file at worktree root pointing at `results_attachments/...` — re-dispatch resumes at Commit 3.
+  - A crash after Commit 3 leaves the tree with the restructured file at worktree root pointing at `attachments/...` AND the materialized folder at `${RESULTS_ATTACHMENTS_DIR}` — re-dispatch just runs the `git mv` in Commit 4.
+  - A crash after Commit 4 is complete state.
+  
+  Each state is git-coherent (tests still pass if they existed; git log reads cleanly; nothing is half-staged on disk without being committed). `final-form.md` and `integration-workflow` agree on the commit sequence and the commit messages. Atomic commit.
 
 ---
 
