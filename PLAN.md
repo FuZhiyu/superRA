@@ -260,7 +260,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 9: Move project doc audit into integration Stage 2 (refactor + integration-review)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/integration-workflow/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/handoff-doc/references/results-anatomy.md`, `skills/report-in-markdown/SKILL.md` (load-map row), `skills/report-in-markdown/references/final-form.md` (project-docs section), `agents/implementer.md`, `agents/reviewer.md` (two cross-references each).
 **Input:** `integration-workflow` Step 3 sub-part B — currently bundled into the doc-writer dispatch.
