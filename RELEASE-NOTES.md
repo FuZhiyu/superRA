@@ -169,7 +169,7 @@ Skill count: **18 → 16**.
 
 **New workflow skills (4):**
 - `planning-workflow` — PLAN phase. Phase 1 data inventory hard gate + Phase 2 plan creation. Replaces `analysis-planning` + `data-exploration`.
-- `execution-workflow` — IMPLEMENT + VALIDATE phases. Per-task dispatch with two-stage review, orchestrator-discipline filter on reviewer feedback, end-of-workflow reproducibility verification, and the 4-option completion menu. Replaces `executing-analysis`, absorbs reproducibility checks and option menu from `finishing-analysis`.
+- `execution-workflow` — IMPLEMENT + VALIDATE phases. Per-task dispatch with one-pass review, orchestrator-discipline filter on reviewer feedback, end-of-workflow reproducibility verification, and the 4-option completion menu. Replaces `executing-analysis`, absorbs reproducibility checks and option menu from `finishing-analysis`.
 - `integration-workflow` — INTEGRATE step 1 of 2. Drift test creation, refactor-review loop, work-journal report generation, and PLAN.md / RESULTS_UPDATE.md disposition. Replaces `pre-merge-gate` workflow part and absorbs Steps 4b/4c of `finishing-analysis`.
 - `merge-workflow` — INTEGRATE step 2 of 2. Main update via semantic-merge, **post-merge verification running BOTH drift tests AND a fresh integration review**, refactor-review loop on either failure, local merge or PR push, worktree cleanup. Replaces `finishing-analysis` Steps 4d + 5.
 
