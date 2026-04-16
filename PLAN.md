@@ -347,11 +347,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 13: Distribute `verification-before-completion` content + delete the skill
-**Review status:** IMPLEMENTED
-
-> **Review notes:**
-> 1. [STANDARD] PLAN.md Task 13 `**Files affected:**` label is missing. The line immediately after this review-notes blockquote (the one that starts `` `skills/verification-before-completion/` (delete), `agents/implementer.md`, ...``) has a single leading space and no `**Files affected:**` prefix. The prefix was clobbered by the blockquote insertion in the prior review commit `68b343e` (the reviewer's editor move accidentally consumed the label when the blockquote was added). The SHA-swap revise fix at `3c7272d` did not introduce the damage but also did not restore the label. Per handoff-doc `plan-anatomy.md`, every task block carries Files affected / Input / Output as structured metadata under Review status and before the step list. Fix: restore the `**Files affected:**` prefix at the start of that line (same content, label re-added).
->    → implemented: restored `**Files affected:**` prefix at the start of `PLAN.md:361`; content of the line unchanged, leading space replaced by the label. Set Review status back to IMPLEMENTED for the reviewer's narrow re-review.
+**Review status:** APPROVED
 
 **Files affected:** `skills/verification-before-completion/` (delete), `agents/implementer.md`, `agents/reviewer.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/execution-workflow/SKILL.md`, `skills/using-superRA/SKILL.md` (inventory + types), `skills/CATEGORIES.md`, `README.md`, `skills/writing-skills/SKILL.md` (one mention)
 **Input:** `verification-before-completion/SKILL.md` (143 lines). Per the content audit: ~30 lines of unique content; ~110 lines of duplication with `econ-data-analysis` Red Flags + Common Rationalizations, `agents/reviewer.md` "DO NOT take the implementer's word", and `execution-workflow` Step 3 §Completion verification.
