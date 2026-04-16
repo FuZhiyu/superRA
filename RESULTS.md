@@ -98,10 +98,15 @@ The `integration-review` manifest row currently replicates the `refactoring` row
 
 ## Task 8: Step 0b — explicit handoff to `planning-workflow`
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**`skills/execution-workflow/SKILL.md` Step 0b** now halts and invokes `superRA:planning-workflow` when the existence check fails, instead of inlining a bootstrap procedure. Old body (3 paragraphs: "Before any task dispatch" / "Step 0 ... Task 0 cannot silently land" / "If the docs exist, are tracked ...") → new body (2 paragraphs: the halt-and-invoke instruction + the revised Step-0 cross-reference that no longer uses "Task 0" framing). The inline "satisfy the domain-specific planning gate (for data analysis: the Data Inventory hard gate ...)" wording is gone — that work happens inside planning-workflow's Phase 1 now, not inline here.
+
+**`skills/planning-workflow/SKILL.md` Overview** gains a second paragraph acknowledging the invocation path from execution-workflow Step 0b: "May be invoked from `execution-workflow` Step 0b when an existing branch lacks committed `PLAN.md` / `RESULTS.md` (or carries uncommitted edits to them). The bootstrap path is identical to a fresh start — run the full Phase 1 / Phase 2 / Self-Review, satisfy any domain-specific planning gate, commit the docs, and hand control back. No shortcut." The wording "no shortcut" closes the design question — there is no lightweight bootstrap mode, just the normal planning flow.
+
+**Validation:** `grep "Task 0\b" skills/execution-workflow/SKILL.md` returns zero matches after the edit. Both skills re-read end-to-end flow cleanly — execution-workflow's failure branch becomes a one-sentence halt, and planning-workflow's overview reads as a natural entry point whether arrived-at fresh or invoked via execution-workflow.
 
 ---
 

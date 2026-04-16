@@ -134,9 +134,9 @@ All four conjuncts must succeed. The first two confirm existence and tracking; t
 
 If the check fails (one or both missing, present but untracked, or present with uncommitted edits), the user probably entered this workflow without going through `planning-workflow` first — for example, they exited CLI plan-mode and jumped straight to execution, inherited an existing branch that never bootstrapped docs, or left in-flight edits uncommitted.
 
-**Before any task dispatch:** load `superRA:planning-workflow` and `superRA:handoff-doc`, create or finish-editing `PLAN.md` and `RESULTS.md` from the current session state (plan-mode plan output, chat context, whatever is available — follow `planning-workflow`'s template), satisfy the domain-specific planning gate (for data analysis: the Data Inventory hard gate from `econ-data-analysis/references/planning.md`), and commit the docs. Treat this as Task 0 of the work.
+**If the check fails, halt execution-workflow and invoke `superRA:planning-workflow` to bootstrap the docs.** Do not inline planning-workflow content here — the docs are created through planning-workflow's full Phase 1 / Phase 2 / Self-Review (with any applicable domain-specific planning gate satisfied there, not here). Resume execution-workflow at Step 1 after planning-workflow completes; its own self-review and execution-handoff will return control here.
 
-Step 0 (branch check) must have already run and granted consent to commit on the current branch — Step 0b intentionally comes after Step 0 so Task 0 cannot silently land on `main` / `master`.
+Step 0 (branch check) must have already run and granted consent to commit on the current branch — Step 0b intentionally comes after Step 0 so planning-workflow's bootstrap commits cannot silently land on `main` / `master`.
 
 If the docs exist, are tracked, and the worktree is clean, proceed directly to Step 1.
 
