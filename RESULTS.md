@@ -141,10 +141,26 @@
 
 ## Task 15: Remove deprecated commands
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**Files deleted (3):**
+- `commands/brainstorm.md` — stub pointing at `superpowers:brainstorming`.
+- `commands/execute-plan.md` — stub pointing at `superpowers:executing-plans`.
+- `commands/write-plan.md` — stub pointing at `superpowers:writing-plans`.
+
+The `commands/` directory is now empty and git treats it as removed (no tracked files remain in it).
+
+**Grep sweep (`execute-plan|write-plan|brainstorm` across `skills/`, `commands/`, `README.md`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `CATEGORIES.md`, `agents/`, `hooks/`):** zero matches after the deletion. No inventory-table rows or skill-body references to clean up — the stubs were referenced only by the plugin runtime's command discovery, not by any skill body or README table.
+
+**Intentionally not touched:**
+- `RELEASE-NOTES.md` and `CHANGELOG.md` carry upstream superpowers release history mentioning these commands (lines documenting their introduction, deprecation, and removal in prior upstream versions). These are historical release records, not current inventory, so they stay. superRA's own release-note entry for this refactor lands in Task 16 Step 4.
+
+**Task-1 overlap check:** grep surfaced no references inside any of Task 1's files (`skills/using-superRA/SKILL.md`, the 4 workflow skills, `skills/semantic-merge/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `agents/implementer.md`, `agents/reviewer.md`). No deferred edits for Task 1 to absorb.
+
+### Notes
+The PLAN's Step 2 mentioned "Remove the 'Deprecated — use superpowers:* instead' rows from any inventory tables (likely in README.md or CHANGELOG)." None existed in superRA's README or anywhere under skill / agent / command files — the stubs self-describe their deprecation in their own frontmatter only. Clean deletion.
 
 ---
 
