@@ -449,7 +449,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 17: Document agent-reuse vs fresh-dispatch heuristic in agent-orchestration
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/agent-orchestration/SKILL.md`, `skills/execution-workflow/SKILL.md` (one-line cross-reference).
 **Input:** Current `agent-orchestration` Decision Framework section (the parallel-dispatch / Agent Teams / orchestrator-relay table) and its §Integration section. Current `execution-workflow` Per-Task Execution Steps + §Dispatch Templates pointer.
