@@ -42,6 +42,32 @@ digraph decision {
 
 **Rule of thumb:** if two agents will exchange feedback more than once, use a team (or orchestrator relay). If each agent does its work and returns a result, use parallel dispatch. For the technical mechanics of either pattern — TeamCreate usage, task-graph construction, parallel-dispatch infrastructure (worktrees, data sync), known limitations — see `references/agent-teams.md`.
 
+## Agent reuse vs fresh dispatch
+
+Once you have decided to dispatch (single subagent, team, or parallel), a second question fires every time you are about to launch: **is there already a warm agent whose context fits this task?** Reusing a warm agent via `SendMessage` avoids paying the full context-reload tax a fresh dispatch incurs; spawning a fresh one keeps roles cleanly separated. Neither is the right default — the choice depends on the task.
+
+**Context-reload cost.** Every fresh dispatch pays to reload `superRA:using-superRA`, the active domain skill (where applicable), and the module-level `CLAUDE.md` / `AGENTS.md` / `README.md` walk-up for every directory the task touches. For a small follow-up that builds on what an agent just did, that cost is disproportionate: the same content is about to be loaded that was loaded ten minutes ago, and the fresh agent will re-derive context the warm one already has in session.
+
+**Criteria favoring reuse (send a message to the warm agent).** All of the following should hold:
+
+- Small scope — a follow-up that takes minutes, not a new multi-step task.
+- Same domain context — the warm agent was working on related material and its loaded skills still apply.
+- Non-overlapping file set with any other in-flight work — no concurrent-edit risk.
+- Sequential — the next task benefits from what the agent already knows (e.g., a second grep-sweep after a prior grep-sweep found partial hits; a tightening edit immediately after a larger refactor landed).
+
+**Criteria favoring fresh dispatch.** Any of the following is enough:
+
+- The task is large or meaningfully new scope.
+- The task lives in a different domain vertical (the warm agent's loaded domain skill and module docs are wrong for it).
+- The task has file-set overlap with work still in flight elsewhere — a fresh agent can be given a clean scope; a warm agent may edit over something it does not know changed.
+- The task needs a perspective the warm agent cannot provide (see the reviewer-always-fresh rule below).
+
+**Bundling as a third option.** When several tiny tasks share the same up-front context, a single implementer dispatch can carry a multi-task brief: list every task pointer in `Task:` and spell out the sequence and the boundaries in `Additionally:`. One context load amortizes across all of them. This is the right answer when you catch yourself about to fire three sequential fresh dispatches into the same skill or the same handful of files.
+
+**Reviewer-always-fresh rule (hard — named exception).** Review passes always spawn a fresh reviewer agent. Never send a review task to the implementer that just produced the work, and never reuse the reviewer from a prior round as an implementer on the same code. The reviewer is adversarial by design — thorough, skeptical, biased toward over-flagging (see §Reviewer–Orchestrator Dynamic in `superRA:using-superRA` and Workflow principle #1 in the plugin's `CLAUDE.md`). That adversarial property collapses the moment the reviewer has already committed to a line of thinking about the code; reusing a warm agent for review is equivalent to self-review and voids the implementer–reviewer pair. This rule overrides every reuse criterion above — if it is a review pass, dispatch fresh.
+
+**`SendMessage` mechanic.** The `to:` field takes the agent's id, or the teammate name inside an Agent Team. The recipient resumes with its full session context and the new message is queued for it; tool-call details are in the tool's own description.
+
 ## Dispatch Templates
 
 Every workflow skill that dispatches an `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules.
