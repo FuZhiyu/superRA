@@ -418,24 +418,20 @@ Result: SKILL.md ~210 lines. Reviewer load ~210. Implementer load ~210 + ~200 (`
 ---
 
 ### Task 15: Remove deprecated commands
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Files affected:** `commands/execute-plan.md`, `commands/write-plan.md`, `commands/brainstorm.md`, `using-superRA` (skill inventory references), `README.md`
 **Input:** Three stub commands point at `superpowers:*` skills that are not part of this plugin. If the user doesn't have `obra/superpowers` installed, the commands silently fail.
 **Output:** The three deprecated command stubs are removed. No silent failures.
 
-- [ ] **Step 1: Delete the stubs.**
+- [x] **Step 1: Delete the stubs.**
   ```bash
   git rm commands/execute-plan.md commands/write-plan.md commands/brainstorm.md
   ```
 
-- [ ] **Step 2: Sweep references.**
-  ```bash
-  grep -rn "execute-plan\|write-plan\|brainstorm" skills/ commands/ README.md CLAUDE.md
-  ```
-  Remove the "Deprecated — use superpowers:* instead" rows from any inventory tables (likely in README.md or CHANGELOG).
+- [x] **Step 2: Sweep references.** `grep -rn "execute-plan\|write-plan\|brainstorm" skills/ commands/ README.md CLAUDE.md` returned zero matches in any of those paths — no inventory-table rows to remove. Upstream-history mentions in `RELEASE-NOTES.md` and `CHANGELOG.md` are intentionally preserved (they are release history for the upstream superpowers project, not superRA inventory); superRA's own release entry for this refactor lands in Task 16 Step 4.
 
-- [ ] **Step 3: Validate.** Atomic commit.
+- [x] **Step 3: Validate.** Atomic commit.
 
 ---
 
