@@ -43,8 +43,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 | `refactor-and-integrate` | Drift-test quality, codebase integration, and merge quality checklists. Loaded by integration-phase agents. |
 | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. Progressive-reveal references by stage. |
 | `semantic-merge` | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions. |
-| `using-analysis-worktrees` | Isolated git worktrees with data seeding. |
-| `worktree-data-sync` | Sync non-git data between worktrees (seed, diff, apply). |
+| `worktree-data-sync` | Isolated git worktrees, non-git data sync between them (seed, diff, apply), and cleanup ritual. |
 
 ## Meta — system-level
 

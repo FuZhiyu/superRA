@@ -421,10 +421,35 @@ Re-read `merge-workflow` Step 1: invocation uses delegated-mode task string; ret
 
 ## Task 14: Consolidate worktree skills (drop `using-analysis-worktrees`)
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**`worktree-data-sync` now owns the whole worktree lifecycle.** The skill's SKILL.md gained two new top-level sections plus the worktree-creation content merged in from `using-analysis-worktrees`. The final section order is:
+
+1. `## When to Use a Worktree` — relocated decision table from `using-analysis-worktrees` (6 rows: single-session, multi-session, parallel branches, data copy, cloud-synced dirs, destructive-refactor sandbox). Preserved verbatim so the triage judgment is unchanged.
+2. `## When to Use (non-git data sync only)` — preserves the prior skill's scoping for sync-only use cases.
+3. `## Creating a Worktree` — merged from `using-analysis-worktrees`: directory selection (priority: `.worktrees` > `worktrees` > CLAUDE.md preference > ask), safety verification (`git check-ignore` for project-local), create + environment setup, seed data (via this skill's own CLI), verify data accessibility (cloud-only check), report location.
+4. `## Command Surface` / `## Modes` / `## Managed Path Discovery` / `## Examples` — the pre-existing data-sync CLI content, unchanged.
+5. `## Cleanup` — new section: the canonical `git worktree remove` ritual; the Option-4 discard teardown from execution-workflow (`git checkout <base-branch> && git branch -D <analysis-branch> && git worktree remove <worktree-path>`); a note that `git worktree remove` also removes seeded data when the worktree was created through this skill; a `--force` safety warning.
+
+**Skill deleted: `skills/using-analysis-worktrees/`.** `git rm -r` removed the directory's only file (`SKILL.md`).
+
+**Frontmatter description broadened.** The new description fires on the original sync triggers ("copy data to the new worktree", "seed this worktree from main", "diff the data files between worktrees", "sync my worktree data"), the worktree-creation triggers inherited from `using-analysis-worktrees` ("set up a worktree for this", "isolate this analysis", "I'll run two analyses in parallel", "this will take multiple sessions"), and the new cleanup trigger ("clean up this worktree"). Preserved the "Optional for simple single-session analyses — a feature branch without a worktree is sufficient there" opt-out. Triggering-check walkthrough: every trigger that previously routed to `using-analysis-worktrees` or the prior `worktree-data-sync` now resolves to the consolidated skill; nothing is lost.
+
+**Duplicated cleanup blocks replaced with pointers.** `merge-workflow` Step 5 Cleanup Worktree previously carried an inline `git worktree remove <worktree-path>` block — now a one-line "invoke `superRA:worktree-data-sync` §Cleanup for the teardown ritual" with the "if feature branch without worktree, skip" condition and the "Report what was merged/pushed" line preserved. `execution-workflow` Step 4 Option 4 (Discard) previously carried a three-command inline block — now a one-line "invoke `superRA:worktree-data-sync` §Cleanup — its Option-4 ritual covers the branch deletion and the optional `git worktree remove`" with the typed-`discard` confirmation and the "Stop after the branch and worktree are removed. Report what was deleted" instruction preserved.
+
+**"When to use" judgment relocated from `planning-workflow`.** The §Before you create directories paragraph now points at the consolidated skill with a trailing "(See `worktree-data-sync` §When to Use a Worktree for the full decision table.)" cross-reference. The one-sentence summary in planning-workflow is preserved so the triage signal fires at plan time without forcing a full load of the worktree skill.
+
+**Sweep — zero residual mentions in active content.** Grep across `skills/`, `agents/`, `commands/`, `README.md`, `CLAUDE.md`: zero `using-analysis-worktrees` hits after the refactor. Four active files updated: `skills/planning-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/agent-orchestration/references/agent-teams.md`. Historical mentions in `PLAN.md`, `RESULTS.md`, `RELEASE-NOTES.md` retained by design.
+
+**Inventory tables consistent.** Three tables (`using-superRA §Skill Inventory`, `CATEGORIES.md` Utility, `README.md` Utility) now all enumerate the same post-refactor utility set: `handoff-doc`, `refactor-and-integrate`, `report-in-markdown`, `semantic-merge`, `worktree-data-sync`. The `worktree-data-sync` row purpose was rewritten to "Isolated git worktrees, non-git data sync between them, and cleanup ritual."
+
+### Validation
+
+Post-refactor re-read of `worktree-data-sync/SKILL.md`: the eight top-level sections flow cleanly — a reader arriving at the skill for any of the three use cases (setup / sync / cleanup) lands on the right section within one scroll. No references to a separate worktree skill. The data-sync CLI content is unchanged, so existing callers of the script remain compatible.
+
+Grep for `using-analysis-worktrees` across active content — zero hits. Re-grep for `worktree-data-sync` — every hit points at the consolidated skill as the sole worktree authority.
 
 ---
 
