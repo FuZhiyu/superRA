@@ -256,7 +256,7 @@ Result: SKILL.md ~210 lines. Reviewer load ~210. Implementer load ~210 + ~200 (`
 ---
 
 ### Task 8: Step 0b — explicit handoff to `planning-workflow` (no inline degradation)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/execution-workflow/SKILL.md`, `skills/planning-workflow/SKILL.md`
 **Input:** `execution-workflow` Step 0b (lines 122–141) — currently inlines "load planning-workflow + handoff-doc, create or finish-editing PLAN.md/RESULTS.md, satisfy domain-specific planning gate."
