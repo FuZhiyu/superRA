@@ -46,7 +46,6 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 | `semantic-merge` | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions. |
 | `using-analysis-worktrees` | Isolated git worktrees with data seeding. |
 | `worktree-data-sync` | Sync non-git data between worktrees (seed, diff, apply). |
-| `verification-before-completion` | Fresh verification evidence before any completion claim. |
 
 ## Meta — system-level
 

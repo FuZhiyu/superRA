@@ -62,7 +62,17 @@ Bad analysis is worse than no analysis. It is always OK to stop and say
 
 ### Self-Review Before Reporting
 
-Before reporting back, check:
+**Evidence before claims.** Before asserting any task, test, build, or output succeeded, run the verification command in this session and read the output. The gate is:
+
+1. **IDENTIFY** the command that proves the claim.
+2. **RUN** the full command, fresh.
+3. **READ** full output, check exit code, count failures.
+4. **VERIFY** output confirms the claim — if not, state actual status with evidence.
+5. **ONLY THEN** make the claim.
+
+Skipping any step is lying, not verifying. **Bottom line: run the command, read the output, then claim the result.**
+
+Then check:
 
 **Completeness:**
 - Did I implement everything in the task spec?
@@ -161,6 +171,8 @@ Before staging your commit, verify:
 - [ ] Figures are embedded with `![caption](results_attachments/...)` and the image files are committed.
 - [ ] The task block and results section read as single coherent current-state descriptions.
 - [ ] Every material finding I am about to report is already written into `PLAN.md` (task block) or `RESULTS.md` (task section), not only in my status report. The doc is the record; the report only points at it.
+
+**Red-flag wording — stop and verify before committing.** If your status report or commit message contains "should", "probably", "seems to", "Great!", "Done!", or "Perfect!" without fresh verification evidence in this session, you are claiming a result you did not confirm. Run the verification command, read the output, then rewrite the claim with evidence.
 
 ## Report Format
 
