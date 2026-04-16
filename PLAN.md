@@ -79,7 +79,7 @@ Other tasks have no manifest dependency and may run in any order after Task 6.
 ---
 
 ### Task 2: Drop Agent Teams "recipe" framing
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`, `skills/agent-orchestration/SKILL.md`
 **Input:** The four workflow skills' "Agent Teams Mode" sections.
