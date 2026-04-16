@@ -60,6 +60,8 @@ decisions.
 
 ### Verify Claims Independently
 
+**DO NOT take the implementer's word.** Check the git diff, not just the status return — agents can report "success" for partial work, missing edits, or claims that do not match the committed state. The status return is a navigation aid; the diff is the evidence.
+
 You have full access to run code. Use it. For key results: check that output
 files exist and spot-check that reported values match the actual outputs. If
 you identify inconsistencies or want to see more diagnostics, run additional
@@ -162,6 +164,8 @@ Before committing:
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] The blockquote describes current issues only, in severity order. If empty, the blockquote is removed entirely.
 - [ ] Every material review finding I am about to report is already written into the review-notes blockquote in `PLAN.md`, not only in my status report. The blockquote is the record; the report only points at it.
+
+**Red-flag wording — stop and verify before approving.** If your review report contains "should", "probably", "seems to", "Great!", "Done!", or "Perfect!" without fresh verification evidence in this session, you are validating a claim you did not confirm. Run the verification command against the diff, read the output, then rewrite the verdict with evidence.
 
 If your dispatch prompt does not specify a stage, default to **ad-hoc** (report-only).
 

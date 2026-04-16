@@ -143,10 +143,32 @@ The `integration-review` manifest row currently replicates the `refactoring` row
 
 ## Task 13: Distribute `verification-before-completion` + delete the skill
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**Skill folder deleted:** `skills/verification-before-completion/SKILL.md` (143 lines) removed via `git rm -r`.
+
+**Distribution of unique content:**
+
+- **`agents/implementer.md` §Self-Review Before Reporting** — added the 5-step Gate Function (IDENTIFY → RUN → READ → VERIFY → claim) as a new opening subsection, followed by the bottom-line one-liner "Run the command, read the output, then claim the result." Preserved the existing Completeness / Reproducibility / Domain §Review checks beneath it.
+- **`agents/implementer.md` §Pre-Commit Self-Check** — appended a red-flag wording block ("should", "probably", "seems to", "Great!", "Done!", "Perfect!") at the end of the checklist, instructing the implementer to stop and verify if any of those words show up without fresh verification evidence.
+- **`agents/reviewer.md` §Verify Claims Independently** — prepended a "DO NOT take the implementer's word" paragraph with the new diff-vs-status-return framing ("check the git diff, not just the status return — agents can report 'success' for partial work").
+- **`agents/reviewer.md` §Pre-Commit Self-Check** — appended the same red-flag wording block as the implementer, scoped to the reviewer's verdict instead of the commit claim.
+- **`skills/refactor-and-integrate/references/drift-test-quality.md`** — added a new `## Red-Green Verification` section between Robustness and Test Format, carrying the Write → Green → Revert → Red → Restore → Green cycle with the rationale "a drift test that passes once is not verified — it might always pass."
+- **`skills/execution-workflow/SKILL.md` Step 3 preamble** — inserted a bold one-sentence reminder: "Run every check. Don't trust 'looks committed' — execute `git status` and read the output. The five checks below are the orchestrator's verification gate: evidence before claims, no shortcuts."
+
+**Reference sweep results (grep `verification-before-completion` across `skills/`, `agents/`, `README.md`, `CLAUDE.md`):** zero matches. Also cleaned:
+- `skills/using-superRA/SKILL.md` §Skill Inventory — row removed.
+- `skills/CATEGORIES.md` Utility table — row removed.
+- `README.md` Utility table — row removed.
+- `skills/writing-skills/SKILL.md:401` — updated "TDD, verification-before-completion, designing-before-coding" to "TDD, designing-before-coding".
+
+**Intentionally not touched:**
+- `PLAN.md` (this refactor plan) and `RESULTS.md` (this dev log) retain references as historical record of the refactor.
+- `docs/plans/2025-11-28-skills-improvements-from-user-feedback.md` is an archived prior plan document, not current inventory.
+
+**Note on §Skill Types.** PLAN.md Step 7 anticipated removing the skill from a §Skill Types "Rigid" example list in `using-superRA`. That section does not currently exist in `using-superRA/SKILL.md` (apparently removed in the pre-plan commit `e5c8b58` which stripped EXTREMELY-IMPORTANT / Red Flags / Skill Types sections). The `writing-skills` Discipline-Enforcing example list was the only remaining "types-like" enumeration — updated as documented above.
 
 ---
 

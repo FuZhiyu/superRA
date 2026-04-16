@@ -349,31 +349,27 @@ Result: SKILL.md ~210 lines. Reviewer load ~210. Implementer load ~210 + ~200 (`
 ---
 
 ### Task 13: Distribute `verification-before-completion` content + delete the skill
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Files affected:** `skills/verification-before-completion/` (delete), `agents/implementer.md`, `agents/reviewer.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/execution-workflow/SKILL.md`, `skills/using-superRA/SKILL.md` (inventory + types), `skills/CATEGORIES.md`, `README.md`, `skills/writing-skills/SKILL.md` (one mention)
 **Input:** `verification-before-completion/SKILL.md` (143 lines). Per the content audit: ~30 lines of unique content; ~110 lines of duplication with `econ-data-analysis` Red Flags + Common Rationalizations, `agents/reviewer.md` "DO NOT take the implementer's word", and `execution-workflow` Step 3 §Completion verification.
 **Output:** Unique content distributed to four call sites (implementer self-check, reviewer claim-verification, drift-test creation, execution-workflow Step 3). Skill deleted. ~110 duplicated lines disappear; ~30 lines land where they're actually used.
 
-- [ ] **Step 1: Move the 5-step Gate Function** (IDENTIFY → RUN → READ → VERIFY → claim) into `agents/implementer.md` §Self-Review Before Reporting. Replace the current 4-line Self-Review intro with the gate framework + the Bottom Line one-liner: "Run the command. Read the output. Then claim the result."
+- [x] **Step 1: Move the 5-step Gate Function** (IDENTIFY → RUN → READ → VERIFY → claim) into `agents/implementer.md` §Self-Review Before Reporting. Added as a new "Evidence before claims" opening subsection with the 5-step gate and the bottom-line one-liner "Run the command, read the output, then claim the result." Preserved the existing Completeness / Reproducibility / Domain §Review blocks beneath it.
 
-- [ ] **Step 2: Move the red-flag *wording* list** ("should", "probably", "seems to", "Great!", "Done!", "Perfect!") into both `agents/implementer.md` §Pre-Commit Self-Check and `agents/reviewer.md` §Pre-Commit Self-Check. Keep it as a 5-line block in each (acceptable duplication — these are local to each role's commit gate, and the content is short and tight).
+- [x] **Step 2: Move the red-flag *wording* list** ("should", "probably", "seems to", "Great!", "Done!", "Perfect!") into both `agents/implementer.md` §Pre-Commit Self-Check and `agents/reviewer.md` §Pre-Commit Self-Check. Appended as a bold 3-line block at the end of each checklist, scoped to the commit claim / the review verdict respectively.
 
-- [ ] **Step 3: Move the Red-Green TDD pattern for regression / drift tests** ("Write → Run pass → Revert fix → Run MUST FAIL → Restore → Run pass") into `skills/refactor-and-integrate/references/drift-test-quality.md` as a new "Red-Green Verification" section. This is where drift tests are written, so it is the natural home — the rule belongs next to the test-writing checklist.
+- [x] **Step 3: Move the Red-Green TDD pattern for regression / drift tests** into `skills/refactor-and-integrate/references/drift-test-quality.md` as a new `## Red-Green Verification` section between Robustness and Test Format. Carries the Write → Green → Revert → Red → Restore → Green cycle plus the rationale ("a drift test that passes once is not verified — it might always pass").
 
-- [ ] **Step 4: Sharpen `agents/reviewer.md` §Verify Claims Independently.** Today says "DO NOT take the implementer's word." Add: "Check the git diff, not just the status return — agents can report 'success' for partial work. The status return is a navigation aid; the diff is the evidence."
+- [x] **Step 4: Sharpen `agents/reviewer.md` §Verify Claims Independently.** Prepended "DO NOT take the implementer's word" paragraph with the new diff-vs-status framing: "Check the git diff, not just the status return — agents can report 'success' for partial work, missing edits, or claims that do not match the committed state."
 
-- [ ] **Step 5: Add one sentence to `execution-workflow` Step 3 preamble.** At the top of Step 3 (Verify Pipeline and Reproducibility): "Run every check. Don't trust 'looks committed' — execute `git status` and read the output. The five checks below are the orchestrator's verification gate."
+- [x] **Step 5: Add one sentence to `execution-workflow` Step 3 preamble.** Inserted bold line after the existing skeleton paragraph: "Run every check. Don't trust 'looks committed' — execute `git status` and read the output. The five checks below are the orchestrator's verification gate: evidence before claims, no shortcuts."
 
-- [ ] **Step 6: Delete the skill.** `git rm -r skills/verification-before-completion/`.
+- [x] **Step 6: Delete the skill.** `git rm -r skills/verification-before-completion/` — removed `SKILL.md` (only file in the folder).
 
-- [ ] **Step 7: Sweep references.**
-  ```bash
-  grep -rn "verification-before-completion\|superRA:verification-before-completion" skills/ agents/ commands/ README.md CLAUDE.md CATEGORIES.md
-  ```
-  Remove from `using-superRA` §Skill Inventory and §Skill Types ("Rigid" example list — replace with `econ-data-analysis` only); remove from `CATEGORIES.md` Utility table; remove from `README.md` skill table; in `writing-skills/SKILL.md` line 401 ("**Examples:** TDD, verification-before-completion, designing-before-coding"), drop the verification-before-completion mention.
+- [x] **Step 7: Sweep references.** `grep -rn "verification-before-completion" skills/ agents/ README.md CLAUDE.md` returned zero matches after the sweep. Cleanup performed: row removed from `using-superRA/SKILL.md` §Skill Inventory; row removed from `CATEGORIES.md` Utility table; row removed from `README.md` Utility table; `writing-skills/SKILL.md:401` example list trimmed from "TDD, verification-before-completion, designing-before-coding" to "TDD, designing-before-coding". Note: the §Skill Types "Rigid" example list the step anticipated does not currently exist in `using-superRA/SKILL.md` (removed in pre-plan commit `e5c8b58`), so no row to strip there; `writing-skills` was the only remaining example list.
 
-- [ ] **Step 8: Validate.** Grep again; should appear only in this PLAN.md and CHANGELOG. Re-read `agents/implementer.md` and `agents/reviewer.md` end-to-end — each should now carry the verification discipline natively at the right moment in the role flow. Re-read `drift-test-quality.md` — Red-Green section should sit naturally next to the existing test-quality content. Re-read `execution-workflow` Step 3 — preamble should now lean into the orchestrator's responsibility for evidence. Atomic commit.
+- [x] **Step 8: Validate.** Final sweep confirms zero matches across active content; surviving mentions are limited to `PLAN.md` / `RESULTS.md` (this refactor's own record) and `docs/plans/2025-11-28-skills-improvements-from-user-feedback.md` (archived prior plan). Re-read `agents/implementer.md` end-to-end: the §Self-Review block now opens with the gate function, making verification the first discipline the implementer sees, not a tail-end checklist. Re-read `agents/reviewer.md`: §Verify Claims Independently now leads with the diff-vs-status framing, and §Pre-Commit Self-Check carries the red-flag wording stop. Re-read `drift-test-quality.md`: Red-Green Verification sits between Robustness and Test Format — it reads as part of the test-writing discipline, not as an imported discipline. Re-read `execution-workflow` Step 3: the orchestrator's role as the verification gate is now explicit in the preamble. Atomic commit staged: `task 13: distribute verification-before-completion content + delete skill`.
 
 ---
 
