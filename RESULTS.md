@@ -53,10 +53,27 @@ The `integration-review` manifest row currently replicates the `refactoring` row
 
 ## Task 3: Slim `econ-data-analysis/SKILL.md` + extract disciplines reference
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**Shared-base SKILL.md and role-split operational references.** `econ-data-analysis/SKILL.md` shrank from 473 lines to 276 — the full Describe / Analyze / Validate operational content (195 lines) moved to the new `references/disciplines.md`, which the **implementer loads** and the **reviewer does not**. The shared §Review & Self-Check Discipline stays in SKILL.md's main body so both roles walk the same checklist (one source of truth, two perspectives). Pitfalls, Common Rationalizations, and Red Flags stay in SKILL.md too — the reviewer needs §Pitfalls to verify operation-specific correctness (merges, lags, aggregations, filters, variable construction, missing data).
+
+**Three-disciplines framing is now a lean summary with pointers.** The three-paragraph intro in SKILL.md replaces the prior 200-line `## Describe` / `## Analyze` / `## Validate` subsection tree. Each paragraph carries the headline rules (Iron Law for Describe; row-count MANDATORY + one-operation-per-step + sort discipline + join-type discipline for Analyze; four subdisciplines of Validate including escalation-via-AskUserQuestion) and points at `references/disciplines.md §{Describe|Analyze|Validate}` for the operational expansion. The implementer's context is split into two discoverable chunks (the shared discipline + the writing mechanics) rather than the prior 473-line wall; the reviewer's load drops to 276 lines while retaining every verification-critical section.
+
+**§Review & Self-Check Discipline now carries `Why:` rationales on every [GATING] item.** Ten gating items across four sub-sections (Gating / Documentation-and-handoff / Refactor-integrity / Completion-verification) each gain a bulleted `*Why:*` sub-item explaining the failure mode the gate prevents — silent corruption via skipped describe, row-count drift via missing prints, merge bets against unchecked keys, chat-only findings lost at session boundaries, refactors that silently convert transparent analyses into opaque ones, re-expected drift silently changing the headline, uncommitted state that cannot be reproduced. Three `[STANDARD]` items also gained rationales where context mattered (PLAN.md-specifies handoff-doc tie-in, major-vs-minor-decision split, expectations-comparison as forcing-function). `[ADVISORY]` items stay bare. This protects against mechanical checklist-walking by reviewers — the gate tells them *what*, the rationale tells them *why*, so a novel situation can be judged rather than just matched against the line.
+
+**§Writing Discipline absorbed into `notebook-format.md`.** The dissolved §Documentation cross-cutting writing practice section of SKILL.md landed as a new `## Writing Discipline` section in `notebook-format.md`, placed between §Markdown Cells and §Output. The absorbed content carries the markdown-cells / inline-comments / major-vs-minor-decisions / figures-pointer rules, plus a new closing paragraph that makes the major/minor split explicit ("minor decisions inside a cell document *the choice*; major decisions in a markdown cell document *the reasoning that led to the choice*. A reviewer tracing how the analysis got to its current shape reads the markdown cells first, then the code"). The prior §Short checklist per step and §Script categories paragraph from SKILL.md were deleted — the first duplicates §Review & Self-Check Discipline gates, the second is covered by `notebook-format.md`'s §When to Use.
+
+**Manifest and agent files reflect the role split.** The `implementation` row's Stage-scoped-references cell now carries an explicit role split: implementer loads `references/disciplines.md` + `references/notebook-format.md`; reviewer loads SKILL.md only. The lede paragraph above the manifest table was updated — role differentiation now appears on two rows (`implementation` and `documentation`), not just one. Both agent files' Stage → skills paragraph and §Before You Start Step 2 were rewritten to name the exact loads per role.
+
+### Notes on section ordering
+
+PLAN.md Step 3's target ordering places §Review & Self-Check Discipline before §Pitfalls and §Common Rationalizations before §Red Flags. The pre-refactor file had §Review → §Common Rationalizations → §Red Flags → §Verification Checklist → §Pitfalls (in that order). Reordered the tail to match the target: §Pitfalls moved up immediately after §Review, followed by §Common Rationalizations → §Red Flags → §Key References. The §Verification Checklist stub (a one-line "see §Review & Self-Check Discipline above" pointer) was deleted — after the reorder it became a stub pointing backwards to the section right above it, serving no navigation purpose.
+
+### Notes on line-count target
+
+PLAN.md §Architectural design stated ~210 lines as the SKILL.md target. Final is 276 lines. The delta is driven by the `Why:` rationales on Step 4 (~30 lines added as explicit goal), a richer Stage-Scoped References table (new `disciplines.md` row + expanded role-split explanation), and the three-paragraph summary of DAV disciplines (slightly longer than the ~5 lines estimated so each paragraph can stand as a self-sufficient headline summary). The reviewer's total load is still cut roughly in half (from 473 to 276), and the implementer's total is the same as today's monolith but split into three discoverable chunks.
 
 ---
 
@@ -237,7 +254,28 @@ The PLAN's Step 2 mentioned "Remove the 'Deprecated — use superpowers:* instea
 
 ## Task 17: Document agent-reuse vs fresh-dispatch heuristic in agent-orchestration
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**New subsection in `skills/agent-orchestration/SKILL.md`.** `## Agent reuse vs fresh dispatch` placed between `## Decision Framework` and `## Dispatch Templates`. The two sections answer orthogonal questions: Decision Framework picks the dispatch *pattern* (parallel / teams / relay); the new section picks agent *identity* within a chosen pattern (reuse a warm agent via `SendMessage` vs spawn fresh vs bundle several small tasks into one dispatch). No content overlap with the existing parallel/teams/relay table.
+
+**Six labeled paragraphs** (bolded lead-ins, so an orchestrator can skim): Context-reload cost (names the specific loads a fresh dispatch re-pays: `using-superRA`, active domain skill, module-level `CLAUDE.md` / `AGENTS.md` / `README.md` walk-up); Criteria favoring reuse (small scope + same domain context + non-overlapping file set + sequential build-on-previous — all four should hold); Criteria favoring fresh dispatch (any one of: new scope, different domain vertical, file-set overlap with in-flight work, warm agent cannot provide the needed perspective); Bundling as a third option (multi-task brief in a single implementer dispatch, amortizes one context load across several tiny tasks); Reviewer-always-fresh rule; `SendMessage` mechanic pointer.
+
+**Reviewer-always-fresh rule is hard, not soft.** Anchored to `superRA:using-superRA` §Reviewer–Orchestrator Dynamic and the plugin `CLAUDE.md` Workflow principle #1. Rationale in the subsection: the adversarial-review property collapses the moment the reviewer has already committed to a line of thinking about the code — warm-agent review is equivalent to self-review and voids the implementer–reviewer pair. The rule overrides every other reuse criterion; if it is a review pass, dispatch fresh.
+
+**Cross-reference in `skills/execution-workflow/SKILL.md`.** Single line appended to §Per-Task Execution Steps step 1 (the dispatch-implementer step — where the reuse decision actually fires): "See `superRA:agent-orchestration` §Agent reuse vs fresh dispatch for when to reuse a warm implementer via `SendMessage` versus spawning a fresh dispatch." No heuristic content duplicated; pointer only.
+
+### Validation
+
+End-to-end re-read of `agent-orchestration/SKILL.md`: new subsection slots between §Decision Framework (ends with the rule-of-thumb paragraph) and §Dispatch Templates (opens with the canonical-shape intro) without disrupting the existing flow. Covers the orthogonal axis of agent-identity selection that §Decision Framework does not address. No duplication with the parallel/teams/relay table.
+
+End-to-end re-read of `execution-workflow/SKILL.md` §Per-Task Execution Steps: the one-line pointer lands on step 1 (implementer dispatch) and does not step on steps 2–4 (NEEDS_CONTEXT / BLOCKED handling, reviewer dispatch — which by the new hard rule is always fresh, and final APPROVE handoff). The pointer is additive, not conflicting.
+
+No skill-description frontmatter changed — triggering checks not needed for this task.
+
+### Notes
+
+**Concurrency with Task 6.** At dispatch time the orchestrator flagged that another implementer was running Task 6, which edits `skills/execution-workflow/SKILL.md` in multiple places. `git diff` on my target file before commit showed only my single-line addition to step 1 of §Per-Task Execution Steps — no overlap with Task 6's in-flight edits. `skills/agent-orchestration/SKILL.md` was untouched by any other in-flight work.
+
+**Does not subsume the Decision Framework.** The new section does not replace or compete with §Decision Framework; the two compose. An orchestrator first picks the dispatch pattern (parallel / teams / relay / single), then asks the reuse-vs-fresh question within that pattern.

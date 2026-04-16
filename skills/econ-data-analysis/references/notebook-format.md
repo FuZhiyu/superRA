@@ -27,6 +27,22 @@ use standard script format.
 - Equations: inline `$formula$`, display `$$formula$$` — define variables
   before first use
 
+## Writing Discipline
+
+Writing the narrative is part of the work, not an afterthought. Documentation runs continuously alongside Describe, Analyze, and Validate (see `SKILL.md` §Three Concurrent Disciplines); the notebook-format mechanics above are the shape it takes. The rules below fix *where* each kind of reasoning lands.
+
+- **Markdown cells** frame each block: what, why, expected result.
+- **Inline comments** for minor decisions (winsorization percentile, filter
+  threshold).
+- **Markdown cells with reasoning** for major decisions (excluding countries,
+  choosing sample period, variable definition).
+- **Figures**: save alongside notebook renders; see `SKILL.md` §Describe for
+  what to plot (distributions, relationships, temporal patterns) and the
+  rendering sections below (Python jupytext / Julia QuartoNotebookRunner) for
+  how to render.
+
+The major-vs-minor-decision split is load-bearing: minor decisions inside a cell document *the choice*; major decisions in a markdown cell document *the reasoning that led to the choice*. A reviewer tracing how the analysis got to its current shape reads the markdown cells first, then the code.
+
 ## Output: diagnostics vs rich display
 
 Two idioms, pick by what you're showing.
