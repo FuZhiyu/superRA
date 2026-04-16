@@ -40,7 +40,9 @@ Other tasks have no manifest dependency and may run in any order after Task 6.
 
 ## Decisions
 
-> *(empty — populate as user decisions are logged at execution time per `superRA:handoff-doc` §User Decisions Log)*
+> **User decision (2026-04-16):** Commit the 3 pre-existing uncommitted files as-is before starting Task 1.
+> **Question asked:** How to handle 3 files with uncommitted modifications (version bumps in plugin.json/marketplace.json, deletion of EXTREMELY-IMPORTANT/Red Flags/Skill Types sections in using-superRA/SKILL.md) that are unrelated to Tasks 1–16.
+> **Rationale:** *(none given — user chose to preserve the prior intentional work as an atomic pre-plan commit)*
 
 ---
 

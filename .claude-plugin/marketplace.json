@@ -9,7 +9,7 @@
     {
       "name": "superRA",
       "description": "superRA plugin",
-      "version": "0.0.2",
+      "version": "0.0.4",
       "source": "./",
       "author": {
         "name": "Julie Zhiyu Fu",
