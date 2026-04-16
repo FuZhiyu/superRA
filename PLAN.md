@@ -285,7 +285,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 10: Subdivide RESULTS.md maturation into ordered, recoverable commits
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/integration-workflow/SKILL.md` (Step 3 sub-part A), `skills/report-in-markdown/references/final-form.md`, `agents/implementer.md` (Report Format — multi-commit status return).
 **Input:** `integration-workflow` Step 3 sub-part A — the pass currently bundles fact-check + restructure + figure materialization + relocation into one commit.
