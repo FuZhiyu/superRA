@@ -62,10 +62,25 @@ The `integration-review` manifest row currently replicates the `refactoring` row
 
 ## Task 4: Move `script-to-notebook` into `econ-data-analysis` as a reference
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**Skill retired; content relocated under the data-analysis vertical.** The standalone `superRA:script-to-notebook` utility skill is gone — its three files (`SKILL.md` + `references/jupytext-guide.md` + `references/julia-quarto-guide.md`) moved via `git mv` into `skills/econ-data-analysis/references/`, with the old SKILL.md body landing as `notebook-format.md` (frontmatter trimmed to a one-line blockquote; title changed from "Script to Notebook" to "Notebook Format"). The directory `skills/script-to-notebook/` no longer exists. Skill inventory shrinks by one as planned.
+
+**Manifest now carries the notebook-format reference explicitly.** The `implementation` row's Required-skills cell dropped the trailing `+ script-to-notebook` enumeration; the Stage-scoped-references cell gained `econ-data-analysis/references/notebook-format.md` as a data-analysis-specific load. The manifest remains the single source of truth — any agent dispatched at Stage `implementation` sees the notebook-format reference called out on the manifest row itself, not implied by a separate skill load.
+
+**Active sweep — zero residual mentions outside historical records.** Post-refactor grep across `skills/`, `agents/`, `commands/`, `README.md`, `CLAUDE.md`, `CATEGORIES.md` shows no `script-to-notebook` matches. Eight active files updated (five SKILL.md bodies, one agent file, the README, and CATEGORIES); PLAN.md / RESULTS.md / RELEASE-NOTES.md retain the strings as historical record by design. Full file list in PLAN.md Step 5.
+
+**Stage-Scoped References table in `econ-data-analysis/SKILL.md` is now internally consistent.** The table listed three references pre-refactor (planning, integrate-drift-tests, data-robustness-checklist) despite the file directory carrying `integration.md` (named in the manifest but missing from the table). Added both the missing `integration.md` row and the new `notebook-format.md` row; lede sentence updated from "Two companion reference files..." to "Companion reference files..." to match the now-five-row table. Each table row names its phase + purpose + companion-file relationships (notebook-format's companions `jupytext-guide.md` and `julia-quarto-guide.md` are named in its row).
+
+### Notes on Step 1b (sequencing deviation)
+
+PLAN.md's Step 1b expected Task 3 to have staged a `notebook-format.md.draft` file carrying the dissolved §Documentation cross-cutting writing-discipline content from the SKILL.md body. Task 3 has not run yet in the plan sequence (Tasks 1, 4, 3, 6 are the coupled chain per the Task-sequencing note; Task 4 runs second), so no draft file existed and the dispatch override instructed: proceed with Step 1 content as-is, note the absence. When Task 3 runs, its Step 2 absorbs the writing-discipline content into the now-existing `notebook-format.md` as a new "Writing Discipline" section after the cell-organization section. The `notebook-format.md` file that Task 4 leaves behind is the correct target — Task 3's implementer will find it in place.
+
+### Reviewer note on working-tree reset
+
+During implementation, the coordinator reported that a prior reviewer agent accidentally bundled Task 4's pre-staged file renames into one of its review commits, then soft-reset to unbundle. The result: the three file moves came back as unstaged deletes + untracked new files in the working tree. Git history was not corrupted; only the index was affected. Re-staged before committing.
 
 ---
 

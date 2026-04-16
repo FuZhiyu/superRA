@@ -54,7 +54,7 @@ flowchart TB
     PLAN["<b>PLAN</b><br/>planning-workflow<br/>+ econ-data-analysis/references/planning.md<br/>Data Inventory hard gate, sensitivity design"]
     PLAN --> IMPL
 
-    IMPL["<b>IMPLEMENT</b> (per task)<br/>execution-workflow Step 2<br/>Stage: implementation<br/>→ implementer agent<br/>+ econ-data-analysis main body (Iron Law, Describe/Analyze/Validate)<br/>+ script-to-notebook"]
+    IMPL["<b>IMPLEMENT</b> (per task)<br/>execution-workflow Step 2<br/>Stage: implementation<br/>→ implementer agent<br/>+ econ-data-analysis main body (Iron Law, Describe/Analyze/Validate)<br/>+ econ-data-analysis/references/notebook-format.md"]
     IMPL --> VAL
 
     VAL["<b>VALIDATE</b> (per task)<br/>execution-workflow Step 2 review<br/>Stage: implementation review<br/>→ reviewer agent<br/>+ econ-data-analysis §Review &amp; Self-Check Discipline<br/>APPROVE / REVISE / CONDITIONAL APPROVE"]
@@ -148,7 +148,7 @@ superRA's skills split into four categories. The directory layout stays flat (on
 
 | Skill | What It Does |
 |-------|-------------|
-| **econ-data-analysis** | Iron Law (no transformation without prior description). Three concurrent disciplines: Describe, Analyze, Validate (with sensitivity analysis as a first-class validation discipline). Diagnostics-for-validity philosophy. Pitfall catalogs for merges, time series, aggregations, filtering, variable construction, missing data. Red Flags table. Stage-scoped references load per phase: `planning.md` (Data Inventory hard gate + sensitivity design), `integrate-drift-tests.md` (drift-test construction), `integration.md` (data-specific integration gates), `data-robustness-checklist.md` (robustness menu). |
+| **econ-data-analysis** | Iron Law (no transformation without prior description). Three concurrent disciplines: Describe, Analyze, Validate (with sensitivity analysis as a first-class validation discipline). Diagnostics-for-validity philosophy. Pitfall catalogs for merges, time series, aggregations, filtering, variable construction, missing data. Red Flags table. Stage-scoped references load per phase: `planning.md` (Data Inventory hard gate + sensitivity design), `integrate-drift-tests.md` (drift-test construction), `integration.md` (data-specific integration gates), `data-robustness-checklist.md` (robustness menu), `notebook-format.md` (cell organization + Python/Julia rendering; companion guides `jupytext-guide.md`, `julia-quarto-guide.md`). |
 
 Future verticals — theory/modeling, literature review, simulation, writing/paper drafting — are planned; see the Roadmap section at the bottom.
 
@@ -157,7 +157,6 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 | Skill | What It Does |
 |-------|-------------|
 | **handoff-doc** | Document-level discipline for PLAN.md / RESULTS.md — four principles (latest-state-only, inline-edit, task-block structure, doc-is-the-record), stale-content checklist, figure embedding rule. Progressive-reveal references carry full PLAN.md and RESULTS.md anatomy. Single source of truth for doc mechanics. |
-| **script-to-notebook** | Cell organization, markdown narrative, and rendering for analysis scripts. Python (jupytext) and Julia (QuartoNotebookRunner). |
 | **refactor-and-integrate** | Three integration-phase checklists: `drift-test-quality.md`, `codebase-integration.md`, `merge-quality.md`. Standalone-invokable for any refactoring task. |
 | **report-in-markdown** | Format discipline for markdown reports with figures, LaTeX math, tables. Lean SKILL.md body; three references loaded on demand: `baseline-io.md`, `rich-content.md`, `final-form.md`. |
 | **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions to the user. Invoked by `merge-workflow` Step 1 and by the merge-guard hook. |

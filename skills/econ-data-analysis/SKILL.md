@@ -26,13 +26,15 @@ superRA's flagship domain skill. Carries the cross-cutting discipline that appli
 
 ## Stage-Scoped References
 
-Two companion reference files carry content that applies at exactly one phase. Load them per stage; do not load them at every dispatch:
+Companion reference files carry content that applies at a specific phase or operation. Load per stage; do not load them all at every dispatch:
 
 | Reference | Load when |
 |---|---|
 | `references/planning.md` | PLAN phase — covers the **Data Inventory hard gate** and **Sensitivity Analysis Design**. Loaded by `planning-workflow` when the analysis involves data work. |
 | `references/integrate-drift-tests.md` | INTEGRATE phase — identifies key results worth protecting, sets econ-specific tolerances, and catalogs data-analysis failure modes drift tests catch. Loaded by `integration-workflow` Stage 1 (drift-test creation + review). |
+| `references/integration.md` | INTEGRATE phase — data-specific refactor-integrity gates (variable-construction consistency, transformation-pattern consistency, preserved describe steps / row-count prints / validation checks, drift-test pass-through). Loaded at `refactoring` and `integration-review` stages. |
 | `references/data-robustness-checklist.md` | PLAN phase (design) and IMPLEMENT phase (execution of sensitivity tasks) — menu of robustness checks. |
+| `references/notebook-format.md` | IMPLEMENT + VALIDATE phase — cell organization, markdown narrative, output idioms, and language-specific rendering (Python via jupytext, Julia via QuartoNotebookRunner). Loaded alongside the main body whenever analysis scripts are being written or rendered. Companion guides: `jupytext-guide.md`, `julia-quarto-guide.md`. |
 
 The main body below is everything else — everything that applies whenever data is being touched, which is most of the time. The §Review & Self-Check Discipline section below loads with the main body at every stage — it is the shared gating both implementer and reviewer walk.
 
@@ -131,7 +133,7 @@ describing data — create them alongside the statistics they complement.
 
 Not publication quality. Clear axis labels, informative titles, readable scales.
 Save to the output directory alongside notebook renders. For rendering, see
-`superRA:script-to-notebook`.
+`references/notebook-format.md`.
 
 ## Analyze
 
@@ -165,7 +167,7 @@ reconstruct what was done and why.
 
 **Script categories:**
 - **Analysis scripts** (loading, cleaning, merging, construction, diagnostics):
-  format for notebook rendering — see `superRA:script-to-notebook` for cell
+  format for notebook rendering — see `references/notebook-format.md` for cell
   organization and rendering details (Python jupytext, Julia
   QuartoNotebookRunner).
 - **Runner/utility/pipeline scripts**: standard script format, no notebook
@@ -178,7 +180,7 @@ reconstruct what was done and why.
 - **Markdown cells with reasoning** for major decisions (excluding countries,
   choosing sample period, variable definition).
 - **Figures**: save alongside notebook renders; see Describe §Visualization for
-  what to plot and `superRA:script-to-notebook` for rendering.
+  what to plot and `references/notebook-format.md` for rendering.
 
 **Short checklist per step:**
 - [ ] Markdown cell stating what this step does and why
@@ -306,7 +308,7 @@ On a re-dispatch following a CONDITIONAL APPROVE, the reviewer's second pass is 
 ### Implementation standards
 
 - `[STANDARD]` Each step implements what `PLAN.md` specifies; deviations are rewritten into the step text, not layered on top.
-- `[STANDARD]` Analysis scripts follow the notebook-compatible format per `superRA:script-to-notebook`.
+- `[STANDARD]` Analysis scripts follow the notebook-compatible format per `references/notebook-format.md`.
 - `[STANDARD]` Major decisions (filter threshold, join type, variable definition, sample period) carry a markdown-cell justification; minor decisions carry an inline comment.
 - `[STANDARD]` Outputs (tables, figures) are generated from committed code, not ad-hoc REPL state.
 
@@ -463,7 +465,7 @@ Validate §Missing-data-as-signal):
 
 ## Key References
 
-- `superRA:script-to-notebook` — cell organization, rendering (Python jupytext, Julia QuartoNotebookRunner)
+- `references/notebook-format.md` — cell organization, rendering (Python jupytext, Julia QuartoNotebookRunner)
 - `references/data-robustness-checklist.md` — sensitivity analysis: outlier
   alternatives, alternative definitions, sample restrictions, leave-one-out
 - Gentzkow & Shapiro (2014), "Code and Data for the Social Sciences"
