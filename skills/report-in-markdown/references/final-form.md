@@ -69,15 +69,15 @@ The following sections **must not appear** unless the researcher explicitly requ
 
 A "Limitations" section that lists factual caveats (unresolved reviewer notes, data coverage gaps, known biases) is allowed and encouraged.
 
-## Project documentation accuracy
+## Cross-consistency with project docs
 
-When the doc-reviewer's dispatch includes project docs (CLAUDE.md / AGENTS.md / README.md), apply this checklist alongside the RESULTS.md fact-check above.
+The Stage 2 doc-writer matures `RESULTS.md` only; project-level docs (`CLAUDE.md` / `AGENTS.md` / `README.md`) are audited during `integration-workflow` Stage 2 per `refactor-and-integrate/references/codebase-integration.md` §Project Doc Audit. The doc-reviewer still checks that the matured `RESULTS.md` does not contradict project docs:
 
-- [ ] **Methodology descriptions** match the actual code — no references to dropped approaches, superseded variable definitions, or removed processing steps
-- [ ] **Output file lists** match committed outputs — every file listed is actually produced by the current code; no references to renamed or deleted outputs
-- [ ] **Headline results** (if any) match the matured RESULTS.md — no stale numbers from before the last revision
-- [ ] **Dates and version claims** ("as of ...", version numbers) reflect the current commit
-- [ ] **File paths and command names** are accurate — no references to moved, renamed, or deleted files
+- [ ] **Methodology descriptions** in the matured RESULTS.md match the current code — no references to dropped approaches, superseded variable definitions, or removed processing steps
+- [ ] **Headline results cited in project docs** (if any) match the matured RESULTS.md — no stale numbers from before the last revision
+- [ ] **File paths and command names cited in RESULTS.md** are accurate — no references to moved, renamed, or deleted files
+
+If the reviewer finds stale claims in `CLAUDE.md` / `AGENTS.md` / `README.md` themselves, that is a Stage 2 regression — flag it but recognize the primary gate for project-doc accuracy was Stage 2.
 
 ## Severity for integration review
 

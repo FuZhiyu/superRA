@@ -264,27 +264,27 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 9: Move project doc audit into integration Stage 2 (refactor + integration-review)
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
-**Files affected:** `skills/integration-workflow/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/handoff-doc/references/results-anatomy.md` (the §Transition to Stage 2 paragraph)
-**Input:** `integration-workflow` Step 3 sub-part B (lines 300–311) — currently bundled into the doc-writer dispatch.
+**Files affected:** `skills/integration-workflow/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/handoff-doc/references/results-anatomy.md`, `skills/report-in-markdown/SKILL.md` (load-map row), `skills/report-in-markdown/references/final-form.md` (project-docs section), `agents/implementer.md`, `agents/reviewer.md` (two cross-references each).
+**Input:** `integration-workflow` Step 3 sub-part B — currently bundled into the doc-writer dispatch.
 **Output:** Project doc audit (walk-up CLAUDE.md / AGENTS.md / README.md, update stale claims, create missing pairs) becomes a checklist item for the Stage 2 refactorer and a verification item for the Stage 2 integration reviewer. Step 3 doc-writer is RESULTS.md-only.
 
-- [ ] **Step 1: Move the audit checklist** (the bullet list at `integration-workflow:304–311` describing what to update, what to leave alone, the CLAUDE.md+AGENTS.md symlink rule) into `refactor-and-integrate/references/codebase-integration.md` as a new "Project Doc Audit" section. This becomes part of the refactorer's discipline.
+- [x] **Step 1: Move the audit checklist** into `refactor-and-integrate/references/codebase-integration.md` as a new "Project Doc Audit" section. The walk-up rules, what-to-update, what-to-leave-alone, and CLAUDE.md+AGENTS.md symlink rule are now a §Project Doc Audit section in that file. The closing sentence names the Stage 2 ownership split (refactorer applies; integration reviewer verifies) and carves RESULTS.md out to Step 3.
 
-- [ ] **Step 2: Update `integration-workflow` Stage 2 dispatches.** Both refactorer dispatch (Stage 2 step 4a) and integration-reviewer dispatch (Stage 2 step 2) get a sub-bullet: "this stage also covers project doc audit per `codebase-integration.md` §Project Doc Audit." (The dispatch template doesn't expand the checklist — the agent loads `codebase-integration.md` per the manifest.)
+- [x] **Step 2: Update `integration-workflow` Stage 2 dispatches.** Both refactorer dispatch (Stage 2 step 4a) and integration-reviewer dispatch (Stage 2 step 2) carry the sub-bullet "this stage also covers the project doc audit per `codebase-integration.md` §Project Doc Audit (walk-up CLAUDE.md / AGENTS.md / README.md reachable from the diff)". The dispatch prompts do not expand the checklist — the loaded reference carries it.
 
-- [ ] **Step 3: Update `integration-workflow` Step 3.** Remove sub-part B entirely. Step 3 becomes:
-  - Sub-part A (RESULTS.md maturation by doc-writer; subdivided per Task 10).
-  - Sub-part C (PLAN.md disposition by orchestrator) — unchanged.
+- [x] **Step 3: Update `integration-workflow` Step 3.** Sub-part B is deleted. Step 3 now has sub-part A (RESULTS.md maturation) and sub-part C (PLAN.md disposition). Doc-writer dispatch `Task:` is now `Stage 2 RESULTS.md maturation` (no "+ project doc audit"); its `Additionally:` drops the audit sub-bullet. Doc-reviewer dispatch `Task:` is `review of matured Stage 2 RESULTS.md` (no "+ audited project docs"); its scope list drops the separate "Project docs" bullet, replaced with a tighter Cross-consistency bullet that points at Stage 2's responsibility for upstream stale-claim catches.
+
+- [x] **Step 4: Update `integration-workflow` Step 3 process diagram and red flags.** Process diagram: node "B: audit CLAUDE.md / AGENTS.md / README.md" and its edges removed; A now flows directly into doc-reviewer dispatch. Description-frontmatter and Core principle + intro paragraphs rewritten to name Stage 2 as the project-doc audit owner. Red Flags "Never" / "Always" bullets rewritten to drop "sub-parts A and B" framing; Agent Loads paragraph rewritten the same way. Agent Teams Mode paragraph trimmed to "sub-part A — the RESULTS.md maturation".
+
+- [x] **Step 5: Update `results-anatomy.md` §Transition to Stage 2** to move the project-doc audit sentence out of the doc-writer pass and into a separate sentence naming Stage 2 + `codebase-integration.md` §Project Doc Audit as the owner.
+
+- [x] **Step 6: Validate + downstream sweep.** Grep `sub-part B` and `project doc audit` across the repo:
+  - `sub-part B` — zero hits in skill bodies and agent files; only PLAN.md history (lines 60, 270, 277, 283, 287, 442 in this file) and RELEASE-NOTES remain, which is fine.
+  - `project doc audit` / `Project Doc Audit` — appears in `codebase-integration.md` (the new section), in `integration-workflow/SKILL.md` (as pointers into Stage 2), in `results-anatomy.md` (the new Stage 2 pointer), in `final-form.md` (the new cross-consistency paragraph), and in `agents/{implementer,reviewer}.md` (the two walk-up pointers now point at Stage 2's §Project Doc Audit, not Step 3 sub-part B).
   
-  Update the doc-writer dispatch (Step 3 sub-part A) to drop "Audit project docs reachable from the diff…" from its sub-parts list.
-
-- [ ] **Step 4: Update `integration-workflow` Step 3 process diagram and red flags.** Remove every reference to "sub-part B," "project doc audit," and the "doc-writer subagent does the doc audit" framing.
-
-- [ ] **Step 5: Update `results-anatomy.md` §Transition to Stage 2** to remove the "The same doc-writer pass also audits project-level docs" sentence.
-
-- [ ] **Step 6: Validate.** Grep for "sub-part B" and "project doc audit" — should appear only in `codebase-integration.md`. Re-read integration-workflow end-to-end: the workflow should now have Stage 2 (which absorbed B) and Step 3 (now smaller — just RESULTS.md + PLAN.md disposition). Atomic commit.
+  Also caught during sweep: `report-in-markdown/SKILL.md` load-map row still read "maturing `RESULTS.md` + project doc audit" — trimmed to "maturing `RESULTS.md`". `final-form.md` §Project documentation accuracy was the doc-reviewer's project-doc checklist (now stale since Stage 2 owns that gate) — rewritten into a tighter §Cross-consistency with project docs that keeps the RESULTS.md-vs-project-docs consistency check and names Stage 2 as the primary project-doc gate. Atomic commit.
 
 ---
 
