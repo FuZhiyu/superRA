@@ -173,7 +173,7 @@ The `integration-review` manifest row currently replicates the `refactoring` row
 - `PLAN.md` (this refactor plan) and `RESULTS.md` (this dev log) retain references as historical record of the refactor.
 - `docs/plans/2025-11-28-skills-improvements-from-user-feedback.md` is an archived prior plan document, not current inventory.
 
-**Note on §Skill Types.** PLAN.md Step 7 anticipated removing the skill from a §Skill Types "Rigid" example list in `using-superRA`. That section does not currently exist in `using-superRA/SKILL.md` (apparently removed in the pre-plan commit `e5c8b58` which stripped EXTREMELY-IMPORTANT / Red Flags / Skill Types sections). The `writing-skills` Discipline-Enforcing example list was the only remaining "types-like" enumeration — updated as documented above.
+**Note on §Skill Types.** PLAN.md Step 7 anticipated removing the skill from a §Skill Types "Rigid" example list in `using-superRA`. That section does not currently exist in `using-superRA/SKILL.md` (removed in the pre-plan commit `956f6cc` which stripped EXTREMELY-IMPORTANT / Red Flags / Skill Types sections). The `writing-skills` Discipline-Enforcing example list was the only remaining "types-like" enumeration — updated as documented above.
 
 ---
 
