@@ -225,13 +225,7 @@ Log the researcher's answer per `using-superRA` §Handoff Doc Discipline §User 
   Invoke `superRA:integration-workflow` skill to proceed with the integration stage. 
 
   - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
-- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then:
-  ```bash
-  git checkout <base-branch>
-  git branch -D <analysis-branch>
-  git worktree remove <worktree-path>  # only if running in a worktree
-  ```
-  Stop after the branch and worktree are removed. Report what was deleted.
+- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then invoke `superRA:worktree-data-sync` §Cleanup — its Option-4 ritual covers the branch deletion and the optional `git worktree remove`. Stop after the branch and worktree are removed. Report what was deleted.
 
 ## Review Status Reference
 
@@ -310,7 +304,7 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 ## Integration
 
 **Required workflow skills:**
-- **superRA:using-analysis-worktrees** — RECOMMENDED: For complex or multi-session analyses, set up an isolated workspace before starting
+- **superRA:worktree-data-sync** — RECOMMENDED: For complex or multi-session analyses, set up an isolated workspace before starting (see §When to Use a Worktree for the decision table)
 - **superRA:worktree-data-sync** — Load this when copying managed data between existing worktrees (e.g., seeding a new analysis worktree from the main one); do not hand-roll data copy scripts
 - **superRA:planning-workflow** — Creates the plan this skill executes
 - **the active domain skill (for data analysis: `superRA:econ-data-analysis`)** — REQUIRED: domain discipline all agents follow, loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest. Carries the §Review & Self-Check Discipline that the reviewer walks on every pass.
