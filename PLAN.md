@@ -51,43 +51,30 @@ Other tasks have no manifest dependency and may run in any order after Task 6.
 ---
 
 ### Task 1: Consolidate Stage names + remove dispatch re-statements
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Files affected:** `skills/using-superRA/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `agents/implementer.md`, `agents/reviewer.md`
 **Input:** Current dispatch sites (grep targets below); current manifest (using-superRA §Skill-Load Manifest).
 **Output:** Manifest is the single source of truth for Stage→{skills, references}. Every `Stage:` value in every dispatch matches a manifest row. Per-workflow `Skills:` / `Domain reference:` / "Agent Types and Domain References" tables are deleted.
 
-- [ ] **Step 1: Audit Stage names actually emitted.**
-  ```bash
-  grep -rn "Stage:" skills/ agents/ --include="*.md" \
-    | grep -v "frontmatter\|description\|Stage column\|Stage-scoped"
-  ```
-  Produce a single list of distinct values. Expected to find at least: `implementation`, `implementation review`, `drift test creation`, `drift test`, `integration review`, `refactoring`, `documentation finalization (...)`, `merge`, `merge proposer`, `merge proposer (Tier 3)`, `integration`.
+- [x] **Step 1: Audit Stage names actually emitted.** Grep returned eleven distinct non-canonical values across `skills/` and `agents/`: `implementation`, `implementation review`, `drift test creation`, `drift test`, `integration review`, `refactoring`, `documentation finalization (Stage 2 RESULTS.md + project doc audit)` (emitted twice), `merge`, `merge proposer`, `merge proposer (Tier 3)`, and `integration` (from refactor-and-integrate's dispatch example). Matches the expected list.
 
-- [ ] **Step 2: Decide canonical names.** Use the existing six manifest rows and let `subagent_type` (implementer vs reviewer) carry the role split:
-  - `implementation` (was: implementation, implementation review)
-  - `refactoring` (was: refactoring)
-  - `drift-test` (was: drift test creation, drift test) — note: hyphenated, matches manifest
-  - `integration-review` — **new manifest row** (was: integration review). Required because integration review's reference set differs from `refactoring`. Add to the manifest.
-  - `merge` (was: merge, merge proposer, merge proposer (Tier 3); Tier moves to `Additionally:`)
-  - `documentation` (was: documentation finalization (...); the descriptive suffix moves to `Additionally:`)
-  - `planning-review` (unchanged)
+- [x] **Step 2: Decide canonical names + update manifest.** Added the new `integration-review` row to `using-superRA/SKILL.md` §Skill-Load Manifest (same reference load as `refactoring`, preserved verbatim — Tasks 3 and 6 will refine later per the Task-sequencing note). Replaced the `Fallback rule` paragraph with: "**Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess." Canonical name for integration review is `integration-review` (hyphenated, matching the `drift-test` convention, per override #8).
 
-  Update `using-superRA` §Skill-Load Manifest to add the `integration-review` row and to remove the `Fallback rule` that points unknown stages at `implementation` defaults — replace with: "Unknown Stage values are a dispatch error; the agent halts and reports."
+- [x] **Step 3: Sweep all dispatch sites.** Rewrote every non-canonical `Stage:` value to its canonical name:
+  - `integration-workflow`: `drift test creation` → `drift-test`; `drift test` → `drift-test`; `integration review` → `integration-review`; `documentation finalization (...)` → `documentation` (sub-part A/B context moved into `Additionally:`).
+  - `merge-workflow`: `integration review` → `integration-review`.
+  - `semantic-merge`: `merge proposer` → `merge`; `merge proposer (Tier 3)` → `merge` (Tier 2 / Tier 3 context moved into `Additionally:`).
+  - `refactor-and-integrate`: the two dispatch examples (`drift test creation` / `integration`) replaced with a one-line pointer at `agent-orchestration` §Dispatch Templates per Step 4.
+  - `execution-workflow`: the `Agent Types` section's reviewer line referenced `Stage: implementation review` — rewrote to state both roles use `Stage: implementation` and `subagent_type` carries the split. The §Dispatch Templates pointer paragraph that named `Stage: implementation review` was likewise updated.
 
-- [ ] **Step 3: Sweep all dispatch sites.** For each file in *Files affected*, rewrite each non-canonical `Stage:` value to its canonical name. Where the old name carried sub-context (Tier 3, "Stage 2 RESULTS.md + project doc audit"), move that context into the `Additionally:` line.
+- [x] **Step 4: Delete redundant `Skills:` / `Domain reference(s):` lines from every dispatch template.** Every Stage-line dispatch block across `integration-workflow`, `merge-workflow`, `semantic-merge`, and `refactor-and-integrate` has been reduced to the canonical shape (`Stage:` + `Task:` + `Git range:` (reviewers only) + `Additionally:`). Large free-form context fields (`Key results to protect:`, `Tests under review:`, `Code under review:`, `Codebase conventions:`, `Merge context:`, `Incoming changes:`, etc.) were also dropped — the dispatched agent reads these from `PLAN.md` / `RESULTS.md` directly. The `refactor-and-integrate` §Dispatch Convention examples were replaced with a single paragraph pointing at `agent-orchestration` §Dispatch Templates and naming which manifest rows load this skill.
 
-- [ ] **Step 4: Delete redundant `Skills:` / `Domain reference(s):` lines from every dispatch template.** These re-state what the manifest now fully specifies. Keep `Skills:` only where the dispatch genuinely overrides the manifest (today: none; if any survive, leave a comment explaining why). Touch:
-  - `integration-workflow:128–150, 174–187, 195–209, 256–278, 322–340`
-  - `merge-workflow:82–96, 105–117`
-  - `semantic-merge:146–158, 163–175, 193–207`
-  - `refactor-and-integrate:38–58` (the dispatch examples — replace with a one-line pointer at `agent-orchestration` §Dispatch Templates)
+- [x] **Step 5: Delete per-workflow Agent-Types tables.** Removed `## Agent Types and Domain References` from `integration-workflow/SKILL.md` and `semantic-merge/SKILL.md`, and the `## Agent Types` section from `execution-workflow/SKILL.md`. Each replaced with a short `## Agent Loads` section that points at `superRA:using-superRA` §Skill-Load Manifest and names the manifest rows the workflow runs.
 
-- [ ] **Step 5: Delete per-workflow Agent-Types tables.** Specifically `integration-workflow:431–438` ("Agent Types and Domain References" table). Replace with one line: "See `superRA:using-superRA` §Skill-Load Manifest." Audit the other workflow skills for similar tables and delete them too.
+- [x] **Step 6: Update agents/{implementer,reviewer}.md "Before You Start" steps 3 and 4.** Rewrote step 3 in both files to: "Load any additional skill the dispatch's `Additionally:` line names (rare — overrides only; the manifest is the default)." Deleted step 4 entirely. Renumbered the remaining steps (5→4, 6→5, 7→6) and updated the in-paragraph cross-reference ("see step 7 below" → "see step 6 below"). Also updated both agent files' §Stage → skills and references paragraph: the old fallback to `implementation` defaults is replaced with a halt-and-report instruction, matching the manifest's new no-fallback policy.
 
-- [ ] **Step 6: Update agents/{implementer,reviewer}.md "Before You Start" steps 3 and 4.** Today they say "load any additional skills specified in your dispatch prompt" and "read the domain reference file specified in your dispatch prompt." After this task, neither line should appear in dispatches. Rewrite step 3 to: "Load any additional skill the dispatch's `Additionally:` line names (rare — overrides only)." Delete step 4 entirely.
-
-- [ ] **Step 7: Validate.** Re-grep `Stage:` and confirm every emitted value is in the manifest. Re-read every workflow skill end-to-end: dispatch templates should now be just `Stage:` + `Task:` (+ `Git range:` for reviewers) + `Additionally:`. Grep for `Skills:` and `Domain reference` in dispatch sections — should return only the manifest itself. Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Update RESULTS.md. Atomic commit.
+- [x] **Step 7: Validate.** Re-grepped `Stage:` across `skills/` and `agents/`: every emitted value is now `implementation`, `drift-test`, `refactoring`, `integration-review`, `merge`, or `documentation` — all manifest rows. Re-grepped `Skills:` / `Domain reference` in dispatch sections: zero hits in dispatch blocks; two meta-level matches remain (`agent-orchestration:77` describing the canonical template's optional override fields, and `refactor-and-integrate:36` stating dispatches do not restate these lines) — both legitimate. Re-read every touched workflow skill end-to-end: dispatch templates match the canonical shape (`Stage:` + `Task:` + optional `Git range:` + `Additionally:`). Also fixed two stale `integration review` references in `integration-workflow` Red Flags / Always lists to `integration-review`. Refactor-and-integrate's `description:` frontmatter was edited to enumerate the new canonical Stage names; `superRA:writing-skills` triggering-check: the description still fires on its original triggers (drift tests, refactor, merge integration commits) and the change only synchronizes the enumeration of Stage names with the new manifest — no trigger surface change.
 
 ---
 

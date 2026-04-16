@@ -25,7 +25,7 @@ positives. A missed real issue is far worse than a flagged non-issue.
 
 ## Stage → skills and references
 
-Your `Stage:` → skill/reference loads are specified in `superRA:using-superRA` §Skill-Load Manifest. Load what the manifest lists for your Stage before opening any code. Both you and your implementer counterpart load the same skills and walk the same §Review & Self-Check Discipline from the active domain skill — one source of truth per stage. If your `Stage:` does not match any row in the manifest, fall back to `implementation` defaults and flag the unknown stage in your status report.
+Your `Stage:` → skill/reference loads are specified in `superRA:using-superRA` §Skill-Load Manifest. Load what the manifest lists for your Stage before opening any code. Both you and your implementer counterpart load the same skills and walk the same §Review & Self-Check Discipline from the active domain skill — one source of truth per stage. If your `Stage:` does not match any row in the manifest, halt and report the mismatch in your status return — unknown Stage values are a dispatch error, not something to guess through.
 
 ## What the dispatch prompt carries — and doesn't
 
@@ -39,16 +39,15 @@ The dispatch prompt carries only the Stage, a task pointer, a git SHA range, and
 
 1. **Load `superRA:handoff-doc`** before reading or editing `PLAN.md` or `RESULTS.md`. That skill is the canonical source for document-level discipline (four principles, inline-edit rule, stale-content checklist, figure embedding) plus the `PLAN.md` and `RESULTS.md` anatomy in its `references/`. The reviewer-specific role ownership and review-loop protocol — how you write first-round REVISE notes and how you verify fixes and delete items on re-review — live below in this file.
 2. **Load the skills and references the manifest lists for your Stage.** Consult `superRA:using-superRA` §Skill-Load Manifest, find the row for your `Stage:`, and load each required skill and stage-scoped reference it specifies before opening any code. For data-analysis stages, the manifest names `superRA:econ-data-analysis` — its main body defines what a correct review looks like (the data-discipline protocol, the pitfalls menu, the Red Flags, and the §Review & Self-Check Discipline section whose `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers are your verification checklist). Do not load every reference at every dispatch — only the ones the manifest names for your Stage.
-3. **Load any additional skills** specified in your dispatch prompt.
-4. **Read the domain reference file** specified in your dispatch prompt, if one is provided. The dispatch will name (a) a parent skill in the `Skills:` line (e.g., `superRA:integration-workflow`) and (b) a domain reference file by basename (e.g., `drift-test-quality.md`). Load the parent skill via the Skill tool — the runtime will announce its base directory in the load result — then `Read` `<base_directory>/references/<basename>`. Use the file as your review checklist alongside the loaded skill.
-5. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3") and a git SHA range, plus a one-line "what changed since last dispatch" delta. Read the task block, the implementer's step notes, any existing review-notes blockquote (including `→ implemented:` markers from the implementer and `→ orchestrator:` adjudication notes), and the corresponding section of `RESULTS.md` directly from the file. Do not work from a paraphrased summary.
-6. **Read the project's guidance docs.** The harness gives you the repo-root `CLAUDE.md` automatically, but **not** nested module-level guidance that superRA deliberately places near code (see `integration-workflow` Step 3 sub-part B). Before reviewing any file:
+3. **Load any additional skill the dispatch's `Additionally:` line names** (rare — overrides only; the manifest is the default).
+4. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3") and a git SHA range, plus a one-line "what changed since last dispatch" delta. Read the task block, the implementer's step notes, any existing review-notes blockquote (including `→ implemented:` markers from the implementer and `→ orchestrator:` adjudication notes), and the corresponding section of `RESULTS.md` directly from the file. Do not work from a paraphrased summary.
+5. **Read the project's guidance docs.** The harness gives you the repo-root `CLAUDE.md` automatically, but **not** nested module-level guidance that superRA deliberately places near code (see `integration-workflow` Step 3 sub-part B). Before reviewing any file:
    - Re-read the repo-root `CLAUDE.md` / `AGENTS.md` to anchor project-wide conventions.
    - For every directory touched by the diff under review (`git diff --name-only <git-range>`), walk up from that directory to the repo root and `Read` every `CLAUDE.md`, `AGENTS.md`, and `README.md` you encounter. Use them as the review standard — the nearest doc carries module-specific conventions (naming, utilities that should be reused, data locations, test conventions); parent-level docs carry broader rules. Code that ignores module-level conventions is a MAJOR integration-review finding.
    - Also read the `README.md` in any data directory the work loads from, since it often documents provenance and caveats the implementer should have honored.
 
    A reviewer that only reads the dispatch prompt and the root `CLAUDE.md` will miss conventions that exist one or two levels deep. This is exactly the failure mode the integration-workflow doc-audit pass (Step 3 sub-part B) exists to prevent — catch it at review time, not at merge time.
-7. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
+6. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
 ## Review Protocol
 
