@@ -81,14 +81,11 @@ pytest tests/  # or: julia --project test/runtests.jl
 **2b. Dispatch a fresh integration reviewer on the merged state.**
 ```
 Agent(subagent_type: "superRA:reviewer"):
-  Stage: integration review
-  Skills: superRA:refactor-and-integrate
-  Domain reference: active domain skill's §Refactor integrity (for data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + codebase-integration.md (cross-cutting code-quality checklist)
-  Code under review: <analysis paths>
-  Codebase conventions: <where they live in main>
-  Drift tests: <test paths>
-  Diff: <merge-base>..HEAD  # the merged state vs the base branch tip
-  Additionally: Follow the standard stage-relevant workflow and load
+  Stage: integration-review
+  Task: post-merge integration review on the merged state
+  Git range: <merge-base>..HEAD  # the merged state vs the base branch tip
+
+  Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally, this is a
     post-merge review — verify the merge didn't break codebase fit
     (convention drift, renamed utilities, moved files, stale imports).
@@ -105,12 +102,9 @@ When drift tests fail OR the post-merge integration reviewer returns REVISE, re-
    ```
    Agent(subagent_type: "superRA:implementer"):
      Stage: refactoring
-     Skills: superRA:refactor-and-integrate
-     Domain reference: active domain skill's §Refactor integrity (for data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + codebase-integration.md (cross-cutting code-quality checklist)
-     Reviewer issues to address: [accepted items, file:line, what to fix]
-     Drift tests: [paths — must pass after refactoring]
-     Code to refactor: [paths]
-     Additionally: Follow the standard stage-relevant workflow and load
+     Task: post-merge refactoring — address integration reviewer's accepted findings on the merged state
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally, this is
        post-merge refactoring — main has moved since integration-workflow
        ran; address the drift introduced by the merge.

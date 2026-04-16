@@ -145,29 +145,25 @@ Conflicts exist but none touch research-relevant files.
 1. **Dispatch merge-proposer:**
    ```
    Agent(subagent_type: "superRA:implementer"):
-     Stage: merge proposer
-     Skills: superRA:refactor-and-integrate
-     Domain reference: merge-quality.md
-     Merge context: branches, merge base, tier
-     Incoming changes: <commit messages and diffs since merge base>
-     Conflicting files: [list with classification]
-     Current branch purpose: [one line]
-     Additionally: Follow the standard stage-relevant workflow and load
-       relevant skills and documents to proceed. Additionally,
-       <optional steering>.
+     Stage: merge
+     Task: propose Tier 2 merge — <base>..<incoming-branch>
+
+     Follow the standard stage-relevant workflow and load
+       relevant skills and documents to proceed. Additionally, Tier 2 —
+       syntactic conflicts only (config/docs/infra); execute the two-commit
+       merge (Commit 1 mechanical, Commit 2 integration). <optional steering>.
    ```
 
-2. **Proposer executes** the two-commit merge per the merge-quality.md domain reference (Commit 1 mechanical, Commit 2 integration).
+2. **Proposer executes** the two-commit merge per the `merge-quality.md` checklist (Commit 1 mechanical, Commit 2 integration).
 
 3. **Dispatch merge-reviewer:**
    ```
    Agent(subagent_type: "superRA:reviewer"):
      Stage: merge
-     Skills: superRA:refactor-and-integrate
-     Domain reference: merge-quality.md
-     Merge context: branches, merge base, tier
-     Proposer's report: [integration map, decisions, rationale]
-     Additionally: Follow the standard stage-relevant workflow and load
+     Task: review the Tier 2 merge proposal
+     Git range: <BASE_SHA>..<HEAD_SHA>
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally,
        <optional steering>.
    ```
@@ -193,17 +189,16 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 3. **Dispatch merge-proposer** with Tier 3 context:
    ```
    Agent(subagent_type: "superRA:implementer"):
-     Stage: merge proposer (Tier 3)
-     Skills: superRA:refactor-and-integrate
-     Domain reference: merge-quality.md
-     [Tier 2 fields, plus:]
-     Changes classified by research role: [list]
-     Drift test results: [if available]
-     Integration map with research-meaningful decisions flagged for user
-     Additionally: Follow the standard stage-relevant workflow and load
+     Stage: merge
+     Task: propose Tier 3 merge — <base>..<incoming-branch>
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally, this is
        a Tier 3 semantic merge — research-relevant files are in conflict
-       and integration decisions require user-facing flags.
+       and integration decisions require user-facing flags. Produce an
+       integration map classifying changes by research role (analysis /
+       data processing / methodology / infrastructure / docs / generated)
+       and flag research-meaningful decisions for orchestrator escalation.
    ```
 
 4. **Present integration map to user.** The proposer's report identifies conflicts and proposes resolutions. Present research-meaningful decisions:
@@ -293,12 +288,9 @@ When the merge is complete, summarize:
 - **Pipeline status:** Runs or fails
 - **Verification:** Stale references checked, data discipline preserved
 
-## Agent Types and Domain References
+## Agent Loads
 
-- **`superRA:implementer`** agent + `./references/merge-quality.md` — For merge proposals
-- **`superRA:reviewer`** agent + `./references/merge-quality.md` — For merge review
-
-Stage-driven domain-skill loads are specified by `superRA:using-superRA` §Skill-Load Manifest (for data-analysis stages, the manifest names `superRA:econ-data-analysis`).
+See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of truth for what every dispatched implementer / reviewer loads per Stage. This skill runs the `merge` row.
 
 ## Agent Teams Mode
 

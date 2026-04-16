@@ -170,7 +170,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 #### Dispatch Templates
 
-See `superRA:agent-orchestration` §Dispatch Templates for the canonical shape (required fields first, `Additionally:` anchor last; the "Follow the standard stage-relevant workflow" prefix; banned-in-dispatch list). Stage-specific bodies for this workflow use `Stage: implementation` (implementer) and `Stage: implementation review` (reviewer). On a CONDITIONAL APPROVE re-dispatch, the same reviewer template is used with `Additionally:` pointing at the narrow scope: "Narrow re-review — verify the gating fix at <file:line> and confirm cited downstream items still hold."
+See `superRA:agent-orchestration` §Dispatch Templates for the canonical shape (required fields first, `Additionally:` anchor last; the "Follow the standard stage-relevant workflow" prefix; banned-in-dispatch list). Both implementer and reviewer dispatches in this workflow use `Stage: implementation` — the `subagent_type` (`superRA:implementer` vs `superRA:reviewer`) carries the role split. On a CONDITIONAL APPROVE re-dispatch, the same reviewer template is used with `Additionally:` pointing at the narrow scope: "Narrow re-review — verify the gating fix at <file:line> and confirm cited downstream items still hold."
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
 
@@ -288,10 +288,9 @@ Stop for exactly three classes of pause, all of which require logging the answer
 
 **Ask for clarification rather than guessing** — but only when there is a real question. Fabricating a question to create a check-in violates this principle.
 
-## Agent Types
+## Agent Loads
 
-- **`superRA:implementer`** — Dispatched per task at `Stage: implementation`. See `superRA:using-superRA` §Skill-Load Manifest for the skills and stage-scoped references it loads.
-- **`superRA:reviewer`** — Dispatched per task at `Stage: implementation review`. See `superRA:using-superRA` §Skill-Load Manifest for the skills and stage-scoped references it loads.
+See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `implementation` row for both roles; `subagent_type` (`superRA:implementer` vs `superRA:reviewer`) carries the role split.
 
 ## Agent Teams Mode
 

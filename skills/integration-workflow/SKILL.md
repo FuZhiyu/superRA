@@ -125,12 +125,10 @@ Drift tests guard key results from unintended changes during refactoring or futu
 3. **Dispatch test-creator:**
    ```
    Agent(subagent_type: "superRA:implementer"):
-     Stage: drift test creation
-     Skills: superRA:refactor-and-integrate
-     Domain references: drift-test-quality.md (refactor-and-integrate) + integrate-drift-tests.md (econ-data-analysis)
-     Key results to protect: [user-confirmed list with values]
-     Test conventions: [project test framework, test directory]
-     Additionally: Follow the standard stage-relevant workflow and load
+     Stage: drift-test
+     Task: Task N in PLAN.md — create drift tests for the user-confirmed key results
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally,
        <optional steering — e.g., tolerance conventions specific to this
        analysis, prior-round adjudication if this is a re-dispatch>.
@@ -139,12 +137,11 @@ Drift tests guard key results from unintended changes during refactoring or futu
 4. **Dispatch test-reviewer:**
    ```
    Agent(subagent_type: "superRA:reviewer"):
-     Stage: drift test
-     Skills: superRA:refactor-and-integrate
-     Domain references: drift-test-quality.md (refactor-and-integrate) + integrate-drift-tests.md (econ-data-analysis)
-     Tests under review: [paths to created test files]
-     Key results they should protect: [list]
-     Additionally: Follow the standard stage-relevant workflow and load
+     Stage: drift-test
+     Task: Task N in PLAN.md — drift tests under review
+     Git range: <BASE_SHA>..<HEAD_SHA>
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally,
        <optional steering>.
    ```
@@ -173,18 +170,14 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
 2. **Dispatch integration-reviewer:**
    ```
    Agent(subagent_type: "superRA:reviewer"):
-     Stage: integration review
-     Skills: superRA:refactor-and-integrate
-     Code under review: [paths]
-     Codebase conventions: [where they're documented — CLAUDE.md, AGENTS.md, etc.]
-     Drift tests: [paths]
-     Diff: <BASE_SHA>..<HEAD_SHA>
-     Additionally: Follow the standard stage-relevant workflow and load
+     Stage: integration-review
+     Task: Task N in PLAN.md — integration review of the refactored analysis code
+     Git range: <BASE_SHA>..<HEAD_SHA>
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally,
        <optional steering>.
    ```
-
-   Refactoring discipline lives in the Skill-Load Manifest for `integration review` — for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` (generic cross-cutting code-quality) + `skills/econ-data-analysis/references/integration.md` (data-specific gates). `superRA:using-superRA` §Skill-Load Manifest specifies the reference load for your Stage; do not inline the list in this dispatch prompt.
 
 3. **If APPROVE:** No refactoring needed. Proceed to final commit.
 
@@ -194,18 +187,13 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
       ```
       Agent(subagent_type: "superRA:implementer"):
         Stage: refactoring
-        Skills: superRA:refactor-and-integrate
-        Reviewer issues to address: [accepted items, file:line, what to fix]
-        Codebase conventions: [pointers]
-        Drift tests: [paths — must keep passing]
-        Code to refactor: [paths]
-        Additionally: Follow the standard stage-relevant workflow and load
+        Task: Task N in PLAN.md — address integration reviewer's accepted findings
+
+        Follow the standard stage-relevant workflow and load
           relevant skills and documents to proceed. Additionally,
           <optional steering — e.g., prior-round adjudication, items the
           orchestrator has rejected vs. accepted>.
       ```
-
-      Refactoring discipline lives in the Skill-Load Manifest for `refactoring` — for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` (generic cross-cutting code-quality) + `skills/econ-data-analysis/references/integration.md` (data-specific gates). `superRA:using-superRA` §Skill-Load Manifest specifies the reference load for your Stage; do not inline the list in this dispatch prompt.
 
    b. **After refactoring: run drift tests.**
       - **Pass:** Commit and re-submit for review.
@@ -255,26 +243,21 @@ Define `RESULTS_DIR` = the resolved permanent folder. Define `RESULTS_ATTACHMENT
 
 ```
 Agent(subagent_type: "superRA:implementer"):
-  Stage: documentation finalization (Stage 2 RESULTS.md + project doc audit)
-  Skills: superRA:report-in-markdown
-  Domain references: baseline-io.md + rich-content.md + final-form.md (full mode)
+  Stage: documentation
+  Task: Task N in PLAN.md — Stage 2 RESULTS.md maturation + project doc audit
   RESULTS_DIR: <resolved permanent folder>
   RESULTS_ATTACHMENTS_DIR: ${RESULTS_DIR}/attachments
-  Stage 1 RESULTS.md: RESULTS.md (at worktree root)
-  PLAN.md: PLAN.md (for objective, methodology, citations)
-  Diff: <BASE_SHA>..<HEAD_SHA>
-  Code files cited by RESULTS.md: [paths]
-  Output files cited by RESULTS.md: [paths]
-  Sub-parts (execute in order, commit each separately):
-    A. Mature RESULTS.md in place, relocate to ${RESULTS_DIR} per final-form.md
+
+  Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally, this dispatch
+    covers two sub-parts in order, commit each separately:
+    A. Mature RESULTS.md in place, relocate to ${RESULTS_DIR} per final-form.md.
     B. Audit project docs reachable from the diff (walk up to each CLAUDE.md /
        AGENTS.md / README.md from every changed file; always also check root
        README.md and root CLAUDE.md). Update stale claims, add new patterns,
        create missing CLAUDE.md + AGENTS.md symlink pair for new modules.
-  Additionally: Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <optional steering — e.g., project-specific doc conventions, prior-round
-    doc-reviewer feedback on a re-dispatch>.
+    <optional additional steering — e.g., project-specific doc conventions,
+    prior-round doc-reviewer feedback on a re-dispatch>.
 ```
 
 The doc-writer is the only subagent in this step. It loads `superRA:report-in-markdown` full mode (SKILL.md + all three references) and performs both sub-parts before returning control.
@@ -322,17 +305,12 @@ After both sub-parts commit, dispatch the reviewer:
 
 ```
 Agent(subagent_type: "superRA:reviewer"):
-  Stage: documentation finalization (Stage 2 RESULTS.md + project doc audit)
-  Skills: superRA:report-in-markdown
-  Domain reference: final-form.md
-  Matured document under review: ${RESULTS_DIR}/RESULTS.md
-  Project docs under review: [CLAUDE.md / AGENTS.md / README.md files touched by sub-part B]
-  Source dev log (for comparison): RESULTS.md at <PRE_MATURE_SHA>
-  Diff: <BASE_SHA>..<HEAD_SHA>
-  Code files cited: [paths]
-  Output files cited: [paths]
-  Objective of the analysis: [from PLAN.md header]
-  Additionally: Follow the standard stage-relevant workflow and load
+  Stage: documentation
+  Task: Task N in PLAN.md — review of matured Stage 2 RESULTS.md + audited project docs
+  Git range: <BASE_SHA>..<HEAD_SHA>
+  RESULTS_DIR: <resolved permanent folder>
+
+  Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
     <optional steering>.
 ```
@@ -424,22 +402,11 @@ This is the critical judgment call in the process. When drift tests fail after r
 3. **If meaningful:** Do not proceed. Show the user exactly what changed — before/after values side by side — and ask via `AskUserQuestion` (plain text if unavailable) whether to (a) accept the new result and update the drift test baseline with a documented reason, (b) roll back the refactoring, or (c) investigate the discrepancy further before deciding. Log the researcher's answer per `handoff-doc` §User Decisions Log before taking any action.
 4. **If minor:** Update the test expectation, add a comment explaining why (e.g., "tolerance updated: refactored merge order produces equivalent result within floating-point precision"), and proceed.
 
-## Agent Types and Domain References
+## Agent Loads
 
-Dispatched agents load a parent skill via the `Skills:` line and read a named domain reference by basename (the runtime announces the skill's base directory on load; the agent reads `<base_dir>/references/<basename>`).
-
-| Stage | Agent | Parent skill | Domain reference |
-|---|---|---|---|
-| Stage 1 test creation | `superRA:implementer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` (quality checklist) + `econ-data-analysis/references/integrate-drift-tests.md` (domain-specific framing: what to protect, econ tolerances, failure modes) |
-| Stage 1 test review | `superRA:reviewer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` + `econ-data-analysis/references/integrate-drift-tests.md` |
-| Stage 2 refactoring | `superRA:implementer` | `superRA:refactor-and-integrate` | `codebase-integration.md` (generic code-quality) + active domain skill's integration reference (data analysis: `econ-data-analysis/references/integration.md` + SKILL.md §Refactor integrity) |
-| Stage 2 integration review (code) | `superRA:reviewer` | `superRA:refactor-and-integrate` | `codebase-integration.md` (generic code-quality) + active domain skill's integration reference (data analysis: `econ-data-analysis/references/integration.md` + SKILL.md §Refactor integrity) |
-| Step 3 doc-writer (matured RESULTS.md + project doc audit) | `superRA:implementer` | `superRA:report-in-markdown` | `baseline-io.md` + `rich-content.md` + `final-form.md` (full mode) |
-| Step 3 doc-reviewer (final-form + project docs) | `superRA:reviewer` | `superRA:report-in-markdown` | `final-form.md` |
+See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `refactoring`, `integration-review`, and `documentation` rows.
 
 Step 3 sub-parts A (mature RESULTS.md) and B (project doc audit) are performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates the whole documentation pass per workflow principle P1. Sub-part C (PLAN.md disposition) stays with the orchestrator because it is a user-facing decision, not an RA-implementable task.
-
-Stage-driven domain-skill and script-to-notebook loads are specified by `superRA:using-superRA` §Skill-Load Manifest (for data-analysis stages, the manifest names `superRA:econ-data-analysis` and `superRA:script-to-notebook`).
 
 ## Agent Teams Mode
 
@@ -456,7 +423,7 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 **Never:**
 - Skip Stage 1 (drift tests) — they are the safety net for everything that follows
 - Refactor before integration reviewer has identified issues — review first, then fix
-- Strip domain-discipline artifacts during refactoring — see `superRA:using-superRA` §Skill-Load Manifest for `refactoring` / `integration review` for the full reference list per domain
+- Strip domain-discipline artifacts during refactoring — see `superRA:using-superRA` §Skill-Load Manifest for `refactoring` / `integration-review` for the full reference list per domain
 - Judge the researcher's methodology choice — focus on implementation correctness (see the foundational RA framing in `CLAUDE.md`)
 - Refactor before drift tests are committed and green
 - Hand off to merge-workflow without integration reviewer APPROVE on the refactored code (Stage 2) AND doc-reviewer APPROVE on the matured RESULTS.md + project docs (Step 3)
@@ -470,7 +437,7 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 - Run integration review before any refactoring
 - Run drift tests after every refactoring change
 - Re-submit to integration reviewer after every refactoring round
-- Keep and re-validate all domain-discipline artifacts through refactoring — refactoring discipline lives in `superRA:using-superRA` §Skill-Load Manifest for `refactoring` / `integration review` (for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` generic + `skills/econ-data-analysis/references/integration.md` data-specific)
+- Keep and re-validate all domain-discipline artifacts through refactoring — refactoring discipline lives in `superRA:using-superRA` §Skill-Load Manifest for `refactoring` / `integration-review` (for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` generic + `skills/econ-data-analysis/references/integration.md` data-specific)
 - Dispatch the Step 3 doc-writer subagent with `superRA:report-in-markdown` (full mode — all three references) to perform the matured RESULTS.md consolidation AND the project doc audit in one pass; dispatch the doc-reviewer afterward and iterate to APPROVE
 - Resolve `RESULTS_DIR` before dispatching the doc-writer — either from project guidance, or via `AskUserQuestion` if guidance is missing, logged in PLAN.md `## Decisions`
 - Commit at each stage boundary and after each Step 3 sub-part (A, B, and C each land as separate commits)
