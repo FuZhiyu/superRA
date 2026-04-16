@@ -217,7 +217,7 @@ Work complete and verified. What would you like to do?
 4. Discard this work
 ```
 
-The researcher's answer is a user decision — the `ask-user-question-logger` PostToolUse hook will remind you to log it. Append it to the top-level `## Decisions` section in `PLAN.md` (one line: `> **User decision (YYYY-MM-DD):** chose Option N (<name>) at execution-workflow Step 4.`) before executing the choice, and include the PLAN.md edit in the first commit of whatever workflow the option dispatches to. See `using-superRA` §Handoff Doc Discipline §User Decisions Log for the format.
+Log the researcher's answer per `using-superRA` §Handoff Doc Discipline §User Decisions Log — top-level `## Decisions` section, before executing the choice, included in the first commit of whatever workflow the option dispatches to.
 
 **Execute the user's choice:**
 
@@ -244,7 +244,7 @@ These are the things the orchestrator does that no subagent does:
 - **Task sequencing and dispatch.** Read PLAN.md, decide what to dispatch next.
 - **Adjudicate reviewer feedback in place** in the PLAN.md review-notes blockquote before re-dispatching the implementer (see Handling Reviewer Feedback above). Append `→ orchestrator: rejected <reason>` annotations to items you are rejecting, `→ orchestrator: <second opinion requested> <reason>` to items you are flagging for the reviewer, and rewrite task steps in place for items you are accepting. **Do not clear the blockquote.** The implementer appends `→ implemented: ...` annotations on their pass; the reviewer deletes confirmed-fixed items on re-review. See `agents/implementer.md` §"How You Fix Review Items on a REVISE Round" and `agents/reviewer.md` §"How You Write a Review" for the full annotation mechanics. Commit the annotated PLAN.md.
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text, don't annotate it. Commit.
-- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck: BLOCKED, methodology disagreement, CRITICAL issue you want to override, repeated reviewer disagreement. Log the answer in `PLAN.md` (task-scoped blockquote or `## Decisions` section per `using-superRA` §Handoff Doc Discipline §User Decisions Log) **before** acting on it, and commit the doc edit atomically with whatever the decision unblocks. Do not resume work until the decision is in the doc.
+- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck: BLOCKED, methodology disagreement, CRITICAL issue you want to override, repeated reviewer disagreement. Log per `using-superRA` §Handoff Doc Discipline §User Decisions Log.
 
 **Review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Review & Self-Check Discipline). Codebase integration review is deferred to integration-workflow (dispatched by this skill at Step 4 when the user chooses merge or PR).
 
@@ -270,11 +270,11 @@ Use the least capable model that handles the task; reviewers use the most capabl
 
 The autonomy contract (proceed-without-asking patterns, stop-and-ask classes, banned phrasings) is in `superRA:using-superRA/references/main-agent-autonomy.md` — main-agent only. Read it at session start; it applies to every workflow phase, not just execution. This section lists only the **execution-workflow-specific stop points** — the legitimate pauses baked into this workflow that plug into the autonomy contract's three pause classes.
 
-- **Step 4 completion menu.** The 4-option menu (merge now / continue another task / sensitivity task / discard) is a user-defined workflow milestone. Stop and `AskUserQuestion` (plain text if unavailable); log the answer per `superRA:using-superRA` §Handoff Doc Discipline §User Decisions Log before executing the chosen option.
+- **Step 4 completion menu.** The 4-option menu (merge now / continue another task / sensitivity task / discard) is a user-defined workflow milestone.
 - **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
 - **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. Pause class (2) in the autonomy contract.
 
-Every stop above requires logging the researcher's answer per `superRA:using-superRA` §Handoff Doc Discipline §User Decisions Log **before** acting on it.
+Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log per `using-superRA` §Handoff Doc Discipline §User Decisions Log **before** acting on it.
 
 ## Agent Loads
 
