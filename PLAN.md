@@ -352,9 +352,11 @@ Result: SKILL.md ~210 lines. Reviewer load ~210. Implementer load ~210 + ~200 (`
 ---
 
 ### Task 13: Distribute `verification-before-completion` content + delete the skill
-**Review status:** IMPLEMENTED
+**Review status:** REVISE
 
-**Files affected:** `skills/verification-before-completion/` (delete), `agents/implementer.md`, `agents/reviewer.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/execution-workflow/SKILL.md`, `skills/using-superRA/SKILL.md` (inventory + types), `skills/CATEGORIES.md`, `README.md`, `skills/writing-skills/SKILL.md` (one mention)
+> **Review notes:**
+> 1. [STANDARD] Wrong commit SHA cited in Step 7's note and in `RESULTS.md` Task 13 §"Note on §Skill Types". Both say the `§Skill Types` section was "removed in pre-plan commit `e5c8b58`". That SHA is the `plan for consolidate the workflow` commit — the PLAN.md creation commit, not a `using-superRA` edit. The commit that actually removed EXTREMELY-IMPORTANT / Red Flags / Skill Types from `skills/using-superRA/SKILL.md` is `956f6cc` ("chore: pre-plan cleanup — bump version to 0.0.4 and trim using-superRA"). Verified by `git log -S 'Rigid' -- skills/using-superRA/SKILL.md` and by reading `956f6cc`'s commit message, which explicitly names the three removed sections. Fix: replace both citations of `e5c8b58` with `956f6cc`. Minor factual correction, but the dev-log is the record — future agents following the pointer will land on the wrong commit and get confused about the provenance of the §Skill Types removal.
+ `skills/verification-before-completion/` (delete), `agents/implementer.md`, `agents/reviewer.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/execution-workflow/SKILL.md`, `skills/using-superRA/SKILL.md` (inventory + types), `skills/CATEGORIES.md`, `README.md`, `skills/writing-skills/SKILL.md` (one mention)
 **Input:** `verification-before-completion/SKILL.md` (143 lines). Per the content audit: ~30 lines of unique content; ~110 lines of duplication with `econ-data-analysis` Red Flags + Common Rationalizations, `agents/reviewer.md` "DO NOT take the implementer's word", and `execution-workflow` Step 3 §Completion verification.
 **Output:** Unique content distributed to four call sites (implementer self-check, reviewer claim-verification, drift-test creation, execution-workflow Step 3). Skill deleted. ~110 duplicated lines disappear; ~30 lines land where they're actually used.
 
