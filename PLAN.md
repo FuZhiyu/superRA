@@ -99,7 +99,7 @@ Other tasks have no manifest dependency and may run in any order after Task 6.
 ---
 
 ### Task 3: Slim `econ-data-analysis/SKILL.md` (shared base) + extract one operational-disciplines reference
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/econ-data-analysis/SKILL.md`, `skills/econ-data-analysis/references/disciplines.md` (new — combined Describe + Analyze + Validate), `skills/econ-data-analysis/references/notebook-format.md` (absorbed Writing Discipline section), `skills/using-superRA/SKILL.md` (manifest), `agents/implementer.md`, `agents/reviewer.md`
 **Input:** Current `econ-data-analysis/SKILL.md` (473 lines pre-refactor).
