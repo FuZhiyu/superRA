@@ -86,39 +86,6 @@ The macro workflow is **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. When mu
 
 Within each implementation step, the micro-level discipline is the three concurrent disciplines **DESCRIBE / ANALYZE / VALIDATE** — documentation is written continuously alongside them (see `econ-data-analysis`).
 
-<EXTREMELY-IMPORTANT>
-If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
-
-IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
-
-This is not negotiable. This is not optional. You cannot rationalize your way out of this.
-</EXTREMELY-IMPORTANT>
-
-## Red Flags
-
-These thoughts mean STOP—you're rationalizing:
-
-| Thought | Reality |
-|---------|---------|
-| "This is just a simple question" | Questions are tasks. Check for skills. |
-| "I need more context first" | Skill check comes BEFORE clarifying questions. |
-| "Let me explore the data first" | Skills tell you HOW to explore. Check first. |
-| "Let me load the data quickly" | Data loading requires description discipline. Check for skills. |
-| "This doesn't need a formal skill" | If a skill exists, use it. |
-| "I remember this skill" | Skills evolve. Read current version. |
-| "This doesn't count as a task" | Action = task. Check for skills. |
-| "The skill is overkill" | Simple things become complex. Use it. |
-| "I'll just run this one merge first" | Check BEFORE doing anything. |
-| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
-| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
-
-## Skill Types
-
-**Rigid** (`econ-data-analysis`, `verification-before-completion`): Follow exactly. Don't adapt away discipline.
-
-**Flexible** (`econ-data-analysis/references/planning.md` Data Inventory): Adapt principles to context.
-
-The skill itself tells you which.
 
 ## Semantic Merge
 
