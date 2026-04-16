@@ -170,11 +170,11 @@ For direct mode (orchestrator executes the step itself), see `superRA:using-supe
 
 ## Integration
 
-**Skills that use Agent Teams mode** (composition derived from the manifest — see `references/agent-teams.md` for spawn mechanics):
+**Skills that use Agent Teams mode.** Each workflow below names the manifest stages it runs. When Agent Teams are enabled, the lead spawns one teammate per stage (implementer-role stages use `subagent_type: superRA:implementer`, reviewer-role stages use `superRA:reviewer`); the teammate then loads what `superRA:using-superRA` §Skill-Load Manifest lists for its Stage. There are no per-workflow team "recipes" — composition is read from the workflow (which stages it runs) and the manifest (what each stage loads). See `references/agent-teams.md` for spawn mechanics.
 
-- **superRA:execution-workflow** — analysis team (implementer + reviewer).
-- **superRA:integration-workflow** — integration team (one implementer + one reviewer per stage the workflow runs: drift-test, refactoring, documentation).
-- **superRA:merge-workflow** — merge team (merge-stage implementer + reviewer, plus refactoring / integration-review stages as needed).
-- **superRA:semantic-merge** — merge team (merge-stage implementer + reviewer).
+- **superRA:execution-workflow** — runs stages: implementation.
+- **superRA:integration-workflow** — runs stages: drift-test, refactoring, integration-review, documentation.
+- **superRA:merge-workflow** — runs stages: merge, refactoring, integration-review.
+- **superRA:semantic-merge** — runs stages: merge.
 
 **When Agent Teams are unavailable:** all skills fall back to standard subagent patterns (Task tool dispatch with orchestrator-as-hub). No functionality is lost — teams are an enhancement, not a requirement.

@@ -79,22 +79,17 @@ Other tasks have no manifest dependency and may run in any order after Task 6.
 ---
 
 ### Task 2: Drop Agent Teams "recipe" framing
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
-**Files affected:** `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/agent-orchestration/references/agent-teams.md`
+**Files affected:** `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`, `skills/agent-orchestration/SKILL.md`
 **Input:** The four workflow skills' "Agent Teams Mode" sections.
 **Output:** No skill claims a per-workflow team "recipe" exists. Spawn instructions live only in `agent-teams.md`; team composition is derived from the manifest.
 
-- [ ] **Step 1: Remove "Invoke for the [X Team] recipe" lines** from each workflow's "Agent Teams Mode" section:
-  - `execution-workflow:300` (Task Team recipe)
-  - `integration-workflow:448` (Integration Team recipe — including the "6 teammates" enumeration)
-  - `merge-workflow:196` (Merge Team recipe — including "4 teammates" + "7-task graph")
-  - `semantic-merge:307` (Semantic Merge Team recipe)
-  Replace each with one sentence: "When Agent Teams are available, see `agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs."
+- [x] **Step 1: Remove "Invoke for the [X Team] recipe" lines** from each workflow's "Agent Teams Mode" section. All four "Invoke `superRA:agent-orchestration` for the [X] Team recipe" sentences replaced with the pointer "See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs." The enumerations ("6 teammates: test-creator, test-reviewer, …", "4 teammates …", "7-task graph", "2 teammates") are gone; spawn details live only in `agent-teams.md`. Also updated `execution-workflow` line 43 (the bullet inside the Agent Team mode block mentioning "Load `superRA:agent-orchestration` for the Task Team recipe") to the same pointer language, and cleaned the `semantic-merge` §Integration pairs-with line ("Semantic Merge Team recipe for Tier 2/3 merges" → "§Integration and `references/agent-teams.md` for team spawn mechanics on Tier 2/3 merges"). Collapsed the redundant "When Agent Teams are available" lead-in that resulted from the replacement into a single opening sentence per section.
 
-- [ ] **Step 2: Update agent-orchestration §Integration** (lines 147–154). Today this lists each workflow with a one-line composition descriptor. Keep the list, but make it clear these are *what stages each workflow runs*, not "recipes." Suggested rewrite for each entry: "**superRA:integration-workflow** — runs stages: drift-test, refactoring, integration-review, documentation."
+- [x] **Step 2: Update agent-orchestration §Integration.** Rewrote the lede from "Skills that use Agent Teams mode (composition derived from the manifest…)" to explicitly state "There are no per-workflow team 'recipes' — composition is read from the workflow (which stages it runs) and the manifest (what each stage loads)." Each workflow entry now names its runs-stages list rather than team-type: `execution-workflow` → stages: implementation; `integration-workflow` → drift-test, refactoring, integration-review, documentation; `merge-workflow` → merge, refactoring, integration-review; `semantic-merge` → merge. Pointer at `references/agent-teams.md` for spawn mechanics preserved in the same paragraph.
 
-- [ ] **Step 3: Validate.** Grep for "recipe" across `skills/`. Should return only this PLAN.md and incidental usage. Re-read each workflow's "Agent Teams Mode" section — every section should defer to `agent-orchestration` for mechanics. Atomic commit.
+- [x] **Step 3: Validate.** Grep for "recipe" across `skills/` returns four hits — three in `agent-orchestration` (SKILL.md:14 + references/agent-teams.md:8,50) and each is a "no per-workflow recipe is needed" statement (the desired state), plus the new "There are no per-workflow team 'recipes'" line in §Integration. No skill body still claims a per-workflow team recipe exists. Re-read each workflow's "Agent Teams Mode" section end-to-end: every section now defers to `agent-orchestration` for spawn mechanics and derives composition from the manifest. Atomic commit staged: `task 2: drop Agent Teams recipe framing`.
 
 ---
 

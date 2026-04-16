@@ -410,9 +410,7 @@ Step 3 sub-parts A (mature RESULTS.md) and B (project doc audit) are performed b
 
 ## Agent Teams Mode
 
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), Stages 1 and 2 can be orchestrated as a team instead of sequential subagent dispatches. This enables direct iteration between creator/reviewer and integration-reviewer/refactorer without the orchestrator relaying messages.
-
-**Invoke `superRA:agent-orchestration` for the Integration Team recipe** — it has the full team composition (6 teammates: test-creator, test-reviewer, refactorer, integration-reviewer, doc-writer, doc-reviewer), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
+When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), Stages 1 and 2 can be orchestrated as a team instead of sequential subagent dispatches — direct iteration between creator/reviewer and integration-reviewer/refactorer without the orchestrator relaying messages. See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs.
 
 Step 3 (Documentation Finalization) can join the team as a two-teammate sub-graph: a doc-writer (performing sub-parts A and B) and a doc-reviewer, iterating on their own until APPROVE. Sub-part C (PLAN.md disposition) stays with the lead because it is a user-facing decision. The relocation-target stop point (Step 3 orchestrator preamble) also stays with the lead, since it fires before the doc-writer dispatches.
 
