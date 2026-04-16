@@ -40,7 +40,7 @@ digraph mode_selection {
 **Agent Team mode (preferred):**
 - Use `TeamCreate` to set up a persistent team with implementer + reviewer
 - Direct iteration between agents without orchestrator relay
-- Load `superRA:agent-orchestration` for the Task Team recipe (team composition, task graph, lifecycle)
+- See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics; composition is derived from the manifest — one teammate per stage this workflow runs
 - Use when: `TeamCreate` tool is available AND ≥2 tasks remain
 
 **Subagent mode:**
@@ -282,9 +282,7 @@ See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of
 
 ## Agent Teams Mode
 
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per-task implementation+review cycle can be orchestrated as a persistent team. This enables direct iteration between implementer and reviewer without the orchestrator relaying feedback.
-
-**Invoke `superRA:agent-orchestration` for the Task Team recipe** — it has the full team composition, task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
+When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per-task implementation+review cycle can be orchestrated as a persistent team — direct iteration between implementer and reviewer without the orchestrator relaying feedback. See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs.
 
 **Critical:** When all tasks complete, shut down teammates and clean up the team BEFORE dispatching `superRA:integration-workflow`. This frees the session's team slot for the integration-workflow team and the subsequent merge-workflow team.
 
