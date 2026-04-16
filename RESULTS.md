@@ -132,10 +132,31 @@ During implementation, the coordinator reported that a prior reviewer agent acci
 
 ## Task 5: Cache project conventions in PLAN.md header
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**New `## Project Conventions` section in plan anatomy.** `handoff-doc/references/plan-anatomy.md` now carries a top-level `## Project Conventions` section between §Header and §Task Block Anatomy — it is a PLAN.md top-level section (like `## Decisions`), not an inline header field. The section carries a worked markdown example with three subsections (`### Repo root`, `### Module-level docs walked`, `### Not walked (not reachable from the planned diff)`), each populated with example entries naming the file path, HEAD SHA, and a one-paragraph summary. A closing §Discipline block lists four rules: orchestrator-only writes, one-paragraph-per-doc summaries (not excerpts), stamp the walk date, list the not-walked paths explicitly (so an empty section is never ambiguous). Task 6 had already added the pointer in `using-superRA` §Handoff Doc Discipline §Project Conventions — no edit needed there.
+
+**`planning-workflow` Phase 3 populates the section.** Added a paragraph to §Phase 3 "File Structure" that names the walk-up ("walk up from every directory the plan will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` … plus the repo-root `CLAUDE.md` and every `README.md` in a data directory") and the output target ("populate the `## Project Conventions` section of `PLAN.md` with one-paragraph summaries per doc, stamped with the walk date"). Phase 3 now produces the populated section alongside the artifact-pipeline map before tasks are drafted.
+
+**`plan-template.md` ships a worked example.** The template at `planning-workflow/references/plan-template.md` now carries a `## Project Conventions` section between the header's closing `---` and the §Task Block Structure heading, with example entries for the three subsections. The explanatory paragraph above it names Phase 3 as the populate-step and points at `plan-anatomy.md` §Project Conventions for the full anatomy.
+
+**`execution-workflow` Step 1 reads the section instead of re-walking.** Item 3 of Step 1 was a walk-up paragraph ("Read the project's guidance docs … Walk up from every directory PLAN.md says will be touched …"). Rewrote to "Read PLAN.md's `## Project Conventions` section" — the orchestrator reads the populated section first and skims if fresh; only walks and populates if the section is missing, empty, or stale. Preserves the critical framing that these conventions are load-bearing for adjudicating reviewer findings and editing upcoming tasks inline, and closes the on-demand loop (subagents flag omissions; orchestrator updates the section).
+
+**Agent files step 5 reads the section first.** Both `agents/implementer.md` and `agents/reviewer.md` step 5 (the walk-up step — Task 1 renumbered the old step 6 into step 5) was rewritten to start from PLAN.md's §Project Conventions instead of walking from scratch. On-demand re-walk is allowed when a needed convention is not in the section, and the omission must be flagged in the status return so the orchestrator updates the section. Reviewer preserves the "MAJOR integration-review finding if code ignores module-level conventions" framing and the pointer at `codebase-integration.md` §Project Doc Audit as the Stage 2 safety net. Implementer preserves the "do not dump these docs into your status report" and "if a doc contradicts the dispatch prompt, raise the conflict before starting" framings.
+
+### Notes on PLAN.md's step number
+
+PLAN.md Step 5 referenced "agents/implementer.md step 6 and agents/reviewer.md step 6." Task 1 renumbered the old step 7 (Ask questions) to step 6, making the walk-up step 5, not step 6. Edited step 5 in both agent files; step 6 (Ask questions) is untouched. The PLAN.md step-number spec was stale; the semantic intent (rewrite the walk-up step) was clear.
+
+### Validation
+
+- Re-read `plan-anatomy.md` §Project Conventions: three subsections with worked examples (Repo root / Module-level docs walked / Not walked); Discipline block lists the four rules.
+- Re-read `plan-template.md`: `## Project Conventions` section sits between the header close and §Task Block Structure; three subsections populated with example entries.
+- Re-read `planning-workflow` Phase 3: the new paragraph sits after the "Follow existing project conventions for directory structure" bullet; walk-up + populate instruction + pointer-at-anatomy all present.
+- Re-read `execution-workflow` Step 1 item 3: opens with "Read PLAN.md's `## Project Conventions` section"; the walk-on-stale/missing fallback is explicit.
+- Re-read `agents/implementer.md` step 5 and `agents/reviewer.md` step 5: both open with "Read PLAN.md's `## Project Conventions` section"; on-demand re-walk + flag-the-omission framing preserved; prior critical framings ("do not dump" / "MAJOR integration-review finding") preserved.
 
 ---
 
