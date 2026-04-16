@@ -308,7 +308,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 11: Skip post-merge integration review on Tier 1 clean merges
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`
 **Input:** `merge-workflow` Step 2 (post-merge verification) currently runs both drift tests AND a fresh integration reviewer unconditionally.
@@ -327,7 +327,7 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 12: Clarify `semantic-merge` standalone vs delegated (mode-aware verification)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/semantic-merge/SKILL.md`, `skills/merge-workflow/SKILL.md`
 **Input:** `semantic-merge` §Invocation Pattern previously said "process is identical, only the caller differs." Post-merge verification (drift tests, pipeline, stale-reference check) ran inside every Tier in both modes, duplicating what `merge-workflow` Step 2 then re-ran.
