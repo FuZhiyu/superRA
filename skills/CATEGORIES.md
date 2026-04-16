@@ -22,7 +22,7 @@ Carry the domain-specific knowledge that workflow skills invoke when a task touc
 
 | Skill | Vertical | Flagship discipline |
 |---|---|---|
-| `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), three concurrent disciplines (describe-analyze-validate), diagnostics-for-validity philosophy, pitfall catalogs, red flags. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `data-robustness-checklist.md`. |
+| `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), three concurrent disciplines (describe-analyze-validate), diagnostics-for-validity philosophy, pitfall catalogs, red flags. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `data-robustness-checklist.md`, `notebook-format.md` (+ `jupytext-guide.md` and `julia-quarto-guide.md` companions). |
 
 ### Future verticals (roadmap — not yet implemented)
 
@@ -40,7 +40,6 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 | Skill | What it provides |
 |---|---|
 | `handoff-doc` | Document-level discipline for `PLAN.md` / `RESULTS.md` — the four principles, inline-edit rule, stale-content checklist, task-block anatomy. Single source of truth for doc structure. |
-| `script-to-notebook` | Cell organization, markdown narrative, rendering for analysis scripts. Python (jupytext) and Julia (QuartoNotebookRunner). |
 | `refactor-and-integrate` | Drift-test quality, codebase integration, and merge quality checklists. Loaded by integration-phase agents. |
 | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. Progressive-reveal references by stage. |
 | `semantic-merge` | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions. |

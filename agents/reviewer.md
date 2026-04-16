@@ -88,7 +88,7 @@ off.
 - Not in notebook-compatible format (but otherwise documented)
 - Missing markdown cells for minor decisions
 - Incomplete diagnostics
-- **Active check for notebook format:** Open each analysis script and verify it follows the project's cell convention for its language (Python: `# %%` cells per `script-to-notebook`; Julia: check if project uses QuartoNotebookRunner or `# %%`). If the project has no convention for the language, note "not applicable" with reasoning — do not silently skip.
+- **Active check for notebook format:** Open each analysis script and verify it follows the project's cell convention for its language (Python: `# %%` cells per `econ-data-analysis/references/notebook-format.md`; Julia: check if project uses QuartoNotebookRunner or `# %%`). If the project has no convention for the language, note "not applicable" with reasoning — do not silently skip.
 
 ### Verdict
 

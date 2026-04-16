@@ -1,17 +1,6 @@
----
-name: script-to-notebook
-description: >
-  Utility (IMPLEMENT+VALIDATE phase, loaded alongside econ-data-analysis
-  by implementer/reviewer agents per the using-superRA §Skill-Load Manifest
-  when the stage touches analysis code). Use
-  when writing analysis scripts intended for notebook rendering, or when
-  rendering existing scripts as notebooks. Covers cell organization, markdown
-  narrative, equation formatting, and language-specific rendering (Python via
-  jupytext, Julia via QuartoNotebookRunner).
-user-invocable: true
----
+# Notebook Format
 
-# Script to Notebook
+> Stage-scoped reference of `superRA:econ-data-analysis`. Loaded by implementer subagents (and by the orchestrator in-session) whenever analysis scripts are being written or rendered. Covers cell organization, markdown narrative, equation formatting, and language-specific rendering (Python via jupytext, Julia via QuartoNotebookRunner). Companion guides `jupytext-guide.md` and `julia-quarto-guide.md` carry the full per-language setup.
 
 ## When to Use
 

@@ -146,31 +146,36 @@ Result: SKILL.md ~210 lines. Reviewer load ~210. Implementer load ~210 + ~200 (`
 ---
 
 ### Task 4: Move `script-to-notebook` into `econ-data-analysis` as a reference
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
-**Files affected:** `skills/script-to-notebook/SKILL.md` (delete), `skills/script-to-notebook/references/*.md` (move), `skills/econ-data-analysis/references/notebook-format.md` (new), `skills/econ-data-analysis/references/jupytext-guide.md` (move), `skills/econ-data-analysis/references/julia-quarto-guide.md` (move), `skills/econ-data-analysis/SKILL.md`, `skills/using-superRA/SKILL.md`, `skills/CATEGORIES.md`, `README.md`, `agents/implementer.md`, `agents/reviewer.md`, all skills that mention `superRA:script-to-notebook`
+**Files affected:** `skills/script-to-notebook/SKILL.md` (delete), `skills/script-to-notebook/references/*.md` (move), `skills/econ-data-analysis/references/notebook-format.md` (new), `skills/econ-data-analysis/references/jupytext-guide.md` (move), `skills/econ-data-analysis/references/julia-quarto-guide.md` (move), `skills/econ-data-analysis/SKILL.md`, `skills/using-superRA/SKILL.md`, `skills/CATEGORIES.md`, `README.md`, `agents/reviewer.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/planning-workflow/SKILL.md`, `skills/execution-workflow/SKILL.md`
 **Input:** Current `script-to-notebook` skill + its two references.
 **Output:** Notebook-formatting content lives under the data-analysis vertical. Standalone skill is removed. Skill inventory shrinks by one.
 
-- [ ] **Step 1: Move content.** Move `skills/script-to-notebook/SKILL.md` → `skills/econ-data-analysis/references/notebook-format.md` (keep the body; trim the frontmatter to a one-line description). Move `skills/script-to-notebook/references/jupytext-guide.md` and `julia-quarto-guide.md` to `skills/econ-data-analysis/references/`.
+- [x] **Step 1: Move content.** `skills/script-to-notebook/SKILL.md` → `skills/econ-data-analysis/references/notebook-format.md`; `jupytext-guide.md` and `julia-quarto-guide.md` moved from `skills/script-to-notebook/references/` to `skills/econ-data-analysis/references/` (via `git mv` — history preserved). Frontmatter trimmed from the old skill-style block (name / description / user-invocable) to a single one-line blockquote placed under the new `# Notebook Format` heading. Title changed from `# Script to Notebook` to `# Notebook Format`.
 
-- [ ] **Step 1b: Absorb the writing-discipline content from Task 3 Step 2.** The dissolved §Documentation cross-cutting writing practice section (markdown cells when, inline comments when, figures discipline, major-vs-minor-decision rule) lands in `notebook-format.md` here — script-formatting and writing discipline are one concern. Place it as a new "Writing Discipline" section after the cell-organization section in `notebook-format.md`. If Task 3 staged the content as `notebook-format.md.draft`, merge it in and delete the draft file.
+- [x] **Step 1b: Absorb the writing-discipline content from Task 3 Step 2.** Task 3 has not yet run, so no `notebook-format.md.draft` existed at implementation time. Per dispatch override, proceeded with Step 1 content as-is. When Task 3 runs, its Step 2 will absorb the dissolved §Documentation cross-cutting writing practice section into `notebook-format.md` as a new "Writing Discipline" section after the cell-organization section (per Task 3's spec).
 
-- [ ] **Step 2: Delete the skill folder.** `git rm -r skills/script-to-notebook/`.
+- [x] **Step 2: Delete the skill folder.** `skills/script-to-notebook/` no longer exists in the working tree — the three files were moved via `git mv` in Step 1, leaving the directory empty, and git has already removed it.
 
-- [ ] **Step 3: Update `econ-data-analysis/SKILL.md`** §Stage-Scoped References table to add the new `notebook-format.md` entry. Update §Documentation cross-cutting to point at `references/notebook-format.md` (replace the `superRA:script-to-notebook` mentions). Note: Task 3 has already removed most of this section; this step finalizes the references-table entries.
+- [x] **Step 3: Update `econ-data-analysis/SKILL.md`** §Stage-Scoped References table — added a new `references/notebook-format.md` entry (IMPLEMENT + VALIDATE phase; companion guides `jupytext-guide.md`, `julia-quarto-guide.md`). Also added a `references/integration.md` row that was missing from the table (it is named in the manifest but was not listed in this SKILL.md). Lede sentence updated from "Two companion reference files ..." to "Companion reference files ..." since the table now carries five entries. All four inline `superRA:script-to-notebook` mentions in the body (Describe §Visualization rendering pointer; Documentation §Script categories; Documentation §Figures; §Review & Self-Check Discipline §Implementation standards) rewrote to `references/notebook-format.md`. §Key References likewise rewrote `superRA:script-to-notebook` → `references/notebook-format.md`.
 
-- [ ] **Step 4: Update the manifest** (`using-superRA` §Skill-Load Manifest). The `implementation` row's reference cell currently mentions `superRA:script-to-notebook` parenthetically. Replace with `econ-data-analysis/references/notebook-format.md` (data-analysis vertical only).
+- [x] **Step 4: Update the manifest** (`using-superRA` §Skill-Load Manifest). The `implementation` row's Required-skills cell previously read "`handoff-doc`; active domain skill (for data analysis: `econ-data-analysis` + `script-to-notebook`)". Rewrote to "`handoff-doc`; active domain skill (for data analysis: `econ-data-analysis`)" and appended "for data analysis also `econ-data-analysis/references/notebook-format.md`" to the Stage-scoped references cell so the load is explicit on the manifest (the single source of truth).
 
-- [ ] **Step 5: Sweep all references.**
-  ```bash
-  grep -rn "script-to-notebook\|superRA:script-to-notebook" skills/ agents/ commands/ README.md CLAUDE.md CATEGORIES.md
-  ```
-  Update every match to point at `econ-data-analysis/references/notebook-format.md` (or delete if the mention is now obsolete).
+- [x] **Step 5: Sweep all references.** Grep across `skills/`, `agents/`, `commands/`, `README.md`, `CLAUDE.md`, `CATEGORIES.md` shows zero `script-to-notebook` matches in active content after the sweep. Active updates made:
+  - `README.md` Workflow Map Mermaid node IMPL: `script-to-notebook` → `econ-data-analysis/references/notebook-format.md`.
+  - `README.md` Domain — Data Analysis table: `econ-data-analysis` row's stage-scoped-references enumeration extended with `notebook-format.md` (and its jupytext/julia-quarto companion guides).
+  - `skills/CATEGORIES.md` Domain table: `econ-data-analysis` row's Stage-scoped references enumeration extended with `notebook-format.md` (and companion guides).
+  - `agents/reviewer.md` §Verify Claims Independently active-check line: `per script-to-notebook` → `per econ-data-analysis/references/notebook-format.md`.
+  - `skills/refactor-and-integrate/SKILL.md` §Auto-loaded alongside: dropped the `superRA:script-to-notebook` bullet; merged the note into the `superRA:econ-data-analysis` bullet (the `implementation` manifest row now carries notebook-format.md as a stage reference).
+  - `skills/planning-workflow/SKILL.md` Phase 3 File Structure: `per superRA:script-to-notebook` → `per econ-data-analysis/references/notebook-format.md`.
+  - `skills/execution-workflow/SKILL.md` Step 1.2: `superRA:econ-data-analysis + superRA:script-to-notebook` → `superRA:econ-data-analysis (plus references/notebook-format.md when analysis scripts are being written or reviewed)`.
+  
+  Intentionally not touched: `PLAN.md` / `RESULTS.md` / `RELEASE-NOTES.md` retain their `script-to-notebook` strings as historical record of this refactor and of prior upstream releases.
 
-- [ ] **Step 6: Update inventory tables.** Remove `script-to-notebook` row from `using-superRA` §Skill Inventory and `skills/CATEGORIES.md` Utility table and `README.md` skill table.
+- [x] **Step 6: Update inventory tables.** Removed the `script-to-notebook` row from `using-superRA/SKILL.md` §Skill Inventory, `skills/CATEGORIES.md` Utility table, and `README.md` Utility table. All three tables now enumerate the same post-refactor utility set (handoff-doc, refactor-and-integrate, report-in-markdown, semantic-merge, using-analysis-worktrees, worktree-data-sync).
 
-- [ ] **Step 7: Validate.** Grep again for `script-to-notebook` — only this PLAN.md and incidental references should remain. Re-read `econ-data-analysis/SKILL.md` end-to-end. Atomic commit.
+- [x] **Step 7: Validate.** Post-sweep grep confirms zero `script-to-notebook` mentions in active content (only PLAN.md, RESULTS.md, and RELEASE-NOTES.md retain the strings by design). Re-read `econ-data-analysis/SKILL.md` end-to-end — the Stage-Scoped References table is internally consistent (five rows matching the five reference files in the directory), Describe §Visualization / Documentation §Script categories / Documentation §Figures / §Review & Self-Check Discipline §Implementation standards / §Key References all point at the new path, and the §Documentation cross-cutting section still reads coherently pending Task 3's further restructuring. Atomic commit staged: `task 4: move script-to-notebook into econ-data-analysis as a reference`.
 
 ---
 
