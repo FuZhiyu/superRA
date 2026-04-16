@@ -48,4 +48,4 @@ When a pause is legitimate, ask a single focused question and wait for the answe
 
 ## Log Before You Act
 
-Every user decision produced at a stop point is written into `PLAN.md` — per `using-superRA` §Handoff Doc Discipline §User Decisions Log — **before** the agent acts on it, and committed atomically with the work it unblocks. The doc is the record; the chat message is the pointer. The `ask-user-question-logger` PostToolUse hook reminds you to log after each `AskUserQuestion` call; if your harness does not expose the hook, set a `TodoWrite` reminder.
+Every user decision produced at a stop point is written into `PLAN.md` per `using-superRA` §Handoff Doc Discipline §User Decisions Log **before** the agent acts on it, and committed atomically with the work it unblocks. The doc is the record; the chat message is the pointer.

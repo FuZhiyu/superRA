@@ -228,23 +228,19 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 7: Stop restating User Decisions Log discipline
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
-**Files affected:** every workflow skill + `agent-orchestration` + `semantic-merge` + `agents/{implementer,reviewer}.md`
+**Files affected:** `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/using-superRA/references/main-agent-autonomy.md`
 **Input:** Current restatements scattered across `execution-workflow`, `integration-workflow`, `merge-workflow`, `semantic-merge`, `agent-orchestration` (each repeats some variant of "log per `handoff-doc` §User Decisions Log; the `ask-user-question-logger` hook will remind you"). After Task 6, the canonical home is `using-superRA` §Handoff Doc Discipline §User Decisions Log.
 **Output:** Workflow skills carry only a one-line pointer. The hook-reminder text appears once.
 
-- [ ] **Step 1: Audit.**
-  ```bash
-  grep -rn "User Decisions Log\|ask-user-question-logger" skills/ agents/
-  ```
-  Catalog every restatement.
+- [x] **Step 1: Audit.** Task 6 had already swept all 11 pointer targets to `using-superRA` §Handoff Doc Discipline §User Decisions Log. Restatements of format + hook reminder still surrounded several of those pointers in the workflow skills — Task 7's work is collapsing that surrounding prose. Eight restatement sites identified: `execution-workflow:220` (Step 4 menu hook + format reminder), `execution-workflow:247` (Escalate bullet location reminder), `execution-workflow:273/277` (Step 4 completion-menu bullet + closing summary), `integration-workflow:121` (drift-test candidate location reminder + hook reminder), `integration-workflow:242` (RESULTS_DIR location reminder + hook reminder), `integration-workflow:330` (PLAN.md disposition location reminder), `semantic-merge:278` (full format restatement + hook reminder), `agent-orchestration:145` (hook reminder), and `using-superRA/references/main-agent-autonomy.md:51` (hook reminder — the file Task 6 created).
 
-- [ ] **Step 2: Move the hook-reminder text into `using-superRA` §Handoff Doc Discipline §User Decisions Log** (the section created in Task 6). One sentence: "The `ask-user-question-logger` PostToolUse hook reminds you to log after each `AskUserQuestion` call; if your harness doesn't expose the hook, set a TodoWrite reminder."
+- [x] **Step 2: Move the hook-reminder text into `using-superRA` §Handoff Doc Discipline §User Decisions Log.** Task 6 already did this — the canonical sentence "The `ask-user-question-logger` PostToolUse hook reminds you to log after each `AskUserQuestion` call; if your harness doesn't expose the hook, set a TodoWrite reminder" lives at `using-superRA/SKILL.md:64` inside §User Decisions Log. No edit needed here.
 
-- [ ] **Step 3: Replace each restatement** in workflow skills with: "Log per `using-superRA` §Handoff Doc Discipline §User Decisions Log."
+- [x] **Step 3: Replace each restatement.** Collapsed each of the eight sites to a clean "Log per `using-superRA` §Handoff Doc Discipline §User Decisions Log" pointer, preserving only the site-specific context (which commit the log lands in, which PLAN.md section if useful for that workflow's pause class, what to do if the doc has been disposed of). Stripped the hook-reminder sentence everywhere except the canonical home. `execution-workflow:273` (Step 4 bullet) lost its trailing "stop and `AskUserQuestion`; log per …" tail — the closing summary line at 277 now covers logging for all three bullets uniformly so the individual bullets stay focused on *what the stop is about*. Semantic-merge:278 kept its branch-specific context ("If PLAN.md has already been disposed of, record the decision in the merge commit message instead") because that's a semantic-merge-only rule, not a restatement of the discipline.
 
-- [ ] **Step 4: Validate.** Re-grep. Only `using-superRA` should carry the discipline; everywhere else is a one-line pointer. Atomic commit.
+- [x] **Step 4: Validate.** Re-grep for `ask-user-question-logger` across `skills/`: one match, at `using-superRA/SKILL.md:64` (the canonical sentence). Zero elsewhere. Re-grep for `User Decisions Log`: every workflow-skill hit is either a one-line pointer or a pointer with narrow site-specific context; no hit repeats the hook-reminder text, and no hit inlines the blockquote format template (that lives only at `using-superRA/SKILL.md:56-60`). Atomic commit staged: `task 7: collapse duplicate prose around User Decisions Log pointers`.
 
 ---
 

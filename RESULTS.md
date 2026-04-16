@@ -176,10 +176,25 @@ End-to-end re-reads:
 
 ## Task 7: Stop restating User Decisions Log discipline
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*(to be populated)*
+
+**Task 6 left the pointer targets swept; Task 7 collapsed the surrounding prose.** All 11 `per handoff-doc §User Decisions Log` pointers were rewritten to `per using-superRA §Handoff Doc Discipline §User Decisions Log` in Task 6. What remained after Task 6 was the restated *prose around* those pointers — format reminders, location enumerations, and the `ask-user-question-logger` hook-reminder sentence. Eight sites carried restatement:
+
+- `execution-workflow:220` — Step 4 completion menu: hook reminder + the `> **User decision (YYYY-MM-DD):** chose Option N (<name>)` format line were both stripped; the pointer now states where the log lands (`## Decisions`, before executing the choice, first commit of whatever workflow dispatches) without duplicating §User Decisions Log's format template.
+- `execution-workflow:247` — "Escalate to the researcher" bullet: the "(task-scoped blockquote or `## Decisions` section per …)" location enumeration stripped.
+- `execution-workflow:273/277` — §Autonomy and Stop Points bullet list: the Step 4 bullet lost its trailing "stop and `AskUserQuestion`; log per …" tail because the closing summary line at 277 already covers logging for all three bullets uniformly. Bullets now focus on *what the stop is about*; the summary covers *how to log*.
+- `integration-workflow:121, 242, 330` — three pointers, each had a "log it in the top-level `## Decisions` section … per … hook will remind you" three-part restatement. All three are now one-liners with only the workflow-specific context preserved (before dispatching test-creator / doc-writer / disposition).
+- `semantic-merge:278` — "Log every answer" paragraph: the hook reminder + format template were stripped; the branch-specific clause "If `PLAN.md` has already been disposed of, record the decision in the merge commit message instead — the commit message is the record of record once the doc is gone" was kept because it is a semantic-merge-only rule, not a restatement of the canonical discipline.
+- `agent-orchestration:145` — "If you genuinely cannot tell whether the reviewer is right" point: the hook-reminder trailing sentence was removed; the "inside the relevant task's review-notes area" location context was kept as a parenthetical since the review-notes blockquote is a specific location §User Decisions Log does not enumerate.
+- `using-superRA/references/main-agent-autonomy.md:51` — §Log Before You Act paragraph: the hook-reminder sentence was stripped; the paragraph now opens with the canonical pointer and closes with the one-line summary "The doc is the record; the chat message is the pointer."
+
+**Validation grep.** `ask-user-question-logger` across `skills/`: one hit, at `using-superRA/SKILL.md:64` (the canonical sentence). Zero hits elsewhere — the hook-reminder text lives in exactly one place. `User Decisions Log` across `skills/`: every workflow-skill match is a pointer with at most narrow site-specific context; no match inlines the blockquote format template (lives only at `using-superRA/SKILL.md:56-60`).
+
+### Notes on edits NOT made
+
+`merge-workflow:213` (post-merge drift escalation), `integration-workflow:382` (meaningful drift), `integration-workflow:414` (key-result confirmation "Always" bullet), `agent-orchestration:150/151` (orchestrator limits bullets) — these were all already one-line pointers after Task 6 and did not carry restatement prose. Not touched. `integration-workflow:16` (§Autonomy opening paragraph) — the pointer there is a single summary sentence that also names the companion §Universal-Principles reference for autonomy; it is a composite pointer, not a restatement. Not touched.
 
 ---
 
