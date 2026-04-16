@@ -156,7 +156,7 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 | Skill | What It Does |
 |-------|-------------|
-| **handoff-doc** | Document-level discipline for PLAN.md / RESULTS.md — four principles (latest-state-only, inline-edit, task-block structure, doc-is-the-record), stale-content checklist, figure embedding rule. Progressive-reveal references carry full PLAN.md and RESULTS.md anatomy. Single source of truth for doc mechanics. |
+| **handoff-doc** | Doc-creation skill — full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded only by doc-creators: `planning-workflow` Phase 2 (new plans) and the `integration-workflow` Step 3 doc-writer (Stage 2 maturation). Everyday editing rules (four principles, inline-edit, stale-content, User Decisions Log, figure embedding) live in `using-superRA` §Handoff Doc Discipline — always available via the master skill. |
 | **refactor-and-integrate** | Three integration-phase checklists: `drift-test-quality.md`, `codebase-integration.md`, `merge-quality.md`. Standalone-invokable for any refactoring task. |
 | **report-in-markdown** | Format discipline for markdown reports with figures, LaTeX math, tables. Lean SKILL.md body; three references loaded on demand: `baseline-io.md`, `rich-content.md`, `final-form.md`. |
 | **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions to the user. Invoked by `merge-workflow` Step 1 and by the merge-guard hook. |

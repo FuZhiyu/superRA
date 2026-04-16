@@ -15,9 +15,65 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 3. **Fast early, strict before merge. Semantic merges always.** Interim work is optimized for speed — no codebase-fit checks at per-task checkpoints. Integration discipline (drift tests, refactor, doc finalization) runs only when the user chooses to merge, inside `integration-workflow`. Every merge into main goes through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
 
-4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it.
+4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per §Handoff Doc Discipline §User Decisions Log below **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent-autonomy.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
 
 **RA framing.** The agent is a Research Assistant implementing the researcher's methodology, not judging it. Challenges to methodology are escalated to the human partner, never decided unilaterally.
+
+## Handoff Doc Discipline
+
+Every agent edits `PLAN.md` and `RESULTS.md` at some point — implementers rewrite step text and record findings, reviewers write review-notes blockquotes, orchestrators annotate with adjudication notes. The rules below are the agent-runtime essentials; they apply to every agent in every stage. For the full `PLAN.md` and `RESULTS.md` anatomy templates (section layouts, code-block examples, status-line formats) see `superRA:handoff-doc/references/plan-anatomy.md` and `results-anatomy.md` — but only doc-*creators* (the planner and the Stage 2 doc-writer) need them. Everyday implementer / reviewer edits operate from this section alone.
+
+### The Four Document Principles
+
+1. **Latest state only, no history.** Handoff docs reflect the current intended implementation and current findings. They are not changelogs. Git owns history. No "Previously...", no strikethroughs, no "Update:" blocks, no stacked review rounds.
+2. **Live and committed.** Every edit is an inline replacement, committed atomically with the work it belongs to. Stale steps, stale review notes, and superseded discovery notes are **removed**, not struck through. The doc at any point reads as a single coherent current-state description.
+3. **Task-block structure.** `PLAN.md` consists of a header (project-wide context, `## Project Conventions`, `## Decisions`) and a sequence of task blocks. Each task block carries: objective, files affected, input, output, steps, review status, optional review-notes blockquote. `RESULTS.md` Stage 1 mirrors the task structure (one section per task).
+4. **The doc is the record. Status reports are pointers, not substitutes.** Any material finding, result, methodology change, caveat, or decision MUST be written into `PLAN.md` or `RESULTS.md` **before** it is communicated in a status report or chat message. If a result only exists in a chat reply, it does not exist — it will be lost at the next session boundary. Rule of thumb: before you type a finding into a status report, ask "is this written in `PLAN.md` or `RESULTS.md` yet?" If not, write it in the doc first and commit, then point at it in the report.
+
+### Inline-Edit Rule
+
+Every edit replaces stale content in place. Never append, never strike through, never use "Update:" / "Revised:" / "Previously..." framing. If you find yourself writing a sentence that references a prior version of the doc, stop — that sentence belongs in the git commit message, not the doc.
+
+### What Counts as Stale (remove, don't keep)
+
+- Steps describing an approach that was abandoned after seeing the data — rewrite them to describe what was actually done.
+- Discovery notes that are now incorporated into the current steps.
+- Review items that have been confirmed fixed on re-review (the reviewer deletes them).
+- "Previously we tried X" / "Update:" / "Revised:" framing — delete the old text and write the new.
+- Upcoming task descriptions that assume an earlier approach which has since changed.
+
+### User Decisions Log
+
+Any time the agent stops to consult the researcher — via `AskUserQuestion` or plain-text question — and the researcher gives an answer that shapes the work, the answer MUST be written into the handoff doc **before** the agent acts on it, and committed atomically with the work it unblocks. A decision that only lives in chat will be lost at the next session boundary, and the next agent will re-open the same question — or worse, make a different call silently.
+
+**Where it lands:**
+
+- **Task-scoped decision** (affects one task's scope, methodology, or implementation) → blockquote inside that task block, directly under `**Review status:**`.
+- **Cross-task or project-level decision** (affects methodology across tasks, sample definition, output scope, the 4-option merge menu at execution-workflow Step 4, drift-test selection at integration-workflow Step 1, doc disposition at integration-workflow Step 3) → top-level `## Decisions` section in `PLAN.md` immediately after the header and before the first task block. Append; do not rewrite prior decisions.
+
+**Format (both locations):**
+
+```markdown
+> **User decision (2026-04-16):** Use CRSP value-weighted returns, not equal-weighted.
+> **Question asked:** Which market return definition for the benchmark?
+> **Rationale (if given):** Matches prior paper; easier reviewer comparison.
+```
+
+Three lines, blockquote, dated. `Question asked` is the agent's own short restatement of what it asked. `Rationale` is optional — only if the researcher gave one; do not invent rationale.
+
+The `ask-user-question-logger` PostToolUse hook reminds you to log after each `AskUserQuestion` call; if your harness doesn't expose the hook, set a TodoWrite reminder. Not covered by this section: adjudication of reviewer feedback inside the review-notes blockquote — that's the `→ orchestrator:` / `→ implemented:` protocol owned by `agents/implementer.md` and `agents/reviewer.md`.
+
+### Project Conventions
+
+Project-wide conventions extracted from walking up `CLAUDE.md` / `AGENTS.md` / `README.md` at planning time land in a `## Project Conventions` section of `PLAN.md` (populated by the orchestrator; read-only for subagents). Subagents read this section instead of re-walking the project tree; on-demand re-walk is allowed but the omission is flagged in the status return so the orchestrator can update `PLAN.md`. (The section is introduced by Task 5 of the current refactor; see `handoff-doc/references/plan-anatomy.md` for the final anatomy.)
+
+### Figure Embedding
+
+Figures in Stage 1 `RESULTS.md` are embedded with markdown image syntax pointing at a committed PNG in `results_attachments/` at project root: `![Descriptive caption](results_attachments/fig_name.png)`. The full discipline (PDF→PNG conversion, caption requirements, math/table handling) is in `skills/report-in-markdown/references/rich-content.md`.
+
+### When You Need the Full Anatomy
+
+The section above is what every agent needs at runtime. Doc-*creators* — the planner in `planning-workflow` Phase 2, the Stage 2 doc-writer in `integration-workflow` Step 3 — also need the full PLAN.md / RESULTS.md anatomy templates (section layouts, code-block examples, transition-to-Stage-2 note). Those live in `superRA:handoff-doc/references/plan-anatomy.md` and `results-anatomy.md`. Loaded only when creating docs from scratch or maturing them into final form; not loaded on everyday implementer / reviewer dispatches.
 
 ## Skill Inventory
 
@@ -31,7 +87,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Workflow | `merge-workflow` | INTEGRATE (merge): update with main, verify, local merge or PR. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, red flags. |
-| Utility | `handoff-doc` | Document-level discipline for PLAN.md / RESULTS.md — four principles, inline-edit rule, task-block anatomy. |
+| Utility | `handoff-doc` | Doc-creation skill — the full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded only by doc-creators (planning-workflow, Stage 2 doc-writer). Everyday editing rules live in §Handoff Doc Discipline above. |
 | Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
 | Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
@@ -48,15 +104,19 @@ Skills compose by category. **Workflow skills** own sequencing — they decide w
 
 For each Stage, load the listed skills and references. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Role differentiation shows up explicitly on the `implementation` and `documentation` rows where the implementer and reviewer load different references.
 
+**The "Required skills" column lists what loads *in addition to* `superRA:using-superRA`** — the master skill every agent already loads at dispatch time (implementer / reviewer via frontmatter preload; team teammates via SessionStart injection). `using-superRA` carries §Universal Principles, §Handoff Doc Discipline (the four document principles + inline-edit rule + stale-content checklist + User Decisions Log format + figure-embedding pointer), the Skill Inventory, the composable-design map, and this manifest. That content is always available without needing to list it below.
+
 | `Stage:` | Required skills | Stage-scoped references |
 |---|---|---|
-| `implementation` | `handoff-doc`; active domain skill (for data analysis: `econ-data-analysis`) | domain §Review & Self-Check Discipline. For data analysis: **implementer** additionally loads `econ-data-analysis/references/disciplines.md` + `references/notebook-format.md`; **reviewer** loads SKILL.md only (its §Review & Self-Check Discipline is self-sufficient for verification; §Pitfalls is in SKILL.md — if the dispatcher wants a specific Pitfalls subsection highlighted for review, it names it in `Additionally:`). |
-| `refactoring` | `handoff-doc` + `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
-| `drift-test` | `handoff-doc` + `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
-| `integration-review` | `handoff-doc` + `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
-| `merge` | `handoff-doc` + `refactor-and-integrate` + `semantic-merge`; domain skill | `merge-quality.md` |
+| `implementation` | active domain skill (for data analysis: `econ-data-analysis`) | domain §Review & Self-Check Discipline. For data analysis: **implementer** additionally loads `econ-data-analysis/references/disciplines.md` + `references/notebook-format.md`; **reviewer** loads SKILL.md only (its §Review & Self-Check Discipline is self-sufficient for verification; §Pitfalls is in SKILL.md — if the dispatcher wants a specific Pitfalls subsection highlighted for review, it names it in `Additionally:`). |
+| `refactoring` | `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
+| `drift-test` | `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
+| `integration-review` | `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
+| `merge` | `refactor-and-integrate` + `semantic-merge`; domain skill | `merge-quality.md` |
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
+
+`handoff-doc` remains a required load only on the `documentation` and `planning-review` rows — those stages create or mature docs from scratch and need the full anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Everyday implementer / reviewer stages get handoff-doc editing rules from `using-superRA` §Handoff Doc Discipline and do not need to load `handoff-doc` separately.
 
 **Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess. The manifest is the single source of truth for Stage→{skills, references}.
 
