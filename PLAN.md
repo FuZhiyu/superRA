@@ -48,6 +48,10 @@ Other tasks have no manifest dependency and may run in any order after Task 6.
 > **Question asked:** *(researcher-initiated, not agent-prompted — raised after observing orchestrator behavior during parallel dispatch of Task 1 + Task 15.)*
 > **Rationale:** Each fresh dispatch reloads skills + PLAN.md + module-level guidance; for small sequential follow-ups the context-reload cost outweighs the benefit. The heuristic should be written into the skill so future orchestrators apply it automatically. Reviewer role is a named exception (always fresh — adversarial by design).
 
+> **User decision (2026-04-16):** Drop Task 16 (final consistency pass) from the plan; proceed directly to INTEGRATE.
+> **Question asked:** Why do we need Task 16? It duplicates what integration-workflow Stage 2 already covers.
+> **Rationale:** Task 16's six steps (inventory sync, principle consistency, end-to-end re-read, CHANGELOG/RELEASE-NOTES update, triggering checks, grep sweep) all map onto integration-workflow Stage 2's refactor + integration review + project-doc-audit that Task 9 just relocated there. Executing Task 16 in the IMPLEMENT phase would perform the work twice.
+
 ---
 
 ### Task 1: Consolidate Stage names + remove dispatch re-statements
@@ -410,34 +414,6 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 - [x] **Step 2: Sweep references.** `grep -rn "execute-plan\|write-plan\|brainstorm" skills/ commands/ README.md CLAUDE.md` returned zero matches in any of those paths — no inventory-table rows to remove. Upstream-history mentions in `RELEASE-NOTES.md` and `CHANGELOG.md` are intentionally preserved (they are release history for the upstream superpowers project, not superRA inventory); superRA's own release entry for this refactor lands in Task 16 Step 4.
 
 - [x] **Step 3: Validate.** Atomic commit.
-
----
-
-### Task 16: Final consistency pass
-**Review status:** *(not started)*
-
-**Files affected:** `skills/CATEGORIES.md`, `README.md`, `CHANGELOG.md`, `RELEASE-NOTES.md`, every skill touched in Tasks 1–15
-**Input:** Cumulative diff of Tasks 1–15.
-**Output:** All inventory tables match the post-refactor skill set. CHANGELOG/RELEASE-NOTES have an entry. The "four principles" claim is consistent across files. End-to-end re-read confirms no drift.
-
-- [ ] **Step 1: Sync inventory tables.** Update `skills/CATEGORIES.md` (Workflow / Domain / Utility / Meta tables), `README.md` skill tables, and `using-superRA` §Skill Inventory to reflect:
-  - Removed: `script-to-notebook`, `using-analysis-worktrees`
-  - Broadened: `worktree-data-sync`
-  - Added rows for `references/main-agent-autonomy.md` and `references/review-checklist.md` if those tables enumerate references.
-
-- [ ] **Step 2: Verify "four principles" consistency.**
-  ```bash
-  grep -rn "four \(load-bearing\|workflow\|discipline\) principles\|six \(discipline\) principles" skills/ agents/ CLAUDE.md README.md
-  ```
-  Confirm "four" everywhere (no stray "six"). The installed plugin description (visible at session start) may show "six" — that's a deployment-cache issue, not a repo issue, and resolves on next install.
-
-- [ ] **Step 3: End-to-end re-read.** Walk every workflow skill (`planning-workflow`, `execution-workflow`, `integration-workflow`, `merge-workflow`, `semantic-merge`, `agent-orchestration`) plus `using-superRA`, `handoff-doc`, `econ-data-analysis`, `refactor-and-integrate`, `report-in-markdown`, `verification-before-completion`, `worktree-data-sync`, both agent files. Catch any orphan reference, broken pointer, contradictory line, or stale Stage name introduced by interactions between Tasks 1–15.
-
-- [ ] **Step 4: Update CHANGELOG and RELEASE-NOTES** with a single entry summarizing the refactor: stage consolidation, two skills folded, project-doc-audit relocated, verification-before-completion connected, worktree skills consolidated. Cite this PLAN.md by branch/SHA so the design rationale is auditable.
-
-- [ ] **Step 5: Run `superRA:writing-skills` triggering checks** for every skill whose description was modified across the refactor (at minimum: `worktree-data-sync` after Task 14, `econ-data-analysis` if its description was touched in Task 3, and `using-superRA` if Task 1 / Task 6 modified its description). Confirm each still triggers on its intended cues and doesn't trigger on cues meant for sibling skills.
-
-- [ ] **Step 6: Validate.** Final grep sweep for the strings: `script-to-notebook`, `using-analysis-worktrees`, `execute-plan`, `write-plan`, `brainstorm`, `Stage: implementation review`, `Stage: drift test creation`, `Stage: integration review`, `Stage: merge proposer`, `sub-part B`, `recipe`. None should appear in skill bodies (only in PLAN.md / CHANGELOG history, which is fine). Atomic commit.
 
 ---
 
