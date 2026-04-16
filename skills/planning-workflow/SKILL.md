@@ -50,7 +50,7 @@ If the work covers multiple independent workstreams (e.g., "analyze portfolio so
 Before defining tasks, map out the artifact pipeline:
 
 - What scripts, notebooks, or documents will be created? One per logical phase (e.g., data cleaning → variable construction → analysis → robustness; or derivation → simulation → calibration for theory work).
-- **Analysis scripts**: format for notebook rendering per `superRA:script-to-notebook`. Runner/pipeline scripts and non-analysis artifacts use standard format.
+- **Analysis scripts**: format for notebook rendering per `econ-data-analysis/references/notebook-format.md`. Runner/pipeline scripts and non-analysis artifacts use standard format.
 - What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 

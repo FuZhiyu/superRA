@@ -82,5 +82,4 @@ When your dispatch prompt names multiple domain references, load them all before
 - **`superRA:semantic-merge`** — Dispatches merge proposer (`merge-quality.md`) and merge reviewer (`merge-quality.md`) for tier classification and conflict resolution
 
 **Auto-loaded alongside:**
-- **`superRA:econ-data-analysis`** — Data discipline (loaded by `implementer` / `reviewer` agents whenever the stage involves analysis code, per the `superRA:using-superRA` §Skill-Load Manifest)
-- **`superRA:script-to-notebook`** — Notebook formatting (same manifest row)
+- **`superRA:econ-data-analysis`** — Data discipline (loaded by `implementer` / `reviewer` agents whenever the stage involves analysis code, per the `superRA:using-superRA` §Skill-Load Manifest); the `implementation` row also loads `econ-data-analysis/references/notebook-format.md` for notebook formatting.

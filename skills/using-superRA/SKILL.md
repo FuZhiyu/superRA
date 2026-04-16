@@ -32,7 +32,6 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, red flags. |
 | Utility | `handoff-doc` | Document-level discipline for PLAN.md / RESULTS.md — four principles, inline-edit rule, task-block anatomy. |
-| Utility | `script-to-notebook` | Cell organization, markdown narrative, rendering for analysis scripts (Python/Julia). |
 | Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
 | Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
@@ -51,7 +50,7 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 
 | `Stage:` | Required skills | Stage-scoped references |
 |---|---|---|
-| `implementation` | `handoff-doc`; active domain skill (for data analysis: `econ-data-analysis` + `script-to-notebook`) | domain §Review & Self-Check Discipline |
+| `implementation` | `handoff-doc`; active domain skill (for data analysis: `econ-data-analysis`) | domain §Review & Self-Check Discipline; for data analysis also `econ-data-analysis/references/notebook-format.md` |
 | `refactoring` | `handoff-doc` + `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
 | `drift-test` | `handoff-doc` + `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
 | `integration-review` | `handoff-doc` + `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
