@@ -308,38 +308,42 @@ Result: SKILL.md 276 lines (slightly over the ~210 target — the `Why:` rationa
 ---
 
 ### Task 11: Skip post-merge integration review on Tier 1 clean merges
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Files affected:** `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`
 **Input:** `merge-workflow` Step 2 (post-merge verification) currently runs both drift tests AND a fresh integration reviewer unconditionally.
-**Output:** When `semantic-merge` Step 1 returned Tier 1 (clean merge, no conflicts, drift tests passed inside semantic-merge), `merge-workflow` Step 2b is skipped. The skip is documented in the merge commit.
+**Output:** When `semantic-merge` Step 1 returned Tier 1 (clean merge, no conflicts, no analysis-path changes in the incoming diff), `merge-workflow` Step 2b is skipped. The skip is documented in the merge commit (Option 1) or PR body (Option 2).
 
-- [ ] **Step 1: Update `semantic-merge`'s return contract.** When invoked from `merge-workflow`, semantic-merge returns its tier classification + a one-line "did main introduce non-trivial code changes?" verdict. Add this to `semantic-merge` §Invocation Pattern (delegated mode) and §What to Report.
+- [x] **Step 1: Update `semantic-merge`'s return contract.** §What to Report split into Standalone mode (existing content) and Delegated mode (new). Delegated mode names the required fields: tier classification, incoming-impact line (paths touched, analysis-path yes/no), integration + user decisions (one-paragraph summaries), drift tests / pipeline / verification all stamped `deferred to caller`. Tier + incoming-impact marked load-bearing — `merge-workflow` Step 2 reads them for skip eligibility.
 
-- [ ] **Step 2: Update `merge-workflow` Step 2.** Add a sub-step 2.0: "Read semantic-merge's tier classification. If Tier 1 (clean, no conflicts) AND the incoming diff did not touch any file in your analysis paths: skip Step 2b. Run Step 2a (drift tests on merged state) only."
+- [x] **Step 2: Update `merge-workflow` Step 2.** Added sub-step 2.0 (read tier + incoming-impact, decide skip) ahead of 2a. Reworded 2b to "Skip this sub-step only if 2.0 said so." Skip condition: Tier 1 AND no analysis-path changes. Otherwise (Tier 2, Tier 3, or Tier 1 with analysis-path changes) run 2a AND 2b. Added an "Analysis paths" definition and a "when in doubt, do not skip" nudge. Step 1's invocation example updated to delegated-mode form per Task 12.
 
-- [ ] **Step 3: Document the skip.** When 2b is skipped, the merge commit message gets a trailer: `"Post-merge integration review skipped: Tier 1 clean merge, no analysis-path changes incoming."` This makes the saving auditable.
+- [x] **Step 3: Document the skip.** Added sub-step 2c: when 2b is skipped, merge commit message gets the trailer `"Post-merge integration review skipped: Tier 1 clean merge, no analysis-path changes incoming."` For Option 2 (PR), the same sentence goes under "Pre-Merge Quality" in the PR body — PR body template's Integration review line offers the skip-wording alternative. Step 4 Option 1 block got a trailer-append instruction.
 
-- [ ] **Step 4: Update `merge-workflow` §Why Both Drift Tests AND Integration Review Post-Merge.** Replace "always run both" with the conditional rule. Preserve the rationale for the non-Tier-1 case.
+- [x] **Step 4: Update `merge-workflow` §Why Both Drift Tests AND Integration Review Post-Merge.** Renamed to "§Why Both Drift Tests AND Integration Review Post-Merge — and when one is redundant". Two-signal rationale preserved verbatim for the default case. New second paragraph names the provable-redundancy condition and explains *why* drift tests alone cover both signals when Tier 1 AND no analysis-path changes (no surface for convention drift on your code). Closing paragraph reconnects to Step 3's refactor-review loop.
 
-- [ ] **Step 5: Validate.** Re-read `merge-workflow` Step 2 end-to-end. The skip path should be obvious; the not-skip path should be unchanged. Atomic commit.
+- [x] **Step 5: Validate.** Re-read `merge-workflow` Step 2 end-to-end: 2.0 → 2a (always) → either 2b or 2c depending on 2.0 → refactor-review loop if anything fails. Process diagram updated: new diamond "Step 2b skippable?" gating either 2b dispatch or 2c skip-documentation; both converge on existing pass/fail diamond. Red Flags rewritten: "Never push without running BOTH signals" becomes "Never push without running 2a" + "Never skip 2b outside the 2.0 condition"; "Always run both" becomes "Always run 2a; run 2b unless 2.0's skip condition is met; document the skip per 2c when skipped"; semantic-merge invocation is now "never invoke in default standalone mode" because delegated mode is load-bearing for the skip contract. Atomic commit.
 
 ---
 
 ### Task 12: Clarify `semantic-merge` standalone vs delegated (mode-aware verification)
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
-**Files affected:** `skills/semantic-merge/SKILL.md`
-**Input:** `semantic-merge` §Invocation Pattern (lines 24–31) currently says "process is identical, only the caller differs." Today this means semantic-merge does its own drift-test re-run inside Tier 1/2/3 even when `merge-workflow` will then re-run them in Step 2a.
-**Output:** Two explicit modes documented. Standalone owns all post-merge verification (drift tests, pipeline, stale-reference check). Delegated trims duplicates: it does what tier classification requires (e.g., Tier 2/3 propose+review), and leaves drift-test re-run + integration review to the caller.
+**Files affected:** `skills/semantic-merge/SKILL.md`, `skills/merge-workflow/SKILL.md`
+**Input:** `semantic-merge` §Invocation Pattern previously said "process is identical, only the caller differs." Post-merge verification (drift tests, pipeline, stale-reference check) ran inside every Tier in both modes, duplicating what `merge-workflow` Step 2 then re-ran.
+**Output:** Two explicit modes with a mode-aware-verification table. Standalone owns all post-merge verification (drift tests, pipeline, stale-reference check). Delegated does tier classification + conflict resolution only; caller runs the rest.
 
-- [ ] **Step 1: Rewrite §Invocation Pattern** to spell out the difference. Add a "Mode-aware verification" subsection enumerating which post-merge checks each mode runs. (Standalone: tier classification, conflict resolution, drift tests, pipeline, stale-reference check, report. Delegated: tier classification, conflict resolution, return tier + caller-relevant context. The caller — `merge-workflow` — runs drift tests + integration review on the merged state in its Step 2.)
+- [x] **Step 1: Rewrite §Invocation Pattern** to spell out the mode split. New "Mode-aware verification" subsection is a 6-row table showing which post-merge checks each mode runs — Tier classification and conflict resolution in both; drift tests, pipeline run, stale-reference check standalone-only; return tier+impact delegated-only. The invocation pattern is now split so the two bullets carry mode-specific behavior, not a "process is identical" disclaimer.
 
-- [ ] **Step 2: Add a parameter to the invocation contract.** When the caller is `merge-workflow`, the Skill invocation is `superRA:semantic-merge` with task: `"merge <base> into <analysis> — delegated mode: skip post-merge drift tests and pipeline run; the caller will verify"`. Document this in `merge-workflow` Step 1 alongside the existing invocation example.
+- [x] **Step 2: Parameterize the invocation contract.** Delegated-mode invocation task string spelled out: `"merge <base> into <analysis> — delegated mode: skip post-merge drift tests and pipeline run; the caller will verify"`. Documented this in `merge-workflow` Step 1 alongside the existing invocation example — Step 1 now opens with "in delegated mode" and the code fence shows the full task string.
 
-- [ ] **Step 3: Update Tier 1 / Tier 2 / Tier 3 sections** to gate the post-merge drift-test step ("If standalone: run drift tests. If delegated: skip — caller will run."). Same for pipeline and stale-reference checks.
+- [x] **Step 3: Update Tier 1 / Tier 2 / Tier 3 sections** to gate post-merge verification by mode. Each of the three tiers' post-merge steps (Tier 1 steps 2-5; Tier 2 step 5; Tier 3 steps 8-9) is annotated `[standalone-only]` and followed by an explicit "Delegated: skip — the caller runs …" sentence that names the caller's step (merge-workflow Step 2a for drift tests, Step 4 for pipeline). The Working Principles "drift tests are the safety net" bullet is reworded to carry both modes ("In standalone mode, always … In delegated mode, you do NOT … — `merge-workflow` Step 2a does"). Red Flags §Always is also split by mode. Agent Teams Mode closing sentence updated: drift-test verification is lead-handled in standalone, caller-handled in delegated.
 
-- [ ] **Step 4: Validate.** Re-read `semantic-merge` end-to-end in both modes. Re-read `merge-workflow` Step 1. The two skills should now be redundancy-free across the boundary. Atomic commit.
+- [x] **Step 4: Validate.** Re-read `semantic-merge` end-to-end in both modes:
+  - Standalone Tier 1: merge → drift tests → pipeline → done. Standalone Tier 2: propose → review → drift tests → done. Standalone Tier 3: propose → present → merge → review → drift tests → pipeline → done. Behavior preserved.
+  - Delegated Tier 1: merge → return tier+impact. Delegated Tier 2: propose → review → return tier+impact. Delegated Tier 3: propose → present → merge → review → return tier+impact. Drift tests / pipeline never re-run inside semantic-merge — the caller owns them.
+  
+  Re-read `merge-workflow` Step 1: invocation is delegated-mode, return contract documented, Step 2 reads tier+impact for skip eligibility. No redundancy across the boundary: Step 2a always runs (the caller's drift-test pass), Step 4 always runs (the caller's pipeline), semantic-merge never runs either in delegated mode. Atomic commit (coupled with Task 11 since they share files).
 
 ---
 
