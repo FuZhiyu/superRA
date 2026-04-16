@@ -8,7 +8,7 @@ Stage 1 dev log. Populated as each task completes.
 
 **Files touched:**
 
-- `skills/execution-workflow/SKILL.md` — 3 primary templates (analysis-task implementer, data-integrity reviewer, implementation reviewer) rewritten; added a short prose preamble describing the prefix contract; the `Agent Teams only` Counterpart comments are gone (teammate pairing now lives in `agent-orchestration` team recipes only).
+- `skills/execution-workflow/SKILL.md` — 3 primary templates (analysis-task implementer, data-integrity reviewer, implementation reviewer) rewritten; added a short prose preamble describing the prefix contract; the `Agent Teams only` Counterpart comments are gone (teammate pairing is now derived from the Skill-Load Manifest in `superRA:using-superRA`; team mechanics live in `agent-orchestration/references/agent-teams.md`).
 - `skills/integration-workflow/SKILL.md` — 6 templates rewritten: test-creator, test-reviewer, integration-reviewer, refactorer, Step 3 doc-writer, Step 3 doc-reviewer.
 - `skills/merge-workflow/SKILL.md` — 2 templates rewritten: post-merge integration reviewer, post-merge refactorer; `Note:` fields folded into `Additionally:`.
 - `skills/semantic-merge/SKILL.md` — 3 templates rewritten: Tier 2 merge-proposer, Tier 2 merge-reviewer, Tier 3 merge-proposer; Tier 3 context folded into `Additionally:`.

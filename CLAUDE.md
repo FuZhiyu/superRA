@@ -43,7 +43,7 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
 
 ### Architectural pattern
 
-- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. Stage tables in `agents/implementer.md` and `agents/reviewer.md` are the authoritative map from `Stage:` value to references loaded.
+- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. The Skill-Load Manifest in `superRA:using-superRA` is the authoritative map from `Stage:` value to required skills + stage-scoped references; `agents/implementer.md` / `agents/reviewer.md` carry one-line pointers at it.
 - **Flat skills/ layout.** No nested subfolders — every skill lives at `skills/<name>/SKILL.md`. Grouping into Workflow / Domain / Utility / Meta is documented in `skills/CATEGORIES.md` and mirrored in `README.md`, not in the filesystem. This preserves compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders.
 
 ### DRY, composability, extensibility
@@ -53,7 +53,7 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
 Concerns and their owners:
 
 - **Workflow skills** own *choreography* — what steps run in what order, what stop points exist, what status transitions apply. `planning-workflow`, `execution-workflow`, `integration-workflow`, `merge-workflow` each own the choreography of their phase and nothing else.
-- **`agent-orchestration`** owns *cross-stage orchestration* — dispatch-prompt shape (required-fields-first, `Additionally:` anchor-last), the "Follow the standard stage-relevant workflow" prefix, the relay protocol between orchestrator and subagent (what-changed deltas, review-notes annotation mechanics), verdict-adjudication discipline (how to handle `REVISE` and `CONDITIONAL APPROVE` findings), team recipes, and the direct-mode rubric (when the orchestrator executes a step itself instead of dispatching a subagent, read the agent file for that role and follow the same protocol).
+- **`agent-orchestration`** owns *cross-stage orchestration* — dispatch-prompt shape (required-fields-first, `Additionally:` anchor-last), the "Follow the standard stage-relevant workflow" prefix, the relay protocol between orchestrator and subagent (what-changed deltas, review-notes annotation mechanics), verdict-adjudication discipline (how to handle `REVISE` and `CONDITIONAL APPROVE` findings), and team mechanics in `references/agent-teams.md`. Execution Modes (subagent dispatch vs direct) are owned by `superRA:using-superRA`.
 - **Domain skills** own *domain discipline* — the Iron Law for data analysis, the gated checklist for that domain (§Review & Self-Check Discipline, domain-specific integration reference), pitfall catalogs, stage-scoped references. Adding a new vertical means adding a domain skill, not forking workflow skills.
 - **`refactor-and-integrate`** owns *generic integration discipline* — code-quality standards, drift-test construction, merge-quality standards. Domain-specific integration content lives alongside the domain skill (for data analysis: `econ-data-analysis/references/integration.md`).
 - **`handoff-doc`** owns *handoff-doc mechanics* — latest-state-only, inline-edit rule, task-block structure, `## Decisions` section shape. It does NOT own role permissions or dispatch/status-return protocols — those are orchestration concerns and live in `agent-orchestration` + the agent files.
@@ -70,7 +70,7 @@ superRA's workflow scaffolding is domain-agnostic. Domain-specific discipline li
 
 **Currently implemented:**
 
-- **Data analysis** — `superRA:econ-data-analysis`. Load-bearing rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION.** Non-negotiable; protected by Red Flags tables and rationalization lists in the skill body. Stage-scoped references: `references/planning.md` (Data Inventory hard gate + sensitivity design), `references/integrate-drift-tests.md` (drift-test construction), `references/data-robustness-checklist.md`.
+- **Data analysis** — `superRA:econ-data-analysis`. Load-bearing rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION.** Non-negotiable; protected by Red Flags tables and rationalization lists in the skill body. Stage-scoped references: `references/planning.md` (Data Inventory hard gate + sensitivity design), `references/integrate-drift-tests.md` (drift-test construction), `references/integration.md` (data-specific integration gates), `references/data-robustness-checklist.md`.
 
 Data analysis is the flagship vertical, not the whole product. The workflow skills do not assume data analysis; they route to the domain skill only when the task matches.
 
