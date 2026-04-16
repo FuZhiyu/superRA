@@ -1,6 +1,6 @@
 ---
 name: handoff-doc
-description: Use when creating, reading, or editing PLAN.md, RESULTS.md, or any other task-block-structured handoff document. Defines the six discipline principles, the inline-edit rule, the stale-content checklist, and the figure embedding rule. Points at references/ for full document anatomy, and at `report-in-markdown` for the Stage 2 consolidation that matures RESULTS.md into its permanent form. Load whenever you are about to read or edit a handoff doc.
+description: Use when creating, reading, or editing PLAN.md, RESULTS.md, or any other task-block-structured handoff document. Defines the four discipline principles, the inline-edit rule, the stale-content checklist, and the figure embedding rule. Points at references/ for full document anatomy, and at `report-in-markdown` for the Stage 2 consolidation that matures RESULTS.md into its permanent form. Load whenever you are about to read or edit a handoff doc.
 ---
 
 # Handoff Doc Discipline
