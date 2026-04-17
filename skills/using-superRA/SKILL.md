@@ -128,7 +128,7 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 - **Read the agent file for the role you are playing.** For an implementation step, read `agents/implementer.md`. For a review step, read `agents/reviewer.md`. Follow the protocol there as written.
 - **The Skill-Load Manifest still drives loads.** Consult the manifest row for your Stage and load the listed skills and references yourself in-session.
 - **The dispatch-prompt contract does not apply — there is no dispatch.** Task context comes from `PLAN.md`, `RESULTS.md`, and the current session; you do not write an `Additionally:` line to yourself.
-- **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's §Review & Self-Check Discipline before committing. Update `PLAN.md` / `RESULTS.md` inline per `superRA:handoff-doc`. Reviewer verdicts are still APPROVE / REVISE / CONDITIONAL APPROVE even when you render them as your own conclusion.
+- **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's §Review & Self-Check Discipline before committing. Update `PLAN.md` / `RESULTS.md` inline per §Handoff Doc Discipline above. Reviewer verdicts are still APPROVE / REVISE / CONDITIONAL APPROVE even when you render them as your own conclusion.
 - **Review is never skipped.** If you implemented in direct mode, you still need a review pass — either dispatch a reviewer subagent for the review step, or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
 
 ## When to Invoke Which Skill

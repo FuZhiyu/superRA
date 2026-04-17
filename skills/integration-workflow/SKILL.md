@@ -402,7 +402,7 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 - Skip Stage 1 (drift tests) — they are the safety net for everything that follows
 - Refactor before integration reviewer has identified issues — review first, then fix
 - Strip domain-discipline artifacts during refactoring — see `superRA:using-superRA` §Skill-Load Manifest for `refactoring` / `integration-review` for the full reference list per domain
-- Judge the researcher's methodology choice — focus on implementation correctness (see the foundational RA framing in `CLAUDE.md`)
+- Judge the researcher's methodology choice — focus on implementation correctness (see the foundational RA framing in `superRA:using-superRA` §Universal Principles)
 - Refactor before drift tests are committed and green
 - Hand off to merge-workflow without integration reviewer APPROVE on the refactored code + project-doc audit (Stage 2) AND doc-reviewer APPROVE on the matured RESULTS.md (Step 3)
 - Skip Step 3 because "RESULTS.md is already a markdown file" — the dev-log form has not been fact-checked, restructured, or relocated, and shipping it as-is bypasses the discipline gate

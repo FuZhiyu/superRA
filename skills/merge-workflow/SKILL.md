@@ -21,7 +21,7 @@ merge-workflow is invoked by `superRA:execution-workflow` Step 4 (Option 1 or 2)
 
 - Drift tests have been created, reviewed, and committed (integration-workflow Stage 1)
 - Code has been refactored for codebase fit and integration-reviewer-approved (integration-workflow Stage 2)
-- `RESULTS.md` has been matured into its permanent form at `RESULTS_DIR` and project-level docs (CLAUDE.md / AGENTS.md / README.md) have been audited, both via the doc-writer + doc-reviewer pair (integration-workflow Step 3 sub-parts A + B)
+- `RESULTS.md` has been matured into its permanent form at `RESULTS_DIR` via the doc-writer + doc-reviewer pair (integration-workflow Step 3 sub-part A); project-level docs (CLAUDE.md / AGENTS.md / README.md) have been audited during Stage 2 per `refactor-and-integrate/references/codebase-integration.md` §Project Doc Audit
 - `PLAN.md` has been disposed of (integration-workflow Step 3 sub-part C)
 - The user has chosen Option 1 (merge locally) or Option 2 (push + PR) — execution-workflow Step 4 captured this choice
 

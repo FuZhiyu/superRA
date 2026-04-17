@@ -66,7 +66,7 @@ digraph process {
         "Implementer asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
         "Implementer: describe-analyze-validate-commit" [shape=box];
-        "Dispatch reviewer (implementation review)" [shape=box];
+        "Dispatch reviewer subagent" [shape=box];
         "Reviewer verdict?" [shape=diamond];
         "Implementer fixes REVISE items" [shape=box];
         "Implementer fixes gating item(s)" [shape=box];
@@ -85,10 +85,10 @@ digraph process {
     "Implementer asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent";
     "Implementer asks questions?" -> "Implementer: describe-analyze-validate-commit" [label="no"];
-    "Implementer: describe-analyze-validate-commit" -> "Dispatch reviewer (implementation review)";
-    "Dispatch reviewer (implementation review)" -> "Reviewer verdict?";
+    "Implementer: describe-analyze-validate-commit" -> "Dispatch reviewer subagent";
+    "Dispatch reviewer subagent" -> "Reviewer verdict?";
     "Reviewer verdict?" -> "Implementer fixes REVISE items" [label="REVISE"];
-    "Implementer fixes REVISE items" -> "Dispatch reviewer (implementation review)" [label="re-review"];
+    "Implementer fixes REVISE items" -> "Dispatch reviewer subagent" [label="re-review"];
     "Reviewer verdict?" -> "Implementer fixes gating item(s)" [label="CONDITIONAL APPROVE"];
     "Implementer fixes gating item(s)" -> "Reviewer narrow re-review\n(verify gating fix + cited downstream)";
     "Reviewer narrow re-review\n(verify gating fix + cited downstream)" -> "Narrow re-review APPROVE?";

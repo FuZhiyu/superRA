@@ -52,26 +52,42 @@ for ref in $(grep -rohE 'superRA:[a-zA-Z-]+' skills/ agents/ hooks/ README.md CL
 done
 [ $broken_live -eq 0 ] && pass "all superRA: invocations in live surface resolve"
 
-# 3. Iron Law and cross-cutting content preserved in econ-data-analysis
-# main SKILL.md body. These are load-bearing and must not drift to
-# references (per feedback_skill_file_thoroughness).
+# 3. Iron Law preserved in econ-data-analysis main SKILL.md body; the
+# Describe / Analyze / Validate operational content moved to
+# references/disciplines.md in Task 3, and main body now carries the
+# three-disciplines intro as bold inline paragraphs. Pitfalls and Red
+# Flags stay in the main body (both roles load them). These are load-
+# bearing and must not drift further.
 grep -q '^NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION$' skills/econ-data-analysis/SKILL.md \
   && pass "Iron Law in econ-data-analysis main body" \
   || fail "Iron Law missing from econ-data-analysis main body"
-for section in '## Describe' '## Analyze' '## Validate' '## Pitfalls' '## Red Flags'; do
+for section in '## Pitfalls' '## Red Flags'; do
   if grep -Fq "$section" skills/econ-data-analysis/SKILL.md; then
     pass "main body contains '$section'"
   else
     fail "main body missing '$section'"
   fi
 done
+disc_ref="skills/econ-data-analysis/references/disciplines.md"
+if [ -f "$disc_ref" ]; then
+  for section in '## Describe' '## Analyze' '## Validate'; do
+    if grep -Fq "$section" "$disc_ref"; then
+      pass "disciplines.md contains '$section'"
+    else
+      fail "disciplines.md missing '$section'"
+    fi
+  done
+else
+  fail "missing: $disc_ref (Task 3 should have created it)"
+fi
 
 # 3b. Validate section must carry a Sensitivity analysis sub-section — this
-# is the first-class execution-phase discipline added in the DAV restructure.
-if grep -Fq '### Sensitivity analysis' skills/econ-data-analysis/SKILL.md; then
-  pass "Validate section contains Sensitivity analysis sub-section"
+# is the first-class execution-phase discipline. After Task 3 the section
+# lives in references/disciplines.md, not the SKILL.md main body.
+if grep -Fq '### Sensitivity analysis' "$disc_ref"; then
+  pass "disciplines.md Validate section contains Sensitivity analysis sub-section"
 else
-  fail "Validate section missing Sensitivity analysis sub-section"
+  fail "disciplines.md Validate section missing Sensitivity analysis sub-section"
 fi
 
 # 3c. No lingering DAD / describe-analyze-doc strings in the SKILL.md body.
@@ -387,18 +403,22 @@ for h in '^## Skill-Load Manifest$' \
   fi
 done
 [ "$us_missing" -eq 0 ] && pass "using-superRA SKILL.md carries Skill-Load Manifest + Skill Inventory + Execution Modes"
-# Six Stage rows in the manifest, backtick-wrapped stage names in column 1.
-stage_rows=$(grep -cE '^\| `(implementation|refactoring|drift-test|merge|documentation|planning-review)`' "$us_skill")
-if [ "$stage_rows" -eq 6 ]; then
-  pass "using-superRA Skill-Load Manifest has exactly 6 Stage rows"
+# Seven Stage rows in the manifest, backtick-wrapped stage names in column 1.
+# Task 1 added `integration-review` as the 7th row.
+stage_rows=$(grep -cE '^\| `(implementation|refactoring|drift-test|integration-review|merge|documentation|planning-review)`' "$us_skill")
+if [ "$stage_rows" -eq 7 ]; then
+  pass "using-superRA Skill-Load Manifest has exactly 7 Stage rows"
 else
-  fail "using-superRA Skill-Load Manifest has $stage_rows Stage rows (expected 6)"
+  fail "using-superRA Skill-Load Manifest has $stage_rows Stage rows (expected 7)"
 fi
+# handoff-doc is mentioned in the manifest preamble and in the documentation/
+# planning-review rows (Task 6 dropped it from everyday implementer/reviewer
+# rows); it also appears in the skill inventory. >=3 live mentions is the floor.
 handoff_hits=$(grep -c 'handoff-doc' "$us_skill")
-if [ "$handoff_hits" -ge 6 ]; then
-  pass "using-superRA SKILL.md mentions handoff-doc in >=6 places (one per Stage row)"
+if [ "$handoff_hits" -ge 3 ]; then
+  pass "using-superRA SKILL.md mentions handoff-doc in >=3 places"
 else
-  fail "using-superRA SKILL.md mentions handoff-doc only $handoff_hits times (expected >=6)"
+  fail "using-superRA SKILL.md mentions handoff-doc only $handoff_hits times (expected >=3)"
 fi
 if grep -Fq '<SUBAGENT-STOP>' "$us_skill"; then
   fail "using-superRA SKILL.md still contains <SUBAGENT-STOP> (should be retired in Round 3)"
@@ -480,8 +500,12 @@ else
   fail "§Direct Mode still referenced in $dm_hits SKILL.md file(s)"
 fi
 
-# 24. handoff-doc principles pruned to four: #4 (Ownership by role) and #5
-# (Explicit what-changed deltas) are deleted; principle count = 4.
+# 24. Handoff-doc principles: Task 6 moved the four document principles out
+# of handoff-doc/SKILL.md and into using-superRA §Handoff Doc Discipline (now
+# the canonical home — every agent reads using-superRA and inherits the
+# discipline). handoff-doc became a doc-*creation* skill with no principle
+# list. Assert the four principles now live under §The Four Document
+# Principles in using-superRA.
 hd_skill="skills/handoff-doc/SKILL.md"
 if grep -Eq '^4\. \*\*Ownership by role' "$hd_skill"; then
   fail "handoff-doc SKILL.md still contains old principle #4 'Ownership by role'"
@@ -493,11 +517,16 @@ if grep -Eq '^5\. \*\*Explicit what-changed' "$hd_skill"; then
 else
   pass "handoff-doc SKILL.md no longer contains old principle #5 'Explicit what-changed'"
 fi
-principle_count=$(grep -cE '^[0-9]+\. \*\*' "$hd_skill")
-if [ "$principle_count" -eq 4 ]; then
-  pass "handoff-doc SKILL.md has exactly 4 numbered principles"
+if grep -Fq '### The Four Document Principles' "$us_skill"; then
+  pass "using-superRA SKILL.md carries '### The Four Document Principles' heading"
 else
-  fail "handoff-doc SKILL.md has $principle_count numbered principles (expected 4)"
+  fail "using-superRA SKILL.md missing '### The Four Document Principles' heading"
+fi
+us_principle_count=$(awk '/^### The Four Document Principles/{flag=1; next} /^### /{flag=0} flag' "$us_skill" | grep -cE '^[0-9]+\. \*\*')
+if [ "$us_principle_count" -eq 4 ]; then
+  pass "using-superRA §The Four Document Principles has exactly 4 numbered principles"
+else
+  fail "using-superRA §The Four Document Principles has $us_principle_count numbered principles (expected 4)"
 fi
 
 # 25. econ-data-analysis/references/integration.md contains the new

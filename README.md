@@ -57,21 +57,21 @@ flowchart TB
     IMPL["<b>IMPLEMENT</b> (per task)<br/>execution-workflow Step 2<br/>Stage: implementation<br/>→ implementer agent<br/>+ econ-data-analysis main body (Iron Law, Describe/Analyze/Validate)<br/>+ econ-data-analysis/references/notebook-format.md"]
     IMPL --> VAL
 
-    VAL["<b>VALIDATE</b> (per task)<br/>execution-workflow Step 2 review<br/>Stage: implementation review<br/>→ reviewer agent<br/>+ econ-data-analysis §Review &amp; Self-Check Discipline<br/>APPROVE / REVISE / CONDITIONAL APPROVE"]
+    VAL["<b>VALIDATE</b> (per task)<br/>execution-workflow Step 2 review<br/>Stage: implementation (subagent_type encodes role)<br/>→ reviewer agent<br/>+ econ-data-analysis §Review &amp; Self-Check Discipline<br/>APPROVE / REVISE / CONDITIONAL APPROVE"]
     VAL -->|REVISE loop| IMPL
     VAL -->|APPROVED, next task| IMPL
     VAL -->|all tasks APPROVED, user chooses merge| INT1
 
-    INT1["<b>INTEGRATE — Stage 1: drift tests</b><br/>integration-workflow Stage 1<br/>Stage: drift test creation / drift test review<br/>→ implementer + reviewer<br/>+ refactor-and-integrate/references/drift-test-quality.md<br/>+ econ-data-analysis/references/integrate-drift-tests.md"]
+    INT1["<b>INTEGRATE — Stage 1: drift tests</b><br/>integration-workflow Stage 1<br/>Stage: drift-test<br/>→ implementer + reviewer<br/>+ refactor-and-integrate/references/drift-test-quality.md<br/>+ econ-data-analysis/references/integrate-drift-tests.md"]
     INT1 --> INT2
 
-    INT2["<b>INTEGRATE — Stage 2: refactor + integration review</b><br/>integration-workflow Stage 2<br/>Stage: refactoring / integration review<br/>→ implementer + reviewer<br/>+ econ-data-analysis §Refactor integrity<br/>+ econ-data-analysis/references/integration.md (data-specific)<br/>+ refactor-and-integrate/references/codebase-integration.md (generic)"]
+    INT2["<b>INTEGRATE — Stage 2: refactor + integration review</b><br/>integration-workflow Stage 2<br/>Stage: refactoring / integration-review<br/>→ implementer + reviewer<br/>+ econ-data-analysis §Refactor integrity<br/>+ econ-data-analysis/references/integration.md (data-specific)<br/>+ refactor-and-integrate/references/codebase-integration.md (generic)"]
     INT2 --> INT3
 
-    INT3["<b>INTEGRATE — Step 3: doc finalization</b><br/>integration-workflow Step 3<br/>Stage: doc writer / doc reviewer<br/>→ implementer + reviewer<br/>+ report-in-markdown (baseline-io, rich-content, final-form)<br/>Mature RESULTS.md; audit CLAUDE.md / AGENTS.md / README.md"]
+    INT3["<b>INTEGRATE — Step 3: doc finalization</b><br/>integration-workflow Step 3<br/>Stage: documentation<br/>→ implementer + reviewer<br/>+ report-in-markdown (baseline-io, rich-content, final-form)<br/>Mature RESULTS.md (project-doc audit runs in Stage 2)"]
     INT3 --> MERGE
 
-    MERGE["<b>MERGE</b><br/>merge-workflow<br/>+ semantic-merge (conflict classification)<br/>Stage: merge proposer / merge review<br/>→ implementer + reviewer<br/>+ refactor-and-integrate/references/merge-quality.md<br/>Post-merge: fresh drift-test + integration review"]
+    MERGE["<b>MERGE</b><br/>merge-workflow<br/>+ semantic-merge (conflict classification)<br/>Stage: merge<br/>→ implementer + reviewer<br/>+ refactor-and-integrate/references/merge-quality.md<br/>Post-merge: fresh drift-test + integration review"]
 
     CROSS["<b>Cross-cutting (every dispatch)</b><br/>using-superRA — universal principles · skill inventory · skill-load manifest · execution modes (subagent/direct) · session bootstrap<br/>agent-orchestration — dispatch shape · return deltas · reviewer-feedback adjudication · review-status reference<br/>handoff-doc — four principles · inline-edit · task-block anatomy · figure embedding · user-decisions log"]
 
@@ -108,7 +108,11 @@ Four workflow principles are baked into every skill in the repo. Every contribut
 
 4. **Autonomous with human in the loop.** The agent drives the workflow forward on its own between legitimate stop points — no "should I continue?" check-ins on approved plans. It stops, and uses `AskUserQuestion` when available, only for hard blockers, decisions beyond the RA's authority (methodology, scope, research intent), or user-defined milestones. Every user decision at a stop point is logged into `PLAN.md` before the agent acts on it.
 
-5. **DRY, composability, extensibility.** One source of truth per concern. `using-superRA` is the master skill every agent reads — it owns the universal principles, skill inventory, composable-design map, Skill-Load Manifest, and Execution Modes (subagent dispatch vs direct mode). Workflow skills own choreography (what steps run in what order). `agent-orchestration` owns cross-stage orchestration (dispatch shape, relay protocol, verdict adjudication). Domain skills own domain discipline. `refactor-and-integrate` owns generic integration discipline. `handoff-doc` owns handoff-doc mechanics. When adding content, ask *what concern does this describe?* and put it in the one skill that owns that concern; reference it from everywhere else. Duplicated content invites drift and is a code smell. Shared-flow corollary: for any gated checklist, implementer and reviewer walk the **same file**, with `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers encoding severity — one document, two perspectives. Adding a new vertical composes existing pieces; it never forks workflow skills. See `CLAUDE.md` §DRY, composability, extensibility for the full statement and ownership map.
+### Architectural discipline
+
+Below the four workflow principles sits one load-bearing architectural rule that shapes how the skills themselves compose.
+
+**DRY, composability, extensibility.** One source of truth per concern. `using-superRA` is the master skill every agent reads — it owns the universal principles, skill inventory, composable-design map, Skill-Load Manifest, and Execution Modes (subagent dispatch vs direct mode). Workflow skills own choreography (what steps run in what order). `agent-orchestration` owns cross-stage orchestration (dispatch shape, relay protocol, verdict adjudication). Domain skills own domain discipline. `refactor-and-integrate` owns generic integration discipline. `handoff-doc` owns handoff-doc mechanics. When adding content, ask *what concern does this describe?* and put it in the one skill that owns that concern; reference it from everywhere else. Duplicated content invites drift and is a code smell. Shared-flow corollary: for any gated checklist, implementer and reviewer walk the **same file**, with `[GATING]` / `[STANDARD]` / `[ADVISORY]` markers encoding severity — one document, two perspectives. Adding a new vertical composes existing pieces; it never forks workflow skills. See `CLAUDE.md` §DRY, composability, extensibility for the full statement and ownership map.
 
 ## Installation
 
@@ -166,7 +170,7 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 | Skill | What It Does |
 |-------|-------------|
-| **using-superRA** | Master skill every agent reads. Carries the distilled universal principles, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the six-row Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Preloaded on `superRA:implementer` / `superRA:reviewer` agent frontmatter; injected at session start for the main agent. Main-agent-only cross-session detection lives in `references/session-bootstrap.md`. |
+| **using-superRA** | Master skill every agent reads. Carries the distilled universal principles, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the seven-row Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Preloaded on `superRA:implementer` / `superRA:reviewer` agent frontmatter; injected at session start for the main agent. Main-agent-only cross-session detection lives in `references/session-bootstrap.md`. |
 | **writing-skills** | Create or modify skills using test-driven methodology. |
 
 ## Agents
@@ -184,7 +188,7 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 **One comprehensive review pass.** The reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom — `[GATING]` / `[STANDARD]` / `[ADVISORY]` items — even on gating failure. Reviewer dispatches are costly; halting early forces a full re-review. CONDITIONAL APPROVE separates "must-fix gating items" from "downstream already verified" so the re-review can be narrow. Review is never skipped, even in direct execution mode. Implementer and reviewer walk the same checklist — one source of truth, no drift between pre-handoff self-check and reviewer verification.
 
-**Stage → skill and reference loads via the Skill-Load Manifest.** `superRA:using-superRA` §Skill-Load Manifest is the single source of truth mapping each `Stage:` value (`implementation`, `refactoring`, `drift-test`, `merge`, `documentation`, `planning-review`) to the required skills and stage-scoped references agents load. Every agent reads `using-superRA`, so the manifest is always reachable. Dispatch prompts carry only Stage, task pointer, git range, and optional steering — the manifest handles the rest.
+**Stage → skill and reference loads via the Skill-Load Manifest.** `superRA:using-superRA` §Skill-Load Manifest is the single source of truth mapping each `Stage:` value (`implementation`, `refactoring`, `drift-test`, `integration-review`, `merge`, `documentation`, `planning-review`) to the required skills and stage-scoped references agents load. Every agent reads `using-superRA`, so the manifest is always reachable. Dispatch prompts carry only Stage, task pointer, git range, and optional steering — the manifest handles the rest.
 
 **Scope rule.** Agents only edit their own task's sections in PLAN.md and RESULTS.md. Never touch other tasks.
 
