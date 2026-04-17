@@ -334,7 +334,7 @@ The lead still handles tier classification, user-facing decisions (Tier 3 integr
 - Run bare `git merge` without tier classification in a research context
 - Choose `--ours` or `--theirs` for research-relevant files without user input
 - Resolve analysis-code conflicts without presenting options to the user
-- Judge the researcher's methodology — you integrate, you don't evaluate (see the foundational RA framing in `CLAUDE.md`)
+- Judge the researcher's methodology — you integrate, you don't evaluate (see the foundational RA framing in `superRA:using-superRA` §Universal Principles)
 - Discard dirty worktree state without explicit approval
 
 **Always:**

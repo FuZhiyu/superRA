@@ -121,7 +121,7 @@ On a re-dispatch following a CONDITIONAL APPROVE, the reviewer's second pass is 
 
 ### Documentation and handoff
 
-- `[GATING]` `RESULTS.md` updated in place for this task's section per `superRA:handoff-doc`. The doc is the record — findings live there before they appear in any status report.
+- `[GATING]` `RESULTS.md` updated in place for this task's section per `superRA:using-superRA` §Handoff Doc Discipline. The doc is the record — findings live there before they appear in any status report.
   - *Why:* Workflow Principle #2 — if a finding exists only in a chat message, it does not exist. It will be lost at the next session boundary. The committed doc is the authoritative record; the status report points at it.
 - `[STANDARD]` Markdown cells explain what each block does and why; reasoning for major decisions sits alongside the code.
 - `[STANDARD]` Figures saved under `results_attachments/` and embedded in `RESULTS.md` via relative paths per `superRA:report-in-markdown`.
@@ -152,7 +152,7 @@ For integration-stage refactoring discipline (cross-codebase consistency, no red
   - *Why:* scripts that run individually but not as a pipeline are a reproducibility failure waiting for the next session to trigger it.
 - `[GATING]` Outputs exist and were generated from committed code (not ad-hoc REPL).
   - *Why:* outputs generated from uncommitted REPL state are unreproducible — the commit does not reconstruct them.
-- `[STANDARD]` `PLAN.md` and `RESULTS.md` current, per the inline-edit rule in `superRA:handoff-doc`.
+- `[STANDARD]` `PLAN.md` and `RESULTS.md` current, per the inline-edit rule in `superRA:using-superRA` §Handoff Doc Discipline.
 - `[STANDARD]` Deferred MINORs either resolved or documented in `RESULTS.md` as accepted limitations with rationale.
 
 ## Pitfalls
