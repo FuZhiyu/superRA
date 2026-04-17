@@ -2,7 +2,7 @@
 
 The findings document at the worktree root, created alongside `PLAN.md`. Mirrors the plan's task structure and gets updated after each step with key findings. This is the Stage 1 form — it matures into a permanent record at INTEGRATE Step 3 (see `superRA:handoff-doc`'s two-stage lifecycle).
 
-**The canonical anatomy and inline-edit rules live in `superRA:handoff-doc`.** Load that skill for the six principles and the full per-task section structure. This template is a minimal starter scaffold.
+**The canonical anatomy and inline-edit rules live in `superRA:handoff-doc`.** Load that skill for the four principles and the full per-task section structure. This template is a minimal starter scaffold.
 
 ## Starter Scaffold
 

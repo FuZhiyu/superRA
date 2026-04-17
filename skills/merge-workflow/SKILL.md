@@ -81,19 +81,21 @@ pytest tests/  # or: julia --project test/runtests.jl
 **2b. Dispatch a fresh integration reviewer on the merged state.**
 ```
 Agent(subagent_type: "superRA:reviewer"):
-  Stage: integration
+  Stage: integration review
   Skills: superRA:refactor-and-integrate
-  Domain reference: codebase-integration.md
+  Domain reference: active domain skill's §Refactor integrity (for data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + codebase-integration.md (cross-cutting code-quality checklist)
   Code under review: <analysis paths>
   Codebase conventions: <where they live in main>
   Drift tests: <test paths>
   Diff: <merge-base>..HEAD  # the merged state vs the base branch tip
-  Note: Post-merge review. Verify the merge didn't break codebase fit
-        — convention drift, renamed utilities, moved files, stale imports.
+  Additionally: Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally, this is a
+    post-merge review — verify the merge didn't break codebase fit
+    (convention drift, renamed utilities, moved files, stale imports).
 ```
 
 - **APPROVE:** drift tests passed AND integration is clean. Proceed to Step 4.
-- **REVISE:** integration broke during the merge. Adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:execution-workflow` (Handling Reviewer Feedback). For accepted issues, proceed to Step 3.
+- **REVISE:** integration broke during the merge. Adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback. For accepted issues, proceed to Step 3.
 
 ### Step 3: Refactor-Review Loop on Post-Merge Failure
 
@@ -104,12 +106,14 @@ When drift tests fail OR the post-merge integration reviewer returns REVISE, re-
    Agent(subagent_type: "superRA:implementer"):
      Stage: refactoring
      Skills: superRA:refactor-and-integrate
-     Domain reference: codebase-integration.md
+     Domain reference: active domain skill's §Refactor integrity (for data analysis: `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity) + codebase-integration.md (cross-cutting code-quality checklist)
      Reviewer issues to address: [accepted items, file:line, what to fix]
      Drift tests: [paths — must pass after refactoring]
      Code to refactor: [paths]
-     Note: Post-merge refactoring. Main has moved since integration-workflow
-           ran; address the drift introduced by the merge.
+     Additionally: Follow the standard stage-relevant workflow and load
+       relevant skills and documents to proceed. Additionally, this is
+       post-merge refactoring — main has moved since integration-workflow
+       ran; address the drift introduced by the merge.
    ```
 
 2. **After refactoring, re-run drift tests.**
@@ -119,7 +123,7 @@ When drift tests fail OR the post-merge integration reviewer returns REVISE, re-
 
 3. **Iterate until both drift tests pass AND integration reviewer APPROVES.**
 
-The orchestrator discipline applies: read each cited issue yourself before forwarding to the refactorer, override with documented reasoning if the reviewer is wrong, and never silently dismiss CRITICAL findings. See `superRA:execution-workflow` Handling Reviewer Feedback section for the full protocol.
+The orchestrator discipline applies: read each cited issue yourself before forwarding to the refactorer, override with documented reasoning if the reviewer is wrong, and never silently dismiss CRITICAL findings. See `superRA:agent-orchestration` §Handling Reviewer Feedback for the full protocol.
 
 ### Step 4: Execute Merge or PR
 
@@ -206,7 +210,7 @@ Together they cover both failure modes. Skipping either leaves a hole. The post-
 
 **Never:**
 - Push or local-merge without running BOTH drift tests AND a fresh integration reviewer on the merged state
-- Silently swallow integration-reviewer REVISE on the merged state — adjudicate per the orchestrator discipline in `superRA:execution-workflow` (Handling Reviewer Feedback), then either fix or document the override
+- Silently swallow integration-reviewer REVISE on the merged state — adjudicate per the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback, then either fix or document the override
 - Skip Step 1 (the semantic-merge update) and go straight to git merge — main may have moved since integration-workflow ran
 - Cleanup the worktree before the merge or push has actually completed
 

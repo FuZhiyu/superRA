@@ -76,6 +76,6 @@ These rules apply wherever drift tests are in play — during creation (`integra
 - **Silently update drift test expectations for meaningful result changes.** A test failure after a refactor, merge, or rebase means one of three things: (a) the change broke something and must be fixed, (b) the change revealed a tolerance too tight and must be justified with economic reasoning and an `AskUserQuestion` confirmation from the researcher, or (c) the change meaningfully shifted a result, which is a research conversation with the researcher — surface it via `AskUserQuestion` (plain text fallback when unavailable), log the answer per `handoff-doc` §User Decisions Log, and commit the log entry before updating the expectation. Never a silent expectation bump.
 - **Proceed past failing drift tests without assessment.** Failing tests block the workflow until explicitly adjudicated.
 - **Remove or weaken existing drift tests during refactoring or merge integration.** Tests are part of the analysis contract.
-- **Treat the drift tests as the only safety net.** They protect key results; they do not replace the two-stage review or the data-discipline protocol.
+- **Treat the drift tests as the only safety net.** They protect key results; they do not replace the one-pass review or the data-discipline protocol.
 
-When a drift test fails, follow the orchestrator discipline in `superRA:execution-workflow` ("Handling Reviewer Feedback") — read the cited output, classify the failure, and either fix, justify, or escalate.
+When a drift test fails, follow the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback — read the cited output, classify the failure, and either fix, justify, or escalate.
