@@ -1,13 +1,13 @@
 ---
 name: execution-workflow
-description: Use when you have a PLAN.md in the superRA task-block format and are ready to implement its tasks; when a plan has been approved and you need per-task implementation with an implementer-reviewer pair; when resuming work on a plan where some tasks are `IMPLEMENTED`, some `REVISE`, some `CONDITIONAL APPROVE`, and some not started; when an analysis is code-complete and you want to verify reproducibility and present completion options (merge / PR / keep / discard). Triggers include "execute the plan", "run task N", "implement this PLAN.md", "finish this analysis", a branch with an APPROVED plan but no code yet, or a REVISE / CONDITIONAL APPROVE state that needs orchestrator adjudication before re-dispatch. Covers the IMPLEMENT and VALIDATE phases of the superRA workflow; hands off to `integration-workflow` when the user chooses merge or PR.
+description: Use when you have a PLAN.md in the superRA task-block format and are ready to implement its tasks; when a plan has been approved and you need per-task implementation with an implementer-reviewer pair; when resuming work on a plan where some tasks are `IMPLEMENTED`, some `REVISE`, and some not started; when an analysis is code-complete and you want to verify reproducibility and present completion options (merge / PR / keep / discard). Triggers include "execute the plan", "run task N", "implement this PLAN.md", "finish this analysis", a branch with an APPROVED plan but no code yet, or a REVISE state that needs orchestrator adjudication before re-dispatch. Covers the IMPLEMENT and VALIDATE phases of the superRA workflow; hands off to `integration-workflow` when the user chooses merge or PR.
 ---
 
 # Execution Workflow
 
 Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu. On merge/PR, dispatches `superRA:integration-workflow` then `superRA:merge-workflow` directly.
 
-Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE / CONDITIONAL APPROVE; the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines`). Falls back to direct execution when the user requests it or tasks are trivial.
+Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE; the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines` + relevant §Pitfalls). Falls back to direct execution when the user requests it or tasks are trivial.
 
 **Core principle:** Fresh subagent per task + one comprehensive review pass = high quality, reproducible work. Review always happens regardless of execution mode.
 
@@ -31,7 +31,7 @@ Mode selection, in order:
 
 **Subagent mode:**
 - Dispatch implementer subagent per task
-- One comprehensive review pass after each (verdict: APPROVE / REVISE / CONDITIONAL APPROVE)
+- One comprehensive review pass after each (verdict: APPROVE / REVISE)
 - Fresh context per task (no pollution)
 - Orchestrator preserves context for coordination
 
@@ -57,8 +57,7 @@ Top-level loop:
 4. Dispatch reviewer subagent (one comprehensive pass).
 5. Branch on verdict:
    - **APPROVE** → update plan file + commit, return to top loop.
-   - **REVISE** → implementer fixes findings → re-dispatch reviewer (full pass).
-   - **CONDITIONAL APPROVE** → implementer fixes gating item(s) → reviewer does a narrow re-review (verify gating fix + cited downstream). Loop until narrow re-review APPROVES, then update plan file + commit.
+   - **REVISE** → implementer fixes `[BLOCKING]` findings → re-dispatch reviewer (narrow re-review: verify cited fixes + any finding annotated as depending on an upstream fix). Loop until APPROVE, then update plan file + commit.
 
 ### Step 0: Branch Check
 
@@ -118,17 +117,16 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "superRA:implementer")` — see template below. Direct mode: follow `superRA:using-superRA` §Execution Modes, then implement yourself. See `superRA:agent-orchestration` §Agent reuse vs fresh dispatch for when to reuse a warm implementer via `SendMessage` versus spawning a fresh dispatch.
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
-3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom and returns one of three verdicts:
-   - **APPROVE** — no findings. Proceed to the next task.
-   - **REVISE** — only `[STANDARD]` items failed. Adjudicate feedback in place inside the PLAN.md review-notes blockquote — append `→ orchestrator: rejected <reason>` or `→ orchestrator: <second opinion requested> <reason>` annotations to items you are rejecting or flagging, rewrite task steps in place for items you are accepting, commit, then re-dispatch the implementer. Leave the blockquote itself intact — the implementer will annotate items with `→ implemented: ...` markers on their pass, and the reviewer will delete confirmed-fixed items on re-review. See the "Handling Reviewer Feedback" section below and `agents/implementer.md` / `agents/reviewer.md` for the full annotation mechanics. Iterate until APPROVE.
-   - **CONDITIONAL APPROVE** — one or more `[GATING]` items failed, but the reviewer walked downstream items and they look correct conditional on the gating fix not invalidating them. Adjudicate the flagged gating item(s) the same way (accept / reject / second opinion), then re-dispatch the implementer to fix them. The reviewer's re-dispatch on a CONDITIONAL APPROVE is **narrow by default**: it verifies the gating fix is correct and that the cited downstream items still hold under the fix; if both pass, it promotes to unconditional APPROVE. MAY dispatch a wider re-review via optional `Additionally:` steering when the gating fix is substantial enough to cast doubt on downstream items — documented flexibility, not the default.
+3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task, and returns one of two verdicts:
+   - **APPROVE** — no `[BLOCKING]` findings. Proceed to the next task.
+   - **REVISE** — at least one `[BLOCKING]` finding. Adjudicate feedback in place inside the PLAN.md review-notes blockquote — append `→ orchestrator: rejected <reason>` or `→ orchestrator: <second opinion requested> <reason>` annotations to items you are rejecting or flagging, rewrite task steps in place for items you are accepting, commit, then re-dispatch the implementer. Leave the blockquote itself intact — the implementer will annotate items with `→ implemented: ...` markers on their pass, and the reviewer will delete confirmed-fixed items on re-review. The reviewer's re-review is **narrow by default**: verify the cited fixes + any finding annotated as depending on an upstream fix; everything else is accepted from the first pass. See the "Handling Reviewer Feedback" section below and `agents/implementer.md` / `agents/reviewer.md` for the full annotation mechanics. Iterate until APPROVE.
 4. **Once APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
 
 **In direct mode:** Steps 1–2 are done by the main agent directly (follow `superRA:using-superRA` §Execution Modes). Steps 3–4 are unchanged — still dispatch reviewer subagents.
 
 #### Dispatch Templates
 
-See `superRA:agent-orchestration` §Dispatch Templates for the canonical shape (required fields first, `Additionally:` anchor last; the "Follow the standard stage-relevant workflow" prefix; banned-in-dispatch list). Both implementer and reviewer dispatches in this workflow use `Stage: implementation` — the `subagent_type` (`superRA:implementer` vs `superRA:reviewer`) carries the role split. On a CONDITIONAL APPROVE re-dispatch, the same reviewer template is used with `Additionally:` pointing at the narrow scope: "Narrow re-review — verify the gating fix at <file:line> and confirm cited downstream items still hold."
+See `superRA:agent-orchestration` §Dispatch Templates for the canonical shape (required fields first, `Additionally:` anchor last; the "Follow the standard stage-relevant workflow" prefix; banned-in-dispatch list). Both implementer and reviewer dispatches in this workflow use `Stage: implementation` — the `subagent_type` (`superRA:implementer` vs `superRA:reviewer`) carries the role split. A reviewer re-dispatch after REVISE is narrow by default (verify cited fixes + any finding annotated as depending on an upstream fix); if a particular fix is substantial enough to cast doubt on other findings, use `Additionally:` to widen the scope.
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
 
@@ -136,7 +134,7 @@ See `superRA:agent-orchestration` §Handling Reviewer Feedback (Orchestrator Dis
 
 ### Step 3: Verify Pipeline and Reproducibility
 
-After every task is APPROVED, verify the work end-to-end before presenting completion options. This is an **orchestrator skeleton** — the domain-specific gating items live in the active domain skill's §Completion verification (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines §Completion verification`). Walk all five checks; do not proceed if any fails.
+After every task is APPROVED, verify the work end-to-end before presenting completion options. Walk all five checks; do not proceed if any fails.
 
 **Run every check. Don't trust "looks committed" — execute `git status` and read the output. The five checks below are the orchestrator's verification gate: evidence before claims, no shortcuts.**
 
@@ -146,11 +144,13 @@ After every task is APPROVED, verify the work end-to-end before presenting compl
    ```
    If uncommitted changes exist: investigate (probably an agent missed an inline-edit), commit, or ask the user.
 
-2. **PLAN.md up to date?** All tasks have `**Review status:** APPROVED`. All steps marked `- [x]` with result notes. No tasks stuck in `IMPLEMENTED`, `REVISE`, or `CONDITIONAL APPROVE`. Discovery notes captured. Upcoming-task descriptions reflect current understanding.
+2. **PLAN.md up to date?** All tasks have `**Review status:** APPROVED`. All steps marked `- [x]` with result notes. No tasks stuck in `IMPLEMENTED` or `REVISE`. Discovery notes captured. Upcoming-task descriptions reflect current understanding.
 
 3. **RESULTS.md up to date?** Has findings for all completed tasks. Figure attachments in `results_attachments/` committed.
 
-4. **Domain completion verification.** Walk the active domain skill's §Completion verification `[GATING]` items. For data analysis, this is `econ-data-analysis/SKILL.md §Three Concurrent Disciplines §Completion verification` — pipeline runs end-to-end if the plan declares one, outputs exist and were generated from committed code (not ad-hoc REPL), and any other domain-specific gating items. The domain skill owns the exact list; this workflow just routes you to it.
+4. **Reproducibility verification.**
+   - Multi-script pipeline runs end-to-end if the plan declares one.
+   - Outputs exist and were generated from committed code, not ad-hoc REPL state.
 
 5. **Deferred MINORs resolved?** Check PLAN.md review-notes blockquotes for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in RESULTS.md.
 
@@ -175,7 +175,7 @@ Work complete and verified. What would you like to do?
 4. Discard this work
 ```
 
-Log the researcher's answer per `using-superRA` §Handoff Doc Discipline §User Decisions Log — top-level `## Decisions` section, before executing the choice, included in the first commit of whatever workflow the option dispatches to.
+Log the researcher's answer per `handoff-doc` §User Decisions Log — top-level `## Decisions` section, before executing the choice, included in the first commit of whatever workflow the option dispatches to.
 
 **Execute the user's choice:**
 
@@ -196,7 +196,7 @@ These are the things the orchestrator does that no subagent does:
 - **Task sequencing and dispatch.** Read PLAN.md, decide what to dispatch next.
 - **Adjudicate reviewer feedback in place** in the PLAN.md review-notes blockquote before re-dispatching the implementer (see Handling Reviewer Feedback above). Append `→ orchestrator: rejected <reason>` annotations to items you are rejecting, `→ orchestrator: <second opinion requested> <reason>` to items you are flagging for the reviewer, and rewrite task steps in place for items you are accepting. **Do not clear the blockquote.** The implementer appends `→ implemented: ...` annotations on their pass; the reviewer deletes confirmed-fixed items on re-review. See `agents/implementer.md` §"How You Fix Review Items on a REVISE Round" and `agents/reviewer.md` §"How You Write a Review" for the full annotation mechanics. Commit the annotated PLAN.md.
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text, don't annotate it. Commit.
-- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck: BLOCKED, methodology disagreement, CRITICAL issue you want to override, repeated reviewer disagreement. Log per `using-superRA` §Handoff Doc Discipline §User Decisions Log.
+- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck: BLOCKED, methodology disagreement, CRITICAL issue you want to override, repeated reviewer disagreement. Log per `handoff-doc` §User Decisions Log.
 
 **Review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Three Concurrent Disciplines). Codebase integration review is deferred to integration-workflow (dispatched by this skill at Step 4 when the user chooses merge or PR).
 
@@ -226,7 +226,7 @@ The autonomy contract (proceed-without-asking patterns, stop-and-ask classes, ba
 - **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
 - **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. Pause class (2) in the autonomy contract.
 
-Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log per `using-superRA` §Handoff Doc Discipline §User Decisions Log **before** acting on it.
+Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log per `handoff-doc` §User Decisions Log **before** acting on it.
 
 ## Agent Loads
 
@@ -243,7 +243,7 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 **Never:**
 - Start work on main/master branch without proposing a feature branch first (Step 0)
 - Skip review — even in direct mode
-- Proceed with unfixed `[GATING]` items (a CONDITIONAL APPROVE task is not complete until the narrow re-review promotes it to APPROVED)
+- Proceed with unfixed `[BLOCKING]` items (a REVISE task is not complete until the re-review promotes it to APPROVED)
 - Dispatch multiple implementers in parallel on the same working tree (conflicts)
 - Paraphrase the task prompt into the dispatch instead of pointing the subagent at `PLAN.md` (the pointer-based convention is mandatory — subagents read the file directly so the dispatch and PLAN.md cannot drift)
 - Skip plan file update after task completion
@@ -251,10 +251,10 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 - Accept "looks fine" without verification
 - Move to the next task while the current task's review has open issues or status is not APPROVED
 
-**If reviewer returns REVISE or CONDITIONAL APPROVE:**
+**If reviewer returns REVISE:**
 - Adjudicate in the review-notes blockquote first (see Handling Reviewer Feedback)
 - Re-dispatch the implementer with the adjudicated items
-- Re-dispatch the reviewer after implementer fixes (narrow re-review on CONDITIONAL APPROVE)
+- Re-dispatch the reviewer after implementer fixes (narrow re-review: cited fixes + dependent findings)
 - Repeat until APPROVED
 - Do NOT skip the re-review
 - Do NOT ask the user whether to fix — iterate automatically

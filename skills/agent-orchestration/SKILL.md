@@ -107,9 +107,9 @@ Dispatch prompts and status returns both carry a one-line what-changed delta so 
 
 ## Handling Reviewer Feedback (Orchestrator Discipline)
 
-The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between a REVISE / CONDITIONAL APPROVE verdict and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
+The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between a REVISE verdict and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
 
-When a reviewer returns REVISE or CONDITIONAL APPROVE:
+When a reviewer returns REVISE:
 
 1. **Read the actual code at the cited file:line.** Do not trust the reviewer's summary. The reviewer is also a subagent and can be wrong.
 
@@ -130,13 +130,13 @@ When a reviewer returns REVISE or CONDITIONAL APPROVE:
 
 4. **If you push back on the reviewer (rather than override them), re-dispatch the same reviewer with counter-evidence.** Cite the file:line that proves the reviewer wrong, the methodology section that overrides their suggestion, or the human partner conversation that established the convention. The reviewer should then either retract or escalate.
 
-5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Log per `using-superRA` §Handoff Doc Discipline §User Decisions Log (inside the relevant task's review-notes area); commit the doc edit in the same commit as the re-dispatched implementer's fix (or as the commit that records the override).
+5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Log per `handoff-doc` §User Decisions Log (inside the relevant task's review-notes area); commit the doc edit in the same commit as the re-dispatched implementer's fix (or as the commit that records the override).
 
 **The orchestrator's authority:** You can override any reviewer issue with documented reasoning. You cannot silently ignore one. If you find yourself dismissing reviewer feedback without writing down why, stop — that's the slip that turns a critical filter into an excuse to skip reviews.
 
 **The orchestrator's limits:**
-- You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `using-superRA` §Handoff Doc Discipline §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
-- You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `using-superRA` §Handoff Doc Discipline §User Decisions Log.
+- You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `handoff-doc` §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
+- You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `handoff-doc` §User Decisions Log.
 
 This discipline applies equally to `execution-workflow` (implementation review), `integration-workflow` (drift test review, integration review, doc review), `merge-workflow` (merge review, post-merge integration review), and `semantic-merge` (merge review). The orchestrator owns the final call in every loop.
 
@@ -148,8 +148,7 @@ Implementer and reviewer agents own their commits and document updates — see `
 |---|---|---|
 | *(no line)* | Not started | Dispatch implementer |
 | `IMPLEMENTED` | Code committed, awaiting review | Dispatch reviewer |
-| `REVISE` | Reviewer found `[STANDARD]` issues | Adjudicate (see Handling Reviewer Feedback), then re-dispatch implementer |
-| `CONDITIONAL APPROVE` | Reviewer found `[GATING]` issue(s); downstream walked and looks correct contingent on the gating fix | Adjudicate the gating item(s), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review |
+| `REVISE` | Reviewer found `[BLOCKING]` issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
 | `APPROVED` | Review passed | Proceed to next task |
 
 **A task is complete only when its status is `APPROVED`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.

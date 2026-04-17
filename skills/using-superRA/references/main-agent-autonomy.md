@@ -6,7 +6,7 @@ This contract generalizes what used to live in `execution-workflow` §Autonomy a
 
 ## The Three Pause Classes
 
-Universal Principle #4 in `using-superRA` §Universal Principles states the rule. Expanded: stop and use `AskUserQuestion` (plain text if the harness does not expose the tool) for exactly three classes of pause, all of which require logging the researcher's answer per `using-superRA` §Handoff Doc Discipline §User Decisions Log **before** acting on it:
+Universal Principle #4 in `using-superRA` §Universal Principles states the rule. Expanded: stop and use `AskUserQuestion` (plain text if the harness does not expose the tool) for exactly three classes of pause, all of which require logging the researcher's answer per `handoff-doc` §User Decisions Log **before** acting on it:
 
 1. **Hard blocker the RA cannot resolve from code and data.** Unexpected input-quality issues, missing or corrupted inputs, ambiguous upstream dependency the agent cannot trace, a transformation that produces an unexpected scope change (row count shift on a merge, date range change after a filter), validation failure against domain expectation, plan with critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required dependency unavailable.
 2. **Decision beyond the RA's authority.** Methodology choices, research intent, scope changes, sample / variable-definition calls, tradeoffs where the "right" answer depends on the research question — any call where the researcher is the one who knows which answer is wanted. Also: methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope change that would affect tasks not yet reached.
@@ -18,7 +18,7 @@ All three classes have one thing in common: the agent cannot answer the question
 
 The autonomy principle is load-bearing in the other direction too — when there is no pause-class question on the table, the agent drives the workflow forward on its own power. Common patterns:
 
-- Task just moved to `APPROVED` → immediately dispatch the implementer for the next not-started task (or the next `REVISE` / `CONDITIONAL APPROVE` task you have already adjudicated).
+- Task just moved to `APPROVED` → immediately dispatch the implementer for the next not-started task (or the next `REVISE` task you have already adjudicated).
 - Reviewer feedback already adjudicated in the review-notes blockquote → re-dispatch the implementer; do not ask the researcher to confirm the adjudication.
 - A workflow step's internal verification passed → move to the next step without narrating "ready to show you the next options?".
 - Minor implementation choices fully inside the task's scope (variable naming, plot formatting, diagnostic printouts, function signatures of pure-refactor helpers) → decide and proceed; commit with the work.
@@ -38,7 +38,7 @@ When nothing has changed since the last approved state, these phrasings are bann
 - "Let me know if you want me to..."
 - "Would you like me to dispatch the next implementer?"
 
-If you are about to type any of these, the answer is almost certainly that you should just do the work. If the work legitimately needs a decision, use `AskUserQuestion` with a specific pause-class question; log the answer per §Handoff Doc Discipline §User Decisions Log; and then proceed.
+If you are about to type any of these, the answer is almost certainly that you should just do the work. If the work legitimately needs a decision, use `AskUserQuestion` with a specific pause-class question; log the answer per `handoff-doc` §User Decisions Log; and then proceed.
 
 **Ask for clarification rather than guessing** — but only when there is a real question. Fabricating a question to create a check-in violates this principle.
 
@@ -48,4 +48,4 @@ When a pause is legitimate, ask a single focused question and wait for the answe
 
 ## Log Before You Act
 
-Every user decision produced at a stop point is written into `PLAN.md` per `using-superRA` §Handoff Doc Discipline §User Decisions Log **before** the agent acts on it, and committed atomically with the work it unblocks. The doc is the record; the chat message is the pointer.
+Every user decision produced at a stop point is written into `PLAN.md` per `handoff-doc` §User Decisions Log **before** the agent acts on it, and committed atomically with the work it unblocks. The doc is the record; the chat message is the pointer.

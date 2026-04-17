@@ -2,7 +2,7 @@
 
 Shared cross-cutting code-quality reference for code refactoring and integration review. Both the implementer (refactorer) and reviewer use this checklist.
 
-> **Primary references for data-analysis work:** load BOTH the active domain skill's §Refactor integrity — for data analysis that is `econ-data-analysis/SKILL.md` §Review & Self-Check Discipline §Refactor integrity — AND `econ-data-analysis/references/integration.md` for the data-analysis-specific integration gates (no redundant intermediaries, variable-construction consistency, transformation-pattern consistency, data discipline preserved through refactoring, documented deviations). This file then covers the generic cross-cutting code-quality companion (naming, utility reuse, PR-friendly diffs, debug-artifact cleanup, documentation currency) that applies regardless of domain.
+> **Primary reference for data-analysis work:** load `econ-data-analysis/references/integration.md` for the data-analysis-specific integration gates (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations — with `[BLOCKING]` / `[ADVISORY]` markers and its own reviewer verdict protocol). This file then covers the generic cross-cutting code-quality companion (naming, utility reuse, PR-friendly diffs, debug-artifact cleanup, documentation currency) that applies regardless of domain.
 
 ## Code Integration
 
