@@ -1,230 +1,131 @@
 ---
 name: planning-workflow
-description: Use when starting a new empirical analysis with a research objective and methodology but no code or PLAN.md yet; when you have a research idea and need to translate it into an executable plan document; when you need to inventory data sources and verify availability before any task steps are drafted; when a fresh analysis branch needs its planning artifacts bootstrapped. Triggers include "let's analyze X", "write me a plan for Y", "we're starting a new project on Z", "before writing any code", empty working directory for a new analysis, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow; hands off to `execution-workflow` once the plan is approved.
+description: Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet; when you have an idea and need to translate it into an executable plan document; when a fresh branch needs its planning artifacts bootstrapped. Triggers include "let's analyze X", "write me a plan for Y", "we're starting a new project on Z", "before writing any code", empty working directory for a new task, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow; hands off to `execution-workflow` once the plan is approved. Domain-agnostic: for data-analysis planning, invokes `superRA:econ-data-analysis` and reads its `references/planning.md` for the Data Inventory hard gate and sensitivity design.
 ---
 
 # Planning Workflow
 
 ## Overview
 
-Workflow skill for the **PLAN** phase of the superRA workflow. Owns data inventory (Phase 1) and plan creation (Phase 2+). Outputs `PLAN.md` and `RESULTS.md` for the execution-workflow to consume.
+Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the execution-workflow to consume.
 
-Write comprehensive analysis plans assuming the analyst has zero context for this project. Document everything they need: which files to create, what data to load, how to transform it, what to validate, and how to document results. Give them the whole plan as bite-sized steps. Frequent commits.
+This skill is **domain-agnostic**. Today's only implemented domain vertical is data analysis; future verticals (theory / modeling, literature review, simulation, writing) plug in by providing their own domain skill with a `references/planning.md`. The procedure here stays the same.
 
-Assume the analyst is skilled at data work, but knows nothing about this specific project, its data, or its conventions.
+Write comprehensive plans assuming the next person reading has zero context for this project. Document everything they need: which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Give them the whole plan as bite-sized steps. Frequent commits.
 
-**Announce at start:** "I'm using the planning-workflow skill to inventory data and create the analysis plan."
+Assume the next reader is skilled at the craft, but knows nothing about this specific project, its data / literature / prior work, or its conventions.
+
+**Announce at start:** "I'm using the planning-workflow skill to create the project plan."
 
 **Save plan to:** `PLAN.md` at the project root (if in a worktree, the worktree root; otherwise, the project root or user-specified location)
-- Create `RESULTS.md` alongside (see Results Update Document section)
+- Create `RESULTS.md` alongside (see Living Plan and Results Docs section below)
 - (User preferences for plan location override this default)
 
-**Before you create directories or start editing:** if this analysis may span multiple sessions, run in parallel with another analysis, or need an isolated data copy, consider loading `superRA:using-analysis-worktrees` before any file creation. A worktree at this point is cheap; retrofitting one after Phase 1 is not. For simple single-session analyses on an existing branch, skip it — a feature branch is sufficient.
+**Before you create directories or start editing:** if this work may span multiple sessions, run in parallel with other work, or need an isolated data / environment copy, consider loading `superRA:using-analysis-worktrees` before any file creation. A worktree at this point is cheap; retrofitting one later is not. For simple single-session work on an existing branch, skip it — a feature branch is sufficient.
 
-Commit first before proceeding to execution.
+Commit the plan before proceeding to execution.
 
-## Phase 1: Data Inventory (Hard Gate)
+## Phase 1: Domain Vertical Setup
 
-The plan cannot be written without a data inventory. The user arrives with a research question and methodology already in mind. Your job in Phase 1 is NOT to design the research — it is to help with data logistics: what data exists, what's missing, and where to find it. The inventory becomes the **Data Inventory** section of `PLAN.md`.
+Identify the domain of the work and load the matching domain skill's planning reference. The domain skill carries any domain-specific hard gates and templates that must be satisfied before tasks are drafted.
 
-<HARD-GATE>
-Do NOT write any task structure, invoke any implementation skill, or take any planning action beyond Phase 1 until you have presented a data inventory and the user has approved it. This applies to EVERY analysis regardless of perceived simplicity.
-</HARD-GATE>
+**Currently implemented verticals:**
 
-### Phase 1 Checklist
+| Vertical | Trigger | Domain skill | Planning reference |
+|---|---|---|---|
+| Data analysis | task involves loading, cleaning, merging, transforming, modeling, or visualizing data | `superRA:econ-data-analysis` | `references/planning.md` — carries the **Data Inventory hard gate** (no tasks until data is inventoried and approved) and **Sensitivity Analysis Design** discussion |
 
-Create a task for each of these items and complete them in order:
+If the task is data analysis: **stop here, load `superRA:econ-data-analysis`, read `references/planning.md`, and satisfy its hard gate before returning to Phase 2.** The researcher must approve the Data Inventory before any task structure is drafted.
 
-1. **Understand the analysis goal** — ask the user what they need to analyze and what data they expect to use. One question at a time; don't overwhelm.
-2. **Explore project data** — check existing data directories, symlinks, and documentation:
-   ```bash
-   ls Data/ data/ 2>/dev/null
-   ls -la *.parquet *.csv *.dta *.feather *.arrow 2>/dev/null
-   cat Data/README.md data/README.md 2>/dev/null
-   git ls-files --others --ignored --exclude-standard --directory
-   grep -ri "data" CLAUDE.md AGENTS.md README.md 2>/dev/null | head -20
-   ```
-3. **Inventory available data** — for each dataset found, document name and path, format, approximate size (rows × columns), key variables, date range, source.
-4. **Identify gaps** — compare what the user needs against what's available: missing datasets entirely, available data with wrong time period or frequency, missing variables within available datasets, data quality concerns.
-5. **Research sources** — for missing data, suggest specific sources:
-   - **Financial:** WRDS (CRSP, Compustat, IBES, TAQ), Bloomberg, Refinitiv
-   - **Macro:** FRED, IMF WEO, World Bank, central bank websites
-   - **Academic:** journal replication packages, ICPSR
-   - **Project-specific:** check project documentation for custom data pipelines
-   
-   If WRDS or Refinitiv data skills are available, note them as tools for downloading.
-6. **Present the inventory and get user approval.** Use the format from `references/plan-template.md` (the Data Inventory section of the header). Ask the user to confirm before proceeding to Phase 2.
-
-### Phase 1 Principles
-
-- **Be specific about sources** — "try WRDS" is vague; "CRSP Monthly Stock File via WRDS" is specific
-- **Check before assuming** — explore the project before asking "do you have data?"
-- **Document everything** — the inventory is a reference for the rest of the analysis
-
-### Common Phase 1 mistakes
-
-- **Skipping project exploration:** asking "what data do you have?" when the project directory has it. Always check the file system first, then ask about gaps.
-- **Skipping the inventory:** verbal agreement on data, no written record. Always document the inventory — it becomes part of PLAN.md.
-
-### Red Flags — Hard Gate Protection
-
-The Phase 1 data inventory is a hard gate. It applies to every analysis regardless of perceived simplicity. The following loopholes are closed:
-
-**Never:**
-- Skip Phase 1 and propose the data inventory verbally. It must be written into `PLAN.md`.
-- Proceed to Phase 2 before the user explicitly approves the inventory.
-- Say "I'll assume we have X data — we can check later." Check first, then plan.
-- Write task structure speculatively while data availability is uncertain.
-- Use phrases like "pending data availability" or "TBD sources" in task steps — every source must be grounded in a verified file or table.
-- Draft Phase 2 in parallel with Phase 1 "to save time" — the gate is sequential.
-
-**Common rationalizations that mean STOP:**
-- "This analysis is simple — the gate is overkill." The gate applies every time. Simple analyses hide the same data-shape surprises as complex ones.
-- "The user clearly knows what data they want." Write it down anyway. The doc is the record; verbal confirmation is not.
-- "We can move faster if I draft tasks in parallel with inventory." No. Gate first, then tasks.
-- "I'll sketch Phase 2 and revise after Phase 1." A sketch written against unknown data will be thrown away — the revision is a rewrite, not an edit.
-
-**Why the gate exists:** skipping Phase 1 means writing a plan for data you don't have, which means rewriting the plan after seeing the data — 2–3× the overhead. The Iron Law ("no transformation without prior description") has a planning-phase analogue: no tasks without prior data inventory.
-
-After the user approves the inventory, proceed to Phase 2 (Scope Check + Plan Creation).
+If the task is in a domain without an implemented vertical yet: proceed to Phase 2, but flag the gap to the researcher so they know superRA's domain coverage is not complete for this work.
 
 ## Phase 2: Scope Check
 
-If the analysis covers multiple independent workstreams (e.g., "analyze portfolio sorts AND run Fama-MacBeth regressions AND build factor models"), suggest breaking into separate plans — one per workstream. Each plan should produce complete, documented results on its own.
+If the work covers multiple independent workstreams (e.g., "analyze portfolio sorts AND run Fama-MacBeth regressions AND build factor models"; "do the theory derivation AND the empirical test"), suggest breaking into separate plans — one per workstream. Each plan should produce complete, documented results on its own.
 
-## File Structure
+## Phase 3: File Structure
 
-Before defining tasks, map out the analysis pipeline:
+Before defining tasks, map out the artifact pipeline:
 
-- What scripts will be created? One per logical phase (data cleaning, variable construction, analysis, robustness).
-- **Analysis scripts**: format for notebook rendering per `superRA:script-to-notebook`. Runner/pipeline scripts use standard format.
-- What data files are inputs? Where do outputs go?
+- What scripts, notebooks, or documents will be created? One per logical phase (e.g., data cleaning → variable construction → analysis → robustness; or derivation → simulation → calibration for theory work).
+- **Analysis scripts**: format for notebook rendering per `superRA:script-to-notebook`. Runner/pipeline scripts and non-analysis artifacts use standard format.
+- What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 
-**Pipeline file (required for multi-script analyses):**
+**Pipeline file (required for multi-artifact work):**
 
-If the analysis involves more than one script, the plan MUST include a pipeline file that runs all scripts in the correct order. This is a reproducibility requirement.
-
-```bash
-# Example: run_all.sh
-#!/bin/bash
-set -e
-echo "Step 1: Clean data"
-python Code/01_clean_data.py
-echo "Step 2: Construct variables"
-python Code/02_construct_variables.py
-echo "Step 3: Main analysis"
-python Code/03_analysis.py
-echo "Step 4: Robustness checks"
-python Code/04_robustness.py
-echo "Pipeline complete."
-```
-
-Or for Julia:
-```julia
-# pipeline.jl
-include("Code/01_clean_data.jl")
-include("Code/02_construct_variables.jl")
-include("Code/03_analysis.jl")
-```
+If the work involves more than one script, the plan MUST include a pipeline file that runs all scripts in the correct order. This is a reproducibility requirement. Examples and detail for data analysis are in `econ-data-analysis/references/planning.md`. The same principle applies to any multi-artifact workstream: a single entry point that reproduces every output from source.
 
 The pipeline file must:
 - Run all scripts in dependency order
 - Fail fast on errors (`set -e` or equivalent)
 - Be committed to version control
-- Be updated whenever a new script is added to the analysis
+- Be updated whenever a new script is added
 
-## Step Granularity
+## Phase 4: Task Decomposition
 
-**Each step is one data operation with full discipline:**
+### Step Granularity
+
+**Each step is one logical unit of work with full discipline applied.** For data analysis, that discipline is the three concurrent disciplines describe-analyze-validate (see `superRA:econ-data-analysis` main body). Documentation is written continuously alongside the three, not as a separate step. Typical step shapes:
 
 - "Describe the raw holdings data (panel structure, key variables, missing values)" — step
 - "Merge holdings with fund characteristics (left join on fund_id × date)" — step
-- "Validate merge result (row counts, check unmatched, spot-check merged variables)" — step
-- "Document merge decisions and commit" — step
+- "Validate merge result (row counts, check unmatched, spot-check merged variables), commit" — step
 
-## Plan Document Header and Task Structure
+For other verticals, the operational cycle looks different (e.g., derivation → verification → proof-check for theory work), but the granularity rule is the same: one logical operation per step, with the cycle completed in-step.
 
-The full PLAN.md template — required header (objective, methodology, data inventory, output, expected results, sensitivity analysis, pipeline) plus task block structure with describe → analyze → doc steps and worked example — lives in `references/plan-template.md` inside this skill. Load this skill via the Skill tool and read `<base_dir>/references/plan-template.md` when authoring a plan, then fill in the placeholders for the current analysis.
+### Plan Document Header and Task Structure
 
-Required header fields and task block structure are non-negotiable. The template's example code is illustrative — adapt the content to your data and methodology, but preserve the describe → analyze → doc cycle.
+The full `PLAN.md` template — required header (objective, methodology, domain-specific sections, output, expected results, pipeline) plus task block structure with the domain's step cycle and a worked example — lives in `references/plan-template.md` inside this skill. Load this skill via the Skill tool and read `<base_dir>/references/plan-template.md` when authoring a plan, then fill in the placeholders for the current work. Domain-specific header sections (e.g., the Data Inventory section for data analysis) come from the domain skill's planning reference.
 
-## Sensitivity Analysis Design
+Required header fields and task block structure are non-negotiable. The template's example code is illustrative — adapt the content to your domain and methodology, but preserve the step-cycle rhythm the domain prescribes.
 
-Every analysis plan should include sensitivity analysis tasks. At the planning stage:
+## Living Plan and Results Docs
 
-1. **Discuss with user:** What robustness checks matter for this analysis? Not all checks are meaningful for every study — the user knows which dimensions are most important.
-2. **Reference `data-robustness-checklist.md`** for a menu of options:
-   - Alternative outlier treatment (winsorization cutoffs, trimming vs no treatment)
-   - Alternative variable definitions (functional form, denominators, lag structure, aggregation)
-   - Alternative sample restrictions (time windows, geographic subsets, balanced vs unbalanced panel)
-   - Leave-one-out / influential observations
-   - Alternative data sources (when the same concept is measured by multiple providers)
-3. **Design as dedicated task(s):** Sensitivity checks are their own task(s) in the plan, typically after the main analysis produces baseline results.
-4. **Document expected sensitivity:** For each check, note what you expect and what would be concerning.
-5. **Not all failures are problems:** A result that's sensitive to outlier treatment may be fine if the outliers are legitimate data points. Use economic reasoning, not mechanical pass/fail. **If unsure whether a sensitivity failure is meaningful, ask the user.**
+**The plan is NOT a static spec.** Work reveals surprises; the plan evolves in place.
 
-## Living Plan Document
+**For the full discipline** — the four principles, inline-edit rule, stale-content checklist, figure embedding, `PLAN.md` / `RESULTS.md` anatomy, and the two-stage `RESULTS.md` lifecycle — load `superRA:handoff-doc`. That skill is the single source of truth for document mechanics and is loaded by implementer and reviewer subagents, so the rules stay consistent across roles. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
-**The plan is NOT a static spec.** Research reveals surprises; the plan evolves in place.
-
-At each checkpoint: mark steps `[x]`, update upcoming steps if findings change the approach, edit discovery notes into the relevant task sections. Every update is an inline edit — replace outdated text, never append "Update:" blocks.
-
-**For the full discipline** — the six principles, inline-edit rule, stale-content checklist, figure embedding, and the PLAN.md / RESULTS.md anatomy — load `superRA:handoff-doc`. That skill is the single source of truth and is also loaded by implementer and reviewer subagents, so the rules stay consistent across roles. Role-by-role ownership and the review-loop annotation protocols (how implementers annotate fixes, how reviewers verify and delete items) live in `agents/implementer.md` and `agents/reviewer.md`.
-
-**Reviewers check:** Does the plan reflect what actually happened? Are upcoming steps still valid given what was found?
-
-## Results Update Document
-
-After saving `PLAN.md`, create `RESULTS.md` at the project root using the template at `references/results-template.md` inside this skill (load this skill via the Skill tool, then read `<base_dir>/references/results-template.md`). This is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record via `report-in-markdown` (see `superRA:handoff-doc` for the two-stage lifecycle).
-
-The document is updated after each completed step alongside PLAN.md. Key rules:
-
-- One section per task — replace prior content on re-implementation, never append a second version
-- Reviewer caveats appear as blockquoted notes below the implementer's findings (replaced on re-review, not stacked)
-- Save figures and tables as PNG in `results_attachments/` at project root (committed to git). Full figure/math/table discipline lives in `skills/report-in-markdown/references/rich-content.md`; load it when embedding figures.
-- The document should always read as a clean current-state summary, not a changelog
-- Reference full output files for detailed results (these may be gitignored)
-- Commit `RESULTS.md` and `results_attachments/` with each checkpoint commit
-- Together with PLAN.md, this forms a complete handoff: context + what happened + what was found
+**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the template at `references/results-template.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
 
 ## No Placeholders
 
-Every step must contain the actual code an analyst needs. These are **plan failures** — never write them:
+Every step must contain the actual code, instructions, or artifacts someone needs to execute it. These are **plan failures** — never write them:
 - "TBD", "TODO", "implement later", "fill in details"
-- "Add appropriate validation" / "check results" (without actual code)
-- "Similar to Task N" (repeat the code — the analyst may read tasks out of order)
+- "Add appropriate validation" / "check results" (without actual code or criteria)
+- "Similar to Task N" (repeat the content — the executor may read tasks out of order)
 - "Run descriptive statistics" (without showing which variables and what statistics)
-- Steps that describe what to do without showing how (code blocks required)
+- Steps that describe what to do without showing how (code blocks required for code steps)
 
 ## Remember
+
 - Exact file paths always
-- Complete code in every step
-- Row counts logged for every sample-changing operation
-- Describe → Analyze → Doc → Commit at each step (see `econ-data-analysis` for the micro-level discipline)
-- Pipeline file for multi-script analyses
+- Complete content in every step
+- For data analysis, row counts logged for every sample-changing operation
+- Domain-appropriate discipline (for data: describe → analyze → validate at each step, with commit bundled into the validate step; documentation written continuously — see `superRA:econ-data-analysis`)
+- Pipeline file for multi-artifact work
 
 ## Self-Review
 
 After writing the complete plan:
 
-**1. Data inventory coverage:** Can you point to a task that handles each dataset from the Data Inventory section of this plan?
+**1. Domain inventory coverage (where applicable):** For data analysis, can you point to a task that handles each dataset from the Data Inventory section?
 
-**2. Placeholder scan:** Search for red flags from the "No Placeholders" section. Fix them.
+**2. Placeholder scan:** Search for the red flags listed in the "No Placeholders" section. Fix them.
 
-**3. Pipeline consistency:** Do the script names in the pipeline file match the scripts created in each task? Are they in the right order?
+**3. Pipeline consistency:** Do the artifact names in the pipeline file match the artifacts created in each task? Are they in the right order?
 
-**4. Validation coverage:** Does every merge, filter, and variable construction have a corresponding validation step?
+**4. Validation coverage:** Does every transformative step have a corresponding validation step? (For data: every merge, filter, and variable construction.)
 
-**5. Plan serves as handoff:** If you stopped here and a new agent read only this plan and RESULTS.md, could they continue? Is there enough context?
+**5. Plan serves as handoff:** If you stopped here and a new agent read only this plan and `RESULTS.md`, could they continue? Is there enough context?
 
-**6. Sensitivity coverage:** Are sensitivity analysis tasks included? Were they discussed with the user to determine which checks matter most for this analysis?
+**6. Sensitivity / robustness coverage (where applicable):** For data analysis, are sensitivity analysis tasks included? Were they discussed with the researcher to determine which checks matter most?
 
 Fix issues inline. No need to re-review — just fix and move on.
 
 ## Execution Handoff
 
-After finalizing the plan, commit the plan, then offer execution choice:
+After finalizing the plan, commit it, then offer execution choice:
 
 **"Plan complete and saved to `PLAN.md`. RESULTS.md created. Two execution options:**
 
@@ -234,7 +135,7 @@ After finalizing the plan, commit the plan, then offer execution choice:
 
 **Which approach?"**
 
-**REQUIRED DISCIPLINE:** Use superRA:execution-workflow
-- Defaults to subagent mode (fresh subagent per task + two-stage review)
+**REQUIRED DISCIPLINE:** Use `superRA:execution-workflow`
+- Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's §Review & Self-Check Discipline)
 - Falls back to direct mode for simple tasks or when user requests it
 - Review always happens regardless of mode

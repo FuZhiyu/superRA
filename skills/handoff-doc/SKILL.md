@@ -1,6 +1,6 @@
 ---
 name: handoff-doc
-description: Use when creating, reading, or editing PLAN.md, RESULTS.md, or any other task-block-structured handoff document. Defines the six discipline principles, the inline-edit rule, the stale-content checklist, and the figure embedding rule. Points at references/ for full document anatomy, and at `report-in-markdown` for the Stage 2 consolidation that matures RESULTS.md into its permanent form. Load whenever you are about to read or edit a handoff doc.
+description: Use when creating, reading, or editing PLAN.md, RESULTS.md, or any other task-block-structured handoff document. Defines the four discipline principles, the inline-edit rule, the stale-content checklist, and the figure embedding rule. Points at references/ for full document anatomy, and at `report-in-markdown` for the Stage 2 consolidation that matures RESULTS.md into its permanent form. Load whenever you are about to read or edit a handoff doc.
 ---
 
 # Handoff Doc Discipline
@@ -16,7 +16,7 @@ Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs)
 
 **Subagent-specific execution protocol** — including the full review-loop mechanics (who writes what in the review-notes blockquote, who may delete items, the `→ implemented:` and `→ orchestrator:` annotation protocols, and the `**Doc edits:**` status-line format) — lives in `agents/implementer.md` and `agents/reviewer.md`. Each agent file carries its own view of the loop. This skill does not duplicate that; it only specifies the document-level discipline all roles (including a standalone user with no subagents) must follow.
 
-## The Six Principles
+## The Four Principles
 
 1. **Latest state only, no history.** Handoff docs reflect the current intended implementation and current findings. They are not changelogs. Git owns history. No "Previously...", no strikethroughs, no "Update:" blocks, no stacked review rounds.
 
@@ -24,13 +24,7 @@ Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs)
 
 3. **Task-block structure.** `PLAN.md` consists of a header (project-wide context) and a sequence of task blocks. Each task block has a fixed anatomy: objective / script / I/O / steps / review status. Stage 1 `RESULTS.md` mirrors the task structure (one section per task). See `references/plan-anatomy.md` and `references/results-anatomy.md` for the full templates.
 
-4. **Ownership by role lives in the agent files.** In a multi-agent workflow, each role's permissions on handoff docs are defined in `agents/implementer.md` and `agents/reviewer.md` (what each role may edit, what they must leave alone, and the review-loop annotation protocol). In standalone use, the single author plays all roles — the role split collapses, but the inline-edit rule and "latest state only" still apply.
-
-5. **Explicit what-changed deltas in both directions.** Because the docs only show latest state, readers cannot infer what changed by reading the doc alone.
-   - **Dispatch prompts and task instructions (orchestrator → worker)** carry a one-line delta describing what changed since the last touch: "Task 3 updated — revised Step 2; adjudication note on review item 3."
-   - **Status returns (worker → orchestrator)** carry a `**Doc edits:**` line describing what changed. The status return is a **navigation aid**, not a content dump — it summarizes and points at the doc for detail.
-
-6. **The doc is the record. Status reports are pointers, not substitutes.** Any material finding, result, methodology change, caveat, or decision MUST be written into `PLAN.md` or `RESULTS.md` *before* it is communicated in a status report or chat message. If a result only exists in a chat reply, it does not exist — it will be lost at the next session boundary, cache eviction, or context compaction. The authoritative record is the committed doc; the report only points at it.
+4. **The doc is the record. Status reports are pointers, not substitutes.** Any material finding, result, methodology change, caveat, or decision MUST be written into `PLAN.md` or `RESULTS.md` *before* it is communicated in a status report or chat message. If a result only exists in a chat reply, it does not exist — it will be lost at the next session boundary, cache eviction, or context compaction. The authoritative record is the committed doc; the report only points at it.
 
    **Rule of thumb:** before you type a finding into a status report, ask "is this written in `PLAN.md` or `RESULTS.md` yet?" If not, write it in the doc first and commit, then point at it in the report.
 
@@ -51,7 +45,7 @@ A `PLAN.md` in flight looks like:
 - [x] Step 2: ...
 
 ### Task 2: [Phase Name]
-**Review status:** REVISE (implementation)
+**Review status:** REVISE
 - [x] Step 1: ...
 - [ ] Step 2: ...
 
@@ -120,5 +114,5 @@ The Stage 2 consolidation that matures `RESULTS.md` into its permanent form — 
 
 ## How This Skill Is Used
 
-- **Standalone use:** a single author creating or maintaining handoff docs without subagents — read the six principles, the anatomy references, and the inline-edit rule. The role split collapses; the author plays all roles.
+- **Standalone use:** a single author creating or maintaining handoff docs without subagents — read the four principles, the anatomy references, and the inline-edit rule. The role split collapses; the author plays all roles.
 - **Multi-agent workflows:** `planning-workflow` delegates handoff-doc discipline here from its Living Plan section rather than duplicating the rules. The implementer and reviewer subagents (`agents/implementer.md`, `agents/reviewer.md`) load this skill alongside their role-specific review-loop protocol. The other workflow skills (`execution-workflow`, `integration-workflow`, `merge-workflow`) inherit the discipline indirectly through the subagents they dispatch; they do not need to reference `handoff-doc` directly.

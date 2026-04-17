@@ -14,14 +14,27 @@ description: >
   "clean this data", "construct variable X", "check the summary stats",
   "why is this number so large", "I'll just filter and move on",
   or any data file with unknown structure. Language-agnostic (Python,
-  Julia, R, Stata). Auto-loaded by implementer and reviewer subagents
-  at dispatch time when the stage touches analysis code; the
-  auto-load is configured in `agents/implementer.md` and
-  `agents/reviewer.md`, not in the workflow skills themselves.
+  Julia, R, Stata). Loaded by implementer and reviewer subagents
+  at dispatch time when the stage touches analysis code, per the
+  `superRA:using-superRA` §Skill-Load Manifest.
 user-invocable: true
 ---
 
 # Economic Data Analysis
+
+superRA's flagship domain skill. Carries the cross-cutting discipline that applies at every stage of a data analysis — the Iron Law, the three concurrent disciplines (Describe, Analyze, Validate), the pitfalls catalog, and the Red Flags. Main body is loaded by implementer and reviewer subagents at every analysis-touching dispatch.
+
+## Stage-Scoped References
+
+Two companion reference files carry content that applies at exactly one phase. Load them per stage; do not load them at every dispatch:
+
+| Reference | Load when |
+|---|---|
+| `references/planning.md` | PLAN phase — covers the **Data Inventory hard gate** and **Sensitivity Analysis Design**. Loaded by `planning-workflow` when the analysis involves data work. |
+| `references/integrate-drift-tests.md` | INTEGRATE phase — identifies key results worth protecting, sets econ-specific tolerances, and catalogs data-analysis failure modes drift tests catch. Loaded by `integration-workflow` Stage 1 (drift-test creation + review). |
+| `references/data-robustness-checklist.md` | PLAN phase (design) and IMPLEMENT phase (execution of sensitivity tasks) — menu of robustness checks. |
+
+The main body below is everything else — everything that applies whenever data is being touched, which is most of the time. The §Review & Self-Check Discipline section below loads with the main body at every stage — it is the shared gating both implementer and reviewer walk.
 
 ## The Iron Law
 
@@ -43,13 +56,13 @@ Describe fresh from the current data state. Period.
 
 ---
 
-Three concurrent principles for rigorous data work. These are not sequential
-stages — apply all three at every point in the analysis.
+## Three Concurrent Disciplines: Describe-Analyze-Validate
 
-## Principle 1: Description Before Analysis
+Three disciplines underpin rigorous data work. They are **concurrent, not sequential** — every analysis step exercises all three. Describe runs both before and after every transformation; Analyze is the transformation itself done with integrity; Validate is the sanity check against priors, literature, and alternatives. Documentation is a cross-cutting writing practice that runs throughout (see the short section after Analyze).
 
-The most common analytical error is transforming data you do not understand.
-**Describe thoroughly and often.**
+## Describe
+
+The most common analytical error is transforming data you do not understand. **Describe thoroughly and often — both before and after every transformation.** Post-transformation describe is not a separate "phase"; it is the same discipline applied a second time, now as a validation tool (see Validate §Sanity checks).
 
 ### After loading any dataset
 
@@ -74,23 +87,18 @@ The most common analytical error is transforming data you do not understand.
 **Data types and missing values**:
 - Column types: dates as dates, numerics as numerics (not object/string)
 - Missing values: count and share per variable; is missingness random or
-  systematic (concentrated in certain periods, countries, or correlated with
-  other variables)?
+  systematic? (See Validate §Missing-data-as-signal for interpretation.)
 - Compare to source documentation if expected sample size is stated
 
 When data was already imported and validated upstream, read existing diagnostics
 rather than re-running full validation.
 
-### After every major transformation
+### Before a merge
 
-Re-run descriptive statistics on affected variables. Compare before/after.
-Major transformations include: merges, filters, variable construction,
-aggregations, reshaping, deduplication.
+Also describe the **join keys** in both tables — unique values, overlap, type
+compatibility. A merge without join-key inspection on both sides is a Red Flag.
 
-**Rule: if something looks unexpected, investigate before proceeding.**
-Do not use a variable downstream until its distribution is understood.
-
-### Outlier decisions
+### Outlier flagging
 
 - Flag observations beyond p1/p99 — are they data errors or genuine extremes?
 - For naturally skewed variables (firm size, wealth, trade volumes), extreme
@@ -98,31 +106,15 @@ Do not use a variable downstream until its distribution is understood.
 - If winsorizing, document cutoff and consider robustness with alternatives
   (see `references/data-robustness-checklist.md`)
 
-## Principle 2: Logs and Documentation
+### After every major transformation (re-describe)
 
-Analysis scripts should be human-readable documents that interleave code,
-narrative, and outputs.
+Re-run descriptive statistics on affected variables. Major transformations
+include: merges, filters, variable construction, aggregations, reshaping,
+deduplication. This is the same Describe discipline applied a second time — the
+output is fed directly into Validate §Sanity checks (distribution-shift check).
 
-### Script categories
-
-- **Analysis scripts** (data loading, cleaning, merging, variable construction,
-  diagnostics): format for notebook rendering — see `superRA:script-to-notebook`
-  for cell organization and rendering details.
-- **Runner/utility/pipeline scripts**: standard script format, no notebook
-  formatting needed.
-
-### Row count tracking
-
-Log before/after row counts for **every** sample-changing operation:
-merges, filters, drops, deduplication, sample restrictions. Major operations
-(merges, large filters) typically warrant their own cell; minor operations can
-share a cell as long as the count is printed.
-
-### Decision documentation
-
-- **Minor** decisions (winsorization percentile, filter threshold): inline comment
-- **Major** decisions (excluding countries, choosing sample period, variable
-  definition): markdown cell with reasoning
+**Rule: if something looks unexpected, investigate before proceeding.**
+Do not use a variable downstream until its distribution is understood.
 
 ### Visualization for key variables
 
@@ -138,132 +130,220 @@ describing data — create them alongside the statistics they complement.
   breaks, trends, and seasonality. Essential for any time-series variable.
 
 Not publication quality. Clear axis labels, informative titles, readable scales.
-Save to the output directory alongside notebook renders.
+Save to the output directory alongside notebook renders. For rendering, see
+`superRA:script-to-notebook`.
 
-### Output rendering
+## Analyze
 
-For rendering scripts as notebooks, see `superRA:script-to-notebook`.
+Transform data with integrity. This is the shortest of the three disciplines —
+most of the work is in getting Describe right before and Validate right after.
 
-## Principle 3: Multi-Source Validation
+**One logical operation per step.** Don't chain merge + filter + construct in a
+single step. Each Analyze step should correspond to one verb: merge, filter,
+construct, aggregate, reshape, deduplicate.
 
-Numbers must make economic sense. Validate against intuition, literature, and
-cross-variable relationships.
+**Row-count logging is MANDATORY at every sample-changing operation.** Print
+`before → after` row counts for every merge, filter, drop, deduplication, or
+sample restriction. Major operations typically warrant their own cell; minor
+operations can share a cell as long as the count is printed. This rule is
+stated once here and referenced elsewhere — see Pitfalls for operation-specific
+details.
 
-### Scale check
+**Sort discipline for time-series**: sort by panel ID + time before any lag,
+lead, diff, or cumsum. Joins destroy sort order — re-sort after every merge.
+See Pitfalls §Time-series for operator-specific guidance.
 
-Does the magnitude match economic intuition? GDP growth of 300% is wrong;
-stock returns of -99% need investigation. Compare summary statistics to
-published benchmarks (IMF WEO, World Bank, central bank data, prior literature).
+**Join-type discipline**: decide 1:1, m:1, or 1:m before writing the merge;
+many-to-many is almost always a bug. See Pitfalls §Merges.
 
-### Property check
+## Documentation — cross-cutting writing practice
 
-Is the variable's behavior consistent with priors or what the literature has
-found? For constructed variables, spot-check a few observations by hand.
-For growth rates, verify against published figures for well-known cases.
+Documentation is not a fourth phase. It runs continuously alongside Describe,
+Analyze, and Validate. The goal is a human-readable document that interleaves
+code, narrative, and outputs so a fresh reader (or the next session) can
+reconstruct what was done and why.
 
-### Relationship check
+**Script categories:**
+- **Analysis scripts** (loading, cleaning, merging, construction, diagnostics):
+  format for notebook rendering — see `superRA:script-to-notebook` for cell
+  organization and rendering details (Python jupytext, Julia
+  QuartoNotebookRunner).
+- **Runner/utility/pipeline scripts**: standard script format, no notebook
+  formatting needed.
 
-- Compute correlations between new variables and known related measures
-- Signs and magnitudes consistent with published stylized facts?
-  (e.g., GDP growth positively correlated with employment growth)
-- Conditional means across subgroups behave as expected?
-  (e.g., developed vs. emerging, pre/post crisis)
+**Writing discipline:**
+- **Markdown cells** frame each block: what, why, expected result.
+- **Inline comments** for minor decisions (winsorization percentile, filter
+  threshold).
+- **Markdown cells with reasoning** for major decisions (excluding countries,
+  choosing sample period, variable definition).
+- **Figures**: save alongside notebook renders; see Describe §Visualization for
+  what to plot and `superRA:script-to-notebook` for rendering.
 
-### Reference verification
+**Short checklist per step:**
+- [ ] Markdown cell stating what this step does and why
+- [ ] Row-count log visible in output (if sample-changing)
+- [ ] Decision justifications written *as decisions are made*, not retrofitted
 
-For key variables, find at least one external reference to verify alignment.
-If a relationship looks surprising, investigate before proceeding — it may
-indicate a data or construction error.
+## Validate
 
-### Missing data as validation signal
+Numbers must make economic sense. Sanity-check against priors, literature,
+cross-variable relationships, and alternative specifications. Validate is not
+a "final" phase — it runs on the output of every Analyze step, using Describe's
+post-transformation output as one of its tools.
 
-- Systematic missingness (concentrated in time/geography) is informative —
-  investigate whether it reflects true data absence or a construction error
-- Ask: what does "missing" mean here? No position (→ zero) vs didn't report
+### Sanity checks
+
+Run after every Analyze step; these are the minimum bar before proceeding.
+
+- **Row count matches join/filter expectation**:
+  - Left join: row count should match left table (if right side is m:1)
+  - Inner join: expect fewer rows — how many dropped?
+  - Filter: how many rows removed? Is the drop rate reasonable?
+- **Distribution shift vs. pre-transformation values**: re-run describe on the
+  affected variables (that's the second application of Describe) and compare
+  to the pre-transformation values. Unexpected shifts flag silent corruption.
+- **Economic sense**: magnitudes plausible? GDP growth of 300% is wrong. Signs
+  correct? Correlations match known stylized facts?
+- **Spot-check a few observations by hand** — especially for constructed
+  variables and growth rates.
+- **PLAN.md expectations comparison**: when the plan states expected results or
+  hypotheses, compare findings to them explicitly. Flag and investigate
+  divergences before moving on.
+
+**If something looks unexpected: STOP. Investigate before proceeding.**
+
+### Multi-source validation
+
+For key variables and headline numbers, go beyond sanity checks and cross-check
+against external references.
+
+- **Scale check**: does the magnitude match economic intuition and published
+  benchmarks (IMF WEO, World Bank, central bank data, prior literature)?
+- **Property check**: is the variable's behavior consistent with priors or what
+  the literature has found? For constructed variables, spot-check a few
+  observations by hand. For growth rates, verify against published figures for
+  well-known cases.
+- **Relationship check**:
+  - Compute correlations between new variables and known related measures
+    (e.g., two different proxies for financial conditions should be meaningfully correlated)
+  - Signs and magnitudes consistent with published stylized facts?
+    (e.g., GDP growth positively correlated with employment growth)
+  - Conditional means across subgroups behave as expected?
+    (e.g., developed vs. emerging, pre/post crisis)
+- **Reference verification**: for key variables, find at least one external
+  reference to verify alignment. A surprising relationship is a signal to
+  investigate, not to explain away.
+
+### Missing-data as signal
+
+Missingness is data. Interrogate the pattern before deciding how to handle it.
+(Operational how-to-write-the-code lives in Pitfalls §Missing data handling.)
+
+- **Systematic missingness** (concentrated in time, geography, or correlated
+  with other variables) is informative — investigate whether it reflects true
+  data absence or a construction error.
+- **What does "missing" mean here?** No position (→ zero) vs didn't report
   (→ truly missing) — the correct treatment depends on the data source and
-  research question
-- Missing returns treated as zero is almost always wrong
+  research question.
+- **Missing returns treated as zero is almost always wrong.**
+- Prefer passing missingness through the pipeline over silently filling it;
+  fill/coalesce only with explicit justification.
 
-## Describe-Analyze-Doc
+### Sensitivity analysis
 
-The operational cycle that implements the three principles at every step.
+Validation against alternative specifications. Planning-side design is in
+`references/planning.md §Sensitivity Analysis Design`; the menu of checks is in
+`references/data-robustness-checklist.md`. This section covers **execution-side
+discipline** — how to run a sensitivity check during implementation.
 
-```dot
-digraph dad_cycle {
-    rankdir=LR;
-    describe [label="DESCRIBE\nStats on input", shape=box, style=filled, fillcolor="#ccffcc"];
-    verify_describe [label="Data\nunderstood?", shape=diamond];
-    analyze [label="ANALYZE\nExecute operation", shape=box, style=filled, fillcolor="#ccccff"];
-    doc [label="DOC\nVerify & document", shape=box, style=filled, fillcolor="#ffffcc"];
-    unexpected [label="Unexpected?", shape=diamond];
-    next [label="Next step", shape=ellipse];
+**How to run**: rerun the headline analysis under one alternative specification
+at a time (different sample cutoff, alternative variable definition, different
+winsorization, leave-one-out). One variation per check — bundling changes makes
+divergence untraceable.
 
-    describe -> verify_describe;
-    verify_describe -> analyze [label="yes"];
-    verify_describe -> describe [label="investigate\nfirst"];
-    analyze -> doc;
-    doc -> unexpected;
-    unexpected -> next [label="as expected"];
-    unexpected -> describe [label="investigate"];
-    next -> describe;
-}
-```
+**What counts as "robust enough"**: use economic reasoning, not mechanical
+pass/fail. A coefficient that moves 5% under a sensible alternative is usually
+fine; one that flips sign or loses significance is not. The relevant question
+is "would the researcher tell the same story under this alternative?" — not
+"does the number round to the same value?"
 
-### DESCRIBE — Understand the Input
+**When to escalate**: if a sensitivity check produces a meaningfully different
+result (sign flip, lost significance on a headline coefficient, magnitude
+change large enough to change the interpretation), **stop and
+`AskUserQuestion`**. Divergence is a methodology question, not an RA decision —
+the researcher chooses whether to revise the headline, report both, or
+investigate further.
 
-Run descriptive statistics on the data you are about to work with.
-Follow the Principle 1 protocol above for panel structure, variable diagnostics,
-and data types/missing values. Key points:
+## Review & Self-Check Discipline
 
-**Panel structure** (if applicable):
-- Panel ID and time ID, unique counts of each
-- Date range, balancedness (periods per unit)
-- Does panel ID × time uniquely identify rows?
+The implementer walks this section before returning DONE; the reviewer walks the same items as verification criteria. 
 
-**Variable diagnostics** (key variables only, not blanket `describe()`):
-- Continuous: mean, median, std, p1, p5, p95, p99
-- Categorical: value counts and shares
-- Missing: count, share, systematic patterns
+**Severity markers** appear inline on each item:
 
-**Before a merge:** also describe the join keys in both tables — unique values, overlap.
+- `[GATING]` — load-bearing non-negotiable. Failure blocks an unconditional APPROVE. These encode the Iron Law and the handoff-doc discipline; no task ships with a failed gating item unresolved.
+- `[STANDARD]` — required. A missed item becomes a REVISE finding from the reviewer.
+- `[ADVISORY]` — best-practice. The reviewer MAY flag as MINOR; resolution is optional unless the task's specifics elevate it.
 
-### ANALYZE — Execute the Operation
+### Reviewer verdict protocol (CONDITIONAL APPROVE)
 
-Apply the data operation: merge, filter, construct variable, aggregate.
+**Walk the entire section top to bottom even when a gating item fails.** Halting early on gating failure forces a full re-review on the next pass — reviewer dispatches are costly. One comprehensive pass, every time.
 
-**One logical operation per step.** Don't chain merge + filter + construct in a single step.
+Three verdicts:
 
-Row count printed before and after (for sample-changing operations).
+- **APPROVE** — no findings at any severity.
+- **REVISE** — only `[STANDARD]` items failed (no `[GATING]` failures). Implementer fixes the flagged items and re-dispatches.
+- **CONDITIONAL APPROVE** — one or more `[GATING]` items failed. The reviewer walked the rest of the checklist anyway and those downstream items look correct **conditional on the gating fix not invalidating them**. The review-notes blockquote lists the failed `[GATING]` item(s) first, then states "downstream items reviewed and currently correct; approval contingent on the gating fix not changing downstream results."
 
-### DOC — Verify and Document
+On a re-dispatch following a CONDITIONAL APPROVE, the reviewer's second pass is narrow: (1) verify the gating fix is correct, (2) verify the cited downstream items still hold under the fix. If both, CONDITIONAL → unconditional APPROVE.
 
-Verify the result, then document everything. You can't document properly without checking — the evidence IS the documentation.
+### Gating — the Iron Law applied per step
 
-**Row counts:**
-- Left join: row count should match left table (if right side is m:1)
-- Inner join: expect fewer rows — how many dropped?
-- Filter: how many rows removed? Is the drop rate reasonable?
+- `[GATING]` Every input described before the first transformation on it — panel structure, variable diagnostics, missing-value pattern. See §Describe.
+- `[GATING]` Every sample-changing operation logs before/after row counts. See §Analyze.
+- `[GATING]` Every merge describes join keys on both sides before execution. See §Pitfalls §Merges and joins.
 
-**Distribution checks:**
-- Re-run descriptive stats on affected variables
-- Compare to pre-transformation values
-- Flag anything unexpected
+### Implementation standards
 
-**Economic sense:**
-- Magnitudes plausible? GDP growth of 300% is wrong.
-- Signs correct? Correlations match known stylized facts?
-- Spot-check a few observations by hand
-- When expected results or hypotheses are provided in PLAN.md, compare findings to them — flag and investigate divergences
+- `[STANDARD]` Each step implements what `PLAN.md` specifies; deviations are rewritten into the step text, not layered on top.
+- `[STANDARD]` Analysis scripts follow the notebook-compatible format per `superRA:script-to-notebook`.
+- `[STANDARD]` Major decisions (filter threshold, join type, variable definition, sample period) carry a markdown-cell justification; minor decisions carry an inline comment.
+- `[STANDARD]` Outputs (tables, figures) are generated from committed code, not ad-hoc REPL state.
 
-**Log in markdown cells:**
-- What you did and why
-- Row count changes
-- Any surprising findings
-- Decision justifications (why this filter threshold, why this join type)
+### Validation completeness
 
-**If something looks unexpected:** STOP. Investigate before proceeding.
+- `[STANDARD]` Distributions re-checked on affected variables after every major transformation; compared to pre-transformation values per §Validate §Sanity checks.
+- `[STANDARD]` Economic sense checked: magnitudes plausible, signs as expected, benchmarks cross-checked where applicable. See §Validate §Multi-source validation.
+- `[STANDARD]` When `PLAN.md` header states Expected Results / Hypotheses, findings are compared explicitly and divergences flagged.
+- `[ADVISORY]` Sensitivity analysis run on robustness-sensitive tasks per `references/data-robustness-checklist.md`; divergence escalated per §Validate §Sensitivity analysis.
 
-**Row count tracking is mandatory** for every sample-changing operation.
+### Documentation and handoff
+
+- `[GATING]` `RESULTS.md` updated in place for this task's section per `superRA:handoff-doc`. The doc is the record — findings live there before they appear in any status report.
+- `[STANDARD]` Markdown cells explain what each block does and why; reasoning for major decisions sits alongside the code.
+- `[STANDARD]` Figures saved under `results_attachments/` and embedded in `RESULTS.md` via relative paths per `superRA:report-in-markdown`.
+- `[STANDARD]` No dangling TODO / placeholder / `XXX` strings shipped.
+
+### Refactor integrity (applies at the `refactoring` and `integration review` stages)
+
+For integration-stage refactoring discipline (cross-codebase consistency, no redundant intermediaries, variable-construction consistency, transformation-pattern consistency, documented deviations, migration pointers), see `references/integration.md`. The items below are the data-discipline-preservation gates that apply inside this file regardless of codebase context.
+
+- `[GATING]` All Describe steps preserved — or explicitly replaced by upstream-validated diagnostics the refactor relies on.
+- `[GATING]` All row-count prints preserved at sample-changing operations.
+- `[GATING]` All Validate checks preserved.
+- `[GATING]` Drift tests (where they exist) pass post-refactor; failures adjudicated per `references/integrate-drift-tests.md`, never silently re-expected.
+- `[STANDARD]` Variable definitions unchanged, or the change is documented and justified.
+- `[STANDARD]` Sample construction unchanged, or the change is documented and justified.
+- `[STANDARD]` Naming follows the nearest module-level `CLAUDE.md` / `AGENTS.md` / `README.md` conventions.
+- `[STANDARD]` Existing utility functions reused; no reinvented helpers.
+
+### Completion verification (applies at `execution-workflow` Step 3)
+
+- `[GATING]` All code committed.
+- `[GATING]` Multi-script pipeline runs end-to-end if the plan declares one.
+- `[GATING]` Outputs exist and were generated from committed code (not ad-hoc REPL).
+- `[STANDARD]` `PLAN.md` and `RESULTS.md` current, per the inline-edit rule in `superRA:handoff-doc`.
+- `[STANDARD]` Deferred MINORs either resolved or documented in `RESULTS.md` as accepted limitations with rationale.
 
 ## Common Rationalizations
 
@@ -299,24 +379,7 @@ Verify the result, then document everything. You can't document properly without
 
 ## Verification Checklist
 
-Before marking a step complete:
-
-**DESCRIBE:**
-- [ ] Described input data before the operation
-- [ ] Key variables examined with appropriate diagnostics
-- [ ] Panel structure documented (if applicable)
-
-**ANALYZE:**
-- [ ] Operation matches plan specification
-- [ ] Row counts logged before and after (if sample-changing)
-
-**DOC:**
-- [ ] Output validated against expectations
-- [ ] Economic sense checked (magnitudes, signs, relationships)
-- [ ] Decisions documented in markdown cells
-- [ ] Unexpected findings investigated before proceeding
-
-Can't check all boxes? You skipped data-first discipline. Start over from the describe step.
+For pre-handoff self-check and reviewer verification, see §Review & Self-Check Discipline above.
 
 ## Pitfalls
 
@@ -388,12 +451,15 @@ the relevant operation.
 
 ### Missing data handling
 
-- **Explicit** handling (`.fillna(0)`, `.dropna()`, filters) is visible and auditable
-- **Implicit** handling (package defaults silently ignoring NaN in aggregations)
-  is easy to miss — check alignment with analytical objective
-- Ask: what does "missing" mean in this specific context?
-- Prefer passing missing through the pipeline over filling silently;
-  use fill/coalesce only with explicit justification
+Operational how-to (for *interpretation* of missingness, see
+Validate §Missing-data-as-signal):
+
+- **Explicit** handling (`.fillna(0)`, `.dropna()`, filters) is visible and
+  auditable
+- **Implicit** handling (package defaults silently ignoring NaN in
+  aggregations) is easy to miss — check alignment with analytical objective
+- Prefer passing missing through the pipeline over filling silently; use
+  fill/coalesce only with explicit justification
 
 ## Key References
 
