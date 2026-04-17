@@ -268,7 +268,7 @@ These are the Tier 3 escalations for semantic-merge and the only stop points in 
 - Bad: "Lines 42-58 conflict between HEAD and incoming"
 - Good: "Incoming changes redefine `excess_return` from arithmetic to log returns. Your branch uses this in regression Table 3."
 
-**Log every answer** per `using-superRA` §Handoff Doc Discipline §User Decisions Log; include the log entry in the integration commit that implements the resolution. If `PLAN.md` has already been disposed of, record the decision in the merge commit message instead — the commit message is the record of record once the doc is gone.
+**Log every answer** per `handoff-doc` §User Decisions Log; include the log entry in the integration commit that implements the resolution. If `PLAN.md` has already been disposed of, record the decision in the merge commit message instead — the commit message is the record of record once the doc is gone.
 
 ## What to Report
 
