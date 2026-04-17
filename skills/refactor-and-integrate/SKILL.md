@@ -1,6 +1,6 @@
 ---
 name: refactor-and-integrate
-description: Utility skill (any phase). Use when creating drift tests, refactoring analysis code for codebase integration, or writing clean merge integration commits. Carries the three domain-knowledge checklists that define what "good" looks like for each task. Standalone-invokable — can be used outside the integration phase for any refactoring task. Dispatched implementer/reviewer subagents load this skill when their Stage is `drift-test`, `refactoring`, `integration-review`, or `merge` (per `superRA:using-superRA` §Skill-Load Manifest).
+description: Utility skill (any phase). Use when creating drift tests, refactoring analysis code for codebase integration, or writing clean merge integration commits. Carries the three domain-knowledge checklists that define what "good" looks like for each task. Standalone-invokable — can be used outside the integration phase for any refactoring task. Dispatched implementer/reviewer subagents load this skill when their Stage is `drift-test`, `integration`, or `merge` (per `superRA:using-superRA` §Skill-Load Manifest).
 ---
 
 # Refactor and Integrate
@@ -33,7 +33,7 @@ The runtime will announce this skill's base directory when it loads. Read the re
 
 ## Dispatch Convention
 
-Dispatches follow the canonical template in `superRA:agent-orchestration` §Dispatch Templates. The manifest (`superRA:using-superRA` §Skill-Load Manifest) names this skill and its reference files on the `drift-test`, `refactoring`, `integration-review`, and `merge` rows — the dispatch prompt does not restate `Skills:` or reference lines. The agent loads this skill via the Skill tool, receives the base directory, reads the manifest-named reference, and uses it as the checklist alongside the domain skill (for data analysis: `superRA:econ-data-analysis`).
+Dispatches follow the canonical template in `superRA:agent-orchestration` §Dispatch Templates. The manifest (`superRA:using-superRA` §Skill-Load Manifest) names this skill and its reference files on the `drift-test`, `integration`, and `merge` rows — the dispatch prompt does not restate `Skills:` or reference lines. The agent loads this skill via the Skill tool, receives the base directory, reads the manifest-named reference, and uses it as the checklist alongside the domain skill (for data analysis: `superRA:econ-data-analysis`).
 
 ## What Each Reference Covers
 
@@ -77,8 +77,8 @@ When your dispatch prompt names multiple domain references, load them all before
 ## Integration
 
 **Used by workflow skills:**
-- **`superRA:integration-workflow`** — Dispatches drift test creation (loads `drift-test-quality.md`), drift test review (`drift-test-quality.md`), refactoring (`codebase-integration.md`), and integration review (`codebase-integration.md`)
-- **`superRA:merge-workflow`** — Dispatches post-merge refactoring (`codebase-integration.md`) and post-merge integration review (`codebase-integration.md`) during the refactor-review loop triggered by drift test failure or reviewer REVISE
+- **`superRA:integration-workflow`** — Dispatches drift test creation and review (loads `drift-test-quality.md`) and the integration review → refactor loop (`codebase-integration.md`)
+- **`superRA:merge-workflow`** — Dispatches post-merge integration review and refactoring (`codebase-integration.md`) during the refactor-review loop triggered by drift test failure or reviewer REVISE
 - **`superRA:semantic-merge`** — Dispatches merge proposer (`merge-quality.md`) and merge reviewer (`merge-quality.md`) for tier classification and conflict resolution
 
 **Auto-loaded alongside:**
