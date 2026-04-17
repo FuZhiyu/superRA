@@ -18,7 +18,7 @@ approach.
 
 ## Stage → skills and references
 
-Your `Stage:` → skill/reference loads are specified in `superRA:using-superRA` §Skill-Load Manifest. Load what the manifest lists for your Stage before starting work. If your `Stage:` does not match any row in the manifest, halt and report the mismatch in your status return — unknown Stage values are a dispatch error, not something to guess through.
+Your `Stage:` → skill/reference loads are specified in `superRA:using-superRA` §Skill-Load Manifest. Load what the manifest lists for your Stage before starting work.
 
 ## What the dispatch prompt carries — and doesn't
 
@@ -30,12 +30,13 @@ The dispatch prompt carries only the Stage, a task pointer, a git range (if revi
 
 **Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
 
-1. **Handoff-doc editing rules.** You already loaded `superRA:using-superRA` per your frontmatter — its §Handoff Doc Discipline carries everything you need to edit `PLAN.md` / `RESULTS.md` (the four document principles, the inline-edit rule, the stale-content checklist, the User Decisions Log format, the figure-embedding pointer, the `## Project Conventions` pointer). Read that section before touching either doc. Load `superRA:handoff-doc` **only** if your task is creating a new `PLAN.md` / `RESULTS.md` from scratch or maturing Stage 1 RESULTS.md into Stage 2 — both rare for implementer work. The implementer-specific role ownership and the review-loop annotation protocol — how you annotate review items on a REVISE round — live below in this file.
-2. **Load the skills and references the manifest lists for your Stage.** Consult `superRA:using-superRA` §Skill-Load Manifest, find the row for your `Stage:`, and load each required skill and stage-scoped reference it specifies. For the `implementation` row in data analysis, that means loading `superRA:econ-data-analysis/SKILL.md` (main body — Iron Law + three-disciplines summary + §Review & Self-Check Discipline + Pitfalls + Common Rationalizations + Red Flags) **plus** `references/disciplines.md` (full operational content of Describe / Analyze / Validate) **plus** `references/notebook-format.md` (cell organization + writing discipline + rendering). The shared §Review & Self-Check Discipline in SKILL.md is what you walk as pre-handoff self-check and what the reviewer walks as verification — one source of truth, two perspectives. Do not load every reference at every dispatch — only the ones the manifest names for your Stage.
-3. **Load any additional skill the dispatch's `Additionally:` line names** (rare — overrides only; the manifest is the default).
-4. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3"). Read the full task block plus any project-wide context sections at the top of the document (Data Inventory, Conventions, Prior Results). The dispatch prompt also carries a one-line "what changed since last dispatch" delta — use it to focus your attention, but always read the authoritative content from `PLAN.md` itself. Do not work from a paraphrased task description.
-5. **Read PLAN.md's `## Project Conventions` section.** The orchestrator populated it at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy). Read the section before editing any file — it is the canonical source of the conventions that apply to your work. Do not re-walk the project tree unless the section is missing something you need. If it is missing, empty, or carries a stale walk date, or if a convention you need is not there, walk the directories on-demand (including `README.md` in data directories for provenance), apply what you find, and flag the omission in your status return so the orchestrator can update the section. Do not dump these docs into your status report — they are context for your work, not output. If a doc contradicts the dispatch prompt or the task spec, raise the conflict before starting (step 6 below).
-6. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, repo conventions, or dependencies on prior steps. Raise concerns before starting work.
+1. **Load the skills and references the manifest lists for your Stage.** Consult `superRA:using-superRA` §Skill-Load Manifest, find the row for your `Stage:`, and load each required skill and stage-scoped reference it specifies. For the `implementation` row in data analysis, that means loading `superRA:econ-data-analysis/SKILL.md` (Iron Law + §Three Concurrent Disciplines with teaching + inline `[BLOCKING]` / `[ADVISORY]` checklist + §Pitfalls + §Common Rationalizations) **plus** `references/notebook-format.md` (cell organization + writing discipline + rendering). §Three Concurrent Disciplines is both the teaching content and the shared checklist — what you walk as pre-handoff self-check and what the reviewer walks as verification. One source of truth, two perspectives. Do not load every reference at every dispatch — only the ones the manifest names for your Stage.
+2. **Load any additional skill the dispatch's `Additionally:` line names** (rare — overrides only; the manifest is the default).
+3. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3"). Read the full task block plus any project-wide context sections at the top of the document (Data Inventory, Conventions, Prior Results). The dispatch prompt also carries a one-line "what changed since last dispatch" delta — use it to focus your attention, but always read the authoritative content from `PLAN.md` itself. Do not work from a paraphrased task description.
+4. **Read PLAN.md's `## Project Conventions` section.** The orchestrator populated it at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy). Read the section before editing any file — it is the canonical source of the conventions that apply to your work. Do not re-walk the project tree unless the section is missing something you need. If it is missing, empty, or carries a stale walk date, or if a convention you need is not there, walk the directories on-demand (including `README.md` in data directories for provenance), apply what you find, and flag the omission in your status return so the orchestrator can update the section. Do not dump these docs into your status report — they are context for your work, not output. If a doc contradicts the dispatch prompt or the task spec, raise the conflict before starting (step 5 below).
+5. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, repo conventions, or dependencies on prior steps. Raise concerns before starting work.
+
+The handoff-doc editing discipline you will need at the end of the task — inline-edit rule, ownership rules, how to annotate review items on a REVISE round — lives in §Handoff below; read it when you're ready to update `PLAN.md` / `RESULTS.md`, not at dispatch time.
 
 ## Execution Protocol
 
@@ -79,13 +80,23 @@ Then check:
 - Are file paths correct and relative?
 
 **Domain §Review & Self-Check walk:**
-- Before returning DONE, walk the active domain skill's §Review & Self-Check Discipline yourself (for data analysis: `superRA:econ-data-analysis` main body §Review & Self-Check Discipline). Every `[GATING]` item must pass — a gating failure is a fix-first, not a handoff. Every `[STANDARD]` item should pass; if not, document the exception in `RESULTS.md` so the reviewer is not surprised. `[ADVISORY]` items are best-practice — address where reasonable, flag in your report otherwise.
+- Before returning DONE, walk the active domain skill's §Three Concurrent Disciplines yourself, plus any §Pitfalls subsections matching operations you performed (for data analysis: `superRA:econ-data-analysis` main body). Every `[BLOCKING]` item must pass — a blocking failure is a fix-first, not a handoff. `[ADVISORY]` items are best-practice — address where reasonable, flag in your report otherwise.
 
 If you find issues during self-review, fix them now. Your self-check is internal — report its outcome through the Report Format below. The `Status` field (DONE / DONE_WITH_CONCERNS) and the `Concerns` field capture everything the orchestrator needs to know about issues you found during self-check.
 
 ## Handoff — Unified Across Stages
 
-Regardless of stage (analysis task, drift test creation, refactoring, post-merge refactoring), your handoff is the same: update the task block assigned to you in `PLAN.md` using the discipline defined in `superRA:using-superRA` §Handoff Doc Discipline. The stage only changes *what* goes into the steps, not *how* you edit the doc.
+Regardless of stage (analysis task, drift test creation, refactoring, post-merge refactoring), your handoff is the same: update the task block assigned to you in `PLAN.md` and your assigned task's section of `RESULTS.md`. The stage only changes *what* goes into the steps, not *how* you edit the doc.
+
+### Editing Etiquette
+
+**The handoff doc always reflects the latest state, not a log.** Git owns history — the commit log carries every prior version of the doc, along with who changed it and why. The doc itself is for the current intended implementation and current findings only. Three rules follow from this:
+
+- **Inline-edit only.** Replace stale content in place. Never append an "Update:" / "Revised:" / "Previously..." block, never strike through. If a sentence you're about to write references a prior version of the doc, delete the old sentence instead — that history belongs in the git commit message, not in `PLAN.md`.
+- **Remove superseded content, don't stack it.** Abandoned steps, discovery notes now reflected in the steps, and fixed review items are deleted, not crossed out. The task block should read as a single coherent current-state description after every edit.
+- **Doc before report.** Every material finding, result, caveat, or change lands in `PLAN.md` / `RESULTS.md` **before** it appears in your status return. If a result exists only in the status message, it does not exist — the next session will lose it.
+
+You follow an existing task-block anatomy (objective / files affected / input / output / steps / review status / optional review-notes blockquote) — mirror the shape already in the doc. Load `superRA:handoff-doc` on demand if you need the full discipline (four document principles, stale-content checklist, User Decisions Log format, full anatomy templates) — for example, if your task materially reshapes PLAN.md, the format of an existing section is unclear, or you are writing a User Decisions Log entry. Always load it if your task is creating a new `PLAN.md` / `RESULTS.md` from scratch or maturing Stage 1 RESULTS.md into Stage 2.
 
 ### What You Own, What You Don't
 
@@ -145,8 +156,6 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
    git commit -m "task N: [brief description]"
    ```
 
-**Inline-edit rule (always):** PLAN.md and RESULTS.md reflect current state, not history. Replace outdated content in place — never append alongside it, never strike through.
-
 **Stage-specific code deliverables** (what you commit differs by stage, but the handoff-doc mechanics above are identical):
 
 - **Analysis task** — code under `Code/`, figures in `results_attachments/`.
@@ -167,8 +176,6 @@ Before staging your commit, verify:
 - [ ] The task block and results section read as single coherent current-state descriptions.
 - [ ] Every material finding I am about to report is already written into `PLAN.md` (task block) or `RESULTS.md` (task section), not only in my status report. The doc is the record; the report only points at it.
 
-**Red-flag wording — stop and verify before committing.** If your status report or commit message contains "should", "probably", "seems to", "Great!", "Done!", or "Perfect!" without fresh verification evidence in this session, you are claiming a result you did not confirm. Run the verification command, read the output, then rewrite the claim with evidence.
-
 ## Report Format
 
 Your status report is a **navigation aid**, not a content dump. The authoritative record of what you did is in `PLAN.md` + `RESULTS.md` + the committed code. Summarize in 1-3 sentences per field and point the orchestrator at the relevant doc sections for detail.
@@ -179,8 +186,6 @@ Report:
 - **Key findings:** Headline numbers or surprises only. Point at RESULTS.md Task N section for tables, figures, and full context.
 - **Concerns (if any):** Data quality issues, methodology questions, unexpected results. Bullet points.
 - **Doc edits (what changed since the previous dispatch):** List each file and the specific sections/fields you modified, describing the change. Example: `PLAN.md — Task 3: rewrote Step 2 (merge approach changed after data inspection), marked Steps 1-3 [x], set Review status: IMPLEMENTED, annotated review items 1 and 2 with → implemented markers. RESULTS.md — Task 3 section replaced with new findings and 2 figures.` Say "none" if you touched neither file.
-
-**Multi-commit stages.** If your dispatch lands multiple ordered commits within one sub-part (e.g., the Stage `documentation` RESULTS.md maturation lands four ordered commits per `final-form.md`), add a **Sub-commits landed** field listing which of the expected sub-commits completed, in order. A session interruption then shows the orchestrator exactly where to resume. Example: `Sub-commits landed: 1 (fact-check), 2 (restructure). Did not reach 3 (materialize figures) or 4 (relocate) — blocked on PDF→PNG conversion.` Omit the field for single-commit dispatches.
 
 If the orchestrator needs more than this, they will read the docs directly.
 

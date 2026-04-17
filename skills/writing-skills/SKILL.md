@@ -293,7 +293,7 @@ Express process flow and decision logic in **prose, numbered lists, or nested bu
 
 - **Decision selection** ("which mode?", "which pattern?") → ordered list of conditions, first match wins.
 - **Sequential process** → numbered Steps, with sub-bullets for branches.
-- **Verdict / status branches** (APPROVE / REVISE / CONDITIONAL APPROVE, Tier 1 / 2 / 3) → top-level bullet per verdict, sub-bullets for the actions that follow.
+- **Verdict / status branches** (APPROVE / REVISE, Tier 1 / 2 / 3) → top-level bullet per verdict, sub-bullets for the actions that follow.
 - **Loops** → state the loop condition explicitly ("iterate until APPROVE", "return to Step N").
 
 **Use markdown for everything else:**

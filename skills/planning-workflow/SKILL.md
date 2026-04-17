@@ -9,8 +9,6 @@ description: Use when starting a new piece of research work with an objective an
 
 Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the execution-workflow to consume.
 
-May be invoked from `execution-workflow` Step 0b when an existing branch lacks committed `PLAN.md` / `RESULTS.md` (or carries uncommitted edits to them). The bootstrap path is identical to a fresh start — run the full Phase 1 / Phase 2 / Self-Review, satisfy any domain-specific planning gate, commit the docs, and hand control back. No shortcut.
-
 This skill is **domain-agnostic**. Today's only implemented domain vertical is data analysis; future verticals (theory / modeling, literature review, simulation, writing) plug in by providing their own domain skill with a `references/planning.md`. The procedure here stays the same.
 
 Write comprehensive plans assuming the next person reading has zero context for this project. Document everything they need: which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Give them the whole plan as bite-sized steps. Frequent commits.
@@ -88,9 +86,7 @@ Required header fields and task block structure are non-negotiable. The template
 
 **The plan is NOT a static spec.** Work reveals surprises; the plan evolves in place.
 
-**For everyday editing discipline** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout — see `superRA:using-superRA` §Handoff Doc Discipline. Every agent already loads `using-superRA`, so this discipline is always in effect without a separate load; the rules stay consistent across roles.
-
-**For the full `PLAN.md` / `RESULTS.md` anatomy templates** — section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — load `superRA:handoff-doc` (you are authoring a doc from scratch, so you need the anatomy references `plan-anatomy.md` and `results-anatomy.md`). Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
+**The editing discipline and the full anatomy templates** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — live in `superRA:handoff-doc`. Load it when authoring `PLAN.md` / `RESULTS.md` from scratch; its `references/plan-anatomy.md` and `references/results-anatomy.md` carry the full templates. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
 **Results document:** Create `RESULTS.md` alongside `PLAN.md` using the template at `references/results-template.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
 
@@ -142,6 +138,6 @@ After finalizing the plan, commit it, then offer execution choice:
 **Which approach?"**
 
 **REQUIRED DISCIPLINE:** Use `superRA:execution-workflow`
-- Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's §Review & Self-Check Discipline)
+- Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's §Three Concurrent Disciplines)
 - Falls back to direct mode for simple tasks or when user requests it
 - Review always happens regardless of mode
