@@ -1,7 +1,7 @@
 {
   "name": "superRA",
   "description": "Super Research Assistant: data-first discipline, analysis planning, reproducibility, and rigorous data validation for economic research",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": {
     "name": "Julie Zhiyu Fu"
   },
