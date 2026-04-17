@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Plan created, no tasks executed yet)
+**Last updated:** 2026-04-17 (Plan rebased onto `econ-adaption` @ `3db7681` and revised to absorb three direct removals from `a48f900`; no tasks executed yet)
 **Status:** In Progress — planning phase complete; execution not started
 
 ---

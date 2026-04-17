@@ -2,13 +2,15 @@
 
 > **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for doc mechanics. Use `superRA:execution-workflow` to execute this plan. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff. This plan edits skill/agent/hook files — not empirical data — so the usual `superRA:econ-data-analysis` per-step cycle does not apply. The per-step cycle here is **plan → edit → verify (grep / read) → commit**.
 
-**Objective:** Apply five pieces of user feedback from commit `a48f900` (on branch `manual-feedback`) to the superRA plugin. Deliverables are edits to `skills/`, `agents/`, `hooks/`, `tests/`, `README.md`, `RELEASE-NOTES.md`.
+**Objective:** Apply user feedback from commit `a48f900` (on branch `manual-feedback`) to the superRA plugin. Feedback has two parts: (a) five pieces of new guidance embedded as HTML comments (F1–F6 below), and (b) three direct section removals the user made in `a48f900` that have NOT been merged into `econ-adaption` and must be re-applied. Deliverables are edits to `skills/`, `agents/`, `hooks/`, `tests/`, `README.md`, `RELEASE-NOTES.md`, `CLAUDE.md`.
 
-**Methodology:** Treat `a48f900` as feedback input (read-only). Branch `feedback/agent-dispatch-fixes` off `econ-adaption` (commit `3755274`). Five feedback items become six tasks (T1–T6) because F2 produces a new section large enough to be its own task while F3+F4 bundle naturally into the same file edit. Dispatch via the three-tier framework defined in feedback F2 itself (dogfooding). Use `Depends on:` declarations on every task (also dogfooding, from F6).
+**Methodology:** Treat `a48f900` as feedback input (read-only). Branch `feedback/agent-dispatch-fixes` off `econ-adaption` (currently `3db7681 bump version` — the PR `refactor/workflow-domain-split` merged into `econ-adaption` after this plan was initially drafted, so the worktree was rebased; file shapes now match the restructured post-refactor state that `a48f900` was raised against). Six tasks (T1–T5 plus a renumbered verification task) cover the six feedback items and three direct removals. Dispatch via the three-tier framework defined in feedback F2 itself (dogfooding). Use `Depends on:` declarations on every task (also dogfooding, from F6).
 
 **Feedback Inventory (substitute for Data Inventory):**
 
 Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
+
+**Part A — HTML-comment feedback (new guidance):**
 
 | # | Target file(s) on `manual-feedback` | Feedback |
 |---|---|---|
@@ -19,7 +21,15 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 | F5 | `agents/implementer.md`, `agents/reviewer.md` | Multi-agent repo warning: only commit your own edits when other agents' uncommitted changes appear. Teach `git add <specific-path>` mechanics. |
 | F6 | `skills/planning-workflow/SKILL.md`, `references/plan-template.md` | Plans need `Depends on:` declarations so orchestrator can dispatch independent tasks in parallel (lightweight DAG, not a DSL). |
 
-**Feedback coverage map:** Every item above is addressed by exactly one task block below. F3 and F4 bundle into T2 with F2 because all three edit the same file in adjacent regions.
+**Part B — Direct removals the user already made in `a48f900` (must be re-applied on `econ-adaption` because `a48f900` is NOT merged into the current base — only its sibling `refactor/workflow-domain-split` is):**
+
+| # | Target file | Removal |
+|---|---|---|
+| D1 | `skills/agent-orchestration/SKILL.md` | Delete entire `## Dispatch-Return Deltas` section (lines ~86–91 on current HEAD). Comment on the user's diff was "not needed anymore". |
+| D2 | `skills/agent-orchestration/SKILL.md` | Delete entire `## Integration` section at tail (listing Agent-Teams-mode workflow users). Falls out of F1 naturally. |
+| D3 | `skills/handoff-doc/SKILL.md` | Delete the `**Not covered by this section:**` bullet block after the User Decisions Log (5 lines). |
+
+**Feedback coverage map:** Every item above is addressed by exactly one task block below. F3, F4, D1, D2 all bundle into T2 with F2 because all five edit `skills/agent-orchestration/SKILL.md` in adjacent regions. D3 bundles into T4 with F6 because both touch doc-discipline skills.
 
 **Output:**
 - Updated skill files: `skills/agent-orchestration/SKILL.md`, `skills/planning-workflow/SKILL.md`, `skills/planning-workflow/references/plan-template.md`, `skills/execution-workflow/SKILL.md` (and any dependents named during T1 discovery).
@@ -43,9 +53,9 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 > **Question asked:** Does the Data Inventory hard gate apply to a skill-editing task?
 > **Rationale:** The gate exists to prevent coding against nonexistent data. For file-editing, the analog is enumerating the feedback items — done above. No empirical data to inventory.
 
-> **User decision (2026-04-17):** Base this work on `econ-adaption` (commit `3755274`), NOT `manual-feedback`.
+> **User decision (2026-04-17):** Base this work on `econ-adaption` (now `3db7681 bump version` after the `refactor/workflow-domain-split` PR merge), NOT `manual-feedback`.
 > **Question asked:** Which base branch for the fixes?
-> **Rationale:** `manual-feedback` has 91 WIP commits ahead of the stable base; the user wants a clean base rather than stacking on WIP.
+> **Rationale:** `manual-feedback` has WIP commits ahead of `econ-adaption`; the user wants the fix grounded on the merged, stable base. After the PR merge (commits `c35c56b` + `3db7681`), `econ-adaption` now contains the restructuring work the feedback was raised against — the worktree was rebased from `3755274` onto `3db7681` before plan execution.
 
 > **User decision (2026-04-17):** Use the three-tier agent-dispatch framework (trivial→inline; slightly-involved→bundle-and-delegate; complicated→dedicated agent) to pick dispatch mode for each task in this plan itself. Pair with ≤150k tokens/agent.
 > **Question asked:** How should the orchestrator dispatch these six tasks?
@@ -193,12 +203,12 @@ git commit -m "refactor(agent-orchestration): archive Agent Teams mode"
 
 ---
 
-### Task 2: Rewrite `agent-orchestration/SKILL.md` — add §Workload Balancing, delete Decision Framework, tighten dispatch template
+### Task 2: Rewrite `agent-orchestration/SKILL.md` — add §Workload Balancing, delete Decision Framework + Dispatch-Return Deltas + Integration, tighten dispatch template
 
 **Depends on:** Task 1
 **Review status:** *(not started)*
 
-**Bundles feedback F2 + F3 + F4** — all three edit `skills/agent-orchestration/SKILL.md` in overlapping regions. One implementer, one reviewer. This is the "slightly involved, bundle-and-delegate" tier.
+**Bundles feedback F2 + F3 + F4 + D1 + D2** — all five edit `skills/agent-orchestration/SKILL.md` in overlapping regions. One implementer, one reviewer. This is the "slightly involved, bundle-and-delegate" tier.
 
 **Files touched:**
 - `skills/agent-orchestration/SKILL.md`
@@ -213,14 +223,26 @@ wc -l skills/agent-orchestration/SKILL.md
 grep -n "^## " skills/agent-orchestration/SKILL.md
 ```
 
-Expected regions (from `econ-adaption` inspection):
-- `## Overview` — will keep, rewrite core-principle bullet.
+Current outline on new `econ-adaption` (verified 2026-04-17):
+- `## Overview` — rewrite core-principle bullet (drop Teams framing).
 - `## Decision Framework` — **delete entire section** (F3).
-- `## Parallel Dispatch` and below — keep; tighten the dispatch template.
+- `## Dispatch Templates` — edit `<optional steering>` placeholder (F4).
+- `## Dispatch-Return Deltas` — **delete entire section** (D1).
+- `## Handling Reviewer Feedback` — keep (unchanged by feedback).
+- `## Review Status Reference` — keep.
+- `## Integration` — **delete entire section** (D2) because it lists Agent-Teams workflow users.
 
 - [ ] **Step 2: Edit — delete Decision Framework section (F3)**
 
-Using Edit tool, remove the heading `## Decision Framework` through the end of the pattern table (the `**Rule of thumb:** ...` line). Keep the `---` separator that follows if present.
+Using Edit tool, remove the heading `## Decision Framework` through the end of the pattern table (the `**Rule of thumb:** ...` line). Keep any `---` separator that follows.
+
+- [ ] **Step 2b: Edit — delete Dispatch-Return Deltas section (D1)**
+
+Remove the `## Dispatch-Return Deltas` heading and its body (~6 lines describing the one-line what-changed delta between orchestrator and worker). The delta convention is already specified in `agents/implementer.md` §Report Format (Doc edits) and `agents/reviewer.md` §Report Format, so the standalone section is redundant.
+
+- [ ] **Step 2c: Edit — delete `## Integration` section (D2)**
+
+Remove the entire `## Integration` section at the tail of the file (the bulleted list of skills that use Agent Teams mode + the "When Agent Teams are unavailable" paragraph). With Teams archived, this section has no referent. Leave the preceding `## Review Status Reference` section intact.
 
 - [ ] **Step 3: Edit — rewrite `## Overview` core principle**
 
@@ -455,7 +477,7 @@ git commit -m "docs(agents): add §Shared-Repo Commit Discipline (implementer + 
 
 ---
 
-### Task 4: Add `Depends on:` field to plan template + §Task Dependencies in planning-workflow (F6)
+### Task 4: Add `Depends on:` field to plan template + §Task Dependencies in planning-workflow (F6) + delete handoff-doc "Not covered by this section" block (D3)
 
 **Depends on:** Task 1 (both edit `skills/execution-workflow/SKILL.md`; serialize to avoid merge).
 **Review status:** *(not started)*
@@ -464,8 +486,9 @@ git commit -m "docs(agents): add §Shared-Repo Commit Discipline (implementer + 
 - `skills/planning-workflow/SKILL.md`
 - `skills/planning-workflow/references/plan-template.md`
 - `skills/execution-workflow/SKILL.md` (teach orchestrator to read `Depends on:`)
+- `skills/handoff-doc/SKILL.md` (D3 — delete the `**Not covered by this section:**` block from User Decisions Log)
 
-**Dispatch tier:** Complicated — schema change propagates across three files and the orchestrator's dispatch logic. Dedicated implementer + reviewer.
+**Dispatch tier:** Complicated — schema change propagates across three files and the orchestrator's dispatch logic; also one small doc-discipline edit. Dedicated implementer + reviewer.
 
 - [ ] **Step 1: Edit — add `### Task Dependencies` sub-section to planning-workflow**
 
@@ -528,6 +551,10 @@ In `skills/planning-workflow/references/plan-template.md`, modify the task-block
 
 Also add a short prose paragraph before the code example explaining the new field. Keep the existing worked example; add `**Depends on:** *(none)*` to it.
 
+- [ ] **Step 3b: Edit — delete handoff-doc "Not covered by this section" block (D3)**
+
+In `skills/handoff-doc/SKILL.md` §User Decisions Log, locate and delete the `**Not covered by this section:**` block (bullet list explaining what isn't a user decision) plus the "If you are not sure whether an answer counts..." paragraph that follows. The preceding three-line user-decision format box and the following `## What Counts as Stale` heading stay intact. The block was removed on `manual-feedback` with no replacement; the user's edit implies the discussion is better handled by the positive-inclusion rule alone without the negation list.
+
 - [ ] **Step 4: Edit — teach execution-workflow about `Depends on:`**
 
 Read `skills/execution-workflow/SKILL.md`. Find the Step where the orchestrator picks the next task to dispatch (the "decompose / dispatch next" step). Insert a paragraph:
@@ -557,15 +584,18 @@ grep -q "Dependency graph sanity" skills/planning-workflow/SKILL.md && echo "OK"
 # 4. Execution-workflow update
 grep -q "Depends on:" skills/execution-workflow/SKILL.md && echo "OK" || echo "FAIL"
 
-# 5. Invariants
+# 5. Handoff-doc "Not covered" block removed
+! grep -q "^\*\*Not covered by this section:\*\*" skills/handoff-doc/SKILL.md && echo "OK" || echo "FAIL"
+
+# 6. Invariants
 bash tests/structural-invariants.sh
 ```
 
 Update PLAN.md + RESULTS.md. Commit:
 
 ```bash
-git add skills/planning-workflow/ skills/execution-workflow/SKILL.md PLAN.md RESULTS.md
-git commit -m "feat(planning-workflow): add task-dependency declarations; teach execution-workflow to batch parallel tasks"
+git add skills/planning-workflow/ skills/execution-workflow/SKILL.md skills/handoff-doc/SKILL.md PLAN.md RESULTS.md
+git commit -m "feat(planning-workflow): add task-dependency declarations; teach execution-workflow to batch parallel tasks; drop handoff-doc user-decisions negation block"
 ```
 
 ---
@@ -643,9 +673,14 @@ test $(grep -l "Shared-Repo Commit Discipline" agents/*.md | wc -l) -eq 2
 # 7. Task-dependency field in template
 grep -q "^\*\*Depends on:\*\*" skills/planning-workflow/references/plan-template.md
 
-# 8. Commit history is clean (one commit per task)
+# 8. Direct removals from a48f900 applied
+! grep -q "^## Dispatch-Return Deltas" skills/agent-orchestration/SKILL.md
+! grep -q "^## Integration" skills/agent-orchestration/SKILL.md
+! grep -q "^\*\*Not covered by this section:\*\*" skills/handoff-doc/SKILL.md
+
+# 9. Commit history is clean (one commit per task)
 git log --oneline econ-adaption..HEAD
-# expected: 4-5 commits, each describing one task
+# expected: 1 plan-bootstrap commit + 4-5 task commits
 ```
 
 ---
