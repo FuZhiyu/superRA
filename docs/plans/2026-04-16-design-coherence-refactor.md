@@ -56,6 +56,14 @@ Other tasks have no manifest dependency and may run in any order after Task 6.
 > **Question asked:** Merge locally vs open a PR (standard execution-workflow Step 4 4-option menu)?
 > **Rationale:** Researcher chose a third path — run the integration-prep (drift tests skipped for plugin-dev, refactor + integration review, doc finalization) but stop before merge. Merge decision deferred.
 
+> **User decision (2026-04-16):** Skip Step 3 sub-part A (RESULTS.md maturation) for this plugin-dev refactor.
+> **Question asked:** Mature RESULTS.md into a reader-facing doc, or skip?
+> **Rationale:** RELEASE-NOTES.md already carries the Round 4 summary with 8 dedicated paragraphs for Tasks 1, 3, 4, 6, 9, 13, 14, 15. A separate matured RESULTS.md would duplicate content.
+
+> **User decision (2026-04-16):** Move both PLAN.md and RESULTS.md to `docs/plans/` under the date-topic convention.
+> **Question asked:** PLAN.md + RESULTS.md disposition (move to docs/plans/ vs delete vs split)?
+> **Rationale:** Follows the existing `docs/plans/YYYY-MM-DD-<topic>.md` convention (4 prior plans); preserves the prescriptive plan + task-by-task dev log alongside the analogous records.
+
 ---
 
 ### Task 1: Consolidate Stage names + remove dispatch re-statements
