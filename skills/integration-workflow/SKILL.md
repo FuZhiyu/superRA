@@ -13,7 +13,7 @@ Assumes execution-workflow has already verified reproducibility and the user has
 
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
-**Autonomy:** this workflow has exactly four legitimate stop points — drift-test candidate confirmation (Stage 1 Step 2), meaningful drift escalation after refactoring (Stage 2 / "Handling Drift Test Failures"), Stage 2 RESULTS.md relocation target if project guidance does not specify one (Step 3 sub-part A), and PLAN.md disposition (Step 3 sub-part C). Between those, run on your own power: do not check in after each stage, do not ask "ready to move to the next step?", do not re-confirm a reviewer's APPROVE. See `superRA:using-superRA` §Universal Principles (principle #4) + `references/main-agent-autonomy.md` for the full autonomy rule, and `superRA:using-superRA` §Handoff Doc Discipline §User Decisions Log for how the answer at each stop point must be recorded in PLAN.md before the workflow acts on it.
+**Autonomy:** this workflow has exactly four legitimate stop points — drift-test candidate confirmation (Stage 1 Step 2), meaningful drift escalation after refactoring (Stage 2 / "Handling Drift Test Failures"), Stage 2 RESULTS.md relocation target if project guidance does not specify one (Step 3 sub-part A), and PLAN.md disposition (Step 3 sub-part C). Between those, run on your own power: do not check in after each stage, do not ask "ready to move to the next step?", do not re-confirm a reviewer's APPROVE. See `superRA:using-superRA` §Universal Principles (principle #4) + `references/main-agent-autonomy.md` for the full autonomy rule, and `superRA:handoff-doc` §User Decisions Log for how the answer at each stop point must be recorded in PLAN.md before the workflow acts on it.
 
 ## The Process
 
@@ -65,7 +65,7 @@ Drift tests guard key results from unintended changes during refactoring or futu
 
    Which of these should be protected? Any to add or remove?
    ```
-   Log per `using-superRA` §Handoff Doc Discipline §User Decisions Log; commit the PLAN.md edit **before** dispatching the test-creator.
+   Log per `handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching the test-creator.
 
 3. **Dispatch test-creator:**
    ```
@@ -186,7 +186,7 @@ Where should it land?
 Suggested: <best guess from the analysis code's location, e.g. analyses/<name>/>
 ```
 
-Log per `using-superRA` §Handoff Doc Discipline §User Decisions Log **before** dispatching the doc-writer. If a project convention exists in the guidance files, use it directly without asking.
+Log per `handoff-doc` §User Decisions Log **before** dispatching the doc-writer. If a project convention exists in the guidance files, use it directly without asking.
 
 Define `RESULTS_DIR` = the resolved permanent folder. Define `RESULTS_ATTACHMENTS_DIR` = `${RESULTS_DIR}/attachments` (destination for materialized figures, distinct from the worktree-root `results_attachments/` that the analysis script writes to). Pass both as dispatch parameters.
 
@@ -274,7 +274,7 @@ are up to date. Options:
 Which option?
 ```
 
-Log per `using-superRA` §Handoff Doc Discipline §User Decisions Log **before** executing the disposition. Include the log entry in the same commit that moves or removes the files — the last state of `PLAN.md` records what was done with it.
+Log per `handoff-doc` §User Decisions Log **before** executing the disposition. Include the log entry in the same commit that moves or removes the files — the last state of `PLAN.md` records what was done with it.
 
 **Option 1 (Move alongside matured RESULTS.md):**
 ```bash
@@ -326,7 +326,7 @@ This is the critical judgment call in the process. When drift tests fail after r
    - Point estimates shifting by more than the tolerance you set: investigate.
    - Sign changes or significance changes: always meaningful.
    - Standard errors changing modestly: usually minor (sensitive to implementation details).
-3. **If meaningful:** Do not proceed. Show the user exactly what changed — before/after values side by side — and ask via `AskUserQuestion` (plain text if unavailable) whether to (a) accept the new result and update the drift test baseline with a documented reason, (b) roll back the refactoring, or (c) investigate the discrepancy further before deciding. Log the researcher's answer per `using-superRA` §Handoff Doc Discipline §User Decisions Log before taking any action.
+3. **If meaningful:** Do not proceed. Show the user exactly what changed — before/after values side by side — and ask via `AskUserQuestion` (plain text if unavailable) whether to (a) accept the new result and update the drift test baseline with a documented reason, (b) roll back the refactoring, or (c) investigate the discrepancy further before deciding. Log the researcher's answer per `handoff-doc` §User Decisions Log before taking any action.
 4. **If minor:** Update the test expectation, add a comment explaining why (e.g., "tolerance updated: refactored merge order produces equivalent result within floating-point precision"), and proceed.
 
 ## Agent Loads
@@ -358,7 +358,7 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 - Delegate sub-part C (PLAN.md disposition) to the doc-writer subagent — disposition is a researcher-owned decision, not an RA task
 
 **Always:**
-- Confirm key-result coverage with the researcher (via `AskUserQuestion`, logged per `using-superRA` §Handoff Doc Discipline §User Decisions Log) before creating tests
+- Confirm key-result coverage with the researcher (via `AskUserQuestion`, logged per `handoff-doc` §User Decisions Log) before creating tests
 - Run integration review before any refactoring
 - Run drift tests after every refactoring change
 - Re-submit to integration reviewer after every refactoring round
