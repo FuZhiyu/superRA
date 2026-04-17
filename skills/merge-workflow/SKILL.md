@@ -29,36 +29,14 @@ If any of those preconditions are missing, stop and consult integration-workflow
 
 ## The Process
 
-```dot
-digraph merge_workflow {
-    rankdir=TB;
-
-    "Update analysis branch with main" [shape=box];
-    "Invoke semantic-merge (delegated)" [shape=box];
-    "Read tier + incoming-impact" [shape=box];
-    "Run drift tests on merged state (2a)" [shape=box];
-    "Step 2b skippable?" [shape=diamond];
-    "Document skip in merge commit (2c)" [shape=box style=filled fillcolor=lightyellow];
-    "Dispatch fresh integration reviewer (2b)" [shape=box];
-    "Drift tests pass AND (skipped OR integration reviewer APPROVE)?" [shape=diamond];
-    "Re-enter refactor-review loop (integration-workflow Stage 2 machinery)" [shape=box style=filled fillcolor=lightyellow];
-    "Execute local merge OR push + create PR" [shape=box];
-    "Cleanup worktree" [shape=box style=filled fillcolor=lightgreen];
-
-    "Update analysis branch with main" -> "Invoke semantic-merge (delegated)";
-    "Invoke semantic-merge (delegated)" -> "Read tier + incoming-impact";
-    "Read tier + incoming-impact" -> "Run drift tests on merged state (2a)";
-    "Run drift tests on merged state (2a)" -> "Step 2b skippable?";
-    "Step 2b skippable?" -> "Document skip in merge commit (2c)" [label="Tier 1 AND no analysis-path changes"];
-    "Step 2b skippable?" -> "Dispatch fresh integration reviewer (2b)" [label="otherwise"];
-    "Document skip in merge commit (2c)" -> "Drift tests pass AND (skipped OR integration reviewer APPROVE)?";
-    "Dispatch fresh integration reviewer (2b)" -> "Drift tests pass AND (skipped OR integration reviewer APPROVE)?";
-    "Drift tests pass AND (skipped OR integration reviewer APPROVE)?" -> "Execute local merge OR push + create PR" [label="yes"];
-    "Drift tests pass AND (skipped OR integration reviewer APPROVE)?" -> "Re-enter refactor-review loop (integration-workflow Stage 2 machinery)" [label="no"];
-    "Re-enter refactor-review loop (integration-workflow Stage 2 machinery)" -> "Run drift tests on merged state (2a)" [label="iterate"];
-    "Execute local merge OR push + create PR" -> "Cleanup worktree";
-}
-```
+1. **Step 1** — Update analysis branch with main by invoking `superRA:semantic-merge` (delegated mode). It returns a tier classification and an incoming-impact line.
+2. **Step 2** — Post-merge verification:
+   - **2.0** Read tier + incoming-impact to decide 2b eligibility.
+   - **2a** Run drift tests on the merged state.
+   - **2b** If not skippable (anything other than Tier 1 with no analysis-path changes) → dispatch a fresh integration reviewer. If skippable → skip 2b and document the skip in the merge commit (2c).
+   - If drift tests fail OR the integration reviewer returns non-APPROVE → re-enter the integration-workflow Stage 2 refactor-review loop, then return to 2a.
+3. **Step 3** — Execute local merge OR push + create PR.
+4. **Step 4** — Cleanup worktree.
 
 ### Step 1: Update Analysis Branch with Main
 
@@ -104,7 +82,7 @@ pytest tests/  # or: julia --project test/runtests.jl
 **2b. Dispatch a fresh integration reviewer on the merged state.** Skip this sub-step only if 2.0 said so.
 ```
 Agent(subagent_type: "superRA:reviewer"):
-  Stage: integration-review
+  Stage: integration
   Task: post-merge integration review on the merged state
   Git range: <merge-base>..HEAD  # the merged state vs the base branch tip
 
@@ -133,7 +111,7 @@ When drift tests fail OR the post-merge integration reviewer returns REVISE, re-
 1. **Dispatch refactorer:**
    ```
    Agent(subagent_type: "superRA:implementer"):
-     Stage: refactoring
+     Stage: integration
      Task: post-merge refactoring — address integration reviewer's accepted findings on the merged state
 
      Follow the standard stage-relevant workflow and load
