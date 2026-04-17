@@ -15,24 +15,12 @@ Team composition at each workflow stage is derived from the manifest — the lea
 
 ## Decision Framework
 
-```dot
-digraph decision {
-    "Multiple tasks?" [shape=diamond];
-    "Need iteration between agents?" [shape=diamond];
-    "Agent Teams available?" [shape=diamond];
-    "Parallel dispatch (Task tool)" [shape=box style=filled fillcolor=lightgreen];
-    "Agent Teams (persistent sessions)" [shape=box style=filled fillcolor=lightblue];
-    "Subagents with orchestrator relay" [shape=box style=filled fillcolor=lightyellow];
-    "Single subagent" [shape=box];
+Walk these questions in order:
 
-    "Multiple tasks?" -> "Need iteration between agents?" [label="yes"];
-    "Multiple tasks?" -> "Single subagent" [label="no"];
-    "Need iteration between agents?" -> "Agent Teams available?" [label="yes"];
-    "Need iteration between agents?" -> "Parallel dispatch (Task tool)" [label="no"];
-    "Agent Teams available?" -> "Agent Teams (persistent sessions)" [label="yes"];
-    "Agent Teams available?" -> "Subagents with orchestrator relay" [label="no"];
-}
-```
+1. **Single task?** → single subagent. Done.
+2. **Multiple tasks, no iteration between agents?** → parallel dispatch via the Task tool.
+3. **Multiple tasks, iteration needed, Agent Teams available?** → Agent Team (persistent sessions).
+4. **Multiple tasks, iteration needed, Teams unavailable?** → subagents with orchestrator relay.
 
 | Pattern | Use when | Mechanism |
 |---------|----------|-----------|
@@ -173,8 +161,8 @@ For direct mode (orchestrator executes the step itself), see `superRA:using-supe
 **Skills that use Agent Teams mode.** Each workflow below names the manifest stages it runs. When Agent Teams are enabled, the lead spawns one teammate per stage (implementer-role stages use `subagent_type: superRA:implementer`, reviewer-role stages use `superRA:reviewer`); the teammate then loads what `superRA:using-superRA` §Skill-Load Manifest lists for its Stage. There are no per-workflow team "recipes" — composition is read from the workflow (which stages it runs) and the manifest (what each stage loads). See `references/agent-teams.md` for spawn mechanics.
 
 - **superRA:execution-workflow** — runs stages: implementation.
-- **superRA:integration-workflow** — runs stages: drift-test, refactoring, integration-review, documentation.
-- **superRA:merge-workflow** — runs stages: merge, refactoring, integration-review.
+- **superRA:integration-workflow** — runs stages: drift-test, integration, documentation.
+- **superRA:merge-workflow** — runs stages: merge, integration.
 - **superRA:semantic-merge** — runs stages: merge.
 
 **When Agent Teams are unavailable:** all skills fall back to standard subagent patterns (Task tool dispatch with orchestrator-as-hub). No functionality is lost — teams are an enhancement, not a requirement.

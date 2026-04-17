@@ -17,85 +17,32 @@ Assumes execution-workflow has already verified reproducibility and the user has
 
 ## The Process
 
-```dot
-digraph integration_workflow {
-    rankdir=TB;
+**Stage 1 — Drift Test Creation:**
 
-    subgraph cluster_stage1 {
-        label="Stage 1: Drift Test Creation";
-        "Extract key results from RESULTS.md" [shape=box];
-        "Present candidates to user" [shape=box];
-        "Dispatch test-creator subagent" [shape=box];
-        "Dispatch test-reviewer subagent" [shape=box];
-        "Test reviewer: APPROVE?" [shape=diamond];
-        "Test-creator fixes issues" [shape=box];
-        "Run tests — establish green baseline" [shape=box];
-        "Commit test files" [shape=box];
-    }
+1. Extract key results from `RESULTS.md`.
+2. Present candidates to the user (legitimate stop point).
+3. Dispatch test-creator → dispatch test-reviewer. Iterate REVISE → fix → re-review until APPROVE.
+4. Run tests to establish a green baseline.
+5. Commit test files.
 
-    subgraph cluster_stage2 {
-        label="Stage 2: Integration Review → Refactor Loop";
-        "Identify codebase conventions" [shape=box];
-        "Dispatch integration-reviewer subagent" [shape=box];
-        "Integration reviewer: APPROVE?" [shape=diamond];
-        "Dispatch refactor subagent with specific feedback" [shape=box];
-        "Run drift tests after refactoring" [shape=box];
-        "Drift tests pass?" [shape=diamond];
-        "Assess economic significance" [shape=diamond];
-        "STOP — ask user with before/after" [shape=box style=filled fillcolor=lightyellow];
-        "Update test expectations, document reason" [shape=box];
-        "Commit refactored code" [shape=box];
-        "Final commit" [shape=box style=filled fillcolor=lightgreen];
-    }
+**Stage 2 — Integration Review → Refactor Loop:**
 
-    "Extract key results from RESULTS.md" -> "Present candidates to user";
-    "Present candidates to user" -> "Dispatch test-creator subagent";
-    "Dispatch test-creator subagent" -> "Dispatch test-reviewer subagent";
-    "Dispatch test-reviewer subagent" -> "Test reviewer: APPROVE?";
-    "Test reviewer: APPROVE?" -> "Run tests — establish green baseline" [label="APPROVE"];
-    "Test reviewer: APPROVE?" -> "Test-creator fixes issues" [label="REVISE"];
-    "Test-creator fixes issues" -> "Dispatch test-reviewer subagent" [label="re-review"];
-    "Run tests — establish green baseline" -> "Commit test files";
+1. Identify codebase conventions.
+2. Dispatch integration-reviewer.
+3. On APPROVE → final commit, proceed to Step 3.
+4. On REVISE → dispatch refactor subagent with specific feedback → run drift tests.
+   - **Drift tests pass** → commit refactored code → re-dispatch integration-reviewer.
+   - **Drift tests fail** → assess economic significance.
+     - **Minor variation** → update test expectations, document the reason, commit, re-dispatch reviewer.
+     - **Meaningful** → STOP, ask the user with before/after numbers (legitimate stop point).
 
-    "Commit test files" -> "Identify codebase conventions";
-    "Identify codebase conventions" -> "Dispatch integration-reviewer subagent";
-    "Dispatch integration-reviewer subagent" -> "Integration reviewer: APPROVE?";
-    "Integration reviewer: APPROVE?" -> "Final commit" [label="APPROVE"];
-    "Integration reviewer: APPROVE?" -> "Dispatch refactor subagent with specific feedback" [label="REVISE"];
-    "Dispatch refactor subagent with specific feedback" -> "Run drift tests after refactoring";
-    "Run drift tests after refactoring" -> "Drift tests pass?";
-    "Drift tests pass?" -> "Commit refactored code" [label="pass"];
-    "Drift tests pass?" -> "Assess economic significance" [label="fail"];
-    "Assess economic significance" -> "STOP — ask user with before/after" [label="meaningful"];
-    "Assess economic significance" -> "Update test expectations, document reason" [label="minor variation"];
-    "Update test expectations, document reason" -> "Commit refactored code";
-    "Commit refactored code" -> "Dispatch integration-reviewer subagent" [label="re-review"];
+**Step 3 — Documentation Finalization:**
 
-    subgraph cluster_step3 {
-        label="Step 3: Documentation Finalization";
-        "Resolve RESULTS_DIR (stop if missing)" [shape=box];
-        "Dispatch doc-writer subagent" [shape=box];
-        "A: mature RESULTS.md in place + git mv" [shape=box];
-        "Dispatch doc-reviewer subagent" [shape=box];
-        "Doc reviewer: APPROVE?" [shape=diamond];
-        "Doc-writer fixes issues" [shape=box];
-        "Ask PLAN.md disposition (stop)" [shape=box style=filled fillcolor=lightyellow];
-        "Execute disposition" [shape=box];
-        "Done — hand off to merge-workflow" [shape=box style=filled fillcolor=lightgreen];
-    }
-
-    "Final commit" -> "Resolve RESULTS_DIR (stop if missing)";
-    "Resolve RESULTS_DIR (stop if missing)" -> "Dispatch doc-writer subagent";
-    "Dispatch doc-writer subagent" -> "A: mature RESULTS.md in place + git mv";
-    "A: mature RESULTS.md in place + git mv" -> "Dispatch doc-reviewer subagent";
-    "Dispatch doc-reviewer subagent" -> "Doc reviewer: APPROVE?";
-    "Doc reviewer: APPROVE?" -> "Ask PLAN.md disposition (stop)" [label="APPROVE"];
-    "Doc reviewer: APPROVE?" -> "Doc-writer fixes issues" [label="REVISE"];
-    "Doc-writer fixes issues" -> "Dispatch doc-reviewer subagent" [label="re-review"];
-    "Ask PLAN.md disposition (stop)" -> "Execute disposition";
-    "Execute disposition" -> "Done — hand off to merge-workflow";
-}
-```
+1. Resolve `RESULTS_DIR` (stop if project guidance is missing — legitimate stop point).
+2. Dispatch doc-writer → mature `RESULTS.md` in place, then `git mv` to its destination.
+3. Dispatch doc-reviewer. Iterate REVISE → fix → re-review until APPROVE.
+4. Ask `PLAN.md` disposition (legitimate stop point).
+5. Execute disposition → hand off to `merge-workflow`.
 
 ## Dispatch Convention
 
@@ -168,7 +115,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
 2. **Dispatch integration-reviewer:**
    ```
    Agent(subagent_type: "superRA:reviewer"):
-     Stage: integration-review
+     Stage: integration
      Task: Task N in PLAN.md — integration review of the refactored analysis code
      Git range: <BASE_SHA>..<HEAD_SHA>
 
@@ -187,7 +134,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
    a. **Dispatch refactorer:**
       ```
       Agent(subagent_type: "superRA:implementer"):
-        Stage: refactoring
+        Stage: integration
         Task: Task N in PLAN.md — address integration reviewer's accepted findings
 
         Follow the standard stage-relevant workflow and load
@@ -384,7 +331,7 @@ This is the critical judgment call in the process. When drift tests fail after r
 
 ## Agent Loads
 
-See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `refactoring`, `integration-review`, and `documentation` rows.
+See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows.
 
 Step 3 sub-part A (mature RESULTS.md) is performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates the RESULTS.md maturation per workflow principle P1. Sub-part C (PLAN.md disposition) stays with the orchestrator because it is a user-facing decision, not an RA-implementable task. Project-level doc audit is covered by Stage 2 refactor + integration review per `codebase-integration.md` §Project Doc Audit — not by Step 3.
 
@@ -401,7 +348,7 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 **Never:**
 - Skip Stage 1 (drift tests) — they are the safety net for everything that follows
 - Refactor before integration reviewer has identified issues — review first, then fix
-- Strip domain-discipline artifacts during refactoring — see `superRA:using-superRA` §Skill-Load Manifest for `refactoring` / `integration-review` for the full reference list per domain
+- Strip domain-discipline artifacts during refactoring — see `superRA:using-superRA` §Skill-Load Manifest for `integration` for the full reference list per domain
 - Judge the researcher's methodology choice — focus on implementation correctness (see the foundational RA framing in `superRA:using-superRA` §Universal Principles)
 - Refactor before drift tests are committed and green
 - Hand off to merge-workflow without integration reviewer APPROVE on the refactored code + project-doc audit (Stage 2) AND doc-reviewer APPROVE on the matured RESULTS.md (Step 3)
@@ -415,7 +362,7 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 - Run integration review before any refactoring
 - Run drift tests after every refactoring change
 - Re-submit to integration reviewer after every refactoring round
-- Keep and re-validate all domain-discipline artifacts through refactoring — refactoring discipline lives in `superRA:using-superRA` §Skill-Load Manifest for `refactoring` / `integration-review` (for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` generic + `skills/econ-data-analysis/references/integration.md` data-specific)
+- Keep and re-validate all domain-discipline artifacts through refactoring — refactoring discipline lives in `superRA:using-superRA` §Skill-Load Manifest for `integration` (for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` generic + `skills/econ-data-analysis/references/integration.md` data-specific)
 - Dispatch the Step 3 doc-writer subagent with `superRA:report-in-markdown` (full mode — all three references) to perform the matured RESULTS.md consolidation; dispatch the doc-reviewer afterward and iterate to APPROVE. Project-doc audit is not part of Step 3 — it is a Stage 2 refactorer / integration-reviewer concern per `codebase-integration.md` §Project Doc Audit
 - Resolve `RESULTS_DIR` before dispatching the doc-writer — either from project guidance, or via `AskUserQuestion` if guidance is missing, logged in PLAN.md `## Decisions`
 - Commit at each stage boundary and after each Step 3 sub-part (A and C each land as separate commits)

@@ -22,7 +22,7 @@ The autonomy principle is load-bearing in the other direction too — when there
 - Reviewer feedback already adjudicated in the review-notes blockquote → re-dispatch the implementer; do not ask the researcher to confirm the adjudication.
 - A workflow step's internal verification passed → move to the next step without narrating "ready to show you the next options?".
 - Minor implementation choices fully inside the task's scope (variable naming, plot formatting, diagnostic printouts, function signatures of pure-refactor helpers) → decide and proceed; commit with the work.
-- Every diamond in a workflow's Process flowchart that is not explicitly labelled "ask user".
+- Every decision point in a workflow's Process section that is not explicitly labelled "ask user" or "stop point".
 
 The guiding question: has anything changed since the last approved state that the researcher needs to know about **before** the agent takes the next step? If the answer is no, the agent takes the next step.
 

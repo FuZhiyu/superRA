@@ -42,37 +42,15 @@ The mechanics of tier classification and conflict resolution below are identical
 
 ## The Process
 
-```dot
-digraph semantic_merge {
-    rankdir=TB;
-
-    "Ground in repo state" [shape=box];
-    "Run git merge --no-commit" [shape=box];
-    "Conflicts?" [shape=diamond];
-    "Analysis files touched?" [shape=diamond];
-    "Run drift tests" [shape=box];
-    "Drift tests pass?" [shape=diamond];
-    "Classify conflicting files" [shape=box];
-    "Research files in conflict?" [shape=diamond];
-
-    "Tier 1: Clean" [shape=box style=filled fillcolor=lightgreen];
-    "Tier 2: Syntactic" [shape=box style=filled fillcolor=lightyellow];
-    "Tier 3: Semantic" [shape=box style=filled fillcolor=lightsalmon];
-
-    "Ground in repo state" -> "Run git merge --no-commit";
-    "Run git merge --no-commit" -> "Conflicts?";
-    "Conflicts?" -> "Analysis files touched?" [label="no"];
-    "Analysis files touched?" -> "Tier 1: Clean" [label="no"];
-    "Analysis files touched?" -> "Run drift tests" [label="yes"];
-    "Run drift tests" -> "Drift tests pass?";
-    "Drift tests pass?" -> "Tier 1: Clean" [label="pass"];
-    "Drift tests pass?" -> "Tier 3: Semantic" [label="fail"];
-    "Conflicts?" -> "Classify conflicting files" [label="yes"];
-    "Classify conflicting files" -> "Research files in conflict?";
-    "Research files in conflict?" -> "Tier 2: Syntactic" [label="no — config/docs/infra only"];
-    "Research files in conflict?" -> "Tier 3: Semantic" [label="yes"];
-}
-```
+1. **Ground in repo state.**
+2. **Run `git merge --no-commit`** and classify:
+   - **No conflicts AND no analysis files touched** → **Tier 1** (clean).
+   - **No conflicts AND analysis files touched** → run drift tests:
+     - Pass → **Tier 1** (clean).
+     - Fail → **Tier 3** (semantic).
+   - **Conflicts exist** → classify each conflicting file:
+     - Config / docs / infra only → **Tier 2** (syntactic).
+     - Any research file in conflict → **Tier 3** (semantic).
 
 ### Step 1: Ground in Repo State
 

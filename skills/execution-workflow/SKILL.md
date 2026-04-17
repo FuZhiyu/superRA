@@ -7,7 +7,7 @@ description: Use when you have a PLAN.md in the superRA task-block format and ar
 
 Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu. On merge/PR, dispatches `superRA:integration-workflow` then `superRA:merge-workflow` directly.
 
-Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE / CONDITIONAL APPROVE; the reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom (for data analysis: `econ-data-analysis/SKILL.md §Review & Self-Check Discipline`). Falls back to direct execution when the user requests it or tasks are trivial.
+Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE / CONDITIONAL APPROVE; the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines`). Falls back to direct execution when the user requests it or tasks are trivial.
 
 **Core principle:** Fresh subagent per task + one comprehensive review pass = high quality, reproducible work. Review always happens regardless of execution mode.
 
@@ -15,27 +15,13 @@ Default mode dispatches a fresh subagent per task. Each task gets one comprehens
 
 ## Execution Modes
 
-```dot
-digraph mode_selection {
-    "Have plan?" [shape=diamond];
-    "Subagents available?" [shape=diamond];
-    "Tasks trivial or user prefers direct?" [shape=diamond];
-    "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" [shape=diamond];
-    "Agent Team mode (preferred)" [shape=box style=filled fillcolor=lightblue];
-    "Subagent mode" [shape=box style=filled fillcolor=lightgreen];
-    "Direct mode (fallback)" [shape=box style=filled fillcolor=lightyellow];
-    "Plan first" [shape=box];
+Mode selection, in order:
 
-    "Have plan?" -> "Subagents available?" [label="yes"];
-    "Have plan?" -> "Plan first" [label="no"];
-    "Subagents available?" -> "Tasks trivial or user prefers direct?" [label="yes"];
-    "Subagents available?" -> "Direct mode (fallback)" [label="no"];
-    "Tasks trivial or user prefers direct?" -> "Direct mode (fallback)" [label="yes"];
-    "Tasks trivial or user prefers direct?" -> "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" [label="no"];
-    "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" -> "Agent Team mode (preferred)" [label="yes"];
-    "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" -> "Subagent mode" [label="no"];
-}
-```
+1. **No plan?** → run `superRA:planning-workflow` first.
+2. **No subagent capability on this harness?** → Direct mode (fallback).
+3. **User explicitly prefers direct, or tasks are trivial?** → Direct mode (fallback).
+4. **`TeamCreate` available AND ≥2 tasks remaining?** → Agent Team mode (preferred).
+5. **Otherwise** → Subagent mode.
 
 **Agent Team mode (preferred):**
 - Use `TeamCreate` to set up a persistent team with implementer + reviewer
@@ -56,51 +42,23 @@ digraph mode_selection {
 
 ## The Process
 
-```dot
-digraph process {
-    rankdir=TB;
+Top-level loop:
 
-    subgraph cluster_per_task {
-        label="Per Task";
-        "Dispatch implementer subagent" [shape=box];
-        "Implementer asks questions?" [shape=diamond];
-        "Answer questions, provide context" [shape=box];
-        "Implementer: describe-analyze-validate-commit" [shape=box];
-        "Dispatch reviewer subagent" [shape=box];
-        "Reviewer verdict?" [shape=diamond];
-        "Implementer fixes REVISE items" [shape=box];
-        "Implementer fixes gating item(s)" [shape=box];
-        "Reviewer narrow re-review\n(verify gating fix + cited downstream)" [shape=box];
-        "Narrow re-review APPROVE?" [shape=diamond];
-        "Update plan file + commit" [shape=box];
-    }
+1. Read plan, extract all tasks, create TodoWrite.
+2. **Per task** (see inner loop below).
+3. When no tasks remain → verify pipeline + reproducibility (Step 3).
+4. Dispatch `integration-workflow` then `merge-workflow`.
 
-    "Read plan, extract all tasks, create TodoWrite" [shape=box];
-    "More tasks remain?" [shape=diamond];
-    "Verify pipeline + reproducibility (Step 3)" [shape=box];
-    "Dispatch integration-workflow then merge-workflow" [shape=box style=filled fillcolor=lightgreen];
+**Per-task inner loop:**
 
-    "Read plan, extract all tasks, create TodoWrite" -> "Dispatch implementer subagent";
-    "Dispatch implementer subagent" -> "Implementer asks questions?";
-    "Implementer asks questions?" -> "Answer questions, provide context" [label="yes"];
-    "Answer questions, provide context" -> "Dispatch implementer subagent";
-    "Implementer asks questions?" -> "Implementer: describe-analyze-validate-commit" [label="no"];
-    "Implementer: describe-analyze-validate-commit" -> "Dispatch reviewer subagent";
-    "Dispatch reviewer subagent" -> "Reviewer verdict?";
-    "Reviewer verdict?" -> "Implementer fixes REVISE items" [label="REVISE"];
-    "Implementer fixes REVISE items" -> "Dispatch reviewer subagent" [label="re-review"];
-    "Reviewer verdict?" -> "Implementer fixes gating item(s)" [label="CONDITIONAL APPROVE"];
-    "Implementer fixes gating item(s)" -> "Reviewer narrow re-review\n(verify gating fix + cited downstream)";
-    "Reviewer narrow re-review\n(verify gating fix + cited downstream)" -> "Narrow re-review APPROVE?";
-    "Narrow re-review APPROVE?" -> "Implementer fixes gating item(s)" [label="no"];
-    "Narrow re-review APPROVE?" -> "Update plan file + commit" [label="yes"];
-    "Reviewer verdict?" -> "Update plan file + commit" [label="APPROVE"];
-    "Update plan file + commit" -> "More tasks remain?";
-    "More tasks remain?" -> "Dispatch implementer subagent" [label="yes"];
-    "More tasks remain?" -> "Verify pipeline + reproducibility (Step 3)" [label="no"];
-    "Verify pipeline + reproducibility (Step 3)" -> "Dispatch integration-workflow then merge-workflow";
-}
-```
+1. Dispatch implementer subagent.
+2. If the implementer asks questions → answer with context, then re-dispatch.
+3. Implementer runs describe → analyze → validate → commit.
+4. Dispatch reviewer subagent (one comprehensive pass).
+5. Branch on verdict:
+   - **APPROVE** → update plan file + commit, return to top loop.
+   - **REVISE** → implementer fixes findings → re-dispatch reviewer (full pass).
+   - **CONDITIONAL APPROVE** → implementer fixes gating item(s) → reviewer does a narrow re-review (verify gating fix + cited downstream). Loop until narrow re-review APPROVES, then update plan file + commit.
 
 ### Step 0: Branch Check
 
@@ -160,7 +118,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "superRA:implementer")` — see template below. Direct mode: follow `superRA:using-superRA` §Execution Modes, then implement yourself. See `superRA:agent-orchestration` §Agent reuse vs fresh dispatch for when to reuse a warm implementer via `SendMessage` versus spawning a fresh dispatch.
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
-3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's §Review & Self-Check Discipline top to bottom and returns one of three verdicts:
+3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom and returns one of three verdicts:
    - **APPROVE** — no findings. Proceed to the next task.
    - **REVISE** — only `[STANDARD]` items failed. Adjudicate feedback in place inside the PLAN.md review-notes blockquote — append `→ orchestrator: rejected <reason>` or `→ orchestrator: <second opinion requested> <reason>` annotations to items you are rejecting or flagging, rewrite task steps in place for items you are accepting, commit, then re-dispatch the implementer. Leave the blockquote itself intact — the implementer will annotate items with `→ implemented: ...` markers on their pass, and the reviewer will delete confirmed-fixed items on re-review. See the "Handling Reviewer Feedback" section below and `agents/implementer.md` / `agents/reviewer.md` for the full annotation mechanics. Iterate until APPROVE.
    - **CONDITIONAL APPROVE** — one or more `[GATING]` items failed, but the reviewer walked downstream items and they look correct conditional on the gating fix not invalidating them. Adjudicate the flagged gating item(s) the same way (accept / reject / second opinion), then re-dispatch the implementer to fix them. The reviewer's re-dispatch on a CONDITIONAL APPROVE is **narrow by default**: it verifies the gating fix is correct and that the cited downstream items still hold under the fix; if both pass, it promotes to unconditional APPROVE. MAY dispatch a wider re-review via optional `Additionally:` steering when the gating fix is substantial enough to cast doubt on downstream items — documented flexibility, not the default.
@@ -178,7 +136,7 @@ See `superRA:agent-orchestration` §Handling Reviewer Feedback (Orchestrator Dis
 
 ### Step 3: Verify Pipeline and Reproducibility
 
-After every task is APPROVED, verify the work end-to-end before presenting completion options. This is an **orchestrator skeleton** — the domain-specific gating items live in the active domain skill's §Completion verification (for data analysis: `econ-data-analysis/SKILL.md §Review & Self-Check Discipline §Completion verification`). Walk all five checks; do not proceed if any fails.
+After every task is APPROVED, verify the work end-to-end before presenting completion options. This is an **orchestrator skeleton** — the domain-specific gating items live in the active domain skill's §Completion verification (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines §Completion verification`). Walk all five checks; do not proceed if any fails.
 
 **Run every check. Don't trust "looks committed" — execute `git status` and read the output. The five checks below are the orchestrator's verification gate: evidence before claims, no shortcuts.**
 
@@ -192,7 +150,7 @@ After every task is APPROVED, verify the work end-to-end before presenting compl
 
 3. **RESULTS.md up to date?** Has findings for all completed tasks. Figure attachments in `results_attachments/` committed.
 
-4. **Domain completion verification.** Walk the active domain skill's §Completion verification `[GATING]` items. For data analysis, this is `econ-data-analysis/SKILL.md §Review & Self-Check Discipline §Completion verification` — pipeline runs end-to-end if the plan declares one, outputs exist and were generated from committed code (not ad-hoc REPL), and any other domain-specific gating items. The domain skill owns the exact list; this workflow just routes you to it.
+4. **Domain completion verification.** Walk the active domain skill's §Completion verification `[GATING]` items. For data analysis, this is `econ-data-analysis/SKILL.md §Three Concurrent Disciplines §Completion verification` — pipeline runs end-to-end if the plan declares one, outputs exist and were generated from committed code (not ad-hoc REPL), and any other domain-specific gating items. The domain skill owns the exact list; this workflow just routes you to it.
 
 5. **Deferred MINORs resolved?** Check PLAN.md review-notes blockquotes for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in RESULTS.md.
 
@@ -240,7 +198,7 @@ These are the things the orchestrator does that no subagent does:
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text, don't annotate it. Commit.
 - **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck: BLOCKED, methodology disagreement, CRITICAL issue you want to override, repeated reviewer disagreement. Log per `using-superRA` §Handoff Doc Discipline §User Decisions Log.
 
-**Review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Review & Self-Check Discipline). Codebase integration review is deferred to integration-workflow (dispatched by this skill at Step 4 when the user chooses merge or PR).
+**Review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Three Concurrent Disciplines). Codebase integration review is deferred to integration-workflow (dispatched by this skill at Step 4 when the user chooses merge or PR).
 
 ## Model Selection
 
@@ -307,6 +265,6 @@ When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per
 - **superRA:worktree-data-sync** — RECOMMENDED: For complex or multi-session analyses, set up an isolated workspace before starting (see §When to Use a Worktree for the decision table)
 - **superRA:worktree-data-sync** — Load this when copying managed data between existing worktrees (e.g., seeding a new analysis worktree from the main one); do not hand-roll data copy scripts
 - **superRA:planning-workflow** — Creates the plan this skill executes
-- **the active domain skill (for data analysis: `superRA:econ-data-analysis`)** — REQUIRED: domain discipline all agents follow, loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest. Carries the §Review & Self-Check Discipline that the reviewer walks on every pass.
+- **the active domain skill (for data analysis: `superRA:econ-data-analysis`)** — REQUIRED: domain discipline all agents follow, loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest. Carries the §Three Concurrent Disciplines that the reviewer walks on every pass.
 - **superRA:integration-workflow** — Drift tests, refactor-review loop, documentation finalization (dispatched by this skill at Step 4 on merge/PR)
 - **superRA:merge-workflow** — Main update, post-merge verification, local merge or PR push, worktree cleanup (dispatched by this skill at Step 4 on merge/PR after integration-workflow returns)
