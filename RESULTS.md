@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Task 4)
+**Last updated:** 2026-04-17 (Task 5)
 **Status:** In Progress
 
 ---
@@ -62,3 +62,22 @@ Frontmatter → `# Worktree Data Sync Skill` → §When to Use → §Command Sur
 | `git merge --no-ff parallel/feat/b` | `{}` (exempt) | `{}` ✓ |
 | `git merge main` | STOP reminder | STOP reminder ✓ |
 | `git merge --abort` | `{}` (already skipped) | `{}` ✓ |
+
+## Task 5: Consumer workflow pointer updates
+
+**Status:** Implemented (awaiting review)
+
+### Key changes (pointer-level only — no duplicated content)
+- **`skills/planning-workflow/SKILL.md`**: deleted the pre-existing paragraph instructing the planner to load `worktree-data-sync` for worktree setup (worktree setup is not a planning-time concern).
+- **`skills/execution-workflow/SKILL.md`**: (a) Option 4 Discard retargeted at `agent-orchestration/references/worktree-harness-fallback.md §Remove`; (b) Red Flag about "dispatch multiple implementers in parallel on the same working tree" reworded to point at §Concurrent Writers (isolation enables parallel dispatch, rather than absolute prohibition); (c) §Integration workflow-skill list deduplicated the two `worktree-data-sync` entries and added an `agent-orchestration` entry as the owner of parallel-dispatch discipline.
+- **`skills/merge-workflow/SKILL.md`**: Step 5 Cleanup Worktree and §Pairs with list split — lifecycle → `agent-orchestration/references/worktree-harness-fallback.md §Remove`; data teardown → `worktree-data-sync §Data Teardown`.
+- **`skills/semantic-merge/SKILL.md`**: §When to Use gained an "Exception" paragraph noting that `parallel/*` branches bypass this skill.
+
+### Additional dangling references fixed beyond the planned four files
+Cross-reference audit uncovered two more stale pointers:
+- `skills/using-superRA/references/codex-tools.md:86` — was `superRA:worktree-data-sync §Creating a Worktree`; now points at the fallback reference + `worktree-data-sync` for data seeding.
+- `skills/agent-orchestration/references/agent-teams.md:101` — was the same stale cross-ref; rewritten to describe the full §Concurrent Writers flow (worktree provisioning + force-symlink seeding + plain-merge harvest).
+
+### Final audit
+- `grep -rn "§Creating a Worktree\|worktree-data-sync.*§Cleanup" skills/ agents/ hooks/` → zero hits.
+- All `agent-orchestration/references/worktree-harness-fallback` references land at the correct new path.
