@@ -111,7 +111,7 @@ If you are not sure whether an answer counts as a decision worth logging: if act
 
 ## Mid-Session Scope Changes
 
-When the researcher adds, modifies, removes, or reorders work during a session — or changes methodology, sample, output, or data sources — the change is **material** and MUST land in `PLAN.md` before any new work begins. There is one `PLAN.md` per analysis. We update it; we do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
+When the researcher adds, modifies, removes, or reorders work during a session — or changes methodology, sample, output, or data sources — the change is **material** and MUST land in `PLAN.md` before any new work begins. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
 
 **Material (require this protocol):**
 
