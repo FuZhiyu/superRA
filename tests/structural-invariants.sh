@@ -400,7 +400,7 @@ else
 fi
 
 # 20. using-superRA is the master skill: carries the principles + inventory +
-# skill-load manifest + execution modes; references/session-bootstrap.md is
+# skill-load manifest + execution modes; references/main-agent.md is
 # the main-agent-only bootstrap reference; <SUBAGENT-STOP> is retired.
 us_skill="skills/using-superRA/SKILL.md"
 us_missing=0
@@ -437,10 +437,10 @@ if grep -Fq '<SUBAGENT-STOP>' "$us_skill"; then
 else
   pass "using-superRA SKILL.md is free of <SUBAGENT-STOP>"
 fi
-if [ -f skills/using-superRA/references/session-bootstrap.md ]; then
-  pass "exists: skills/using-superRA/references/session-bootstrap.md"
+if [ -f skills/using-superRA/references/main-agent.md ]; then
+  pass "exists: skills/using-superRA/references/main-agent.md"
 else
-  fail "missing: skills/using-superRA/references/session-bootstrap.md"
+  fail "missing: skills/using-superRA/references/main-agent.md"
 fi
 
 # 21. Stage tables retired on agent files; frontmatter preload applied;
