@@ -82,8 +82,7 @@ time so the orchestrator can dispatch them in parallel (see
 
 **Format.** Each task block declares a `**Depends on:**` line listing
 upstream task numbers, or `*(none)*` if the task has no upstream
-dependency. The field is **required** — an omitted field is a plan
-failure.
+dependency. See the task-block template in `references/plan-template.md` for the required format.
 
 **When a task depends on another.**
 - It reads the other task's output files.
@@ -154,9 +153,7 @@ After writing the complete plan:
 
 **6. Sensitivity / robustness coverage (where applicable):** For data analysis, are sensitivity analysis tasks included? Were they discussed with the researcher to determine which checks matter most?
 
-**7. Dependency graph sanity.** Every task has a `**Depends on:**` line.
-No cycles. If the plan has ≥2 independent branches, at least one pair of
-tasks is marked parallelizable.
+**7. Dependency graph sanity:** Every task has a `**Depends on:**` line. No cycles. If the plan has ≥2 independent branches, at least one pair of tasks is marked parallelizable.
 
 Fix issues inline. No need to re-review — just fix and move on.
 

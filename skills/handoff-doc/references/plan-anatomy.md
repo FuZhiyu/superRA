@@ -51,6 +51,7 @@ The header is the project's standing context, written at planning time and updat
 
 ````markdown
 ### Task N: [Phase Name]
+**Depends on:** Task N-1 [, Task N-2] | *(none)*
 **Review status:** *(set during execution — not filled at planning time)*
 
 **Script:** `Code/NN_phase_name.py` (notebook-compatible format)
