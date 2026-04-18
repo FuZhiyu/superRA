@@ -49,8 +49,11 @@ The header and task examples below are written for the **data-analysis vertical*
 
 The task-block example below is a **data-analysis example** — the step cycle (describe → analyze → validate) and the Python/pandas syntax come from the data-analysis vertical. For other verticals, preserve the three-element shape (input-diagnosis → operation → validate/commit) but substitute the domain's cycle and language. Documentation is written continuously inside each step, not as a separate step.
 
+Each task block must declare a `**Depends on:**` line listing upstream task numbers, or `*(none)*` if the task has no upstream dependency. This field is required — an omitted field is a plan failure. The `execution-workflow` orchestrator reads these fields to identify tasks that may be dispatched in parallel.
+
 ````markdown
 ### Task N: [Phase Name]
+**Depends on:** Task N-1 [, Task N-2] | *(none)*
 **Review status:** *(set during execution — do not fill at planning time)*
 
 **Script:** `Code/NN_phase_name.py` (notebook-compatible format)
