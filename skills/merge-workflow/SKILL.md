@@ -189,14 +189,6 @@ If the analysis was done on a feature branch without a worktree, skip this step.
 
 Report what was merged/pushed and what was cleaned up.
 
-## Agent Teams Mode
-
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), merge-workflow can be orchestrated as a team instead of sequential subagent dispatches. This enables direct iteration between merge-proposer/merge-reviewer and post-merge-refactorer/post-merge-integration-reviewer without the orchestrator relaying feedback.
-
-**Invoke `superRA:agent-orchestration` for the Merge Team recipe** — it has the full team composition (4 teammates: merge-proposer, merge-reviewer, post-merge-refactorer, post-merge-integration-reviewer), the 7-task graph covering Step 1 main update through Step 3 refactor-review loop, iteration patterns, orchestrator-discipline enforcement, and cleanup protocol.
-
-The lead still handles the user-facing meaningful-drift escalation (Step 3), executes Step 4 (local merge or PR push) outside the team, executes Step 5 (worktree cleanup) outside the team, and cleans up the team after final APPROVE. Spawn the Merge Team only after the Integration Team has been cleaned up — both share the session's team slot.
-
 ## Why Both Drift Tests AND Integration Review Post-Merge
 
 The user explicitly accepted the cost of running BOTH signals after merging main. The reasoning:

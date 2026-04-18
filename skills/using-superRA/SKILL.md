@@ -3,7 +3,7 @@ name: using-superRA
 description: Master skill every agent reads. Carries the universal workflow principles, the skill inventory, the composable-design map, the Skill-Load Manifest (required skills + stage-scoped references per Stage), Execution Modes (subagent dispatch vs direct), skill-invocation rules, and instruction priority. Main agents additionally load `references/session-bootstrap.md` at session start for cross-session detection; subagents inherit task context from their dispatch and skip bootstrap.
 ---
 
-This is the one skill every superRA agent reads — main agents at session start, dispatched subagents at dispatch time, Agent Team teammates on spawn. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
+This is the one skill every superRA agent reads — main agents at session start, dispatched subagents at dispatch time. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
 
 ## Universal Principles
 
@@ -123,10 +123,6 @@ The skill itself tells you which.
 ## Semantic Merge
 
 When merging, rebasing, or cherry-picking branches, superRA uses intent-based conflict resolution rather than mechanical ours/theirs. Research-meaningful conflicts are always escalated to the user. See `superRA:semantic-merge` for the full process. A PreToolUse hook automatically reminds you to use this skill when a bare `git merge/rebase/cherry-pick` is detected.
-
-## Agent Teams
-
-When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled, superRA uses Agent Teams for workflows with iteration loops (`execution-workflow`, `integration-workflow`, `merge-workflow`, `semantic-merge`). This is automatic — the orchestration skills detect availability and use teams when appropriate. See `superRA:agent-orchestration` for details on team compositions, lifecycle, and session handoff.
 
 ## Reviewer–Orchestrator Dynamic
 

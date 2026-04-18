@@ -14,7 +14,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 | `execution-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE / CONDITIONAL APPROVE), reproducibility verification, 4-option completion menu. |
 | `integration-workflow` | INTEGRATE (pre-merge) | Drift-test creation, refactor-review loop, doc finalization. |
 | `merge-workflow` | INTEGRATE (merge) | Main update via semantic-merge, post-merge verification, local merge or PR push, worktree cleanup. |
-| `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns; Agent Teams mechanics in `references/agent-teams.md`. |
+| `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
 ## Domain — vertical-specific discipline
 

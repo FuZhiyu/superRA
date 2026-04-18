@@ -188,14 +188,3 @@ End with:
 
 ---
 ACTION REQUIRED (REVISE or CONDITIONAL APPROVE): Fix the above issues, then re-dispatch this reviewer. Iterate until APPROVE.
-
-## If Running as Agent Team Teammate
-
-If you are part of an Agent Team (not a standalone subagent):
-- Use the shared task list to claim your review tasks when unblocked
-- When you assess REVISE: message your counterpart (specified in dispatch)
-  directly with your specific feedback items — file, line, what's wrong, severity
-- When re-reviewing after fixes: verify all previous issues are addressed
-  before marking APPROVE
-- Message the lead for escalation decisions that need user input
-- Mark your tasks as completed when the review passes
