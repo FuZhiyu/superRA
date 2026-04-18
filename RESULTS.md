@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each task with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Bundle A IMPLEMENTED)
-**Status:** Bundle A (Tasks 1+2) implemented; awaiting reviewer.
+**Last updated:** 2026-04-17 (Bundle B IMPLEMENTED)
+**Status:** Bundle A (Tasks 1+2) APPROVED; Bundle B (Tasks 3+5) implemented; awaiting reviewer.
 
 ---
 
@@ -37,27 +37,19 @@
 
 ---
 
-## Task 3: Wire box-flip and protocol pointers into the four workflow skills
+## Task 3: Update the four workflow skills for iterative re-entry + full drift-suite always + renamed section pointer
 
-**Status:** Completed (APPROVED 2026-04-17, commit `04cec53`)
+**Status:** IMPLEMENTED (Bundle B)
 
 ### Key Findings
-- All four workflow skills now reference `## Workflow Status` and flip the milestone they own:
-  - `planning-workflow` Execution Handoff (line ~130) — flips `Plan approved` after researcher confirms.
-  - `execution-workflow` Step 3 (line ~200) — flips `Execution complete` once all five reproducibility checks pass. (Was "six checks" in the stash — adapted to the current Step 3 structure.)
-  - `integration-workflow` Stage 1 step 8 (new, line ~162) — flips `Drift tests created`.
-  - `integration-workflow` Stage 2 step 6 (new, line ~232) — flips `Refactored`, with rollback note for post-merge re-entry.
-  - `integration-workflow` Step 3 doc-reviewer (after APPROVE, line ~352) — flips `Docs finalized` before Sub-part C disposition.
-  - `merge-workflow` Step 4 before-action (line ~134) — flips `Merged` on the analysis branch (conditional on PLAN.md still being present after disposition).
-- `merge-workflow` Step 3 entry — unchecks `Refactored` on post-merge re-entry (conditional, same disposition guard).
-- `§Mid-Session Scope Changes` pointers added to:
-  - `planning-workflow` Living Plan section (distinguishes agent-discovered drift from researcher-initiated scope changes).
-  - `execution-workflow` Stop-Points class (b) (rewritten "scope change" line to point at the new protocol).
-- `execution-workflow` Step 1 expanded from 7 to 8 sub-steps to fold in three new concepts (PLAN.md as authoritative tracker, Read Workflow Status, TodoWrite as derived view) without undoing the recent refactor that added domain-skill loading and project-guidance walk-up.
+- `planning-workflow/SKILL.md`: Living Plan section pointer renamed `§Mid-Session Scope Changes` → `§Scope Changes and Re-entry`.
+- `execution-workflow/SKILL.md`: Three edits — (1) Stop-Points class (b) pointer renamed; (2) New sub-step 2a after "Read Workflow Status" adds per-task `**Review status:**` + `**Integration status:**` read and DAG cascade detection on re-entry, cross-referencing `handoff-doc §Scope Changes and Re-entry` for exemption protocol; (3) Autonomy section reference updated from `main-agent-autonomy.md` to `main-agent.md`.
+- `integration-workflow/SKILL.md`: Always-full-drift-suite rule added before Stage 1 test-creator dispatch; `Drift tests created` box-flip updated to key on all tasks `**Integration status:** APPROVED`; Stage 2 refactorer scope clause added; `Refactored` box-flip updated to rollup; doc-writer always-full-doc rule and doc-reviewer diff-focus rule added to Step 3; `Docs finalized` box-flip updated to rollup. Autonomy reference updated.
+- `merge-workflow/SKILL.md`: No `§Mid-Session Scope Changes` pointers existed in file; no changes needed.
+- Also updated stale pointer in `agent-orchestration/references/agent-teams.md` and `skills/CATEGORIES.md` (found during Task 5 validation; Task 3's scope).
 
-### Notes
-- All six milestone names appear in exactly one owning workflow skill — no milestone is flipped by a skill that does not own its completion criterion.
-- Cross-references all resolve to real headings (verified by reviewer at the heading line numbers above).
+### Validation
+- `grep -rn "Mid-Session Scope Changes" skills/` → zero hits. Integration-workflow always-full-drift-suite rule present. Execution-workflow step 2a references `**Integration status:**` and DAG cascade cross-ref. No Principle 3 violations.
 
 ---
 
@@ -76,11 +68,30 @@
 
 ---
 
+## Task 5: Consolidate main-agent references into `main-agent.md` + make `handoff-doc` a main-agent default load
+
+**Status:** IMPLEMENTED (Bundle B)
+
+### Key Findings
+- Created `skills/using-superRA/references/main-agent.md` consolidating both `session-bootstrap.md` and `main-agent-autonomy.md`. Structure: MANDATORY Session Start Actions → Cross-Session Detection (bash block + incomplete-plan handling + worktree handling) → Load the Handoff-Doc Skill (new) → The Three Pause Classes → Proceed Without Asking → Banned Phrasings → One Question at a Time → Log Before You Act.
+- New "Load the Handoff-Doc Skill" paragraph directs main agent to load `superRA:handoff-doc` at session start so editing discipline and `§Scope Changes and Re-entry` are available before touching PLAN.md.
+- `session-bootstrap.md` and `main-agent-autonomy.md` deleted via `git rm`.
+- `using-superRA/SKILL.md` updated: frontmatter pointer, Universal Principles #4 pointer, and Skill-Load Manifest "Main-agent default load" paragraph all reference the new `main-agent.md`. Subagent-side rows in the manifest table unchanged.
+- Stale pointers in `agent-orchestration/references/agent-teams.md` and `skills/CATEGORIES.md` updated to `main-agent.md`.
+
+### Validation
+- `ls skills/using-superRA/references/` → `main-agent.md` present; old files absent.
+- `grep -rn "session-bootstrap.md\|main-agent-autonomy.md" skills/` → zero hits.
+- `grep -n "handoff-doc" skills/using-superRA/SKILL.md` → new main-agent-default note + `documentation` / `planning-review` subagent rows both present.
+- Content parity confirmed: all sections from both source files present in `main-agent.md`, no content dropped.
+
+---
+
 ## Cross-Bundle Verification (post-Bundle B)
 
-- All 4 PLAN.md tasks: APPROVED.
-- Working tree: clean.
-- No deferred MINOR items remain in any blockquote.
+- Bundle A (Tasks 1+2): APPROVED.
+- Bundle B (Tasks 3+5): IMPLEMENTED, awaiting reviewer.
+- Task 4: APPROVED (unaffected by re-entry).
+- No deferred MINOR items in any blockquote.
 - All `§<heading>` cross-references introduced by Bundles A and B resolve to real headings.
-- Six milestone-flip instructions across four workflow skills match the six checkboxes in `plan-anatomy.md` exactly.
-- `## Workflow Status` checklist in this very PLAN.md is the first end-to-end usage of the new mechanism — a meta-test that the design is self-applicable.
+- `## Workflow Status` checklist in this PLAN.md is the first end-to-end usage of the new mechanism — a meta-test that the design is self-applicable.

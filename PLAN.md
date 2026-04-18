@@ -143,28 +143,28 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ### Task 3: Update the four workflow skills for iterative re-entry + full drift-suite always + renamed section pointer
 **Depends on:** Task 1 (section rename must land so pointers resolve), Task 2 (Integration-status field must exist in anatomy so workflow skills can reference it)
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** `skills/planning-workflow/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md` (edit)
 **Input:** Current state of each — they carry pointers to `§Mid-Session Scope Changes` and box-flip language landed in a prior pass. All pointer strings must be updated; `integration-workflow` needs substantive content changes for drift-suite + refactor-scope + doc-scope wording; `execution-workflow` Step 1 needs DAG-cascade detection on re-entry.
 **Output:** All four skills use the new `§Scope Changes and Re-entry` name; integration-workflow spells out the always-full-drift-suite rule and the orchestrator-declared scope for refactor authoring + doc-reviewer diff; execution-workflow Step 1 reads `**Integration status:**` alongside `**Review status:**` and proposes the DAG invalidation set on re-entry; box-flip language ties to the per-task rollup.
 
-- [ ] **Step 1: `planning-workflow/SKILL.md`** — rename the existing pointer `handoff-doc §Mid-Session Scope Changes` → `handoff-doc §Scope Changes and Re-entry` in the Living Plan section. `Plan approved` box-flip language in Execution Handoff is unchanged (still flips on planning approval).
+- [x] **Step 1: `planning-workflow/SKILL.md`** — renamed pointer `handoff-doc §Mid-Session Scope Changes` → `handoff-doc §Scope Changes and Re-entry` in the Living Plan section.
 
-- [ ] **Step 2: `execution-workflow/SKILL.md`** — three edits:
-  - Step 1 sub-step 1 pointer rename: `handoff-doc §PLAN.md Is the Task Tracker` unchanged; the downstream reference that names `§Mid-Session Scope Changes` in the TodoWrite sub-step gets renamed to `§Scope Changes and Re-entry`.
-  - Step 1 expansion: add a new sub-step after "Read `## Workflow Status`" that reads each pending task's `**Review status:**` *and* `**Integration status:**`. On detected re-entry (any project-level box unchecked but some tasks APPROVED), the orchestrator walks the DAG: any task being modified this re-entry gets its transitive downstream closure (from `**Depends on:**`) proposed for invalidation. Orchestrator adjudicates default-clear vs documented exemption per `handoff-doc §Scope Changes and Re-entry`.
-  - Stop-Points class (b) pointer rename: `handoff-doc §Mid-Session Scope Changes` → `handoff-doc §Scope Changes and Re-entry`. `Execution complete` box-flip semantics unchanged (flips when every task has `**Review status:** APPROVED`).
+- [x] **Step 2: `execution-workflow/SKILL.md`** — three edits:
+  - Stop-Points class (b) pointer renamed to `§Scope Changes and Re-entry`.
+  - New sub-step 2a added after "Read `## Workflow Status`": reads per-task `**Review status:**` and `**Integration status:**` fields; on detected re-entry walks the DAG and proposes downstream closure for invalidation; orchestrator adjudicates per `handoff-doc §Scope Changes and Re-entry`.
+  - Autonomy section `main-agent-autonomy.md` reference updated to `main-agent.md`.
 
-- [ ] **Step 3: `integration-workflow/SKILL.md`** — substantive changes:
-  - Stage 1 (drift tests): rewrite the authoring rule to explicitly state "Always run the full drift-test suite on every integration pass, regardless of re-entry scope. Author new drift tests only for tasks with `**Integration status:**` ≠ APPROVED plus any orchestrator-declared related tasks per §Scope Changes and Re-entry." Update `Drift tests created` box-flip to key on all tasks having `**Integration status:** APPROVED` (drift coverage is one of the three integration gates).
-  - Stage 2 (refactor): refactor-reviewer scope = tasks with `**Integration status:**` ≠ APPROVED + orchestrator-declared related tasks. `Refactored` box-flip ties to the same rollup.
-  - Step 3 (docs): doc-writer re-runs the whole matured doc on every integration pass; doc-reviewer reviews the diff from the last APPROVED state plus any section a newly-reworked task touches. `Docs finalized` flip language unchanged beyond the pointer rename.
+- [x] **Step 3: `integration-workflow/SKILL.md`** — substantive changes:
+  - Stage 1: added always-full-drift-suite rule before dispatch-test-creator; `Drift tests created` box-flip updated to key on all tasks having `**Integration status:** APPROVED`.
+  - Stage 2: refactorer scope clause added; `Refactored` box-flip updated to rollup over per-task Integration-status.
+  - Step 3: doc-writer always-full-doc rule added; doc-reviewer diff-based review rule added; `Docs finalized` box-flip updated to rollup. Autonomy reference updated to `main-agent.md`.
 
-- [ ] **Step 4: `merge-workflow/SKILL.md`** — Step 3 "On entry" note and Step 4 "Before executing the merge action" note both rename `§Mid-Session Scope Changes` → `§Scope Changes and Re-entry`. `Merged` flip semantics unchanged.
+- [x] **Step 4: `merge-workflow/SKILL.md`** — no `§Mid-Session Scope Changes` pointers present (none exist in current file); no changes needed.
 
-- [ ] **Step 5: Validate** — `grep -rn "Mid-Session Scope Changes" skills/` returns zero hits across the repo. The integration-workflow wording about "always-full-drift-suite" appears verbatim in Stage 1 and is cross-referenced from `handoff-doc §Scope Changes and Re-entry` Step 5 banned-shortcut bullet (set in Task 1). Execution-workflow Step 1 references `**Integration status:**` explicitly. DAG cascade language in execution-workflow Step 1 points back to handoff-doc for the exemption protocol. No Principle 3 violations — every flip keys on a rollup over per-task fields.
+- [x] **Step 5: Validate** — `grep -rn "Mid-Session Scope Changes" skills/` returns zero hits. Execution-workflow Step 1 sub-step 2a references `**Integration status:**` explicitly and cross-references `handoff-doc §Scope Changes and Re-entry` for exemption protocol. Integration-workflow has always-full-drift-suite rule in Stage 1. No Principle 3 violations.
 
 ---
 
@@ -187,23 +187,17 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ### Task 5: Consolidate main-agent references into `main-agent.md` + make `handoff-doc` a main-agent default load
 **Depends on:** Task 1 (the renamed `§Scope Changes and Re-entry` section is what the main agent needs handoff-doc loaded for)
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** `skills/using-superRA/references/main-agent.md` (new), `skills/using-superRA/references/session-bootstrap.md` (delete), `skills/using-superRA/references/main-agent-autonomy.md` (delete), `skills/using-superRA/SKILL.md` (edit)
 **Input:** Current `references/session-bootstrap.md` (55 lines: cross-session detection + mandatory start actions + "load the autonomy contract" handoff). Current `references/main-agent-autonomy.md` (52 lines: three pause classes + proceed-without-asking + banned phrasings + one-question-at-a-time + log-before-act). Current `using-superRA/SKILL.md` Skill-Load Manifest preamble at lines 65–82 (notes `handoff-doc` is loaded on `documentation` and `planning-review` rows only).
 **Output:** Single `references/main-agent.md` carrying cross-session detection + autonomy contract + a new directive establishing `superRA:handoff-doc` as a main-agent default skill load. The two prior files are deleted. Skill-Load Manifest preamble gets a note describing the main-agent default that sits alongside (and does not contradict) the subagent-only rows.
 
-- [ ] **Step 1: Create `skills/using-superRA/references/main-agent.md`** consolidating both source files. Structure: (a) MANDATORY Session Start Actions (from session-bootstrap §MANDATORY), (b) Cross-Session Detection bash block + incomplete-plan handling + worktree-no-plan handling (from session-bootstrap §Cross-Session Detection), (c) **new paragraph: "Load the handoff-doc skill"** — state that the main agent loads `superRA:handoff-doc` at session start so the editing discipline and §Scope Changes and Re-entry protocol are available before touching PLAN.md, (d) The Three Pause Classes (from main-agent-autonomy §The Three Pause Classes), (e) Proceed Without Asking (from main-agent-autonomy §Proceed Without Asking), (f) Banned Phrasings, (g) One Question at a Time, (h) Log Before You Act. Top-of-file note: "Main agent loads this at session start; subagents skip — they inherit task context from their dispatch and do not make autonomy decisions of their own."
+- [x] **Step 1: Create `skills/using-superRA/references/main-agent.md`** — consolidated both source files. Structure: (a) MANDATORY Session Start Actions, (b) Cross-Session Detection bash block + incomplete-plan handling + worktree handling, (c) Load the Handoff-Doc Skill (new paragraph), (d) The Three Pause Classes, (e) Proceed Without Asking, (f) Banned Phrasings, (g) One Question at a Time, (h) Log Before You Act. Top-of-file note present.
 
-- [ ] **Step 2: Delete `skills/using-superRA/references/session-bootstrap.md`** and **`skills/using-superRA/references/main-agent-autonomy.md`** via `git rm`. All their content lives in `main-agent.md`.
+- [x] **Step 2: Deleted** `session-bootstrap.md` and `main-agent-autonomy.md` via `git rm`.
 
-- [ ] **Step 3: Update `skills/using-superRA/SKILL.md`** — two edits:
-  - The sentence at the top of the §Skill-Load Manifest that currently names `session-bootstrap.md` (currently around lines 65–69 in the preamble describing main-agent session-start loads) is rewritten to point at the new `main-agent.md`.
-  - Add one sentence to the Skill-Load Manifest preamble (or a paragraph below the table at the current line 80 area): "Main agents additionally load `superRA:handoff-doc` at session start (per `references/main-agent.md`) so that editing discipline and `§Scope Changes and Re-entry` are available whenever the main agent touches PLAN.md. The subagent-side rows above are unaffected — subagents load `handoff-doc` only on `documentation` / `planning-review` stages as before." No other row in the table is changed.
+- [x] **Step 3: Updated `skills/using-superRA/SKILL.md`** — frontmatter rewritten to reference `main-agent.md`; Universal Principles #4 pointer updated; Skill-Load Manifest preamble extended with "Main-agent default load" paragraph for `superRA:handoff-doc`; stale pointers in `agent-orchestration/references/agent-teams.md` and `skills/CATEGORIES.md` also updated.
 
-- [ ] **Step 4: Validate** —
-  - `ls skills/using-superRA/references/` shows `main-agent.md` but not `session-bootstrap.md` or `main-agent-autonomy.md`.
-  - `grep -rn "session-bootstrap.md\|main-agent-autonomy.md" skills/` returns zero hits (no stale pointers).
-  - `grep -n "handoff-doc" skills/using-superRA/SKILL.md` shows both the new main-agent-default note and the existing `documentation` / `planning-review` subagent rows.
-  - Content parity: every numbered bullet / pause class / banned phrasing from the two deleted files appears in `main-agent.md`. No content dropped.
+- [x] **Step 4: Validate** — `ls skills/using-superRA/references/` shows `main-agent.md` only. `grep -rn "session-bootstrap.md\|main-agent-autonomy.md" skills/` returns zero hits. `grep -n "handoff-doc" skills/using-superRA/SKILL.md` shows both the new main-agent-default note and the `documentation` / `planning-review` subagent rows. Content parity confirmed: all sections from both deleted files present in `main-agent.md`.

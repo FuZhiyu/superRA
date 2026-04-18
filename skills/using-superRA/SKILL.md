@@ -1,6 +1,6 @@
 ---
 name: using-superRA
-description: Master skill every agent reads. Carries the universal workflow principles, the skill inventory, the composable-design map, the Skill-Load Manifest (required skills + stage-scoped references per Stage), Execution Modes (subagent dispatch vs direct), skill-invocation rules, and instruction priority. Main agents additionally load `references/session-bootstrap.md` at session start for cross-session detection; subagents inherit task context from their dispatch and skip bootstrap.
+description: Master skill every agent reads. Carries the universal workflow principles, the skill inventory, the composable-design map, the Skill-Load Manifest (required skills + stage-scoped references per Stage), Execution Modes (subagent dispatch vs direct), skill-invocation rules, and instruction priority. Main agents additionally load `references/main-agent.md` at session start for cross-session detection, autonomy contract, and handoff-doc default load; subagents inherit task context from their dispatch and skip this reference.
 ---
 
 This is the one skill every superRA agent reads — main agents at session start, dispatched subagents at dispatch time. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
@@ -15,7 +15,7 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 3. **Fast early, strict before merge. Semantic merges always.** Interim work is optimized for speed — no codebase-fit checks at per-task checkpoints. Integration discipline (drift tests, refactor, doc finalization) runs only when the we have stable results, inside `integration-workflow`. Every merge into main goes through `semantic-merge`. 
 
-4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent-autonomy.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
+4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
 
 
 ## Shared-Repo Commit Discipline
@@ -78,6 +78,8 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
 `handoff-doc` is a required load only on the `documentation` and `planning-review` rows — those stages create or mature docs from scratch and need the full anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Everyday implementer / reviewer stages work from the compact handoff-doc editing etiquette carried in `agents/implementer.md` / `agents/reviewer.md` step 1 (inline-edit, remove-stale, no-append) and load `handoff-doc` on demand only when that etiquette is not enough.
+
+**Main-agent default load.** Main agents additionally load `superRA:handoff-doc` at session start (per `references/main-agent.md`) so that editing discipline and `§Scope Changes and Re-entry` are available before the main agent touches PLAN.md. The subagent-side rows in the table above are unaffected — subagents load `handoff-doc` only on `documentation` / `planning-review` stages as listed.
 
 **Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess. The manifest is the single source of truth for Stage→{skills, references}.
 
