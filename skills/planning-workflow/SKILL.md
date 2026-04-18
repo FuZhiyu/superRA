@@ -21,8 +21,6 @@ Assume the next reader is skilled at the craft, but knows nothing about this spe
 - Create `RESULTS.md` alongside (see Living Plan and Results Docs section below)
 - (User preferences for plan location override this default)
 
-**Before you create directories or start editing:** if this work may span multiple sessions, run in parallel with other work, or need an isolated data / environment copy, consider loading `superRA:worktree-data-sync` for the worktree setup before any file creation. A worktree at this point is cheap; retrofitting one later is not. For simple single-session work on an existing branch, skip it — a feature branch is sufficient. (See `worktree-data-sync` §When to Use a Worktree for the full decision table.)
-
 Commit the plan before proceeding to execution.
 
 ## Phase 1: Domain Vertical Setup
