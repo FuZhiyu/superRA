@@ -184,7 +184,7 @@ Walked at planning time (2026-04-17).
 
 ## Task 3: Teach the implementer the dedicated-worktree path
 
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Files affected:** `agents/implementer.md`
 
@@ -194,12 +194,12 @@ Walked at planning time (2026-04-17).
 
 **Dependencies:** Task 1.
 
-- [ ] **Step 1: Extend §Before You Start.** Add a new step (numbered appropriately; current list ends at 5):
+- [x] **Step 1: Extend §Before You Start.** Add a new step (numbered appropriately; current list ends at 5):
   > **6. If the dispatch prompt includes a `Worktree:` field, enter that worktree before any file I/O.** Use the harness-provided worktree-entry tool if available (e.g., `EnterWorktree`); otherwise `cd` to the path and verify with `git rev-parse --show-toplevel`. All reads, edits, and commits for this task happen inside the worktree. Do not touch files outside it. The orchestrator owns merge-back and cleanup — you commit on the `parallel/…` branch and report HEAD SHA back.
 
   Cross-reference: "See `superRA:agent-orchestration` §Concurrent Writers Require Worktree Isolation for the full protocol."
 
-- [ ] **Step 2: Split §Handoff → Update the Docs and Commit** into two paths.
+- [x] **Step 2: Split §Handoff → Update the Docs and Commit** into two paths.
 
   Replace the current single "Shared-repo commit discipline" line (line 151 at current HEAD) with a branched paragraph:
 
@@ -213,14 +213,10 @@ Walked at planning time (2026-04-17).
 
   Leave the `Single atomic commit` example block (`git add [code files] PLAN.md RESULTS.md results_attachments/`) intact — it applies to both paths.
 
-- [ ] **Step 3: Extend §Report Format** — add one bullet:
+- [x] **Step 3: Extend §Report Format** — add one bullet:
   > - **Worktree return (path B only):** branch name (`parallel/<branch>/<slug>`) and HEAD SHA. Omit in path A.
 
-- [ ] **Step 4: Commit.**
-  ```bash
-  git add agents/implementer.md PLAN.md RESULTS.md
-  git commit -m "implementer: add dedicated-worktree commit path"
-  ```
+- [x] **Step 4: Commit.**
 
 ---
 
