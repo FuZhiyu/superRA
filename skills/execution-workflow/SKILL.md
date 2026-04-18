@@ -20,14 +20,7 @@ Mode selection, in order:
 1. **No plan?** → run `superRA:planning-workflow` first.
 2. **No subagent capability on this harness?** → Direct mode (fallback).
 3. **User explicitly prefers direct, or tasks are trivial?** → Direct mode (fallback).
-4. **`TeamCreate` available AND ≥2 tasks remaining?** → Agent Team mode (preferred).
-5. **Otherwise** → Subagent mode.
-
-**Agent Team mode (preferred):**
-- Use `TeamCreate` to set up a persistent team with implementer + reviewer
-- Direct iteration between agents without orchestrator relay
-- See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics; composition is derived from the manifest — one teammate per stage this workflow runs
-- Use when: `TeamCreate` tool is available AND ≥2 tasks remain
+4. **Otherwise** → Subagent mode.
 
 **Subagent mode:**
 - Dispatch implementer subagent per task
@@ -113,6 +106,12 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 8. If no concerns: mirror the pending task steps into `TodoWrite` as a transient session view (see `handoff-doc §PLAN.md Is the Task Tracker` — `PLAN.md` remains the source of truth; `TodoWrite` is a derived view) and proceed.
 
 ### Step 2: Execute Tasks
+
+**Before dispatching, read each pending task's `Depends on:` field.**
+Tasks whose dependencies are all `APPROVED` may be dispatched as a
+single parallel Agent-tool batch (subject to `agent-orchestration`
+§Workload Balancing). Serialize only when no parallel batch is
+available.
 
 #### Per-Task Execution Steps
 
@@ -234,12 +233,6 @@ Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log pe
 ## Agent Loads
 
 See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `implementation` row for both roles; `subagent_type` (`superRA:implementer` vs `superRA:reviewer`) carries the role split.
-
-## Agent Teams Mode
-
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per-task implementation+review cycle can be orchestrated as a persistent team — direct iteration between implementer and reviewer without the orchestrator relaying feedback. See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs.
-
-**Critical:** When all tasks complete, shut down teammates and clean up the team BEFORE dispatching `superRA:integration-workflow`. This frees the session's team slot for the integration-workflow team and the subsequent merge-workflow team.
 
 ## Red Flags
 
