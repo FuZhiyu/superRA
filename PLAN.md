@@ -309,9 +309,9 @@ Walked at planning time (2026-04-17).
 
 ---
 
-## Task 6: End-to-end verification
+## Task 6: End-to-end verification + batched-review revisions
 
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Files affected:** none (verification only).
 
@@ -321,11 +321,11 @@ Walked at planning time (2026-04-17).
 
 **Dependencies:** Tasks 1–5.
 
-- [ ] **Step 1: Merge-guard regression.** Re-run the four synthetic inputs from Task 4 Step 2. Confirm pre-existing behavior (main / abort) still works and new exemption works.
+- [x] **Step 1: Merge-guard regression.** All four synthetic inputs pass (same expectations as Task 4 Step 2). Re-run the four synthetic inputs from Task 4 Step 2. Confirm pre-existing behavior (main / abort) still works and new exemption works.
 
-- [ ] **Step 2: Data-sync test regression.** Run `python3 skills/worktree-data-sync/scripts/test_worktree_data_sync.py`. Paste exit code + pass/fail summary into RESULTS.md.
+- [x] **Step 2: Data-sync test regression.** `~/.venv/bin/python -m pytest skills/worktree-data-sync/scripts/test_worktree_data_sync.py -x` → 30 passed in 3.58s. Run `python3 skills/worktree-data-sync/scripts/test_worktree_data_sync.py`. Paste exit code + pass/fail summary into RESULTS.md.
 
-- [ ] **Step 3: Cross-reference audit.** Run:
+- [x] **Step 3: Cross-reference audit.** Zero dangling `§Creating a Worktree` / `worktree-data-sync.*§Cleanup` hits; new fallback reference resolves at 4 call sites; §Concurrent Writers referenced in 7 files (spec-expected). Run:
   ```bash
   grep -rn "§Creating a Worktree" skills/ agents/
   grep -rn "worktree-data-sync/references/worktree-harness-fallback" skills/ agents/   # should be zero
@@ -335,13 +335,13 @@ Walked at planning time (2026-04-17).
   ```
   Record the matches in RESULTS.md. No dangling references (§Creating a Worktree cross-refs outside worktree-data-sync itself, or fallback paths under the wrong parent skill).
 
-- [ ] **Step 4: SKILL.md structural sanity.** Open each edited SKILL.md and confirm it still has a YAML frontmatter with `name:` and `description:`, a top-level `#` heading matching the skill name, and no broken internal anchors (`§Foo` references to a section that no longer exists).
+- [x] **Step 4: SKILL.md structural sanity.** All edited SKILL.md files retain frontmatter + top-level heading; `agent-orchestration/SKILL.md` has 7 subsections under §Concurrent Writers. Open each edited SKILL.md and confirm it still has a YAML frontmatter with `name:` and `description:`, a top-level `#` heading matching the skill name, and no broken internal anchors (`§Foo` references to a section that no longer exists).
 
-- [ ] **Step 5: Commit verification log.**
-  ```bash
-  git add PLAN.md RESULTS.md
-  git commit -m "verify: parallel-worktree isolation refactor end-to-end"
-  ```
+- [x] **Step 5: Batched adversarial review + revisions.** Dispatched `code-quality-reviewer` agent against the full `889f53c^..HEAD` diff. Verdict: REVISE. Adjudication:
+  - **MAJOR M1 — ACCEPTED.** `§Seed` anchor in `worktree-data-sync/SKILL.md` doesn't exist (actual heading is `### \`--mode seed\``). Fixed 2 of 3 reviewer-cited call sites (the third — `agent-teams.md:101` — was already using the correct `§\`--mode seed\`` anchor; reviewer miscited).
+  - **MINOR m1 — ACCEPTED.** Updated stale skill-inventory descriptions in `README.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md` to reflect narrowed scope. Also added a RELEASE-NOTES.md entry for this refactor per the `CLAUDE.md` sync-when-renaming rule.
+  - **MINOR m2–m5 — ADVISORY, no action.** Regex verified safe; path A/B terminology acceptable; canned-steering justification self-defending; worktree-data-sync standalone post-cut.
+- [x] **Step 6: Commit verification log + revisions.**
 
 ---
 

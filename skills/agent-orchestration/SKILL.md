@@ -103,7 +103,7 @@ does the single write) and do not need worktrees either.
 
 | Direction | Owner | When | How |
 |---|---|---|---|
-| Seed-in (inputs → worktree) | Orchestrator | Before dispatch | `worktree-data-sync` §Seed with `--seed-sync-mode force-symlink` |
+| Seed-in (inputs → worktree) | Orchestrator | Before dispatch | `worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink` |
 | Inside worktree (task execution) | Subagent | During dispatch | Normal file I/O on the `parallel/…` branch |
 | Harvest-out (merge back) | Orchestrator | After all siblings return | Plain `git merge --no-ff parallel/<branch>/<slug>` |
 | Cleanup | Orchestrator | After merge | Harness worktree tool or `git worktree remove` + `git branch -D` |
