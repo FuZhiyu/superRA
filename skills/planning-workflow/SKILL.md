@@ -126,7 +126,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 ## Changing Plans
 
-This protocol covers two related situations that share the same mechanics: (a) a researcher ping during execution — adding, modifying, removing, or reordering work mid-session — and (b) a scope addition that arrives after integration or merge (a PR-review request, a reviewer-surfaced adjacent feature, a follow-on idea). Both situations modify the same `PLAN.md`, follow the same decision-log pattern, and require the same re-entry into the appropriate workflow stage. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
+When the plan changes — new task, removed task, reordered task, objective / sample / methodology edit, scope addition surfaced by a PR reviewer — follow this protocol. The same procedure applies whether the change is raised mid-execution or after integration / merge; the protocol itself records how much rolls back via Step 4's box-unchecking and Step 6's re-entry point. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
 
 **Material (require this protocol):**
 
