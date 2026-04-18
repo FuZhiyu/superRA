@@ -171,7 +171,7 @@ If context runs out or the session ends mid-team:
 
 - **Teammates are lost.** `/resume` and `/rewind` do not restore teammates.
 - **Completed work is safe.** All completed tasks are committed to git and recorded in `PLAN.md` / `RESULTS.md`.
-- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superRA` `references/session-bootstrap.md`) checks for incomplete `PLAN.md`.
+- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superRA` `references/main-agent.md`) checks for incomplete `PLAN.md`.
 - **Resume with new team.** New session reads `PLAN.md` to find last completed task, spawns a fresh team for remaining work.
 
 ### Checkpointing for Team Safety
