@@ -46,3 +46,9 @@ find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/nul
 
 **If in a worktree with no plan file:**
 - Note: "You're in worktree `<path>` on branch `<branch>`. Continue working here?"
+
+## After Bootstrap: Load the Autonomy Contract
+
+Once the cross-session detection checks above are done, **load `superRA:using-superRA/references/main-agent-autonomy.md`**. That file carries the full main-agent autonomy contract — the three pause classes (when to stop and use `AskUserQuestion`), the proceed-without-asking patterns (task → dispatch without check-in; adjudicated review → re-dispatch without re-confirmation), and the banned phrasings ("Should I proceed?", "Want me to continue?", etc.). It generalizes what used to live in `execution-workflow` §Autonomy and Stop Points so the contract applies at every workflow phase.
+
+Subagents do NOT load this reference — they inherit autonomy from their dispatch boundary and make no autonomy decisions of their own.

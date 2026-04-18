@@ -114,8 +114,6 @@ description: Use when [specific triggering conditions and symptoms]
 What is this? Core principle in 1-2 sentences.
 
 ## When to Use
-[Small inline flowchart IF decision non-obvious]
-
 Bullet list with SYMPTOMS and use cases
 When NOT to use
 
@@ -151,9 +149,9 @@ Concrete results
 
 The description should ONLY describe triggering conditions. Do NOT summarize the skill's process or workflow in the description.
 
-**Why this matters:** Testing revealed that when a description summarizes the skill's workflow, Claude may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused Claude to do ONE review, even though the skill's flowchart clearly showed TWO reviews (spec compliance then code quality).
+**Why this matters:** Testing revealed that when a description summarizes the skill's workflow, Claude may follow the description instead of reading the full skill content. A description saying "code review between tasks" caused Claude to do ONE review, even though the skill body clearly specified TWO reviews (spec compliance then code quality).
 
-When the description was changed to just "Use when executing implementation plans with independent tasks" (no workflow summary), Claude correctly read the flowchart and followed the two-stage review process.
+When the description was changed to just "Use when executing implementation plans with independent tasks" (no workflow summary), Claude correctly read the skill body and followed the two-stage review process.
 
 **The trap:** Descriptions that summarize workflow create a shortcut Claude will take. The skill body becomes documentation Claude skips.
 
@@ -287,39 +285,21 @@ Use skill name only, with explicit requirement markers:
 
 **Why no @ links:** `@` syntax force-loads files immediately, consuming 200k+ context before you need them.
 
-## Flowchart Usage
+## Process and Decision Logic
 
-```dot
-digraph when_flowchart {
-    "Need to show information?" [shape=diamond];
-    "Decision where I might go wrong?" [shape=diamond];
-    "Use markdown" [shape=box];
-    "Small inline flowchart" [shape=box];
+Express process flow and decision logic in **prose, numbered lists, or nested bullets** — not in DOT/Graphviz or other rendered diagram formats. Agents read skills as text; an edge list like `"A" -> "B" [label="yes"]` is harder to parse than a numbered decision tree, costs more tokens, and creates a drift risk when prose Steps follow the diagram and the two disagree.
 
-    "Need to show information?" -> "Decision where I might go wrong?" [label="yes"];
-    "Decision where I might go wrong?" -> "Small inline flowchart" [label="yes"];
-    "Decision where I might go wrong?" -> "Use markdown" [label="no"];
-}
-```
+**Patterns that work well:**
 
-**Use flowcharts ONLY for:**
-- Non-obvious decision points
-- Process loops where you might stop too early
-- "When to use A vs B" decisions
+- **Decision selection** ("which mode?", "which pattern?") → ordered list of conditions, first match wins.
+- **Sequential process** → numbered Steps, with sub-bullets for branches.
+- **Verdict / status branches** (APPROVE / REVISE, Tier 1 / 2 / 3) → top-level bullet per verdict, sub-bullets for the actions that follow.
+- **Loops** → state the loop condition explicitly ("iterate until APPROVE", "return to Step N").
 
-**Never use flowcharts for:**
-- Reference material → Tables, lists
-- Code examples → Markdown blocks
-- Linear instructions → Numbered lists
-- Labels without semantic meaning (step1, helper2)
-
-See @graphviz-conventions.dot for graphviz style rules.
-
-**Visualizing for your human partner:** Use `render-graphs.js` in this directory to render a skill's flowcharts to SVG:
-```bash
-./render-graphs.js ../some-skill           # Each diagram separately
-./render-graphs.js ../some-skill --combine # All diagrams in one SVG
-```
+**Use markdown for everything else:**
+- Reference material → tables, lists.
+- Code examples → fenced code blocks.
+- Linear instructions → numbered lists.
 
 ## Code Examples
 
@@ -398,7 +378,7 @@ Different skill types need different test approaches:
 
 ### Discipline-Enforcing Skills (rules/requirements)
 
-**Examples:** TDD, verification-before-completion, designing-before-coding
+**Examples:** TDD, designing-before-coding
 
 **Test with:**
 - Academic questions: Do they understand the rules?
@@ -569,12 +549,11 @@ Agent found new rationalization? Add explicit counter. Re-test until bulletproof
 example-js.js, example-py.py, example-go.go
 **Why bad:** Mediocre quality, maintenance burden
 
-### ❌ Code in Flowcharts
+### ❌ DOT / Graphviz Flowcharts
 ```dot
-step1 [label="import fs"];
-step2 [label="read file"];
+"Step A" -> "Step B" [label="yes"];
 ```
-**Why bad:** Can't copy-paste, hard to read
+**Why bad:** Agents parse text, not rendered diagrams. Numbered lists or nested bullets convey the same flow more cheaply and without drift risk against the prose Steps that follow.
 
 ### ❌ Generic Labels
 helper1, helper2, step3, pattern4
@@ -622,7 +601,7 @@ Deploying untested skills = deploying untested code. It's a violation of quality
 - [ ] Re-test until bulletproof
 
 **Quality Checks:**
-- [ ] Small flowchart only if decision non-obvious
+- [ ] Process / decision logic expressed in prose, numbered lists, or nested bullets — never DOT/Graphviz
 - [ ] Quick reference table
 - [ ] Common mistakes section
 - [ ] No narrative storytelling

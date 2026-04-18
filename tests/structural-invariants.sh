@@ -52,26 +52,36 @@ for ref in $(grep -rohE 'superRA:[a-zA-Z-]+' skills/ agents/ hooks/ README.md CL
 done
 [ $broken_live -eq 0 ] && pass "all superRA: invocations in live surface resolve"
 
-# 3. Iron Law and cross-cutting content preserved in econ-data-analysis
-# main SKILL.md body. These are load-bearing and must not drift to
-# references (per feedback_skill_file_thoroughness).
+# 3. Iron Law preserved in econ-data-analysis main SKILL.md body; the
+# Describe / Analyze / Validate content is consolidated back into the
+# main body as §Three Concurrent Disciplines (teaching + inline
+# severity-marked checklist), replacing the former split between a
+# short intro and references/disciplines.md. Pitfalls and Common
+# Rationalizations stay in the main body (both roles load them).
+# These are load-bearing and must not drift further.
 grep -q '^NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION$' skills/econ-data-analysis/SKILL.md \
   && pass "Iron Law in econ-data-analysis main body" \
   || fail "Iron Law missing from econ-data-analysis main body"
-for section in '## Describe' '## Analyze' '## Validate' '## Pitfalls' '## Red Flags'; do
+for section in '## Three Concurrent Disciplines' '### Describe' '### Analyze' '### Validate' '## Pitfalls' '## Common Rationalizations'; do
   if grep -Fq "$section" skills/econ-data-analysis/SKILL.md; then
     pass "main body contains '$section'"
   else
     fail "main body missing '$section'"
   fi
 done
+if [ -f skills/econ-data-analysis/references/disciplines.md ]; then
+  fail "references/disciplines.md should be deleted — content consolidated into SKILL.md §Three Concurrent Disciplines"
+else
+  pass "references/disciplines.md correctly absent (consolidated into SKILL.md)"
+fi
 
 # 3b. Validate section must carry a Sensitivity analysis sub-section — this
-# is the first-class execution-phase discipline added in the DAV restructure.
-if grep -Fq '### Sensitivity analysis' skills/econ-data-analysis/SKILL.md; then
-  pass "Validate section contains Sensitivity analysis sub-section"
+# is the first-class execution-phase discipline. Post-consolidation it
+# lives in SKILL.md §Validate.
+if grep -Fq '**Sensitivity analysis**' skills/econ-data-analysis/SKILL.md; then
+  pass "SKILL.md §Validate contains Sensitivity analysis sub-section"
 else
-  fail "Validate section missing Sensitivity analysis sub-section"
+  fail "SKILL.md §Validate missing Sensitivity analysis sub-section"
 fi
 
 # 3c. No lingering DAD / describe-analyze-doc strings in the SKILL.md body.
@@ -172,29 +182,36 @@ else
   pass "no dispatch template carries 'Work from:' or 'Counterpart:' fields"
 fi
 
-# 11. econ-data-analysis §Review & Self-Check Discipline integration.
-# The shared-gating section in the SKILL.md main body is the single source
-# of truth both implementer self-check and reviewer verification walk.
-# Encoded here: heading exists, severity markers present (≥8 GATING), the
-# CONDITIONAL APPROVE verdict protocol is spelled out, and no separate
-# implementation-review.md / integration-review.md reference file was
-# created (shared-gating decision sanity check).
+# 11. econ-data-analysis §Three Concurrent Disciplines integration.
+# The consolidated section in the SKILL.md main body is the single source
+# of truth — teaching content + shared severity-marked checklist that
+# both implementer self-check and reviewer verification walk.
+# Encoded here: heading exists, severity markers present (≥8 BLOCKING),
+# the two-verdict protocol is in place (APPROVE/REVISE, no CONDITIONAL
+# APPROVE carryover), and no separate implementation-review.md /
+# integration-review.md reference file was created (shared-gating
+# decision sanity check).
 eda_skill="skills/econ-data-analysis/SKILL.md"
-if grep -Fq '## Review & Self-Check Discipline' "$eda_skill"; then
-  pass "econ-data-analysis SKILL.md contains '## Review & Self-Check Discipline' heading"
+if grep -Fq '## Three Concurrent Disciplines' "$eda_skill"; then
+  pass "econ-data-analysis SKILL.md contains '## Three Concurrent Disciplines' heading"
 else
-  fail "econ-data-analysis SKILL.md missing '## Review & Self-Check Discipline' heading"
+  fail "econ-data-analysis SKILL.md missing '## Three Concurrent Disciplines' heading"
 fi
-gating_count=$(grep -c '\[GATING\]' "$eda_skill" 2>/dev/null || echo 0)
-if [ "$gating_count" -ge 8 ]; then
-  pass "econ-data-analysis SKILL.md has ${gating_count} [GATING] markers (>=8)"
+blocking_count=$(grep -c '\[BLOCKING\]' "$eda_skill" 2>/dev/null || echo 0)
+if [ "$blocking_count" -ge 8 ]; then
+  pass "econ-data-analysis SKILL.md has ${blocking_count} [BLOCKING] markers (>=8)"
 else
-  fail "econ-data-analysis SKILL.md has only ${gating_count} [GATING] markers (<8)"
+  fail "econ-data-analysis SKILL.md has only ${blocking_count} [BLOCKING] markers (<8)"
+fi
+if grep -qE '\[GATING\]|\[STANDARD\]' "$eda_skill"; then
+  fail "econ-data-analysis SKILL.md still contains [GATING] or [STANDARD] markers — should be [BLOCKING] after severity consolidation"
+else
+  pass "econ-data-analysis SKILL.md free of legacy [GATING] / [STANDARD] markers"
 fi
 if grep -Fq 'CONDITIONAL APPROVE' "$eda_skill"; then
-  pass "econ-data-analysis SKILL.md encodes CONDITIONAL APPROVE verdict"
+  fail "econ-data-analysis SKILL.md still mentions CONDITIONAL APPROVE — should be removed with verdict simplification"
 else
-  fail "econ-data-analysis SKILL.md missing CONDITIONAL APPROVE verdict"
+  pass "econ-data-analysis SKILL.md free of CONDITIONAL APPROVE references"
 fi
 if [ -f skills/econ-data-analysis/references/implementation-review.md ] \
    || [ -f skills/econ-data-analysis/references/integration-review.md ]; then
@@ -203,11 +220,10 @@ else
   pass "no separate implementation-review.md / integration-review.md reference (shared gating in main body)"
 fi
 
-# 12. execution-workflow domain-agnosticism invariants (Task 3 restructure).
+# 12. execution-workflow domain-agnosticism invariants.
 # The workflow skill should no longer carry data-flavored two-stage review
-# language, should encode the one-pass CONDITIONAL APPROVE protocol, and
-# should have dropped the data-analysis-specific Sensitivity Analysis Tasks
-# and Model Selection sections (replaced by a one-paragraph Model Selection).
+# language or legacy CONDITIONAL APPROVE references, and should have
+# dropped the data-analysis-specific Sensitivity Analysis Tasks section.
 ew_skill="skills/execution-workflow/SKILL.md"
 if grep -qE 'data integrity|two-stage review|REVISE \(data integrity\)|REVISE \(implementation\)' "$ew_skill"; then
   fail "execution-workflow SKILL.md still contains two-stage-review phrasing (data integrity / two-stage review / REVISE (data integrity) / REVISE (implementation))"
@@ -220,14 +236,14 @@ else
   pass "execution-workflow SKILL.md has dropped '## Sensitivity Analysis Tasks' section"
 fi
 if grep -Fq 'CONDITIONAL APPROVE' "$ew_skill"; then
-  pass "execution-workflow SKILL.md encodes CONDITIONAL APPROVE verdict"
+  fail "execution-workflow SKILL.md still mentions CONDITIONAL APPROVE — should be removed with verdict simplification"
 else
-  fail "execution-workflow SKILL.md missing CONDITIONAL APPROVE verdict"
+  pass "execution-workflow SKILL.md free of CONDITIONAL APPROVE references"
 fi
 
-# 13. Agent files point at the manifest for stage-based loads (Round 3
-# retired the in-agent Stage tables); the dispatch-prompt contract phrase
-# is preserved; reviewer encodes CONDITIONAL APPROVE.
+# 13. Agent files point at the manifest for stage-based loads; the
+# dispatch-prompt contract phrase is preserved; reviewer uses the
+# two-verdict APPROVE/REVISE protocol (no CONDITIONAL APPROVE).
 for f in agents/implementer.md agents/reviewer.md; do
   if grep -Fq 'Skill-Load Manifest' "$f"; then
     pass "$f points at using-superRA §Skill-Load Manifest"
@@ -241,9 +257,9 @@ for f in agents/implementer.md agents/reviewer.md; do
   fi
 done
 if grep -Fq 'CONDITIONAL APPROVE' agents/reviewer.md; then
-  pass "agents/reviewer.md encodes CONDITIONAL APPROVE verdict"
+  fail "agents/reviewer.md still mentions CONDITIONAL APPROVE — should be removed with verdict simplification"
 else
-  fail "agents/reviewer.md missing CONDITIONAL APPROVE verdict"
+  pass "agents/reviewer.md free of CONDITIONAL APPROVE references"
 fi
 
 # 14. Cross-stage orchestration content lives in agent-orchestration, not
@@ -301,21 +317,21 @@ fi
 
 # 16. Data-analysis integration reference exists and encodes shared-flow gating.
 # econ-data-analysis/references/integration.md is the single source of truth
-# for the data-specific refactoring / integration-review checklist; generic
-# code-integration content stays in refactor-and-integrate/references/
-# codebase-integration.md; integration-workflow/SKILL.md carries no data-
-# specific tokens (workflow-choreography only).
+# for the data-specific `integration` stage checklist; generic code-integration
+# content stays in refactor-and-integrate/references/codebase-integration.md;
+# integration-workflow/SKILL.md carries no data-specific tokens
+# (workflow-choreography only).
 int_ref="skills/econ-data-analysis/references/integration.md"
 if [ -f "$int_ref" ]; then
   pass "exists: $int_ref"
 else
   fail "missing: $int_ref"
 fi
-int_gating=$(grep -c '\[GATING\]' "$int_ref" 2>/dev/null || echo 0)
-if [ "$int_gating" -ge 3 ]; then
-  pass "$int_ref has ${int_gating} [GATING] markers (>=3)"
+int_blocking=$(grep -c '\[BLOCKING\]' "$int_ref" 2>/dev/null || echo 0)
+if [ "$int_blocking" -ge 3 ]; then
+  pass "$int_ref has ${int_blocking} [BLOCKING] markers (>=3)"
 else
-  fail "$int_ref has only ${int_gating} [GATING] markers (<3)"
+  fail "$int_ref has only ${int_blocking} [BLOCKING] markers (<3)"
 fi
 if grep -Fq 'single source of truth for data-analysis integration discipline' "$int_ref"; then
   pass "$int_ref contains shared-flow preamble phrase"
@@ -400,17 +416,21 @@ for h in '^## Skill-Load Manifest$' \
 done
 [ "$us_missing" -eq 0 ] && pass "using-superRA SKILL.md carries Skill-Load Manifest + Skill Inventory + Execution Modes"
 # Six Stage rows in the manifest, backtick-wrapped stage names in column 1.
-stage_rows=$(grep -cE '^\| `(implementation|refactoring|drift-test|merge|documentation|planning-review)`' "$us_skill")
+# `refactoring` and `integration-review` collapsed into a single `integration` row.
+stage_rows=$(grep -cE '^\| `(implementation|integration|drift-test|merge|documentation|planning-review)`' "$us_skill")
 if [ "$stage_rows" -eq 6 ]; then
   pass "using-superRA Skill-Load Manifest has exactly 6 Stage rows"
 else
   fail "using-superRA Skill-Load Manifest has $stage_rows Stage rows (expected 6)"
 fi
+# handoff-doc is mentioned in the manifest preamble and in the documentation/
+# planning-review rows (Task 6 dropped it from everyday implementer/reviewer
+# rows); it also appears in the skill inventory. >=3 live mentions is the floor.
 handoff_hits=$(grep -c 'handoff-doc' "$us_skill")
-if [ "$handoff_hits" -ge 6 ]; then
-  pass "using-superRA SKILL.md mentions handoff-doc in >=6 places (one per Stage row)"
+if [ "$handoff_hits" -ge 3 ]; then
+  pass "using-superRA SKILL.md mentions handoff-doc in >=3 places"
 else
-  fail "using-superRA SKILL.md mentions handoff-doc only $handoff_hits times (expected >=6)"
+  fail "using-superRA SKILL.md mentions handoff-doc only $handoff_hits times (expected >=3)"
 fi
 if grep -Fq '<SUBAGENT-STOP>' "$us_skill"; then
   fail "using-superRA SKILL.md still contains <SUBAGENT-STOP> (should be retired in Round 3)"
@@ -504,8 +524,11 @@ else
   fail "§Direct Mode still referenced in $dm_hits SKILL.md file(s)"
 fi
 
-# 24. handoff-doc principles pruned to four: #4 (Ownership by role) and #5
-# (Explicit what-changed deltas) are deleted; principle count = 4.
+# 24. Handoff-doc principles: the four document principles live in
+# handoff-doc/SKILL.md under §The Four Principles (the canonical home).
+# using-superRA must not duplicate that content — it owns universal principles,
+# skill inventory, and the manifest; handoff-doc discipline is referenced, not
+# restated. handoff-doc is loaded by doc-creators and on demand by other agents.
 hd_skill="skills/handoff-doc/SKILL.md"
 if grep -Eq '^4\. \*\*Ownership by role' "$hd_skill"; then
   fail "handoff-doc SKILL.md still contains old principle #4 'Ownership by role'"
@@ -517,15 +540,25 @@ if grep -Eq '^5\. \*\*Explicit what-changed' "$hd_skill"; then
 else
   pass "handoff-doc SKILL.md no longer contains old principle #5 'Explicit what-changed'"
 fi
-principle_count=$(grep -cE '^[0-9]+\. \*\*' "$hd_skill")
-if [ "$principle_count" -eq 4 ]; then
-  pass "handoff-doc SKILL.md has exactly 4 numbered principles"
+if grep -Fq '## The Four Principles' "$hd_skill"; then
+  pass "handoff-doc SKILL.md carries '## The Four Principles' heading"
 else
-  fail "handoff-doc SKILL.md has $principle_count numbered principles (expected 4)"
+  fail "handoff-doc SKILL.md missing '## The Four Principles' heading"
+fi
+hd_principle_count=$(awk '/^## The Four Principles/{flag=1; next} /^## /{flag=0} flag' "$hd_skill" | grep -cE '^[0-9]+\. \*\*')
+if [ "$hd_principle_count" -eq 4 ]; then
+  pass "handoff-doc §The Four Principles has exactly 4 numbered principles"
+else
+  fail "handoff-doc §The Four Principles has $hd_principle_count numbered principles (expected 4)"
+fi
+if grep -Fq '## Handoff Doc Discipline' "$us_skill"; then
+  fail "using-superRA SKILL.md still carries '## Handoff Doc Discipline' section — handoff-doc owns this now"
+else
+  pass "using-superRA SKILL.md no longer carries '## Handoff Doc Discipline' section (owned by handoff-doc)"
 fi
 
 # 25. econ-data-analysis/references/integration.md contains the new
-# Document-code consistency [STANDARD] item added in Round 3.
+# Document-code consistency [BLOCKING] item added in Round 3.
 if grep -Fq 'Document-code consistency' skills/econ-data-analysis/references/integration.md; then
   pass "integration.md contains 'Document-code consistency' item"
 else

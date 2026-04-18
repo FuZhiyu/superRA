@@ -1,17 +1,6 @@
----
-name: script-to-notebook
-description: >
-  Utility (IMPLEMENT+VALIDATE phase, loaded alongside econ-data-analysis
-  by implementer/reviewer agents per the using-superRA §Skill-Load Manifest
-  when the stage touches analysis code). Use
-  when writing analysis scripts intended for notebook rendering, or when
-  rendering existing scripts as notebooks. Covers cell organization, markdown
-  narrative, equation formatting, and language-specific rendering (Python via
-  jupytext, Julia via QuartoNotebookRunner).
-user-invocable: true
----
+# Notebook Format
 
-# Script to Notebook
+> Stage-scoped reference of `superRA:econ-data-analysis`. Loaded by implementer subagents (and by the orchestrator in-session) whenever analysis scripts are being written or rendered. Covers cell organization, markdown narrative, equation formatting, and language-specific rendering (Python via jupytext, Julia via QuartoNotebookRunner). Companion guides `jupytext-guide.md` and `julia-quarto-guide.md` carry the full per-language setup.
 
 ## When to Use
 
@@ -37,6 +26,22 @@ use standard script format.
 - Document **findings** after operations ("Lost 3.2% of observations in merge")
 - Equations: inline `$formula$`, display `$$formula$$` — define variables
   before first use
+
+## Writing Discipline
+
+Writing the narrative is part of the work, not an afterthought. Documentation runs continuously alongside Describe, Analyze, and Validate (see `SKILL.md` §Three Concurrent Disciplines); the notebook-format mechanics above are the shape it takes. The rules below fix *where* each kind of reasoning lands.
+
+- **Markdown cells** frame each block: what, why, expected result.
+- **Inline comments** for minor decisions (winsorization percentile, filter
+  threshold).
+- **Markdown cells with reasoning** for major decisions (excluding countries,
+  choosing sample period, variable definition).
+- **Figures**: save alongside notebook renders; see `SKILL.md` §Describe for
+  what to plot (distributions, relationships, temporal patterns) and the
+  rendering sections below (Python jupytext / Julia QuartoNotebookRunner) for
+  how to render.
+
+The major-vs-minor-decision split is load-bearing: minor decisions inside a cell document *the choice*; major decisions in a markdown cell document *the reasoning that led to the choice*. A reviewer tracing how the analysis got to its current shape reads the markdown cells first, then the code.
 
 ## Output: diagnostics vs rich display
 
