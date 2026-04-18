@@ -66,6 +66,10 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 > **Question asked:** Should the current implementation work be backfilled into handoff docs after the fact?
 > **Rationale (if given):** Yes.
 
+> **User decision (2026-04-17):** Proceed from the approved execution work into `integration-workflow`.
+> **Question asked:** After the implementation review, should this branch move into pre-merge integration?
+> **Rationale (if given):** "integration workflow then"
+
 ### Task 1: Codex Plugin and Named-Agent Surfaces
 **Review status:** APPROVED
 
@@ -93,3 +97,15 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 - [x] **Step 2: Shorten the entire skill surface.** Rewrote skill descriptions to trigger-only metadata instead of mini-specs, following `skill-creator` and `writing-skills` guidance.
 - [x] **Step 3: Add a structural guard.** Extended `tests/structural-invariants.sh` so every `skills/*/SKILL.md` frontmatter must parse and every description must stay at or below 500 characters.
 - [x] **Step 4: Verify the retrofitted surface.** Re-ran the Codex-focused frontmatter check, generated-agent tests, sync check, and full structural invariants suite after the metadata cleanup.
+
+### Task 3: Pre-Merge Integration and Merge Readiness
+
+**Files affected:** `PLAN.md`, `RESULTS.md`, structural tests or helper checks chosen as drift guards, and any docs or plugin surfaces flagged by the integration pass
+
+**Input:** Approved Codex compatibility implementation (`3e9f1c8`) plus the approved execution-stage record in `RESULTS.md`
+
+**Output:** Confirmed drift-test coverage for the Codex support surface, any codebase-fit or doc-audit fixes required for integration, finalized Stage 2 handoff docs, and a clean handoff to `merge-workflow`
+
+- [ ] **Step 1: Confirm drift-test coverage.** Propose the key repo-level invariants that should be protected for this Codex support work, get user confirmation, and record that decision before any integration edits.
+- [ ] **Step 2: Run the integration review / fix loop.** Review the committed Codex compatibility surface for codebase fit and project-doc consistency, make any required fixes, and rerun the selected drift guards after each accepted change.
+- [ ] **Step 3: Finalize handoff for merge.** Mature the integration record in `RESULTS.md`, decide `PLAN.md` disposition, and hand off a clean branch to `merge-workflow`.

@@ -43,3 +43,17 @@
   - `bash tests/structural-invariants.sh`
 - Known warnings remain unchanged: unresolved upstream refs in `writing-skills` for `superRA:systematic-debugging` and `superRA:test-driven-development`.
 - Review pass on 2026-04-17 over `b0cb9dc..3e9f1c8` found no blocking issues. Task status promoted to `APPROVED`.
+
+## Task 3: Pre-Merge Integration and Merge Readiness
+
+**Status:** In Progress
+
+### Key Findings
+
+- Integration-workflow started on 2026-04-17 after the execution-stage review approved the implementation work.
+- The first integration stop point is still open: the branch needs user-confirmed drift-test coverage for the Codex support surface before Stage 1 can proceed.
+
+### Notes
+
+- This integration pass is repo-level rather than empirical-analysis-level, so the likely drift guards are structural/plugin invariants rather than numerical output tests.
+- No integration reviewer verdict has been recorded yet.
