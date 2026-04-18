@@ -8,20 +8,17 @@
 
 ---
 
-## Task 1: Reframe `## Mid-Session Scope Changes` → `## Scope Changes and Re-entry` in `handoff-doc/SKILL.md`
+## Task 1: Author `## Changing Plans` in `planning-workflow/SKILL.md`; reduce handoff-doc to a pointer
 
-**Status:** APPROVED (Bundle A, 2026-04-17)
+**Status:** IMPLEMENTED (2026-04-18)
 
 ### Key Findings
-- `## Mid-Session Scope Changes` renamed to `## Scope Changes and Re-entry` in `skills/handoff-doc/SKILL.md`.
-- Preamble rewritten to frame the protocol as covering both (a) mid-execution researcher pings and (b) post-integration / post-merge scope additions (PR-review requests, adjacent features, follow-on ideas).
-- "Material" bullets extended with explicit post-integration case.
-- Protocol Step 3 gains "prefer modifying existing tasks over appending" bullet.
-- Protocol Step 4 gains orchestrator-judgment language: orchestrator declares which boxes and why; per-task status clearing rules for fully-re-implemented / untouched / minor-edited tasks.
-- Protocol Step 6 gains full-drift-suite-always rule and doc-writer/doc-reviewer scope rule.
-- New DAG cascade paragraph added after protocol: transitive closure clearing, exemption mechanism via §Decisions blockquote, cross-reference to `plan-anatomy.md §Field-by-Field`.
-- Banned shortcuts extended: one new bullet forbidding subset drift-test runs on re-entry.
-- Validation: `grep "Mid-Session Scope Changes" skills/handoff-doc/` → zero hits; all cross-references (§User Decisions Log, §PLAN.md Is the Task Tracker, `plan-anatomy.md`) resolve; four-principles framing preserved.
+- New `## Changing Plans` section authored in `skills/planning-workflow/SKILL.md` between "Living Plan and Results Docs" and "No Placeholders". Content moved verbatim from handoff-doc: two-trigger framing (mid-execution ping + post-integration scope addition), material / not-material bullet lists, 6-step protocol (confirm intent → log decision → edit PLAN.md inline → update `## Workflow Status` → commit atomically → resume), DAG cascade paragraph, and four banned-shortcuts bullets.
+- Step 3's "Prefer modifying existing task blocks over appending" rule preserved verbatim as the first bullet of Step 3 — the load-bearing rule called out in the dispatch.
+- Cross-references retargeted: inside planning-workflow the protocol now points at `handoff-doc/references/plan-anatomy.md` (was `references/plan-anatomy.md` when inside handoff-doc) and at `handoff-doc` §User Decisions Log.
+- `handoff-doc/SKILL.md §Scope Changes and Re-entry` body deleted; the heading removed. A one-sentence pointer appended under `§PLAN.md Is the Task Tracker`: "When the plan itself changes — in-session scope change or cross-session re-entry — re-invoke `planning-workflow §Changing Plans` and follow its protocol."
+- Living Plan paragraph's cross-ref retargeted from `handoff-doc §Scope Changes and Re-entry` → `§Changing Plans below` (local pointer since the section now lives in planning-workflow).
+- Validation: `grep -n "## Changing Plans" skills/planning-workflow/SKILL.md` returns the new section; content parity verified for all 6 protocol steps + DAG cascade + banned shortcuts. Remaining `Scope Changes and Re-entry` hits across skills/ are the pre-existing pointers in execution-workflow, integration-workflow, plan-anatomy.md, main-agent.md, and using-superRA/SKILL.md — retargeted in Task 3.
 
 ---
 

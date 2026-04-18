@@ -102,18 +102,18 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ### Task 1: Author `## Changing Plans` in `planning-workflow/SKILL.md`; reduce handoff-doc to a pointer
 **Depends on:** *(none)*
-**Review status:** *(cleared at re-entry 2026-04-17 — scope rewritten: change-plan protocol moves from handoff-doc to planning-workflow under the name `§Changing Plans`)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(cleared at re-entry)*
 
 **Script:** `skills/planning-workflow/SKILL.md` (edit — new section), `skills/handoff-doc/SKILL.md` (edit — remove body, leave pointer)
 **Input:** Current `handoff-doc/SKILL.md §Scope Changes and Re-entry` carries the 6-step protocol, DAG cascade paragraph, and banned-shortcuts bullets authored in prior iterations. Procedure belongs in planning-workflow (which owns how to create/update plans); handoff-doc owns doc *structure*, not plan-update choreography.
 **Output:** New `planning-workflow §Changing Plans` section owning the full procedure; `handoff-doc §Scope Changes and Re-entry` reduced to a one-line pointer (or removed with pointer placed under `§PLAN.md Is the Task Tracker`).
 
-- [ ] **Step 1: Author `## Changing Plans` in `planning-workflow/SKILL.md`.** Add as a top-level section after the existing planning sequence. One-paragraph framing opens with the two triggers (in-session scope change + cross-session re-entry) and the single procedure that covers both. Body = 6-step protocol moved verbatim from handoff-doc (confirm intent → log decision → edit PLAN.md inline → update `## Workflow Status` → commit atomically → resume) + the DAG cascade paragraph + banned-shortcuts bullets (full-drift-suite-always, prefer-inline-edit-over-append). Cross-reference `handoff-doc §User Decisions Log` for the log format (doc mechanics stay there).
+- [x] **Step 1: Author `## Changing Plans` in `planning-workflow/SKILL.md`.** Added as top-level section after "Living Plan and Results Docs" and before "No Placeholders". One-paragraph framing names both triggers (in-session scope change + cross-session re-entry). Body carries the 6-step protocol, DAG cascade paragraph, and banned-shortcuts bullets verbatim from handoff-doc, with internal pointers retargeted from `references/plan-anatomy.md` (inside handoff-doc) to `handoff-doc/references/plan-anatomy.md` and §User Decisions Log references to `handoff-doc` §User Decisions Log. Living Plan paragraph's cross-ref retargeted to §Changing Plans below.
 
-- [ ] **Step 2: Reduce `handoff-doc/SKILL.md §Scope Changes and Re-entry` to a pointer.** Delete the section body. Under `§PLAN.md Is the Task Tracker`, append one sentence: "When the plan itself changes — in-session scope change or cross-session re-entry — re-invoke `planning-workflow §Changing Plans` and follow its protocol." Remove the now-empty `§Scope Changes and Re-entry` heading.
+- [x] **Step 2: Reduced `handoff-doc/SKILL.md §Scope Changes and Re-entry` to a pointer.** Section body deleted, the heading removed. Under `§PLAN.md Is the Task Tracker`, appended one sentence: "When the plan itself changes — in-session scope change or cross-session re-entry — re-invoke `planning-workflow §Changing Plans` and follow its protocol."
 
-- [ ] **Step 3: Validate** — `grep -rn "Scope Changes and Re-entry" skills/` returns only the pointer (or zero if rephrased with new name). `grep -n "## Changing Plans" skills/planning-workflow/SKILL.md` returns the new section. Content parity: every rule in the old `§Scope Changes and Re-entry` body appears in `planning-workflow §Changing Plans`. Voice matches existing planning-workflow sections.
+- [x] **Step 3: Validate** — `grep -rn "Scope Changes and Re-entry" skills/` returns only the pre-existing pointers in execution-workflow, integration-workflow, plan-anatomy.md, main-agent.md, and using-superRA/SKILL.md (all retargeted in Task 3). `grep -n "## Changing Plans" skills/planning-workflow/SKILL.md` returns the new section. Content parity: all 6 protocol steps + DAG cascade + banned shortcuts present verbatim in planning-workflow. Voice matches existing planning-workflow sections.
 
 ---
 
