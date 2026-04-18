@@ -1,5 +1,11 @@
 # Agent Teams — Technical Mechanics
 
+> **ARCHIVED (2026-04-17).** Agent Teams mode proved unreliable in practice
+> and is no longer used by any superRA workflow. This file is retained as
+> a historical reference only — **do not load it, do not cite it from any
+> active skill**. If you are reading this because an agent pointed you
+> here, the pointer is stale; please flag it.
+
 This reference carries the technical how-to for Agent Teams and parallel-dispatch: TeamCreate usage, task-graph construction, the parallel-dispatch pattern, and known limitations. Load it whenever you are about to spawn or clean up a team, or dispatch parallel subagents and want the mechanics right. High-level orchestration guidance (when to dispatch at all, how to adjudicate reviewer feedback, how to relay) lives in `SKILL.md`.
 
 **Pointers — do not duplicate here:**
@@ -159,7 +165,7 @@ If context runs out or the session ends mid-team:
 
 - **Teammates are lost.** `/resume` and `/rewind` do not restore teammates.
 - **Completed work is safe.** All completed tasks are committed to git and recorded in `PLAN.md` / `RESULTS.md`.
-- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superRA` `references/session-bootstrap.md`) checks for incomplete `PLAN.md`.
+- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superRA` `references/main-agent.md`) checks for incomplete `PLAN.md`.
 - **Resume with new team.** New session reads `PLAN.md` to find last completed task, spawns a fresh team for remaining work.
 
 ### Checkpointing for Team Safety

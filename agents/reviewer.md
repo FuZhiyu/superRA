@@ -36,8 +36,6 @@ The dispatch prompt carries only the Stage, a task pointer, a git SHA range, and
 
 ## Before You Start
 
-**Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
-
 1. **Load the skills and references the manifest lists for your Stage.** Consult `superRA:using-superRA` §Skill-Load Manifest, find the row for your `Stage:`, and load each required skill and stage-scoped reference it specifies before opening any code. For the `implementation` row in data analysis, that means loading `superRA:econ-data-analysis/SKILL.md` **only** — its main body carries everything you need: §Three Concurrent Disciplines (teaching content + inline `[BLOCKING]` / `[ADVISORY]` checklist — same content the implementer walked as self-check, now your verification criteria), §Pitfalls (operation-conditional correctness standards for merges, time-series, aggregations, filters, variable construction, missing data — walk the subsections matching operations performed in this task), and §Common Rationalizations. You do NOT load `references/notebook-format.md` — that carries implementer-facing writing/rendering content the reviewer does not need. If the dispatcher's `Additionally:` line names a specific §Pitfalls focus (e.g., "focus on the lag/lead review" or "verify the merge semantics"), jump to that subsection. Do not load every reference at every dispatch — only the ones the manifest names for your Stage.
 2. **Load any additional skill the dispatch's `Additionally:` line names** (rare — overrides only; the manifest is the default).
 3. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3") and a git SHA range, plus a one-line "what changed since last dispatch" delta. Read the task block, the implementer's step notes, any existing review-notes blockquote (including `→ implemented:` markers from the implementer and `→ orchestrator:` adjudication notes), and the corresponding section of `RESULTS.md` directly from the file. Do not work from a paraphrased summary.
@@ -125,6 +123,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 
 - Any step, step code, or task objective — even if you believe it is wrong. Raise the issue as a review item in your blockquote and let the orchestrator decide whether to rewrite the step.
 - Any other task's content.
+- **The PLAN.md header**, including the `## Workflow Status` checklist and the `## Decisions` log. These are orchestrator-owned (see `superRA:handoff-doc` references/plan-anatomy.md §Header ownership). If your review surfaces a project-level concern that belongs in those sections, raise it in your status report; do not edit the header yourself.
 - **Rewrite** the prose of an implementer's `→ implemented: ...` annotation or an orchestrator's `→ orchestrator: ...` annotation. You read them. You are allowed to **delete an entire item** (including its annotations) when the fix is verified on re-review — that is a delete, not a rewrite.
 
 ### How You Write a Review
@@ -136,6 +135,8 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
 4. Set `**Review status:**` per the verdict protocol in §Verdict: `APPROVED` (no `[BLOCKING]` items) or `REVISE` (at least one `[BLOCKING]` item).
 5. Commit `PLAN.md` only: `git commit -m "review: Task N <verdict>"`.
+
+**Shared-repo commit discipline.** Follow `superRA:using-superRA` §Shared-Repo Commit Discipline before staging `PLAN.md` for your `review:` commit — stage by exact path, never `git add -A/./-u`, diff-cached before commit.
 
 **On re-review (blockquote exists with annotations):**
 
@@ -192,14 +193,3 @@ End with:
 
 ---
 ACTION REQUIRED (REVISE): Fix the above issues, then re-dispatch this reviewer. Iterate until APPROVE.
-
-## If Running as Agent Team Teammate
-
-If you are part of an Agent Team (not a standalone subagent):
-- Use the shared task list to claim your review tasks when unblocked
-- When you assess REVISE: message your counterpart (specified in dispatch)
-  directly with your specific feedback items — file, line, what's wrong, severity
-- When re-reviewing after fixes: verify all previous issues are addressed
-  before marking APPROVE
-- Message the lead for escalation decisions that need user input
-- Mark your tasks as completed when the review passes
