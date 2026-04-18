@@ -19,20 +19,20 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 **RA framing.** The agent is a Research Assistant implementing the researcher's methodology, not judging it. Challenges to methodology are escalated to the human partner, never decided unilaterally.
 
-## Shared-Repo Commit Discipline
+## Commit Hygiene
 
-Multiple agents (main/orchestrator plus subagents, or parallel subagents in the same worktree) may be writing in the same repo. Any agent that stages a commit — including the main agent dispatching other agents — MUST respect this discipline.
+Any agent that stages a commit — main agent, orchestrator, or subagent — stages **only the files it modified this turn**. Never commit sweeps.
 
-Other agents' uncommitted edits may land in your `git status` output. **Only commit the files you modified this turn.** Never commit sweeps.
+Untracked files that are not your work routinely show up in `git status`: editor scratch files, `__pycache__`, `.DS_Store`, harness artifacts (`.claude/settings.local.json` and similar), stale local state from prior sessions. If you `git add -A` / `git add .` / `git add -u`, those land in your commit silently.
 
 Before staging:
 
 1. Run `git status` and list every modified/new file. For each, decide: did I touch this file (directly via Write/Edit) in this turn?
 2. If yes → stage it by exact path: `git add path/to/file`.
-3. If no → leave it untouched. Do NOT `git add -A`, `git add .`, or `git add -u`. Those stage other agents' in-flight work and produce cross-agent commit contamination that is hard to unwind.
+3. If no → leave it untouched. Do NOT `git add -A`, `git add .`, or `git add -u`.
 4. Before `git commit`, run `git diff --cached` and confirm only your edits are staged. If you see unexpected content, unstage it with `git restore --staged path/to/file`.
 
-If you see unfamiliar uncommitted changes and cannot tell whether they are another agent's in-flight work or stale local state, stop and ask (the orchestrator if you are a subagent; the user if you are the main agent) — do not unilaterally discard or commit them.
+If you see unfamiliar uncommitted changes and cannot tell whether they are legitimate pending work (from the main agent between dispatches, or the user editing manually) or stale junk, stop and ask the orchestrator (if you are a subagent) or the user (if you are the main agent) — do not unilaterally discard or commit them.
 
 ## Handoff Docs
 
