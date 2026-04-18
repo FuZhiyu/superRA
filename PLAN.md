@@ -54,7 +54,7 @@ Walked at planning time (2026-04-17).
 
 ## Task 1: Add worktree lifecycle fallback + §Concurrent Writers subsection
 
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Files affected:**
 - `skills/agent-orchestration/references/worktree-harness-fallback.md` (NEW)
@@ -66,7 +66,7 @@ Walked at planning time (2026-04-17).
 
 **Dependencies:** None.
 
-- [ ] **Step 1: Create `skills/agent-orchestration/references/worktree-harness-fallback.md`** (~30 lines).
+- [x] **Step 1: Create `skills/agent-orchestration/references/worktree-harness-fallback.md`** (~30 lines).
 
   Structure:
   - Short opener: "This reference is loaded by the orchestrator when it needs to create, enter, or remove a worktree and no harness-provided worktree tool is available. Worktree lifecycle is an orchestration concern — see SKILL.md §Concurrent Writers Require Worktree Isolation for when worktrees are required."
@@ -75,7 +75,7 @@ Walked at planning time (2026-04-17).
   - §Placement: default `./.worktrees/<branch-name>` at repo root; defer to project-level `CLAUDE.md` / `AGENTS.md` if it names a directory; add the chosen directory to `.gitignore` before first use if not already ignored.
   - §Gotchas: verify `git status` clean before `worktree remove`; `remove` refuses dirty worktrees unless `--force` is passed — never `--force` without checking.
 
-- [ ] **Step 2: Extend `skills/agent-orchestration/SKILL.md`** in three places.
+- [x] **Step 2: Extend `skills/agent-orchestration/SKILL.md`** in three places.
 
   **(a) Add new subsection after §Workload Balancing (before §Dispatch Templates):**
 
@@ -144,16 +144,7 @@ Walked at planning time (2026-04-17).
   > from PLAN.md alone, because the agent's spawn cwd would otherwise
   > default to the main worktree and silently edit the wrong copy.
 
-- [ ] **Step 3: Verify and commit.**
-  - Read the written files; confirm section anchors referenced elsewhere (e.g., "§Concurrent Writers Require Worktree Isolation", "§Dispatch Templates") exist and are spelled as written.
-  - Grep `skills/` for any stale references to the new content that were accidentally introduced.
-  - Commit:
-    ```bash
-    git add skills/agent-orchestration/SKILL.md \
-      skills/agent-orchestration/references/worktree-harness-fallback.md \
-      PLAN.md RESULTS.md
-    git commit -m "agent-orchestration: add §Concurrent Writers + worktree fallback reference"
-    ```
+- [x] **Step 3: Verify and commit.** Section anchor listing confirmed: new §Concurrent Writers Require Worktree Isolation sits between §Workload Balancing and §Dispatch Templates with the expected subsections (Ownership split, Branch naming, Plain `git merge`, Worktree lifecycle, Data seeding, Dispatch, Not persisted in PLAN.md).
 
 ---
 
