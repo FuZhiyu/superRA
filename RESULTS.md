@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each task with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (all five tasks APPROVED; Docs finalized pending doc-reviewer pass)
-**Status:** All five tasks `**Review status:** APPROVED` and `**Integration status:** APPROVED`. Execution complete; drift tests green; refactored; docs finalized pending doc-reviewer APPROVE; merge pending.
+**Last updated:** 2026-04-18 (all five tasks APPROVED; integration re-review APPROVED after the iterative-framing additions)
+**Status:** All five tasks `**Review status:** APPROVED` and `**Integration status:** APPROVED`. Execution complete; drift tests green (`bash tests/structural-invariants.sh` → 0 FAIL); refactored; Stage 2 `RESULTS.md` maturation in progress; merge pending.
 
 ---
 
