@@ -62,25 +62,11 @@ file reads. If an agent's projected context exceeds ~150k, split the work
 across two agents even when the individual items are small — context
 thrash degrades output quality more than the cost of a second spawn.
 
-**Exploit the prompt-cache window by bundling.** The Anthropic prompt
-cache has a ~5-minute TTL. When using the `Agent` tool with
-`run_in_background: true`, the orchestrator can send a follow-on task to
-an agent that is still running or recently completed via `SendMessage` —
-this is a standard harness feature (not Teams-specific) available whenever
-a background agent is live. Use it to deliver a tightly-related follow-on
-task within the cache window rather than spawning a new agent: cached
-context (skill loads, file reads, domain references) is effectively free.
-Alternatively, bundle logically related tasks into a single dispatch so the
-agent amortizes its skill-load cost across them in one turn.
-Spawn fresh when: the prior agent has exited, its context has accumulated
-stale or irrelevant material, the new task needs a different skill load, or
-more than ~5 minutes have elapsed.
 
 **Parallelize independent tasks.** Tasks whose `Depends on:` lines (see
 `planning-workflow` §Task Dependencies) are all satisfied and that share
-no mutable state should dispatch in a single parallel Agent-tool batch,
-one agent per task (subject to the bundling rule above). Serializing
-mutually-independent tasks is waste.
+no mutable state are encouraged to be dispatched in parallel to separate agents.
+
 
 ---
 
@@ -131,8 +117,6 @@ The agent reads `PLAN.md`, Data Inventory, Conventions, and prior results from `
 **Banned in dispatch prompts:**
 
 - `Work from:` — the worker's cwd is the default; stating it is noise.
-- `Counterpart:` — no longer applicable; remove from any legacy dispatch prompts.
-- Free-form `Note:` fields — fold task-specific notes into the `Additionally:` tail so all task-specific steering flows through one channel.
 - Re-statement of `PLAN.md` content, standard protocol, or the manifest's skill/reference loads — the agent reads those itself.
 
 ## Handling Reviewer Feedback (Orchestrator Discipline)
