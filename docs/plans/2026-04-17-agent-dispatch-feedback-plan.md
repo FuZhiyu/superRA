@@ -73,6 +73,10 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 > **Question asked:** Preserve main's §Agent reuse vs fresh dispatch?
 > **Rationale:** User-directed drop; keeps agent-orchestration lean and focused on Workload Balancing + Dispatch Templates.
 
+> **User decision (2026-04-17, post-merge):** Before landing on main, run a second semantic-merge pass integrating local main's 4 unpushed commits (C-01 planning-workflow template dedup, C-16 using-superRA tool-preference consolidation, D1 drop writing-skills, Stage 2 integration review fixes) into `feedback/agent-dispatch-fixes`. Only then fast-forward local main and push.
+> **Question asked:** Merge target — local main (4 commits ahead), origin/main direct, or via PR?
+> **Rationale:** Those 4 commits touch areas our feedback round also edits (using-superRA, planning-workflow template, writing-skills). A second tier-3 semantic-merge pass protects against silent overlap, matching the discipline we just used for origin/main.
+
 ---
 
 ### Task 1: Archive Agent Teams mode across the plugin

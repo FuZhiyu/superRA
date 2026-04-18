@@ -15,7 +15,7 @@ When you are modifying superRA itself (skills, hooks, agents, docs), you are edi
 
 Skills are not prose. If you modify skill content:
 
-- Use `superRA:writing-skills` to develop and test changes.
+- Edit skills directly, test on a real session in Claude Code, and iterate based on observed behavior. For upstream skill-writing guidance, see the [Superpowers project docs](https://github.com/obra/superpowers).
 - Run the skill through a realistic session to confirm it triggers when it should and doesn't when it shouldn't.
 - Be cautious editing carefully-tuned content (Red Flags tables, rationalization lists, RA-framing language, severity protocols). Changes here should be driven by observed failures, not stylistic preference.
 
