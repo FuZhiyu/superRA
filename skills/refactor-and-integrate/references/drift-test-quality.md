@@ -60,6 +60,21 @@ Set tolerances based on **economic reasoning**, not arbitrary thresholds.
 - [ ] Tests reference stable output locations
 - [ ] Floating-point comparisons use appropriate tolerance functions (`pytest.approx`, `isapprox`), not exact equality
 
+## Red-Green Verification
+
+A drift test that passes once is not verified — it might always pass, regardless of the condition it claims to protect. Verify every drift or regression test with the red-green cycle before committing it:
+
+```
+1. Write the test against the current (correct) output.
+2. Run it — MUST PASS (green).
+3. Revert the fix / perturb the input the test protects.
+4. Run it — MUST FAIL (red).
+5. Restore the fix / input.
+6. Run it — MUST PASS again (green).
+```
+
+A test that does not turn red on step 4 is not actually guarding the result — it is a passing no-op. "I've written a regression test" without the red-green cycle is not evidence the test works.
+
 ## Test Format
 
 Follow the project's testing conventions:

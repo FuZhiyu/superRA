@@ -22,46 +22,35 @@ Adapts the general-purpose `semantic-merge-integration` skill for economics rese
 
 ## Invocation Pattern
 
-semantic-merge can be invoked in two distinct ways — the mechanics are the same, but the caller and the return contract differ:
+semantic-merge has two modes. Tier classification and conflict resolution are identical across modes. **Post-merge verification differs** — standalone owns it all; delegated trims the duplicate checks that the caller will re-run.
 
-- **Standalone (ad-hoc merge).** The user asks you to merge, rebase, or cherry-pick, or the `merge-guard` PreToolUse hook fires when you attempt a bare git merge command. Load this skill directly, run the process below, and report back to the user. You own the outcome.
-- **Delegated from `merge-workflow` Step 1.** The orchestrator running `merge-workflow` loads this skill via an explicit `Skill superRA:semantic-merge` invocation and hands control to it for the duration of the base-branch-into-analysis-branch update. Run the full process below, then return control to `merge-workflow` for post-merge drift tests, a fresh integration review, and the local merge or PR push. `merge-workflow` is not a passive wrapper — it owns the choreography on either side of your call.
+- **Standalone (ad-hoc merge).** The user asks you to merge, rebase, or cherry-pick, or the `merge-guard` PreToolUse hook fires on a bare git merge command. Load this skill directly, run the process below (including all post-merge verification), and report back to the user. You own the outcome.
+- **Delegated from `merge-workflow` Step 1.** The orchestrator running `merge-workflow` loads this skill via an explicit `Skill superRA:semantic-merge` invocation with task: `"merge <base> into <analysis> — delegated mode: skip post-merge drift tests and pipeline run; the caller will verify"`. Run the tier-classification + conflict-resolution parts, then return the tier classification + a one-line incoming-impact verdict (see §What to Report — delegated). The caller (`merge-workflow`) runs post-merge drift tests and integration review on the merged state in its Step 2. Do NOT run drift tests, pipeline, or stale-reference checks yourself in delegated mode — those are the caller's.
 
-In both cases the process below is identical. The difference is only who dispatches you and what happens after you return.
+### Mode-aware verification
+
+| Step | Standalone | Delegated |
+|---|---|---|
+| Tier classification | yes | yes |
+| Conflict resolution (incl. Tier 2/3 propose+review) | yes | yes |
+| Drift tests on merged state | yes | **skip** (caller runs in merge-workflow Step 2a) |
+| Pipeline run on merged state | yes | **skip** (caller runs in merge-workflow Step 4) |
+| Stale-reference check on merged state | yes | **skip** (covered by caller's integration review in Step 2b) |
+| Return tier classification + incoming-impact verdict | n/a | yes (required for merge-workflow's skip logic per Task 11) |
+
+The mechanics of tier classification and conflict resolution below are identical across modes; only the post-merge verification block (Tier 1 step 2-4; Tier 2 step 5; Tier 3 steps 8-9) is mode-gated. Each gate below is annotated `[standalone-only]`.
 
 ## The Process
 
-```dot
-digraph semantic_merge {
-    rankdir=TB;
-
-    "Ground in repo state" [shape=box];
-    "Run git merge --no-commit" [shape=box];
-    "Conflicts?" [shape=diamond];
-    "Analysis files touched?" [shape=diamond];
-    "Run drift tests" [shape=box];
-    "Drift tests pass?" [shape=diamond];
-    "Classify conflicting files" [shape=box];
-    "Research files in conflict?" [shape=diamond];
-
-    "Tier 1: Clean" [shape=box style=filled fillcolor=lightgreen];
-    "Tier 2: Syntactic" [shape=box style=filled fillcolor=lightyellow];
-    "Tier 3: Semantic" [shape=box style=filled fillcolor=lightsalmon];
-
-    "Ground in repo state" -> "Run git merge --no-commit";
-    "Run git merge --no-commit" -> "Conflicts?";
-    "Conflicts?" -> "Analysis files touched?" [label="no"];
-    "Analysis files touched?" -> "Tier 1: Clean" [label="no"];
-    "Analysis files touched?" -> "Run drift tests" [label="yes"];
-    "Run drift tests" -> "Drift tests pass?";
-    "Drift tests pass?" -> "Tier 1: Clean" [label="pass"];
-    "Drift tests pass?" -> "Tier 3: Semantic" [label="fail"];
-    "Conflicts?" -> "Classify conflicting files" [label="yes"];
-    "Classify conflicting files" -> "Research files in conflict?";
-    "Research files in conflict?" -> "Tier 2: Syntactic" [label="no — config/docs/infra only"];
-    "Research files in conflict?" -> "Tier 3: Semantic" [label="yes"];
-}
-```
+1. **Ground in repo state.**
+2. **Run `git merge --no-commit`** and classify:
+   - **No conflicts AND no analysis files touched** → **Tier 1** (clean).
+   - **No conflicts AND analysis files touched** → run drift tests:
+     - Pass → **Tier 1** (clean).
+     - Fail → **Tier 3** (semantic).
+   - **Conflicts exist** → classify each conflicting file:
+     - Config / docs / infra only → **Tier 2** (syntactic).
+     - Any research file in conflict → **Tier 3** (semantic).
 
 ### Step 1: Ground in Repo State
 
@@ -127,16 +116,18 @@ No subagents needed. Execute directly.
    ```bash
    git merge <incoming-branch>  # or git commit if --no-commit is staged
    ```
-2. Run drift tests (if they exist):
+2. `[standalone-only]` Run drift tests (if they exist):
    ```bash
    # Run existing test suite
    ```
-3. Run pipeline (if it exists):
+3. `[standalone-only]` Run pipeline (if it exists):
    ```bash
    bash run_all.sh  # or equivalent
    ```
-4. If everything passes: done.
-5. If drift tests fail: abort and escalate to Tier 3.
+4. `[standalone-only]` If everything passes: done.
+5. `[standalone-only]` If drift tests fail: abort and escalate to Tier 3.
+
+**Delegated mode:** after step 1 completes the merge, skip steps 2-5 and return tier + incoming-impact per §What to Report — delegated mode. The caller (`merge-workflow`) runs drift tests in its Step 2a and may skip its Step 2b integration review if the incoming-impact verdict shows no analysis-path changes.
 
 ### Tier 2: Syntactic Conflicts
 
@@ -145,36 +136,32 @@ Conflicts exist but none touch research-relevant files.
 1. **Dispatch merge-proposer:**
    ```
    Agent(subagent_type: "superRA:implementer"):
-     Stage: merge proposer
-     Skills: superRA:refactor-and-integrate
-     Domain reference: merge-quality.md
-     Merge context: branches, merge base, tier
-     Incoming changes: <commit messages and diffs since merge base>
-     Conflicting files: [list with classification]
-     Current branch purpose: [one line]
-     Additionally: Follow the standard stage-relevant workflow and load
-       relevant skills and documents to proceed. Additionally,
-       <optional steering>.
+     Stage: merge
+     Task: propose Tier 2 merge — <base>..<incoming-branch>
+
+     Follow the standard stage-relevant workflow and load
+       relevant skills and documents to proceed. Additionally, Tier 2 —
+       syntactic conflicts only (config/docs/infra); execute the two-commit
+       merge (Commit 1 mechanical, Commit 2 integration). <optional steering>.
    ```
 
-2. **Proposer executes** the two-commit merge per the merge-quality.md domain reference (Commit 1 mechanical, Commit 2 integration).
+2. **Proposer executes** the two-commit merge per the `merge-quality.md` checklist (Commit 1 mechanical, Commit 2 integration).
 
 3. **Dispatch merge-reviewer:**
    ```
    Agent(subagent_type: "superRA:reviewer"):
      Stage: merge
-     Skills: superRA:refactor-and-integrate
-     Domain reference: merge-quality.md
-     Merge context: branches, merge base, tier
-     Proposer's report: [integration map, decisions, rationale]
-     Additionally: Follow the standard stage-relevant workflow and load
+     Task: review the Tier 2 merge proposal
+     Git range: <BASE_SHA>..<HEAD_SHA>
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally,
        <optional steering>.
    ```
 
 4. **If REVISE:** adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback. Forward accepted issues to the merge-proposer; push back or override others with documented reasoning. Iterate until APPROVE.
 
-5. **Run drift tests.** If pass: done. If fail: escalate to user (Tier 3 handling).
+5. `[standalone-only]` **Run drift tests.** If pass: done. If fail: escalate to user (Tier 3 handling). **Delegated:** skip — the caller runs drift tests in `merge-workflow` Step 2a. Return tier + incoming-impact per §What to Report — delegated mode.
 
 ### Tier 3: Semantic / Research Conflicts
 
@@ -193,17 +180,16 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 3. **Dispatch merge-proposer** with Tier 3 context:
    ```
    Agent(subagent_type: "superRA:implementer"):
-     Stage: merge proposer (Tier 3)
-     Skills: superRA:refactor-and-integrate
-     Domain reference: merge-quality.md
-     [Tier 2 fields, plus:]
-     Changes classified by research role: [list]
-     Drift test results: [if available]
-     Integration map with research-meaningful decisions flagged for user
-     Additionally: Follow the standard stage-relevant workflow and load
+     Stage: merge
+     Task: propose Tier 3 merge — <base>..<incoming-branch>
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally, this is
        a Tier 3 semantic merge — research-relevant files are in conflict
-       and integration decisions require user-facing flags.
+       and integration decisions require user-facing flags. Produce an
+       integration map classifying changes by research role (analysis /
+       data processing / methodology / infrastructure / docs / generated)
+       and flag research-meaningful decisions for orchestrator escalation.
    ```
 
 4. **Present integration map to user.** The proposer's report identifies conflicts and proposes resolutions. Present research-meaningful decisions:
@@ -239,13 +225,15 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 
 7. **If REVISE:** Proposer fixes, reviewer re-reviews.
 
-8. **Run drift tests.** If drift tests fail after integration:
+8. `[standalone-only]` **Run drift tests.** If drift tests fail after integration:
    - Present before/after values to user
    - Assess economic significance (same framework as integration-workflow)
    - **Meaningful drift:** STOP. User decides whether to accept or revise.
    - **Minor variation:** Update test expectations with documented reason.
+   
+   **Delegated:** skip — the caller runs drift tests in `merge-workflow` Step 2a, which handles meaningful-vs-minor drift per the same framework. Return tier + incoming-impact per §What to Report — delegated mode.
 
-9. **Verify pipeline** runs end-to-end on the merged result.
+9. `[standalone-only]` **Verify pipeline** runs end-to-end on the merged result. **Delegated:** skip — the caller will verify the pipeline post-merge in its Step 4 (or decide not to per that step's logic).
 
 ## Working Principles
 
@@ -255,11 +243,11 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 - **Regenerate over edit.** For generated files (tables, figures, compiled outputs), regenerate from merged source rather than hand-editing.
 - **RA framing.** You propose integration, present options, and implement the researcher's decisions. You never judge whether the methodology is correct.
 - **Data discipline.** If incoming changes affect data processing, verify describe-analyze-validate artifacts (row-count logs, distribution diagnostics, validation checks) are preserved in the merged result.
-- **Drift tests are the safety net.** Always run them after merge. Never skip. Never silently update expectations for meaningful changes.
+- **Drift tests are the safety net.** In standalone mode, always run them after the merge; never skip; never silently update expectations for meaningful changes. In delegated mode, you do NOT run drift tests — `merge-workflow` Step 2a does, against the same discipline — and "skipping" here means handing the responsibility to the caller, not dropping it.
 
 ## When to Ask the User
 
-These are the Tier 3 escalations for semantic-merge and the only stop points in the skill — the rest of the merge proposal/review loop runs autonomously per CLAUDE.md workflow principle #4. Use `AskUserQuestion` (plain text if unavailable) at every stop below; when the conflict has a closed set of resolutions (`--ours`, `--theirs`, synthesize, regenerate, roll back), pass them as the question options. When the decision is genuinely open-ended (methodology rewrite, sample redefinition), frame the question as free-form prose but still route it through `AskUserQuestion` if available.
+These are the Tier 3 escalations for semantic-merge and the only stop points in the skill — the rest of the merge proposal/review loop runs autonomously per `superRA:using-superRA` §Universal Principles (principle #4). Use `AskUserQuestion` (plain text if unavailable) at every stop below; when the conflict has a closed set of resolutions (`--ours`, `--theirs`, synthesize, regenerate, roll back), pass them as the question options. When the decision is genuinely open-ended (methodology rewrite, sample redefinition), frame the question as free-form prose but still route it through `AskUserQuestion` if available.
 
 **Always ask:**
 - Variable definition conflicts (affects economic interpretation)
@@ -280,9 +268,11 @@ These are the Tier 3 escalations for semantic-merge and the only stop points in 
 - Bad: "Lines 42-58 conflict between HEAD and incoming"
 - Good: "Incoming changes redefine `excess_return` from arithmetic to log returns. Your branch uses this in regression Table 3."
 
-**Log every answer.** Each Tier 3 decision is a user decision — append it to the top-level `## Decisions` section of `PLAN.md` (if the branch still has one) using the `handoff-doc` §User Decisions Log format, and include the log entry in the integration commit that implements the resolution. If `PLAN.md` has already been disposed of, record the decision in the merge commit message instead — the commit message is the record of record once the doc is gone. The `ask-user-question-logger` hook will remind you after each `AskUserQuestion` call.
+**Log every answer** per `handoff-doc` §User Decisions Log; include the log entry in the integration commit that implements the resolution. If `PLAN.md` has already been disposed of, record the decision in the merge commit message instead — the commit message is the record of record once the doc is gone.
 
 ## What to Report
+
+### Standalone mode
 
 When the merge is complete, summarize:
 - **Tier classification** and rationale
@@ -293,20 +283,28 @@ When the merge is complete, summarize:
 - **Pipeline status:** Runs or fails
 - **Verification:** Stale references checked, data discipline preserved
 
-## Agent Types and Domain References
+### Delegated mode (called from `merge-workflow` Step 1)
 
-- **`superRA:implementer`** agent + `./references/merge-quality.md` — For merge proposals
-- **`superRA:reviewer`** agent + `./references/merge-quality.md` — For merge review
+The caller (`merge-workflow`) uses the return to decide whether to skip its Step 2b post-merge integration review (see `merge-workflow` §Step 2). Return EXACTLY these fields — the skip logic reads them by name:
 
-Stage-driven domain-skill loads are specified by `superRA:using-superRA` §Skill-Load Manifest (for data-analysis stages, the manifest names `superRA:econ-data-analysis`).
+- **Tier classification:** `Tier 1` / `Tier 2` / `Tier 3` and a one-sentence rationale.
+- **Incoming impact:** one line — did the incoming diff touch any file in the analysis paths? Name the paths that were changed. Example: `Incoming impact: touched config/pipeline.yaml and .github/workflows/ci.yml; no analysis-path changes.`
+- **Integration decisions + User decisions:** same content as standalone, but keep it to one short paragraph each — the caller will not re-present these to the user.
+- **Drift tests:** `not run (delegated; caller will run in Step 2a)`.
+- **Pipeline:** `not run (delegated; caller will run in Step 4 or skip per that step's logic)`.
+- **Verification:** `deferred to caller's Step 2b integration review`.
+
+The tier classification and the incoming-impact line are load-bearing: `merge-workflow` Step 2 reads them to decide Step 2b skip eligibility.
+
+## Agent Loads
+
+See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of truth for what every dispatched implementer / reviewer loads per Stage. This skill runs the `merge` row.
 
 ## Agent Teams Mode
 
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the propose+review cycle can be orchestrated as a team for Tier 2 and Tier 3 merges.
+When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the propose+review cycle can be orchestrated as a team for Tier 2 and Tier 3 merges. See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs.
 
-**Invoke `superRA:agent-orchestration` for the Semantic Merge Team recipe** — it has the team composition (2 teammates), task graph, iteration patterns, and lead responsibilities.
-
-The lead still handles tier classification, user-facing decisions (Tier 3 integration map), commits at each stage, and drift test verification.
+The lead still handles tier classification, user-facing decisions (Tier 3 integration map), commits at each stage, and (in standalone mode) drift-test verification. In delegated mode, drift-test verification is the caller's job — the lead returns tier + incoming-impact and hands control back.
 
 ## Red Flags
 
@@ -314,17 +312,17 @@ The lead still handles tier classification, user-facing decisions (Tier 3 integr
 - Run bare `git merge` without tier classification in a research context
 - Choose `--ours` or `--theirs` for research-relevant files without user input
 - Resolve analysis-code conflicts without presenting options to the user
-- Judge the researcher's methodology — you integrate, you don't evaluate (see the foundational RA framing in `CLAUDE.md`)
+- Judge the researcher's methodology — you integrate, you don't evaluate (see the foundational RA framing in `superRA:using-superRA` §Universal Principles)
 - Discard dirty worktree state without explicit approval
 
 **Always:**
 - Classify the merge into a tier before proceeding
 - Understand incoming intent before resolving conflicts
 - Use two-commit structure (mechanical + integration)
-- Run drift tests after every merge
+- In **standalone mode**, run drift tests and verify the pipeline on the merged result after every merge
+- In **delegated mode**, return tier classification + incoming-impact per §What to Report — delegated mode; the caller runs drift tests + pipeline
 - Present research-meaningful conflicts to the user with intent and consequences
 - Keep and re-validate data discipline artifacts through the merge (describe steps, row counts, validation)
-- Verify pipeline runs on the merged result
 
 **Drift-test integrity after the merge is governed by the cross-cutting rules in `refactor-and-integrate` reference `drift-test-quality.md` — failing tests after a merge must be adjudicated, not silently re-expected. Load the reference before running post-merge tests.**
 
@@ -338,7 +336,7 @@ The lead still handles tier classification, user-facing decisions (Tier 3 integr
 
 **Pairs with:**
 - **superRA:integration-workflow** — Runs before this skill in the integration phase (creates drift tests that this skill uses as safety net)
-- **superRA:agent-orchestration** — Semantic Merge Team recipe for Tier 2/3 merges
+- **superRA:agent-orchestration** — §Integration and `references/agent-teams.md` for team spawn mechanics on Tier 2/3 merges
 
 **References:**
 - **semantic-merge-integration** (global skill) — General-purpose merge philosophy that this skill adapts for research

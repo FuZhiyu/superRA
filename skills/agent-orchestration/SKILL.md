@@ -15,24 +15,12 @@ Team composition at each workflow stage is derived from the manifest — the lea
 
 ## Decision Framework
 
-```dot
-digraph decision {
-    "Multiple tasks?" [shape=diamond];
-    "Need iteration between agents?" [shape=diamond];
-    "Agent Teams available?" [shape=diamond];
-    "Parallel dispatch (Task tool)" [shape=box style=filled fillcolor=lightgreen];
-    "Agent Teams (persistent sessions)" [shape=box style=filled fillcolor=lightblue];
-    "Subagents with orchestrator relay" [shape=box style=filled fillcolor=lightyellow];
-    "Single subagent" [shape=box];
+Walk these questions in order:
 
-    "Multiple tasks?" -> "Need iteration between agents?" [label="yes"];
-    "Multiple tasks?" -> "Single subagent" [label="no"];
-    "Need iteration between agents?" -> "Agent Teams available?" [label="yes"];
-    "Need iteration between agents?" -> "Parallel dispatch (Task tool)" [label="no"];
-    "Agent Teams available?" -> "Agent Teams (persistent sessions)" [label="yes"];
-    "Agent Teams available?" -> "Subagents with orchestrator relay" [label="no"];
-}
-```
+1. **Single task?** → single subagent. Done.
+2. **Multiple tasks, no iteration between agents?** → parallel dispatch via the Task tool.
+3. **Multiple tasks, iteration needed, Agent Teams available?** → Agent Team (persistent sessions).
+4. **Multiple tasks, iteration needed, Teams unavailable?** → subagents with orchestrator relay.
 
 | Pattern | Use when | Mechanism |
 |---------|----------|-----------|
@@ -41,6 +29,32 @@ digraph decision {
 | **Orchestrator relay** | Need iteration but Teams unavailable | Subagents + orchestrator relays feedback |
 
 **Rule of thumb:** if two agents will exchange feedback more than once, use a team (or orchestrator relay). If each agent does its work and returns a result, use parallel dispatch. For the technical mechanics of either pattern — TeamCreate usage, task-graph construction, parallel-dispatch infrastructure (worktrees, data sync), known limitations — see `references/agent-teams.md`.
+
+## Agent reuse vs fresh dispatch
+
+Once you have decided to dispatch (single subagent, team, or parallel), a second question fires every time you are about to launch: **is there already a warm agent whose context fits this task?** Reusing a warm agent via `SendMessage` avoids paying the full context-reload tax a fresh dispatch incurs; spawning a fresh one keeps roles cleanly separated. Neither is the right default — the choice depends on the task.
+
+**Context-reload cost.** Every fresh dispatch pays to reload `superRA:using-superRA`, the active domain skill (where applicable), and the module-level `CLAUDE.md` / `AGENTS.md` / `README.md` walk-up for every directory the task touches. For a small follow-up that builds on what an agent just did, that cost is disproportionate: the same content is about to be loaded that was loaded ten minutes ago, and the fresh agent will re-derive context the warm one already has in session.
+
+**Criteria favoring reuse (send a message to the warm agent).** All of the following should hold:
+
+- Small scope — a follow-up that takes minutes, not a new multi-step task.
+- Same domain context — the warm agent was working on related material and its loaded skills still apply.
+- Non-overlapping file set with any other in-flight work — no concurrent-edit risk.
+- Sequential — the next task benefits from what the agent already knows (e.g., a second grep-sweep after a prior grep-sweep found partial hits; a tightening edit immediately after a larger refactor landed).
+
+**Criteria favoring fresh dispatch.** Any of the following is enough:
+
+- The task is large or meaningfully new scope.
+- The task lives in a different domain vertical (the warm agent's loaded domain skill and module docs are wrong for it).
+- The task has file-set overlap with work still in flight elsewhere — a fresh agent can be given a clean scope; a warm agent may edit over something it does not know changed.
+- The task needs a perspective the warm agent cannot provide (see the reviewer-always-fresh rule below).
+
+**Bundling as a third option.** When several tiny tasks share the same up-front context, a single implementer dispatch can carry a multi-task brief: list every task pointer in `Task:` and spell out the sequence and the boundaries in `Additionally:`. One context load amortizes across all of them. This is the right answer when you catch yourself about to fire three sequential fresh dispatches into the same skill or the same handful of files.
+
+**Reviewer-always-fresh rule (hard — named exception).** Review passes always spawn a fresh reviewer agent. Never send a review task to the implementer that just produced the work, and never reuse the reviewer from a prior round as an implementer on the same code. The reviewer is adversarial by design — thorough, skeptical, biased toward over-flagging (see §Reviewer–Orchestrator Dynamic in `superRA:using-superRA` and Workflow principle #1 in the plugin's `CLAUDE.md`). That adversarial property collapses the moment the reviewer has already committed to a line of thinking about the code; reusing a warm agent for review is equivalent to self-review and voids the implementer–reviewer pair. This rule overrides every reuse criterion above — if it is a review pass, dispatch fresh.
+
+**`SendMessage` mechanic.** The `to:` field takes the agent's id, or the teammate name inside an Agent Team. The recipient resumes with its full session context and the new message is queued for it; tool-call details are in the tool's own description.
 
 ## Dispatch Templates
 
@@ -93,9 +107,9 @@ Dispatch prompts and status returns both carry a one-line what-changed delta so 
 
 ## Handling Reviewer Feedback (Orchestrator Discipline)
 
-The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between a REVISE / CONDITIONAL APPROVE verdict and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
+The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between a REVISE verdict and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
 
-When a reviewer returns REVISE or CONDITIONAL APPROVE:
+When a reviewer returns REVISE:
 
 1. **Read the actual code at the cited file:line.** Do not trust the reviewer's summary. The reviewer is also a subagent and can be wrong.
 
@@ -116,7 +130,7 @@ When a reviewer returns REVISE or CONDITIONAL APPROVE:
 
 4. **If you push back on the reviewer (rather than override them), re-dispatch the same reviewer with counter-evidence.** Cite the file:line that proves the reviewer wrong, the methodology section that overrides their suggestion, or the human partner conversation that established the convention. The reviewer should then either retract or escalate.
 
-5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Log the researcher's answer as a user decision in the relevant task's review-notes area per `handoff-doc` §User Decisions Log, and commit the doc edit in the same commit as the re-dispatched implementer's fix (or as the commit that records the override). The `ask-user-question-logger` hook will remind you.
+5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Log per `handoff-doc` §User Decisions Log (inside the relevant task's review-notes area); commit the doc edit in the same commit as the re-dispatched implementer's fix (or as the commit that records the override).
 
 **The orchestrator's authority:** You can override any reviewer issue with documented reasoning. You cannot silently ignore one. If you find yourself dismissing reviewer feedback without writing down why, stop — that's the slip that turns a critical filter into an excuse to skip reviews.
 
@@ -134,8 +148,7 @@ Implementer and reviewer agents own their commits and document updates — see `
 |---|---|---|
 | *(no line)* | Not started | Dispatch implementer |
 | `IMPLEMENTED` | Code committed, awaiting review | Dispatch reviewer |
-| `REVISE` | Reviewer found `[STANDARD]` issues | Adjudicate (see Handling Reviewer Feedback), then re-dispatch implementer |
-| `CONDITIONAL APPROVE` | Reviewer found `[GATING]` issue(s); downstream walked and looks correct contingent on the gating fix | Adjudicate the gating item(s), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review |
+| `REVISE` | Reviewer found `[BLOCKING]` issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
 | `APPROVED` | Review passed | Proceed to next task |
 
 **A task is complete only when its status is `APPROVED`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
@@ -144,11 +157,11 @@ For direct mode (orchestrator executes the step itself), see `superRA:using-supe
 
 ## Integration
 
-**Skills that use Agent Teams mode** (composition derived from the manifest — see `references/agent-teams.md` for spawn mechanics):
+**Skills that use Agent Teams mode.** Each workflow below names the manifest stages it runs. When Agent Teams are enabled, the lead spawns one teammate per stage (implementer-role stages use `subagent_type: superRA:implementer`, reviewer-role stages use `superRA:reviewer`); the teammate then loads what `superRA:using-superRA` §Skill-Load Manifest lists for its Stage. There are no per-workflow team "recipes" — composition is read from the workflow (which stages it runs) and the manifest (what each stage loads). See `references/agent-teams.md` for spawn mechanics.
 
-- **superRA:execution-workflow** — analysis team (implementer + reviewer).
-- **superRA:integration-workflow** — integration team (one implementer + one reviewer per stage the workflow runs: drift-test, refactoring, documentation).
-- **superRA:merge-workflow** — merge team (merge-stage implementer + reviewer, plus refactoring / integration-review stages as needed).
-- **superRA:semantic-merge** — merge team (merge-stage implementer + reviewer).
+- **superRA:execution-workflow** — runs stages: implementation.
+- **superRA:integration-workflow** — runs stages: drift-test, integration, documentation.
+- **superRA:merge-workflow** — runs stages: merge, integration.
+- **superRA:semantic-merge** — runs stages: merge.
 
 **When Agent Teams are unavailable:** all skills fall back to standard subagent patterns (Task tool dispatch with orchestrator-as-hub). No functionality is lost — teams are an enhancement, not a requirement.
