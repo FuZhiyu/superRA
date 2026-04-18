@@ -1,103 +1,48 @@
 ---
 name: integration-workflow
-description: Use when an analysis is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when analysis code needs a refactor pass to fit existing codebase conventions before integration; when the Stage 1 dev-log RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form (Stage 2); when project-level CLAUDE.md / AGENTS.md / README.md need updating to reflect the new code; when PLAN.md needs final disposition before merge. Triggers include "prepare this for merge", "write drift tests for the key results", "refactor this to match the codebase style", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", or the transition from `execution-workflow`'s completion menu (options 1 or 2). Sits at the INTEGRATE phase, step 1 of 2; hands off to `merge-workflow` for the main update and actual merge/PR.
+description: Use when an analysis is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when analysis code needs a refactor pass to fit existing codebase conventions before integration (including a project-level CLAUDE.md / AGENTS.md / README.md audit for the diff); when the Stage 1 dev-log RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form (Stage 2); when PLAN.md needs final disposition before merge. Triggers include "prepare this for merge", "write drift tests for the key results", "refactor this to match the codebase style", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", or the transition from `execution-workflow`'s completion menu (options 1 or 2). Sits at the INTEGRATE phase, step 1 of 2; hands off to `merge-workflow` for the main update and actual merge/PR.
 ---
 
 # Integration Workflow
 
-Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the three steps that prepare an analysis branch for merging into main: protect results with drift tests (Stage 1), refactor code for codebase integration (Stage 2), and finalize all documentation for merge — mature RESULTS.md into its Stage 2 permanent form, audit project-level docs (CLAUDE.md / AGENTS.md / README.md), and dispose of PLAN.md (Step 3). Hands off the actual merge/PR mechanics to `superRA:merge-workflow`.
+Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the three steps that prepare an analysis branch for merging into main: protect results with drift tests (Stage 1), refactor code for codebase integration and audit project-level docs reachable from the diff (Stage 2), and finalize RESULTS.md into its Stage 2 permanent form plus dispose of PLAN.md (Step 3). Hands off the actual merge/PR mechanics to `superRA:merge-workflow`.
 
 Assumes execution-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in execution-workflow.
 
-**Core principle:** Tests guard results. Integration review identifies what needs changing. Refactoring addresses specific issues. Before merge, every doc lands in its final form through a dedicated doc-writer + doc-reviewer pair: RESULTS.md matures from dev log into a permanent co-located record, project docs are brought into sync with the new code, and PLAN.md is disposed of. Nothing hands off to merge-workflow without integration reviewer approval on the refactored code (Stage 2) AND doc-reviewer approval on the matured RESULTS.md + project docs (Step 3).
+**Core principle:** Tests guard results. Integration review identifies what needs changing in both the code and the project-level docs that describe it. Refactoring addresses specific issues. Before merge, RESULTS.md matures from dev log into a permanent co-located record through a dedicated doc-writer + doc-reviewer pair, and PLAN.md is disposed of. Nothing hands off to merge-workflow without integration reviewer approval on the refactored code + project-doc audit (Stage 2) AND doc-reviewer approval on the matured RESULTS.md (Step 3).
 
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
-**Autonomy:** this workflow has exactly four legitimate stop points — drift-test candidate confirmation (Stage 1 Step 2), meaningful drift escalation after refactoring (Stage 2 / "Handling Drift Test Failures"), Stage 2 RESULTS.md relocation target if project guidance does not specify one (Step 3 sub-part A), and PLAN.md disposition (Step 3 sub-part C). Between those, run on your own power: do not check in after each stage, do not ask "ready to move to the next step?", do not re-confirm a reviewer's APPROVE. See CLAUDE.md workflow principle #4 for the full autonomy rule and `handoff-doc` §User Decisions Log for how the answer at each stop point must be recorded in PLAN.md before the workflow acts on it.
+**Autonomy:** this workflow has exactly four legitimate stop points — drift-test candidate confirmation (Stage 1 Step 2), meaningful drift escalation after refactoring (Stage 2 / "Handling Drift Test Failures"), Stage 2 RESULTS.md relocation target if project guidance does not specify one (Step 3 sub-part A), and PLAN.md disposition (Step 3 sub-part C). Between those, run on your own power: do not check in after each stage, do not ask "ready to move to the next step?", do not re-confirm a reviewer's APPROVE. See `superRA:using-superRA` §Universal Principles (principle #4) + `references/main-agent-autonomy.md` for the full autonomy rule, and `superRA:handoff-doc` §User Decisions Log for how the answer at each stop point must be recorded in PLAN.md before the workflow acts on it.
 
 ## The Process
 
-```dot
-digraph integration_workflow {
-    rankdir=TB;
+**Stage 1 — Drift Test Creation:**
 
-    subgraph cluster_stage1 {
-        label="Stage 1: Drift Test Creation";
-        "Extract key results from RESULTS.md" [shape=box];
-        "Present candidates to user" [shape=box];
-        "Dispatch test-creator subagent" [shape=box];
-        "Dispatch test-reviewer subagent" [shape=box];
-        "Test reviewer: APPROVE?" [shape=diamond];
-        "Test-creator fixes issues" [shape=box];
-        "Run tests — establish green baseline" [shape=box];
-        "Commit test files" [shape=box];
-    }
+1. Extract key results from `RESULTS.md`.
+2. Present candidates to the user (legitimate stop point).
+3. Dispatch test-creator → dispatch test-reviewer. Iterate REVISE → fix → re-review until APPROVE.
+4. Run tests to establish a green baseline.
+5. Commit test files.
 
-    subgraph cluster_stage2 {
-        label="Stage 2: Integration Review → Refactor Loop";
-        "Identify codebase conventions" [shape=box];
-        "Dispatch integration-reviewer subagent" [shape=box];
-        "Integration reviewer: APPROVE?" [shape=diamond];
-        "Dispatch refactor subagent with specific feedback" [shape=box];
-        "Run drift tests after refactoring" [shape=box];
-        "Drift tests pass?" [shape=diamond];
-        "Assess economic significance" [shape=diamond];
-        "STOP — ask user with before/after" [shape=box style=filled fillcolor=lightyellow];
-        "Update test expectations, document reason" [shape=box];
-        "Commit refactored code" [shape=box];
-        "Final commit" [shape=box style=filled fillcolor=lightgreen];
-    }
+**Stage 2 — Integration Review → Refactor Loop:**
 
-    "Extract key results from RESULTS.md" -> "Present candidates to user";
-    "Present candidates to user" -> "Dispatch test-creator subagent";
-    "Dispatch test-creator subagent" -> "Dispatch test-reviewer subagent";
-    "Dispatch test-reviewer subagent" -> "Test reviewer: APPROVE?";
-    "Test reviewer: APPROVE?" -> "Run tests — establish green baseline" [label="APPROVE"];
-    "Test reviewer: APPROVE?" -> "Test-creator fixes issues" [label="REVISE"];
-    "Test-creator fixes issues" -> "Dispatch test-reviewer subagent" [label="re-review"];
-    "Run tests — establish green baseline" -> "Commit test files";
+1. Identify codebase conventions.
+2. Dispatch integration-reviewer.
+3. On APPROVE → final commit, proceed to Step 3.
+4. On REVISE → dispatch refactor subagent with specific feedback → run drift tests.
+   - **Drift tests pass** → commit refactored code → re-dispatch integration-reviewer.
+   - **Drift tests fail** → assess economic significance.
+     - **Minor variation** → update test expectations, document the reason, commit, re-dispatch reviewer.
+     - **Meaningful** → STOP, ask the user with before/after numbers (legitimate stop point).
 
-    "Commit test files" -> "Identify codebase conventions";
-    "Identify codebase conventions" -> "Dispatch integration-reviewer subagent";
-    "Dispatch integration-reviewer subagent" -> "Integration reviewer: APPROVE?";
-    "Integration reviewer: APPROVE?" -> "Final commit" [label="APPROVE"];
-    "Integration reviewer: APPROVE?" -> "Dispatch refactor subagent with specific feedback" [label="REVISE"];
-    "Dispatch refactor subagent with specific feedback" -> "Run drift tests after refactoring";
-    "Run drift tests after refactoring" -> "Drift tests pass?";
-    "Drift tests pass?" -> "Commit refactored code" [label="pass"];
-    "Drift tests pass?" -> "Assess economic significance" [label="fail"];
-    "Assess economic significance" -> "STOP — ask user with before/after" [label="meaningful"];
-    "Assess economic significance" -> "Update test expectations, document reason" [label="minor variation"];
-    "Update test expectations, document reason" -> "Commit refactored code";
-    "Commit refactored code" -> "Dispatch integration-reviewer subagent" [label="re-review"];
+**Step 3 — Documentation Finalization:**
 
-    subgraph cluster_step3 {
-        label="Step 3: Documentation Finalization";
-        "Resolve RESULTS_DIR (stop if missing)" [shape=box];
-        "Dispatch doc-writer subagent" [shape=box];
-        "A: mature RESULTS.md in place + git mv" [shape=box];
-        "B: audit CLAUDE.md / AGENTS.md / README.md" [shape=box];
-        "Dispatch doc-reviewer subagent" [shape=box];
-        "Doc reviewer: APPROVE?" [shape=diamond];
-        "Doc-writer fixes issues" [shape=box];
-        "Ask PLAN.md disposition (stop)" [shape=box style=filled fillcolor=lightyellow];
-        "Execute disposition" [shape=box];
-        "Done — hand off to merge-workflow" [shape=box style=filled fillcolor=lightgreen];
-    }
-
-    "Final commit" -> "Resolve RESULTS_DIR (stop if missing)";
-    "Resolve RESULTS_DIR (stop if missing)" -> "Dispatch doc-writer subagent";
-    "Dispatch doc-writer subagent" -> "A: mature RESULTS.md in place + git mv";
-    "A: mature RESULTS.md in place + git mv" -> "B: audit CLAUDE.md / AGENTS.md / README.md";
-    "B: audit CLAUDE.md / AGENTS.md / README.md" -> "Dispatch doc-reviewer subagent";
-    "Dispatch doc-reviewer subagent" -> "Doc reviewer: APPROVE?";
-    "Doc reviewer: APPROVE?" -> "Ask PLAN.md disposition (stop)" [label="APPROVE"];
-    "Doc reviewer: APPROVE?" -> "Doc-writer fixes issues" [label="REVISE"];
-    "Doc-writer fixes issues" -> "Dispatch doc-reviewer subagent" [label="re-review"];
-    "Ask PLAN.md disposition (stop)" -> "Execute disposition";
-    "Execute disposition" -> "Done — hand off to merge-workflow";
-}
-```
+1. Resolve `RESULTS_DIR` (stop if project guidance is missing — legitimate stop point).
+2. Dispatch doc-writer → mature `RESULTS.md` in place, then `git mv` to its destination.
+3. Dispatch doc-reviewer. Iterate REVISE → fix → re-review until APPROVE.
+4. Ask `PLAN.md` disposition (legitimate stop point).
+5. Execute disposition → hand off to `merge-workflow`.
 
 ## Dispatch Convention
 
@@ -120,17 +65,15 @@ Drift tests guard key results from unintended changes during refactoring or futu
 
    Which of these should be protected? Any to add or remove?
    ```
-   The answer is a user decision — log it in the top-level `## Decisions` section of `PLAN.md` (or inside the task block whose results are being protected, if the list is task-scoped) per `handoff-doc` §User Decisions Log, and commit the PLAN.md edit **before** dispatching the test-creator. The `ask-user-question-logger` hook will remind you.
+   Log per `handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching the test-creator.
 
 3. **Dispatch test-creator:**
    ```
    Agent(subagent_type: "superRA:implementer"):
-     Stage: drift test creation
-     Skills: superRA:refactor-and-integrate
-     Domain references: drift-test-quality.md (refactor-and-integrate) + integrate-drift-tests.md (econ-data-analysis)
-     Key results to protect: [user-confirmed list with values]
-     Test conventions: [project test framework, test directory]
-     Additionally: Follow the standard stage-relevant workflow and load
+     Stage: drift-test
+     Task: Task N in PLAN.md — create drift tests for the user-confirmed key results
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally,
        <optional steering — e.g., tolerance conventions specific to this
        analysis, prior-round adjudication if this is a re-dispatch>.
@@ -139,12 +82,11 @@ Drift tests guard key results from unintended changes during refactoring or futu
 4. **Dispatch test-reviewer:**
    ```
    Agent(subagent_type: "superRA:reviewer"):
-     Stage: drift test
-     Skills: superRA:refactor-and-integrate
-     Domain references: drift-test-quality.md (refactor-and-integrate) + integrate-drift-tests.md (econ-data-analysis)
-     Tests under review: [paths to created test files]
-     Key results they should protect: [list]
-     Additionally: Follow the standard stage-relevant workflow and load
+     Stage: drift-test
+     Task: Task N in PLAN.md — drift tests under review
+     Git range: <BASE_SHA>..<HEAD_SHA>
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally,
        <optional steering>.
    ```
@@ -175,18 +117,17 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
 2. **Dispatch integration-reviewer:**
    ```
    Agent(subagent_type: "superRA:reviewer"):
-     Stage: integration review
-     Skills: superRA:refactor-and-integrate
-     Code under review: [paths]
-     Codebase conventions: [where they're documented — CLAUDE.md, AGENTS.md, etc.]
-     Drift tests: [paths]
-     Diff: <BASE_SHA>..<HEAD_SHA>
-     Additionally: Follow the standard stage-relevant workflow and load
+     Stage: integration
+     Task: Task N in PLAN.md — integration review of the refactored analysis code
+     Git range: <BASE_SHA>..<HEAD_SHA>
+
+     Follow the standard stage-relevant workflow and load
        relevant skills and documents to proceed. Additionally,
+       this stage also covers the project doc audit per
+       `codebase-integration.md` §Project Doc Audit (walk-up
+       CLAUDE.md / AGENTS.md / README.md reachable from the diff).
        <optional steering>.
    ```
-
-   Refactoring discipline lives in the Skill-Load Manifest for `integration review` — for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` (generic cross-cutting code-quality) + `skills/econ-data-analysis/references/integration.md` (data-specific gates). `superRA:using-superRA` §Skill-Load Manifest specifies the reference load for your Stage; do not inline the list in this dispatch prompt.
 
 3. **If APPROVE:** No refactoring needed. Proceed to final commit.
 
@@ -195,19 +136,17 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
    a. **Dispatch refactorer:**
       ```
       Agent(subagent_type: "superRA:implementer"):
-        Stage: refactoring
-        Skills: superRA:refactor-and-integrate
-        Reviewer issues to address: [accepted items, file:line, what to fix]
-        Codebase conventions: [pointers]
-        Drift tests: [paths — must keep passing]
-        Code to refactor: [paths]
-        Additionally: Follow the standard stage-relevant workflow and load
+        Stage: integration
+        Task: Task N in PLAN.md — address integration reviewer's accepted findings
+
+        Follow the standard stage-relevant workflow and load
           relevant skills and documents to proceed. Additionally,
+          this stage also covers the project doc audit per
+          `codebase-integration.md` §Project Doc Audit (walk-up
+          CLAUDE.md / AGENTS.md / README.md reachable from the diff).
           <optional steering — e.g., prior-round adjudication, items the
           orchestrator has rejected vs. accepted>.
       ```
-
-      Refactoring discipline lives in the Skill-Load Manifest for `refactoring` — for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` (generic cross-cutting code-quality) + `skills/econ-data-analysis/references/integration.md` (data-specific gates). `superRA:using-superRA` §Skill-Load Manifest specifies the reference load for your Stage; do not inline the list in this dispatch prompt.
 
    b. **After refactoring: run drift tests.**
       - **Pass:** Commit and re-submit for review.
@@ -233,7 +172,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
 
 ## Step 3: Documentation Finalization
 
-After Stage 2 APPROVES the refactored code, every doc needs to land in its final shape before merge: `RESULTS.md` matures from dev log to permanent record, project-level docs (`CLAUDE.md` / `AGENTS.md` / `README.md`) are brought into sync with the new code, and `PLAN.md` is disposed of. This step gates the entire documentation pass behind a **single implementer-reviewer pair** — a dispatched doc-writer subagent performs sub-parts A and B, a dispatched doc-reviewer subagent gates both together, and the orchestrator handles the user-facing decisions (relocation target, PLAN.md disposition) on either side of the subagent cycle.
+After Stage 2 APPROVES the refactored code (including the project doc audit that Stage 2 now covers via `codebase-integration.md` §Project Doc Audit), `RESULTS.md` still needs to mature from dev log to permanent record, and `PLAN.md` still needs to be disposed of. This step gates the RESULTS.md maturation behind a **single implementer-reviewer pair** — a dispatched doc-writer subagent performs sub-part A, a dispatched doc-reviewer subagent gates it, and the orchestrator handles the user-facing decisions (relocation target in the preamble, PLAN.md disposition in sub-part C) on either side of the subagent cycle.
 
 Why a doc-writer subagent and not orchestrator-performed: workflow principle P1 requires an enforced implementer-reviewer pair at every step. Having the orchestrator do the consolidation and then dispatching only a reviewer is a reviewer-only gate, not a pair. The doc-writer subagent closes that gap and keeps Step 3 consistent with the rest of the workflow.
 
@@ -251,7 +190,7 @@ Where should it land?
 Suggested: <best guess from the analysis code's location, e.g. analyses/<name>/>
 ```
 
-Log the answer in the top-level `## Decisions` section of `PLAN.md` per `handoff-doc` §User Decisions Log **before** dispatching the doc-writer. If a project convention exists in the guidance files, use it directly without asking. The `ask-user-question-logger` hook will remind you.
+Log per `handoff-doc` §User Decisions Log **before** dispatching the doc-writer. If a project convention exists in the guidance files, use it directly without asking.
 
 Define `RESULTS_DIR` = the resolved permanent folder. Define `RESULTS_ATTACHMENTS_DIR` = `${RESULTS_DIR}/attachments` (destination for materialized figures, distinct from the worktree-root `results_attachments/` that the analysis script writes to). Pass both as dispatch parameters.
 
@@ -259,84 +198,51 @@ Define `RESULTS_DIR` = the resolved permanent folder. Define `RESULTS_ATTACHMENT
 
 ```
 Agent(subagent_type: "superRA:implementer"):
-  Stage: documentation finalization (Stage 2 RESULTS.md + project doc audit)
-  Skills: superRA:report-in-markdown
-  Domain references: baseline-io.md + rich-content.md + final-form.md (full mode)
+  Stage: documentation
+  Task: Task N in PLAN.md — Stage 2 RESULTS.md maturation
   RESULTS_DIR: <resolved permanent folder>
   RESULTS_ATTACHMENTS_DIR: ${RESULTS_DIR}/attachments
-  Stage 1 RESULTS.md: RESULTS.md (at worktree root)
-  PLAN.md: PLAN.md (for objective, methodology, citations)
-  Diff: <BASE_SHA>..<HEAD_SHA>
-  Code files cited by RESULTS.md: [paths]
-  Output files cited by RESULTS.md: [paths]
-  Sub-parts (execute in order, commit each separately):
-    A. Mature RESULTS.md in place, relocate to ${RESULTS_DIR} per final-form.md
-    B. Audit project docs reachable from the diff (walk up to each CLAUDE.md /
-       AGENTS.md / README.md from every changed file; always also check root
-       README.md and root CLAUDE.md). Update stale claims, add new patterns,
-       create missing CLAUDE.md + AGENTS.md symlink pair for new modules.
-  Additionally: Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <optional steering — e.g., project-specific doc conventions, prior-round
-    doc-reviewer feedback on a re-dispatch>.
+
+  Follow the standard stage-relevant workflow and load
+    relevant skills and documents to proceed. Additionally, this dispatch
+    matures RESULTS.md per `final-form.md` §The consolidation pass —
+    four ordered commits. Land each of the four commits separately (in
+    order: fact-check → restructure → materialize figures → relocate)
+    so a session interruption is recoverable. In your status return,
+    list which of the four sub-commits landed.
+    <optional additional steering — e.g., project-specific doc conventions,
+    prior-round doc-reviewer feedback on a re-dispatch>.
 ```
 
-The doc-writer is the only subagent in this step. It loads `superRA:report-in-markdown` full mode (SKILL.md + all three references) and performs both sub-parts before returning control.
+The doc-writer is the only subagent in this step. It loads `superRA:report-in-markdown` full mode (SKILL.md + all three references) and performs sub-part A before returning control.
 
-#### Sub-part A: Mature RESULTS.md in place
+#### Sub-part A: Mature RESULTS.md in place — four ordered commits
 
-Drive from `final-form.md`. The pass typically does:
+Drive from `final-form.md` §The consolidation pass — four ordered commits. Each commit is independently recoverable; if the session crashes between commits, a fresh dispatch resumes from the next un-landed step (the prior commits are on the branch, the file is in a coherent in-between state).
 
-1. Restructure from task-indexed to reader-facing — by objective, data source, or result type. Task numbering disappears.
-2. Merge related findings split across tasks.
-3. Strip resolved reviewer caveats; surface unresolved limitations into a "Limitations" section.
-4. Add frontmatter per `baseline-io.md`. The file name stays `RESULTS.md` across stages — it is the identity of the artifact.
-5. Materialize figures from `results_attachments/` into `${RESULTS_ATTACHMENTS_DIR}` per `rich-content.md`. Update embed paths.
-6. Run the fact-check checklist from `final-form.md`. Open every cited file and confirm the claim matches. Strip speculation and subjective language. Remove prohibited sections (Recommendations, Conclusions, Implications) unless the researcher explicitly requested them.
-7. Relocate: `git mv RESULTS.md ${RESULTS_DIR}/RESULTS.md` and `git mv` (or copy + remove) the materialized attachments folder into place.
+Commit sequence (suggested messages match `final-form.md`):
 
-Commit sub-part A separately:
-```bash
-git add ${RESULTS_DIR}/RESULTS.md ${RESULTS_DIR}/attachments/
-git commit -m "mature RESULTS.md into permanent form at ${RESULTS_DIR}"
-```
+1. `results: fact-check Stage 2 RESULTS.md` — walk the fact-check checklist against the Stage 1 dev log at worktree root. No structural changes yet.
+2. `results: restructure Stage 2 RESULTS.md to reader-facing` — reorganize by objective/data/result, merge related findings, strip resolved caveats, add frontmatter. Task numbering disappears.
+3. `results: materialize figures into ${RESULTS_DIR}/attachments` — copy `results_attachments/*` into `${RESULTS_ATTACHMENTS_DIR}` (PDF→PNG per `rich-content.md`), update embed paths in `RESULTS.md`.
+4. `results: relocate RESULTS.md to ${RESULTS_DIR}` — `git mv RESULTS.md ${RESULTS_DIR}/RESULTS.md` so history follows the file. Attachments folder already lives at `${RESULTS_ATTACHMENTS_DIR}` after commit 3.
 
-#### Sub-part B: Project documentation audit
+Each commit has its own validation gate — see `final-form.md` for the per-commit checklist. Do NOT bundle these into one commit.
 
-For every file in the diff `<BASE_SHA>..<HEAD_SHA>`, walk up from its directory to the repo root and collect every `CLAUDE.md` / `AGENTS.md` / `README.md` encountered. Always also check the repo-root `README.md` and root `CLAUDE.md` regardless of the diff (stale skill counts and top-level claims live there).
-
-For each doc in the set:
-
-- **Update stale claims** — command names, file paths, architectural notes, skill counts, any statement contradicted by the diff.
-- **Add new patterns or modules** — if the diff introduced a new module directory, feature, or command, document it at the correct level (nearest CLAUDE.md to the new code, not blasted into parent docs).
-- **Do not duplicate parent-level content** — link instead. Module-level docs should carry module-specific conventions, not repeat what repo-root docs already cover.
-- **Create missing CLAUDE.md + AGENTS.md pair for new modules** — if a new module directory has no guidance doc, create `CLAUDE.md` with purpose/conventions, then create a relative symlink `AGENTS.md -> CLAUDE.md` (just the filename, not an absolute path). If only one of the pair exists in an existing directory, unify them via symlink (keep the richer file).
-
-Do **not** propagate upward for the sake of it: leave `CLAUDE.md` / `AGENTS.md` above the affected area alone unless something in them is stale.
-
-Commit sub-part B separately:
-```bash
-git add -A
-git commit -m "update project docs for <analysis>"
-```
+**Recovery on re-dispatch.** If the orchestrator sees the doc-writer's status return listed commits 1 and 2 as landed but not 3 or 4 (or the doc-writer crashed without returning), the re-dispatch's `Additionally:` line names which commits still need to land. The doc-writer reads `git log --oneline` on the branch and resumes at the first un-landed step.
 
 ### Dispatch the doc-reviewer
 
-After both sub-parts commit, dispatch the reviewer:
+After sub-part A commits, dispatch the reviewer:
 
 ```
 Agent(subagent_type: "superRA:reviewer"):
-  Stage: documentation finalization (Stage 2 RESULTS.md + project doc audit)
-  Skills: superRA:report-in-markdown
-  Domain reference: final-form.md
-  Matured document under review: ${RESULTS_DIR}/RESULTS.md
-  Project docs under review: [CLAUDE.md / AGENTS.md / README.md files touched by sub-part B]
-  Source dev log (for comparison): RESULTS.md at <PRE_MATURE_SHA>
-  Diff: <BASE_SHA>..<HEAD_SHA>
-  Code files cited: [paths]
-  Output files cited: [paths]
-  Objective of the analysis: [from PLAN.md header]
-  Additionally: Follow the standard stage-relevant workflow and load
+  Stage: documentation
+  Task: Task N in PLAN.md — review of matured Stage 2 RESULTS.md
+  Git range: <BASE_SHA>..<HEAD_SHA>
+  RESULTS_DIR: <resolved permanent folder>
+
+  Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
     <optional steering>.
 ```
@@ -344,8 +250,7 @@ Agent(subagent_type: "superRA:reviewer"):
 The reviewer loads `superRA:report-in-markdown` SKILL.md + `final-form.md` (and only those — per the skill's load-map for the doc-reviewer role). Scope:
 
 1. **Matured RESULTS.md** — run the fact-check checklist line by line (`final-form.md`). Every cited number must match its source. Prohibited language, unsupported claims, and disallowed sections block APPROVED.
-2. **Project docs** — accuracy against the diff, no stale claims remain, new features documented at the right level, no duplication with parent `CLAUDE.md`, CLAUDE.md ↔ AGENTS.md symlink convention respected.
-3. **Cross-consistency** — matured `RESULTS.md` and any `README.md` / `CLAUDE.md` that mentions the analysis do not contradict each other (figures of merit, method names, sample sizes).
+2. **Cross-consistency** — matured `RESULTS.md` and any `README.md` / `CLAUDE.md` that mentions the analysis do not contradict each other (figures of merit, method names, sample sizes). Stale project-doc claims against the diff are Stage 2's responsibility (`codebase-integration.md` §Project Doc Audit) and should already be resolved by the time Step 3 runs.
 
 If REVISE: adjudicate per the orchestrator discipline above. For accepted issues, re-dispatch the doc-writer with specific feedback (file:line, what to fix). Re-dispatch the doc-reviewer. Iterate until APPROVE.
 
@@ -353,9 +258,9 @@ If REVISE: adjudicate per the orchestrator discipline above. For accepted issues
 
 ### Sub-part C: Dispose of PLAN.md (orchestrator, after APPROVE)
 
-Once the doc-reviewer APPROVES sub-parts A and B, the orchestrator handles PLAN.md disposition directly — this is a user-facing decision, not an RA-implementable task, and it must not be delegated.
+Once the doc-reviewer APPROVES sub-part A, the orchestrator handles PLAN.md disposition directly — this is a user-facing decision, not an RA-implementable task, and it must not be delegated.
 
-By this point `RESULTS.md` has graduated to `${RESULTS_DIR}` and project docs are in sync. `PLAN.md` is the only Stage 1 scaffold left at the worktree root, along with the working `results_attachments/` folder (whose content has already been materialized into `${RESULTS_ATTACHMENTS_DIR}`).
+By this point `RESULTS.md` has graduated to `${RESULTS_DIR}` and project docs are already in sync (audited during Stage 2 per `codebase-integration.md` §Project Doc Audit). `PLAN.md` is the only Stage 1 scaffold left at the worktree root, along with the working `results_attachments/` folder (whose content has already been materialized into `${RESULTS_ATTACHMENTS_DIR}`).
 
 Ask via `AskUserQuestion` (plain text if unavailable) — this is a legitimate stop point. The default suggestion is Option 1 (move alongside the matured RESULTS.md):
 
@@ -375,7 +280,7 @@ are up to date. Options:
 Which option?
 ```
 
-Log the researcher's choice in the `## Decisions` section of `PLAN.md` **before** executing the disposition (per `handoff-doc` §User Decisions Log). Include the log entry in the same commit that moves or removes the files — the last state of `PLAN.md` records what was done with it.
+Log per `handoff-doc` §User Decisions Log **before** executing the disposition. Include the log entry in the same commit that moves or removes the files — the last state of `PLAN.md` records what was done with it.
 
 **Option 1 (Move alongside matured RESULTS.md):**
 ```bash
@@ -430,30 +335,17 @@ This is the critical judgment call in the process. When drift tests fail after r
 3. **If meaningful:** Do not proceed. Show the user exactly what changed — before/after values side by side — and ask via `AskUserQuestion` (plain text if unavailable) whether to (a) accept the new result and update the drift test baseline with a documented reason, (b) roll back the refactoring, or (c) investigate the discrepancy further before deciding. Log the researcher's answer per `handoff-doc` §User Decisions Log before taking any action.
 4. **If minor:** Update the test expectation, add a comment explaining why (e.g., "tolerance updated: refactored merge order produces equivalent result within floating-point precision"), and proceed.
 
-## Agent Types and Domain References
+## Agent Loads
 
-Dispatched agents load a parent skill via the `Skills:` line and read a named domain reference by basename (the runtime announces the skill's base directory on load; the agent reads `<base_dir>/references/<basename>`).
+See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows.
 
-| Stage | Agent | Parent skill | Domain reference |
-|---|---|---|---|
-| Stage 1 test creation | `superRA:implementer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` (quality checklist) + `econ-data-analysis/references/integrate-drift-tests.md` (domain-specific framing: what to protect, econ tolerances, failure modes) |
-| Stage 1 test review | `superRA:reviewer` | `superRA:refactor-and-integrate` | `drift-test-quality.md` + `econ-data-analysis/references/integrate-drift-tests.md` |
-| Stage 2 refactoring | `superRA:implementer` | `superRA:refactor-and-integrate` | `codebase-integration.md` (generic code-quality) + active domain skill's integration reference (data analysis: `econ-data-analysis/references/integration.md` + SKILL.md §Refactor integrity) |
-| Stage 2 integration review (code) | `superRA:reviewer` | `superRA:refactor-and-integrate` | `codebase-integration.md` (generic code-quality) + active domain skill's integration reference (data analysis: `econ-data-analysis/references/integration.md` + SKILL.md §Refactor integrity) |
-| Step 3 doc-writer (matured RESULTS.md + project doc audit) | `superRA:implementer` | `superRA:report-in-markdown` | `baseline-io.md` + `rich-content.md` + `final-form.md` (full mode) |
-| Step 3 doc-reviewer (final-form + project docs) | `superRA:reviewer` | `superRA:report-in-markdown` | `final-form.md` |
-
-Step 3 sub-parts A (mature RESULTS.md) and B (project doc audit) are performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates the whole documentation pass per workflow principle P1. Sub-part C (PLAN.md disposition) stays with the orchestrator because it is a user-facing decision, not an RA-implementable task.
-
-Stage-driven domain-skill and script-to-notebook loads are specified by `superRA:using-superRA` §Skill-Load Manifest (for data-analysis stages, the manifest names `superRA:econ-data-analysis` and `superRA:script-to-notebook`).
+Step 3 sub-part A (mature RESULTS.md) is performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates the RESULTS.md maturation per workflow principle P1. Sub-part C (PLAN.md disposition) stays with the orchestrator because it is a user-facing decision, not an RA-implementable task. Project-level doc audit is covered by Stage 2 refactor + integration review per `codebase-integration.md` §Project Doc Audit — not by Step 3.
 
 ## Agent Teams Mode
 
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), Stages 1 and 2 can be orchestrated as a team instead of sequential subagent dispatches. This enables direct iteration between creator/reviewer and integration-reviewer/refactorer without the orchestrator relaying messages.
+When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), Stages 1 and 2 can be orchestrated as a team instead of sequential subagent dispatches — direct iteration between creator/reviewer and integration-reviewer/refactorer without the orchestrator relaying messages. See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs.
 
-**Invoke `superRA:agent-orchestration` for the Integration Team recipe** — it has the full team composition (6 teammates: test-creator, test-reviewer, refactorer, integration-reviewer, doc-writer, doc-reviewer), task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
-
-Step 3 (Documentation Finalization) can join the team as a two-teammate sub-graph: a doc-writer (performing sub-parts A and B) and a doc-reviewer, iterating on their own until APPROVE. Sub-part C (PLAN.md disposition) stays with the lead because it is a user-facing decision. The relocation-target stop point (Step 3 orchestrator preamble) also stays with the lead, since it fires before the doc-writer dispatches.
+Step 3 (Documentation Finalization) can join the team as a two-teammate sub-graph: a doc-writer (performing sub-part A — the RESULTS.md maturation) and a doc-reviewer, iterating on their own until APPROVE. Sub-part C (PLAN.md disposition) stays with the lead because it is a user-facing decision. The relocation-target stop point (Step 3 orchestrator preamble) also stays with the lead, since it fires before the doc-writer dispatches.
 
 The lead handles user-facing decisions throughout (drift test candidates, meaningful drift escalation, RESULTS.md relocation target, PLAN.md disposition), commits at stage boundaries, and team cleanup after final APPROVE.
 
@@ -462,12 +354,12 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 **Never:**
 - Skip Stage 1 (drift tests) — they are the safety net for everything that follows
 - Refactor before integration reviewer has identified issues — review first, then fix
-- Strip domain-discipline artifacts during refactoring — see `superRA:using-superRA` §Skill-Load Manifest for `refactoring` / `integration review` for the full reference list per domain
-- Judge the researcher's methodology choice — focus on implementation correctness (see the foundational RA framing in `CLAUDE.md`)
+- Strip domain-discipline artifacts during refactoring — see `superRA:using-superRA` §Skill-Load Manifest for `integration` for the full reference list per domain
+- Judge the researcher's methodology choice — focus on implementation correctness (see the foundational RA framing in `superRA:using-superRA` §Universal Principles)
 - Refactor before drift tests are committed and green
-- Hand off to merge-workflow without integration reviewer APPROVE on the refactored code (Stage 2) AND doc-reviewer APPROVE on the matured RESULTS.md + project docs (Step 3)
+- Hand off to merge-workflow without integration reviewer APPROVE on the refactored code + project-doc audit (Stage 2) AND doc-reviewer APPROVE on the matured RESULTS.md (Step 3)
 - Skip Step 3 because "RESULTS.md is already a markdown file" — the dev-log form has not been fact-checked, restructured, or relocated, and shipping it as-is bypasses the discipline gate
-- Perform the Step 3 sub-parts A and B as the orchestrator instead of dispatching a doc-writer subagent — this bypasses the implementer-reviewer pair that workflow principle P1 requires. Only sub-part C (PLAN.md disposition) is orchestrator-performed, because it is a user-facing decision
+- Perform the Step 3 sub-part A as the orchestrator instead of dispatching a doc-writer subagent — this bypasses the implementer-reviewer pair that workflow principle P1 requires. Only sub-part C (PLAN.md disposition) is orchestrator-performed, because it is a user-facing decision
 - Inline the Step 3 fact-check checklist or frontmatter spec in this skill — it lives in `superRA:report-in-markdown`'s `final-form.md` and `baseline-io.md`, and there should be exactly one source of truth
 - Delegate sub-part C (PLAN.md disposition) to the doc-writer subagent — disposition is a researcher-owned decision, not an RA task
 
@@ -476,10 +368,10 @@ The lead handles user-facing decisions throughout (drift test candidates, meanin
 - Run integration review before any refactoring
 - Run drift tests after every refactoring change
 - Re-submit to integration reviewer after every refactoring round
-- Keep and re-validate all domain-discipline artifacts through refactoring — refactoring discipline lives in `superRA:using-superRA` §Skill-Load Manifest for `refactoring` / `integration review` (for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` generic + `skills/econ-data-analysis/references/integration.md` data-specific)
-- Dispatch the Step 3 doc-writer subagent with `superRA:report-in-markdown` (full mode — all three references) to perform the matured RESULTS.md consolidation AND the project doc audit in one pass; dispatch the doc-reviewer afterward and iterate to APPROVE
+- Keep and re-validate all domain-discipline artifacts through refactoring — refactoring discipline lives in `superRA:using-superRA` §Skill-Load Manifest for `integration` (for data analysis: `skills/refactor-and-integrate/references/codebase-integration.md` generic + `skills/econ-data-analysis/references/integration.md` data-specific)
+- Dispatch the Step 3 doc-writer subagent with `superRA:report-in-markdown` (full mode — all three references) to perform the matured RESULTS.md consolidation; dispatch the doc-reviewer afterward and iterate to APPROVE. Project-doc audit is not part of Step 3 — it is a Stage 2 refactorer / integration-reviewer concern per `codebase-integration.md` §Project Doc Audit
 - Resolve `RESULTS_DIR` before dispatching the doc-writer — either from project guidance, or via `AskUserQuestion` if guidance is missing, logged in PLAN.md `## Decisions`
-- Commit at each stage boundary and after each Step 3 sub-part (A, B, and C each land as separate commits)
+- Commit at each stage boundary and after each Step 3 sub-part (A and C each land as separate commits)
 
 **Drift-test integrity is governed by the cross-cutting rules in `refactor-and-integrate` reference `drift-test-quality.md` ("Drift Test Integrity — Cross-Cutting Red Flags") — failing tests must be adjudicated, not silently re-expected; tolerance bumps require justification; and test removal during refactoring is forbidden. Load the reference before creating, reviewing, or running drift tests.**
 
