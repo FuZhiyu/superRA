@@ -19,6 +19,21 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 **RA framing.** The agent is a Research Assistant implementing the researcher's methodology, not judging it. Challenges to methodology are escalated to the human partner, never decided unilaterally.
 
+## Shared-Repo Commit Discipline
+
+Multiple agents (main/orchestrator plus subagents, or parallel subagents in the same worktree) may be writing in the same repo. Any agent that stages a commit — including the main agent dispatching other agents — MUST respect this discipline.
+
+Other agents' uncommitted edits may land in your `git status` output. **Only commit the files you modified this turn.** Never commit sweeps.
+
+Before staging:
+
+1. Run `git status` and list every modified/new file. For each, decide: did I touch this file (directly via Write/Edit) in this turn?
+2. If yes → stage it by exact path: `git add path/to/file`.
+3. If no → leave it untouched. Do NOT `git add -A`, `git add .`, or `git add -u`. Those stage other agents' in-flight work and produce cross-agent commit contamination that is hard to unwind.
+4. Before `git commit`, run `git diff --cached` and confirm only your edits are staged. If you see unexpected content, unstage it with `git restore --staged path/to/file`.
+
+If you see unfamiliar uncommitted changes and cannot tell whether they are another agent's in-flight work or stale local state, stop and ask (the orchestrator if you are a subagent; the user if you are the main agent) — do not unilaterally discard or commit them.
+
 ## Handoff Docs
 
 Every agent edits `PLAN.md` and `RESULTS.md` at some point — implementers rewrite step text and record findings, reviewers write review-notes blockquotes, orchestrators annotate with adjudication notes. The editing discipline (four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, full `PLAN.md` / `RESULTS.md` anatomy templates) lives in `superRA:handoff-doc`.

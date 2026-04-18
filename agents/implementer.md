@@ -150,28 +150,7 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 2. **Update `RESULTS.md` task section in place.** If a section for your task already exists from a prior iteration, **replace** its content with current findings. Mirror the per-task shape already in `RESULTS.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
-### Shared-Repo Commit Discipline
-
-Other agents may be running in parallel in the same repository, and
-their uncommitted edits may land in your `git status` output. **Only
-commit the files you modified this turn.** Never commit sweeps.
-
-Before staging:
-
-1. Run `git status` and list every modified/new file. For each one,
-   decide: did I touch this file (directly via Write/Edit) in this
-   turn?
-2. If yes → stage it by exact path: `git add path/to/file`.
-3. If no → leave it untouched. Do NOT `git add -A`, `git add .`, or
-   `git add -u`. Those stage other agents' in-flight work and produce
-   cross-agent commit contamination that is hard to unwind.
-4. Before `git commit`, run `git diff --cached` and confirm only your
-   edits are staged. If you see unexpected content, unstage it with
-   `git restore --staged path/to/file`.
-
-If you see unfamiliar uncommitted changes and cannot tell whether they
-are another agent's in-flight work or stale local state, stop and ask
-the orchestrator — do not unilaterally discard or commit them.
+**Shared-repo commit discipline.** Follow `superRA:using-superRA` §Shared-Repo Commit Discipline — stage by exact path, never `git add -A/./-u`, diff-cached before commit. Applies whenever other agents may be writing in the same worktree.
 
 **Single atomic commit.** Stage code + `PLAN.md` + `RESULTS.md` together:
 ```bash

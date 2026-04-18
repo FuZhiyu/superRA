@@ -98,11 +98,6 @@ Three lines, blockquote, dated. `Question asked` is the agent's own short restat
 
 The `ask-user-question-logger` PostToolUse hook reminds the agent to log after each `AskUserQuestion` call; when the harness does not expose the hook, set a TodoWrite reminder.
 
-**Not covered here:**
-
-- Reviewer-feedback adjudication inside review-notes blockquotes — that is the `→ orchestrator:` / `→ implemented:` protocol owned by `agents/implementer.md` and `agents/reviewer.md`. User decisions are upstream: the researcher answering a question the agent could not decide.
-- Ephemeral clarifications the agent could have resolved from the code ("which file holds X?") — those are not decisions, they do not belong in the log.
-
 If it is unclear whether an answer counts as a decision worth logging: if acting on it would change the code, data, or methodology in a way another agent could not reconstruct from the code alone, log it.
 
 ## Task Block Anatomy
