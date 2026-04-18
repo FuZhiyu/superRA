@@ -98,61 +98,43 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ---
 
 ### Task 3: Wire box-flip and protocol pointers into the four workflow skills
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Script:** `skills/planning-workflow/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md` (edit)
 **Input:** Current state of each (line counts in file inventory above)
 **Output:** Each workflow skill carries: (a) a thin pointer to `handoff-doc` §Mid-Session Scope Changes where its choreography touches researcher-initiated drift; (b) a one-liner that flips the relevant `## Workflow Status` box at the corresponding completion gate.
 
-- [ ] **Step 1: `planning-workflow/SKILL.md`** — two edits:
-  - In **Living Plan and Results Docs** section (line 83-89): insert one paragraph after "The plan is NOT a static spec." distinguishing agent-discovered drift (covered here) from researcher-initiated scope changes (covered by `handoff-doc` §Mid-Session Scope Changes). Stash content at lines 247-252 of the patch.
-  - In **Execution Handoff** section (line 126-128): rewrite "After finalizing the plan, commit it" to "After finalizing the plan and confirming with the researcher that the plan reflects what they want analyzed, check the `Plan approved` box in `## Workflow Status` (see `superRA:handoff-doc` references/plan-anatomy.md), commit the plan". Stash content at line 261.
+- [x] **Step 1: `planning-workflow/SKILL.md`** — two edits completed:
+  - Inserted distinguishing paragraph after "The plan is NOT a static spec." (Living Plan section, now at line 87) distinguishing agent-discovered drift from researcher-initiated scope changes, with pointer to `handoff-doc` §Mid-Session Scope Changes.
+  - Rewrote "After finalizing the plan, commit it" (Execution Handoff section) to include `Plan approved` box-flip with cross-ref to `superRA:handoff-doc` references/plan-anatomy.md.
 
-- [ ] **Step 2: `execution-workflow/SKILL.md`** — three edits:
-  - Step 1 (line 143-155): rewrite to (a) name PLAN.md as authoritative tracker with cross-ref to `handoff-doc` §PLAN.md Is the Task Tracker; (b) add a step "Read `## Workflow Status` to see which milestones are complete"; (c) reframe TodoWrite line as "optional working view of PLAN.md task blocks; do not put new analysis tasks into TodoWrite only — write into PLAN.md per `handoff-doc` §Mid-Session Scope Changes first". Adapt stash patch lines 33-46 to the new step numbering (current Step 1 has 7 steps after the Step 0b refactor).
-  - Step 3 (line 195-197): after the "If any check fails: fix it before proceeding" line, append a paragraph: "Once all five checks pass: check the `Execution complete` box in `PLAN.md` §Workflow Status and commit, then proceed to Step 4." Stash content at line 54 (note: was "all six checks" in stash, now "all five checks" because Step 3 was simplified).
-  - Stop-Points class (b) (line 284): change the trailing phrase "scope change that would affect tasks not yet reached." to point at `handoff-doc` §Mid-Session Scope Changes for the doc-update protocol. Stash content at line 64.
+- [x] **Step 2: `execution-workflow/SKILL.md`** — three edits completed:
+  - Step 1 expanded from 7 to 8 sub-steps: sub-step 1 now includes cross-ref to `handoff-doc §PLAN.md Is the Task Tracker`; new sub-step 2 added "Read `## Workflow Status`"; old sub-step 7 (TodoWrite) replaced with derived-view framing per `handoff-doc §Mid-Session Scope Changes`; old sub-steps 2-6 renumbered to 3-7 (domain-skill loading, guidance walk-up, conflict check all preserved).
+  - Step 3: inserted "Once all five checks pass" paragraph with `Execution complete` box-flip after "If any check fails" line.
+  - Stop-Points class (b): scope-change entry bolded and extended with pointer to `handoff-doc` §Mid-Session Scope Changes.
 
-- [ ] **Step 3: `integration-workflow/SKILL.md`** — three box-flip insertions:
-  - End of Stage 1 (after step 7 "Commit test files", line 160): add step 8 "Flip the milestone — check the `Drift tests created` box in `PLAN.md` §Workflow Status and commit before moving to Stage 2."
-  - End of Stage 2 (after step 5 "Final commit", line 228): add step 6 "Flip the milestone — check the `Refactored` box. Note: a later post-merge refactor or scope change unchecks the box until the next integration-reviewer APPROVE."
-  - Step 3 doc-reviewer (after the "If REVISE: adjudicate per the orchestrator discipline above" line at line 346): add a paragraph "On doc-reviewer APPROVE: check the `Docs finalized` box in `PLAN.md` §Workflow Status and commit before moving to Sub-part C. The box flips here, not after disposition, because PLAN.md may be moved or removed by Sub-part C."
-  - Use stash content lines 198, 207, 216 verbatim.
+- [x] **Step 3: `integration-workflow/SKILL.md`** — three box-flip insertions completed:
+  - Stage 1 step 8 added after "Commit test files": flip `Drift tests created` box, commit before Stage 2.
+  - Stage 2 step 6 added after "Final commit": flip `Refactored` box with uncheck caveat for post-merge re-entry.
+  - "On doc-reviewer APPROVE" paragraph inserted after REVISE adjudication line, before Sub-part C: flip `Docs finalized` box with explanation that flip belongs here not at disposition.
 
-- [ ] **Step 4: `merge-workflow/SKILL.md`** — two edits:
-  - Step 3 entry (after "When drift tests fail OR the post-merge integration reviewer returns REVISE..." at line 102): add an "On entry" note that unchecks `Refactored` if PLAN.md is still present (Option 1 of integration-workflow Step 3 sub-part C disposition). Stash content at line 229.
-  - Step 4 (after "Once Step 2 returns clean, execute the user's choice..." at line 130): add a "Before executing the merge action" note that flips `Merged` on the analysis branch if PLAN.md is still present, with the conditional-on-disposition explanation. Stash content at line 238.
+- [x] **Step 4: `merge-workflow/SKILL.md`** — two edits completed:
+  - Step 3: "On entry" note inserted after "When drift tests fail..." line — unchecks `Refactored` if PLAN.md present; references integration-workflow Stage 2 step 6 for re-check.
+  - Step 4: "Before executing the merge action" note inserted after "Once Step 2 returns clean" — checks `Merged` box on analysis branch if PLAN.md present; explains skip condition for Options 2/3 disposition.
 
-- [ ] **Step 5: Validate** — across all four workflow skills:
-  - Every `## Workflow Status` reference is a real heading in `plan-anatomy.md` (verified after Task 2 lands).
-  - Every `handoff-doc §Mid-Session Scope Changes` reference points at a real heading in `handoff-doc/SKILL.md` (verified after Task 1 lands).
-  - The six milestones in plan-anatomy.md exactly match the six box-flip instructions across the four workflow skills (Plan approved → planning; Execution complete → execution; Drift tests created + Refactored + Docs finalized → integration; Merged → merge).
-  - No box-flip instruction adds new choreography that violates Workflow Principle 3 ("Fast early, strict before merge") — every flip happens at the natural completion of a step that already exists.
-  Update PLAN.md, commit:
-  ```bash
-  git add skills/planning-workflow/SKILL.md skills/execution-workflow/SKILL.md skills/integration-workflow/SKILL.md skills/merge-workflow/SKILL.md PLAN.md
-  git commit -m "workflow skills: wire Workflow Status box-flips + Mid-Session Scope Changes pointers"
-  ```
+- [x] **Step 5: Validate** — all six milestones verified in correct workflow skills (Plan approved → planning; Execution complete → execution; Drift tests created + Refactored + Docs finalized → integration; Merged → merge). All `§Mid-Session Scope Changes` references resolved. No Principle 3 violations (every flip at natural completion gate). Self-check commands passed (see dispatch self-check notes).
 
 ---
 
 ### Task 4: Add header-ownership bullet to `agents/implementer.md` and `agents/reviewer.md`
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Script:** `agents/implementer.md`, `agents/reviewer.md` (edit)
 **Input:** Both files' "What You Own, What You Don't" sections, specifically the "**You may NOT edit:**" lists (implementer line 95-100, reviewer line 118-122)
 **Output:** Each list gains one bullet establishing the PLAN.md header (including `## Workflow Status` and `## Decisions`) as orchestrator-owned.
 
-- [ ] **Step 1: implementer.md** — insert a new bullet in the "**You may NOT edit:**" list, between the "Any other task's content" bullet (line 99) and the "The reviewer's prose" bullet (line 100). Content from stash patch line 9: "**The PLAN.md header**, including the `## Workflow Status` checklist and the `## Decisions` log. These are orchestrator-owned (see `superRA:handoff-doc` references/plan-anatomy.md §Header ownership). If your work completes a milestone or surfaces a decision, report it in your status return; the orchestrator handles the doc edit."
+- [x] **Step 1: implementer.md** — inserted new bullet between "Any other task's content" and "The reviewer's prose" (now at line 99). Stash prose used verbatim: header is orchestrator-owned, cross-ref to `superRA:handoff-doc` references/plan-anatomy.md §Header ownership, status-return instruction.
 
-- [ ] **Step 2: reviewer.md** — insert the same kind of bullet, between the "Any other task's content" bullet (line 120) and the "Rewrite the prose..." bullet (line 121). Adapt the stash patch line 21 prose for reviewer voice: "If your review surfaces a project-level concern that belongs in those sections, raise it in your status report; do not edit the header yourself."
+- [x] **Step 2: reviewer.md** — inserted new bullet between "Any other task's content" and "Rewrite the prose..." (now at line 122). Adapted for reviewer voice: same header ownership cross-ref, "raise it in your status report; do not edit the header yourself."
 
-- [ ] **Step 3: Validate** — read both files end-to-end:
-  - The new bullet sits beside the existing "may NOT edit" items without contradicting them.
-  - The cross-reference `superRA:handoff-doc` references/plan-anatomy.md §Header ownership resolves to a real heading after Task 2 lands.
-  - The reviewer's "ad-hoc stage is report-only with no document updates" exception is unaffected.
-  Update PLAN.md, commit:
-  ```bash
-  git add agents/implementer.md agents/reviewer.md PLAN.md
-  git commit -m "agents: forbid implementer/reviewer from editing PLAN.md header (Workflow Status, Decisions)"
-  ```
+- [x] **Step 3: Validate** — both bullets verified: sit naturally beside existing "may NOT edit" items, §Header ownership heading confirmed present in plan-anatomy.md (line 61), reviewer's ad-hoc stage exception unaffected. Cross-reference resolves.

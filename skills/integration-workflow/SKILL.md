@@ -159,6 +159,8 @@ Drift tests guard key results from unintended changes during refactoring or futu
    git commit -m "add drift tests for key analysis results"
    ```
 
+8. **Flip the milestone.** Check the `Drift tests created` box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md) and commit the doc edit before moving to Stage 2.
+
 ## Stage 2: Integration Review → Refactor Loop
 
 The integration reviewer is the gatekeeper. Review first to identify what needs changing, then refactor to address specific issues. Nothing moves forward without integration reviewer approval.
@@ -226,6 +228,8 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
    git add -A
    git commit -m "address integration review feedback"
    ```
+
+6. **Flip the milestone.** Check the `Refactored` box in `PLAN.md` §Workflow Status and commit the doc edit. If a later round of refactoring is triggered (post-merge integration review in `merge-workflow`, or a researcher-initiated scope change that touches refactored code), uncheck the box until the next integration-reviewer APPROVE — the box reflects current state, not historical state.
 
 ## Step 3: Documentation Finalization
 
@@ -344,6 +348,8 @@ The reviewer loads `superRA:report-in-markdown` SKILL.md + `final-form.md` (and 
 3. **Cross-consistency** — matured `RESULTS.md` and any `README.md` / `CLAUDE.md` that mentions the analysis do not contradict each other (figures of merit, method names, sample sizes).
 
 If REVISE: adjudicate per the orchestrator discipline above. For accepted issues, re-dispatch the doc-writer with specific feedback (file:line, what to fix). Re-dispatch the doc-reviewer. Iterate until APPROVE.
+
+**On doc-reviewer APPROVE:** check the `Docs finalized` box in `PLAN.md` §Workflow Status and commit the doc edit before moving to Sub-part C. The box flips here, not after disposition, because by Sub-part C `PLAN.md` may be moved or removed depending on the researcher's choice — the milestone belongs to the doc-finalization gate, not the disposition.
 
 ### Sub-part C: Dispose of PLAN.md (orchestrator, after APPROVE)
 

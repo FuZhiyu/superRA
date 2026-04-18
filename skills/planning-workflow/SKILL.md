@@ -84,6 +84,8 @@ Required header fields and task block structure are non-negotiable. The template
 
 **The plan is NOT a static spec.** Work reveals surprises; the plan evolves in place.
 
+This section covers **agent-discovered drift**: findings during execution that revise upcoming steps within the existing scope. **Researcher-initiated scope changes** during execution — new tasks, modified objectives, methodology changes, sample changes — follow a separate protocol that requires confirmation, decision logging, and a `## Workflow Status` rollback. See `superRA:handoff-doc` §Mid-Session Scope Changes.
+
 **For the full discipline** — the four principles, inline-edit rule, stale-content checklist, figure embedding, `PLAN.md` / `RESULTS.md` anatomy, and the two-stage `RESULTS.md` lifecycle — load `superRA:handoff-doc`. That skill is the single source of truth for document mechanics and is loaded by implementer and reviewer subagents, so the rules stay consistent across roles. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
 **Results document:** Create `RESULTS.md` alongside `PLAN.md` using the template at `references/results-template.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
@@ -125,7 +127,7 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ## Execution Handoff
 
-After finalizing the plan, commit it, then offer execution choice:
+After finalizing the plan and confirming with the researcher that the plan reflects what they want analyzed, check the `Plan approved` box in `## Workflow Status` (see `superRA:handoff-doc` references/plan-anatomy.md), commit the plan, then offer execution choice:
 
 **"Plan complete and saved to `PLAN.md`. RESULTS.md created. Two execution options:**
 

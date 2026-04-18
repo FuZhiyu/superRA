@@ -101,6 +101,8 @@ Agent(subagent_type: "superRA:reviewer"):
 
 When drift tests fail OR the post-merge integration reviewer returns REVISE, re-enter the same refactor-review loop that integration-workflow Stage 2 uses. The machinery is identical — only the trigger changed.
 
+**On entry:** if `PLAN.md` is still present (Option 1 of integration-workflow Step 3 sub-part C disposition), uncheck the `Refactored` box in §Workflow Status — a post-merge refactor invalidates the prior milestone until the next integration-reviewer APPROVE. Re-check it when the loop exits per integration-workflow Stage 2 step 6.
+
 1. **Dispatch refactorer:**
    ```
    Agent(subagent_type: "superRA:implementer"):
@@ -128,6 +130,8 @@ The orchestrator discipline applies: read each cited issue yourself before forwa
 ### Step 4: Execute Merge or PR
 
 Once Step 2 returns clean, execute the user's choice from execution-workflow Step 4.
+
+**Before executing the merge action:** if `PLAN.md` is still present at its disposition location (e.g., `${RESULTS_DIR}/PLAN.md` from Step 3 sub-part C Option 1), check the `Merged` box in §Workflow Status on the **analysis branch** and commit. The flip records that this workflow has completed its merge action — local merge for Option 1, PR opened for Option 2. The box flip then rides into the merge or PR. Skip this if PLAN.md was consolidated/deleted (Step 3 sub-part C Options 2 or 3) — there is nothing to flip; the merged commit history is the record.
 
 **For Option 1 (Merge Locally):**
 
