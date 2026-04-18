@@ -1,6 +1,6 @@
 # superRA
 
-superRA turns AI coding agents into disciplined Research Assistants. Built as a fork of [Superpowers](https://github.com/obra/superpowers), it ships a complete PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow that enforces reviewer sign-off at every step, keeps `PLAN.md` / `RESULTS.md` as the session-to-session source of truth, runs autonomously between legitimate stop points, and merges via intent-based semantic-merge rather than bare `git merge`. Today's flagship domain is economic data analysis; the architecture is built to extend to theory, literature review, simulation, and writing.
+superRA turns AI coding agents into disciplined Research Assistants. Built as a fork of [Superpowers](https://github.com/obra/superpowers), it ships a complete **iterative** PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow that enforces reviewer sign-off at every step, keeps `PLAN.md` / `RESULTS.md` as the session-to-session source of truth, runs autonomously between legitimate stop points, and merges via intent-based semantic-merge rather than bare `git merge`. Research is rarely linear — new tasks surface mid-execution, PR reviewers request adjacent analyses, methodology pivots land post-integration — so the phases form a cycle. Today's flagship domain is economic data analysis; the architecture is built to extend to theory, literature review, simulation, and writing.
 
 ## Why superRA?
 
@@ -17,7 +17,7 @@ In the **data-analysis vertical** (today's flagship), these principles are backe
 
 ## How It Works
 
-When your agent receives a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase.
+When your agent receives a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases also **cycle**: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope addition after merge all route back through `planning-workflow §Changing Plans`, which rolls back the affected milestones, walks the DAG to clear downstream per-task statuses, and resumes at the right re-entry point.
 
 ```
 PLAN            planning-workflow (domain vertical setup → scope check → task decomposition)
@@ -40,7 +40,7 @@ INTEGRATE       integration-workflow → merge-workflow (uses semantic-merge)
                 Refactor for codebase. Integration review. Mature RESULTS.md. Merge or PR.
 ```
 
-Each task produces an atomic commit. If the session dies at any point, the next session reads `PLAN.md` + `RESULTS.md` + git state and picks up exactly where the last one stopped.
+Each task produces an atomic commit. If the session dies at any point, the next session reads `PLAN.md` + `RESULTS.md` + git state and picks up exactly where the last one stopped — including mid-cycle re-entry after a scope change, because the unchecked `## Workflow Status` boxes and per-task `**Review status:**` / `**Integration status:**` fields encode exactly how far the last §Changing Plans pass rolled state back.
 
 ## Workflow Map
 
@@ -73,7 +73,7 @@ flowchart TB
 
     MERGE["<b>MERGE</b><br/>merge-workflow<br/>+ semantic-merge (conflict classification)<br/>Stage: merge<br/>→ implementer + reviewer<br/>+ refactor-and-integrate/references/merge-quality.md<br/>Post-merge: fresh drift-test + integration review"]
 
-    CROSS["<b>Cross-cutting (every dispatch)</b><br/>using-superRA — universal principles · skill inventory · skill-load manifest · execution modes (subagent/direct) · session bootstrap<br/>agent-orchestration — dispatch shape · return deltas · reviewer-feedback adjudication · review-status reference<br/>handoff-doc — loaded on demand or by doc-creators; carries four principles · inline-edit · task-block anatomy · user-decisions log · figure embedding"]
+    CROSS["<b>Cross-cutting (every dispatch)</b><br/>using-superRA — universal principles · code-change defaults · skill inventory · skill-load manifest · execution modes (subagent/direct) · session bootstrap<br/>agent-orchestration — dispatch shape · return deltas · reviewer-feedback adjudication · review-status reference<br/>handoff-doc — loaded on demand or by doc-creators; carries four principles · inline-edit · task-block anatomy · user-decisions log · figure embedding"]
 
     SESSION -.loads.-> CROSS
     PLAN -.uses.-> CROSS
@@ -92,7 +92,7 @@ flowchart TB
     class SESSION session
 ```
 
-**Legend — the DRY-composition pattern.** `using-superRA` is the master skill every agent reads; it owns the universal principles, the skill inventory, the composable-design map, the Skill-Load Manifest, and the Execution Modes (subagent dispatch vs direct mode). Workflow skills own *choreography* — what steps run in what order at each stage. `agent-orchestration` owns cross-stage orchestration (dispatch shape, return-delta protocol, reviewer-feedback adjudication, review-status reference). Domain skills own domain discipline (Iron Law, Describe/Analyze/Validate, the `[BLOCKING]` / `[ADVISORY]` shared-flow checklists that both implementer and reviewer walk). `refactor-and-integrate` owns generic integration discipline (drift-test quality, codebase integration, merge quality). `handoff-doc` owns document-level discipline for `PLAN.md` / `RESULTS.md`. The Skill-Load Manifest in `superRA:using-superRA` is the authoritative map from a dispatched `Stage:` value to the exact skills and references the agent loads — the diagram above is a visualization of that manifest.
+**Legend — the DRY-composition pattern.** `using-superRA` is the master skill every agent reads; it owns the universal principles, the code-change defaults, the skill inventory, the composable-design map, the Skill-Load Manifest, and the Execution Modes (subagent dispatch vs direct mode). Workflow skills own *choreography* — what steps run in what order at each stage. `agent-orchestration` owns cross-stage orchestration (dispatch shape, return-delta protocol, reviewer-feedback adjudication, review-status reference). Domain skills own domain discipline (Iron Law, Describe/Analyze/Validate, the `[BLOCKING]` / `[ADVISORY]` shared-flow checklists that both implementer and reviewer walk). `refactor-and-integrate` owns generic integration discipline (drift-test quality, codebase integration, merge quality). `handoff-doc` owns document-level discipline for `PLAN.md` / `RESULTS.md`. The Skill-Load Manifest in `superRA:using-superRA` is the authoritative map from a dispatched `Stage:` value to the exact skills and references the agent loads — the diagram above is a visualization of that manifest.
 
 **Extension note.** Adding a new vertical (theory, literature review, simulation, writing) swaps only the Domain column — the planning reference, the main-body discipline, the §Three Concurrent Disciplines checklist, and the integration reference. The workflow skills, `agent-orchestration`, `handoff-doc`, `refactor-and-integrate`, and the agent Stage-table scaffolding all stay put. A new vertical composes these pieces; it never forks a workflow skill.
 
@@ -112,7 +112,7 @@ Four workflow principles are baked into every skill in the repo. Every contribut
 
 Below the four workflow principles sits one load-bearing architectural rule that shapes how the skills themselves compose.
 
-**DRY, composability, extensibility.** One source of truth per concern. `using-superRA` is the master skill every agent reads — it owns the universal principles, skill inventory, composable-design map, Skill-Load Manifest, and Execution Modes (subagent dispatch vs direct mode). Workflow skills own choreography (what steps run in what order). `agent-orchestration` owns cross-stage orchestration (dispatch shape, relay protocol, verdict adjudication). Domain skills own domain discipline. `refactor-and-integrate` owns generic integration discipline. `handoff-doc` owns handoff-doc mechanics. When adding content, ask *what concern does this describe?* and put it in the one skill that owns that concern; reference it from everywhere else. Duplicated content invites drift and is a code smell. Shared-flow corollary: for any gated checklist, implementer and reviewer walk the **same file**, with `[BLOCKING]` / `[ADVISORY]` markers encoding severity — one document, two perspectives. Adding a new vertical composes existing pieces; it never forks workflow skills. See `CLAUDE.md` §DRY, composability, extensibility for the full statement and ownership map.
+**DRY, composability, extensibility.** One source of truth per concern. `using-superRA` is the master skill every agent reads — it owns the universal principles, code-change defaults, skill inventory, composable-design map, Skill-Load Manifest, and Execution Modes (subagent dispatch vs direct mode). Workflow skills own choreography (what steps run in what order). `agent-orchestration` owns cross-stage orchestration (dispatch shape, relay protocol, verdict adjudication). Domain skills own domain discipline. `refactor-and-integrate` owns generic integration discipline. `handoff-doc` owns handoff-doc mechanics. When adding content, ask *what concern does this describe?* and put it in the one skill that owns that concern; reference it from everywhere else. Duplicated content invites drift and is a code smell. Shared-flow corollary: for any gated checklist, implementer and reviewer walk the **same file**, with `[BLOCKING]` / `[ADVISORY]` markers encoding severity — one document, two perspectives. Adding a new vertical composes existing pieces; it never forks workflow skills. See `CLAUDE.md` §DRY, composability, extensibility for the full statement and ownership map.
 
 ## Installation
 
@@ -170,7 +170,7 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 | Skill | What It Does |
 |-------|-------------|
-| **using-superRA** | Master skill every agent reads. Carries the distilled universal principles, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the seven-row Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Preloaded on `superRA:implementer` / `superRA:reviewer` agent frontmatter; injected at session start for the main agent. Main-agent-only cross-session detection lives in `references/session-bootstrap.md`. |
+| **using-superRA** | Master skill every agent reads. Carries the distilled universal principles, code-change defaults, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the seven-row Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Preloaded on `superRA:implementer` / `superRA:reviewer` agent frontmatter; injected at session start for the main agent. Main-agent-only cross-session detection and autonomy contract live in `references/main-agent.md`. |
 
 ## Agents
 

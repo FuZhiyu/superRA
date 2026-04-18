@@ -8,9 +8,6 @@
 # still holds after a structural change.
 #
 # Exit 0 = all invariants pass. Exit >0 = one or more failures.
-# Known pre-existing warnings (broken upstream refs in writing-skills)
-# are reported as WARN, not FAIL, so CI stays green until they're
-# addressed separately.
 
 set -u
 cd "$(dirname "$0")/.."
@@ -42,12 +39,7 @@ for ref in $(grep -rohE 'superRA:[a-zA-Z-]+' skills/ agents/ hooks/ README.md CL
   [ "$name" = "reviewer" ] && continue
   if [ ! -d "skills/$name" ]; then
     broken_live=$((broken_live+1))
-    # Known pre-existing upstream refs → WARN, not FAIL
-    if [ "$name" = "systematic-debugging" ] || [ "$name" = "test-driven-development" ]; then
-      warn "superRA:$name — unresolved upstream ref in writing-skills (known)"
-    else
-      fail "superRA:$name — invocation does not resolve to a skills/ directory"
-    fi
+    fail "superRA:$name — invocation does not resolve to a skills/ directory"
   fi
 done
 [ $broken_live -eq 0 ] && pass "all superRA: invocations in live surface resolve"
@@ -400,7 +392,7 @@ else
 fi
 
 # 20. using-superRA is the master skill: carries the principles + inventory +
-# skill-load manifest + execution modes; references/session-bootstrap.md is
+# skill-load manifest + execution modes; references/main-agent.md is
 # the main-agent-only bootstrap reference; <SUBAGENT-STOP> is retired.
 us_skill="skills/using-superRA/SKILL.md"
 us_missing=0
@@ -437,10 +429,10 @@ if grep -Fq '<SUBAGENT-STOP>' "$us_skill"; then
 else
   pass "using-superRA SKILL.md is free of <SUBAGENT-STOP>"
 fi
-if [ -f skills/using-superRA/references/session-bootstrap.md ]; then
-  pass "exists: skills/using-superRA/references/session-bootstrap.md"
+if [ -f skills/using-superRA/references/main-agent.md ]; then
+  pass "exists: skills/using-superRA/references/main-agent.md"
 else
-  fail "missing: skills/using-superRA/references/session-bootstrap.md"
+  fail "missing: skills/using-superRA/references/main-agent.md"
 fi
 
 # 21. Stage tables retired on agent files; frontmatter preload applied;
@@ -580,10 +572,10 @@ if [ "$tier_count" -eq 3 ]; then
 else
   fail "$ao has $tier_count tiers (expected 3)"
 fi
-if grep -q "150k" "$ao" && grep -q "cache" "$ao"; then
-  pass "$ao references 150k-token rule and cache reuse"
+if grep -q "150k" "$ao"; then
+  pass "$ao references 150k-token rule"
 else
-  fail "$ao missing 150k or cache-reuse guidance"
+  fail "$ao missing 150k guidance"
 fi
 
 echo

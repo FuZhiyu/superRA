@@ -110,6 +110,7 @@ You follow an existing task-block anatomy (objective / files affected / input / 
 
 - The task objective, script path, or input/output — these define task scope.
 - Any other task's content (steps, status, review notes, results section).
+- **The PLAN.md header**, including the `## Workflow Status` checklist and the `## Decisions` log. These are orchestrator-owned (see `superRA:handoff-doc` references/plan-anatomy.md §Header ownership). If your work completes a milestone or surfaces a decision, report it in your status return; the orchestrator handles the doc edit.
 - **The reviewer's prose** inside a review-notes blockquote item. You append `→ implemented: ...` annotations; you do not rewrite what the reviewer wrote.
 - **Any `→ orchestrator: ...` annotation** already present on a review item. Leave it intact.
 - **Any review item's existence.** You never delete review items. Only the reviewer and the orchestrator have delete authority; your only tool is the `→ implemented: ...` annotation.

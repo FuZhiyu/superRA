@@ -123,6 +123,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 
 - Any step, step code, or task objective — even if you believe it is wrong. Raise the issue as a review item in your blockquote and let the orchestrator decide whether to rewrite the step.
 - Any other task's content.
+- **The PLAN.md header**, including the `## Workflow Status` checklist and the `## Decisions` log. These are orchestrator-owned (see `superRA:handoff-doc` references/plan-anatomy.md §Header ownership). If your review surfaces a project-level concern that belongs in those sections, raise it in your status report; do not edit the header yourself.
 - **Rewrite** the prose of an implementer's `→ implemented: ...` annotation or an orchestrator's `→ orchestrator: ...` annotation. You read them. You are allowed to **delete an entire item** (including its annotations) when the fix is verified on re-review — that is a delete, not a rewrite.
 
 ### How You Write a Review
