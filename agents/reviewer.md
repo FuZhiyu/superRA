@@ -129,6 +129,30 @@ Regardless of stage (implementation review, drift test review, integration revie
 2. Walk the domain skill's §Review & Self-Check Discipline top to bottom. Do not halt on a `[GATING]` failure — continue through `[STANDARD]` and `[ADVISORY]` items so the implementer gets one comprehensive pass.
 3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix. **If any `[GATING]` items failed, list them first** and append the framing line "downstream items reviewed and currently correct; approval contingent on the gating fix not changing downstream results" after them.
 4. Set `**Review status:**` per the three-verdict protocol in §Verdict: `APPROVED` (no items), `REVISE` (only `[STANDARD]` failures), or `CONDITIONAL APPROVE` (one or more `[GATING]` failures; downstream walked).
+
+### Shared-Repo Commit Discipline
+
+Other agents may be running in parallel in the same repository, and
+their uncommitted edits may land in your `git status` output. **Only
+commit the files you modified this turn.** Never commit sweeps.
+
+Before staging:
+
+1. Run `git status` and list every modified/new file. For each one,
+   decide: did I touch this file (directly via Write/Edit) in this
+   turn?
+2. If yes → stage it by exact path: `git add path/to/file`.
+3. If no → leave it untouched. Do NOT `git add -A`, `git add .`, or
+   `git add -u`. Those stage other agents' in-flight work and produce
+   cross-agent commit contamination that is hard to unwind.
+4. Before `git commit`, run `git diff --cached` and confirm only your
+   edits are staged. If you see unexpected content, unstage it with
+   `git restore --staged path/to/file`.
+
+If you see unfamiliar uncommitted changes and cannot tell whether they
+are another agent's in-flight work or stale local state, stop and ask
+the orchestrator — do not unilaterally discard or commit them.
+
 5. Commit `PLAN.md` only: `git commit -m "review: Task N <verdict>"`.
 
 **On re-review (blockquote exists with annotations):**

@@ -135,11 +135,34 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 2. **Update `RESULTS.md` task section in place.** If a section for your task already exists from a prior iteration, **replace** its content with current findings. Follow the canonical per-task anatomy in `superRA:handoff-doc` (`references/results-anatomy.md`). Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
-3. **Single atomic commit.** Stage code + `PLAN.md` + `RESULTS.md` together:
-   ```bash
-   git add [code files] PLAN.md RESULTS.md results_attachments/
-   git commit -m "task N: [brief description]"
-   ```
+### Shared-Repo Commit Discipline
+
+Other agents may be running in parallel in the same repository, and
+their uncommitted edits may land in your `git status` output. **Only
+commit the files you modified this turn.** Never commit sweeps.
+
+Before staging:
+
+1. Run `git status` and list every modified/new file. For each one,
+   decide: did I touch this file (directly via Write/Edit) in this
+   turn?
+2. If yes → stage it by exact path: `git add path/to/file`.
+3. If no → leave it untouched. Do NOT `git add -A`, `git add .`, or
+   `git add -u`. Those stage other agents' in-flight work and produce
+   cross-agent commit contamination that is hard to unwind.
+4. Before `git commit`, run `git diff --cached` and confirm only your
+   edits are staged. If you see unexpected content, unstage it with
+   `git restore --staged path/to/file`.
+
+If you see unfamiliar uncommitted changes and cannot tell whether they
+are another agent's in-flight work or stale local state, stop and ask
+the orchestrator — do not unilaterally discard or commit them.
+
+**Single atomic commit.** Stage code + `PLAN.md` + `RESULTS.md` together:
+```bash
+git add [code files] PLAN.md RESULTS.md results_attachments/
+git commit -m "task N: [brief description]"
+```
 
 **Inline-edit rule (always):** PLAN.md and RESULTS.md reflect current state, not history. Replace outdated content in place — never append alongside it, never strike through.
 
