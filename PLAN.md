@@ -98,7 +98,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ---
 
 ### Task 3: Wire box-flip and protocol pointers into the four workflow skills
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** `skills/planning-workflow/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md` (edit)
 **Input:** Current state of each (line counts in file inventory above)
@@ -127,7 +127,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ---
 
 ### Task 4: Add header-ownership bullet to `agents/implementer.md` and `agents/reviewer.md`
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** `agents/implementer.md`, `agents/reviewer.md` (edit)
 **Input:** Both files' "What You Own, What You Don't" sections, specifically the "**You may NOT edit:**" lists (implementer line 95-100, reviewer line 118-122)
