@@ -66,7 +66,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ---
 
 ### Task 1: Add `## PLAN.md Is the Task Tracker` and `## Mid-Session Scope Changes` to `handoff-doc/SKILL.md`
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** `skills/handoff-doc/SKILL.md` (edit)
 **Input:** Current `handoff-doc/SKILL.md` (119 lines, four-principles structure)
@@ -81,7 +81,10 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ---
 
 ### Task 2: Add `## Workflow Status` template to `plan-anatomy.md` + Header-ownership and Field-by-Field updates
-**Review status:** IMPLEMENTED
+**Review status:** REVISE
+
+> **Review notes:**
+> 1. [MAJOR] `skills/handoff-doc/references/plan-anatomy.md:61` — `**Header ownership:**` is a bold-prefix paragraph, not a real heading. PLAN.md Task 4 Step 3 explicitly cites `references/plan-anatomy.md §Header ownership` as a cross-reference target and includes "resolves to a real heading after Task 2 lands" as a validate-step criterion. With the current state, that validate step fails by its own definition. Bundle A owns the cross-reference targets that Bundle B will link to. **Fix:** Promote `**Header ownership:**` to `### Header ownership` (one-line change). Once promoted, both `### Header ownership` and the pre-existing `### \`## Decisions\` placement` cleanly hang as siblings off `## Header`. The Field-by-Field bullet at line 125 already implicitly refers to this section ("Header ownership"); the promotion makes that reference unambiguous and discoverable by heading-grep.
 
 **Script:** `skills/handoff-doc/references/plan-anatomy.md` (edit)
 **Input:** Current `plan-anatomy.md` (117 lines, header template + task block anatomy + field notes)
