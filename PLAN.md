@@ -129,7 +129,12 @@ Verification results:
 ### Task 2: Rewrite `agent-orchestration/SKILL.md` — add §Workload Balancing, delete Decision Framework + Dispatch-Return Deltas + Integration, tighten dispatch template
 
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** REVISE
+
+> **Review notes:**
+> 1. [MAJOR] `SendMessage` tool reference in cache-reuse rule of thumb — Teams-era capability cited in active skill. (`skills/agent-orchestration/SKILL.md` lines 67–68)
+>
+>    The new "Reuse existing agents within the cache window" rule of thumb says: "prefer `SendMessage` on the existing agent over spawning fresh." `SendMessage` was a mechanism for Agent Teams peer-to-peer messaging. Agent Teams mode has just been archived. In standard subagent dispatch (the only mode that remains), the orchestrator uses the `Agent` tool to spawn subagents — there is no `SendMessage` call that routes a new task to an already-running subagent. An orchestrator reading this text has no way to act on the advice: the tool it points at does not exist in standard mode. The cache-reuse observation itself is valid (prompt-cache TTL means spawning the same agent within ~5 minutes of its last turn is cheaper), but the actionable guidance needs to be rewritten to describe what is actually available — e.g., noting that if a task arrives within the cache window and the prior agent has not yet exited, dispatching a bundled follow-on task rather than a separate spawn can exploit the warm cache; or simply noting that the orchestrator should consider bundling tasks that share context to minimize spawn overhead. Fix: remove or replace the `SendMessage` reference with guidance that reflects standard-mode tools only.
 
 **Bundles feedback F2 + F3 + F4 + D1 + D2** — all five edit `skills/agent-orchestration/SKILL.md` in overlapping regions. One implementer, one reviewer. This is the "slightly involved, bundle-and-delegate" tier.
 
