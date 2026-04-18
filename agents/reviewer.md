@@ -137,28 +137,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 4. Set `**Review status:**` per the verdict protocol in §Verdict: `APPROVED` (no `[BLOCKING]` items) or `REVISE` (at least one `[BLOCKING]` item).
 5. Commit `PLAN.md` only: `git commit -m "review: Task N <verdict>"`.
 
-### Shared-Repo Commit Discipline
-
-Other agents may be running in parallel in the same repository, and
-their uncommitted edits may land in your `git status` output. **Only
-commit the files you modified this turn.** Never commit sweeps.
-
-Before staging:
-
-1. Run `git status` and list every modified/new file. For each one,
-   decide: did I touch this file (directly via Write/Edit) in this
-   turn?
-2. If yes → stage it by exact path: `git add path/to/file`.
-3. If no → leave it untouched. Do NOT `git add -A`, `git add .`, or
-   `git add -u`. Those stage other agents' in-flight work and produce
-   cross-agent commit contamination that is hard to unwind.
-4. Before `git commit`, run `git diff --cached` and confirm only your
-   edits are staged. If you see unexpected content, unstage it with
-   `git restore --staged path/to/file`.
-
-If you see unfamiliar uncommitted changes and cannot tell whether they
-are another agent's in-flight work or stale local state, stop and ask
-the orchestrator — do not unilaterally discard or commit them.
+**Shared-repo commit discipline.** Follow `superRA:using-superRA` §Shared-Repo Commit Discipline before staging `PLAN.md` for your `review:` commit — stage by exact path, never `git add -A/./-u`, diff-cached before commit.
 
 **On re-review (blockquote exists with annotations):**
 
