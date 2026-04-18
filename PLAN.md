@@ -87,8 +87,8 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ## Workflow Status
 
-- [ ] **Plan approved** — unchecked at re-entry (2026-04-17): plan rewritten to adopt per-task `**Integration status:**` + iterative re-entry mechanism; Tasks 1/2/3 rescoped, Task 5 added
-- [ ] **Execution complete** — unchecked at re-entry: Tasks 1/2/3/5 need re-implementation against the new design; Task 4 remains APPROVED (header-ownership language unaffected by the redesign)
+- [x] **Plan approved** — re-approved at re-entry (2026-04-17): iterative re-entry mechanism plan adopted; Tasks 1/2/3 rescoped, Task 5 added
+- [x] **Execution complete** — all five tasks `**Review status:** APPROVED` (2026-04-17): Bundle A (Tasks 1+2) APPROVED at `ee38223`; Task 4 preserved APPROVED across re-entry; Bundle B (Tasks 3+5) APPROVED at `3776981` after one REVISE round
 - [ ] **Drift tests created** — unchecked at re-entry: no new invariants to author this iteration, but full-suite `bash tests/structural-invariants.sh` must re-run green before recheck
 - [ ] **Refactored** — unchecked at re-entry: Tasks 1/2/3/5 code changes require integration-reviewer pass
 - [ ] **Docs finalized** — unchecked at re-entry: RELEASE-NOTES needs a new entry describing the unified re-entry mechanism + main-agent handoff-doc default; doc-reviewer runs on the diff
