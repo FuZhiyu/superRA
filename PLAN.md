@@ -66,7 +66,7 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 ### Task 1: Archive Agent Teams mode across the plugin
 
 **Depends on:** *(none)*
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Files touched (verified to exist on `econ-adaption`):**
 - `skills/agent-orchestration/SKILL.md`
@@ -78,128 +78,51 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 - `README.md`
 - `RELEASE-NOTES.md`
 
-**Files to discover during implementation (grep and include if matches found):**
-- Any skill file under `skills/` with string `Agent Team|TeamCreate|agent-teams` (exclude `references/`, `RELEASE-NOTES.md`, the file being archived).
-- `hooks/session-start` if present — strip Teams detection.
+**Files discovered during implementation (grep found and included):**
+- `hooks/session-start` — stripped Teams detection (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` probe + `agent_teams_note` variable).
+- `skills/integration-workflow/SKILL.md` — `## Agent Teams Mode` section removed.
+- `skills/merge-workflow/SKILL.md` — `## Agent Teams Mode` section removed.
+- `skills/semantic-merge/SKILL.md` — `## Agent Teams Mode` section removed; stale `Pairs with` bullet pointing at `agent-orchestration` removed.
+- `skills/using-superRA/SKILL.md` — `## Agent Teams` section removed; intro line updated.
+- `CLAUDE.md` — `agent-teams.md` reference removed from `agent-orchestration` ownership bullet.
+- `skills/CATEGORIES.md` — category description updated.
 
 **Dispatch tier:** Complicated — dedicated implementer agent, dedicated reviewer. Cross-file grep, test rewrite, doc sweep. Estimated ≤60k tokens for the agent.
 
-- [ ] **Step 1: Plan — enumerate all active references to Agent Teams**
+- [x] **Step 1: Plan — enumerate all active references to Agent Teams**
 
-```bash
-cd $WORKTREE_ROOT   # /Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/feedback-agent-dispatch
-grep -rn -E "Agent Team|TeamCreate|agent-teams\.md|Team mode" \
-  skills/ agents/ hooks/ tests/ README.md RELEASE-NOTES.md CLAUDE.md \
-  --exclude-dir=references | tee /tmp/teams-refs-before.txt
-wc -l /tmp/teams-refs-before.txt
-```
+Before-count across active files (excluding `agent-orchestration/SKILL.md` which is T2 scope and `agent-teams.md` itself): ~28 references across 10 files (`execution-workflow` ×10, `using-superRA` ×3, `integration-workflow` ×2, `merge-workflow` ×2, `semantic-merge` ×2, `agents/implementer.md` ×2, `agents/reviewer.md` ×2, `hooks/session-start` ×2, `CLAUDE.md` ×1, `README.md` ×2). `agent-orchestration/SKILL.md` had ~10 additional references (deferred to T2).
 
-Expected: ≥10 hits. Record the full count in RESULTS.md.
+- [x] **Step 2: Edit — archive the reference file**
 
-- [ ] **Step 2: Edit — archive the reference file**
+Prepended ARCHIVED banner + blank line to `skills/agent-orchestration/references/agent-teams.md`. Body preserved.
 
-Prepend to `skills/agent-orchestration/references/agent-teams.md`:
+- [x] **Step 3: Edit — strip Teams references from active files**
 
-```markdown
-> **ARCHIVED (2026-04-17).** Agent Teams mode proved unreliable in practice
-> and is no longer used by any superRA workflow. This file is retained as
-> a historical reference only — **do not load it, do not cite it from any
-> active skill**. If you are reading this because an agent pointed you
-> here, the pointer is stale; please flag it.
+Removed Teams references from all active files. `skills/agent-orchestration/SKILL.md` skipped per plan — handled in T2. Files edited:
+- `skills/execution-workflow/SKILL.md`: removed Teams branch from DOT graph and deleted `## Agent Teams Mode` section.
+- `agents/implementer.md`: deleted `## If Running as Agent Team Teammate` section.
+- `agents/reviewer.md`: deleted `## If Running as Agent Team Teammate` section.
+- `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`: deleted `## Agent Teams Mode` sections.
+- `skills/using-superRA/SKILL.md`: deleted `## Agent Teams` section; updated intro sentence.
+- `hooks/session-start`: removed `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` probe and `agent_teams_note` injection.
+- `CLAUDE.md`: removed `agent-teams.md` pointer from `agent-orchestration` ownership description.
+- `skills/CATEGORIES.md`: updated description for `agent-orchestration`.
 
-```
+- [x] **Step 4: Edit — replace the TeamCreate invariant in structural tests**
 
-Do NOT delete the body. Just the banner + one blank line before the existing content.
+Replaced the `TeamCreate`-asserting body of invariant 22 in `tests/structural-invariants.sh` with archive-banner assertion + active-file cite check. Extended to also scan `skills/`, `agents/`, `hooks/` for active Teams references (excluding the archived file itself and `RELEASE-NOTES.md`).
 
-- [ ] **Step 3: Edit — strip Teams references from active files**
+- [x] **Step 5: Edit — README and RELEASE-NOTES**
 
-For each file with an active reference (from Step 1 grep output):
+`README.md`: updated `agent-orchestration` row description and `session-start` hook description to remove Teams language. `RELEASE-NOTES.md`: prepended `## 2026-04-17 — Agent Teams mode archived` entry.
 
-1. Read the file, identify the sentence/paragraph/section referencing Teams.
-2. If the reference is a standalone section (e.g., `## Agent Teams Mode`, `## If Running as Agent Team Teammate`) → delete the entire section.
-3. If the reference is one sentence inside a broader paragraph → delete the sentence, and rewrite the paragraph to read coherently.
-4. If the reference sits inside a decision table or DOT graph branch → delete the branch; renumber / restructure if needed.
-5. Surrounding prose must still read cleanly after removal — do not leave dangling "See above" or orphan cross-references.
+- [x] **Step 6: Verify + commit**
 
-Files known from Step 1 sample (may be more after full grep):
-
-- `skills/agent-orchestration/SKILL.md` — **skip for this task**, handled in T2 which rewrites the skill top-to-bottom including Teams removal.
-- `skills/execution-workflow/SKILL.md` — remove the Teams branch from the mode-decision DOT graph (lines around §23–36 on `econ-adaption`); delete `## Agent Teams Mode` section near §297. Keep subagent-mode section only.
-- `agents/implementer.md` — delete `## If Running as Agent Team Teammate` section (tail of file on `econ-adaption`).
-- `agents/reviewer.md` — delete the analogous `## If Running as Agent Team Teammate` section.
-
-- [ ] **Step 4: Edit — replace the TeamCreate invariant in structural tests**
-
-On `econ-adaption`, `tests/structural-invariants.sh` may or may not contain a TeamCreate-asserting invariant. Confirm by:
-
-```bash
-grep -n "TeamCreate\|agent-teams" tests/structural-invariants.sh
-```
-
-If an invariant exists, replace its body with an archive-banner assertion:
-
-```bash
-# Invariant N: agent-teams reference is archived (not loaded by active skills)
-at_ref="skills/agent-orchestration/references/agent-teams.md"
-if head -5 "$at_ref" | grep -q "ARCHIVED"; then
-  pass "$at_ref carries ARCHIVED banner"
-else
-  fail "$at_ref is missing the ARCHIVED banner"
-fi
-
-# And: no active skill file cites the archived reference
-active_refs=$(grep -rln -E "agent-teams\.md|TeamCreate" \
-  skills/ agents/ hooks/ \
-  --exclude-dir=references \
-  --exclude="$at_ref" || true)
-if [ -z "$active_refs" ]; then
-  pass "no active file references archived agent-teams content"
-else
-  fail "active files still reference Teams content: $active_refs"
-fi
-```
-
-If no existing invariant — append the above as a new invariant at the end of the file, numbered sequentially.
-
-- [ ] **Step 5: Edit — README and RELEASE-NOTES**
-
-`README.md`: remove any feature row or sentence describing Agent Teams mode as a supported orchestration pattern. Replace with (only if needed) a single sentence about parallel-subagent dispatch.
-
-`RELEASE-NOTES.md`: **append** (do not rewrite prior entries) a new top entry dated `2026-04-17`:
-
-```markdown
-## 2026-04-17 — Agent Teams mode archived
-
-Agent Teams mode was unreliable in practice. `references/agent-teams.md` is
-now archived; no active skill loads or cites it. Workflows that previously
-offered a Teams branch (execution-workflow, integration-workflow,
-merge-workflow, semantic-merge) fall back to parallel-subagent dispatch.
-See `agent-orchestration` §Workload Balancing for the dispatch framework.
-```
-
-- [ ] **Step 6: Verify + commit**
-
-```bash
-# 1. No active references remain
-grep -rn -E "Agent Team|TeamCreate|agent-teams\.md|Team mode" \
-  skills/ agents/ hooks/ README.md CLAUDE.md \
-  --exclude-dir=references | grep -v "ARCHIVED" | tee /tmp/teams-refs-after.txt
-test ! -s /tmp/teams-refs-after.txt && echo "OK: no active refs" || echo "FAIL: refs remain"
-
-# 2. Archive banner present
-head -5 skills/agent-orchestration/references/agent-teams.md | grep -q "ARCHIVED" \
-  && echo "OK: banner" || echo "FAIL: banner missing"
-
-# 3. Invariants pass
-bash tests/structural-invariants.sh
-```
-
-All three must pass. Update PLAN.md: mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Update RESULTS.md Task 1 section with before/after grep counts. Commit:
-
-```bash
-git add skills/ agents/ tests/ README.md RELEASE-NOTES.md PLAN.md RESULTS.md
-git commit -m "refactor(agent-orchestration): archive Agent Teams mode"
-```
+Verification results:
+1. Active Teams refs: only `skills/agent-orchestration/SKILL.md` (expected — T2 scope, not yet cleaned).
+2. Archive banner: PASS.
+3. Structural invariants: 1 FAIL (invariant 22 active-file check flags `agent-orchestration/SKILL.md` — expected, T2 handles it). All other invariants PASS.
 
 ---
 

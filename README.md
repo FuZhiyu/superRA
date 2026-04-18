@@ -142,7 +142,7 @@ superRA's skills split into four categories. The directory layout stays flat (on
 | **execution-workflow** | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE / CONDITIONAL APPROVE) with orchestrator-discipline filter, pipeline + reproducibility verification, 4-option completion menu. |
 | **integration-workflow** | INTEGRATE (pre-merge) | Drift-test creation, refactor-review loop, doc finalization (mature RESULTS.md into permanent form, audit project-level CLAUDE.md / AGENTS.md / README.md). |
 | **merge-workflow** | INTEGRATE (merge) | Update analysis branch via semantic-merge, post-merge verification (drift tests + fresh integration review), local merge or PR push, worktree cleanup. |
-| **agent-orchestration** | cross-cutting | Multi-agent dispatch patterns: parallel subagents for independent tasks, Agent Teams for iterative workflows. |
+| **agent-orchestration** | cross-cutting | Multi-agent dispatch patterns: workload balancing across tiers, parallel subagents for independent tasks, reviewer-feedback adjudication. |
 
 ### Domain — Data Analysis
 
@@ -199,7 +199,7 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
-| **session-start** | Session start, `/clear`, `/compact` | Inject using-superRA skill, check for Agent Teams availability |
+| **session-start** | Session start, `/clear`, `/compact` | Inject using-superRA skill |
 | **merge-guard** | Before any `git merge/rebase/cherry-pick` | Remind to use semantic-merge skill |
 | **ask-user-question-logger** | After `AskUserQuestion` | Remind to log the decision in PLAN.md before acting |
 | **exit-plan-mode** | After `ExitPlanMode` | Remind to materialize plan into PLAN.md + RESULTS.md before implementing |

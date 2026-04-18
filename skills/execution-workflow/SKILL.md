@@ -20,8 +20,6 @@ digraph mode_selection {
     "Have plan?" [shape=diamond];
     "Subagents available?" [shape=diamond];
     "Tasks trivial or user prefers direct?" [shape=diamond];
-    "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" [shape=diamond];
-    "Agent Team mode (preferred)" [shape=box style=filled fillcolor=lightblue];
     "Subagent mode" [shape=box style=filled fillcolor=lightgreen];
     "Direct mode (fallback)" [shape=box style=filled fillcolor=lightyellow];
     "Plan first" [shape=box];
@@ -31,17 +29,9 @@ digraph mode_selection {
     "Subagents available?" -> "Tasks trivial or user prefers direct?" [label="yes"];
     "Subagents available?" -> "Direct mode (fallback)" [label="no"];
     "Tasks trivial or user prefers direct?" -> "Direct mode (fallback)" [label="yes"];
-    "Tasks trivial or user prefers direct?" -> "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" [label="no"];
-    "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" -> "Agent Team mode (preferred)" [label="yes"];
-    "Agent Teams available (TeamCreate)\nAND ≥2 tasks remaining?" -> "Subagent mode" [label="no"];
+    "Tasks trivial or user prefers direct?" -> "Subagent mode" [label="no"];
 }
 ```
-
-**Agent Team mode (preferred):**
-- Use `TeamCreate` to set up a persistent team with implementer + reviewer
-- Direct iteration between agents without orchestrator relay
-- Load `superRA:agent-orchestration` for the Task Team recipe (team composition, task graph, lifecycle)
-- Use when: `TeamCreate` tool is available AND ≥2 tasks remain
 
 **Subagent mode:**
 - Dispatch implementer subagent per task
@@ -292,14 +282,6 @@ Stop for exactly three classes of pause, all of which require logging the answer
 
 - **`superRA:implementer`** — Dispatched per task at `Stage: implementation`. See `superRA:using-superRA` §Skill-Load Manifest for the skills and stage-scoped references it loads.
 - **`superRA:reviewer`** — Dispatched per task at `Stage: implementation review`. See `superRA:using-superRA` §Skill-Load Manifest for the skills and stage-scoped references it loads.
-
-## Agent Teams Mode
-
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per-task implementation+review cycle can be orchestrated as a persistent team. This enables direct iteration between implementer and reviewer without the orchestrator relaying feedback.
-
-**Invoke `superRA:agent-orchestration` for the Task Team recipe** — it has the full team composition, task graph with dependencies, iteration patterns, lead responsibilities, and session handoff protocol.
-
-**Critical:** When all tasks complete, shut down teammates and clean up the team BEFORE dispatching `superRA:integration-workflow`. This frees the session's team slot for the integration-workflow team and the subsequent merge-workflow team.
 
 ## Red Flags
 

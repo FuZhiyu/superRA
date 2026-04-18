@@ -164,8 +164,8 @@ else
 fi
 
 # 10b. No dispatch template retains `Work from:` or `Counterpart:` fields
-# (legacy over-specification; Work-from is cwd by default, Counterpart is
-# set at team-spawn time in Agent Teams mode).
+# (legacy over-specification; Work-from is cwd by default, Counterpart was
+# previously set at team-spawn time in the now-archived Agent Teams mode).
 if grep -n 'Work from:\|Counterpart:' $dispatch_files 2>/dev/null | grep -v '^[^:]*:[[:space:]]*#'; then
   fail "dispatch templates still contain 'Work from:' or 'Counterpart:' lines"
 else
@@ -441,19 +441,31 @@ else
   fail "auto-load still appears in $al_hits file(s) under agents/, skills/, or README.md"
 fi
 
-# 22. agent-orchestration split: TeamCreate mechanics live in references/
-# agent-teams.md; SKILL.md no longer carries '### Team Recipes' or a top-
-# level '## Direct Mode' heading.
+# 22. Agent Teams mode is archived: references/agent-teams.md carries the
+# ARCHIVED banner and no active file under skills/, agents/, or hooks/
+# cites it. SKILL.md no longer carries '### Team Recipes' or a top-level
+# '## Direct Mode' heading.
 at_ref="skills/agent-orchestration/references/agent-teams.md"
 if [ -f "$at_ref" ]; then
-  tc_hits=$(grep -c 'TeamCreate' "$at_ref")
-  if [ "$tc_hits" -ge 3 ]; then
-    pass "$at_ref carries TeamCreate content (>=3 mentions)"
+  if head -10 "$at_ref" | grep -q 'ARCHIVED'; then
+    pass "$at_ref carries ARCHIVED banner"
   else
-    fail "$at_ref has only $tc_hits TeamCreate mentions (expected >=3)"
+    fail "$at_ref is missing the ARCHIVED banner"
   fi
 else
   fail "missing: $at_ref"
+fi
+# No active file under skills/ (excluding the archived reference itself and
+# its subtree), agents/, or hooks/ cites the archived content or the Teams
+# mode. RELEASE-NOTES.md is excluded — historical references are expected.
+active_team_refs=$(grep -rln -E 'agent-teams\.md|TeamCreate|Agent Team|Team mode' \
+  skills/ agents/ hooks/ 2>/dev/null \
+  | grep -v '^skills/agent-orchestration/references/agent-teams\.md$' \
+  || true)
+if [ -z "$active_team_refs" ]; then
+  pass "no active file under skills/, agents/, or hooks/ cites archived agent-teams content"
+else
+  fail "active files still reference Teams content: $active_team_refs"
 fi
 if grep -Fq '### Team Recipes' skills/agent-orchestration/SKILL.md; then
   fail "agent-orchestration SKILL.md still contains '### Team Recipes' (stale)"

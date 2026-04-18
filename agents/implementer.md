@@ -188,16 +188,3 @@ If the orchestrator needs more than this, they will read the docs directly.
 - Task requires methodology decisions (the researcher decides)
 
 **Ask for clarification rather than guessing.**
-
-## If Running as Agent Team Teammate
-
-If you are part of an Agent Team (not a standalone subagent):
-- Use the shared task list to track your assigned tasks
-- When you encounter issues that need reviewer input, continue working
-  and note them in your report — the reviewer will see your completed
-  work via the task dependency
-- Message the lead for escalation decisions that need user input
-  (BLOCKED, data quality concerns, methodology questions)
-- Mark your tasks as completed when done
-- When a reviewer messages you with REVISE feedback, fix the issues
-  and message them back when ready for re-review
