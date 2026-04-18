@@ -65,7 +65,7 @@ When the researcher adds, modifies, removes, or reorders work during a session �
 **Protocol:**
 
 1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. This is the same escalation gate as `execution-workflow` Stop-Points class (b).
-2. **Log the decision** per §User Decisions Log above — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes.
+2. **Log the decision** per §User Decisions Log below — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes.
 3. **Update `PLAN.md` inline:**
    - **New task** → append `### Task N+1: [name]` block with the full anatomy from `references/plan-anatomy.md`. Renumber later tasks if inserting earlier in the sequence.
    - **Modified task** → rewrite the affected fields in place. Do not strike through. Do not add "Modified:" annotations.
