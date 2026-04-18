@@ -11,7 +11,7 @@ superRA answers with four load-bearing workflow principles that apply to every d
 1. **Implementer–reviewer pair at every step.** No result ships without adversarial review. One comprehensive review pass per task during execution (`APPROVE` / `REVISE`), drift-test + integration review before merge.
 2. **Handoff docs are the auditable record.** Findings, decisions, methodology notes land in committed `PLAN.md` / `RESULTS.md` *before* they appear in any report. Any fresh agent resumes from docs + git alone.
 3. **Fast early, strict before merge. Semantic merges always.** Interim tasks optimize for speed; integration discipline loads only when the user chooses to merge. Every merge into main is a semantic-merge.
-4. **Autonomous with human in the loop.** The agent drives work forward on its own power, and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
+4. **Autonomous with human in the loop.** The agent drives work forward on its own power, and stops — via the question tool (`AskUserQuestion` on Claude) — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
 
 In the **data-analysis vertical** (today's flagship), these principles are backed by one non-negotiable domain rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION**. Every data operation is shaped by three concurrent disciplines: Describe, Analyze, and Validate. See `skills/econ-data-analysis/SKILL.md`.
 
@@ -106,7 +106,7 @@ Four workflow principles are baked into every skill in the repo. Every contribut
 
 3. **Fast early, strict before merge. Semantic merges always.** Analysis code is written for speed during implementation — no codebase-fit checks at interim checkpoints. Refactoring, drift tests, codebase integration, and documentation finalization (maturing RESULTS.md and auditing project docs) happen only when the user chooses to merge. Every merge into main runs through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
 
-4. **Autonomous with human in the loop.** The agent drives the workflow forward on its own between legitimate stop points — no "should I continue?" check-ins on approved plans. It stops, and uses `AskUserQuestion` when available, only for hard blockers, decisions beyond the RA's authority (methodology, scope, research intent), or user-defined milestones. Every user decision at a stop point is logged into `PLAN.md` before the agent acts on it.
+4. **Autonomous with human in the loop.** The agent drives the workflow forward on its own between legitimate stop points — no "should I continue?" check-ins on approved plans. It stops, and uses the question tool when available (`AskUserQuestion` on Claude), only for hard blockers, decisions beyond the RA's authority (methodology, scope, research intent), or user-defined milestones. Every user decision at a stop point is logged into `PLAN.md` before the agent acts on it.
 
 ### Architectural discipline
 
@@ -127,7 +127,13 @@ git clone https://github.com/FuZhiyu/econ-superpowers.git
 
 ### Other Platforms
 
-See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plugin installation patterns on Cursor, Codex, Copilot CLI, and Gemini CLI. Point them at this repo instead of the upstream.
+For Codex, use the local plugin surface in this repo and then run `codex-superra-setup`:
+
+1. Install the plugin from a marketplace entry that points at this repo's root (`.codex-plugin/plugin.json` is the manifest).
+2. Run `codex-superra-setup`.
+3. Choose **global** scope to install `superra_implementer` and `superra_reviewer` into `~/.codex/agents/` for normal cross-repo use.
+
+Project-scoped `.codex/agents/` support is also available when developing this repo itself. See `.codex/INSTALL.md` and `docs/README.codex.md`.
 
 ## Skills
 
@@ -170,7 +176,8 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 | Skill | What It Does |
 |-------|-------------|
-| **using-superRA** | Master skill every agent reads. Carries the distilled universal principles, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the seven-row Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Preloaded on `superRA:implementer` / `superRA:reviewer` agent frontmatter; injected at session start for the main agent. Main-agent-only cross-session detection lives in `references/session-bootstrap.md`. |
+| **using-superRA** | Master skill every agent reads. Carries the distilled universal principles, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the six-row Skill-Load Manifest (Stage → required skills + stage-scoped references), the harness adapter references, and the Execution Modes (subagent dispatch vs direct). Preloaded on `superRA:implementer` / `superRA:reviewer` agent frontmatter; injected at session start for the main agent. Main-agent-only cross-session detection lives in `references/session-bootstrap.md`. |
+| **codex-superra-setup** | Codex-only bootstrap for installing or refreshing the named custom agents in either project scope (`.codex/agents/`) or global scope (`~/.codex/agents/`). |
 | **writing-skills** | Create or modify skills using test-driven methodology. |
 
 ## Agents

@@ -1,6 +1,6 @@
 ---
 name: refactor-and-integrate
-description: Utility skill (any phase). Use when creating drift tests, refactoring analysis code for codebase integration, or writing clean merge integration commits. Carries the three domain-knowledge checklists that define what "good" looks like for each task. Standalone-invokable — can be used outside the integration phase for any refactoring task. Dispatched implementer/reviewer subagents load this skill when their Stage is `drift-test`, `integration`, or `merge` (per `superRA:using-superRA` §Skill-Load Manifest).
+description: Use when creating drift tests, refactoring analysis code to fit the codebase, or writing merge integration commits that need the shared integration checklists.
 ---
 
 # Refactor and Integrate

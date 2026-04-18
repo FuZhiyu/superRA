@@ -1,6 +1,6 @@
 ---
 name: using-superRA
-description: Master skill every agent reads. Carries the universal workflow principles, the skill inventory, the composable-design map, the Skill-Load Manifest (required skills + stage-scoped references per Stage), Execution Modes (subagent dispatch vs direct), skill-invocation rules, and instruction priority. Main agents additionally load `references/session-bootstrap.md` at session start for cross-session detection; subagents inherit task context from their dispatch and skip bootstrap.
+description: Use when working inside superRA and you need the master workflow map, stage-based skill loads, execution-mode rules, or harness adapter references.
 ---
 
 This is the one skill every superRA agent reads — main agents at session start, dispatched subagents at dispatch time, Agent Team teammates on spawn. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
@@ -15,7 +15,7 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 3. **Fast early, strict before merge. Semantic merges always.** Interim work is optimized for speed — no codebase-fit checks at per-task checkpoints. Integration discipline (drift tests, refactor, doc finalization) runs only when the user chooses to merge, inside `integration-workflow`. Every merge into main goes through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
 
-4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent-autonomy.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
+4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use the question tool when the harness exposes it (`AskUserQuestion` on Claude; plain text otherwise). Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent-autonomy.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
 
 **RA framing.** The agent is a Research Assistant implementing the researcher's methodology, not judging it. Challenges to methodology are escalated to the human partner, never decided unilaterally.
 
@@ -43,11 +43,23 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
 | Utility | `worktree-data-sync` | Isolated git worktrees, non-git data sync between them, and cleanup ritual. |
 | Meta | `using-superRA` | This skill — the master skill every agent reads. |
+| Meta | `codex-superra-setup` | Codex-only bootstrap for installing or refreshing the named custom agents in project or global scope. |
 | Meta | `writing-skills` | Create or modify skills using test-driven methodology. |
 
 ## Composable Design
 
 Skills compose by category. **Workflow skills** own sequencing — they decide what happens when, and dispatch agents to do it. **Domain skills** own domain discipline — the vertical-specific knowledge a workflow skill invokes when a task touches that domain (today: `econ-data-analysis`). **Utility skills** are called on demand by workflow skills, agent files, or other skills — they are domain-agnostic and reusable. **Meta skills** shape the skill system itself (this skill, plus `writing-skills`). One source of truth per concern: if two skills seem to overlap, one of them should be pointing at the other rather than duplicating content.
+
+## Harness Adapters
+
+The canonical workflow instructions live in shared `skills/` and `agents/`. Harness-specific tool names, named-agent setup, and install surfaces live in adapter references rather than in forked workflow copies.
+
+- **Claude:** `references/claude-tools.md`
+- **Codex:** `references/codex-tools.md`
+- **Copilot CLI:** `references/copilot-tools.md`
+- **Gemini CLI:** `references/gemini-tools.md`
+
+Use the adapter for the harness you are actually running on. Keep the shared workflow behavior in the canonical skill bodies.
 
 ## Skill-Load Manifest
 
