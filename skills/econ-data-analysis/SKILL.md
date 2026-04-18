@@ -1,22 +1,10 @@
 ---
 name: econ-data-analysis
 description: >
-  Use PROACTIVELY whenever performing data analysis on economic,
-  financial, or panel datasets — importing raw data, cleaning,
-  merging, filtering, constructing variables, aggregating, computing
-  summary statistics, producing regression inputs, building figures,
-  or writing analysis scripts. Also use when about to transform data
-  you have not yet described; when merging two datasets; when
-  filtering by a condition you have not yet profiled; when a number
-  "looks off"; when outputs fail to match literature or intuition;
-  when a script was just refactored and needs re-validation. Triggers
-  include CRSP / Compustat / WRDS / panel data, "merge these datasets",
-  "clean this data", "construct variable X", "check the summary stats",
-  "why is this number so large", "I'll just filter and move on",
-  or any data file with unknown structure. Language-agnostic (Python,
-  Julia, R, Stata). Loaded by implementer and reviewer subagents
-  at dispatch time when the stage touches analysis code, per the
-  `superRA:using-superRA` §Skill-Load Manifest.
+  Use for empirical work on economic, financial, or panel datasets,
+  especially before transforming, merging, filtering, constructing
+  variables, validating surprising results, or re-checking outputs
+  after refactors.
 user-invocable: true
 ---
 

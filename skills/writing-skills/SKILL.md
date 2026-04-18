@@ -1,6 +1,6 @@
 ---
 name: writing-skills
-description: Meta (skill authoring). Use when creating new skills, editing existing skills, or verifying skills work before deployment — enforces test-driven skill development, rationalization prevention, description tuning for triggering reliability, and adversarial pressure testing.
+description: Use when creating or editing a skill, tightening its trigger description, or validating that a skill actually changes agent behavior before deployment.
 ---
 
 # Writing Skills

@@ -1,6 +1,6 @@
 ---
 name: report-in-markdown
-description: Utility for producing well-formatted markdown reports that contain figures, LaTeX math, tables, or multi-section prose — lengthy output that reads poorly in a terminal, standalone reports meant for humans, the Stage 2 consolidation of `RESULTS.md` at INTEGRATE Step 3, and any implementer task section in `RESULTS.md` that embeds a figure or a math expression. Not for agent-only handoff text. Caller supplies the content; this skill enforces format discipline via reference files loaded on demand.
+description: Use when producing human-facing markdown reports with figures, tables, LaTeX math, or multi-section prose, especially for RESULTS.md sections that need rich formatting.
 user-invocable: true
 ---
 

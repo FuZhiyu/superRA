@@ -1,6 +1,9 @@
 ---
 name: integration-workflow
-description: Use when an analysis is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when analysis code needs a refactor pass to fit existing codebase conventions before integration (including a project-level CLAUDE.md / AGENTS.md / README.md audit for the diff); when the Stage 1 dev-log RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form (Stage 2); when PLAN.md needs final disposition before merge. Triggers include "prepare this for merge", "write drift tests for the key results", "refactor this to match the codebase style", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", or the transition from `execution-workflow`'s completion menu (options 1 or 2). Sits at the INTEGRATE phase, step 1 of 2; hands off to `merge-workflow` for the main update and actual merge/PR.
+description: >
+  Use when approved implementation work is ready for pre-merge
+  integration: drift tests, codebase-fit refactoring, doc
+  finalization, and merge readiness.
 ---
 
 # Integration Workflow

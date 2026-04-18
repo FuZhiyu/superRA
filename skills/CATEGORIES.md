@@ -50,6 +50,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 | Skill | Purpose |
 |---|---|
 | `using-superRA` | Master skill every agent reads. Carries the distilled universal principles, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Main-agent-only cross-session detection lives in `references/session-bootstrap.md`. |
+| `codex-superra-setup` | Codex-only bootstrap for installing or refreshing the named custom agents in either project scope (`.codex/agents/`) or global scope (`~/.codex/agents/`). |
 | `writing-skills` | Create or modify skills using test-driven methodology. |
 
 ## Adding a Skill
