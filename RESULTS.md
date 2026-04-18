@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Task 5)
-**Status:** In Progress
+**Last updated:** 2026-04-17 (Task 6)
+**Status:** Complete
 
 ---
 
@@ -81,3 +81,29 @@ Cross-reference audit uncovered two more stale pointers:
 ### Final audit
 - `grep -rn "§Creating a Worktree\|worktree-data-sync.*§Cleanup" skills/ agents/ hooks/` → zero hits.
 - All `agent-orchestration/references/worktree-harness-fallback` references land at the correct new path.
+
+## Task 6: End-to-end verification + review revisions
+
+**Status:** Complete (APPROVE post-revision)
+
+### Verification results
+- **Merge-guard regression:** 4/4 synthetic inputs behave as specified.
+- **Data-sync CLI:** 30/30 pytest pass in 3.58s.
+- **Cross-reference audit:** zero dangling `§Creating a Worktree` or `worktree-data-sync §Cleanup` hits; 4 call sites correctly point at `agent-orchestration/references/worktree-harness-fallback`.
+- **SKILL.md structural sanity:** edited skills retain frontmatter, top-level headings, and intact subsection anchors.
+
+### Adversarial review (batched)
+Dispatched `code-quality-reviewer` against `889f53c^..HEAD`. Verdict: **REVISE** → fixed → **APPROVE (self-assessed after revisions)**.
+- **MAJOR M1 — accepted + fixed.** Three reviewer-cited `§Seed` anchor pointers resolved to nothing; actual heading is `### \`--mode seed\``. Fixed two (`agent-orchestration/SKILL.md` ownership table, `worktree-harness-fallback.md` Create section); the third (`agent-teams.md:101`) was already correct — reviewer miscited.
+- **MINOR m1 — accepted + fixed.** Updated skill-inventory blurbs in `README.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md` to reflect narrowed scope ("non-git data sync + data teardown; lifecycle in agent-orchestration/references/worktree-harness-fallback.md"). Added a 2-bullet entry to the 2026-04-17 section of `RELEASE-NOTES.md` covering this refactor.
+- **MINOR m2–m5 — advisory, no action.** Hook regex verified safe against spoofing vectors (`-m 'parallel/...'`, positional path args, feature-branch names containing "parallel"). Path A/B terminology in implementer agent is coherent. Canned-steering justification is self-defending. Trimmed `worktree-data-sync` still stands on its own.
+
+### Final commit count
+7 commits on branch `feedback/agent-dispatch-fixes`:
+1. `889f53c` plan bootstrap
+2. `1f844f6` agent-orchestration: §Concurrent Writers + fallback reference
+3. `4241a8f` worktree-data-sync: narrow scope
+4. `3a7b987` implementer: dedicated-worktree commit path
+5. `1f69f28` merge-guard: parallel/* exemption
+6. `42ecc7b` workflows: redirect worktree lifecycle refs
+7. (this commit) verification + review-driven revisions + RELEASE-NOTES entry
