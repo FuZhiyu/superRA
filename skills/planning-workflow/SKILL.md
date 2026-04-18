@@ -21,7 +21,7 @@ Assume the next reader is skilled at the craft, but knows nothing about this spe
 - Create `RESULTS.md` alongside (see Living Plan and Results Docs section below)
 - (User preferences for plan location override this default)
 
-**Before you create directories or start editing:** if this work may span multiple sessions, run in parallel with other work, or need an isolated data / environment copy, consider loading `superRA:using-analysis-worktrees` before any file creation. A worktree at this point is cheap; retrofitting one later is not. For simple single-session work on an existing branch, skip it — a feature branch is sufficient.
+**Before you create directories or start editing:** if this work may span multiple sessions, run in parallel with other work, or need an isolated data / environment copy, consider loading `superRA:worktree-data-sync` for the worktree setup before any file creation. A worktree at this point is cheap; retrofitting one later is not. For simple single-session work on an existing branch, skip it — a feature branch is sufficient. (See `worktree-data-sync` §When to Use a Worktree for the full decision table.)
 
 Commit the plan before proceeding to execution.
 
@@ -48,9 +48,11 @@ If the work covers multiple independent workstreams (e.g., "analyze portfolio so
 Before defining tasks, map out the artifact pipeline:
 
 - What scripts, notebooks, or documents will be created? One per logical phase (e.g., data cleaning → variable construction → analysis → robustness; or derivation → simulation → calibration for theory work).
-- **Analysis scripts**: format for notebook rendering per `superRA:script-to-notebook`. Runner/pipeline scripts and non-analysis artifacts use standard format.
+- **Analysis scripts**: format for notebook rendering per `econ-data-analysis/references/notebook-format.md`. Runner/pipeline scripts and non-analysis artifacts use standard format.
 - What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
+
+**Walk the project guidance docs and cache them in PLAN.md.** Before drafting tasks, walk up from every directory the plan will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the plan will load from. Populate the `## Project Conventions` section of `PLAN.md` with one-paragraph summaries per doc, stamped with the walk date (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy). This is what subagent dispatches read at task time instead of re-walking the whole tree; if a subagent later needs a convention not captured here, it walks on-demand and reports the omission so the orchestrator can update the section.
 
 **Pipeline file (required for multi-artifact work):**
 
@@ -84,9 +86,7 @@ Required header fields and task block structure are non-negotiable. The template
 
 **The plan is NOT a static spec.** Work reveals surprises; the plan evolves in place.
 
-This section covers **agent-discovered drift**: findings during execution that revise upcoming steps within the existing scope. **Researcher-initiated scope changes** during execution — new tasks, modified objectives, methodology changes, sample changes — follow a separate protocol that requires confirmation, decision logging, and a `## Workflow Status` rollback. See `superRA:handoff-doc` §Mid-Session Scope Changes.
-
-**For the full discipline** — the four principles, inline-edit rule, stale-content checklist, figure embedding, `PLAN.md` / `RESULTS.md` anatomy, and the two-stage `RESULTS.md` lifecycle — load `superRA:handoff-doc`. That skill is the single source of truth for document mechanics and is loaded by implementer and reviewer subagents, so the rules stay consistent across roles. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
+**The editing discipline and the full anatomy templates** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — live in `superRA:handoff-doc`. Load it when authoring `PLAN.md` / `RESULTS.md` from scratch; its `references/plan-anatomy.md` and `references/results-anatomy.md` carry the full templates. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
 **Results document:** Create `RESULTS.md` alongside `PLAN.md` using the template at `references/results-template.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
 
@@ -127,7 +127,7 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ## Execution Handoff
 
-After finalizing the plan and confirming with the researcher that the plan reflects what they want analyzed, check the `Plan approved` box in `## Workflow Status` (see `superRA:handoff-doc` references/plan-anatomy.md), commit the plan, then offer execution choice:
+After finalizing the plan, commit it, then offer execution choice:
 
 **"Plan complete and saved to `PLAN.md`. RESULTS.md created. Two execution options:**
 
@@ -138,6 +138,6 @@ After finalizing the plan and confirming with the researcher that the plan refle
 **Which approach?"**
 
 **REQUIRED DISCIPLINE:** Use `superRA:execution-workflow`
-- Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's §Review & Self-Check Discipline)
+- Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's §Three Concurrent Disciplines)
 - Falls back to direct mode for simple tasks or when user requests it
 - Review always happens regardless of mode
