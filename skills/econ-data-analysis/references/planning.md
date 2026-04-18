@@ -46,7 +46,7 @@ Create a task for each of these items and complete them in order:
 
    If WRDS or Refinitiv data skills are available, note them as tools for downloading.
 
-6. **Present the inventory and get researcher approval.** Use the format from `skills/planning-workflow/references/plan-template.md` (the Data Inventory section of the header). Ask the researcher to confirm before proceeding to task drafting.
+6. **Present the inventory and get researcher approval.** Use the Data Inventory format from `superRA:handoff-doc` `references/plan-anatomy.md` (the **Data Inventory:** section of the header). Ask the researcher to confirm before proceeding to task drafting.
 
 ### Principles
 

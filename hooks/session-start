@@ -14,12 +14,6 @@ if [ -d "$legacy_skills_dir" ]; then
     warning_message="\n\n<important-reminder>IN YOUR FIRST REPLY AFTER SEEING THIS MESSAGE YOU MUST TELL THE USER:⚠️ **WARNING:** Superpowers now uses Claude Code's skills system. Custom skills in ~/.config/superpowers/skills will not be read. Move custom skills to ~/.claude/skills instead. To make this message go away, remove ~/.config/superpowers/skills</important-reminder>"
 fi
 
-# Check for Agent Teams availability
-agent_teams_note=""
-if [ -n "${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS:-}" ]; then
-    agent_teams_note="\n\nAgent Teams: available. For workflows with iteration loops (execution-workflow, integration-workflow, merge-workflow, semantic-merge), prefer Agent Teams over regular subagents. See superRA:agent-orchestration for guidance."
-fi
-
 # Read using-superRA content
 using_superpowers_content=$(cat "${PLUGIN_ROOT}/skills/using-superRA/SKILL.md" 2>&1 || echo "Error reading using-superRA skill")
 
@@ -38,8 +32,7 @@ escape_for_json() {
 
 using_superpowers_escaped=$(escape_for_json "$using_superpowers_content")
 warning_escaped=$(escape_for_json "$warning_message")
-agent_teams_escaped=$(escape_for_json "$agent_teams_note")
-session_context="<EXTREMELY_IMPORTANT>\nYou have superRA.\n\n**Below is the full content of your 'superRA:using-superRA' skill - your introduction to using skills for economic research. For all other skills, use the 'Skill' tool:**\n\n${using_superpowers_escaped}\n\n${warning_escaped}${agent_teams_escaped}\n</EXTREMELY_IMPORTANT>"
+session_context="<EXTREMELY_IMPORTANT>\nYou have superRA.\n\n**Below is the full content of your 'superRA:using-superRA' skill - your introduction to using skills for economic research. For all other skills, use the 'Skill' tool:**\n\n${using_superpowers_escaped}\n\n${warning_escaped}\n</EXTREMELY_IMPORTANT>"
 
 # Output context injection as JSON.
 # Cursor hooks expect additional_context (snake_case).

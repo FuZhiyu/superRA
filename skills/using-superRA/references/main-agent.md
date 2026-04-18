@@ -1,10 +1,64 @@
-# Main-Agent Autonomy Contract
+# Main Agent — Session Start and Autonomy Contract
 
-> Loaded by the main agent at session start (hooked from `session-bootstrap.md`). Subagents inherit autonomy from their dispatch boundary — they do not load this file and do not make autonomy decisions of their own; they implement the task they were dispatched with and return a status. The autonomy contract below is what the main agent (orchestrator) uses to decide when to proceed on its own power versus when to stop and consult the researcher.
+Main agent loads this at session start; subagents skip — they inherit task context from their dispatch and do not make autonomy decisions of their own; they implement the task they were dispatched with and return a status.
 
-This contract generalizes what used to live in `execution-workflow` §Autonomy and Stop Points. It applies to every workflow phase — planning, execution, integration, merge, semantic-merge — not just execution. Workflow skills carry stage-specific stop points (the 4-option menu at `execution-workflow` Step 4, drift-test selection at `integration-workflow` Step 1, doc disposition at `integration-workflow` Step 3, Tier-3 conflict resolution in `semantic-merge`); this contract carries the framing those stop points plug into.
+## MANDATORY: Session Start Actions
+
+Before your first substantive response, run these cross-session detection checks:
+1. Check for PLAN.md in the working directory
+2. Check for analysis worktrees (`git worktree list`)
+3. Check for analysis branches (`git branch --list 'analysis/*'`)
+4. If any exist, report to the user: "Found in-progress analysis work: [details]"
+
+Do NOT skip these because the user "jumped straight into a task." The checks take 5 seconds and prevent lost work.
+
+## Cross-Session Detection
+
+**At session start, check for in-progress work:**
+
+```bash
+# Check current branch (propose feature branch if on main/master)
+git branch --show-current
+
+# Check if currently in a worktree
+git rev-parse --is-inside-work-tree 2>/dev/null && git worktree list 2>/dev/null
+
+# Check for analysis branches
+git branch --list 'analysis/*' 2>/dev/null
+
+# Check for PLAN.md at project root
+[ -f "PLAN.md" ] && grep -c "\- \[ \]" PLAN.md 2>/dev/null
+
+# Check for tasks under review or with issues
+grep "Review status" PLAN.md 2>/dev/null | grep -v APPROVED | head -5
+
+# Check for RESULTS.md for context
+[ -f "RESULTS.md" ] && echo "Results document found"
+
+# Fallback: check docs/ for archived or legacy plans
+find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/null | head -5
+```
+
+**If an incomplete plan is found** (PLAN.md with unchecked `- [ ]` steps or non-APPROVED review status):
+- Summarize: "Found in-progress analysis: `PLAN.md` (N tasks APPROVED, K with review issues or pending review). RESULTS.md has findings through Task K. Resume?"
+- If user confirms: load PLAN.md and RESULTS.md, check git log for latest state, continue from next incomplete task (check review status — a task with `REVISE` needs re-dispatch, `IMPLEMENTED` needs review, no status needs implementation)
+- If user declines: proceed normally
+
+**If in a worktree with no plan file:**
+- Note: "You're in worktree `<path>` on branch `<branch>`. Continue working here?"
+
+## Load the Handoff-Doc Skill
+
+After cross-session detection, **load `superRA:handoff-doc`**. The main agent loads it at session start so the editing discipline is available before touching PLAN.md.
+
+## Changes of the Plan
+
+Whenever the plan meaningfully changes — a new task, a removed or reordered task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `planning-workflow` and follow the  §Changing Plans protocol (confirm → log decision → inline-edit PLAN.md → roll back milestones → atomic commit → resume). This is the hinge that keeps the handoff doc honest across iterations; rewording a step inside an in-flight task to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §Changing Plans` for the full material-vs-not-material list and the 6-step protocol.
+
 
 ## The Three Pause Classes
+
+This contract applies across every workflow phase — planning, execution, integration, merge, semantic-merge — not just execution. Workflow skills carry phase-specific stop points; those plug into the three classes below.
 
 Universal Principle #4 in `using-superRA` §Universal Principles states the rule. Expanded: stop and use `AskUserQuestion` (plain text if the harness does not expose the tool) for exactly three classes of pause, all of which require logging the researcher's answer per `handoff-doc` §User Decisions Log **before** acting on it:
 
