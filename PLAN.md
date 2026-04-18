@@ -129,200 +129,58 @@ Verification results:
 ### Task 2: Rewrite `agent-orchestration/SKILL.md` — add §Workload Balancing, delete Decision Framework + Dispatch-Return Deltas + Integration, tighten dispatch template
 
 **Depends on:** Task 1
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Bundles feedback F2 + F3 + F4 + D1 + D2** — all five edit `skills/agent-orchestration/SKILL.md` in overlapping regions. One implementer, one reviewer. This is the "slightly involved, bundle-and-delegate" tier.
 
 **Files touched:**
 - `skills/agent-orchestration/SKILL.md`
-- `tests/structural-invariants.sh` (add §Workload Balancing heading invariant)
+- `tests/structural-invariants.sh` (invariant 14 updated; invariant 26 added)
 
 **Dispatch tier:** Slightly involved — one bundled dispatch.
 
-- [ ] **Step 1: Plan — read current file, identify target regions**
+- [x] **Step 1: Plan — read current file, identify target regions**
 
-```bash
-wc -l skills/agent-orchestration/SKILL.md
-grep -n "^## " skills/agent-orchestration/SKILL.md
-```
+Pre-edit outline on `econ-adaption` (after T1):
+- `## Overview` — rewrote core-principle bullet (dropped Teams framing).
+- `## Decision Framework` — **deleted entire section** (F3).
+- `## Dispatch Templates` — edited `<optional steering>` placeholder (F4).
+- `## Dispatch-Return Deltas` — **deleted entire section** (D1).
+- `## Handling Reviewer Feedback` — kept (unchanged by feedback).
+- `## Review Status Reference` — kept.
+- `## Integration` — **deleted entire section** (D2).
 
-Current outline on new `econ-adaption` (verified 2026-04-17):
-- `## Overview` — rewrite core-principle bullet (drop Teams framing).
-- `## Decision Framework` — **delete entire section** (F3).
-- `## Dispatch Templates` — edit `<optional steering>` placeholder (F4).
-- `## Dispatch-Return Deltas` — **delete entire section** (D1).
-- `## Handling Reviewer Feedback` — keep (unchanged by feedback).
-- `## Review Status Reference` — keep.
-- `## Integration` — **delete entire section** (D2) because it lists Agent-Teams workflow users.
+- [x] **Step 2: Edit — delete Decision Framework section (F3)**
 
-- [ ] **Step 2: Edit — delete Decision Framework section (F3)**
+Removed `## Decision Framework` heading through the `**Rule of thumb:**` closing line (the DOT graph + pattern table). Transition to `## Dispatch Templates` is clean.
 
-Using Edit tool, remove the heading `## Decision Framework` through the end of the pattern table (the `**Rule of thumb:** ...` line). Keep any `---` separator that follows.
+- [x] **Step 2b: Edit — delete Dispatch-Return Deltas section (D1)**
 
-- [ ] **Step 2b: Edit — delete Dispatch-Return Deltas section (D1)**
+Removed `## Dispatch-Return Deltas` heading and its 7-line body. Convention is already specified in `agents/implementer.md` and `agents/reviewer.md` §Report Format.
 
-Remove the `## Dispatch-Return Deltas` heading and its body (~6 lines describing the one-line what-changed delta between orchestrator and worker). The delta convention is already specified in `agents/implementer.md` §Report Format (Doc edits) and `agents/reviewer.md` §Report Format, so the standalone section is redundant.
+- [x] **Step 2c: Edit — delete `## Integration` section (D2)**
 
-- [ ] **Step 2c: Edit — delete `## Integration` section (D2)**
+Removed entire `## Integration` section (bulleted list of Teams-using skills + fallback paragraph). No referent after Teams archived.
 
-Remove the entire `## Integration` section at the tail of the file (the bulleted list of skills that use Agent Teams mode + the "When Agent Teams are unavailable" paragraph). With Teams archived, this section has no referent. Leave the preceding `## Review Status Reference` section intact.
+- [x] **Step 3: Edit — rewrite `## Overview` core principle**
 
-- [ ] **Step 3: Edit — rewrite `## Overview` core principle**
+Replaced Teams-framing paragraph with: **Core principle:** parallel-dispatch independent tasks; serialize iterative loops; do trivial work inline. Also updated frontmatter description to remove Agent Teams language.
 
-Replace the sentence "Use teams when agents need to iterate with each other. Use parallel subagents when you just need results back." with:
+- [x] **Step 4: Edit — insert `## Workload Balancing` after `## Overview` (F2)**
 
-```markdown
-**Core principle:** parallel-dispatch independent tasks; serialize iterative
-loops; do trivial work inline. See §Workload Balancing for how to size each
-dispatch.
-```
+Inserted three-tier section (Tier 1 trivial inline, Tier 2 bundle-and-delegate, Tier 3 dedicated agent) plus Rules of thumb (≤150k tokens/agent, cache-reuse, parallelize independent tasks) followed by `---` separator before `## Dispatch Templates`.
 
-Remove any remaining sentence that refers to Agent Teams or the two-pattern choice.
+- [x] **Step 5: Edit — tighten `<optional steering>` placeholder (F4)**
 
-- [ ] **Step 4: Edit — insert `## Workload Balancing` after `## Overview` (F2)**
+Both implementer and reviewer templates now use: `<optional steering — focus area, prior-round adjudication notes, or warnings. Must add information on top of the default; never restate what the default protocol, skill-load manifest, or PLAN.md already says.>`. Additive-only paragraph added immediately after the reviewer template. Cleaned stale `Counterpart:` banned-item text and removed stale Agent Teams reference from Dispatch Templates prose.
 
-Insert exactly this section (between `## Overview` and the next remaining `## ...` heading):
+- [x] **Step 6: Edit — update and add structural invariants**
 
-```markdown
-## Workload Balancing
+Invariant 14 updated: `## Dispatch-Return Deltas` removed from checked heading list; `## Workload Balancing` added; two new checks for absence of `## Dispatch-Return Deltas` and `## Integration`. Invariant 26 added: checks for `## Workload Balancing` heading, three tier headings, `150k`, and `cache` references.
 
-Every dispatch has spawn cost — skill-load, context hydration, per-turn
-overhead. Treating every sub-task as dispatch-worthy wastes tokens and
-serializes work that could run inline; treating every bundle as "split
-it up" over-spawns. Pick the tier that matches the work:
+- [x] **Step 7: Verify + commit**
 
-### Tier 1 — Trivial: do it inline
-
-The orchestrator executes the task itself, no subagent. Use when the
-task fits in a single edit, reads no unfamiliar files, and needs no
-domain skill beyond what the orchestrator already has loaded.
-
-- Typo or comment fix in one file.
-- A 2-line constant change the orchestrator has already read.
-- Removing a known-dead import.
-
-Dispatch cost > work content. Just do it.
-
-### Tier 2 — Slightly involved: bundle and delegate
-
-Group multiple small-to-medium tasks that share context (same file, same
-skill load, same domain references) into one dispatch. One agent does the
-whole bundle in a single turn.
-
-- Three edits in the same skill file.
-- A reviewer sweep over two sibling agent files.
-- Updating a template plus its one consumer.
-
-The agent pays the spawn cost once and amortizes it across the bundle.
-
-### Tier 3 — Complicated: one dedicated agent per task
-
-One agent owns one task. Use when the task needs deep context (cross-file
-grep, multi-step refactor, full skill-load chain), or its deliverable
-will be reviewed in isolation.
-
-- A refactor that touches >5 files across skills + agents + tests.
-- A new feature that requires full domain-skill engagement.
-- Any task where bundle-context would exceed ~150k tokens.
-
-### Rules of thumb
-
-**≤150k tokens per agent.** When estimating: manifest skill loads (~5–15k
-each), `PLAN.md` + `RESULTS.md` (5–50k depending on stage), plus per-task
-file reads. If an agent's projected context exceeds ~150k, split the work
-across two agents even when the individual items are small — context
-thrash degrades output quality more than the cost of a second spawn.
-
-**Reuse existing agents within the cache window.** The Anthropic prompt
-cache has a ~5-minute TTL. If a prior agent's turn is still warm and the
-next task shares its skill/reference profile, prefer `SendMessage` on the
-existing agent over spawning fresh — cached context is effectively free.
-Spawn fresh when: the agent has accumulated stale or irrelevant context,
-the new task needs a different skill load, or more than ~5 minutes have
-elapsed.
-
-**Parallelize independent tasks.** Tasks whose `Depends on:` lines (see
-`planning-workflow` §Task Dependencies) are all satisfied and that share
-no mutable state should dispatch in a single parallel Agent-tool batch,
-one agent per task (subject to the bundling rule above). Serializing
-mutually-independent tasks is waste.
-
----
-```
-
-- [ ] **Step 5: Edit — tighten `<optional steering>` placeholder (F4)**
-
-Locate the Parallel Dispatch subsection that shows the dispatch-template code block(s). In each `<optional steering>` placeholder (there is typically one implementer example and one reviewer example, but on `econ-adaption` there may only be one — read first, then edit):
-
-Change the placeholder text to:
-
-```
-<optional steering — focus area, prior-round adjudication notes, or
-warnings. Must add information on top of the default; never restate
-what the default protocol, skill-load manifest, or PLAN.md already
-says.>
-```
-
-Immediately below the code block(s), add exactly one paragraph:
-
-```markdown
-**Optional steering is strictly additive.** If your `Additionally:` line
-only paraphrases the default protocol, the skill-load manifest, or
-`PLAN.md` content, delete it — re-statement of content the agent will
-read itself is noise that clutters the dispatch without adding signal.
-```
-
-- [ ] **Step 6: Edit — add structural invariant for §Workload Balancing**
-
-Append to `tests/structural-invariants.sh`, numbered sequentially:
-
-```bash
-# Invariant N: agent-orchestration carries the three-tier Workload Balancing framework
-ao="skills/agent-orchestration/SKILL.md"
-if grep -q "^## Workload Balancing" "$ao"; then
-  pass "$ao has §Workload Balancing heading"
-else
-  fail "$ao is missing §Workload Balancing heading"
-fi
-tier_count=$(grep -c "^### Tier [123]" "$ao" || true)
-if [ "$tier_count" -eq 3 ]; then
-  pass "$ao has all three tiers"
-else
-  fail "$ao has $tier_count tiers (expected 3)"
-fi
-if grep -q "150k" "$ao" && grep -q "cache" "$ao"; then
-  pass "$ao references 150k-token rule and cache reuse"
-else
-  fail "$ao missing 150k or cache-reuse guidance"
-fi
-```
-
-- [ ] **Step 7: Verify + commit**
-
-```bash
-# 1. Structure checks
-bash tests/structural-invariants.sh
-
-# 2. Template placeholder tightened
-grep -A1 "<optional steering" skills/agent-orchestration/SKILL.md | \
-  grep -q "additive\|add information" && echo "OK: tightening" || echo "FAIL"
-
-# 3. Decision Framework gone
-! grep -q "^## Decision Framework" skills/agent-orchestration/SKILL.md \
-  && echo "OK: deleted" || echo "FAIL: still present"
-
-# 4. Sanity-read — check rendered outline
-grep "^## " skills/agent-orchestration/SKILL.md
-```
-
-Outline should read: `## Overview`, `## Workload Balancing`, `## Parallel Dispatch` (and any subsections below); no `## Decision Framework`; no Teams-era `## Agent Teams` headings.
-
-Update PLAN.md: mark `[x]`, set `**Review status:** IMPLEMENTED`. Update RESULTS.md Task 2 with the new outline. Commit:
-
-```bash
-git add skills/agent-orchestration/SKILL.md tests/structural-invariants.sh PLAN.md RESULTS.md
-git commit -m "docs(agent-orchestration): add §Workload Balancing; delete Decision Framework; tighten dispatch template"
-```
+All structural invariants PASS (2 known pre-existing WARNs). Final outline: `## Overview`, `## Workload Balancing`, `## Dispatch Templates`, `## Handling Reviewer Feedback (Orchestrator Discipline)`, `## Review Status Reference`. No `## Decision Framework`. No Teams-era headings.
 
 ---
 

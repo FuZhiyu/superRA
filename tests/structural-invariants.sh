@@ -247,16 +247,18 @@ else
 fi
 
 # 14. Cross-stage orchestration content lives in agent-orchestration, not
-# execution-workflow. agent-orchestration/SKILL.md owns four top-level
-# sections (Dispatch Templates, Dispatch-Return Deltas, Handling Reviewer
-# Feedback, Review Status Reference); Direct Mode was relocated to
+# execution-workflow. agent-orchestration/SKILL.md owns these top-level
+# sections: Workload Balancing, Dispatch Templates, Handling Reviewer
+# Feedback, Review Status Reference. Dispatch-Return Deltas was removed
+# (D1 in the feedback round — content lives in agents/implementer.md and
+# agents/reviewer.md §Report Format). Direct Mode was relocated to
 # using-superRA in Round 3 and no longer appears here. execution-workflow/
 # SKILL.md does NOT carry '## Dispatch Templates' as a heading (pointers to
 # agent-orchestration only).
 ao_skill="skills/agent-orchestration/SKILL.md"
 ao_missing=0
-for h in '^## Dispatch Templates$' \
-         '^## Dispatch-Return Deltas$' \
+for h in '^## Workload Balancing$' \
+         '^## Dispatch Templates$' \
          '^## Handling Reviewer Feedback' \
          '^## Review Status Reference$'; do
   if grep -Eq "$h" "$ao_skill"; then
@@ -266,7 +268,17 @@ for h in '^## Dispatch Templates$' \
     ao_missing=$((ao_missing+1))
   fi
 done
-[ "$ao_missing" -eq 0 ] && pass "agent-orchestration SKILL.md owns the four cross-stage orchestration sections"
+[ "$ao_missing" -eq 0 ] && pass "agent-orchestration SKILL.md owns the four cross-stage orchestration sections (Workload Balancing, Dispatch Templates, Handling Reviewer Feedback, Review Status Reference)"
+if grep -Eq '^## Dispatch-Return Deltas$' "$ao_skill"; then
+  fail "agent-orchestration SKILL.md still carries '## Dispatch-Return Deltas' (removed in D1 — content lives in agent files)"
+else
+  pass "agent-orchestration SKILL.md no longer carries '## Dispatch-Return Deltas'"
+fi
+if grep -Eq '^## Integration$' "$ao_skill"; then
+  fail "agent-orchestration SKILL.md still carries '## Integration' (removed in D2 — Teams-mode-specific content archived)"
+else
+  pass "agent-orchestration SKILL.md no longer carries '## Integration' section"
+fi
 if grep -Eq '^## Dispatch Templates' "skills/execution-workflow/SKILL.md"; then
   fail "execution-workflow SKILL.md still carries '## Dispatch Templates' as a top-level heading (should be lifted to agent-orchestration)"
 else
@@ -518,6 +530,27 @@ if grep -Fq 'Document-code consistency' skills/econ-data-analysis/references/int
   pass "integration.md contains 'Document-code consistency' item"
 else
   fail "integration.md missing 'Document-code consistency' item"
+fi
+
+# 26. agent-orchestration carries the three-tier Workload Balancing framework
+# (F2 in the feedback round). Must have the heading, all three tier headings,
+# the 150k-token rule, and the cache-reuse guidance.
+ao="skills/agent-orchestration/SKILL.md"
+if grep -q "^## Workload Balancing" "$ao"; then
+  pass "$ao has §Workload Balancing heading"
+else
+  fail "$ao is missing §Workload Balancing heading"
+fi
+tier_count=$(grep -c "^### Tier [123]" "$ao" || true)
+if [ "$tier_count" -eq 3 ]; then
+  pass "$ao has all three tiers"
+else
+  fail "$ao has $tier_count tiers (expected 3)"
+fi
+if grep -q "150k" "$ao" && grep -q "cache" "$ao"; then
+  pass "$ao references 150k-token rule and cache reuse"
+else
+  fail "$ao missing 150k or cache-reuse guidance"
 fi
 
 echo

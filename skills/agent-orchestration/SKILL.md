@@ -1,46 +1,82 @@
 ---
 name: agent-orchestration
-description: Use when about to dispatch multiple agents and unsure whether to use parallel subagents or an Agent Team; when tasks are independent vs iterative and the right dispatch pattern is not obvious; when picking teammate composition for an analysis / integration / merge / semantic-merge job; when a previous session ended mid-workflow and team context needs to be rehydrated; when choosing lead + implementer + reviewer roles for a multi-step workflow. Triggers include "dispatch N agents", "run these in parallel", "use an Agent Team for this", "who should do the review", "spawn a team for the merge", a multi-step workflow that needs coordination across roles, or a session handoff where team state must survive. Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / VALIDATE / INTEGRATE).
+description: Use when dispatching multiple agents and unsure how to size or parallelize the work; when tasks are independent vs iterative and the right dispatch pattern is not obvious; when choosing implementer + reviewer roles for a multi-step workflow; when adjudicating reviewer feedback as orchestrator. Triggers include "dispatch N agents", "run these in parallel", "who should do the review", a multi-step workflow that needs coordination across roles, or a session handoff where workflow state must survive. Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / VALIDATE / INTEGRATE).
 ---
 
 # Agent Orchestration
 
 ## Overview
 
-You delegate tasks to specialized agents with isolated context. This skill carries the **high-level orchestrator guidance** — when to dispatch, what dispatch shape to use, how to read the resulting state from `PLAN.md`, and how to adjudicate reviewer feedback. **Technical team + parallel-dispatch mechanics** (TeamCreate usage, task-graph construction, parallel-dispatch how-to, known limitations) live in `references/agent-teams.md`; load that reference when you are about to spawn or clean up a team, or fan out parallel subagents.
+You delegate tasks to specialized agents with isolated context. This skill carries the **high-level orchestrator guidance** — when to dispatch, what dispatch shape to use, how to read the resulting state from `PLAN.md`, and how to adjudicate reviewer feedback.
 
-**Core principle:** use teams when agents need to iterate with each other; use parallel subagents when you just need results back; use a single subagent for a single focused task.
+**Core principle:** parallel-dispatch independent tasks; serialize iterative
+loops; do trivial work inline. See §Workload Balancing for how to size each
+dispatch.
 
-Team composition at each workflow stage is derived from the manifest — the lead spawns one teammate per stage the workflow runs, using `subagent_type: superRA:implementer` for implementer-role stages and `superRA:reviewer` for reviewer-role stages; the teammate loads what `superRA:using-superRA` §Skill-Load Manifest lists for its Stage. No per-workflow recipe is needed.
+## Workload Balancing
 
-## Decision Framework
+Every dispatch has spawn cost — skill-load, context hydration, per-turn
+overhead. Treating every sub-task as dispatch-worthy wastes tokens and
+serializes work that could run inline; treating every bundle as "split
+it up" over-spawns. Pick the tier that matches the work:
 
-```dot
-digraph decision {
-    "Multiple tasks?" [shape=diamond];
-    "Need iteration between agents?" [shape=diamond];
-    "Agent Teams available?" [shape=diamond];
-    "Parallel dispatch (Task tool)" [shape=box style=filled fillcolor=lightgreen];
-    "Agent Teams (persistent sessions)" [shape=box style=filled fillcolor=lightblue];
-    "Subagents with orchestrator relay" [shape=box style=filled fillcolor=lightyellow];
-    "Single subagent" [shape=box];
+### Tier 1 — Trivial: do it inline
 
-    "Multiple tasks?" -> "Need iteration between agents?" [label="yes"];
-    "Multiple tasks?" -> "Single subagent" [label="no"];
-    "Need iteration between agents?" -> "Agent Teams available?" [label="yes"];
-    "Need iteration between agents?" -> "Parallel dispatch (Task tool)" [label="no"];
-    "Agent Teams available?" -> "Agent Teams (persistent sessions)" [label="yes"];
-    "Agent Teams available?" -> "Subagents with orchestrator relay" [label="no"];
-}
-```
+The orchestrator executes the task itself, no subagent. Use when the
+task fits in a single edit, reads no unfamiliar files, and needs no
+domain skill beyond what the orchestrator already has loaded.
 
-| Pattern | Use when | Mechanism |
-|---------|----------|-----------|
-| **Parallel dispatch** | Independent tasks, no shared state | Task tool, one-shot |
-| **Agent Teams** | Creator↔reviewer iteration, feedback loops | Persistent sessions, peer messaging |
-| **Orchestrator relay** | Need iteration but Teams unavailable | Subagents + orchestrator relays feedback |
+- Typo or comment fix in one file.
+- A 2-line constant change the orchestrator has already read.
+- Removing a known-dead import.
 
-**Rule of thumb:** if two agents will exchange feedback more than once, use a team (or orchestrator relay). If each agent does its work and returns a result, use parallel dispatch. For the technical mechanics of either pattern — TeamCreate usage, task-graph construction, parallel-dispatch infrastructure (worktrees, data sync), known limitations — see `references/agent-teams.md`.
+Dispatch cost > work content. Just do it.
+
+### Tier 2 — Slightly involved: bundle and delegate
+
+Group multiple small-to-medium tasks that share context (same file, same
+skill load, same domain references) into one dispatch. One agent does the
+whole bundle in a single turn.
+
+- Three edits in the same skill file.
+- A reviewer sweep over two sibling agent files.
+- Updating a template plus its one consumer.
+
+The agent pays the spawn cost once and amortizes it across the bundle.
+
+### Tier 3 — Complicated: one dedicated agent per task
+
+One agent owns one task. Use when the task needs deep context (cross-file
+grep, multi-step refactor, full skill-load chain), or its deliverable
+will be reviewed in isolation.
+
+- A refactor that touches >5 files across skills + agents + tests.
+- A new feature that requires full domain-skill engagement.
+- Any task where bundle-context would exceed ~150k tokens.
+
+### Rules of thumb
+
+**≤150k tokens per agent.** When estimating: manifest skill loads (~5–15k
+each), `PLAN.md` + `RESULTS.md` (5–50k depending on stage), plus per-task
+file reads. If an agent's projected context exceeds ~150k, split the work
+across two agents even when the individual items are small — context
+thrash degrades output quality more than the cost of a second spawn.
+
+**Reuse existing agents within the cache window.** The Anthropic prompt
+cache has a ~5-minute TTL. If a prior agent's turn is still warm and the
+next task shares its skill/reference profile, prefer `SendMessage` on the
+existing agent over spawning fresh — cached context is effectively free.
+Spawn fresh when: the agent has accumulated stale or irrelevant context,
+the new task needs a different skill load, or more than ~5 minutes have
+elapsed.
+
+**Parallelize independent tasks.** Tasks whose `Depends on:` lines (see
+`planning-workflow` §Task Dependencies) are all satisfied and that share
+no mutable state should dispatch in a single parallel Agent-tool batch,
+one agent per task (subject to the bundling rule above). Serializing
+mutually-independent tasks is waste.
+
+---
 
 ## Dispatch Templates
 
@@ -58,8 +94,10 @@ Agent(subagent_type: "superRA:implementer"):
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
-    <optional one-or-two-sentence steering — focus area, prior-round
-    adjudication, warning, anything non-default>.
+    <optional steering — focus area, prior-round adjudication notes, or
+    warnings. Must add information on top of the default; never restate
+    what the default protocol, skill-load manifest, or PLAN.md already
+    says.>
 ```
 
 **Reviewer:**
@@ -71,25 +109,25 @@ Agent(subagent_type: "superRA:reviewer"):
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
-    <optional steering>.
+    <optional steering — focus area, prior-round adjudication notes, or
+    warnings. Must add information on top of the default; never restate
+    what the default protocol, skill-load manifest, or PLAN.md already
+    says.>
 ```
 
-The agent reads `PLAN.md`, Data Inventory, Conventions, and prior results from `RESULTS.md` directly — the dispatch does not re-state them. If a non-default skill load, an extra domain reference, or an override of the standard handoff is required for this particular call, add `Skills:` and `References:` lines between the required fields and the prefix line. In Agent Teams mode, teammate pairing is set at team-spawn time (see `references/agent-teams.md`) — not inside the per-task dispatch template.
+**Optional steering is strictly additive.** If your `Additionally:` line
+only paraphrases the default protocol, the skill-load manifest, or
+`PLAN.md` content, delete it — re-statement of content the agent will
+read itself is noise that clutters the dispatch without adding signal.
+
+The agent reads `PLAN.md`, Data Inventory, Conventions, and prior results from `RESULTS.md` directly — the dispatch does not re-state them. If a non-default skill load, an extra domain reference, or an override of the standard handoff is required for this particular call, add `Skills:` and `References:` lines between the required fields and the prefix line.
 
 **Banned in dispatch prompts:**
 
 - `Work from:` — the worker's cwd is the default; stating it is noise.
-- `Counterpart:` — teammate pairing belongs in team-spawn config, not in the per-task dispatch.
+- `Counterpart:` — no longer applicable; remove from any legacy dispatch prompts.
 - Free-form `Note:` fields — fold task-specific notes into the `Additionally:` tail so all task-specific steering flows through one channel.
 - Re-statement of `PLAN.md` content, standard protocol, or the manifest's skill/reference loads — the agent reads those itself.
-
-## Dispatch-Return Deltas
-
-Dispatch prompts and status returns both carry a one-line what-changed delta so the receiving side doesn't have to diff the doc to know what moved.
-
-**Orchestrator → worker (in the dispatch prompt):** one line describing what changed in the task since the last touch. Example: "Task 3 updated — revised Step 2; adjudication note on review item 3 accepted."
-
-**Worker → orchestrator (in the status return):** a `**Doc edits:**` line describing what the worker changed in `PLAN.md` / `RESULTS.md` this round. The status return is a navigation aid, not a content dump — it summarizes and points at the doc for detail. Full format discipline lives in `agents/implementer.md` §Report Format and `agents/reviewer.md` §Report Format; this section is the cross-stage orchestration convention that keeps the two sides in sync.
 
 ## Handling Reviewer Feedback (Orchestrator Discipline)
 
@@ -142,13 +180,3 @@ Implementer and reviewer agents own their commits and document updates — see `
 
 For direct mode (orchestrator executes the step itself), see `superRA:using-superRA` §Execution Modes.
 
-## Integration
-
-**Skills that use Agent Teams mode** (composition derived from the manifest — see `references/agent-teams.md` for spawn mechanics):
-
-- **superRA:execution-workflow** — analysis team (implementer + reviewer).
-- **superRA:integration-workflow** — integration team (one implementer + one reviewer per stage the workflow runs: drift-test, refactoring, documentation).
-- **superRA:merge-workflow** — merge team (merge-stage implementer + reviewer, plus refactoring / integration-review stages as needed).
-- **superRA:semantic-merge** — merge team (merge-stage implementer + reviewer).
-
-**When Agent Teams are unavailable:** all skills fall back to standard subagent patterns (Task tool dispatch with orchestrator-as-hub). No functionality is lost — teams are an enhancement, not a requirement.

@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Task 4 implemented)
-**Status:** In Progress — Task 1 implemented, pending review; Task 3 implemented, pending review; Task 4 implemented, pending review; Tasks 2, 5 not started
+**Last updated:** 2026-04-17 (Task 2 implemented)
+**Status:** In Progress — Tasks 1, 2, 3, 4 implemented, pending review; Task 5 not started
 
 ---
 
@@ -52,6 +52,33 @@
 - `README.md` — Teams language removed from feature table and hooks table
 - `RELEASE-NOTES.md` — `## 2026-04-17 — Agent Teams mode archived` entry prepended
 - `tests/structural-invariants.sh` — invariant 22 body replaced with archive-banner + active-cite check
+
+---
+
+## Task 2: Rewrite `agent-orchestration/SKILL.md` — §Workload Balancing + deletions + template tightening
+
+**Outcome:** All five bundled feedback items (F2, F3, F4, D1, D2) applied to `skills/agent-orchestration/SKILL.md`. New final outline: `## Overview` → `## Workload Balancing` → `## Dispatch Templates` → `## Handling Reviewer Feedback` → `## Review Status Reference`.
+
+**Sections deleted:**
+- `## Decision Framework` (F3): DOT graph + pattern table removed. 24 lines removed.
+- `## Dispatch-Return Deltas` (D1): 7-line section removed. Convention already lives in agent files §Report Format.
+- `## Integration` (D2): 6-line section removed. Teams-specific content has no referent after T1 archival.
+
+**Sections added:**
+- `## Workload Balancing` (F2): three-tier framework (Tier 1 trivial/inline, Tier 2 bundle-and-delegate, Tier 3 dedicated-agent) plus three Rules of thumb (≤150k tokens/agent, cache-reuse within TTL, parallelize independent tasks). Separated from `## Dispatch Templates` by `---`.
+
+**Edits within kept sections:**
+- `## Overview` (F2 + F3): replaced Teams-framing paragraph ("use teams when…use parallel subagents when…") with: **Core principle:** parallel-dispatch independent tasks; serialize iterative loops; do trivial work inline. Frontmatter description also updated to remove Agent Teams trigger language.
+- `## Dispatch Templates` (F4): both implementer and reviewer `<optional steering>` placeholders now read: "Must add information on top of the default; never restate what the default protocol, skill-load manifest, or PLAN.md already says." Additive-only paragraph added after the reviewer template. Stale `Counterpart:` banned-item cleaned. Stale Agent Teams reference removed from the prose paragraph after the templates.
+
+**Structural invariants:**
+- Invariant 14 updated: `## Workload Balancing` replaces `## Dispatch-Return Deltas` in the checked heading list; two new checks confirm `## Dispatch-Return Deltas` and `## Integration` are absent.
+- Invariant 26 added: checks for `## Workload Balancing` heading, all three tier headings, `150k` token rule, and `cache` reuse guidance.
+- All invariants PASS after edits (2 known pre-existing WARNs for upstream refs in writing-skills).
+
+**Files changed:**
+- `skills/agent-orchestration/SKILL.md` — sections deleted + rewritten + §Workload Balancing inserted + dispatch templates tightened
+- `tests/structural-invariants.sh` — invariant 14 updated; invariant 26 added
 
 ---
 
