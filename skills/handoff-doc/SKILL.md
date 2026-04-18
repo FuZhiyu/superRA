@@ -85,13 +85,6 @@ Any time the agent stops to consult the researcher — via `AskUserQuestion` or 
 
 Three lines, blockquote, dated. The `Question asked` line is the agent's own restatement of what it asked — short enough to read at a glance, specific enough that a fresh agent sees why the decision was needed. The `Rationale` line is optional and appears only if the researcher gave one; do not invent rationale.
 
-**Not covered by this section:**
-
-- Adjudication of reviewer feedback inside the review-notes blockquote — that is the `→ orchestrator: ...` / `→ implemented: ...` protocol owned by `agents/implementer.md` and `agents/reviewer.md`. User decisions are a separate, upstream thing: the researcher answering a question the agent could not decide, not the orchestrator overriding a reviewer.
-- Ephemeral clarifications the agent could have resolved from the code ("which file holds X?") — those are not decisions, they do not belong in the log.
-
-If you are not sure whether an answer counts as a decision worth logging: if acting on it would change the code, data, or methodology in a way another agent could not reconstruct from the code alone, log it.
-
 ## What Counts as Stale (remove, don't keep)
 
 - Steps describing an approach that was abandoned after seeing the data — rewrite them to describe what was actually done.

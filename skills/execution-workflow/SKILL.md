@@ -146,6 +146,12 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 ### Step 2: Execute Tasks
 
+**Before dispatching, read each pending task's `Depends on:` field.**
+Tasks whose dependencies are all `APPROVED` may be dispatched as a
+single parallel Agent-tool batch (subject to `agent-orchestration`
+§Workload Balancing). Serialize only when no parallel batch is
+available.
+
 #### Per-Task Execution Steps
 
 1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "superRA:implementer")` — see template below. Direct mode: follow `superRA:using-superRA` §Execution Modes, then implement yourself.

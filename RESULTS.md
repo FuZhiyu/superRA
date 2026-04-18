@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Task 3 implemented)
-**Status:** In Progress — Task 1 implemented, pending review; Task 3 implemented, pending review; Tasks 2, 4–5 not started
+**Last updated:** 2026-04-17 (Task 4 implemented)
+**Status:** In Progress — Task 1 implemented, pending review; Task 3 implemented, pending review; Task 4 implemented, pending review; Tasks 2, 5 not started
 
 ---
 
@@ -70,3 +70,27 @@
 **Files changed in T3 commit:**
 - `agents/implementer.md` — `### Shared-Repo Commit Discipline` sub-section inserted; atomic-commit step converted from numbered item to bold paragraph
 - `agents/reviewer.md` — `### Shared-Repo Commit Discipline` sub-section inserted
+
+---
+
+## Task 4: Add `Depends on:` field to plan template + §Task Dependencies in planning-workflow (F6) + delete handoff-doc "Not covered by this section" block (D3)
+
+**Outcome:** All four edits applied. `planning-workflow` now teaches authors to declare task dependencies; `execution-workflow` reads those fields before dispatch; the plan template requires the field in every task block; `handoff-doc` User Decisions Log drops the negation list (D3).
+
+**Edits made:**
+
+1. `skills/planning-workflow/SKILL.md` — inserted `### Task Dependencies` sub-section after `### Step Granularity` inside Phase 4. Covers format, when-depends-on, when-independent, orchestration contract, and plan-time DAG sanity. Also added item 7 ("Dependency graph sanity") to `## Self-Review`.
+
+2. `skills/planning-workflow/references/plan-template.md` — added prose paragraph explaining the `**Depends on:**` field requirement before the task-block code example; added `**Depends on:** Task N-1 [, Task N-2] | *(none)*` as the first field in the task-block skeleton.
+
+3. `skills/execution-workflow/SKILL.md` — inserted a paragraph at the top of Step 2 ("Execute Tasks") instructing the orchestrator to read `Depends on:` fields before dispatch and batch independent tasks per `agent-orchestration` §Workload Balancing.
+
+4. `skills/handoff-doc/SKILL.md` — deleted the `**Not covered by this section:**` bullet block (two bullets) and the `If you are not sure whether an answer counts...` paragraph from §User Decisions Log. Section now reads directly from the three-line format example to `## What Counts as Stale`.
+
+**Verification results (Step 5):**
+1. `### Task Dependencies` heading in planning-workflow: PASS
+2. `**Depends on:**` field in plan-template: PASS
+3. "Dependency graph sanity" in self-review: PASS
+4. `Depends on:` text in execution-workflow: PASS
+5. `**Not covered by this section:**` absent from handoff-doc: PASS
+6. Structural invariants: 2 pre-existing FAILs (invariant 14 asserts `## Dispatch-Return Deltas` exists — stale, T2 scope; invariant 22 flags `agent-orchestration/SKILL.md` active Teams refs — T2 scope). No new failures introduced by T4.
