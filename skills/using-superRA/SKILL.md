@@ -43,11 +43,10 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
 | Utility | `worktree-data-sync` | Isolated git worktrees, non-git data sync between them, and cleanup ritual. |
 | Meta | `using-superRA` | This skill — the master skill every agent reads. |
-| Meta | `writing-skills` | Create or modify skills using test-driven methodology. |
 
 ## Composable Design
 
-Skills compose by category. **Workflow skills** own sequencing — they decide what happens when, and dispatch agents to do it. **Domain skills** own domain discipline — the vertical-specific knowledge a workflow skill invokes when a task touches that domain (today: `econ-data-analysis`). **Utility skills** are called on demand by workflow skills, agent files, or other skills — they are domain-agnostic and reusable. **Meta skills** shape the skill system itself (this skill, plus `writing-skills`). One source of truth per concern: if two skills seem to overlap, one of them should be pointing at the other rather than duplicating content.
+Skills compose by category. **Workflow skills** own sequencing — they decide what happens when, and dispatch agents to do it. **Domain skills** own domain discipline — the vertical-specific knowledge a workflow skill invokes when a task touches that domain (today: `econ-data-analysis`). **Utility skills** are called on demand by workflow skills, agent files, or other skills — they are domain-agnostic and reusable. **Meta skills** shape the skill system itself (`using-superRA`). One source of truth per concern: if two skills seem to overlap, one of them should be pointing at the other rather than duplicating content.
 
 ## Skill-Load Manifest
 
