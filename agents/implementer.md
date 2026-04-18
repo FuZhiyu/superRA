@@ -147,7 +147,7 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 1. **Update your assigned task block in PLAN.md in place.** Mark completed steps `[x]`. Rewrite step text if you deviated from the originally planned approach. Annotate review items as described above. Set `**Review status:** IMPLEMENTED`.
 
-2. **Update `RESULTS.md` task section in place.** If a section for your task already exists from a prior iteration, **replace** its content with current findings. Mirror the per-task shape already in `RESULTS.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
+2. **Update `RESULTS.md` task section in place.** Your task's section is **pre-allocated** in `RESULTS.md` at planning time (`## Task N: <name>`, same order and name as `PLAN.md`). Find your section by heading and **replace its content** with current findings — do not append a new section at end-of-file (that creates merge conflicts on parallel dispatch). Mirror the per-task shape in `handoff-doc/references/results-anatomy.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
 **Commit discipline depends on your dispatch's worktree context:**
 
@@ -176,7 +176,7 @@ Before staging your commit, verify:
 - [ ] Every PLAN.md edit is inside my assigned task block (no edits elsewhere).
 - [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations.
 - [ ] I replaced stale step notes in place — no "Previously..." or "Update:" blocks, no strikethroughs.
-- [ ] My RESULTS.md edits are confined to my task's section.
+- [ ] My RESULTS.md edits are confined to my task's pre-allocated section (replaced in place — not a new section appended at EOF).
 - [ ] Figures are embedded with `![caption](results_attachments/...)` and the image files are committed.
 - [ ] The task block and results section read as single coherent current-state descriptions.
 - [ ] Every material finding I am about to report is already written into `PLAN.md` (task block) or `RESULTS.md` (task section), not only in my status report. The doc is the record; the report only points at it.
