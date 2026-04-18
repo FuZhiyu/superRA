@@ -1,6 +1,6 @@
 # superRA
 
-superRA turns AI coding agents into disciplined Research Assistants. Built as a fork of [Superpowers](https://github.com/obra/superpowers), it ships a complete PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow that enforces reviewer sign-off at every step, keeps `PLAN.md` / `RESULTS.md` as the session-to-session source of truth, runs autonomously between legitimate stop points, and merges via intent-based semantic-merge rather than bare `git merge`. Today's flagship domain is economic data analysis; the architecture is built to extend to theory, literature review, simulation, and writing.
+superRA turns AI coding agents into disciplined Research Assistants. Built as a fork of [Superpowers](https://github.com/obra/superpowers), it ships a complete **iterative** PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow that enforces reviewer sign-off at every step, keeps `PLAN.md` / `RESULTS.md` as the session-to-session source of truth, runs autonomously between legitimate stop points, and merges via intent-based semantic-merge rather than bare `git merge`. Research is rarely linear — new tasks surface mid-execution, PR reviewers request adjacent analyses, methodology pivots land post-integration — so the phases form a cycle and `planning-workflow §Changing Plans` is the hinge that makes re-entry safe (DAG cascade over downstream tasks, full drift-test suite always re-runs, prefer-updating-existing-tasks). Today's flagship domain is economic data analysis; the architecture is built to extend to theory, literature review, simulation, and writing.
 
 ## Why superRA?
 
@@ -17,7 +17,7 @@ In the **data-analysis vertical** (today's flagship), these principles are backe
 
 ## How It Works
 
-When your agent receives a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase.
+When your agent receives a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases also **cycle**: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope addition after merge all route back through `planning-workflow §Changing Plans`, which rolls back the affected milestones, walks the DAG to clear downstream per-task statuses, and resumes at the right re-entry point.
 
 ```
 PLAN            planning-workflow (domain vertical setup → scope check → task decomposition)
@@ -40,7 +40,7 @@ INTEGRATE       integration-workflow → merge-workflow (uses semantic-merge)
                 Refactor for codebase. Integration review. Mature RESULTS.md. Merge or PR.
 ```
 
-Each task produces an atomic commit. If the session dies at any point, the next session reads `PLAN.md` + `RESULTS.md` + git state and picks up exactly where the last one stopped.
+Each task produces an atomic commit. If the session dies at any point, the next session reads `PLAN.md` + `RESULTS.md` + git state and picks up exactly where the last one stopped — including mid-cycle re-entry after a scope change, because the unchecked `## Workflow Status` boxes and per-task `**Review status:**` / `**Integration status:**` fields encode exactly how far the last §Changing Plans pass rolled state back.
 
 ## Workflow Map
 

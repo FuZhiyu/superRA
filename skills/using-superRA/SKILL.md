@@ -39,6 +39,8 @@ Every agent edits `PLAN.md` and `RESULTS.md` at some point — implementers rewr
 
 Implementer / reviewer subagents do NOT load `handoff-doc` by default — a compact editing etiquette (inline-edit, remove-stale, no-append) is carried in `agents/implementer.md` + `agents/reviewer.md` step 1 and is enough for the everyday case. Load `superRA:handoff-doc` on demand when the etiquette is not enough (unusual structural edit, first-time encounter with the doc format) and always when creating docs from scratch — `planning-workflow` Phase 2 (new plan) and `integration-workflow` Step 3 doc-writer (Stage 2 maturation). A standalone user with no subagents also reads `handoff-doc` directly.
 
+**Significant plan changes re-enter planning-workflow.** Whenever the plan meaningfully changes — a new task, a removed or reordered task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-invoke `planning-workflow §Changing Plans` and follow its protocol (confirm → log decision → inline-edit PLAN.md → roll back milestones → atomic commit → resume). This is the hinge that keeps the handoff doc honest across iterations; rewording a step inside an in-flight task to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §Changing Plans` for the full material-vs-not-material list and the 6-step protocol.
+
 ## Skill Inventory
 
 Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the full grouping index.
