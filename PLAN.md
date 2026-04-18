@@ -349,4 +349,42 @@ Walked at planning time (2026-04-17).
 
 - **Domain:** plugin-engineering prose. No data-first discipline applies. Implementer subagent's default Stage loads (`econ-data-analysis` under `Stage: implementation`) aren't a good fit; inline execution by the orchestrator with an adversarial review pass (e.g., `code-quality-reviewer` agent reading the diff) is the cleaner shape.
 - **Commits:** one per task (six total). No squashing — each task is a reviewable unit.
-- **Parallelization:** The feature being built here is what *enables* safe parallel implementers. Until it lands, tasks must serialize. After Task 1 lands, Tasks 2–5 are file-disjoint and could in principle be parallelized if the feature self-hosted — but that's out of scope for this PR.
+- **Parallelization:** The feature being built here is what *enables* safe parallel implementers. Tasks 1–6 serialized because the feature did not self-host yet. Tasks 7–8 (below) are the self-hosting dogfood test.
+
+---
+
+## Task 7: Dogfood — document merge-guard test vectors (parallel slot α)
+
+**Review status:** *(set during execution — artificial task for parallel-dispatch demo)*
+
+**Files affected:** `hooks/merge-guard`
+
+**Inputs:** Task 4 synthetic test cases (already in RESULTS.md Task 4 section).
+
+**Outputs:** `hooks/merge-guard` gains an inline comment block enumerating the four synthetic test inputs + expected outputs, so future edits can self-regress.
+
+**Depends on:** none (file-disjoint from Task 8).
+
+**Worktree:** orchestrator will provision `.worktrees/parallel/feedback-agent-dispatch-fixes/alpha` on branch `parallel/feedback-agent-dispatch-fixes/alpha`.
+
+- [ ] **Step 1: Add a `# Test vectors` comment block to `hooks/merge-guard`** just above the `exit 0` at the end (or immediately after the shebang — agent's choice). Include the four cases from RESULTS.md Task 4: `git merge parallel/foo/a` → `{}`, `git merge --no-ff parallel/feat/b` → `{}`, `git merge main` → STOP reminder, `git merge --abort` → `{}`.
+- [ ] **Step 2: Commit** on the dedicated branch. Stage `hooks/merge-guard` and `PLAN.md` (this task block only) and `RESULTS.md` (new Task 7 section only). Do not touch Task 8's files.
+
+---
+
+## Task 8: Dogfood — add orchestrator invocation example (parallel slot β)
+
+**Review status:** *(set during execution — artificial task for parallel-dispatch demo)*
+
+**Files affected:** `skills/agent-orchestration/references/worktree-harness-fallback.md`
+
+**Inputs:** the existing Create/Enter/Remove sections of the fallback reference.
+
+**Outputs:** a new `## Example Orchestrator Invocation` section appended at the end showing a complete bash sequence for a single-slot parallel dispatch (create → seed symlink → wait for subagent → merge → remove).
+
+**Depends on:** none (file-disjoint from Task 7).
+
+**Worktree:** orchestrator will provision `.worktrees/parallel/feedback-agent-dispatch-fixes/beta` on branch `parallel/feedback-agent-dispatch-fixes/beta`.
+
+- [ ] **Step 1: Append `## Example Orchestrator Invocation`** to `worktree-harness-fallback.md`. Show a concrete bash snippet: `git worktree add .worktrees/parallel/<branch>/a -b parallel/<branch>/a`, `python3 skills/worktree-data-sync/scripts/sync_worktree_data.py --to ... --mode seed --seed-sync-mode force-symlink`, a placeholder `# dispatch subagent with Worktree: field`, then `git merge --no-ff parallel/<branch>/a` and `git worktree remove`. Keep it under ~20 lines.
+- [ ] **Step 2: Commit** on the dedicated branch. Stage `skills/agent-orchestration/references/worktree-harness-fallback.md`, `PLAN.md` (this task block only), `RESULTS.md` (new Task 8 section only). Do not touch Task 7's files.
