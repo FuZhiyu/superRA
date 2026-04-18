@@ -493,8 +493,8 @@ if grep -Eq '^5\. \*\*Explicit what-changed' "$hd_skill"; then
 else
   pass "handoff-doc SKILL.md no longer contains old principle #5 'Explicit what-changed'"
 fi
-# Scoped to the §The Four Principles section because Mid-Session Scope Changes carries a numbered protocol
-principle_count=$(awk '/^## The Four Principles/,/^## At-a-Glance/' "$hd_skill" | grep -cE '^[0-9]+\. \*\*')
+# Scoped to the §The Four Principles section (generic ^## end marker survives section renames)
+principle_count=$(awk '/^## The Four Principles/{flag=1; next} /^## /{flag=0} flag' "$hd_skill" | grep -cE '^[0-9]+\. \*\*')
 if [ "$principle_count" -eq 4 ]; then
   pass "handoff-doc SKILL.md has exactly 4 numbered principles"
 else
