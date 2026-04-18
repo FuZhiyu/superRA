@@ -1,6 +1,6 @@
 ---
 name: refactor-and-integrate
-description: Utility skill (any phase). Use when creating drift tests, refactoring analysis code for codebase integration, or writing clean merge integration commits. Carries the three domain-knowledge checklists that define what "good" looks like for each task. Standalone-invokable — can be used outside the integration phase for any refactoring task. Dispatched implementer/reviewer subagents should load this skill via the Skills line when their stage is drift test creation, drift test review, refactoring, integration review, merge proposer, or merge review.
+description: Utility skill (any phase). Use when creating drift tests, refactoring analysis code for codebase integration, or writing clean merge integration commits. Carries the three domain-knowledge checklists that define what "good" looks like for each task. Standalone-invokable — can be used outside the integration phase for any refactoring task. Dispatched implementer/reviewer subagents load this skill when their Stage is `drift-test`, `integration`, or `merge` (per `superRA:using-superRA` §Skill-Load Manifest).
 ---
 
 # Refactor and Integrate
@@ -33,31 +33,7 @@ The runtime will announce this skill's base directory when it loads. Read the re
 
 ## Dispatch Convention
 
-Workflow skills dispatching a subagent for any of the stages above pass `Skills: superRA:refactor-and-integrate` along with the domain reference basename:
-
-```
-Agent(subagent_type: "superRA:implementer"):
-  Stage: drift test creation
-  Skills: superRA:refactor-and-integrate
-  Domain reference: drift-test-quality.md
-  [task-specific pointers]
-  Additionally: Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <optional steering>.
-```
-
-```
-Agent(subagent_type: "superRA:reviewer"):
-  Stage: integration
-  Skills: superRA:refactor-and-integrate
-  Domain reference: codebase-integration.md
-  [task-specific pointers]
-  Additionally: Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <optional steering>.
-```
-
-The agent loads this skill via the Skill tool, receives the base directory, and reads the named reference file. It then uses the reference as its checklist alongside the data-discipline principles from `superRA:econ-data-analysis` (which analysis-touching agents load per the `superRA:using-superRA` §Skill-Load Manifest).
+Dispatches follow the canonical template in `superRA:agent-orchestration` §Dispatch Templates. The manifest (`superRA:using-superRA` §Skill-Load Manifest) names this skill and its reference files on the `drift-test`, `integration`, and `merge` rows — the dispatch prompt does not restate `Skills:` or reference lines. The agent loads this skill via the Skill tool, receives the base directory, reads the manifest-named reference, and uses it as the checklist alongside the domain skill (for data analysis: `superRA:econ-data-analysis`).
 
 ## What Each Reference Covers
 
@@ -101,10 +77,9 @@ When your dispatch prompt names multiple domain references, load them all before
 ## Integration
 
 **Used by workflow skills:**
-- **`superRA:integration-workflow`** — Dispatches drift test creation (loads `drift-test-quality.md`), drift test review (`drift-test-quality.md`), refactoring (`codebase-integration.md`), and integration review (`codebase-integration.md`)
-- **`superRA:merge-workflow`** — Dispatches post-merge refactoring (`codebase-integration.md`) and post-merge integration review (`codebase-integration.md`) during the refactor-review loop triggered by drift test failure or reviewer REVISE
+- **`superRA:integration-workflow`** — Dispatches drift test creation and review (loads `drift-test-quality.md`) and the integration review → refactor loop (`codebase-integration.md`)
+- **`superRA:merge-workflow`** — Dispatches post-merge integration review and refactoring (`codebase-integration.md`) during the refactor-review loop triggered by drift test failure or reviewer REVISE
 - **`superRA:semantic-merge`** — Dispatches merge proposer (`merge-quality.md`) and merge reviewer (`merge-quality.md`) for tier classification and conflict resolution
 
 **Auto-loaded alongside:**
-- **`superRA:econ-data-analysis`** — Data discipline (loaded by `implementer` / `reviewer` agents whenever the stage involves analysis code, per the `superRA:using-superRA` §Skill-Load Manifest)
-- **`superRA:script-to-notebook`** — Notebook formatting (same manifest row)
+- **`superRA:econ-data-analysis`** — Data discipline (loaded by `implementer` / `reviewer` agents whenever the stage involves analysis code, per the `superRA:using-superRA` §Skill-Load Manifest); the `implementation` row also loads `econ-data-analysis/references/notebook-format.md` for notebook formatting.

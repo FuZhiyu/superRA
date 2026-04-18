@@ -4,14 +4,65 @@ Load this reference when you are either the **doc-writer subagent maturing `RESU
 
 The Stage 1 dev-log form of `RESULTS.md` is task-indexed, terse, agent-facing, reviewer caveats inline. The Stage 2 permanent form is reader-facing, fact-checked, and co-located with the analysis code. Consolidation **rewrites the file in place** before relocating it — it does not create a new file.
 
-## The consolidation pass — what changes
+## The consolidation pass — four ordered commits
 
-1. **Restructure from task-indexed to reader-facing.** Task ordering mirrored execution order, which is rarely the order a reader wants. Reorganize by objective, data source, or result type — whatever flows best for someone reading cold. Task numbering from `PLAN.md` disappears.
-2. **Merge related findings.** If two tasks produced pieces of the same result (e.g., Task 3 built the sample, Task 5 ran the regression on it), combine them into one section.
-3. **Strip reviewer caveats that were resolved.** Caveats on APPROVED tasks that were addressed should be gone. Caveats flagging unresolved limitations become a "Limitations" section.
-4. **Add frontmatter.** Per `baseline-io.md`. Stage 1 had no frontmatter.
-5. **Materialize figures.** Copy from `results_attachments/` into a new `attachments/` folder next to the relocated file. Update embed paths. See `rich-content.md` for the mechanics.
-6. **Relocate.** Move the file from worktree root to the analysis's permanent code folder, resolved from project guidance (`CLAUDE.md` / `AGENTS.md`). Commit as part of the integration commit.
+Sub-part A lands as **four separate commits, in order**. Each commit is independently recoverable — a session interruption mid-pass leaves the tree git-coherent and the next dispatch resumes at the first un-landed step. Do NOT bundle these into one commit: the atomicity is the whole point (a file move mixed with a fact-check edit is very hard to audit or revert).
+
+### Commit 1 — Fact-check in place
+
+Walk the fact-check checklist below against the Stage 1 `RESULTS.md` at the worktree root. No structural changes yet; only substitute wrong numbers with correct ones, strip unsupported claims, remove prohibited language, remove prohibited sections (Recommendations, Conclusions, Implications) unless the researcher explicitly requested them.
+
+```bash
+git add RESULTS.md
+git commit -m "results: fact-check Stage 2 RESULTS.md"
+```
+
+**Validation before commit:** every cited number matches its source file (you opened each one and confirmed). No prohibited language patterns remain (grep the file if in doubt). No prohibited sections remain.
+
+### Commit 2 — Restructure in place
+
+Re-organize the now-fact-checked file. Still at worktree root, still Stage 1 figure paths. Changes:
+
+- Restructure from task-indexed to reader-facing — by objective, data source, or result type. Task numbering from `PLAN.md` disappears.
+- Merge related findings split across tasks (e.g., Task 3 built the sample, Task 5 ran the regression on it — combine into one section).
+- Strip resolved reviewer caveats; surface unresolved limitations into a "Limitations" section.
+- Add frontmatter per `baseline-io.md`. Stage 1 had none.
+
+```bash
+git add RESULTS.md
+git commit -m "results: restructure Stage 2 RESULTS.md to reader-facing"
+```
+
+**Validation before commit:** no `## Task N` headings remain. Frontmatter is present at file top. Output shape matches the target layout (see §Output shape below).
+
+### Commit 3 — Materialize figures
+
+Copy figures from `results_attachments/` (worktree root, Stage 1 directory) into `${RESULTS_ATTACHMENTS_DIR}` (= `${RESULTS_DIR}/attachments`). Convert PDF→PNG if needed per `rich-content.md`. Update embed paths in `RESULTS.md` from `results_attachments/...` to `attachments/...` so they resolve correctly after Commit 4's relocation.
+
+The file is still at worktree root at this point — only the figures and their embed paths have moved.
+
+```bash
+git add RESULTS.md ${RESULTS_ATTACHMENTS_DIR}/
+git commit -m "results: materialize figures into ${RESULTS_DIR}/attachments"
+```
+
+**Validation before commit:** every figure embedded in `RESULTS.md` renders when previewed (every relative path resolves to a committed file). Every figure is a PNG (or the project's mandated format), not a PDF. `results_attachments/` at the worktree root still exists — do not delete it until after Commit 4 and the separate disposition pass.
+
+### Commit 4 — Relocate
+
+Move the file and the materialized attachments folder into the permanent location using `git mv` so history is preserved.
+
+```bash
+git mv RESULTS.md ${RESULTS_DIR}/RESULTS.md
+# The attachments folder may have been created by Commit 3 already at
+# ${RESULTS_ATTACHMENTS_DIR} (= ${RESULTS_DIR}/attachments) — in that case
+# this step is just the RESULTS.md move. Otherwise git mv it too.
+git commit -m "results: relocate RESULTS.md to ${RESULTS_DIR}"
+```
+
+**Validation before commit:** `git log --follow ${RESULTS_DIR}/RESULTS.md` shows the history back to the Stage 1 dev-log version. The file opens cleanly at its new location. Every figure-embed path resolves against the new location's `attachments/` folder.
+
+After Commit 4, the doc-writer returns. The doc-reviewer dispatches against `${RESULTS_DIR}/RESULTS.md`.
 
 ## Fact-check checklist
 
@@ -69,15 +120,15 @@ The following sections **must not appear** unless the researcher explicitly requ
 
 A "Limitations" section that lists factual caveats (unresolved reviewer notes, data coverage gaps, known biases) is allowed and encouraged.
 
-## Project documentation accuracy
+## Cross-consistency with project docs
 
-When the doc-reviewer's dispatch includes project docs (CLAUDE.md / AGENTS.md / README.md), apply this checklist alongside the RESULTS.md fact-check above.
+The Stage 2 doc-writer matures `RESULTS.md` only; project-level docs (`CLAUDE.md` / `AGENTS.md` / `README.md`) are audited during `integration-workflow` Stage 2 per `refactor-and-integrate/references/codebase-integration.md` §Project Doc Audit. The doc-reviewer still checks that the matured `RESULTS.md` does not contradict project docs:
 
-- [ ] **Methodology descriptions** match the actual code — no references to dropped approaches, superseded variable definitions, or removed processing steps
-- [ ] **Output file lists** match committed outputs — every file listed is actually produced by the current code; no references to renamed or deleted outputs
-- [ ] **Headline results** (if any) match the matured RESULTS.md — no stale numbers from before the last revision
-- [ ] **Dates and version claims** ("as of ...", version numbers) reflect the current commit
-- [ ] **File paths and command names** are accurate — no references to moved, renamed, or deleted files
+- [ ] **Methodology descriptions** in the matured RESULTS.md match the current code — no references to dropped approaches, superseded variable definitions, or removed processing steps
+- [ ] **Headline results cited in project docs** (if any) match the matured RESULTS.md — no stale numbers from before the last revision
+- [ ] **File paths and command names cited in RESULTS.md** are accurate — no references to moved, renamed, or deleted files
+
+If the reviewer finds stale claims in `CLAUDE.md` / `AGENTS.md` / `README.md` themselves, that is a Stage 2 regression — flag it but recognize the primary gate for project-doc accuracy was Stage 2.
 
 ## Severity for integration review
 

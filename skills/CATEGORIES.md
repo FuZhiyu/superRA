@@ -11,7 +11,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 | Skill | Phase | Role |
 |---|---|---|
 | `planning-workflow` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
-| `execution-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE / CONDITIONAL APPROVE), reproducibility verification, 4-option completion menu. |
+| `execution-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
 | `integration-workflow` | INTEGRATE (pre-merge) | Drift-test creation, refactor-review loop, doc finalization. |
 | `merge-workflow` | INTEGRATE (merge) | Main update via semantic-merge, post-merge verification, local merge or PR push, worktree cleanup. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns; Agent Teams mechanics in `references/agent-teams.md`. |
@@ -22,7 +22,7 @@ Carry the domain-specific knowledge that workflow skills invoke when a task touc
 
 | Skill | Vertical | Flagship discipline |
 |---|---|---|
-| `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), three concurrent disciplines (describe-analyze-validate), diagnostics-for-validity philosophy, pitfall catalogs, red flags. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `data-robustness-checklist.md`. |
+| `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), three concurrent disciplines (describe-analyze-validate), diagnostics-for-validity philosophy, pitfall catalogs, common rationalizations. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `data-robustness-checklist.md`, `notebook-format.md` (+ `jupytext-guide.md` and `julia-quarto-guide.md` companions). |
 
 ### Future verticals (roadmap — not yet implemented)
 
@@ -39,14 +39,11 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 
 | Skill | What it provides |
 |---|---|
-| `handoff-doc` | Document-level discipline for `PLAN.md` / `RESULTS.md` — the four principles, inline-edit rule, stale-content checklist, task-block anatomy. Single source of truth for doc structure. |
-| `script-to-notebook` | Cell organization, markdown narrative, rendering for analysis scripts. Python (jupytext) and Julia (QuartoNotebookRunner). |
+| `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Step 3 doc-writer). Usable standalone by a single author with no subagents. |
 | `refactor-and-integrate` | Drift-test quality, codebase integration, and merge quality checklists. Loaded by integration-phase agents. |
 | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. Progressive-reveal references by stage. |
 | `semantic-merge` | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions. |
-| `using-analysis-worktrees` | Isolated git worktrees with data seeding. |
-| `worktree-data-sync` | Sync non-git data between worktrees (seed, diff, apply). |
-| `verification-before-completion` | Fresh verification evidence before any completion claim. |
+| `worktree-data-sync` | Isolated git worktrees, non-git data sync between them (seed, diff, apply), and cleanup ritual. |
 
 ## Meta — system-level
 
