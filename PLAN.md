@@ -62,6 +62,10 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 > **Question asked:** Should this PR's RELEASE-NOTES entry be a separate ## Unreleased block (current) or folded into the existing workflow-domain-split block?
 > **Rationale:** "I don't care about release note for the moment" — orchestrator interprets as: do not spend cycles on the convention call; ship the entry as-written with only the accuracy fixes.
 
+> **User decision (2026-04-17):** Push and open the PR now; user will handle the divergence with `econ-adaption` later. Skip integration-workflow Step 3 Sub-part C (PLAN.md disposition stays in worktree) and skip merge-workflow Step 1 (semantic-merge with main). Move directly to merge-workflow Step 4 PR push.
+> **Question asked:** econ-adaption diverged 10+ commits (rescue/design-coherence-refactor merged) while this PR was in flight. Pause for user review, run semantic-merge, or abandon?
+> **Rationale:** "Create the PR and I'll handle the divergence later." User accepts the divergence-resolution burden as a separate, post-PR-creation task. The PR is for design discussion and historical reference; the actual merge will be reconciled by the user manually against the new econ-adaption.
+
 ---
 
 ## Workflow Status
