@@ -150,7 +150,7 @@ Walked at planning time (2026-04-17).
 
 ## Task 2: Refactor `worktree-data-sync` to non-git data sync only
 
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Files affected:**
 - `skills/worktree-data-sync/SKILL.md`
@@ -162,37 +162,23 @@ Walked at planning time (2026-04-17).
 
 **Dependencies:** Task 1 (fallback reference must exist before we point at it).
 
-- [ ] **Step 1: Rewrite the YAML description and opening paragraphs of `SKILL.md`.**
+- [x] **Step 1: Rewrite the YAML description and opening paragraphs of `SKILL.md`.**
   - Narrow the `description:` frontmatter to "syncing non-git-controlled data files between existing worktrees (seeding, diffing, reconciling after parallel work, data teardown)." Remove triggers about worktree creation (`set up a worktree for this`, `isolate this analysis`, `I'll run two analyses in parallel`, etc.) — those now live in `agent-orchestration`.
   - Rewrite the opening paragraph under `# Worktree Data Sync Skill`: "Non-git data sync between existing worktrees. Seed, diff, apply, and data teardown. Worktree lifecycle (create / enter / remove) is an orchestration concern — see `skills/agent-orchestration/references/worktree-harness-fallback.md`."
 
-- [ ] **Step 2: Delete §Creating a Worktree (lines 37–87 at current HEAD) and the §When to Use a Worktree decision table (lines 11–23).**
+- [x] **Step 2: Delete §Creating a Worktree (lines 37–87 at current HEAD) and the §When to Use a Worktree decision table (lines 11–23).**
   - Keep §When to Use (non-git data sync only) — that's scope-appropriate.
   - Announce-at-start line moves to the top of §When to Use (non-git data sync only) or gets dropped if no longer needed.
 
-- [ ] **Step 3: Trim §Cleanup (lines 247–268).**
+- [x] **Step 3: Trim §Cleanup (lines 247–268).** Renamed to §Data Teardown; retained the "seeded data disappears with the worktree directory" fact and repointed lifecycle to the fallback reference.
   - Delete the `git worktree remove` invocation and the "teardown is removal" prose about `git worktree remove` implicit-data-cleanup. Keep the paragraph clarifying that seeded symlinks disappear when the worktree directory is removed (as a cross-reference: "For worktree lifecycle mechanics including removal, see `agent-orchestration/references/worktree-harness-fallback.md`; seeded data lives inside the worktree directory and is removed with it.").
   - Delete the Option 4 Discard block (it prescribes `git checkout; git branch -D; git worktree remove`) — lifecycle lives in the new reference.
 
-- [ ] **Step 4: Add §See Also** at the bottom of `SKILL.md`:
+- [x] **Step 4: Add §See Also** at the bottom of `SKILL.md`.
 
-  ```markdown
-  ## See Also
-  - `agent-orchestration/references/worktree-harness-fallback.md` — worktree lifecycle (create / enter / remove), harness tools preferred, raw-git fallback.
-  - `agent-orchestration` §Concurrent Writers Require Worktree Isolation — when parallel implementers each need their own worktree.
-  ```
+- [x] **Step 5: Verify tests still pass.** `~/.venv/bin/python -m pytest skills/worktree-data-sync/scripts/test_worktree_data_sync.py -x` → 30 passed in 3.37s. No test touched SKILL.md-level worktree-creation behavior; no test changes needed.
 
-- [ ] **Step 5: Verify tests still pass.**
-  - Inspect `skills/worktree-data-sync/scripts/test_worktree_data_sync.py` to confirm tests exercise the Python CLI (seed / diff / apply) and not deleted SKILL.md-level worktree-creation behavior.
-  - Run: `python3 skills/worktree-data-sync/scripts/test_worktree_data_sync.py` from the worktree root. All tests must pass.
-  - If any test asserts behavior tied to removed SKILL.md sections (e.g., test names like `test_create_worktree_*`), adapt or remove them — CLI-level behavior stays unchanged, so this should be a no-op.
-
-- [ ] **Step 6: Commit.**
-  ```bash
-  git add skills/worktree-data-sync/SKILL.md PLAN.md RESULTS.md
-  # also any test file edits if required
-  git commit -m "worktree-data-sync: narrow scope to non-git data sync"
-  ```
+- [x] **Step 6: Commit.**
 
 ---
 

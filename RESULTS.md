@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Task 1)
+**Last updated:** 2026-04-17 (Task 2)
 **Status:** In Progress
 
 ---
@@ -22,3 +22,19 @@
 ### Notes
 - The canned steering sentence for `Worktree:` is codified as **required**, not additive — the single exception to the existing "additive-only" `Additionally:` rule. Justification in-place: the agent's spawn cwd defaults would otherwise cause silent wrong-copy edits.
 - `references/worktree-harness-fallback.md` lives under `agent-orchestration/`, not `worktree-data-sync/` — worktree lifecycle is an orchestration concern. Task 2 points `worktree-data-sync` at this location.
+
+## Task 2: Refactor `worktree-data-sync` to non-git data sync only
+
+**Status:** Implemented (awaiting review)
+
+### Key changes
+- **Description frontmatter** narrowed to "syncing non-git-controlled data files between existing worktrees (seeding, diffing, reconciling, teardown). Worktree lifecycle out of scope."
+- **Deleted:** §When to Use a Worktree (decision table, ~13 lines) and §Creating a Worktree (6 subsections including Directory Selection, Safety Verification, Create, Seed Data, Verify Accessibility, Report Location — ~80 lines).
+- **Renamed §Cleanup → §Data Teardown** — retained the "seeded data disappears with the worktree directory" fact; removed `git worktree remove` prescription and the Option 4 Discard block (branch deletion). Repointed lifecycle operations to `agent-orchestration/references/worktree-harness-fallback.md`.
+- **New §See Also** pointing at the lifecycle reference and at `agent-orchestration` §Concurrent Writers.
+
+### Section outline after refactor
+Frontmatter → `# Worktree Data Sync Skill` → §When to Use → §Command Surface (with §Endpoints) → §Modes (§`--mode seed` / §`--mode diff` / §`--mode apply`) → §Managed Path Discovery → §Examples → §Data Teardown → §See Also.
+
+### Test verification
+`~/.venv/bin/python -m pytest skills/worktree-data-sync/scripts/test_worktree_data_sync.py -x` → **30 passed in 3.37s**. No tests touched deleted SKILL.md sections; CLI logic unchanged.
