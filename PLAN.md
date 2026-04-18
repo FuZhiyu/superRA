@@ -1,0 +1,389 @@
+# Parallel-Implementer Worktree Isolation — Plan
+
+> **For agentic workers:** This is a superRA **plugin-engineering** task (prose editing of skill / agent / hook files), not data analysis. No data-analysis domain vertical applies — no Data Inventory gate, no three-concurrent-disciplines, no row counts. Use `superRA:execution-workflow` to execute. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
+
+**Objective:** Allow the orchestrator to parallel-dispatch ≥2 implementers without silent file-clobber, by isolating each in its own worktree; and refactor `skills/worktree-data-sync` to own only non-git data sync while worktree lifecycle moves under `skills/agent-orchestration`.
+
+**Methodology:**
+1. Establish a branch-name contract `parallel/<analysis-branch>/<slug>` so merge-guard can exempt orchestrator-managed parallel merges and the orchestrator can merge them with plain `git merge` (no `semantic-merge`).
+2. Add a new optional `Worktree:` field + canned steering sentence to the implementer dispatch template; teach `agents/implementer.md` the dedicated-worktree commit/handoff branch.
+3. Strip worktree creation/cleanup out of `skills/worktree-data-sync`; create `skills/agent-orchestration/references/worktree-harness-fallback.md` to carry the lifecycle fallback (harness tools preferred; raw `git worktree` otherwise).
+4. Update consumer workflows (`planning-workflow`, `execution-workflow`, `merge-workflow`, `semantic-merge`) with pointer-level edits only — no duplicated content.
+
+**Output:**
+- `skills/agent-orchestration/SKILL.md` — new §Concurrent Writers Require Worktree Isolation; extended §Dispatch Templates.
+- `skills/agent-orchestration/references/worktree-harness-fallback.md` — new ~30-line reference.
+- `skills/worktree-data-sync/SKILL.md` — lifecycle stripped; scope narrowed to data sync.
+- `agents/implementer.md` — worktree-entry step + dedicated-worktree commit branch.
+- `hooks/merge-guard` — `^parallel/` exemption.
+- `skills/planning-workflow/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md` — pointer updates.
+
+**Expected Results / Hypotheses:**
+- Running `hooks/merge-guard` against synthetic input `git merge parallel/foo/a` emits no additional context; `git merge main` still emits the existing reminder.
+- `skills/worktree-data-sync/scripts/test_worktree_data_sync.py` continues to pass after the SKILL.md refactor (CLI logic untouched).
+- All cross-references between skill files remain valid (no dangling pointers to removed sections).
+
+**Pipeline:** n/a (no scripts). Verification steps in Task 6.
+
+---
+
+## Project Conventions
+
+Walked at planning time (2026-04-17).
+
+### Repo root
+- `CLAUDE.md` (feedback/agent-dispatch-fixes HEAD `a5b578a`): superRA contributor guidelines. Load-bearing workflow principles (implementer-reviewer pair; handoff-doc as auditable record; fast-early-strict-before-merge; autonomous with human-in-loop). DRY principle: one source of truth per concern; consumer workflow skills must not duplicate content owned by `agent-orchestration` or domain skills. Flat `skills/` layout (no nesting). Skill changes are behavior-shaping and must be tested on at least one harness.
+- `AGENTS.md`: duplicate / symlink of `CLAUDE.md`.
+- `README.md`: high-level overview; do not edit procedurally for this plan.
+
+### Module-level docs walked
+- `skills/agent-orchestration/SKILL.md` (current HEAD): canonical dispatch-template shape (required-fields-first, `Additionally:` anchor last); §Workload Balancing (Tier 1 inline / Tier 2 bundle / Tier 3 dedicated; parallelize independent tasks); §Handling Reviewer Feedback owns orchestrator adjudication discipline.
+- `agents/implementer.md` (current HEAD): standard Before-You-Start; §Handoff editing etiquette; assumes shared-worktree by default; has a "Shared-repo commit discipline" note at line 151.
+
+### Not walked
+- `skills/*/references/` files not named above (unaffected by this plan).
+- Test fixtures in `skills/worktree-data-sync/scripts/test_worktree_data_sync.py` — spot-check only in Task 2.
+
+### Key cross-refs to preserve
+- `merge-workflow/SKILL.md` lines 192, 239: currently point at `worktree-data-sync §Cleanup`. Split: lifecycle → new reference; data teardown → stays in `worktree-data-sync`.
+- `planning-workflow/SKILL.md` line ~82: currently loads `worktree-data-sync` for worktree setup. Drop entirely — worktree setup is an orchestration-time concern, not a planning-time concern.
+- `execution-workflow/SKILL.md` line ~185 (Option 4 Discard): currently points at `worktree-data-sync §Cleanup`. Repoint at new fallback reference.
+- `semantic-merge/SKILL.md`: add parallel/* bypass note.
+
+---
+
+## Task 1: Add worktree lifecycle fallback + §Concurrent Writers subsection
+
+**Review status:** *(set during execution)*
+
+**Files affected:**
+- `skills/agent-orchestration/references/worktree-harness-fallback.md` (NEW)
+- `skills/agent-orchestration/SKILL.md` (extend)
+
+**Inputs:** Current `skills/agent-orchestration/SKILL.md` (read at execution time).
+
+**Outputs:** New reference file + extended SKILL.md.
+
+**Dependencies:** None.
+
+- [ ] **Step 1: Create `skills/agent-orchestration/references/worktree-harness-fallback.md`** (~30 lines).
+
+  Structure:
+  - Short opener: "This reference is loaded by the orchestrator when it needs to create, enter, or remove a worktree and no harness-provided worktree tool is available. Worktree lifecycle is an orchestration concern — see SKILL.md §Concurrent Writers Require Worktree Isolation for when worktrees are required."
+  - §Prefer harness tools: list signals (`EnterWorktree`, `ExitWorktree`, IDE worktree integration). Use them when available.
+  - §Raw-git fallback: `git worktree add <path> -b <branch> <base-ref>`; `git worktree remove <path>`; `git branch -D <branch>` (only after merge or discard).
+  - §Placement: default `./.worktrees/<branch-name>` at repo root; defer to project-level `CLAUDE.md` / `AGENTS.md` if it names a directory; add the chosen directory to `.gitignore` before first use if not already ignored.
+  - §Gotchas: verify `git status` clean before `worktree remove`; `remove` refuses dirty worktrees unless `--force` is passed — never `--force` without checking.
+
+- [ ] **Step 2: Extend `skills/agent-orchestration/SKILL.md`** in three places.
+
+  **(a) Add new subsection after §Workload Balancing (before §Dispatch Templates):**
+
+  ```markdown
+  ## Concurrent Writers Require Worktree Isolation
+
+  When a parallel dispatch batch contains **≥2 implementers**, each runs in
+  its own git worktree. Two implementers sharing a worktree race on
+  `PLAN.md` / `RESULTS.md` at the filesystem layer — `Edit` reads, sibling
+  `Edit` reads, first writes, second writes, first's edits are silently
+  lost. Worktree isolation is the only safe concurrency model for parallel
+  writes in this plugin.
+
+  **Ownership split:**
+
+  | Direction | Owner | When | How |
+  |---|---|---|---|
+  | Seed-in (inputs → worktree) | Orchestrator | Before dispatch | `worktree-data-sync` §Seed with `--seed-sync-mode force-symlink` |
+  | Inside worktree (task execution) | Subagent | During dispatch | Normal file I/O on the `parallel/…` branch |
+  | Harvest-out (merge back) | Orchestrator | After all siblings return | Plain `git merge --no-ff parallel/<branch>/<slug>` |
+  | Cleanup | Orchestrator | After merge | Harness worktree tool or `git worktree remove`; `git branch -D` |
+
+  **Branch naming:** `parallel/<analysis-branch>/<slug>` where `<slug>` is
+  an orchestrator-chosen short identifier (e.g., `a`, `b`, `alpha`). A single
+  implementer may own multiple PLAN.md tasks in one dispatch, so the branch
+  is per *parallel slot*, not per task.
+
+  **Plain `git merge`, not semantic-merge.** Task boundaries are set
+  ex-ante in `PLAN.md` before parallel dispatch, so `parallel/…` branches
+  are mechanically disjoint by construction. Merges are auto-resolving; if
+  a conflict surfaces, use discretion — trivial adjacent edits can be
+  resolved inline, but material or ambiguous conflicts indicate the
+  task-boundary contract was violated and should escalate to the
+  researcher. The merge-guard hook exempts `parallel/*` source branches
+  for this reason.
+
+  **Worktree lifecycle** (creation, entry, removal): prefer harness
+  worktree tools; fall back to raw git per
+  `references/worktree-harness-fallback.md`.
+
+  **Data seeding:** force-symlink mode is safe here because parallel tasks
+  have disjoint write paths by construction — symlinks point at the source
+  worktree's data and no task mutates shared inputs.
+
+  **Dispatch:** implementers in a parallel batch receive a `Worktree:`
+  field and a canned steering sentence (see §Dispatch Templates below).
+
+  **Not persisted in PLAN.md.** Branch names, HEAD SHAs, and worktree
+  paths are transient orchestration state. Git (`git worktree list`, `git
+  branch`) is the source of truth. PLAN.md records the committed state of
+  tasks, not in-flight dispatch bookkeeping.
+  ```
+
+  **(b) Extend §Dispatch Templates** — add `Worktree:` as a new optional field between required fields and the `Additionally:` tail in the **implementer** template. Show it in the template snippet. Add a short paragraph below:
+
+  > **`Worktree:` field.** Present only when the orchestrator provisioned a
+  > dedicated worktree for this parallel slot (see §Concurrent Writers).
+  > Value is the absolute path. When present, the dispatch prompt MUST
+  > include this canned steering sentence in the `Additionally:` tail:
+  > *"Work inside the worktree at `<path>` for the entirety of this task.
+  > Enter it using the harness-provided worktree tool if available (e.g.,
+  > `EnterWorktree`); otherwise `cd` to that path and verify with `git
+  > rev-parse --show-toplevel`. Do not edit files outside this worktree.
+  > Do not merge or push — the orchestrator owns merge-back."* This is
+  > not optional steering — it's required context the agent cannot derive
+  > from PLAN.md alone, because the agent's spawn cwd would otherwise
+  > default to the main worktree and silently edit the wrong copy.
+
+- [ ] **Step 3: Verify and commit.**
+  - Read the written files; confirm section anchors referenced elsewhere (e.g., "§Concurrent Writers Require Worktree Isolation", "§Dispatch Templates") exist and are spelled as written.
+  - Grep `skills/` for any stale references to the new content that were accidentally introduced.
+  - Commit:
+    ```bash
+    git add skills/agent-orchestration/SKILL.md \
+      skills/agent-orchestration/references/worktree-harness-fallback.md \
+      PLAN.md RESULTS.md
+    git commit -m "agent-orchestration: add §Concurrent Writers + worktree fallback reference"
+    ```
+
+---
+
+## Task 2: Refactor `worktree-data-sync` to non-git data sync only
+
+**Review status:** *(set during execution)*
+
+**Files affected:**
+- `skills/worktree-data-sync/SKILL.md`
+- `skills/worktree-data-sync/scripts/test_worktree_data_sync.py` (verify only; edit if tests exercise removed SKILL.md-level behavior)
+
+**Inputs:** current `skills/worktree-data-sync/SKILL.md`; the new `agent-orchestration/references/worktree-harness-fallback.md` from Task 1.
+
+**Outputs:** slimmed `SKILL.md`; test file verified green.
+
+**Dependencies:** Task 1 (fallback reference must exist before we point at it).
+
+- [ ] **Step 1: Rewrite the YAML description and opening paragraphs of `SKILL.md`.**
+  - Narrow the `description:` frontmatter to "syncing non-git-controlled data files between existing worktrees (seeding, diffing, reconciling after parallel work, data teardown)." Remove triggers about worktree creation (`set up a worktree for this`, `isolate this analysis`, `I'll run two analyses in parallel`, etc.) — those now live in `agent-orchestration`.
+  - Rewrite the opening paragraph under `# Worktree Data Sync Skill`: "Non-git data sync between existing worktrees. Seed, diff, apply, and data teardown. Worktree lifecycle (create / enter / remove) is an orchestration concern — see `skills/agent-orchestration/references/worktree-harness-fallback.md`."
+
+- [ ] **Step 2: Delete §Creating a Worktree (lines 37–87 at current HEAD) and the §When to Use a Worktree decision table (lines 11–23).**
+  - Keep §When to Use (non-git data sync only) — that's scope-appropriate.
+  - Announce-at-start line moves to the top of §When to Use (non-git data sync only) or gets dropped if no longer needed.
+
+- [ ] **Step 3: Trim §Cleanup (lines 247–268).**
+  - Delete the `git worktree remove` invocation and the "teardown is removal" prose about `git worktree remove` implicit-data-cleanup. Keep the paragraph clarifying that seeded symlinks disappear when the worktree directory is removed (as a cross-reference: "For worktree lifecycle mechanics including removal, see `agent-orchestration/references/worktree-harness-fallback.md`; seeded data lives inside the worktree directory and is removed with it.").
+  - Delete the Option 4 Discard block (it prescribes `git checkout; git branch -D; git worktree remove`) — lifecycle lives in the new reference.
+
+- [ ] **Step 4: Add §See Also** at the bottom of `SKILL.md`:
+
+  ```markdown
+  ## See Also
+  - `agent-orchestration/references/worktree-harness-fallback.md` — worktree lifecycle (create / enter / remove), harness tools preferred, raw-git fallback.
+  - `agent-orchestration` §Concurrent Writers Require Worktree Isolation — when parallel implementers each need their own worktree.
+  ```
+
+- [ ] **Step 5: Verify tests still pass.**
+  - Inspect `skills/worktree-data-sync/scripts/test_worktree_data_sync.py` to confirm tests exercise the Python CLI (seed / diff / apply) and not deleted SKILL.md-level worktree-creation behavior.
+  - Run: `python3 skills/worktree-data-sync/scripts/test_worktree_data_sync.py` from the worktree root. All tests must pass.
+  - If any test asserts behavior tied to removed SKILL.md sections (e.g., test names like `test_create_worktree_*`), adapt or remove them — CLI-level behavior stays unchanged, so this should be a no-op.
+
+- [ ] **Step 6: Commit.**
+  ```bash
+  git add skills/worktree-data-sync/SKILL.md PLAN.md RESULTS.md
+  # also any test file edits if required
+  git commit -m "worktree-data-sync: narrow scope to non-git data sync"
+  ```
+
+---
+
+## Task 3: Teach the implementer the dedicated-worktree path
+
+**Review status:** *(set during execution)*
+
+**Files affected:** `agents/implementer.md`
+
+**Inputs:** current `agents/implementer.md`; the `Worktree:` field definition from Task 1.
+
+**Outputs:** implementer agent file updated with (A) shared / (B) dedicated commit-discipline branch.
+
+**Dependencies:** Task 1.
+
+- [ ] **Step 1: Extend §Before You Start.** Add a new step (numbered appropriately; current list ends at 5):
+  > **6. If the dispatch prompt includes a `Worktree:` field, enter that worktree before any file I/O.** Use the harness-provided worktree-entry tool if available (e.g., `EnterWorktree`); otherwise `cd` to the path and verify with `git rev-parse --show-toplevel`. All reads, edits, and commits for this task happen inside the worktree. Do not touch files outside it. The orchestrator owns merge-back and cleanup — you commit on the `parallel/…` branch and report HEAD SHA back.
+
+  Cross-reference: "See `superRA:agent-orchestration` §Concurrent Writers Require Worktree Isolation for the full protocol."
+
+- [ ] **Step 2: Split §Handoff → Update the Docs and Commit** into two paths.
+
+  Replace the current single "Shared-repo commit discipline" line (line 151 at current HEAD) with a branched paragraph:
+
+  ```markdown
+  **Commit discipline depends on your dispatch's worktree context:**
+
+  **(A) Shared-worktree path (no `Worktree:` field in dispatch):** Follow `superRA:using-superRA` §Shared-Repo Commit Discipline — stage by exact path, never `git add -A/./-u`, diff-cached before commit. Single atomic commit on the current branch.
+
+  **(B) Dedicated-worktree path (`Worktree:` field present):** You are operating inside a `parallel/<branch>/<slug>` branch provisioned by the orchestrator. Commit code + PLAN.md task block + RESULTS.md task section atomically on that branch. **Do not** merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out. After your commit, report the branch name and HEAD SHA in your status return alongside the usual fields.
+  ```
+
+  Leave the `Single atomic commit` example block (`git add [code files] PLAN.md RESULTS.md results_attachments/`) intact — it applies to both paths.
+
+- [ ] **Step 3: Extend §Report Format** — add one bullet:
+  > - **Worktree return (path B only):** branch name (`parallel/<branch>/<slug>`) and HEAD SHA. Omit in path A.
+
+- [ ] **Step 4: Commit.**
+  ```bash
+  git add agents/implementer.md PLAN.md RESULTS.md
+  git commit -m "implementer: add dedicated-worktree commit path"
+  ```
+
+---
+
+## Task 4: Exempt `parallel/*` from merge-guard
+
+**Review status:** *(set during execution)*
+
+**Files affected:** `hooks/merge-guard`
+
+**Inputs:** current `hooks/merge-guard`.
+
+**Outputs:** hook updated with `^parallel/` exemption.
+
+**Dependencies:** Task 1 (branch naming convention documented).
+
+- [ ] **Step 1: Add the exemption in `hooks/merge-guard`.**
+
+  Between the existing abort/continue/skip/quit exit (around line 28) and the "Detect actual merge" regex (line 32), insert:
+
+  ```bash
+  # Exempt orchestrator-managed parallel-task merges.
+  # Branch-name convention established in superRA:agent-orchestration
+  # §Concurrent Writers Require Worktree Isolation — parallel/<branch>/<slug>
+  # branches are disjoint by construction and merge with plain git merge.
+  if echo "$command" | grep -qE 'git (merge|rebase|cherry-pick)(\s+--\S+)*\s+parallel/'; then
+    printf '{}\n'
+    exit 0
+  fi
+  ```
+
+  Keep the exemption to source refs that start with `parallel/`. Do not match mid-argument occurrences of "parallel/" to avoid spurious exemptions from flags or paths. Test patterns in Step 2.
+
+- [ ] **Step 2: Synthetic-input verification.** Run the hook against four inputs and read each stdout:
+
+  ```bash
+  # Should emit empty {} (exempt)
+  echo '{"tool_input":{"command":"git merge parallel/foo/a"}}' | ./hooks/merge-guard
+
+  # Should emit empty {} (exempt, with --no-ff flag)
+  echo '{"tool_input":{"command":"git merge --no-ff parallel/feat/b"}}' | ./hooks/merge-guard
+
+  # Should emit the reminder (not exempt)
+  echo '{"tool_input":{"command":"git merge main"}}' | ./hooks/merge-guard
+
+  # Should emit empty {} (abort, not a new merge)
+  echo '{"tool_input":{"command":"git merge --abort"}}' | ./hooks/merge-guard
+  ```
+
+  Expected: tests 1, 2, 4 emit `{}`; test 3 emits a JSON payload with the `STOP. You are about to run a bare git merge` context.
+
+- [ ] **Step 3: Commit.**
+  ```bash
+  git add hooks/merge-guard PLAN.md RESULTS.md
+  git commit -m "merge-guard: exempt parallel/* branch merges"
+  ```
+
+---
+
+## Task 5: Update consumer workflow skills (pointer-level only)
+
+**Review status:** *(set during execution)*
+
+**Files affected:**
+- `skills/planning-workflow/SKILL.md`
+- `skills/execution-workflow/SKILL.md`
+- `skills/merge-workflow/SKILL.md`
+- `skills/semantic-merge/SKILL.md`
+
+**Inputs:** Tasks 1 and 2 (canonical pointers now exist).
+
+**Outputs:** each consumer skill's references redirected to the correct owner.
+
+**Dependencies:** Task 1, Task 2.
+
+- [ ] **Step 1: `skills/planning-workflow/SKILL.md`.** Locate the paragraph (around line 82 at current HEAD) that instructs the planner to load `superRA:worktree-data-sync` for worktree setup at planning time. Remove it entirely — worktree setup is not a planning-time concern. Do not replace with a pointer; the first touchpoint is `agent-orchestration` §Concurrent Writers at dispatch time, and planning-workflow does not need to reference it.
+
+- [ ] **Step 2: `skills/execution-workflow/SKILL.md`.** Locate the post-completion Option 4 Discard reference (around line 185) to `worktree-data-sync §Cleanup`. Repoint to `superRA:agent-orchestration/references/worktree-harness-fallback.md`. Do not add parallel-dispatch prose here — parallel dispatch is owned by `agent-orchestration` §Concurrent Writers and consumers reference that section transitively via the existing §Workload Balancing pointer.
+
+- [ ] **Step 3: `skills/merge-workflow/SKILL.md`.** Locate the two references to `worktree-data-sync §Cleanup` (around lines 192, 239 at current HEAD). Split each: keep `worktree-data-sync` references for non-git data teardown; point `agent-orchestration/references/worktree-harness-fallback.md` for worktree-lifecycle removal.
+
+- [ ] **Step 4: `skills/semantic-merge/SKILL.md`.** Add a short note near the top of §When to Use:
+  > **Exception:** Orchestrator-managed parallel merges — branches matching `parallel/*` under `agent-orchestration` §Concurrent Writers Require Worktree Isolation — bypass this skill. Task boundaries are set ex-ante in PLAN.md, so plain `git merge` is sufficient. See `agent-orchestration` §Concurrent Writers.
+
+- [ ] **Step 5: Verify no dangling references remain.** Grep:
+  ```bash
+  grep -rn "worktree-data-sync.*Cleanup\|worktree-data-sync.*§Creating" skills/
+  grep -rn "worktree-data-sync/scripts/sync_worktree_data" skills/   # only in worktree-data-sync itself
+  grep -rn "Creating a Worktree" skills/                             # no more cross-refs
+  ```
+
+  Every hit must be inside `skills/worktree-data-sync/SKILL.md` itself or the new `worktree-harness-fallback.md`. Any other hit is a dangling cross-reference — fix it.
+
+- [ ] **Step 6: Commit.**
+  ```bash
+  git add skills/planning-workflow/SKILL.md skills/execution-workflow/SKILL.md \
+    skills/merge-workflow/SKILL.md skills/semantic-merge/SKILL.md \
+    PLAN.md RESULTS.md
+  git commit -m "workflows: redirect worktree lifecycle refs to agent-orchestration"
+  ```
+
+---
+
+## Task 6: End-to-end verification
+
+**Review status:** *(set during execution)*
+
+**Files affected:** none (verification only).
+
+**Inputs:** All prior tasks merged on this branch.
+
+**Outputs:** Verification log in RESULTS.md Task 6 section.
+
+**Dependencies:** Tasks 1–5.
+
+- [ ] **Step 1: Merge-guard regression.** Re-run the four synthetic inputs from Task 4 Step 2. Confirm pre-existing behavior (main / abort) still works and new exemption works.
+
+- [ ] **Step 2: Data-sync test regression.** Run `python3 skills/worktree-data-sync/scripts/test_worktree_data_sync.py`. Paste exit code + pass/fail summary into RESULTS.md.
+
+- [ ] **Step 3: Cross-reference audit.** Run:
+  ```bash
+  grep -rn "§Creating a Worktree" skills/ agents/
+  grep -rn "worktree-data-sync/references/worktree-harness-fallback" skills/ agents/   # should be zero
+  grep -rn "agent-orchestration/references/worktree-harness-fallback" skills/ agents/  # should match expected call sites
+  grep -rn "§Concurrent Writers" skills/ agents/
+  grep -rn "parallel/<" skills/ agents/ hooks/
+  ```
+  Record the matches in RESULTS.md. No dangling references (§Creating a Worktree cross-refs outside worktree-data-sync itself, or fallback paths under the wrong parent skill).
+
+- [ ] **Step 4: SKILL.md structural sanity.** Open each edited SKILL.md and confirm it still has a YAML frontmatter with `name:` and `description:`, a top-level `#` heading matching the skill name, and no broken internal anchors (`§Foo` references to a section that no longer exists).
+
+- [ ] **Step 5: Commit verification log.**
+  ```bash
+  git add PLAN.md RESULTS.md
+  git commit -m "verify: parallel-worktree isolation refactor end-to-end"
+  ```
+
+---
+
+## Execution Notes
+
+- **Domain:** plugin-engineering prose. No data-first discipline applies. Implementer subagent's default Stage loads (`econ-data-analysis` under `Stage: implementation`) aren't a good fit; inline execution by the orchestrator with an adversarial review pass (e.g., `code-quality-reviewer` agent reading the diff) is the cleaner shape.
+- **Commits:** one per task (six total). No squashing — each task is a reviewable unit.
+- **Parallelization:** The feature being built here is what *enables* safe parallel implementers. Until it lands, tasks must serialize. After Task 1 lands, Tasks 2–5 are file-disjoint and could in principle be parallelized if the feature self-hosted — but that's out of scope for this PR.
