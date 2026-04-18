@@ -78,7 +78,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 - [x] **Drift tests created** — Skill-edit adaptation: `tests/structural-invariants.sh` four-principles invariant tightened to scope-aware awk (commits `2dba05d` + `b6ecb26`); full suite returns 0 FAIL on this branch (2026-04-17)
 - [x] **Refactored** — post-rebase integration-reviewer APPROVED after one REVISE round (2 MINOR cross-reference drift fixes in commit `96dfaa1`: execution-workflow step-number citation + handoff-doc above/below directional wording); narrow re-review confirmed both fixes landed (2026-04-17)
 - [x] **Docs finalized** — post-rebase doc-reviewer APPROVED on narrow scope (new RELEASE-NOTES entry + new Decisions-log entry for the rebase); no contradictions with README.md / CATEGORIES.md; RESULTS.md remains at root in Stage 1 form per prior user decision to skip full maturation (2026-04-17)
-- [ ] **Merged** — branch merged to econ-adaption (or PR opened against it) (merge-workflow Step 4)
+- [x] **Merged** — PR #2 updated against `main` (https://github.com/FuZhiyu/superRA/pull/2); branch `feat/plan-stage-marker` pushed at `d761ea5`; target changed from `econ-adaption` → `main` per user redirection post-second-rebase (2026-04-18)
 
 ---
 
