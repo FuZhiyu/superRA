@@ -61,6 +61,18 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 > **Question asked:** How should the orchestrator dispatch these six tasks?
 > **Rationale:** Dogfood the framework we are introducing. Bundles T2+T3+T4 into one dispatch; keeps T1 and T6 dedicated.
 
+> **User decision (2026-04-17, merge-time):** Relocate §Shared-Repo Commit Discipline (F5) into `skills/using-superRA/SKILL.md` (next to main's centralized shared-agent discipline), with one-line pointers in `agents/implementer.md` + `agents/reviewer.md`. The discipline binds the main/orchestrator agent too, not just subagents — any agent that stages a commit must respect it.
+> **Question asked:** Where should §Shared-Repo Commit Discipline live now that main consolidated shared-agent content in using-superRA?
+> **Rationale:** DRY with main's task 6 consolidation; user noted main agent must also respect the discipline when other agents are active.
+
+> **User decision (2026-04-17, merge-time):** Move top-level `PLAN.md` + `RESULTS.md` to `docs/plans/2026-04-17-agent-dispatch-feedback-{plan,results}.md` at the integration commit, following main's `docs/plans/` convention.
+> **Question asked:** Delete the top-level plan docs or preserve them under `docs/plans/`?
+> **Rationale:** Preserve the auditable record of the feedback round; align with main's convention.
+
+> **User decision (2026-04-17, merge-time):** Delete `## Agent reuse vs fresh dispatch` from `skills/agent-orchestration/SKILL.md` (introduced on main via task 17) as part of the merge integration commit.
+> **Question asked:** Preserve main's §Agent reuse vs fresh dispatch?
+> **Rationale:** User-directed drop; keeps agent-orchestration lean and focused on Workload Balancing + Dispatch Templates.
+
 ---
 
 ### Task 1: Archive Agent Teams mode across the plugin
