@@ -96,7 +96,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ## Workflow Status
 
 - [x] **Plan approved** — re-approved at re-entry (2026-04-17): iterative re-entry mechanism plan adopted; Tasks 1/2/3 rescoped, Task 5 added
-- [ ] **Execution complete** — unchecked at re-entry (2026-04-17): Tasks 1 and 3 rescoped to consolidate change-plan protocol into `planning-workflow §Changing Plans`; Task 2/5 Integration cleared for pointer retarget; Task 4 preserved APPROVED
+- [x] **Execution complete** — re-checked at integration pass (2026-04-18): §Changing Plans consolidation + 2026-04-18 iterative-framing additions (`using-superRA` re-entry directive, CLAUDE.md / README.md iterative reframe) implemented; all integration-review findings addressed inline
 - [x] **Drift tests created** — re-run green (2026-04-17): no new invariants authored this iteration; full suite `bash tests/structural-invariants.sh` passes (0 FAIL) against the post-re-entry tree
 - [ ] **Refactored** — unchecked at re-entry (2026-04-17): pending integration pass against the consolidated section location (planning-workflow §Changing Plans) — **integration review 2026-04-18: REVISE (see review-notes blockquote below)**
 - [ ] **Docs finalized** — unchecked at re-entry (2026-04-17): pending Task 1+3 completion — RELEASE-NOTES + RESULTS.md need the §Changing Plans rename documented
@@ -105,27 +105,35 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 > **Integration review notes (2026-04-18):**
 >
 > 1. [MAJOR — DRIFT-TEST REGRESSION] `tests/structural-invariants.sh` exits **FAIL** at HEAD (`f8403f5`). Block 26 asserts `skills/agent-orchestration/SKILL.md` references `150k` AND `cache`; the `cache` keyword check fails because commit `492e03b` ("drop the unnecessary instruction") deleted the cache-reuse paragraph. The §Workflow Status line "Drift tests created — re-run green (2026-04-17): full suite ... passes (0 FAIL)" and the dispatch's claim that the drift suite passes green on the current tree are **both inaccurate**. Fix: either (a) drop the `cache` check in `tests/structural-invariants.sh` block 26 (`grep -q "cache"` line near L583) now that cache-reuse was intentionally removed, or (b) restore a short cache-reuse paragraph in `agent-orchestration/SKILL.md §Workload Balancing`. The user's explicit instruction at Stage 1 said "fix the existing `structural-invariants.sh` principle-count test ONLY" — but the principle-count test is now fine; this is a *different* drift-test regression introduced by the post-review `492e03b` cleanup and must be reconciled before merge.
+>    → implemented: dropped the `cache` check per option (a) in `tests/structural-invariants.sh` block 26 — now asserts only the 150k-token rule (`tests/structural-invariants.sh:577-581`). Full suite re-runs green (0 FAIL).
 >
 > 2. [MAJOR — BROKEN REFERENCE] `skills/planning-workflow/SKILL.md:87` says "See the task-block template in `references/plan-template.md` for the required format." That reference file was deleted in this PR (diff: `skills/planning-workflow/references/plan-template.md | 132 ---`). The pointer is dangling. Retarget to `superRA:handoff-doc` `references/plan-anatomy.md` §Task Block Anatomy (which now carries the required `**Depends on:**` field).
+>    → implemented: retargeted pointer to `superRA:handoff-doc` `references/plan-anatomy.md` §Task Block Anatomy (`skills/planning-workflow/SKILL.md:87`).
 >
 > 3. [MAJOR — STALE REFERENCE] `skills/using-superRA/SKILL.md:88` (§Execution Modes, "Subagent dispatch") points at `agent-orchestration §Dispatch-Return Deltas`. That section was deliberately removed per `tests/structural-invariants.sh` block 14 ("'## Dispatch-Return Deltas' removed in D1 — content lives in agent files"). The dispatch-return contract now lives in `agents/implementer.md` / `agents/reviewer.md` §Report Format. Retarget the pointer, or drop the trailing clause if the report-format contract is self-evident from the agent files.
+>    → implemented: retargeted pointer to `agents/implementer.md` / `agents/reviewer.md` §Report Format (`skills/using-superRA/SKILL.md:88`).
 >
 > 4. [MAJOR — STALE REFERENCE] `skills/execution-workflow/SKILL.md:119` says "See `superRA:agent-orchestration` §Agent reuse vs fresh dispatch for when to reuse a warm implementer via `SendMessage` versus spawning a fresh dispatch." Commit `492e03b` deleted the entire cache-reuse / `SendMessage` paragraph from `agent-orchestration`; no such section exists. The whole sentence is obsolete — delete it, or replace with a one-line pointer to §Workload Balancing Tier 2 (bundle-and-delegate) which is the surviving form of that guidance.
+>    → implemented: replaced the obsolete sentence with a one-liner pointing at `agent-orchestration §Workload Balancing` Tier 2 (`skills/execution-workflow/SKILL.md:119`).
 >
 > 5. [MAJOR — PLACEMENT / DRY] `skills/handoff-doc/SKILL.md §PLAN.md Is the Task Tracker` (lines 27–45) belongs in `planning-workflow` (or `execution-workflow`), not `handoff-doc`. The HTML comment on L27 ("it seems this should belong to the planning workflow rather than here") flags it and the user explicitly confirmed in the dispatch. The section's content — "PLAN.md is the authoritative task tracker; `TodoWrite` is a transient view; banned patterns; rule-of-thumb for what belongs where" — is task-tracking choreography, a **planning/execution-workflow concern**, not a doc-structure concern. Move the whole section to `planning-workflow/SKILL.md` (natural home: a new subsection under §Living Plan and Results Docs, or folded into §Task Decomposition). Leave at most a one-line pointer in `handoff-doc`. Note: the new "When the plan itself changes — ... re-invoke `planning-workflow §Changing Plans`" one-liner (L45) was appended under this section; when the section moves, that pointer needs a new home — fold it into the new section at its planning-workflow destination, or move it to `handoff-doc` §The Four Principles as a closing line since the cross-ref target is planning-workflow anyway. Update the three consumer pointers (`planning-workflow/SKILL.md:163`, `execution-workflow/SKILL.md:95`, and the `RELEASE-NOTES.md:52` historical note which is fine as-is) to the new section address.
+>    → implemented: moved §PLAN.md Is the Task Tracker into `planning-workflow/SKILL.md` as a new subsection under §Living Plan and Results Docs (folded the "When the plan itself changes…" pointer into its closing line, now cross-refs §Changing Plans below); reduced `handoff-doc/SKILL.md` to a one-line pointer at the former location; updated consumer pointers in `planning-workflow/SKILL.md` Banned-shortcuts bullet and `execution-workflow/SKILL.md:95` to `planning-workflow §PLAN.md Is the Task Tracker`.
 >
 > 6. [MINOR — COPY-EDIT] `skills/using-superRA/SKILL.md:16` (Universal Principle #3) reads: "integration discipline (drift tests, refactor, doc finalization) runs only when the we have stable results, inside `integration-workflow`. Every merge into main goes through `semantic-merge`." Two small regressions vs the prior version: (a) "the we" — spurious article; (b) the "never a bare `git merge` / `rebase` / `cherry-pick`" clause that previously anchored the semantic-merge sentence was dropped. The handoff-doc summary at SKILL.md L23 still quotes the fuller version ("Every merge into main goes through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`"), so the two should be brought into alignment — either both keep the long form or both the short. Fix the typo and pick one.
+>    → implemented: fixed "the we" typo and restored the "never a bare `git merge` / `rebase` / `cherry-pick`" clause — picked the longer form for alignment with the handoff-doc summary (`skills/using-superRA/SKILL.md:16`).
 >
 > 7. [MINOR — DEAD CODE] `tests/structural-invariants.sh:11, L46-48` carries the "Known pre-existing warnings (broken upstream refs in `writing-skills`)" preamble and the `[ "$name" = "systematic-debugging" ] || [ "$name" = "test-driven-development" ]` special-case branch. The `writing-skills` skill was deleted in this PR, so neither of those strings can appear in any `superRA:<name>` reference across `skills/`, `agents/`, `hooks/`, `README.md`, `CLAUDE.md` — the WARN branch is dead. Drop the preamble comment and the special-case branch; the test simplifies to a flat broken-ref FAIL loop.
+>    → implemented: dropped the stale WARN preamble (`tests/structural-invariants.sh:11`) and the systematic-debugging / test-driven-development special-case branch; the live-surface check is now a flat broken-ref FAIL loop.
 >
 > 8. [MINOR — STALE PROJECT-DOC NOTE] `PLAN.md:3` (the "For agentic workers" preamble) still tells a resuming agent to "also load `superRA:writing-skills` per `CLAUDE.md` §Skill Changes". The `writing-skills` skill is deleted in this PR and `CLAUDE.md §Skill Changes` no longer references it. PLAN.md is normally the implementer's territory, but this line is a dispatch instruction the orchestrator owns — flag for deletion or retarget (CLAUDE.md §Skill Changes is still a valid pointer, just without the skill-load directive). Not blocking (PLAN.md itself is about to be disposed at merge-workflow Step 4), but worth a sweep if the PLAN.md-disposition decision is "keep alongside RESULTS".
+>    → implemented: dropped the `superRA:writing-skills` skill-load clause from `PLAN.md:3`; kept the `CLAUDE.md §Skill Changes` pointer (still valid).
 
 ---
 
 ### Task 1: Author `## Changing Plans` in `planning-workflow/SKILL.md`; reduce handoff-doc to a pointer
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(cleared at re-entry)*
+**Integration status:** IMPLEMENTED
 
 **Script:** `skills/planning-workflow/SKILL.md` (edit — new section), `skills/handoff-doc/SKILL.md` (edit — remove body, leave pointer)
 **Input:** Current `handoff-doc/SKILL.md §Scope Changes and Re-entry` carries the 6-step protocol, DAG cascade paragraph, and banned-shortcuts bullets authored in prior iterations. Procedure belongs in planning-workflow (which owns how to create/update plans); handoff-doc owns doc *structure*, not plan-update choreography.
@@ -142,7 +150,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ### Task 2: Add `**Integration status:**` field + re-entry semantics to `plan-anatomy.md`
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(cleared at re-entry 2026-04-17 — pointer from `§Scope Changes and Re-entry` → `planning-workflow §Changing Plans` to be re-flipped in Task 3; field addition unaffected)*
+**Integration status:** IMPLEMENTED
 
 **Script:** `skills/handoff-doc/references/plan-anatomy.md` (edit)
 **Input:** Current `plan-anatomy.md` carrying the header template with `## Workflow Status` (lines 47–60, landed in a prior pass), task-block anatomy (lines 122+), and Field-by-Field notes.
@@ -161,7 +169,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ### Task 3: Retarget workflow-skill cross-references to `planning-workflow §Changing Plans` + rewrite the overloaded execution-workflow Step 1 paragraph
 **Depends on:** Task 1 (new section must exist at the new location so pointers resolve), Task 2 (Integration-status field must exist in anatomy)
 **Review status:** APPROVED
-**Integration status:** *(cleared at re-entry)*
+**Integration status:** IMPLEMENTED
 
 **Script:** `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/using-superRA/references/main-agent.md`, `skills/using-superRA/SKILL.md` (edit). `skills/planning-workflow/SKILL.md` and `skills/merge-workflow/SKILL.md` carry no remaining pointers to retarget.
 **Input:** Current cross-references to `handoff-doc §Scope Changes and Re-entry` across the listed files; the overloaded paragraph in `execution-workflow` Step 1 sub-step 2a that conflates re-entry detection with in-session scope change into one dense sentence; the substantive content additions to `integration-workflow` (always-full-drift-suite, refactor scope, doc-writer/reviewer scope) landed in the prior iteration and remain valid — only the pointer text changes.
@@ -203,7 +211,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ### Task 5: Consolidate main-agent references into `main-agent.md` + make `handoff-doc` a main-agent default load
 **Depends on:** Task 1 (the renamed `§Scope Changes and Re-entry` section is what the main agent needs handoff-doc loaded for)
 **Review status:** APPROVED
-**Integration status:** *(cleared at re-entry 2026-04-17 — `main-agent.md` line 52 carries a stale `§Scope Changes and Re-entry` reference retargeted in Task 3; consolidation + default-load decision unaffected)*
+**Integration status:** IMPLEMENTED
 
 **Script:** `skills/using-superRA/references/main-agent.md` (new), `skills/using-superRA/references/session-bootstrap.md` (delete), `skills/using-superRA/references/main-agent-autonomy.md` (delete), `skills/using-superRA/SKILL.md` (edit)
 **Input:** Current `references/session-bootstrap.md` (55 lines: cross-session detection + mandatory start actions + "load the autonomy contract" handoff). Current `references/main-agent-autonomy.md` (52 lines: three pause classes + proceed-without-asking + banned phrasings + one-question-at-a-time + log-before-act). Current `using-superRA/SKILL.md` Skill-Load Manifest preamble at lines 65–82 (notes `handoff-doc` is loaded on `documentation` and `planning-review` rows only).
