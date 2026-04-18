@@ -98,7 +98,7 @@ For 2+ independent tasks that can be worked on without shared state or sequentia
 
 ### Infrastructure for Parallel Work
 
-When dispatching parallel agents that need isolated workspaces — e.g., parallel analyses on different branches, or parallel refactors touching overlapping files — load `superRA:using-analysis-worktrees` first to set up the workspaces, and `superRA:worktree-data-sync` for copying managed data between them. Do not hand-roll worktree setup or data-copy scripts. These two utilities are the canonical path for all parallel-work infrastructure in superRA.
+When dispatching parallel agents that need isolated workspaces — e.g., parallel analyses on different branches, or parallel refactors touching overlapping files — load `superRA:worktree-data-sync` for both the workspace setup (§Creating a Worktree) and the managed-data copy between them. Do not hand-roll worktree setup or data-copy scripts. This is the canonical path for all parallel-work infrastructure in superRA.
 
 ### The Pattern
 

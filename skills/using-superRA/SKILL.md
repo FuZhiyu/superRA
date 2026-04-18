@@ -9,15 +9,21 @@ This is the one skill every superRA agent reads — main agents at session start
 
 Four load-bearing principles apply to **every** superRA workflow, regardless of domain.
 
-1. **Implementer–reviewer pair at every step.** No result ships without adversarial review. One comprehensive review pass per task returning `APPROVE` / `REVISE` / `CONDITIONAL APPROVE`; the reviewer walks the full checklist even on a gating failure, and `CONDITIONAL APPROVE` re-review is narrow (verify gating fix + downstream still holds). Review is never skipped, regardless of perceived triviality. The reviewer is adversarial by design — thorough, skeptical, erring toward over-flagging. The orchestrator is the arbitrator — it made the plan, talks to the researcher, and overrules with documented reasoning when the reviewer is wrong.
+1. **Implementer–reviewer pair at every step.** No result ships without adversarial review. One comprehensive review pass per task returning `APPROVE` / `REVISE`; the reviewer walks the full checklist regardless of early failures, and the re-review after REVISE is narrow (verify cited fixes + any finding annotated as depending on an upstream fix). Review is never skipped, regardless of perceived triviality. The reviewer is adversarial by design — thorough, skeptical, erring toward over-flagging. The orchestrator is the arbitrator — it made the plan, talks to the researcher, and overrules with documented reasoning when the reviewer is wrong.
 
 2. **Handoff docs are the auditable record AND the continuation point.** Findings, decisions, methodology notes, and results land in committed `PLAN.md` / `RESULTS.md` **before** they appear in any chat message or status report. Any fresh agent can open the repo and resume work from the docs + git state alone — no prompt history required. Atomic commits bundle code + doc edits so every git SHA reconstructs a coherent state. If a result exists only in a status message, it does not exist.
 
 3. **Fast early, strict before merge. Semantic merges always.** Interim work is optimized for speed — no codebase-fit checks at per-task checkpoints. Integration discipline (drift tests, refactor, doc finalization) runs only when the user chooses to merge, inside `integration-workflow`. Every merge into main goes through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
 
-4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it.
+4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent-autonomy.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
 
 **RA framing.** The agent is a Research Assistant implementing the researcher's methodology, not judging it. Challenges to methodology are escalated to the human partner, never decided unilaterally.
+
+## Handoff Docs
+
+Every agent edits `PLAN.md` and `RESULTS.md` at some point — implementers rewrite step text and record findings, reviewers write review-notes blockquotes, orchestrators annotate with adjudication notes. The editing discipline (four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, full `PLAN.md` / `RESULTS.md` anatomy templates) lives in `superRA:handoff-doc`.
+
+Implementer / reviewer subagents do NOT load `handoff-doc` by default — a compact editing etiquette (inline-edit, remove-stale, no-append) is carried in `agents/implementer.md` + `agents/reviewer.md` step 1 and is enough for the everyday case. Load `superRA:handoff-doc` on demand when the etiquette is not enough (unusual structural edit, first-time encounter with the doc format) and always when creating docs from scratch — `planning-workflow` Phase 2 (new plan) and `integration-workflow` Step 3 doc-writer (Stage 2 maturation). A standalone user with no subagents also reads `handoff-doc` directly.
 
 ## Skill Inventory
 
@@ -30,15 +36,12 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Workflow | `integration-workflow` | INTEGRATE (pre-merge): drift tests, refactor, doc finalization. |
 | Workflow | `merge-workflow` | INTEGRATE (merge): update with main, verify, local merge or PR. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
-| Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, red flags. |
-| Utility | `handoff-doc` | Document-level discipline for PLAN.md / RESULTS.md — four principles, inline-edit rule, task-block anatomy. |
-| Utility | `script-to-notebook` | Cell organization, markdown narrative, rendering for analysis scripts (Python/Julia). |
+| Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
+| Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Step 3 doc-writer); usable standalone by a single author. |
 | Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
 | Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
-| Utility | `verification-before-completion` | Run verification commands before claiming work complete. |
-| Utility | `using-analysis-worktrees` | Isolated git worktrees with data seeding. |
-| Utility | `worktree-data-sync` | Sync non-git data between worktrees. |
+| Utility | `worktree-data-sync` | Isolated git worktrees, non-git data sync between them, and cleanup ritual. |
 | Meta | `using-superRA` | This skill — the master skill every agent reads. |
 | Meta | `writing-skills` | Create or modify skills using test-driven methodology. |
 
@@ -48,18 +51,22 @@ Skills compose by category. **Workflow skills** own sequencing — they decide w
 
 ## Skill-Load Manifest
 
-For each Stage, load the listed skills and references. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Role differentiation shows up explicitly only in the `documentation` row.
+For each Stage, load the listed skills and references. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Role differentiation shows up explicitly on the `implementation` and `documentation` rows where the implementer and reviewer load different references.
+
+**The "Required skills" column lists what loads *in addition to* `superRA:using-superRA`** — the master skill every agent already loads at dispatch time (implementer / reviewer via frontmatter preload; team teammates via SessionStart injection). `using-superRA` carries §Universal Principles, the Skill Inventory, the composable-design map, and this manifest. Handoff-doc editing discipline is owned by `superRA:handoff-doc`; subagents get a compact etiquette from `agents/implementer.md` / `agents/reviewer.md` step 1 and load the full skill only on demand or when creating docs from scratch.
 
 | `Stage:` | Required skills | Stage-scoped references |
 |---|---|---|
-| `implementation` | `handoff-doc`; active domain skill (for data analysis: `econ-data-analysis` + `script-to-notebook`) | domain §Review & Self-Check Discipline |
-| `refactoring` | `handoff-doc` + `refactor-and-integrate`; domain skill | domain §Refactor integrity; `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
-| `drift-test` | `handoff-doc` + `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
-| `merge` | `handoff-doc` + `refactor-and-integrate` + `semantic-merge`; domain skill | `merge-quality.md` |
+| `implementation` | active domain skill (for data analysis: `econ-data-analysis`) | domain §Three Concurrent Disciplines (teaching + shared severity-marked checklist). For data analysis: **implementer** additionally loads `econ-data-analysis/references/notebook-format.md`; **reviewer** loads SKILL.md only (the main body carries everything — §Three Concurrent Disciplines for verification, §Pitfalls for operation-specific correctness; if the dispatcher wants a specific Pitfalls subsection highlighted for review, it names it in `Additionally:`). |
+| `integration` | `refactor-and-integrate`; domain skill | `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
+| `drift-test` | `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
+| `merge` | `refactor-and-integrate` + `semantic-merge`; domain skill | `merge-quality.md` |
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
-**Fallback rule.** If the dispatch prompt carries an unknown `Stage:`, default to the `implementation` row's loads and flag the unknown Stage in your status return so the orchestrator can correct it.
+`handoff-doc` is a required load only on the `documentation` and `planning-review` rows — those stages create or mature docs from scratch and need the full anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Everyday implementer / reviewer stages work from the compact handoff-doc editing etiquette carried in `agents/implementer.md` / `agents/reviewer.md` step 1 (inline-edit, remove-stale, no-append) and load `handoff-doc` on demand only when that etiquette is not enough.
+
+**Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess. The manifest is the single source of truth for Stage→{skills, references}.
 
 ## Execution Modes
 
@@ -70,7 +77,7 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 - **Read the agent file for the role you are playing.** For an implementation step, read `agents/implementer.md`. For a review step, read `agents/reviewer.md`. Follow the protocol there as written.
 - **The Skill-Load Manifest still drives loads.** Consult the manifest row for your Stage and load the listed skills and references yourself in-session.
 - **The dispatch-prompt contract does not apply — there is no dispatch.** Task context comes from `PLAN.md`, `RESULTS.md`, and the current session; you do not write an `Additionally:` line to yourself.
-- **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's §Review & Self-Check Discipline before committing. Update `PLAN.md` / `RESULTS.md` inline per `superRA:handoff-doc`. Reviewer verdicts are still APPROVE / REVISE / CONDITIONAL APPROVE even when you render them as your own conclusion.
+- **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's §Three Concurrent Disciplines before committing. Update `PLAN.md` / `RESULTS.md` inline per the handoff-doc editing etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1, or load `superRA:handoff-doc` if you need the full discipline. Reviewer verdicts are still APPROVE / REVISE even when you render them as your own conclusion.
 - **Review is never skipped.** If you implemented in direct mode, you still need a review pass — either dispatch a reviewer subagent for the review step, or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
 
 ## When to Invoke Which Skill
@@ -86,39 +93,6 @@ The macro workflow is **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. When mu
 
 Within each implementation step, the micro-level discipline is the three concurrent disciplines **DESCRIBE / ANALYZE / VALIDATE** — documentation is written continuously alongside them (see `econ-data-analysis`).
 
-<EXTREMELY-IMPORTANT>
-If you think there is even a 1% chance a skill might apply to what you are doing, you ABSOLUTELY MUST invoke the skill.
-
-IF A SKILL APPLIES TO YOUR TASK, YOU DO NOT HAVE A CHOICE. YOU MUST USE IT.
-
-This is not negotiable. This is not optional. You cannot rationalize your way out of this.
-</EXTREMELY-IMPORTANT>
-
-## Red Flags
-
-These thoughts mean STOP—you're rationalizing:
-
-| Thought | Reality |
-|---------|---------|
-| "This is just a simple question" | Questions are tasks. Check for skills. |
-| "I need more context first" | Skill check comes BEFORE clarifying questions. |
-| "Let me explore the data first" | Skills tell you HOW to explore. Check first. |
-| "Let me load the data quickly" | Data loading requires description discipline. Check for skills. |
-| "This doesn't need a formal skill" | If a skill exists, use it. |
-| "I remember this skill" | Skills evolve. Read current version. |
-| "This doesn't count as a task" | Action = task. Check for skills. |
-| "The skill is overkill" | Simple things become complex. Use it. |
-| "I'll just run this one merge first" | Check BEFORE doing anything. |
-| "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
-| "I know what that means" | Knowing the concept ≠ using the skill. Invoke it. |
-
-## Skill Types
-
-**Rigid** (`econ-data-analysis`, `verification-before-completion`): Follow exactly. Don't adapt away discipline.
-
-**Flexible** (`econ-data-analysis/references/planning.md` Data Inventory): Adapt principles to context.
-
-The skill itself tells you which.
 
 ## Semantic Merge
 
@@ -126,7 +100,7 @@ When merging, rebasing, or cherry-picking branches, superRA uses intent-based co
 
 ## Reviewer–Orchestrator Dynamic
 
-The reviewer is **adversarial by design** — thorough, skeptical, flagging everything it is uncertain about. A false positive costs one orchestrator evaluation; a missed issue can ship wrong results. The orchestrator is the **arbitrator** — it made the plan, talks to the researcher, and has big-picture context the reviewer lacks. It expects over-flagging, evaluates each finding independently, and overrules with documented reasoning when the reviewer is wrong. One comprehensive review pass per task returns `APPROVE` / `REVISE` / `CONDITIONAL APPROVE`; the reviewer walks the full checklist even on gating failure, and `CONDITIONAL APPROVE` re-review is narrow (verify gating fix + downstream still holds). This dynamic applies across all stages (execution, integration, merge, semantic-merge).
+The reviewer is **adversarial by design** — thorough, skeptical, flagging everything it is uncertain about. A false positive costs one orchestrator evaluation; a missed issue can ship wrong results. The orchestrator is the **arbitrator** — it made the plan, talks to the researcher, and has big-picture context the reviewer lacks. It expects over-flagging, evaluates each finding independently, and overrules with documented reasoning when the reviewer is wrong. One comprehensive review pass per task returns `APPROVE` / `REVISE`; the reviewer walks the full checklist regardless of early failures, and the re-review after REVISE is narrow (verify cited fixes + any finding annotated as depending on an upstream fix). This dynamic applies across all stages (execution, integration, merge, semantic-merge).
 
 ## User Instructions
 

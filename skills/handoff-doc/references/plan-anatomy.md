@@ -47,6 +47,64 @@ The header is the project's standing context, written at planning time and updat
 
 **Header ownership:** Only the orchestrator (or standalone author) edits the header. Subagents read it but do not modify it. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
 
+## Project Conventions
+
+Sits between the header's closing `---` and the first task block (or, if a `## Decisions` section is present, directly above it). Populated by the orchestrator at `planning-workflow` Phase 3 and refreshed at `execution-workflow` Step 1 when new upstream docs are discovered. Subagents read this section instead of re-walking the project's `CLAUDE.md` / `AGENTS.md` / `README.md` tree on every dispatch; if something they need is missing, they walk on-demand and flag the omission in their status return so the orchestrator can update the section.
+
+```markdown
+## Project Conventions
+
+Walked at planning time (YYYY-MM-DD). Re-walk on-demand only.
+
+### Repo root
+- `/CLAUDE.md` (HEAD at <SHA>): [one-paragraph summary of the top-level conventions — package manager, directory layout rules, test conventions, branching model, etc.]
+- `/AGENTS.md`: symlink to `/CLAUDE.md`.
+- `/README.md` (HEAD at <SHA>): [one-paragraph summary of project purpose + pointers].
+
+### Module-level docs walked
+- `Code/pipeline/CLAUDE.md` (HEAD at <SHA>): [one-paragraph summary of pipeline-specific conventions — naming, output format, logging].
+- `Data/README.md` (HEAD at <SHA>): [provenance, caveats, known quality issues for the data in this directory].
+- `tests/README.md` (HEAD at <SHA>): [test-naming rules, helpers to reuse, drift-test location].
+
+### Not walked (not reachable from the planned diff)
+- `docs/archive/`, `sandbox/`, `Notebooks/exploratory/` — out of scope for this plan.
+```
+
+**Discipline:**
+
+- **Populated by the orchestrator.** Subagents do not edit this section. If a subagent needs a convention the section does not carry, it walks on-demand, uses the result, and reports the omission so the orchestrator can add it.
+- **Entry format: one paragraph per doc.** Not an excerpt — a summary. The subagent dispatches re-read the actual doc only if they need specifics; the summary is for fast triage.
+- **Stamp the walk date.** A convention that was true two months ago may not be true today. The walk date tells the next orchestrator whether to re-walk.
+- **List the NOT-walked paths too.** An empty section is ambiguous (orchestrator forgot? or nothing reachable?). Explicitly naming the out-of-scope directories removes the ambiguity.
+
+## User Decisions Log
+
+Researcher answers to `AskUserQuestion` / plain-text pauses land in `PLAN.md` **before** the agent acts on them, committed atomically with the work they unblock. The four document principles and the inline-edit rule (in `handoff-doc/SKILL.md` body) still apply — this section defines *where* decisions land and *what format* they take.
+
+**Where it lands:**
+
+- **Task-scoped decision** (affects one task's scope, methodology, or implementation) → blockquote inside that task block, directly under `**Review status:**`. Uses the same blockquote syntax as review notes, so it sits naturally beside the adjudication protocol in `agents/implementer.md` / `agents/reviewer.md`.
+- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `execution-workflow` Step 4 merge-menu choice, `integration-workflow` Step 1 drift-test selection, `integration-workflow` Step 3 doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed immediately after the header / `## Project Conventions` and before the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
+
+**Format (both locations):**
+
+```markdown
+> **User decision (2026-04-16):** Use CRSP value-weighted returns, not equal-weighted.
+> **Question asked:** Which market return definition for the benchmark?
+> **Rationale (if given):** Matches prior paper; easier reviewer comparison.
+```
+
+Three lines, blockquote, dated. `Question asked` is the agent's own short restatement of what it asked — specific enough for a fresh agent to see why the decision was needed. `Rationale` is optional; include only if the researcher gave one, never invent it.
+
+The `ask-user-question-logger` PostToolUse hook reminds the agent to log after each `AskUserQuestion` call; when the harness does not expose the hook, set a TodoWrite reminder.
+
+**Not covered here:**
+
+- Reviewer-feedback adjudication inside review-notes blockquotes — that is the `→ orchestrator:` / `→ implemented:` protocol owned by `agents/implementer.md` and `agents/reviewer.md`. User decisions are upstream: the researcher answering a question the agent could not decide.
+- Ephemeral clarifications the agent could have resolved from the code ("which file holds X?") — those are not decisions, they do not belong in the log.
+
+If it is unclear whether an answer counts as a decision worth logging: if acting on it would change the code, data, or methodology in a way another agent could not reconstruct from the code alone, log it.
+
 ## Task Block Anatomy
 
 ````markdown

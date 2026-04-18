@@ -43,6 +43,24 @@ The header and task examples below are written for the **data-analysis vertical*
 **Pipeline:** [Path to pipeline file, e.g., `run_all.sh`]
 
 ---
+
+## Project Conventions
+
+Walked at planning time (YYYY-MM-DD). Subagents read this section instead of re-walking the project tree on every dispatch; if a subagent needs a convention not captured here, it walks on-demand and reports the omission so the orchestrator can update this section. See `handoff-doc/references/plan-anatomy.md` §Project Conventions for the full anatomy.
+
+### Repo root
+- `/CLAUDE.md` (HEAD at <SHA>): [one-paragraph summary — package manager, directory layout, test conventions, branching model].
+- `/AGENTS.md`: symlink to `/CLAUDE.md`.
+- `/README.md` (HEAD at <SHA>): [one-paragraph project-purpose summary].
+
+### Module-level docs walked
+- `Code/pipeline/CLAUDE.md` (HEAD at <SHA>): [summary of pipeline-specific conventions].
+- `Data/README.md` (HEAD at <SHA>): [provenance, caveats, known data quality issues].
+
+### Not walked (not reachable from the planned diff)
+- `docs/archive/`, `sandbox/` — out of scope for this plan.
+
+---
 ```
 
 ## Task Block Structure
