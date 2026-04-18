@@ -355,7 +355,7 @@ Walked at planning time (2026-04-17).
 
 ## Task 7: Dogfood — document merge-guard test vectors (parallel slot α)
 
-**Review status:** *(set during execution — artificial task for parallel-dispatch demo)*
+**Review status:** IMPLEMENTED
 
 **Files affected:** `hooks/merge-guard`
 
@@ -367,8 +367,8 @@ Walked at planning time (2026-04-17).
 
 **Worktree:** orchestrator will provision `.worktrees/parallel/feedback-agent-dispatch-fixes/alpha` on branch `parallel/feedback-agent-dispatch-fixes/alpha`.
 
-- [ ] **Step 1: Add a `# Test vectors` comment block to `hooks/merge-guard`** just above the `exit 0` at the end (or immediately after the shebang — agent's choice). Include the four cases from RESULTS.md Task 4: `git merge parallel/foo/a` → `{}`, `git merge --no-ff parallel/feat/b` → `{}`, `git merge main` → STOP reminder, `git merge --abort` → `{}`.
-- [ ] **Step 2: Commit** on the dedicated branch. Stage `hooks/merge-guard` and `PLAN.md` (this task block only) and `RESULTS.md` (new Task 7 section only). Do not touch Task 8's files.
+- [x] **Step 1: Add a `# Test vectors` comment block to `hooks/merge-guard`** just above the `exit 0` at the end (or immediately after the shebang — agent's choice). Include the four cases from RESULTS.md Task 4: `git merge parallel/foo/a` → `{}`, `git merge --no-ff parallel/feat/b` → `{}`, `git merge main` → STOP reminder, `git merge --abort` → `{}`.
+- [x] **Step 2: Commit** on the dedicated branch. Stage `hooks/merge-guard` and `PLAN.md` (this task block only) and `RESULTS.md` (new Task 7 section only). Do not touch Task 8's files.
 
 ---
 
