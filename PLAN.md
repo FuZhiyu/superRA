@@ -90,7 +90,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 - [x] **Plan approved** — re-approved at re-entry (2026-04-17): iterative re-entry mechanism plan adopted; Tasks 1/2/3 rescoped, Task 5 added
 - [x] **Execution complete** — all five tasks `**Review status:** APPROVED` (2026-04-17): Bundle A (Tasks 1+2) APPROVED at `ee38223`; Task 4 preserved APPROVED across re-entry; Bundle B (Tasks 3+5) APPROVED at `3776981` after one REVISE round
 - [x] **Drift tests created** — re-run green (2026-04-17): no new invariants authored this iteration; full suite `bash tests/structural-invariants.sh` passes (0 FAIL) against the post-re-entry tree
-- [ ] **Refactored** — unchecked at re-entry: Tasks 1/2/3/5 code changes require integration-reviewer pass
+- [x] **Refactored** — integration-reviewer APPROVED at `d95f467` (2026-04-17): DRY preserved, workflow principles intact, structural invariants green; all five tasks `**Integration status:** APPROVED`
 - [ ] **Docs finalized** — unchecked at re-entry: RELEASE-NOTES needs a new entry describing the unified re-entry mechanism + main-agent handoff-doc default; doc-reviewer runs on the diff
 - [ ] **Merged** — unchecked at re-entry: PR #2 update path to be decided at merge-workflow Step 4 (update in place vs stacked PR)
 
