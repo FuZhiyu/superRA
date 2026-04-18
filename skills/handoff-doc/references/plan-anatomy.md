@@ -58,7 +58,9 @@ A checklist of irreversible workflow milestones. Each box flips at the moment it
 ---
 ```
 
-**Header ownership:** Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read these sections but do not modify them. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
+### Header ownership
+
+Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read these sections but do not modify them. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
 
 ### `## Decisions` placement
 
