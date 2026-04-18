@@ -79,6 +79,10 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 - **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's §Three Concurrent Disciplines before committing. Update `PLAN.md` / `RESULTS.md` inline per the handoff-doc editing etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1, or load `superRA:handoff-doc` if you need the full discipline. Reviewer verdicts are still APPROVE / REVISE even when you render them as your own conclusion.
 - **Review is never skipped.** If you implemented in direct mode, you still need a review pass — either dispatch a reviewer subagent for the review step, or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
 
+## Tool Discipline
+
+**Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
+
 ## When to Invoke Which Skill
 
 The macro workflow is **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. When multiple skills could apply, follow this flow:
