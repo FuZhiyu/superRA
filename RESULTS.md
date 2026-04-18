@@ -3,14 +3,14 @@
 > Mirrors `PLAN.md` structure. Updated retroactively to capture what was already implemented in this session.
 > New agents: read `PLAN.md` for the work record and `RESULTS.md` for the implementation outcomes and verification state.
 
-**Last updated:** 2026-04-17 (Task 2)
-**Status:** In Progress (implemented, awaiting independent review)
+**Last updated:** 2026-04-17 (review pass)
+**Status:** Approved
 
 ---
 
 ## Task 1: Codex Plugin and Named-Agent Surfaces
 
-**Status:** Implemented (awaiting independent review)
+**Status:** Approved
 
 ### Key Findings
 
@@ -23,11 +23,11 @@
 
 - `AGENT.md` and `AGENTS.md` both resolve to `CLAUDE.md`, so contributor instructions remain single-sourced.
 - Codex-facing docs now describe two local test modes: open the repo directly, or install the plugin locally through the repo marketplace entry.
-- No independent reviewer pass has been run yet; this task remains `IMPLEMENTED`.
+- Review pass on 2026-04-17 over `b0cb9dc..3e9f1c8` found no blocking issues. Task status promoted to `APPROVED`.
 
 ## Task 2: Codex Metadata Cleanup and Validation
 
-**Status:** Implemented (awaiting independent review)
+**Status:** Approved
 
 ### Key Findings
 
@@ -42,4 +42,4 @@
   - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check`
   - `bash tests/structural-invariants.sh`
 - Known warnings remain unchanged: unresolved upstream refs in `writing-skills` for `superRA:systematic-debugging` and `superRA:test-driven-development`.
-- No independent reviewer pass has been run yet; this task remains `IMPLEMENTED`.
+- Review pass on 2026-04-17 over `b0cb9dc..3e9f1c8` found no blocking issues. Task status promoted to `APPROVED`.

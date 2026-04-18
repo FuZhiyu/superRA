@@ -67,7 +67,7 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 > **Rationale (if given):** Yes.
 
 ### Task 1: Codex Plugin and Named-Agent Surfaces
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`, `.agents/skills/*`, `.codex/agents/*`, `AGENT.md`, `skills/codex-superra-setup/*`, `skills/using-superRA/SKILL.md`, `skills/using-superRA/references/codex-tools.md`, `skills/using-superRA/references/claude-tools.md`, `.codex/INSTALL.md`, `docs/README.codex.md`, `README.md`, `CLAUDE.md`, `skills/CATEGORIES.md`
 
@@ -81,7 +81,7 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 - [x] **Step 4: Update shared harness references and install docs.** Reworked Codex docs and `using-superRA` adapter references so Codex uses plugin skills plus named custom agents instead of the older prompt-wrapping workaround.
 
 ### Task 2: Codex Metadata Cleanup and Validation
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files affected:** `skills/*/SKILL.md` frontmatter across the skill tree, `tests/structural-invariants.sh`
 
