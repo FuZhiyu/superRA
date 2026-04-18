@@ -149,17 +149,13 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 2. **Update `RESULTS.md` task section in place.** Your task's section is **pre-allocated** in `RESULTS.md` at planning time (`## Task N: <name>`, same order and name as `PLAN.md`). Find your section by heading and **replace its content** with current findings — do not append a new section at end-of-file (that creates merge conflicts on parallel dispatch). Mirror the per-task shape in `handoff-doc/references/results-anatomy.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
-**Commit discipline depends on your dispatch's worktree context:**
-
-**(A) Shared-worktree path (no `Worktree:` field in dispatch).** Follow `superRA:using-superRA` §Shared-Repo Commit Discipline — stage by exact path, never `git add -A/./-u`, diff-cached before commit. Single atomic commit on the current branch. Applies whenever other agents may be writing in the same worktree.
-
-**(B) Dedicated-worktree path (`Worktree:` field present).** You are operating inside a `parallel/<branch>/<slug>` branch that the orchestrator provisioned. Commit code + `PLAN.md` task block + `RESULTS.md` task section atomically on that branch. **Do not** merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out. After your commit, include the branch name and HEAD SHA in your status return (see §Report Format).
-
-**Single atomic commit (both paths).** Stage code + `PLAN.md` + `RESULTS.md` together:
+**Single atomic commit.** Follow `superRA:using-superRA` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + `PLAN.md` + `RESULTS.md` together:
 ```bash
 git add [code files] PLAN.md RESULTS.md results_attachments/
 git commit -m "task N: [brief description]"
 ```
+
+**If the dispatch included a `Worktree:` field,** you are operating inside a `parallel/<branch>/<slug>` branch the orchestrator provisioned. Commit atomically on that branch. **Do not** merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out. Include the branch name and HEAD SHA in your status return (see §Report Format). Otherwise, commit on the current branch as usual.
 
 **Stage-specific code deliverables** (what you commit differs by stage, but the handoff-doc mechanics above are identical):
 
