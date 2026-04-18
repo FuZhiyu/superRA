@@ -3,14 +3,14 @@
 > Mirrors PLAN.md structure. Updated after each task with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Bundle B IMPLEMENTED)
-**Status:** Bundle A (Tasks 1+2) APPROVED; Bundle B (Tasks 3+5) implemented; awaiting reviewer.
+**Last updated:** 2026-04-17 (all five tasks APPROVED; Docs finalized pending doc-reviewer pass)
+**Status:** All five tasks `**Review status:** APPROVED` and `**Integration status:** APPROVED`. Execution complete; drift tests green; refactored; docs finalized pending doc-reviewer APPROVE; merge pending.
 
 ---
 
 ## Task 1: Reframe `## Mid-Session Scope Changes` → `## Scope Changes and Re-entry` in `handoff-doc/SKILL.md`
 
-**Status:** IMPLEMENTED (Bundle A, awaiting reviewer)
+**Status:** APPROVED (Bundle A, 2026-04-17)
 
 ### Key Findings
 - `## Mid-Session Scope Changes` renamed to `## Scope Changes and Re-entry` in `skills/handoff-doc/SKILL.md`.
@@ -27,7 +27,7 @@
 
 ## Task 2: Add `**Integration status:**` field + re-entry semantics to `plan-anatomy.md`
 
-**Status:** IMPLEMENTED (Bundle A, awaiting reviewer)
+**Status:** APPROVED (Bundle A, 2026-04-17)
 
 ### Key Findings
 - `**Integration status:** *(set during integration — not filled at planning time)*` added to task-block template immediately below `**Review status:**`.
@@ -39,7 +39,7 @@
 
 ## Task 3: Update the four workflow skills for iterative re-entry + full drift-suite always + renamed section pointer
 
-**Status:** IMPLEMENTED (Bundle B)
+**Status:** APPROVED (Bundle B, 2026-04-17)
 
 ### Key Findings
 - `planning-workflow/SKILL.md`: Living Plan section pointer renamed `§Mid-Session Scope Changes` → `§Scope Changes and Re-entry`.
@@ -70,7 +70,7 @@
 
 ## Task 5: Consolidate main-agent references into `main-agent.md` + make `handoff-doc` a main-agent default load
 
-**Status:** IMPLEMENTED (Bundle B)
+**Status:** APPROVED (Bundle B, 2026-04-17)
 
 ### Key Findings
 - Created `skills/using-superRA/references/main-agent.md` consolidating both `session-bootstrap.md` and `main-agent-autonomy.md`. Structure: MANDATORY Session Start Actions → Cross-Session Detection (bash block + incomplete-plan handling + worktree handling) → Load the Handoff-Doc Skill (new) → The Three Pause Classes → Proceed Without Asking → Banned Phrasings → One Question at a Time → Log Before You Act.
@@ -90,7 +90,7 @@
 ## Cross-Bundle Verification (post-Bundle B)
 
 - Bundle A (Tasks 1+2): APPROVED.
-- Bundle B (Tasks 3+5): IMPLEMENTED, awaiting reviewer.
+- Bundle B (Tasks 3+5): APPROVED (2026-04-17).
 - Task 4: APPROVED (unaffected by re-entry).
 - No deferred MINOR items in any blockquote.
 - All `§<heading>` cross-references introduced by Bundles A and B resolve to real headings.
