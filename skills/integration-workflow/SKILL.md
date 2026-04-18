@@ -341,14 +341,6 @@ See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of
 
 Step 3 sub-part A (mature RESULTS.md) is performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates the RESULTS.md maturation per workflow principle P1. Sub-part C (PLAN.md disposition) stays with the orchestrator because it is a user-facing decision, not an RA-implementable task. Project-level doc audit is covered by Stage 2 refactor + integration review per `codebase-integration.md` §Project Doc Audit — not by Step 3.
 
-## Agent Teams Mode
-
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), Stages 1 and 2 can be orchestrated as a team instead of sequential subagent dispatches — direct iteration between creator/reviewer and integration-reviewer/refactorer without the orchestrator relaying messages. See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs.
-
-Step 3 (Documentation Finalization) can join the team as a two-teammate sub-graph: a doc-writer (performing sub-part A — the RESULTS.md maturation) and a doc-reviewer, iterating on their own until APPROVE. Sub-part C (PLAN.md disposition) stays with the lead because it is a user-facing decision. The relocation-target stop point (Step 3 orchestrator preamble) also stays with the lead, since it fires before the doc-writer dispatches.
-
-The lead handles user-facing decisions throughout (drift test candidates, meaningful drift escalation, RESULTS.md relocation target, PLAN.md disposition), commits at stage boundaries, and team cleanup after final APPROVE.
-
 ## Red Flags
 
 **Never:**

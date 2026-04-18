@@ -300,12 +300,6 @@ The tier classification and the incoming-impact line are load-bearing: `merge-wo
 
 See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of truth for what every dispatched implementer / reviewer loads per Stage. This skill runs the `merge` row.
 
-## Agent Teams Mode
-
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the propose+review cycle can be orchestrated as a team for Tier 2 and Tier 3 merges. See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs.
-
-The lead still handles tier classification, user-facing decisions (Tier 3 integration map), commits at each stage, and (in standalone mode) drift-test verification. In delegated mode, drift-test verification is the caller's job — the lead returns tier + incoming-impact and hands control back.
-
 ## Red Flags
 
 **Never:**
@@ -336,7 +330,6 @@ The lead still handles tier classification, user-facing decisions (Tier 3 integr
 
 **Pairs with:**
 - **superRA:integration-workflow** — Runs before this skill in the integration phase (creates drift tests that this skill uses as safety net)
-- **superRA:agent-orchestration** — §Integration and `references/agent-teams.md` for team spawn mechanics on Tier 2/3 merges
 
 **References:**
 - **semantic-merge-integration** (global skill) — General-purpose merge philosophy that this skill adapts for research

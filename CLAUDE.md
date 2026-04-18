@@ -15,7 +15,7 @@ When you are modifying superRA itself (skills, hooks, agents, docs), you are edi
 
 Skills are not prose. If you modify skill content:
 
-- Use `superRA:writing-skills` to develop and test changes.
+- Edit skills directly, test on a real session in Claude Code, and iterate based on observed behavior. For upstream skill-writing guidance, see the [Superpowers project docs](https://github.com/obra/superpowers).
 - Run the skill through a realistic session to confirm it triggers when it should and doesn't when it shouldn't.
 - Be cautious editing carefully-tuned content (Red Flags tables, rationalization lists, RA-framing language, severity protocols). Changes here should be driven by observed failures, not stylistic preference.
 
@@ -53,7 +53,7 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
 Concerns and their owners:
 
 - **Workflow skills** own *choreography* — what steps run in what order, what stop points exist, what status transitions apply. `planning-workflow`, `execution-workflow`, `integration-workflow`, `merge-workflow` each own the choreography of their phase and nothing else.
-- **`agent-orchestration`** owns *cross-stage orchestration* — dispatch-prompt shape (required-fields-first, `Additionally:` anchor-last), the "Follow the standard stage-relevant workflow" prefix, the relay protocol between orchestrator and subagent (what-changed deltas, review-notes annotation mechanics), verdict-adjudication discipline (how to handle `REVISE` findings), and team mechanics in `references/agent-teams.md`. Execution Modes (subagent dispatch vs direct) are owned by `superRA:using-superRA`.
+- **`agent-orchestration`** owns *cross-stage orchestration* — dispatch-prompt shape (required-fields-first, `Additionally:` anchor-last), the "Follow the standard stage-relevant workflow" prefix, the relay protocol between orchestrator and subagent (what-changed deltas, review-notes annotation mechanics), and verdict-adjudication discipline (how to handle `REVISE` findings). Execution Modes (subagent dispatch vs direct) are owned by `superRA:using-superRA`.
 - **Domain skills** own *domain discipline* — the Iron Law for data analysis, the gated checklist for that domain (§Three Concurrent Disciplines, domain-specific integration reference), pitfall catalogs, stage-scoped references. Adding a new vertical means adding a domain skill, not forking workflow skills.
 - **`refactor-and-integrate`** owns *generic integration discipline* — code-quality standards, drift-test construction, merge-quality standards. Domain-specific integration content lives alongside the domain skill (for data analysis: `econ-data-analysis/references/integration.md`).
 - **`handoff-doc`** owns *handoff-doc mechanics* — latest-state-only, inline-edit rule, task-block structure, `## Decisions` section shape. It does NOT own role permissions or dispatch/status-return protocols — those are orchestration concerns and live in `agent-orchestration` + the agent files.
