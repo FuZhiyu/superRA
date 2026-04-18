@@ -129,6 +129,7 @@ Regardless of stage (implementation review, drift test review, integration revie
 2. Walk the domain skill's §Review & Self-Check Discipline top to bottom. Do not halt on a `[GATING]` failure — continue through `[STANDARD]` and `[ADVISORY]` items so the implementer gets one comprehensive pass.
 3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix. **If any `[GATING]` items failed, list them first** and append the framing line "downstream items reviewed and currently correct; approval contingent on the gating fix not changing downstream results" after them.
 4. Set `**Review status:**` per the three-verdict protocol in §Verdict: `APPROVED` (no items), `REVISE` (only `[STANDARD]` failures), or `CONDITIONAL APPROVE` (one or more `[GATING]` failures; downstream walked).
+5. Commit `PLAN.md` only: `git commit -m "review: Task N <verdict>"`.
 
 ### Shared-Repo Commit Discipline
 
@@ -152,8 +153,6 @@ Before staging:
 If you see unfamiliar uncommitted changes and cannot tell whether they
 are another agent's in-flight work or stale local state, stop and ask
 the orchestrator — do not unilaterally discard or commit them.
-
-5. Commit `PLAN.md` only: `git commit -m "review: Task N <verdict>"`.
 
 **On re-review (blockquote exists with annotations):**
 
