@@ -43,9 +43,26 @@ The header is the project's standing context, written at planning time and updat
 **Pipeline:** [Path to pipeline file, e.g., `run_all.sh`]
 
 ---
+
+## Workflow Status
+
+A checklist of irreversible workflow milestones. Each box flips at the moment its workflow step completes, in the same commit that completes the step. A new agent reads this section first to know where the project stands without having to scan task blocks or grep commits. If a later scope change reverts a completed milestone, uncheck the affected boxes — see `SKILL.md` §Mid-Session Scope Changes.
+
+- [ ] **Plan approved** — researcher signed off on data inventory + plan (`planning-workflow` Phase 2)
+- [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`execution-workflow` Step 3)
+- [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Stage 1)
+- [ ] **Refactored** — integration-reviewer `APPROVED` on refactored code (`integration-workflow` Stage 2)
+- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Step 3)
+- [ ] **Merged** — branch merged to main or PR opened (`merge-workflow` Step 4)
+
+---
 ```
 
-**Header ownership:** Only the orchestrator (or standalone author) edits the header. Subagents read it but do not modify it. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
+**Header ownership:** Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read these sections but do not modify them. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
+
+### `## Decisions` placement
+
+When the first cross-task user decision arrives, insert a `## Decisions` heading immediately after `## Workflow Status` and before the first task block — so the header order is: standing context → `## Workflow Status` → `## Decisions` (when present) → `---` → task blocks. Format and rules per `SKILL.md` §User Decisions Log. Omit the heading entirely until there is a first decision to record.
 
 ## Task Block Anatomy
 
@@ -105,6 +122,7 @@ Validate: row count matches expectation, unmatched rate reasonable, distribution
 - **Script / Input / Output** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **Steps** are editable by the implementer: they may rewrite, reorder, add, or remove steps when the data forces deviation from the planned approach. Steps are expressed as checkbox items with inline code blocks that contain the actual analyst code.
 - **Review notes blockquote** is present only when there are active items. On `APPROVED`, the blockquote is removed entirely. For how items enter, get annotated, and exit across iterations, see `agents/reviewer.md` (first-round REVISE and re-review deletion) and `agents/implementer.md` (annotating fixes with `→ implemented: ...`).
+- **`## Workflow Status` checkboxes** are flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. A box is unchecked again only when a scope change or post-merge refactor invalidates the milestone — see `SKILL.md` §Mid-Session Scope Changes. Subagents may not flip boxes; if a subagent reports work that completes a milestone, the orchestrator flips the box in the next commit.
 
 ## No Placeholders
 
