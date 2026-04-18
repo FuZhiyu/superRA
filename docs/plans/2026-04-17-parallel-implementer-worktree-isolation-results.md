@@ -1,11 +1,13 @@
 ---
-author: "Zhiyu Fu"
+author: "[[Julie Zhiyu Fu]]"
 date: 2026-04-17
-git_commit: "9a1b097d15eea25208c973dd44a0d9d786fae93e"
-git_message: "plan: flip Integration status + Drift tests / Refactored boxes"
+timestamp: "2026-04-18T00:00:00"
+session_id: "session-20260418-parallel-implementer-worktree-isolation"
+git_commit: "6e1ce9d43f6b40bd3873a04db96511bb57f00728"
+git_message: "results: relocate to docs/plans/2026-04-17-parallel-implementer-worktree-isolation-results.md"
 git_dirty: false
 tags: ["results", "integration", "agent-orchestration", "worktree"]
-project: "superRA"
+project: "[[superRA]]"
 permalink: "docs/plans/2026-04-17-parallel-implementer-worktree-isolation-results"
 ---
 
@@ -44,8 +46,8 @@ Post-refactor outline: frontmatter → `# Worktree Data Sync Skill` → §When t
 [`agents/implementer.md`](../../agents/implementer.md) gains:
 
 - §Before You Start step 6 — when `Worktree:` is present, enter it (harness tool or `cd` + verify `git rev-parse --show-toplevel`), do all I/O inside, do not merge / rebase / push / clean up, report branch + HEAD SHA.
-- §Handoff → Update the Docs and Commit — split into (A) shared-worktree path with the existing discipline and (B) dedicated-worktree path on `parallel/<branch>/<slug>`. Atomic-commit block stays shared across both paths.
-- §Report Format — new `Worktree return (path B only)` bullet reporting branch name and HEAD SHA; path A omits the field.
+- §Update the Docs and Commit gains a conditional paragraph ([`agents/implementer.md:159`](../../agents/implementer.md)) for the dedicated-worktree path: commit on the provisioned `parallel/<branch>/<slug>` branch; do not merge, rebase, push, or clean up. The atomic-commit block is shared with the shared-worktree path.
+- §Report Format (line 191) gains a new `Worktree return (path B only)` field reporting branch name and HEAD SHA; the path A / path B labels first appear here.
 
 ### Consumer workflow pointer updates (no content duplicated)
 
@@ -75,7 +77,7 @@ Skill-inventory blurbs in `README.md`, `skills/CATEGORIES.md`, and `skills/using
 
 ## Limitations
 
-**Merge-guard `parallel/*` exemption not load-bearing under the Claude Code Bash tool harness.** Direct CLI tests against the exact `git merge --no-ff parallel/feedback/agent-dispatch-fixes/alpha -m "..."` command return `{}` (exempt, as intended). When the same command ran through the Claude Code Bash tool during the dogfood pass, the PreToolUse hook emitted the STOP reminder on both `parallel/` slot merges. Reminder is advisory-only so the merges proceeded, but the exemption did not fire as designed. Root cause is likely a JSON-escaping or command-string difference in how the harness serializes the `Bash` invocation to the hook's stdin. A follow-up would harden the hook's input parsing and add an integration test that invokes the hook through a Bash-tool-equivalent JSON wrapper.
+**Merge-guard `parallel/*` exemption not load-bearing under the Claude Code Bash tool harness.** Direct CLI tests against the exact `git merge --no-ff parallel/feedback/agent-dispatch-fixes/alpha -m "..."` command return `{}` (exempt, as intended). When the same command ran through the Claude Code Bash tool during the dogfood pass, the PreToolUse hook emitted the STOP reminder on both `parallel/` slot merges. Reminder is advisory-only so the merges proceeded, but the exemption did not fire as designed. Root cause not isolated. One hypothesis is a JSON-escaping or command-string difference in how the harness serializes the `Bash` invocation to the hook's stdin; a follow-up would harden the hook's input parsing and add an integration test that invokes the hook through a Bash-tool-equivalent JSON wrapper.
 
 **Shared-file appends at EOF still conflict under parallel dispatch.** The §Concurrent Writers boundary contract — "task blocks are line-separated so disjoint tasks produce disjoint hunks" — held for `PLAN.md` (distinct task blocks mid-file merged cleanly) but broke for `RESULTS.md` during the Task 7 / Task 8 dogfood (both agents appended new sections at EOF; overlapping line range → conflict). The conflict was resolved inline by concatenating the two sections. Follow-up `2f58b6c` pre-allocates per-task `RESULTS.md` stubs at planning time so appends land in distinct, disjoint regions.
 
