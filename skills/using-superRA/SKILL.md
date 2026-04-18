@@ -79,7 +79,7 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 
 `handoff-doc` is a required load only on the `documentation` and `planning-review` rows — those stages create or mature docs from scratch and need the full anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Everyday implementer / reviewer stages work from the compact handoff-doc editing etiquette carried in `agents/implementer.md` / `agents/reviewer.md` step 1 (inline-edit, remove-stale, no-append) and load `handoff-doc` on demand only when that etiquette is not enough.
 
-**Main-agent default load.** Main agents additionally load `superRA:handoff-doc` at session start (per `references/main-agent.md`) so that editing discipline and `§Scope Changes and Re-entry` are available before the main agent touches PLAN.md. The subagent-side rows in the table above are unaffected — subagents load `handoff-doc` only on `documentation` / `planning-review` stages as listed.
+**Main-agent default load.** Main agents additionally load `superRA:handoff-doc` at session start (per `references/main-agent.md`) so that editing discipline is available before the main agent touches PLAN.md, and so `planning-workflow §Changing Plans` cross-references into `handoff-doc` (User Decisions Log, plan-anatomy) resolve. The subagent-side rows in the table above are unaffected — subagents load `handoff-doc` only on `documentation` / `planning-review` stages as listed.
 
 **Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess. The manifest is the single source of truth for Stage→{skills, references}.
 

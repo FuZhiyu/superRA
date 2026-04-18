@@ -67,7 +67,7 @@ Drift tests guard key results from unintended changes during refactoring or futu
    ```
    Log per `handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching the test-creator.
 
-   > **Always run the full drift-test suite on every integration pass, regardless of re-entry scope.** Author new drift tests only for tasks with `**Integration status:**` ≠ APPROVED plus any orchestrator-declared related tasks per `handoff-doc §Scope Changes and Re-entry`. Running a subset of the suite because "only these tasks changed" is a banned shortcut — authoring is scoped, running is not.
+   > **Always run the full drift-test suite on every integration pass, regardless of re-entry scope.** Author new drift tests only for tasks with `**Integration status:**` ≠ APPROVED plus any orchestrator-declared related tasks per `planning-workflow §Changing Plans`. Running a subset of the suite because "only these tasks changed" is a banned shortcut — authoring is scoped, running is not.
 
 3. **Dispatch test-creator:**
    ```
@@ -133,7 +133,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
 
 3. **If APPROVE:** No refactoring needed. Proceed to final commit.
 
-4. **If REVISE:** Adjudicate the reviewer's feedback per the orchestrator discipline above. For accepted issues, refactor. Refactorer scope = tasks with `**Integration status:**` ≠ APPROVED plus any orchestrator-declared related tasks per `handoff-doc §Scope Changes and Re-entry`.
+4. **If REVISE:** Adjudicate the reviewer's feedback per the orchestrator discipline above. For accepted issues, refactor. Refactorer scope = tasks with `**Integration status:**` ≠ APPROVED plus any orchestrator-declared related tasks per `planning-workflow §Changing Plans`.
 
    a. **Dispatch refactorer:**
       ```
