@@ -27,6 +27,29 @@
 
 ---
 
+## Workflow Status
+
+- [x] Plan approved
+- [x] Execution complete
+- [ ] Drift tests created
+- [ ] Refactored
+- [ ] Docs finalized
+- [ ] Merged
+
+---
+
+## Decisions
+
+> **2026-04-18 — Post-merge re-entry after semantic-merge of origin/main (commit `5f98599`).** Main moved ahead 63 commits while this branch's 19 commits were implementing parallel-implementer worktree isolation. semantic-merge classified the update as Tier 2; two conflicts resolved (PLAN.md kept ours; `using-superRA/SKILL.md §Commit Hygiene` synthesized). All eight tasks' deliverables verified intact post-merge: §Concurrent Writers lives in `agent-orchestration/SKILL.md:73`, `Worktree:` dispatch field at line 113, `merge-guard` `parallel/*` exemption at lines 39–41, `worktree-harness-fallback.md` reference at ~30 lines, `semantic-merge/SKILL.md` bypass note at line 23. `tests/structural-invariants.sh` exits 0.
+>
+> **Tasks affected:** all (metadata only, no code changes). Adopt main's new task-block anatomy — add `**Integration status:**` (unset, awaiting integration-workflow), rename `Dependencies:` → `Depends on:` for Tasks 1–6 to match Tasks 7–8 which were authored after main's convention landed. Flip `Review status:` from `IMPLEMENTED` to `APPROVED` on all tasks: Task 6 Step 5's batched `code-quality-reviewer` pass adjudicated to APPROVE after revisions; the subsequent simplify pass (`78183d6`) addressed a further 10 integration-review findings in its own commit. Execution is functionally complete pending integration-workflow.
+>
+> **Boxes unchecked:** none. The merge did not invalidate any deliverable, and no DAG closure re-opens. Plan approved + Execution complete flip on; Drift tests / Refactored / Docs finalized / Merged remain unchecked and become integration-workflow's job.
+>
+> **Drift tests disposition.** This is plugin-engineering work (prose editing of skill / agent / hook files). There are no analysis results to guard, so the "Drift tests" box is expected to remain unchecked and be flipped `n/a` by integration-workflow Stage 1 per its domain-exempt path. Mechanical regression coverage already lives in `skills/worktree-data-sync/scripts/test_worktree_data_sync.py` (30 tests, green) and `hooks/merge-guard` inline test vectors (Task 7) — these are not drift tests in the econ-data-analysis sense, but they are the analogous safety net for this vertical.
+
+---
+
 ## Project Conventions
 
 Walked at planning time (2026-04-17).
@@ -54,7 +77,8 @@ Walked at planning time (2026-04-17).
 
 ## Task 1: Add worktree lifecycle fallback + §Concurrent Writers subsection
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
+**Integration status:**
 
 **Files affected:**
 - `skills/agent-orchestration/references/worktree-harness-fallback.md` (NEW)
@@ -64,7 +88,7 @@ Walked at planning time (2026-04-17).
 
 **Outputs:** New reference file + extended SKILL.md.
 
-**Dependencies:** None.
+**Depends on:** *(none)*
 
 - [x] **Step 1: Create `skills/agent-orchestration/references/worktree-harness-fallback.md`** (~30 lines).
 
@@ -150,7 +174,8 @@ Walked at planning time (2026-04-17).
 
 ## Task 2: Refactor `worktree-data-sync` to non-git data sync only
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
+**Integration status:**
 
 **Files affected:**
 - `skills/worktree-data-sync/SKILL.md`
@@ -160,7 +185,7 @@ Walked at planning time (2026-04-17).
 
 **Outputs:** slimmed `SKILL.md`; test file verified green.
 
-**Dependencies:** Task 1 (fallback reference must exist before we point at it).
+**Depends on:** Task 1 (fallback reference must exist before we point at it).
 
 - [x] **Step 1: Rewrite the YAML description and opening paragraphs of `SKILL.md`.**
   - Narrow the `description:` frontmatter to "syncing non-git-controlled data files between existing worktrees (seeding, diffing, reconciling after parallel work, data teardown)." Remove triggers about worktree creation (`set up a worktree for this`, `isolate this analysis`, `I'll run two analyses in parallel`, etc.) — those now live in `agent-orchestration`.
@@ -184,7 +209,8 @@ Walked at planning time (2026-04-17).
 
 ## Task 3: Teach the implementer the dedicated-worktree path
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
+**Integration status:**
 
 **Files affected:** `agents/implementer.md`
 
@@ -192,7 +218,7 @@ Walked at planning time (2026-04-17).
 
 **Outputs:** implementer agent file updated with (A) shared / (B) dedicated commit-discipline branch.
 
-**Dependencies:** Task 1.
+**Depends on:** Task 1.
 
 - [x] **Step 1: Extend §Before You Start.** Add a new step (numbered appropriately; current list ends at 5):
   > **6. If the dispatch prompt includes a `Worktree:` field, enter that worktree before any file I/O.** Use the harness-provided worktree-entry tool if available (e.g., `EnterWorktree`); otherwise `cd` to the path and verify with `git rev-parse --show-toplevel`. All reads, edits, and commits for this task happen inside the worktree. Do not touch files outside it. The orchestrator owns merge-back and cleanup — you commit on the `parallel/…` branch and report HEAD SHA back.
@@ -222,7 +248,8 @@ Walked at planning time (2026-04-17).
 
 ## Task 4: Exempt `parallel/*` from merge-guard
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
+**Integration status:**
 
 **Files affected:** `hooks/merge-guard`
 
@@ -230,7 +257,7 @@ Walked at planning time (2026-04-17).
 
 **Outputs:** hook updated with `^parallel/` exemption.
 
-**Dependencies:** Task 1 (branch naming convention documented).
+**Depends on:** Task 1 (branch naming convention documented).
 
 - [x] **Step 1: Add the exemption in `hooks/merge-guard`.**
 
@@ -273,7 +300,8 @@ Walked at planning time (2026-04-17).
 
 ## Task 5: Update consumer workflow skills (pointer-level only)
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
+**Integration status:**
 
 **Files affected:**
 - `skills/planning-workflow/SKILL.md`
@@ -285,7 +313,7 @@ Walked at planning time (2026-04-17).
 
 **Outputs:** each consumer skill's references redirected to the correct owner.
 
-**Dependencies:** Task 1, Task 2.
+**Depends on:** Task 1, Task 2.
 
 - [x] **Step 1: `skills/planning-workflow/SKILL.md`.** Paragraph deleted. Locate the paragraph (around line 82 at current HEAD) that instructs the planner to load `superRA:worktree-data-sync` for worktree setup at planning time. Remove it entirely — worktree setup is not a planning-time concern. Do not replace with a pointer; the first touchpoint is `agent-orchestration` §Concurrent Writers at dispatch time, and planning-workflow does not need to reference it.
 
@@ -311,7 +339,8 @@ Walked at planning time (2026-04-17).
 
 ## Task 6: End-to-end verification + batched-review revisions
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
+**Integration status:**
 
 **Files affected:** none (verification only).
 
@@ -319,7 +348,7 @@ Walked at planning time (2026-04-17).
 
 **Outputs:** Verification log in RESULTS.md Task 6 section.
 
-**Dependencies:** Tasks 1–5.
+**Depends on:** Tasks 1–5.
 
 - [x] **Step 1: Merge-guard regression.** All four synthetic inputs pass (same expectations as Task 4 Step 2). Re-run the four synthetic inputs from Task 4 Step 2. Confirm pre-existing behavior (main / abort) still works and new exemption works.
 
@@ -355,7 +384,8 @@ Walked at planning time (2026-04-17).
 
 ## Task 7: Dogfood — document merge-guard test vectors (parallel slot α)
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
+**Integration status:**
 
 **Files affected:** `hooks/merge-guard`
 
@@ -374,7 +404,8 @@ Walked at planning time (2026-04-17).
 
 ## Task 8: Dogfood — add orchestrator invocation example (parallel slot β)
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
+**Integration status:**
 
 **Files affected:** `skills/agent-orchestration/references/worktree-harness-fallback.md`
 
