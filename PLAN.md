@@ -329,7 +329,7 @@ git commit -m "docs(agent-orchestration): add §Workload Balancing; delete Decis
 ### Task 3: Add §Shared-Repo Commit Discipline to implementer + reviewer (F5)
 
 **Depends on:** *(none)* — independent of Tasks 1 and 2 (different files).
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Files touched:**
 - `agents/implementer.md`
@@ -337,15 +337,11 @@ git commit -m "docs(agent-orchestration): add §Workload Balancing; delete Decis
 
 **Dispatch tier:** Slightly involved — mirrored sub-section in two files. One implementer bundle.
 
-- [ ] **Step 1: Plan — identify insertion points**
+- [x] **Step 1: Plan — identify insertion points**
 
-Read both files in full; locate the existing commit-handling section in each. Typical cue: a bullet or code block showing `git add ... && git commit -m ...`. The new sub-section goes immediately before that, or immediately after (wherever reads better for each file — they may not have identical structure on `econ-adaption`).
+Read both files in full; located commit-handling sections. In `implementer.md`: git add/commit at lines 140–141, inside `### Update the Docs and Commit` as numbered item 3. In `reviewer.md`: `git commit -m "review: Task N <verdict>"` at line 132, as step 5 of the "On first review" numbered list. Inserted the new sub-section between items 2 and 3 (implementer) and between items 4 and 5 (reviewer).
 
-```bash
-grep -n "git add\|git commit" agents/implementer.md agents/reviewer.md
-```
-
-- [ ] **Step 2: Edit — insert the sub-section into `agents/implementer.md`**
+- [x] **Step 2: Edit — insert the sub-section into `agents/implementer.md`**
 
 Insert (preserving surrounding context):
 
@@ -374,13 +370,11 @@ are another agent's in-flight work or stale local state, stop and ask
 the orchestrator — do not unilaterally discard or commit them.
 ```
 
-- [ ] **Step 3: Edit — insert the same sub-section into `agents/reviewer.md`**
+- [x] **Step 3: Edit — insert the same sub-section into `agents/reviewer.md`**
 
-Insert the identical text block. The reviewer commits only when updating review status / adjudication annotations, but the discipline applies equally — a reviewer who `git add -A`s will pull in the implementer's in-flight edits for the next task.
+Inserted identical text block. `agents/reviewer.md` on `econ-adaption` has no explicit `git add` block — only `git commit` at step 5 of the "On first review" list. Sub-section placed between steps 4 and 5 of that list (reviewer's commit step is just one line; the section precedes it as the discipline to apply before that commit).
 
-If `agents/reviewer.md` on `econ-adaption` has a structurally different commit section (e.g., no `git add` block at all), insert the sub-section at the top of its "How you commit" region — do not invent a commit section if the reviewer file doesn't have one, but confirm placement is consistent by reading both files first.
-
-- [ ] **Step 4: Verify + commit**
+- [x] **Step 4: Verify + commit**
 
 ```bash
 # 1. Both files carry the sub-section

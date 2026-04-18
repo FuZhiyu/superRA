@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Task 1 implemented)
-**Status:** In Progress — Task 1 implemented, pending review; Tasks 2–5 not started
+**Last updated:** 2026-04-17 (Task 3 implemented)
+**Status:** In Progress — Task 1 implemented, pending review; Task 3 implemented, pending review; Tasks 2, 4–5 not started
 
 ---
 
@@ -52,3 +52,21 @@
 - `README.md` — Teams language removed from feature table and hooks table
 - `RELEASE-NOTES.md` — `## 2026-04-17 — Agent Teams mode archived` entry prepended
 - `tests/structural-invariants.sh` — invariant 22 body replaced with archive-banner + active-cite check
+
+---
+
+## Task 3: Add §Shared-Repo Commit Discipline to implementer + reviewer (F5)
+
+**Outcome:** `### Shared-Repo Commit Discipline` sub-section inserted into both `agents/implementer.md` and `agents/reviewer.md`. Content is identical in both files per the plan spec.
+
+**Insertion points:**
+- `agents/implementer.md`: inserted as a `###` sub-section between step 2 ("Update RESULTS.md") and the atomic-commit example within `### Update the Docs and Commit`. The prior `3. **Single atomic commit.**` numbered item was converted to a bold paragraph to avoid numbered-list collision with the new sub-section's own 4-step list.
+- `agents/reviewer.md`: inserted as a `###` sub-section between step 4 (set Review status) and step 5 (commit PLAN.md) within the "On first review" flow under `### How You Write a Review`.
+
+**Verification:**
+1. `grep -l "Shared-Repo Commit Discipline" agents/*.md | wc -l` → **2** (PASS)
+2. `git add -A` / `git add .` mentions in both files are inside the "do NOT" prohibition — no contradicting language (PASS)
+
+**Files changed in T3 commit:**
+- `agents/implementer.md` — `### Shared-Repo Commit Discipline` sub-section inserted; atomic-commit step converted from numbered item to bold paragraph
+- `agents/reviewer.md` — `### Shared-Repo Commit Discipline` sub-section inserted
