@@ -89,7 +89,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 - [x] **Plan approved** — re-approved at re-entry (2026-04-17): iterative re-entry mechanism plan adopted; Tasks 1/2/3 rescoped, Task 5 added
 - [x] **Execution complete** — all five tasks `**Review status:** APPROVED` (2026-04-17): Bundle A (Tasks 1+2) APPROVED at `ee38223`; Task 4 preserved APPROVED across re-entry; Bundle B (Tasks 3+5) APPROVED at `3776981` after one REVISE round
-- [ ] **Drift tests created** — unchecked at re-entry: no new invariants to author this iteration, but full-suite `bash tests/structural-invariants.sh` must re-run green before recheck
+- [x] **Drift tests created** — re-run green (2026-04-17): no new invariants authored this iteration; full suite `bash tests/structural-invariants.sh` passes (0 FAIL) against the post-re-entry tree
 - [ ] **Refactored** — unchecked at re-entry: Tasks 1/2/3/5 code changes require integration-reviewer pass
 - [ ] **Docs finalized** — unchecked at re-entry: RELEASE-NOTES needs a new entry describing the unified re-entry mechanism + main-agent handoff-doc default; doc-reviewer runs on the diff
 - [ ] **Merged** — unchecked at re-entry: PR #2 update path to be decided at merge-workflow Step 4 (update in place vs stacked PR)
@@ -99,7 +99,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ### Task 1: Reframe `## Mid-Session Scope Changes` → `## Scope Changes and Re-entry` in `handoff-doc/SKILL.md`
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** `skills/handoff-doc/SKILL.md` (edit)
 **Input:** Current `handoff-doc/SKILL.md` carrying `## Mid-Session Scope Changes` (lines 48–82) + `## PLAN.md Is the Task Tracker` (lines 27–42, landed in a prior pass, keep as-is).
@@ -125,7 +125,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ### Task 2: Add `**Integration status:**` field + re-entry semantics to `plan-anatomy.md`
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** `skills/handoff-doc/references/plan-anatomy.md` (edit)
 **Input:** Current `plan-anatomy.md` carrying the header template with `## Workflow Status` (lines 47–60, landed in a prior pass), task-block anatomy (lines 122+), and Field-by-Field notes.
@@ -144,7 +144,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ### Task 3: Update the four workflow skills for iterative re-entry + full drift-suite always + renamed section pointer
 **Depends on:** Task 1 (section rename must land so pointers resolve), Task 2 (Integration-status field must exist in anatomy so workflow skills can reference it)
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** `skills/planning-workflow/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md` (edit)
 **Input:** Current state of each — they carry pointers to `§Mid-Session Scope Changes` and box-flip language landed in a prior pass. All pointer strings must be updated; `integration-workflow` needs substantive content changes for drift-suite + refactor-scope + doc-scope wording; `execution-workflow` Step 1 needs DAG-cascade detection on re-entry.
@@ -188,7 +188,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ### Task 5: Consolidate main-agent references into `main-agent.md` + make `handoff-doc` a main-agent default load
 **Depends on:** Task 1 (the renamed `§Scope Changes and Re-entry` section is what the main agent needs handoff-doc loaded for)
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** `skills/using-superRA/references/main-agent.md` (new), `skills/using-superRA/references/session-bootstrap.md` (delete), `skills/using-superRA/references/main-agent-autonomy.md` (delete), `skills/using-superRA/SKILL.md` (edit)
 **Input:** Current `references/session-bootstrap.md` (55 lines: cross-session detection + mandatory start actions + "load the autonomy contract" handoff). Current `references/main-agent-autonomy.md` (52 lines: three pause classes + proceed-without-asking + banned phrasings + one-question-at-a-time + log-before-act). Current `using-superRA/SKILL.md` Skill-Load Manifest preamble at lines 65–82 (notes `handoff-doc` is loaded on `documentation` and `planning-review` rows only).
