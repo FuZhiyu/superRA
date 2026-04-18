@@ -76,8 +76,8 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 - [x] **Plan approved** — researcher confirmed the bundling decision and execution mode at planning handoff (2026-04-17)
 - [x] **Execution complete** — all tasks `APPROVED`, no remaining REVISE / CONDITIONAL APPROVE, working tree clean (2026-04-17)
 - [x] **Drift tests created** — Skill-edit adaptation: `tests/structural-invariants.sh` four-principles invariant tightened to scope-aware awk (commits `2dba05d` + `b6ecb26`); full suite returns 0 FAIL on this branch (2026-04-17)
-- [x] **Refactored** — integration-reviewer APPROVED after one REVISE round (voice + flowchart-label fixes in commit `c707c58`); 2 minor findings deferred to Step 3 (RELEASE-NOTES) or rejected per user-scope (new invariants) (2026-04-17)
-- [x] **Docs finalized** — RELEASE-NOTES.md entry added (commit `5a7e13e`); doc-reviewer REVISE round 1 fixes (commit `2c21a6a`); doc-reviewer APPROVED on re-review; README/CATEGORIES audited clean (2026-04-17)
+- [ ] **Refactored** — previously APPROVED pre-rebase (commit `c707c58`); unchecked because the semantic-merge integration commit (`3c3f061`) re-applied wire-ups onto main's new structure — needs fresh integration review on the merged state
+- [ ] **Docs finalized** — previously APPROVED pre-rebase; unchecked because the rebase added a new RELEASE-NOTES entry and Decisions-log edit that have not been doc-reviewed
 - [ ] **Merged** — branch merged to econ-adaption (or PR opened against it) (merge-workflow Step 4)
 
 ---
