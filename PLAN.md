@@ -99,7 +99,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 - [x] **Execution complete** — re-checked at integration pass (2026-04-18): §Changing Plans consolidation + 2026-04-18 iterative-framing additions (`using-superRA` re-entry directive, CLAUDE.md / README.md iterative reframe) implemented; all integration-review findings addressed inline
 - [x] **Drift tests created** — re-run green (2026-04-17): no new invariants authored this iteration; full suite `bash tests/structural-invariants.sh` passes (0 FAIL) against the post-re-entry tree
 - [x] **Refactored** — integration re-review 2026-04-18: APPROVED. All 8 prior findings verified fixed at cited file:line; drift suite re-runs green (0 FAIL); iterative-framing additions in `using-superRA` / `CLAUDE.md` / `README.md` consistent and non-duplicative.
-- [ ] **Docs finalized** — unchecked at re-entry (2026-04-17): pending Task 1+3 completion — RELEASE-NOTES + RESULTS.md need the §Changing Plans rename documented
+- [x] **Docs finalized** — doc-reviewer APPROVED (2026-04-18): matured RESULTS.md relocated to `docs/plans/2026-04-17-plan-stage-marker-results.md` (git history preserved via `git mv`); RELEASE-NOTES Unreleased entry reconciled to current branch state; CLAUDE.md / README.md iterative reframe consistent with the matured record
 - [ ] **Merged** — unchecked at re-entry: PR #2 update path to be decided at merge-workflow Step 4 (update in place vs stacked PR)
 
 ---
