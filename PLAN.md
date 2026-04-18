@@ -56,8 +56,8 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ## Workflow Status
 
-- [ ] **Plan approved** — researcher signed off on this PLAN (planning-workflow Phase 4)
-- [ ] **Execution complete** — all tasks `APPROVED`, no remaining REVISE / CONDITIONAL APPROVE (execution-workflow Step 3)
+- [x] **Plan approved** — researcher confirmed the bundling decision and execution mode at planning handoff (2026-04-17)
+- [x] **Execution complete** — all tasks `APPROVED`, no remaining REVISE / CONDITIONAL APPROVE, working tree clean (2026-04-17)
 - [ ] **Drift tests created** — N/A for a skill-editing task; replaced by `RELEASE-NOTES.md` entry + structural-invariants run before merge (integration-workflow Stage 1 equivalent)
 - [ ] **Refactored** — integration-reviewer `APPROVED` on the final state (integration-workflow Stage 2)
 - [ ] **Docs finalized** — RELEASE-NOTES.md updated, README skill summaries audited, doc-reviewer `APPROVED` (integration-workflow Step 3)
