@@ -261,7 +261,12 @@ git commit -m "docs(agents): add §Shared-Repo Commit Discipline (implementer + 
 ### Task 4: Add `Depends on:` field to plan template + §Task Dependencies in planning-workflow (F6) + delete handoff-doc "Not covered by this section" block (D3)
 
 **Depends on:** Task 1 (both edit `skills/execution-workflow/SKILL.md`; serialize to avoid merge).
-**Review status:** IMPLEMENTED
+**Review status:** REVISE
+
+> **Review notes:**
+> 1. [MAJOR] `skills/handoff-doc/references/plan-anatomy.md` line 53: the canonical task-block anatomy template (`### Task N: [Phase Name]` / `**Review status:**` / ...) was not updated with the new `**Depends on:**` field. `handoff-doc/SKILL.md` explicitly names `plan-anatomy.md` as "the full `PLAN.md` template (header + task blocks...)" and line 25 states "Each task block has a fixed anatomy... See `references/plan-anatomy.md`." Any agent following this reference to create or validate task blocks will produce blocks missing the required field — contradicting the "required — an omitted field is a plan failure" rule added by this task. Fix: add `**Depends on:** Task N-1 [, Task N-2] | *(none)*` on the line immediately after `### Task N: [Phase Name]` in `plan-anatomy.md`.
+> 2. [MINOR] `skills/planning-workflow/SKILL.md` line 85 vs `skills/planning-workflow/references/plan-template.md` line 52: the normative rule "required — an omitted field is a plan failure" appears verbatim in both files. The CLAUDE.md DRY principle requires one authoritative copy; the rest should be a pointer. Fix: retain the rule in one location (SKILL.md §Format is the natural authority); shorten the plan-template prose to reference the SKILL.md rather than restating the rule.
+> 3. [MINOR] `skills/planning-workflow/SKILL.md` Self-Review item 7 (line 157): formatting inconsistent with items 1–6. Items 1–6 use `**N. Title:**` (colon, description on same line); item 7 uses `**7. Dependency graph sanity.**` (period, description on following lines). Fix: change period to colon and fold description to the same line, matching the existing style.
 
 **Files touched:**
 - `skills/planning-workflow/SKILL.md`
