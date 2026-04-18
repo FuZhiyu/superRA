@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Task 2 implemented)
-**Status:** In Progress — Tasks 1, 2, 3, 4 implemented, pending review; Task 5 not started
+**Last updated:** 2026-04-17 (Task 5 complete — all tasks APPROVED)
+**Status:** Complete — all 5 tasks implemented and approved; RELEASE-NOTES consolidated
 
 ---
 
@@ -121,3 +121,22 @@
 4. `Depends on:` text in execution-workflow: PASS
 5. `**Not covered by this section:**` absent from handoff-doc: PASS
 6. Structural invariants: 2 pre-existing FAILs (invariant 14 asserts `## Dispatch-Return Deltas` exists — stale, T2 scope; invariant 22 flags `agent-orchestration/SKILL.md` active Teams refs — T2 scope). No new failures introduced by T4.
+
+---
+
+## Task 5: End-to-end verification + RELEASE-NOTES consolidation
+
+**Outcome:** All 9 end-to-end checks passed (orchestrator inline). RELEASE-NOTES consolidated.
+
+**Verification results:**
+1. Structural invariants: all PASS (2 known warnings only — pre-existing upstream refs in writing-skills).
+2. Active Teams refs in skills/agents/hooks/README/CLAUDE: **0** (empty grep).
+3. Archive banner on `agent-teams.md`: **PASS**.
+4. Three-tier headings (Tier 1/2/3): **3** (PASS). `150k` present. `cache` present.
+5. `<optional steering>` additive-only language: **PASS**.
+6. Shared-Repo Commit Discipline in both agent files: **PASS** (2 files).
+7. `**Depends on:**` in `plan-template.md`: **PASS**.
+8. D1/D2/D3 removals: all **PASS**.
+9. Commit log: clean task commits on `feedback/agent-dispatch-fixes`.
+
+**RELEASE-NOTES:** T1's separate "Agent Teams mode archived" entry collapsed into one consolidated "Agent dispatch refactor (feedback round)" entry covering all five feedback items.

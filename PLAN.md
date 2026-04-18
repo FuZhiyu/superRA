@@ -378,18 +378,18 @@ git commit -m "feat(planning-workflow): add task-dependency declarations; teach 
 ### Task 5: End-to-end verification + RELEASE-NOTES consolidation
 
 **Depends on:** Task 1, Task 2, Task 3, Task 4
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Files touched:**
 - `RELEASE-NOTES.md`
 
 **Dispatch tier:** Trivial — orchestrator inline. No subagent.
 
-- [ ] **Step 1: End-to-end verification**
+- [x] **Step 1: End-to-end verification**
 
 Run every check listed in the bottom-of-plan Verification section. All must pass before the RELEASE-NOTES consolidation.
 
-- [ ] **Step 2: Edit — consolidate RELEASE-NOTES**
+- [x] **Step 2: Edit — consolidate RELEASE-NOTES**
 
 Append (or merge with Task 1's entry) a consolidated top-of-file entry:
 
@@ -408,7 +408,7 @@ Append (or merge with Task 1's entry) a consolidated top-of-file entry:
 
 If Task 1's entry already covers Teams archival, collapse into this one entry.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add RELEASE-NOTES.md PLAN.md RESULTS.md
