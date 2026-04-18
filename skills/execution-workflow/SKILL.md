@@ -142,17 +142,18 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 ### Step 1: Load and Review Plan
 
-1. Read `PLAN.md` and `RESULTS.md`.
-2. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` + `superRA:script-to-notebook`. Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
-3. **Read the project's guidance docs.** The harness gives you the repo-root `CLAUDE.md` automatically; module-level guidance (nested `CLAUDE.md` / `AGENTS.md` / `README.md` files near the code) is not auto-surfaced. Walk up from every directory PLAN.md says will be touched, and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` along the path. Also read `README.md` in any data directory the plan loads from, for provenance and caveats. These docs carry the conventions you will use when adjudicating reviewer findings ("is this a codebase-fit issue the reviewer correctly flagged, or noise?") and when editing upcoming tasks inline. This mirrors the walk-up the implementer and reviewer subagents perform at dispatch — the orchestrator does the same walk once, not per-task.
-4. Review PLAN.md critically — identify any questions or concerns:
+1. Read `PLAN.md` and `RESULTS.md`. `PLAN.md` is the authoritative task tracker for the analysis (see `superRA:handoff-doc` §PLAN.md Is the Task Tracker) — its task blocks and `**Review status:**` lines are the source of truth.
+2. Read `## Workflow Status` (if present) to see which milestones are complete and which stage the project is at. If a fresh agent is resuming mid-flight, this is the first signal of where to pick up.
+3. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` + `superRA:script-to-notebook`. Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
+4. **Read the project's guidance docs.** The harness gives you the repo-root `CLAUDE.md` automatically; module-level guidance (nested `CLAUDE.md` / `AGENTS.md` / `README.md` files near the code) is not auto-surfaced. Walk up from every directory PLAN.md says will be touched, and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` along the path. Also read `README.md` in any data directory the plan loads from, for provenance and caveats. These docs carry the conventions you will use when adjudicating reviewer findings ("is this a codebase-fit issue the reviewer correctly flagged, or noise?") and when editing upcoming tasks inline. This mirrors the walk-up the implementer and reviewer subagents perform at dispatch — the orchestrator does the same walk once, not per-task.
+5. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources / inputs available and accessible?
    - Are the steps in the right order?
    - Is the pipeline file included (for multi-script analyses)?
-   - Does any step conflict with a project convention you found in step 3?
-5. Review RESULTS.md for context on any completed steps (if resuming).
-6. If concerns: raise them with your human partner before starting.
-7. If no concerns: create TodoWrite with all steps and proceed.
+   - Does any step conflict with a project convention you found in step 4?
+6. Review RESULTS.md for context on any completed steps (if resuming).
+7. If concerns: raise them with your human partner before starting.
+8. If no concerns: optionally mirror open task blocks into `TodoWrite` as a working view — `PLAN.md` remains the record. Do not put new analysis tasks into `TodoWrite` only; if a discovered task belongs to the analysis, write it into `PLAN.md` per `handoff-doc` §Mid-Session Scope Changes first.
 
 ### Step 2: Execute Tasks
 
@@ -195,6 +196,8 @@ After every task is APPROVED, verify the work end-to-end before presenting compl
 5. **Deferred MINORs resolved?** Check PLAN.md review-notes blockquotes for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in RESULTS.md.
 
 If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
+
+**Once all five checks pass:** check the `Execution complete` box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md), commit the doc edit, then proceed to Step 4. The box flip is the orchestrator's signal that the analysis is reproducible and ready for the researcher's completion choice.
 
 ### Step 4: Determine Base Branch and Present Options
 
@@ -281,7 +284,7 @@ This workflow is **autonomous by default** — see CLAUDE.md workflow principle 
 Stop for exactly three classes of pause, all of which require logging the answer via `handoff-doc` §User Decisions Log **before** acting on it:
 
 1. **Hard blocker the RA cannot resolve.** Unexpected input-quality issues surface during initial description, a transformation produces an unexpected scope change (e.g., row count shift on a merge), validation fails against domain expectation, plan has critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required input unavailable.
-2. **Decision beyond the RA's authority.** Methodology disagreement with a reviewer, CRITICAL severity issue you want to override, repeated reviewer disagreement across re-dispatches, validation failure of unclear domain significance, scope or definition call with no obvious right answer, scope change that would affect tasks not yet reached.
+2. **Decision beyond the RA's authority.** Methodology disagreement with a reviewer, CRITICAL severity issue you want to override, repeated reviewer disagreement across re-dispatches, validation failure of unclear domain significance, scope or definition call with no obvious right answer, **scope change that would affect tasks not yet reached** — for the last one, after the researcher confirms, follow `handoff-doc` §Mid-Session Scope Changes to update PLAN.md and roll back any affected `## Workflow Status` checkboxes before resuming.
 3. **User-defined workflow milestone.** The 4-option completion menu at Step 4 above. These are baked into the workflow and the stop is intentional — not a check-in.
 
 **Banned phrasings** when nothing has changed since the last approved state: "Should I proceed?", "Want me to continue?", "Ready for the next task?", "Does this look right before I move on?", "Shall I move to Step N?". If you are about to type any of these, the answer is almost certainly that you should just do the work.
