@@ -58,6 +58,10 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 > **User decision (2026-04-17):** At integration-workflow Stage 1, fix the existing `structural-invariants.sh` principle-count test ONLY. Skip the three optional new invariants (assert new sections exist; assert milestone names appear; assert each workflow skill references Workflow Status).
 > **Question asked:** Which drift-test invariants should this PR add — just the required test fix, or also new protective invariants for the new sections / milestones / wire-up?
 
+> **User decision (2026-04-17):** Skip the RELEASE-NOTES one-block-vs-two convention call. Keep the current two-block structure as-is and proceed; only apply the two trivial accuracy fixes (sub-step-number citation, contradictory "unconditionally" wording) from the doc-reviewer's REVISE.
+> **Question asked:** Should this PR's RELEASE-NOTES entry be a separate ## Unreleased block (current) or folded into the existing workflow-domain-split block?
+> **Rationale:** "I don't care about release note for the moment" — orchestrator interprets as: do not spend cycles on the convention call; ship the entry as-written with only the accuracy fixes.
+
 ---
 
 ## Workflow Status
