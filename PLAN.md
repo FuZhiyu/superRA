@@ -98,7 +98,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ### Task 1: Reframe `## Mid-Session Scope Changes` → `## Scope Changes and Re-entry` in `handoff-doc/SKILL.md`
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** `skills/handoff-doc/SKILL.md` (edit)
@@ -124,7 +124,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ### Task 2: Add `**Integration status:**` field + re-entry semantics to `plan-anatomy.md`
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** `skills/handoff-doc/references/plan-anatomy.md` (edit)
