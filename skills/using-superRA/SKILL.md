@@ -21,9 +21,7 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 ## Commit Hygiene
 
-Any agent that stages a commit — main agent, orchestrator, or subagent — stages **only the files it modified this turn**. Never commit sweeps.
-
-Untracked files that are not your work routinely show up in `git status`: editor scratch files, `__pycache__`, `.DS_Store`, harness artifacts (`.claude/settings.local.json` and similar), stale local state from prior sessions. If you `git add -A` / `git add .` / `git add -u`, those land in your commit silently.
+Any agent that stages a commit — main agent, orchestrator, or subagent — stages **only the files it modified this turn**. Untracked files not your work (editor scratch, `__pycache__`, `.DS_Store`, harness artifacts) show up in `git status`; `git add -A/./-u` sweeps them in silently.
 
 Before staging:
 

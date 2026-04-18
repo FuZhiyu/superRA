@@ -27,7 +27,7 @@ Together with `PLAN.md`, Stage 1 `RESULTS.md` forms a complete handoff: context 
 
 ## Starter scaffold — pre-allocated task stubs
 
-At planning time, `RESULTS.md` is created with **one stub per PLAN.md task block**, in the same order. The task name in the heading mirrors the name in `PLAN.md` so humans can find a task's findings by scanning headings:
+At planning time, `RESULTS.md` is created with **one stub per PLAN.md task block**, in the same order and with the same task name:
 
 ```markdown
 ## Task 1: [Phase name as in PLAN.md]
@@ -40,8 +40,6 @@ At planning time, `RESULTS.md` is created with **one stub per PLAN.md task block
 
 ...
 ```
-
-This pre-allocation is load-bearing for parallel dispatch: when two implementers commit findings on different `parallel/…` branches, each replaces **its own pre-allocated section** in place — edits land in disjoint mid-file hunks and `git merge` auto-resolves. An EOF-append pattern would collide even for file-disjoint tasks.
 
 During execution, the implementer replaces its task's stub with the per-task section shape below. A stub left as `**Status:** Not started` at the end of execution is a red flag — either the task was skipped without logging the decision, or the implementer failed to update the doc.
 

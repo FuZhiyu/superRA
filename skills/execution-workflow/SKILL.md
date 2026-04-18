@@ -256,7 +256,7 @@ See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of
 
 **Required workflow skills:**
 - **superRA:agent-orchestration** — OWNS: parallel-dispatch discipline (§Workload Balancing, §Concurrent Writers Require Worktree Isolation). Required reading when parallel-dispatching ≥2 implementers; `references/worktree-harness-fallback.md` covers worktree create / enter / remove.
-- **superRA:worktree-data-sync** — Load this when copying managed data between existing worktrees (e.g., seeding a new analysis worktree from the main one); do not hand-roll data copy scripts. Worktree lifecycle is out of scope — see `agent-orchestration/references/worktree-harness-fallback.md`.
+  - **superRA:worktree-data-sync** — invoked from within the parallel-dispatch flow to seed non-git data into a provisioned worktree; do not hand-roll copy scripts.
 - **superRA:planning-workflow** — Creates the plan this skill executes
 - **the active domain skill (for data analysis: `superRA:econ-data-analysis`)** — REQUIRED: domain discipline all agents follow, loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest. Carries the §Three Concurrent Disciplines that the reviewer walks on every pass.
 - **superRA:integration-workflow** — Drift tests, refactor-review loop, documentation finalization (dispatched by this skill at Step 4 on merge/PR)
