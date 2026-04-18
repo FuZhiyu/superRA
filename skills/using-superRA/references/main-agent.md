@@ -49,7 +49,12 @@ find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/nul
 
 ## Load the Handoff-Doc Skill
 
-After cross-session detection, **load `superRA:handoff-doc`**. The main agent loads it at session start so the editing discipline is available before touching PLAN.md, and so the `planning-workflow §Changing Plans` protocol's cross-references to `handoff-doc` (User Decisions Log format, plan-anatomy templates) resolve. This is a main-agent default; subagents load `handoff-doc` only on `documentation` / `planning-review` stages as the Skill-Load Manifest specifies.
+After cross-session detection, **load `superRA:handoff-doc`**. The main agent loads it at session start so the editing discipline is available before touching PLAN.md.
+
+## Changes of the Plan
+
+Whenever the plan meaningfully changes — a new task, a removed or reordered task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `planning-workflow` and follow the  §Changing Plans protocol (confirm → log decision → inline-edit PLAN.md → roll back milestones → atomic commit → resume). This is the hinge that keeps the handoff doc honest across iterations; rewording a step inside an in-flight task to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §Changing Plans` for the full material-vs-not-material list and the 6-step protocol.
+
 
 ## The Three Pause Classes
 

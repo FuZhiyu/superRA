@@ -37,10 +37,6 @@ If you see unfamiliar uncommitted changes and cannot tell whether they are anoth
 
 Every agent edits `PLAN.md` and `RESULTS.md` at some point — implementers rewrite step text and record findings, reviewers write review-notes blockquotes, orchestrators annotate with adjudication notes. The editing discipline (four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, full `PLAN.md` / `RESULTS.md` anatomy templates) lives in `superRA:handoff-doc`.
 
-Implementer / reviewer subagents do NOT load `handoff-doc` by default — a compact editing etiquette (inline-edit, remove-stale, no-append) is carried in `agents/implementer.md` + `agents/reviewer.md` step 1 and is enough for the everyday case. Load `superRA:handoff-doc` on demand when the etiquette is not enough (unusual structural edit, first-time encounter with the doc format) and always when creating docs from scratch — `planning-workflow` Phase 2 (new plan) and `integration-workflow` Step 3 doc-writer (Stage 2 maturation). A standalone user with no subagents also reads `handoff-doc` directly.
-
-**Significant plan changes re-enter planning-workflow.** Whenever the plan meaningfully changes — a new task, a removed or reordered task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-invoke `planning-workflow §Changing Plans` and follow its protocol (confirm → log decision → inline-edit PLAN.md → roll back milestones → atomic commit → resume). This is the hinge that keeps the handoff doc honest across iterations; rewording a step inside an in-flight task to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §Changing Plans` for the full material-vs-not-material list and the 6-step protocol.
-
 ## Skill Inventory
 
 Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the full grouping index.
@@ -79,7 +75,6 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
-`handoff-doc` is a required load only on the `documentation` and `planning-review` rows — those stages create or mature docs from scratch and need the full anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Everyday implementer / reviewer stages work from the compact handoff-doc editing etiquette carried in `agents/implementer.md` / `agents/reviewer.md` step 1 (inline-edit, remove-stale, no-append) and load `handoff-doc` on demand only when that etiquette is not enough.
 
 **Main-agent default load.** Main agents additionally load `superRA:handoff-doc` at session start (per `references/main-agent.md`) so that editing discipline is available before the main agent touches PLAN.md, and so `planning-workflow §Changing Plans` cross-references into `handoff-doc` (User Decisions Log, plan-anatomy) resolve. The subagent-side rows in the table above are unaffected — subagents load `handoff-doc` only on `documentation` / `planning-review` stages as listed.
 
@@ -100,19 +95,6 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 ## Tool Discipline
 
 **Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
-
-## When to Invoke Which Skill
-
-The macro workflow is **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. When multiple skills could apply, follow this flow:
-
-1. **PLAN phase skills first** (`planning-workflow`) — determine WHAT to do.
-2. **IMPLEMENT + VALIDATE phase skills second** (`execution-workflow`, `econ-data-analysis`) — guide execution and review.
-3. **INTEGRATE phase skills last** (`integration-workflow`, `merge-workflow`) — integrate work back.
-
-"Let's analyze X" → PLAN phase: `planning-workflow` (Phase 1 inventory then Phase 2 plan creation).
-"Something looks wrong in the data" → investigate using `econ-data-analysis` describe step.
-
-Within each implementation step, the micro-level discipline is the three concurrent disciplines **DESCRIBE / ANALYZE / VALIDATE** — documentation is written continuously alongside them (see `econ-data-analysis`).
 
 
 ## Semantic Merge
