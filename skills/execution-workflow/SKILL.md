@@ -99,17 +99,18 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 ### Step 1: Load and Review Plan
 
-1. Read `PLAN.md` and `RESULTS.md`.
-2. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` (plus `references/notebook-format.md` when analysis scripts are being written or reviewed). Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
-3. **Read PLAN.md's `## Project Conventions` section.** It is populated at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy). Skim and proceed. If the section is missing, empty, or its walk date is stale relative to the current work, walk now and populate it — walk up from every directory PLAN.md says will be touched and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` along the path, plus `README.md` in any data directory the plan loads from, then write one-paragraph summaries into the section and commit the update before dispatching subagents. These conventions are load-bearing for adjudicating reviewer findings ("is this a codebase-fit issue the reviewer correctly flagged, or noise?") and for editing upcoming tasks inline. Subagents read the populated section instead of re-walking per dispatch; if a subagent finds the section missing something, it walks on-demand and reports the omission so you can update the section.
-4. Review PLAN.md critically — identify any questions or concerns:
+1. Read `PLAN.md` and `RESULTS.md`. `PLAN.md` is the task tracker (`superRA:handoff-doc §PLAN.md Is the Task Tracker`); `TodoWrite` mirrors it as a transient session view, not a substitute.
+2. **Read `## Workflow Status`** at the top of `PLAN.md`. The checklist names which milestones are complete (`Plan approved`, `Execution complete`, `Drift tests created`, `Refactored`, `Docs finalized`, `Merged`) and tells a resuming agent exactly which phase this branch is at without grepping commits. If `Execution complete` is already checked, skip to Step 3 (verification); if earlier milestones are unchecked unexpectedly, raise it with the user before dispatching tasks.
+3. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` (plus `references/notebook-format.md` when analysis scripts are being written or reviewed). Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
+4. **Read PLAN.md's `## Project Conventions` section.** It is populated at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy). Skim and proceed. If the section is missing, empty, or its walk date is stale relative to the current work, walk now and populate it — walk up from every directory PLAN.md says will be touched and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` along the path, plus `README.md` in any data directory the plan loads from, then write one-paragraph summaries into the section and commit the update before dispatching subagents. These conventions are load-bearing for adjudicating reviewer findings ("is this a codebase-fit issue the reviewer correctly flagged, or noise?") and for editing upcoming tasks inline. Subagents read the populated section instead of re-walking per dispatch; if a subagent finds the section missing something, it walks on-demand and reports the omission so you can update the section.
+5. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources / inputs available and accessible?
    - Are the steps in the right order?
    - Is the pipeline file included (for multi-script analyses)?
    - Does any step conflict with a project convention you found in step 3?
-5. Review RESULTS.md for context on any completed steps (if resuming).
-6. If concerns: raise them with your human partner before starting.
-7. If no concerns: create TodoWrite with all steps and proceed.
+6. Review RESULTS.md for context on any completed steps (if resuming).
+7. If concerns: raise them with your human partner before starting.
+8. If no concerns: mirror the pending task steps into `TodoWrite` as a transient session view (see `handoff-doc §PLAN.md Is the Task Tracker` — `PLAN.md` remains the source of truth; `TodoWrite` is a derived view) and proceed.
 
 ### Step 2: Execute Tasks
 
@@ -155,6 +156,8 @@ After every task is APPROVED, verify the work end-to-end before presenting compl
 5. **Deferred MINORs resolved?** Check PLAN.md review-notes blockquotes for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in RESULTS.md.
 
 If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
+
+**Once all five checks pass:** check the `Execution complete` box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md) and commit the box-flip before presenting the Step 4 completion menu. The flip records that the branch has reached the IMPLEMENT/VALIDATE terminus and is ready for the researcher's disposition choice.
 
 ### Step 4: Determine Base Branch and Present Options
 
@@ -224,7 +227,7 @@ The autonomy contract (proceed-without-asking patterns, stop-and-ask classes, ba
 
 - **Step 4 completion menu.** The 4-option menu (merge now / continue another task / sensitivity task / discard) is a user-defined workflow milestone.
 - **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
-- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. Pause class (2) in the autonomy contract.
+- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `handoff-doc` §Mid-Session Scope Changes (confirm → log → inline-edit PLAN.md → roll back milestone checkboxes → atomic commit → resume). Pause class (2) in the autonomy contract.
 
 Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log per `handoff-doc` §User Decisions Log **before** acting on it.
 

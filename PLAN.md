@@ -66,6 +66,9 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 > **Question asked:** econ-adaption diverged 10+ commits (rescue/design-coherence-refactor merged) while this PR was in flight. Pause for user review, run semantic-merge, or abandon?
 > **Rationale:** "Create the PR and I'll handle the divergence later." User accepts the divergence-resolution burden as a separate, post-PR-creation task. The PR is for design discussion and historical reference; the actual merge will be reconciled by the user manually against the new econ-adaption.
 
+> **User decision (2026-04-17, post-rebase):** Merge `origin/main` into this branch via `superRA:semantic-merge` (Tier 3) to reconcile the design-coherence-refactor divergence. For the four conflicted files (`RELEASE-NOTES.md`, `skills/execution-workflow/SKILL.md`, `skills/planning-workflow/SKILL.md`, `tests/structural-invariants.sh`) take main's version in the mechanical commit; re-apply the branch's unique wire-ups (Workflow Status reads + box-flips + scope-change pointers) against main's new structure in the integration commit. Chose Option A (merge path, preserves history via merge commit) over Option B (hard rebase, discards 14 branch commits). Main's rewritten `tests/structural-invariants.sh` supersedes the branch's four-principles awk scoping fix — no re-application needed. Line-number citations in Task 1–4 sub-steps are stale against main's restructured handoff-doc / workflow skills; the implementations were committed at the old base SHA and remain valid in content, only the line numbers drifted.
+> **Question asked:** Rebase this branch on main; keep unique and essential parts only. Merge vs hard rebase?
+
 ---
 
 ## Workflow Status
