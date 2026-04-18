@@ -107,3 +107,17 @@ Dispatched `code-quality-reviewer` against `889f53c^..HEAD`. Verdict: **REVISE**
 5. `1f69f28` merge-guard: parallel/* exemption
 6. `42ecc7b` workflows: redirect worktree lifecycle refs
 7. (this commit) verification + review-driven revisions + RELEASE-NOTES entry
+
+## Task 7: Dogfood — merge-guard test vectors documented
+
+**Status:** Implemented
+
+### Key changes
+- **New:** `hooks/merge-guard` gains a comment block immediately after the header, documenting the four synthetic test inputs (two exempt cases with parallel/* branches, one semantic-merge reminder case, one skip case) and their expected outputs.
+
+### Test vector documentation
+Added shell comments enumerating the four regression cases from Task 4:
+- `git merge parallel/foo/a` → emit `{}`
+- `git merge --no-ff parallel/feat/b` → emit `{}`
+- `git merge main` → emit STOP reminder
+- `git merge --abort` → emit `{}`
