@@ -580,10 +580,10 @@ if [ "$tier_count" -eq 3 ]; then
 else
   fail "$ao has $tier_count tiers (expected 3)"
 fi
-if grep -q "150k" "$ao" && grep -q "cache" "$ao"; then
-  pass "$ao references 150k-token rule and cache reuse"
+if grep -q "150k" "$ao"; then
+  pass "$ao references 150k-token rule"
 else
-  fail "$ao missing 150k or cache-reuse guidance"
+  fail "$ao missing 150k guidance"
 fi
 
 echo

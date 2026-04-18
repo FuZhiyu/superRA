@@ -84,7 +84,7 @@ time so the orchestrator can dispatch them in parallel (see
 
 **Format.** Each task block declares a `**Depends on:**` line listing
 upstream task numbers, or `*(none)*` if the task has no upstream
-dependency. See the task-block template in `references/plan-template.md` for the required format.
+dependency. See `superRA:handoff-doc` `references/plan-anatomy.md` §Task Block Anatomy for the required format.
 
 **When a task depends on another.**
 - It reads the other task's output files.
@@ -124,6 +124,25 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 **Results document:** Create `RESULTS.md` alongside `PLAN.md`. For the starter scaffold and anatomy, load `superRA:handoff-doc` and read `references/results-anatomy.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
 
+### PLAN.md Is the Task Tracker
+
+**`PLAN.md` is the primary task tracker** — not `Todo` tools, not chat, not status reports, not a session-internal scratchpad. The task blocks with their `- [ ]` / `- [x]` checkbox steps and `**Review status:**` lines are the authoritative state of what is planned, what is in progress, and what is done. Persistence across sessions, agent handoffs, and harness boundaries depends on this being true.
+
+`TodoWrite` (or any equivalent harness-provided todo UI) has a narrower role: a transient view of *what the agent is doing right now in this session*. It is acceptable for ephemeral session-internal todos that do not represent analysis tasks (e.g., "read three reference files, then summarize for the user", "fix three lint errors before re-running the test"). It is **not** acceptable as a substitute for a PLAN.md task block. If the work is part of the analysis — a new task, a discovered subtask, a methodology check, a sensitivity run, a refactor pass — it lives in `PLAN.md` first, then optionally mirrors into `TodoWrite` as a working view.
+
+**Rule of thumb:** if losing this todo at session end would lose work the researcher cares about, it belongs in `PLAN.md`, not `TodoWrite`.
+
+**Banned patterns:**
+
+- Tracking analysis tasks only in `TodoWrite` while leaving `PLAN.md` stale.
+- Discovering a new subtask, adding it to `TodoWrite`, completing it, and never reflecting it in `PLAN.md`.
+- Using `TodoWrite` to coordinate work between sessions (it does not persist; the next session sees nothing).
+- Treating `TodoWrite` items as "logged" — they are not. Logged work is in a committed doc.
+
+If `TodoWrite` and `PLAN.md` ever disagree about the state of analysis work, `PLAN.md` is right by definition. Update `TodoWrite` to match — never the reverse.
+
+When the plan itself changes — in-session scope change or cross-session re-entry — re-invoke §Changing Plans below and follow its protocol.
+
 ## Changing Plans
 
 When the plan changes — new task, removed task, reordered task, objective / sample / methodology edit, scope addition surfaced by a PR reviewer — follow this protocol. The same procedure applies whether the change is raised mid-execution or after integration / merge; the protocol itself records how much rolls back via Step 4's box-unchecking and Step 6's re-entry point. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
@@ -160,7 +179,7 @@ When the plan changes — new task, removed task, reordered task, objective / sa
 
 **Banned shortcuts:**
 
-- Carrying the new task in chat or only in `TodoWrite` without writing it into `PLAN.md` (see `handoff-doc` §PLAN.md Is the Task Tracker — `TodoWrite` is a transient view, not a record).
+- Carrying the new task in chat or only in `TodoWrite` without writing it into `PLAN.md` (see §PLAN.md Is the Task Tracker above — `TodoWrite` is a transient view, not a record).
 - Creating a `PLAN_v2.md` or appending an "Addendum" section. There is one `PLAN.md`.
 - Resuming the in-flight task before reflecting the change in the doc — the change is not real until it is committed.
 - Running a subset of the drift-test suite on re-entry because "only these tasks changed" — authoring is scoped, running is not. Always run the full suite.

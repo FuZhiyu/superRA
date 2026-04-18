@@ -85,7 +85,7 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 
 ## Execution Modes
 
-**Subagent dispatch (default for multi-step workflows).** The orchestrator uses the `Agent` tool to dispatch an implementer or reviewer subagent per task. Dispatch prompts follow the canonical `Stage:` / `Task:` / `Additionally:` template — see `agent-orchestration` §Dispatch Templates. The subagent reads its dispatch prompt, loads per the Skill-Load Manifest above, does the work, returns a status per `agent-orchestration` §Dispatch-Return Deltas.
+**Subagent dispatch (default for multi-step workflows).** The orchestrator uses the `Agent` tool to dispatch an implementer or reviewer subagent per task. Dispatch prompts follow the canonical `Stage:` / `Task:` / `Additionally:` template — see `agent-orchestration` §Dispatch Templates. The subagent reads its dispatch prompt, loads per the Skill-Load Manifest above, does the work, returns a status per `agents/implementer.md` / `agents/reviewer.md` §Report Format.
 
 **Direct mode.** When the orchestrator executes a step itself — no subagent dispatch — it plays the implementer or reviewer role in-session. The discipline is the same; only the dispatch envelope is gone.
 
