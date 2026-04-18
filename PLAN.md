@@ -77,7 +77,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 - [x] **Execution complete** — all tasks `APPROVED`, no remaining REVISE / CONDITIONAL APPROVE, working tree clean (2026-04-17)
 - [x] **Drift tests created** — Skill-edit adaptation: `tests/structural-invariants.sh` four-principles invariant tightened to scope-aware awk (commits `2dba05d` + `b6ecb26`); full suite returns 0 FAIL on this branch (2026-04-17)
 - [x] **Refactored** — post-rebase integration-reviewer APPROVED after one REVISE round (2 MINOR cross-reference drift fixes in commit `96dfaa1`: execution-workflow step-number citation + handoff-doc above/below directional wording); narrow re-review confirmed both fixes landed (2026-04-17)
-- [ ] **Docs finalized** — previously APPROVED pre-rebase; unchecked because the rebase added a new RELEASE-NOTES entry and Decisions-log edit that have not been doc-reviewed
+- [x] **Docs finalized** — post-rebase doc-reviewer APPROVED on narrow scope (new RELEASE-NOTES entry + new Decisions-log entry for the rebase); no contradictions with README.md / CATEGORIES.md; RESULTS.md remains at root in Stage 1 form per prior user decision to skip full maturation (2026-04-17)
 - [ ] **Merged** — branch merged to econ-adaption (or PR opened against it) (merge-workflow Step 4)
 
 ---
