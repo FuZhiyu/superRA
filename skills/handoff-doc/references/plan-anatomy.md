@@ -46,7 +46,7 @@ The header is the project's standing context, written at planning time and updat
 
 ## Workflow Status
 
-A checklist of irreversible workflow milestones. Each box flips at the moment its workflow step completes, in the same commit that completes the step. A new agent reads this section first to know where the project stands without having to scan task blocks or grep commits. If a later scope change reverts a completed milestone, uncheck the affected boxes — see `SKILL.md` §Mid-Session Scope Changes.
+A checklist of irreversible workflow milestones. Each box is a rollup over per-task `**Review status:**` and `**Integration status:**` fields — it flips only when all tasks that contribute to the milestone have the appropriate per-task status. Each box flips at the moment its workflow step completes, in the same commit that completes the step. A new agent reads this section first to know where the project stands without having to scan task blocks or grep commits. On re-entry, the orchestrator unchecks affected boxes by judgment and declares in §Decisions which boxes were cleared and why. The full drift-test suite must re-run green before rechecking `Drift tests created` — see `SKILL.md §Scope Changes and Re-entry`.
 
 - [ ] **Plan approved** — researcher signed off on data inventory + plan (`planning-workflow` Phase 2)
 - [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`execution-workflow` Step 3)
@@ -125,6 +125,7 @@ If it is unclear whether an answer counts as a decision worth logging: if acting
 ### Task N: [Phase Name]
 **Depends on:** Task N-1 [, Task N-2] | *(none)*
 **Review status:** *(set during execution — not filled at planning time)*
+**Integration status:** *(set during integration — not filled at planning time)*
 
 **Script:** `Code/NN_phase_name.py` (notebook-compatible format)
 **Input:** `Data/input_file.parquet`
@@ -174,11 +175,12 @@ Validate: row count matches expectation, unmatched rate reasonable, distribution
 
 ## Field-by-Field Notes
 
-- **`**Review status:**`** is always present on a task once execution begins. Valid values: `IMPLEMENTED`, `REVISE (<stage>)`, `APPROVED`. Before execution starts, leave it as a placeholder or omit.
+- **`**Review status:**`** is always present on a task once execution begins. Valid values: `IMPLEMENTED`, `REVISE (<stage>)`, `APPROVED`. Before execution starts, leave it as a placeholder or omit. On re-entry, tasks in the transitive downstream closure of a modified task have their status cleared by default; the orchestrator may exempt a downstream task by documenting why the upstream change does not affect its inputs (one blockquote per exempted task in §Decisions).
+- **`**Integration status:**`** is set by the integration reviewer, considering drift-test coverage, refactor coverage, and doc coverage for that task's contribution. Valid values: unset / `IMPLEMENTED` / `REVISE` / `APPROVED`. The same DAG cascade rule applies as for `**Review status:**` — downstream tasks in the closure of a modified task have their Integration status cleared by default, with documented exemptions in §Decisions.
 - **Script / Input / Output** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **Steps** are editable by the implementer: they may rewrite, reorder, add, or remove steps when the data forces deviation from the planned approach. Steps are expressed as checkbox items with inline code blocks that contain the actual analyst code.
 - **Review notes blockquote** is present only when there are active items. On `APPROVED`, the blockquote is removed entirely. For how items enter, get annotated, and exit across iterations, see `agents/reviewer.md` (first-round REVISE and re-review deletion) and `agents/implementer.md` (annotating fixes with `→ implemented: ...`).
-- **`## Workflow Status` checkboxes** are flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. A box is unchecked again only when a scope change or post-merge refactor invalidates the milestone — see `SKILL.md` §Mid-Session Scope Changes. Subagents may not flip boxes; if a subagent reports work that completes a milestone, the orchestrator flips the box in the next commit.
+- **`## Workflow Status` checkboxes** are flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. Each box is a rollup over per-task statuses: e.g., `Execution complete` flips only when every task has `**Review status:** APPROVED`; `Drift tests created` flips only when the full drift-test suite passes (which requires all tasks to have `**Integration status:**` coverage). A box is unchecked again only when a scope change or post-merge refactor invalidates the milestone — see `SKILL.md §Scope Changes and Re-entry`. Subagents may not flip boxes; if a subagent reports work that completes a milestone, the orchestrator flips the box in the next commit.
 
 ## No Placeholders
 

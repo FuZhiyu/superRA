@@ -45,9 +45,9 @@ If `TodoWrite` and `PLAN.md` ever disagree about the state of analysis work, `PL
 
 Every edit replaces stale content in place. Never append, never strike through, never use "Update:" / "Revised:" / "Previously..." framing. If you catch yourself writing a sentence that references a prior version of the doc, stop — that sentence belongs in the git commit message.
 
-## Mid-Session Scope Changes
+## Scope Changes and Re-entry
 
-When the researcher adds, modifies, removes, or reorders work during a session — or changes methodology, sample, output, or data sources — the change is **material** and MUST land in `PLAN.md` before any new work begins. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
+This protocol covers two related situations that share the same mechanics: (a) a researcher ping during execution — adding, modifying, removing, or reordering work mid-session — and (b) a scope addition that arrives after integration or merge (a PR-review request, a reviewer-surfaced adjacent feature, a follow-on idea). Both situations modify the same `PLAN.md`, follow the same decision-log pattern, and require the same re-entry into the appropriate workflow stage. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
 
 **Material (require this protocol):**
 
@@ -55,6 +55,7 @@ When the researcher adds, modifies, removes, or reorders work during a session �
 - Changing a task's objective, script, input, or output.
 - Changing the analysis-level objective, methodology, sample definition, or expected output.
 - Changing data sources or project-wide conventions.
+- Scope additions arriving after integration or merge (post-PR additions, adjacent features surfaced by reviewers, follow-on ideas).
 
 **Not material (handle as inline discovery edits per the Living Plan section in `planning-workflow`):**
 
@@ -65,21 +66,25 @@ When the researcher adds, modifies, removes, or reorders work during a session �
 **Protocol:**
 
 1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. This is the same escalation gate as `execution-workflow` Stop-Points class (b).
-2. **Log the decision** per §User Decisions Log below — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes.
+2. **Log the decision** per §User Decisions Log below — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes. The log entry must declare which tasks are affected and which project-level boxes are unchecked.
 3. **Update `PLAN.md` inline:**
+   - **Prefer modifying existing task blocks over appending.** Append a new task block only when the change cannot be expressed as an edit to an existing task's scope.
    - **New task** → append `### Task N+1: [name]` block with the full anatomy from `references/plan-anatomy.md`. Renumber later tasks if inserting earlier in the sequence.
    - **Modified task** → rewrite the affected fields in place. Do not strike through. Do not add "Modified:" annotations.
    - **Removed task** → delete the block entirely. The Decisions entry preserves the rationale.
    - **Reordered tasks** → renumber and rewrite. The decision log preserves the original sequence.
-4. **Update `## Workflow Status`** if the change reverts a completed milestone. Adding a new task means `Execution complete` is no longer checked; changing methodology after refactor means `Refactored` and `Docs finalized` are no longer checked and the affected downstream stages must re-run.
+4. **Update `## Workflow Status`** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* boxes are unchecked and *why*. Rules: per-task `**Review status:**` and `**Integration status:**` on fully re-implemented tasks are cleared; untouched tasks retain APPROVED; minor-edited tasks (code unchanged) clear `**Integration status:**` while keeping `**Review status:** APPROVED`. The orchestrator — not the new task's implementer — decides which tasks are "related" and which milestones roll back.
 5. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
-6. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `execution-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Stage 2.
+6. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `execution-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Stage 2. On every re-entry, `integration-workflow` runs the **full** drift-test suite regardless of which tasks changed — only *authoring* new drift tests is scoped to the affected tasks. The doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff.
+
+**DAG cascade on re-entry.** When re-entering, the orchestrator walks the transitive downstream closure of each task whose code or outputs will change (from `**Depends on:**` fields). By default, every task in the closure has `**Review status:**` and `**Integration status:**` cleared. Exemption: the orchestrator may leave a downstream task APPROVED by documenting *why* the upstream change does not affect its inputs — one blockquote per exempted task in §Decisions. The drift-test suite runs in full regardless of the closure; closure scopes re-review and integration-review dispatch only. See `references/plan-anatomy.md` §Field-by-Field for the cascade vocabulary and `§User Decisions Log` for the exemption format.
 
 **Banned shortcuts:**
 
 - Carrying the new task in chat or only in `TodoWrite` without writing it into `PLAN.md` (see §PLAN.md Is the Task Tracker — `TodoWrite` is a transient view, not a record).
 - Creating a `PLAN_v2.md` or appending an "Addendum" section. There is one `PLAN.md`.
 - Resuming the in-flight task before reflecting the change in the doc — the change is not real until it is committed.
+- Running a subset of the drift-test suite on re-entry because "only these tasks changed" — authoring is scoped, running is not. Always run the full suite.
 
 ## What Counts as Stale (remove, don't keep)
 

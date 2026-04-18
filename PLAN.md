@@ -98,46 +98,46 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ### Task 1: Reframe `## Mid-Session Scope Changes` → `## Scope Changes and Re-entry` in `handoff-doc/SKILL.md`
 **Depends on:** *(none)*
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** `skills/handoff-doc/SKILL.md` (edit)
 **Input:** Current `handoff-doc/SKILL.md` carrying `## Mid-Session Scope Changes` (lines 48–82) + `## PLAN.md Is the Task Tracker` (lines 27–42, landed in a prior pass, keep as-is).
 **Output:** Same file with the §Mid-Session section renamed and extended to cover both in-execution drift and post-integration re-entry, including the DAG cascade rule.
 
-- [ ] **Step 1: Rename section heading** from `## Mid-Session Scope Changes` to `## Scope Changes and Re-entry` and rewrite the one-paragraph preamble so it frames the protocol as covering (a) researcher pings during execution and (b) scope additions that arrive after integration or merge (PR-review additions, reviewer-requested adjacent features, follow-on ideas). Keep the "there is one PLAN.md per analysis" rule.
+- [x] **Step 1: Rename section heading** from `## Mid-Session Scope Changes` to `## Scope Changes and Re-entry` and rewrite the one-paragraph preamble so it frames the protocol as covering (a) researcher pings during execution and (b) scope additions that arrive after integration or merge (PR-review additions, reviewer-requested adjacent features, follow-on ideas). Keep the "there is one PLAN.md per analysis" rule.
 
-- [ ] **Step 2: Extend the Material / Not-material bullets** so "Material (require this protocol)" names post-integration additions explicitly as one of the covered cases. "Not material" bullets are unchanged.
+- [x] **Step 2: Extend the Material / Not-material bullets** so "Material (require this protocol)" names post-integration additions explicitly as one of the covered cases. "Not material" bullets are unchanged.
 
-- [ ] **Step 3: Rewrite the 6-step Protocol** to keep the existing skeleton (confirm intent → log decision → edit PLAN inline → update Workflow Status → commit atomically → resume) but:
+- [x] **Step 3: Rewrite the 6-step Protocol** to keep the existing skeleton (confirm intent → log decision → edit PLAN inline → update Workflow Status → commit atomically → resume) but:
   - Step 3 "Update PLAN.md inline" gets a new first bullet: "Prefer modifying existing task blocks over appending. Append only when the change cannot be expressed as an edit to an existing task's scope."
   - Step 4 "Update `## Workflow Status`" gets explicit language that the orchestrator unchecks project-level boxes by judgment and declares in the §Decisions entry *which* boxes and *why*. Add sub-bullet: per-task fields (`**Review status:**` / `**Integration status:**`) on tasks fully re-implemented are cleared; untouched tasks retain APPROVED; minor-edited tasks clear `**Integration status:**` while keeping `**Review status:** APPROVED` if code is unchanged.
   - Step 6 "Resume" gets the full-drift-suite rule: `integration-workflow` runs the full drift-test suite on every re-entry regardless of closure; only *authoring* new drift tests is scoped. Doc-writer always re-runs whole doc; doc-reviewer on diff.
 
-- [ ] **Step 4: Add a new paragraph under the Protocol on DAG cascade.** When re-entering, the orchestrator walks the transitive downstream closure of each task whose code or outputs will change (from `**Depends on:**` fields). Default: every task in the closure has `**Review status:**` and `**Integration status:**` cleared. Exemption: the orchestrator may leave a task APPROVED by documenting *why* the change does not affect its inputs — one blockquote per exempted task in §Decisions. The drift-test suite runs in full regardless of the closure; closure scopes re-review and integration-review dispatch only.
+- [x] **Step 4: Add a new paragraph under the Protocol on DAG cascade.** When re-entering, the orchestrator walks the transitive downstream closure of each task whose code or outputs will change (from `**Depends on:**` fields). Default: every task in the closure has `**Review status:**` and `**Integration status:**` cleared. Exemption: the orchestrator may leave a task APPROVED by documenting *why* the change does not affect its inputs — one blockquote per exempted task in §Decisions. The drift-test suite runs in full regardless of the closure; closure scopes re-review and integration-review dispatch only.
 
-- [ ] **Step 5: Extend "Banned shortcuts"** with one bullet: "Running a subset of the drift-test suite on re-entry because 'only these tasks changed' — authoring is scoped, running is not. Always run the full suite."
+- [x] **Step 5: Extend "Banned shortcuts"** with one bullet: "Running a subset of the drift-test suite on re-entry because 'only these tasks changed' — authoring is scoped, running is not. Always run the full suite."
 
-- [ ] **Step 6: Validate** — `grep -n "Mid-Session Scope Changes" skills/` returns zero hits across the repo (pointers in other skills are updated in Task 3). The §Scope Changes and Re-entry section cross-references §User Decisions Log, §PLAN.md Is the Task Tracker, and `plan-anatomy.md` §Field-by-Field. Voice matches the existing four-principles-era sections.
+- [x] **Step 6: Validate** — `grep -n "Mid-Session Scope Changes" skills/` returns zero hits across the repo (pointers in other skills are updated in Task 3). The §Scope Changes and Re-entry section cross-references §User Decisions Log, §PLAN.md Is the Task Tracker, and `plan-anatomy.md` §Field-by-Field. Voice matches the existing four-principles-era sections.
 
 ---
 
 ### Task 2: Add `**Integration status:**` field + re-entry semantics to `plan-anatomy.md`
 **Depends on:** *(none)*
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** `skills/handoff-doc/references/plan-anatomy.md` (edit)
 **Input:** Current `plan-anatomy.md` carrying the header template with `## Workflow Status` (lines 47–60, landed in a prior pass), task-block anatomy (lines 122+), and Field-by-Field notes.
 **Output:** Same file carrying (a) `**Integration status:**` in the task-block template, (b) expanded `## Workflow Status` description noting derived-from-task-status + re-entry unchecks, (c) new Field-by-Field bullets, (d) updated pointer from §Mid-Session Scope Changes → §Scope Changes and Re-entry.
 
-- [ ] **Step 1: Add `**Integration status:**` line to the task-block template** (currently line 127) immediately below `**Review status:**`. Render as: `**Integration status:** *(set during integration — not filled at planning time)*`. Values: unset / IMPLEMENTED / REVISE / APPROVED.
+- [x] **Step 1: Add `**Integration status:**` line to the task-block template** (currently line 127) immediately below `**Review status:**`. Render as: `**Integration status:** *(set during integration — not filled at planning time)*`. Values: unset / IMPLEMENTED / REVISE / APPROVED.
 
-- [ ] **Step 2: Expand the `## Workflow Status` paragraph** in the header template (currently line 49) so it explains: project-level boxes are a rollup over per-task `**Review status:**` / `**Integration status:**`; the orchestrator unchecks them at re-entry when a scope change invalidates the milestone; the full drift-test suite must re-run green before rechecking `Drift tests created`. Point at `SKILL.md §Scope Changes and Re-entry` (renamed in Task 1).
+- [x] **Step 2: Expand the `## Workflow Status` paragraph** in the header template (currently line 49) so it explains: project-level boxes are a rollup over per-task `**Review status:**` / `**Integration status:**`; the orchestrator unchecks them at re-entry when a scope change invalidates the milestone; the full drift-test suite must re-run green before rechecking `Drift tests created`. Point at `SKILL.md §Scope Changes and Re-entry` (renamed in Task 1).
 
-- [ ] **Step 3: Update the Field-by-Field section.** Edit the existing `**Review status:**` bullet to note that downstream tasks in the DAG closure of a modified task have their status cleared by default (orchestrator-documented exemptions in §Decisions). Add a new bullet for `**Integration status:**` with the same values vocabulary, set by the integration reviewer considering drift / refactor / doc coverage for that task's contribution, same cascade rule as `**Review status:**`. Update the existing `## Workflow Status checkboxes` bullet: change the pointer `SKILL.md §Mid-Session Scope Changes` → `SKILL.md §Scope Changes and Re-entry`.
+- [x] **Step 3: Update the Field-by-Field section.** Edit the existing `**Review status:**` bullet to note that downstream tasks in the DAG closure of a modified task have their status cleared by default (orchestrator-documented exemptions in §Decisions). Add a new bullet for `**Integration status:**` with the same values vocabulary, set by the integration reviewer considering drift / refactor / doc coverage for that task's contribution, same cascade rule as `**Review status:**`. Update the existing `## Workflow Status checkboxes` bullet: change the pointer `SKILL.md §Mid-Session Scope Changes` → `SKILL.md §Scope Changes and Re-entry`.
 
-- [ ] **Step 4: Validate** — Fenced block count stays even (template not broken). Template line count changes by +1 (Integration status line). Pointer renames complete: `grep -n "Mid-Session Scope Changes" skills/handoff-doc/references/plan-anatomy.md` returns zero. Field-by-Field now has explicit cascade semantics for both Review and Integration status.
+- [x] **Step 4: Validate** — Fenced block count stays even (template not broken). Template line count changes by +1 (Integration status line). Pointer renames complete: `grep -n "Mid-Session Scope Changes" skills/handoff-doc/references/plan-anatomy.md` returns zero. Field-by-Field now has explicit cascade semantics for both Review and Integration status.
 
 ---
 
