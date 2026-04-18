@@ -102,7 +102,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ### Task 1: Author `## Changing Plans` in `planning-workflow/SKILL.md`; reduce handoff-doc to a pointer
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(cleared at re-entry)*
 
 **Script:** `skills/planning-workflow/SKILL.md` (edit — new section), `skills/handoff-doc/SKILL.md` (edit — remove body, leave pointer)
@@ -138,7 +138,7 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ### Task 3: Retarget workflow-skill cross-references to `planning-workflow §Changing Plans` + rewrite the overloaded execution-workflow Step 1 paragraph
 **Depends on:** Task 1 (new section must exist at the new location so pointers resolve), Task 2 (Integration-status field must exist in anatomy)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(cleared at re-entry)*
 
 **Script:** `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/using-superRA/references/main-agent.md`, `skills/using-superRA/SKILL.md` (edit). `skills/planning-workflow/SKILL.md` and `skills/merge-workflow/SKILL.md` carry no remaining pointers to retarget.
