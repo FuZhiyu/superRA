@@ -75,12 +75,12 @@ digraph process {
         "Update plan file + commit" [shape=box];
     }
 
-    "Read plan, extract all tasks, create TodoWrite" [shape=box];
+    "Read plan + Workflow Status; optionally mirror open tasks into TodoWrite" [shape=box];
     "More tasks remain?" [shape=diamond];
     "Verify pipeline + reproducibility (Step 3)" [shape=box];
     "Dispatch integration-workflow then merge-workflow" [shape=box style=filled fillcolor=lightgreen];
 
-    "Read plan, extract all tasks, create TodoWrite" -> "Dispatch implementer subagent";
+    "Read plan + Workflow Status; optionally mirror open tasks into TodoWrite" -> "Dispatch implementer subagent";
     "Dispatch implementer subagent" -> "Implementer asks questions?";
     "Implementer asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Dispatch implementer subagent";
