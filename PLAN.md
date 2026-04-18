@@ -95,9 +95,6 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 - [x] **Step 3: Validate** — Section order confirmed: At-a-Glance Structure → PLAN.md Is the Task Tracker → Inline-Edit Rule → User Decisions Log → Mid-Session Scope Changes → What Counts as Stale. `grep "six principles"` returns nothing. Cross-references to §User Decisions Log and §PLAN.md Is the Task Tracker are valid (both exist). Voice matches existing sections.
 
-> **Review notes (post-rebase integration review, 2026-04-17):**
-> 1. [MINOR] `skills/handoff-doc/SKILL.md:68` — §Mid-Session Scope Changes protocol step 2 says "Log the decision per §User Decisions Log **above**". In main's restructured `handoff-doc/SKILL.md` (auto-merged at `bc8a99d`), §User Decisions Log (line 92) now sits **below** §Mid-Session Scope Changes (line 48), not above. The branch's original "above" wording was written against a prior structure where User Decisions Log preceded Mid-Session Scope Changes; the mechanical auto-merge preserved it verbatim. Fix: change "above" to "below" (or drop the directional word — "per §User Decisions Log" is unambiguous on its own).
-
 ---
 
 ### Task 2: Add `## Workflow Status` template to `plan-anatomy.md` + Header-ownership and Field-by-Field updates
@@ -143,9 +140,6 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
   - Step 4: "Before executing the merge action" note inserted after "Once Step 2 returns clean" — checks `Merged` box on analysis branch if PLAN.md present; explains skip condition for Options 2/3 disposition.
 
 - [x] **Step 5: Validate** — all six milestones verified in correct workflow skills (Plan approved → planning; Execution complete → execution; Drift tests created + Refactored + Docs finalized → integration; Merged → merge). All `§Mid-Session Scope Changes` references resolved. No Principle 3 violations (every flip at natural completion gate). Self-check commands passed (see dispatch self-check notes).
-
-> **Review notes (post-rebase integration review, 2026-04-17):**
-> 1. [MINOR] `skills/execution-workflow/SKILL.md:110` — Step 1 sub-step 5 bullet reads "Does any step conflict with a project convention you found in **step 3**?" but the re-numbering in integration commit `3c3f061` inserted the new "Read Workflow Status" sub-step at position 2, pushing "Read PLAN.md's `## Project Conventions` section" from sub-step 3 to sub-step 4. The cross-reference is now dangling. Fix: change "step 3" to "step 4" (or rephrase to "in the Project Conventions step" to be robust to future re-numbering).
 
 ---
 
