@@ -374,7 +374,7 @@ Walked at planning time (2026-04-17).
 
 ## Task 8: Dogfood — add orchestrator invocation example (parallel slot β)
 
-**Review status:** *(set during execution — artificial task for parallel-dispatch demo)*
+**Review status:** IMPLEMENTED
 
 **Files affected:** `skills/agent-orchestration/references/worktree-harness-fallback.md`
 
@@ -386,5 +386,5 @@ Walked at planning time (2026-04-17).
 
 **Worktree:** orchestrator will provision `.worktrees/parallel/feedback-agent-dispatch-fixes/beta` on branch `parallel/feedback-agent-dispatch-fixes/beta`.
 
-- [ ] **Step 1: Append `## Example Orchestrator Invocation`** to `worktree-harness-fallback.md`. Show a concrete bash snippet: `git worktree add .worktrees/parallel/<branch>/a -b parallel/<branch>/a`, `python3 skills/worktree-data-sync/scripts/sync_worktree_data.py --to ... --mode seed --seed-sync-mode force-symlink`, a placeholder `# dispatch subagent with Worktree: field`, then `git merge --no-ff parallel/<branch>/a` and `git worktree remove`. Keep it under ~20 lines.
-- [ ] **Step 2: Commit** on the dedicated branch. Stage `skills/agent-orchestration/references/worktree-harness-fallback.md`, `PLAN.md` (this task block only), `RESULTS.md` (new Task 8 section only). Do not touch Task 7's files.
+- [x] **Step 1: Append `## Example Orchestrator Invocation`** to `worktree-harness-fallback.md`. Show a concrete bash snippet: `git worktree add .worktrees/parallel/<branch>/a -b parallel/<branch>/a`, `python3 skills/worktree-data-sync/scripts/sync_worktree_data.py --to ... --mode seed --seed-sync-mode force-symlink`, a placeholder `# dispatch subagent with Worktree: field`, then `git merge --no-ff parallel/<branch>/a` and `git worktree remove`. Keep it under ~20 lines.
+- [x] **Step 2: Commit** on the dedicated branch. Stage `skills/agent-orchestration/references/worktree-harness-fallback.md`, `PLAN.md` (this task block only), `RESULTS.md` (new Task 8 section only). Do not touch Task 7's files.

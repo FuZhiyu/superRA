@@ -107,3 +107,10 @@ Dispatched `code-quality-reviewer` against `889f53c^..HEAD`. Verdict: **REVISE**
 5. `1f69f28` merge-guard: parallel/* exemption
 6. `42ecc7b` workflows: redirect worktree lifecycle refs
 7. (this commit) verification + review-driven revisions + RELEASE-NOTES entry
+
+## Task 8: Dogfood — add orchestrator invocation example (parallel slot β)
+
+**Status:** Implemented
+
+### Key changes
+- **New `## Example Orchestrator Invocation` section** appended to `skills/agent-orchestration/references/worktree-harness-fallback.md` — shows a complete 25-line bash sequence for a single parallel slot: worktree creation, data seeding via force-symlink, placeholder for subagent dispatch, merge, and cleanup. Covers the full orchestrator-side lifecycle from the fallback reference perspective.

@@ -61,3 +61,40 @@ Global-location worktrees (e.g., `~/.config/superpowers/worktrees/<project>/`) n
 - **Branch deletion lag.** `git branch -D <branch>` only after the branch has been merged into its intended target, or the orchestrator has explicitly decided to discard. A parallel-slot branch that hasn't been harvested yet must not be deleted.
 - **Detached HEAD on add.** If `<base-ref>` is a SHA rather than a branch name and `-b` is omitted, the worktree lands in detached HEAD. Always pass `-b <new-branch>`.
 - **Cloud-synced directories.** If the repo is inside a cloud-synced folder (Dropbox, iCloud), worktrees in sibling directories can conflict across machines. Prefer global-location worktrees for cloud-synced projects.
+
+## Example Orchestrator Invocation
+
+This example shows the complete lifecycle for a single parallel slot: create a dedicated worktree, seed shared data, dispatch a subagent, merge the result, and clean up.
+
+```bash
+#!/bin/bash
+set -e
+
+ANALYSIS_BRANCH="feedback/agent-dispatch-fixes"
+SLOT_SLUG="beta"
+PARALLEL_BRANCH="parallel/${ANALYSIS_BRANCH}/${SLOT_SLUG}"
+WORKTREE_PATH=".worktrees/parallel/${ANALYSIS_BRANCH}/${SLOT_SLUG}"
+
+# 1. Create worktree
+git worktree add "${WORKTREE_PATH}" -b "${PARALLEL_BRANCH}" "${ANALYSIS_BRANCH}"
+
+# 2. Seed non-git data (symlink mode for shared read-only inputs)
+python3 skills/worktree-data-sync/scripts/sync_worktree_data.py \
+  --to "${WORKTREE_PATH}" \
+  --mode seed \
+  --seed-sync-mode force-symlink
+
+# 3. Dispatch subagent with Worktree field set to absolute path
+# (placeholder: dispatch orchestrator sends this worktree path to implementer)
+
+# 4. Merge result (run from main worktree after subagent completes)
+cd "$(git rev-parse --show-toplevel)"
+git merge --no-ff "${PARALLEL_BRANCH}"
+
+# 5. Clean up
+git worktree remove "${WORKTREE_PATH}"
+git branch -D "${PARALLEL_BRANCH}"
+```
+
+For harness-provided worktree tools, use them in place of the raw-git commands above: `EnterWorktree` to enter the path in Step 2, `ExitWorktree` for cleanup.
+
