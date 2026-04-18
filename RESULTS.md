@@ -14,10 +14,10 @@
 
 ### Key changes
 - **New:** `skills/agent-orchestration/references/worktree-harness-fallback.md` — ~60 lines covering harness-tool preference, raw-git create/enter/remove, placement priority, and four gotchas.
-- **Updated:** `skills/agent-orchestration/SKILL.md` — added §Concurrent Writers Require Worktree Isolation (seven subsections: ownership split, branch naming, plain-merge rationale, worktree lifecycle pointer, data seeding, dispatch, no-PLAN.md-bookkeeping rule). Extended §Dispatch Templates: new optional `Worktree:` field on the implementer template + required canned steering sentence when the field is present.
+- **Updated:** `skills/agent-orchestration/SKILL.md` — added §Concurrent Writers Require Worktree Isolation (two subsections after the `78183d6` simplify pass: §Ownership split and §Worktree lifecycle). Extended §Dispatch Templates: new optional `Worktree:` field on the implementer template + required canned steering sentence when the field is present.
 
 ### Section anchor verification
-`grep -n "^## \|^### "` on `agent-orchestration/SKILL.md` confirms the new section sits between §Workload Balancing (line 16) and §Dispatch Templates (line 164). All cross-references in the new content target existing anchors (§Dispatch Templates, `handoff-doc` §Living Plan, `hooks/merge-guard`, `semantic-merge/SKILL.md`, `worktree-data-sync` §Seed).
+`grep -n "^## \|^### "` on `agent-orchestration/SKILL.md` confirms the new section sits between §Workload Balancing (line 16) and §Dispatch Templates (line 100). All cross-references in the new content target existing anchors (§Dispatch Templates, `handoff-doc` §Living Plan, `hooks/merge-guard`, `semantic-merge/SKILL.md`, `worktree-data-sync` §`--mode seed`).
 
 ### Notes
 - The canned steering sentence for `Worktree:` is codified as **required**, not additive — the single exception to the existing "additive-only" `Additionally:` rule. Justification in-place: the agent's spawn cwd defaults would otherwise cause silent wrong-copy edits.
