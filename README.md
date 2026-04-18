@@ -1,6 +1,6 @@
 # superRA
 
-superRA turns AI coding agents into disciplined Research Assistants. Built as a fork of [Superpowers](https://github.com/obra/superpowers), it ships a complete PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow that enforces reviewer sign-off at every step, keeps `PLAN.md` / `RESULTS.md` as the session-to-session source of truth, runs autonomously between legitimate stop points, and merges via intent-based semantic-merge rather than bare `git merge`. Today's flagship domain is economic data analysis; the architecture is built to extend to theory, literature review, simulation, and writing.
+superRA turns AI coding agents into disciplined Research Assistants. Built as a fork of [Superpowers](https://github.com/obra/superpowers), it ships a complete **iterative** PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow that enforces reviewer sign-off at every step, keeps `PLAN.md` / `RESULTS.md` as the session-to-session source of truth, runs autonomously between legitimate stop points, and merges via intent-based semantic-merge rather than bare `git merge`. Research is rarely linear — new tasks surface mid-execution, PR reviewers request adjacent analyses, methodology pivots land post-integration — so the phases form a cycle. Today's flagship domain is economic data analysis; the architecture is built to extend to theory, literature review, simulation, and writing.
 
 ## Why superRA?
 
@@ -17,7 +17,7 @@ In the **data-analysis vertical** (today's flagship), these principles are backe
 
 ## How It Works
 
-When your agent receives a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase.
+When your agent receives a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases also **cycle**: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope addition after merge all route back through `planning-workflow §Changing Plans`, which rolls back the affected milestones, walks the DAG to clear downstream per-task statuses, and resumes at the right re-entry point.
 
 ```
 PLAN            planning-workflow (domain vertical setup → scope check → task decomposition)
@@ -40,7 +40,7 @@ INTEGRATE       integration-workflow → merge-workflow (uses semantic-merge)
                 Refactor for codebase. Integration review. Mature RESULTS.md. Merge or PR.
 ```
 
-Each task produces an atomic commit. If the session dies at any point, the next session reads `PLAN.md` + `RESULTS.md` + git state and picks up exactly where the last one stopped.
+Each task produces an atomic commit. If the session dies at any point, the next session reads `PLAN.md` + `RESULTS.md` + git state and picks up exactly where the last one stopped — including mid-cycle re-entry after a scope change, because the unchecked `## Workflow Status` boxes and per-task `**Review status:**` / `**Integration status:**` fields encode exactly how far the last §Changing Plans pass rolled state back.
 
 ## Workflow Map
 
@@ -146,7 +146,7 @@ superRA's skills split into four categories. The directory layout stays flat (on
 | **execution-workflow** | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE) with orchestrator-discipline filter, pipeline + reproducibility verification, 4-option completion menu. |
 | **integration-workflow** | INTEGRATE (pre-merge) | Drift-test creation, refactor-review loop, doc finalization (mature RESULTS.md into permanent form, audit project-level CLAUDE.md / AGENTS.md / README.md). |
 | **merge-workflow** | INTEGRATE (merge) | Update analysis branch via semantic-merge, post-merge verification (drift tests + fresh integration review), local merge or PR push, worktree cleanup. |
-| **agent-orchestration** | cross-cutting | Multi-agent dispatch patterns: parallel subagents for independent tasks, Agent Teams for iterative workflows. |
+| **agent-orchestration** | cross-cutting | Multi-agent dispatch patterns: workload balancing across tiers, parallel subagents for independent tasks, reviewer-feedback adjudication. |
 
 ### Domain — Data Analysis
 
@@ -170,8 +170,7 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 | Skill | What It Does |
 |-------|-------------|
-| **using-superRA** | Master skill every agent reads. Carries the distilled universal principles, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the seven-row Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Preloaded on `superRA:implementer` / `superRA:reviewer` agent frontmatter; injected at session start for the main agent. Main-agent-only cross-session detection lives in `references/session-bootstrap.md`. |
-| **writing-skills** | Create or modify skills using test-driven methodology. |
+| **using-superRA** | Master skill every agent reads. Carries the distilled universal principles, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the seven-row Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Preloaded on `superRA:implementer` / `superRA:reviewer` agent frontmatter; injected at session start for the main agent. Main-agent-only cross-session detection and autonomy contract live in `references/main-agent.md`. |
 
 ## Agents
 
@@ -200,7 +199,7 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
-| **session-start** | Session start, `/clear`, `/compact` | Inject using-superRA skill, check for Agent Teams availability |
+| **session-start** | Session start, `/clear`, `/compact` | Inject using-superRA skill |
 | **merge-guard** | Before any `git merge/rebase/cherry-pick` | Remind to use semantic-merge skill |
 | **ask-user-question-logger** | After `AskUserQuestion` | Remind to log the decision in PLAN.md before acting |
 | **exit-plan-mode** | After `ExitPlanMode` | Remind to materialize plan into PLAN.md + RESULTS.md before implementing |
