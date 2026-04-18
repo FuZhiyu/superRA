@@ -28,6 +28,15 @@ if echo "$command" | grep -qE 'git (merge|rebase|cherry-pick) --(abort|continue|
   exit 0
 fi
 
+# Exempt orchestrator-managed parallel-task merges.
+# Branch-name convention from superRA:agent-orchestration §Concurrent
+# Writers Require Worktree Isolation — parallel/<branch>/<slug> branches
+# are disjoint by construction and merge with plain git merge.
+if echo "$command" | grep -qE 'git (merge|rebase|cherry-pick)(\s+--?\S+)*\s+parallel/'; then
+  printf '{}\n'
+  exit 0
+fi
+
 # Detect actual merge/rebase/cherry-pick commands
 if echo "$command" | grep -qE '(^|\s)git (merge|rebase|cherry-pick)(\s|$)'; then
   context="<IMPORTANT>STOP. You are about to run a bare git merge/rebase/cherry-pick. In a research project, you MUST invoke superRA:semantic-merge first to classify conflicts by research impact and protect analysis results. Do not proceed with a mechanical merge.</IMPORTANT>"
