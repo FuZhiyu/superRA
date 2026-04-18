@@ -13,7 +13,7 @@ Assumes execution-workflow has already verified reproducibility and the user has
 
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
-**Autonomy:** this workflow has exactly four legitimate stop points — drift-test candidate confirmation (Stage 1 Step 2), meaningful drift escalation after refactoring (Stage 2 / "Handling Drift Test Failures"), Stage 2 RESULTS.md relocation target if project guidance does not specify one (Step 3 sub-part A), and PLAN.md disposition (Step 3 sub-part C). Between those, run on your own power: do not check in after each stage, do not ask "ready to move to the next step?", do not re-confirm a reviewer's APPROVE. See `superRA:using-superRA` §Universal Principles (principle #4) + `references/main-agent-autonomy.md` for the full autonomy rule, and `superRA:handoff-doc` §User Decisions Log for how the answer at each stop point must be recorded in PLAN.md before the workflow acts on it.
+**Autonomy:** this workflow has exactly four legitimate stop points — drift-test candidate confirmation (Stage 1 Step 2), meaningful drift escalation after refactoring (Stage 2 / "Handling Drift Test Failures"), Stage 2 RESULTS.md relocation target if project guidance does not specify one (Step 3 sub-part A), and PLAN.md disposition (Step 3 sub-part C). Between those, run on your own power: do not check in after each stage, do not ask "ready to move to the next step?", do not re-confirm a reviewer's APPROVE. See `superRA:using-superRA` §Universal Principles (principle #4) + `references/main-agent.md` for the full autonomy rule, and `superRA:handoff-doc` §User Decisions Log for how the answer at each stop point must be recorded in PLAN.md before the workflow acts on it.
 
 ## The Process
 
@@ -67,6 +67,8 @@ Drift tests guard key results from unintended changes during refactoring or futu
    ```
    Log per `handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching the test-creator.
 
+**Always run the full drift-test suite on every integration pass, regardless of re-entry scope.** Author new drift tests only for tasks with `**Integration status:**` ≠ APPROVED plus any orchestrator-declared related tasks per `handoff-doc §Scope Changes and Re-entry`. Running a subset of the suite because "only these tasks changed" is a banned shortcut — authoring is scoped, running is not.
+
 3. **Dispatch test-creator:**
    ```
    Agent(subagent_type: "superRA:implementer"):
@@ -101,7 +103,7 @@ Drift tests guard key results from unintended changes during refactoring or futu
    git commit -m "add drift tests for key analysis results"
    ```
 
-8. **Flip the milestone.** Check the `Drift tests created` box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md) and commit the doc edit before moving to Stage 2.
+8. **Flip the milestone.** Check the `Drift tests created` box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md) only once all tasks have `**Integration status:** APPROVED` (drift-test coverage is one of the three integration gates) and commit the doc edit before moving to Stage 2.
 
 ## Stage 2: Integration Review → Refactor Loop
 
@@ -131,7 +133,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
 
 3. **If APPROVE:** No refactoring needed. Proceed to final commit.
 
-4. **If REVISE:** Adjudicate the reviewer's feedback per the orchestrator discipline above. For accepted issues, refactor:
+4. **If REVISE:** Adjudicate the reviewer's feedback per the orchestrator discipline above. For accepted issues, refactor. Refactorer scope = tasks with `**Integration status:**` ≠ APPROVED plus any orchestrator-declared related tasks per `handoff-doc §Scope Changes and Re-entry`.
 
    a. **Dispatch refactorer:**
       ```
@@ -168,7 +170,7 @@ The integration reviewer is the gatekeeper. Review first to identify what needs 
    git commit -m "address integration review feedback"
    ```
 
-6. **Flip the milestone.** Check the `Refactored` box in `PLAN.md` §Workflow Status and commit the doc edit. If a later round of refactoring is triggered (post-merge integration review in `merge-workflow`, or a researcher-initiated scope change that touches refactored code), uncheck the box until the next integration-reviewer APPROVE — the box reflects current state, not historical state.
+6. **Flip the milestone.** Check the `Refactored` box in `PLAN.md` §Workflow Status and commit the doc edit once all tasks have `**Integration status:** APPROVED` (the box is a rollup over per-task Integration-status fields). If a later round of refactoring is triggered (post-merge integration review in `merge-workflow`, or a researcher-initiated scope change that touches refactored code), uncheck the box until the next integration-reviewer APPROVE — the box reflects current state, not historical state.
 
 ## Step 3: Documentation Finalization
 
@@ -214,7 +216,7 @@ Agent(subagent_type: "superRA:implementer"):
     prior-round doc-reviewer feedback on a re-dispatch>.
 ```
 
-The doc-writer is the only subagent in this step. It loads `superRA:report-in-markdown` full mode (SKILL.md + all three references) and performs sub-part A before returning control.
+The doc-writer is the only subagent in this step. It loads `superRA:report-in-markdown` full mode (SKILL.md + all three references) and performs sub-part A before returning control. **The doc-writer always re-runs the whole matured doc on every integration pass** — even on re-entry where only some tasks changed. The doc-reviewer reviews the diff from the last APPROVED state plus any section a newly-reworked task touches.
 
 #### Sub-part A: Mature RESULTS.md in place — four ordered commits
 
@@ -249,12 +251,12 @@ Agent(subagent_type: "superRA:reviewer"):
 
 The reviewer loads `superRA:report-in-markdown` SKILL.md + `final-form.md` (and only those — per the skill's load-map for the doc-reviewer role). Scope:
 
-1. **Matured RESULTS.md** — run the fact-check checklist line by line (`final-form.md`). Every cited number must match its source. Prohibited language, unsupported claims, and disallowed sections block APPROVED.
+1. **Matured RESULTS.md** — on a first integration pass, run the fact-check checklist line by line (`final-form.md`). On re-entry, focus the review on the diff from the last APPROVED state plus any section a newly-reworked task touches; re-verify fact-check items only where the underlying analysis changed. Every cited number must match its source. Prohibited language, unsupported claims, and disallowed sections block APPROVED.
 2. **Cross-consistency** — matured `RESULTS.md` and any `README.md` / `CLAUDE.md` that mentions the analysis do not contradict each other (figures of merit, method names, sample sizes). Stale project-doc claims against the diff are Stage 2's responsibility (`codebase-integration.md` §Project Doc Audit) and should already be resolved by the time Step 3 runs.
 
 If REVISE: adjudicate per the orchestrator discipline above. For accepted issues, re-dispatch the doc-writer with specific feedback (file:line, what to fix). Re-dispatch the doc-reviewer. Iterate until APPROVE.
 
-**On doc-reviewer APPROVE:** check the `Docs finalized` box in `PLAN.md` §Workflow Status and commit the doc edit before moving to Sub-part C. The box flips here, not after disposition, because by Sub-part C `PLAN.md` may be moved or removed depending on the researcher's choice — the milestone belongs to the doc-finalization gate, not the disposition.
+**On doc-reviewer APPROVE:** check the `Docs finalized` box in `PLAN.md` §Workflow Status (the box is a rollup — it flips when all tasks have `**Integration status:** APPROVED` and the doc-reviewer has approved the whole doc) and commit the doc edit before moving to Sub-part C. The box flips here, not after disposition, because by Sub-part C `PLAN.md` may be moved or removed depending on the researcher's choice — the milestone belongs to the doc-finalization gate, not the disposition.
 
 ### Sub-part C: Dispose of PLAN.md (orchestrator, after APPROVE)
 
