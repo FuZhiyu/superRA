@@ -1,6 +1,6 @@
 ---
 name: using-superRA
-description: Master skill every agent reads. Carries the universal workflow principles, the skill inventory, the composable-design map, the Skill-Load Manifest (required skills + stage-scoped references per Stage), Execution Modes (subagent dispatch vs direct), skill-invocation rules, and instruction priority. Main agents additionally load `references/main-agent.md` at session start for cross-session detection, autonomy contract, and handoff-doc default load; subagents inherit task context from their dispatch and skip this reference.
+description: Master skill every agent reads. Carries the universal workflow principles, code-change defaults, the skill inventory, the composable-design map, the Skill-Load Manifest (required skills + stage-scoped references per Stage), Execution Modes (subagent dispatch vs direct), skill-invocation rules, and instruction priority. Main agents additionally load `references/main-agent.md` at session start for cross-session detection, autonomy contract, and handoff-doc default load; subagents inherit task context from their dispatch and skip this reference.
 ---
 
 This is the one skill every superRA agent reads — main agents at session start, dispatched subagents at dispatch time. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
@@ -17,6 +17,15 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
 
+## Code-Change Defaults
+
+These defaults apply whenever you write, review, or refactor code. They govern micro-level execution and do not replace the workflow rules above.
+
+1. **Surface assumptions and ambiguity early.** Do not silently choose between materially different interpretations. State the assumption you are making, name meaningful tradeoffs, and point out a simpler path when one exists. Ask only when the ambiguity changes correctness, scope, or a decision that belongs to the researcher.
+
+2. **Prefer the minimum code that solves the task.** No speculative features, abstractions, configurability, or defensive branches that were not requested. If a straightforward implementation works, use it.
+
+3. **Keep edits surgical.** Touch only what the task requires. Match the surrounding style. Do not refactor adjacent code, comments, or formatting unless the task requires it. Remove imports, variables, and helper code only when your own change made them unused; mention unrelated dead code instead of deleting it.
 
 ## Shared-Repo Commit Discipline
 
@@ -27,8 +36,8 @@ Other agents' uncommitted edits may land in your `git status` output. **Only com
 Before staging:
 
 1. Run `git status` and list every modified/new file. For each, decide: did I touch this file (directly via Write/Edit) in this turn?
-2. If yes → stage it by exact path: `git add path/to/file`.
-3. If no → leave it untouched. Do NOT `git add -A`, `git add .`, or `git add -u`. Those stage other agents' in-flight work and produce cross-agent commit contamination that is hard to unwind.
+2. If yes -> stage it by exact path: `git add path/to/file`.
+3. If no -> leave it untouched. Do NOT `git add -A`, `git add .`, or `git add -u`. Those stage other agents' in-flight work and produce cross-agent commit contamination that is hard to unwind.
 4. Before `git commit`, run `git diff --cached` and confirm only your edits are staged. If you see unexpected content, unstage it with `git restore --staged path/to/file`.
 
 If you see unfamiliar uncommitted changes and cannot tell whether they are another agent's in-flight work or stale local state, stop and ask (the orchestrator if you are a subagent; the user if you are the main agent) — do not unilaterally discard or commit them.
