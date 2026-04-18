@@ -97,8 +97,8 @@ Main agents now load `superRA:handoff-doc` by default at session start. This mak
 - `grep -rn "Scope Changes and Re-entry" skills/` → 0 hits. The rename consolidated under `planning-workflow §Changing Plans` is complete.
 - `grep -rn "Changing Plans" skills/` → the new `planning-workflow` section plus retargeted pointers from `execution-workflow`, `integration-workflow`, `plan-anatomy.md`, `main-agent.md`, `using-superRA/SKILL.md`, and `handoff-doc/SKILL.md`.
 - `grep -rn "session-bootstrap.md\|main-agent-autonomy.md" skills/` → 0 hits. The two deleted files have no lingering references.
-- `ls skills/using-superRA/references/` → `main-agent.md` only.
-- `execution-workflow` Step 1 sub-step 2a is three sentences that cleanly name both triggers.
+- `ls skills/using-superRA/references/` shows `main-agent.md` alongside the three pre-existing harness tool references (`codex-tools.md`, `copilot-tools.md`, `gemini-tools.md`); the two deleted files are gone.
+- `execution-workflow` Step 1 sub-step 2a is two sentences that cleanly name both triggers.
 - [`tests/structural-invariants.sh`](../../tests/structural-invariants.sh) passes (0 FAIL) against the post-re-entry tree.
 - Behavior-based self-test: the `PLAN.md` on this branch is itself the first end-to-end use of the new mechanism. `## Workflow Status` is a rollup over per-task fields; the 2026-04-17 re-entry unchecked `Execution complete`, `Refactored`, `Docs finalized` and declared which tasks to re-work; the 2026-04-18 re-entry added the iterative-framing additions as an inline extension. The mechanism is self-applicable.
 
