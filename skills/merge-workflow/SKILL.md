@@ -1,6 +1,6 @@
 ---
 name: merge-workflow
-description: Use after `integration-workflow` has produced a merge-ready branch (drift tests committed, refactor approved, all docs finalized via the doc-writer + doc-reviewer pair, PLAN.md disposed) and you need to update the analysis branch with main, verify results survived the update, and land the work via local merge or PR; when an analysis branch is behind main and about to be finished; when you need a post-merge safety check (drift tests + integration review against the merged state); when cleaning up a worktree after merge completion. Triggers include "merge this back", "open the PR", "sync with main and merge", "finish this analysis", or the transition from `integration-workflow` completing successfully. Sits at the INTEGRATE phase, step 2 of 2 — the final phase of the superRA workflow.
+description: Use after integration-workflow when a branch is ready to sync with main, survive a post-merge verification pass, and land via local merge or PR.
 ---
 
 # Merge Workflow

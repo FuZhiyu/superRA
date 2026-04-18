@@ -30,6 +30,12 @@ else
   fail "AGENTS.md must be a symlink to CLAUDE.md"
 fi
 
+if [ "$(readlink AGENT.md 2>/dev/null)" = "CLAUDE.md" ]; then
+  pass "AGENT.md is a symlink to CLAUDE.md"
+else
+  fail "AGENT.md must be a symlink to CLAUDE.md"
+fi
+
 # 2. Every superRA:<name> invocation in the live plugin surface resolves to
 # a real skill directory. Scope: skills/, agents/, hooks/, README.md,
 # CLAUDE.md. Excludes RELEASE-NOTES.md (historical refs to removed skills
@@ -119,6 +125,23 @@ if [ -z "$missing_skills" ]; then
   pass "CATEGORIES.md lists every skill on disk"
 else
   fail "CATEGORIES.md missing: $missing_skills"
+fi
+
+# 6b. Every skill frontmatter parses and descriptions stay concise.
+if ruby -e '
+require "yaml"
+Dir["skills/*/SKILL.md"].sort.each do |f|
+  text = File.read(f)
+  abort("missing frontmatter #{f}") unless text.start_with?("---\n")
+  boundary = text.index("\n---\n", 4) or abort("unterminated frontmatter #{f}")
+  data = YAML.safe_load(text[4...boundary]) or abort("empty frontmatter #{f}")
+  desc = data["description"].to_s
+  abort("description too long #{f}: #{desc.length}") if desc.length > 500
+end
+' >/dev/null 2>&1; then
+  pass "skill frontmatter parses and every description is <=500 chars"
+else
+  fail "skill frontmatter parse or description-length invariant failed"
 fi
 
 # 7. hooks.json and hooks-cursor.json are valid JSON.
@@ -430,6 +453,41 @@ if [ -f skills/using-superRA/references/session-bootstrap.md ]; then
 else
   fail "missing: skills/using-superRA/references/session-bootstrap.md"
 fi
+
+# 21b. Codex plugin/install surfaces exist and point at the canonical skills tree.
+python3 -c "import json; data=json.load(open('.codex-plugin/plugin.json')); assert data['name']=='superra'; assert data['skills']=='./skills/'" 2>/dev/null \
+  && pass ".codex-plugin/plugin.json exists and points at ./skills/" \
+  || fail ".codex-plugin/plugin.json missing or malformed"
+python3 -c "import json; data=json.load(open('.agents/plugins/marketplace.json')); entry=data['plugins'][0]; assert entry['name']=='superra'; assert entry['source']['path']=='./'" 2>/dev/null \
+  && pass ".agents/plugins/marketplace.json exists and points at plugin root" \
+  || fail ".agents/plugins/marketplace.json missing or malformed"
+
+# 21c. Codex repo-local skill exposure mirrors the canonical skills tree.
+codex_links_missing=0
+for skill in $(ls -d skills/*/ 2>/dev/null | sed 's|skills/||;s|/$||'); do
+  link=".agents/skills/$skill"
+  if [ ! -L "$link" ]; then
+    fail "$link must be a symlink to ../../skills/$skill"
+    codex_links_missing=$((codex_links_missing+1))
+    continue
+  fi
+  target=$(readlink "$link")
+  if [ "$target" = "../../skills/$skill" ]; then
+    :
+  else
+    fail "$link points to $target (expected ../../skills/$skill)"
+    codex_links_missing=$((codex_links_missing+1))
+  fi
+done
+[ "$codex_links_missing" -eq 0 ] && pass ".agents/skills exposes every canonical skill via symlink"
+
+# 21d. Generated Codex agents stay in sync with the canonical role specs.
+python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check >/dev/null 2>&1 \
+  && pass "generated project-scoped Codex agents are up to date" \
+  || fail "project-scoped Codex agents drift from agents/*.md"
+python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py >/dev/null 2>&1 \
+  && pass "codex agent sync script tests pass" \
+  || fail "codex agent sync script tests failed"
 
 # 21. Stage tables retired on agent files; frontmatter preload applied;
 # auto-load language retired from live prose (PLAN.md, RELEASE-NOTES.md, and

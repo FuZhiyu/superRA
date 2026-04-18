@@ -1,6 +1,6 @@
 ---
 name: worktree-data-sync
-description: Use when an analysis needs an isolated git worktree — a multi-session analysis spanning days, parallel analyses on different branches, work needing its own data copy or environment setup, a destructive refactor sandbox — OR when syncing non-git data files between existing worktrees (seeding a new worktree, diffing data across worktrees, reconciling changes after parallel work), OR when cleaning up a worktree after a branch ships or is discarded. Triggers include "set up a worktree for this", "isolate this analysis", "I'll run two analyses in parallel", "this will take multiple sessions", "copy data to the new worktree", "seed this worktree from main", "diff the data files between worktrees", "sync my worktree data", "clean up this worktree", or any time you would otherwise hand-roll `git worktree add` / `cp` / `rsync` / `git worktree remove` between two worktrees. Optional for simple single-session analyses — a feature branch without a worktree is sufficient there.
+description: Use when work needs an isolated git worktree, when non-git data must be copied or reconciled between worktrees, or when cleaning up a worktree after a branch ships or is discarded.
 user-invocable: true
 ---
 

@@ -1,67 +1,73 @@
-# Installing Superpowers for Codex
+# Installing superRA for Codex
 
-Enable superpowers skills in Codex via native skill discovery. Just clone and symlink.
+superRA has two Codex install surfaces:
 
-## Prerequisites
+- **Shared skills** via the plugin manifest at `.codex-plugin/plugin.json`
+- **Named custom agents** via `codex-superra-setup`, which installs `superra_implementer` and `superra_reviewer` into either project or global Codex scope
 
-- Git
+For normal use across other repos, install the plugin and then run the setup skill with **global** scope.
 
-## Installation
+## Cross-Repo Setup (Recommended)
 
-1. **Clone the superpowers repository:**
+1. Clone this repo somewhere durable:
    ```bash
-   git clone https://github.com/obra/superpowers.git ~/.codex/superpowers
+   git clone https://github.com/FuZhiyu/econ-superpowers.git ~/.codex/plugins/superra
    ```
-
-2. **Create the skills symlink:**
-   ```bash
-   mkdir -p ~/.agents/skills
-   ln -s ~/.codex/superpowers/skills ~/.agents/skills/superpowers
+2. Add a personal Codex marketplace entry at `~/.agents/plugins/marketplace.json` that points to that clone. Minimal example:
+   ```json
+   {
+     "name": "personal-superra",
+     "interface": {
+       "displayName": "Personal superRA Plugins"
+     },
+     "plugins": [
+       {
+         "name": "superra",
+         "source": {
+           "source": "local",
+           "path": "./.codex/plugins/superra"
+         },
+         "policy": {
+           "installation": "AVAILABLE",
+           "authentication": "ON_INSTALL"
+         },
+         "category": "Productivity"
+       }
+     ]
+   }
    ```
+3. Restart Codex and install the `superra` plugin from that marketplace.
+4. In Codex, run `codex-superra-setup`.
+5. Choose **global** scope so the named agents install into `~/.codex/agents/`.
+6. Restart Codex or start a fresh session if discovery has not refreshed yet.
 
-   **Windows (PowerShell):**
-   ```powershell
-   New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
-   cmd /c mklink /J "$env:USERPROFILE\.agents\skills\superpowers" "$env:USERPROFILE\.codex\superpowers\skills"
-   ```
+## Repo-Local Development Setup
 
-3. **Restart Codex** (quit and relaunch the CLI) to discover the skills.
+When you are developing superRA itself in this repo:
 
-## Migrating from old bootstrap
+- Repo-scoped skill discovery comes from `.agents/skills/`
+- Project-scoped named agents come from `.codex/agents/`
 
-If you installed superpowers before native skill discovery, you need to:
-
-1. **Update the repo:**
-   ```bash
-   cd ~/.codex/superpowers && git pull
-   ```
-
-2. **Create the skills symlink** (step 2 above) — this is the new discovery mechanism.
-
-3. **Remove the old bootstrap block** from `~/.codex/AGENTS.md` — any block referencing `superpowers-codex bootstrap` is no longer needed.
-
-4. **Restart Codex.**
-
-## Verify
+Run:
 
 ```bash
-ls -la ~/.agents/skills/superpowers
+python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project
 ```
 
-You should see a symlink (or junction on Windows) pointing to your superpowers skills directory.
+This refreshes the generated project-scoped agent files from the canonical role definitions in `agents/`.
 
-## Updating
+## Verification
+
+Check for the named agents in the expected scope:
 
 ```bash
-cd ~/.codex/superpowers && git pull
+ls ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.toml
 ```
 
-Skills update instantly through the symlink.
-
-## Uninstalling
+or, for repo-local setup:
 
 ```bash
-rm ~/.agents/skills/superpowers
+ls .codex/agents/superra_implementer.toml .codex/agents/superra_reviewer.toml
 ```
 
-Optionally delete the clone: `rm -rf ~/.codex/superpowers`.
+The plugin provides the skills; the setup step provides the named agents.
