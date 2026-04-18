@@ -118,11 +118,52 @@ Required header fields and task block structure are non-negotiable. The template
 
 **The plan is NOT a static spec.** Work reveals surprises; the plan evolves in place.
 
-Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a step's method adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits per the discipline below; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through `handoff-doc` §Scope Changes and Re-entry, which defines the confirm → log → inline-edit → roll-back-milestones → atomic-commit protocol.
+Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a step's method adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits per the discipline below; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §Changing Plans below, which defines the confirm → log → inline-edit → roll-back-milestones → atomic-commit protocol.
 
 **The editing discipline and the full anatomy templates** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — live in `superRA:handoff-doc`. Load it when authoring `PLAN.md` / `RESULTS.md` from scratch; its `references/plan-anatomy.md` and `references/results-anatomy.md` carry the full templates. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
 **Results document:** Create `RESULTS.md` alongside `PLAN.md`. For the starter scaffold and anatomy, load `superRA:handoff-doc` and read `references/results-anatomy.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
+
+## Changing Plans
+
+This protocol covers two related situations that share the same mechanics: (a) a researcher ping during execution — adding, modifying, removing, or reordering work mid-session — and (b) a scope addition that arrives after integration or merge (a PR-review request, a reviewer-surfaced adjacent feature, a follow-on idea). Both situations modify the same `PLAN.md`, follow the same decision-log pattern, and require the same re-entry into the appropriate workflow stage. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
+
+**Material (require this protocol):**
+
+- Adding, removing, or reordering a task block.
+- Changing a task's objective, script, input, or output.
+- Changing the analysis-level objective, methodology, sample definition, or expected output.
+- Changing data sources or project-wide conventions.
+- Scope additions arriving after integration or merge (post-PR additions, adjacent features surfaced by reviewers, follow-on ideas).
+
+**Not material (handle as inline discovery edits per the Living Plan section above):**
+
+- Rewording a step within an in-flight task to match what the data forced.
+- Adjusting expected results based on early findings.
+- Refining methodology details that the researcher already approved at planning time.
+
+**Protocol:**
+
+1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. This is the same escalation gate as `execution-workflow` Stop-Points class (b).
+2. **Log the decision** per `handoff-doc` §User Decisions Log — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes. The log entry must declare which tasks are affected and which project-level boxes are unchecked.
+3. **Update `PLAN.md` inline:**
+   - **Prefer modifying existing task blocks over appending.** Append a new task block only when the change cannot be expressed as an edit to an existing task's scope.
+   - **New task** → append `### Task N+1: [name]` block with the full anatomy from `handoff-doc/references/plan-anatomy.md`. Renumber later tasks if inserting earlier in the sequence.
+   - **Modified task** → rewrite the affected fields in place. Do not strike through. Do not add "Modified:" annotations.
+   - **Removed task** → delete the block entirely. The Decisions entry preserves the rationale.
+   - **Reordered tasks** → renumber and rewrite. The decision log preserves the original sequence.
+4. **Update `## Workflow Status`** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* boxes are unchecked and *why*. Rules: per-task `**Review status:**` and `**Integration status:**` on fully re-implemented tasks are cleared; untouched tasks retain APPROVED; minor-edited tasks (code unchanged) clear `**Integration status:**` while keeping `**Review status:** APPROVED`. The orchestrator — not the new task's implementer — decides which tasks are "related" and which milestones roll back.
+5. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
+6. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `execution-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Stage 2. On every re-entry, `integration-workflow` runs the **full** drift-test suite regardless of which tasks changed — only *authoring* new drift tests is scoped to the affected tasks. The doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff.
+
+**DAG cascade on re-entry.** When re-entering, the orchestrator walks the transitive downstream closure of each task whose code or outputs will change (from `**Depends on:**` fields). By default, every task in the closure has `**Review status:**` and `**Integration status:**` cleared. Exemption: the orchestrator may leave a downstream task APPROVED by documenting *why* the upstream change does not affect its inputs — one blockquote per exempted task in §Decisions. The drift-test suite runs in full regardless of the closure; closure scopes re-review and integration-review dispatch only. See `handoff-doc/references/plan-anatomy.md` §Field-by-Field for the cascade vocabulary and `handoff-doc` §User Decisions Log for the exemption format.
+
+**Banned shortcuts:**
+
+- Carrying the new task in chat or only in `TodoWrite` without writing it into `PLAN.md` (see `handoff-doc` §PLAN.md Is the Task Tracker — `TodoWrite` is a transient view, not a record).
+- Creating a `PLAN_v2.md` or appending an "Addendum" section. There is one `PLAN.md`.
+- Resuming the in-flight task before reflecting the change in the doc — the change is not real until it is committed.
+- Running a subset of the drift-test suite on re-entry because "only these tasks changed" — authoring is scoped, running is not. Always run the full suite.
 
 ## No Placeholders
 
