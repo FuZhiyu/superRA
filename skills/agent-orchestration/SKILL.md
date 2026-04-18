@@ -84,6 +84,83 @@ mutually-independent tasks is waste.
 
 ---
 
+## Concurrent Writers Require Worktree Isolation
+
+When a parallel dispatch batch contains **≥2 implementers**, each runs in
+its own git worktree. Two implementers sharing a worktree race on
+`PLAN.md` / `RESULTS.md` at the filesystem layer — `Edit` reads, sibling
+`Edit` reads, first writes, second writes, first's edits are silently
+lost. The same hazard applies to any shared output path. Worktree
+isolation is the only safe concurrency model for parallel writes in this
+plugin.
+
+This rule applies to implementers only. Reviewers run post-merge on the
+analysis branch and do not need dedicated worktrees. Read-only research
+subagents in a parallel batch return findings to the orchestrator (which
+does the single write) and do not need worktrees either.
+
+### Ownership split
+
+| Direction | Owner | When | How |
+|---|---|---|---|
+| Seed-in (inputs → worktree) | Orchestrator | Before dispatch | `worktree-data-sync` §Seed with `--seed-sync-mode force-symlink` |
+| Inside worktree (task execution) | Subagent | During dispatch | Normal file I/O on the `parallel/…` branch |
+| Harvest-out (merge back) | Orchestrator | After all siblings return | Plain `git merge --no-ff parallel/<branch>/<slug>` |
+| Cleanup | Orchestrator | After merge | Harness worktree tool or `git worktree remove` + `git branch -D` |
+
+### Branch naming
+
+`parallel/<analysis-branch>/<slug>` where `<slug>` is an orchestrator-chosen
+short identifier (e.g., `a`, `b`, `alpha`, or a bundle name). A single
+implementer may own multiple PLAN.md tasks in one dispatch, so the branch
+is per **parallel slot**, not per task.
+
+### Plain `git merge`, not semantic-merge
+
+Task boundaries are set ex-ante in `PLAN.md` before parallel dispatch, so
+`parallel/…` branches are mechanically disjoint by construction. Merges
+are auto-resolving; if a conflict surfaces, use discretion — trivial
+adjacent edits can be resolved inline, but material or ambiguous
+conflicts indicate the task-boundary contract was violated and should
+escalate to the researcher. The `merge-guard` hook exempts `parallel/*`
+source branches for this reason — see `hooks/merge-guard` and
+`skills/semantic-merge/SKILL.md` for the complementary bypass note.
+
+### Worktree lifecycle
+
+Creation, entry, and removal — prefer harness worktree tools (e.g.,
+`EnterWorktree`, `ExitWorktree`); fall back to raw git per
+`references/worktree-harness-fallback.md`. The fallback reference also
+covers placement conventions (project-level `CLAUDE.md` override →
+existing `.worktrees/` → default `./.worktrees/<branch>`) and gotchas.
+
+### Data seeding
+
+Force-symlink mode is safe here because parallel tasks have disjoint
+write paths by construction — symlinks point at the source worktree's
+data and no task mutates shared inputs. If a task would mutate seeded
+data, force-symlink is unsafe and either the task boundary needs
+redrawing or `--seed-sync-mode force-cow` must be used instead.
+
+### Dispatch
+
+Implementers in a parallel batch receive a `Worktree:` field and a
+required canned steering sentence (see §Dispatch Templates below). The
+steering is not optional — it carries context the agent cannot derive
+from PLAN.md alone, because the agent's spawn cwd would otherwise
+default to the main worktree and silently edit the wrong copy of
+`PLAN.md`.
+
+### Not persisted in PLAN.md
+
+Branch names, HEAD SHAs, and worktree paths are transient orchestration
+state. Git (`git worktree list`, `git branch`) is the source of truth.
+`PLAN.md` records the committed state of tasks, not in-flight dispatch
+bookkeeping. See `handoff-doc` §Living Plan — the doc carries latest
+state only, not working-stage state.
+
+---
+
 ## Dispatch Templates
 
 Every workflow skill that dispatches an `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules.
@@ -97,6 +174,7 @@ Every template opens with the canonical prefix **"Follow the standard stage-rele
 Agent(subagent_type: "superRA:implementer"):
   Stage: <stage-name>
   Task: <task pointer — e.g., "Task N in PLAN.md">
+  Worktree: <absolute path>   # optional — parallel-dispatch only
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
@@ -125,6 +203,25 @@ Agent(subagent_type: "superRA:reviewer"):
 only paraphrases the default protocol, the skill-load manifest, or
 `PLAN.md` content, delete it — re-statement of content the agent will
 read itself is noise that clutters the dispatch without adding signal.
+
+**`Worktree:` field (implementer-only, parallel-dispatch only).** Present
+only when the orchestrator has provisioned a dedicated worktree for this
+parallel slot (see §Concurrent Writers Require Worktree Isolation).
+Value is the absolute path to that worktree. When `Worktree:` is
+present, the dispatch **must** include this canned steering sentence in
+the `Additionally:` tail — it is required context the agent cannot
+derive from `PLAN.md` alone, because the agent's spawn cwd would
+otherwise default to the main worktree and silently edit the wrong copy
+of `PLAN.md`:
+
+> *Work inside the worktree at `<path>` for the entirety of this task.
+> Enter it using the harness-provided worktree tool if available (e.g.,
+> `EnterWorktree`); otherwise `cd` to that path and verify with `git
+> rev-parse --show-toplevel`. Do not edit files outside this worktree.
+> Do not merge or push — the orchestrator owns merge-back.*
+
+This is the one case where the `Additionally:` tail carries required,
+non-additive content. Everywhere else, additive-only applies.
 
 The agent reads `PLAN.md`, Data Inventory, Conventions, and prior results from `RESULTS.md` directly — the dispatch does not re-state them. If a non-default skill load, an extra domain reference, or an override of the standard handoff is required for this particular call, add `Skills:` and `References:` lines between the required fields and the prefix line.
 
