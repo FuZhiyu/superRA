@@ -55,12 +55,13 @@ git check-ignore -q .worktrees 2>/dev/null || echo "NOT IGNORED — add to .giti
 
 Global-location worktrees (e.g., `~/.config/superpowers/worktrees/<project>/`) need no gitignore entry — they live outside the project.
 
+**Cloud-synced repos** (Dropbox, iCloud): prefer global-location worktrees — sibling-directory worktrees can conflict across machines.
+
 ## Gotchas
 
 - **Clean state before remove.** Always `git status` inside the worktree before removing. An unclean state means uncommitted work is about to be discarded.
 - **Branch deletion lag.** `git branch -D <branch>` only after the branch has been merged into its intended target, or the orchestrator has explicitly decided to discard. A parallel-slot branch that hasn't been harvested yet must not be deleted.
 - **Detached HEAD on add.** If `<base-ref>` is a SHA rather than a branch name and `-b` is omitted, the worktree lands in detached HEAD. Always pass `-b <new-branch>`.
-- **Cloud-synced directories.** If the repo is inside a cloud-synced folder (Dropbox, iCloud), worktrees in sibling directories can conflict across machines. Prefer global-location worktrees for cloud-synced projects.
 
 ## Example Orchestrator Invocation
 
