@@ -557,3 +557,61 @@ class TestSafeJoinUnder:
 
         result = sync_worktree_data._safe_join_under(base, Path("src/main.py"))
         assert result == Path(base / "src" / "main.py").absolute()
+
+
+class TestNestedWorktreeSelfReference:
+    """Guard against self-referential links when --to is nested under a
+    gitignored folder of --from (e.g., /repo/.worktrees/foo seeded from /repo)."""
+
+    @pytest.fixture
+    def repo_with_nested_worktree(self, tmp_path):
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "t"], cwd=repo, check=True, capture_output=True)
+
+        (repo / "README.md").write_text("# Test\n", encoding="utf-8")
+        (repo / ".gitignore").write_text(".worktrees/\noutput/\n", encoding="utf-8")
+        subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+
+        (repo / "output").mkdir()
+        (repo / "output" / "result.csv").write_text("a,b\n", encoding="utf-8")
+
+        (repo / ".worktrees").mkdir()
+        child = repo / ".worktrees" / "foo"
+        subprocess.run(
+            ["git", "worktree", "add", str(child), "-b", "foo"],
+            cwd=repo, check=True, capture_output=True,
+        )
+
+        return {"main": repo, "child": child}
+
+    def test_nested_worktree_excluded_from_managed_entries(self, repo_with_nested_worktree):
+        main = repo_with_nested_worktree["main"]
+        child = repo_with_nested_worktree["child"]
+
+        entries = worktree_data_discovery.discover_managed_entries(main, dest_worktree=child)
+        paths = {e["path"] for e in entries}
+
+        assert ".worktrees" not in paths
+        assert "output" in paths
+
+    def test_nested_worktree_seed_does_not_self_reference(self, repo_with_nested_worktree):
+        main = repo_with_nested_worktree["main"]
+        child = repo_with_nested_worktree["child"]
+
+        entries = worktree_data_discovery.discover_managed_entries(main, dest_worktree=child)
+        sync_worktree_data.run_seed(entries, child, verbose=False)
+
+        assert not (child / ".worktrees").exists()
+        assert (child / "output" / "result.csv").exists()
+
+    def test_no_dest_preserves_legacy_behavior(self, repo_with_nested_worktree):
+        main = repo_with_nested_worktree["main"]
+
+        entries = worktree_data_discovery.discover_managed_entries(main)
+        paths = {e["path"] for e in entries}
+
+        assert ".worktrees" in paths
