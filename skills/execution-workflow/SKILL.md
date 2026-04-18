@@ -107,7 +107,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
    - Are data sources / inputs available and accessible?
    - Are the steps in the right order?
    - Is the pipeline file included (for multi-script analyses)?
-   - Does any step conflict with a project convention you found in step 3?
+   - Does any step conflict with a project convention you found in step 4?
 6. Review RESULTS.md for context on any completed steps (if resuming).
 7. If concerns: raise them with your human partner before starting.
 8. If no concerns: mirror the pending task steps into `TodoWrite` as a transient session view (see `handoff-doc §PLAN.md Is the Task Tracker` — `PLAN.md` remains the source of truth; `TodoWrite` is a derived view) and proceed.
