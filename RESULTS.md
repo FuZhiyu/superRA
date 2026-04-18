@@ -51,9 +51,10 @@
 ### Key Findings
 
 - Integration-workflow started on 2026-04-17 after the execution-stage review approved the implementation work.
-- The first integration stop point is still open: the branch needs user-confirmed drift-test coverage for the Codex support surface before Stage 1 can proceed.
+- The first integration stop point is resolved: the branch will be protected by a new Claude/Codex compatibility check script rather than by Codex-only assertions.
 
 ### Notes
 
-- This integration pass is repo-level rather than empirical-analysis-level, so the likely drift guards are structural/plugin invariants rather than numerical output tests.
+- This integration pass is repo-level rather than empirical-analysis-level, so the drift guards are structural/plugin invariants rather than numerical output tests.
+- The selected Stage 1 guard is a new top-level compatibility script that will run the shared structural invariants plus the Claude- and Codex-specific manifest / agent-sync checks.
 - No integration reviewer verdict has been recorded yet.

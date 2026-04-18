@@ -70,6 +70,10 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 > **Question asked:** After the implementation review, should this branch move into pre-merge integration?
 > **Rationale (if given):** "integration workflow then"
 
+> **User decision (2026-04-17):** Protect this branch with a new Claude/Codex compatibility check script, not only the Codex-specific structural assertions.
+> **Question asked:** Which drift guards should protect the Codex compatibility work during integration?
+> **Rationale (if given):** "we need to create a compatibility check script to make sure the changes are compatible to both codex and claude code"
+
 ### Task 1: Codex Plugin and Named-Agent Surfaces
 **Review status:** APPROVED
 
@@ -106,6 +110,6 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 
 **Output:** Confirmed drift-test coverage for the Codex support surface, any codebase-fit or doc-audit fixes required for integration, finalized Stage 2 handoff docs, and a clean handoff to `merge-workflow`
 
-- [ ] **Step 1: Confirm drift-test coverage.** Propose the key repo-level invariants that should be protected for this Codex support work, get user confirmation, and record that decision before any integration edits.
+- [x] **Step 1: Confirm drift-test coverage.** User chose a new top-level compatibility check as the Stage 1 guard: add a Claude/Codex compatibility script that validates both harness surfaces, then keep `tests/structural-invariants.sh`, `skills/codex-superra-setup/scripts/test_sync_codex_agents.py`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` as the concrete checks it runs.
 - [ ] **Step 2: Run the integration review / fix loop.** Review the committed Codex compatibility surface for codebase fit and project-doc consistency, make any required fixes, and rerun the selected drift guards after each accepted change.
 - [ ] **Step 3: Finalize handoff for merge.** Mature the integration record in `RESULTS.md`, decide `PLAN.md` disposition, and hand off a clean branch to `merge-workflow`.
