@@ -110,7 +110,7 @@ Dispatched `code-quality-reviewer` against `889f53c^..HEAD`. Verdict: **REVISE**
 
 ## Task 7: Dogfood — merge-guard test vectors documented
 
-**Status:** Implemented
+**Status:** Implemented (parallel slot α, merged `4224ac3`)
 
 ### Key changes
 - **New:** `hooks/merge-guard` gains a comment block immediately after the header, documenting the four synthetic test inputs (two exempt cases with parallel/* branches, one semantic-merge reminder case, one skip case) and their expected outputs.
@@ -121,3 +121,18 @@ Added shell comments enumerating the four regression cases from Task 4:
 - `git merge --no-ff parallel/feat/b` → emit `{}`
 - `git merge main` → emit STOP reminder
 - `git merge --abort` → emit `{}`
+
+## Task 8: Dogfood — orchestrator invocation example added
+
+**Status:** Implemented (parallel slot β)
+
+### Key changes
+- **New `## Example Orchestrator Invocation` section** appended to `skills/agent-orchestration/references/worktree-harness-fallback.md` — shows a complete ~25-line bash sequence for a single parallel slot: worktree creation, data seeding via force-symlink, placeholder for subagent dispatch, merge, and cleanup. Covers the full orchestrator-side lifecycle from the fallback reference perspective.
+
+## Dogfood findings (Tasks 7–8)
+
+Two issues surfaced from self-hosting the §Concurrent Writers protocol:
+
+1. **Hook regex misfires at harness invocation time.** Direct CLI tests of `hooks/merge-guard` against the exact `git merge --no-ff parallel/feedback/agent-dispatch-fixes/alpha -m "..."` command return `{}` (exempt, as intended). But when Claude Code's Bash tool ran the same command, the PreToolUse hook emitted the STOP reminder instead — fired on both alpha and beta merges. Reminder is advisory-only so the merges proceeded, but the exemption is not load-bearing in practice. Root cause likely a JSON-escaping / command-string difference in how the harness serializes to the hook's stdin. **Follow-up:** harden the hook's input parsing and add an integration test that invokes the hook through a Bash-tool-equivalent JSON wrapper.
+
+2. **Both agents appending to RESULTS.md at EOF caused a real git conflict.** The plan's assumption that "task blocks are line-separated → different hunks = no conflict" held for PLAN.md (different task blocks mid-file, merged cleanly) but broke for RESULTS.md (both agents appended new sections at the end of the file; overlapping line range → conflict). Per §Concurrent Writers' discretion clause, this is a trivial adjacent-edit conflict — resolved inline by concatenating Task 7 then Task 8 sections. **Lesson for the protocol:** the ex-ante task-boundary contract must specify *where* each agent writes in shared files, not just *what* files they touch. For RESULTS.md: either pre-allocate per-task section stubs in the file before dispatch, or route RESULTS.md edits through the orchestrator after agents return.
