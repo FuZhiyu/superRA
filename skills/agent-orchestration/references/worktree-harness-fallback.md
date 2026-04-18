@@ -64,37 +64,15 @@ Global-location worktrees (e.g., `~/.config/superpowers/worktrees/<project>/`) n
 
 ## Example Orchestrator Invocation
 
-This example shows the complete lifecycle for a single parallel slot: create a dedicated worktree, seed shared data, dispatch a subagent, merge the result, and clean up.
+One parallel slot's full lifecycle (create → seed → dispatch → merge → cleanup):
 
 ```bash
-#!/bin/bash
-set -e
-
-ANALYSIS_BRANCH="feedback/agent-dispatch-fixes"
-SLOT_SLUG="beta"
-PARALLEL_BRANCH="parallel/${ANALYSIS_BRANCH}/${SLOT_SLUG}"
-WORKTREE_PATH=".worktrees/parallel/${ANALYSIS_BRANCH}/${SLOT_SLUG}"
-
-# 1. Create worktree
-git worktree add "${WORKTREE_PATH}" -b "${PARALLEL_BRANCH}" "${ANALYSIS_BRANCH}"
-
-# 2. Seed non-git data (symlink mode for shared read-only inputs)
+WT=".worktrees/parallel/$BR/$SLUG"
+git worktree add "$WT" -b "parallel/$BR/$SLUG" "$BR"
 python3 skills/worktree-data-sync/scripts/sync_worktree_data.py \
-  --to "${WORKTREE_PATH}" \
-  --mode seed \
-  --seed-sync-mode force-symlink
-
-# 3. Dispatch subagent with Worktree field set to absolute path
-# (placeholder: dispatch orchestrator sends this worktree path to implementer)
-
-# 4. Merge result (run from main worktree after subagent completes)
-cd "$(git rev-parse --show-toplevel)"
-git merge --no-ff "${PARALLEL_BRANCH}"
-
-# 5. Clean up
-git worktree remove "${WORKTREE_PATH}"
-git branch -D "${PARALLEL_BRANCH}"
+  --to "$WT" --mode seed --seed-sync-mode force-symlink
+# dispatch implementer with Worktree: <absolute path to $WT>
+git merge --no-ff "parallel/$BR/$SLUG"
+git worktree remove "$WT" && git branch -D "parallel/$BR/$SLUG"
 ```
-
-For harness-provided worktree tools, use them in place of the raw-git commands above: `EnterWorktree` to enter the path in Step 2, `ExitWorktree` for cleanup.
 
