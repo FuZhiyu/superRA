@@ -397,7 +397,7 @@ git commit -m "docs(agents): add §Shared-Repo Commit Discipline (implementer + 
 ### Task 4: Add `Depends on:` field to plan template + §Task Dependencies in planning-workflow (F6) + delete handoff-doc "Not covered by this section" block (D3)
 
 **Depends on:** Task 1 (both edit `skills/execution-workflow/SKILL.md`; serialize to avoid merge).
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Files touched:**
 - `skills/planning-workflow/SKILL.md`
@@ -407,7 +407,7 @@ git commit -m "docs(agents): add §Shared-Repo Commit Discipline (implementer + 
 
 **Dispatch tier:** Complicated — schema change propagates across three files and the orchestrator's dispatch logic; also one small doc-discipline edit. Dedicated implementer + reviewer.
 
-- [ ] **Step 1: Edit — add `### Task Dependencies` sub-section to planning-workflow**
+- [x] **Step 1: Edit — add `### Task Dependencies` sub-section to planning-workflow**
 
 In `skills/planning-workflow/SKILL.md`, insert a new sub-section under Phase 2 (or wherever the Task Decomposition / Step Granularity content currently sits — read the file first to find the right place). Content:
 
@@ -446,7 +446,7 @@ doesn't exist. The terminal task(s) (no downstream) should be the ones
 that produce the top-line results.
 ```
 
-- [ ] **Step 2: Edit — update the self-review checklist**
+- [x] **Step 2: Edit — update the self-review checklist**
 
 Add one item to `## Self-Review` in `skills/planning-workflow/SKILL.md`:
 
@@ -456,7 +456,7 @@ No cycles. If the plan has ≥2 independent branches, at least one pair of
 tasks is marked parallelizable.
 ```
 
-- [ ] **Step 3: Edit — add `Depends on:` to the plan template task block**
+- [x] **Step 3: Edit — add `Depends on:` to the plan template task block**
 
 In `skills/planning-workflow/references/plan-template.md`, modify the task-block structure (§"Task Block Structure") to insert the new field on the line directly under the task title, before `**Review status:**`:
 
@@ -468,11 +468,11 @@ In `skills/planning-workflow/references/plan-template.md`, modify the task-block
 
 Also add a short prose paragraph before the code example explaining the new field. Keep the existing worked example; add `**Depends on:** *(none)*` to it.
 
-- [ ] **Step 3b: Edit — delete handoff-doc "Not covered by this section" block (D3)**
+- [x] **Step 3b: Edit — delete handoff-doc "Not covered by this section" block (D3)**
 
 In `skills/handoff-doc/SKILL.md` §User Decisions Log, locate and delete the `**Not covered by this section:**` block (bullet list explaining what isn't a user decision) plus the "If you are not sure whether an answer counts..." paragraph that follows. The preceding three-line user-decision format box and the following `## What Counts as Stale` heading stay intact. The block was removed on `manual-feedback` with no replacement; the user's edit implies the discussion is better handled by the positive-inclusion rule alone without the negation list.
 
-- [ ] **Step 4: Edit — teach execution-workflow about `Depends on:`**
+- [x] **Step 4: Edit — teach execution-workflow about `Depends on:`**
 
 Read `skills/execution-workflow/SKILL.md`. Find the Step where the orchestrator picks the next task to dispatch (the "decompose / dispatch next" step). Insert a paragraph:
 
@@ -486,7 +486,7 @@ available.
 
 Keep the existing prose; this is an addition, not a replacement.
 
-- [ ] **Step 5: Verify + commit**
+- [x] **Step 5: Verify + commit**
 
 ```bash
 # 1. New section in planning-workflow
