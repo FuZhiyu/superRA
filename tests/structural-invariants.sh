@@ -8,9 +8,6 @@
 # still holds after a structural change.
 #
 # Exit 0 = all invariants pass. Exit >0 = one or more failures.
-# Known pre-existing warnings (broken upstream refs in writing-skills)
-# are reported as WARN, not FAIL, so CI stays green until they're
-# addressed separately.
 
 set -u
 cd "$(dirname "$0")/.."
@@ -42,12 +39,7 @@ for ref in $(grep -rohE 'superRA:[a-zA-Z-]+' skills/ agents/ hooks/ README.md CL
   [ "$name" = "reviewer" ] && continue
   if [ ! -d "skills/$name" ]; then
     broken_live=$((broken_live+1))
-    # Known pre-existing upstream refs → WARN, not FAIL
-    if [ "$name" = "systematic-debugging" ] || [ "$name" = "test-driven-development" ]; then
-      warn "superRA:$name — unresolved upstream ref in writing-skills (known)"
-    else
-      fail "superRA:$name — invocation does not resolve to a skills/ directory"
-    fi
+    fail "superRA:$name — invocation does not resolve to a skills/ directory"
   fi
 done
 [ $broken_live -eq 0 ] && pass "all superRA: invocations in live surface resolve"

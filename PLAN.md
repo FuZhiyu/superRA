@@ -1,6 +1,6 @@
 # Plan Stage Marker + Iterative Re-entry Mechanism
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use `superRA:execution-workflow` to execute this plan. Skill changes — also load `superRA:writing-skills` per `CLAUDE.md` §Skill Changes. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use `superRA:execution-workflow` to execute this plan. Skill changes — see `CLAUDE.md` §Skill Changes. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
 
 **Objective:** Give the superRA skills a unified iterative re-entry mechanism so a fresh agent picking up an in-flight project (a) can tell which workflow stage is active from `## Workflow Status` + per-task fields, (b) can re-enter execution/integration for small-scope additions without spinning up a new PLAN.md, and (c) main agents always have handoff-doc discipline loaded at session start.
 
