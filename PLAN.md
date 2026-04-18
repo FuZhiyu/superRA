@@ -222,7 +222,7 @@ Walked at planning time (2026-04-17).
 
 ## Task 4: Exempt `parallel/*` from merge-guard
 
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Files affected:** `hooks/merge-guard`
 
@@ -232,7 +232,7 @@ Walked at planning time (2026-04-17).
 
 **Dependencies:** Task 1 (branch naming convention documented).
 
-- [ ] **Step 1: Add the exemption in `hooks/merge-guard`.**
+- [x] **Step 1: Add the exemption in `hooks/merge-guard`.**
 
   Between the existing abort/continue/skip/quit exit (around line 28) and the "Detect actual merge" regex (line 32), insert:
 
@@ -249,7 +249,7 @@ Walked at planning time (2026-04-17).
 
   Keep the exemption to source refs that start with `parallel/`. Do not match mid-argument occurrences of "parallel/" to avoid spurious exemptions from flags or paths. Test patterns in Step 2.
 
-- [ ] **Step 2: Synthetic-input verification.** Run the hook against four inputs and read each stdout:
+- [x] **Step 2: Synthetic-input verification.** All 4 cases as expected — parallel/foo/a and --no-ff parallel/feat/b emit `{}`; git merge main emits the STOP reminder; --abort emits `{}`. Run the hook against four inputs and read each stdout:
 
   ```bash
   # Should emit empty {} (exempt)
@@ -267,11 +267,7 @@ Walked at planning time (2026-04-17).
 
   Expected: tests 1, 2, 4 emit `{}`; test 3 emits a JSON payload with the `STOP. You are about to run a bare git merge` context.
 
-- [ ] **Step 3: Commit.**
-  ```bash
-  git add hooks/merge-guard PLAN.md RESULTS.md
-  git commit -m "merge-guard: exempt parallel/* branch merges"
-  ```
+- [x] **Step 3: Commit.**
 
 ---
 

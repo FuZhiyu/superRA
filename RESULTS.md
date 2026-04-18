@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-17 (Task 3)
+**Last updated:** 2026-04-17 (Task 4)
 **Status:** In Progress
 
 ---
@@ -47,3 +47,18 @@ Frontmatter → `# Worktree Data Sync Skill` → §When to Use → §Command Sur
 - **§Before You Start** — added step 6: when `Worktree:` is present, enter it (harness tool or `cd` + verify `git rev-parse --show-toplevel`), all I/O inside, do not merge/rebase/push/cleanup, report branch + HEAD SHA.
 - **§Handoff → Update the Docs and Commit** — split the single "Shared-repo commit discipline" note into (A) shared-worktree path with the existing discipline and (B) dedicated-worktree path on `parallel/<branch>/<slug>`. Atomic-commit block stays shared across both paths.
 - **§Report Format** — new bullet: `Worktree return (path B only)` reports branch name and HEAD SHA. Path A omits the field.
+
+## Task 4: Exempt `parallel/*` from merge-guard
+
+**Status:** Implemented (awaiting review)
+
+### Key changes
+- **`hooks/merge-guard`** — added a third early-exit branch between the abort/continue/skip/quit skip and the reminder-emitting regex. Pattern: `git (merge|rebase|cherry-pick)(\s+--?\S+)*\s+parallel/` — matches a parallel/-prefixed positional argument while allowing intermediate flags like `--no-ff`.
+
+### Synthetic-input verification
+| Input | Expected | Actual |
+|---|---|---|
+| `git merge parallel/foo/a` | `{}` (exempt) | `{}` ✓ |
+| `git merge --no-ff parallel/feat/b` | `{}` (exempt) | `{}` ✓ |
+| `git merge main` | STOP reminder | STOP reminder ✓ |
+| `git merge --abort` | `{}` (already skipped) | `{}` ✓ |
