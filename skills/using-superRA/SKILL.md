@@ -13,17 +13,16 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 2. **Handoff docs are the auditable record AND the continuation point.** Findings, decisions, methodology notes, and results land in committed `PLAN.md` / `RESULTS.md` **before** they appear in any chat message or status report. Any fresh agent can open the repo and resume work from the docs + git state alone — no prompt history required. Atomic commits bundle code + doc edits so every git SHA reconstructs a coherent state. If a result exists only in a status message, it does not exist.
 
-3. **Fast early, strict before merge. Semantic merges always.** Interim work is optimized for speed — no codebase-fit checks at per-task checkpoints. Integration discipline (drift tests, refactor, doc finalization) runs only when the user chooses to merge, inside `integration-workflow`. Every merge into main goes through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
+3. **Fast early, strict before merge. Semantic merges always.** Interim work is optimized for speed — no codebase-fit checks at per-task checkpoints. Integration discipline (drift tests, refactor, doc finalization) runs only when the we have stable results, inside `integration-workflow`. Every merge into main goes through `semantic-merge`. 
 
 4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent-autonomy.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
 
-**RA framing.** The agent is a Research Assistant implementing the researcher's methodology, not judging it. Challenges to methodology are escalated to the human partner, never decided unilaterally.
 
 ## Shared-Repo Commit Discipline
 
 Multiple agents (main/orchestrator plus subagents, or parallel subagents in the same worktree) may be writing in the same repo. Any agent that stages a commit — including the main agent dispatching other agents — MUST respect this discipline.
 
-Other agents' uncommitted edits may land in your `git status` output. **Only commit the files you modified this turn.** Never commit sweeps.
+Other agents' uncommitted edits may land in your `git status` output. **Only commit the files you or your subagents modified this turn.** Never commit sweeps.
 
 Before staging:
 
@@ -116,13 +115,6 @@ Within each implementation step, the micro-level discipline is the three concurr
 
 When merging, rebasing, or cherry-picking branches, superRA uses intent-based conflict resolution rather than mechanical ours/theirs. Research-meaningful conflicts are always escalated to the user. See `superRA:semantic-merge` for the full process. A PreToolUse hook automatically reminds you to use this skill when a bare `git merge/rebase/cherry-pick` is detected.
 
-## Reviewer–Orchestrator Dynamic
-
-The reviewer is **adversarial by design** — thorough, skeptical, flagging everything it is uncertain about. A false positive costs one orchestrator evaluation; a missed issue can ship wrong results. The orchestrator is the **arbitrator** — it made the plan, talks to the researcher, and has big-picture context the reviewer lacks. It expects over-flagging, evaluates each finding independently, and overrules with documented reasoning when the reviewer is wrong. One comprehensive review pass per task returns `APPROVE` / `REVISE`; the reviewer walks the full checklist regardless of early failures, and the re-review after REVISE is narrow (verify cited fixes + any finding annotated as depending on an upstream fix). This dynamic applies across all stages (execution, integration, merge, semantic-merge).
-
-## User Instructions
-
-Instructions say WHAT, not HOW. "Analyze X" or "Merge these datasets" doesn't mean skip `econ-data-analysis` discipline.
 
 ## Instruction Priority
 
