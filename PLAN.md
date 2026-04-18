@@ -33,7 +33,7 @@
 - [x] Execution complete
 - [x] Drift tests created *(n/a — plugin engineering; existing regression coverage satisfies: structural-invariants.sh, test_worktree_data_sync.py, merge-guard inline vectors)*
 - [x] Refactored
-- [ ] Docs finalized
+- [x] Docs finalized
 - [ ] Merged
 
 ---
