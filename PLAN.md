@@ -329,10 +329,11 @@ git commit -m "docs(agent-orchestration): add §Workload Balancing; delete Decis
 ### Task 3: Add §Shared-Repo Commit Discipline to implementer + reviewer (F5)
 
 **Depends on:** *(none)* — independent of Tasks 1 and 2 (different files).
-**Review status:** REVISE
+**Review status:** IMPLEMENTED
 
 > **Review notes:**
 > 1. [MAJOR] `agents/reviewer.md` lines 133–156: the `### Shared-Repo Commit Discipline` heading was inserted between items 4 and 5 of the "On first review" numbered list inside `### How You Write a Review`. A `###` heading breaks the list context in markdown — step 5 (`5. Commit PLAN.md only: ...`, now at line 156) is orphaned: it appears as content of the Shared-Repo section rather than the closing step of the first-review flow. An agent reading the reviewer file no longer sees a coherent 1–5 sequence for the first-review protocol. Fix: move `### Shared-Repo Commit Discipline` to after step 5 (i.e., insert it after `5. Commit PLAN.md only: git commit -m "review: Task N <verdict>"`), or move step 5 into the Shared-Repo section itself as the concluding commit instruction (analogous to the `**Single atomic commit.**` paragraph that terminates the Shared-Repo section in implementer.md).
+>    → implemented: moved step 5 back into the numbered list (now items 1–5 are intact), then placed `### Shared-Repo Commit Discipline` as a standalone subsection after the list ends (`agents/reviewer.md` lines 132–134)
 
 **Files touched:**
 - `agents/implementer.md`
