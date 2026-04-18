@@ -104,12 +104,12 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 
 ### Task 3: Pre-Merge Integration and Merge Readiness
 
-**Files affected:** `PLAN.md`, `RESULTS.md`, structural tests or helper checks chosen as drift guards, and any docs or plugin surfaces flagged by the integration pass
+**Files affected:** `PLAN.md`, `RESULTS.md`, `tests/check-harness-compatibility.sh`, `CLAUDE.md`, structural tests or helper checks chosen as drift guards, and any docs or plugin surfaces flagged by the integration pass
 
 **Input:** Approved Codex compatibility implementation (`3e9f1c8`) plus the approved execution-stage record in `RESULTS.md`
 
-**Output:** Confirmed drift-test coverage for the Codex support surface, any codebase-fit or doc-audit fixes required for integration, finalized Stage 2 handoff docs, and a clean handoff to `merge-workflow`
+**Output:** Confirmed drift-test coverage for the Codex support surface, a top-level Claude/Codex compatibility guard, any codebase-fit or doc-audit fixes required for integration, finalized Stage 2 handoff docs, and a clean handoff to `merge-workflow`
 
 - [x] **Step 1: Confirm drift-test coverage.** User chose a new top-level compatibility check as the Stage 1 guard: add a Claude/Codex compatibility script that validates both harness surfaces, then keep `tests/structural-invariants.sh`, `skills/codex-superra-setup/scripts/test_sync_codex_agents.py`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` as the concrete checks it runs.
-- [ ] **Step 2: Run the integration review / fix loop.** Review the committed Codex compatibility surface for codebase fit and project-doc consistency, make any required fixes, and rerun the selected drift guards after each accepted change.
+- [x] **Step 2: Run the integration review / fix loop.** Added `tests/check-harness-compatibility.sh` as the top-level harness guard, then ran an integration pass over the new surface. The only accepted finding was a missing contributor-facing instruction to run the new guard for harness-surface changes, fixed in `CLAUDE.md`. The compatibility script reran cleanly afterward.
 - [ ] **Step 3: Finalize handoff for merge.** Mature the integration record in `RESULTS.md`, decide `PLAN.md` disposition, and hand off a clean branch to `merge-workflow`.

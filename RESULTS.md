@@ -52,9 +52,13 @@
 
 - Integration-workflow started on 2026-04-17 after the execution-stage review approved the implementation work.
 - The first integration stop point is resolved: the branch will be protected by a new Claude/Codex compatibility check script rather than by Codex-only assertions.
+- Added `tests/check-harness-compatibility.sh`, which validates the Claude plugin metadata, Codex plugin metadata, shared harness adapters, Codex agent-generation checks, and then delegates to `tests/structural-invariants.sh`.
+- The Stage 2 integration pass found one codebase-fit issue: contributors had no documented instruction to run the new harness-compatibility guard. Fixed by adding the requirement to `CLAUDE.md`.
+- After that doc-audit fix, `bash tests/check-harness-compatibility.sh` passed cleanly, with only the two pre-existing `writing-skills` warnings inherited from the structural suite.
 
 ### Notes
 
 - This integration pass is repo-level rather than empirical-analysis-level, so the drift guards are structural/plugin invariants rather than numerical output tests.
 - The selected Stage 1 guard is a new top-level compatibility script that will run the shared structural invariants plus the Claude- and Codex-specific manifest / agent-sync checks.
-- No integration reviewer verdict has been recorded yet.
+- Local CLI probe from the new script saw both harness executables on this machine: `Claude Code 2.1.114` and `codex-cli 0.121.0`.
+- Task 3 is still in progress because the documentation-finalization / `PLAN.md` disposition step has not run yet.
