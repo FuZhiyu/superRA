@@ -10,6 +10,7 @@ When you are modifying superRA itself (skills, hooks, agents, docs), you are edi
 - **One problem per commit.** Keep commits focused. Don't bundle unrelated edits.
 - **Describe the problem, not just the change.** Commit messages should explain what was broken or missing, not just what moved.
 - **Test on at least one harness** (Claude Code is primary) before claiming a change works. Skills are code — verify behavior, don't just read the diff.
+- **Run `bash tests/check-harness-compatibility.sh`** when a change touches shared skill metadata, plugin manifests, harness adapters, hooks, or agent-install surfaces. It is the repo's cross-harness guard for Claude Code + Codex compatibility.
 
 ## Skill Changes
 
