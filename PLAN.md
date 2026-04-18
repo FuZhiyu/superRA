@@ -66,7 +66,7 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 ### Task 1: Archive Agent Teams mode across the plugin
 
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Files touched (verified to exist on `econ-adaption`):**
 - `skills/agent-orchestration/SKILL.md`
