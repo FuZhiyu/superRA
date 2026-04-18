@@ -31,8 +31,8 @@
 
 - [x] Plan approved
 - [x] Execution complete
-- [ ] Drift tests created
-- [ ] Refactored
+- [x] Drift tests created *(n/a — plugin engineering; existing regression coverage satisfies: structural-invariants.sh, test_worktree_data_sync.py, merge-guard inline vectors)*
+- [x] Refactored
 - [ ] Docs finalized
 - [ ] Merged
 
@@ -78,7 +78,7 @@ Walked at planning time (2026-04-17).
 ## Task 1: Add worktree lifecycle fallback + §Concurrent Writers subsection
 
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files affected:**
 - `skills/agent-orchestration/references/worktree-harness-fallback.md` (NEW)
@@ -175,7 +175,7 @@ Walked at planning time (2026-04-17).
 ## Task 2: Refactor `worktree-data-sync` to non-git data sync only
 
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files affected:**
 - `skills/worktree-data-sync/SKILL.md`
@@ -210,7 +210,7 @@ Walked at planning time (2026-04-17).
 ## Task 3: Teach the implementer the dedicated-worktree path
 
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files affected:** `agents/implementer.md`
 
@@ -249,7 +249,7 @@ Walked at planning time (2026-04-17).
 ## Task 4: Exempt `parallel/*` from merge-guard
 
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files affected:** `hooks/merge-guard`
 
@@ -301,7 +301,7 @@ Walked at planning time (2026-04-17).
 ## Task 5: Update consumer workflow skills (pointer-level only)
 
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files affected:**
 - `skills/planning-workflow/SKILL.md`
@@ -340,7 +340,7 @@ Walked at planning time (2026-04-17).
 ## Task 6: End-to-end verification + batched-review revisions
 
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files affected:** none (verification only).
 
@@ -385,7 +385,7 @@ Walked at planning time (2026-04-17).
 ## Task 7: Dogfood — document merge-guard test vectors (parallel slot α)
 
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files affected:** `hooks/merge-guard`
 
@@ -405,7 +405,7 @@ Walked at planning time (2026-04-17).
 ## Task 8: Dogfood — add orchestrator invocation example (parallel slot β)
 
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files affected:** `skills/agent-orchestration/references/worktree-harness-fallback.md`
 
