@@ -49,7 +49,7 @@ find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/nul
 
 ## Load the Handoff-Doc Skill
 
-After cross-session detection, **load `superRA:handoff-doc`**. The main agent loads it at session start so the editing discipline and `§Scope Changes and Re-entry` protocol are available before touching PLAN.md. This is a main-agent default; subagents load `handoff-doc` only on `documentation` / `planning-review` stages as the Skill-Load Manifest specifies.
+After cross-session detection, **load `superRA:handoff-doc`**. The main agent loads it at session start so the editing discipline is available before touching PLAN.md, and so the `planning-workflow §Changing Plans` protocol's cross-references to `handoff-doc` (User Decisions Log format, plan-anatomy templates) resolve. This is a main-agent default; subagents load `handoff-doc` only on `documentation` / `planning-review` stages as the Skill-Load Manifest specifies.
 
 ## The Three Pause Classes
 

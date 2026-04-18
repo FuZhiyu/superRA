@@ -34,19 +34,22 @@
 
 ---
 
-## Task 3: Update the four workflow skills for iterative re-entry + full drift-suite always + renamed section pointer
+## Task 3: Retarget workflow-skill cross-references to `planning-workflow §Changing Plans` + rewrite execution-workflow Step 1 sub-step 2a
 
-**Status:** APPROVED (Bundle B, 2026-04-17)
+**Status:** IMPLEMENTED (2026-04-18)
 
 ### Key Findings
-- `planning-workflow/SKILL.md`: Living Plan section pointer renamed `§Mid-Session Scope Changes` → `§Scope Changes and Re-entry`.
-- `execution-workflow/SKILL.md`: Three edits — (1) Stop-Points class (b) pointer renamed; (2) New sub-step 2a after "Read Workflow Status" adds per-task `**Review status:**` + `**Integration status:**` read and DAG cascade detection on re-entry, cross-referencing `handoff-doc §Scope Changes and Re-entry` for exemption protocol; (3) Autonomy section reference updated from `main-agent-autonomy.md` to `main-agent.md`.
-- `integration-workflow/SKILL.md`: Always-full-drift-suite rule added before Stage 1 test-creator dispatch; `Drift tests created` box-flip updated to key on all tasks `**Integration status:** APPROVED`; Stage 2 refactorer scope clause added; `Refactored` box-flip updated to rollup; doc-writer always-full-doc rule and doc-reviewer diff-focus rule added to Step 3; `Docs finalized` box-flip updated to rollup. Autonomy reference updated.
-- `merge-workflow/SKILL.md`: No `§Mid-Session Scope Changes` pointers existed in file; no changes needed.
-- Also updated stale pointer in `agent-orchestration/references/agent-teams.md` and `skills/CATEGORIES.md` (found during Task 5 validation; Task 3's scope).
+- `execution-workflow/SKILL.md`: Step 1 sub-step 2a rewritten to 3 short sentences that cleanly separate the two triggers — (a) re-entry detection via unchecked project-level box + lingering APPROVED task statuses, (b) in-session researcher-raised scope change — and hand off to `planning-workflow §Changing Plans` for both. Stop-Points class (b) pointer retargeted from `handoff-doc §Scope Changes and Re-entry` → `planning-workflow §Changing Plans`.
+- `integration-workflow/SKILL.md`: Two pointer retargets, content otherwise preserved. Line 70 (always-full-drift-suite blockquote inside Stage 1) and line 136 (Stage 2 refactorer-scope clause) both now point at `planning-workflow §Changing Plans`.
+- `handoff-doc/references/plan-anatomy.md`: Two retargets — Workflow Status paragraph (line 49) and Field-by-Field `## Workflow Status checkboxes` bullet (line 183) — both renamed from `SKILL.md §Scope Changes and Re-entry` to `planning-workflow §Changing Plans`.
+- `using-superRA/references/main-agent.md`: Line 52 "Load the Handoff-Doc Skill" paragraph rewritten so the handoff-doc main-agent default load is justified by (a) editing discipline and (b) resolving the `planning-workflow §Changing Plans` protocol's cross-references into handoff-doc (User Decisions Log format, plan-anatomy templates).
+- `using-superRA/SKILL.md`: Main-agent default-load paragraph (line 82) retargeted to match main-agent.md — the same justification rewrite.
 
 ### Validation
-- `grep -rn "Mid-Session Scope Changes" skills/` → zero hits. Integration-workflow always-full-drift-suite rule present. Execution-workflow step 2a references `**Integration status:**` and DAG cascade cross-ref. No Principle 3 violations.
+- `grep -rn "Scope Changes and Re-entry" skills/` → 0 hits.
+- `grep -rn "Changing Plans" skills/` → planning-workflow §Changing Plans section + retargeted pointers from all files listed above + handoff-doc/SKILL.md Task 1 pointer.
+- Execution-workflow Step 1 sub-step 2a is 3 sentences naming both triggers.
+- `bash tests/structural-invariants.sh` → reported below in status return.
 
 ---
 

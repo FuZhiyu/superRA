@@ -138,26 +138,26 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 
 ### Task 3: Retarget workflow-skill cross-references to `planning-workflow §Changing Plans` + rewrite the overloaded execution-workflow Step 1 paragraph
 **Depends on:** Task 1 (new section must exist at the new location so pointers resolve), Task 2 (Integration-status field must exist in anatomy)
-**Review status:** *(cleared at re-entry 2026-04-17 — `execution-workflow` Step 1 paragraph is being rewritten and all pointers retarget from `handoff-doc §Scope Changes and Re-entry` → `planning-workflow §Changing Plans`)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(cleared at re-entry)*
 
-**Script:** `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/using-superRA/references/main-agent.md` (edit). `skills/planning-workflow/SKILL.md` and `skills/merge-workflow/SKILL.md` carry no remaining pointers to retarget.
+**Script:** `skills/execution-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/using-superRA/references/main-agent.md`, `skills/using-superRA/SKILL.md` (edit). `skills/planning-workflow/SKILL.md` and `skills/merge-workflow/SKILL.md` carry no remaining pointers to retarget.
 **Input:** Current cross-references to `handoff-doc §Scope Changes and Re-entry` across the listed files; the overloaded paragraph in `execution-workflow` Step 1 sub-step 2a that conflates re-entry detection with in-session scope change into one dense sentence; the substantive content additions to `integration-workflow` (always-full-drift-suite, refactor scope, doc-writer/reviewer scope) landed in the prior iteration and remain valid — only the pointer text changes.
 **Output:** All pointers target `planning-workflow §Changing Plans`; `execution-workflow` Step 1 sub-step 2a rewritten as ≤3 short sentences that name both triggers clearly and hand off to the consolidated procedure; integration-workflow content additions preserved verbatim except for the pointer rename.
 
-- [ ] **Step 1: `execution-workflow/SKILL.md`** — two edits:
-  - Rewrite Step 1 sub-step 2a to: "Read per-task `**Review status:**` and `**Integration status:**` fields alongside `## Workflow Status`. If any project-level box is unchecked while some tasks are still APPROVED, the branch is in re-entry — invoke `planning-workflow §Changing Plans` before dispatching any implementer. The same skill covers in-session scope changes raised by the researcher mid-execution."
+- [x] **Step 1: `execution-workflow/SKILL.md`** — two edits:
+  - Rewrote Step 1 sub-step 2a to 3 sentences naming both triggers: "Also read per-task `**Review status:**` and `**Integration status:**` fields alongside `## Workflow Status`. If any project-level box is unchecked while some tasks are still APPROVED, the branch is in re-entry — invoke `planning-workflow §Changing Plans` before dispatching any implementer. The same skill covers in-session scope changes raised by the researcher mid-execution."
   - Stop-Points class (b) pointer retargeted from `handoff-doc §Scope Changes and Re-entry` → `planning-workflow §Changing Plans`.
 
-- [ ] **Step 2: `integration-workflow/SKILL.md`** — two pointer retargets, content preserved:
-  - Line 70 (always-full-drift-suite rule): "per `handoff-doc §Scope Changes and Re-entry`" → "per `planning-workflow §Changing Plans`".
+- [x] **Step 2: `integration-workflow/SKILL.md`** — two pointer retargets, content preserved:
+  - Line 70 (always-full-drift-suite rule): retargeted to `planning-workflow §Changing Plans`.
   - Line 136 (refactorer scope clause): same retarget.
 
-- [ ] **Step 3: `plan-anatomy.md`** — two retargets at lines 49 and 183 (`SKILL.md §Scope Changes and Re-entry` pointer in the Workflow Status paragraph and Field-by-Field bullet) updated to `planning-workflow §Changing Plans`.
+- [x] **Step 3: `plan-anatomy.md`** — two retargets at lines 49 and 183 (`SKILL.md §Scope Changes and Re-entry` pointer in the Workflow Status paragraph and Field-by-Field bullet) updated to `planning-workflow §Changing Plans`.
 
-- [ ] **Step 4: `main-agent.md`** — line 52 "`§Scope Changes and Re-entry` protocol" updated to "`planning-workflow §Changing Plans` protocol"; cross-skill load language adjusted so the main agent still knows to have `handoff-doc` available for doc mechanics even though the change-plan procedure itself now lives in planning-workflow.
+- [x] **Step 4: `main-agent.md`** — line 52 updated so the handoff-doc default-load language names `planning-workflow §Changing Plans` as the protocol whose cross-references resolve through `handoff-doc`. Also retargeted the matching line in `using-superRA/SKILL.md` §Main-agent default load.
 
-- [ ] **Step 5: Validate** — `grep -rn "Scope Changes and Re-entry" skills/` returns at most one hit (the Task 1 pointer in handoff-doc if retained). `grep -rn "Changing Plans" skills/` shows the new planning-workflow section + retargeted pointers from every file listed above. `execution-workflow` Step 1 sub-step 2a is ≤3 sentences and names both triggers. `bash tests/structural-invariants.sh` passes.
+- [x] **Step 5: Validate** — `grep -rn "Scope Changes and Re-entry" skills/` returns zero hits. `grep -rn "Changing Plans" skills/` shows the planning-workflow section + retargeted pointers from execution-workflow (sub-step 2a + Stop-Points), integration-workflow (lines 70 + 136), plan-anatomy.md (lines 49 + 183), main-agent.md (line 52), using-superRA/SKILL.md (line 82), and handoff-doc/SKILL.md (Task 1 pointer). `execution-workflow` Step 1 sub-step 2a is 3 sentences naming both triggers. `bash tests/structural-invariants.sh` green.
 
 ---
 
