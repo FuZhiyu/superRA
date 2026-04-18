@@ -33,6 +33,7 @@ The dispatch prompt carries only the Stage, a task pointer, a git range (if revi
 3. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3"). Read the full task block plus any project-wide context sections at the top of the document (Data Inventory, Conventions, Prior Results). The dispatch prompt also carries a one-line "what changed since last dispatch" delta — use it to focus your attention, but always read the authoritative content from `PLAN.md` itself. Do not work from a paraphrased task description.
 4. **Read PLAN.md's `## Project Conventions` section.** The orchestrator populated it at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches. Read the section before editing any file — it is the canonical source of the conventions that apply to your work. Do not re-walk the project tree unless the section is missing something you need. If it is missing, empty, or carries a stale walk date, or if a convention you need is not there, walk the directories on-demand (including `README.md` in data directories for provenance), apply what you find, and flag the omission in your status return so the orchestrator can update the section. Do not dump these docs into your status report — they are context for your work, not output. If a doc contradicts the dispatch prompt or the task spec, raise the conflict before starting (step 5 below).
 5. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, repo conventions, or dependencies on prior steps. Raise concerns before starting work.
+6. **If the dispatch prompt includes a `Worktree:` field, enter that worktree before any file I/O.** Use the harness-provided worktree-entry tool if available (e.g., `EnterWorktree`); otherwise `cd` to the path and verify with `git rev-parse --show-toplevel`. All reads, edits, and commits for this task happen inside the worktree. Do not touch files outside it. You are on a `parallel/<branch>/<slug>` branch the orchestrator provisioned — commit your work there, report the branch name and HEAD SHA back, and do not merge, rebase, push, or clean up. The orchestrator owns harvest-out. See `superRA:agent-orchestration` §Concurrent Writers Require Worktree Isolation for the full protocol.
 
 The handoff-doc editing discipline you will need at the end of the task — inline-edit rule, ownership rules, how to annotate review items on a REVISE round — lives in §Handoff below; read it when you're ready to update `PLAN.md` / `RESULTS.md`, not at dispatch time.
 
@@ -148,9 +149,13 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 2. **Update `RESULTS.md` task section in place.** If a section for your task already exists from a prior iteration, **replace** its content with current findings. Mirror the per-task shape already in `RESULTS.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
-**Shared-repo commit discipline.** Follow `superRA:using-superRA` §Shared-Repo Commit Discipline — stage by exact path, never `git add -A/./-u`, diff-cached before commit. Applies whenever other agents may be writing in the same worktree.
+**Commit discipline depends on your dispatch's worktree context:**
 
-**Single atomic commit.** Stage code + `PLAN.md` + `RESULTS.md` together:
+**(A) Shared-worktree path (no `Worktree:` field in dispatch).** Follow `superRA:using-superRA` §Shared-Repo Commit Discipline — stage by exact path, never `git add -A/./-u`, diff-cached before commit. Single atomic commit on the current branch. Applies whenever other agents may be writing in the same worktree.
+
+**(B) Dedicated-worktree path (`Worktree:` field present).** You are operating inside a `parallel/<branch>/<slug>` branch that the orchestrator provisioned. Commit code + `PLAN.md` task block + `RESULTS.md` task section atomically on that branch. **Do not** merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out. After your commit, include the branch name and HEAD SHA in your status return (see §Report Format).
+
+**Single atomic commit (both paths).** Stage code + `PLAN.md` + `RESULTS.md` together:
 ```bash
 git add [code files] PLAN.md RESULTS.md results_attachments/
 git commit -m "task N: [brief description]"
@@ -186,6 +191,7 @@ Report:
 - **Key findings:** Headline numbers or surprises only. Point at RESULTS.md Task N section for tables, figures, and full context.
 - **Concerns (if any):** Data quality issues, methodology questions, unexpected results. Bullet points.
 - **Doc edits (what changed since the previous dispatch):** List each file and the specific sections/fields you modified, describing the change. Example: `PLAN.md — Task 3: rewrote Step 2 (merge approach changed after data inspection), marked Steps 1-3 [x], set Review status: IMPLEMENTED, annotated review items 1 and 2 with → implemented markers. RESULTS.md — Task 3 section replaced with new findings and 2 figures.` Say "none" if you touched neither file.
+- **Worktree return (path B only):** branch name (`parallel/<analysis-branch>/<slug>`) and HEAD SHA. Omit this field entirely on path A.
 
 If the orchestrator needs more than this, they will read the docs directly.
 
