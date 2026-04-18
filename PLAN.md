@@ -66,52 +66,34 @@ Per-task `**Review status:**` fields still flip individually at the implementer'
 ---
 
 ### Task 1: Add `## PLAN.md Is the Task Tracker` and `## Mid-Session Scope Changes` to `handoff-doc/SKILL.md`
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Script:** `skills/handoff-doc/SKILL.md` (edit)
 **Input:** Current `handoff-doc/SKILL.md` (119 lines, four-principles structure)
 **Output:** Same file with two new top-level sections inserted
 
-- [ ] **Step 1: Insert `## PLAN.md Is the Task Tracker` section** between the existing `## At-a-Glance Structure` (ends ~line 63) and `## Inline-Edit Rule` (starts line 65). Content: PLAN.md is the source of truth for analysis tasks; TodoWrite is a transient view; banned patterns; precedence rule. Use the prose from the stash patch (lines 76-91 of `/tmp/stash.patch`) verbatim — it was tuned in the prior session.
+- [x] **Step 1: Insert `## PLAN.md Is the Task Tracker` section** between `## At-a-Glance Structure` and `## Inline-Edit Rule` (now lines 65-81). Section inserted verbatim from stash patch prose. Section establishes PLAN.md as the primary task tracker, defines TodoWrite's transient role, lists banned patterns, and gives the precedence rule.
 
-- [ ] **Step 2: Insert `## Mid-Session Scope Changes` section** between `## User Decisions Log` (ends ~line 93) and `## What Counts as Stale` (starts line 95). Content: material vs. not-material; 6-step protocol; banned shortcuts. Use prose from stash patch lines 100-134. Cross-reference `execution-workflow` Stop-Points class (b) and §User Decisions Log.
+- [x] **Step 2: Insert `## Mid-Session Scope Changes` section** between `## User Decisions Log` and `## What Counts as Stale` (now lines 112-146). Section inserted verbatim from stash patch prose. Covers material vs. not-material distinction, 6-step protocol with inline-edit rules, and banned shortcuts. Cross-references `execution-workflow` Stop-Points class (b) and §User Decisions Log.
 
-- [ ] **Step 3: Validate** — re-read the file end-to-end:
-  - The new sections sit beside the four principles without contradicting them.
-  - Cross-reference targets exist (`§User Decisions Log`, `§PLAN.md Is the Task Tracker` — self-ref, `references/plan-anatomy.md`).
-  - Voice matches existing sections (banned-patterns lists, "rule of thumb" callout).
-  - No mention of "six principles" anywhere.
-  Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Commit:
-  ```bash
-  git add skills/handoff-doc/SKILL.md PLAN.md
-  git commit -m "handoff-doc: add PLAN.md-is-task-tracker and mid-session-scope-changes sections"
-  ```
+- [x] **Step 3: Validate** — Section order confirmed: At-a-Glance Structure → PLAN.md Is the Task Tracker → Inline-Edit Rule → User Decisions Log → Mid-Session Scope Changes → What Counts as Stale. `grep "six principles"` returns nothing. Cross-references to §User Decisions Log and §PLAN.md Is the Task Tracker are valid (both exist). Voice matches existing sections.
 
 ---
 
 ### Task 2: Add `## Workflow Status` template to `plan-anatomy.md` + Header-ownership and Field-by-Field updates
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 
 **Script:** `skills/handoff-doc/references/plan-anatomy.md` (edit)
 **Input:** Current `plan-anatomy.md` (117 lines, header template + task block anatomy + field notes)
 **Output:** Same file with `## Workflow Status` checklist inside the header template, expanded Header-ownership note, new Field-by-Field bullet on `## Workflow Status`
 
-- [ ] **Step 1: Insert `## Workflow Status` block inside the fenced header template** between `**Pipeline:**` (line 43) and the closing `---` (line 45). The block: a one-paragraph description + 6-bullet checklist (Plan approved, Execution complete, Drift tests created, Refactored, Docs finalized, Merged) — content from stash patch lines 147-159. Make sure the markdown fenced block stays syntactically valid: the outer ` ```markdown ` opened at line 11 must still close cleanly at the original line 47 marker (this is plain content; no nested fences needed for the checklist).
+- [x] **Step 1: Insert `## Workflow Status` block inside the fenced header template** between `**Pipeline:**` and the closing `---` (now lines 47-57). One-paragraph description + 6-bullet checklist (Plan approved, Execution complete, Drift tests created, Refactored, Docs finalized, Merged). Outer ` ```markdown ` template block still closes cleanly — awk fence count returns 8 (even). No nested fences; checklist is plain markdown inside the outer fence.
 
-- [ ] **Step 2: Update the Header-ownership note** (currently line 48) to mention `## Workflow Status` and `## Decisions` as orchestrator-owned. Use prose from stash patch line 164.
+- [x] **Step 2: Update the Header-ownership note** (now line 61) to mention `## Workflow Status` and (when present) `## Decisions` as orchestrator-owned. Added `### Decisions placement` prose below the note pointing readers at `SKILL.md §User Decisions Log` for format — no Decisions example embedded inside the outer fenced block.
 
-- [ ] **Step 3: Add a Field-by-Field bullet** for `## Workflow Status` checkboxes after the existing Review-notes bullet (line 107). Content from stash patch line 186 — it states: only orchestrator (or standalone author) flips boxes; only at the moment the named workflow step completes; only in the same commit; uncheck only on scope change or post-merge refactor.
+- [x] **Step 3: Add a Field-by-Field bullet** for `## Workflow Status` checkboxes after the Review-notes bullet (now line 125). Bullet states orchestrator-only flip, same-commit requirement, and uncheck-on-scope-change with pointer to `SKILL.md §Mid-Session Scope Changes`.
 
-- [ ] **Step 4: Validate** — read the file end-to-end:
-  - Fenced markdown blocks render correctly (no broken-fence side effects).
-  - The Workflow Status block uses the same milestone names that the workflow-skill instructions in Task 3 will reference.
-  - The Header-ownership note now lists three orchestrator-owned sections (Header proper, Workflow Status, Decisions).
-  - No `## Decisions` template literal embedded inside the fenced block — that section appears conditionally, not in the template (the prior session's plan-anatomy edit added a long `## Decisions placement` discussion outside the fence; we reuse that decision here only if needed for clarity).
-  Update PLAN.md, commit:
-  ```bash
-  git add skills/handoff-doc/references/plan-anatomy.md PLAN.md
-  git commit -m "plan-anatomy: add Workflow Status template, expand Header ownership, add Field-by-Field note"
-  ```
+- [x] **Step 4: Validate** — Fenced block count = 8 (even, no orphan fences). Milestone names in template (Plan approved / Execution complete / Drift tests created / Refactored / Docs finalized / Merged) match the six names described in Task 3's wire-up targets. Header-ownership note names three orchestrator-owned areas (header proper, Workflow Status, Decisions). No Decisions literal embedded inside fenced template.
 
 ---
 

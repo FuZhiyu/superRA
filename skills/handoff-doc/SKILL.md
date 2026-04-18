@@ -62,6 +62,23 @@ A Stage 1 `RESULTS.md` mirrors the task structure, one section per task, with fi
 
 See the reference templates for the full skeleton.
 
+## PLAN.md Is the Task Tracker
+
+For analysis work, **`PLAN.md` is the primary task tracker** — not `TodoWrite`, not chat, not status reports, not a session-internal scratchpad. The task blocks with their `- [ ]` / `- [x]` checkbox steps and `**Review status:**` lines are the authoritative state of what is planned, what is in progress, and what is done. Persistence across sessions, agent handoffs, and harness boundaries depends on this being true.
+
+`TodoWrite` (or any equivalent harness-provided todo UI) has a narrower role: a transient view of *what the agent is doing right now in this session*. It is acceptable for ephemeral session-internal todos that do not represent analysis tasks (e.g., "read three reference files, then summarize for the user", "fix three lint errors before re-running the test"). It is **not** acceptable as a substitute for a PLAN.md task block. If the work is part of the analysis — a new task, a discovered subtask, a methodology check, a sensitivity run, a refactor pass — it lives in `PLAN.md` first, then optionally mirrors into `TodoWrite` as a working view.
+
+**Rule of thumb:** if losing this todo at session end would lose work the researcher cares about, it belongs in `PLAN.md`, not `TodoWrite`.
+
+**Banned patterns:**
+
+- Tracking analysis tasks only in `TodoWrite` while leaving `PLAN.md` stale.
+- Discovering a new subtask, adding it to `TodoWrite`, completing it, and never reflecting it in `PLAN.md`.
+- Using `TodoWrite` to coordinate work between sessions (it does not persist; the next session sees nothing).
+- Treating `TodoWrite` items as "logged" — they are not. Logged work is in a committed doc.
+
+If `TodoWrite` and `PLAN.md` ever disagree about the state of analysis work, `PLAN.md` is right by definition. Update `TodoWrite` to match — never the reverse.
+
 ## Inline-Edit Rule
 
 Every edit replaces stale content in place. Never append, never strike through, never use "Update:" / "Revised:" / "Previously..." framing. If you find yourself writing a sentence that references a prior version of the doc, stop — that sentence belongs in the git commit message, not the doc.
@@ -91,6 +108,42 @@ Three lines, blockquote, dated. The `Question asked` line is the agent's own res
 - Ephemeral clarifications the agent could have resolved from the code ("which file holds X?") — those are not decisions, they do not belong in the log.
 
 If you are not sure whether an answer counts as a decision worth logging: if acting on it would change the code, data, or methodology in a way another agent could not reconstruct from the code alone, log it.
+
+## Mid-Session Scope Changes
+
+When the researcher adds, modifies, removes, or reorders work during a session — or changes methodology, sample, output, or data sources — the change is **material** and MUST land in `PLAN.md` before any new work begins. There is one `PLAN.md` per analysis. We update it; we do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
+
+**Material (require this protocol):**
+
+- Adding, removing, or reordering a task block.
+- Changing a task's objective, script, input, or output.
+- Changing the analysis-level objective, methodology, sample definition, or expected output.
+- Changing data sources or project-wide conventions.
+
+**Not material (handle as inline discovery edits per the Living Plan section in `planning-workflow`):**
+
+- Rewording a step within an in-flight task to match what the data forced.
+- Adjusting expected results based on early findings.
+- Refining methodology details that the researcher already approved at planning time.
+
+**Protocol:**
+
+1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. This is the same escalation gate as `execution-workflow` Stop-Points class (b).
+2. **Log the decision** per §User Decisions Log above — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes.
+3. **Update `PLAN.md` inline:**
+   - **New task** → append `### Task N+1: [name]` block with the full anatomy from `references/plan-anatomy.md`. Renumber later tasks if inserting earlier in the sequence.
+   - **Modified task** → rewrite the affected fields in place. Do not strike through. Do not add "Modified:" annotations.
+   - **Removed task** → delete the block entirely. The Decisions entry preserves the rationale.
+   - **Reordered tasks** → renumber and rewrite. The decision log preserves the original sequence.
+4. **Update `## Workflow Status`** if the change reverts a completed milestone. Adding a new task means `Execution complete` is no longer checked; changing methodology after refactor means `Refactored` and `Docs finalized` are no longer checked and the affected downstream stages must re-run.
+5. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
+6. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `execution-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Stage 2.
+
+**Banned shortcuts:**
+
+- Carrying the new task in chat or only in `TodoWrite` without writing it into `PLAN.md` (see §PLAN.md Is the Task Tracker — `TodoWrite` is a transient view, not a record).
+- Creating a `PLAN_v2.md` or appending an "Addendum" section. There is one `PLAN.md`.
+- Resuming the in-flight task before reflecting the change in the doc — the change is not real until it is committed.
 
 ## What Counts as Stale (remove, don't keep)
 
