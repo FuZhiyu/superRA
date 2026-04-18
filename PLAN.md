@@ -52,6 +52,9 @@
 
 Per-task `**Review status:**` fields still flip individually at the implementer's commit, and the reviewer issues one `APPROVE` / `REVISE` / `CONDITIONAL APPROVE` verdict per bundle.
 
+> **User decision (2026-04-17):** Chose Option 2 (Push and open PR against `econ-adaption`) at `execution-workflow` Step 4. Run `integration-workflow` then `merge-workflow`; the final merge action is `git push -u origin feat/plan-stage-marker` + `gh pr create --base econ-adaption`, not a local merge.
+> **Question asked:** Work complete and verified — what should I do with the branch (merge / PR / keep / discard)?
+
 ---
 
 ## Workflow Status
