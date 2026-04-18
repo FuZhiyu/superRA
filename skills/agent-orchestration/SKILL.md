@@ -62,13 +62,19 @@ file reads. If an agent's projected context exceeds ~150k, split the work
 across two agents even when the individual items are small — context
 thrash degrades output quality more than the cost of a second spawn.
 
-**Reuse existing agents within the cache window.** The Anthropic prompt
-cache has a ~5-minute TTL. If a prior agent's turn is still warm and the
-next task shares its skill/reference profile, prefer `SendMessage` on the
-existing agent over spawning fresh — cached context is effectively free.
-Spawn fresh when: the agent has accumulated stale or irrelevant context,
-the new task needs a different skill load, or more than ~5 minutes have
-elapsed.
+**Exploit the prompt-cache window by bundling.** The Anthropic prompt
+cache has a ~5-minute TTL. When using the `Agent` tool with
+`run_in_background: true`, the orchestrator can send a follow-on task to
+an agent that is still running or recently completed via `SendMessage` —
+this is a standard harness feature (not Teams-specific) available whenever
+a background agent is live. Use it to deliver a tightly-related follow-on
+task within the cache window rather than spawning a new agent: cached
+context (skill loads, file reads, domain references) is effectively free.
+Alternatively, bundle logically related tasks into a single dispatch so the
+agent amortizes its skill-load cost across them in one turn.
+Spawn fresh when: the prior agent has exited, its context has accumulated
+stale or irrelevant material, the new task needs a different skill load, or
+more than ~5 minutes have elapsed.
 
 **Parallelize independent tasks.** Tasks whose `Depends on:` lines (see
 `planning-workflow` §Task Dependencies) are all satisfied and that share
