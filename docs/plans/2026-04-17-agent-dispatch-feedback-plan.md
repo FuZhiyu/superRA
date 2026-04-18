@@ -77,6 +77,14 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 > **Question asked:** Merge target — local main (4 commits ahead), origin/main direct, or via PR?
 > **Rationale:** Those 4 commits touch areas our feedback round also edits (using-superRA, planning-workflow template, writing-skills). A second tier-3 semantic-merge pass protects against silent overlap, matching the discipline we just used for origin/main.
 
+> **User decision (2026-04-17, push):** Push the fast-forwarded main (at 5c9dc46) to origin/main.
+> **Question asked:** Push main to origin now, or hold local?
+> **Rationale:** Non-destructive fast-forward — origin/main is an ancestor of 5c9dc46. Lands the feedback round + local-main refactors + both semantic-merge commits in one push.
+
+> **User decision (2026-04-17, landing):** User pushed main themselves. Harness policy blocked the agent from pushing directly to the default branch; user ran `git push origin main` outside the harness.
+> **Question asked:** Landing path — agent-opened PR, user-run direct push, or reset-and-PR?
+> **Rationale:** Bypasses the harness's default-branch push guard without opening a PR. The final log-commit on feedback (61e09e6) is one ahead of origin/main; if user wants it landed, another ff+push will carry it.
+
 ---
 
 ### Task 1: Archive Agent Teams mode across the plugin
