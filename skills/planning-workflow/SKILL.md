@@ -78,7 +78,7 @@ For other verticals, the operational cycle looks different (e.g., derivation →
 
 ### Plan Document Header and Task Structure
 
-The full `PLAN.md` template — required header (objective, methodology, domain-specific sections, output, expected results, pipeline) plus task block structure with the domain's step cycle and a worked example — lives in `references/plan-template.md` inside this skill. Load this skill via the Skill tool and read `<base_dir>/references/plan-template.md` when authoring a plan, then fill in the placeholders for the current work. Domain-specific header sections (e.g., the Data Inventory section for data analysis) come from the domain skill's planning reference.
+For the canonical `PLAN.md` template — required header (objective, methodology, domain-specific sections, output, expected results, pipeline) plus task block structure with the domain's step cycle and a worked example — load `superRA:handoff-doc` and read `references/plan-anatomy.md`. Domain-specific header sections (e.g., the Data Inventory section for data analysis) come from the domain skill's planning reference.
 
 Required header fields and task block structure are non-negotiable. The template's example code is illustrative — adapt the content to your domain and methodology, but preserve the step-cycle rhythm the domain prescribes.
 
@@ -88,7 +88,7 @@ Required header fields and task block structure are non-negotiable. The template
 
 **The editing discipline and the full anatomy templates** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — live in `superRA:handoff-doc`. Load it when authoring `PLAN.md` / `RESULTS.md` from scratch; its `references/plan-anatomy.md` and `references/results-anatomy.md` carry the full templates. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the template at `references/results-template.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
+**Results document:** Create `RESULTS.md` alongside `PLAN.md`. For the starter scaffold and anatomy, load `superRA:handoff-doc` and read `references/results-anatomy.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
 
 ## No Placeholders
 
