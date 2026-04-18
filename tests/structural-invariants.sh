@@ -174,8 +174,8 @@ else
 fi
 
 # 10b. No dispatch template retains `Work from:` or `Counterpart:` fields
-# (legacy over-specification; Work-from is cwd by default, Counterpart is
-# set at team-spawn time in Agent Teams mode).
+# (legacy over-specification; Work-from is cwd by default, Counterpart was
+# previously set at team-spawn time in the now-archived Agent Teams mode).
 if grep -n 'Work from:\|Counterpart:' $dispatch_files 2>/dev/null | grep -v '^[^:]*:[[:space:]]*#'; then
   fail "dispatch templates still contain 'Work from:' or 'Counterpart:' lines"
 else
@@ -263,16 +263,18 @@ else
 fi
 
 # 14. Cross-stage orchestration content lives in agent-orchestration, not
-# execution-workflow. agent-orchestration/SKILL.md owns four top-level
-# sections (Dispatch Templates, Dispatch-Return Deltas, Handling Reviewer
-# Feedback, Review Status Reference); Direct Mode was relocated to
+# execution-workflow. agent-orchestration/SKILL.md owns these top-level
+# sections: Workload Balancing, Dispatch Templates, Handling Reviewer
+# Feedback, Review Status Reference. Dispatch-Return Deltas was removed
+# (D1 in the feedback round — content lives in agents/implementer.md and
+# agents/reviewer.md §Report Format). Direct Mode was relocated to
 # using-superRA in Round 3 and no longer appears here. execution-workflow/
 # SKILL.md does NOT carry '## Dispatch Templates' as a heading (pointers to
 # agent-orchestration only).
 ao_skill="skills/agent-orchestration/SKILL.md"
 ao_missing=0
-for h in '^## Dispatch Templates$' \
-         '^## Dispatch-Return Deltas$' \
+for h in '^## Workload Balancing$' \
+         '^## Dispatch Templates$' \
          '^## Handling Reviewer Feedback' \
          '^## Review Status Reference$'; do
   if grep -Eq "$h" "$ao_skill"; then
@@ -282,7 +284,17 @@ for h in '^## Dispatch Templates$' \
     ao_missing=$((ao_missing+1))
   fi
 done
-[ "$ao_missing" -eq 0 ] && pass "agent-orchestration SKILL.md owns the four cross-stage orchestration sections"
+[ "$ao_missing" -eq 0 ] && pass "agent-orchestration SKILL.md owns the four cross-stage orchestration sections (Workload Balancing, Dispatch Templates, Handling Reviewer Feedback, Review Status Reference)"
+if grep -Eq '^## Dispatch-Return Deltas$' "$ao_skill"; then
+  fail "agent-orchestration SKILL.md still carries '## Dispatch-Return Deltas' (removed in D1 — content lives in agent files)"
+else
+  pass "agent-orchestration SKILL.md no longer carries '## Dispatch-Return Deltas'"
+fi
+if grep -Eq '^## Integration$' "$ao_skill"; then
+  fail "agent-orchestration SKILL.md still carries '## Integration' (removed in D2 — Teams-mode-specific content archived)"
+else
+  pass "agent-orchestration SKILL.md no longer carries '## Integration' section"
+fi
 if grep -Eq '^## Dispatch Templates' "skills/execution-workflow/SKILL.md"; then
   fail "execution-workflow SKILL.md still carries '## Dispatch Templates' as a top-level heading (should be lifted to agent-orchestration)"
 else
@@ -461,19 +473,31 @@ else
   fail "auto-load still appears in $al_hits file(s) under agents/, skills/, or README.md"
 fi
 
-# 22. agent-orchestration split: TeamCreate mechanics live in references/
-# agent-teams.md; SKILL.md no longer carries '### Team Recipes' or a top-
-# level '## Direct Mode' heading.
+# 22. Agent Teams mode is archived: references/agent-teams.md carries the
+# ARCHIVED banner and no active file under skills/, agents/, or hooks/
+# cites it. SKILL.md no longer carries '### Team Recipes' or a top-level
+# '## Direct Mode' heading.
 at_ref="skills/agent-orchestration/references/agent-teams.md"
 if [ -f "$at_ref" ]; then
-  tc_hits=$(grep -c 'TeamCreate' "$at_ref")
-  if [ "$tc_hits" -ge 3 ]; then
-    pass "$at_ref carries TeamCreate content (>=3 mentions)"
+  if head -10 "$at_ref" | grep -q 'ARCHIVED'; then
+    pass "$at_ref carries ARCHIVED banner"
   else
-    fail "$at_ref has only $tc_hits TeamCreate mentions (expected >=3)"
+    fail "$at_ref is missing the ARCHIVED banner"
   fi
 else
   fail "missing: $at_ref"
+fi
+# No active file under skills/ (excluding the archived reference itself and
+# its subtree), agents/, or hooks/ cites the archived content or the Teams
+# mode. RELEASE-NOTES.md is excluded — historical references are expected.
+active_team_refs=$(grep -rln -E 'agent-teams\.md|TeamCreate|Agent Team|Team mode' \
+  skills/ agents/ hooks/ 2>/dev/null \
+  | grep -v '^skills/agent-orchestration/references/agent-teams\.md$' \
+  || true)
+if [ -z "$active_team_refs" ]; then
+  pass "no active file under skills/, agents/, or hooks/ cites archived agent-teams content"
+else
+  fail "active files still reference Teams content: $active_team_refs"
 fi
 if grep -Fq '### Team Recipes' skills/agent-orchestration/SKILL.md; then
   fail "agent-orchestration SKILL.md still contains '### Team Recipes' (stale)"
@@ -539,6 +563,27 @@ if grep -Fq 'Document-code consistency' skills/econ-data-analysis/references/int
   pass "integration.md contains 'Document-code consistency' item"
 else
   fail "integration.md missing 'Document-code consistency' item"
+fi
+
+# 26. agent-orchestration carries the three-tier Workload Balancing framework
+# (F2 in the feedback round). Must have the heading, all three tier headings,
+# the 150k-token rule, and the cache-reuse guidance.
+ao="skills/agent-orchestration/SKILL.md"
+if grep -q "^## Workload Balancing" "$ao"; then
+  pass "$ao has §Workload Balancing heading"
+else
+  fail "$ao is missing §Workload Balancing heading"
+fi
+tier_count=$(grep -c "^### Tier [123]" "$ao" || true)
+if [ "$tier_count" -eq 3 ]; then
+  pass "$ao has all three tiers"
+else
+  fail "$ao has $tier_count tiers (expected 3)"
+fi
+if grep -q "150k" "$ao" && grep -q "cache" "$ao"; then
+  pass "$ao references 150k-token rule and cache reuse"
+else
+  fail "$ao missing 150k or cache-reuse guidance"
 fi
 
 echo

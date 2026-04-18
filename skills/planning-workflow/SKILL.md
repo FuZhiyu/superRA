@@ -76,9 +76,41 @@ The pipeline file must:
 
 For other verticals, the operational cycle looks different (e.g., derivation → verification → proof-check for theory work), but the granularity rule is the same: one logical operation per step, with the cycle completed in-step.
 
+### Task Dependencies
+
+Not every task is sequential. Identify independent branches at plan
+time so the orchestrator can dispatch them in parallel (see
+`agent-orchestration` §Workload Balancing).
+
+**Format.** Each task block declares a `**Depends on:**` line listing
+upstream task numbers, or `*(none)*` if the task has no upstream
+dependency. See the task-block template in `references/plan-template.md` for the required format.
+
+**When a task depends on another.**
+- It reads the other task's output files.
+- It needs a sample / variable / methodology decision finalized in the
+  other task.
+- It runs sensitivity / robustness on the other task's baseline
+  results.
+
+**When a task is independent (`Depends on: *(none)*`).**
+- Loads its own raw inputs, produces its own outputs.
+- Sits in a separate pipeline branch that doesn't meet downstream.
+
+**Orchestration contract.** The `execution-workflow` orchestrator reads
+these fields. Tasks whose dependencies are all `APPROVED` may be
+dispatched as a single parallel Agent-tool batch, subject to
+`agent-orchestration` §Workload Balancing. Mutually independent tasks
+SHOULD run in parallel; serializing them is waste.
+
+**Plan-time DAG sanity.** After writing all tasks, trace the dependency
+edges. No cycles. No `Depends on: Task 99` pointing at a task that
+doesn't exist. The terminal task(s) (no downstream) should be the ones
+that produce the top-line results.
+
 ### Plan Document Header and Task Structure
 
-The full `PLAN.md` template — required header (objective, methodology, domain-specific sections, output, expected results, pipeline) plus task block structure with the domain's step cycle and a worked example — lives in `references/plan-template.md` inside this skill. Load this skill via the Skill tool and read `<base_dir>/references/plan-template.md` when authoring a plan, then fill in the placeholders for the current work. Domain-specific header sections (e.g., the Data Inventory section for data analysis) come from the domain skill's planning reference.
+For the canonical `PLAN.md` template — required header (objective, methodology, domain-specific sections, output, expected results, pipeline) plus task block structure with the domain's step cycle and a worked example — load `superRA:handoff-doc` and read `references/plan-anatomy.md`. Domain-specific header sections (e.g., the Data Inventory section for data analysis) come from the domain skill's planning reference.
 
 Required header fields and task block structure are non-negotiable. The template's example code is illustrative — adapt the content to your domain and methodology, but preserve the step-cycle rhythm the domain prescribes.
 
@@ -90,7 +122,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 **The editing discipline and the full anatomy templates** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — live in `superRA:handoff-doc`. Load it when authoring `PLAN.md` / `RESULTS.md` from scratch; its `references/plan-anatomy.md` and `references/results-anatomy.md` carry the full templates. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the template at `references/results-template.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
+**Results document:** Create `RESULTS.md` alongside `PLAN.md`. For the starter scaffold and anatomy, load `superRA:handoff-doc` and read `references/results-anatomy.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
 
 ## No Placeholders
 
@@ -124,6 +156,8 @@ After writing the complete plan:
 **5. Plan serves as handoff:** If you stopped here and a new agent read only this plan and `RESULTS.md`, could they continue? Is there enough context?
 
 **6. Sensitivity / robustness coverage (where applicable):** For data analysis, are sensitivity analysis tasks included? Were they discussed with the researcher to determine which checks matter most?
+
+**7. Dependency graph sanity:** Every task has a `**Depends on:**` line. No cycles. If the plan has ≥2 independent branches, at least one pair of tasks is marked parallelizable.
 
 Fix issues inline. No need to re-review — just fix and move on.
 

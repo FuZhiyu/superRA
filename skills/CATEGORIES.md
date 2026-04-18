@@ -14,7 +14,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 | `execution-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
 | `integration-workflow` | INTEGRATE (pre-merge) | Drift-test creation, refactor-review loop, doc finalization. |
 | `merge-workflow` | INTEGRATE (merge) | Main update via semantic-merge, post-merge verification, local merge or PR push, worktree cleanup. |
-| `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns; Agent Teams mechanics in `references/agent-teams.md`. |
+| `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
 ## Domain — vertical-specific discipline
 
@@ -50,7 +50,6 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 | Skill | Purpose |
 |---|---|
 | `using-superRA` | Master skill every agent reads. Carries the distilled universal principles, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Main-agent-only cross-session detection lives in `references/session-bootstrap.md`. |
-| `writing-skills` | Create or modify skills using test-driven methodology. |
 
 ## Adding a Skill
 
