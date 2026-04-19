@@ -74,18 +74,18 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 1: Rebuild `refactor-and-integrate` as a gated checklist
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A (skill file refactor)
 **Input:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines (pattern reference)
 **Output:** Rewritten `skills/refactor-and-integrate/SKILL.md` with §Three Concurrent Disciplines-style gated checklist; references preserved only where load-bearing (long-form operational procedures); body walked by both implementer (self-check before commit) and reviewer (verification).
 
-- [ ] **Step 1: Describe — read tuned content carefully before touching**
+- [x] **Step 1: Describe — read tuned content carefully before touching**
 
   Read all three references in full. Identify Red Flags tables, rationalization lists, and severity-marked items. Per `/CLAUDE.md §Skill Changes`, this content is tuned through real sessions — paraphrasing is forbidden; relocation must preserve wording.
 
-- [ ] **Step 2: Design the gated checklist structure**
+- [x] **Step 2: Design the gated checklist structure**
 
   Three disciplines (Drift-Test Integrity, Codebase Integration, Merge Quality) as top-level sections. Each item marked `[BLOCKING]` or `[ADVISORY]`. Top-level item:
 
@@ -93,11 +93,11 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
   Include an explicit **Implementer self-check** subsection at the end of the checklist restating the pre-commit `git diff` procedure and what to do when a hunk fails justification (revert or re-justify in the integration map + commit message).
 
-- [ ] **Step 3: Fold references into body where load-bearing**
+- [x] **Step 3: Fold references into body where load-bearing**
 
   Long-form operational content stays in references (e.g., Project Doc Audit walk-up algorithm, two-commit merge mechanics). Short checklist items fold into SKILL.md body per `skill-creator §Progressive Disclosure`.
 
-- [ ] **Step 4: Validate — confirm implementer + reviewer walk the same file**
+- [x] **Step 4: Validate — confirm implementer + reviewer walk the same file**
 
   Cross-read with `/agents/implementer.md` and `/agents/reviewer.md`. Both must point at the single gated-checklist section. No parallel review-only document. Commit.
 
