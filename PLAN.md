@@ -232,7 +232,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 7: End-to-end dry-run verification
 **Depends on:** Tasks 1–6
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** N/A (on-paper dry-read / simulation)
@@ -244,7 +244,3 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 - [x] **Step 3: Mid-Phase-B plan-change scenario** — inject a substantive restructure need surfaced by recon; walk `planning-workflow §Changing Plans` with the INTEGRATE-trigger bullet (added by Task 5); confirm orchestrator-authors / researcher-decides ownership is unambiguous.
 - [x] **Step 4: Unrelated-hunk injection scenario** — on paper, inject an out-of-scope hunk in the implementer's Commit 2; walk the Implementer Self-Check (`git diff <merge-base>..HEAD`) and the verify reviewer's minimum-net-diff catch; confirm both independently catch it.
 - [x] **Step 5: D→B re-entry scenario** + write findings to RESULTS.md. Fix any ADVISORY stale-vocabulary hits found during the sweep in-place (no tuned content touched). Any `[BLOCKING]` issues would have been opened as new review-notes entries on the relevant prior task; none found.
-
-> **Review notes (2026-04-19, Task 7 review):**
->
-> 1. **MAJOR — stale-vocabulary sweep incomplete.** → implemented: orchestrator fixed the four `INTEGRATE Step 3` → `INTEGRATE Phase C` hits in `skills/report-in-markdown/SKILL.md:3,43,52` and `skills/report-in-markdown/references/baseline-io.md:36`. Post-fix broader sweep `grep -rn "INTEGRATE Step\|INTEGRATE Stage\|integration-workflow Step\|integration-workflow Stage"` over skills/, agents/, hooks/ returns zero hits. "Stage 1 / Stage 2" document-lifecycle terminology elsewhere in `report-in-markdown` preserved. RESULTS.md Task 7 fix table extended.
