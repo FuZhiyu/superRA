@@ -97,7 +97,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 1: Rebuild `refactor-and-integrate` as a gated checklist
 **Depends on:** *(none)*
-**Review status:** REVISE (Step 5 added — scope-by-Integration-status rule)
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A (skill file refactor)
@@ -124,7 +124,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
   Cross-read with `/agents/implementer.md` and `/agents/reviewer.md`. Both must point at the single gated-checklist section. No parallel review-only document. Commit.
 
-- [ ] **Step 5: Add scope-by-Integration-status rule** *(added 2026-04-19 via §Changing Plans)*
+- [x] **Step 5: Add scope-by-Integration-status rule** *(added 2026-04-19 via §Changing Plans)*
 
   In `skills/refactor-and-integrate/SKILL.md` body, add an explicit principle: *"Refactor implementer and verify reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution."* Point at `handoff-doc/references/plan-anatomy.md` for the DAG cascade semantics. Commit.
 

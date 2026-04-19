@@ -30,6 +30,8 @@
 - Caller-side wording in `integration-workflow/SKILL.md`, `merge-workflow/SKILL.md`, and `using-superRA/SKILL.md` still references the filenames directly; those pointers remain valid.
 - `[BLOCKING] Handoff-doc coherence` in merge-quality is deferred to Task 4 per plan.
 
+**Step 5 addition (scope-by-Integration-status rule).** SKILL.md body gained one principle-level section, `## Scope by Integration Status`, stating that refactor implementer and verify reviewer operate only on tasks whose `Integration status` is unset or `REVISE`; `APPROVED`-integration tasks are out of scope. The section points at `handoff-doc/references/plan-anatomy.md` (lines 178–179) for the DAG cascade semantics rather than restating them. Minimum-net-diff: only SKILL.md was touched in this step; the three references were not modified.
+
 **Verification:**
 
 - `grep` for "Silently update drift", "Tier 3", and "Never:" in SKILL.md shows the verbatim blockquotes are gone from the body; same strings present verbatim in the references.
