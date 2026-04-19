@@ -18,7 +18,7 @@
 
 ## Workflow Status
 
-- [x] **Plan approved** — researcher signed off on this plan (2026-04-19)
+- [x] **Plan approved** — researcher signed off on this plan (2026-04-19; re-approved after §Changing Plans protocol on 2026-04-19 for recon-as-reviewer architecture and shortcut axes)
 - [ ] **Execution complete** — all tasks `APPROVED`
 - [ ] **Drift tests created** — N/A for skill refactor; substitute: skill-graph consistency sweep + end-to-end dry-run verified
 - [ ] **Refactored** — final integration-review approval on the consolidated skill changes
@@ -50,6 +50,25 @@
 > **Question asked:** How to de-duplicate tuned content between SKILL.md body and references?
 > **Rationale:** DRY / one-source-of-truth; mirrored content in Task 1's first pass would drift on future edits.
 
+> **User decision (2026-04-19):** Phase B recon is a reviewer following the standard reviewer protocol. Its specialty is also running `semantic-merge` to produce a Tier classification. Recon output is distributed across PLAN.md task blocks as per-task integration review-notes blockquotes with `[BLOCKING]` / `[ADVISORY]` items — not a monolithic return payload. Orchestrator reads PLAN.md: any task with a new integration review-notes blockquote gets its `Integration status:` flipped to `REVISE`; tasks without annotations stay `APPROVED`. Tier classification is logged as a one-line entry under §Decisions for the integration pass.
+> **Question asked:** How does recon communicate the integration map?
+> **Rationale:** All important communication goes through handoff doc, not return text. Recon is already a reviewer; following the standard reviewer annotation protocol means one source of truth and no custom return contract.
+
+> **User decision (2026-04-19):** Tier-1 / refactor-path shortcut axes are independent.
+> - **Tier classification** (from recon's `semantic-merge` run) gates the **merge path**. Tier 1 → fast-forward merge only (Commit 1 = `git merge --ff-only`); follow-up agents do not load `semantic-merge`. Tier 2/3 → `semantic-merge` loaded by follow-up agents for proper merge resolution.
+> - **Per-task integration annotations** gate the **refactor path**. Zero annotations across all APPROVED-integration tasks → skip unified implementer + verify reviewer entirely. Non-zero → dispatch them, scoped to the annotated task list.
+> - Combined: Tier 1 + zero annotations → Phase B = fast-forward only, terminates. Tier 1 + annotations → fast-forward + refactor-only implementer + verify reviewer (no semantic-merge load). Tier 2/3 regardless of annotations → full flow.
+> **Question asked:** How do Tier and annotation-count gates combine into shortcuts?
+> **Rationale:** Decomposing the single "Tier-1 shortcut" into two independent axes prevents the class of bugs where one axis is clean but the other isn't.
+
+> **User decision (2026-04-19):** Refactor implementer and verify reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution. Mirrors the existing Review-status DAG cascade rule in `handoff-doc/references/plan-anatomy.md`. The dispatch `Task:` or `Tasks in scope:` field names the explicit list.
+> **Question asked:** Do refactorer / verify-reviewer know to skip already-integrated tasks?
+> **Rationale:** Without scoping, a second integration pass either redoes work or silently lets reviewer flag already-APPROVED tasks — violates minimum-net-diff.
+
+> **User decision (2026-04-19):** Recon loads `superRA:semantic-merge` via the canonical `Skills:` dispatch field (per `agent-orchestration §Dispatch Templates`) on top of its Stage-default loads. No new Manifest stage required.
+> **Question asked:** How does recon get the `semantic-merge` load without adding a new stage?
+> **Rationale:** The `Skills:` field is the canonical extra-load mechanism; introducing a new stage for one use case is heavier than needed.
+
 ---
 
 ## Project Conventions
@@ -78,7 +97,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 1: Rebuild `refactor-and-integrate` as a gated checklist
 **Depends on:** *(none)*
-**Review status:** APPROVED
+**Review status:** REVISE (Step 5 added — scope-by-Integration-status rule)
 **Integration status:** *(set during integration)*
 
 **Script:** N/A (skill file refactor)
@@ -105,6 +124,10 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
   Cross-read with `/agents/implementer.md` and `/agents/reviewer.md`. Both must point at the single gated-checklist section. No parallel review-only document. Commit.
 
+- [ ] **Step 5: Add scope-by-Integration-status rule** *(added 2026-04-19 via §Changing Plans)*
+
+  In `skills/refactor-and-integrate/SKILL.md` body, add an explicit principle: *"Refactor implementer and verify reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution."* Point at `handoff-doc/references/plan-anatomy.md` for the DAG cascade semantics. Commit.
+
 ---
 
 ### Task 2: Unify `integration-workflow` — Phases A–D with iterative Phase B
@@ -114,17 +137,22 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 > **Review notes (2026-04-19):**
 >
-> 1. [MAJOR] **Unauthorized step rewrite — Tier-1 shortcut drop routed through step-text edit, not `planning-workflow §Changing Plans`.** Step 2 text was changed from the planned "Tier 1 shortcut path." to a paragraph documenting that the shortcut was dropped. The implementer is not authorized to rewrite step content (handoff-doc ownership: implementers annotate with `→ implemented:`, they do not alter step text or task objective — see `agents/implementer.md`). Dropping the Tier-1 shortcut is a substantive design deviation from the approved plan and should have escalated via `planning-workflow §Changing Plans` (orchestrator authors the restructure; researcher decides). Fix: (a) revert Step 2 text to its original wording ("… Tier 1 shortcut path."), append an `→ implemented: <file:line> — noted that the Tier-1 shortcut was not included; escalation needed` annotation below it, and (b) flag this to the orchestrator in your status return so the plan change can be properly logged (User Decision + §Decisions entry) before the shortcut drop is ratified.
+> 1. [MAJOR] **Unauthorized step rewrite — Tier-1 shortcut drop routed through step-text edit, not `planning-workflow §Changing Plans`.** Step 2 text was changed from the planned "Tier 1 shortcut path." to a paragraph documenting that the shortcut was dropped.
+>    → orchestrator: accepted, and escalated properly. `planning-workflow §Changing Plans` protocol executed 2026-04-19: four new User Decisions logged in §Decisions covering (a) recon as reviewer with per-task annotations, (b) two independent shortcut axes (Tier + annotations), (c) scope-by-Integration-status rule, (d) recon `Skills:` field load of `semantic-merge`. Task 2 Steps 2–6 rewritten in place to reflect the new architecture. Task 1 reopened with Step 5 for the scope-by-status rule. Task 5 scope extended to cover the B→B re-entry trigger sentence in `plan-anatomy.md`. Workflow Status `Plan approved` unchecked and re-checked after these edits.
 >
-> 2. [MAJOR] **PR body template preserves a dangling "Step 2.0" reference.** Phase D Step 3b (SKILL.md:344) carries the old PR body verbatim including `[OR: skipped per Step 2.0 — Tier 1 clean merge, no analysis-path changes incoming]`. Phase D has no Step 2.0 — the Tier-1 skip path was deliberately dropped (see finding 1). Preserving the `[OR: …]` branch in the template invites PR authors to fill it in when no underlying mechanism exists. The Task 2 Step 2 text acknowledges this ("carries over only in the PR body template … if a future revision re-introduces the shortcut") but the dispatch-time user of the template has no way to know that. Either (a) strip the `[OR: …]` branch so the template reflects actual Phase D behavior, or (b) keep the full text but add an explicit in-file note above the PR body that the `[OR: …]` branch is a forward hook, not an active option — preferably (a), since "preserved verbatim" is a design requirement the orchestrator set, but a template that lies about the workflow is worse than a near-verbatim template. Flag to the orchestrator if unsure.
+> 2. [MAJOR] **PR body template preserves a dangling "Step 2.0" reference.**
+>    → orchestrator: accepted. Task 2 Step 4 rewritten to require stripping or rewriting any PR-template branch whose condition no longer exists in unified Phase D. The new shortcut architecture has Tier 1 + annotations = fast-forward + refactor-only; the PR-body template should reflect actual Phase D behavior, not a dropped step reference.
 >
-> 3. [MINOR] **Phase B opening paragraph lightly duplicates the two-commit definition from `refactor-and-integrate/references/merge-quality.md`.** SKILL.md:87 describes "Commit 1 mechanical conflict resolution via `superRA:semantic-merge`; Commit 2 unified integration — codebase-fit changes plus any intent-level work semantic-merge identified". `references/merge-quality.md` §11–26 owns this definition. Some naming is needed for the workflow to orchestrate, but the current paragraph leans into scope description ("codebase-fit changes plus any intent-level work semantic-merge identified"), which is merge-quality content. Consider trimming to: "Commit 1 mechanical (via `superRA:semantic-merge`); Commit 2 unified integration (per `refactor-and-integrate/references/merge-quality.md` §Two-Commit Structure)." Not blocking — borderline DRY.
+> 3. [MINOR] **Phase B opening paragraph lightly duplicates the two-commit definition from `refactor-and-integrate/references/merge-quality.md`.**
+>    → orchestrator: accepted as advisory. Re-dispatched implementer should trim Phase B opening to pointer-only, with substantive definition staying in `merge-quality.md`.
 >
-> 4. [MINOR] **"Run drift tests between the two commits and again after Commit 2" is named in both the Phase B body prose (lines 147, 151–158) and the dispatch `Additionally:` block (line 147).** Dispatch `Additionally:` steering must be strictly additive per `agent-orchestration §Dispatch Templates`. The drift-test cadence is already codified in the body prose immediately below and in `references/drift-test-quality.md`. Consider deleting the "Run drift tests between the two commits and again after Commit 2." line from the `Additionally:` block — the implementer will read the body prose and the reference. Not blocking — close call on whether this is load-bearing steering or restated content.
+> 4. [MINOR] **Drift-test cadence duplicated between body prose and dispatch `Additionally:` block.**
+>    → orchestrator: accepted as advisory. Strip the restated drift-test line from the `Additionally:` block.
 >
-> 5. [MINOR] **"When to Lighten" section mentions "the sync commit only" for true greenfield branches.** SKILL.md:367 says "Phase B reduces to the sync commit only" for greenfield. The Phase B core principle (lines 86–87, 381) is that separating sync and refactor into two passes violates minimum-net-diff. For a greenfield branch with no base, there is no sync to perform; the "sync commit only" wording is confusing. Consider rephrasing: "For a true greenfield branch with no base branch, Phase B is skipped entirely (no sync, no refactor target)." Not blocking.
+> 5. [MINOR] **"When to Lighten" section uses confusing "sync commit only" wording for greenfield.**
+>    → orchestrator: accepted as advisory. Rephrase per reviewer's suggestion.
 >
-> Re-review scope: (1) and (2) are the blocking items; (3)-(5) are advisory.
+> **Re-dispatch scope:** full Phase B rewrite per new Steps 2–3 (recon-as-reviewer, Tier + annotations shortcut axes, `Skills:` field dispatch shape, `Tasks in scope:` dispatch field, scope-by-Integration-status wiring). Items 3–5 advisory MINORs addressed incidentally in the rewrite.
 
 **Script:** N/A
 **Input:** current `skills/integration-workflow/SKILL.md`, current `skills/merge-workflow/SKILL.md`, Task 1's rewritten `refactor-and-integrate`, `agent-orchestration §Dispatch Templates`
@@ -132,15 +160,27 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 - [x] **Step 1: Draft phase skeleton** — Phases A–D with explicit re-entry arrows (B→A, B→B, C→B, D→B, Anywhere→`planning-workflow §Changing Plans`).
 
-- [x] **Step 2: Write Phase B three-dispatch internal structure** — recon reviewer (read-only, produces integration map) → batched `AskUserQuestion` for research-meaningful items + merge-base list → unified implementer (loads `semantic-merge` + `refactor-and-integrate`; two-commit structure: Commit 1 mechanical, Commit 2 unified integration; runs pre-commit self-check) → verify reviewer. Orchestrator split safety-valve for large integration maps. The Tier-1 shortcut that former `merge-workflow` used for Step 2b was dropped: Phase B's verify reviewer is always dispatched regardless of tier — the shortcut only saved one dispatch and complicated the flow. Post-merge skip-documentation carries over only in the PR body template (Phase D) where a Tier-1 clean merge may still be documented if a future revision re-introduces the shortcut.
+- [ ] **Step 2: Write Phase B internal structure** *(rewritten 2026-04-19 via §Changing Plans — see §Decisions, 4 new decisions)*
 
-- [x] **Step 3: Refactor every dispatch prompt** to canonical shape. Required-fields-first (`Stage:`, `Task:`, `Worktree:` / `Git range:`); `Additionally:` anchor-last with additive signal only. Canonical prefix verbatim. No restated PLAN.md content or checklist items.
+  Phase B uses standard reviewer/implementer dispatches with two shortcut axes.
+  - **Recon reviewer** (Stage: `integration`; **Skills: superRA:semantic-merge** via canonical `Skills:` dispatch field). Follows the standard reviewer protocol: walks every APPROVED-integration task, appends per-task integration review-notes blockquotes with `[BLOCKING]`/`[ADVISORY]` items for any task whose outputs need codebase-fit refactor, drift-test update, handoff-doc coherence, or merge-induced semantic clash. Additionally, runs `semantic-merge` trial-merge + drift tests to produce a **Tier classification**, logged as a one-line User Decision entry in §Decisions for this integration pass.
+  - **Orchestrator post-recon actions** (reads PLAN.md after recon commits):
+    - For each task carrying a new integration review-notes blockquote → flip `Integration status: REVISE`. Tasks without annotations stay `APPROVED`. Commit the flips atomically.
+    - Evaluate the two independent shortcut axes:
+      - **Tier 1 + zero annotations** → fast-forward merge only (Commit 1 = `git merge --ff-only`). Phase B terminates. Skip Steps 2b/3/4.
+      - **Tier 1 + annotations** → fast-forward merge (Commit 1); dispatch unified implementer + verify reviewer scoped to the flagged task list; follow-ups do NOT load `semantic-merge`.
+      - **Tier 2/3** (regardless of annotations) → full flow; follow-ups load `semantic-merge` via the `Skills:` field for proper merge resolution.
+  - **Step 2b — Batched user decisions**: collect research-meaningful items from recon's blockquotes into a single `AskUserQuestion` call (merge-base target + user-decision items). Log each per `handoff-doc §User Decisions Log`. Commit PLAN.md before dispatching the implementer.
+  - **Step 3 — Unified implementer** (Stage: `integration`; `Skills: superRA:semantic-merge` IF Tier 2/3; `Tasks in scope:` field names flagged task list). Two-commit structure: Commit 1 = mechanical merge (semantic-merge if Tier 2/3; `git merge --ff-only` if Tier 1); Commit 2 = unified refactor across flagged tasks. Pre-commit self-check per `refactor-and-integrate`.
+  - **Step 4 — Verify reviewer** (Stage: `integration`; walks cumulative diff; refuses to walk APPROVED-integration tasks not in scope). Orchestrator split safety-valve applies when the in-scope task list is large enough to exceed context threshold.
 
-- [x] **Step 4: Fold Phase D (merge/PR/cleanup)** from former `merge-workflow`. Drift tests run once on final state. PR body template preserved verbatim.
+- [ ] **Step 3: Refactor every dispatch prompt** to canonical shape. Required-fields-first (`Stage:`, `Task:`, `Worktree:` / `Git range:`; `Skills:` / `References:` where override needed); `Additionally:` anchor-last with additive signal only. Canonical prefix verbatim. No restated PLAN.md content or checklist items.
 
-- [x] **Step 5: Add plan-change trigger pointer** — one bullet in Phase B acknowledging that substantive restructure findings escalate to `planning-workflow §Changing Plans` (orchestrator proposes, researcher decides). Not a duplicated protocol — a pointer.
+- [ ] **Step 4: Fold Phase D (merge/PR/cleanup)** from former `merge-workflow`. Drift tests run once on final state. PR body template preserved verbatim — strip or rewrite any branch whose condition no longer exists in unified Phase D (e.g., any `[OR: skipped per Step 2.0 …]` referencing the old Tier-1 branch if the new shortcut architecture removes it).
 
-- [x] **Step 6: Validate — walk the four workflow principles** against the draft. Confirm each principle preserved or strengthened. Commit.
+- [ ] **Step 5: Add plan-change trigger pointer** — one bullet in Phase B acknowledging that substantive restructure findings escalate to `planning-workflow §Changing Plans` (orchestrator proposes, researcher decides). Not a duplicated protocol — a pointer.
+
+- [ ] **Step 6: Validate — walk the four workflow principles** against the draft. Confirm each principle preserved or strengthened. Commit.
 
 ---
 
@@ -175,17 +215,18 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ---
 
-### Task 5: Minimal `planning-workflow §Changing Plans` extension
+### Task 5: Minimal `planning-workflow §Changing Plans` extension + B→B re-entry trigger
 **Depends on:** Task 2
 **Review status:**
 **Integration status:**
 
 **Script:** N/A
-**Input:** `skills/planning-workflow/SKILL.md` §Changing Plans.
-**Output:** One bullet added acknowledging INTEGRATE-phase findings can trigger the protocol; one line stating orchestrator authors the Restructure Proposal and researcher decides. No duplication of the protocol body elsewhere.
+**Input:** `skills/planning-workflow/SKILL.md` §Changing Plans; `skills/handoff-doc/references/plan-anatomy.md` (DAG cascade rule for Integration status).
+**Output:** (a) One bullet in `planning-workflow §Changing Plans` acknowledging INTEGRATE-phase findings can trigger the protocol; one line stating orchestrator authors the Restructure Proposal and researcher decides. (b) In `plan-anatomy.md`, alongside the existing Integration-status cascade rule (lines 178–179), add one sentence documenting the **B→B re-entry trigger**: when main advances mid-integration, the recon reviewer's per-task annotations gate the flip — tasks it annotates get `Integration status: REVISE`; tasks it does not annotate stay `APPROVED`. No duplication of the cascade semantics elsewhere.
 
-- [ ] **Step 1: Add the pointer bullet and authorship rule.** No other changes — existing cascade semantics already cover mid-INTEGRATE rollback.
-- [ ] **Step 2: Validate** — cross-read with Task 2's Phase B plan-change pointer; confirm the two pointers are consistent and not duplicative. Commit.
+- [ ] **Step 1: Add the pointer bullet and authorship rule** to `planning-workflow §Changing Plans`. No other changes — existing cascade semantics already cover mid-INTEGRATE rollback.
+- [ ] **Step 2: Add B→B re-entry trigger sentence** to `plan-anatomy.md` adjacent to the Integration-status cascade rule. Format: one sentence; references `integration-workflow` Phase B recon as the trigger author.
+- [ ] **Step 3: Validate** — cross-read with Task 2's Phase B plan-change pointer and recon protocol; confirm the two pointers + the trigger sentence are consistent and not duplicative. Commit.
 
 ---
 
