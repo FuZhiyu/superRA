@@ -11,7 +11,7 @@ Utility skill carrying the domain knowledge for three closely related tasks in t
 2. **Refactoring analysis code** for codebase integration — making the code fit the host project's conventions, utilities, and style without losing data discipline or results.
 3. **Writing clean merge integration commits** that preserve intent and research integrity when combining branches.
 
-This is a utility skill, not a workflow skill. Workflow skills (`superRA:integration-workflow`, `superRA:merge-workflow`) own procedural choreography — when to dispatch agents, how to sequence stages, how to handle iteration loops. This skill owns the content.
+This is a utility skill, not a workflow skill. Workflow skills (`superRA:integration-workflow`) own procedural choreography — when to dispatch agents, how to sequence phases, how to handle iteration loops. This skill owns the content.
 
 **This body describes principles only.** The gated checklists — with `[BLOCKING]` / `[ADVISORY]` severity markers, tuned Red Flags, escalation lists, worked examples, and operational procedures — live in the three references. The references are **required loads**, named per Stage in `superRA:using-superRA` §Skill-Load Manifest. The implementer walks the reference checklists as self-check before commit; the reviewer walks the same checklists as verification. Same content, two perspectives — no parallel review-only document, no duplication.
 
@@ -101,8 +101,7 @@ Some tasks cross stages (a refactor during a merge; a drift-test review that fla
 ## Integration
 
 **Used by workflow skills:**
-- **`superRA:integration-workflow`** — Dispatches drift-test creation and review (`references/drift-test-quality.md`) and the integration review → refactor loop (`references/codebase-integration.md`).
-- **`superRA:merge-workflow`** — Dispatches post-merge integration review and refactoring (`references/codebase-integration.md`) during the refactor-review loop triggered by drift-test failure or reviewer REVISE.
+- **`superRA:integration-workflow`** — Dispatches drift-test creation and review (`references/drift-test-quality.md`) across Phase A; the Phase B recon, unified-implementer, and verify-reviewer dispatches (`references/codebase-integration.md`, `references/merge-quality.md`) for the iterative sync+refactor loop; and the Phase D post-merge drift-test + integration-review re-runs (`references/codebase-integration.md`) when main advanced.
 - **`superRA:semantic-merge`** — Dispatches merge proposer (`references/merge-quality.md`) and merge reviewer (`references/merge-quality.md`) for tier classification and conflict resolution.
 
 **Auto-loaded alongside:**

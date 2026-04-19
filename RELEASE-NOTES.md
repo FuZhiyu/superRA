@@ -1,5 +1,9 @@
 # Superpowers Release Notes
 
+## Unreleased — unified integration-workflow refactor
+
+- **`merge-workflow` removed.** The former `skills/merge-workflow/` is deleted; its choreography (main update via `semantic-merge`, post-merge verification, local merge or PR push, worktree cleanup) is folded into `superRA:integration-workflow` Phase D. Callers across `skills/`, `agents/`, `README.md`, `CLAUDE.md`, `skills/CATEGORIES.md`, and `tests/structural-invariants.sh` repointed at `integration-workflow`. `semantic-merge` remains a standalone utility, invoked from `integration-workflow` Phase B and Phase D.
+
 ## Unreleased — iterative re-entry mechanism + main-agent reference consolidation
 
 **Iterative re-entry mechanism.** `planning-workflow/SKILL.md §Changing Plans` owns a single 6-step protocol subsuming both in-execution researcher scope drift and post-integration scope additions (PR-review requests, adjacent features, follow-on ideas). The body moved out of `handoff-doc` — which previously hosted it under `§Mid-Session Scope Changes` and then briefly under `§Scope Changes and Re-entry` — into `planning-workflow` so re-entry lives alongside the other planning choreography; `handoff-doc/SKILL.md` retains only a one-sentence pointer under `§PLAN.md Is the Task Tracker`. The protocol now covers re-entry after integration or merge, not just mid-execution pings. Key features of the protocol:

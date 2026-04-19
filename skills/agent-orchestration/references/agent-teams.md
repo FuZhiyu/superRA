@@ -43,10 +43,8 @@ The full superRA workflow spans three team-worthy phases:
 ```
 execution-workflow (analysis team)
   → cleanup
-    → integration-workflow (integration team)
+    → integration-workflow (integration team, Phases A–D)
       → cleanup
-        → merge-workflow (merge team)
-          → cleanup
 ```
 
 Sequential teams with cleanup. The lead cleans up each team before spawning the next.

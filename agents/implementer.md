@@ -3,7 +3,7 @@ name: implementer
 description: >
   Prototype implementer agent. Executes tasks with data-first discipline.
   Used by execution-workflow (analysis tasks), integration-workflow (drift
-  test creation and refactoring), merge-workflow (post-merge refactoring),
+  test creation, refactoring, and post-merge refactoring across Phases A–D),
   and semantic-merge (merge proposals). The dispatcher passes only task
   pointers and stage context — this file is the canonical source for
   execution discipline, self-review, handoff format, and report format.
@@ -162,8 +162,8 @@ git commit -m "task N: [brief description]"
 
 - **Analysis task** — code under `Code/`, figures in `results_attachments/`.
 - **Drift test creation** — test files under `tests/`.
-- **Refactoring (integration-workflow Stage 2 or merge-workflow Step 3)** — refactored code anywhere in the repo. Your job is to address the reviewer's accepted issues, not to redo the analysis.
-- **Merge proposer (semantic-merge or merge-workflow Step 1)** — two-commit pattern on the merge branch: (1) mechanical conflict resolution, (2) integration commit adapting code/docs/tests. You still update the relevant PLAN.md task block if the merge changes a task's results; otherwise leave it alone.
+- **Refactoring (integration-workflow Phase B unified implementer)** — refactored code anywhere in the repo. Your job is to address the reviewer's accepted issues, not to redo the analysis.
+- **Merge proposer (semantic-merge or integration-workflow Phase B Commit 1 / Phase D re-sync)** — two-commit pattern on the merge branch: (1) mechanical conflict resolution, (2) integration commit adapting code/docs/tests. You still update the relevant PLAN.md task block if the merge changes a task's results; otherwise leave it alone.
 
 If your dispatch prompt overrides any of these defaults, follow the override.
 
