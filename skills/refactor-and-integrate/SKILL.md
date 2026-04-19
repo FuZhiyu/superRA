@@ -54,6 +54,14 @@ This item frames every checklist item below it — any hunk in the cumulative di
 
 ---
 
+## Scope by Integration Status
+
+Refactor implementer and verify reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution. The dispatch's `Task:` or `Tasks in scope:` field names the explicit in-scope list.
+
+This mirrors the DAG cascade rule on `Review status:` and `Integration status:` — see `handoff-doc/references/plan-anatomy.md` (lines 178–179) for the cascade semantics. Without scoping, a second integration pass either redoes already-approved work or lets the reviewer flag already-APPROVED tasks, which violates the Minimum-net-diff top item above.
+
+---
+
 ## Reviewer Verdict Protocol
 
 Every reviewer walks top-to-bottom through the Minimum-net-diff top item plus every discipline's checklist that the task touches. **Never halt on a failure** — one comprehensive pass every time; halting early forces a full re-review on the next pass, and reviewer dispatches are costly.
