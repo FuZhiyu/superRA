@@ -394,7 +394,7 @@ Report what was merged/pushed and what was cleaned up.
 
 ## Agent Loads
 
-See `superRA:using-superRA` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, `merge` (inside the Phase B implementer), and `documentation` rows.
+See `superRA:using-superRA` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows. The Phase B implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the `Skills:` dispatch field on Tier 2/3 — not a separate Stage.
 
 Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates RESULTS.md maturation per workflow principle P1. Step 4 (PLAN.md disposition) and Phase D Step 2 (milestone flip) stay with the orchestrator because they are user-facing decisions, not RA-implementable tasks. Project-level doc audit is covered by the Phase B verify reviewer per `codebase-integration.md` §Project Doc Audit — not by Phase C.
 
@@ -407,7 +407,7 @@ Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer sub
 - Interrupt the implementer mid-run with user questions — batch every research-meaningful decision at Phase B Step 2b
 - Invoke semantic-merge in its default (standalone) mode inside Phase B — delegated mode is load-bearing when semantic-merge runs at all (Tier 2/3); Phase B owns the post-merge drift tests and verify review
 - Refactor APPROVED-integration tasks not named in `Tasks in scope:` — those are out of scope per `refactor-and-integrate` §Scope by Integration Status
-- Strip domain-discipline artifacts during refactoring — see the `integration` / `merge` rows of the Skill-Load Manifest
+- Strip domain-discipline artifacts during refactoring — see the `integration` row of the Skill-Load Manifest (plus the conditional `superRA:semantic-merge` Skills-load on Tier 2/3)
 - Judge the researcher's methodology — challenges to methodology escalate (RA framing, `using-superRA` §Universal Principles)
 - Advance to Phase C before the verify reviewer APPROVES the unified diff
 - Advance to Phase D without a freshness check on the base branch — if main advanced, re-enter Phase B

@@ -133,7 +133,24 @@
 
 ## Task 6: Sync peripheral surfaces
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Files touched:**
+- `skills/using-superRA/SKILL.md` — Skill Inventory table: dropped `merge-workflow` row; widened `integration-workflow` one-liner to cover Phases A–D. Skill-Load Manifest: added clarifying paragraph after the table noting the `merge` stage is used for standalone `semantic-merge` delegated-mode dispatches; inside Phase B, the unified implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the canonical `Skills:` field on Tier 2/3.
+- `skills/execution-workflow/SKILL.md` — preamble, top-level-loop Step 4, and §Integration required-workflow-skills list all hand off to `integration-workflow` (Phases A–D) only; no `merge-workflow` reference.
+- `skills/handoff-doc/references/plan-anatomy.md` — Workflow Status milestones renamed to Phase A / B / C / D (drift tests / refactor / docs / merge); User Decisions Log cross-task-decision location list updated from Step 1 / Step 3 to Phase A / Phase C.
+- `skills/agent-orchestration/SKILL.md` — reviewer-feedback-discipline call-site list updated (line 187): now names `execution-workflow`, `integration-workflow` Phase A/B/C, and standalone `semantic-merge`. Override-pattern language (lines 147–148) confirmed adequate for utility-skill on-demand loading.
+- `skills/integration-workflow/SKILL.md` — §Agent Loads row list dropped `merge` (no longer a stage this workflow dispatches); §Red Flags entry on domain-discipline artifacts updated to the conditional `Skills:` pattern.
+- `skills/CATEGORIES.md` — dropped `merge-workflow` row; rewrote `integration-workflow` row to Phases A–D; updated `semantic-merge` row to name `integration-workflow` Phase B as caller.
+- `README.md` — workflow-map ASCII block replaced (unified `integration-workflow` with Phase A–D bullets); Mermaid diagram MERGE node replaced with Phase D node, added B→B and D→B re-entry arrows; Workflow skill table dropped `merge-workflow` row and widened `integration-workflow` row; Utility skill table `semantic-merge` row cites `integration-workflow` Phase B as caller.
+- `CLAUDE.md` — §DRY workflow-skills ownership list updated to drop `merge-workflow` (now names `planning-workflow`, `execution-workflow`, `integration-workflow` Phases A–D).
+- `RELEASE-NOTES.md` — Task 3's deprecation bullet augmented with a second bullet listing the peripheral-surface sync (skill inventory, Manifest clarification, Workflow Status milestone rename, README/CATEGORIES/CLAUDE.md updates).
+
+**Validation:**
+- `grep merge-workflow` across repo: remaining hits are PLAN.md / RESULTS.md / RELEASE-NOTES.md / `docs/plans/` / `docs/process-issues-2026-04-16.md` — all historical or task-description references. No active skill, agent, or hook file carries a `merge-workflow` reference.
+- Dispatch prompts sampled: `integration-workflow` Phase B Steps 1, 3, 4 each follow the canonical shape (required fields first — `Stage:`, `Task:`, `Git range:` / `Worktree:`; optional `Skills: superRA:semantic-merge` between required fields and prefix line on Tier 2/3; canonical prefix verbatim; `Additionally:` anchor last with additive steering only).
+- Shared-flow checklist (`refactor-and-integrate` §Three Disciplines) remains single-source — both implementer and reviewer walk the same file per the architectural rule. No review-only parallel document introduced by this task.
+- Minimum-net-diff: edits confined to skill inventory / Manifest clarification / milestone rename / caller-list updates. No tuned content (Red Flags tables, rationalization lists, RA-framing language) reworded.
 
 ## Task 7: End-to-end dry-run verification
 

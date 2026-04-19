@@ -12,8 +12,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 |---|---|---|
 | `planning-workflow` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
 | `execution-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
-| `integration-workflow` | INTEGRATE (pre-merge) | Drift-test creation, refactor-review loop, doc finalization. |
-| `merge-workflow` | INTEGRATE (merge) | Main update via semantic-merge, post-merge verification, local merge or PR push, worktree cleanup. |
+| `integration-workflow` | INTEGRATE (Phases A–D) | Drift-test creation (A), iterative unified sync + refactor (B), doc finalization (C), final merge / PR / cleanup (D). Invokes `semantic-merge` internally for Tier 2/3 syncs. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
 ## Domain — vertical-specific discipline
@@ -42,7 +41,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Step 3 doc-writer). Usable standalone by a single author with no subagents. |
 | `refactor-and-integrate` | Drift-test quality, codebase integration, and merge quality checklists. Loaded by integration-phase agents. |
 | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. Progressive-reveal references by stage. |
-| `semantic-merge` | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions. |
+| `semantic-merge` | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions. Invoked by `integration-workflow` Phase B (recon + Tier 2/3 implementer) and standalone outside the workflow. |
 | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle is in `agent-orchestration/references/worktree-harness-fallback.md`. |
 
 ## Meta — system-level

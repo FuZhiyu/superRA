@@ -52,8 +52,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 |---|---|---|
 | Workflow | `planning-workflow` | PLAN phase: scope check, task decomposition, plan draft. |
 | Workflow | `execution-workflow` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
-| Workflow | `integration-workflow` | INTEGRATE (pre-merge): drift tests, refactor, doc finalization. |
-| Workflow | `merge-workflow` | INTEGRATE (merge): update with main, verify, local merge or PR. |
+| Workflow | `integration-workflow` | INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
 | Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Step 3 doc-writer); usable standalone by a single author. |
@@ -79,6 +78,8 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 | `integration` | `refactor-and-integrate`; domain skill | `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
 | `drift-test` | `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
 | `merge` | `refactor-and-integrate` + `semantic-merge`; domain skill | `merge-quality.md` |
+
+The `merge` stage is used when `semantic-merge` is invoked in delegated mode for a dedicated merge-proposer / merge-reviewer pair (standalone merges). Inside `integration-workflow` Phase B, the unified implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the canonical `Skills:` dispatch field (Tier 2/3 only) rather than switching Stage.
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
