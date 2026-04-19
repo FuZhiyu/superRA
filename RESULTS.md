@@ -71,7 +71,25 @@
 
 ## Task 4: Update `semantic-merge` caller paths and handoff-doc coherence rule
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Summary:** `skills/semantic-merge/SKILL.md` caller-path text re-pointed from the deleted `merge-workflow` onto the unified `integration-workflow` Phase A–D structure (Task 2). `skills/refactor-and-integrate/references/merge-quality.md` gains a new §How-To section ("Handoff-doc coherence through the merge") and a matching `[BLOCKING] Handoff-doc coherence` gated-checklist item carrying the escalation rule for substantive PLAN.md/RESULTS.md restructures.
+
+**Key structural choices:**
+
+- **Two invocation sites named, not one.** The new caller-path text cites both Phase B (recon trial-merge + Tier 2/3 unified implementer) and Phase D re-sync (when the pre-merge freshness check finds main advanced). Keeps the mapping accurate to `integration-workflow` Step 1 (Phase D) where `semantic-merge` is delegated a second time.
+- **Dispatch-field mechanism surfaced.** Caller-path prose now states that `integration-workflow` loads `semantic-merge` via the canonical `Skills:` dispatch field on implementer/reviewer subagents — consistent with the §Decisions entry under PLAN.md ("Recon loads `superRA:semantic-merge` via the canonical `Skills:` dispatch field") and with the shortcut-axis rule (Tier 1 follow-ups do NOT load semantic-merge).
+- **Delegated-mode verification table updated.** The four "skip" rows now name Phase B verify / Phase D post-merge checks instead of `merge-workflow Step 2a/2b/4`. Tier + incoming-impact return contract repointed at Phase B's two-axis shortcut evaluation and Phase D's re-entry decision.
+- **Handoff-doc coherence §How-To is new content.** Scope-defines what counts as a "substantive restructure" (task add/remove/combine, DAG edge flip, APPROVED status invalidation from a cascade) versus routine content conflict (reworded prose, updated numbers inside an unchanged task block, new review-notes blockquote text). Routine conflicts stay mechanical; restructures escalate to `planning-workflow §Changing Plans` **before** the merge proceeds — orchestrator authors the Restructure Proposal, researcher decides, decision logged per `handoff-doc §User Decisions Log`, `PLAN.md` updated atomically, only then does Commit 2 land (reflecting the post-restructure plan).
+- **Checklist item is a single `[BLOCKING]` entry.** Points back into the §How-To rather than restating the trigger list — one source of truth. Placed in the "Handoff-doc coherence" checklist group just above "Integration map", so the reviewer hits it between result-integrity checks and the map-format check.
+- **Cascade semantics not duplicated.** The DAG cascade rule for `APPROVED` invalidation points at `handoff-doc/references/plan-anatomy.md` (existing owner of the rule) rather than restating the cascade mechanics.
+
+**Verification:**
+
+- `grep -n "merge-workflow" skills/semantic-merge/` returns zero hits — every caller-path reference (description frontmatter, When-to-Use bullet, delegated-mode paragraph, mode-aware verification table, Tier 1 / 2 / 3 Delegated lines, Working-Principles drift-test bullet, What-to-Report header, delegated-return contract, Integration §Called-by + Pairs-with) rewritten.
+- `[BLOCKING] Handoff-doc coherence` item present in `merge-quality.md` Gated Checklist; §How-To "Handoff-doc coherence through the merge" section present and cross-referenced.
+- Dry-read through a Tier 3 example where incoming PLAN.md restructures a task block: `semantic-merge` → Tier 3 classification → merge-proposer loads `merge-quality.md` → sees `[BLOCKING] Handoff-doc coherence` checklist item → §How-To points at `planning-workflow §Changing Plans` before Commit 2. Escalation path discoverable from `semantic-merge` alone via its required `merge-quality.md` load on the `merge` stage (per `using-superRA` §Skill-Load Manifest).
+- Minimum-net-diff: only two files touched in this task (`skills/semantic-merge/SKILL.md`, `skills/refactor-and-integrate/references/merge-quality.md`) plus PLAN.md / RESULTS.md. No unrelated hunks.
 
 ## Task 5: Minimal `planning-workflow §Changing Plans` extension
 
