@@ -67,7 +67,30 @@
 
 ## Task 3: Delete `skills/merge-workflow/`
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Summary:** `skills/merge-workflow/` deleted (one file, `SKILL.md`). Callers outside Task 6's peripheral-surfaces scope repointed to `superRA:integration-workflow` using the Phase A–D vocabulary established in Task 2. `RELEASE-NOTES.md` gained a single deprecation line under a new "Unreleased — unified integration-workflow refactor" heading, naming Phase D as the new home for former merge-workflow choreography.
+
+**Callers repointed (in scope for Task 3):**
+
+- `agents/implementer.md` — description frontmatter dropped `merge-workflow (post-merge refactoring)` and folded its call sites into `integration-workflow (drift test creation, refactoring, and post-merge refactoring across Phases A–D)`. §Stage-specific code deliverables lines for "Refactoring" and "Merge proposer" rewritten to reference `integration-workflow Phase B unified implementer` and `integration-workflow Phase B Commit 1 / Phase D re-sync`.
+- `agents/reviewer.md` — description frontmatter dropped `merge-workflow (post-merge drift test + integration review)`; replaced with `integration-workflow (drift test review, Phase B recon + verify review, and Phase D post-merge drift test + integration review)`.
+- `skills/refactor-and-integrate/SKILL.md` — "Workflow skills (...)" parenthetical in the body reduced to `superRA:integration-workflow` only. §Integration §Used-by list collapsed from two bullets (integration-workflow + merge-workflow) to one integration-workflow bullet naming Phase A drift tests, Phase B recon/unified-implementer/verify-reviewer, and Phase D post-merge drift-test + integration-review re-runs as the three call sites.
+- `skills/refactor-and-integrate/references/drift-test-quality.md` — Cross-cutting Red Flags preamble rewritten: `integration-workflow Stage 1 / Stage 2`, `merge-workflow Step 2`, `semantic-merge` → `integration-workflow Phase A`, `Phase B`, `Phase D post-merge verification`, `semantic-merge`.
+- `skills/agent-orchestration/references/agent-teams.md` — Teams-flow diagram collapsed: three cascading boxes (execution → integration → merge) → two boxes (execution → integration), with Phases A–D annotation on the integration team.
+- `skills/using-superRA/references/codex-tools.md` — "Finishing a development branch" pointer retargeted from `superRA:merge-workflow` to `superRA:integration-workflow Phase D`.
+- `tests/structural-invariants.sh` — `dispatch_files` list pruned (removed `skills/merge-workflow/SKILL.md`); check-10a (canonical-prefix count on dispatch templates) now scans four files instead of five.
+
+**Scope boundary (not touched by Task 3):**
+
+- **Task 6's peripheral surfaces** — `README.md`, `CLAUDE.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md` Skill-Load Manifest + inventory, `skills/execution-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, and `skills/handoff-doc/references/plan-anatomy.md` Workflow Status block. These are Task 6 Steps 1–5 scope and were left intact so the Task 3 diff stays minimum-net.
+- **RELEASE-NOTES.md pre-existing entries** — earlier release notes mention `merge-workflow` by name (it was a live skill at the time); these are historical record and were not rewritten. The new deprecation bullet is the only edit.
+
+**Verification:**
+
+- `grep -rn "merge-workflow" skills/ agents/ hooks/ README.md CLAUDE.md RELEASE-NOTES.md` returns only (a) Task 6 scope files, (b) the new deprecation line in RELEASE-NOTES.md, and (c) pre-existing historical RELEASE-NOTES entries. No hits remain in Task 3's scope files.
+- `skills/merge-workflow/` directory no longer exists; `git status` shows `deleted: skills/merge-workflow/SKILL.md`.
+- Minimum-net-diff: eight files modified plus one deletion, PLAN.md, and RESULTS.md. No unrelated hunks; each repoint is a 1–3 line edit targeted at a known caller string.
 
 ## Task 4: Update `semantic-merge` caller paths and handoff-doc coherence rule
 

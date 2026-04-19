@@ -167,17 +167,18 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 3: Delete `skills/merge-workflow/`
 **Depends on:** Task 2
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** N/A
 **Input:** `skills/merge-workflow/SKILL.md` + references; every caller of `superRA:merge-workflow` across the repo (grep).
-**Output:** Directory deleted; `grep -r "merge-workflow"` returns zero hits in `/skills/`, `/agents/`, `/hooks/`; `RELEASE-NOTES.md` carries one deprecation line pointing at `integration-workflow`.
+**Output:** Directory deleted; callers outside Task 6's peripheral-surfaces scope repointed at `integration-workflow`; `RELEASE-NOTES.md` carries one deprecation line pointing at `integration-workflow`. Task 6 owns the remaining inventory / Workflow Status / CLAUDE.md / README / CATEGORIES / Skill-Load Manifest sync; Task 3 does not pre-empt those files.
 
-- [ ] **Step 1: Audit callers** — `grep -rn "merge-workflow" skills/ agents/ hooks/ README.md CLAUDE.md RELEASE-NOTES.md`. List every hit.
-- [ ] **Step 2: Update each caller** to point at `integration-workflow`. Confirm wording matches the new Phase A–D structure.
-- [ ] **Step 3: Delete the directory** — `git rm -r skills/merge-workflow/`.
-- [ ] **Step 4: Validate — re-grep** returns zero hits except the RELEASE-NOTES deprecation line. Commit.
+- [x] **Step 1: Audit callers** — `grep -rn "merge-workflow" skills/ agents/ hooks/ README.md CLAUDE.md RELEASE-NOTES.md`. Hits outside Task 6's scope (the ones Task 3 owns): `agents/implementer.md` (×3), `agents/reviewer.md` (×1), `skills/refactor-and-integrate/SKILL.md` (×2), `skills/refactor-and-integrate/references/drift-test-quality.md` (×1), `skills/agent-orchestration/references/agent-teams.md` (×1), `skills/using-superRA/references/codex-tools.md` (×1), `tests/structural-invariants.sh` (×1). Task 6's scope (deferred): `README.md`, `CLAUDE.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`. RELEASE-NOTES pre-existing entries remain as historical record.
+- [x] **Step 2: Update each in-scope caller** to point at `integration-workflow` (Phase A–D vocabulary). Done: agents/implementer.md + agents/reviewer.md stage listings + agents/implementer.md §Stage-specific code deliverables; refactor-and-integrate/SKILL.md §Workflow-skills line folded into a single integration-workflow bullet citing Phase A / Phase B / Phase D call sites and the residual "Workflow skills (...)" parenthetical trimmed to `superRA:integration-workflow` only; drift-test-quality.md cross-cutting Red Flags preamble; agent-teams.md diagram; codex-tools.md finishing-branch pointer; tests/structural-invariants.sh dispatch_files list.
+- [x] **Step 3: Delete the directory** — `git rm -r skills/merge-workflow/` (one file: SKILL.md).
+- [x] **Step 4: Add deprecation line to `RELEASE-NOTES.md`** — single bullet under a new "Unreleased — unified integration-workflow refactor" heading, naming Phase D as the new home and listing the caller-file classes that were repointed.
+- [x] **Step 5: Validate — re-grep** remaining hits confirmed to be either Task 6's scope or pre-existing historical RELEASE-NOTES entries. Commit.
 
 ---
 
