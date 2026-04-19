@@ -1,6 +1,6 @@
 # superRA Codex Compatibility Plan
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all `PLAN.md` / `RESULTS.md` editing. Use `superRA:writing-skills` when editing SKILL.md frontmatter or trigger descriptions. Use `superRA:codex-superra-setup` when changing named Codex agent installation mechanics.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all `PLAN.md` / `RESULTS.md` editing. Use `superRA:codex-superra-setup` when changing named Codex agent installation mechanics. For skill-description guidance, follow the contributor rules in `CLAUDE.md` and the upstream Superpowers docs.
 
 **Objective:** Add coherent Codex support to superRA without regressing any Claude-facing workflow behavior.
 
@@ -32,7 +32,7 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 
 ### Module-level docs walked
 
-- `skills/writing-skills/SKILL.md`: skill descriptions are trigger metadata, not workflow summaries; keep them concise and under the practical length limit.
+- `skills/using-superRA/SKILL.md`: harness-specific behavior belongs in adapter references rather than in forked workflow copies; skill descriptions stay concise trigger metadata rather than workflow summaries.
 - `skills/using-superRA/SKILL.md`: harness-specific behavior belongs in adapter references rather than in forked workflow copies.
 - `tests/structural-invariants.sh`: when a new plugin surface or metadata rule becomes load-bearing, encode it as an invariant so regressions fail fast.
 
@@ -93,12 +93,12 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 
 **Files affected:** `skills/*/SKILL.md` frontmatter across the skill tree, `tests/structural-invariants.sh`
 
-**Input:** Codex skill-loading validation errors from the local repo test, plus `skill-creator` and `writing-skills` guidance on concise trigger descriptions.
+**Input:** Codex skill-loading validation errors from the local repo test, plus contributor guidance on concise trigger descriptions from `CLAUDE.md` and the upstream Superpowers docs.
 
 **Output:** Codex-compatible skill frontmatter across the entire repo and a regression guard for YAML parseability and description length.
 
 - [x] **Step 1: Fix invalid frontmatter.** Repaired the SKILL metadata issues Codex reported: malformed YAML description lines and the overlong `econ-data-analysis` description.
-- [x] **Step 2: Shorten the entire skill surface.** Rewrote skill descriptions to trigger-only metadata instead of mini-specs, following `skill-creator` and `writing-skills` guidance.
+- [x] **Step 2: Shorten the entire skill surface.** Rewrote skill descriptions to trigger-only metadata instead of mini-specs, following the repo contributor guidance and upstream Superpowers skill-writing guidance.
 - [x] **Step 3: Add a structural guard.** Extended `tests/structural-invariants.sh` so every `skills/*/SKILL.md` frontmatter must parse and every description must stay at or below 500 characters.
 - [x] **Step 4: Verify the retrofitted surface.** Re-ran the Codex-focused frontmatter check, generated-agent tests, sync check, and full structural invariants suite after the metadata cleanup.
 

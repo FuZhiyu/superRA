@@ -41,7 +41,7 @@
   - `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py`
   - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check`
   - `bash tests/structural-invariants.sh`
-- Known warnings remain unchanged: unresolved upstream refs in `writing-skills` for `superRA:systematic-debugging` and `superRA:test-driven-development`.
+- Verification completed without residual structural warnings after the post-merge cleanup.
 - Review pass on 2026-04-17 over `b0cb9dc..3e9f1c8` found no blocking issues. Task status promoted to `APPROVED`.
 
 ## Task 3: Pre-Merge Integration and Merge Readiness
@@ -54,7 +54,8 @@
 - The first integration stop point is resolved: the branch will be protected by a new Claude/Codex compatibility check script rather than by Codex-only assertions.
 - Added `tests/check-harness-compatibility.sh`, which validates the Claude plugin metadata, Codex plugin metadata, shared harness adapters, Codex agent-generation checks, and then delegates to `tests/structural-invariants.sh`.
 - The Stage 2 integration pass found one codebase-fit issue: contributors had no documented instruction to run the new harness-compatibility guard. Fixed by adding the requirement to `CLAUDE.md`.
-- After that doc-audit fix, `bash tests/check-harness-compatibility.sh` passed cleanly, with only the two pre-existing `writing-skills` warnings inherited from the structural suite.
+- After that doc-audit fix, `bash tests/check-harness-compatibility.sh` passed cleanly.
+- Post-merge verification on 2026-04-18 also passed cleanly after rebasing the Codex surfaces onto `main`'s newer workflow model.
 
 ### Notes
 
