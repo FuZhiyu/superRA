@@ -152,6 +152,7 @@ When the plan changes — new task, removed task, reordered task, objective / sa
 - Changing the analysis-level objective, methodology, sample definition, or expected output.
 - Changing data sources or project-wide conventions.
 - Scope additions arriving after integration or merge (post-PR additions, adjacent features surfaced by reviewers, follow-on ideas).
+- Substantive restructure findings surfaced mid-INTEGRATE (by `integration-workflow` Phase B recon, Phase B verify reviewer, Phase C doc-reviewer, or Phase D semantic-merge) — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
 
 **Not material (handle as inline discovery edits per the Living Plan section above):**
 
