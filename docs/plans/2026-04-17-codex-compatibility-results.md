@@ -3,9 +3,9 @@ author: Zhiyu Fu
 date: 2026-04-19
 timestamp: "2026-04-19T20:02:22Z"
 session_id: "session-20260419-200222Z"
-git_commit: "d3fbcda14779403288653392d1e70f453af2d537"
-git_message: "docs: record clean Codex integration review"
-git_dirty: true
+git_commit: "60f50d009c71714e8dc75acc1025ab57d45f0a65"
+git_message: "results: mature Codex compatibility report in place"
+git_dirty: false
 tags: ["results", "integration", "codex"]
 project: "superRA"
 permalink: "docs/plans/2026-04-17-codex-compatibility-results"
@@ -58,4 +58,4 @@ The integration pass was organized around three checks:
 
 ## Reproducibility
 
-Reproduce this state from commit `d3fbcda14779403288653392d1e70f453af2d537` with `bash tests/check-harness-compatibility.sh`.
+Reproduce this state from commit `60f50d009c71714e8dc75acc1025ab57d45f0a65` with `bash tests/check-harness-compatibility.sh`.
