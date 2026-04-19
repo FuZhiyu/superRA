@@ -225,6 +225,10 @@ Consistency check: the Phase Map box at lines 18–31 of integration-workflow SK
 | `skills/report-in-markdown/references/final-form.md` | 3, 125, 131 | `integration-workflow Step 3 / Stage 2 / Stage 2` | `integration-workflow Phase C / Phase B / Phase B` |
 | `skills/using-superRA/references/main-agent.md` | 67 | `integration-workflow Step 1 / Step 3` | `integration-workflow Phase A / Phase C` |
 | `skills/CATEGORIES.md` | 41 | `integration-workflow Step 3 doc-writer` | `integration-workflow Phase C doc-writer` |
+| `skills/report-in-markdown/SKILL.md` | 3 | `INTEGRATE Step 3` (frontmatter) | `INTEGRATE Phase C` |
+| `skills/report-in-markdown/SKILL.md` | 43 | `INTEGRATE Step 3` | `INTEGRATE Phase C` |
+| `skills/report-in-markdown/SKILL.md` | 52 | `INTEGRATE Step 3 caller` | `INTEGRATE Phase C caller` |
+| `skills/report-in-markdown/references/baseline-io.md` | 36 | `INTEGRATE Step 3` | `INTEGRATE Phase C` |
 
 **Legitimately retained "Stage 1 / Stage 2" usage.** The RESULTS.md document-lifecycle terminology (Stage 1 dev log → Stage 2 permanent record) is orthogonal to the workflow's old Stage 1 / Stage 2 naming and remains in force across `handoff-doc`, `report-in-markdown`, and their references. Only the workflow-phase label usage was stale.
 
@@ -243,5 +247,5 @@ Consistency check: the Phase Map box at lines 18–31 of integration-workflow SK
 
 ### Conclusion
 
-The refactored `integration-workflow` is internally consistent and externally pointer-correct against `planning-workflow §Changing Plans`, `handoff-doc/references/plan-anatomy.md`, and `refactor-and-integrate`. The five scenarios (happy path, B→B, mid-Phase-B plan-change, unrelated-hunk injection, D→B) all resolve on the committed skill text. The only findings were thirteen ADVISORY-level stale-vocabulary strings, fixed in this commit. No blocking inconsistency surfaced — the plan's Expected Results (a)–(d) are met.
+The refactored `integration-workflow` is internally consistent and externally pointer-correct against `planning-workflow §Changing Plans`, `handoff-doc/references/plan-anatomy.md`, and `refactor-and-integrate`. The five scenarios (happy path, B→B, mid-Phase-B plan-change, unrelated-hunk injection, D→B) all resolve on the committed skill text. Findings were seventeen ADVISORY-level stale-vocabulary strings (thirteen in the initial sweep + four `INTEGRATE Step 3` hits surfaced in review), all fixed. Post-fix broader grep (`INTEGRATE Step\|INTEGRATE Stage\|integration-workflow Step\|integration-workflow Stage`) returns zero hits in skills/, agents/, hooks/. No blocking inconsistency surfaced — the plan's Expected Results (a)–(d) are met.
 
