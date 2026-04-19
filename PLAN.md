@@ -183,16 +183,16 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 4: Update `semantic-merge` caller paths and handoff-doc coherence rule
 **Depends on:** Task 2
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** N/A
 **Input:** `skills/semantic-merge/SKILL.md`, `skills/refactor-and-integrate/references/merge-quality.md` (or its successor location post-Task 1).
 **Output:** `semantic-merge` caller-path text updated (`merge-workflow Step 1` → `integration-workflow Phase B`); `[BLOCKING] Handoff-doc coherence` item added to merge-quality; escalation rule stated: substantive handoff-doc restructures (task add/remove/combine, DAG edge flip, APPROVED status invalidation) escalate to `planning-workflow §Changing Plans` before the merge proceeds.
 
-- [ ] **Step 1: Update caller-path references** in `semantic-merge/SKILL.md` (delegated-mode invocation section, return contract section, standalone-invocation section).
-- [ ] **Step 2: Add `[BLOCKING] Handoff-doc coherence`** item to merge-quality checklist (Task 1's successor location). Include the escalation-to-Change-Plans rule.
-- [ ] **Step 3: Validate** — dry-read through a Tier 3 example where PLAN.md is in the conflict set. Confirm the escalation path is discoverable from semantic-merge alone. Commit.
+- [x] **Step 1: Update caller-path references** in `semantic-merge/SKILL.md` (delegated-mode invocation section, return contract section, standalone-invocation section).
+- [x] **Step 2: Add `[BLOCKING] Handoff-doc coherence`** item to merge-quality checklist (Task 1's successor location). Include the escalation-to-Change-Plans rule.
+- [x] **Step 3: Validate** — dry-read through a Tier 3 example where PLAN.md is in the conflict set. Confirm the escalation path is discoverable from semantic-merge alone. Commit.
 
 ---
 
