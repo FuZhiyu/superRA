@@ -3,7 +3,7 @@
 > Mirrors `PLAN.md` structure. Updated retroactively to capture what was already implemented in this session.
 > New agents: read `PLAN.md` for the work record and `RESULTS.md` for the implementation outcomes and verification state.
 
-**Last updated:** 2026-04-17 (review pass)
+**Last updated:** 2026-04-19 (integration review pass)
 **Status:** Approved
 
 ---
@@ -56,10 +56,11 @@
 - The Stage 2 integration pass found one codebase-fit issue: contributors had no documented instruction to run the new harness-compatibility guard. Fixed by adding the requirement to `CLAUDE.md`.
 - After that doc-audit fix, `bash tests/check-harness-compatibility.sh` passed cleanly.
 - Post-merge verification on 2026-04-18 also passed cleanly after rebasing the Codex surfaces onto `main`'s newer workflow model.
+- Integration review on 2026-04-19 found two minor doc drifts after the merge (`README.md` said the Skill-Load Manifest had seven rows; `PLAN.md` duplicated one `Project Conventions` bullet). Both were fixed in place; the harness-compatibility guard still passes.
 
 ### Notes
 
 - This integration pass is repo-level rather than empirical-analysis-level, so the drift guards are structural/plugin invariants rather than numerical output tests.
 - The selected Stage 1 guard is a new top-level compatibility script that will run the shared structural invariants plus the Claude- and Codex-specific manifest / agent-sync checks.
 - Local CLI probe from the new script saw both harness executables on this machine: `Claude Code 2.1.114` and `codex-cli 0.121.0`.
-- Task 3 is still in progress because the documentation-finalization / `PLAN.md` disposition step has not run yet.
+- Task 3 remains in progress because the documentation-finalization / `PLAN.md` disposition step has not run yet, but the Stage 2 integration-review pass is now clean.
