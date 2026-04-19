@@ -21,8 +21,6 @@ Assume the next reader is skilled at the craft, but knows nothing about this spe
 - Create `RESULTS.md` alongside (see Living Plan and Results Docs section below)
 - (User preferences for plan location override this default)
 
-**Before you create directories or start editing:** if this work may span multiple sessions, run in parallel with other work, or need an isolated data / environment copy, consider loading `superRA:worktree-data-sync` for the worktree setup before any file creation. A worktree at this point is cheap; retrofitting one later is not. For simple single-session work on an existing branch, skip it — a feature branch is sufficient. (See `worktree-data-sync` §When to Use a Worktree for the full decision table.)
-
 Commit the plan before proceeding to execution.
 
 ## Phase 1: Domain Vertical Setup
@@ -122,7 +120,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 **The editing discipline and the full anatomy templates** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — live in `superRA:handoff-doc`. Load it when authoring `PLAN.md` / `RESULTS.md` from scratch; its `references/plan-anatomy.md` and `references/results-anatomy.md` carry the full templates. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md`. For the starter scaffold and anatomy, load `superRA:handoff-doc` and read `references/results-anatomy.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
+**Results document:** Create `RESULTS.md` alongside `PLAN.md` with the header and **one pre-allocated stub per task block** — same order, same task name as in `PLAN.md`, body just `**Status:** Not started`. Full anatomy and ownership rules in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Step 3 it matures into a permanent record.
 
 ### PLAN.md Is the Task Tracker
 

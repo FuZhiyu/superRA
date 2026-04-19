@@ -184,17 +184,35 @@ def _tracked_external_symlink_paths(repo_root: Path) -> list[str]:
     return paths
 
 
-def discover_managed_entries(source_worktree: Path) -> list[dict]:
-    """Discover managed non-git entries from source worktree state."""
+def _contains(ancestor: Path, target: Path) -> bool:
+    try:
+        target.relative_to(ancestor)
+        return True
+    except ValueError:
+        return False
+
+
+def discover_managed_entries(source_worktree: Path, dest_worktree: Path | None = None) -> list[dict]:
+    """Discover managed non-git entries from source worktree state.
+
+    When `dest_worktree` is provided, entries whose resolved source path
+    contains it are skipped to avoid creating a self-referential link or
+    recursive copy when the destination worktree is nested inside a
+    gitignored directory of the source (e.g., `/repo/.worktrees/foo`
+    seeded from `/repo` where `.worktrees/` is gitignored).
+    """
     shared_roots = parse_data_sync_annotations(source_worktree)
     by_path: dict[str, dict] = {}
     priority: dict[str, int] = {}
+    dest_resolved = dest_worktree.resolve() if dest_worktree is not None else None
 
     def add_entry(path: str, source: Path, origin_priority: int) -> None:
         if not path:
             return
         kind = _entry_kind_for_source(source)
         if kind is None:
+            return
+        if dest_resolved is not None and _contains(source, dest_resolved):
             return
         if path in priority and priority[path] > origin_priority:
             return
@@ -272,6 +290,7 @@ def discover_managed_entries(source_worktree: Path) -> list[dict]:
         if not resolved.exists():
             continue
         add_entry(root, resolved, origin_priority=40)
-        by_path[root]["symlink_only"] = True
+        if root in by_path:
+            by_path[root]["symlink_only"] = True
 
     return [by_path[path] for path in sorted(by_path)]

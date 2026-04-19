@@ -164,7 +164,7 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 | **refactor-and-integrate** | Three integration-phase checklists: `drift-test-quality.md`, `codebase-integration.md`, `merge-quality.md`. Standalone-invokable for any refactoring task. |
 | **report-in-markdown** | Format discipline for markdown reports with figures, LaTeX math, tables. Lean SKILL.md body; three references loaded on demand: `baseline-io.md`, `rich-content.md`, `final-form.md`. |
 | **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions to the user. Invoked by `merge-workflow` Step 1 and by the merge-guard hook. |
-| **worktree-data-sync** | Isolated git worktrees, non-git data sync between them (seed, diff, apply modes), and cleanup ritual. Parallel analysis without branch switching. |
+| **worktree-data-sync** | Non-git data sync between existing worktrees (seed, diff, apply modes) and data teardown. Worktree lifecycle (create / enter / remove) lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
 
 ### Meta
 

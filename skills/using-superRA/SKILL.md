@@ -27,20 +27,18 @@ These defaults apply whenever you write, review, or refactor code. They govern m
 
 3. **Keep edits surgical.** Touch only what the task requires. Match the surrounding style. Do not refactor adjacent code, comments, or formatting unless the task requires it. Remove imports, variables, and helper code only when your own change made them unused; mention unrelated dead code instead of deleting it.
 
-## Shared-Repo Commit Discipline
+## Commit Hygiene
 
-Multiple agents (main/orchestrator plus subagents, or parallel subagents in the same worktree) may be writing in the same repo. Any agent that stages a commit — including the main agent dispatching other agents — MUST respect this discipline.
-
-Other agents' uncommitted edits may land in your `git status` output. **Only commit the files you or your subagents modified this turn.** Never commit sweeps.
+Any agent that stages a commit — main agent, orchestrator, or subagent — stages **only the files it modified this turn**. Untracked files not your work (editor scratch, `__pycache__`, `.DS_Store`, harness artifacts, or other agents' in-flight edits in a shared worktree) show up in `git status`; `git add -A/./-u` sweeps them in silently and produces cross-agent commit contamination that is hard to unwind.
 
 Before staging:
 
 1. Run `git status` and list every modified/new file. For each, decide: did I touch this file (directly via Write/Edit) in this turn?
 2. If yes -> stage it by exact path: `git add path/to/file`.
-3. If no -> leave it untouched. Do NOT `git add -A`, `git add .`, or `git add -u`. Those stage other agents' in-flight work and produce cross-agent commit contamination that is hard to unwind.
+3. If no -> leave it untouched. Do NOT `git add -A`, `git add .`, or `git add -u`.
 4. Before `git commit`, run `git diff --cached` and confirm only your edits are staged. If you see unexpected content, unstage it with `git restore --staged path/to/file`.
 
-If you see unfamiliar uncommitted changes and cannot tell whether they are another agent's in-flight work or stale local state, stop and ask (the orchestrator if you are a subagent; the user if you are the main agent) — do not unilaterally discard or commit them.
+If you see unfamiliar uncommitted changes and cannot tell whether they are legitimate pending work (from the main agent between dispatches, or the user editing manually) or stale junk, stop and ask the orchestrator (if you are a subagent) or the user (if you are the main agent) — do not unilaterally discard or commit them.
 
 ## Handoff Docs
 
@@ -62,7 +60,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
 | Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
-| Utility | `worktree-data-sync` | Isolated git worktrees, non-git data sync between them, and cleanup ritual. |
+| Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
 | Meta | `using-superRA` | This skill — the master skill every agent reads. |
 
 ## Composable Design
