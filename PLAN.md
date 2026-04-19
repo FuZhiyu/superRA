@@ -33,7 +33,6 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 ### Module-level docs walked
 
 - `skills/using-superRA/SKILL.md`: harness-specific behavior belongs in adapter references rather than in forked workflow copies; skill descriptions stay concise trigger metadata rather than workflow summaries.
-- `skills/using-superRA/SKILL.md`: harness-specific behavior belongs in adapter references rather than in forked workflow copies.
 - `tests/structural-invariants.sh`: when a new plugin surface or metadata rule becomes load-bearing, encode it as an invariant so regressions fail fast.
 
 ### Not walked (not needed for this retroactive handoff)
