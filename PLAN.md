@@ -167,7 +167,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 3: Delete `skills/merge-workflow/`
 **Depends on:** Task 2
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** N/A
