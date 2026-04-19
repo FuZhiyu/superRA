@@ -91,9 +91,22 @@
 - Dry-read through a Tier 3 example where incoming PLAN.md restructures a task block: `semantic-merge` → Tier 3 classification → merge-proposer loads `merge-quality.md` → sees `[BLOCKING] Handoff-doc coherence` checklist item → §How-To points at `planning-workflow §Changing Plans` before Commit 2. Escalation path discoverable from `semantic-merge` alone via its required `merge-quality.md` load on the `merge` stage (per `using-superRA` §Skill-Load Manifest).
 - Minimum-net-diff: only two files touched in this task (`skills/semantic-merge/SKILL.md`, `skills/refactor-and-integrate/references/merge-quality.md`) plus PLAN.md / RESULTS.md. No unrelated hunks.
 
-## Task 5: Minimal `planning-workflow §Changing Plans` extension
+## Task 5: Minimal `planning-workflow §Changing Plans` extension + B→B re-entry trigger
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Summary:** Two minimal additions wire INTEGRATE-phase re-entry into the existing plan-change and cascade machinery without duplicating either. `planning-workflow §Changing Plans` now has one bullet under **Material** acknowledging mid-INTEGRATE restructure findings (Phase B recon, Phase B verify reviewer, Phase C doc-reviewer, Phase D semantic-merge) as valid triggers, with the orchestrator-authors / researcher-decides ownership rule stated inline. `plan-anatomy.md` gains one sentence adjacent to the existing Integration-status cascade rule documenting the **B→B re-entry trigger**: recon's per-task annotations gate the flip — annotated tasks → `Integration status: REVISE`, unannotated tasks stay `APPROVED`.
+
+**Key structural choices:**
+
+- **Pointers, not duplicated protocol.** The `planning-workflow §Changing Plans` bullet names the four Phase-B/C/D call sites that can raise a restructure finding and restates only the ownership rule ("orchestrator authors the Restructure Proposal; the researcher decides"). The protocol body (confirm intent → log decision → inline-edit PLAN.md → update Workflow Status → commit atomically → resume) is unchanged — mid-INTEGRATE restructures ride the existing cascade semantics.
+- **Trigger sentence placed at the cascade-rule owner.** The B→B sentence lives in `plan-anatomy.md` next to the Integration-status cascade bullet, not in `integration-workflow`. One source of truth: Phase B recon is the mechanical trigger, but the cascade rule itself (what annotated vs unannotated means for the `Integration status` flip) belongs to the PLAN.md anatomy reference that owns the field's semantics.
+- **Wording aligned with Task 2's Phase B recon.** `integration-workflow` Phase B Step 1 already states recon "walks every APPROVED-integration task, appends per-task integration review-notes blockquotes … for any task whose outputs need codebase-fit refactor, drift-test update, handoff-doc coherence, or merge-induced semantic clash." The new sentence uses the same annotation vocabulary without restating the recon procedure.
+
+**Verification:**
+
+- Cross-read with `integration-workflow/SKILL.md` line 91 (Phase-B plan-change pointer) and line 447 (Integration §Called-by entry for `planning-workflow §Changing Plans`): all three pointers use the same "orchestrator authors the Restructure Proposal; researcher decides" framing. No duplication of the cascade semantics — `planning-workflow §Changing Plans` points at `plan-anatomy.md` for the field vocabulary, and `plan-anatomy.md` points at `integration-workflow` Phase B recon as the trigger author.
+- Minimum-net-diff: only two skill files touched (`skills/planning-workflow/SKILL.md` + `skills/handoff-doc/references/plan-anatomy.md`) plus PLAN.md / RESULTS.md. One bullet added in the first file, one sentence appended to an existing bullet in the second. No unrelated hunks.
 
 ## Task 6: Sync peripheral surfaces
 

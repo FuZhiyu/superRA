@@ -198,16 +198,16 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 5: Minimal `planning-workflow §Changing Plans` extension + B→B re-entry trigger
 **Depends on:** Task 2
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md` §Changing Plans; `skills/handoff-doc/references/plan-anatomy.md` (DAG cascade rule for Integration status).
 **Output:** (a) One bullet in `planning-workflow §Changing Plans` acknowledging INTEGRATE-phase findings can trigger the protocol; one line stating orchestrator authors the Restructure Proposal and researcher decides. (b) In `plan-anatomy.md`, alongside the existing Integration-status cascade rule (lines 178–179), add one sentence documenting the **B→B re-entry trigger**: when main advances mid-integration, the recon reviewer's per-task annotations gate the flip — tasks it annotates get `Integration status: REVISE`; tasks it does not annotate stay `APPROVED`. No duplication of the cascade semantics elsewhere.
 
-- [ ] **Step 1: Add the pointer bullet and authorship rule** to `planning-workflow §Changing Plans`. No other changes — existing cascade semantics already cover mid-INTEGRATE rollback.
-- [ ] **Step 2: Add B→B re-entry trigger sentence** to `plan-anatomy.md` adjacent to the Integration-status cascade rule. Format: one sentence; references `integration-workflow` Phase B recon as the trigger author.
-- [ ] **Step 3: Validate** — cross-read with Task 2's Phase B plan-change pointer and recon protocol; confirm the two pointers + the trigger sentence are consistent and not duplicative. Commit.
+- [x] **Step 1: Add the pointer bullet and authorship rule** to `planning-workflow §Changing Plans`. No other changes — existing cascade semantics already cover mid-INTEGRATE rollback.
+- [x] **Step 2: Add B→B re-entry trigger sentence** to `plan-anatomy.md` adjacent to the Integration-status cascade rule. Format: one sentence; references `integration-workflow` Phase B recon as the trigger author.
+- [x] **Step 3: Validate** — cross-read with Task 2's Phase B plan-change pointer and recon protocol; confirm the two pointers + the trigger sentence are consistent and not duplicative. Commit.
 
 ---
 
