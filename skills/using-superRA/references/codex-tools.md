@@ -44,4 +44,21 @@ BRANCH=$(git branch --show-current)
 - `GIT_DIR != GIT_COMMON` → already in a linked worktree
 - `BRANCH` empty → detached HEAD
 
-See `superRA:worktree-data-sync` for worktree creation + data sync + cleanup, and `superRA:merge-workflow` / `superRA:execution-workflow` for branch completion flows.
+See `superRA:agent-orchestration/references/worktree-harness-fallback.md`
+for worktree create / enter / remove mechanics (harness tools preferred;
+raw `git worktree` fallback) and `superRA:worktree-data-sync` for seeding
+non-git data into an existing worktree. Finishing a development branch —
+push, PR, or discard — is covered by `superRA:merge-workflow` and
+`superRA:execution-workflow` Step 4 Option 4.
+
+## Codex App Finishing
+
+When the sandbox blocks branch/push operations (detached HEAD in an
+externally managed worktree), the agent commits all work and informs
+the user to use the App's native controls:
+
+- **"Create branch"** — names the branch, then commit/push/PR via App UI
+- **"Hand off to local"** — transfers work to the user's local checkout
+
+The agent can still run tests, stage files, and output suggested branch
+names, commit messages, and PR descriptions for the user to copy.

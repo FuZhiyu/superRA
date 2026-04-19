@@ -20,6 +20,8 @@ Adapts the general-purpose `semantic-merge-integration` skill for economics rese
 - Updating a long-lived analysis branch from main/upstream
 - The PreToolUse `merge-guard` hook reminds you when you attempt a bare `git merge/rebase/cherry-pick` outside the analysis-finishing flow
 
+**Exception — orchestrator-managed parallel merges bypass this skill.** Branches matching `parallel/<analysis-branch>/<slug>` are created by the orchestrator under `superRA:agent-orchestration` §Concurrent Writers Require Worktree Isolation. Their task boundaries are set ex-ante in `PLAN.md`, so the branches are mechanically disjoint and merge with plain `git merge --no-ff`. The `merge-guard` hook exempts `parallel/*` source refs for this reason. Do not invoke semantic-merge for these.
+
 ## Invocation Pattern
 
 semantic-merge has two modes. Tier classification and conflict resolution are identical across modes. **Post-merge verification differs** — standalone owns it all; delegated trims the duplicate checks that the caller will re-run.
