@@ -43,9 +43,28 @@ The header is the project's standing context, written at planning time and updat
 **Pipeline:** [Path to pipeline file, e.g., `run_all.sh`]
 
 ---
+
+## Workflow Status
+
+A checklist of irreversible workflow milestones. Each box is a rollup over per-task `**Review status:**` and `**Integration status:**` fields — it flips only when all tasks that contribute to the milestone have the appropriate per-task status. Each box flips at the moment its workflow step completes, in the same commit that completes the step. A new agent reads this section first to know where the project stands without having to scan task blocks or grep commits. On re-entry, the orchestrator unchecks affected boxes by judgment and declares in §Decisions which boxes were cleared and why. The full drift-test suite must re-run green before rechecking `Drift tests created` — see `planning-workflow §Changing Plans`.
+
+- [ ] **Plan approved** — researcher signed off on data inventory + plan (`planning-workflow` Phase 2)
+- [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`execution-workflow` Step 3)
+- [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Stage 1)
+- [ ] **Refactored** — integration-reviewer `APPROVED` on refactored code (`integration-workflow` Stage 2)
+- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Step 3)
+- [ ] **Merged** — branch merged to main or PR opened (`merge-workflow` Step 4)
+
+---
 ```
 
-**Header ownership:** Only the orchestrator (or standalone author) edits the header. Subagents read it but do not modify it. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
+### Header ownership
+
+Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read these sections but do not modify them. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
+
+### `## Decisions` placement
+
+When the first cross-task user decision arrives, insert a `## Decisions` heading immediately after `## Workflow Status` and before the first task block — so the header order is: standing context → `## Workflow Status` → `## Decisions` (when present) → `---` → task blocks. Format and rules per `SKILL.md` §User Decisions Log. Omit the heading entirely until there is a first decision to record.
 
 ## Project Conventions
 
@@ -98,18 +117,15 @@ Three lines, blockquote, dated. `Question asked` is the agent's own short restat
 
 The `ask-user-question-logger` PostToolUse hook reminds the agent to log after each `AskUserQuestion` call; when the harness does not expose the hook, set a TodoWrite reminder.
 
-**Not covered here:**
-
-- Reviewer-feedback adjudication inside review-notes blockquotes — that is the `→ orchestrator:` / `→ implemented:` protocol owned by `agents/implementer.md` and `agents/reviewer.md`. User decisions are upstream: the researcher answering a question the agent could not decide.
-- Ephemeral clarifications the agent could have resolved from the code ("which file holds X?") — those are not decisions, they do not belong in the log.
-
 If it is unclear whether an answer counts as a decision worth logging: if acting on it would change the code, data, or methodology in a way another agent could not reconstruct from the code alone, log it.
 
 ## Task Block Anatomy
 
 ````markdown
 ### Task N: [Phase Name]
+**Depends on:** Task N-1 [, Task N-2] | *(none)*
 **Review status:** *(set during execution — not filled at planning time)*
+**Integration status:** *(set during integration — not filled at planning time)*
 
 **Script:** `Code/NN_phase_name.py` (notebook-compatible format)
 **Input:** `Data/input_file.parquet`
@@ -159,10 +175,12 @@ Validate: row count matches expectation, unmatched rate reasonable, distribution
 
 ## Field-by-Field Notes
 
-- **`**Review status:**`** is always present on a task once execution begins. Valid values: `IMPLEMENTED`, `REVISE (<stage>)`, `APPROVED`. Before execution starts, leave it as a placeholder or omit.
+- **`**Review status:**`** is always present on a task once execution begins. Valid values: `IMPLEMENTED`, `REVISE (<stage>)`, `APPROVED`. Before execution starts, leave it as a placeholder or omit. On re-entry, tasks in the transitive downstream closure of a modified task have their status cleared by default; the orchestrator may exempt a downstream task by documenting why the upstream change does not affect its inputs (one blockquote per exempted task in §Decisions).
+- **`**Integration status:**`** is set by the integration reviewer, considering drift-test coverage, refactor coverage, and doc coverage for that task's contribution. Valid values: unset / `IMPLEMENTED` / `REVISE` / `APPROVED`. The same DAG cascade rule applies as for `**Review status:**` — downstream tasks in the closure of a modified task have their Integration status cleared by default, with documented exemptions in §Decisions.
 - **Script / Input / Output** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **Steps** are editable by the implementer: they may rewrite, reorder, add, or remove steps when the data forces deviation from the planned approach. Steps are expressed as checkbox items with inline code blocks that contain the actual analyst code.
 - **Review notes blockquote** is present only when there are active items. On `APPROVED`, the blockquote is removed entirely. For how items enter, get annotated, and exit across iterations, see `agents/reviewer.md` (first-round REVISE and re-review deletion) and `agents/implementer.md` (annotating fixes with `→ implemented: ...`).
+- **`## Workflow Status` checkboxes** are flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. Each box is a rollup over per-task statuses: e.g., `Execution complete` flips only when every task has `**Review status:** APPROVED`; `Drift tests created` flips only when the full drift-test suite passes (which requires all tasks to have `**Integration status:**` coverage). A box is unchecked again only when a scope change or post-merge refactor invalidates the milestone — see `planning-workflow §Changing Plans`. Subagents may not flip boxes; if a subagent reports work that completes a milestone, the orchestrator flips the box in the next commit.
 
 ## No Placeholders
 

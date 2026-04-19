@@ -61,8 +61,9 @@ of human involvement will be closed without review.
 
 ## Rigor
 
-- [ ] If this is a skills change: I used `superpowers:writing-skills` and
-      completed adversarial pressure testing (paste results below)
+- [ ] If this is a skills change: I edited the skill directly, tested it
+      on a real Claude Code session, and iterated based on observed
+      behavior (see CLAUDE.md "Skill Changes"). Paste eval results below.
 - [ ] This change was tested adversarially, not just on the happy path
 - [ ] I did not modify carefully-tuned content (Red Flags table,
       rationalizations, "human partner" language) without extensive evals

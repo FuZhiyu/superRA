@@ -10,7 +10,7 @@ These skills still mention Claude-oriented tool names in places. In Codex, read 
 | `Agent(subagent_type: "superRA:implementer")` | spawn the named Codex agent `superra_implementer` |
 | `Agent(subagent_type: "superRA:reviewer")` | spawn the named Codex agent `superra_reviewer` |
 | `SendMessage` | send input to the existing warm agent |
-| `TeamCreate` / `TaskCreate` | use Codex team or parallel-agent tools when available; otherwise fall back to ordinary agent fan-out |
+| parallel agent dispatch | use Codex parallel-agent tools when available; otherwise fall back to ordinary agent fan-out |
 
 ## Named Agent Setup
 
