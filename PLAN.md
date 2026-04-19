@@ -132,27 +132,8 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 2: Unify `integration-workflow` — Phases A–D with iterative Phase B
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
-
-> **Review notes (2026-04-19):**
->
-> 1. [MAJOR] **Unauthorized step rewrite — Tier-1 shortcut drop routed through step-text edit, not `planning-workflow §Changing Plans`.** Step 2 text was changed from the planned "Tier 1 shortcut path." to a paragraph documenting that the shortcut was dropped.
->    → orchestrator: accepted, and escalated properly. `planning-workflow §Changing Plans` protocol executed 2026-04-19: four new User Decisions logged in §Decisions covering (a) recon as reviewer with per-task annotations, (b) two independent shortcut axes (Tier + annotations), (c) scope-by-Integration-status rule, (d) recon `Skills:` field load of `semantic-merge`. Task 2 Steps 2–6 rewritten in place to reflect the new architecture. Task 1 reopened with Step 5 for the scope-by-status rule. Task 5 scope extended to cover the B→B re-entry trigger sentence in `plan-anatomy.md`. Workflow Status `Plan approved` unchecked and re-checked after these edits.
->
-> 2. [MAJOR] **PR body template preserves a dangling "Step 2.0" reference.**
->    → orchestrator: accepted. Task 2 Step 4 rewritten to require stripping or rewriting any PR-template branch whose condition no longer exists in unified Phase D. The new shortcut architecture has Tier 1 + annotations = fast-forward + refactor-only; the PR-body template should reflect actual Phase D behavior, not a dropped step reference.
->
-> 3. [MINOR] **Phase B opening paragraph lightly duplicates the two-commit definition from `refactor-and-integrate/references/merge-quality.md`.**
->    → orchestrator: accepted as advisory. Re-dispatched implementer should trim Phase B opening to pointer-only, with substantive definition staying in `merge-quality.md`.
->
-> 4. [MINOR] **Drift-test cadence duplicated between body prose and dispatch `Additionally:` block.**
->    → orchestrator: accepted as advisory. Strip the restated drift-test line from the `Additionally:` block.
->
-> 5. [MINOR] **"When to Lighten" section uses confusing "sync commit only" wording for greenfield.**
->    → orchestrator: accepted as advisory. Rephrase per reviewer's suggestion.
->
-> **Re-dispatch scope:** full Phase B rewrite per new Steps 2–3 (recon-as-reviewer, Tier + annotations shortcut axes, `Skills:` field dispatch shape, `Tasks in scope:` dispatch field, scope-by-Integration-status wiring). Items 3–5 advisory MINORs addressed incidentally in the rewrite.
 
 **Script:** N/A
 **Input:** current `skills/integration-workflow/SKILL.md`, current `skills/merge-workflow/SKILL.md`, Task 1's rewritten `refactor-and-integrate`, `agent-orchestration §Dispatch Templates`
