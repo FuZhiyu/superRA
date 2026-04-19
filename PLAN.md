@@ -18,7 +18,7 @@
 
 ## Workflow Status
 
-- [ ] **Plan approved** — researcher signed off on this plan
+- [x] **Plan approved** — researcher signed off on this plan (2026-04-19)
 - [ ] **Execution complete** — all tasks `APPROVED`
 - [ ] **Drift tests created** — N/A for skill refactor; substitute: skill-graph consistency sweep + end-to-end dry-run verified
 - [ ] **Refactored** — final integration-review approval on the consolidated skill changes
