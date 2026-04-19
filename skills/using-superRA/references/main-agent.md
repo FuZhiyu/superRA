@@ -32,16 +32,17 @@ git branch --list 'analysis/*' 2>/dev/null
 # Check for tasks under review or with issues
 grep "Review status" PLAN.md 2>/dev/null | grep -v APPROVED | head -5
 
-# Check for RESULTS.md for context
-[ -f "RESULTS.md" ] && echo "Results document found"
+# Check for RESULTS.md or archived results for context
+[ -f "RESULTS.md" ] && echo "Results document found at project root"
+find docs/plans -maxdepth 1 -name "*results*.md" 2>/dev/null | head -5
 
 # Fallback: check docs/ for archived or legacy plans
 find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/null | head -5
 ```
 
 **If an incomplete plan is found** (PLAN.md with unchecked `- [ ]` steps or non-APPROVED review status):
-- Summarize: "Found in-progress analysis: `PLAN.md` (N tasks APPROVED, K with review issues or pending review). RESULTS.md has findings through Task K. Resume?"
-- If user confirms: load PLAN.md and RESULTS.md, check git log for latest state, continue from next incomplete task (check review status — a task with `REVISE` needs re-dispatch, `IMPLEMENTED` needs review, no status needs implementation)
+- Summarize: "Found in-progress analysis: `PLAN.md` (N tasks APPROVED, K with review issues or pending review). Results live in root `RESULTS.md` if present; otherwise load the relevant archived `docs/plans/*results*.md`. Resume?"
+- If user confirms: load `PLAN.md` and the active results record (root `RESULTS.md` when present, otherwise the archived results markdown that matches this analysis), check git log for latest state, continue from next incomplete task (check review status — a task with `REVISE` needs re-dispatch, `IMPLEMENTED` needs review, no status needs implementation)
 - If user declines: proceed normally
 
 **If in a worktree with no plan file:**
