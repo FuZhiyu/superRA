@@ -1,22 +1,12 @@
 # Merge Integration Quality Standards
 
-Shared domain reference for merge proposals and merge review. Both the implementer (merge proposer) and reviewer use this checklist.
+Shared domain reference for merge proposals and merge review. Both the implementer (merge proposer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the commit-message templates, integration-map format, and Tier 3 escalation procedure the checklist items encode. Loaded whenever `Stage:` is `merge` (per `superRA:using-superRA` §Skill-Load Manifest).
 
-## Intent Preservation
+---
 
-- [ ] **Incoming intent understood:** Correctly identified what the incoming changes were trying to accomplish — read commits and diffs to understand WHY, not just WHAT
-- [ ] **Current branch preserved:** Current branch's work is preserved where intended
-- [ ] **Synthesis coherent:** Where both sides were combined, result is logically consistent
-- [ ] **No silent losses:** No changes from either side silently dropped without justification
+## How-To
 
-## Research Integrity
-
-- [ ] **No silent result changes:** Analysis outputs are either unchanged, or the change was flagged to the user
-- [ ] **Variable definitions consistent:** Variables used across merged code have consistent definitions
-- [ ] **Sample construction preserved:** Sample filters and data sources are correct in the merged result
-- [ ] **User decisions implemented:** (Tier 3) The user's decisions on research-meaningful conflicts were implemented correctly
-
-## Two-Commit Structure
+### Two-commit structure — templates
 
 **Commit 1 (mechanical merge):**
 - Complete the merge with lowest-assumption reconciliation
@@ -31,12 +21,7 @@ Shared domain reference for merge proposals and merge review. Both the implement
 - Regenerate derived outputs from merged source code
 - Message: `"integrate [incoming] intent: [brief description]"`
 
-**Quality checks:**
-- [ ] Commit 1 is minimal — no opportunistic cleanup beyond conflict resolution
-- [ ] Commit 2 adapts intent — code, docs, tests reflect the merged state
-- [ ] Generated artifacts regenerated, not hand-edited
-
-## Research-Meaningful Escalation (Tier 3)
+### Research-Meaningful Escalation (Tier 3)
 
 These conflicts **MUST** be flagged for the researcher. Ask via `AskUserQuestion` (plain text if unavailable) — when the resolution has a closed set of options (`--ours`, `--theirs`, synthesize, regenerate, roll back), pass them as question options; when it's methodology-level, ask in free-form prose. Mark such rows as `ASK USER` in the integration map while still open, and replace with the researcher's resolution once it comes back. Every answer is a user decision and must be logged per `handoff-doc` §User Decisions Log before the resolution is committed — into `PLAN.md`'s `## Decisions` section if the branch still has `PLAN.md`, otherwise into the integration commit message (which becomes the record of record once `PLAN.md` is gone).
 
@@ -52,7 +37,7 @@ These conflicts **MUST** be flagged for the researcher. Ask via `AskUserQuestion
 - Remove data discipline artifacts
 - Judge whether a methodology choice is correct
 
-## Integration Map Format
+### Integration map format
 
 For each conflict area, document:
 - File and location
@@ -62,14 +47,47 @@ For each conflict area, document:
 
 Present user decisions in terms of **intent and consequences**, not raw diffs.
 
-## Verification
+---
 
-- [ ] **Drift tests pass** (or failures appropriately escalated to user)
-- [ ] **No stale references:** Old variable names, file paths, function names updated
-- [ ] **No outdated labels:** Comments, docstrings, and documentation reflect the merged state
-- [ ] **Pipeline runs** (if applicable): End-to-end pipeline produces expected outputs
+## Gated Checklist
 
-## Data Discipline
+Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` items MAY be flagged as MINOR but do not block APPROVE.
 
-- [ ] Data discipline artifacts (description steps, row counts, validation checks, documentation cells) preserved through the merge
-- [ ] See loaded `econ-data-analysis` for the full list of artifacts
+**Intent preservation:**
+
+- `[BLOCKING]` **Incoming intent understood.** Correctly identified what the incoming changes were trying to accomplish — read commits and diffs to understand WHY, not just WHAT.
+- `[BLOCKING]` **Current branch preserved** where intended.
+- `[BLOCKING]` **No silent losses.** No changes from either side silently dropped without justification.
+- `[ADVISORY]` **Synthesis coherent.** Where both sides were combined, result is logically consistent.
+
+**Research integrity:**
+
+- `[BLOCKING]` **No silent result changes.** Analysis outputs are either unchanged, or the change was flagged to the user.
+- `[BLOCKING]` **Variable definitions consistent** across merged code.
+- `[BLOCKING]` **Sample construction preserved.** Sample filters and data sources are correct in the merged result.
+- `[BLOCKING]` **User decisions implemented correctly** (Tier 3) — the researcher's decisions on research-meaningful conflicts were implemented as stated.
+
+**Two-commit structure (templates in §How-To → Two-commit structure):**
+
+- `[BLOCKING]` **Commit 1 (mechanical merge):** lowest-assumption reconciliation; preserves information from both sides; restores a buildable, runnable state; no opportunistic cleanup or reinterpretation.
+- `[BLOCKING]` **Commit 2 (integration):** adapts code, docs, tests, and generated artifacts so the branch incorporates the incoming objective; rewrites stale names, labels, paths, and references; regenerates derived outputs from merged source code (not hand-edited).
+
+**Research-Meaningful Escalation (full procedure and Never-list in §How-To → Research-Meaningful Escalation (Tier 3)):**
+
+- `[BLOCKING]` Every Tier 3 conflict (variable definitions, sample construction, econometric specifications, data processing, results) flagged to the researcher via `AskUserQuestion`, logged per `handoff-doc` §User Decisions Log, and implemented per the answer.
+- `[BLOCKING]` None of the four Tier 3 "Never" items violated (silent result changes, ours/theirs on research-meaningful conflicts, removing data discipline artifacts, judging methodology choices).
+
+**Integration map (format in §How-To → Integration map format):**
+
+- `[BLOCKING]` For each conflict area, documented file + location, classification, decision, and rationale. User decisions presented in terms of **intent and consequences**, not raw diffs.
+
+**Verification:**
+
+- `[BLOCKING]` **Drift tests pass** (or failures appropriately escalated to user per `drift-test-quality.md` §Cross-cutting Red Flags).
+- `[BLOCKING]` **No stale references:** Old variable names, file paths, function names updated.
+- `[BLOCKING]` **Pipeline runs** (if applicable): End-to-end pipeline produces expected outputs.
+- `[ADVISORY]` **No outdated labels:** Comments, docstrings, and documentation reflect the merged state.
+
+**Data discipline:**
+
+- `[BLOCKING]` Data discipline artifacts (description steps, row counts, validation checks, documentation cells) preserved through the merge. See loaded `econ-data-analysis` for the full list of artifacts.

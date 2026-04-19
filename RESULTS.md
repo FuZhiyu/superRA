@@ -12,28 +12,28 @@
 
 **Status:** IMPLEMENTED
 
-**Summary:** `skills/refactor-and-integrate/SKILL.md` rewritten as a shared gated checklist structured after `econ-data-analysis/SKILL.md §Three Concurrent Disciplines`. Three top-level disciplines — **Drift-Test Integrity**, **Codebase Integration**, **Merge Quality** — each carry `[BLOCKING]` / `[ADVISORY]` severity-marked items. Load-bearing top item `[BLOCKING] Minimum net diff to merge base` is called out above the disciplines (verbatim from PLAN.md Task 1 Step 2). A dedicated **Implementer Self-Check** subsection at the end restates the pre-commit `git diff <merge-base>..HEAD` procedure and the revert-or-re-justify rule.
+**Summary:** `skills/refactor-and-integrate` restructured with a clean separation between **principle-level body** (SKILL.md) and **how-to + checklist references** — one source of truth per concern. SKILL.md describes what each of the three concurrent disciplines (Drift-Test Integrity, Codebase Integration, Merge Quality) is *for*, names the severity-marker convention (`[BLOCKING]` / `[ADVISORY]`), carries the load-bearing **Minimum net diff to merge base** top item, the two-verdict reviewer protocol (APPROVE / REVISE + dependent-finding prose + narrow re-review), and the pre-commit **Implementer Self-Check** (`git diff <merge-base>..HEAD`). All tuned content lives in the three references, reached via stage-scoped required loads per `superRA:using-superRA` §Skill-Load Manifest.
 
 **Key structural choices:**
 
-- **References preserved (no deletion).** `drift-test-quality.md`, `codebase-integration.md`, `merge-quality.md` kept intact as long-form operational references. Checklist items in SKILL.md point at the references for worked examples, the red-green verification cycle, the Project Doc Audit walk-up algorithm, two-commit commit-message templates, and the integration-map format. This satisfies Task 1 Step 3 — long-form operational content stays in references; short checklist items fold into body.
-- **Tuned content preserved verbatim, not paraphrased.**
-  - Drift-Test Integrity "Cross-cutting Red Flags" (the four-bullet "Never" list) reproduced in the SKILL.md body as a blockquote, matching the wording in `references/drift-test-quality.md` §Drift Test Integrity — Cross-Cutting Red Flags.
-  - Merge Quality "Research-Meaningful Escalation (Tier 3)" (escalation prose + five-conflict-type list + four-bullet "Never" list) reproduced verbatim from `references/merge-quality.md`.
-  - RA-framing language ("methodology is a research decision, not a code-quality decision") preserved in the Codebase Integration inconsistency-handling item.
-- **Shared-flow checklist, one source of truth.** Implementer walks the SKILL.md body as self-check before commit; reviewer walks the same items as verification. Verdict protocol (APPROVE / REVISE, dependent findings, narrow re-review after REVISE) mirrors `econ-data-analysis/SKILL.md`. No parallel review-only document exists.
-- **Agent-file cross-check.** `agents/implementer.md` and `agents/reviewer.md` load `refactor-and-integrate` via the `superRA:using-superRA` §Skill-Load Manifest (no hard-coded path in either agent file), so both point at the same file by construction.
+- **SKILL.md = principles + cross-cutting gates.** No verbatim Red Flags Never-list, no Tier 3 escalation blockquote, no RA-framing blockquotes. Principle descriptions may *name* concepts ("Tier 3 conflicts", "Red Flags") but the tuned prose lives only in references. Body retained items: load-bearing top item, reviewer verdict protocol, Implementer Self-Check, dispatch convention, integration-pointers.
+- **References restructured as §How-To + §Gated Checklist.** Each reference now opens with a how-to section (procedures, worked examples, Red Flags rationale, Tier 3 escalation procedure + Never-list, Project Doc Audit walk-up algorithm, two-commit commit-message templates, integration-map format) and closes with the gated checklist — severity-marked items whose prose points back into §How-To.
+  - `drift-test-quality.md` §How-To: tolerance calibration worked examples, red-green cycle, test format conventions, Cross-cutting Red Flags (four-bullet "Never" list, verbatim).
+  - `codebase-integration.md` §How-To: handling-inconsistencies decision tree (RA-framing wording preserved verbatim), Project Doc Audit walk-up.
+  - `merge-quality.md` §How-To: two-commit templates, Research-Meaningful Escalation (Tier 3) prose + five-conflict-type list + four-bullet "Never" list (verbatim), integration-map format.
+- **Tuned wording preserved verbatim.** All Red Flags, rationalization bullets, Tier 3 escalation prose, and RA-framing sentences were relocated with no paraphrasing, per `/CLAUDE.md §Skill Changes`.
+- **Shared-flow checklist, one source of truth.** Implementer walks each reference's §Gated Checklist as self-check before commit; reviewer walks the same items as verification. No parallel review-only document exists; no content is duplicated between SKILL.md body and references.
+- **Manifest wording tight.** `integration` / `drift-test` / `merge` rows in `using-superRA/SKILL.md` §Skill-Load Manifest already name the specific references as required (`codebase-integration.md`, `drift-test-quality.md`, `merge-quality.md`). No manifest edit needed.
 
 **Scope notes:**
 
-- Caller-side wording in `integration-workflow/SKILL.md`, `merge-workflow/SKILL.md`, and `using-superRA/SKILL.md` still references the references by filename (e.g., "`codebase-integration.md` §Project Doc Audit"). Those pointers remain valid since the references were not deleted. Task 2 / Task 6 will update any stage-naming or skill-inventory language that depends on the new SKILL.md structure.
+- Caller-side wording in `integration-workflow/SKILL.md`, `merge-workflow/SKILL.md`, and `using-superRA/SKILL.md` still references the filenames directly; those pointers remain valid.
 - `[BLOCKING] Handoff-doc coherence` in merge-quality is deferred to Task 4 per plan.
 
 **Verification:**
 
-- Top item wording matches PLAN.md Task 1 Step 2 verbatim.
-- `grep` for "Red Flag", "AskUserQuestion", "Tier 3", "ASK USER" in the new SKILL.md shows preserved wording.
-- No other files modified in this task.
+- `grep` for "Silently update drift", "Tier 3", and "Never:" in SKILL.md shows the verbatim blockquotes are gone from the body; same strings present verbatim in the references.
+- `git diff 92a685b..HEAD` on this task's commit touches exactly four files: SKILL.md and the three references under `skills/refactor-and-integrate/`. No unrelated hunks (Minimum-net-diff self-check passes).
 
 
 
