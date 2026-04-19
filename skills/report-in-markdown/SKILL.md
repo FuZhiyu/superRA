@@ -1,6 +1,6 @@
 ---
 name: report-in-markdown
-description: Utility for producing well-formatted markdown reports that contain figures, LaTeX math, tables, or multi-section prose — lengthy output that reads poorly in a terminal, standalone reports meant for humans, the Stage 2 consolidation of `RESULTS.md` at INTEGRATE Step 3, and any implementer task section in `RESULTS.md` that embeds a figure or a math expression. Not for agent-only handoff text. Caller supplies the content; this skill enforces format discipline via reference files loaded on demand.
+description: Utility for producing well-formatted markdown reports that contain figures, LaTeX math, tables, or multi-section prose — lengthy output that reads poorly in a terminal, standalone reports meant for humans, the Stage 2 consolidation of `RESULTS.md` at INTEGRATE Phase C, and any implementer task section in `RESULTS.md` that embeds a figure or a math expression. Not for agent-only handoff text. Caller supplies the content; this skill enforces format discipline via reference files loaded on demand.
 user-invocable: true
 ---
 
@@ -40,7 +40,7 @@ Skip this skill for agent-only text handoffs with no figures, no math, no tables
 `rich-content.md` describes *how* to embed figures, but the target attachments directory is passed in by the caller, not hard-coded:
 
 - **Stage 1** (`RESULTS.md` dev log): use `results_attachments/` at the project root (superRA convention in `handoff-doc`).
-- **Stage 2** (permanent `RESULTS.md` at INTEGRATE Step 3): use an `attachments/` folder next to the relocated file.
+- **Stage 2** (permanent `RESULTS.md` at INTEGRATE Phase C): use an `attachments/` folder next to the relocated file.
 - **Standalone report**: use `./attachments/` relative to the report file.
 
 If you are the caller and unsure which directory applies, the skill that invoked you (e.g., `handoff-doc`, `integration-workflow`) should tell you. If nothing specifies one, default to `attachments/` next to the output file.
@@ -49,4 +49,4 @@ If you are the caller and unsure which directory applies, the skill that invoked
 
 - `references/baseline-io.md` — frontmatter spec, filename convention, output-path resolution, git metadata capture. For permanent artifacts only.
 - `references/rich-content.md` — figure handling (PDF→PNG, relative-path embedding), LaTeX math, markdown tables, file references. For any caller with embedded content.
-- `references/final-form.md` — consolidation discipline for Stage 2 `RESULTS.md`: fact-check checklist, task-indexed → reader-facing restructure, figure materialization, relocation. For the INTEGRATE Step 3 caller and the integration reviewer.
+- `references/final-form.md` — consolidation discipline for Stage 2 `RESULTS.md`: fact-check checklist, task-indexed → reader-facing restructure, figure materialization, relocation. For the INTEGRATE Phase C caller and the integration reviewer.
