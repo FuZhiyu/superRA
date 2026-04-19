@@ -5,7 +5,7 @@ description: Use when you have a PLAN.md in the superRA task-block format and ar
 
 # Execution Workflow
 
-Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu. On merge/PR, dispatches `superRA:integration-workflow` then `superRA:merge-workflow` directly.
+Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu. On merge/PR, dispatches `superRA:integration-workflow` (Phases A–D) directly.
 
 Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE; the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines` + relevant §Pitfalls). Falls back to direct execution when the user requests it or tasks are trivial.
 
@@ -40,7 +40,7 @@ Top-level loop:
 1. Read plan, extract all tasks, create TodoWrite.
 2. **Per task** (see inner loop below).
 3. When no tasks remain → verify pipeline + reproducibility (Step 3).
-4. Dispatch `integration-workflow` then `merge-workflow`.
+4. Dispatch `integration-workflow` (Phases A–D cover drift tests, unified sync+refactor, doc finalization, and final merge/PR/cleanup).
 
 **Per-task inner loop:**
 
@@ -263,5 +263,4 @@ See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of
   - **superRA:worktree-data-sync** — invoked from within the parallel-dispatch flow to seed non-git data into a provisioned worktree; do not hand-roll copy scripts.
 - **superRA:planning-workflow** — Creates the plan this skill executes
 - **the active domain skill (for data analysis: `superRA:econ-data-analysis`)** — REQUIRED: domain discipline all agents follow, loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest. Carries the §Three Concurrent Disciplines that the reviewer walks on every pass.
-- **superRA:integration-workflow** — Drift tests, refactor-review loop, documentation finalization (dispatched by this skill at Step 4 on merge/PR)
-- **superRA:merge-workflow** — Main update, post-merge verification, local merge or PR push, worktree cleanup (dispatched by this skill at Step 4 on merge/PR after integration-workflow returns)
+- **superRA:integration-workflow** — Drift tests (Phase A), iterative sync + refactor (Phase B), doc finalization (Phase C), final merge/PR/cleanup (Phase D). Dispatched by this skill at Step 4 on merge/PR.

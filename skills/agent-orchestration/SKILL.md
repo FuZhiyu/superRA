@@ -184,7 +184,7 @@ When a reviewer returns REVISE:
 - You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `handoff-doc` §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
 - You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `handoff-doc` §User Decisions Log.
 
-This discipline applies equally to `execution-workflow` (implementation review), `integration-workflow` (drift test review, integration review, doc review), `merge-workflow` (merge review, post-merge integration review), and `semantic-merge` (merge review). The orchestrator owns the final call in every loop.
+This discipline applies equally to `execution-workflow` (implementation review), `integration-workflow` (Phase A drift-test review, Phase B recon + verify reviews, Phase C doc review), and `semantic-merge` (merge review, standalone delegated-mode dispatches). The orchestrator owns the final call in every loop.
 
 ## Review Status Reference
 

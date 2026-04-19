@@ -50,10 +50,10 @@ A checklist of irreversible workflow milestones. Each box is a rollup over per-t
 
 - [ ] **Plan approved** — researcher signed off on data inventory + plan (`planning-workflow` Phase 2)
 - [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`execution-workflow` Step 3)
-- [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Stage 1)
-- [ ] **Refactored** — integration-reviewer `APPROVED` on refactored code (`integration-workflow` Stage 2)
-- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Step 3)
-- [ ] **Merged** — branch merged to main or PR opened (`merge-workflow` Step 4)
+- [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Phase A)
+- [ ] **Refactored** — verify reviewer `APPROVED` on the unified sync+refactor diff (`integration-workflow` Phase B)
+- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Phase C)
+- [ ] **Merged** — branch merged to main or PR opened (`integration-workflow` Phase D)
 
 ---
 ```
@@ -103,7 +103,7 @@ Researcher answers to `AskUserQuestion` / plain-text pauses land in `PLAN.md` **
 **Where it lands:**
 
 - **Task-scoped decision** (affects one task's scope, methodology, or implementation) → blockquote inside that task block, directly under `**Review status:**`. Uses the same blockquote syntax as review notes, so it sits naturally beside the adjudication protocol in `agents/implementer.md` / `agents/reviewer.md`.
-- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `execution-workflow` Step 4 merge-menu choice, `integration-workflow` Step 1 drift-test selection, `integration-workflow` Step 3 doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed immediately after the header / `## Project Conventions` and before the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
+- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `execution-workflow` Step 4 merge-menu choice, `integration-workflow` Phase A drift-test selection, `integration-workflow` Phase C doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed immediately after the header / `## Project Conventions` and before the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
 
 **Format (both locations):**
 
