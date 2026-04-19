@@ -78,13 +78,8 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 1: Rebuild `refactor-and-integrate` as a gated checklist
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(set during integration)*
-
-> **Review notes (2026-04-19 — orchestrator, post-APPROVE):**
-> 1. [BLOCKING] DRY violation: SKILL.md body mirrors Red Flags (drift-test "Never" list), Tier 3 escalation prose + conflict-type list + Never-list, and RA-framing wording that also lives in the references. Per User Decision (2026-04-19) logged in `## Decisions`, SKILL.md body carries principles only; tuned content lives in references only. Restructure references as how-tos + checklists; SKILL.md body points at them via required-load references (stage-scoped per `using-superRA` §Skill-Load Manifest).
->    → orchestrator: accepted — re-dispatch implementer to strip duplicated blockquotes, rewrite body as principles + pointers, and restructure references to carry the full gated-checklist items under how-to / checklist sections.
->    → implemented: stripped the Drift-Test Red Flags blockquote, the Tier 3 escalation blockquote (prose + conflict-type list + Never-list), and the RA-framing wording from `skills/refactor-and-integrate/SKILL.md`; rewrote body as principles + pointers with Minimum-net-diff top item, reviewer verdict protocol, and Implementer Self-Check retained. Restructured all three references (`drift-test-quality.md`, `codebase-integration.md`, `merge-quality.md`) into §How-To (procedures / worked examples / Red Flags / Tier 3 / Project Doc Audit walk-up / two-commit templates / integration-map format) + §Gated Checklist (severity-marked items pointing at §How-To). Tuned wording preserved verbatim. Manifest wording already tight (references named on `drift-test` / `integration` / `merge` rows); no edit needed.
 
 **Script:** N/A (skill file refactor)
 **Input:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines (pattern reference)
