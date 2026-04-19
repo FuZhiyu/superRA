@@ -132,7 +132,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 2: Unify `integration-workflow` — Phases A–D with iterative Phase B
 **Depends on:** Task 1
-**Review status:** REVISE
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 > **Review notes (2026-04-19):**
@@ -160,7 +160,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 - [x] **Step 1: Draft phase skeleton** — Phases A–D with explicit re-entry arrows (B→A, B→B, C→B, D→B, Anywhere→`planning-workflow §Changing Plans`).
 
-- [ ] **Step 2: Write Phase B internal structure** *(rewritten 2026-04-19 via §Changing Plans — see §Decisions, 4 new decisions)*
+- [x] **Step 2: Write Phase B internal structure** *(rewritten 2026-04-19 via §Changing Plans — see §Decisions, 4 new decisions)*
 
   Phase B uses standard reviewer/implementer dispatches with two shortcut axes.
   - **Recon reviewer** (Stage: `integration`; **Skills: superRA:semantic-merge** via canonical `Skills:` dispatch field). Follows the standard reviewer protocol: walks every APPROVED-integration task, appends per-task integration review-notes blockquotes with `[BLOCKING]`/`[ADVISORY]` items for any task whose outputs need codebase-fit refactor, drift-test update, handoff-doc coherence, or merge-induced semantic clash. Additionally, runs `semantic-merge` trial-merge + drift tests to produce a **Tier classification**, logged as a one-line User Decision entry in §Decisions for this integration pass.
@@ -174,13 +174,13 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
   - **Step 3 — Unified implementer** (Stage: `integration`; `Skills: superRA:semantic-merge` IF Tier 2/3; `Tasks in scope:` field names flagged task list). Two-commit structure: Commit 1 = mechanical merge (semantic-merge if Tier 2/3; `git merge --ff-only` if Tier 1); Commit 2 = unified refactor across flagged tasks. Pre-commit self-check per `refactor-and-integrate`.
   - **Step 4 — Verify reviewer** (Stage: `integration`; walks cumulative diff; refuses to walk APPROVED-integration tasks not in scope). Orchestrator split safety-valve applies when the in-scope task list is large enough to exceed context threshold.
 
-- [ ] **Step 3: Refactor every dispatch prompt** to canonical shape. Required-fields-first (`Stage:`, `Task:`, `Worktree:` / `Git range:`; `Skills:` / `References:` where override needed); `Additionally:` anchor-last with additive signal only. Canonical prefix verbatim. No restated PLAN.md content or checklist items.
+- [x] **Step 3: Refactor every dispatch prompt** to canonical shape. Required-fields-first (`Stage:`, `Task:`, `Worktree:` / `Git range:`; `Skills:` / `References:` where override needed); `Additionally:` anchor-last with additive signal only. Canonical prefix verbatim. No restated PLAN.md content or checklist items.
 
-- [ ] **Step 4: Fold Phase D (merge/PR/cleanup)** from former `merge-workflow`. Drift tests run once on final state. PR body template preserved verbatim — strip or rewrite any branch whose condition no longer exists in unified Phase D (e.g., any `[OR: skipped per Step 2.0 …]` referencing the old Tier-1 branch if the new shortcut architecture removes it).
+- [x] **Step 4: Fold Phase D (merge/PR/cleanup)** from former `merge-workflow`. Drift tests run once on final state. PR body template preserved verbatim — strip or rewrite any branch whose condition no longer exists in unified Phase D (e.g., any `[OR: skipped per Step 2.0 …]` referencing the old Tier-1 branch if the new shortcut architecture removes it).
 
-- [ ] **Step 5: Add plan-change trigger pointer** — one bullet in Phase B acknowledging that substantive restructure findings escalate to `planning-workflow §Changing Plans` (orchestrator proposes, researcher decides). Not a duplicated protocol — a pointer.
+- [x] **Step 5: Add plan-change trigger pointer** — one bullet in Phase B acknowledging that substantive restructure findings escalate to `planning-workflow §Changing Plans` (orchestrator proposes, researcher decides). Not a duplicated protocol — a pointer.
 
-- [ ] **Step 6: Validate — walk the four workflow principles** against the draft. Confirm each principle preserved or strengthened. Commit.
+- [x] **Step 6: Validate — walk the four workflow principles** against the draft. Confirm each principle preserved or strengthened. Commit.
 
 ---
 
