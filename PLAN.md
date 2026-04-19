@@ -183,7 +183,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 4: Update `semantic-merge` caller paths and handoff-doc coherence rule
 **Depends on:** Task 2
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** N/A
