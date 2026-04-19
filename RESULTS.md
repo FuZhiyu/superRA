@@ -1,66 +1,61 @@
-# superRA Codex Compatibility — Results
-
-> Mirrors `PLAN.md` structure. Updated retroactively to capture what was already implemented in this session.
-> New agents: read `PLAN.md` for the work record and `RESULTS.md` for the implementation outcomes and verification state.
-
-**Last updated:** 2026-04-19 (integration review pass)
-**Status:** Approved
-
+---
+author: Zhiyu Fu
+date: 2026-04-19
+timestamp: "2026-04-19T20:02:22Z"
+session_id: "session-20260419-200222Z"
+git_commit: "d3fbcda14779403288653392d1e70f453af2d537"
+git_message: "docs: record clean Codex integration review"
+git_dirty: true
+tags: ["results", "integration", "codex"]
+project: "superRA"
+permalink: "docs/plans/2026-04-17-codex-compatibility-results"
 ---
 
-## Task 1: Codex Plugin and Named-Agent Surfaces
+# superRA Codex Compatibility — Results
 
-**Status:** Approved
+This branch adds Codex support to superRA without changing the canonical Claude-facing workflow. Shared skills remain in root `skills/`, role specs remain in `agents/`, Codex skill discovery is provided through the plugin surface, and named Codex agents are installed through `codex-superra-setup` rather than through plugin-managed agent files.
 
-### Key Findings
+## Objective
 
-- Codex support now has a documented split: plugin manifests install shared skills, while `codex-superra-setup` installs named custom agents.
-- The local plugin install path is now testable directly from this repo through `.codex-plugin/plugin.json` plus `.agents/plugins/marketplace.json`.
-- Canonical workflow behavior remains single-sourced in root `skills/` and `agents/`; Codex repo discovery uses `.agents/skills/` symlinks instead of duplicated wrapper skills.
-- Named custom agents are now generated from canonical `agents/implementer.md` and `agents/reviewer.md` into `.codex/agents/`, with support for copying them to `~/.codex/agents/` for cross-repo use.
+Add coherent Codex support to superRA without regressing any Claude-facing workflow behavior.
 
-### Notes
+## Data and Sources
 
-- `AGENT.md` and `AGENTS.md` both resolve to `CLAUDE.md`, so contributor instructions remain single-sourced.
-- Codex-facing docs now describe two local test modes: open the repo directly, or install the plugin locally through the repo marketplace entry.
-- Review pass on 2026-04-17 over `b0cb9dc..3e9f1c8` found no blocking issues. Task status promoted to `APPROVED`.
+No empirical dataset was used. The source material for this work is the repository itself: the Codex plugin manifest in [`.codex-plugin/plugin.json`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.codex-plugin/plugin.json:1), the local marketplace entry in [`.agents/plugins/marketplace.json`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.agents/plugins/marketplace.json:1), the Codex setup skill in [`skills/codex-superra-setup/SKILL.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/skills/codex-superra-setup/SKILL.md:1), the Codex install docs in [`.codex/INSTALL.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.codex/INSTALL.md:1) and [`docs/README.codex.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/docs/README.codex.md:1), and the contributor guidance in [`CLAUDE.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/CLAUDE.md:13).
 
-## Task 2: Codex Metadata Cleanup and Validation
+## Method
 
-**Status:** Approved
+The integration pass was organized around three checks:
 
-### Key Findings
+1. Verify that the Codex plugin surface points at the shared skills bundle and that the local marketplace entry exposes the repo as an installable plugin. [`.codex-plugin/plugin.json`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.codex-plugin/plugin.json:16) [`.agents/plugins/marketplace.json`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.agents/plugins/marketplace.json:8)
+2. Verify that Codex named-agent installation is separated from the shared skill bundle and that the generated project-scoped agents are refreshed from the canonical role specs. [`skills/codex-superra-setup/SKILL.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/skills/codex-superra-setup/SKILL.md:8) [`skills/codex-superra-setup/scripts/sync_codex_agents.py`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/skills/codex-superra-setup/scripts/sync_codex_agents.py:1)
+3. Verify that the top-level compatibility guard covers the Codex metadata, the shared harness adapters, the agent-generation checks, and the structural invariants suite. [`tests/check-harness-compatibility.sh`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/tests/check-harness-compatibility.sh:17)
 
-- All `skills/*/SKILL.md` frontmatter now parses cleanly under YAML.
-- Every skill description is now concise trigger metadata rather than a workflow summary; the entire skill tree is at or below the new 500-character structural limit.
-- The structural suite now explicitly checks both frontmatter parseability and description length so Codex metadata regressions fail fast.
+## Results
 
-### Notes
+### Codex surface
 
-- Verification completed with:
-  - `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py`
-  - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check`
-  - `bash tests/structural-invariants.sh`
-- Verification completed without residual structural warnings after the post-merge cleanup.
-- Review pass on 2026-04-17 over `b0cb9dc..3e9f1c8` found no blocking issues. Task status promoted to `APPROVED`.
+- The Codex plugin manifest points at `./skills/`, and the repo-local marketplace entry exposes `superra` as a local plugin install from `./`. [`.codex-plugin/plugin.json`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.codex-plugin/plugin.json:16) [`.agents/plugins/marketplace.json`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.agents/plugins/marketplace.json:8)
+- Repo-local Codex discovery uses `.agents/skills/` symlinks, and the generated project-scoped agent files live in [`.codex/agents/superra_implementer.toml`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.codex/agents/superra_implementer.toml:1) and [`.codex/agents/superra_reviewer.toml`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.codex/agents/superra_reviewer.toml:1). [`.codex/INSTALL.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.codex/INSTALL.md:44) [`docs/README.codex.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/docs/README.codex.md:25)
+- The setup skill keeps the canonical role instructions in [`agents/implementer.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/agents/implementer.md:1) and [`agents/reviewer.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/agents/reviewer.md:1), and the generated agents are refreshed by [`skills/codex-superra-setup/scripts/sync_codex_agents.py`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/skills/codex-superra-setup/scripts/sync_codex_agents.py:1). [`skills/codex-superra-setup/SKILL.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/skills/codex-superra-setup/SKILL.md:76)
 
-## Task 3: Pre-Merge Integration and Merge Readiness
+### Metadata and validation
 
-**Status:** In Progress
+- `CLAUDE.md` instructs contributors to run `bash tests/check-harness-compatibility.sh` for changes that touch shared skill metadata, plugin manifests, harness adapters, hooks, or agent-install surfaces. [`CLAUDE.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/CLAUDE.md:12)
+- `AGENTS.md` and `AGENT.md` both resolve to `CLAUDE.md` in this worktree, keeping the contributor guidance single-sourced. [`CLAUDE.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/CLAUDE.md:58)
+- `tests/check-harness-compatibility.sh` validates the Claude plugin metadata, the Codex plugin metadata, the shared harness adapters, the Codex agent-generation checks, and then runs `tests/structural-invariants.sh`. [`tests/check-harness-compatibility.sh`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/tests/check-harness-compatibility.sh:17)
 
-### Key Findings
+### Integration readiness
 
-- Integration-workflow started on 2026-04-17 after the execution-stage review approved the implementation work.
-- The first integration stop point is resolved: the branch will be protected by a new Claude/Codex compatibility check script rather than by Codex-only assertions.
-- Added `tests/check-harness-compatibility.sh`, which validates the Claude plugin metadata, Codex plugin metadata, shared harness adapters, Codex agent-generation checks, and then delegates to `tests/structural-invariants.sh`.
-- The Stage 2 integration pass found one codebase-fit issue: contributors had no documented instruction to run the new harness-compatibility guard. Fixed by adding the requirement to `CLAUDE.md`.
-- After that doc-audit fix, `bash tests/check-harness-compatibility.sh` passed cleanly.
-- Post-merge verification on 2026-04-18 also passed cleanly after rebasing the Codex surfaces onto `main`'s newer workflow model.
-- Integration review on 2026-04-19 found two minor doc drifts after the merge (`README.md` said the Skill-Load Manifest had seven rows; `PLAN.md` duplicated one `Project Conventions` bullet). Both were fixed in place; the harness-compatibility guard still passes.
+- The Codex-facing install docs describe the split as intended: the plugin provides shared skills, and `codex-superra-setup` installs `superra_implementer` and `superra_reviewer` into either project or global scope. [`.codex/INSTALL.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/.codex/INSTALL.md:3) [`docs/README.codex.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/docs/README.codex.md:5)
+- The root repo docs now state the same split: shared skills are packaged through the Codex plugin surface, and named agents are installed through the setup skill. [`README.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/README.md:130)
+- The integration workflow docs treat `RESULTS.md` maturation as the final documentation step before merge readiness. [`skills/integration-workflow/SKILL.md`](/Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/codex-adaption/skills/integration-workflow/SKILL.md:1)
 
-### Notes
+## Limitations
 
-- This integration pass is repo-level rather than empirical-analysis-level, so the drift guards are structural/plugin invariants rather than numerical output tests.
-- The selected Stage 1 guard is a new top-level compatibility script that will run the shared structural invariants plus the Claude- and Codex-specific manifest / agent-sync checks.
-- Local CLI probe from the new script saw both harness executables on this machine: `Claude Code 2.1.114` and `codex-cli 0.121.0`.
-- Task 3 remains in progress because the documentation-finalization / `PLAN.md` disposition step has not run yet, but the Stage 2 integration-review pass is now clean.
+- No figures, tables, or other materialized attachments were produced in this pass, so there was nothing to move into an `attachments/` directory.
+- This report covers repository configuration and documentation state only; it does not change `PLAN.md`.
+
+## Reproducibility
+
+Reproduce this state from commit `d3fbcda14779403288653392d1e70f453af2d537` with `bash tests/check-harness-compatibility.sh`.
