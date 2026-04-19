@@ -39,7 +39,28 @@
 
 ## Task 2: Unify `integration-workflow` — Phases A–D with iterative Phase B
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Summary:** `skills/integration-workflow/SKILL.md` rewritten to cover the full INTEGRATE phase from drift tests through PR/merge as Phases A–D. Former `merge-workflow` content folded in as Phase D (PR body template preserved verbatim). Former Stage 1 / Stage 2 / Step 3 collapsed into A / B / C; B now carries the unified two-commit sync+refactor pass with an explicit three-dispatch internal structure (recon reviewer → batched user decisions → unified implementer → verify reviewer). The skill is the only workflow owner of INTEGRATE — `merge-workflow` will be deleted in Task 3.
+
+**Key structural choices:**
+
+- **Phase map up front.** ASCII diagram at the top of the file names all four phases and every re-entry arrow (B→A, B→B, C→B, D→B, Anywhere→`planning-workflow §Changing Plans`). Re-entry is framed as the normal case, not an exception.
+- **Phase B three-dispatch structure explicit.** Step 1 recon reviewer produces the integration map + tier preview + user-decision list; Step 2 is a single batched `AskUserQuestion` (no mid-implementation interruptions); Step 3 is the unified implementer with Commit 1 (mechanical semantic-merge, delegated mode) and Commit 2 (unified integration); Step 4 verify reviewer walks `git diff <merge-base>..HEAD`. Drift tests run between Commit 1 and Commit 2 and again after Commit 2.
+- **Orchestrator split safety-valve** documented at Phase B Step 2 — when the integration map exceeds the ~150k context threshold, siblings run on parallel worktrees per `agent-orchestration §Concurrent Writers`.
+- **Minimum-net-diff enforcement.** The body points at `superRA:refactor-and-integrate` for the top item and the Implementer Self-Check (`git diff <merge-base>..HEAD`); the verify-reviewer dispatch explicitly tells the reviewer to compute the same diff and walk every hunk.
+- **Plan-change pointer.** One bullet in Phase B body names the escalation path to `planning-workflow §Changing Plans` (orchestrator authors the restructure proposal; researcher decides). No protocol duplication — just the pointer.
+- **Phase D folds in merge-workflow verbatim.** Step 1 (pre-merge freshness check — re-enter Phase B if main advanced), Step 2 (`Merged` milestone flip), Step 3a/3b (local merge vs PR push, full PR body template copied without paraphrasing), Step 4 (worktree cleanup) — all preserved. The skill-calls-skill mechanics (semantic-merge in delegated mode, `worktree-harness-fallback.md` for cleanup) remain identical.
+- **Dispatches use canonical shape only.** Every dispatch block in the file opens with the canonical prefix "Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …" and carries only strictly additive steering in the `Additionally:` tail — no restated PLAN.md content, no duplicated skill-load lines, no repeated checklist items. Required fields appear first; `Additionally:` is anchor-last.
+- **Legitimate stop points enumerated.** Five stops total (Phase A drift-test confirmation, Phase B batched decisions, Phase B/D meaningful-drift stop, Phase C RESULTS_DIR when guidance is silent, Phase C PLAN.md disposition). Every one is logged per `superRA:handoff-doc §User Decisions Log` before the workflow acts.
+- **Red Flags body stays principle-level.** No Tier 3 blockquote, no Red Flags Never-list verbatim from merge-workflow — pointers to `refactor-and-integrate/references/` instead (Task 1 owns those). RA-framing reference preserved via a one-line pointer to `using-superRA §Universal Principles`.
+- **Hand-off targets updated.** Phase D is the terminal phase; no reference to `superRA:merge-workflow` remains. Task 3 can delete the merge-workflow directory without breaking a caller.
+
+**Verification:**
+
+- Canonical shape: every `Agent(subagent_type: …)` block in the new file carries `Stage:` and `Task:` first, `Git range:` where reviewer-only, and an `Additionally:` tail with only additive content.
+- Four workflow principles: (1) implementer-reviewer pair at every gate — retained at drift-test pair, verify-reviewer pair for Phase B, doc-writer / doc-reviewer pair for Phase C, post-merge safety-check via re-entry into Phase B. (2) handoff docs as record — every stop point logs into PLAN.md before the work runs. (3) fast early / strict before merge / semantic merges — Phase B's Commit 1 is always semantic-merge (delegated), and Phase D Step 1 re-enters Phase B if main advanced. (4) autonomous with human in loop — five enumerated stop points, explicit "between stops, run on own power" language.
+- Deferred items: manifest / plan-anatomy / execution-workflow hand-off wording update is Task 6; semantic-merge caller-path text + `[BLOCKING] Handoff-doc coherence` is Task 4; planning-workflow bullet is Task 5; merge-workflow directory deletion is Task 3.
 
 ## Task 3: Delete `skills/merge-workflow/`
 
