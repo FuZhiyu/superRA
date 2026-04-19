@@ -11,7 +11,7 @@ A format-discipline utility. **The caller writes the content; this skill tells y
 ## When to invoke
 
 - You are writing or updating a `RESULTS.md` task section that contains a figure, table, or LaTeX math.
-- You are at `integration-workflow` Step 3 maturing `RESULTS.md` into its permanent form.
+- You are at `integration-workflow` Phase C maturing `RESULTS.md` into its permanent form.
 - You are producing a standalone markdown report (figures, math, long prose) that a human will read.
 - You are reviewing a matured `RESULTS.md` and need the consolidation checklist.
 
@@ -31,8 +31,8 @@ Skip this skill for agent-only text handoffs with no figures, no math, no tables
 | Implementer writing a `RESULTS.md` task section with figures / math / tables | `rich-content.md` |
 | Implementer writing a text-only `RESULTS.md` task section | nothing beyond this file |
 | `execution-workflow` reviewer (implementation review) | nothing beyond this file |
-| `integration-workflow` Step 3 doc-writer subagent (maturing `RESULTS.md`) | `baseline-io.md` + `rich-content.md` + `final-form.md` |
-| `integration-workflow` Step 3 doc-reviewer subagent | `final-form.md` |
+| `integration-workflow` Phase C doc-writer subagent (maturing `RESULTS.md`) | `baseline-io.md` + `rich-content.md` + `final-form.md` |
+| `integration-workflow` Phase C doc-reviewer subagent | `final-form.md` |
 | Standalone markdown report (any context) | `baseline-io.md` + `rich-content.md` |
 
 ## Figure directory: caller decides

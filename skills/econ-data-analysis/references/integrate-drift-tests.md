@@ -1,6 +1,6 @@
 # Drift Tests for Data-Analysis Results
 
-Load at the **INTEGRATE phase** when preparing drift tests that guard a data analysis's key results before it is merged. `integration-workflow` Stage 1 invokes this reference alongside the quality checklist.
+Load at the **INTEGRATE phase** when preparing drift tests that guard a data analysis's key results before it is merged. `integration-workflow` Phase A invokes this reference alongside the quality checklist.
 
 This reference answers the data-analysis-specific questions:
 
@@ -37,7 +37,7 @@ Drift tests should protect **headline findings**, not every number in the analys
 - Descriptive statistics on raw inputs (upstream, not load-bearing for conclusions)
 - Sensitivity-analysis numbers (these are already robustness themselves — testing a robustness check against itself adds little)
 
-**Always ask the researcher to confirm the candidate list** before writing tests. Drift-test coverage is a researcher-owned decision because it encodes what counts as a "key result." `integration-workflow` Stage 1 Step 2 bakes this question into the workflow via `AskUserQuestion`.
+**Always ask the researcher to confirm the candidate list** before writing tests. Drift-test coverage is a researcher-owned decision because it encodes what counts as a "key result." `integration-workflow` Phase A Step 2 bakes this question into the workflow via `AskUserQuestion`.
 
 ---
 
