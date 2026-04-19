@@ -37,6 +37,20 @@ These conflicts **MUST** be flagged for the researcher. Ask via `AskUserQuestion
 - Remove data discipline artifacts
 - Judge whether a methodology choice is correct
 
+### Handoff-doc coherence through the merge
+
+The incoming branch can carry edits to `PLAN.md` / `RESULTS.md` that substantively restructure the work — adding, removing, or combining tasks; flipping a DAG edge; invalidating a prior `APPROVED` (review or integration) status because the incoming diff changed an upstream task's outputs. These are **not** content conflicts to resolve mechanically. They are plan changes.
+
+**Before the merge proceeds**, escalate any such restructure to `planning-workflow §Changing Plans`: the orchestrator authors the Restructure Proposal, the researcher decides, the plan change is logged per `handoff-doc` §User Decisions Log, and `PLAN.md` is updated atomically. Only after the plan-change protocol completes does the merge continue — Commit 2 (integration) then reflects the post-restructure plan, not the pre-merge plan.
+
+Trigger list — if any of these is present in the incoming diff or in the merged state of `PLAN.md`, escalate before Commit 2:
+
+- **Task add / remove / combine** — the incoming branch introduces, deletes, or fuses task blocks relative to the base.
+- **DAG edge flip** — `Depends on:` is changed in a way that re-orders downstream dispatch.
+- **APPROVED status invalidation** — any task with `Review status: APPROVED` or `Integration status: APPROVED` has its upstream inputs materially changed by the merge (per the DAG cascade rule in `handoff-doc/references/plan-anatomy.md`). The cascade must be reflected in `PLAN.md` before the integration commit lands.
+
+Routine content conflicts in `PLAN.md` / `RESULTS.md` (reworded prose, updated numbers inside an unchanged task block, new review-notes blockquote text) are resolved mechanically in Commit 1 and adapted in Commit 2 like any other file — no escalation needed.
+
 ### Integration map format
 
 For each conflict area, document:
@@ -76,6 +90,10 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 - `[BLOCKING]` Every Tier 3 conflict (variable definitions, sample construction, econometric specifications, data processing, results) flagged to the researcher via `AskUserQuestion`, logged per `handoff-doc` §User Decisions Log, and implemented per the answer.
 - `[BLOCKING]` None of the four Tier 3 "Never" items violated (silent result changes, ours/theirs on research-meaningful conflicts, removing data discipline artifacts, judging methodology choices).
+
+**Handoff-doc coherence (full procedure in §How-To → Handoff-doc coherence through the merge):**
+
+- `[BLOCKING]` **Handoff-doc coherence.** `PLAN.md` / `RESULTS.md` in the merged state reflect a single coherent plan. Substantive handoff-doc restructures introduced by the incoming branch — task add/remove/combine, DAG edge flip, or APPROVED (review or integration) status invalidation from a cascade — were escalated to `planning-workflow §Changing Plans` **before** the merge proceeded (orchestrator authors proposal, researcher decides, decision logged per `handoff-doc` §User Decisions Log). Commit 2 (integration) reflects the post-restructure plan. Routine content conflicts (reworded prose, updated numbers, new review-notes text) are resolved inline in Commit 1/2 without escalation.
 
 **Integration map (format in §How-To → Integration map format):**
 

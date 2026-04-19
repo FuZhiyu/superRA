@@ -1,6 +1,6 @@
 ---
 name: semantic-merge
-description: Use when about to run `git merge`, `git rebase`, or `git cherry-pick` on research code — or any time incoming changes from another branch may touch results-bearing files, analysis scripts, PLAN.md, RESULTS.md, or drift tests — and you want thoughtful, research-aware conflict resolution rather than mechanical ours/theirs; when pulling main into an analysis branch; when integrating a sibling analysis; when a "simple" conflict might silently change results. Triggers include bare `git merge` / `git rebase` / `git cherry-pick` on a research branch (the merge-guard hook will flag these automatically), "pull main into this branch", "rebase onto main", "cherry-pick commit X", or any merge where at least one hunk touches a results-bearing file. Invoked internally by `merge-workflow` Step 1; also usable standalone for ad-hoc merges outside the analysis-finishing flow.
+description: Use when about to run `git merge`, `git rebase`, or `git cherry-pick` on research code — or any time incoming changes from another branch may touch results-bearing files, analysis scripts, PLAN.md, RESULTS.md, or drift tests — and you want thoughtful, research-aware conflict resolution rather than mechanical ours/theirs; when pulling main into an analysis branch; when integrating a sibling analysis; when a "simple" conflict might silently change results. Triggers include bare `git merge` / `git rebase` / `git cherry-pick` on a research branch (the merge-guard hook will flag these automatically), "pull main into this branch", "rebase onto main", "cherry-pick commit X", or any merge where at least one hunk touches a results-bearing file. Invoked internally by `integration-workflow` Phase B (and Phase D re-syncs when main advances); also usable standalone for ad-hoc merges outside the analysis-finishing flow.
 ---
 
 # Semantic Merge
@@ -16,7 +16,7 @@ Adapts the general-purpose `semantic-merge-integration` skill for economics rese
 ## When to Use
 
 - User asks to merge, rebase, cherry-pick, or sync branches
-- `superRA:merge-workflow` Step 1 delegates to this skill to update an analysis branch from main
+- `superRA:integration-workflow` Phase B delegates to this skill (via the canonical `Skills:` dispatch field on the recon reviewer and, on Tier 2/3, on the unified implementer) to sync an analysis branch with its base; Phase D also delegates to this skill when a pre-merge freshness check finds that main advanced again
 - Updating a long-lived analysis branch from main/upstream
 - The PreToolUse `merge-guard` hook reminds you when you attempt a bare `git merge/rebase/cherry-pick` outside the analysis-finishing flow
 
@@ -27,7 +27,7 @@ Adapts the general-purpose `semantic-merge-integration` skill for economics rese
 semantic-merge has two modes. Tier classification and conflict resolution are identical across modes. **Post-merge verification differs** — standalone owns it all; delegated trims the duplicate checks that the caller will re-run.
 
 - **Standalone (ad-hoc merge).** The user asks you to merge, rebase, or cherry-pick, or the `merge-guard` PreToolUse hook fires on a bare git merge command. Load this skill directly, run the process below (including all post-merge verification), and report back to the user. You own the outcome.
-- **Delegated from `merge-workflow` Step 1.** The orchestrator running `merge-workflow` loads this skill via an explicit `Skill superRA:semantic-merge` invocation with task: `"merge <base> into <analysis> — delegated mode: skip post-merge drift tests and pipeline run; the caller will verify"`. Run the tier-classification + conflict-resolution parts, then return the tier classification + a one-line incoming-impact verdict (see §What to Report — delegated). The caller (`merge-workflow`) runs post-merge drift tests and integration review on the merged state in its Step 2. Do NOT run drift tests, pipeline, or stale-reference checks yourself in delegated mode — those are the caller's.
+- **Delegated from `integration-workflow` Phase B (or Phase D re-sync).** The orchestrator running `integration-workflow` dispatches an implementer or reviewer subagent with `Skills: superRA:semantic-merge` on the canonical dispatch line (per `agent-orchestration §Dispatch Templates`) — on the Phase B recon reviewer for trial-merge Tier classification, on the Phase B unified implementer when Tier 2/3, and on any Phase D re-sync implementer when the pre-merge freshness check finds main advanced. The invocation is implicitly delegated: skip post-merge drift tests and pipeline run; the caller will verify. Run the tier-classification + conflict-resolution parts, then return the tier classification + a one-line incoming-impact verdict (see §What to Report — delegated). The caller (`integration-workflow`) runs post-merge drift tests and verify review on the merged state within Phase B (or Phase D). Do NOT run drift tests, pipeline, or stale-reference checks yourself in delegated mode — those are the caller's.
 
 ### Mode-aware verification
 
@@ -35,10 +35,10 @@ semantic-merge has two modes. Tier classification and conflict resolution are id
 |---|---|---|
 | Tier classification | yes | yes |
 | Conflict resolution (incl. Tier 2/3 propose+review) | yes | yes |
-| Drift tests on merged state | yes | **skip** (caller runs in merge-workflow Step 2a) |
-| Pipeline run on merged state | yes | **skip** (caller runs in merge-workflow Step 4) |
-| Stale-reference check on merged state | yes | **skip** (covered by caller's integration review in Step 2b) |
-| Return tier classification + incoming-impact verdict | n/a | yes (required for merge-workflow's skip logic per Task 11) |
+| Drift tests on merged state | yes | **skip** (caller runs in `integration-workflow` Phase B verify + drift-test re-run, or Phase D post-merge drift re-run) |
+| Pipeline run on merged state | yes | **skip** (caller runs as part of Phase B / Phase D verification) |
+| Stale-reference check on merged state | yes | **skip** (covered by the caller's verify reviewer in Phase B, or integration review in Phase D) |
+| Return tier classification + incoming-impact verdict | n/a | yes (required for `integration-workflow` Phase B's two-axis shortcut evaluation and Phase D re-entry decisions) |
 
 The mechanics of tier classification and conflict resolution below are identical across modes; only the post-merge verification block (Tier 1 step 2-4; Tier 2 step 5; Tier 3 steps 8-9) is mode-gated. Each gate below is annotated `[standalone-only]`.
 
@@ -129,7 +129,7 @@ No subagents needed. Execute directly.
 4. `[standalone-only]` If everything passes: done.
 5. `[standalone-only]` If drift tests fail: abort and escalate to Tier 3.
 
-**Delegated mode:** after step 1 completes the merge, skip steps 2-5 and return tier + incoming-impact per §What to Report — delegated mode. The caller (`merge-workflow`) runs drift tests in its Step 2a and may skip its Step 2b integration review if the incoming-impact verdict shows no analysis-path changes.
+**Delegated mode:** after step 1 completes the merge, skip steps 2-5 and return tier + incoming-impact per §What to Report — delegated mode. The caller (`integration-workflow`) runs drift tests and verification as part of Phase B (or Phase D) and uses the incoming-impact verdict to scope follow-up dispatches per the Phase B two-axis shortcut rules.
 
 ### Tier 2: Syntactic Conflicts
 
@@ -163,7 +163,7 @@ Conflicts exist but none touch research-relevant files.
 
 4. **If REVISE:** adjudicate the reviewer's feedback per the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback. Forward accepted issues to the merge-proposer; push back or override others with documented reasoning. Iterate until APPROVE.
 
-5. `[standalone-only]` **Run drift tests.** If pass: done. If fail: escalate to user (Tier 3 handling). **Delegated:** skip — the caller runs drift tests in `merge-workflow` Step 2a. Return tier + incoming-impact per §What to Report — delegated mode.
+5. `[standalone-only]` **Run drift tests.** If pass: done. If fail: escalate to user (Tier 3 handling). **Delegated:** skip — the caller runs drift tests as part of `integration-workflow` Phase B verification (or Phase D post-merge drift re-run). Return tier + incoming-impact per §What to Report — delegated mode.
 
 ### Tier 3: Semantic / Research Conflicts
 
@@ -233,9 +233,9 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
    - **Meaningful drift:** STOP. User decides whether to accept or revise.
    - **Minor variation:** Update test expectations with documented reason.
    
-   **Delegated:** skip — the caller runs drift tests in `merge-workflow` Step 2a, which handles meaningful-vs-minor drift per the same framework. Return tier + incoming-impact per §What to Report — delegated mode.
+   **Delegated:** skip — the caller runs drift tests as part of `integration-workflow` Phase B verification (or Phase D post-merge drift re-run), which handles meaningful-vs-minor drift per the same framework. Return tier + incoming-impact per §What to Report — delegated mode.
 
-9. `[standalone-only]` **Verify pipeline** runs end-to-end on the merged result. **Delegated:** skip — the caller will verify the pipeline post-merge in its Step 4 (or decide not to per that step's logic).
+9. `[standalone-only]` **Verify pipeline** runs end-to-end on the merged result. **Delegated:** skip — the caller verifies the pipeline as part of `integration-workflow` Phase B (verify reviewer + drift-test re-run) or Phase D post-merge checks.
 
 ## Working Principles
 
@@ -245,7 +245,7 @@ Conflicts touch research-relevant files, or drift tests fail on a clean merge.
 - **Regenerate over edit.** For generated files (tables, figures, compiled outputs), regenerate from merged source rather than hand-editing.
 - **RA framing.** You propose integration, present options, and implement the researcher's decisions. You never judge whether the methodology is correct.
 - **Data discipline.** If incoming changes affect data processing, verify describe-analyze-validate artifacts (row-count logs, distribution diagnostics, validation checks) are preserved in the merged result.
-- **Drift tests are the safety net.** In standalone mode, always run them after the merge; never skip; never silently update expectations for meaningful changes. In delegated mode, you do NOT run drift tests — `merge-workflow` Step 2a does, against the same discipline — and "skipping" here means handing the responsibility to the caller, not dropping it.
+- **Drift tests are the safety net.** In standalone mode, always run them after the merge; never skip; never silently update expectations for meaningful changes. In delegated mode, you do NOT run drift tests — `integration-workflow` Phase B (or Phase D) does, against the same discipline — and "skipping" here means handing the responsibility to the caller, not dropping it.
 
 ## When to Ask the User
 
@@ -285,18 +285,18 @@ When the merge is complete, summarize:
 - **Pipeline status:** Runs or fails
 - **Verification:** Stale references checked, data discipline preserved
 
-### Delegated mode (called from `merge-workflow` Step 1)
+### Delegated mode (called from `integration-workflow` Phase B, or Phase D re-sync)
 
-The caller (`merge-workflow`) uses the return to decide whether to skip its Step 2b post-merge integration review (see `merge-workflow` §Step 2). Return EXACTLY these fields — the skip logic reads them by name:
+The caller (`integration-workflow`) uses the return to evaluate the Phase B two-axis shortcut rules (Tier axis gates the merge path; annotation axis gates the refactor path — see `integration-workflow §Phase B`) and, on Phase D re-sync, to decide whether another refactor round is needed. Return EXACTLY these fields — the caller reads them by name:
 
 - **Tier classification:** `Tier 1` / `Tier 2` / `Tier 3` and a one-sentence rationale.
 - **Incoming impact:** one line — did the incoming diff touch any file in the analysis paths? Name the paths that were changed. Example: `Incoming impact: touched config/pipeline.yaml and .github/workflows/ci.yml; no analysis-path changes.`
 - **Integration decisions + User decisions:** same content as standalone, but keep it to one short paragraph each — the caller will not re-present these to the user.
-- **Drift tests:** `not run (delegated; caller will run in Step 2a)`.
-- **Pipeline:** `not run (delegated; caller will run in Step 4 or skip per that step's logic)`.
-- **Verification:** `deferred to caller's Step 2b integration review`.
+- **Drift tests:** `not run (delegated; caller will run as part of Phase B verification or Phase D post-merge drift re-run)`.
+- **Pipeline:** `not run (delegated; caller will run as part of Phase B / Phase D verification)`.
+- **Verification:** `deferred to caller's Phase B verify reviewer (or Phase D post-merge integration review)`.
 
-The tier classification and the incoming-impact line are load-bearing: `merge-workflow` Step 2 reads them to decide Step 2b skip eligibility.
+The tier classification and the incoming-impact line are load-bearing: `integration-workflow` Phase B reads them to evaluate the two independent shortcut axes (Tier axis → merge path; annotation axis → refactor path), and Phase D reads them to decide whether a re-sync warrants another refactor round.
 
 ## Agent Loads
 
@@ -325,13 +325,13 @@ See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of
 ## Integration
 
 **Called by:**
-- **superRA:merge-workflow** (Step 1) — Update analysis branch from base before merging back, as part of the final phase of the analysis-finishing workflow
+- **superRA:integration-workflow** (Phase B recon reviewer; Phase B unified implementer on Tier 2/3; Phase D re-sync implementer when the pre-merge freshness check finds main advanced) — delegated mode via the canonical `Skills:` dispatch field
 - **PreToolUse hook** (merge-guard) — Reminds agent to use this skill for any git merge/rebase/cherry-pick
 
 **Can invoke standalone:** User asks to merge/update branches
 
 **Pairs with:**
-- **superRA:integration-workflow** — Runs before this skill in the integration phase (creates drift tests that this skill uses as safety net)
+- **superRA:integration-workflow** — This skill is invoked from within Phase B (sync) and Phase D (re-sync) of integration-workflow; Phase A drift tests created earlier in that same workflow are the safety net this skill relies on
 
 **References:**
 - **semantic-merge-integration** (global skill) — General-purpose merge philosophy that this skill adapts for research
