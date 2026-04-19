@@ -46,6 +46,10 @@
 > **User decision (2026-04-19):** Add an implementer self-check step before every commit: run `git diff <merge-base>..HEAD` and review the cumulative diff against the minimum-net-diff rule; revert or re-justify any hunk not tied to the integration map or gated-checklist items. Walked by the verify reviewer as part of `refactor-and-integrate`.
 > **Question asked:** Should there be an explicit self-check for minimum-change discipline?
 
+> **User decision (2026-04-19):** In `refactor-and-integrate`, SKILL.md body highlights principles only — tuned content (Red Flags, Tier 3 escalation, rationalization lists, RA-framing) lives **only** in references, which are required loads. Restructure references as how-tos + checklists. No duplication between body and references.
+> **Question asked:** How to de-duplicate tuned content between SKILL.md body and references?
+> **Rationale:** DRY / one-source-of-truth; mirrored content in Task 1's first pass would drift on future edits.
+
 ---
 
 ## Project Conventions
@@ -74,8 +78,12 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 1: Rebuild `refactor-and-integrate` as a gated checklist
 **Depends on:** *(none)*
-**Review status:** APPROVED
+**Review status:** REVISE (DRY violation — see review notes)
 **Integration status:** *(set during integration)*
+
+> **Review notes (2026-04-19 — orchestrator, post-APPROVE):**
+> 1. [BLOCKING] DRY violation: SKILL.md body mirrors Red Flags (drift-test "Never" list), Tier 3 escalation prose + conflict-type list + Never-list, and RA-framing wording that also lives in the references. Per User Decision (2026-04-19) logged in `## Decisions`, SKILL.md body carries principles only; tuned content lives in references only. Restructure references as how-tos + checklists; SKILL.md body points at them via required-load references (stage-scoped per `using-superRA` §Skill-Load Manifest).
+>    → orchestrator: accepted — re-dispatch implementer to strip duplicated blockquotes, rewrite body as principles + pointers, and restructure references to carry the full gated-checklist items under how-to / checklist sections.
 
 **Script:** N/A (skill file refactor)
 **Input:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines (pattern reference)
