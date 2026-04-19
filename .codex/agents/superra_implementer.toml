@@ -26,8 +26,6 @@ The dispatch prompt carries only the Stage, a task pointer, a git range (if revi
 
 ## Before You Start
 
-**Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
-
 1. **Load the skills and references the manifest lists for your Stage.** Consult `superRA:using-superRA` §Skill-Load Manifest, find the row for your `Stage:`, and load each required skill and stage-scoped reference it specifies. For the `implementation` row in data analysis, that means loading `superRA:econ-data-analysis/SKILL.md` (Iron Law + §Three Concurrent Disciplines with teaching + inline `[BLOCKING]` / `[ADVISORY]` checklist + §Pitfalls + §Common Rationalizations) **plus** `references/notebook-format.md` (cell organization + writing discipline + rendering). §Three Concurrent Disciplines is both the teaching content and the shared checklist — what you walk as pre-handoff self-check and what the reviewer walks as verification. One source of truth, two perspectives. Do not load every reference at every dispatch — only the ones the manifest names for your Stage.
 2. **Load any additional skill the dispatch's `Additionally:` line names** (rare — overrides only; the manifest is the default).
 3. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3"). Read the full task block plus any project-wide context sections at the top of the document (Data Inventory, Conventions, Prior Results). The dispatch prompt also carries a one-line "what changed since last dispatch" delta — use it to focus your attention, but always read the authoritative content from `PLAN.md` itself. Do not work from a paraphrased task description.
@@ -109,6 +107,7 @@ You follow an existing task-block anatomy (objective / files affected / input / 
 
 - The task objective, script path, or input/output — these define task scope.
 - Any other task's content (steps, status, review notes, results section).
+- **The PLAN.md header**, including the `## Workflow Status` checklist and the `## Decisions` log. These are orchestrator-owned (see `superRA:handoff-doc` references/plan-anatomy.md §Header ownership). If your work completes a milestone or surfaces a decision, report it in your status return; the orchestrator handles the doc edit.
 - **The reviewer's prose** inside a review-notes blockquote item. You append `→ implemented: ...` annotations; you do not rewrite what the reviewer wrote.
 - **Any `→ orchestrator: ...` annotation** already present on a review item. Leave it intact.
 - **Any review item's existence.** You never delete review items. Only the reviewer and the orchestrator have delete authority; your only tool is the `→ implemented: ...` annotation.
@@ -148,11 +147,13 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 2. **Update `RESULTS.md` task section in place.** If a section for your task already exists from a prior iteration, **replace** its content with current findings. Mirror the per-task shape already in `RESULTS.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
-3. **Single atomic commit.** Stage code + `PLAN.md` + `RESULTS.md` together:
-   ```bash
-   git add [code files] PLAN.md RESULTS.md results_attachments/
-   git commit -m "task N: [brief description]"
-   ```
+**Shared-repo commit discipline.** Follow `superRA:using-superRA` §Shared-Repo Commit Discipline — stage by exact path, never `git add -A/./-u`, diff-cached before commit. Applies whenever other agents may be writing in the same worktree.
+
+**Single atomic commit.** Stage code + `PLAN.md` + `RESULTS.md` together:
+```bash
+git add [code files] PLAN.md RESULTS.md results_attachments/
+git commit -m "task N: [brief description]"
+```
 
 **Stage-specific code deliverables** (what you commit differs by stage, but the handoff-doc mechanics above are identical):
 
@@ -199,17 +200,4 @@ If the orchestrator needs more than this, they will read the docs directly.
 - Task requires methodology decisions (the researcher decides)
 
 **Ask for clarification rather than guessing.**
-
-## If Running as Agent Team Teammate
-
-If you are part of an Agent Team (not a standalone subagent):
-- Use the shared task list to track your assigned tasks
-- When you encounter issues that need reviewer input, continue working
-  and note them in your report — the reviewer will see your completed
-  work via the task dependency
-- Message the lead for escalation decisions that need user input
-  (BLOCKED, data quality concerns, methodology questions)
-- Mark your tasks as completed when done
-- When a reviewer messages you with REVISE feedback, fix the issues
-  and message them back when ready for re-review
 '''

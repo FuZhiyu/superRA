@@ -20,14 +20,7 @@ Mode selection, in order:
 1. **No plan?** → run `superRA:planning-workflow` first.
 2. **No subagent capability on this harness?** → Direct mode (fallback).
 3. **User explicitly prefers direct, or tasks are trivial?** → Direct mode (fallback).
-4. **`TeamCreate` available AND ≥2 tasks remaining?** → Agent Team mode (preferred).
-5. **Otherwise** → Subagent mode.
-
-**Agent Team mode (preferred):**
-- Use `TeamCreate` to set up a persistent team with implementer + reviewer
-- Direct iteration between agents without orchestrator relay
-- See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics; composition is derived from the manifest — one teammate per stage this workflow runs
-- Use when: `TeamCreate` tool is available AND ≥2 tasks remain
+4. **Otherwise** → Subagent mode.
 
 **Subagent mode:**
 - Dispatch implementer subagent per task
@@ -99,23 +92,31 @@ If the docs exist, are tracked, and the worktree is clean, proceed directly to S
 
 ### Step 1: Load and Review Plan
 
-1. Read `PLAN.md` and `RESULTS.md`.
-2. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` (plus `references/notebook-format.md` when analysis scripts are being written or reviewed). Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
-3. **Read PLAN.md's `## Project Conventions` section.** It is populated at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy). Skim and proceed. If the section is missing, empty, or its walk date is stale relative to the current work, walk now and populate it — walk up from every directory PLAN.md says will be touched and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` along the path, plus `README.md` in any data directory the plan loads from, then write one-paragraph summaries into the section and commit the update before dispatching subagents. These conventions are load-bearing for adjudicating reviewer findings ("is this a codebase-fit issue the reviewer correctly flagged, or noise?") and for editing upcoming tasks inline. Subagents read the populated section instead of re-walking per dispatch; if a subagent finds the section missing something, it walks on-demand and reports the omission so you can update the section.
-4. Review PLAN.md critically — identify any questions or concerns:
+1. Read `PLAN.md` and `RESULTS.md`. `PLAN.md` is the task tracker (`superRA:planning-workflow §PLAN.md Is the Task Tracker`); `TodoWrite` mirrors it as a transient session view, not a substitute.
+2. **Read `## Workflow Status`** at the top of `PLAN.md`. The checklist names which milestones are complete (`Plan approved`, `Execution complete`, `Drift tests created`, `Refactored`, `Docs finalized`, `Merged`) and tells a resuming agent exactly which phase this branch is at without grepping commits. If `Execution complete` is already checked, skip to Step 3 (verification); if earlier milestones are unchecked unexpectedly, raise it with the user before dispatching tasks.
+   - **Also read per-task `**Review status:**` and `**Integration status:**` fields alongside `## Workflow Status`.** If any project-level box is unchecked while some tasks remain APPROVED, a prior `planning-workflow §Changing Plans` invocation unchecked those boxes (Step 4) and paused — resume that protocol at Step 6 before dispatching any implementer. Enter `§Changing Plans` at Step 1 if the researcher instead pings mid-execution with a scope change.
+3. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` (plus `references/notebook-format.md` when analysis scripts are being written or reviewed). Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
+4. **Read PLAN.md's `## Project Conventions` section.** It is populated at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy). Skim and proceed. If the section is missing, empty, or its walk date is stale relative to the current work, walk now and populate it — walk up from every directory PLAN.md says will be touched and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` along the path, plus `README.md` in any data directory the plan loads from, then write one-paragraph summaries into the section and commit the update before dispatching subagents. These conventions are load-bearing for adjudicating reviewer findings ("is this a codebase-fit issue the reviewer correctly flagged, or noise?") and for editing upcoming tasks inline. Subagents read the populated section instead of re-walking per dispatch; if a subagent finds the section missing something, it walks on-demand and reports the omission so you can update the section.
+5. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources / inputs available and accessible?
    - Are the steps in the right order?
    - Is the pipeline file included (for multi-script analyses)?
-   - Does any step conflict with a project convention you found in step 3?
-5. Review RESULTS.md for context on any completed steps (if resuming).
-6. If concerns: raise them with your human partner before starting.
-7. If no concerns: create TodoWrite with all steps and proceed.
+   - Does any step conflict with a project convention you found in step 4?
+6. Review RESULTS.md for context on any completed steps (if resuming).
+7. If concerns: raise them with your human partner before starting.
+8. If no concerns: proceed.
 
 ### Step 2: Execute Tasks
 
+**Before dispatching, read each pending task's `Depends on:` field.**
+Tasks whose dependencies are all `APPROVED` may be dispatched as a
+single parallel Agent-tool batch (subject to `agent-orchestration`
+§Workload Balancing). Serialize only when no parallel batch is
+available.
+
 #### Per-Task Execution Steps
 
-1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "superRA:implementer")` — see template below. Direct mode: follow `superRA:using-superRA` §Execution Modes, then implement yourself. See `superRA:agent-orchestration` §Agent reuse vs fresh dispatch for when to reuse a warm implementer via `SendMessage` versus spawning a fresh dispatch.
+1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "superRA:implementer")` — see template below. Direct mode: follow `superRA:using-superRA` §Execution Modes, then implement yourself. When several small tasks share context, see `superRA:agent-orchestration` §Workload Balancing Tier 2 for bundling them into a single dispatch.
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
 3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task, and returns one of two verdicts:
    - **APPROVE** — no `[BLOCKING]` findings. Proceed to the next task.
@@ -155,6 +156,8 @@ After every task is APPROVED, verify the work end-to-end before presenting compl
 5. **Deferred MINORs resolved?** Check PLAN.md review-notes blockquotes for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in RESULTS.md.
 
 If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
+
+**Once all five checks pass:** check the `Execution complete` box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md) and commit the box-flip before presenting the Step 4 completion menu. The flip records that the branch has reached the IMPLEMENT/VALIDATE terminus and is ready for the researcher's disposition choice.
 
 ### Step 4: Determine Base Branch and Present Options
 
@@ -220,23 +223,17 @@ Use the least capable model that handles the task; reviewers use the most capabl
 
 ## Autonomy and Stop Points
 
-The autonomy contract (proceed-without-asking patterns, stop-and-ask classes, banned phrasings) is in `superRA:using-superRA/references/main-agent-autonomy.md` — main-agent only. Read it at session start; it applies to every workflow phase, not just execution. This section lists only the **execution-workflow-specific stop points** — the legitimate pauses baked into this workflow that plug into the autonomy contract's three pause classes.
+The autonomy contract (proceed-without-asking patterns, stop-and-ask classes, banned phrasings) is in `superRA:using-superRA/references/main-agent.md` — main-agent only. Read it at session start; it applies to every workflow phase, not just execution. This section lists only the **execution-workflow-specific stop points** — the legitimate pauses baked into this workflow that plug into the autonomy contract's three pause classes.
 
 - **Step 4 completion menu.** The 4-option menu (merge now / continue another task / sensitivity task / discard) is a user-defined workflow milestone.
 - **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
-- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. Pause class (2) in the autonomy contract.
+- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `planning-workflow §Changing Plans` (confirm → log → inline-edit PLAN.md → roll back milestone checkboxes → atomic commit → resume). Pause class (2) in the autonomy contract.
 
 Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log per `handoff-doc` §User Decisions Log **before** acting on it.
 
 ## Agent Loads
 
 See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `implementation` row for both roles; `subagent_type` (`superRA:implementer` vs `superRA:reviewer`) carries the role split.
-
-## Agent Teams Mode
-
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), the per-task implementation+review cycle can be orchestrated as a persistent team — direct iteration between implementer and reviewer without the orchestrator relaying feedback. See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs.
-
-**Critical:** When all tasks complete, shut down teammates and clean up the team BEFORE dispatching `superRA:integration-workflow`. This frees the session's team slot for the integration-workflow team and the subsequent merge-workflow team.
 
 ## Red Flags
 

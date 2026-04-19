@@ -108,6 +108,8 @@ For Option 2 (PR), include the same sentence under "Pre-Merge Quality" in the PR
 
 When drift tests fail OR the post-merge integration reviewer returns REVISE, re-enter the same refactor-review loop that integration-workflow Stage 2 uses. The machinery is identical — only the trigger changed.
 
+**On entry:** if `PLAN.md` is still present (Option 1 of integration-workflow Step 3 sub-part C disposition), uncheck the `Refactored` box in §Workflow Status — a post-merge refactor invalidates the prior milestone until the next integration-reviewer APPROVE. Re-check it when the loop exits per integration-workflow Stage 2 step 6.
+
 1. **Dispatch refactorer:**
    ```
    Agent(subagent_type: "superRA:implementer"):
@@ -132,6 +134,8 @@ The orchestrator discipline applies: read each cited issue yourself before forwa
 ### Step 4: Execute Merge or PR
 
 Once Step 2 returns clean, execute the user's choice from execution-workflow Step 4.
+
+**Before executing the merge action:** if `PLAN.md` is still present at its disposition location (e.g., `${RESULTS_DIR}/PLAN.md` from Step 3 sub-part C Option 1), check the `Merged` box in §Workflow Status on the **analysis branch** and commit. The flip records that this workflow has completed its merge action — local merge for Option 1, PR opened for Option 2. The box flip then rides into the merge or PR. Skip this if PLAN.md was consolidated/deleted (Step 3 sub-part C Options 2 or 3) — there is nothing to flip; the merged commit history is the record.
 
 **For Option 1 (Merge Locally):**
 
@@ -192,12 +196,6 @@ EOF
 If the analysis was done in a git worktree, invoke `superRA:worktree-data-sync` §Cleanup for the teardown ritual. If the analysis was done on a feature branch without a worktree, skip this step.
 
 Report what was merged/pushed and what was cleaned up.
-
-## Agent Teams Mode
-
-When Agent Teams are available (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`), merge-workflow can be orchestrated as a team instead of sequential subagent dispatches — direct iteration between merge-proposer/merge-reviewer and post-merge-refactorer/post-merge-integration-reviewer without the orchestrator relaying feedback. See `superRA:agent-orchestration` §Integration and `references/agent-teams.md` for spawn mechanics. Composition is derived from the manifest — one teammate per stage this workflow runs.
-
-The lead still handles the user-facing meaningful-drift escalation (Step 3), executes Step 4 (local merge or PR push) outside the team, executes Step 5 (worktree cleanup) outside the team, and cleans up the team after final APPROVE. Spawn the Merge Team only after the Integration Team has been cleaned up — both share the session's team slot.
 
 ## Why Both Drift Tests AND Integration Review Post-Merge — and when one is redundant
 

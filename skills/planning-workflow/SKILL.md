@@ -79,9 +79,41 @@ The pipeline file must:
 
 For other verticals, the operational cycle looks different (e.g., derivation → verification → proof-check for theory work), but the granularity rule is the same: one logical operation per step, with the cycle completed in-step.
 
+### Task Dependencies
+
+Not every task is sequential. Identify independent branches at plan
+time so the orchestrator can dispatch them in parallel (see
+`agent-orchestration` §Workload Balancing).
+
+**Format.** Each task block declares a `**Depends on:**` line listing
+upstream task numbers, or `*(none)*` if the task has no upstream
+dependency. See `superRA:handoff-doc` `references/plan-anatomy.md` §Task Block Anatomy for the required format.
+
+**When a task depends on another.**
+- It reads the other task's output files.
+- It needs a sample / variable / methodology decision finalized in the
+  other task.
+- It runs sensitivity / robustness on the other task's baseline
+  results.
+
+**When a task is independent (`Depends on: *(none)*`).**
+- Loads its own raw inputs, produces its own outputs.
+- Sits in a separate pipeline branch that doesn't meet downstream.
+
+**Orchestration contract.** The `execution-workflow` orchestrator reads
+these fields. Tasks whose dependencies are all `APPROVED` may be
+dispatched as a single parallel Agent-tool batch, subject to
+`agent-orchestration` §Workload Balancing. Mutually independent tasks
+SHOULD run in parallel; serializing them is waste.
+
+**Plan-time DAG sanity.** After writing all tasks, trace the dependency
+edges. No cycles. No `Depends on: Task 99` pointing at a task that
+doesn't exist. The terminal task(s) (no downstream) should be the ones
+that produce the top-line results.
+
 ### Plan Document Header and Task Structure
 
-The full `PLAN.md` template — required header (objective, methodology, domain-specific sections, output, expected results, pipeline) plus task block structure with the domain's step cycle and a worked example — lives in `references/plan-template.md` inside this skill. Load this skill via the Skill tool and read `<base_dir>/references/plan-template.md` when authoring a plan, then fill in the placeholders for the current work. Domain-specific header sections (e.g., the Data Inventory section for data analysis) come from the domain skill's planning reference.
+For the canonical `PLAN.md` template — required header (objective, methodology, domain-specific sections, output, expected results, pipeline) plus task block structure with the domain's step cycle and a worked example — load `superRA:handoff-doc` and read `references/plan-anatomy.md`. Domain-specific header sections (e.g., the Data Inventory section for data analysis) come from the domain skill's planning reference.
 
 Required header fields and task block structure are non-negotiable. The template's example code is illustrative — adapt the content to your domain and methodology, but preserve the step-cycle rhythm the domain prescribes.
 
@@ -89,9 +121,71 @@ Required header fields and task block structure are non-negotiable. The template
 
 **The plan is NOT a static spec.** Work reveals surprises; the plan evolves in place.
 
+Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a step's method adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits per the discipline below; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §Changing Plans below, which defines the confirm → log → inline-edit → roll-back-milestones → atomic-commit protocol.
+
 **The editing discipline and the full anatomy templates** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — live in `superRA:handoff-doc`. Load it when authoring `PLAN.md` / `RESULTS.md` from scratch; its `references/plan-anatomy.md` and `references/results-anatomy.md` carry the full templates. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the template at `references/results-template.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
+**Results document:** Create `RESULTS.md` alongside `PLAN.md`. For the starter scaffold and anatomy, load `superRA:handoff-doc` and read `references/results-anatomy.md`. It is the Stage 1 form of `RESULTS.md`; at `integration-workflow` Step 3 it matures into a permanent record.
+
+### PLAN.md Is the Task Tracker
+
+**`PLAN.md` is the primary task tracker** — not `Todo` tools, not chat, not status reports, not a session-internal scratchpad. The task blocks with their `- [ ]` / `- [x]` checkbox steps and `**Review status:**` lines are the authoritative state of what is planned, what is in progress, and what is done. Persistence across sessions, agent handoffs, and harness boundaries depends on this being true.
+
+`TodoWrite` (or any equivalent harness-provided todo UI) has a narrower role: a transient view of *what the agent is doing right now in this session*. It is acceptable for ephemeral session-internal todos that do not represent analysis tasks (e.g., "read three reference files, then summarize for the user", "fix three lint errors before re-running the test"). It is **not** acceptable as a substitute for a PLAN.md task block. If the work is part of the analysis — a new task, a discovered subtask, a methodology check, a sensitivity run, a refactor pass — it lives in `PLAN.md` first, then optionally mirrors into `TodoWrite` as a working view.
+
+**Rule of thumb:** if losing this todo at session end would lose work the researcher cares about, it belongs in `PLAN.md`, not `TodoWrite`.
+
+**Banned patterns:**
+
+- Tracking analysis tasks only in `TodoWrite` while leaving `PLAN.md` stale.
+- Discovering a new subtask, adding it to `TodoWrite`, completing it, and never reflecting it in `PLAN.md`.
+- Using `TodoWrite` to coordinate work between sessions (it does not persist; the next session sees nothing).
+- Treating `TodoWrite` items as "logged" — they are not. Logged work is in a committed doc.
+
+If `TodoWrite` and `PLAN.md` ever disagree about the state of analysis work, `PLAN.md` is right by definition. Update `TodoWrite` to match — never the reverse.
+
+When the plan itself changes — in-session scope change or cross-session re-entry — re-invoke §Changing Plans below and follow its protocol.
+
+## Changing Plans
+
+When the plan changes — new task, removed task, reordered task, objective / sample / methodology edit, scope addition surfaced by a PR reviewer — follow this protocol. The same procedure applies whether the change is raised mid-execution or after integration / merge; the protocol itself records how much rolls back via Step 4's box-unchecking and Step 6's re-entry point. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
+
+**Material (require this protocol):**
+
+- Adding, removing, or reordering a task block.
+- Changing a task's objective, script, input, or output.
+- Changing the analysis-level objective, methodology, sample definition, or expected output.
+- Changing data sources or project-wide conventions.
+- Scope additions arriving after integration or merge (post-PR additions, adjacent features surfaced by reviewers, follow-on ideas).
+
+**Not material (handle as inline discovery edits per the Living Plan section above):**
+
+- Rewording a step within an in-flight task to match what the data forced.
+- Adjusting expected results based on early findings.
+- Refining methodology details that the researcher already approved at planning time.
+
+**Protocol:**
+
+1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. This is the same escalation gate as `execution-workflow` Stop-Points class (b).
+2. **Log the decision** per `handoff-doc` §User Decisions Log — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes. The log entry must declare which tasks are affected and which project-level boxes are unchecked.
+3. **Update `PLAN.md` inline:**
+   - **Prefer modifying existing task blocks over appending.** Append a new task block only when the change cannot be expressed as an edit to an existing task's scope.
+   - **New task** → append `### Task N+1: [name]` block with the full anatomy from `handoff-doc/references/plan-anatomy.md`. Renumber later tasks if inserting earlier in the sequence.
+   - **Modified task** → rewrite the affected fields in place. Do not strike through. Do not add "Modified:" annotations.
+   - **Removed task** → delete the block entirely. The Decisions entry preserves the rationale.
+   - **Reordered tasks** → renumber and rewrite. The decision log preserves the original sequence.
+4. **Update `## Workflow Status`** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* boxes are unchecked and *why*. Rules: per-task `**Review status:**` and `**Integration status:**` on fully re-implemented tasks are cleared; untouched tasks retain APPROVED; minor-edited tasks (code unchanged) clear `**Integration status:**` while keeping `**Review status:** APPROVED`. The orchestrator — not the new task's implementer — decides which tasks are "related" and which milestones roll back.
+5. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
+6. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `execution-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Stage 2. On every re-entry, `integration-workflow` runs the **full** drift-test suite regardless of which tasks changed — only *authoring* new drift tests is scoped to the affected tasks. The doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff.
+
+**DAG cascade on re-entry.** When re-entering, the orchestrator walks the transitive downstream closure of each task whose code or outputs will change (from `**Depends on:**` fields). By default, every task in the closure has `**Review status:**` and `**Integration status:**` cleared. Exemption: the orchestrator may leave a downstream task APPROVED by documenting *why* the upstream change does not affect its inputs — one blockquote per exempted task in §Decisions. The drift-test suite runs in full regardless of the closure; closure scopes re-review and integration-review dispatch only. See `handoff-doc/references/plan-anatomy.md` §Field-by-Field for the cascade vocabulary and `handoff-doc` §User Decisions Log for the exemption format.
+
+**Banned shortcuts:**
+
+- Carrying the new task in chat or only in `TodoWrite` without writing it into `PLAN.md` (see §PLAN.md Is the Task Tracker above — `TodoWrite` is a transient view, not a record).
+- Creating a `PLAN_v2.md` or appending an "Addendum" section. There is one `PLAN.md`.
+- Resuming the in-flight task before reflecting the change in the doc — the change is not real until it is committed.
+- Running a subset of the drift-test suite on re-entry because "only these tasks changed" — authoring is scoped, running is not. Always run the full suite.
 
 ## No Placeholders
 
@@ -126,11 +220,13 @@ After writing the complete plan:
 
 **6. Sensitivity / robustness coverage (where applicable):** For data analysis, are sensitivity analysis tasks included? Were they discussed with the researcher to determine which checks matter most?
 
+**7. Dependency graph sanity:** Every task has a `**Depends on:**` line. No cycles. If the plan has ≥2 independent branches, at least one pair of tasks is marked parallelizable.
+
 Fix issues inline. No need to re-review — just fix and move on.
 
 ## Execution Handoff
 
-After finalizing the plan, commit it, then offer execution choice:
+After finalizing the plan, check the **`Plan approved`** box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md for the checklist anatomy) and commit the plan + box-flip atomically. Then offer execution choice:
 
 **"Plan complete and saved to `PLAN.md`. RESULTS.md created. Two execution options:**
 

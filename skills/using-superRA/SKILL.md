@@ -1,9 +1,9 @@
 ---
 name: using-superRA
-description: Use when working inside superRA and you need the master workflow map, stage-based skill loads, execution-mode rules, or harness adapter references.
+description: Master skill every agent reads. Carries the universal workflow principles, code-change defaults, skill inventory, composable-design map, Skill-Load Manifest, Execution Modes, and instruction priority. Main agents also load `references/main-agent.md` at session start for cross-session detection, autonomy, and the default handoff-doc load; subagents inherit task context from dispatch and skip that reference.
 ---
 
-This is the one skill every superRA agent reads — main agents at session start, dispatched subagents at dispatch time, Agent Team teammates on spawn. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
+This is the one skill every superRA agent reads — main agents at session start, dispatched subagents at dispatch time. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
 
 ## Universal Principles
 
@@ -15,15 +15,36 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 3. **Fast early, strict before merge. Semantic merges always.** Interim work is optimized for speed — no codebase-fit checks at per-task checkpoints. Integration discipline (drift tests, refactor, doc finalization) runs only when the user chooses to merge, inside `integration-workflow`. Every merge into main goes through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
 
-4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use the question tool when the harness exposes it (`AskUserQuestion` on Claude; plain text otherwise). Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent-autonomy.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
+4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
 
-**RA framing.** The agent is a Research Assistant implementing the researcher's methodology, not judging it. Challenges to methodology are escalated to the human partner, never decided unilaterally.
+## Code-Change Defaults
+
+These defaults apply whenever you write, review, or refactor code. They govern micro-level execution and do not replace the workflow rules above.
+
+1. **Surface assumptions and ambiguity early.** Do not silently choose between materially different interpretations. State the assumption you are making, name meaningful tradeoffs, and point out a simpler path when one exists. Ask only when the ambiguity changes correctness, scope, or a decision that belongs to the researcher.
+
+2. **Prefer the minimum code that solves the task.** No speculative features, abstractions, configurability, or defensive branches that were not requested. If a straightforward implementation works, use it.
+
+3. **Keep edits surgical.** Touch only what the task requires. Match the surrounding style. Do not refactor adjacent code, comments, or formatting unless the task requires it. Remove imports, variables, and helper code only when your own change made them unused; mention unrelated dead code instead of deleting it.
+
+## Shared-Repo Commit Discipline
+
+Multiple agents (main/orchestrator plus subagents, or parallel subagents in the same worktree) may be writing in the same repo. Any agent that stages a commit — including the main agent dispatching other agents — MUST respect this discipline.
+
+Other agents' uncommitted edits may land in your `git status` output. **Only commit the files you or your subagents modified this turn.** Never commit sweeps.
+
+Before staging:
+
+1. Run `git status` and list every modified/new file. For each, decide: did I touch this file (directly via Write/Edit) in this turn?
+2. If yes -> stage it by exact path: `git add path/to/file`.
+3. If no -> leave it untouched. Do NOT `git add -A`, `git add .`, or `git add -u`. Those stage other agents' in-flight work and produce cross-agent commit contamination that is hard to unwind.
+4. Before `git commit`, run `git diff --cached` and confirm only your edits are staged. If you see unexpected content, unstage it with `git restore --staged path/to/file`.
+
+If you see unfamiliar uncommitted changes and cannot tell whether they are another agent's in-flight work or stale local state, stop and ask (the orchestrator if you are a subagent; the user if you are the main agent) — do not unilaterally discard or commit them.
 
 ## Handoff Docs
 
 Every agent edits `PLAN.md` and `RESULTS.md` at some point — implementers rewrite step text and record findings, reviewers write review-notes blockquotes, orchestrators annotate with adjudication notes. The editing discipline (four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, full `PLAN.md` / `RESULTS.md` anatomy templates) lives in `superRA:handoff-doc`.
-
-Implementer / reviewer subagents do NOT load `handoff-doc` by default — a compact editing etiquette (inline-edit, remove-stale, no-append) is carried in `agents/implementer.md` + `agents/reviewer.md` step 1 and is enough for the everyday case. Load `superRA:handoff-doc` on demand when the etiquette is not enough (unusual structural edit, first-time encounter with the doc format) and always when creating docs from scratch — `planning-workflow` Phase 2 (new plan) and `integration-workflow` Step 3 doc-writer (Stage 2 maturation). A standalone user with no subagents also reads `handoff-doc` directly.
 
 ## Skill Inventory
 
@@ -44,11 +65,10 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `worktree-data-sync` | Isolated git worktrees, non-git data sync between them, and cleanup ritual. |
 | Meta | `using-superRA` | This skill — the master skill every agent reads. |
 | Meta | `codex-superra-setup` | Codex-only bootstrap for installing or refreshing the named custom agents in project or global scope. |
-| Meta | `writing-skills` | Create or modify skills using test-driven methodology. |
 
 ## Composable Design
 
-Skills compose by category. **Workflow skills** own sequencing — they decide what happens when, and dispatch agents to do it. **Domain skills** own domain discipline — the vertical-specific knowledge a workflow skill invokes when a task touches that domain (today: `econ-data-analysis`). **Utility skills** are called on demand by workflow skills, agent files, or other skills — they are domain-agnostic and reusable. **Meta skills** shape the skill system itself (this skill, plus `writing-skills`). One source of truth per concern: if two skills seem to overlap, one of them should be pointing at the other rather than duplicating content.
+Skills compose by category. **Workflow skills** own sequencing — they decide what happens when, and dispatch agents to do it. **Domain skills** own domain discipline — the vertical-specific knowledge a workflow skill invokes when a task touches that domain (today: `econ-data-analysis`). **Utility skills** are called on demand by workflow skills, agent files, or other skills — they are domain-agnostic and reusable. **Meta skills** shape the skill system itself (`using-superRA`). One source of truth per concern: if two skills seem to overlap, one of them should be pointing at the other rather than duplicating content.
 
 ## Harness Adapters
 
@@ -76,13 +96,14 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
-`handoff-doc` is a required load only on the `documentation` and `planning-review` rows — those stages create or mature docs from scratch and need the full anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Everyday implementer / reviewer stages work from the compact handoff-doc editing etiquette carried in `agents/implementer.md` / `agents/reviewer.md` step 1 (inline-edit, remove-stale, no-append) and load `handoff-doc` on demand only when that etiquette is not enough.
+
+**Main-agent default load.** Main agents additionally load `superRA:handoff-doc` at session start (per `references/main-agent.md`) so that editing discipline is available before the main agent touches PLAN.md, and so `planning-workflow §Changing Plans` cross-references into `handoff-doc` (User Decisions Log, plan-anatomy) resolve. The subagent-side rows in the table above are unaffected — subagents load `handoff-doc` only on `documentation` / `planning-review` stages as listed.
 
 **Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess. The manifest is the single source of truth for Stage→{skills, references}.
 
 ## Execution Modes
 
-**Subagent dispatch (default for multi-step workflows).** The orchestrator uses the `Agent` tool to dispatch an implementer or reviewer subagent per task. Dispatch prompts follow the canonical `Stage:` / `Task:` / `Additionally:` template — see `agent-orchestration` §Dispatch Templates. The subagent reads its dispatch prompt, loads per the Skill-Load Manifest above, does the work, returns a status per `agent-orchestration` §Dispatch-Return Deltas.
+**Subagent dispatch (default for multi-step workflows).** The orchestrator uses the `Agent` tool to dispatch an implementer or reviewer subagent per task. Dispatch prompts follow the canonical `Stage:` / `Task:` / `Additionally:` template — see `agent-orchestration` §Dispatch Templates. The subagent reads its dispatch prompt, loads per the Skill-Load Manifest above, does the work, returns a status per `agents/implementer.md` / `agents/reviewer.md` §Report Format.
 
 **Direct mode.** When the orchestrator executes a step itself — no subagent dispatch — it plays the implementer or reviewer role in-session. The discipline is the same; only the dispatch envelope is gone.
 
@@ -92,35 +113,15 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 - **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's §Three Concurrent Disciplines before committing. Update `PLAN.md` / `RESULTS.md` inline per the handoff-doc editing etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1, or load `superRA:handoff-doc` if you need the full discipline. Reviewer verdicts are still APPROVE / REVISE even when you render them as your own conclusion.
 - **Review is never skipped.** If you implemented in direct mode, you still need a review pass — either dispatch a reviewer subagent for the review step, or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
 
-## When to Invoke Which Skill
+## Tool Discipline
 
-The macro workflow is **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. When multiple skills could apply, follow this flow:
-
-1. **PLAN phase skills first** (`planning-workflow`) — determine WHAT to do.
-2. **IMPLEMENT + VALIDATE phase skills second** (`execution-workflow`, `econ-data-analysis`) — guide execution and review.
-3. **INTEGRATE phase skills last** (`integration-workflow`, `merge-workflow`) — integrate work back.
-
-"Let's analyze X" → PLAN phase: `planning-workflow` (Phase 1 inventory then Phase 2 plan creation).
-"Something looks wrong in the data" → investigate using `econ-data-analysis` describe step.
-
-Within each implementation step, the micro-level discipline is the three concurrent disciplines **DESCRIBE / ANALYZE / VALIDATE** — documentation is written continuously alongside them (see `econ-data-analysis`).
+**Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
 
 
 ## Semantic Merge
 
 When merging, rebasing, or cherry-picking branches, superRA uses intent-based conflict resolution rather than mechanical ours/theirs. Research-meaningful conflicts are always escalated to the user. See `superRA:semantic-merge` for the full process. A PreToolUse hook automatically reminds you to use this skill when a bare `git merge/rebase/cherry-pick` is detected.
 
-## Agent Teams
-
-When `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled, superRA uses Agent Teams for workflows with iteration loops (`execution-workflow`, `integration-workflow`, `merge-workflow`, `semantic-merge`). This is automatic — the orchestration skills detect availability and use teams when appropriate. See `superRA:agent-orchestration` for details on team compositions, lifecycle, and session handoff.
-
-## Reviewer–Orchestrator Dynamic
-
-The reviewer is **adversarial by design** — thorough, skeptical, flagging everything it is uncertain about. A false positive costs one orchestrator evaluation; a missed issue can ship wrong results. The orchestrator is the **arbitrator** — it made the plan, talks to the researcher, and has big-picture context the reviewer lacks. It expects over-flagging, evaluates each finding independently, and overrules with documented reasoning when the reviewer is wrong. One comprehensive review pass per task returns `APPROVE` / `REVISE`; the reviewer walks the full checklist regardless of early failures, and the re-review after REVISE is narrow (verify cited fixes + any finding annotated as depending on an upstream fix). This dynamic applies across all stages (execution, integration, merge, semantic-merge).
-
-## User Instructions
-
-Instructions say WHAT, not HOW. "Analyze X" or "Merge these datasets" doesn't mean skip `econ-data-analysis` discipline.
 
 ## Instruction Priority
 
