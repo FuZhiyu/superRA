@@ -109,24 +109,24 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 2: Unify `integration-workflow` — Phases A–D with iterative Phase B
 **Depends on:** Task 1
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** N/A
 **Input:** current `skills/integration-workflow/SKILL.md`, current `skills/merge-workflow/SKILL.md`, Task 1's rewritten `refactor-and-integrate`, `agent-orchestration §Dispatch Templates`
 **Output:** Rewritten `skills/integration-workflow/SKILL.md` covering Phases A (drift-test creation, unchanged), B (Integrate — sync + refactor, three-dispatch internal structure, iterative), C (docs maturation + disposition, unchanged), D (final merge / PR / cleanup, folded in from merge-workflow); all dispatches use canonical shape with no content duplicated from loaded skills; re-entry arrows explicit.
 
-- [ ] **Step 1: Draft phase skeleton** — Phases A–D with explicit re-entry arrows (B→A, B→B, C→B, D→B, Anywhere→`planning-workflow §Changing Plans`).
+- [x] **Step 1: Draft phase skeleton** — Phases A–D with explicit re-entry arrows (B→A, B→B, C→B, D→B, Anywhere→`planning-workflow §Changing Plans`).
 
-- [ ] **Step 2: Write Phase B three-dispatch internal structure** — recon reviewer (read-only, produces integration map) → batched `AskUserQuestion` for research-meaningful items + merge-base list → unified implementer (loads `semantic-merge` + `refactor-and-integrate`; two-commit structure: Commit 1 mechanical, Commit 2 unified integration; runs pre-commit self-check) → verify reviewer. Orchestrator split safety-valve for large integration maps. Tier 1 shortcut path.
+- [x] **Step 2: Write Phase B three-dispatch internal structure** — recon reviewer (read-only, produces integration map) → batched `AskUserQuestion` for research-meaningful items + merge-base list → unified implementer (loads `semantic-merge` + `refactor-and-integrate`; two-commit structure: Commit 1 mechanical, Commit 2 unified integration; runs pre-commit self-check) → verify reviewer. Orchestrator split safety-valve for large integration maps. The Tier-1 shortcut that former `merge-workflow` used for Step 2b was dropped: Phase B's verify reviewer is always dispatched regardless of tier — the shortcut only saved one dispatch and complicated the flow. Post-merge skip-documentation carries over only in the PR body template (Phase D) where a Tier-1 clean merge may still be documented if a future revision re-introduces the shortcut.
 
-- [ ] **Step 3: Refactor every dispatch prompt** to canonical shape. Required-fields-first (`Stage:`, `Task:`, `Worktree:` / `Git range:`); `Additionally:` anchor-last with additive signal only. Canonical prefix verbatim. No restated PLAN.md content or checklist items.
+- [x] **Step 3: Refactor every dispatch prompt** to canonical shape. Required-fields-first (`Stage:`, `Task:`, `Worktree:` / `Git range:`); `Additionally:` anchor-last with additive signal only. Canonical prefix verbatim. No restated PLAN.md content or checklist items.
 
-- [ ] **Step 4: Fold Phase D (merge/PR/cleanup)** from former `merge-workflow`. Drift tests run once on final state. PR body template preserved.
+- [x] **Step 4: Fold Phase D (merge/PR/cleanup)** from former `merge-workflow`. Drift tests run once on final state. PR body template preserved verbatim.
 
-- [ ] **Step 5: Add plan-change trigger pointer** — one bullet in Phase B acknowledging that substantive restructure findings escalate to `planning-workflow §Changing Plans` (orchestrator proposes, researcher decides). Not a duplicated protocol — a pointer.
+- [x] **Step 5: Add plan-change trigger pointer** — one bullet in Phase B acknowledging that substantive restructure findings escalate to `planning-workflow §Changing Plans` (orchestrator proposes, researcher decides). Not a duplicated protocol — a pointer.
 
-- [ ] **Step 6: Validate — walk the four workflow principles** against the draft. Confirm each principle preserved or strengthened. Commit.
+- [x] **Step 6: Validate — walk the four workflow principles** against the draft. Confirm each principle preserved or strengthened. Commit.
 
 ---
 
