@@ -103,11 +103,17 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 
 ### Task 3: Pre-Merge Integration and Merge Readiness
 
+**Review status:** REVISE
+
 **Files affected:** `PLAN.md`, `RESULTS.md`, `tests/check-harness-compatibility.sh`, `CLAUDE.md`, structural tests or helper checks chosen as drift guards, and any docs or plugin surfaces flagged by the integration pass
 
 **Input:** Approved Codex compatibility implementation (`3e9f1c8`) plus the approved execution-stage record in `RESULTS.md`
 
 **Output:** Confirmed drift-test coverage for the Codex support surface, a top-level Claude/Codex compatibility guard, any codebase-fit or doc-audit fixes required for integration, finalized Stage 2 handoff docs, and a clean handoff to `merge-workflow`
+
+> **Review notes:**
+> 1. [MAJOR] `README.md:95` is stale against this integration round. The line still says `agent-orchestration` owns the "return-delta protocol", but `skills/agent-orchestration/SKILL.md` no longer has `## Dispatch-Return Deltas`; that protocol was deliberately removed from the skill in this diff. Update the README's architecture summary so the project-doc audit reflects the current ownership split instead of a retired section.
+> 2. [MAJOR] `skills/using-superRA/references/main-agent.md:35-44` still assumes the continuation record lives in a root `RESULTS.md` ("Results document found", "RESULTS.md has findings through Task K", "load PLAN.md and RESULTS.md"), but this integration pass deleted the root file and moved the mature Codex record to `docs/plans/2026-04-17-codex-compatibility-results.md:1`. As committed, a fresh main agent following the session-start contract will look for a non-existent file and miss the actual results handoff. Either keep the root `RESULTS.md` until Task 3 Step 3 is truly complete, or update the session-start / continuation guidance to discover and load the relocated results path used by this repo.
 
 - [x] **Step 1: Confirm drift-test coverage.** User chose a new top-level compatibility check as the Stage 1 guard: add a Claude/Codex compatibility script that validates both harness surfaces, then keep `tests/structural-invariants.sh`, `skills/codex-superra-setup/scripts/test_sync_codex_agents.py`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` as the concrete checks it runs.
 - [x] **Step 2: Run the integration review / fix loop.** Added `tests/check-harness-compatibility.sh` as the top-level harness guard, then ran an integration pass over the new surface. The only accepted finding was a missing contributor-facing instruction to run the new guard for harness-surface changes, fixed in `CLAUDE.md`. The compatibility script reran cleanly afterward.
