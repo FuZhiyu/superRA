@@ -83,10 +83,11 @@ BRANCH=$(git branch --show-current)
 - `GIT_DIR != GIT_COMMON` → already in a linked worktree (skip creation)
 - `BRANCH` empty → detached HEAD (cannot branch/push/PR from sandbox)
 
-See `superRA:worktree-data-sync` §Creating a Worktree for how the
-consolidated worktree skill uses these signals (worktree creation +
-data sync + cleanup). Finishing a development branch — push, PR, or
-discard — is covered by `superRA:merge-workflow` and
+See `superRA:agent-orchestration/references/worktree-harness-fallback.md`
+for worktree create / enter / remove mechanics (harness tools preferred;
+raw `git worktree` fallback) and `superRA:worktree-data-sync` for seeding
+non-git data into an existing worktree. Finishing a development branch —
+push, PR, or discard — is covered by `superRA:merge-workflow` and
 `superRA:execution-workflow` Step 4 Option 4.
 
 ## Codex App Finishing

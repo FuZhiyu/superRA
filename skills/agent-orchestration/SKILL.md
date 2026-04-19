@@ -70,6 +70,33 @@ no mutable state are encouraged to be dispatched in parallel to separate agents.
 
 ---
 
+## Concurrent Writers Require Worktree Isolation
+
+When a parallel dispatch batch contains **≥2 implementers**, each runs in its own git worktree on a `parallel/<analysis-branch>/<slug>` branch (slug is orchestrator-chosen — `a`, `b`, `alpha`, a bundle name). Two implementers sharing a worktree race on `PLAN.md` / `RESULTS.md` and any shared output path; worktree isolation is the only safe concurrency model for parallel writes.
+
+Applies to implementers only. Reviewers run post-merge on the analysis branch. Read-only research subagents return findings to the orchestrator, which does the single write.
+
+### Ownership split
+
+| Direction | Owner | When | How |
+|---|---|---|---|
+| Seed-in (inputs → worktree) | Orchestrator | Before dispatch | `worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink` |
+| Inside worktree (task execution) | Subagent | During dispatch | Normal file I/O on the `parallel/…` branch |
+| Harvest-out (merge back) | Orchestrator | After all siblings return | Plain `git merge --no-ff parallel/<branch>/<slug>` |
+| Cleanup | Orchestrator | After merge | Harness worktree tool or `git worktree remove` + `git branch -D` |
+
+Task boundaries are set ex-ante in `PLAN.md`, so `parallel/…` branches are mechanically disjoint and merge without `semantic-merge`. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. The `merge-guard` hook exempts `parallel/*` source branches.
+
+Force-symlink seeding is safe because parallel tasks have disjoint write paths by construction. A task that would mutate seeded data either needs a redrawn boundary or `--seed-sync-mode force-cow`.
+
+### Worktree lifecycle
+
+Prefer harness worktree tools (`EnterWorktree`, `ExitWorktree`); fall back to raw git per `references/worktree-harness-fallback.md`, which also covers placement and gotchas.
+
+Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `PLAN.md` — git (`git worktree list`, `git branch`) is the source of truth.
+
+---
+
 ## Dispatch Templates
 
 Every workflow skill that dispatches an `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules.
@@ -83,6 +110,7 @@ Every template opens with the canonical prefix **"Follow the standard stage-rele
 Agent(subagent_type: "superRA:implementer"):
   Stage: <stage-name>
   Task: <task pointer — e.g., "Task N in PLAN.md">
+  Worktree: <absolute path>   # optional — parallel-dispatch only
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
@@ -111,6 +139,10 @@ Agent(subagent_type: "superRA:reviewer"):
 only paraphrases the default protocol, the skill-load manifest, or
 `PLAN.md` content, delete it — re-statement of content the agent will
 read itself is noise that clutters the dispatch without adding signal.
+
+**`Worktree:` field (implementer-only, parallel-dispatch only).** Absolute path to the dedicated worktree provisioned per §Concurrent Writers. When present, the dispatch **must** include this canned steering in the `Additionally:` tail — the one case where that tail carries required, non-additive content:
+
+> *Work inside the worktree at `<path>`. Enter via `EnterWorktree` if available, otherwise `cd <path>`. Do not edit files outside. Do not merge or push — the orchestrator owns merge-back.*
 
 The agent reads `PLAN.md`, Data Inventory, Conventions, and prior results from `RESULTS.md` directly — the dispatch does not re-state them. If a non-default skill load, an extra domain reference, or an override of the standard handoff is required for this particular call, add `Skills:` and `References:` lines between the required fields and the prefix line.
 

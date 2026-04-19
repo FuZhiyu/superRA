@@ -193,7 +193,7 @@ EOF
 
 ### Step 5: Cleanup Worktree
 
-If the analysis was done in a git worktree, invoke `superRA:worktree-data-sync` §Cleanup for the teardown ritual. If the analysis was done on a feature branch without a worktree, skip this step.
+If the analysis was done in a git worktree, remove it per `superRA:agent-orchestration/references/worktree-harness-fallback.md` §Remove (harness tool preferred; `git worktree remove <path>` + `git branch -D <branch>` otherwise). Seeded non-git data inside the worktree disappears with the directory — see `superRA:worktree-data-sync` §Data Teardown. If the analysis was done on a feature branch without a worktree, skip this step.
 
 Report what was merged/pushed and what was cleaned up.
 
@@ -240,4 +240,5 @@ The refactor-review loop in Step 3 reuses integration-workflow Stage 2 verbatim 
 - **superRA:integration-workflow** (via the post-merge refactor-review loop) — Reuses Stage 2 machinery for refactor + review
 
 **Pairs with:**
-- **superRA:worktree-data-sync** — §Cleanup ritual for the worktree created by that skill at planning time
+- **superRA:agent-orchestration** — `references/worktree-harness-fallback.md` §Remove for the worktree-removal ritual at Step 5
+- **superRA:worktree-data-sync** — §Data Teardown clarifies that seeded non-git data disappears with the worktree directory

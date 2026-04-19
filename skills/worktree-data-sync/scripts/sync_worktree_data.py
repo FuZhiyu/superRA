@@ -926,7 +926,7 @@ def main() -> None:
         print(f"Error: {error}", file=sys.stderr)
         sys.exit(1)
 
-    entries = discover_managed_entries(source_root)
+    entries = discover_managed_entries(source_root, dest_worktree=destination_root)
 
     verbose = not args.quiet
 
