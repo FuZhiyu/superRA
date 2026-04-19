@@ -97,7 +97,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 1: Rebuild `refactor-and-integrate` as a gated checklist
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A (skill file refactor)
