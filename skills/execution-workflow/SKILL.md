@@ -186,7 +186,7 @@ Log the researcher's answer per `handoff-doc` §User Decisions Log — top-level
   Invoke `superRA:integration-workflow` skill to proceed with the integration stage. 
 
   - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
-- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then invoke `superRA:worktree-data-sync` §Cleanup — its Option-4 ritual covers the branch deletion and the optional `git worktree remove`. Stop after the branch and worktree are removed. Report what was deleted.
+- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree — `git worktree remove <path>` per `superRA:agent-orchestration/references/worktree-harness-fallback.md` §Remove. Stop after the branch and worktree are removed. Report what was deleted.
 
 ## Review Status Reference
 
@@ -241,7 +241,7 @@ See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of
 - Start work on main/master branch without proposing a feature branch first (Step 0)
 - Skip review — even in direct mode
 - Proceed with unfixed `[BLOCKING]` items (a REVISE task is not complete until the re-review promotes it to APPROVED)
-- Dispatch multiple implementers in parallel on the same working tree (conflicts)
+- Dispatch multiple implementers in parallel on the same worktree — when parallel-dispatching ≥2 implementers, each must run in its own worktree per `superRA:agent-orchestration` §Concurrent Writers Require Worktree Isolation
 - Paraphrase the task prompt into the dispatch instead of pointing the subagent at `PLAN.md` (the pointer-based convention is mandatory — subagents read the file directly so the dispatch and PLAN.md cannot drift)
 - Skip plan file update after task completion
 - Ignore implementer input-quality or methodology concerns
@@ -259,8 +259,8 @@ See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of
 ## Integration
 
 **Required workflow skills:**
-- **superRA:worktree-data-sync** — RECOMMENDED: For complex or multi-session analyses, set up an isolated workspace before starting (see §When to Use a Worktree for the decision table)
-- **superRA:worktree-data-sync** — Load this when copying managed data between existing worktrees (e.g., seeding a new analysis worktree from the main one); do not hand-roll data copy scripts
+- **superRA:agent-orchestration** — OWNS: parallel-dispatch discipline (§Workload Balancing, §Concurrent Writers Require Worktree Isolation). Required reading when parallel-dispatching ≥2 implementers; `references/worktree-harness-fallback.md` covers worktree create / enter / remove.
+  - **superRA:worktree-data-sync** — invoked from within the parallel-dispatch flow to seed non-git data into a provisioned worktree; do not hand-roll copy scripts.
 - **superRA:planning-workflow** — Creates the plan this skill executes
 - **the active domain skill (for data analysis: `superRA:econ-data-analysis`)** — REQUIRED: domain discipline all agents follow, loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest. Carries the §Three Concurrent Disciplines that the reviewer walks on every pass.
 - **superRA:integration-workflow** — Drift tests, refactor-review loop, documentation finalization (dispatched by this skill at Step 4 on merge/PR)

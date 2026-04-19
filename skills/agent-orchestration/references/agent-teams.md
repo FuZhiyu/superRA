@@ -98,7 +98,13 @@ For 2+ independent tasks that can be worked on without shared state or sequentia
 
 ### Infrastructure for Parallel Work
 
-When dispatching parallel agents that need isolated workspaces — e.g., parallel analyses on different branches, or parallel refactors touching overlapping files — load `superRA:worktree-data-sync` for both the workspace setup (§Creating a Worktree) and the managed-data copy between them. Do not hand-roll worktree setup or data-copy scripts. This is the canonical path for all parallel-work infrastructure in superRA.
+When dispatching parallel agents that need isolated workspaces, follow `SKILL.md` §Concurrent Writers Require Worktree Isolation:
+
+- Provision one worktree per agent per `references/worktree-harness-fallback.md` (harness tools preferred; raw `git worktree` otherwise).
+- Seed non-git data via `superRA:worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink`.
+- Merge back with plain `git merge` on the `parallel/<branch>/<slug>` branches.
+
+Do not hand-roll worktree setup or data-copy scripts.
 
 ### The Pattern
 

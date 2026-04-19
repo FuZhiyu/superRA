@@ -3,6 +3,12 @@
 # Injects a reminder to use superRA:semantic-merge for research-aware integration.
 # Does NOT block — the discipline system handles enforcement.
 
+# Test vectors for regression (from RESULTS.md Task 4)
+# - `git merge parallel/foo/a` → emit `{}` (exempt: parallel branch)
+# - `git merge --no-ff parallel/feat/b` → emit `{}` (exempt: parallel branch with flag)
+# - `git merge main` → emit STOP reminder (require semantic-merge)
+# - `git merge --abort` → emit `{}` (skip: abort is not a new merge)
+
 set -euo pipefail
 
 # Read tool input from stdin
@@ -24,6 +30,15 @@ print(d.get('tool_input', {}).get('command', ''))
 
 # Skip abort, continue, skip, quit — these are not new merges
 if echo "$command" | grep -qE 'git (merge|rebase|cherry-pick) --(abort|continue|skip|quit)'; then
+  printf '{}\n'
+  exit 0
+fi
+
+# Exempt orchestrator-managed parallel-task merges.
+# Branch-name convention from superRA:agent-orchestration §Concurrent
+# Writers Require Worktree Isolation — parallel/<branch>/<slug> branches
+# are disjoint by construction and merge with plain git merge.
+if echo "$command" | grep -qE 'git (merge|rebase|cherry-pick)(\s+--?\S+)*\s+parallel/'; then
   printf '{}\n'
   exit 0
 fi
