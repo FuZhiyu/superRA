@@ -78,10 +78,10 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 | `integration` | `refactor-and-integrate`; domain skill | `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
 | `drift-test` | `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
 | `merge` | `refactor-and-integrate` + `semantic-merge`; domain skill | `merge-quality.md` |
-
-The `merge` stage is used when `semantic-merge` is invoked in delegated mode for a dedicated merge-proposer / merge-reviewer pair (standalone merges). Inside `integration-workflow` Phase B, the unified implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the canonical `Skills:` dispatch field (Tier 2/3 only) rather than switching Stage.
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
+
+The `merge` stage is used when `semantic-merge` is invoked in delegated mode for a dedicated merge-proposer / merge-reviewer pair (standalone merges). Inside `integration-workflow` Phase B, the unified implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the canonical `Skills:` dispatch field (Tier 2/3 only) rather than switching Stage.
 
 
 **Main-agent default load.** Main agents additionally load `superRA:handoff-doc` at session start (per `references/main-agent.md`) so that editing discipline is available before the main agent touches PLAN.md, and so `planning-workflow §Changing Plans` cross-references into `handoff-doc` (User Decisions Log, plan-anatomy) resolve. The subagent-side rows in the table above are unaffected — subagents load `handoff-doc` only on `documentation` / `planning-review` stages as listed.

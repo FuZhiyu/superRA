@@ -214,7 +214,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 6: Sync peripheral surfaces
 **Depends on:** Tasks 2, 3, 4, 5
-**Review status:** REVISE
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** N/A
@@ -223,7 +223,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 > **Review notes (2026-04-19):**
 >
-> 1. **[CRITICAL] `skills/using-superRA/SKILL.md` Skill-Load Manifest table is broken by the inserted clarifying paragraph.** At lines 75–84, the clarifying paragraph about the `merge` stage (line 82) is wedged **between** the `merge` row (line 80) and the `documentation` / `planning-review` rows (lines 83–84). Markdown tables require contiguous rows separated only by newlines — interposing a paragraph terminates the table, so `documentation` and `planning-review` rows render as a second/degraded table or as raw text, not as part of the Manifest. This is the authoritative source-of-truth for Stage→{skills, references} and it currently does not parse as a single table. Fix: move the clarifying paragraph to **after** the full table (after the `planning-review` row at line 84, before the `**Main-agent default load.**` paragraph). No content change required — just relocate the paragraph below the table.
+> 1. **[CRITICAL] `skills/using-superRA/SKILL.md` Skill-Load Manifest table is broken by the inserted clarifying paragraph.** → implemented: orchestrator relocated the clarifying paragraph to sit *after* the full table (now below the `planning-review` row, before the `**Main-agent default load.**` paragraph). Table is now a contiguous 7-row block.
 
 
 - [x] **Step 1: Skill-Load Manifest** — Skill Inventory `merge-workflow` row removed; `integration-workflow` row rewritten to "INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup." `merge` stage row in the Manifest retained but clarified in a follow-up paragraph: used only for standalone `semantic-merge` delegated-mode dispatches; inside Phase B the unified implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the canonical `Skills:` field on Tier 2/3. The existing `Skills:` + `References:` override-pattern language in `agent-orchestration §Dispatch Templates` (lines 147–148) already supports on-demand utility-skill loading (e.g., `document-skills:skill-creator`) — no edit needed.
