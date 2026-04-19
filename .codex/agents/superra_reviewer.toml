@@ -131,7 +131,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 4. Set `**Review status:**` per the verdict protocol in §Verdict: `APPROVED` (no `[BLOCKING]` items) or `REVISE` (at least one `[BLOCKING]` item).
 5. Commit `PLAN.md` only: `git commit -m "review: Task N <verdict>"`.
 
-**Shared-repo commit discipline.** Follow `superRA:using-superRA` §Shared-Repo Commit Discipline before staging `PLAN.md` for your `review:` commit — stage by exact path, never `git add -A/./-u`, diff-cached before commit.
+**Commit hygiene.** Follow `superRA:using-superRA` §Commit Hygiene before staging `PLAN.md` for your `review:` commit — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit.
 
 **On re-review (blockquote exists with annotations):**
 
