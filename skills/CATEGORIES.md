@@ -38,7 +38,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 
 | Skill | What it provides |
 |---|---|
-| `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Step 3 doc-writer). Usable standalone by a single author with no subagents. |
+| `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Phase C doc-writer). Usable standalone by a single author with no subagents. |
 | `refactor-and-integrate` | Drift-test quality, codebase integration, and merge quality checklists. Loaded by integration-phase agents. |
 | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. Progressive-reveal references by stage. |
 | `semantic-merge` | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions. Invoked by `integration-workflow` Phase B (recon + Tier 2/3 implementer) and standalone outside the workflow. |

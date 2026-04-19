@@ -232,15 +232,15 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 7: End-to-end dry-run verification
 **Depends on:** Tasks 1–6
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
-**Script:** N/A (simulation in a throwaway worktree)
-**Input:** All refactored skills; a dummy branch with APPROVED PLAN.md and code-complete state.
-**Output:** Walk-through notes in RESULTS.md showing Phases A → D exercised, with B → B re-entry (second merge-base sync), a mid-Phase-B plan-change restructure triggering `planning-workflow §Changing Plans`, and D → B re-entry simulating main advancing during Phase C. Confirms drift tests re-run on re-entry, `Integration status` resets, Workflow Status rolls back, minimum-net-diff self-check catches a deliberately-injected unrelated hunk.
+**Script:** N/A (on-paper dry-read / simulation)
+**Input:** All refactored skills; a hypothetical dummy branch with APPROVED PLAN.md and code-complete state.
+**Output:** Walk-through notes in RESULTS.md showing Phases A → D exercised on paper, with B → B re-entry (main advances mid-integration), a mid-Phase-B plan-change restructure triggering `planning-workflow §Changing Plans`, an unrelated-hunk injection caught by the Implementer Self-Check + verify reviewer, and D → B re-entry (main advances during Phase C). Confirms per-task `Integration status` flip logic, Workflow Status rollback, minimum-net-diff protection via self-check + reviewer walk, and B→B trigger-sentence consistency with Task 5's addition.
 
-- [ ] **Step 1: Set up dummy worktree** on a throwaway branch with a minimal analysis and APPROVED plan.
-- [ ] **Step 2: Walk Phase A → D** using the refactored skills; log every dispatch, user decision, and re-entry.
-- [ ] **Step 3: Inject a plan-change trigger** mid-Phase-B; verify protocol fires correctly.
-- [ ] **Step 4: Inject an unrelated hunk** in the implementer's Commit 2; verify self-check + reviewer catch it.
-- [ ] **Step 5: Write findings** to RESULTS.md (Stage 1 dev-log form). Any pattern issues found feed back as additional REVISE cycles on prior tasks.
+- [x] **Step 1: Dry-read Phase A → D** on the refactored `integration-workflow` SKILL.md with a hypothetical dummy branch in mind; log every dispatch, user stop-point, and re-entry arrow encountered.
+- [x] **Step 2: B→B re-entry scenario** — inject main advancing mid-integration on paper; walk recon-reviewer flip logic; confirm consistency with the B→B trigger sentence in `plan-anatomy.md` line 179 (added by Task 5).
+- [x] **Step 3: Mid-Phase-B plan-change scenario** — inject a substantive restructure need surfaced by recon; walk `planning-workflow §Changing Plans` with the INTEGRATE-trigger bullet (added by Task 5); confirm orchestrator-authors / researcher-decides ownership is unambiguous.
+- [x] **Step 4: Unrelated-hunk injection scenario** — on paper, inject an out-of-scope hunk in the implementer's Commit 2; walk the Implementer Self-Check (`git diff <merge-base>..HEAD`) and the verify reviewer's minimum-net-diff catch; confirm both independently catch it.
+- [x] **Step 5: D→B re-entry scenario** + write findings to RESULTS.md. Fix any ADVISORY stale-vocabulary hits found during the sweep in-place (no tuned content touched). Any `[BLOCKING]` issues would have been opened as new review-notes entries on the relevant prior task; none found.

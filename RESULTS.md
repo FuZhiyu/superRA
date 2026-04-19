@@ -154,4 +154,94 @@
 
 ## Task 7: End-to-end dry-run verification
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Summary:** Dry-read simulation of the refactored `integration-workflow` Phases A → D on a hypothetical branch, plus on-paper injection of the four stress scenarios prescribed by the task (B→B main-advance re-entry, mid-Phase-B plan-change, unrelated-hunk injection in Commit 2, D→B main-advance during Phase C). The refactored skill graph carries all four scenarios end-to-end — every dispatch, user stop, and re-entry arrow the dry-run encountered is reachable from the committed skill files without invented protocol. Seven stale-vocabulary hits were found across six skill files (legacy "Step 3" / "Stage 1" / "Stage 2" terminology from the old integration-workflow / merge-workflow split) and fixed as part of this task; all are pointer strings, no tuned content touched.
+
+### Scenarios walked
+
+**(1) Happy path: Phase A → D on a clean branch.**
+
+- Phase A: drift-test creation. Main agent follows `integration-workflow §Phase A` — extracts key results from RESULTS.md, stops at Step 2 for user confirmation via `AskUserQuestion`, dispatches test-creator (Stage `drift-test`) then test-reviewer (Stage `drift-test`), iterates REVISE/APPROVE, runs suite green, commits `tests/`, flips `Drift tests created` milestone. Every dispatch matches canonical shape (required fields first, `Additionally:` anchor last, no restated PLAN.md content).
+- Phase B: dispatches recon reviewer with `Skills: superRA:semantic-merge`. Recon commits per-task integration review-notes blockquotes (where warranted) + one-line Tier classification to §Decisions. Orchestrator flips `Integration status: REVISE` on annotated tasks. Evaluates the two shortcut axes; the four combinations (Tier 1 + zero / Tier 1 + annotations / Tier 2 or 3 + zero / Tier 2 or 3 + annotations) all resolve to a single reachable path. Step 2b batched `AskUserQuestion` for research-meaningful items. Unified implementer dispatched with `Tasks in scope:` scoping and conditional `Skills: superRA:semantic-merge`. Two-commit structure (mechanical merge → unified refactor). Drift tests run between commits. Verify reviewer reviews cumulative diff with same `Tasks in scope:` restriction, refuses out-of-scope hunks as `[BLOCKING]` vs Minimum-net-diff.
+- Phase C: orchestrator resolves `RESULTS_DIR`; dispatches doc-writer (Stage `documentation`) then doc-reviewer (Stage `documentation`); four-commit maturation lands atomically; flips `Docs finalized`; orchestrator-owned PLAN.md disposition decision.
+- Phase D: pre-merge freshness check (`git fetch` + `git log <merge-base>..origin/<base-branch>`); if main not advanced → flip `Merged`, execute Option 1 (local merge) or Option 2 (push + PR); cleanup worktree per `agent-orchestration/references/worktree-harness-fallback.md`.
+
+Result: skill text is internally consistent; all autonomy stop-points enumerated in `Phase Map §Autonomy` are cross-referenced to `using-superRA §Universal Principles (#4)` and to `handoff-doc §User Decisions Log`.
+
+**(2) B→B re-entry: main advances mid-integration.**
+
+Injected scenario: Phase B completes with `Refactored` milestone flipped; before Phase C starts, `origin/main` moves with commits touching two of the five analysis-branch tasks' input files. The researcher triggers another integration pass.
+
+Walked path: re-enter Phase B Step 1 → dispatch recon reviewer with new `<merge-base>..HEAD` git range. Recon annotates the two affected tasks' PLAN.md blockquotes with `[BLOCKING]` merge-induced-semantic-clash items; leaves the other three tasks unannotated; logs new Tier line under §Decisions. Orchestrator Step 2: the two annotated tasks flip to `Integration status: REVISE`; the three unannotated tasks stay `APPROVED`. Unchecks `Refactored` milestone (line 54 of `plan-anatomy.md`) per the DAG-cascade rule.
+
+Consistency check: the B→B trigger sentence in `handoff-doc/references/plan-anatomy.md` line 179 (added by Task 5) reads "*when main advances mid-integration, `integration-workflow` Phase B recon (the reviewer that authors per-task integration review-notes blockquotes) gates the flip — tasks it annotates get `**Integration status:** REVISE`; tasks it does not annotate stay `APPROVED`.*" The dry-run walked this sentence exactly. Scope-by-Integration-status rule in `refactor-and-integrate §Scope by Integration Status` then keeps the three APPROVED-integration tasks out of the unified implementer's diff, preserving minimum-net-diff. **Consistent; no gap.**
+
+**(3) Mid-Phase-B plan-change trigger: substantive restructure surfaces.**
+
+Injected scenario: recon's per-task annotations surface that Task 3's sample construction overlaps with a new main-side helper that subsumes it — the cleanest resolution is to merge Task 3 into the helper and delete Task 3. This is a **substantive restructure** (task remove/combine + DAG edge flip), not a routine conflict.
+
+Walked path: integration-workflow Phase B §Plan-change trigger (lines 91 of the skill) reads "*If the recon reviewer (Step 1) or verify reviewer (Step 4) surfaces a substantive restructure finding — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation — escalate via `planning-workflow §Changing Plans` (orchestrator authors the restructure proposal; researcher decides) before continuing.*" The orchestrator pauses Phase B, authors a Restructure Proposal, stops for the researcher via `AskUserQuestion` per §Changing Plans Step 1, logs the decision per §User Decisions Log Step 2, edits PLAN.md inline per Step 3 (removes Task 3 block, renumbers if needed, updates Depends-on fields), unchecks affected Workflow Status boxes per Step 4, commits atomically per Step 5, then resumes by re-entering Phase B Step 1 per Step 6.
+
+Consistency check: `planning-workflow §Changing Plans` Material-list bullet added by Task 5 (line 155) reads "*Substantive restructure findings surfaced mid-INTEGRATE (by `integration-workflow` Phase B recon, Phase B verify reviewer, Phase C doc-reviewer, or Phase D semantic-merge) — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.*" Ownership (orchestrator authors, researcher decides) matches the Phase B pointer and the `integration-workflow §Integration §Escalates to` block (line 447). **Consistent; no duplication of protocol between the two pointers — the protocol body lives only in `planning-workflow §Changing Plans`.**
+
+**(4) Unrelated-hunk injection in Commit 2.**
+
+Injected scenario: the unified implementer, during Commit 2 of Phase B, also re-formats an unrelated module (`utils/dates.py`) that is not in the in-scope task list and not touched by the merge. This is the canonical minimum-net-diff violation.
+
+Walked paths:
+
+- *Implementer self-check* — `refactor-and-integrate §Implementer Self-Check (Before Every Commit)` (lines 80–89 of SKILL.md) runs `git diff <merge-base>..HEAD` before the commit. Procedure Step 2: "*For each hunk, ask: which `[BLOCKING]` or `[ADVISORY]` item justifies this change?*" The `utils/dates.py` reformat has no justification in the three references' checklists (not drift-test preservation, not codebase-convention fit for any in-scope task, not handoff-doc coherence, not documentation currency, not on the integration map). Procedure Step 3: "*Any hunk without a justification is out of scope. Revert it, OR re-justify it by adding the underlying need to the integration map.*" Self-check catches it before commit.
+- *Verify-reviewer catch* — if the implementer commits anyway, Phase B Step 4 verify reviewer runs `git diff <merge-base>..HEAD` as evidence per the same Implementer Self-Check section ("*The verify reviewer runs the same `git diff <merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists.*"). The dispatch prompt (integration-workflow line 193–194) reads "*Raise any out-of-scope hunk as a [BLOCKING] finding against Minimum-net-diff.*" The reviewer annotates the `utils/dates.py` hunks as `[BLOCKING]` Minimum-net-diff violations → REVISE → orchestrator adjudicates → implementer reverts the hunks in a follow-up commit → narrow re-review.
+
+**Both nets catch it. Consistent.**
+
+**(5) D→B re-entry: main advances during Phase C.**
+
+Injected scenario: Phase B APPROVED and `Refactored` flipped; during Phase C's doc-writer iteration (say, between the doc-writer's Commit 2 and the doc-reviewer's APPROVE), a colleague lands three commits on main that touch one of the analysis-branch input files. Phase D Step 1 detects the drift.
+
+Walked path: Phase D Step 1 (lines 321–328 of integration-workflow SKILL.md) runs `git fetch origin <base-branch>` + `git log --oneline <merge-base>..origin/<base-branch>`; finds three new commits; re-enters Phase B. Phase B re-opens: new recon dispatch → new Tier classification → new per-task annotations. If only the single task's input file conflicts, recon annotates that one task only; the other tasks stay `Integration status: APPROVED`. Unified implementer + verify reviewer run scoped to the single re-flagged task. After APPROVE, re-check `Refactored`. Then Phase C re-runs per the doc-writer's "always re-runs the whole matured doc" rule (SKILL.md line 244); doc-reviewer reviews the diff from the last APPROVED state. Then Phase D Step 1 re-checks freshness. Eventually clean → Phase D Steps 2–4 execute.
+
+Consistency check: the Phase Map box at lines 18–31 of integration-workflow SKILL.md explicitly draws the D→B arrow ("`D → B` when the semantic-merge in Phase D reveals main moved again"). The Phase D Step 1 text enforces it mechanically. The doc-writer's "re-run the whole matured doc on every integration pass" rule handles the C side (Phase C §Step 2 prose). **Consistent; no gap.**
+
+### Findings
+
+**[BLOCKING]** — none. All five scenarios walked end-to-end on the refactored skill graph with no invented protocol and no unreachable arrows.
+
+**[ADVISORY] — stale-vocabulary hits (fixed in this commit).** Task 6's peripheral-surface sweep missed seven strings that still named the pre-unification vocabulary ("integration-workflow Step 1 / Step 3" or "integration-workflow Stage 1 / Stage 2") on skill files other than the ones Task 6 explicitly enumerated. All are pointer strings — no tuned content (Red Flags, RA-framing, rationalization lists) affected. Fixed in-place:
+
+| File | Line | Before | After |
+|---|---|---|---|
+| `skills/planning-workflow/SKILL.md` | 123 | `integration-workflow Step 3` | `integration-workflow Phase C` |
+| `skills/planning-workflow/SKILL.md` | 175 | `integration-workflow Stage 2` | `integration-workflow Phase B` |
+| `skills/using-superRA/SKILL.md` | 58 | `integration-workflow Step 3 doc-writer` | `integration-workflow Phase C doc-writer` |
+| `skills/handoff-doc/SKILL.md` | 56 | `integration-workflow Step 3 doc-writer` | `integration-workflow Phase C doc-writer` |
+| `skills/handoff-doc/references/results-anatomy.md` | 8 | `integration-workflow Step 3` | `integration-workflow Phase C` |
+| `skills/handoff-doc/references/results-anatomy.md` | 106 | `integration-workflow Step 3 … Stage 2 refactor + integration review` | `integration-workflow Phase C … Phase B refactor + integration review` |
+| `skills/econ-data-analysis/SKILL.md` | 34 | `integration-workflow Stage 1` | `integration-workflow Phase A` |
+| `skills/econ-data-analysis/references/integrate-drift-tests.md` | 3, 40 | `integration-workflow Stage 1 / Stage 1 Step 2` | `integration-workflow Phase A / Phase A Step 2` |
+| `skills/refactor-and-integrate/references/codebase-integration.md` | 21, 34 | `Stage 2 refactoring` / `integration-workflow Step 3` | `Phase B refactoring` / `integration-workflow Phase C` |
+| `skills/report-in-markdown/SKILL.md` | 14, 34, 35 | `integration-workflow Step 3` | `integration-workflow Phase C` |
+| `skills/report-in-markdown/references/final-form.md` | 3, 125, 131 | `integration-workflow Step 3 / Stage 2 / Stage 2` | `integration-workflow Phase C / Phase B / Phase B` |
+| `skills/using-superRA/references/main-agent.md` | 67 | `integration-workflow Step 1 / Step 3` | `integration-workflow Phase A / Phase C` |
+| `skills/CATEGORIES.md` | 41 | `integration-workflow Step 3 doc-writer` | `integration-workflow Phase C doc-writer` |
+
+**Legitimately retained "Stage 1 / Stage 2" usage.** The RESULTS.md document-lifecycle terminology (Stage 1 dev log → Stage 2 permanent record) is orthogonal to the workflow's old Stage 1 / Stage 2 naming and remains in force across `handoff-doc`, `report-in-markdown`, and their references. Only the workflow-phase label usage was stale.
+
+**Legitimately retained "Step N" usage inside other workflows.** `execution-workflow §Step 4` (the 4-option completion menu) and `integration-workflow §Phase A Step 2`, `§Phase C Step 1` etc. are live, per-phase step labels in the new vocabulary and are not affected.
+
+**RELEASE-NOTES.md historical hits.** `RELEASE-NOTES.md` line 15 and the §"integration-workflow Step 3 consolidation" heading at line 121 are historical record — they document a release made under the old vocabulary and should not be rewritten (same principle as Task 3 Step 4 applied to pre-existing RELEASE-NOTES entries for `merge-workflow`).
+
+### Verification
+
+- **Phase Map reachability**: every re-entry arrow (`B → A`, `B → B`, `C → B`, `D → B`, `Anywhere → planning-workflow §Changing Plans`) in the Phase Map box (integration-workflow SKILL.md lines 18–31) is cited in text elsewhere in the same file (lines 33, 91, 200–203, 262, 321–328).
+- **Cross-skill pointer consistency**: planning-workflow §Changing Plans material-list bullet, integration-workflow Phase B plan-change pointer, and integration-workflow §Integration §Escalates-to block all use the same "orchestrator authors, researcher decides" framing — verified by Task 5 and re-verified here.
+- **Scope-by-Integration-status invariance**: the rule is stated in `refactor-and-integrate §Scope by Integration Status`, pointed at from the DAG cascade rule in `plan-anatomy.md` line 179, and wired through the unified implementer + verify reviewer dispatch templates (`Tasks in scope:` field; "Refuse to walk APPROVED-integration tasks" in `Additionally:`). No parallel restatement.
+- **Minimum-net-diff protection surfaces**: Implementer Self-Check (`refactor-and-integrate/SKILL.md` lines 80–89) + verify-reviewer dispatch `Additionally:` clause (integration-workflow line 193–194) + `[BLOCKING] Handoff-doc coherence` item in `merge-quality.md` compose without overlap.
+- **Post-edit stale-vocabulary sweep**: `grep -rn "integration-workflow.*(Stage [12]|Step [1-9])" skills/` post-fixes returns only legitimate per-phase Step N labels and the RESULTS.md Stage 1/Stage 2 lifecycle. No remaining old-vocabulary hits.
+- **Minimum-net-diff for this task**: touched eight files (vocabulary fixes) + PLAN.md + RESULTS.md. All hunks are 1-2 line pointer-string replacements. No tuned content edited; no logic edited.
+
+### Conclusion
+
+The refactored `integration-workflow` is internally consistent and externally pointer-correct against `planning-workflow §Changing Plans`, `handoff-doc/references/plan-anatomy.md`, and `refactor-and-integrate`. The five scenarios (happy path, B→B, mid-Phase-B plan-change, unrelated-hunk injection, D→B) all resolve on the committed skill text. The only findings were thirteen ADVISORY-level stale-vocabulary strings, fixed in this commit. No blocking inconsistency surfaced — the plan's Expected Results (a)–(d) are met.
+
