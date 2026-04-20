@@ -237,7 +237,7 @@ Ensure SKILL.md §Pitfalls pointers resolve. Self-check: every rule has a ≤10-
 ## Task 3: `consistency/*.md` — 8 dimension-scoped reference files
 
 **Depends on:** Task 1
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:** `skills/writing/references/consistency/terminology.md`, `consistency/notation.md`, `consistency/cross-references.md`, `consistency/citations.md`, `consistency/numerical.md`, `consistency/math.md`, `consistency/argument-logic.md`, `consistency/code-paper.md` (all new)
@@ -248,24 +248,24 @@ Ensure SKILL.md §Pitfalls pointers resolve. Self-check: every rule has a ≤10-
 
 **Output:** eight small reference files, each sized for a single parallel reviewer to load. **The dimensions come from the draft-reviewer plugin; the superRA-style rule content is re-derived.**
 
-- [ ] **Step 1: Draft `terminology.md` + `notation.md` + `cross-references.md`**
+- [x] **Step 1: Draft `terminology.md` + `notation.md` + `cross-references.md`**
 
 - `terminology.md`: term-drift scan (variable-name drift, synonyms drift within a section, defined-term reuse discipline, glossary audit, treatment-group-vs-treatment-sample style mismatches). Severity-marked gated checklist + how-to.
 - `notation.md`: math symbol consistency (bold/italic/hat conventions, subscript/superscript reuse, Greek-letter conflicts, abbreviations).
 - `cross-references.md`: `\ref` / `\eqref` / `\cite` / label resolution; figure/table/section numbering consistency; undefined-reference scan.
 
-- [ ] **Step 2: Draft `citations.md` + `numerical.md`**
+- [x] **Step 2: Draft `citations.md` + `numerical.md`**
 
 - `citations.md`: citation completeness (every non-common-knowledge claim cited); reference-citation matching (no orphan citations or uncited references); format consistency (author-year vs numbered); outdated-working-paper detection; foundational-reference audit.
 - `numerical.md`: numbers-in-text vs numbers-in-tables (every number in prose traces to a table/figure cell); figure–caption–text alignment (caption matches what's shown and what prose claims); table caption accuracy; ±-sign / units / percentage-point vs percent consistency.
 
-- [ ] **Step 3: Draft `math.md` + `argument-logic.md` + `code-paper.md`**
+- [x] **Step 3: Draft `math.md` + `argument-logic.md` + `code-paper.md`**
 
 - `math.md`: derivation step-by-step correctness; proof integrity; statistical-model correctness (iid assumptions stated where used, standard-error clustering named); notation stability across sections.
 - `argument-logic.md`: claim–evidence mapping (every main claim traces to a cited source or an empirical finding in this paper); causal inference validity (identification assumption stated, alternative explanations addressed); overclaiming detection; hedging appropriate to evidence strength.
 - `code-paper.md`: methodology match (code implements what paper describes); variable-definition alignment; sample-construction alignment; reproducibility from paper alone. Only loaded when the paper wraps an empirical code project.
 
-- [ ] **Step 4: Cross-link + self-review + commit**
+- [x] **Step 4: Cross-link + self-review + commit**
 
 Each file ≤ ~150 lines (fits in a single reviewer's context comfortably). Each has severity-marked checklist items. SKILL.md §Pitfalls pointer `consistency/*.md` resolves to all eight. Update RESULTS.md Task 3. Commit: `skill: writing consistency references (8 dimensions)`.
 

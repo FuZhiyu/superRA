@@ -39,7 +39,27 @@
 
 ## Task 3: `consistency/*.md` — 8 dimension-scoped reference files
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Key findings:**
+
+- **Eight files authored:** `terminology.md`, `notation.md`, `cross-references.md`, `citations.md`, `numerical.md`, `math.md`, `argument-logic.md`, `code-paper.md`.
+- **Rule count per file** (checklist items, `[BLOCKING]` + `[ADVISORY]`):
+  - `terminology.md`: 5 BLOCKING + 3 ADVISORY = 8 items. Sources: `draft-reviewer:writing-clarity-reviewer` (terminology-index pattern), Chaubey p. 76 (consistent key words), p. 157 (don't use interchangeable terms for the same identity).
+  - `notation.md`: 5 BLOCKING + 4 ADVISORY = 9 items. Sources: `draft-reviewer:mathematical-reviewer` (notation-consistency section).
+  - `cross-references.md`: 4 BLOCKING + 3 ADVISORY = 7 items. Sources: `draft-reviewer:consistency-checker` (cross-reference section) + `draft-reviewer:proofreader` (LaTeX-specific).
+  - `citations.md`: 6 BLOCKING + 3 ADVISORY = 9 items. Sources: `draft-reviewer:citation-checker` (completeness, orphans, format, quality).
+  - `numerical.md`: 8 BLOCKING + 2 ADVISORY = 10 items. Sources: `draft-reviewer:consistency-checker` (numerical, table/figure). Folds figure/table/caption alignment per user decision.
+  - `math.md`: 6 BLOCKING + 3 ADVISORY = 9 items. Sources: `draft-reviewer:mathematical-reviewer` (derivations, proofs, statistical specifications).
+  - `argument-logic.md`: 7 BLOCKING + 3 ADVISORY = 10 items. Sources: `draft-reviewer:argument-logic-reviewer` (claim-evidence, causal inference, alternatives, overclaiming / underclaiming).
+  - `code-paper.md`: 7 BLOCKING + 3 ADVISORY = 10 items. Sources: `draft-reviewer:code-paper-consistency` (methodology match, variables, sample, reproducibility). Scope note: loaded only when the paper wraps empirical code.
+- **Total:** 48 BLOCKING + 24 ADVISORY = 72 severity-marked checklist items across 8 files.
+- **Harvest-not-depend discipline preserved:** dimensions come from `draft-reviewer:*`; rule content re-derived in superRA style. No runtime dependency on the draft-reviewer plugin. Common structure across files: §Scope + How-To + §Gated Checklist + §Reviewer verdict protocol + §Output format.
+- **Iron-Law respect:** every consistency file explicitly states that consistency-*check* tasks report mismatches rather than silently rewriting beyond scope (flag, don't fix).
+- **SKILL.md §Pitfalls pointer `references/consistency/*.md` resolves to all eight files.**
+- Each file is concise (100–150 lines) — sized for a single parallel reviewer's context per the user decision on parallel dispatch.
+
+**Files:** 8 files under `skills/writing/references/consistency/`.
 
 ## Task 4: `refactor-and-compile.md` + `collaboration.md`
 
