@@ -39,14 +39,13 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 ## Workflow Status
 
 - [x] Plan approved
-- [ ] Task 1 — README rewrite
+- [ ] Task 1a — Mermaid workflow diagram
+- [ ] Task 1b — README prose rewrite
 - [ ] Task 2 — CLAUDE.md consolidation
 - [ ] Task 3 — plugin.json + marketplace.json descriptions
 - [ ] Task 4 — installation instructions verified
-- [ ] Task 5 — RELEASE-NOTES initial-release cut
-- [ ] Task 6 — skills/CATEGORIES.md + AGENTS.md + GEMINI.md sweep
-- [ ] Task 7 — cross-reference + terminology sweep
-- [ ] Task 8 — final human read-through and release tag decision
+- [ ] Task 5 — cross-reference + terminology sweep
+- [ ] Task 6 — final human read-through and release tag decision
 - [ ] Refactored (integration-workflow — N/A, docs-only branch)
 - [ ] Docs finalized
 - [ ] Merged
@@ -55,13 +54,55 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 
 ## Decisions
 
-*(User decisions logged here as they occur. Empty at plan time.)*
+**2026-04-20 — Scope reduction before dispatch.** User dropped two tasks from the original 8-task plan and deleted the artifact feeding one of them:
+
+- **Drop old Task 5 (RELEASE-NOTES initial-release cut).** `RELEASE-NOTES.md` is being deleted from the repo; no consolidation needed. Rationale: user prefers to not maintain a separate change log for the initial release.
+- **Drop old Task 6 (CATEGORIES + AGENTS.md + GEMINI.md sweep).** Deferred to a later pass; not required for the initial user-facing-docs release.
+- **Split Task 1 into 1a (Mermaid diagram, isolated) + 1b (README prose rewrite).** Rationale: the diagram is complex enough to warrant a dedicated agent so the prose rewriter doesn't context-switch.
+- **Renumber remaining tasks.** Old Task 7 → new Task 5; old Task 8 → new Task 6.
+
+No downstream per-task `**Review status:**` rollback needed — nothing has been implemented yet.
 
 ---
 
-## Task 1: Rewrite README.md as a careful user-facing doc
+## Task 1a: Mermaid workflow diagram for README
 
 **Depends on:** *(none)*
+
+**Objective.** Design a single Mermaid diagram that the user-facing README embeds in its "Plan-Implement-Integrate Workflow" section. Isolated from the prose rewrite because the diagram demands focused attention on information architecture — what survives, what gets collapsed, what stays implicit.
+
+**Constraints:**
+
+- Renders on GitHub markdown (standard Mermaid syntax; no mermaid-cli-only features).
+- User-facing detail level — less dense than the prior README Workflow Map, more narrative than an academic flow chart. Target: a researcher skimming the README understands the phases and the iteration mechanism within ~20 seconds.
+- Must show, at minimum:
+  - Three top-level phases: **PLAN → IMPLEMENT → INTEGRATE**.
+  - Inside IMPLEMENT: the implementer ↔ reviewer loop per task (APPROVE advances, REVISE loops back).
+  - Inside INTEGRATE: the four phases A / B / C / D with one-line labels (A drift tests, B review-led sync + refactor, C doc finalization, D merge / PR).
+  - An arrow from any of IMPLEMENT / INTEGRATE back to PLAN labeled "scope change (§User Feedback and Changing Plans)".
+  - A terminal arrow out of Phase D to a `merged` terminal node.
+- Do NOT show: stage-to-skill mapping, `Skill-Load Manifest` detail, cross-cutting skills rail, stage → reference mapping. Those belong in `using-superRA`, not the user README.
+
+**Deliverable.** A ready-to-paste fenced ```` ```mermaid ```` block saved to `docs/drafts/workflow-diagram.mmd` (create the `docs/drafts/` directory if needed). Do NOT edit `README.md` itself in this task — Task 1b does the embedding.
+
+**Steps:**
+
+- [ ] Read `README.md` (current state) and `docs/plans/round-3/PLAN.md` or the prior archived Mermaid Workflow Map (search `skills/` + `docs/plans/`) to see the density ceiling.
+- [ ] Draft the diagram. Prefer `flowchart TB` with subgraphs for IMPLEMENT (implementer/reviewer loop) and INTEGRATE (Phases A–D).
+- [ ] Validate Mermaid syntax — paste into `https://mermaid.live` or run `npx @mermaid-js/mermaid-cli -i <file>` if installed; report which method was used.
+- [ ] Save to `docs/drafts/workflow-diagram.mmd` with a one-line comment noting the target embed location (README §Plan-Implement-Integrate Workflow).
+- [ ] Commit: `docs(readme): draft workflow diagram for embedding`.
+
+**Expected result.** A self-contained Mermaid file that Task 1b can lift into README without further thought.
+
+**Review status:** not started
+**Integration status:** *(N/A)*
+
+---
+
+## Task 1b: Rewrite README.md as a careful user-facing doc
+
+**Depends on:** Task 1a (embeds its diagram)
 
 **Objective.** Turn the crude README draft into a polished user-facing doc that preserves the user's chosen section structure and tone.
 
@@ -70,13 +111,13 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 1. **Header + tagline.** One sentence that lands what superRA is. Followed by the three-bullet offering the user drafted (workflow / domain skills / utility skills) — tighten wording, keep the list shape.
 2. **"Why superRA?"** Keep the bulleted pain-point framing the user chose. Polish grammar; tighten each bullet to one punchy line; drop the trailing "...". Follow with the one-paragraph resolution ("superRA brings discipline...") — rewrite for clarity, make the three-part structure (implementer-reviewer pair / domain skills / integration) explicit.
 3. **"The Plan-Implement-Integrate Workflow" section.**
-   - Replace the ASCII-block-with-TODO-comments with a rendered Mermaid diagram. The diagram shows PLAN → IMPLEMENT → INTEGRATE with: the implementer-reviewer loop inside IMPLEMENT, the 4-phase unfold inside INTEGRATE (A drift tests / B review-led sync + refactor / C doc finalization / D merge), an arrow from any phase back to PLAN labeled "scope change → §User Feedback and Changing Plans", and a terminal arrow from Phase D to "merged". Keep the diagram's information density below the prior full-architecture diagram — this is a user-facing overview, not the Workflow Map.
+   - Embed the Mermaid diagram produced by Task 1a (copy the contents of `docs/drafts/workflow-diagram.mmd` into a fenced ```` ```mermaid ```` block).
    - Drop the inline `<!-- -->` HTML comments once the diagram resolves them.
    - Keep the prose paragraph above the diagram that motivates iteration.
 4. **"Key principles of the workflow"** (renamed from "Design Principles" to match the user's draft tone). Five bullets as the user drafted them — polish grammar and tighten. For principle 3, fill in the user's explicit TODO "Explain what does integration and semantic merge do" with one sentence each.
 5. **"Domain Skills" section.** Replace the placeholder ("we ship data analysis skill") with a short table keyed from `skills/CATEGORIES.md` §Domain: one row for `econ-data-analysis` with its flagship-discipline one-liner. End with the roadmap list of planned verticals (theory / lit review / simulation / writing) — one line each, explicitly flagged as hooks, not commitments. This moves the "planned verticals" content back into the README where users expect it (it was deleted in the crude draft along with CLAUDE.md's Roadmap section).
 6. **"Utility Skills" section.** Replace the placeholder with a short table: `report-in-markdown`, `refactor-and-integrate`, `worktree-data-sync`, `semantic-merge`, `handoff-doc`. One-line description per skill, keyed from `skills/CATEGORIES.md`. Apply `skill-creator` description discipline — each row says what + when.
-7. **"Installation" section.** See Task 4; Task 1 leaves a `<!-- Task 4 -->` anchor here if Task 4 hasn't landed yet, otherwise inline the Task 4 output.
+7. **"Installation" section.** See Task 4; Task 1b leaves a `<!-- Task 4 -->` anchor here if Task 4 hasn't landed yet, otherwise inline the Task 4 output.
 8. **Existing "Skill Inventory" table** (downstream of Installation, currently in main — need to check what survived the crude draft). Fold into the Domain Skills / Utility Skills tables above; do not repeat.
 9. **"Hooks" table.** Keep as-is from the crude draft but verify the two rows (`ask-user-question-logger`, `exit-plan-mode`) match current `hooks/hooks.json`.
 10. **"Plugin Design Philosophy" section** at the bottom of the crude draft. Move this entirely to CLAUDE.md (Task 2). Replace with a one-paragraph "Contributing" block that points at `CLAUDE.md` for design principles.
@@ -85,7 +126,7 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 **Steps:**
 
 - [ ] Read current `README.md` end-to-end; list every surviving stale reference in a scratchpad
-- [ ] Draft the Mermaid workflow diagram in a fenced `mermaid` block; test by pasting into GitHub's markdown preview (or the `mermaid` CLI)
+- [ ] Read `docs/drafts/workflow-diagram.mmd` (Task 1a output) to have the diagram ready for embedding
 - [ ] Rewrite sections 1–11 in place, one heading at a time
 - [ ] `rg -n "<!--|TODO|tbd|\.\.\." README.md` to confirm no placeholders survived
 - [ ] Commit: `docs(readme): careful rewrite of user-facing README`
@@ -99,7 +140,7 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 
 ## Task 2: Consolidate CLAUDE.md as the developer / contributor doc
 
-**Depends on:** Task 1 (so we know what moved out of README)
+**Depends on:** Task 1b (so we know what moved out of README)
 
 **Objective.** Finish the stash's CLAUDE.md edits into a coherent contributor doc. The stash left the file mid-rewrite (partial "Skill Design Patterns" section, orphan blank lines, removed Roadmap that needs reinstating).
 
@@ -132,7 +173,7 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 
 ## Task 3: Update plugin.json + marketplace.json descriptions
 
-**Depends on:** Task 1 (README tagline is the source of truth for the plugin description)
+**Depends on:** Task 1b (README tagline is the source of truth for the plugin description)
 
 **Objective.** Make the one-liner descriptions in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` match the README tagline and communicate what a user gets.
 
@@ -153,7 +194,7 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 
 ## Task 4: Verify + modernize installation instructions
 
-**Depends on:** *(none)* — can run in parallel with Task 1
+**Depends on:** *(none)* — can run in parallel with Tasks 1a / 1b
 
 **Objective.** The crude draft left an inline TODO: "need to be updated. https://github.com/FuZhiyu/superRA. and we can directly install from the remote I think. research on the updated guide on how to install for claude code". Resolve it.
 
@@ -170,54 +211,18 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 
 ---
 
-## Task 5: Cut initial release section in RELEASE-NOTES.md
+## Task 5: Cross-reference + terminology sweep across all docs
 
-**Depends on:** Task 3 (version number)
-
-**Objective.** Consolidate the three pending `Unreleased` sections into a dated release header matching the Task 3 version choice.
-
-**Steps:**
-
-- [ ] Read the three `Unreleased` sections end-to-end
-- [ ] Replace their three headers with a single dated section: `## YYYY-MM-DD — v0.1.0: initial public release` (or whatever version Task 3 picks)
-- [ ] Within that section, reorganize the bullets under subheads by theme: Workflow architecture / Integration refactor / Agent orchestration / Planning & re-entry / Infrastructure. Preserve the full detail — developers reading `RELEASE-NOTES` want the change log.
-- [ ] Add a top-of-file "About this release" paragraph (2–3 sentences) framing v0.1.0 as the first public release — what stabilized, what's still experimental.
-- [ ] Commit: `docs(release-notes): cut v0.1.0 initial release section`
-
-**Review status:** not started
-**Integration status:** *(N/A)*
-
----
-
-## Task 6: Sync skills/CATEGORIES.md, AGENTS.md, GEMINI.md
-
-**Depends on:** Task 1, Task 2
-
-**Objective.** Keep ancillary entry-point docs aligned with the rewritten README + CLAUDE.md.
-
-**Steps:**
-
-- [ ] `skills/CATEGORIES.md` — verify every skill row still has the right category and one-liner after Task 1's Domain/Utility tables. Any description I tighten in the README, back-port here (or vice-versa — pick one as the source of truth; I lean toward CATEGORIES.md as the source since it's the index).
-- [ ] `AGENTS.md` (Copilot CLI entry point) — read current content; update any stale skill names or category references
-- [ ] `GEMINI.md` + `gemini-extension.json` — same check for Gemini CLI
-- [ ] Commit: `docs: sync CATEGORIES + platform entry points with new README/CLAUDE.md`
-
-**Review status:** not started
-**Integration status:** *(N/A)*
-
----
-
-## Task 7: Cross-reference + terminology sweep across all docs
-
-**Depends on:** Tasks 1, 2, 5, 6
+**Depends on:** Tasks 1b, 2, 3, 4
 
 **Objective.** Catch any stale cross-references that survived the individual rewrites.
 
 **Steps:**
 
-- [ ] `rg -n "Changing Plans" -- '!docs/plans/' '!RELEASE-NOTES.md'` — every hit must read `User Feedback and Changing Plans` unless it's a historical release-note line
-- [ ] `rg -n "Stage 1|Stage 2|Stage 3" skills/integration-workflow/ README.md CLAUDE.md` — post-unified-integration, the vocabulary is Phases A–D in user-facing docs. Release notes keep their historical wording.
-- [ ] `rg -n "merge-workflow"` — must not appear in README, CLAUDE.md, skills/CATEGORIES.md, AGENTS.md, GEMINI.md. It's legitimately in RELEASE-NOTES as a historical removal.
+- [ ] `rg -n "Changing Plans" -- '!docs/plans/'` — every hit must read `User Feedback and Changing Plans` unless it's inside an archived plan.
+- [ ] `rg -n "Stage 1|Stage 2|Stage 3" skills/integration-workflow/ README.md CLAUDE.md` — post-unified-integration, the vocabulary is Phases A–D in user-facing docs.
+- [ ] `rg -n "merge-workflow"` — must not appear in README, CLAUDE.md, or `skills/CATEGORIES.md`.
+- [ ] `rg -n "RELEASE-NOTES"` — must not appear as an active cross-reference in README, CLAUDE.md, `skills/CATEGORIES.md`, or any SKILL.md (release notes were deleted in this branch).
 - [ ] `rg -n "VALIDATE|four-phase"` across README + CLAUDE.md — the user's crude draft renames to three-phase (PLAN → IMPLEMENT → INTEGRATE) with VALIDATE folded into IMPLEMENT's reviewer loop. Every phase-list in user-facing docs must match. CLAUDE.md may still say four-phase if it's describing the internal workflow skills' decomposition; pick one framing and use it consistently.
 - [ ] `rg -n "\[.*\]\(.*\.md\)"` spot-check markdown links for broken paths after any file renames
 - [ ] Commit: `docs: cross-reference + terminology sweep`
@@ -227,16 +232,16 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 
 ---
 
-## Task 8: Final human read-through + release tag decision
+## Task 6: Final human read-through + release tag decision
 
-**Depends on:** Tasks 1–7
+**Depends on:** Tasks 1a–5
 
 **Objective.** Before tagging a release, present the final doc set to the user for read-through. Get explicit approval on: README clarity for a first-time user, CLAUDE.md clarity for a contributor, version number, release tag timing.
 
 **Steps:**
 
 - [ ] Render README.md in GitHub preview (or `gh`-based preview) to confirm Mermaid diagram renders
-- [ ] Summarize diffs across the seven commits for the user
+- [ ] Summarize diffs across the commits for the user
 - [ ] Ask via `AskUserQuestion`: version number confirmed? ready to merge `jzf/readme-doc-polishing-v2` → `main`? tag release?
 - [ ] Log the answer in §Decisions
 - [ ] (If tagging) `git tag v0.1.0 && git push origin v0.1.0`

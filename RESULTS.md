@@ -2,11 +2,15 @@
 
 **Objective.** Turn the committed crude draft of `README.md` + `CLAUDE.md` into shippable documentation and prepare adjacent user-facing docs for an initial release.
 
-**Status.** Plan approved; execution not started.
+**Status.** Plan approved; execution in progress.
 
 ---
 
-## Task 1: Rewrite README.md as a careful user-facing doc
+## Task 1a: Mermaid workflow diagram for README
+
+**Status:** Not started
+
+## Task 1b: Rewrite README.md as a careful user-facing doc
 
 **Status:** Not started
 
@@ -22,18 +26,10 @@
 
 **Status:** Not started
 
-## Task 5: Cut initial release section in RELEASE-NOTES.md
+## Task 5: Cross-reference + terminology sweep across all docs
 
 **Status:** Not started
 
-## Task 6: Sync skills/CATEGORIES.md, AGENTS.md, GEMINI.md
-
-**Status:** Not started
-
-## Task 7: Cross-reference + terminology sweep across all docs
-
-**Status:** Not started
-
-## Task 8: Final human read-through + release tag decision
+## Task 6: Final human read-through + release tag decision
 
 **Status:** Not started
