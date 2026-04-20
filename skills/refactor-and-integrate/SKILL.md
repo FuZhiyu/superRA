@@ -90,13 +90,6 @@ The integration reviewer runs the same `git diff <merge-base>..HEAD` as evidence
 
 ---
 
-## Dispatch Convention
-
-Dispatches follow the canonical template in `superRA:agent-orchestration` §Dispatch Templates. The Skill-Load Manifest (`superRA:using-superRA`) names this skill and its reference files on the `drift-test`, `integration`, and `merge` rows — the dispatch prompt does not restate `Skills:` or reference lines. The agent loads this skill, receives the base directory, reads the manifest-named reference, and walks the gated checklist in that reference alongside the domain skill (for data analysis: `superRA:econ-data-analysis`).
-
-Some tasks cross stages (a refactor during a merge; a drift-test review that flags a refactor-caused sign-flip). Load every reference whose stage your task touches — the checklist sections compose.
-
----
 
 ## Integration
 
