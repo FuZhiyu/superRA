@@ -247,7 +247,23 @@ DAG cascade: Task 1a `**Review status:**` rolled back APPROVED → REVISE. Task 
 - [x] Extra item 7 (GEMINI.md stale @-include): updated `GEMINI.md` — `./skills/using-superpowers/SKILL.md` → `./skills/using-superRA/SKILL.md`; `./skills/using-superpowers/references/gemini-tools.md` → `./skills/using-superRA/references/gemini-tools.md`. Verified both targets exist.
 - [x] Commit: `docs: cross-reference + terminology sweep`
 
-**Review status:** IMPLEMENTED
+> **Review notes — 2026-04-20:**
+>
+> **Verified fixes (all four confirmed correct):**
+> 1. CLAUDE.md line 3: `PLAN → IMPLEMENT → VALIDATE → INTEGRATE` → `PLAN → IMPLEMENT → INTEGRATE`. Confirmed.
+> 2. `skills/integration-workflow/SKILL.md`: 4 stale "Stage 1" / "Stage 2" replacements — all four hits confirmed fixed (frontmatter description, Phase C stop-point bullet, two dispatch task strings, Phase D disposition paragraph).
+> 3. `GEMINI.md`: both `@`-includes updated to `using-superRA`. Targets `skills/using-superRA/SKILL.md` and `skills/using-superRA/references/gemini-tools.md` both exist. Confirmed.
+> 4. `README.md` tagline bullet 3: "human-friendly Jupyter notebooks" → "gated integration checklists". Confirmed.
+>
+> **MAJOR — missed VALIDATE in two more skill frontmatter descriptions:**
+>
+> The `rg -n "VALIDATE"` sweep fixed `CLAUDE.md` but missed two skill files where the four-phase string `PLAN → IMPLEMENT → VALIDATE → INTEGRATE` (or `PLAN / IMPLEMENT / VALIDATE / INTEGRATE`) survives:
+> - `skills/planning-workflow/SKILL.md` line 3: `"...Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow..."` — directly contradicts the three-phase vocabulary this task is enforcing.
+> - `skills/agent-orchestration/SKILL.md` line 3: `"...Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / VALIDATE / INTEGRATE)."` — same four-phase string.
+>
+> Both should read `PLAN → IMPLEMENT → INTEGRATE` / `(PLAN / IMPLEMENT / INTEGRATE)`. Note: `execution-workflow/SKILL.md` lines 3 and 8 also reference "IMPLEMENT and VALIDATE phases" — this is an intentional skill-internal term for that skill's reproducibility-verification step and does not need changing; only the top-level three-phase workflow description strings above require the fix.
+
+**Review status:** REVISE
 **Integration status:** *(N/A)*
 
 ---
