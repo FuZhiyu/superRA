@@ -60,7 +60,7 @@ For each overlapping area, decide one of:
 
 Prefer synthesis over picking sides when both changes are valid and compatible. Prefer regeneration over manual editing for generated files.
 
-**PLAN.md / RESULTS.md conflicts** require extra care: a conflict here may indicate that the incoming branch reorganized a task, removed a section, or changed research scope. If the conflict implies a substantive restructure of the analysis plan, escalate to `planning-workflow §Changing Plans` rather than resolving it as a line conflict. The researcher decides — the agent proposes.
+**PLAN.md / RESULTS.md conflicts** require extra care: a conflict here may indicate that the incoming branch reorganized a task, removed a section, or changed research scope. If the conflict implies a substantive restructure of the analysis plan, escalate to `planning-workflow §User Feedback and Changing Plans` rather than resolving it as a line conflict. The researcher decides — the agent proposes.
 
 ### Step 4: Ask the user when the semantic choice is not discoverable
 
@@ -113,7 +113,7 @@ Ask a concise question when:
 - Two different semantic integrations are both reasonable
 - The branch appears to be changing conclusions or external behavior in a way the repo cannot disambiguate
 - Incoming and current changes point in opposite directions on a research-meaningful dimension (methodology, scope, sample, specification)
-- A PLAN.md conflict implies a substantive restructure — escalate to `planning-workflow §Changing Plans` rather than resolving in-place
+- A PLAN.md conflict implies a substantive restructure — escalate to `planning-workflow §User Feedback and Changing Plans` rather than resolving in-place
 - The repository policy around merge vs rebase vs squash is unclear and affects the required history shape
 
 Do not ask questions that can be answered by inspecting the repo, commit range, tests, or docs.

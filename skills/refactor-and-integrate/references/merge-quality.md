@@ -49,7 +49,7 @@ These conflicts **MUST** be flagged for the researcher. Ask via `AskUserQuestion
 
 The incoming branch can carry edits to `PLAN.md` / `RESULTS.md` that substantively restructure the work — adding, removing, or combining tasks; flipping a DAG edge; invalidating a prior `APPROVED` (review or integration) status because the incoming diff changed an upstream task's outputs. These are **not** content conflicts to resolve mechanically. They are plan changes.
 
-**Before the merge proceeds**, escalate any such restructure to `planning-workflow §Changing Plans`: the orchestrator authors the Restructure Proposal, the researcher decides, the plan change is logged per `handoff-doc` §User Decisions Log, and `PLAN.md` is updated atomically. Only after the plan-change protocol completes does the merge continue — Commit 2 (integration) then reflects the post-restructure plan, not the pre-merge plan.
+**Before the merge proceeds**, escalate any such restructure to `planning-workflow §User Feedback and Changing Plans`: the orchestrator authors the Restructure Proposal, the researcher decides, the plan change is logged per `handoff-doc` §User Decisions Log, and `PLAN.md` is updated atomically. Only after the plan-change protocol completes does the merge continue — Commit 2 (integration) then reflects the post-restructure plan, not the pre-merge plan.
 
 Trigger list — if any of these is present in the incoming diff or in the merged state of `PLAN.md`, escalate before Commit 2:
 
@@ -102,7 +102,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Handoff-doc coherence (full procedure in §How-To → Handoff-doc coherence through the merge):**
 
-- `[BLOCKING]` **Handoff-doc coherence.** `PLAN.md` / `RESULTS.md` in the merged state reflect a single coherent plan. Substantive handoff-doc restructures introduced by the incoming branch — task add/remove/combine, DAG edge flip, or APPROVED (review or integration) status invalidation from a cascade — were escalated to `planning-workflow §Changing Plans` **before** the merge proceeded (orchestrator authors proposal, researcher decides, decision logged per `handoff-doc` §User Decisions Log). Commit 2 (integration) reflects the post-restructure plan. Routine content conflicts (reworded prose, updated numbers, new review-notes text) are resolved inline in Commit 1/2 without escalation.
+- `[BLOCKING]` **Handoff-doc coherence.** `PLAN.md` / `RESULTS.md` in the merged state reflect a single coherent plan. Substantive handoff-doc restructures introduced by the incoming branch — task add/remove/combine, DAG edge flip, or APPROVED (review or integration) status invalidation from a cascade — were escalated to `planning-workflow §User Feedback and Changing Plans` **before** the merge proceeded (orchestrator authors proposal, researcher decides, decision logged per `handoff-doc` §User Decisions Log). Commit 2 (integration) reflects the post-restructure plan. Routine content conflicts (reworded prose, updated numbers, new review-notes text) are resolved inline in Commit 1/2 without escalation.
 
 **Integration map (format in §How-To → Integration map format):**
 
