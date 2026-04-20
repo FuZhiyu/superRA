@@ -139,8 +139,8 @@ After recon commits, the orchestrator reads PLAN.md:
 
 1. For each task carrying a new integration review-notes blockquote → flip `Integration status: REVISE`. Tasks without annotations stay `APPROVED`. Commit the flips atomically with any §Decisions log additions.
 2. Evaluate the two shortcut axes (Tier from §Decisions log; annotation count from the task blocks):
-   - **Tier 1 + zero annotations** → execute `git merge --ff-only <base-branch>` on the analysis branch; Phase B terminates; proceed to Phase C.
-   - **Tier 1 + annotations** → execute `git merge --ff-only <base-branch>` as Commit 1; skip to Step 3 (refactor-only dispatch, no `Skills: superRA:semantic-merge` on follow-ups).
+   - **Tier 1 + zero annotations** → execute `git merge --ff-only <base-branch>` on the analysis branch; Phase B terminates; proceed to Phase C. Degenerate case: if `git merge-base --is-ancestor origin/<base-branch> HEAD`, the fast-forward merge is a true no-op — skip the merge command entirely and note the skip in the orchestrator's §Decisions log.
+   - **Tier 1 + annotations** → execute `git merge --ff-only <base-branch>` as Commit 1; skip to Step 3 (refactor-only dispatch, no `Skills: superRA:semantic-merge` on follow-ups). Degenerate case: if `git merge-base --is-ancestor origin/<base-branch> HEAD`, the fast-forward is a true no-op — skip Commit 1 and note the skip in the implementer's status return. The two-commit structure collapses to one commit (Commit 2 = unified refactor).
    - **Tier 2/3** → proceed to Step 2b, then Step 3 with `Skills: superRA:semantic-merge` on the implementer.
 
 ### Step 2b: Batched user decisions
@@ -176,6 +176,8 @@ Agent(subagent_type: "superRA:implementer"):
 **After Commit 2 — drift tests again.**
 - **Pass** → return control for Step 4 review.
 - **Fail** → same adjudication protocol.
+
+As part of the Commit 2 handoff, the unified implementer flips each in-scope task's `**Integration status:** IMPLEMENTED` (per `superRA:handoff-doc` `references/plan-anatomy.md` Integration-status lifecycle); the orchestrator flips to `APPROVED` only after the Step 4 verify reviewer APPROVEs.
 
 ### Step 4: Dispatch the verify reviewer
 

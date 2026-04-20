@@ -61,6 +61,14 @@ Two independent shortcut axes in Phase B: **Tier classification** (from recon's 
 
 **Peripheral surfaces** — skill inventories (`using-superRA §Skill Inventory`, `CATEGORIES.md`, `README.md`), the PLAN.md template's Workflow Status block, `execution-workflow` Step 4 completion menu, `agent-orchestration` reviewer-feedback call-site list, `CLAUDE.md §DRY workflow-skills ownership list`, and `RELEASE-NOTES.md` were all swept to drop `merge-workflow` and widen `integration-workflow` to Phases A–D. README's workflow-map ASCII diagram and Mermaid diagram gained B→B and D→B re-entry arrows.
 
+### Follow-Up Refinements (Task 8)
+
+Three documentation clarifications surfaced by the end-to-end Phase A–D dogfooding run itself; added post-integration via `planning-workflow §Changing Plans` and applied without touching Tasks 1–7's code content.
+
+- **Integration-status lifecycle named explicitly.** `handoff-doc/references/plan-anatomy.md` state-setter clause (line 179) now names the three-actor choreography — orchestrator flips to `REVISE` post-recon and to `APPROVED` post-verify, unified implementer flips to `IMPLEMENTED` on Commit 2. `integration-workflow` Phase B gained a one-sentence cross-reference between Step 3 and Step 4 so the lifecycle is discoverable from the workflow skill. Replaces the prior "set by the integration reviewer" phrasing that predated Task 2's recon-as-reviewer architecture.
+- **Annotation etiquette — task-block boundary preservation.** `agents/reviewer.md` and `agents/implementer.md` Editing Etiquette sections gained a boundary-preservation bullet alongside the existing inline-edit rule: never disturb `---` separators or `### Task N:` headings when writing review-notes blockquotes or `→ implemented:` replies. Motivated by the PR #5 Phase B recon elision that commit `b58c3fc` had to restore.
+- **Phase B Tier 1 + unchanged-main degenerate case documented.** `integration-workflow` Phase B Step 2 Tier-1 bullets gained explicit handling for the case where `origin/<base-branch>` has not advanced since merge-base: the fast-forward merge is a true no-op (skip Commit 1, collapse the two-commit structure to one). The PR #5 implementer had to improvise this on the fly.
+
 ### Load-bearing design decisions
 
 - **Minimum-net-diff as the top gated-checklist item.** Stated as `[BLOCKING] Minimum net diff to merge base` in the Gated Checklist of all three `refactor-and-integrate` references. Enforced by two independent nets: the Implementer Self-Check (`git diff <merge-base>..HEAD` before every commit; any hunk without a checklist justification is reverted or re-justified in the integration map) and the verify reviewer (runs the same diff as evidence; raises out-of-scope hunks as `[BLOCKING]` findings).

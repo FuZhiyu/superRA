@@ -92,6 +92,7 @@ Regardless of stage (analysis task, drift test creation, refactoring, post-merge
 **The handoff doc always reflects the latest state, not a log.** Git owns history — the commit log carries every prior version of the doc, along with who changed it and why. The doc itself is for the current intended implementation and current findings only. Three rules follow from this:
 
 - **Inline-edit only.** Replace stale content in place. Never append an "Update:" / "Revised:" / "Previously..." block, never strike through. If a sentence you're about to write references a prior version of the doc, delete the old sentence instead — that history belongs in the git commit message, not in `PLAN.md`.
+- **Preserve task-block boundaries.** When appending a `→ implemented: ...` reply inside a review-notes blockquote, stay strictly within the assigned task block — never disturb the preceding `---` separator, the `### Task N:` heading of the next task, or the trailing separator before it. If the prior annotation round elided a boundary, restore it in the same commit.
 - **Remove superseded content, don't stack it.** Abandoned steps, discovery notes now reflected in the steps, and fixed review items are deleted, not crossed out. The task block should read as a single coherent current-state description after every edit.
 - **Doc before report.** Every material finding, result, caveat, or change lands in `PLAN.md` / `RESULTS.md` **before** it appears in your status return. If a result exists only in the status message, it does not exist — the next session will lose it.
 
