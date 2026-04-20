@@ -6,20 +6,28 @@ Shared domain reference for merge proposals and merge review. Both the implement
 
 ## How-To
 
-### Two-commit structure — templates
+### Commit structure — one or more commits, separate when intent differs
 
-**Commit 1 (mechanical merge):**
+A merge integration can land as **one commit or many**. The load-bearing discipline is *intent separation*, not commit count: mechanical reconciliation and intent-bearing adaptation are different kinds of work, and when they are both non-trivial they must not be conflated. The two-commit shape below is the canonical example of that separation, not a mandate.
+
+**When one commit is sufficient:** the mechanical merge is trivial (no real conflicts, or a clean fast-forward) **and** the integration adaptation is small enough that the commit message can describe both pieces honestly. A plain `git merge --ff-only` or a near-empty `--no-ff` merge with a few label fixes is the typical shape.
+
+**When to split into two commits (the canonical template):** either side is non-trivial — conflicts need human-visible reconciliation, or the intent adaptation rewrites derived artifacts, regenerates outputs, or touches multiple files. Split so a reviewer can see the mechanical reconciliation alone, then the intent adaptation alone.
+
+**Commit 1 (mechanical merge) — when split:**
 - Complete the merge with lowest-assumption reconciliation
 - Preserve information from both sides
 - Restore a buildable, runnable state
 - No opportunistic cleanup or reinterpretation
 - Message: `"merge [incoming] into [current]: mechanical resolution"`
 
-**Commit 2 (integration):**
+**Commit 2 (integration) — when split:**
 - Adapt code, docs, tests, and generated artifacts so the branch incorporates the incoming objective
 - Rewrite stale names, labels, paths, and references
 - Regenerate derived outputs from merged source code
 - Message: `"integrate [incoming] intent: [brief description]"`
+
+**More than two commits:** legitimate when the intent adaptation decomposes into independent logical changes (e.g., one commit per affected task in a multi-task integration). Sequence them after Commit 1; keep each one's message honest about what it carries.
 
 ### Research-Meaningful Escalation (Tier 3)
 
@@ -81,10 +89,11 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 - `[BLOCKING]` **Sample construction preserved.** Sample filters and data sources are correct in the merged result.
 - `[BLOCKING]` **User decisions implemented correctly** (Tier 3) — the researcher's decisions on research-meaningful conflicts were implemented as stated.
 
-**Two-commit structure (templates in §How-To → Two-commit structure):**
+**Commit structure (templates in §How-To → Commit structure):**
 
-- `[BLOCKING]` **Commit 1 (mechanical merge):** lowest-assumption reconciliation; preserves information from both sides; restores a buildable, runnable state; no opportunistic cleanup or reinterpretation.
-- `[BLOCKING]` **Commit 2 (integration):** adapts code, docs, tests, and generated artifacts so the branch incorporates the incoming objective; rewrites stale names, labels, paths, and references; regenerates derived outputs from merged source code (not hand-edited).
+- `[BLOCKING]` **Intent separation.** If both the mechanical reconciliation and the intent adaptation are non-trivial, they land in separate commits (canonical two-commit shape, templates in §How-To). A single commit is acceptable only when one side is trivial (clean fast-forward or near-empty intent edit) and the commit message honestly describes both pieces.
+- `[ADVISORY]` **Mechanical-commit discipline (when split):** lowest-assumption reconciliation; preserves information from both sides; restores a buildable, runnable state; no opportunistic cleanup or reinterpretation.
+- `[ADVISORY]` **Integration-commit discipline (when split):** adapts code, docs, tests, and generated artifacts so the branch incorporates the incoming objective; rewrites stale names, labels, paths, and references; regenerates derived outputs from merged source code (not hand-edited).
 
 **Research-Meaningful Escalation (full procedure and Never-list in §How-To → Research-Meaningful Escalation (Tier 3)):**
 

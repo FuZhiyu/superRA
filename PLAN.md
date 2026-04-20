@@ -167,7 +167,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 ### Task 4: Generalize `agent-orchestration §Parallelization and Worktree Isolation`
 **Depends on:** *(none)*
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** N/A
@@ -189,9 +189,9 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
   Grepped: `grep -n "parallel reviewer\|reviewer.*worktree"` returns hits at lines 79 and 145. Task 1's Phase B Step 1 + Step 3 references to "parallel siblings on worktrees" work against this extension.
 
-- [ ] **Step 4 (Round 3): Rename section, generalize scope, add subsections**
+- [x] **Step 4 (Round 3): Rename section, generalize scope, add subsections**
 
-  Section rename: `§Concurrent Writers Require Worktree Isolation` → `§Parallelization and Worktree Isolation`. Broaden the opener from "implementers by default" to "any parallel subagent batch". Add: (a) background-dispatch preference paragraph; (b) new `§Difficulty and Agent Type` subsection (tier-matching guidance — lower-tier for simple / follow-up, higher-tier for first-pass review); (c) worktree-lifecycle paragraph covering orchestrator-creates-with-raw-git and the `Agent`-tool `isolation: "worktree"` anti-pattern; (d) `--from "$(pwd)"` seeding guardrail. Branch-naming convention flipped to `<branch>/parallel/<slug>` inside this section (ownership split table, examples, merge-back command). Reviewer-template block at SKILL.md §Dispatch Templates gets the optional `Worktree:` field that Task 4's round-2 review note flagged as missing (R1). Partial work already landed in commit `a8c4113`; this step finalizes. Commit.
+  All landed in commit `a8c4113`. Section renamed to §Parallelization and Worktree Isolation; opener broadened to any parallel subagent batch (implementers + reviewers + cross-role patterns); added §Difficulty and Agent Type subsection + background-dispatch preference + `--from "$(pwd)"` seeding guardrail + worktree-lifecycle paragraph covering raw-git branching and the `Agent`-tool `isolation: "worktree"` anti-pattern. Branch-naming convention flipped to `<branch>/parallel/<slug>` throughout the section (ownership split table, examples, merge-back command). Reviewer template in §Dispatch Templates now carries `Worktree: <absolute path>   # optional — parallel-reviewer pattern only` (R1 resolved). Cross-surface rename sweep (other skills/hooks/docs) rolls with Task 5 Step 5.
 
 ---
 
@@ -289,7 +289,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 ### Task 7: Simplify `refactor-and-integrate` — §Scope by Integration Status + merge-quality two-commit mandate (C4 + C5)
 **Depends on:** Task 1 (Task 1 Step 7's collapse of the Phase B Step 3b dispatch may already carry the scope-list semantics that §Scope by Integration Status currently codifies)
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** N/A
@@ -298,17 +298,17 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 Rationale for bundling C4 + C5: both live in the same skill (`refactor-and-integrate`) which Round 2 explicitly left untouched. Both are "relax DRY/mandate" moves driven by the same review pass. Single task preserves atomic-commit discipline for this skill's Round 3 delta.
 
-- [ ] **Step 1: Describe — what each section is load-bearing for**
+- [x] **Step 1: Describe — what each section is load-bearing for**
 
-  §Scope by Integration Status: isolate content that is NOT expressible as a dispatch-time `Tasks in scope:` list (implementer-refusal semantics, reviewer out-of-scope boundary). §Two-commit structure: identify failure modes the discipline prevents (conflated intent, un-reviewable mechanical hunks) and note which survive under a "separate when intent differs" rule.
+  §Scope by Integration Status: the one load-bearing sentence was "Refactor implementer and integration reviewer operate only on tasks whose Integration status is unset or REVISE; APPROVED tasks are out of scope except for legitimate merge resolution." Task 1 Step 7 already states the scope list at dispatch time (Phase B Step 3b `Tasks in scope:` + refusal-to-refactor semantics); the remaining piece was the Implementer Self-Check's out-of-scope rule. §Two-commit structure: the discipline prevented conflating mechanical and intent changes; that concern is intent-separation, not commit-count. A trivial merge (clean fast-forward + near-empty adaptation) can legitimately land as one commit.
 
-- [ ] **Step 2: Apply**
+- [x] **Step 2: Apply**
 
-  §Scope by Integration Status: drop / trim / keep per Step 1. If dropped, verify the Implementer Self-Check and the reviewer's Pre-Review Scope Check still carry the invariant. §Two-commit structure: rewrite the How-To to frame the two-commit shape as a convention (not a mandate); downgrade severity markers on the gated checklist; keep the templates as examples of the separated case.
+  §Scope by Integration Status removed entirely. Its load-bearing sentence lifted into Implementer Self-Check as step 4 ("Respect the dispatch's scope list — APPROVED tasks not named in scope are out of scope; a hunk touching one fails step 3"). §Two-commit structure renamed "Commit structure — one or more commits, separate when intent differs"; a three-paragraph opener frames intent-separation as the rule and two-commit as the canonical example. Gated checklist §Commit structure rewritten: one `[BLOCKING]` "intent separation" item, two `[ADVISORY]` commit-discipline items (down from two `[BLOCKING]`). §Three Concurrent Disciplines entry for Merge Quality in the main skill body rewritten to match; stale "two-commit templates" cross-reference updated to "commit-structure templates".
 
-- [ ] **Step 3: Validate**
+- [x] **Step 3: Validate**
 
-  Grep `skills/ agents/` for `§Scope by Integration Status` cross-references; update any that break. Cross-read against `semantic-merge/SKILL.md` (the 1+N "one possible workflow" language) and `integration-workflow` Phase B to confirm nothing elsewhere now demands two commits in contradiction. Commit.
+  `grep -rn "§Scope by Integration Status\|Two-commit structure"` across skills/agents: empty. `grep -rn "two-commit"` returns three hits, all consistent with the new framing (main body + new How-To opener + new gated checklist bullet). `semantic-merge/SKILL.md` 1+N "one possible workflow" language stays consistent. `integration-workflow` Phase B Step 3a still names mechanical-merge-first as a sequencing rule, which is still correct (splits when merge is non-trivial).
 
 ---
 
