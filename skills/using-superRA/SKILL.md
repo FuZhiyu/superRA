@@ -81,7 +81,7 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
-The `merge` stage is used when `semantic-merge` is invoked in delegated mode for a dedicated merge-proposer / merge-reviewer pair (standalone merges). Inside `integration-workflow` Phase B, the unified implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the canonical `Skills:` dispatch field (Tier 2/3 only) rather than switching Stage.
+The `merge` stage is used for standalone `semantic-merge` dispatches — a dedicated merge-proposer / merge-reviewer pair resolving a branch outside the normal integration-workflow. Inside `integration-workflow` Phase B, the implementer runs `Stage: integration` and loads `superRA:semantic-merge` when the integration reviewer's annotation calls for intent-based conflict resolution — no Stage switch needed.
 
 
 **Main-agent default loads.** If you are the main agent, load `references/main-agent.md` and `superRA:handoff-doc` now — before dispatching subagents or touching PLAN.md. `references/main-agent.md` carries the session-start actions and the full autonomy contract; `superRA:handoff-doc` carries the editing discipline needed before any PLAN.md / RESULTS.md edit and resolves the `planning-workflow §Changing Plans` cross-references into `handoff-doc` (User Decisions Log, plan-anatomy). Subagents skip both — they inherit task context from their dispatch and load `handoff-doc` only on `documentation` / `planning-review` stages as listed in the table above.

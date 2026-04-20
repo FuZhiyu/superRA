@@ -168,32 +168,32 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 ### Task 5: Sync peripheral surfaces
 **Depends on:** Tasks 1, 2, 3, 4
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A
 **Input:** `README.md`, `skills/CATEGORIES.md`, `RELEASE-NOTES.md`, `skills/using-superRA/SKILL.md` §Skill-Load Manifest, `agents/reviewer.md`, `agents/implementer.md`.
-**Output:** Peripheral docs updated to match Round 2's language: no residual "recon/verify reviewer", "Tier 1/2/3", "delegated mode", "Standalone mode", "two-commit" anywhere in the skills graph; Skill-Load Manifest `integration` / `merge` rows simplified; `agents/reviewer.md` §What You Own + §Editing Etiquette extended to cover Integration Intent ownership; `agents/implementer.md` §What You Own extended with hands-off note for Integration Intent; RELEASE-NOTES.md has a new "Unreleased" entry.
+**Output:** Peripheral docs updated to match Round 2's language: no residual "recon/verify reviewer", "Tier 1/2/3", "delegated mode", "Standalone mode" anywhere in the active skills graph; Skill-Load Manifest `integration` / `merge` rows simplified; `agents/reviewer.md` §What You Own + §Editing Etiquette extended to cover Integration Intent ownership; `agents/implementer.md` §What You Own extended with hands-off note for Integration Intent; RELEASE-NOTES.md has a new "Unreleased" entry. Also folded in MINOR advisories R1–R4.
 
-- [ ] **Step 1: Update agent files**
+- [x] **Step 1: Update agent files**
 
-  `agents/reviewer.md` §What You Own: add a bullet that the integration reviewer owns the `## Integration Intent` section — writes it at Phase B Step 1 when main-side scan surfaces material changes, per-item removes bullets when the last dependent task APPROVES, section-removes when empty. §Editing Etiquette: one sentence confirming the inline-edit + boundary-preservation rules (round 1 Task 8) apply to Integration Intent edits too.
+  `agents/reviewer.md` §What You Own: replaced stale "recon reviewer / verify reviewer" integration-status flip language with "integration reviewer (annotation pass) / integration reviewer (verify pass)"; added `## Integration Intent` ownership bullet — writes at Phase B Step 1, per-item removes when last named dependent task reaches APPROVED, section-removes when empty; no other role edits it. §Editing Etiquette: added sentence that inline-edit + boundary-preservation rules apply to Integration Intent edits too. Pre-commit self-check: updated to name `## Integration Intent` writes/removes as integration-reviewer-owned.
 
-  `agents/implementer.md` §What You Own: add one sentence that the implementer does not edit the `## Integration Intent` section — only the integration reviewer writes it, and only the orchestrator can overrule via `→ orchestrator:` annotations.
+  `agents/implementer.md` §What You Own: reworded integration-status line to drop "two-commit" and "recon/verify reviewer" vocabulary; added explicit hands-off paragraph for `## Integration Intent`.
 
-- [ ] **Step 2: Update Skill-Load Manifest**
+- [x] **Step 2: Update Skill-Load Manifest**
 
-  `skills/using-superRA/SKILL.md` §Skill-Load Manifest: the `integration` row's descriptor rewritten to drop "recon/verify" language if present. The `merge` row stays (semantic-merge standalone is still a thing) but any "delegated mode" phrasing in the descriptor is replaced with a neutral "general-purpose research-aware merge".
+  `skills/using-superRA/SKILL.md`: replaced stale paragraph below the manifest table ("delegated mode" / "Tier 2/3" language) with neutral wording describing when `merge` stage is used and how Phase B loads `semantic-merge`.
 
-- [ ] **Step 3: Update README, CATEGORIES, RELEASE-NOTES**
+- [x] **Step 3: Update README, CATEGORIES, RELEASE-NOTES**
 
-  `README.md`: workflow-map diagram and skill-inventory table — check for residual Tier / recon-verify / two-commit language in the integration-workflow row and the semantic-merge row; fix.
-  `skills/CATEGORIES.md`: integration-workflow row's short description simplified; semantic-merge row's description made vertical-neutral.
-  `RELEASE-NOTES.md`: new `## Unreleased — flexible integration-workflow + general semantic-merge refactor` heading with bullets listing (a) Phase B flattened to review-led loop; Tier matrix removed; (b) semantic-merge generalized on top of global skill; mode split removed; (c) Integration Intent section added to plan-anatomy; (d) parallel-reviewers note added to agent-orchestration.
+  `README.md`: Mermaid INT2 node updated (removed "recon reviewer + unified implementer + verify reviewer" / "Tier 2/3" language); integration-workflow row updated in skill table; semantic-merge row made vertical-neutral; "How It Works" paragraph updated; "invokes semantic-merge internally on Tier 2/3" fixed.
+  `skills/CATEGORIES.md`: integration-workflow row simplified; semantic-merge row made vertical-neutral.
+  `RELEASE-NOTES.md`: added new `## Unreleased — flexible integration-workflow + general semantic-merge refactor` heading with four bullets.
 
-- [ ] **Step 4: Validate — sweep**
+- [x] **Step 4: Validate — sweep**
 
-  Grep: `grep -rn "Tier 1\|Tier 2\|Tier 3\|recon reviewer\|verify reviewer\|two-commit\|delegated mode\|Standalone mode" skills/ agents/ README.md RELEASE-NOTES.md` → expect only pre-existing historical RELEASE-NOTES entries and `docs/plans/` archive hits (the round-1 plan/results are historical record, not touched by round 2). Commit.
+  `grep -rn "recon reviewer|verify reviewer|delegated mode|Standalone mode" skills/ agents/ README.md` → empty (active content only; RELEASE-NOTES historical entries excluded). Remaining `two-commit` hits are in `refactor-and-integrate/SKILL.md` merge-quality section (legitimate 1+N merge commit vocabulary, not the removed integration-workflow two-commit contract). R1–R4 advisory fixes applied; see RESULTS.md Task 5 for per-item notes.
 
 ---
 

@@ -40,7 +40,7 @@ Stop and clarify only if the repository is already mid-operation in a way that m
 Read commit messages and diffs since the merge base. Classify changes by role:
 
 - **Results-bearing** — domain analysis scripts, computation pipelines, anything that affects outputs
-- **Domain-discipline artifacts** — describe steps, row-count logs, validation checks, drift tests
+- **Domain-discipline artifacts** — validation artifacts the domain skill requires (e.g. for data analysis: describe steps, row-count logs, validation checks); drift tests
 - **Handoff docs** — PLAN.md, RESULTS.md (conflicting edits to these may imply structural reorganization — see below)
 - **Infrastructure** — utilities, build scripts, CI config
 - **Documentation** — README, non-results docs
@@ -67,7 +67,7 @@ Prefer synthesis over picking sides when both changes are valid and compatible. 
 Ask when:
 
 - two different semantic integrations are both reasonable
-- the incoming and current changes point toward different valid research goals, methodological choices, or scope decisions (variable definitions, sample construction, model specifications, data sources, research conclusions)
+- the incoming and current changes point toward different valid research goals, methodological choices, or scope decisions (e.g. scope-defining variables, key model specifications, data sources, research conclusions)
 - incoming and current changes point in opposite architectural directions
 - a PLAN.md conflict implies a substantive restructure of scope or task ordering
 
@@ -103,7 +103,7 @@ If rebase or cherry-pick is required instead of merge, preserve the same concept
 - **Preserve user work.** Never discard dirty state or unrelated edits without explicit approval.
 - **Regenerate over edit.** For generated files, regenerate from merged source rather than hand-editing.
 - **RA framing.** You propose integration, present options, and implement the researcher's decisions. You never judge whether the methodology is correct. Research-meaningful integration decisions belong to the researcher.
-- **Domain-discipline artifacts through the merge.** If incoming changes affect results-bearing files, confirm that domain-discipline artifacts (describe steps, row-count logs, validation checks, domain-specific integrity checks) are preserved and consistent in the merged result.
+- **Domain-discipline artifacts through the merge.** If incoming changes affect results-bearing files, confirm that the active domain's validation artifacts (whatever the domain skill requires — for data analysis: describe steps, row-count logs, validation checks) are preserved and consistent in the merged result.
 - **Drift tests are the safety net.** When drift tests exist, always run them after the merge. Never skip. Never silently update expectations for meaningful result changes.
 
 ## When to Ask the User

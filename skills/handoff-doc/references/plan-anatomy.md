@@ -128,7 +128,7 @@ The `## Integration Intent` section bridges the integration reviewer's Phase B m
 **Lifecycle:**
 
 1. Reviewer writes the section at `integration-workflow` Phase B Step 1 when the main-side scan surfaces material incoming changes.
-2. As each cluster of affected tasks reaches `Integration status: APPROVED`, the reviewer removes the corresponding item from the section.
+2. When the last task named in a cluster reaches `Integration status: APPROVED`, the reviewer removes the corresponding item from the section.
 3. When the last item is removed, the reviewer removes the section entirely. An empty section is never left in PLAN.md — its absence signals clean integration.
 
 **Format:**

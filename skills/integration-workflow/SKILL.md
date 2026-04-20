@@ -1,6 +1,6 @@
 ---
 name: integration-workflow
-description: Use when an analysis is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the analysis branch needs to be brought up to date with main and refactored to fit codebase conventions (a single unified sync + refactor pass targeting one minimum-net-diff state); when the Stage 1 dev-log RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form; when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `execution-workflow`'s completion menu (options 1 or 2). Sits at the INTEGRATE phase — the final phase of the superRA workflow, covering drift tests through PR/merge.
+description: Use when an analysis is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the analysis branch needs to be brought up to date with main and refactored to fit codebase conventions (review-led iterative sync + refactor targeting minimum-net-diff); when the Stage 1 dev-log RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form; when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `execution-workflow`'s completion menu (options 1 or 2). Sits at the INTEGRATE phase — the final phase of the superRA workflow, covering drift tests through PR/merge.
 ---
 
 # Integration Workflow
@@ -338,7 +338,7 @@ Report what was merged/pushed and what was cleaned up.
 
 **Small changes (single-file analysis, few results):**
 - Phase A: Still run, fewer tests.
-- Phase B: Verify reviewer may APPROVE immediately.
+- Phase B: Integration reviewer may APPROVE immediately with no annotations.
 
 ## Agent Loads
 
