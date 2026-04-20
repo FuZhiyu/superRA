@@ -62,7 +62,7 @@ Concerns and their owners:
 
 **Composition at the workflow edge.** A workflow step's content is assembled at dispatch time from: (a) the workflow skill for sequencing, (b) `agent-orchestration` for dispatch shape + verdict adjudication, (c) the agent file for execution / review protocol, (d) the domain skill + stage-scoped references for what to check. None of these pieces duplicate what the others carry.
 
-**Extension path.** Adding a new vertical (theory, literature review, simulation, writing) is composing existing pieces, not forking workflow skills. Create `skills/<vertical>/SKILL.md` with its Iron-Law-equivalent, add the vertical's gated checklist (§Review + §Integration), add stage-scoped references for the phases the vertical touches, add the vertical to the planning-workflow routing table. The workflow skills, `agent-orchestration`, and the agent files carry over unchanged.
+**Extension path.** Adding a new vertical (theory, literature review, simulation) is composing existing pieces, not forking workflow skills. Create `skills/<vertical>/SKILL.md` with its Iron-Law-equivalent, add the vertical's gated checklist (§Review + §Integration), add stage-scoped references for the phases the vertical touches, add the vertical to the planning-workflow routing table. The workflow skills, `agent-orchestration`, and the agent files carry over unchanged.
 
 ### Domain verticals
 
@@ -73,8 +73,9 @@ superRA's workflow scaffolding is domain-agnostic. Domain-specific discipline li
 **Currently implemented:**
 
 - **Data analysis** — `superRA:econ-data-analysis`. Load-bearing rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION.** Non-negotiable; protected by the Common Rationalizations table in the skill body and the inline severity-marked checklist in §Three Concurrent Disciplines. Stage-scoped references: `references/planning.md` (Data Inventory hard gate + sensitivity design), `references/integrate-drift-tests.md` (drift-test construction), `references/integration.md` (data-specific integration gates), `references/data-robustness-checklist.md`.
+- **Writing** — `superRA:writing`. Load-bearing rule: **Iron Law — RESPECT THE AUTHOR'S INTENT.** Three concurrent disciplines (Preserve / Improve / Verify) with inline severity-marked checklist in SKILL.md §Three Concurrent Disciplines. Standalone-usable via four modes (direct-edit / pure-review / review-edit-loop / full-workflow) documented in `skills/writing/references/workflow.md`; most writing work does not need the full PLAN → IMPLEMENT → VALIDATE → INTEGRATE scaffold. Stage-scoped references: `references/planning.md`, `references/workflow.md`, `references/style-checklist.md`, `references/structure-checklist.md`, `references/consistency/*.md` (8 dimension files for parallel review), `references/refactor-and-compile.md`, `references/collaboration.md`, `references/integration.md`.
 
-Data analysis is the flagship vertical, not the whole product. The workflow skills do not assume data analysis; they route to the domain skill only when the task matches.
+Data analysis and writing are the two currently implemented verticals. The workflow skills do not assume either; they route to the domain skill only when the task matches.
 
 Before proposing structural changes to skill design, workflow phases, or agent orchestration, read the existing skills in `skills/` and the workflow skills they reference, and verify the proposal strengthens (or at least preserves) all four workflow principles.
 
@@ -92,8 +93,6 @@ Adding a new vertical means adding a domain skill — not forking the workflow. 
 - **Theory / modeling.** Derivation discipline (step-by-step algebra, symbol tracking), notation consistency, proof checks, simulation or numerical verification of derived formulas.
 - **Literature review.** Citation integrity (every claim traces to a cited source with the page / line), claim-evidence mapping, coverage audit across a reading list, systematic note-taking format.
 - **Simulation.** Seed discipline, stochastic reproducibility across platforms, sensitivity to parameter grids, convergence diagnostics, calibration-vs-estimation separation.
-- **Writing / paper drafting.** Figure and table consistency with the underlying code, cross-reference integrity (labels, citations), narrative coherence across sections, versioning of the manuscript alongside the analysis branch.
-
 When you pick one up, create the domain skill first, then do one real project end-to-end with the existing workflow skills to find the gaps. The workflow skills are meant to bend; the principles are not.
 
 ## General

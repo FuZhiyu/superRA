@@ -9,7 +9,7 @@ description: Use when starting a new piece of research work with an objective an
 
 Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the execution-workflow to consume.
 
-This skill is **domain-agnostic**. Today's only implemented domain vertical is data analysis; future verticals (theory / modeling, literature review, simulation, writing) plug in by providing their own domain skill with a `references/planning.md`. The procedure here stays the same.
+This skill is **domain-agnostic**. Implemented verticals today are data analysis and writing; future verticals (theory / modeling, literature review, simulation) plug in by providing their own domain skill with a `references/planning.md`. The procedure here stays the same.
 
 Write comprehensive plans assuming the next person reading has zero context for this project. Document everything they need: which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Give them the whole plan as bite-sized steps. Frequent commits.
 
