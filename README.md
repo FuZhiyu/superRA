@@ -1,238 +1,147 @@
 # superRA
 
-superRA turns AI coding agents into disciplined Research Assistants. Built as a fork of [Superpowers](https://github.com/obra/superpowers), it ships a complete **iterative** PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow that enforces reviewer sign-off at every step, keeps `PLAN.md` / `RESULTS.md` as the session-to-session source of truth, runs autonomously between legitimate stop points, and merges via intent-based semantic-merge rather than bare `git merge`. Research is rarely linear — new tasks surface mid-execution, PR reviewers request adjacent analyses, methodology pivots land post-integration — so the phases form a cycle. Today's flagship domain is economic data analysis; the architecture is built to extend to theory, literature review, simulation, and writing.
+superRA turns AI coding agents into disciplined Research Assistants. It ships:
+
+1. An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
+2. **Domain skills** that teach agents how to do research work properly — starting with economic data analysis; theory, writing, and modeling are on the roadmap.
+3. **Utility skills** for technical reports in markdown, gated integration checklists, semantic branch merges, and data sync across git worktrees.
+
+superRA is inspired by the [Superpowers](https://github.com/obra/superpowers) plugin, which centers on test-driven software development. superRA adapts the same spine to scientific research, which is exploratory, iterative, and fluid.
 
 ## Why superRA?
 
-AI agents are fast but undisciplined. They jump to implementation before understanding the task, declare "looks fine" without verification, and merge without checking what changed. Research — empirical or otherwise — cannot absorb that failure mode.
+AI agents are fast but undisciplined:
 
-superRA answers with four load-bearing workflow principles that apply to every domain:
+- Agents generate far more code than anyone will carefully review, often inconsistent with the existing codebase.
+- Half the sample is silently dropped before a regression runs, while the agent declares "everything looks good".
+- As the context window fills, agents become more error-prone — but starting fresh loses the thread of what was done and why.
+- After several iterations, the results quietly drift from the original, and neither you nor the agent can reconstruct why.
 
-1. **Implementer–reviewer pair at every step.** No result ships without adversarial review. One comprehensive review pass per task during execution (`APPROVE` / `REVISE`), drift-test + integration review before merge.
-2. **Handoff docs are the auditable record.** Findings, decisions, methodology notes land in committed `PLAN.md` / `RESULTS.md` *before* they appear in any report. Any fresh agent resumes from docs + git alone.
-3. **Fast early, strict before merge. Semantic merges always.** Interim tasks optimize for speed; integration discipline loads only when the user chooses to merge. Every merge into main is a semantic-merge.
-4. **Autonomous with human in the loop.** The agent drives work forward on its own power, and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
+superRA brings discipline to the agent on three fronts. An **implementer–reviewer pair** sits at every step so no result ships without adversarial review. **Domain skills** teach the agent the right protocol for the work at hand (for data analysis: always describe before you transform). And an explicit **integration phase** folds each task into the existing codebase and maturing documentation, so what lands on `main` is coherent rather than a pile of single-shot outputs.
 
-In the **data-analysis vertical** (today's flagship), these principles are backed by one non-negotiable domain rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION**. Every data operation is shaped by three concurrent disciplines: Describe, Analyze, and Validate. See `skills/econ-data-analysis/SKILL.md`.
+## The Plan-Implement-Integrate Workflow
 
-## How It Works
+This workflow assumes basic familiarity with git branch/PR workflow; worktrees help but are optional.
 
-When your agent receives a research task, it doesn't jump into code — it follows a four-phase macro workflow: **PLAN → IMPLEMENT → VALIDATE → INTEGRATE**. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases also **cycle**: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope addition after merge all route back through `planning-workflow §User Feedback and Changing Plans`, which rolls back the affected milestones, walks the DAG to clear downstream per-task statuses, and resumes at the right re-entry point.
-
-```
-PLAN            planning-workflow (domain vertical setup → scope check → task decomposition)
-                Route to the active domain skill's planning reference.
-                  (data analysis: econ-data-analysis/references/planning.md — Data Inventory hard gate, sensitivity design)
-                Break work into tasks. Output: PLAN.md + RESULTS.md (living handoff docs).
-                    |
-IMPLEMENT       execution-workflow (implementer agent per task)
-                Apply domain discipline at every step.
-                  (data analysis: Describe / Analyze / Validate — econ-data-analysis main body)
-                Atomic commit per task: code + PLAN.md status + RESULTS.md findings.
-                    |
-VALIDATE        execution-workflow (reviewer agent after each task)
-                One comprehensive review pass: the reviewer walks the domain skill's §Three Concurrent Disciplines
-                top to bottom plus any §Pitfalls subsections matching operations performed. Returns APPROVE / REVISE.
-                REVISE triggers a narrow re-review (cited fixes + dependent findings) until APPROVED.
-                    |
-INTEGRATE       integration-workflow (Phases A–D; invokes semantic-merge internally when integration reviewer calls for intent-based resolution)
-                Phase A: drift tests for key results (data-analysis vertical).
-                Phase B: iterative unified sync + refactor. Phase C: mature RESULTS.md + doc audit.
-                Phase D: final local merge or PR + cleanup.
-```
-
-Each task produces an atomic commit. If the session dies at any point, the next session reads `PLAN.md` + `RESULTS.md` + git state and picks up exactly where the last one stopped — including mid-cycle re-entry after a scope change, because the unchecked `## Workflow Status` boxes and per-task `**Review status:**` / `**Integration status:**` fields encode exactly how far the last §User Feedback and Changing Plans pass rolled state back.
-
-## Workflow Map
-
-The diagram below shows how each skill, reference, and agent plugs into each workflow stage. Cross-cutting skills (`using-superRA`, `agent-orchestration`) apply at every dispatch and are shown as a shared rail at the bottom rather than repeated inside each stage node. `handoff-doc` is doc-discipline scoped — loaded by doc-creators in PLAN / INTEGRATE and on demand elsewhere; subagents get a compact etiquette from the agent files. The authoritative `Stage:` → skills + references mapping lives in `superRA:using-superRA` §Skill-Load Manifest; this diagram visualizes that same mapping, stage-by-stage.
+superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases form a cycle, not a pipeline: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope change after merge all route back through `planning-workflow §User Feedback and Changing Plans`, which walks the task DAG and resumes at the right re-entry point.
 
 ```mermaid
 flowchart TB
-    SESSION["<b>Session start</b><br/>(every new/compacted session)"]
-    SESSION --> PLAN
+    PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
+    IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
+    INTEGRATE["<b>INTEGRATE</b><br/>A drift tests<br/>B review-led sync + refactor<br/>C mature RESULTS.md + doc audit<br/>D merge / PR / cleanup"]
+    MERGED(["merged"])
 
-    PLAN["<b>PLAN</b><br/>planning-workflow<br/>+ econ-data-analysis/references/planning.md<br/>Data Inventory hard gate, sensitivity design"]
-    PLAN --> IMPL
+    PLAN --> IMPLEMENT
+    IMPLEMENT --> INTEGRATE
+    INTEGRATE --> MERGED
 
-    IMPL["<b>IMPLEMENT</b> (per task)<br/>execution-workflow Step 2<br/>Stage: implementation<br/>→ implementer agent<br/>+ econ-data-analysis main body (Iron Law, Describe/Analyze/Validate)<br/>+ econ-data-analysis/references/notebook-format.md"]
-    IMPL --> VAL
+    IMPLEMENT -. "plan change" .-> PLAN
+    INTEGRATE -. "plan change" .-> PLAN
 
-    VAL["<b>VALIDATE</b> (per task)<br/>execution-workflow Step 2 review<br/>Stage: implementation (subagent_type encodes role)<br/>→ reviewer agent<br/>+ econ-data-analysis §Three Concurrent Disciplines + §Pitfalls (conditional)<br/>APPROVE / REVISE"]
-    VAL -->|REVISE loop| IMPL
-    VAL -->|APPROVED, next task| IMPL
-    VAL -->|all tasks APPROVED, user chooses merge| INT1
-
-    INT1["<b>INTEGRATE — Phase A: drift tests</b><br/>integration-workflow Phase A<br/>Stage: drift-test<br/>→ implementer + reviewer<br/>+ refactor-and-integrate/references/drift-test-quality.md<br/>+ econ-data-analysis/references/integrate-drift-tests.md"]
-    INT1 --> INT2
-
-    INT2["<b>INTEGRATE — Phase B: review-led sync + refactor (iterative)</b><br/>integration-workflow Phase B<br/>Stage: integration (+ semantic-merge when reviewer calls for intent-based resolution)<br/>→ integration reviewer → implementer(s) → integration reviewer<br/>+ econ-data-analysis/references/integration.md (data-specific)<br/>+ refactor-and-integrate/references/codebase-integration.md (generic)<br/>+ refactor-and-integrate/references/merge-quality.md (conditional)"]
-    INT2 --> INT3
-    INT2 -->|re-enterable| INT2
-
-    INT3["<b>INTEGRATE — Phase C: doc finalization</b><br/>integration-workflow Phase C<br/>Stage: documentation<br/>→ doc-writer + doc-reviewer<br/>+ report-in-markdown (baseline-io, rich-content, final-form)<br/>Mature RESULTS.md + PLAN.md disposition"]
-    INT3 --> MERGE
-
-    MERGE["<b>INTEGRATE — Phase D: final merge / PR / cleanup</b><br/>integration-workflow Phase D<br/>→ orchestrator (user-facing decisions)<br/>Pre-merge freshness check; if main advanced, re-enter Phase B<br/>Local merge or PR push; worktree cleanup"]
-    MERGE -->|if main advanced| INT2
-
-    CROSS["<b>Cross-cutting (every dispatch)</b><br/>using-superRA — universal principles · code-change defaults · skill inventory · skill-load manifest · execution modes (subagent/direct) · session bootstrap<br/>agent-orchestration — dispatch shape · return deltas · reviewer-feedback adjudication · review-status reference<br/>handoff-doc — loaded on demand or by doc-creators; carries four principles · inline-edit · task-block anatomy · user-decisions log · figure embedding"]
-
-    SESSION -.loads.-> CROSS
-    PLAN -.uses.-> CROSS
-    IMPL -.uses.-> CROSS
-    VAL -.uses.-> CROSS
-    INT1 -.uses.-> CROSS
-    INT2 -.uses.-> CROSS
-    INT3 -.uses.-> CROSS
-    MERGE -.uses.-> CROSS
-
-    classDef phase fill:#eef7ff,stroke:#0366d6,stroke-width:1px,color:#000
-    classDef cross fill:#fff9e6,stroke:#b58900,stroke-width:1px,color:#000
-    classDef session fill:#f0f0f0,stroke:#666,color:#000
-    class PLAN,IMPL,VAL,INT1,INT2,INT3,MERGE phase
-    class CROSS cross
-    class SESSION session
+    classDef phase fill:#eef7ff,stroke:#0366d6,color:#000
+    classDef terminal fill:#e8f5e9,stroke:#2e7d32,color:#000
+    class PLAN,IMPLEMENT,INTEGRATE phase
+    class MERGED terminal
 ```
 
-**Legend — the DRY-composition pattern.** `using-superRA` is the master skill every agent reads; it owns the universal principles, the code-change defaults, the skill inventory, the composable-design map, the Skill-Load Manifest, and the Execution Modes (subagent dispatch vs direct mode). Workflow skills own *choreography* — what steps run in what order at each stage. `agent-orchestration` owns cross-stage orchestration (dispatch shape, return-delta protocol, reviewer-feedback adjudication, review-status reference). Domain skills own domain discipline (Iron Law, Describe/Analyze/Validate, the `[BLOCKING]` / `[ADVISORY]` shared-flow checklists that both implementer and reviewer walk). `refactor-and-integrate` owns generic integration discipline (drift-test quality, codebase integration, merge quality). `handoff-doc` owns document-level discipline for `PLAN.md` / `RESULTS.md`. The Skill-Load Manifest in `superRA:using-superRA` is the authoritative map from a dispatched `Stage:` value to the exact skills and references the agent loads — the diagram above is a visualization of that manifest.
+### Key principles of the workflow
 
-**Extension note.** Adding a new vertical (theory, literature review, simulation, writing) swaps only the Domain column — the planning reference, the main-body discipline, the §Three Concurrent Disciplines checklist, and the integration reference. The workflow skills, `agent-orchestration`, `handoff-doc`, `refactor-and-integrate`, and the agent Stage-table scaffolding all stay put. A new vertical composes these pieces; it never forks a workflow skill.
+1. **Implementer–reviewer pair at every step.** An adversarial reviewer inspects every implementation; work only advances after `APPROVE`. Review is never skipped, regardless of how trivial a step looks.
+2. **Handoff docs always reflect the current state.** Material progress lives in committed `PLAN.md` and `RESULTS.md`, not in the chat log. A fresh agent can open the repo and resume from the docs plus git state alone.
+3. **Fast early for exploration, strict for integration. Semantic merges always.** During implementation, optimize for speed and correctness of the analysis itself. Once results are in hand, the integration phase refactors the code to dovetail with the existing codebase and matures documentation for the long haul. Every merge into `main` runs through `semantic-merge` — an intent-based conflict resolution pass that classifies conflicts by research impact and escalates methodology-level decisions to the user — never a bare `git merge`.
+4. **Autonomous with human in the loop.** The agent drives work forward on its own power and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
+5. **Adaptive and composable.** Research is rarely linear and never has a single style. The workflow supplies protocols, not requirements, and can be adapted to different rhythms. It is domain-agnostic: data analysis today; theory, modeling, and writing in the pipeline.
 
-## Design Principles
+## Domain Skills
 
-Four workflow principles are baked into every skill in the repo. Every contribution is evaluated against them (see `CLAUDE.md` for the full version).
+Domain skills teach agents the discipline that applies to a particular kind of research work. They load on top of the workflow skills when a task touches their domain.
 
-1. **Enforced implementer–reviewer pair at every step.** No result is accepted until a reviewer signs off. One comprehensive review pass per task during execution — the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom (plus any §Pitfalls subsections matching operations performed) and returns `APPROVE` / `REVISE`. Drift-test and integration reviews before merge, and a fresh integration review after semantic-merge. Review is never skipped. The reviewer's role is adversarial — flag everything, err on the side of over-criticism. The orchestrator arbitrates with big-picture context, filtering through the reviewer's over-critical bias and overruling with documented reasoning when warranted.
+| Skill | Flagship discipline |
+|-------|---------------------|
+| **econ-data-analysis** | Iron Law: no transformation without prior description. Three concurrent disciplines — Describe, Analyze, Validate — plus pitfall catalogs for merges, time series, aggregations, filtering, variable construction, and missing data. Stage-scoped references load per phase (planning, integration, drift tests, robustness, notebook format). |
 
-2. **Handoff docs are the auditable record AND the continuation point.** All material findings, decisions, and results land in committed `PLAN.md` / `RESULTS.md` *before* they appear in any chat reply. Any fresh agent can resume work from the docs + git state alone — no prompt history required. Atomic commits bundle code + doc edits together.
+Future verticals are planned hooks, not commitments:
 
-3. **Fast early, strict before merge. Semantic merges always.** Analysis code is written for speed during implementation — no codebase-fit checks at interim checkpoints. Refactoring, drift tests, codebase integration, and documentation finalization (maturing RESULTS.md and auditing project docs) happen only when the user chooses to merge. Every merge into main runs through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
+- **Theory / modeling** — derivation discipline, notation consistency, proof checks, numerical verification of derived formulas.
+- **Literature review** — citation integrity, claim-evidence mapping, coverage audits.
+- **Simulation** — seed discipline, stochastic reproducibility, parameter-grid sensitivity.
+- **Writing / paper drafting** — figure/table consistency with the underlying code, cross-reference integrity, manuscript versioning alongside the analysis branch.
 
-4. **Autonomous with human in the loop.** The agent drives the workflow forward on its own between legitimate stop points — no "should I continue?" check-ins on approved plans. It stops, and uses `AskUserQuestion` when available, only for hard blockers, decisions beyond the RA's authority (methodology, scope, research intent), or user-defined milestones. Every user decision at a stop point is logged into `PLAN.md` before the agent acts on it.
+## Utility Skills
 
-### Architectural discipline
+Utility skills are domain-neutral tools callable by workflow skills, agents, or directly by a human. Each carries both *what* it provides and *when* you would reach for it.
 
-Below the four workflow principles sits one load-bearing architectural rule that shapes how the skills themselves compose.
+| Skill | What + when to use |
+|-------|--------------------|
+| **handoff-doc** | Editing discipline for `PLAN.md` / `RESULTS.md` — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, full task-block anatomy templates. Use when creating a handoff doc from scratch, maturing `RESULTS.md` into its permanent form, or when the compact etiquette baked into the agent files is not enough. |
+| **report-in-markdown** | Format discipline for markdown reports containing figures, LaTeX math, or tables. Use when producing a standalone human-readable report, or when an implementer task section in `RESULTS.md` embeds a figure or math expression. |
+| **refactor-and-integrate** | Three gated checklists — drift-test quality, codebase integration, merge quality — shared by implementer and reviewer. Use during integration-phase work, or standalone for any refactor that needs consistent quality gates. |
+| **semantic-merge** | Intent-based branch integration that classifies conflicts by research impact and escalates methodology decisions to the user. Use whenever you would otherwise run `git merge` / `git rebase` / `git cherry-pick` on a research branch — the `merge-guard` hook flags bare invocations automatically. |
+| **worktree-data-sync** | Non-git data sync between existing worktrees (seed, diff, apply) plus data teardown. Use when copying data into a new worktree, reconciling data across parallel worktrees, or tearing down a worktree's data cleanly. Worktree lifecycle itself (create/enter/remove) lives in `agent-orchestration`. |
 
-**DRY, composability, extensibility.** One source of truth per concern. `using-superRA` is the master skill every agent reads — it owns the universal principles, code-change defaults, skill inventory, composable-design map, Skill-Load Manifest, and Execution Modes (subagent dispatch vs direct mode). Workflow skills own choreography (what steps run in what order). `agent-orchestration` owns cross-stage orchestration (dispatch shape, relay protocol, verdict adjudication). Domain skills own domain discipline. `refactor-and-integrate` owns generic integration discipline. `handoff-doc` owns handoff-doc mechanics. When adding content, ask *what concern does this describe?* and put it in the one skill that owns that concern; reference it from everywhere else. Duplicated content invites drift and is a code smell. Shared-flow corollary: for any gated checklist, implementer and reviewer walk the **same file**, with `[BLOCKING]` / `[ADVISORY]` markers encoding severity — one document, two perspectives. Adding a new vertical composes existing pieces; it never forks workflow skills. See `CLAUDE.md` §DRY, composability, extensibility for the full statement and ownership map.
-
-## Installation
-
-superRA is a fork of [Superpowers](https://github.com/obra/superpowers), adapted for economic research. Clone and install as a local plugin:
-
-### Claude Code
-
-```bash
-git clone https://github.com/FuZhiyu/econ-superpowers.git
-# Then add as a local plugin in your project's .claude/settings.json
-```
-
-### Other Platforms
-
-See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plugin installation patterns on Cursor, Codex, Copilot CLI, and Gemini CLI. Point them at this repo instead of the upstream.
-
-## Skills
-
-superRA's skills split into four categories. The directory layout stays flat (one `skills/<name>/SKILL.md` per skill); `skills/CATEGORIES.md` is the authoritative grouping index.
-
-- **Workflow skills** — domain-agnostic choreography for each phase. What agent to dispatch, in what sequence, with what handoff rules. Reused across every domain vertical.
-- **Domain skills** — vertical-specific discipline (today: data analysis). Loaded by workflow skills when a task touches the matching domain. Organized with stage-scoped references so only the relevant chunk loads per phase.
-- **Utility skills** — reusable, domain-neutral tools. Handoff-doc discipline, report formatting, notebook rendering, worktree management, semantic merge, verification.
-- **Meta skills** — session bootstrap and skill authoring.
-
-### Workflow
-
-| Skill | Phase | What It Does |
-|-------|-------|-------------|
-| **planning-workflow** | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the active domain skill for domain-specific gates and templates. |
-| **execution-workflow** | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE) with orchestrator-discipline filter, pipeline + reproducibility verification, 4-option completion menu. |
-| **integration-workflow** | INTEGRATE (Phases A–D) | Phase A drift-test creation, Phase B review-led iterative sync+refactor (integration reviewer annotates; `semantic-merge` invoked when reviewer calls for intent-based resolution), Phase C doc finalization (mature RESULTS.md + audit project-level CLAUDE.md / AGENTS.md / README.md), Phase D final merge / PR / cleanup. Re-enterable Phase B on main advancement. |
-| **agent-orchestration** | cross-cutting | Multi-agent dispatch patterns: workload balancing across tiers, parallel subagents for independent tasks, reviewer-feedback adjudication. |
-
-### Domain — Data Analysis
-
-| Skill | What It Does |
-|-------|-------------|
-| **econ-data-analysis** | Iron Law (no transformation without prior description). Three concurrent disciplines: Describe, Analyze, Validate (with sensitivity analysis as a first-class validation discipline). Diagnostics-for-validity philosophy. Pitfall catalogs for merges, time series, aggregations, filtering, variable construction, missing data. Common Rationalizations table. Stage-scoped references load per phase: `planning.md` (Data Inventory hard gate + sensitivity design), `integrate-drift-tests.md` (drift-test construction), `integration.md` (data-specific integration gates), `data-robustness-checklist.md` (robustness menu), `notebook-format.md` (cell organization + Python/Julia rendering; companion guides `jupytext-guide.md`, `julia-quarto-guide.md`). |
-
-Future verticals — theory/modeling, literature review, simulation, writing/paper drafting — are planned; see the Roadmap section at the bottom.
-
-### Utility
-
-| Skill | What It Does |
-|-------|-------------|
-| **handoff-doc** | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Step 3 doc-writer). Usable standalone by a single author with no subagents. |
-| **refactor-and-integrate** | Three integration-phase checklists: `drift-test-quality.md`, `codebase-integration.md`, `merge-quality.md`. Standalone-invokable for any refactoring task. |
-| **report-in-markdown** | Format discipline for markdown reports with figures, LaTeX math, tables. Lean SKILL.md body; three references loaded on demand: `baseline-io.md`, `rich-content.md`, `final-form.md`. |
-| **semantic-merge** | Intent-based branch integration for any vertical or caller (human at terminal, orchestrator direct, or dispatched agent). Resolves conflicts by intent rather than mechanics; escalates research-meaningful decisions to the user. Invoked by `integration-workflow` Phase B when the integration reviewer calls for it, and usable standalone. |
-| **worktree-data-sync** | Non-git data sync between existing worktrees (seed, diff, apply modes) and data teardown. Worktree lifecycle (create / enter / remove) lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
-
-### Meta
-
-| Skill | What It Does |
-|-------|-------------|
-| **using-superRA** | Master skill every agent reads. Carries the distilled universal principles, code-change defaults, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the seven-row Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Preloaded on `superRA:implementer` / `superRA:reviewer` agent frontmatter; injected at session start for the main agent. Main-agent-only cross-session detection and autonomy contract live in `references/main-agent.md`. |
+For the full agent-facing map (Stage → required skills + stage-scoped references) see `superRA:using-superRA` §Skill-Load Manifest. For contributor navigation, `skills/CATEGORIES.md` is the authoritative grouping index.
 
 ## Agents
 
 | Agent | Role |
 |-------|------|
-| **reviewer** | Prototype reviewer agent. Verifies work independently using APPROVE/REVISE protocol. Dispatched with a workflow skill and the active domain skill's stage reference. |
 | **implementer** | Prototype implementer agent. Executes tasks under the active domain's discipline. Dispatched with a workflow skill and the active domain skill's stage reference. |
-
-## Key Design Decisions
-
-**Agent-owned doc updates.** Each agent commits its doc changes atomically with its work. The implementer commits code + PLAN.md status + RESULTS.md findings in a single commit. Reviewers commit review notes and APPROVED status separately. No orchestrator transcription step.
-
-**Review status protocol.** Tasks in PLAN.md carry a status line: `IMPLEMENTED` (code done, awaiting review), `REVISE` (reviewer found `[BLOCKING]` issues to fix — a narrow re-review verifies cited fixes + any finding annotated as depending on an upstream fix, then promotes to APPROVED), `APPROVED` (review passed). A fresh session can tell exactly where each task stands.
-
-**One comprehensive review pass.** The reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom — `[BLOCKING]` / `[ADVISORY]` items — plus any §Pitfalls subsections matching operations performed. Never halts on a failure. Reviewer dispatches are costly; halting early forces a full re-review. Findings that depend on an earlier fix are annotated in plain prose so the re-review can be narrow (verify cited fixes + dependent findings; everything else accepted from the first pass). Review is never skipped, even in direct execution mode. Implementer and reviewer walk the same checklist — one source of truth, no drift between pre-handoff self-check and reviewer verification.
-
-**Stage → skill and reference loads via the Skill-Load Manifest.** `superRA:using-superRA` §Skill-Load Manifest is the single source of truth mapping each `Stage:` value (`implementation`, `integration`, `drift-test`, `merge`, `documentation`, `planning-review`) to the required skills and stage-scoped references agents load. Every agent reads `using-superRA`, so the manifest is always reachable. Dispatch prompts carry only Stage, task pointer, git range, and optional steering — the manifest handles the rest.
-
-**Scope rule.** Agents only edit their own task's sections in PLAN.md and RESULTS.md. Never touch other tasks.
-
-**RA framing.** The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. It executes, validates, and escalates — but the researcher decides the approach.
-
-**Lean agent definitions.** Two prototype agents (implementer, reviewer) define roles, not rules. Domain-specific checklists come from reference files read at dispatch time — today's flagship is `superRA:econ-data-analysis`, which agents load (plus the stage-appropriate reference) whenever the task touches data, per the `superRA:using-superRA` §Skill-Load Manifest. One source of truth per concern, easy to maintain, easy to extend to a new vertical.
+| **reviewer** | Prototype reviewer agent. Verifies work independently using the APPROVE / REVISE protocol. Dispatched with a workflow skill and the active domain skill's stage reference. |
 
 ## Hooks
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
-| **merge-guard** | Before any `git merge/rebase/cherry-pick` | Remind to use semantic-merge skill |
-| **ask-user-question-logger** | After `AskUserQuestion` | Remind to log the decision in PLAN.md before acting |
-| **exit-plan-mode** | After `ExitPlanMode` | Remind to materialize plan into PLAN.md + RESULTS.md before implementing |
+| **merge-guard** | Before any `git merge` / `git rebase` / `git cherry-pick` | Remind to use the `semantic-merge` skill. |
+| **ask-user-question-logger** | After `AskUserQuestion` | Remind to log the decision in `PLAN.md` before acting on it. |
+| **exit-plan-mode** | After `ExitPlanMode` | Remind to materialize the plan into `PLAN.md` + `RESULTS.md` before implementing. |
 
-## Philosophy
+## Installation
 
-**Workflow discipline (cross-cutting):**
-- **Adversarial review at every step** — implementer and reviewer are separate roles; nothing ships without sign-off.
-- **Docs are the record** — `PLAN.md` + `RESULTS.md` + git = complete handoff. Status reports point at the docs; they do not replace them.
-- **Autonomous with human in the loop** — the agent drives forward on its own power and stops only at legitimate decision points.
-- **Semantic merges always** — every merge into main goes through intent-based conflict resolution, never a bare `git merge`.
+### Claude Code
 
-**Data-analysis vertical (today's flagship):**
-- **Data-first** — Understand before transforming. Always. (Iron Law.)
-- **Diagnostics are the primary validity signal** — not a chore, the main tool for judging whether a result is trustworthy.
-- **Reproducibility is a requirement** — drift tests, pipeline files, committed code. Not optional.
+Claude Code (v2.1+) can install plugins directly from a GitHub repo. Add superRA as a marketplace and install the plugin:
 
-**Across every vertical:**
-- **Researcher decides, agent implements** — methodology is not the agent's call.
+```bash
+claude plugin marketplace add FuZhiyu/superRA
+claude plugin install superRA@superRA
+```
 
-## Roadmap: Extending Beyond Data Analysis
+That's it — restart Claude Code (or start a new session) and the skills, agents, and hooks are available.
 
-superRA's workflow scaffolding is domain-agnostic by design. Adding a new vertical means adding a domain skill (with stage-scoped references), not forking the workflow. The four workflow principles, the implementer–reviewer pair, handoff-doc mechanics, and semantic-merge all carry over unchanged.
+To update later:
 
-Planned verticals (hooks for future work, not commitments):
+```bash
+claude plugin marketplace update superRA
+claude plugin update superRA
+```
 
-- **Theory / modeling.** Derivation discipline, notation consistency, proof checks, numerical verification of derived formulas.
-- **Literature review.** Citation integrity, claim-evidence mapping, coverage audits, systematic note-taking formats.
-- **Simulation.** Seed discipline, stochastic reproducibility, parameter-grid sensitivity, convergence diagnostics.
-- **Writing / paper drafting.** Figure/table consistency with the underlying code, cross-reference integrity, narrative coherence, manuscript versioning alongside the analysis branch.
+### Claude Code (local clone, for development or forking)
 
-See `CLAUDE.md` §Roadmap for the checklist to add a new vertical.
+If you want to modify superRA itself — edit skills, add a domain vertical, tune hooks — install from a local clone instead:
+
+```bash
+git clone https://github.com/FuZhiyu/superRA.git
+claude plugin marketplace add ./superRA
+claude plugin install superRA@superRA
+```
+
+Edits to your clone are picked up on the next session start.
+
+### Other Platforms
+
+superRA ships entry files for several non-Claude-Code harnesses:
+
+- **Codex / Copilot CLI / any `AGENTS.md`-aware tool** — point at [`AGENTS.md`](./AGENTS.md) at the repo root.
+- **Gemini CLI** — point at [`GEMINI.md`](./GEMINI.md) and [`gemini-extension.json`](./gemini-extension.json).
+
+Harness-specific install flow varies; see the upstream [Superpowers docs](https://github.com/obra/superpowers) for patterns, and substitute this repo's URL.
+
+
+## Contributing
+
+Design principles, DRY / composability rules, skill-design patterns, and the extension path for adding a new domain vertical live in [`CLAUDE.md`](./CLAUDE.md). Read it before modifying skills, hooks, or agent files.
 
 ## Upstream
 
@@ -240,4 +149,4 @@ superRA is a fork of [Superpowers](https://github.com/obra/superpowers) by [Jess
 
 ## License
 
-MIT License — see LICENSE file for details.
+MIT License — see the `LICENSE` file for details.
