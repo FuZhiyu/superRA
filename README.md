@@ -6,7 +6,7 @@ superRA turns AI coding agents into disciplined Research Assistants. It ships:
 2. **Domain skills** that teach agents how to do research work properly — starting with economic data analysis; theory, writing, and modeling are on the roadmap.
 3. **Utility skills** for technical reports in markdown, gated integration checklists, semantic branch merges, and data sync across git worktrees.
 
-superRA is inspired by the [Superpowers](https://github.com/obra/superpowers) plugin, which centers on test-driven development. superRA adapts the same spine to scientific research, which is exploratory, iterative, and fluid.
+superRA is inspired by the [Superpowers](https://github.com/obra/superpowers) plugin, which centers on test-driven software development. superRA adapts the same spine to scientific research, which is exploratory, iterative, and fluid.
 
 ## Why superRA?
 
@@ -82,9 +82,22 @@ Utility skills are domain-neutral tools callable by workflow skills, agents, or 
 
 For the full agent-facing map (Stage → required skills + stage-scoped references) see `superRA:using-superRA` §Skill-Load Manifest. For contributor navigation, `skills/CATEGORIES.md` is the authoritative grouping index.
 
-## Installation
+## Agents
 
-superRA is a fork of [Superpowers](https://github.com/obra/superpowers), adapted for economic research. The canonical repo is [github.com/FuZhiyu/superRA](https://github.com/FuZhiyu/superRA).
+| Agent | Role |
+|-------|------|
+| **implementer** | Prototype implementer agent. Executes tasks under the active domain's discipline. Dispatched with a workflow skill and the active domain skill's stage reference. |
+| **reviewer** | Prototype reviewer agent. Verifies work independently using the APPROVE / REVISE protocol. Dispatched with a workflow skill and the active domain skill's stage reference. |
+
+## Hooks
+
+| Hook | Trigger | Purpose |
+|------|---------|---------|
+| **merge-guard** | Before any `git merge` / `git rebase` / `git cherry-pick` | Remind to use the `semantic-merge` skill. |
+| **ask-user-question-logger** | After `AskUserQuestion` | Remind to log the decision in `PLAN.md` before acting on it. |
+| **exit-plan-mode** | After `ExitPlanMode` | Remind to materialize the plan into `PLAN.md` + `RESULTS.md` before implementing. |
+
+## Installation
 
 ### Claude Code
 
@@ -125,20 +138,6 @@ superRA ships entry files for several non-Claude-Code harnesses:
 
 Harness-specific install flow varies; see the upstream [Superpowers docs](https://github.com/obra/superpowers) for patterns, and substitute this repo's URL.
 
-## Agents
-
-| Agent | Role |
-|-------|------|
-| **implementer** | Prototype implementer agent. Executes tasks under the active domain's discipline. Dispatched with a workflow skill and the active domain skill's stage reference. |
-| **reviewer** | Prototype reviewer agent. Verifies work independently using the APPROVE / REVISE protocol. Dispatched with a workflow skill and the active domain skill's stage reference. |
-
-## Hooks
-
-| Hook | Trigger | Purpose |
-|------|---------|---------|
-| **merge-guard** | Before any `git merge` / `git rebase` / `git cherry-pick` | Remind to use the `semantic-merge` skill. |
-| **ask-user-question-logger** | After `AskUserQuestion` | Remind to log the decision in `PLAN.md` before acting on it. |
-| **exit-plan-mode** | After `ExitPlanMode` | Remind to materialize the plan into `PLAN.md` + `RESULTS.md` before implementing. |
 
 ## Contributing
 
