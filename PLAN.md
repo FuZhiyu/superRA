@@ -93,7 +93,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 2: Add `## Integration Intent` anatomy to `plan-anatomy.md`
 **Depends on:** *(none)*
 **Review status:** IMPLEMENTED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/handoff-doc/references/plan-anatomy.md`, existing `## Decisions` anatomy entry as a structural template.
