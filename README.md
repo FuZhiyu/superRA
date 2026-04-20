@@ -29,14 +29,15 @@ superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. 
 flowchart TB
     PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
     IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
-    INTEGRATE["<b>INTEGRATE</b><br/>A drift tests · B review-led sync + refactor<br/>C mature RESULTS.md + doc audit · D merge / PR / cleanup"]
+    INTEGRATE["<b>INTEGRATE</b><br/>A drift tests<br/>B review-led sync + refactor<br/>C mature RESULTS.md + doc audit<br/>D merge / PR / cleanup"]
     MERGED(["merged"])
 
     PLAN --> IMPLEMENT
     IMPLEMENT --> INTEGRATE
     INTEGRATE --> MERGED
 
-    INTEGRATE -. "scope change" .-> PLAN
+    IMPLEMENT -. "plan change" .-> PLAN
+    INTEGRATE -. "plan change" .-> PLAN
 
     classDef phase fill:#eef7ff,stroke:#0366d6,color:#000
     classDef terminal fill:#e8f5e9,stroke:#2e7d32,color:#000
