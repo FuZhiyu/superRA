@@ -9,7 +9,7 @@ Integrate branches by intent, not by lines. Understand what each side was trying
 
 **Core principle:** Treat conflicts as intent conflicts first and line conflicts second. Research-meaningful conflicts always go to the user. The agent implements the researcher's integration decisions — never judges methodology.
 
-**Exception — orchestrator-managed parallel worktrees bypass this skill.** Branches matching `parallel/<analysis-branch>/<slug>` are created by the orchestrator under `superRA:agent-orchestration §Concurrent Writers`. Their task boundaries are set ex-ante in `PLAN.md`, so they are mechanically disjoint and merge with plain `git merge --no-ff`. The `merge-guard` hook exempts `parallel/*` source refs.
+**Exception — orchestrator-managed parallel worktrees bypass this skill.** Branches matching `<branch>/parallel/<slug>` are created by the orchestrator under `superRA:agent-orchestration §Parallelization and Worktree Isolation`. Their task boundaries are set ex-ante in `PLAN.md`, so they are mechanically disjoint and merge with plain `git merge --no-ff`. The `merge-guard` hook exempts `*/parallel/*` source refs.
 
 ## The Process
 

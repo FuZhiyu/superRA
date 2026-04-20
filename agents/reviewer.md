@@ -160,7 +160,7 @@ For each item, decide one of:
 ### Pre-Commit Self-Check
 
 Before committing:
-- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS.md caveat if implementation stage, plus `**Integration status:**` flips on annotated / in-scope tasks if integration reviewer, plus `## Integration Intent` writes/removes if integration reviewer Phase B Step 1).
+- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS.md caveat if implementation stage, plus `**Integration status:**` flips on annotated / in-scope tasks if integration reviewer, plus `## Integration Intent` during integration stages).
 - [ ] I did not touch any step, any code, or any task objective.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] The blockquote describes current issues only, in severity order. If empty, the blockquote is removed entirely.

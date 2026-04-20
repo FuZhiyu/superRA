@@ -9,7 +9,7 @@ description: Use when dispatching multiple agents and unsure how to size or para
 
 You delegate tasks to specialized agents with isolated context. This skill carries the **high-level orchestrator guidance** — when to dispatch, what dispatch shape to use, how to read the resulting state from `PLAN.md`, and how to adjudicate reviewer feedback.
 
-**Core principle:** parallel-dispatch independent tasks; serialize iterative
+**Core principle:** parallel-dispatch independent tasks/reviews; serialize iterative
 loops; do trivial work inline. See §Workload Balancing for how to size each
 dispatch.
 
@@ -54,6 +54,16 @@ will be reviewed in isolation.
 - A new feature that requires full domain-skill engagement.
 - Any task where bundle-context would exceed ~150k tokens.
 
+### Difficulty and Agent Type
+
+Harnesses often expose multiple tiers of model capacity (e.g., Sonnet vs. Opus in Claude Code; configurable thinking depth in Codex). Match the tier to the task:
+
+- Conceptually simple tasks — prefer a lower-tier agent for efficiency.
+- First-pass review of substantive work — prefer a higher-tier agent; adversarial review benefits from capacity.
+- Follow-up confirmation checks after a REVISE fix — a lower-tier agent usually suffices.
+
+These are defaults, not rules. Use your discretion and honor any explicit user preference.
+
 ### Rules of thumb
 
 **≤150k tokens per agent.** When estimating: manifest skill loads (~5–15k
@@ -63,37 +73,43 @@ across two agents even when the individual items are small — context
 thrash degrades output quality more than the cost of a second spawn.
 
 
-**Parallelize independent tasks.** Tasks whose `Depends on:` lines (see
-`planning-workflow` §Task Dependencies) are all satisfied and that share
-no mutable state are encouraged to be dispatched in parallel to separate agents.
-
-
 ---
 
-## Concurrent Writers Require Worktree Isolation
+## Parallelization and Worktree Isolation
 
-When a parallel dispatch batch contains **≥2 implementers**, each runs in its own git worktree on a `parallel/<analysis-branch>/<slug>` branch (slug is orchestrator-chosen — `a`, `b`, `alpha`, a bundle name). Two implementers sharing a worktree race on `PLAN.md` / `RESULTS.md` and any shared output path; worktree isolation is the only safe concurrency model for parallel writes.
+Parallel dispatch is often worthwhile: multiple implementers working disjoint tasks at once; multiple reviewers covering different slices of a large diff; or a reviewer checking completed work while an implementer continues on the next task. Tasks whose `Depends on:` lines (see `planning-workflow` §Task Dependencies) are all satisfied and that share no mutable state are the natural candidates.
 
-Applies to implementers by default. Reviewers typically run post-merge on the analysis branch; read-only research subagents return findings to the orchestrator, which does the single write.
+**Prefer background dispatch** so the orchestrator remains available to the user while subagents run.
 
-The same pattern generalizes to parallel reviewers when the diff to be walked is large enough that a single reviewer's context would exceed the ~150k threshold (see §Workload Balancing). The orchestrator splits the diff into disjoint slices (by task ID, by file subtree, or by commit range), dispatches one reviewer per slice on its own worktree, and aggregates the per-slice verdicts into a single overall verdict. The `Worktree:` dispatch field applies to reviewers in this configuration as well. Disjoint scoping is the invariant — two reviewers must not walk the same hunk, and their union must cover the whole diff.
+When a parallel dispatch batch contains **≥2 subagents**, each runs in its own git worktree on a `<current-branch>/parallel/<slug>` branch (slug is orchestrator-chosen — `a`, `b`, `alpha`, a bundle name). Two subagents sharing a worktree race on `PLAN.md` / `RESULTS.md` and any shared output path; worktree isolation is the only safe concurrency model for parallel writes.
+
 
 ### Ownership split
 
 | Direction | Owner | When | How |
 |---|---|---|---|
 | Seed-in (inputs → worktree) | Orchestrator | Before dispatch | `worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink` |
-| Inside worktree (task execution) | Subagent | During dispatch | Normal file I/O on the `parallel/…` branch |
-| Harvest-out (merge back) | Orchestrator | After all siblings return | Plain `git merge --no-ff parallel/<branch>/<slug>` |
+| Inside worktree (task execution) | Subagent | During dispatch | Normal file I/O on the `<branch>/parallel/…` branch |
+| Harvest-out (merge back) | Orchestrator | After all siblings return | Plain `git merge --no-ff <branch>/parallel/<slug>` |
 | Cleanup | Orchestrator | After merge | Harness worktree tool or `git worktree remove` + `git branch -D` |
 
-Task boundaries are set ex-ante in `PLAN.md`, so `parallel/…` branches are mechanically disjoint and merge without `semantic-merge`. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. The `merge-guard` hook exempts `parallel/*` source branches.
+Task boundaries are set ex-ante in `PLAN.md`, so `<branch>/parallel/…` branches are mechanically disjoint and merge without `semantic-merge`. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. The `merge-guard` hook exempts `*/parallel/*` source refs.
 
 Force-symlink seeding is safe because parallel tasks have disjoint write paths by construction. A task that would mutate seeded data either needs a redrawn boundary or `--seed-sync-mode force-cow`.
 
+**Always pass `--from "$(pwd)"` (or an explicit path) when seeding.** Never rely on `sync_worktree_data.py`'s `--from` default — it points at the main worktree, not the orchestrator's analysis worktree.
+
 ### Worktree lifecycle
 
-Prefer harness worktree tools (`EnterWorktree`, `ExitWorktree`); fall back to raw git per `references/worktree-harness-fallback.md`, which also covers placement and gotchas.
+**Orchestrator creates the worktree with raw git** before dispatch, branching off its current branch:
+
+```bash
+git worktree add -b "$(git branch --show-current)/parallel/<slug>" <worktree-path> HEAD
+```
+
+The `/parallel/` infix is load-bearing — the `merge-guard` hook exempts `*/parallel/*` source refs on merge-back, so the orchestrator's `git merge <branch>/parallel/<slug>` is not blocked. Pass the absolute `<worktree-path>` via the dispatch `Worktree:` field. The subagent enters via `EnterWorktree(path=...)` (or `cd` as fallback), works on whatever branch the worktree is on, and never creates its own worktree or touches the branch name.
+
+**Never use the `Agent` tool's `isolation: "worktree"` parameter.** It branches off main's HEAD, not the orchestrator's current tip, so the subagent cannot see in-flight analysis state.
 
 Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `PLAN.md` — git (`git worktree list`, `git branch`) is the source of truth.
 
@@ -143,7 +159,7 @@ only paraphrases the default protocol, the skill-load manifest, or
 `PLAN.md` content, delete it — re-statement of content the agent will
 read itself is noise that clutters the dispatch without adding signal.
 
-**`Worktree:` field (parallel-dispatch only; implementers always, reviewers when using the parallel-reviewer pattern in §Concurrent Writers).** Absolute path to the dedicated worktree provisioned per §Concurrent Writers. When present, the dispatch **must** include this canned steering in the `Additionally:` tail — the one case where that tail carries required, non-additive content:
+**`Worktree:` field (parallel-dispatch only).** Absolute path to the dedicated worktree provisioned per §Parallelization and Worktree Isolation. When present, the dispatch **must** include this canned steering in the `Additionally:` tail — the one case where that tail carries required, non-additive content:
 
 > *Work inside the worktree at `<path>`. Enter via `EnterWorktree` if available, otherwise `cd <path>`. Do not edit files outside. Do not merge or push — the orchestrator owns merge-back.*
 

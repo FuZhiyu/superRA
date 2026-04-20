@@ -1,6 +1,6 @@
 ---
 name: integration-workflow
-description: Use when an analysis is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the analysis branch needs to be brought up to date with main and refactored to fit codebase conventions (review-led iterative sync + refactor targeting minimum-net-diff); when the Stage 1 dev-log RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form; when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `execution-workflow`'s completion menu (options 1 or 2). Sits at the INTEGRATE phase — the final phase of the superRA workflow, covering drift tests through PR/merge.
+description: Use when a plan is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the branch needs to be brought up to date with main and refactored to fit codebase conventions (review-led iterative sync + refactor targeting minimum-net-diff); when the Stage 1 dev-log RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form; when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "integrate", "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `execution-workflow`'s completion menu.
 ---
 
 # Integration Workflow
@@ -9,7 +9,7 @@ Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the ful
 
 Assumes execution-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in execution-workflow.
 
-**Core principle.** Tests guard results. Minimum-net-diff is load-bearing (see `superRA:refactor-and-integrate`). Nothing advances without reviewer APPROVE at every gate (drift-test review, integration review, doc review). Non-trivial merges with main use `superRA:semantic-merge`; the integration reviewer decides whether one is needed.
+**Core principle.** Tests guard results. Minimum net diff relative to main (see `superRA:refactor-and-integrate`). Nothing advances without reviewer APPROVE at every gate (drift-test review, integration review, doc review). Non-trivial merges with main use `superRA:semantic-merge`; the integration reviewer decides whether one is needed.
 
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
@@ -29,8 +29,6 @@ Phase D — Final merge / PR / cleanup
                          DAG flip, APPROVED invalidation; orchestrator
                          proposes, researcher decides)
 ```
-
-**Re-entry is the normal case.** `B → A` when a new task is added mid-integration. `B → B` when main advances and needs another sync. `C → B` when doc-reviewer surfaces a code issue. `D → B` when Phase D's pre-merge check reveals main moved again. Any phase can escalate to `planning-workflow §Changing Plans`.
 
 **Autonomy.** Between stop points, run on your own power — do not check in after each phase, do not re-confirm a reviewer's APPROVE. Legitimate stop points:
 
@@ -376,29 +374,3 @@ Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer sub
 - Re-enter Phase B if main advances between Phase B APPROVE and Phase D merge
 
 **Drift-test integrity** is governed by the cross-cutting rules in `superRA:refactor-and-integrate` `references/drift-test-quality.md` — failing tests must be adjudicated, not silently re-expected; tolerance bumps require justification; test removal during refactoring is forbidden. **Merge quality** is governed by `references/merge-quality.md` — conflicts escalate to the user when research-meaningful; mechanical and intent commits stay separate. **Codebase integration + minimum net diff** is governed by `references/codebase-integration.md` and the body of `refactor-and-integrate` (Minimum-net-diff top item + Implementer Self-Check).
-
-## Integration
-
-**Called by:**
-- **superRA:execution-workflow** Step 4 — when the user chooses Option 1 (merge) or Option 2 (PR) after reproducibility has been verified
-
-**Invokes:**
-- **superRA:semantic-merge** — invoked by Phase B Step 3's mechanical-merge commit when there are conflicts or material main-side changes requiring intent-based resolution (the integration reviewer's findings determine whether this is needed); also used for any Phase D pre-merge re-sync that is non-trivial
-- **superRA:refactor-and-integrate** — loaded by every dispatched implementer and reviewer in Phases A, B, and D; principles in body, `[BLOCKING]` / `[ADVISORY]` items in stage-scoped references
-- **superRA:report-in-markdown** — loaded by the Phase C doc-writer (full mode) and doc-reviewer
-- **superRA:handoff-doc** — loaded on demand for User Decisions Log format and PLAN.md anatomy
-
-**Escalates to:**
-- **superRA:planning-workflow §Changing Plans** — substantive restructure findings (task add/remove/combine, DAG edge flip, APPROVED status invalidation) surfaced in any phase; orchestrator authors the proposal, researcher decides
-
-**Pairs with:**
-- **superRA:agent-orchestration** — `references/worktree-harness-fallback.md` §Remove for worktree removal; §Handling Reviewer Feedback for REVISE adjudication; §Concurrent Writers for the Phase B split safety-valve
-- **superRA:worktree-data-sync** — §Data Teardown clarifies that seeded non-git data disappears with the worktree directory
-
-**Requires:**
-- **RESULTS.md** (Stage 1 dev log) — source of key results for drift tests; matured into Stage 2 form at Phase C
-- **Committed analysis code** — must be committed before drift tests are created
-- **Reproducibility already verified** by execution-workflow Step 3
-
-**Subagents use:**
-- The active domain skill (for data analysis: `superRA:econ-data-analysis`) — domain discipline loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest
