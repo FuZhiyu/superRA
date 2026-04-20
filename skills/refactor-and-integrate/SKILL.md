@@ -87,8 +87,8 @@ The integration reviewer runs the same `git diff <merge-base>..HEAD` as evidence
 ## Integration
 
 **Used by workflow skills:**
-- **`superRA:integration-workflow`** — Dispatches drift-test creation and review (`references/drift-test-quality.md`) across Phase A; the Phase B recon, unified-implementer, and verify-reviewer dispatches (`references/codebase-integration.md`, `references/merge-quality.md`) for the iterative sync+refactor loop; and Phase D pipeline verification — the Phase D→B re-entry trigger on main advancement then runs the Phase B drift-test + verify-review dispatches (`references/codebase-integration.md`) again.
-- **`superRA:semantic-merge`** — Dispatches merge proposer (`references/merge-quality.md`) and merge reviewer (`references/merge-quality.md`) for tier classification and conflict resolution.
+- **`superRA:integration-workflow`** — Dispatches drift-test creation and review (`references/drift-test-quality.md`) across Phase A; the Phase B integration reviewer and refactor implementer (`references/codebase-integration.md`, `references/merge-quality.md`) for the review-led sync+refactor loop; and Phase D pre-merge freshness check — any Phase D→B re-entry triggered by base-branch advancement re-runs the Phase B dispatches.
+- **`superRA:semantic-merge`** — Loaded by the Phase B mechanical-merge commit when conflicts or material base-branch-side changes need intent-based resolution (`references/merge-quality.md`).
 
 **Auto-loaded alongside:**
 - **`superRA:econ-data-analysis`** — Data discipline (loaded by `implementer` / `reviewer` agents whenever the stage involves analysis code, per the `superRA:using-superRA` §Skill-Load Manifest); the `implementation` row also loads `econ-data-analysis/references/notebook-format.md` for notebook formatting.
