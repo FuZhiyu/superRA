@@ -37,6 +37,7 @@ Every edit replaces stale content in place. Never append, never strike through, 
 - Review items confirmed fixed on re-review (the reviewer deletes them).
 - "Previously we tried X" / "Update:" / "Revised:" framing — delete the old text and write the new.
 - Upcoming task descriptions that assume an earlier approach which has since changed.
+- Task output descriptions that have been superseded or further modified by a later task in the plan — rewrite the earlier task's **Output:** to reflect the latest shape, and keep the narrative of "what changed" in the Decisions log only.
 
 ## User Decisions Log
 
