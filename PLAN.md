@@ -126,53 +126,51 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 ### Task 3: Rewrite `semantic-merge/SKILL.md` as general-purpose skill
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A
 **Input:** current `skills/semantic-merge/SKILL.md`, global `~/.claude/skills/semantic-merge-integration/SKILL.md` as tone/structure baseline.
 **Output:** Rewritten `skills/semantic-merge/SKILL.md` that reads as a skill for thoughtful merging — usable by a human at the terminal, by the orchestrator running it directly, or by a dispatched agent, with the same text. Domain-neutral vocabulary. 1+N commit shape stated as *one possible workflow*, not mandated.
 
-- [ ] **Step 1: Describe — read the global baseline + current superRA version**
+- [x] **Step 1: Describe — read the global baseline + current superRA version**
 
-  Read `~/.claude/skills/semantic-merge-integration/SKILL.md` end-to-end. Read `skills/semantic-merge/SKILL.md` end-to-end. Identify: (a) what the global skill carries that superRA should reuse as-is (intent-first framing, commit messages + diffs for inferring intent, regeneration over hand-edit for derived artifacts, ask-user-when-ambiguous discipline); (b) what is superRA-specific and must be retained (drift-test integrity as safety net where tests exist, RA framing on research-meaningful decisions, handoff-doc coherence — PLAN.md / RESULTS.md are themselves conflictable files, escalation to `planning-workflow §Changing Plans` if a PLAN.md conflict implies a substantive restructure); (c) what must be removed (Standalone vs Delegated mode split, named return-field contract, in-skill `Agent(subagent_type: ...)` dispatch blocks, domain-specific examples naming `excess_return` / `variable_construction.py` / `Table 3` / econometric specs / sample filters).
+  Read `~/.claude/skills/semantic-merge-integration/SKILL.md` end-to-end. Read `skills/semantic-merge/SKILL.md` end-to-end. Identified: (a) global skill content to reuse: intent-first framing, diffs for inferring intent, regeneration over hand-edit for derived artifacts, ask-user-when-ambiguous discipline; (b) superRA-specific content to retain: drift-test integrity as safety net, RA framing, handoff-doc coherence with PLAN.md/RESULTS.md conflict escalation to `planning-workflow §Changing Plans`; (c) removal targets: Standalone/Delegated mode split, named return-field contract, in-skill dispatch blocks, Tier 1/2/3 matrix, domain-specific vocabulary (`excess_return`, `variable_construction.py`, `Table 3`, econometric specs, sample filters).
 
-- [ ] **Step 2: Draft the rewritten skill**
+- [x] **Step 2: Draft the rewritten skill**
 
-  Structure: Overview → Core principle (intent first, preserve both sides' purpose) → The process (ground in repo state → understand incoming intent → build integration map → resolve conflicts by intent with user input on ambiguity → verify) → Working principles → When to ask the user (research-meaningful decisions; domain-neutral phrasing) → Commit structure (1+N: mechanical-merge commit first, alone, branch-wide; then N refactor commits, in principle independent and parallelizable when the surface is large; stated as one possible workflow — caller may collapse to a single commit when adaptation is trivial, or to two commits per the global skill's default) → Drift-test / domain-discipline integrity (loads `refactor-and-integrate/references/drift-test-quality.md` on demand when the branch has drift tests) → Red Flags → Integration.
+  Written with structure: frontmatter → Overview → Core principle → The process (6 steps: ground → understand intent → integration map → ask user → resolve/integrate → verify) → Working principles → When to ask the user → What to report → Red Flags → Integration. 1+N commit shape stated explicitly as one possible workflow. Domain-neutral vocabulary throughout; one illustrative example in Step 4 (outcome variable construction) without analysis-specific names.
 
-  Replace all domain-specific examples with vertical-neutral phrasing: "results-bearing files", "domain discipline artifacts", "adaptation to integrated intent". Keep one short illustrative example that can be from any vertical (e.g., a paper-drafting branch merging upstream changes that rename a section heading referenced in multiple chapters).
+- [x] **Step 3: Remove dispatch-focused content**
 
-- [ ] **Step 3: Remove dispatch-focused content**
+  Deleted: Invocation Pattern section (two-mode split), Mode-aware verification table, in-skill `Agent(subagent_type: ...)` dispatch blocks for Tier 2/3, "What to Report — delegated mode" return-field contract, Tier 1/2/3 classification matrix. Integration block updated to "Called by `integration-workflow` Phase B Step 3 mechanical-merge commit, when conflicts or material main-side changes exist; Phase D re-sync when main has advanced; or standalone by any agent or human."
 
-  Delete: "Invocation Pattern" section with the two-mode split; "Mode-aware verification" table; in-skill `Agent(subagent_type: ...)` blocks for Tier 2/3 merge-proposer/merge-reviewer dispatches; the "What to Report — delegated mode" return-field contract; the Tier 1/2/3 classification matrix (the skill's core act is "merge thoughtfully by intent"; classification is an internal concern of whoever is running the skill, not a load-bearing output for a dispatching caller). Replace the `## Integration` block's "Invoked internally by `integration-workflow` Phase B ... via delegated mode" with a neutral "Called by `integration-workflow` Phase B Step 3 mechanical-merge, or standalone by any agent or human doing a research-aware merge".
+- [x] **Step 4: Validate — terminal-use dry-read**
 
-- [ ] **Step 4: Validate — terminal-use dry-read**
-
-  Read the rewritten skill from top to bottom as if a human were running `git merge main` at the terminal on a paper-drafting branch (no orchestrator, no PLAN.md, no dispatch). Confirm nothing assumes a dispatching caller; confirm no data-analysis vocabulary leaks in except as an explicitly-illustrative example. Grep: `grep -n "Standalone\|Delegated\|excess_return\|Table 3\|econometric\|variable_construction\|delegated mode" skills/semantic-merge/SKILL.md` → expect empty. Commit.
+  Dry-read passed as a human running `git merge main` on a paper-drafting branch: no dispatching-caller assumptions, no data-analysis vocabulary except the illustrative example (which uses neutral phrasing). Grep for `Standalone\|Delegated\|excess_return\|Table 3\|econometric\|variable_construction\|delegated mode` → empty. Grep for `Tier 1\|Tier 2\|Tier 3\|recon reviewer\|verify reviewer\|two-commit\|Agent(subagent` → empty.
 
 ---
 
 ### Task 4: Extend `agent-orchestration §Concurrent Writers` with parallel-reviewer note
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A
 **Input:** `skills/agent-orchestration/SKILL.md` §Concurrent Writers Require Worktree Isolation (existing section, implementer-framed).
 **Output:** One additional short paragraph in `agent-orchestration §Concurrent Writers` generalizing the pattern to parallel reviewers walking disjoint slices of a large diff — same worktree isolation, same split-by-disjoint-scope, same orchestrator-aggregates-verdicts pattern. One-sentence note that the `Worktree:` dispatch field applies to reviewers in this configuration too.
 
-- [ ] **Step 1: Describe — read the current §Concurrent Writers**
+- [x] **Step 1: Describe — read the current §Concurrent Writers**
 
-  Read `skills/agent-orchestration/SKILL.md` §Concurrent Writers Require Worktree Isolation plus the `Worktree:` field spec (SKILL.md:143). Identify the core pattern (isolated worktree per concurrent writer to avoid index contention) and the implementer-specific framing that needs generalizing.
+  Read `skills/agent-orchestration/SKILL.md` §Concurrent Writers Require Worktree Isolation plus the `Worktree:` field spec (SKILL.md:143). Identified core pattern (isolated worktree per concurrent writer) and the implementer-specific framing ("Applies to implementers only") that needed generalizing.
 
-- [ ] **Step 2: Draft the extension**
+- [x] **Step 2: Draft the extension**
 
-  Append one paragraph to §Concurrent Writers: *"The same pattern generalizes to parallel reviewers when the diff to be walked is large enough that a single reviewer's context would exceed the ~150k threshold (see §Workload Balancing). The orchestrator splits the diff into disjoint slices (by task ID, by file subtree, or by commit range), dispatches one reviewer per slice on its own worktree, and aggregates the per-slice verdicts into a single overall verdict. The `Worktree:` dispatch field applies to reviewers in this configuration as well. Disjoint scoping is the invariant — two reviewers must not walk the same hunk, and their union must cover the whole diff."* Keep the paragraph inside §Concurrent Writers, not a new top-level section — the pattern is the same.
+  Added one paragraph to §Concurrent Writers (after the implementer-default sentence): parallel reviewers on disjoint worktrees when diff exceeds ~150k threshold; orchestrator splits by task ID / file subtree / commit range; aggregates per-slice verdicts; `Worktree:` field applies to reviewers in this configuration. Updated the `Worktree:` field spec note at SKILL.md:143 to read "parallel-dispatch only; implementers always, reviewers when using the parallel-reviewer pattern in §Concurrent Writers".
 
-- [ ] **Step 3: Validate — cross-read with Task 1**
+- [x] **Step 3: Validate — cross-read with Task 1**
 
-  Confirm Task 1's Phase B Step 1 + Step 3 references to "parallel siblings on worktrees" work against this extension. Grep: `grep -n "parallel reviewer\|reviewer.*worktree" skills/agent-orchestration/SKILL.md` → expect at least one hit in the extension paragraph. Commit.
+  Grepped: `grep -n "parallel reviewer\|reviewer.*worktree"` returns hits at lines 79 and 145. Task 1's Phase B Step 1 + Step 3 references to "parallel siblings on worktrees" work against this extension.
 
 ---
 

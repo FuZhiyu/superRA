@@ -74,7 +74,9 @@ no mutable state are encouraged to be dispatched in parallel to separate agents.
 
 When a parallel dispatch batch contains **≥2 implementers**, each runs in its own git worktree on a `parallel/<analysis-branch>/<slug>` branch (slug is orchestrator-chosen — `a`, `b`, `alpha`, a bundle name). Two implementers sharing a worktree race on `PLAN.md` / `RESULTS.md` and any shared output path; worktree isolation is the only safe concurrency model for parallel writes.
 
-Applies to implementers only. Reviewers run post-merge on the analysis branch. Read-only research subagents return findings to the orchestrator, which does the single write.
+Applies to implementers by default. Reviewers typically run post-merge on the analysis branch; read-only research subagents return findings to the orchestrator, which does the single write.
+
+The same pattern generalizes to parallel reviewers when the diff to be walked is large enough that a single reviewer's context would exceed the ~150k threshold (see §Workload Balancing). The orchestrator splits the diff into disjoint slices (by task ID, by file subtree, or by commit range), dispatches one reviewer per slice on its own worktree, and aggregates the per-slice verdicts into a single overall verdict. The `Worktree:` dispatch field applies to reviewers in this configuration as well. Disjoint scoping is the invariant — two reviewers must not walk the same hunk, and their union must cover the whole diff.
 
 ### Ownership split
 
@@ -140,7 +142,7 @@ only paraphrases the default protocol, the skill-load manifest, or
 `PLAN.md` content, delete it — re-statement of content the agent will
 read itself is noise that clutters the dispatch without adding signal.
 
-**`Worktree:` field (implementer-only, parallel-dispatch only).** Absolute path to the dedicated worktree provisioned per §Concurrent Writers. When present, the dispatch **must** include this canned steering in the `Additionally:` tail — the one case where that tail carries required, non-additive content:
+**`Worktree:` field (parallel-dispatch only; implementers always, reviewers when using the parallel-reviewer pattern in §Concurrent Writers).** Absolute path to the dedicated worktree provisioned per §Concurrent Writers. When present, the dispatch **must** include this canned steering in the `Additionally:` tail — the one case where that tail carries required, non-additive content:
 
 > *Work inside the worktree at `<path>`. Enter via `EnterWorktree` if available, otherwise `cd <path>`. Do not edit files outside. Do not merge or push — the orchestrator owns merge-back.*
 
