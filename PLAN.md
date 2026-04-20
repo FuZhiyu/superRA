@@ -102,7 +102,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ## Task 1: Scaffold `skills/writing/SKILL.md` — Iron Law + §Three Concurrent Disciplines
 
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED (2026-04-19, integration re-review)
 **Integration status:**
 
 **Files:** `skills/writing/SKILL.md` (new)
@@ -209,7 +209,7 @@ Self-check: (a) Iron Law protected by a Common Rationalizations table covering a
 ## Task 2: `style-checklist.md` + `structure-checklist.md`
 
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED (2026-04-19, integration re-review)
 **Integration status:**
 
 **Files:** `skills/writing/references/style-checklist.md` (new), `skills/writing/references/structure-checklist.md` (new)
@@ -237,7 +237,7 @@ Ensure SKILL.md §Pitfalls pointers resolve. Self-check: every rule has a ≤10-
 ## Task 3: `consistency/*.md` — 8 dimension-scoped reference files
 
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED (2026-04-19, integration re-review)
 **Integration status:**
 
 **Files:** `skills/writing/references/consistency/terminology.md`, `consistency/notation.md`, `consistency/cross-references.md`, `consistency/citations.md`, `consistency/numerical.md`, `consistency/math.md`, `consistency/argument-logic.md`, `consistency/code-paper.md` (all new)
@@ -274,7 +274,7 @@ Each file ≤ ~150 lines (fits in a single reviewer's context comfortably). Each
 ## Task 4: `refactor-and-compile.md` + `collaboration.md`
 
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED (2026-04-19, integration re-review)
 **Integration status:**
 
 **Files:** `skills/writing/references/refactor-and-compile.md` (new), `skills/writing/references/collaboration.md` (new)
@@ -298,7 +298,7 @@ Self-check: do the two files respect the one-source-of-truth principle (no dupli
 ## Task 5: `planning.md` + `workflow.md` — mode-heavy orchestration guidance
 
 **Depends on:** Tasks 2, 3, 4
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED (2026-04-19, integration re-review)
 **Integration status:**
 
 **Files:** `skills/writing/references/planning.md` (new), `skills/writing/references/workflow.md` (new)
@@ -339,7 +339,7 @@ Two hard rules:
 ## Task 6: `integration.md` + routing updates
 
 **Depends on:** Tasks 1, 2, 3, 4, 5
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED (2026-04-19, integration re-review)
 **Integration status:**
 
 **Files:** `skills/writing/references/integration.md` (new); **edits:** `skills/using-superRA/SKILL.md` (Skill Inventory + Skill-Load Manifest), `skills/planning-workflow/SKILL.md` (vertical table), `skills/integration-workflow/SKILL.md` (writing branch), `skills/merge-workflow/SKILL.md` (writing branch), `skills/CATEGORIES.md`, `README.md`
@@ -373,7 +373,7 @@ Self-check: every routing table has the new row; Skill-Load Manifest entries are
 ## Task 7: `CLAUDE.md` audit
 
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED (2026-04-19, integration re-review)
 **Integration status:**
 
 **Files:** `/CLAUDE.md` (possibly edited)
