@@ -1,6 +1,6 @@
 ---
 name: using-superRA
-description: Master skill for superRA agents. Carries the universal workflow principles, code-change defaults, skill inventory, composable-design map, and the Skill-Load Manifest that maps each Stage to required skills and stage-scoped references. Invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching handoff docs. Main agents additionally load `references/main-agent.md` for session-start actions, the autonomy contract, and the handoff-doc default load; subagents skip that reference and inherit task context from their dispatch.
+description: Master skill for superRA agents. Carries the universal workflow principles, code-change defaults, skill inventory, composable-design map, and the Skill-Load Manifest that maps each Stage to required skills and stage-scoped references. Invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching handoff docs.
 ---
 
 This is the one skill every superRA agent reads — main agents invoke it via the Skill tool before doing workflow work, dispatched subagents load it at dispatch time. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
@@ -83,7 +83,7 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
 
-**Main-agent default load.** Main agents additionally load `superRA:handoff-doc` when they invoke `using-superRA` (per `references/main-agent.md`) so that editing discipline is available before the main agent touches PLAN.md, and so `planning-workflow §Changing Plans` cross-references into `handoff-doc` (User Decisions Log, plan-anatomy) resolve. The subagent-side rows in the table above are unaffected — subagents load `handoff-doc` only on `documentation` / `planning-review` stages as listed.
+**Main-agent default loads.** If you are the main agent, load `references/main-agent.md` and `superRA:handoff-doc` now — before dispatching subagents or touching PLAN.md. `references/main-agent.md` carries the session-start actions and the full autonomy contract; `superRA:handoff-doc` carries the editing discipline needed before any PLAN.md / RESULTS.md edit and resolves the `planning-workflow §Changing Plans` cross-references into `handoff-doc` (User Decisions Log, plan-anatomy). Subagents skip both — they inherit task context from their dispatch and load `handoff-doc` only on `documentation` / `planning-review` stages as listed in the table above.
 
 **Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess. The manifest is the single source of truth for Stage→{skills, references}.
 
