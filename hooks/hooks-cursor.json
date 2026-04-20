@@ -1,11 +1,6 @@
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [
-      {
-        "command": "./hooks/session-start"
-      }
-    ],
     "preToolUse": [
       {
         "command": "./hooks/merge-guard"

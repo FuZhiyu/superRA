@@ -1,6 +1,6 @@
 # Main Agent — Session Start and Autonomy Contract
 
-Main agent loads this at session start; subagents skip — they inherit task context from their dispatch and do not make autonomy decisions of their own; they implement the task they were dispatched with and return a status.
+Carries the mandatory session-start actions (cross-session detection), the handoff-doc default-load cue, the three pause classes, proceed-without-asking patterns, banned check-in phrasings, and the "log before you act" rule. Subagents do not load this file — they inherit task context from their dispatch and do not make autonomy decisions.
 
 ## MANDATORY: Session Start Actions
 
@@ -49,7 +49,7 @@ find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/nul
 
 ## Load the Handoff-Doc Skill
 
-After cross-session detection, **load `superRA:handoff-doc`**. The main agent loads it at session start so the editing discipline is available before touching PLAN.md.
+After cross-session detection, **load `superRA:handoff-doc`**. The main agent loads it here so the editing discipline is available before touching PLAN.md.
 
 ## Changes of the Plan
 
