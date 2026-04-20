@@ -1,4 +1,4 @@
-# Flexible Integration-Workflow + General Semantic-Merge Refactor (Round 2)
+# Flexible Integration-Workflow + General Semantic-Merge Refactor
 
 > **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. This refactor edits skill files — every implementer and reviewer dispatch MUST additionally load `document-skills:skill-creator` and apply its conciseness, progressive-disclosure, and one-source-of-truth discipline. Preserve carefully-tuned content (Red Flags tables, rationalization lists, RA-framing language) per `/CLAUDE.md §Skill Changes`. Steps use checkbox (`- [ ]`) syntax.
 
@@ -29,7 +29,18 @@
 
 ## Decisions
 
-*(to be populated as user decisions arrive during execution)*
+**2026-04-20 — Round 3 extensions (user review of Rounds 1–2 landed skills).** After reading the full set of skills produced by Rounds 1–2, the researcher marked up the files with inline edits and five `<!-- -->` questions (parked in `.tracked-comments.md`). Some edits were prose-only (grammar, generalization of §Concurrent Writers → §Parallelization and Worktree Isolation, background-dispatch preference, §Difficulty and Agent Type) and landed in commit `a8c4113` without new task blocks. The structural questions become Round 3 tasks below:
+
+- **Branch-naming flip** (`parallel/<branch>/<slug>` → `<branch>/parallel/<slug>`) — already in `a8c4113`; Task 7 covers the cross-surface sweep the commit did not finish.
+- **Flexible integration base branch** (C1) — Phase B Step 1 currently hardcodes `merge-base..origin/<base-branch>` against main; should generalize to any tracked base (Task 8).
+- **Dispatch-template duplication in Phase B Step 3b** (C2) — Task 9.
+- **Red Flags usefulness in `integration-workflow`** (C3) — Task 10.
+- **`refactor-and-integrate §Scope by Integration Status` necessity** (C4) — Task 11.
+- **Two-commit mandate in `merge-quality.md`** (C5) — Task 12.
+
+DAG cascade: Tasks 1–6 keep their APPROVED statuses — Round 3 edits are additive refinements, not rewrites of the Round 2 deliverables. Round 3 will culminate in a fresh end-to-end dry-read (Task 13) that supersedes Task 6's Round 2 verification. Project-level `## Workflow Status` boxes remain unchecked (already the state since the plan was never fully re-opened after Task 6's APPROVE).
+
+Authorization: explicit user request on 2026-04-20 to "follow this idea to update the plan.md file to work on these updates; follow the update plan protocol."
 
 ---
 
@@ -235,3 +246,172 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 - [x] **Step 7: Write findings to `RESULTS.md`; fix ADVISORY issues in place; commit**
 
   For each scenario, write a short paragraph in RESULTS.md noting pass/fail and any residual stale vocabulary or coherence gaps. Fix [ADVISORY] items in place (naming-only, prose-only). Open [BLOCKING] items as review-notes entries on the relevant prior task for re-entry. Commit.
+
+---
+
+### Task 7: Cross-surface sweep for Round 3 renames
+**Depends on:** *(none — partial work already in `a8c4113`)*
+**Review status:**
+**Integration status:**
+
+**Script:** N/A
+**Input:** `a8c4113` diff; remaining stale hits surfaced by `grep -rn "§Concurrent Writers\|parallel/<branch>/<slug>\|parallel/\$BR/\$SLUG" skills/ agents/ README.md RELEASE-NOTES.md hooks/` (excluding `docs/plans/` historical records and `RESULTS.md` prior-round log entries).
+**Output:** All active surfaces use the new section name (`§Parallelization and Worktree Isolation`) and the new branch-naming convention (`<branch>/parallel/<slug>`). Historical `docs/plans/2026-04-17-*` files and prior-round `RESULTS.md` entries left untouched — those are dated artifacts of the earlier plan.
+
+- [ ] **Step 1: Enumerate stale hits**
+
+  Run `grep -rn "§Concurrent Writers" skills/ agents/ README.md RELEASE-NOTES.md` and `grep -rn "parallel/<branch>/<slug>\|parallel/<analysis-branch>/<slug>\|parallel/\*\|parallel/\$BR" skills/ agents/ README.md RELEASE-NOTES.md hooks/`. Classify each hit as active (must update) or historical (leave as-is).
+
+- [ ] **Step 2: Fix active hits**
+
+  Single-shot edit pass on active files. Exempt: `docs/plans/2026-04-17-*` (round-1 plan/results artifacts), `RESULTS.md` Task 4 description (historical log).
+
+- [ ] **Step 3: Validate**
+
+  Re-run both greps; confirm zero active hits remain. Commit.
+
+---
+
+### Task 8: Generalize integration-workflow base-branch (C1)
+**Depends on:** *(none)*
+**Review status:**
+**Integration status:**
+
+**Script:** N/A
+**Input:** `skills/integration-workflow/SKILL.md` Phase B Step 1 dispatch block + surrounding prose; `skills/semantic-merge/SKILL.md` (for consistent vocabulary).
+**Output:** Phase B Step 1 no longer hardcodes `merge-base..origin/<base-branch>` against main. Dispatch reads against a named integration target (e.g., `<integration-base>`) that defaults to main but can be overridden when the researcher is integrating against a sibling branch, a release branch, or a co-authored track. Supporting prose (§Phase Map, §Always list, Integration Intent description) updated to match. `semantic-merge` cross-reference unchanged — it already handles arbitrary base branches.
+
+- [ ] **Step 1: Describe — current rigidity**
+
+  Identify every place Phase B Step 1 (and its diagram/red-flags text) names `main` or `origin/<base-branch>` as if it were the only possible target. Read `semantic-merge/SKILL.md` to confirm it is already base-agnostic.
+
+- [ ] **Step 2: Generalize vocabulary**
+
+  Introduce `<integration-base>` (default `origin/main`, overridable by the researcher at the point the user chooses Option 1 / Option 2 in `execution-workflow` Step 4) and update the Step 1 dispatch `Git range:` line + Integration Intent walking instructions. Preserve the main-default so existing callers keep working.
+
+- [ ] **Step 3: Validate — dry-read for a non-main base**
+
+  Walk the Phase B flow mentally for a researcher integrating back into a `release/2026-Q2` branch instead of main. Confirm nothing in the text requires main. Commit.
+
+---
+
+### Task 9: Drop duplicated implementer template from Phase B Step 3b (C2)
+**Depends on:** *(none)*
+**Review status:**
+**Integration status:**
+
+**Script:** N/A
+**Input:** `skills/integration-workflow/SKILL.md` Phase B Step 3b (currently embeds a full `Agent(subagent_type: ...)` implementer dispatch block); `skills/agent-orchestration/SKILL.md` §Dispatch Templates (canonical implementer template).
+**Output:** Phase B Step 3b points at `agent-orchestration` §Dispatch Templates for the shape and supplies only the integration-stage-specific steering (task scope = REVISE tasks; mechanical merge first; drift tests after). No duplicated template block. If the orchestration canonical template does not carry enough signal for integration-stage dispatch, flag the gap and either (a) extend the canonical template with an optional integration note or (b) keep a tight integration-specific annotation in this Step — whichever preserves DRY without losing information.
+
+- [ ] **Step 1: Describe — compare current duplicated block to the canonical**
+
+  Read both. Identify fields the integration-specific block adds that the canonical does not cover (e.g., `Tasks in scope:` list; the "mechanical merge first" invariant; drift-test re-run order).
+
+- [ ] **Step 2: Collapse**
+
+  Replace the duplicated block with a short prose paragraph that names the canonical template + lists the integration-specific additions only. If additions don't fit cleanly in the template, lift the minimum-needed fields back into the template (or leave a tight annotated block with a comment explaining why it stays). Decision recorded inline in the Step 3b paragraph.
+
+- [ ] **Step 3: Validate**
+
+  Grep `integration-workflow/SKILL.md` for `Agent(subagent_type:` — target is zero or one residual block (with justification). Commit.
+
+---
+
+### Task 10: Assess and trim integration-workflow §Red Flags (C3)
+**Depends on:** *(none)*
+**Review status:**
+**Integration status:**
+
+**Script:** N/A
+**Input:** `skills/integration-workflow/SKILL.md` §Red Flags list.
+**Output:** Each Red Flag bullet evaluated against two criteria: (a) does it warn against a rationalization the RA is plausibly going to make, and (b) is it not already implied by a `[BLOCKING]` item in `refactor-and-integrate` or `using-superRA` §Universal Principles? Bullets that fail both criteria are removed. Bullets that restate content carried elsewhere are replaced with a pointer. If the whole section loses its teeth, drop it entirely.
+
+- [ ] **Step 1: Triage each bullet**
+
+  Walk the `Never:` and `Always:` lists bullet by bullet; mark keep / trim / point-elsewhere / drop.
+
+- [ ] **Step 2: Apply**
+
+  Edit the section per the triage. Preserve carefully-tuned content about the reviewer being dispatched (load-bearing per Round 2 Task 1's Red Flags work). Commit.
+
+- [ ] **Step 3: Validate**
+
+  Re-read the section cold; confirm remaining bullets pass both criteria. Commit.
+
+---
+
+### Task 11: Evaluate `refactor-and-integrate §Scope by Integration Status` (C4)
+**Depends on:** Task 9 *(because the implementer template carries the scope info; Task 9 might already obviate this section)*
+**Review status:**
+**Integration status:**
+
+**Script:** N/A
+**Input:** `skills/refactor-and-integrate/SKILL.md` §Scope by Integration Status; Task 9's output (dispatch-template scope handling).
+**Output:** Section either kept (if it carries invariants the dispatch template cannot express — e.g., the implementer's *refusal* to touch APPROVED tasks even when named in the template), trimmed to just that invariant, or dropped entirely with the invariant lifted into the Implementer Self-Check. The `handoff-doc` cross-reference (`plan-anatomy.md:178–179`) is preserved wherever the cascade rule lives.
+
+- [ ] **Step 1: Describe — what the section is load-bearing for**
+
+  Identify content that is NOT expressible as a dispatch-time instruction (implementer-refusal semantics, reviewer out-of-scope boundary) versus content that IS (naming the in-scope list).
+
+- [ ] **Step 2: Apply the decision**
+
+  Drop / trim / keep per Step 1. If dropped, verify the Implementer Self-Check and the reviewer's Pre-Review Scope Check still carry the invariant.
+
+- [ ] **Step 3: Validate**
+
+  Grep `skills/ agents/` for `§Scope by Integration Status` cross-references; update any that break. Commit.
+
+---
+
+### Task 12: Relax two-commit mandate in `merge-quality.md` (C5)
+**Depends on:** *(none)*
+**Review status:**
+**Integration status:**
+
+**Script:** N/A
+**Input:** `skills/refactor-and-integrate/references/merge-quality.md` §How-To §Two-commit structure — templates; the corresponding gated checklist items in the reference.
+**Output:** Section reframed from "two commits required" to "separate commits when intent is different" — mechanical merge and intent commits MAY be combined when the merge is trivial and the intent edit is small; the separation is a discipline tool, not a mandate. Checklist items downgraded from `[BLOCKING]` to `[ADVISORY]` where the blocking rationale no longer holds. `integration-workflow` Phase B Step 3 1+N language already reads non-mandatorily (Round 2 Task 3); no change there.
+
+- [ ] **Step 1: Describe — what the two-commit structure buys**
+
+  Identify the failure modes the two-commit discipline prevents (conflated intent, un-reviewable mechanical hunks). Note which of those survive under a "separate when intent differs" rule.
+
+- [ ] **Step 2: Rewrite**
+
+  Rewrite the How-To section + adjust severity markers on the gated checklist. Keep the templates as examples of the separated case.
+
+- [ ] **Step 3: Validate — cross-read against `semantic-merge`**
+
+  `semantic-merge/SKILL.md` states 1+N as "one possible workflow" (Round 2 Task 3). Confirm the relaxation here is consistent. Commit.
+
+---
+
+### Task 13: Round 3 end-to-end dry-read verification
+**Depends on:** Tasks 7, 8, 9, 10, 11, 12
+**Review status:**
+**Integration status:**
+
+**Script:** N/A
+**Input:** All Round 3 refactored skills + agent files + peripheral docs.
+**Output:** Walk-through notes appended to `RESULTS.md` (new Round 3 section) covering the four scenarios that exercise the Round 3 changes: (a) integrating against a non-main base (Task 8); (b) Phase B Step 3b dispatch with the collapsed template (Task 9); (c) reduced Red Flags section still catches the intended rationalizations (Task 10); (d) two-commit-optional merge on a trivial sync (Task 12). Supersedes Task 6 for Round 3 coverage; Task 6's log stays as the Round 2 baseline.
+
+- [ ] **Step 1: Scenario (a) — non-main integration base**
+
+  Hypothetical branch integrating into `release/2026-Q2`. Walk Phase B Step 1 dispatch + Integration Intent scan. Confirm no hardcoded main vocabulary remains in the path.
+
+- [ ] **Step 2: Scenario (b) — collapsed Phase B Step 3b dispatch**
+
+  Walk the orchestrator dispatching an implementer via the canonical template + integration-specific annotation. Confirm the implementer has every field it needs (scope list, mechanical-merge invariant, drift-test re-run order).
+
+- [ ] **Step 3: Scenario (c) — Red Flags regression check**
+
+  List the rationalizations that the old (Round 2) §Red Flags caught. For each, confirm either (i) the bullet survived Task 10, or (ii) another surface (checklist, skill body) catches it.
+
+- [ ] **Step 4: Scenario (d) — trivial one-commit merge**
+
+  Walk a trivial main-sync where the mechanical merge and the intent edit are both near-empty. Confirm `merge-quality.md` now reads as one-commit-allowed without losing the "separate when different intent" discipline.
+
+- [ ] **Step 5: Write findings + commit**
+
+  Append Round 3 section to `RESULTS.md`. Fix any [ADVISORY] stale-vocabulary hits in place. Surface any [BLOCKING] issues as review-notes on the responsible Round 3 task.
