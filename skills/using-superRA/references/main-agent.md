@@ -1,7 +1,5 @@
 # Main Agent — Session Start and Autonomy Contract
 
-Carries the mandatory session-start actions (cross-session detection), the handoff-doc default-load cue, the three pause classes, proceed-without-asking patterns, banned check-in phrasings, and the "log before you act" rule. Subagents do not load this file — they inherit task context from their dispatch and do not make autonomy decisions.
-
 ## MANDATORY: Session Start Actions
 
 Before your first substantive response, run these cross-session detection checks:
@@ -11,33 +9,6 @@ Before your first substantive response, run these cross-session detection checks
 4. If any exist, report to the user: "Found in-progress analysis work: [details]"
 
 Do NOT skip these because the user "jumped straight into a task." The checks take 5 seconds and prevent lost work.
-
-## Cross-Session Detection
-
-**At session start, check for in-progress work:**
-
-```bash
-# Check current branch (propose feature branch if on main/master)
-git branch --show-current
-
-# Check if currently in a worktree
-git rev-parse --is-inside-work-tree 2>/dev/null && git worktree list 2>/dev/null
-
-# Check for analysis branches
-git branch --list 'analysis/*' 2>/dev/null
-
-# Check for PLAN.md at project root
-[ -f "PLAN.md" ] && grep -c "\- \[ \]" PLAN.md 2>/dev/null
-
-# Check for tasks under review or with issues
-grep "Review status" PLAN.md 2>/dev/null | grep -v APPROVED | head -5
-
-# Check for RESULTS.md for context
-[ -f "RESULTS.md" ] && echo "Results document found"
-
-# Fallback: check docs/ for archived or legacy plans
-find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/null | head -5
-```
 
 **If an incomplete plan is found** (PLAN.md with unchecked `- [ ]` steps or non-APPROVED review status):
 - Summarize: "Found in-progress analysis: `PLAN.md` (N tasks APPROVED, K with review issues or pending review). RESULTS.md has findings through Task K. Resume?"
@@ -103,3 +74,16 @@ When a pause is legitimate, ask a single focused question and wait for the answe
 ## Log Before You Act
 
 Every user decision produced at a stop point is written into `PLAN.md` per `handoff-doc` §User Decisions Log **before** the agent acts on it, and committed atomically with the work it unblocks. The doc is the record; the chat message is the pointer.
+
+
+## Execution Modes
+
+For execution throughout the workflows, the main agent can dispatch subagent for implementation, or implement it itself. The subagent mode is the recommended mode and all the following workflows assume operations under the subagent mode. To use that, you must load the skill `superRA:agent-orchestration`.
+
+**Direct mode.** When the orchestrator executes a step itself — no subagent dispatch — it plays the implementer or reviewer role in-session. The discipline is the same; only the dispatch envelope is gone.
+
+- **Read the agent file for the role you are playing.** For an implementation step, read `agents/implementer.md`. For a review step, read `agents/reviewer.md`. Follow the protocol there as written.
+- **The Skill-Load Manifest still drives loads.** Consult the manifest row for your Stage and load the listed skills and references yourself in-session.
+- **The dispatch-prompt contract does not apply — there is no dispatch.** Task context comes from `PLAN.md`, `RESULTS.md`, and the current session; you do not write an `Additionally:` line to yourself.
+- **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's §Three Concurrent Disciplines before committing. Update `PLAN.md` / `RESULTS.md` inline per the handoff-doc editing etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1, or load `superRA:handoff-doc` if you need the full discipline. Reviewer verdicts are still APPROVE / REVISE even when you render them as your own conclusion.
+- **Review is never skipped.** If you implemented in direct mode, you still need a review pass — either dispatch a reviewer subagent for the review step, or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.

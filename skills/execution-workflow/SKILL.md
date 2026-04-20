@@ -9,48 +9,24 @@ Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA work
 
 Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE; the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines` + relevant §Pitfalls). Falls back to direct execution when the user requests it or tasks are trivial.
 
-**Core principle:** Fresh subagent per task + one comprehensive review pass = high quality, reproducible work. Review always happens regardless of execution mode.
-
 **Announce at start:** "I'm using the execution-workflow skill to implement this plan."
 
 ## Execution Modes
 
-Mode selection, in order:
-
-1. **No plan?** → run `superRA:planning-workflow` first.
-2. **No subagent capability on this harness?** → Direct mode (fallback).
-3. **User explicitly prefers direct, or tasks are trivial?** → Direct mode (fallback).
-4. **Otherwise** → Subagent mode.
-
-**Subagent mode:**
-- Dispatch implementer subagent per task
-- One comprehensive review pass after each (verdict: APPROVE / REVISE)
-- Fresh context per task (no pollution)
-- Orchestrator preserves context for coordination
-
-**Direct mode (fallback):**
-- Main agent implements tasks directly
-- Still dispatches reviewer subagents after each task (review is never skipped)
-- Use when: user explicitly requests it, single trivial task, or platform lacks subagents
+1. Load plan from `PLAN.md` (run `superRA:planning-workflow` first if no plan exists).
+2. Use **subagent mode** (default): dispatch implementer subagent per task; fresh context per task; orchestrator preserves context for coordination.
+3. Fall back to **direct mode** when the harness lacks subagent capability, the user explicitly requests it, or tasks are trivial. Direct mode: main agent implements; reviewer subagents still dispatched after each task (review is never skipped).
 
 ## The Process
 
-Top-level loop:
-
 1. Read plan, extract all tasks, create TodoWrite.
-2. **Per task** (see inner loop below).
+2. **Per task:**
+   a. Dispatch implementer subagent. Answer context questions, re-dispatch if needed.
+   b. Implementer runs describe → analyze → validate → commit.
+   c. Dispatch reviewer subagent (one comprehensive pass).
+   d. **APPROVE** → update plan file + commit, next task. **REVISE** → fix `[BLOCKING]` findings → narrow re-review (cited fixes + dependent findings). Loop until APPROVE, then update plan file + commit.
 3. When no tasks remain → verify pipeline + reproducibility (Step 3).
-4. Dispatch `integration-workflow` 
-
-**Per-task inner loop:**
-
-1. Dispatch implementer subagent.
-2. If the implementer asks questions → answer with context, then re-dispatch.
-3. Implementer runs describe → analyze → validate → commit.
-4. Dispatch reviewer subagent (one comprehensive pass).
-5. Branch on verdict:
-   - **APPROVE** → update plan file + commit, return to top loop.
-   - **REVISE** → implementer fixes `[BLOCKING]` findings → re-dispatch reviewer (narrow re-review: verify cited fixes + any finding annotated as depending on an upstream fix). Loop until APPROVE, then update plan file + commit.
+4. Present Step 4 completion menu; dispatch `integration-workflow` on merge/PR.
 
 ### Step 0: Branch Check
 
@@ -80,23 +56,21 @@ After the branch check, confirm `PLAN.md` and `RESULTS.md` exist, are tracked, *
   && git diff --quiet --cached -- PLAN.md RESULTS.md
 ```
 
-All four conjuncts must succeed. The first two confirm existence and tracking; the last two confirm the worktree copy matches the committed copy (neither a dirty edit nor a staged-but-uncommitted change). A silent pass on dirty state would let execution proceed against a handoff doc that does not actually match what is in git history — exactly the out-of-doc state Workflow Principle 2 forbids.
+All four conjuncts must succeed. The first two confirm existence and tracking; the last two confirm the worktree copy matches the committed copy (neither a dirty edit nor a staged-but-uncommitted change).
 
-If the check fails (one or both missing, present but untracked, or present with uncommitted edits), the user probably entered this workflow without going through `planning-workflow` first — for example, they exited CLI plan-mode and jumped straight to execution, inherited an existing branch that never bootstrapped docs, or left in-flight edits uncommitted.
+**If the check fails, halt and invoke `superRA:planning-workflow` to bootstrap the docs.** Do not inline planning-workflow content here — proceed through its full Phase 1 / Phase 2 / Self-Review; resume execution-workflow at Step 1 after planning-workflow completes.
 
-**If the check fails, halt execution-workflow and invoke `superRA:planning-workflow` to bootstrap the docs.** Do not inline planning-workflow content here — the docs are created through planning-workflow's full Phase 1 / Phase 2 / Self-Review (with any applicable domain-specific planning gate satisfied there, not here). Resume execution-workflow at Step 1 after planning-workflow completes; its own self-review and execution-handoff will return control here.
+Step 0 (branch check) must have already run — Step 0b comes after Step 0 so bootstrap commits cannot silently land on `main` / `master`.
 
-Step 0 (branch check) must have already run and granted consent to commit on the current branch — Step 0b intentionally comes after Step 0 so planning-workflow's bootstrap commits cannot silently land on `main` / `master`.
-
-If the docs exist, are tracked, and the worktree is clean, proceed directly to Step 1.
+If the docs exist, are tracked, and the worktree is clean, proceed to Step 1.
 
 ### Step 1: Load and Review Plan
 
 1. Read `PLAN.md` and `RESULTS.md`. `PLAN.md` is the task tracker (`superRA:planning-workflow §PLAN.md Is the Task Tracker`); `TodoWrite` mirrors it as a transient session view, not a substitute.
 2. **Read `## Workflow Status`** at the top of `PLAN.md`. The checklist names which milestones are complete (`Plan approved`, `Execution complete`, `Drift tests created`, `Refactored`, `Docs finalized`, `Merged`) and tells a resuming agent exactly which phase this branch is at without grepping commits. If `Execution complete` is already checked, skip to Step 3 (verification); if earlier milestones are unchecked unexpectedly, raise it with the user before dispatching tasks.
    - **Also read per-task `**Review status:**` and `**Integration status:**` fields alongside `## Workflow Status`.** If any project-level box is unchecked while some tasks remain APPROVED, a prior `planning-workflow §User Feedback and Changing Plans` invocation unchecked those boxes (Step 4) and paused — resume that protocol at Step 6 before dispatching any implementer. Enter `§User Feedback and Changing Plans` at Step 1 if the researcher instead pings mid-execution with a scope change.
-3. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` (plus `references/notebook-format.md` when analysis scripts are being written or reviewed). Any task-specific helper skills named in PLAN.md's header or implied by the methodology — load those too. As orchestrator you make dispatch decisions, adjudicate reviewer feedback, and route between Step 2 sub-steps — you cannot do any of that competently without the discipline the domain skill encodes. The implementer and reviewer subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time, but the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
-4. **Read PLAN.md's `## Project Conventions` section.** It is populated at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy). Skim and proceed. If the section is missing, empty, or its walk date is stale relative to the current work, walk now and populate it — walk up from every directory PLAN.md says will be touched and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` along the path, plus `README.md` in any data directory the plan loads from, then write one-paragraph summaries into the section and commit the update before dispatching subagents. These conventions are load-bearing for adjudicating reviewer findings ("is this a codebase-fit issue the reviewer correctly flagged, or noise?") and for editing upcoming tasks inline. Subagents read the populated section instead of re-walking per dispatch; if a subagent finds the section missing something, it walks on-demand and reports the omission so you can update the section.
+3. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` (plus `references/notebook-format.md` when analysis scripts are being written or reviewed). Any task-specific helper skills named in PLAN.md's header — load those too. Subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time; the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
+4. **Read PLAN.md's `## Project Conventions` section** (anatomy: `handoff-doc/references/plan-anatomy.md` §Project Conventions). If the section is missing, empty, or stale, walk and populate it now — commit before dispatching subagents.
 5. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources / inputs available and accessible?
    - Are the steps in the right order?
@@ -203,9 +177,6 @@ These are the things the orchestrator does that no subagent does:
 
 **Review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Three Concurrent Disciplines). Codebase integration review is deferred to integration-workflow (dispatched by this skill at Step 4 when the user chooses merge or PR).
 
-## Model Selection
-
-Use the least capable model that handles the task; reviewers use the most capable available model. Domain-specific complexity examples live in the domain skill, not here.
 
 ## Handling Implementer Status
 
@@ -256,11 +227,3 @@ See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of
 - Do NOT skip the re-review
 - Do NOT ask the user whether to fix — iterate automatically
 
-## Integration
-
-**Required workflow skills:**
-- **superRA:agent-orchestration** — OWNS: parallel-dispatch discipline (§Workload Balancing, §Parallelization and Worktree Isolation). Required reading when parallel-dispatching ≥2 subagents; `references/worktree-harness-fallback.md` covers worktree create / enter / remove.
-  - **superRA:worktree-data-sync** — invoked from within the parallel-dispatch flow to seed non-git data into a provisioned worktree; do not hand-roll copy scripts.
-- **superRA:planning-workflow** — Creates the plan this skill executes
-- **the active domain skill (for data analysis: `superRA:econ-data-analysis`)** — REQUIRED: domain discipline all agents follow, loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest. Carries the §Three Concurrent Disciplines that the reviewer walks on every pass.
-- **superRA:integration-workflow** — Drift tests (Phase A), iterative sync + refactor (Phase B), doc finalization (Phase C), final merge/PR/cleanup (Phase D). Dispatched by this skill at Step 4 on merge/PR.

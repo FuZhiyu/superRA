@@ -14,15 +14,13 @@ description: >
   "clean this data", "construct variable X", "check the summary stats",
   "why is this number so large", "I'll just filter and move on",
   or any data file with unknown structure. Language-agnostic (Python,
-  Julia, R, Stata). Loaded by implementer and reviewer subagents
-  at dispatch time when the stage touches analysis code, per the
-  `superRA:using-superRA` §Skill-Load Manifest.
+  Julia, R, Stata).
 user-invocable: true
 ---
 
 # Economic Data Analysis
 
-superRA's flagship domain skill. Carries the cross-cutting discipline that applies at every stage of a data analysis — the Iron Law, the three concurrent disciplines (Describe, Analyze, Validate) with inline severity markers, the pitfalls catalog, and the common rationalizations. Main body is loaded by implementer and reviewer subagents at every analysis-touching dispatch.
+Domain skill for rigorous economic data work; body carries §Three Concurrent Disciplines, §Pitfalls, §Common Rationalizations.
 
 ## Stage-Scoped References
 
@@ -35,8 +33,6 @@ Companion reference files carry content that applies at a specific phase or oper
 | `references/integration.md` | INTEGRATE phase — data-specific refactor-integrity gates (variable-construction consistency, transformation-pattern consistency, preserved describe steps / row-count prints / validation checks, drift-test pass-through). Loaded at the `integration` stage. |
 | `references/data-robustness-checklist.md` | PLAN phase (design) and IMPLEMENT phase (execution of sensitivity tasks) — menu of robustness checks. |
 | `references/notebook-format.md` | IMPLEMENT + VALIDATE phase — cell organization, markdown narrative, writing discipline (major-vs-minor-decision rule, figure placement), output idioms, and language-specific rendering (Python via jupytext, Julia via QuartoNotebookRunner). Loaded by the **implementer** alongside the main body whenever analysis scripts are being written or rendered. Companion guides: `jupytext-guide.md`, `julia-quarto-guide.md`. |
-
-The main body below is the shared base that both implementer and reviewer load — it carries §Three Concurrent Disciplines (teaching + inline severity-marked checklist), §Pitfalls (operation-specific correctness), §Common Rationalizations, and §Key References. The implementer additionally loads `references/notebook-format.md` for analysis-script stages (per the manifest). The reviewer loads SKILL.md only.
 
 ## The Iron Law
 
@@ -53,8 +49,6 @@ Transformed data without describing it first? Undo the transformation. Start ove
 - Undo means undo
 
 Describe fresh from the current data state. Period.
-
-**Violating the letter of the rules is violating the spirit of the rules.**
 
 ---
 
@@ -108,15 +102,13 @@ When data was already imported and validated upstream, read existing diagnostics
 
 **Visualization for key variables:**
 
-Supplement summary statistics with diagnostic plots — part of Describe, created alongside the statistics they complement. Not publication quality; clear axis labels, informative titles, readable scales. Save to the output directory alongside notebook renders; for rendering see `references/notebook-format.md`.
-
 - `[ADVISORY]` **Distributions**: histograms for continuous variables — reveal skew, modes, outliers that summary stats miss. Use for any variable about to be transformed, winsorized, or filtered on.
 - `[ADVISORY]` **Relationships**: scatter plots for variable pairs — show nonlinearity, clusters, influential observations that correlations hide.
 - `[ADVISORY]` **Temporal patterns**: line plots of variable vs time — detect structural breaks, trends, seasonality. Essential for any time-series variable.
 
 ### Analyze
 
-Transform data with integrity. This is the shortest of the three disciplines — most of the work is in getting Describe right before and Validate right after. Operation-specific traps live in §Pitfalls below — walk the subsections matching the operations this task actually performs.
+Transform data with integrity. Operation-specific traps live in §Pitfalls below — walk the subsections matching the operations this task actually performs.
 
 - `[BLOCKING]` **One logical operation per step.** Don't chain merge + filter + construct in a single step. Each Analyze step corresponds to one verb: merge, filter, construct, aggregate, reshape, deduplicate.
 - `[BLOCKING]` **Row-count logging at every sample-changing operation.** Print `before → after` for every merge, filter, drop, deduplication, or sample restriction. Major operations typically warrant their own cell; minor operations can share a cell as long as the count is printed.

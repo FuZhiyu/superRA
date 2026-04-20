@@ -9,8 +9,6 @@ Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the ful
 
 Assumes execution-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in execution-workflow.
 
-**Core principle.** Tests guard results. Minimum net diff relative to integration base. Nothing advances without reviewer APPROVE at every gate (drift-test review, integration review, doc review). Non-trivial merges with main use `superRA:semantic-merge`; the integration reviewer decides whether one is needed.
-
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
 ## Phase Map
@@ -30,7 +28,7 @@ Phase D — Final merge / PR / cleanup
                          proposes, researcher decides)
 ```
 
-**Autonomy.** Between stop points, run on your own power — do not check in after each phase, do not re-confirm a reviewer's APPROVE. Legitimate stop points:
+**Autonomy** — full contract: `superRA:using-superRA` §Universal Principles (#4). Legitimate stop points in this workflow:
 
 - Phase A Step 2 — drift-test candidate confirmation
 - Phase B — batched research-meaningful decisions surfaced by the integration reviewer (see Phase B Step 2)
@@ -38,13 +36,11 @@ Phase D — Final merge / PR / cleanup
 - Phase C Step 1 — Phase C RESULTS.md relocation target when project guidance is silent
 - Phase C Step 4 — PLAN.md disposition
 
-See `superRA:using-superRA` §Universal Principles (#4) for the full autonomy contract, and `superRA:handoff-doc` §User Decisions Log for how every answer must land in PLAN.md before the workflow acts on it.
+Every stop: log the answer per `superRA:handoff-doc` §User Decisions Log **before** acting.
 
 ## Dispatch Convention
 
-Every dispatch in this skill uses the canonical template in `superRA:agent-orchestration` §Dispatch Templates — required fields first, `Additionally:` anchor last (strictly additive steering only). The Skill-Load Manifest in `superRA:using-superRA` is the single source of truth for what each `Stage:` loads — dispatches do not restate skill/reference loads, do not paraphrase PLAN.md, and do not repeat checklist items the agent already reads. REVISE adjudication follows `superRA:agent-orchestration` §Handling Reviewer Feedback.
-
-The checklist discipline for every implementer self-check and every reviewer walk in this workflow lives in `superRA:refactor-and-integrate` (principles in body; `[BLOCKING]` / `[ADVISORY]` items in the stage-scoped references).
+All dispatches: canonical template in `superRA:agent-orchestration` §Dispatch Templates; skill loads per `superRA:using-superRA` §Skill-Load Manifest; checklist discipline per `superRA:refactor-and-integrate`. REVISE adjudication: `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
 ## Phase A — Drift Test Creation
 
@@ -144,9 +140,7 @@ When every in-scope task is `Integration status: APPROVED` and the Integration I
 
 ## Phase C — Documentation Finalization + PLAN.md Disposition
 
-After Phase B APPROVES the unified diff, `RESULTS.md` still needs to mature from dev log to permanent record and `PLAN.md` still needs disposition. This phase gates the RESULTS.md maturation behind a **single implementer–reviewer pair** (doc-writer + doc-reviewer); the orchestrator handles the user-facing decisions (relocation target, PLAN.md disposition) on either side of the pair.
-
-Format discipline for sub-part A (maturation) lives entirely in `superRA:report-in-markdown`. This phase orchestrates — it does not duplicate the rules.
+Gates `RESULTS.md` maturation (dev log → permanent record) behind a doc-writer + doc-reviewer pair; orchestrator handles user-facing decisions (relocation target, PLAN.md disposition). Format discipline lives in `superRA:report-in-markdown`.
 
 ### Step 1: Resolve `RESULTS_DIR` (orchestrator preamble)
 
@@ -334,13 +328,9 @@ Report what was merged/pushed and what was cleaned up.
 
 ## Agent Loads
 
-See `superRA:using-superRA` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows. The Phase B implementer runs `Stage: integration`; `superRA:semantic-merge` is loaded when the mechanical merge needs intent-based resolution (the integration reviewer's annotation drives that call, not a Tier gate).
-
-Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates RESULTS.md maturation per workflow principle P1. Step 4 (PLAN.md disposition) and Phase D Step 2 (milestone flip) stay with the orchestrator because they are user-facing decisions, not RA-implementable tasks. Project-level doc audit is covered by the Phase B integration reviewer per `codebase-integration.md` §Project Doc Audit — not by Phase C.
+See `superRA:using-superRA` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows.
 
 ## Red Flags
-
-Each bullet below catches a rationalization the RA is plausibly going to make *in this phase*. Sequencing reminders and cross-skill principles (integration discipline, merge quality, drift-test integrity, RA framing) live where they are owned and are not restated here. See the cross-cutting references at the end of this section.
 
 **Never:**
 - Skip the integration reviewer and dispatch the implementer blind — per-task annotations, Integration Intent updates, and the user-decision batch all come from the reviewer
@@ -350,5 +340,3 @@ Each bullet below catches a rationalization the RA is plausibly going to make *i
 
 **Always:**
 - Author new drift tests only for tasks with `**Integration status:** ≠ APPROVED`, but run the **full** drift-test suite on every integration pass (scope is for authoring; running is not scoped)
-
-**Drift-test integrity** is governed by the cross-cutting rules in `superRA:refactor-and-integrate` `references/drift-test-quality.md`. **Merge quality** is governed by `references/merge-quality.md`. **Codebase integration + minimum net diff** is governed by `references/codebase-integration.md` and the body of `refactor-and-integrate` (Minimum-net-diff top item + Implementer Self-Check). **RA framing** (no unilateral methodology judgments; escalate via `AskUserQuestion`) is governed by `superRA:using-superRA` §Universal Principles.
