@@ -21,7 +21,7 @@
 - [x] **Plan approved** — researcher signed off on this plan (2026-04-19; re-approved after §Changing Plans protocol on 2026-04-19 for recon-as-reviewer architecture and shortcut axes)
 - [x] **Execution complete** — Task 8 reviewer APPROVED (2026-04-19); all 8 tasks `**Review status:** APPROVED`
 - [x] **Drift tests created** — N/A for skill refactor; substitute satisfied by Task 7 end-to-end dry-run + skill-graph consistency sweep (2026-04-19)
-- [ ] **Refactored** — rolled back 2026-04-19 by §Changing Plans; Task 8 will produce new skill-file hunks requiring a fresh Phase B recon + verify pass. Tasks 1–7 retain `**Integration status:** APPROVED` (no code changes)
+- [x] **Refactored** — Phase B re-entry verify reviewer APPROVED (2026-04-19) cumulative diff post-semantic-merge (Tier 2 absorption of origin/main 9831255..6d4a0ea into merge commit `712602e`); all 8 tasks `**Integration status:** APPROVED`
 - [ ] **Docs finalized** — rolled back 2026-04-19 by §Changing Plans; matured RESULTS.md needs a Task 8 section + fresh doc-review pass
 - [ ] **Merged** — rolled back 2026-04-19 by §Changing Plans; PR #5 description and branch both require the Task 8 changes before merge
 
@@ -277,7 +277,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ### Task 8: Retrospective refinements from Phase A–D dogfooding
 **Depends on:** Tasks 1, 2, 5 *(edits files those tasks touched; added post-integration 2026-04-19 via §Changing Plans)*
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** N/A (skill + agent file edits)
 **Input:** `skills/handoff-doc/references/plan-anatomy.md`, `skills/integration-workflow/SKILL.md`, `agents/reviewer.md`, `agents/implementer.md`.
