@@ -167,7 +167,6 @@ fi
 # is in effect.
 dispatch_files="skills/execution-workflow/SKILL.md
 skills/integration-workflow/SKILL.md
-skills/merge-workflow/SKILL.md
 skills/semantic-merge/SKILL.md
 skills/refactor-and-integrate/SKILL.md"
 dispatch_count=0

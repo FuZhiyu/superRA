@@ -43,10 +43,8 @@ The full superRA workflow spans three team-worthy phases:
 ```
 execution-workflow (analysis team)
   → cleanup
-    → integration-workflow (integration team)
+    → integration-workflow (integration team, Phases A–D)
       → cleanup
-        → merge-workflow (merge team)
-          → cleanup
 ```
 
 Sequential teams with cleanup. The lead cleans up each team before spawning the next.
@@ -98,11 +96,11 @@ For 2+ independent tasks that can be worked on without shared state or sequentia
 
 ### Infrastructure for Parallel Work
 
-When dispatching parallel agents that need isolated workspaces, follow `SKILL.md` §Concurrent Writers Require Worktree Isolation:
+When dispatching parallel agents that need isolated workspaces, follow `SKILL.md` §Parallelization and Worktree Isolation:
 
 - Provision one worktree per agent per `references/worktree-harness-fallback.md` (harness tools preferred; raw `git worktree` otherwise).
 - Seed non-git data via `superRA:worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink`.
-- Merge back with plain `git merge` on the `parallel/<branch>/<slug>` branches.
+- Merge back with plain `git merge` on the `<branch>/parallel/<slug>` branches.
 
 Do not hand-roll worktree setup or data-copy scripts.
 
@@ -207,5 +205,5 @@ On session resume, this tells the new lead exactly where to pick up.
 - **Task status can lag** — teammates sometimes fail to mark tasks as completed; check if work is actually done.
 - **One team per session** — must clean up before starting a new team.
 - **No nested teams** — teammates cannot spawn their own teams (they can use subagents via Task tool).
-- **Skills / mcpServers frontmatter** — not applied to team teammates; they load from project and user settings like regular sessions. The `superRA:using-superRA` master skill reaches them via the SessionStart-injection path, not via per-teammate frontmatter.
+- **Skills / mcpServers frontmatter** — not applied to team teammates; they load from project and user settings like regular sessions. Teammates pick up `superRA:using-superRA` the same way as any regular session — via the `Skill` tool — since there is no per-teammate frontmatter preload.
 - **Shutdown can be slow** — teammates finish current request / tool call before shutting down.

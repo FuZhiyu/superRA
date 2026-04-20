@@ -27,7 +27,7 @@ Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs)
 
    **Rule of thumb:** before typing a finding into a status report, ask "is this written in `PLAN.md` or `RESULTS.md` yet?" If not, write it in the doc first and commit, then point at it in the report.
 
-**`PLAN.md` is the primary task tracker, not `TodoWrite` or chat.** The task-tracker discipline (banned patterns, the `TodoWrite`-as-transient-view rule, and the re-invoke-`§Changing Plans`-on-plan-change pointer) lives in `planning-workflow §PLAN.md Is the Task Tracker`.
+**`PLAN.md` is the primary task tracker, not `TodoWrite` or chat.** The task-tracker discipline (banned patterns, the `TodoWrite`-as-transient-view rule, and the re-invoke-`§User Feedback and Changing Plans`-on-plan-change pointer) lives in `planning-workflow §PLAN.md Is the Task Tracker`.
 
 ## Inline-Edit Rule
 
@@ -40,6 +40,7 @@ Every edit replaces stale content in place. Never append, never strike through, 
 - Review items confirmed fixed on re-review (the reviewer deletes them).
 - "Previously we tried X" / "Update:" / "Revised:" framing — delete the old text and write the new.
 - Upcoming task descriptions that assume an earlier approach which has since changed.
+- Task output descriptions that have been superseded or further modified by a later task in the plan — rewrite the earlier task's **Output:** to reflect the latest shape, and keep the narrative of "what changed" in the Decisions log only.
 
 ## User Decisions Log
 
@@ -56,5 +57,5 @@ Full spec — where task-scoped vs project-level decisions land, the three-line 
 
 - **Standalone use:** a single author maintaining handoff docs without subagents — read the four principles and the anatomy references; the author plays all roles.
 - **`planning-workflow` Phase 2:** the planner loads this skill for the templates and drafts `PLAN.md` + a Stage 1 `RESULTS.md` skeleton.
-- **`integration-workflow` Step 3 doc-writer:** loads this skill (for `references/results-anatomy.md` — carries the two-stage lifecycle and the transition pointer) plus `report-in-markdown/references/final-form.md` for the Stage 2 materialization and relocation discipline.
+- **`integration-workflow` Phase C doc-writer:** loads this skill (for `references/results-anatomy.md` — carries the two-stage lifecycle and the transition pointer) plus `report-in-markdown/references/final-form.md` for the Stage 2 materialization and relocation discipline.
 - **Implementer / reviewer subagents during execution:** do NOT load this skill by default — a compact editing etiquette lives in `agents/implementer.md` / `agents/reviewer.md` step 1 (inline-edit, remove-stale, no-append). Load on demand when the etiquette is not enough (unusual structural edit, first-time encounter with the doc format, writing a User Decisions Log entry).

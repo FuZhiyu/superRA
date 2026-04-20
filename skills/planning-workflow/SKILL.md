@@ -1,9 +1,6 @@
 ---
 name: planning-workflow
-description: >
-  Use when starting new research work that has an objective and
-  methodology but no PLAN.md yet, or when an existing plan must be
-  rewritten from scratch.
+description: Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet, or when a fresh branch needs its planning artifacts bootstrapped. Triggers include "let's analyze X", "write me a plan for Y", or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA workflow and hands off to `execution-workflow` once the plan is approved. Domain-agnostic — for data-analysis planning, invokes the econ-data-analysis skill.
 ---
 
 # Planning Workflow
@@ -119,11 +116,11 @@ Required header fields and task block structure are non-negotiable. The template
 
 **The plan is NOT a static spec.** Work reveals surprises; the plan evolves in place.
 
-Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a step's method adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits per the discipline below; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §Changing Plans below, which defines the confirm → log → inline-edit → roll-back-milestones → atomic-commit protocol.
+Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a step's method adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits per the discipline below; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §User Feedback and Changing Plans below, which defines the confirm → log → inline-edit → roll-back-milestones → sweep-for-stale-content → atomic-commit protocol.
 
 **The editing discipline and the full anatomy templates** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — live in `superRA:handoff-doc`. Load it when authoring `PLAN.md` / `RESULTS.md` from scratch; its `references/plan-anatomy.md` and `references/results-anatomy.md` carry the full templates. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md` with the header and **one pre-allocated stub per task block** — same order, same task name as in `PLAN.md`, body just `**Status:** Not started`. Full anatomy and ownership rules in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Step 3 it matures into a permanent record.
+**Results document:** Create `RESULTS.md` alongside `PLAN.md` with the header and **one pre-allocated stub per task block** — same order, same task name as in `PLAN.md`, body just `**Status:** Not started`. Full anatomy and ownership rules in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Phase C it matures into a permanent record.
 
 ### PLAN.md Is the Task Tracker
 
@@ -142,11 +139,11 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 If `TodoWrite` and `PLAN.md` ever disagree about the state of analysis work, `PLAN.md` is right by definition. Update `TodoWrite` to match — never the reverse.
 
-When the plan itself changes — in-session scope change or cross-session re-entry — re-invoke §Changing Plans below and follow its protocol.
+When the plan itself changes — in-session scope change or cross-session re-entry — re-invoke §User Feedback and Changing Plans below and follow its protocol.
 
-## Changing Plans
+## User Feedback and Changing Plans
 
-When the plan changes — new task, removed task, reordered task, objective / sample / methodology edit, scope addition surfaced by a PR reviewer — follow this protocol. The same procedure applies whether the change is raised mid-execution or after integration / merge; the protocol itself records how much rolls back via Step 4's box-unchecking and Step 6's re-entry point. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
+When the plan changes — task details updated, tasks added, removed, or reordered, objective shifted — whether prompted by explicit user feedback or surfaced during execution, follow this protocol. The same procedure applies whether the change is raised mid-execution or after integration / merge; the protocol itself records how much rolls back via Step 4's box-unchecking and Step 6's re-entry point. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
 
 **Material (require this protocol):**
 
@@ -155,6 +152,7 @@ When the plan changes — new task, removed task, reordered task, objective / sa
 - Changing the analysis-level objective, methodology, sample definition, or expected output.
 - Changing data sources or project-wide conventions.
 - Scope additions arriving after integration or merge (post-PR additions, adjacent features surfaced by reviewers, follow-on ideas).
+- Substantive restructure findings surfaced mid-INTEGRATE (by `integration-workflow` Phase B integration reviewer, Phase C doc-reviewer, or Phase D semantic-merge) — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
 
 **Not material (handle as inline discovery edits per the Living Plan section above):**
 
@@ -164,19 +162,20 @@ When the plan changes — new task, removed task, reordered task, objective / sa
 
 **Protocol:**
 
-1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. This is the same escalation gate as `execution-workflow` Stop-Points class (b).
+1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. 
 2. **Log the decision** per `handoff-doc` §User Decisions Log — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes. The log entry must declare which tasks are affected and which project-level boxes are unchecked.
 3. **Update `PLAN.md` inline:**
-   - **Prefer modifying existing task blocks over appending.** Append a new task block only when the change cannot be expressed as an edit to an existing task's scope.
-   - **New task** → append `### Task N+1: [name]` block with the full anatomy from `handoff-doc/references/plan-anatomy.md`. Renumber later tasks if inserting earlier in the sequence.
+   - **Prefer modifying existing task blocks over appending.** Walk the task list and identify every task whose objective or output is affected by the change. Update each in place to reflect the new scope.
+   - **New task** → Only when the change is genuinely independent of every existing task's scope, append `### Task N+1: [name]` with the full anatomy from `handoff-doc/references/plan-anatomy.md`. Renumber later tasks if inserting earlier in the sequence.
    - **Modified task** → rewrite the affected fields in place. Do not strike through. Do not add "Modified:" annotations.
    - **Removed task** → delete the block entirely. The Decisions entry preserves the rationale.
    - **Reordered tasks** → renumber and rewrite. The decision log preserves the original sequence.
-4. **Update `## Workflow Status`** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* boxes are unchecked and *why*. Rules: per-task `**Review status:**` and `**Integration status:**` on fully re-implemented tasks are cleared; untouched tasks retain APPROVED; minor-edited tasks (code unchanged) clear `**Integration status:**` while keeping `**Review status:** APPROVED`. The orchestrator — not the new task's implementer — decides which tasks are "related" and which milestones roll back.
-5. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
-6. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `execution-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Stage 2. On every re-entry, `integration-workflow` runs the **full** drift-test suite regardless of which tasks changed — only *authoring* new drift tests is scoped to the affected tasks. The doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff.
 
-**DAG cascade on re-entry.** When re-entering, the orchestrator walks the transitive downstream closure of each task whose code or outputs will change (from `**Depends on:**` fields). By default, every task in the closure has `**Review status:**` and `**Integration status:**` cleared. Exemption: the orchestrator may leave a downstream task APPROVED by documenting *why* the upstream change does not affect its inputs — one blockquote per exempted task in §Decisions. The drift-test suite runs in full regardless of the closure; closure scopes re-review and integration-review dispatch only. See `handoff-doc/references/plan-anatomy.md` §Field-by-Field for the cascade vocabulary and `handoff-doc` §User Decisions Log for the exemption format.
+4. **Update statuses** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* boxes are unchecked and *why*, then flips both the project-level `## Workflow Status` checkboxes and the per-task status lines. Rules: per-task `**Review status:**` and `**Integration status:**` on fully re-implemented tasks are cleared; untouched tasks retain APPROVED; minor-edited tasks (code unchanged) clear `**Integration status:**` while keeping `**Review status:** APPROVED`. **DAG cascade:** walk the transitive downstream closure of every changed task and clear statuses on any dependent whose inputs or assumptions shift.
+5. **Sweep PLAN.md for stale content** per `handoff-doc` §Stale Content Checklist. Earlier task blocks whose output has been superseded by a later task, cross-references to removed sections, review notes resolved by subsequent work — fix in place now, not later.
+6. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
+7. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `execution-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Phase B. On every re-entry, `integration-workflow` runs the **full** drift-test suite regardless of which tasks changed — only *authoring* new drift tests is scoped to the affected tasks. The doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff.
+
 
 **Banned shortcuts:**
 
@@ -185,14 +184,6 @@ When the plan changes — new task, removed task, reordered task, objective / sa
 - Resuming the in-flight task before reflecting the change in the doc — the change is not real until it is committed.
 - Running a subset of the drift-test suite on re-entry because "only these tasks changed" — authoring is scoped, running is not. Always run the full suite.
 
-## No Placeholders
-
-Every step must contain the actual code, instructions, or artifacts someone needs to execute it. These are **plan failures** — never write them:
-- "TBD", "TODO", "implement later", "fill in details"
-- "Add appropriate validation" / "check results" (without actual code or criteria)
-- "Similar to Task N" (repeat the content — the executor may read tasks out of order)
-- "Run descriptive statistics" (without showing which variables and what statistics)
-- Steps that describe what to do without showing how (code blocks required for code steps)
 
 ## Remember
 

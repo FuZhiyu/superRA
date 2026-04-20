@@ -12,8 +12,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 |---|---|---|
 | `planning-workflow` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
 | `execution-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
-| `integration-workflow` | INTEGRATE (pre-merge) | Drift-test creation, refactor-review loop, doc finalization. |
-| `merge-workflow` | INTEGRATE (merge) | Main update via semantic-merge, post-merge verification, local merge or PR push, worktree cleanup. |
+| `integration-workflow` | INTEGRATE (Phases A–D) | Drift-test creation (A), review-led iterative sync + refactor (B), doc finalization (C), final merge / PR / cleanup (D). `semantic-merge` invoked from Phase B when the integration reviewer calls for intent-based conflict resolution. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
 ## Domain — vertical-specific discipline
@@ -39,17 +38,17 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 
 | Skill | What it provides |
 |---|---|
-| `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Step 3 doc-writer). Usable standalone by a single author with no subagents. |
+| `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Phase C doc-writer). Usable standalone by a single author with no subagents. |
 | `refactor-and-integrate` | Drift-test quality, codebase integration, and merge quality checklists. Loaded by integration-phase agents. |
 | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. Progressive-reveal references by stage. |
-| `semantic-merge` | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions. |
+| `semantic-merge` | Intent-based branch integration for any vertical or caller. Resolves conflicts by intent, escalates research-meaningful decisions to the user. Invoked by `integration-workflow` Phase B when the integration reviewer calls for it; usable standalone by a human, orchestrator, or dispatched agent. |
 | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle is in `agent-orchestration/references/worktree-harness-fallback.md`. |
 
 ## Meta — system-level
 
 | Skill | Purpose |
 |---|---|
-| `using-superRA` | Master skill every agent reads. Carries the distilled universal principles, code-change defaults, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Main-agent session-start loads (cross-session detection, autonomy contract, handoff-doc default) live in `references/main-agent.md`. |
+| `using-superRA` | Master skill every agent reads. Carries the distilled universal principles, code-change defaults, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Main-agent loads (cross-session detection, autonomy contract, handoff-doc default) live in `references/main-agent.md`. |
 | `codex-superra-setup` | Codex-only bootstrap for installing or refreshing the named custom agents in either project scope (`.codex/agents/`) or global scope (`~/.codex/agents/`). |
 
 ## Adding a Skill
