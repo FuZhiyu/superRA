@@ -438,7 +438,7 @@ Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer sub
 - **superRA:execution-workflow** Step 4 — when the user chooses Option 1 (merge) or Option 2 (PR) after reproducibility has been verified
 
 **Invokes:**
-- **superRA:semantic-merge** — REQUIRED for the main update in Phase B Commit 1 and any Phase D pre-merge re-sync (delegated mode)
+- **superRA:semantic-merge** — REQUIRED for Phase B Commit 1 on Tier 2/3 (Tier 1 uses `git merge --ff-only`; see Phase B Step 2) and any Phase D pre-merge re-sync (delegated mode)
 - **superRA:refactor-and-integrate** — loaded by every dispatched implementer and reviewer in Phases A, B, and D; principles in body, `[BLOCKING]` / `[ADVISORY]` items in stage-scoped references
 - **superRA:report-in-markdown** — loaded by the Phase C doc-writer (full mode) and doc-reviewer
 - **superRA:handoff-doc** — loaded on demand for User Decisions Log format and PLAN.md anatomy

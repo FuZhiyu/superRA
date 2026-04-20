@@ -103,7 +103,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ### Task 1: Rebuild `refactor-and-integrate` as a gated checklist
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A (skill file refactor)
 **Input:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines (pattern reference)
@@ -135,9 +135,14 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 > **Integration review notes (recon, 2026-04-19):**
 > 1. **[ADVISORY]** `skills/refactor-and-integrate/SKILL.md:104` — `§Integration → Used by workflow skills → superRA:integration-workflow` bullet says the workflow dispatches "Phase D post-merge drift-test + integration-review re-runs (`references/codebase-integration.md`) when main advanced." Phase D as authored in `skills/integration-workflow/SKILL.md` does not itself dispatch a drift-test run or integration review; when main advances it re-enters Phase B (line 319), and Phase D Step 3a only verifies the pipeline. The "re-runs when main advanced" phrasing conflates the Phase D→B re-entry with a Phase D dispatch. Minor prose clarity; no `[BLOCKING]` impact on the checklist's load-bearing content. Fix: reword to "Phase D pipeline verification; the Phase D→B re-entry trigger on main advancement then runs the Phase B drift-test + verify-review dispatches again."
+>    → implemented: reworded line 104 to name Phase D as pipeline verification and the Phase D→B re-entry trigger as the dispatcher of the re-run (`skills/refactor-and-integrate/SKILL.md:104`)
+
+---
+
+### Task 2: Unify `integration-workflow` — Phases A–D with iterative Phase B
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** current `skills/integration-workflow/SKILL.md`, current `skills/merge-workflow/SKILL.md`, Task 1's rewritten `refactor-and-integrate`, `agent-orchestration §Dispatch Templates`
@@ -169,6 +174,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 > **Integration review notes (recon, 2026-04-19):**
 > 1. **[ADVISORY]** `skills/integration-workflow/SKILL.md:441` — `§Integration → Invokes` says `superRA:semantic-merge` is "REQUIRED for the main update in Phase B Commit 1 and any Phase D pre-merge re-sync (delegated mode)." This contradicts Step 2's two-shortcut-axes logic: Tier 1 uses `git merge --ff-only` (line 142–143) and the Red Flags list at line 408 explicitly says "delegated mode is load-bearing when semantic-merge runs at all (Tier 2/3)." The word "REQUIRED" overstates — semantic-merge is Tier-conditional, not unconditional. Minor doc coherence; does not mis-operate because Step 2 is authoritative on control flow. Fix: change "REQUIRED for the main update in Phase B Commit 1" → "REQUIRED for Phase B Commit 1 on Tier 2/3 (Tier 1 uses `git merge --ff-only`; see Phase B Step 2)".
+>    → implemented: softened line 441 to Tier-conditional wording per recon's suggested fix (`skills/integration-workflow/SKILL.md:441`)
 
 ---
 
