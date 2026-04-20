@@ -21,7 +21,7 @@
 - [ ] **Plan approved** — researcher signed off on this plan
 - [ ] **Execution complete** — all tasks `**Review status:** APPROVED`
 - [ ] **Drift tests created** — N/A for skill refactor; Task 6 end-to-end dry-read serves as the substitute (same pattern as round 1)
-- [ ] **Refactored** — Phase B verify reviewer APPROVED on cumulative diff
+- [x] **Refactored** — Phase B integration reviewer APPROVED on cumulative diff (Round 3 APPROVE: commit `632a188`)
 - [ ] **Docs finalized** — matured RESULTS.md + doc-reviewer APPROVED
 - [ ] **Merged** — branch merged or PR opened/updated
 
