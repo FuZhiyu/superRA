@@ -96,31 +96,24 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 ### Task 2: Add `## Integration Intent` anatomy to `plan-anatomy.md`
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A
 **Input:** `skills/handoff-doc/references/plan-anatomy.md`, existing `## Decisions` anatomy entry as a structural template.
 **Output:** New `## Integration Intent` subsection in `plan-anatomy.md`, placed between the existing `## User Decisions Log` and `## Task Block Anatomy` sections. Documents purpose, ownership (reviewer-only; implementer hands-off), lifecycle (written by reviewer when Phase B scan finds material main-side change → per-item removal on dependent-task APPROVE → section removal when empty), format (one bullet per incoming-change cluster, each bullet names affected task IDs + one-sentence why-it-matters), and placement (directly after `## Decisions` if present, before the first task block).
 
-- [ ] **Step 1: Describe — pattern-match against `## Decisions`**
+- [x] **Step 1: Describe — pattern-match against `## Decisions`**
 
-  Read `plan-anatomy.md:99–120` (`## User Decisions Log`) and the existing `## Decisions` placement rule at line 67. The Integration Intent section follows the same placement logic: header context → `## Workflow Status` → `## Decisions` (optional) → `## Integration Intent` (optional) → `---` → task blocks.
+  Read `plan-anatomy.md:99–120` (`## User Decisions Log`) and the existing `## Decisions` placement rule at line 67. The Integration Intent section follows the same placement logic: header context → `## Workflow Status` → `## Decisions` (optional) → `## Integration Intent` (optional) → `---` → task blocks. Confirmed: `## Decisions` placement note updated to include `## Integration Intent` in the order.
 
-- [ ] **Step 2: Draft the anatomy entry**
+- [x] **Step 2: Draft the anatomy entry**
 
-  Write the new subsection with: (a) purpose paragraph (one paragraph: why the section exists — bridge between a material main-side change and the per-task annotations that drive the fix-review loop); (b) ownership rule (reviewer-only; implementer does not edit; orchestrator overrules only via `→ orchestrator:` annotations); (c) lifecycle (written/updated by reviewer at `integration-workflow` Phase B Step 1 when the main-side scan surfaces material incoming intent; per-item removed by reviewer when the last task tied to that item reaches `Integration status: APPROVED`; section removed when empty); (d) format — a markdown code block showing:
-  ```markdown
-  ## Integration Intent
+  Added new `## Integration Intent` section between `## User Decisions Log` and `## Task Block Anatomy` in `plan-anatomy.md`. Covers: (a) purpose paragraph bridging Phase B main-side scan to per-task fix-review loop; (b) ownership (integration reviewer only; implementer hands-off; orchestrator `→ orchestrator:` annotations only); (c) lifecycle (write on Phase B Step 1 scan finding material changes → remove items as dependent tasks hit `APPROVED` → remove section when empty); (d) format code block with two-line blockquote cluster (`Main-side change` + `Adaptation needed`) naming affected task IDs explicitly.
 
-  > **Main-side change (2026-04-19):** origin/main added a session-start hook that drops a banner into every new session; touches no analysis files but adds a new `hooks/session-start` script and updates `README.md §Hooks`. Affects Tasks 5, 7 (README edit conflicts).
-  > **Adaptation needed:** Tasks 5 and 7's README edits must be re-based on top of the new §Hooks language.
-  ```
-  Three-line bullet per cluster; `Main-side change (YYYY-MM-DD)` + `Adaptation needed`; affected task IDs named explicitly.
+- [x] **Step 3: Validate — coherence check against B→B trigger**
 
-- [ ] **Step 3: Validate — coherence check against B→B trigger**
-
-  Read `plan-anatomy.md:179` (B→B trigger sentence, round-1 Task 5). Confirm its language is still consistent: the reviewer's annotation gates the flip, unchanged. Read the `**Integration status:**` paragraph (same line, round-1 Task 8): the three-actor choreography (recon reviewer → implementer → verify reviewer) is now just "integration reviewer → implementer → integration reviewer" in round 2; rewrite the paragraph's naming to drop "recon" and "verify" while preserving the reviewer-owns-verdict-flip semantics. Commit.
+  B→B trigger sentence at `plan-anatomy.md §Field-by-Field Notes` confirmed consistent: integration reviewer's annotation gates the flip. Rewrote the `**Integration status:**` paragraph to replace "recon reviewer", "unified implementer", "verify reviewer" with "integration reviewer (annotation pass)", "implementer", "integration reviewer (verify pass)" — reviewer-owns-verdict-flip semantics and B→B trigger sentence preserved. Also updated `Refactored` checkbox in the Workflow Status template from "verify reviewer" to "integration reviewer".
 
 ---
 

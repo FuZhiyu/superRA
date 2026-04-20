@@ -10,7 +10,15 @@ Stage 1 dev log. Per `superRA:handoff-doc` / `references/results-anatomy.md`, th
 ---
 
 ### Task 2: Add `## Integration Intent` anatomy to `plan-anatomy.md`
-**Status:** Not started
+**Status:** Implemented
+
+**What changed:** `skills/handoff-doc/references/plan-anatomy.md` received three edits:
+
+1. **New `## Integration Intent` section** inserted between `## User Decisions Log` and `## Task Block Anatomy`. Covers purpose (bridges Phase B main-side scan to per-task fix-review loop), ownership (integration reviewer only; implementer hands-off; orchestrator overrules via `→ orchestrator:` annotations), lifecycle (write on scan → remove items as dependent tasks hit `APPROVED` → remove section when empty), and format (two-line blockquote cluster: `Main-side change (YYYY-MM-DD)` naming affected task IDs + `Adaptation needed` describing required work).
+
+2. **`## Decisions` placement note updated** (line 67) to include `## Integration Intent` in the header order: `## Workflow Status` → `## Decisions` (when present) → `## Integration Intent` (when present) → `---` → task blocks.
+
+3. **`**Integration status:**` paragraph rewritten** (§Field-by-Field Notes): "recon reviewer", "unified implementer", "verify reviewer" replaced with "integration reviewer (annotation pass)", "implementer", "integration reviewer (verify pass)". Reviewer-owns-verdict-flip semantics and B→B trigger sentence fully preserved. Also updated the `Refactored` Workflow Status checkbox template from "verify reviewer" to "integration reviewer".
 
 ---
 
