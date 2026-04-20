@@ -23,7 +23,7 @@
 - [x] **Drift tests created** — N/A for skill refactor; substitute satisfied by Task 7 end-to-end dry-run + skill-graph consistency sweep (2026-04-19)
 - [x] **Refactored** — Phase B verify reviewer APPROVED cumulative diff (2026-04-19); Tasks 1, 2 Integration status APPROVED; Tasks 3–7 APPROVED (no recon annotations)
 - [x] **Docs finalized** — Phase C doc-reviewer APPROVED matured RESULTS.md at `docs/plans/2026-04-19-unified-integration-workflow-results.md` (2026-04-19); README / RELEASE-NOTES / CATEGORIES / CLAUDE.md audited during Task 6 + Phase B verify review
-- [ ] **Merged** — branch merged to main or PR opened
+- [x] **Merged** — PR opened against main (2026-04-19); Phase D Step 1 freshness check confirmed `origin/main` unchanged since merge-base `92a685b`
 
 ---
 
