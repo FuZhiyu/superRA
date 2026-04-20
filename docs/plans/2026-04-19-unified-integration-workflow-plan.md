@@ -19,11 +19,11 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on this plan (2026-04-19; re-approved after §Changing Plans protocol on 2026-04-19 for recon-as-reviewer architecture and shortcut axes)
-- [x] **Execution complete** — all tasks `APPROVED` (2026-04-19)
+- [ ] **Execution complete** — rolled back 2026-04-19 by §Changing Plans (Task 8 added post-integration-dogfooding retrospective); Tasks 1–7 retain `**Review status:** APPROVED` (no code changes); Task 8 unstarted
 - [x] **Drift tests created** — N/A for skill refactor; substitute satisfied by Task 7 end-to-end dry-run + skill-graph consistency sweep (2026-04-19)
-- [x] **Refactored** — Phase B verify reviewer APPROVED cumulative diff (2026-04-19); Tasks 1, 2 Integration status APPROVED; Tasks 3–7 APPROVED (no recon annotations)
-- [x] **Docs finalized** — Phase C doc-reviewer APPROVED matured RESULTS.md at `docs/plans/2026-04-19-unified-integration-workflow-results.md` (2026-04-19); README / RELEASE-NOTES / CATEGORIES / CLAUDE.md audited during Task 6 + Phase B verify review
-- [x] **Merged** — PR opened against main (2026-04-19); Phase D Step 1 freshness check confirmed `origin/main` unchanged since merge-base `92a685b`
+- [ ] **Refactored** — rolled back 2026-04-19 by §Changing Plans; Task 8 will produce new skill-file hunks requiring a fresh Phase B recon + verify pass. Tasks 1–7 retain `**Integration status:** APPROVED` (no code changes)
+- [ ] **Docs finalized** — rolled back 2026-04-19 by §Changing Plans; matured RESULTS.md needs a Task 8 section + fresh doc-review pass
+- [ ] **Merged** — rolled back 2026-04-19 by §Changing Plans; PR #5 description and branch both require the Task 8 changes before merge
 
 ---
 
@@ -81,6 +81,10 @@
 > **Orchestrator decision (2026-04-19):** PLAN.md disposition = Option 1 (relocate alongside matured RESULTS.md at `docs/plans/2026-04-19-unified-integration-workflow-plan.md`). No `results_attachments/` rename needed (no figures). Sibling precedent: `docs/plans/2026-04-16-design-coherence-refactor.md` + `-results.md` pair.
 > **Question asked:** How to dispose of PLAN.md?
 > **Rationale:** Option 1 is the established repo convention for refactor plan/results pairs; preserves prescriptive history alongside the permanent archive.
+
+> **User decision (2026-04-19, §Changing Plans — post-integration retrospective):** Add Task 8 covering three retrospective refinements surfaced during the end-to-end Phase A–D dogfooding run. All three are documentation-only fixes to skills altered by Tasks 1, 2, 5; none affect Tasks 1–7's code content. Tasks 1–7 retain `**Review status:** APPROVED` + `**Integration status:** APPROVED` per the "untouched tasks retain APPROVED" rule. Workflow Status boxes unchecked: `Execution complete`, `Refactored`, `Docs finalized`, `Merged` (Task 8 unstarted; its output will produce new diff hunks requiring a fresh Phase B recon + verify pass, a matured-doc update, and a PR-body update before re-flipping). `Drift tests created` stays checked (N/A substitute unchanged). Task 8 combines three small edits into one task for proportionality: (a) `plan-anatomy.md:179` state-setter clause + `integration-workflow` Phase B `IMPLEMENTED` beat; (b) `agents/reviewer.md` + `agents/implementer.md` annotation etiquette (preserve task-block boundaries); (c) `integration-workflow` Phase B Step 2 Tier-1 + unchanged-main no-op case.
+> **Question asked:** The integration dogfooding surfaced three small documentation-fix items — add as one new Task 8, or close PR #5 and handle in a follow-up?
+> **Rationale:** Proportional. The three items are all small doc fixes informed by the very integration run that produced the PR; bundling into PR #5 keeps the retrospective fixes alongside the refactor that motivated them. Separate tasks would multiply Phase B / Phase C re-runs for trivial doc edits.
 
 ---
 
@@ -265,3 +269,22 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 - [x] **Step 3: Mid-Phase-B plan-change scenario** — inject a substantive restructure need surfaced by recon; walk `planning-workflow §Changing Plans` with the INTEGRATE-trigger bullet (added by Task 5); confirm orchestrator-authors / researcher-decides ownership is unambiguous.
 - [x] **Step 4: Unrelated-hunk injection scenario** — on paper, inject an out-of-scope hunk in the implementer's Commit 2; walk the Implementer Self-Check (`git diff <merge-base>..HEAD`) and the verify reviewer's minimum-net-diff catch; confirm both independently catch it.
 - [x] **Step 5: D→B re-entry scenario** + write findings to RESULTS.md. Fix any ADVISORY stale-vocabulary hits found during the sweep in-place (no tuned content touched). Any `[BLOCKING]` issues would have been opened as new review-notes entries on the relevant prior task; none found.
+
+---
+
+### Task 8: Retrospective refinements from Phase A–D dogfooding
+**Depends on:** Tasks 1, 2, 5 *(edits files those tasks touched; added post-integration 2026-04-19 via §Changing Plans)*
+**Review status:**
+**Integration status:**
+
+**Script:** N/A (skill + agent file edits)
+**Input:** `skills/handoff-doc/references/plan-anatomy.md`, `skills/integration-workflow/SKILL.md`, `agents/reviewer.md`, `agents/implementer.md`.
+**Output:** Three documentation clarifications in the skills / agents graph, all small edits, all motivated by concrete ambiguities the PR #5 integration run itself exposed. No code content of Tasks 1–7 touched.
+
+- [ ] **Step 1: Clarify Integration-status lifecycle** — in `skills/handoff-doc/references/plan-anatomy.md`, rewrite the `**Integration status:**` bullet's state-setter clause (line 179). The current wording ("set by the integration reviewer…") predates the recon-as-reviewer architecture added in Task 2 and hides the three-actor choreography. New wording must name: orchestrator flips to `REVISE` post-recon (on annotated tasks) and to `APPROVED` post-verify-reviewer APPROVE; implementer flips to `IMPLEMENTED` post-commit. Preserve the existing DAG cascade paragraph and the B→B re-entry trigger sentence (Task 5's addition) unchanged. Then, in `skills/integration-workflow/SKILL.md` Phase B, add one sentence between Step 3 and Step 4 naming the implementer's `IMPLEMENTED` flip as part of the two-commit handoff (so the lifecycle is discoverable from the workflow skill without having to cross-read `plan-anatomy.md`).
+
+- [ ] **Step 2: Annotation etiquette — preserve task-block boundaries** — add a rule to the annotation-etiquette sections of `agents/reviewer.md` and `agents/implementer.md`: when appending a review-notes blockquote (reviewer) or a `→ implemented:` reply (implementer), the edit must stay strictly within the task block — never disturb the preceding `---` separator, the `### Task N:` heading, or the trailing separator before the next task. Motivation: during PR #5 Phase B recon, the annotation insertion on Task 1 elided the separator + Task 2 heading between blocks (commit `7a12e34`), forcing the implementer to restore them in commit `b58c3fc` as a coherence fix. Find the existing inline-edit etiquette section in each agent file and add the boundary rule alongside it.
+
+- [ ] **Step 3: Phase B Tier 1 + unchanged-main degenerate case** — in `skills/integration-workflow/SKILL.md` Phase B Step 2, add one sentence to the Tier 1 bullets handling the case where `origin/<base-branch>` has not advanced since merge-base. Wording: *"Degenerate case: if `git merge-base --is-ancestor origin/<base-branch> HEAD`, the fast-forward merge is a true no-op — skip Commit 1 and note the skip in the implementer's status return. The two-commit structure collapses to one commit (Commit 2 = unified refactor)."* Motivation: PR #5 implementer had to improvise this handling on the fly.
+
+- [ ] **Step 4: Validate** — re-read the edited files end-to-end; confirm (a) state-setter clause now matches the recon-as-reviewer architecture in Task 2's Phase B, (b) annotation-etiquette rule sits alongside the existing inline-edit discipline in each agent file without duplicating it, (c) Tier 1 no-op sentence reads correctly against Phase B Step 2's existing bullets. Run `grep -n "integration reviewer\|set by the" skills/handoff-doc/references/plan-anatomy.md` to confirm no stale pre-architecture phrasing remains. Commit.
