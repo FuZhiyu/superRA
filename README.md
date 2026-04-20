@@ -92,7 +92,7 @@ Claude Code (v2.1+) can install plugins directly from a GitHub repo. Add superRA
 
 ```bash
 claude plugin marketplace add FuZhiyu/superRA
-claude plugin install superRA@superRA-dev
+claude plugin install superRA@superRA
 ```
 
 That's it — restart Claude Code (or start a new session) and the skills, agents, and hooks are available.
@@ -100,7 +100,7 @@ That's it — restart Claude Code (or start a new session) and the skills, agent
 To update later:
 
 ```bash
-claude plugin marketplace update superRA-dev
+claude plugin marketplace update superRA
 claude plugin update superRA
 ```
 
@@ -111,7 +111,7 @@ If you want to modify superRA itself — edit skills, add a domain vertical, tun
 ```bash
 git clone https://github.com/FuZhiyu/superRA.git
 claude plugin marketplace add ./superRA
-claude plugin install superRA@superRA-dev
+claude plugin install superRA@superRA
 ```
 
 Edits to your clone are picked up on the next session start.
