@@ -61,36 +61,32 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 ### Task 1: Rewrite `integration-workflow` Phase B
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A
 **Input:** current `skills/integration-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md` (Integration Intent anatomy produced by Task 2 — cross-referenced only after Task 2 lands; Task 1 names the section and describes purpose/ownership inline), `skills/agent-orchestration/SKILL.md` §Dispatch Templates + §Handling Reviewer Feedback + §Concurrent Writers (parallel-reviewer extension produced by Task 4 — cross-referenced only after Task 4 lands), `skills/refactor-and-integrate/SKILL.md` + references (linked, unchanged)
 **Output:** Rewritten Phase B section in `skills/integration-workflow/SKILL.md` — review-led loop with four steps; Tier matrix and shortcut-axis evaluation removed; two-commit implementer contract replaced with a brief "1+N: mechanical merge first, refactors after" note that points at `semantic-merge` for the shape; recon/verify naming split collapsed to "integration reviewer"; Red Flags + Always lists updated; metadata block (Called by / Invokes / Escalates to / Pairs with / Requires) updated.
 
-- [ ] **Step 1: Describe — read the current Phase B end-to-end**
+- [x] **Step 1: Describe — read the current Phase B end-to-end**
 
-  Read `skills/integration-workflow/SKILL.md` lines 85–199 (Phase B proper) plus the Red Flags list (lines ~394–424) and the Integration block (lines ~428–452). Identify every sentence that names Tier 1/2/3, the two-axis shortcut, the recon reviewer, the verify reviewer, the two-commit structure, or delegated-mode semantic-merge semantics. These are the removal targets.
+  Read `skills/integration-workflow/SKILL.md` lines 85–199 (Phase B proper) plus the Red Flags list (lines ~394–424) and the Integration block (lines ~428–452). Identified all removal targets: Tier 1/2/3 matrix, two-axis shortcut evaluation, recon reviewer, verify reviewer, two-commit structure, delegated mode.
 
-- [ ] **Step 2: Draft the four-step Phase B skeleton**
+- [x] **Step 2: Draft the four-step Phase B skeleton**
 
-  Write Phase B as:
-  - **Step 1 — Dispatch integration reviewer(s).** One reviewer by default; parallel siblings on worktrees per `agent-orchestration §Concurrent Writers` (Task 4 extension) when the in-scope surface is large. Reviewer walks (a) `merge-base..HEAD` for integration fit per `refactor-and-integrate`, (b) `merge-base..origin/<base>` for what has moved on main. If (b) reveals meaningful incoming changes that could affect this branch, reviewer writes/updates a `## Integration Intent` section in PLAN.md per `plan-anatomy.md` (added by Task 2) and annotates per-task review-notes blockquotes on affected tasks. Reviewer flips `Integration status: REVISE` on annotated tasks in its own review commit (round-1 Task 8 rule).
-  - **Step 2 — Orchestrator adjudicate.** Read PLAN.md (Integration Intent section + per-task annotations). Batch research-meaningful items into one `AskUserQuestion` per `handoff-doc §User Decisions Log`. If findings are a substantive restructure → escalate to `planning-workflow §Changing Plans` (orchestrator authors proposal, researcher decides). Otherwise → Step 3.
-  - **Step 3 — Fix-review loop** (restated inline — do not link to `execution-workflow`). Tight restatement: (a) mechanical merge lands first, branch-wide, alone — orchestrator executes directly or dispatches one implementer (no parallelization for this commit); drift tests run on the merged tree; meaningful drift is a stop point per `refactor-and-integrate/references/drift-test-quality.md`. (b) Follow-up refactor commits scoped to REVISE-status tasks (implementer refuses APPROVED-integration tasks per `refactor-and-integrate §Scope by Integration Status`); one serial implementer by default, or parallel siblings on worktrees when the surface is large (same §Concurrent Writers pattern). Commit granularity is the implementer's judgment; minimum-net-diff self-check before every commit; drift tests after any refactor that could affect them. (c) Dispatch reviewer; on APPROVE the reviewer removes its per-task review-notes, flips `Integration status: APPROVED`, and when the last task tied to an Integration Intent item is APPROVED removes that item (and the section when empty). On REVISE: adjudicate per `agent-orchestration §Handling Reviewer Feedback`, iterate. State the 1+N shape as one possible workflow — orchestrator may collapse to a single commit when refactor is trivial.
-  - **Step 4 — Flip `Refactored` milestone.** Orchestrator flips the box when every in-scope task is APPROVED and the Integration Intent section is empty/absent; proceed to Phase C.
+  Written Phase B as four steps: (1) Dispatch integration reviewer — walks branch diff and main-side diff, writes Integration Intent if material changes found, annotates per-task blockquotes, flips REVISE; (2) Orchestrator adjudicate — zero annotations fast-path or batch AskUserQuestion; (3) Fix-review loop — 3a mechanical merge first (semantic-merge when conflicts/material changes), 3b refactor commits scoped to REVISE tasks with dispatch template, 3c re-dispatch reviewer until APPROVE; (4) Flip Refactored milestone when all tasks APPROVED and Intent section empty.
 
-- [ ] **Step 3: Update the Phase Map diagram and re-entry arrows**
+- [x] **Step 3: Update the Phase Map diagram and re-entry arrows**
 
-  Replace the current Phase Map ASCII diagram (lines ~18–31) with the same four-phase topology but drop the "Recon-Driven, Two Shortcut Axes" sub-heading. B→B re-entry stays: "main advances mid-integration → re-enter Phase B Step 1". C→B, D→B, B→A, Anywhere→Changing Plans are unchanged. Drop the sub-section "Internal Structure — Recon-Driven, Two Shortcut Axes".
+  Phase Map updated — removed "Recon-Driven, Two Shortcut Axes" sub-heading and "Internal Structure" section. Re-entry arrows (B→B, C→B, D→B) preserved. D→B comment updated to reference Phase D pre-merge check.
 
-- [ ] **Step 4: Update Red Flags + Always + metadata blocks**
+- [x] **Step 4: Update Red Flags + Always + metadata blocks**
 
-  Red Flags: remove bullets mentioning Tier, recon reviewer, verify reviewer, two-commit structure, shortcut axes, delegated mode. Keep: no skipping Phase A, no refactoring APPROVED-integration tasks, no judging methodology, no advancing to C before reviewer APPROVES, no advancing to D without a freshness check, no PLAN.md disposition by subagent, no worktree cleanup before merge. Always list: keep coverage confirmation with researcher, running the full drift-test suite on every integration pass, re-entering Phase B if main advances. Remove any Tier/shortcut/recon-verify wording. Metadata: §Invokes — drop the "REQUIRED on Tier 2/3" qualifier on `semantic-merge`; it is "invoked by Phase B Step 3's mechanical-merge commit when conflicts or material main-side changes exist" (the reviewer decides; no Tier gate).
+  Red Flags: removed Tier, recon reviewer, verify reviewer, two-commit structure, shortcut axes, delegated mode bullets. Always list: removed Tier/shortcut/recon-verify wording; updated semantic-merge bullet to describe intent-based resolution trigger (reviewer decides, not Tier gate). Metadata §Invokes updated to drop "REQUIRED on Tier 2/3" qualifier.
 
-- [ ] **Step 5: Validate — walk the four workflow principles**
+- [x] **Step 5: Validate — walk the four workflow principles**
 
-  Cross-read the rewritten Phase B against `/CLAUDE.md` §Workflow Principles 1–4. Confirm implementer-reviewer pair, handoff-doc auditability, fast-early-strict-before-merge with semantic-merges, and autonomous-with-human-in-loop are all preserved. Grep for residual Tier/shortcut/recon-verify/two-commit language: `grep -n "Tier 1\|Tier 2\|Tier 3\|recon reviewer\|verify reviewer\|two-commit\|shortcut ax" skills/integration-workflow/SKILL.md` → expect empty. Commit.
+  All four workflow principles preserved. `grep -n "Tier 1\|Tier 2\|Tier 3\|recon reviewer\|verify reviewer\|two-commit\|shortcut ax" skills/integration-workflow/SKILL.md` → empty. Committed.
 
 ---
 

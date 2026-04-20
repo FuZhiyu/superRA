@@ -5,7 +5,19 @@ Stage 1 dev log. Per `superRA:handoff-doc` / `references/results-anatomy.md`, th
 ---
 
 ### Task 1: Rewrite `integration-workflow` Phase B
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+Phase B in `skills/integration-workflow/SKILL.md` rewritten as a four-step review-led loop. The Tier 1/2/3 matrix, two shortcut axes, "Internal Structure — Recon-Driven" sub-section, two-commit implementer contract, and recon/verify reviewer naming split are fully removed.
+
+**New structure:**
+- **Step 1** — Single integration reviewer dispatched; walks `merge-base..HEAD` and `merge-base..origin/<base>` (main-side scan); writes/updates `## Integration Intent` in PLAN.md when material incoming changes found; annotates per-task blockquotes and flips REVISE. Parallel sibling reviewers supported for large diffs (forward-reference to Task 4 §Concurrent Writers).
+- **Step 2** — Orchestrator adjudicates: zero annotations fast-paths to `git merge --ff-only` (or no-op) and proceeds to Phase C; annotated tasks batch into one `AskUserQuestion`; substantive restructure escalates to `planning-workflow §Changing Plans`.
+- **Step 3** — Fix-review loop (three sub-steps): 3a mechanical merge first (semantic-merge when conflicts or material main-side changes; reviewer's finding drives the call, not a Tier gate); 3b refactor commits scoped to REVISE tasks with dispatch template; 3c re-dispatch reviewer until APPROVE (reviewer removes resolved blockquotes and Integration Intent items on APPROVE).
+- **Step 4** — Orchestrator flips `Refactored` milestone when all tasks APPROVED and Integration Intent empty/absent.
+
+**Other changes:** Red Flags and Always lists updated to remove Tier/shortcut/recon-verify language. §Invokes metadata updated: semantic-merge qualifier changed from "REQUIRED on Tier 2/3" to reviewer-driven. Phase Map re-entry comments cleaned. Autonomy stop-point list, When to Lighten, and Agent Loads updated.
+
+**Validation:** `grep "Tier 1\|Tier 2\|Tier 3\|recon reviewer\|verify reviewer\|two-commit\|shortcut ax\|delegated mode\|Standalone mode"` on SKILL.md → empty.
 
 ---
 
