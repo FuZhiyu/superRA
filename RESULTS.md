@@ -77,7 +77,17 @@
 
 ## Task 5: `planning.md` + `workflow.md` — mode-heavy orchestration guidance
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Key findings:**
+
+- **`planning.md`:** Scope-inventory checklist (7 items); task-size triage table (6 shapes); PLAN.md/RESULTS.md decision matrix (6 rows, matches PLAN.md spec); optional-row rationale; "what a writing PLAN.md / RESULTS.md looks like" sections; **Hard Gate** for mode-(d) full-workflow (scope-confirmation-before-drafting — the writing-vertical analogue of econ-data-analysis's Data Inventory hard gate, lighter-weight but same principle). §Gated Checklist: 7 BLOCKING + 2 ADVISORY items.
+- **`workflow.md`:** Two Hard Rules (reviewer dispatch never skipped; parallel-dispatch for multi-dim consistency) — each with explicit "why" rationale. Four usage modes fully described: (a) direct-edit, (b) pure-review (single + multi-dimensional flows), (c) review → edit → re-review loop, (d) full workflow. Mode-transition rules (a→c, b→c, c→d, d→c — normal; silent (d)-under-(a) — not normal). Dispatch quick-reference with Agent-tool envelopes for each mode. §Gated Checklist: 6 BLOCKING + 1 ADVISORY items.
+- **Cross-linking verified:** `workflow.md` references each `consistency/*.md` pattern (generically — "one reviewer per `consistency/*.md` file") and the specific `style-checklist.md` / `structure-checklist.md` / `refactor-and-compile.md`. `planning.md` references `workflow.md`'s mode names consistently. Both reference `superRA:handoff-doc`, `superRA:agent-orchestration`, and `superRA:using-superRA` appropriately.
+- **Reviewer-dispatch-never-skipped rule** is now stated in three places (main SKILL.md §Mode selection, `workflow.md` Rule 1, `planning.md` Gated Checklist BLOCKING item). This is intentional reinforcement of a load-bearing rule — not drift (all three point at the same rule; `workflow.md` is the source of truth).
+- **Architectural parity with `econ-data-analysis/references/planning.md`:** same gate structure (Hard Gate + checklist + rationale + common-mistakes-equivalent via the decision matrix), lighter-weight content because writing scope is simpler than data inventory.
+
+**Files:** `skills/writing/references/planning.md` (127 lines), `skills/writing/references/workflow.md` (189 lines).
 
 ## Task 6: `integration.md` + routing updates
 

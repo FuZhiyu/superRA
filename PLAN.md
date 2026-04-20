@@ -298,14 +298,14 @@ Self-check: do the two files respect the one-source-of-truth principle (no dupli
 ## Task 5: `planning.md` + `workflow.md` — mode-heavy orchestration guidance
 
 **Depends on:** Tasks 2, 3, 4
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:** `skills/writing/references/planning.md` (new), `skills/writing/references/workflow.md` (new)
 **Input:** all prior references (to reference from workflow-mode descriptions), plan file
 **Output:** two reference files — what a fresh orchestrator loads first on any writing task
 
-- [ ] **Step 1: Draft `planning.md`**
+- [x] **Step 1: Draft `planning.md`**
 
 Sections: §Scope Inventory (who asked, what level of document, which sections, deadline) + §Task-Size Triage + §PLAN.md/RESULTS.md Decision Matrix. Decision matrix:
 
@@ -318,7 +318,7 @@ Sections: §Scope Inventory (who asked, what level of document, which sections, 
 | Drafting a new section / major revision | Yes | Yes | Full workflow |
 | Whole-paper review / pre-submission sweep | Yes | Yes | Full workflow |
 
-- [ ] **Step 2: Draft `workflow.md` — four modes + hard rules**
+- [x] **Step 2: Draft `workflow.md` — four modes + hard rules**
 
 Four modes:
 - **(a) Direct edit.** Orchestrator edits directly while in live conversation with the researcher, then dispatches an independent reviewer. Appropriate for tiny polishes, typo fixes, single-paragraph rewrites at the researcher's explicit request.
@@ -330,7 +330,7 @@ Two hard rules:
 1. **Reviewer dispatch is never skipped.** In every mode — including direct-edit — the reviewer is a separately-dispatched agent. Self-review by the orchestrator is not a substitute.
 2. **Parallel-dispatch multiple reviewers for multi-dimensional consistency work.** One reviewer per `consistency/*.md` file. Single message, multiple Agent-tool calls. Each reviewer is focused on its one dimension.
 
-- [ ] **Step 3: Cross-link + self-review + commit**
+- [x] **Step 3: Cross-link + self-review + commit**
 
 `workflow.md` references each `consistency/*.md` by name; `planning.md` references `workflow.md`. Update RESULTS.md Task 5. Commit: `skill: writing planning + workflow refs`.
 
