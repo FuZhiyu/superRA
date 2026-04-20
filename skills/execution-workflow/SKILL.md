@@ -5,7 +5,7 @@ description: Use when you have a PLAN.md in the superRA task-block format and ar
 
 # Execution Workflow
 
-Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu. On merge/PR, dispatches `superRA:integration-workflow` (Phases A–D) directly.
+Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu. 
 
 Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE; the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines` + relevant §Pitfalls). Falls back to direct execution when the user requests it or tasks are trivial.
 
@@ -40,7 +40,7 @@ Top-level loop:
 1. Read plan, extract all tasks, create TodoWrite.
 2. **Per task** (see inner loop below).
 3. When no tasks remain → verify pipeline + reproducibility (Step 3).
-4. Dispatch `integration-workflow` (Phases A–D cover drift tests, unified sync+refactor, doc finalization, and final merge/PR/cleanup).
+4. Dispatch `integration-workflow` 
 
 **Per-task inner loop:**
 

@@ -3,13 +3,7 @@ name: reviewer
 description: >
   Prototype reviewer agent. Verifies work independently using a two-verdict
   APPROVE/REVISE protocol with CRITICAL/MAJOR/MINOR severity levels on findings.
-  Used by execution-workflow
-  (implementation review), integration-workflow (drift test review, Phase B
-  recon + verify review, and Phase D post-merge drift test + integration
-  review), and semantic-merge (merge review). The dispatcher
-  passes only the review stage, task pointer, and git SHA range — this file
-  is the canonical source for severity definitions, verdict protocol, report
-  format, and stage-specific handoffs. Do not duplicate any of that content
+  Used at every stage of superRA workflow. Adversarial by design. 
   into dispatch prompts.
 tools: [Read, Edit, Glob, Grep, Bash, Skill, TodoWrite]
 skills: [superRA:using-superRA]
