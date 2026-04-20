@@ -209,7 +209,7 @@ Self-check: (a) Iron Law protected by a Common Rationalizations table covering a
 ## Task 2: `style-checklist.md` + `structure-checklist.md`
 
 **Depends on:** Task 1
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:** `skills/writing/references/style-checklist.md` (new), `skills/writing/references/structure-checklist.md` (new)
@@ -220,15 +220,15 @@ Self-check: (a) Iron Law protected by a Common Rationalizations table covering a
 
 **Output:** two reference files, each a how-to + gated checklist. **Read the source PDFs first** — the task steps below are a condensed target, not a substitute for the originals.
 
-- [ ] **Step 1: Draft `style-checklist.md`**
+- [x] **Step 1: Draft `style-checklist.md`**
 
 Structure: §How-To (teaching content with before/after examples) + §Gated Checklist (severity-marked). Cover: nominalization (detect + move action to verb; keep nominalization for daisy-chain / after-strong-verb / field-term cases); noun-cluster avoidance (break clusters of 3+ modifying nouns); active voice with clear agency; single-hedge-per-claim rule; parallel structure for lists and comparisons; sentence-length guidance (~20–25 words); dangling-modifier check; old→new information flow inside paragraphs; topic-sentence-first; transition placement at paragraph start. Each rule cites LRS or Chaubey section.
 
-- [ ] **Step 2: Draft `structure-checklist.md`**
+- [x] **Step 2: Draft `structure-checklist.md`**
 
 Structure: §How-To + §Gated Checklist. Cover: Pyramid Principle (governing idea first, MECE supporting points, horizontal logic — sibling points parallel in type, vertical logic — each level answers questions raised above); SCQ (Situation–Complication–Question) for intros; section-level anatomy (intro: motivation → gap → RQ → contribution → roadmap; methods: data + specification + identification; results: main first then robustness; conclusion: restate + limitations, no new findings); title-should-state-finding rule; table-of-contents paragraph at end of intro; "no mystery novel" front-loading rule.
 
-- [ ] **Step 3: Cross-link from SKILL.md §Pitfalls + self-review + commit**
+- [x] **Step 3: Cross-link from SKILL.md §Pitfalls + self-review + commit**
 
 Ensure SKILL.md §Pitfalls pointers resolve. Self-check: every rule has a ≤10-word name + 1–2 sentence explanation + source citation; severity markers on every checklist item; no "TBD" or "similar to". Update RESULTS.md Task 2. Commit: `skill: writing style + structure checklists`.
 

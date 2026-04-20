@@ -25,7 +25,17 @@
 
 ## Task 2: `style-checklist.md` + `structure-checklist.md`
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Key findings:**
+
+- **`style-checklist.md`:** 9 sentence-level rules (actions-in-verbs / nominalization, old→new info flow, single-hedge-per-claim, active voice, parallel structure, noun-cluster avoidance, sentence length, dangling modifiers, ambiguous pronouns) + 4 paragraph-level rules (topic sentence first, one idea per paragraph, transitions at start, first-sentence link test). Each rule has: ≤10-word name, 1–2 sentence principle, detection trick, before/after example, explicit "do NOT apply when" exceptions (honors Iron Law — rules are heuristics not mandates). §Gated Checklist: 4 `[BLOCKING]` scope/voice items + 13 `[ADVISORY]` rule-application items + 2 handoff items.
+- **`structure-checklist.md`:** Pyramid Principle (governing idea, MECE, horizontal/vertical logic), SCQ framing, RAP (Chaubey), two-part introduction (Chaubey p. 108), title-states-finding rule, section-level anatomy (intro/methods/results/conclusion/abstract), no-mystery-novel front-loading, reader-facing headings (Chaubey p. 71), Miller 7±2 chunking. §Gated Checklist: 3 `[BLOCKING]` scope/authorization items + ~20 `[ADVISORY]` structural items + 1 `[BLOCKING]` handoff item.
+- **Source coverage:** LRS 1-1a (nominalization — read in full, 32 pages including "some nominalizations are useful" caveats which we preserved), LRS 3-4 (info flow — read in full, first 10 pages covering old→new principle). Chaubey cited by page number for every rule it contributed. Minto / Pyramid Principle webs cited qualitatively.
+- **Source-material surprise:** 12 of 14 LRS PDFs at `/Users/zhiyufu/Dropbox/PhD/writing_resources/LittleRedHouse/` are **empty files (0 bytes, Dropbox sync placeholders)** — only LRS 1-1a and LRS 3-4 have content. LRS 5, 6, Arg 1–3, DS 1–2, triage, character (1-1b), cohesion (2) are all inaccessible. The content attributed to them in `style-checklist.md` and `structure-checklist.md` is drawn from Chaubey + plan file summaries. **Flagged for researcher** in final report — should be resolved before Task 8 dogfood.
+- **SKILL.md §Pitfalls pointers resolve:** `style-checklist.md` and `structure-checklist.md` both exist at the paths referenced.
+
+**Files:** `skills/writing/references/style-checklist.md` (198 lines), `skills/writing/references/structure-checklist.md` (143 lines).
 
 ## Task 3: `consistency/*.md` — 8 dimension-scoped reference files
 
