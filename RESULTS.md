@@ -34,7 +34,15 @@
 
 ## Task 3: Update plugin.json + marketplace.json descriptions
 
-**Status:** Not started
+**Status:** IMPLEMENTED.
+
+**Summary.** Updated `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` to reflect the broadened scope of superRA and to mark the first public release.
+
+- **Description** (both files, kept in sync): "Disciplined AI Research Assistant for economists: plan-implement-integrate workflow with implementer–reviewer pair, data-analysis discipline, and drift-test-verified integration."
+- **Version bump:** `0.0.4.1` → `0.1.0`. User decision (2026-04-20): README + CLAUDE.md split complete, install flow modernized, workflow diagram added — milestone is meaningful enough to mark as first public release.
+- **Keywords added** to `plugin.json`: `research-workflow`, `agent-orchestration` appended after existing entries (`skills`, `economics`, `data-analysis`, `reproducibility`, `research`, `workflows`).
+
+**Verification.** `python3 -c "import json; json.load(open('.claude-plugin/plugin.json')); json.load(open('.claude-plugin/marketplace.json')); print('ok')"` → `ok`.
 
 ## Task 4: Verify + modernize installation instructions
 
