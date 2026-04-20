@@ -19,7 +19,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on this plan (2026-04-19; re-approved after §Changing Plans protocol on 2026-04-19 for recon-as-reviewer architecture and shortcut axes)
-- [ ] **Execution complete** — rolled back 2026-04-19 by §Changing Plans (Task 8 added post-integration-dogfooding retrospective); Tasks 1–7 retain `**Review status:** APPROVED` (no code changes); Task 8 unstarted
+- [x] **Execution complete** — Task 8 reviewer APPROVED (2026-04-19); all 8 tasks `**Review status:** APPROVED`
 - [x] **Drift tests created** — N/A for skill refactor; substitute satisfied by Task 7 end-to-end dry-run + skill-graph consistency sweep (2026-04-19)
 - [ ] **Refactored** — rolled back 2026-04-19 by §Changing Plans; Task 8 will produce new skill-file hunks requiring a fresh Phase B recon + verify pass. Tasks 1–7 retain `**Integration status:** APPROVED` (no code changes)
 - [ ] **Docs finalized** — rolled back 2026-04-19 by §Changing Plans; matured RESULTS.md needs a Task 8 section + fresh doc-review pass
@@ -274,7 +274,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Task 8: Retrospective refinements from Phase A–D dogfooding
 **Depends on:** Tasks 1, 2, 5 *(edits files those tasks touched; added post-integration 2026-04-19 via §Changing Plans)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** N/A (skill + agent file edits)
