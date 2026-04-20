@@ -128,6 +128,7 @@ Agent(subagent_type: "superRA:reviewer"):
   Stage: <stage-name>
   Task: <task pointer>
   Git range: <BASE_SHA>..<HEAD_SHA>
+  Worktree: <absolute path>   # optional — parallel-reviewer pattern only
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,

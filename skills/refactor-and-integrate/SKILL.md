@@ -56,7 +56,7 @@ This item frames every checklist item below it — any hunk in the cumulative di
 
 ## Scope by Integration Status
 
-Refactor implementer and verify reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution. The dispatch's `Task:` or `Tasks in scope:` field names the explicit in-scope list.
+Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution. The dispatch's `Task:` or `Tasks in scope:` field names the explicit in-scope list.
 
 This mirrors the DAG cascade rule on `Review status:` and `Integration status:` — see `handoff-doc/references/plan-anatomy.md` (lines 178–179) for the cascade semantics. Without scoping, a second integration pass either redoes already-approved work or lets the reviewer flag already-APPROVED tasks, which violates the Minimum-net-diff top item above.
 
@@ -86,7 +86,7 @@ The Minimum-net-diff top item is enforced by a concrete pre-commit procedure. Ru
 3. **Any hunk without a justification is out of scope.** Revert it, OR re-justify it by adding the underlying need to the integration map (and the commit message) so the reviewer can check the same evidence.
 4. **Stage only files you touched this turn** (per `superRA:using-superRA` §Commit Hygiene); `git diff --cached` before `git commit`.
 
-The verify reviewer runs the same `git diff <merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists. One source of truth, two perspectives.
+The integration reviewer runs the same `git diff <merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists. One source of truth, two perspectives.
 
 ---
 

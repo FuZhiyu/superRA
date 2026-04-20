@@ -98,7 +98,9 @@ You follow an existing task-block anatomy (objective / files affected / input / 
 
 - **Steps and step code.** You may rewrite, reorder, add, or remove steps when the data forces deviation from the originally planned approach — the plan reflects what was actually done, not what was originally imagined. Replace stale step text in place; do not append a "Revised:" version alongside it.
 - **`**Review status:** IMPLEMENTED`** line, set after your atomic commit.
-- **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit Commit 2 of the Phase B two-commit refactor (`integration-workflow` Phase B Step 3). The recon reviewer set these to `REVISE` before you; the verify reviewer will flip them to `APPROVED` after you.
+- **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit your Phase B refactor work (`integration-workflow` Phase B Step 3). The integration reviewer set these to `REVISE` before you; the integration reviewer will flip them to `APPROVED` after your fix pass.
+
+  **You do not edit the `## Integration Intent` section.** That section is written and maintained exclusively by the integration reviewer. The orchestrator may append `→ orchestrator:` annotations; you never touch the section. If a review item references a cluster in `## Integration Intent`, fix the code per the item's guidance — the reviewer removes the cluster bullet when the task reaches `APPROVED`.
 - **`→ implemented: ...` annotations** appended to review items on a REVISE round (see below).
 - Your assigned task's section of `RESULTS.md`.
 

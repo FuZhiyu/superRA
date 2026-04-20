@@ -35,7 +35,7 @@ VALIDATE        execution-workflow (reviewer agent after each task)
                 top to bottom plus any §Pitfalls subsections matching operations performed. Returns APPROVE / REVISE.
                 REVISE triggers a narrow re-review (cited fixes + dependent findings) until APPROVED.
                     |
-INTEGRATE       integration-workflow (Phases A–D; invokes semantic-merge internally on Tier 2/3)
+INTEGRATE       integration-workflow (Phases A–D; invokes semantic-merge internally when integration reviewer calls for intent-based resolution)
                 Phase A: drift tests for key results (data-analysis vertical).
                 Phase B: iterative unified sync + refactor. Phase C: mature RESULTS.md + doc audit.
                 Phase D: final local merge or PR + cleanup.
@@ -66,7 +66,7 @@ flowchart TB
     INT1["<b>INTEGRATE — Phase A: drift tests</b><br/>integration-workflow Phase A<br/>Stage: drift-test<br/>→ implementer + reviewer<br/>+ refactor-and-integrate/references/drift-test-quality.md<br/>+ econ-data-analysis/references/integrate-drift-tests.md"]
     INT1 --> INT2
 
-    INT2["<b>INTEGRATE — Phase B: unified sync + refactor (iterative)</b><br/>integration-workflow Phase B<br/>Stage: integration (+ Skills: semantic-merge on Tier 2/3)<br/>→ recon reviewer + unified implementer + verify reviewer<br/>+ econ-data-analysis/references/integration.md (data-specific)<br/>+ refactor-and-integrate/references/codebase-integration.md (generic)<br/>+ refactor-and-integrate/references/merge-quality.md (conditional)"]
+    INT2["<b>INTEGRATE — Phase B: review-led sync + refactor (iterative)</b><br/>integration-workflow Phase B<br/>Stage: integration (+ semantic-merge when reviewer calls for intent-based resolution)<br/>→ integration reviewer → implementer(s) → integration reviewer<br/>+ econ-data-analysis/references/integration.md (data-specific)<br/>+ refactor-and-integrate/references/codebase-integration.md (generic)<br/>+ refactor-and-integrate/references/merge-quality.md (conditional)"]
     INT2 --> INT3
     INT2 -->|re-enterable| INT2
 
@@ -147,7 +147,7 @@ superRA's skills split into four categories. The directory layout stays flat (on
 |-------|-------|-------------|
 | **planning-workflow** | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the active domain skill for domain-specific gates and templates. |
 | **execution-workflow** | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE) with orchestrator-discipline filter, pipeline + reproducibility verification, 4-option completion menu. |
-| **integration-workflow** | INTEGRATE (Phases A–D) | Phase A drift-test creation, Phase B iterative unified sync+refactor (invokes `semantic-merge` internally on Tier 2/3), Phase C doc finalization (mature RESULTS.md + audit project-level CLAUDE.md / AGENTS.md / README.md), Phase D final merge / PR / cleanup. Re-enterable Phase B on main advancement. |
+| **integration-workflow** | INTEGRATE (Phases A–D) | Phase A drift-test creation, Phase B review-led iterative sync+refactor (integration reviewer annotates; `semantic-merge` invoked when reviewer calls for intent-based resolution), Phase C doc finalization (mature RESULTS.md + audit project-level CLAUDE.md / AGENTS.md / README.md), Phase D final merge / PR / cleanup. Re-enterable Phase B on main advancement. |
 | **agent-orchestration** | cross-cutting | Multi-agent dispatch patterns: workload balancing across tiers, parallel subagents for independent tasks, reviewer-feedback adjudication. |
 
 ### Domain — Data Analysis
@@ -165,7 +165,7 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 | **handoff-doc** | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Step 3 doc-writer). Usable standalone by a single author with no subagents. |
 | **refactor-and-integrate** | Three integration-phase checklists: `drift-test-quality.md`, `codebase-integration.md`, `merge-quality.md`. Standalone-invokable for any refactoring task. |
 | **report-in-markdown** | Format discipline for markdown reports with figures, LaTeX math, tables. Lean SKILL.md body; three references loaded on demand: `baseline-io.md`, `rich-content.md`, `final-form.md`. |
-| **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions to the user. Invoked by `integration-workflow` Phase B (recon + Tier 2/3 implementer) and by the merge-guard hook; also usable standalone. |
+| **semantic-merge** | Intent-based branch integration for any vertical or caller (human at terminal, orchestrator direct, or dispatched agent). Resolves conflicts by intent rather than mechanics; escalates research-meaningful decisions to the user. Invoked by `integration-workflow` Phase B when the integration reviewer calls for it, and usable standalone. |
 | **worktree-data-sync** | Non-git data sync between existing worktrees (seed, diff, apply modes) and data teardown. Worktree lifecycle (create / enter / remove) lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
 
 ### Meta
