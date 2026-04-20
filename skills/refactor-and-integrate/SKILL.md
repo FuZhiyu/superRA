@@ -38,9 +38,9 @@ The three disciplines are **concurrent, not sequential**. A single integration p
 
 ### 3. Merge Quality
 
-**Purpose.** Preserve incoming intent *and* current-branch work across a merge with no silent result changes and no mechanical ours/theirs on research-meaningful conflicts. Structure every merge as a two-commit pair: mechanical first, integration second. Escalate Tier 3 conflicts (variable definitions, sample construction, econometric specifications, data processing, results) to the researcher and log the decision before committing the resolution.
+**Purpose.** Preserve incoming intent *and* current-branch work across a merge with no silent result changes and no mechanical ours/theirs on research-meaningful conflicts. Separate mechanical reconciliation from intent-bearing adaptation — land them in distinct commits whenever either side is non-trivial (canonical two-commit shape in `references/merge-quality.md`; one commit is acceptable only when one side is trivial). Escalate Tier 3 conflicts (variable definitions, sample construction, econometric specifications, data processing, results) to the researcher and log the decision before committing the resolution.
 
-**Full checklist + how-to:** `references/merge-quality.md` (intent preservation, research integrity, two-commit templates, Tier 3 escalation procedure + Never-list, integration-map format, verification, data discipline). Loaded whenever `Stage:` is `merge`.
+**Full checklist + how-to:** `references/merge-quality.md` (intent preservation, research integrity, commit-structure templates, Tier 3 escalation procedure + Never-list, integration-map format, verification, data discipline). Loaded whenever `Stage:` is `merge`.
 
 ---
 
@@ -51,14 +51,6 @@ Every round of drift-test creation, refactoring, and merge integration shares on
 - `[BLOCKING]` **Minimum net diff to merge base.** Cumulative refactor across all integration rounds touches only what drift-test preservation, convention fit, handoff-doc coherence, and documentation demand. No unrelated cleanup, no speculative abstractions, no "while I'm here" edits. Implementer runs `git diff <merge-base>..HEAD` before each commit and reviews the cumulative diff; reviewer computes the same diff as evidence.
 
 This item frames every checklist item below it — any hunk in the cumulative diff must be justifiable against one of the three disciplines' checklists. A hunk not tied to drift-test integrity, codebase integration, or merge quality is out of scope and must be reverted or re-justified. Enforced by the Implementer Self-Check below.
-
----
-
-## Scope by Integration Status
-
-Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution. The dispatch's `Task:` or `Tasks in scope:` field names the explicit in-scope list.
-
-This mirrors the DAG cascade rule on `Review status:` and `Integration status:` — see `handoff-doc/references/plan-anatomy.md` (lines 178–179) for the cascade semantics. Without scoping, a second integration pass either redoes already-approved work or lets the reviewer flag already-APPROVED tasks, which violates the Minimum-net-diff top item above.
 
 ---
 
@@ -84,7 +76,8 @@ The Minimum-net-diff top item is enforced by a concrete pre-commit procedure. Ru
 1. **Compute the cumulative diff.** `git diff <merge-base>..HEAD` where `<merge-base>` is the merge base the integration is targeting (e.g., `$(git merge-base HEAD main)` or whatever the workflow specifies).
 2. **Review every hunk** against the loaded references' checklists. For each hunk, ask: *which `[BLOCKING]` or `[ADVISORY]` item justifies this change?* A hunk may be tied to drift-test preservation, codebase-convention fit, handoff-doc coherence, documentation currency, or an explicit item in the integration map.
 3. **Any hunk without a justification is out of scope.** Revert it, OR re-justify it by adding the underlying need to the integration map (and the commit message) so the reviewer can check the same evidence.
-4. **Stage only files you touched this turn** (per `superRA:using-superRA` §Commit Hygiene); `git diff --cached` before `git commit`.
+4. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` — named explicitly in the dispatch's `Task:` or `Tasks in scope:` field. `APPROVED`-integration tasks are out of scope: do not walk their code; do not touch their output files except through legitimate merge resolution. A hunk touching an APPROVED task that is not named in scope fails step 3.
+5. **Stage only files you touched this turn** (per `superRA:using-superRA` §Commit Hygiene); `git diff --cached` before `git commit`.
 
 The integration reviewer runs the same `git diff <merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists. One source of truth, two perspectives.
 
