@@ -44,7 +44,7 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 - [ ] Task 2 — CLAUDE.md consolidation
 - [ ] Task 3 — plugin.json + marketplace.json descriptions
 - [ ] Task 4 — installation instructions verified
-- [ ] Task 5 — cross-reference + terminology sweep
+- [x] Task 5 — cross-reference + terminology sweep
 - [ ] Task 6 — final human read-through and release tag decision
 - [ ] Refactored (integration-workflow — N/A, docs-only branch)
 - [ ] Docs finalized
@@ -264,12 +264,8 @@ DAG cascade: Task 1a `**Review status:**` rolled back APPROVED → REVISE. Task 
 > Both should read `PLAN → IMPLEMENT → INTEGRATE` / `(PLAN / IMPLEMENT / INTEGRATE)`. Note: `execution-workflow/SKILL.md` lines 3 and 8 also reference "IMPLEMENT and VALIDATE phases" — this is an intentional skill-internal term for that skill's reproducibility-verification step and does not need changing; only the top-level three-phase workflow description strings above require the fix.
 > → implemented: commit 70daa81 (`docs(skills): drop VALIDATE from planning-workflow + agent-orchestration descriptions`) — both frontmatter descriptions updated; `PLAN → IMPLEMENT → INTEGRATE` and `(PLAN / IMPLEMENT / INTEGRATE)` confirmed in the current file state.
 
-> **Integration review — 2026-04-20:**
->
-> **BLOCKING — Review status not closed out.** The MAJOR item above was fixed in commit 70daa81 (merged 101df95), but `**Review status:**` still reads REVISE and the blockquote has no `→ implemented:` marker closing the item. The handoff doc misrepresents the code state. Fix: add the `→ implemented:` annotation (done above), flip `**Review status:**` to APPROVED, and flip this task's `**Integration status:**` to APPROVED.
-
-**Review status:** REVISE
-**Integration status:** REVISE
+**Review status:** APPROVED
+**Integration status:** APPROVED
 
 ---
 
