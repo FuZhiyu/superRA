@@ -72,6 +72,8 @@
 > **User decision (2026-04-19):** Push `refactor/unified-integration` to origin and create a PR against main for review.
 > **Question asked:** All 7 tasks APPROVED — merge locally, push+PR, keep as-is, or discard?
 
+> **Integration recon (2026-04-19):** Tier 1 — trivial fast-forward; `origin/main` has not advanced since merge-base `92a685b` (0 commits behind), `git merge-tree` reports no conflicts, branch is 31 commits ahead. Phase B merge path = `git merge --ff-only`; follow-ups do NOT load `semantic-merge`.
+
 ---
 
 ## Project Conventions
@@ -131,9 +133,8 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
   In `skills/refactor-and-integrate/SKILL.md` body, add an explicit principle: *"Refactor implementer and verify reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution."* Point at `handoff-doc/references/plan-anatomy.md` for the DAG cascade semantics. Commit.
 
----
-
-### Task 2: Unify `integration-workflow` — Phases A–D with iterative Phase B
+> **Integration review notes (recon, 2026-04-19):**
+> 1. **[ADVISORY]** `skills/refactor-and-integrate/SKILL.md:104` — `§Integration → Used by workflow skills → superRA:integration-workflow` bullet says the workflow dispatches "Phase D post-merge drift-test + integration-review re-runs (`references/codebase-integration.md`) when main advanced." Phase D as authored in `skills/integration-workflow/SKILL.md` does not itself dispatch a drift-test run or integration review; when main advances it re-enters Phase B (line 319), and Phase D Step 3a only verifies the pipeline. The "re-runs when main advanced" phrasing conflates the Phase D→B re-entry with a Phase D dispatch. Minor prose clarity; no `[BLOCKING]` impact on the checklist's load-bearing content. Fix: reword to "Phase D pipeline verification; the Phase D→B re-entry trigger on main advancement then runs the Phase B drift-test + verify-review dispatches again."
 **Depends on:** Task 1
 **Review status:** APPROVED
 **Integration status:**
@@ -165,6 +166,9 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 - [x] **Step 5: Add plan-change trigger pointer** — one bullet in Phase B acknowledging that substantive restructure findings escalate to `planning-workflow §Changing Plans` (orchestrator proposes, researcher decides). Not a duplicated protocol — a pointer.
 
 - [x] **Step 6: Validate — walk the four workflow principles** against the draft. Confirm each principle preserved or strengthened. Commit.
+
+> **Integration review notes (recon, 2026-04-19):**
+> 1. **[ADVISORY]** `skills/integration-workflow/SKILL.md:441` — `§Integration → Invokes` says `superRA:semantic-merge` is "REQUIRED for the main update in Phase B Commit 1 and any Phase D pre-merge re-sync (delegated mode)." This contradicts Step 2's two-shortcut-axes logic: Tier 1 uses `git merge --ff-only` (line 142–143) and the Red Flags list at line 408 explicitly says "delegated mode is load-bearing when semantic-merge runs at all (Tier 2/3)." The word "REQUIRED" overstates — semantic-merge is Tier-conditional, not unconditional. Minor doc coherence; does not mis-operate because Step 2 is authoritative on control flow. Fix: change "REQUIRED for the main update in Phase B Commit 1" → "REQUIRED for Phase B Commit 1 on Tier 2/3 (Tier 1 uses `git merge --ff-only`; see Phase B Step 2)".
 
 ---
 
