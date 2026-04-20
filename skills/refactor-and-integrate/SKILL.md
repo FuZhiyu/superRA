@@ -101,7 +101,7 @@ Some tasks cross stages (a refactor during a merge; a drift-test review that fla
 ## Integration
 
 **Used by workflow skills:**
-- **`superRA:integration-workflow`** — Dispatches drift-test creation and review (`references/drift-test-quality.md`) across Phase A; the Phase B recon, unified-implementer, and verify-reviewer dispatches (`references/codebase-integration.md`, `references/merge-quality.md`) for the iterative sync+refactor loop; and the Phase D post-merge drift-test + integration-review re-runs (`references/codebase-integration.md`) when main advanced.
+- **`superRA:integration-workflow`** — Dispatches drift-test creation and review (`references/drift-test-quality.md`) across Phase A; the Phase B recon, unified-implementer, and verify-reviewer dispatches (`references/codebase-integration.md`, `references/merge-quality.md`) for the iterative sync+refactor loop; and Phase D pipeline verification — the Phase D→B re-entry trigger on main advancement then runs the Phase B drift-test + verify-review dispatches (`references/codebase-integration.md`) again.
 - **`superRA:semantic-merge`** — Dispatches merge proposer (`references/merge-quality.md`) and merge reviewer (`references/merge-quality.md`) for tier classification and conflict resolution.
 
 **Auto-loaded alongside:**
