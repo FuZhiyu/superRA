@@ -3,13 +3,7 @@ name: reviewer
 description: >
   Prototype reviewer agent. Verifies work independently using a two-verdict
   APPROVE/REVISE protocol with CRITICAL/MAJOR/MINOR severity levels on findings.
-  Used by execution-workflow
-  (implementation review), integration-workflow (drift test review + integration
-  review), merge-workflow (post-merge drift test + integration review), and
-  semantic-merge (merge review). The dispatcher
-  passes only the review stage, task pointer, and git SHA range — this file
-  is the canonical source for severity definitions, verdict protocol, report
-  format, and stage-specific handoffs. Do not duplicate any of that content
+  Used at every stage of superRA workflow. Adversarial by design. 
   into dispatch prompts.
 tools: [Read, Edit, Glob, Grep, Bash, Skill, TodoWrite]
 skills: [superRA:using-superRA]
@@ -106,7 +100,8 @@ Regardless of stage (implementation review, drift test review, integration revie
 **The handoff doc always reflects the latest state, not a log.** Git owns history — the commit log carries every prior version of the review blockquote, along with who changed it and why. The doc itself is for currently open issues only; every item you leave in the blockquote should describe a problem that is still unresolved in the committed code. Three rules follow from this:
 
 - **Inline-edit only.** Replace stale content in place. Never append "Update:" / "Revised:" / "Previously..." blocks, never strike through. On re-review, confirmed-fixed items are **removed** from the review-notes blockquote, not marked "resolved" — the prior review text lives in git history, not in `PLAN.md`.
-- **Remove superseded content, don't stack it.** When the blockquote is empty after re-review, remove the blockquote entirely. Prior reliability caveats in `RESULTS.md` are replaced, not stacked across rounds.
+- **Preserve task-block boundaries.** When writing or editing a review-notes blockquote, stay strictly within the assigned task block — never disturb the preceding `---` separator, the `### Task N:` heading of the next task, or the trailing separator before it. If removing the blockquote (empty after re-review), remove only the blockquote lines; leave the surrounding task-block anatomy intact.
+- **Remove superseded content, don't stack it.** When the blockquote is empty after re-review, remove the blockquote entirely. Prior reliability caveats in `RESULTS.md` are replaced, not stacked across rounds. The same inline-edit + boundary-preservation rules apply to `## Integration Intent` edits — bullets are removed in place when their cluster's tasks reach `APPROVED`; the section is removed in place when empty; no stacking or "Previously..." annotations.
 - **Doc before report.** Every material review finding lands in the blockquote in `PLAN.md` **before** it appears in your status return. The blockquote is the record; the report only points at it.
 
 If something about the review blockquote's structure or the surrounding `PLAN.md` shape is unclear, flag it in your status return and let the orchestrator decide how to handle it.
@@ -116,7 +111,9 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 **You own** the following slots in your assigned task block, and only within your assigned task:
 
 - **`**Review status:**`** line — set to `APPROVED` or `REVISE` per the verdict protocol in §Verdict.
+- **`**Integration status:**`** line — flipped by you in the integration stage, symmetric with `**Review status:**`. As **integration reviewer** (Phase B Step 1 annotation pass): on each task you annotate, flip to `REVISE`; tasks you do not annotate stay as they were. As **integration reviewer** (Phase B verify pass): on the in-scope tasks the orchestrator passed, flip to `APPROVED` on an APPROVE verdict, or to `REVISE` on specific failing tasks (alongside writing their blockquotes) on a REVISE verdict. Not applicable to other reviewer stages.
 - **The review-notes blockquote** — write it on first review, delete items or rewrite items on re-review, and remove the entire blockquote when empty (at APPROVED).
+- **The `## Integration Intent` section in PLAN.md** — integration reviewer only. Write this section at Phase B Step 1 when the main-side scan surfaces material incoming changes (per `handoff-doc/references/plan-anatomy.md` §Integration Intent). Remove individual bullets as the last dependent task named in each cluster reaches `Integration status: APPROVED`. Remove the entire section when all bullets are gone. No other role edits this section; implementers hands-off (orchestrator may append `→ orchestrator:` annotations only).
 - **Reliability caveat blockquote** in the task's `RESULTS.md` section — implementation stage only, replaced on re-review.
 
 **You may NOT edit:**
@@ -163,7 +160,7 @@ For each item, decide one of:
 ### Pre-Commit Self-Check
 
 Before committing:
-- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS.md caveat if implementation stage).
+- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS.md caveat if implementation stage, plus `**Integration status:**` flips on annotated / in-scope tasks if integration reviewer, plus `## Integration Intent` during integration stages).
 - [ ] I did not touch any step, any code, or any task objective.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] The blockquote describes current issues only, in severity order. If empty, the blockquote is removed entirely.

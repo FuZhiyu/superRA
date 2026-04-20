@@ -1,6 +1,6 @@
 {
-  "name": "superRA-dev",
-  "description": "Development marketplace for superRA core skills library",
+  "name": "superRA",
+  "description": "Marketplace for superRA core skills library",
   "owner": {
     "name": "Julie Zhiyu Fu",
     "email": "juliezfu@gmail.com"
@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "superRA",
-      "description": "superRA plugin",
-      "version": "0.0.4",
+      "description": "Disciplined AI Research Assistant for economists: plan-implement-integrate workflow with implementer–reviewer pair, data-analysis discipline, and drift-test-verified integration.",
+      "version": "0.1.0",
       "source": "./",
       "author": {
         "name": "Julie Zhiyu Fu",

@@ -1,6 +1,6 @@
 ---
 name: agent-orchestration
-description: Use when dispatching multiple agents and the right split is unclear; when tasks may run in parallel; when choosing implementer and reviewer roles for a multi-step workflow; or when adjudicating reviewer feedback as the orchestrator. Triggers include "dispatch N agents", "run these in parallel", "who should do the review", and session handoffs that must preserve workflow state.
+description: Use when dispatching multiple agents and unsure how to size or parallelize the work, when choosing implementer + reviewer roles for a multi-step workflow, or when adjudicating reviewer feedback as orchestrator. Covers workload balancing across tiers, parallel subagents for independent tasks, and session handoff where workflow state must survive. Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / INTEGRATE).
 ---
 
 # Agent Orchestration
@@ -9,7 +9,7 @@ description: Use when dispatching multiple agents and the right split is unclear
 
 You delegate tasks to specialized agents with isolated context. This skill carries the **high-level orchestrator guidance** — when to dispatch, what dispatch shape to use, how to read the resulting state from `PLAN.md`, and how to adjudicate reviewer feedback.
 
-**Core principle:** parallel-dispatch independent tasks; serialize iterative
+**Core principle:** parallel-dispatch independent tasks/reviews; serialize iterative
 loops; do trivial work inline. See §Workload Balancing for how to size each
 dispatch.
 
@@ -54,6 +54,20 @@ will be reviewed in isolation.
 - A new feature that requires full domain-skill engagement.
 - Any task where bundle-context would exceed ~150k tokens.
 
+### Difficulty and Agent Type
+
+Harnesses expose multiple tiers of model capacity (Sonnet vs. Opus in Claude Code; configurable thinking depth in Codex). Tier 1 trivial work runs inline in the orchestrator — the choice below is about dispatched subagents.
+
+**Default to medium tier (Sonnet in Claude Code, medium thinking in Codex).** Step up to higher tier (Opus / deep thinking) when *any* of these apply:
+
+- **Spec emerges mid-task.** The right approach only becomes clear after investigation, or the task requires re-scoping from what `PLAN.md` says.
+- **Silent-error risk is high.** Results-bearing code (data transforms, methodology, drift tests) where a wrong output ships without obvious failure.
+- **Adversarial first-pass review.** The failure mode is *not noticing* — capacity buys thoroughness, and lower-tier agents tend to over-comply, which breaks adversarial review. Narrow re-review of a cited fix stays on Sonnet.
+- **Heavy context synthesis.** Many files/skills must be reconciled in one head; Sonnet degrades faster under context pressure.
+
+
+These are defaults, not rules. Use your discretion and honor any explicit user preference.
+
 ### Rules of thumb
 
 **≤150k tokens per agent.** When estimating: manifest skill loads (~5–15k
@@ -63,35 +77,45 @@ across two agents even when the individual items are small — context
 thrash degrades output quality more than the cost of a second spawn.
 
 
-**Parallelize independent tasks.** Tasks whose `Depends on:` lines (see
-`planning-workflow` §Task Dependencies) are all satisfied and that share
-no mutable state are encouraged to be dispatched in parallel to separate agents.
-
-
 ---
 
-## Concurrent Writers Require Worktree Isolation
+## Parallelization and Worktree Isolation
 
-When a parallel dispatch batch contains **≥2 implementers**, each runs in its own git worktree on a `parallel/<analysis-branch>/<slug>` branch (slug is orchestrator-chosen — `a`, `b`, `alpha`, a bundle name). Two implementers sharing a worktree race on `PLAN.md` / `RESULTS.md` and any shared output path; worktree isolation is the only safe concurrency model for parallel writes.
+Parallel dispatch is often worthwhile: multiple implementers working disjoint tasks at once; multiple reviewers covering different slices of a large diff; or a reviewer checking completed work while an implementer continues on the next task. Tasks whose `Depends on:` lines (see `planning-workflow` §Task Dependencies) are all satisfied and that share no mutable state are the natural candidates.
 
-Applies to implementers only. Reviewers run post-merge on the analysis branch. Read-only research subagents return findings to the orchestrator, which does the single write.
+**Prefer background dispatch** so the orchestrator remains available to the user while subagents run.
+
+If multiple agents are running simultaneously, **you must isolate them in separate worktrees**:
+
+Each runs in its own git worktree on a `<current-branch>/parallel/<slug>` branch (slug is orchestrator-chosen — `a`, `b`, `alpha`, a bundle name). Two subagents sharing a worktree race on `PLAN.md` / `RESULTS.md` and any shared output path; worktree isolation is the only safe concurrency model for parallel writes.
+
 
 ### Ownership split
 
 | Direction | Owner | When | How |
 |---|---|---|---|
 | Seed-in (inputs → worktree) | Orchestrator | Before dispatch | `worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink` |
-| Inside worktree (task execution) | Subagent | During dispatch | Normal file I/O on the `parallel/…` branch |
-| Harvest-out (merge back) | Orchestrator | After all siblings return | Plain `git merge --no-ff parallel/<branch>/<slug>` |
+| Inside worktree (task execution) | Subagent | During dispatch | Normal file I/O on the `<branch>/parallel/…` branch |
+| Harvest-out (merge back) | Orchestrator | After all siblings return | Plain `git merge --no-ff <branch>/parallel/<slug>` |
 | Cleanup | Orchestrator | After merge | Harness worktree tool or `git worktree remove` + `git branch -D` |
 
-Task boundaries are set ex-ante in `PLAN.md`, so `parallel/…` branches are mechanically disjoint and merge without `semantic-merge`. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. The `merge-guard` hook exempts `parallel/*` source branches.
+Task boundaries are set ex-ante in `PLAN.md`, so `<branch>/parallel/…` branches are mechanically disjoint and merge without `semantic-merge`. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. The `merge-guard` hook exempts `*/parallel/*` source refs.
 
 Force-symlink seeding is safe because parallel tasks have disjoint write paths by construction. A task that would mutate seeded data either needs a redrawn boundary or `--seed-sync-mode force-cow`.
 
+**Always pass `--from "$(pwd)"` (or an explicit path) when seeding.** Never rely on `sync_worktree_data.py`'s `--from` default — it points at the main worktree, not the orchestrator's analysis worktree.
+
 ### Worktree lifecycle
 
-Prefer harness worktree tools (`EnterWorktree`, `ExitWorktree`); fall back to raw git per `references/worktree-harness-fallback.md`, which also covers placement and gotchas.
+**Orchestrator creates the worktree with raw git** before dispatch, branching off its current branch:
+
+```bash
+git worktree add -b "$(git branch --show-current)/parallel/<slug>" <worktree-path> HEAD
+```
+
+The `/parallel/` infix is important — the `merge-guard` hook exempts `*/parallel/*` source refs on merge-back, so the orchestrator's `git merge <branch>/parallel/<slug>` is not blocked. Pass the absolute `<worktree-path>` via the dispatch `Worktree:` field. The subagent enters via `EnterWorktree(path=...)` (or `cd` as fallback), works on whatever branch the worktree is on, and never creates its own worktree or touches the branch name.
+
+For Claude Code: **Never use the `Agent` tool's `isolation: "worktree"` parameter.** It branches off main's HEAD, not the orchestrator's current tip, so the subagent cannot see in-flight analysis state.
 
 Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `PLAN.md` — git (`git worktree list`, `git branch`) is the source of truth.
 
@@ -126,6 +150,7 @@ Agent(subagent_type: "superRA:reviewer"):
   Stage: <stage-name>
   Task: <task pointer>
   Git range: <BASE_SHA>..<HEAD_SHA>
+  Worktree: <absolute path>   # optional — parallel-reviewer pattern only
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
@@ -140,7 +165,7 @@ only paraphrases the default protocol, the skill-load manifest, or
 `PLAN.md` content, delete it — re-statement of content the agent will
 read itself is noise that clutters the dispatch without adding signal.
 
-**`Worktree:` field (implementer-only, parallel-dispatch only).** Absolute path to the dedicated worktree provisioned per §Concurrent Writers. When present, the dispatch **must** include this canned steering in the `Additionally:` tail — the one case where that tail carries required, non-additive content:
+**`Worktree:` field (parallel-dispatch only).** Absolute path to the dedicated worktree provisioned per §Parallelization and Worktree Isolation. When present, the dispatch **must** include this canned steering in the `Additionally:` tail — the one case where that tail carries required, non-additive content:
 
 > *Work inside the worktree at `<path>`. Enter via `EnterWorktree` if available, otherwise `cd <path>`. Do not edit files outside. Do not merge or push — the orchestrator owns merge-back.*
 
@@ -184,7 +209,7 @@ When a reviewer returns REVISE:
 - You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `handoff-doc` §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
 - You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `handoff-doc` §User Decisions Log.
 
-This discipline applies equally to `execution-workflow` (implementation review), `integration-workflow` (drift test review, integration review, doc review), `merge-workflow` (merge review, post-merge integration review), and `semantic-merge` (merge review). The orchestrator owns the final call in every loop.
+This discipline applies equally to all stages of the using superRA workflow. The orchestrator owns the final call in every loop.
 
 ## Review Status Reference
 
@@ -200,3 +225,4 @@ Implementer and reviewer agents own their commits and document updates — see `
 **A task is complete only when its status is `APPROVED`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
 
 For direct mode (orchestrator executes the step itself), see `superRA:using-superRA` §Execution Modes.
+

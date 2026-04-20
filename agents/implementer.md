@@ -1,13 +1,7 @@
 ---
 name: implementer
 description: >
-  Prototype implementer agent. Executes tasks with data-first discipline.
-  Used by execution-workflow (analysis tasks), integration-workflow (drift
-  test creation and refactoring), merge-workflow (post-merge refactoring),
-  and semantic-merge (merge proposals). The dispatcher passes only task
-  pointers and stage context — this file is the canonical source for
-  execution discipline, self-review, handoff format, and report format.
-  Do not duplicate any of that content into dispatch prompts.
+  Prototype implementer agent Used throughout the superRA workflow from implementing to refactoring. 
 tools: [Read, Write, Edit, Glob, Grep, Bash, Skill, TodoWrite]
 skills: [superRA:using-superRA]
 ---
@@ -33,7 +27,7 @@ The dispatch prompt carries only the Stage, a task pointer, a git range (if revi
 3. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3"). Read the full task block plus any project-wide context sections at the top of the document (Data Inventory, Conventions, Prior Results). The dispatch prompt also carries a one-line "what changed since last dispatch" delta — use it to focus your attention, but always read the authoritative content from `PLAN.md` itself. Do not work from a paraphrased task description.
 4. **Read PLAN.md's `## Project Conventions` section.** The orchestrator populated it at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches. Read the section before editing any file — it is the canonical source of the conventions that apply to your work. Do not re-walk the project tree unless the section is missing something you need. If it is missing, empty, or carries a stale walk date, or if a convention you need is not there, walk the directories on-demand (including `README.md` in data directories for provenance), apply what you find, and flag the omission in your status return so the orchestrator can update the section. Do not dump these docs into your status report — they are context for your work, not output. If a doc contradicts the dispatch prompt or the task spec, raise the conflict before starting (step 5 below).
 5. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, repo conventions, or dependencies on prior steps. Raise concerns before starting work.
-6. **If the dispatch includes a `Worktree:` field,** follow the canned steering in its `Additionally:` tail (enter the worktree before any file I/O). Protocol details: `superRA:agent-orchestration` §Concurrent Writers Require Worktree Isolation.
+6. **If the dispatch includes a `Worktree:` field,** follow the canned steering in its `Additionally:` tail (enter the worktree before any file I/O). Protocol details: `superRA:agent-orchestration` §Parallelization and Worktree Isolation.
 
 The handoff-doc editing discipline you will need at the end of the task — inline-edit rule, ownership rules, how to annotate review items on a REVISE round — lives in §Handoff below; read it when you're ready to update `PLAN.md` / `RESULTS.md`, not at dispatch time.
 
@@ -92,6 +86,7 @@ Regardless of stage (analysis task, drift test creation, refactoring, post-merge
 **The handoff doc always reflects the latest state, not a log.** Git owns history — the commit log carries every prior version of the doc, along with who changed it and why. The doc itself is for the current intended implementation and current findings only. Three rules follow from this:
 
 - **Inline-edit only.** Replace stale content in place. Never append an "Update:" / "Revised:" / "Previously..." block, never strike through. If a sentence you're about to write references a prior version of the doc, delete the old sentence instead — that history belongs in the git commit message, not in `PLAN.md`.
+- **Preserve task-block boundaries.** When appending a `→ implemented: ...` reply inside a review-notes blockquote, stay strictly within the assigned task block — never disturb the preceding `---` separator, the `### Task N:` heading of the next task, or the trailing separator before it. If the prior annotation round elided a boundary, restore it in the same commit.
 - **Remove superseded content, don't stack it.** Abandoned steps, discovery notes now reflected in the steps, and fixed review items are deleted, not crossed out. The task block should read as a single coherent current-state description after every edit.
 - **Doc before report.** Every material finding, result, caveat, or change lands in `PLAN.md` / `RESULTS.md` **before** it appears in your status return. If a result exists only in the status message, it does not exist — the next session will lose it.
 
@@ -103,6 +98,8 @@ You follow an existing task-block anatomy (objective / files affected / input / 
 
 - **Steps and step code.** You may rewrite, reorder, add, or remove steps when the data forces deviation from the originally planned approach — the plan reflects what was actually done, not what was originally imagined. Replace stale step text in place; do not append a "Revised:" version alongside it.
 - **`**Review status:** IMPLEMENTED`** line, set after your atomic commit.
+- **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit your Phase B refactor work (`integration-workflow` Phase B Step 3). The integration reviewer set these to `REVISE` before you; the integration reviewer will flip them to `APPROVED` after your fix pass.
+
 - **`→ implemented: ...` annotations** appended to review items on a REVISE round (see below).
 - Your assigned task's section of `RESULTS.md`.
 
@@ -156,17 +153,7 @@ git add [code files] PLAN.md RESULTS.md results_attachments/
 git commit -m "task N: [brief description]"
 ```
 
-**If the dispatch included a `Worktree:` field,** you are operating inside a `parallel/<branch>/<slug>` branch the orchestrator provisioned. Commit atomically on that branch. **Do not** merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out. Include the branch name and HEAD SHA in your status return (see §Report Format). Otherwise, commit on the current branch as usual.
-
-**Stage-specific code deliverables** (what you commit differs by stage, but the handoff-doc mechanics above are identical):
-
-- **Analysis task** — code under `Code/`, figures in `results_attachments/`.
-- **Drift test creation** — test files under `tests/`.
-- **Refactoring (integration-workflow Stage 2 or merge-workflow Step 3)** — refactored code anywhere in the repo. Your job is to address the reviewer's accepted issues, not to redo the analysis.
-- **Merge proposer (semantic-merge or merge-workflow Step 1)** — two-commit pattern on the merge branch: (1) mechanical conflict resolution, (2) integration commit adapting code/docs/tests. You still update the relevant PLAN.md task block if the merge changes a task's results; otherwise leave it alone.
-
-If your dispatch prompt overrides any of these defaults, follow the override.
-
+**If the dispatch included a `Worktree:` field,** you are operating inside a `<branch>/parallel/<slug>` branch the orchestrator provisioned. Commit atomically on that branch. **Do not** merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out. Include the branch name and HEAD SHA in your status return (see §Report Format). Otherwise, commit on the current branch as usual.
 ## Pre-Commit Self-Check
 
 Before staging your commit, verify:
@@ -188,7 +175,7 @@ Report:
 - **Key findings:** Headline numbers or surprises only. Point at RESULTS.md Task N section for tables, figures, and full context.
 - **Concerns (if any):** Data quality issues, methodology questions, unexpected results. Bullet points.
 - **Doc edits (what changed since the previous dispatch):** List each file and the specific sections/fields you modified, describing the change. Example: `PLAN.md — Task 3: rewrote Step 2 (merge approach changed after data inspection), marked Steps 1-3 [x], set Review status: IMPLEMENTED, annotated review items 1 and 2 with → implemented markers. RESULTS.md — Task 3 section replaced with new findings and 2 figures.` Say "none" if you touched neither file.
-- **Worktree return (path B only):** branch name (`parallel/<analysis-branch>/<slug>`) and HEAD SHA. Omit this field entirely on path A.
+- **Worktree return (path B only):** branch name (`<branch>/parallel/<slug>`) and HEAD SHA. Omit this field entirely on path A.
 
 If the orchestrator needs more than this, they will read the docs directly.
 

@@ -1,9 +1,9 @@
 ---
 name: using-superRA
-description: Master skill every agent reads. Carries the universal workflow principles, code-change defaults, skill inventory, composable-design map, Skill-Load Manifest, Execution Modes, and instruction priority. Main agents also load `references/main-agent.md` at session start for cross-session detection, autonomy, and the default handoff-doc load; subagents inherit task context from dispatch and skip that reference.
+description: Master skill for superRA agents. Carries the universal workflow principles, code-change defaults, skill inventory, composable-design map, and the Skill-Load Manifest that maps each Stage to required skills and stage-scoped references. Invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching handoff docs.
 ---
 
-This is the one skill every superRA agent reads — main agents at session start, dispatched subagents at dispatch time. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
+This is the one skill every superRA agent reads — main agents invoke it via the Skill tool before doing workflow work, dispatched subagents load it at dispatch time. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
 
 ## Universal Principles
 
@@ -15,7 +15,7 @@ Four load-bearing principles apply to **every** superRA workflow, regardless of 
 
 3. **Fast early, strict before merge. Semantic merges always.** Interim work is optimized for speed — no codebase-fit checks at per-task checkpoints. Integration discipline (drift tests, refactor, doc finalization) runs only when the user chooses to merge, inside `integration-workflow`. Every merge into main goes through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
 
-4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent.md` (loaded by the main agent at session start; subagents inherit autonomy from their dispatch boundary).
+4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent.md` (loaded by the main agent when it invokes this skill; subagents inherit autonomy from their dispatch boundary).
 
 ## Code-Change Defaults
 
@@ -52,11 +52,10 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 |---|---|---|
 | Workflow | `planning-workflow` | PLAN phase: scope check, task decomposition, plan draft. |
 | Workflow | `execution-workflow` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
-| Workflow | `integration-workflow` | INTEGRATE (pre-merge): drift tests, refactor, doc finalization. |
-| Workflow | `merge-workflow` | INTEGRATE (merge): update with main, verify, local merge or PR. |
+| Workflow | `integration-workflow` | INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
-| Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Step 3 doc-writer); usable standalone by a single author. |
+| Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Phase C doc-writer); usable standalone by a single author. |
 | Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
 | Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
@@ -83,7 +82,7 @@ Use the adapter for the harness you are actually running on. Keep the shared wor
 
 For each Stage, load the listed skills and references. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Role differentiation shows up explicitly on the `implementation` and `documentation` rows where the implementer and reviewer load different references.
 
-**The "Required skills" column lists what loads *in addition to* `superRA:using-superRA`** — the master skill every agent already loads at dispatch time (implementer / reviewer via frontmatter preload; team teammates via SessionStart injection). `using-superRA` carries §Universal Principles, the Skill Inventory, the composable-design map, and this manifest. Handoff-doc editing discipline is owned by `superRA:handoff-doc`; subagents get a compact etiquette from `agents/implementer.md` / `agents/reviewer.md` step 1 and load the full skill only on demand or when creating docs from scratch.
+**The "Required skills" column lists what loads *in addition to* `superRA:using-superRA`** — the master skill every agent already loads (implementer / reviewer via frontmatter preload at dispatch time; main agent and team teammates via explicit `Skill` invocation). `using-superRA` carries §Universal Principles, the Skill Inventory, the composable-design map, and this manifest. Handoff-doc editing discipline is owned by `superRA:handoff-doc`; subagents get a compact etiquette from `agents/implementer.md` / `agents/reviewer.md` step 1 and load the full skill only on demand or when creating docs from scratch.
 
 | `Stage:` | Required skills | Stage-scoped references |
 |---|---|---|
@@ -94,8 +93,10 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
+The `merge` stage is used for standalone `semantic-merge` dispatches — a dedicated merge-proposer / merge-reviewer pair resolving a branch outside the normal integration-workflow. Inside `integration-workflow` Phase B, the implementer runs `Stage: integration` and loads `superRA:semantic-merge` when the integration reviewer's annotation calls for intent-based conflict resolution — no Stage switch needed.
 
-**Main-agent default load.** Main agents additionally load `superRA:handoff-doc` at session start (per `references/main-agent.md`) so that editing discipline is available before the main agent touches PLAN.md, and so `planning-workflow §Changing Plans` cross-references into `handoff-doc` (User Decisions Log, plan-anatomy) resolve. The subagent-side rows in the table above are unaffected — subagents load `handoff-doc` only on `documentation` / `planning-review` stages as listed.
+
+**Main-agent default loads.** If you are the main agent, load `references/main-agent.md` and `superRA:handoff-doc` now — before dispatching subagents or touching PLAN.md. Subagents skip both.
 
 **Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess. The manifest is the single source of truth for Stage→{skills, references}.
 

@@ -1,6 +1,6 @@
 # Main Agent — Session Start and Autonomy Contract
 
-Main agent loads this at session start; subagents skip — they inherit task context from their dispatch and do not make autonomy decisions of their own; they implement the task they were dispatched with and return a status.
+Carries the mandatory session-start actions (cross-session detection), the handoff-doc default-load cue, the three pause classes, proceed-without-asking patterns, banned check-in phrasings, and the "log before you act" rule. Subagents do not load this file — they inherit task context from their dispatch and do not make autonomy decisions.
 
 ## MANDATORY: Session Start Actions
 
@@ -32,17 +32,16 @@ git branch --list 'analysis/*' 2>/dev/null
 # Check for tasks under review or with issues
 grep "Review status" PLAN.md 2>/dev/null | grep -v APPROVED | head -5
 
-# Check for RESULTS.md or archived results for context
-[ -f "RESULTS.md" ] && echo "Results document found at project root"
-find docs/plans -maxdepth 1 -name "*results*.md" 2>/dev/null | head -5
+# Check for RESULTS.md for context
+[ -f "RESULTS.md" ] && echo "Results document found"
 
 # Fallback: check docs/ for archived or legacy plans
 find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/null | head -5
 ```
 
 **If an incomplete plan is found** (PLAN.md with unchecked `- [ ]` steps or non-APPROVED review status):
-- Summarize: "Found in-progress analysis: `PLAN.md` (N tasks APPROVED, K with review issues or pending review). Results live in root `RESULTS.md` if present; otherwise load the relevant archived `docs/plans/*results*.md`. Resume?"
-- If user confirms: load `PLAN.md` and the active results record (root `RESULTS.md` when present, otherwise the archived results markdown that matches this analysis), check git log for latest state, continue from next incomplete task (check review status — a task with `REVISE` needs re-dispatch, `IMPLEMENTED` needs review, no status needs implementation)
+- Summarize: "Found in-progress analysis: `PLAN.md` (N tasks APPROVED, K with review issues or pending review). RESULTS.md has findings through Task K. Resume?"
+- If user confirms: load PLAN.md and RESULTS.md, check git log for latest state, continue from next incomplete task (check review status — a task with `REVISE` needs re-dispatch, `IMPLEMENTED` needs review, no status needs implementation)
 - If user declines: proceed normally
 
 **If in a worktree with no plan file:**
@@ -50,11 +49,11 @@ find docs/ -name "PLAN.md" -o -name "*.md" -path "*/analysis-plans/*" 2>/dev/nul
 
 ## Load the Handoff-Doc Skill
 
-After cross-session detection, **load `superRA:handoff-doc`**. The main agent loads it at session start so the editing discipline is available before touching PLAN.md.
+After cross-session detection, **load `superRA:handoff-doc`**. The main agent loads it here so the editing discipline is available before touching PLAN.md.
 
 ## Changes of the Plan
 
-Whenever the plan meaningfully changes — a new task, a removed or reordered task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `planning-workflow` and follow the  §Changing Plans protocol (confirm → log decision → inline-edit PLAN.md → roll back milestones → atomic commit → resume). This is the hinge that keeps the handoff doc honest across iterations; rewording a step inside an in-flight task to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §Changing Plans` for the full material-vs-not-material list and the 6-step protocol.
+Whenever the plan meaningfully changes — a new task, a removed or reordered task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `planning-workflow` and follow the §User Feedback and Changing Plans protocol (confirm → log decision → inline-edit PLAN.md → roll back milestones → sweep for stale content → atomic commit → resume). This is the hinge that keeps the handoff doc honest across iterations; rewording a step inside an in-flight task to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §User Feedback and Changing Plans` for the full material-vs-not-material list and the 7-step protocol.
 
 
 ## The Three Pause Classes
@@ -65,7 +64,7 @@ Universal Principle #4 in `using-superRA` §Universal Principles states the rule
 
 1. **Hard blocker the RA cannot resolve from code and data.** Unexpected input-quality issues, missing or corrupted inputs, ambiguous upstream dependency the agent cannot trace, a transformation that produces an unexpected scope change (row count shift on a merge, date range change after a filter), validation failure against domain expectation, plan with critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required dependency unavailable.
 2. **Decision beyond the RA's authority.** Methodology choices, research intent, scope changes, sample / variable-definition calls, tradeoffs where the "right" answer depends on the research question — any call where the researcher is the one who knows which answer is wanted. Also: methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope change that would affect tasks not yet reached.
-3. **User-defined workflow milestone.** Stops baked into a workflow because the researcher wants a decision at that point. The 4-option completion menu at `execution-workflow` Step 4; drift-test selection at `integration-workflow` Step 1; doc disposition at `integration-workflow` Step 3; Tier 3 conflict escalation in `semantic-merge`. These are intentional stops, not check-ins.
+3. **User-defined workflow milestone.** Stops baked into a workflow because the researcher wants a decision at that point. The 4-option completion menu at `execution-workflow` Step 4; drift-test selection at `integration-workflow` Phase A; doc disposition at `integration-workflow` Phase C; research-meaningful conflict escalation in `semantic-merge`. These are intentional stops, not check-ins.
 
 All three classes have one thing in common: the agent cannot answer the question from the code and data alone, and the answer will shape downstream work in a way another agent could not reconstruct without it.
 
