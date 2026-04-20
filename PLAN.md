@@ -372,22 +372,22 @@ Self-check: every routing table has the new row; Skill-Load Manifest entries are
 ## Task 7: `CLAUDE.md` audit
 
 **Depends on:** Task 1
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:** `/CLAUDE.md` (possibly edited)
 **Input:** `/CLAUDE.md` §Design Principles and §Roadmap sections, the two 2026-04-19 memory entries `feedback_domain_skills_standalone.md` and `feedback_reviewer_dispatch_never_skipped.md`
 **Output:** confirmation that CLAUDE.md states (a) "domain skills are usable standalone without the workflow scaffold" and (b) "reviewer dispatch is never skipped, even in standalone modes"; edit if either is missing/ambiguous
 
-- [ ] **Step 1: Read `/CLAUDE.md` §Design Principles + §Roadmap end-to-end and audit**
+- [x] **Step 1: Read `/CLAUDE.md` §Design Principles + §Roadmap end-to-end and audit**
 
 Record in RESULTS.md Task 7 whether properties (a) and (b) are already stated, partially stated, or absent.
 
-- [ ] **Step 2: If absent or ambiguous — amend**
+- [x] **Step 2: If absent or ambiguous — amend**
 
 Add a short paragraph under §Architectural pattern (or §Domain verticals) stating the standalone-usability property. Add a short clause to workflow principle #1 (or a dedicated note) stating that reviewer dispatch is never skipped across modes. Keep the additions concise — this is a cross-cutting correction, not a rewrite.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 If edits were made: commit separately with `docs: CLAUDE.md — standalone skill usability + reviewer-dispatch rule`. If no edits needed: note in RESULTS.md Task 7 that the properties were already traceable, mark task APPROVED without a commit. Update RESULTS.md Task 7.
 

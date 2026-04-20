@@ -68,6 +68,8 @@ Concerns and their owners:
 
 superRA's workflow scaffolding is domain-agnostic. Domain-specific discipline lives in **domain skills**, one per vertical, each organized with stage-scoped references so the right chunk loads at the right phase.
 
+**Domain skills are usable standalone — without the full PLAN → IMPLEMENT → VALIDATE → INTEGRATE scaffold.** A tiny polish, a single-dimension consistency check, or any task that does not warrant task decomposition and a committed `PLAN.md` should invoke the domain skill directly. Each domain skill owns a mode-selection reference that documents its lightweight usage modes alongside the full-workflow case; the writing vertical exemplifies this pattern (`writing/references/workflow.md` — direct-edit / pure-review / review-edit-loop / full-workflow). Workflow principle #1 (implementer–reviewer pair at every step) **still applies in standalone modes** — reviewer dispatch is never skipped even when the implementer is the orchestrator in direct mode. A fresh, independently-dispatched reviewer is the load-bearing guarantee; self-review by the implementing agent is never a substitute.
+
 **Currently implemented:**
 
 - **Data analysis** — `superRA:econ-data-analysis`. Load-bearing rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION.** Non-negotiable; protected by the Common Rationalizations table in the skill body and the inline severity-marked checklist in §Three Concurrent Disciplines. Stage-scoped references: `references/planning.md` (Data Inventory hard gate + sensitivity design), `references/integrate-drift-tests.md` (drift-test construction), `references/integration.md` (data-specific integration gates), `references/data-robustness-checklist.md`.

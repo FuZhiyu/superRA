@@ -95,7 +95,24 @@
 
 ## Task 7: `CLAUDE.md` audit
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Audit findings:**
+
+- **(a) "Domain skills are usable standalone without the workflow scaffold": ABSENT.** Pre-amendment `CLAUDE.md` §Architectural pattern and §Domain verticals described domain skills as composing *with* the workflow scaffolding but never stated they work *without* it. Needed to be added explicitly.
+- **(b) "Reviewer dispatch is never skipped, even in standalone modes": PARTIALLY STATED.** Workflow principle #1 says "Review is never skipped, regardless of perceived triviality", but the phrasing is contextualized around the workflow pipeline (drift-test review, integration review, per-task review during execution) and does not explicitly carry through to standalone / direct-mode usage. Needed the "even in standalone modes" extension.
+
+**Amendment applied:**
+
+Added one paragraph under §Domain verticals (between the intro sentence and "**Currently implemented:**") stating both properties:
+
+1. Domain skills are usable standalone without the full PLAN → IMPLEMENT → VALIDATE → INTEGRATE scaffold.
+2. Each domain skill owns a mode-selection reference documenting lightweight usage modes alongside the full-workflow case (writing vertical referenced as exemplar: `writing/references/workflow.md`).
+3. Reviewer dispatch is never skipped even in standalone modes — explicit reinforcement of workflow principle #1 for direct-mode / standalone invocations.
+
+The addition is concise (one paragraph), sits in the logical location (§Domain verticals — where readers learn about domain skills), and does not weaken any of the four workflow principles.
+
+**Files:** `/CLAUDE.md` — single paragraph amendment under §Domain verticals.
 
 ## Task 8: Dogfood — three-mode verification
 
