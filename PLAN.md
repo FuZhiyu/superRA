@@ -200,7 +200,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 6: End-to-end dry-read verification
 **Depends on:** Tasks 1, 2, 3, 4, 5
 **Review status:** IMPLEMENTED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** All round-2 refactored skills + agent files + peripheral docs.
