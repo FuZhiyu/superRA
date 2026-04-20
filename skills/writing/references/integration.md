@@ -65,7 +65,7 @@ Identify which `consistency/*.md` dimensions apply to the edits:
 | Methodology section draft / revision | `terminology.md`, `notation.md`, `math.md`, `citations.md` |
 | Pre-submission sweep | all eight |
 
-Dispatch one reviewer per applicable dimension (parallel, per `writing/references/workflow.md` §Mode (b)). Each reviewer loads `writing/SKILL.md` + the one `consistency/*.md` + this `integration.md`. All must return APPROVE for the integration gate to pass.
+Dispatch one reviewer per applicable dimension (parallel, per `writing/references/workflow.md` §Mode (b)). **Each consistency reviewer loads `writing/SKILL.md` + its one `consistency/*.md` file.** The integration-gate reviewer (orchestrator-dispatched separately, over-and-above the per-dimension reviewers) loads this `integration.md`. Do not load `integration.md` into every per-dimension reviewer's context — per-dimension reviewers stay focused on their one file. All per-dimension reviewers must return APPROVE for Gate 4 to pass.
 
 ### Gate 5 — Voice preserved across the full diff
 

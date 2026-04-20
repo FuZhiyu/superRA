@@ -29,11 +29,12 @@
 
 **Key findings:**
 
-- **`style-checklist.md`:** 9 sentence-level rules (actions-in-verbs / nominalization, old→new info flow, single-hedge-per-claim, active voice, parallel structure, noun-cluster avoidance, sentence length, dangling modifiers, ambiguous pronouns) + 4 paragraph-level rules (topic sentence first, one idea per paragraph, transitions at start, first-sentence link test). Each rule has: ≤10-word name, 1–2 sentence principle, detection trick, before/after example, explicit "do NOT apply when" exceptions (honors Iron Law — rules are heuristics not mandates). §Gated Checklist: 4 `[BLOCKING]` scope/voice items + 13 `[ADVISORY]` rule-application items + 2 handoff items.
-- **`structure-checklist.md`:** Pyramid Principle (governing idea, MECE, horizontal/vertical logic), SCQ framing, RAP (Chaubey), two-part introduction (Chaubey p. 108), title-states-finding rule, section-level anatomy (intro/methods/results/conclusion/abstract), no-mystery-novel front-loading, reader-facing headings (Chaubey p. 71), Miller 7±2 chunking. §Gated Checklist: 3 `[BLOCKING]` scope/authorization items + ~20 `[ADVISORY]` structural items + 1 `[BLOCKING]` handoff item.
-- **Source coverage:** LRS 1-1a (nominalization — read in full, 32 pages including "some nominalizations are useful" caveats which we preserved), LRS 3-4 (info flow — read in full, first 10 pages covering old→new principle). Chaubey cited by page number for every rule it contributed. Minto / Pyramid Principle webs cited qualitatively.
+- **`style-checklist.md`:** 9 sentence-level rules (actions-in-verbs / nominalization, old→new info flow, single-hedge-per-claim, active voice, parallel structure, noun-cluster avoidance, sentence length, dangling modifiers, ambiguous pronouns) + 4 paragraph-level rules (topic sentence first, one idea per paragraph, transitions at start, first-sentence link test). Each rule has: ≤10-word name, 1–2 sentence principle, detection trick, before/after example, explicit "Do NOT apply when" exception note (honors Iron Law — rules are heuristics not mandates). §Gated Checklist: `[ADVISORY]` rule-application items + handoff items; **SKILL.md's scope/voice BLOCKING quartet removed per shared-gating DRY** (walked via SKILL.md §Three Concurrent Disciplines).
+- **`structure-checklist.md`:** Pyramid Principle (governing idea, MECE, horizontal/vertical logic), SCQ framing, RAP (Chaubey), two-part introduction (Chaubey p. 108 — LRS 5–6 co-cite removed since source PDFs were empty placeholders), title-states-finding rule, section-level anatomy (intro/methods/results/conclusion/abstract), no-mystery-novel front-loading, reader-facing headings (Chaubey p. 71), Miller 7±2 chunking. §Gated Checklist: ~20 `[ADVISORY]` structural items + 1 `[BLOCKING]` handoff item; **§Scope and authorization BLOCKING items removed per shared-gating DRY** (walked via SKILL.md §Preserve + §Implementation standards).
+- **Source coverage:** LRS 1-1a (nominalization — read in full, 32 pages including "some nominalizations are useful" caveats which we preserved), LRS 3-4 (info flow — read in full, first 10 pages covering old→new principle). Chaubey cited by page number for every rule it contributed. Minto / Pyramid Principle webs cited qualitatively. **Sources lines corrected:** `style-checklist.md` no longer cites LRS 1-1b / LRS 2 (no rule draws from them); `structure-checklist.md` now reads "LRS plan summaries (LRS 5, 6, Arg 1–3 — pending source verification)" rather than claiming direct LRS attribution.
 - **Source-material surprise:** 12 of 14 LRS PDFs at `/Users/zhiyufu/Dropbox/PhD/writing_resources/LittleRedHouse/` are **empty files (0 bytes, Dropbox sync placeholders)** — only LRS 1-1a and LRS 3-4 have content. LRS 5, 6, Arg 1–3, DS 1–2, triage, character (1-1b), cohesion (2) are all inaccessible. The content attributed to them in `style-checklist.md` and `structure-checklist.md` is drawn from Chaubey + plan file summaries. **Flagged for researcher** in final report — should be resolved before Task 8 dogfood.
 - **SKILL.md §Pitfalls pointers resolve:** `style-checklist.md` and `structure-checklist.md` both exist at the paths referenced.
+- **Re-reviewed 2026-04-19:** addressed MAJOR 1 (shared-gating de-duplication), MAJOR 3 (LRS source re-attribution), MINOR 7 ("Do NOT apply when" exception notes added to 7 style rules). See commit `224c8cb`.
 
 **Files:** `skills/writing/references/style-checklist.md` (198 lines), `skills/writing/references/structure-checklist.md` (143 lines).
 
@@ -67,8 +68,9 @@
 
 **Key findings:**
 
-- **`refactor-and-compile.md`:** Two sections. §Refactor covers the Four Always (preview, word-boundary, case/plural variants, quotations sacred), worked false-positive table (7 rows with concrete examples: `estimate`/`underestimate`, `Table 1`/`acceptable`, `reg`/`region`, `\cite`/`\citep`/`\citet`, etc.), math-mode refactor approach, terminology refactor rules. §Compile covers build commands for LaTeX (latexmk), Quarto, Pandoc; 11-row warning triage table; error-escalation rules; handoff format. 6 BLOCKING + 1 ADVISORY refactor items; 4 BLOCKING + 2 ADVISORY compile items.
-- **`collaboration.md`:** Detection patterns (git-level: `git status`/`git diff`/`git log`; in-file: TODO, `\todo{}`, `[fill in]`, `??`, commented-out text, unfinished paragraphs; file-level: `*-draft`, `.gitignore`, read-only). Edit-vs-propose-vs-ask decision matrix (7 rows). Four escalation templates ("I noticed...", "should I include...", "conflict with in-progress work", "structural proposal"). Voice-preservation operational definition (diction + register + sentence-shape; 6 concrete signals). §Gated Checklist: 7 BLOCKING + 2 ADVISORY items.
+- **`refactor-and-compile.md`:** Two sections. §Refactor covers the Four Always (preview, word-boundary, case/plural variants, quotations sacred), worked false-positive table (now includes a genuine `Table` / `Tablespoon` / `TableView` / `turntable` row plus an illustrative `est` row — the earlier misleading `Table 1` / `acceptable` entry was replaced per MINOR 10), math-mode refactor approach, terminology refactor rules. §Compile covers build commands for LaTeX (latexmk), Quarto, Pandoc; 11-row warning triage table; error-escalation rules; handoff format. §Refactor Gated Checklist: 6 BLOCKING + 1 ADVISORY. **§Compile Gated Checklist slimmed per shared-gating DRY** — SKILL.md §Verify owns "document builds / no new unresolved cross-references / no new undefined citations"; this file keeps only operation-specific items (build-command-stated, File-not-found, warning-triage).
+- **`collaboration.md`:** Detection patterns (git-level: `git status`/`git diff`/`git log`; in-file: TODO, `\todo{}`, `[fill in]`, `??`, commented-out text, unfinished paragraphs; file-level: `*-draft`, `.gitignore`, read-only). Edit-vs-propose-vs-ask decision matrix (7 rows). Four escalation templates ("I noticed...", "should I include...", "conflict with in-progress work", "structural proposal"). Voice-preservation operational definition (diction + register + sentence-shape; 6 concrete signals). §Gated Checklist slimmed per shared-gating DRY — **SKILL.md's Preserve quartet (no-edits-outside-scope, voice preservation, in-progress-work respected, meaning preservation) removed** from this file; collaboration-specific items retained (git-status check, hot-line handling, escalation-template-used, user-decisions-logged).
+- **Re-reviewed 2026-04-19:** addressed MAJOR 1 (shared-gating de-duplication in both files) + MINOR 10 (Table 1 false-positive row). See commit `224c8cb`.
 - **One-source-of-truth discipline:** Style rules are NOT re-explained in refactor-and-compile.md (cross-refs to `style-checklist.md`). Cross-reference check in §Refactor points at `consistency/cross-references.md` rather than re-stating the rules. Collaboration.md points at `consistency/terminology.md` for terminology legitimacy rather than duplicating.
 - **Iron-Law alignment:** collaboration.md explicitly operationalizes the Preserve side of the Iron Law (detection patterns for in-progress work, escalation templates for structural changes, voice-preservation checks). refactor-and-compile.md §Refactor gates on "direct quotations and block quotes not touched (quotes are sacred)" — the Iron Law meaning-preservation clause operationalized.
 - **Handoff-doc discipline:** collaboration.md references `handoff-doc` §User Decisions Log for logging escalation outcomes, and `AskUserQuestion` for the escalation tool.
@@ -86,6 +88,7 @@
 - **Cross-linking verified:** `workflow.md` references each `consistency/*.md` pattern (generically — "one reviewer per `consistency/*.md` file") and the specific `style-checklist.md` / `structure-checklist.md` / `refactor-and-compile.md`. `planning.md` references `workflow.md`'s mode names consistently. Both reference `superRA:handoff-doc`, `superRA:agent-orchestration`, and `superRA:using-superRA` appropriately.
 - **Reviewer-dispatch-never-skipped rule** is now stated in three places (main SKILL.md §Mode selection, `workflow.md` Rule 1, `planning.md` Gated Checklist BLOCKING item). This is intentional reinforcement of a load-bearing rule — not drift (all three point at the same rule; `workflow.md` is the source of truth).
 - **Architectural parity with `econ-data-analysis/references/planning.md`:** same gate structure (Hard Gate + checklist + rationale + common-mistakes-equivalent via the decision matrix), lighter-weight content because writing scope is simpler than data inventory.
+- **Re-reviewed 2026-04-19:** addressed MINOR 13 (workflow.md §Mode (c) now includes "Cap at 3 rounds" escalation guard) + MINOR 15 (dispatch envelopes for mode (a) and mode (b) now carry `subagent_type: reviewer` to make role explicit, aligning with `superRA:agent-orchestration §Dispatch Templates`).
 
 **Files:** `skills/writing/references/planning.md` (127 lines), `skills/writing/references/workflow.md` (189 lines).
 
@@ -106,6 +109,7 @@
   - **`README.md`:** added `writing` row to the Domain skill table; updated section heading to "Domain — Data Analysis and Writing"; updated roadmap to say writing is implemented.
 - **Manifest path verification:** all 16 `writing/references/*` files referenced in the Skill-Load Manifest and elsewhere exist on disk. Checked: `planning.md`, `workflow.md`, `style-checklist.md`, `structure-checklist.md`, `refactor-and-compile.md`, `collaboration.md`, `integration.md`, plus 8 consistency files (`terminology.md`, `notation.md`, `cross-references.md`, `citations.md`, `numerical.md`, `math.md`, `argument-logic.md`, `code-paper.md`). No broken pointers.
 - **Plan deviation note (Step 3):** the PLAN.md spec named `merge-workflow/SKILL.md` as an edit target; that skill does not exist in this repo (merge choreography is Phase D of `integration-workflow`). The Phase D writing note covers the same concern. Plan step rewritten in place.
+- **Re-reviewed 2026-04-19:** addressed MINOR 14 — Gate 4 text no longer requires per-dimension consistency reviewers to load `integration.md`. Per-dimension reviewers load `writing/SKILL.md` + their one `consistency/*.md`; the integration-gate reviewer (orchestrator-dispatched separately) loads this `integration.md`.
 
 **Files:** `skills/writing/references/integration.md` (95 lines) + 5 routing-edit files modified (`using-superRA/SKILL.md`, `planning-workflow/SKILL.md`, `integration-workflow/SKILL.md`, `CATEGORIES.md`, `README.md`).
 
@@ -129,6 +133,21 @@ Added one paragraph under §Domain verticals (between the intro sentence and "**
 The addition is concise (one paragraph), sits in the logical location (§Domain verticals — where readers learn about domain skills), and does not weaken any of the four workflow principles.
 
 **Files:** `/CLAUDE.md` — single paragraph amendment under §Domain verticals.
+
+**Re-reviewed 2026-04-19:** addressed MAJOR 2 — writing is no longer treated as a hypothetical future vertical.
+
+- Added a **Writing** bullet under §Currently implemented (mirroring the Data-analysis bullet): names Iron Law (RESPECT THE AUTHOR'S INTENT), four-mode standalone usability (`workflow.md`), and the stage-scoped reference manifest.
+- Reworded "Data analysis is the flagship vertical, not the whole product" to reflect that data analysis **and writing** are both implemented.
+- Dropped "writing" from the §Extension path parenthetical (`theory, literature review, simulation, writing` → `theory, literature review, simulation`).
+- Removed the "Writing / paper drafting" bullet from §Planned verticals.
+
+Parallel sweep of the same stale "writing-as-future-vertical" framing across three additional files (MINORs 4, 5, 6):
+
+- `README.md` — future-vertical sentence reframed to list writing as implemented.
+- `skills/using-superRA/SKILL.md` §Composable Design — "today: `econ-data-analysis`" → include writing.
+- `skills/planning-workflow/SKILL.md` — "writing" removed from future-verticals parenthetical.
+
+See commit `bc885fe`.
 
 ## Task 8: Dogfood — three-mode verification
 

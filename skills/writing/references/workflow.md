@@ -85,6 +85,8 @@ Each reviewer is dispatched with `Stage: implementation` (reviewer role) and `Ad
 
 **Termination.** The loop terminates when the reviewer returns APPROVE. It may also terminate by researcher decision — "this is good enough, ship it" — in which case log the decision (commit message if no `PLAN.md`; User Decisions Log if `PLAN.md`).
 
+**Cap at 3 rounds.** If the reviewer returns REVISE with **new** `[BLOCKING]` findings on each of three consecutive rounds (not the same unresolved item re-raised), escalate to the researcher per `superRA:agent-orchestration` §Reviewer-feedback handling. Persistent new findings usually mean the scope was under-specified or the reviewer and implementer are pulling in different directions — an orchestrator / researcher call, not another lap.
+
 ### (d) Full workflow
 
 **When.** Major changes — whole-section drafting from scratch, whole-paper revision for R&R, pre-submission sweep of an entire paper with substantive edits, structural revision of the argument.
@@ -118,6 +120,7 @@ For orchestrator convenience — the Agent-tool dispatch envelopes for each mode
 **Mode (a) reviewer dispatch (direct-edit follow-up):**
 
 ```
+subagent_type: reviewer
 Stage: implementation
 Task: Review the single edit in <file>:<line-range>. Verify scope, voice,
       compile, cross-refs.
@@ -128,7 +131,8 @@ Additionally: Load writing/SKILL.md + references/style-checklist.md +
 **Mode (b) single-dimension review dispatch:**
 
 ```
-Stage: implementation  (reviewer role)
+subagent_type: reviewer
+Stage: implementation
 Task: Review <file> for <dimension> consistency. Report findings only;
       do not edit.
 Additionally: Load writing/SKILL.md + references/consistency/<dimension>.md.
