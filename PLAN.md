@@ -8,18 +8,22 @@
 
 **Source Material Inventory:**
 
+**READ BEFORE DRAFTING OR REVIEWING.** Every implementer and reviewer must load the corresponding source material before writing or validating a reference file. The task steps below condense rules to check — they are not a substitute for reading the originals. Full catalog + reading map at `docs/writing-references/README.md`.
+
 ### Available
 | Source | Path | Purpose |
 |--------|------|---------|
-| Little Red Schoolhouse (LRS) writing notes | `/Users/zhiyufu/Dropbox/PhD/writing_resources/` | Nominalization discipline, old→new information flow, paragraph unity, noun-cluster avoidance |
-| Chaubey, "Research Writing" | Chaubey PDF (Squarespace URL) | Academic-writing rules aimed at the economics audience |
-| Pyramid Principle (Minto) | Web references (Minto / McKinsey / ModelThinkers / Management Consulted) | Governing idea, MECE, horizontal/vertical logic, SCQ framing for intros |
-| `draft-reviewer:*` plugin subagents | `~/.claude/plugins/` (draft-reviewer plugin) | Dimension split for consistency references (argument-logic, citation-checker, consistency-checker, math-reviewer, proofreader, writing-clarity, code-paper-consistency) |
-| `skills/econ-data-analysis/` | repo | Architectural template for main SKILL.md + references layout, Iron Law pattern, shared checklist with severity markers |
+| Little Red Schoolhouse (LRS) writing notes — 14 PDFs | `/Users/zhiyufu/Dropbox/PhD/writing_resources/LittleRedHouse/` (Dropbox-synced, not committed) | UChicago ENGL 13000/33000 slides. Actions-in-verbs (1-1a), character (1-1b), coherence/cohesion (2), old→new info flow (3-4), introductions (5, 6), argument structure (Arg 1–3), downstream revision (DS 1–2), triage. Main input to `style-checklist.md` and `structure-checklist.md`. |
+| Chaubey, "Research Writing" | `docs/writing-references/Chaubey_Research_Writing.pdf` (committed) | Academic-writing rules targeted at the economics audience — structure, precision, reader-model. Main input to `style-checklist.md` and `structure-checklist.md`. |
+| Pyramid Principle (Minto) | Web reference list in `docs/writing-references/README.md` (Minto / McKinsey / StrategyU / Mental Models / Think Insights / ModelThinkers / Management Consulted) | Governing idea, MECE, horizontal/vertical logic, SCQ (Situation–Complication–Question). Main input to `structure-checklist.md`. |
+| Economics-writing guidance | Web reference list in `docs/writing-references/README.md` (Brandeis, CGDev, IZA DP15057, Bellemare, Conversable Economist) | Supporting guidance for section-level structure in `structure-checklist.md`. |
+| `draft-reviewer:*` plugin subagents | `~/.claude/plugins/draft-reviewer/` | Dimension split for `consistency/*.md`. Harvest the *dimensions*, re-derive the content in superRA style. |
+| `skills/econ-data-analysis/` | repo (`skills/econ-data-analysis/SKILL.md` + `references/*`) | Architectural template for main SKILL.md + references layout, Iron Law pattern, shared checklist with severity markers. |
 
 ### Quality Notes
 - LRS notes are University of Chicago ENGL 13000/33000 slide content — concrete checklist-able rules, high confidence.
 - Draft-reviewer agents supply review *dimensions*; the actual rule content for each dimension is re-derived in superRA's style so the plugin is a harvest target, not a runtime dependency.
+- `docs/writing-references/README.md` carries the reading-map per task — check it before dispatching an implementer.
 
 **Conventions:** (populated as the skill emerges — emergent section titles, reference-file naming, severity-marker usage land here)
 
@@ -35,7 +39,7 @@
 
 ## Workflow Status
 
-- [ ] **Plan approved** — researcher signed off on this plan
+- [x] **Plan approved** — researcher signed off on this plan (2026-04-19)
 - [ ] **Execution complete** — all tasks `APPROVED`
 - [ ] **Drift tests created** — **N/A for skill authoring**; substitute satisfied by Task 8 dogfood (three-mode real-session verification) + skill-graph consistency sweep
 - [ ] **Refactored** — final integration-review approval on the consolidated skill changes
@@ -102,7 +106,12 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 **Integration status:**
 
 **Files:** `skills/writing/SKILL.md` (new)
-**Input:** `skills/econ-data-analysis/SKILL.md` (template), plan file at `/Users/zhiyufu/.claude/plans/bubbly-wondering-parnas.md` (Iron Law + checklist content)
+**Input:**
+- `skills/econ-data-analysis/SKILL.md` — architectural template (Iron Law + §Three Concurrent Disciplines + §Pitfalls + §Common Rationalizations anatomy); read end-to-end before drafting.
+- `/Users/zhiyufu/.claude/plans/bubbly-wondering-parnas.md` — this project's own plan file; has the Iron Law final wording and the full §Three Concurrent Disciplines checklist.
+- `/CLAUDE.md` §RA framing + §Design Principles — for the standalone-usability property and the reviewer-dispatch rule.
+- `docs/writing-references/README.md` — big-picture orientation to why this skill exists.
+
 **Output:** `skills/writing/SKILL.md` with frontmatter + RA framing + Iron Law + Common Rationalizations table + §Three Concurrent Disciplines (Preserve / Improve / Verify) + §Pitfalls pointer list + §Mode-selection pointer + §Key References. No referenced files exist yet — §Pitfalls and §Key References point forward.
 
 - [ ] **Step 1: Draft frontmatter + RA framing**
@@ -204,8 +213,12 @@ Self-check: (a) Iron Law protected by a Common Rationalizations table covering a
 **Integration status:**
 
 **Files:** `skills/writing/references/style-checklist.md` (new), `skills/writing/references/structure-checklist.md` (new)
-**Input:** LRS notes at `/Users/zhiyufu/Dropbox/PhD/writing_resources/`, Pyramid Principle web sources, Chaubey PDF, Phase-1 Explore-agent distillations (categorized rule inventory with source citations)
-**Output:** two reference files, each a how-to + gated checklist
+**Input:**
+- **For `style-checklist.md`:** LRS 1-1a (actions/nominalization), LRS 1-1b (character), LRS 2 (coherence/cohesion), LRS 3-4 (info flow) at `/Users/zhiyufu/Dropbox/PhD/writing_resources/LittleRedHouse/`; `docs/writing-references/Chaubey_Research_Writing.pdf` sections on sentence-level clarity.
+- **For `structure-checklist.md`:** LRS 5, LRS 6 (introductions), LRS Arg 1–3 (argument structure), LRS triage in the same LittleRedHouse directory; `docs/writing-references/Chaubey_Research_Writing.pdf` sections on paper structure; Pyramid Principle web references listed in `docs/writing-references/README.md`; supporting economics-writing guidance (Brandeis, CGDev, IZA DP15057, Bellemare, Conversable Economist) — also in `docs/writing-references/README.md`.
+- **Template:** `skills/econ-data-analysis/references/*.md` — study the how-to + gated-checklist layout and severity-marker discipline before drafting.
+
+**Output:** two reference files, each a how-to + gated checklist. **Read the source PDFs first** — the task steps below are a condensed target, not a substitute for the originals.
 
 - [ ] **Step 1: Draft `style-checklist.md`**
 
@@ -228,8 +241,12 @@ Ensure SKILL.md §Pitfalls pointers resolve. Self-check: every rule has a ≤10-
 **Integration status:**
 
 **Files:** `skills/writing/references/consistency/terminology.md`, `consistency/notation.md`, `consistency/cross-references.md`, `consistency/citations.md`, `consistency/numerical.md`, `consistency/math.md`, `consistency/argument-logic.md`, `consistency/code-paper.md` (all new)
-**Input:** `draft-reviewer:*` plugin agent definitions (argument-logic-reviewer, citation-checker, code-paper-consistency, consistency-checker, mathematical-reviewer, writing-clarity-reviewer); Phase-1 Explore-agent dimension harvest
-**Output:** eight small reference files, each sized for a single parallel reviewer to load
+**Input:**
+- `~/.claude/plugins/draft-reviewer/agents/*.md` — seven subagent definitions (argument-logic-reviewer, citation-checker, code-paper-consistency, consistency-checker, mathematical-reviewer, proofreader, writing-clarity-reviewer). **Read the subagent that corresponds to your target dimension before drafting.** Each subagent's checklist is the spine for the corresponding `consistency/*.md`.
+- `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines — severity-marker model (`[BLOCKING]` / `[ADVISORY]`).
+- `docs/writing-references/Chaubey_Research_Writing.pdf` — for citation / argument / consistency norms in economics.
+
+**Output:** eight small reference files, each sized for a single parallel reviewer to load. **The dimensions come from the draft-reviewer plugin; the superRA-style rule content is re-derived.**
 
 - [ ] **Step 1: Draft `terminology.md` + `notation.md` + `cross-references.md`**
 
