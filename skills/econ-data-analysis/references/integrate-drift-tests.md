@@ -52,8 +52,6 @@ Set tolerances based on **economic reasoning**, not arbitrary thresholds. Summar
 | Counts (N obs, N firms, N periods) | 0 or very small integer | Should not change unless sample construction changes |
 | Signs and significance | Exact (directional) | Sign flip or loss of significance is the failure mode drift tests most need to catch |
 
-**Document every tolerance choice** with a one-line comment explaining the rationale in economic terms, not just a number. A drift test with an unexplained tolerance is easy to silently loosen later, defeating the purpose.
-
 ---
 
 ## Data-Analysis-Specific Failure Modes

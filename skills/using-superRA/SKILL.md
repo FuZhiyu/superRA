@@ -1,9 +1,9 @@
 ---
 name: using-superRA
-description: Master skill for superRA agents. Carries the universal workflow principles, code-change defaults, skill inventory, composable-design map, and the Skill-Load Manifest that maps each Stage to required skills and stage-scoped references. Invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching handoff docs.
+description: Master skill for superRA agents. Carries workflow principles, skill inventory, and the Stage → skill Load Manifest. Invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching handoff docs.
 ---
 
-This is the one skill every superRA agent reads — main agents invoke it via the Skill tool before doing workflow work, dispatched subagents load it at dispatch time. It establishes the universal workflow principles, names the other skills in the plugin, and tells you exactly what to load for your current Stage. The plugin's `CLAUDE.md` is contributor-only and is NOT visible to agents running the plugin in a user's repo; everything agents need to know is restated here.
+Loaded by all agents at dispatch time.
 
 ## Universal Principles
 
@@ -62,9 +62,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
 | Meta | `using-superRA` | This skill — the master skill every agent reads. |
 
-## Composable Design
-
-Skills compose by category. **Workflow skills** own sequencing — they decide what happens when, and dispatch agents to do it. **Domain skills** own domain discipline — the vertical-specific knowledge a workflow skill invokes when a task touches that domain (today: `econ-data-analysis`). **Utility skills** are called on demand by workflow skills, agent files, or other skills — they are domain-agnostic and reusable. **Meta skills** shape the skill system itself (`using-superRA`). One source of truth per concern: if two skills seem to overlap, one of them should be pointing at the other rather than duplicating content.
+**Composable design:** Workflow skills own sequencing; domain skills own vertical discipline; utility skills are called on demand. One source of truth per concern. See `CLAUDE.md §Architectural pattern` for the full design map.
 
 ## Skill-Load Manifest
 
@@ -84,31 +82,9 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 The `merge` stage is used for standalone `semantic-merge` dispatches — a dedicated merge-proposer / merge-reviewer pair resolving a branch outside the normal integration-workflow. Inside `integration-workflow` Phase B, the implementer runs `Stage: integration` and loads `superRA:semantic-merge` when the integration reviewer's annotation calls for intent-based conflict resolution — no Stage switch needed.
 
 
-**Main-agent default loads.** If you are the main agent, load `references/main-agent.md` and `superRA:handoff-doc` now — before dispatching subagents or touching PLAN.md. Subagents skip both.
+**Main agents additionally load** `references/main-agent.md` and `superRA:handoff-doc` before dispatching subagents or touching PLAN.md. Subagents skip both.
 
-**Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess. The manifest is the single source of truth for Stage→{skills, references}.
-
-## Execution Modes
-
-**Subagent dispatch (default for multi-step workflows).** The orchestrator uses the `Agent` tool to dispatch an implementer or reviewer subagent per task. Dispatch prompts follow the canonical `Stage:` / `Task:` / `Additionally:` template — see `agent-orchestration` §Dispatch Templates. The subagent reads its dispatch prompt, loads per the Skill-Load Manifest above, does the work, returns a status per `agents/implementer.md` / `agents/reviewer.md` §Report Format.
-
-**Direct mode.** When the orchestrator executes a step itself — no subagent dispatch — it plays the implementer or reviewer role in-session. The discipline is the same; only the dispatch envelope is gone.
-
-- **Read the agent file for the role you are playing.** For an implementation step, read `agents/implementer.md`. For a review step, read `agents/reviewer.md`. Follow the protocol there as written.
-- **The Skill-Load Manifest still drives loads.** Consult the manifest row for your Stage and load the listed skills and references yourself in-session.
-- **The dispatch-prompt contract does not apply — there is no dispatch.** Task context comes from `PLAN.md`, `RESULTS.md`, and the current session; you do not write an `Additionally:` line to yourself.
-- **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's §Three Concurrent Disciplines before committing. Update `PLAN.md` / `RESULTS.md` inline per the handoff-doc editing etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1, or load `superRA:handoff-doc` if you need the full discipline. Reviewer verdicts are still APPROVE / REVISE even when you render them as your own conclusion.
-- **Review is never skipped.** If you implemented in direct mode, you still need a review pass — either dispatch a reviewer subagent for the review step, or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
-
-## Tool Discipline
-
-**Tool preference for file inspection.** Use `Read`, `Glob`, and `Grep` instead of Bash `cat`/`head`/`grep`/`find` whenever you need to look at files — faster and avoids unnecessary permission prompts.
-
-
-## Semantic Merge
-
-When merging, rebasing, or cherry-picking branches, superRA uses intent-based conflict resolution rather than mechanical ours/theirs. Research-meaningful conflicts are always escalated to the user. See `superRA:semantic-merge` for the full process. A PreToolUse hook automatically reminds you to use this skill when a bare `git merge/rebase/cherry-pick` is detected.
-
+**Unknown `Stage:` values are a dispatch error** — halt and report to the orchestrator rather than guessing a skill/reference load.
 
 ## Instruction Priority
 

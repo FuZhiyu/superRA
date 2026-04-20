@@ -6,7 +6,7 @@ user-invocable: true
 
 # Report in Markdown
 
-A format-discipline utility. **The caller writes the content; this skill tells you how to structure, embed figures, render math, and (for permanent artifacts) fact-check.** No content modification. No tone rules in the body — rules live in references so callers only pay for what they need.
+A format-discipline utility. **The caller writes the content; this skill tells you how to structure, embed figures, render math, and (for permanent artifacts) fact-check.** No content modification.
 
 ## When to invoke
 

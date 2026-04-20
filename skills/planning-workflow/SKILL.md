@@ -9,11 +9,7 @@ description: Use when starting a new piece of research work with an objective an
 
 Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the execution-workflow to consume.
 
-This skill is **domain-agnostic**. Today's only implemented domain vertical is data analysis; future verticals (theory / modeling, literature review, simulation, writing) plug in by providing their own domain skill with a `references/planning.md`. The procedure here stays the same.
-
-Write comprehensive plans assuming the next person reading has zero context for this project. Document everything they need: which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Give them the whole plan as bite-sized steps. Frequent commits.
-
-Assume the next reader is skilled at the craft, but knows nothing about this specific project, its data / literature / prior work, or its conventions.
+Write comprehensive plans for a reader skilled at the craft but with zero context for this specific project — which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Frequent commits.
 
 **Announce at start:** "I'm using the planning-workflow skill to create the project plan."
 
@@ -45,8 +41,7 @@ If the work covers multiple independent workstreams (e.g., "analyze portfolio so
 
 Before defining tasks, map out the artifact pipeline:
 
-- What scripts, notebooks, or documents will be created? One per logical phase (e.g., data cleaning → variable construction → analysis → robustness; or derivation → simulation → calibration for theory work).
-- **Analysis scripts**: format for notebook rendering per `econ-data-analysis/references/notebook-format.md`. Runner/pipeline scripts and non-analysis artifacts use standard format.
+- What scripts, notebooks, or documents will be created? One per logical phase (e.g., data cleaning → variable construction → analysis → robustness). Analysis scripts: format for notebook rendering (see `econ-data-analysis/references/notebook-format.md`).
 - What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 
@@ -54,7 +49,7 @@ Before defining tasks, map out the artifact pipeline:
 
 **Pipeline file (required for multi-artifact work):**
 
-If the work involves more than one script, the plan MUST include a pipeline file that runs all scripts in the correct order. This is a reproducibility requirement. Examples and detail for data analysis are in `econ-data-analysis/references/planning.md`. The same principle applies to any multi-artifact workstream: a single entry point that reproduces every output from source.
+If the work involves more than one script, the plan MUST include a pipeline file that runs all scripts in the correct order (see `econ-data-analysis/references/planning.md` for examples). A single entry point that reproduces every output from source.
 
 The pipeline file must:
 - Run all scripts in dependency order
@@ -76,35 +71,14 @@ For other verticals, the operational cycle looks different (e.g., derivation →
 
 ### Task Dependencies
 
-Not every task is sequential. Identify independent branches at plan
-time so the orchestrator can dispatch them in parallel (see
-`agent-orchestration` §Workload Balancing).
+Each task block declares a `**Depends on:**` line (upstream task numbers, or `*(none)*`). See `superRA:handoff-doc` `references/plan-anatomy.md` §Task Block Anatomy for the required format. Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
 
-**Format.** Each task block declares a `**Depends on:**` line listing
-upstream task numbers, or `*(none)*` if the task has no upstream
-dependency. See `superRA:handoff-doc` `references/plan-anatomy.md` §Task Block Anatomy for the required format.
+**A task depends on another when it:**
+- reads the other task's output files;
+- needs a sample / variable / methodology decision finalized in the other task; or
+- runs sensitivity / robustness on the other task's baseline results.
 
-**When a task depends on another.**
-- It reads the other task's output files.
-- It needs a sample / variable / methodology decision finalized in the
-  other task.
-- It runs sensitivity / robustness on the other task's baseline
-  results.
-
-**When a task is independent (`Depends on: *(none)*`).**
-- Loads its own raw inputs, produces its own outputs.
-- Sits in a separate pipeline branch that doesn't meet downstream.
-
-**Orchestration contract.** The `execution-workflow` orchestrator reads
-these fields. Tasks whose dependencies are all `APPROVED` may be
-dispatched as a single parallel Agent-tool batch, subject to
-`agent-orchestration` §Workload Balancing. Mutually independent tasks
-SHOULD run in parallel; serializing them is waste.
-
-**Plan-time DAG sanity.** After writing all tasks, trace the dependency
-edges. No cycles. No `Depends on: Task 99` pointing at a task that
-doesn't exist. The terminal task(s) (no downstream) should be the ones
-that produce the top-line results.
+**After writing all tasks:** trace the dependency edges — no cycles, no references to nonexistent tasks; terminal task(s) produce the top-line results.
 
 ### Plan Document Header and Task Structure
 
