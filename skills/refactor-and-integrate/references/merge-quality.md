@@ -12,7 +12,7 @@ A merge integration can land as **one commit or many**. The load-bearing discipl
 
 **When one commit is sufficient:** the mechanical merge is trivial (no real conflicts, or a clean fast-forward) **and** the integration adaptation is small enough that the commit message can describe both pieces honestly. A plain `git merge --ff-only` or a near-empty `--no-ff` merge with a few label fixes is the typical shape.
 
-**When to split into two commits (the canonical template):** either side is non-trivial — conflicts need human-visible reconciliation, or the intent adaptation rewrites derived artifacts, regenerates outputs, or touches multiple files. Split so a reviewer can see the mechanical reconciliation alone, then the intent adaptation alone.
+**When to split into multiple commits (the canonical template):** either side is non-trivial — conflicts need human-visible reconciliation, or the intent adaptation rewrites derived artifacts, regenerates outputs, or touches multiple files. Split so a reviewer can see the mechanical reconciliation alone, then the intent adaptation alone.
 
 **Commit 1 (mechanical merge) — when split:**
 - Complete the merge with lowest-assumption reconciliation
