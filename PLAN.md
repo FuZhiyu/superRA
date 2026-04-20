@@ -102,7 +102,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ## Task 1: Scaffold `skills/writing/SKILL.md` — Iron Law + §Three Concurrent Disciplines
 
 **Depends on:** *(none)*
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:** `skills/writing/SKILL.md` (new)
@@ -114,7 +114,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 **Output:** `skills/writing/SKILL.md` with frontmatter + RA framing + Iron Law + Common Rationalizations table + §Three Concurrent Disciplines (Preserve / Improve / Verify) + §Pitfalls pointer list + §Mode-selection pointer + §Key References. No referenced files exist yet — §Pitfalls and §Key References point forward.
 
-- [ ] **Step 1: Draft frontmatter + RA framing**
+- [x] **Step 1: Draft frontmatter + RA framing**
 
 ```markdown
 ---
@@ -127,7 +127,7 @@ description: Use PROACTIVELY whenever editing, polishing, proofreading, consiste
 You are assisting the researcher, not replacing them. The researcher's voice is the final voice. Your edits serve the researcher's intent — never your own preference.
 ```
 
-- [ ] **Step 2: Write the Iron Law**
+- [x] **Step 2: Write the Iron Law**
 
 Heading: `## The Iron Law: RESPECT THE AUTHOR'S INTENT`. Three clauses:
 
@@ -137,7 +137,7 @@ Heading: `## The Iron Law: RESPECT THE AUTHOR'S INTENT`. Three clauses:
 
 **Explicit non-goal:** The Iron Law does NOT require preserving word choices, typos, passive-voice awkwardness, or weak diction. Fixing those is the RA's job. What it forbids is overriding *authorial intent*.
 
-- [ ] **Step 3: Write §Common Rationalizations table**
+- [x] **Step 3: Write §Common Rationalizations table**
 
 Heading: `## §Common Rationalizations`. Table columns `Rationalization | Reality`:
 
@@ -150,7 +150,7 @@ Heading: `## §Common Rationalizations`. Table columns `Rationalization | Realit
 | "The TODO marker is obviously going to be filled in the same way I'd fill it." | In-progress work violation. Leave TODOs for the author. |
 | "Warnings are never important — compile-clean enough." | Verify violation. Triage each warning; escalate on doubt. |
 
-- [ ] **Step 4: Write §Three Concurrent Disciplines (Preserve / Improve / Verify) — shared checklist**
+- [x] **Step 4: Write §Three Concurrent Disciplines (Preserve / Improve / Verify) — shared checklist**
 
 Heading: `## §Three Concurrent Disciplines: Preserve–Improve–Verify`. Walked top-to-bottom for every writing task. Severity markers `[BLOCKING]` / `[ADVISORY]`. Shared between implementer self-check and reviewer verification.
 
@@ -174,7 +174,7 @@ Heading: `## §Three Concurrent Disciplines: Preserve–Improve–Verify`. Walke
 - [ADVISORY] Build warnings enumerated in handoff with ≤1-line rationale each
 ```
 
-- [ ] **Step 5: Write §Pitfalls pointer list + §Mode selection + §Key References**
+- [x] **Step 5: Write §Pitfalls pointer list + §Mode selection + §Key References**
 
 ```markdown
 ## §Pitfalls (operation-conditional)
@@ -200,7 +200,7 @@ See references/workflow.md for the four modes (direct-edit / pure-review / revie
 - integration.md — pre-merge gates
 ```
 
-- [ ] **Step 6: Self-review against template + commit**
+- [x] **Step 6: Self-review against template + commit**
 
 Self-check: (a) Iron Law protected by a Common Rationalizations table covering all three clauses? (b) Every §Three Concurrent Disciplines item has a severity marker? (c) §Pitfalls pointers list all eight consistency dimensions generically as `consistency/*.md`? Update RESULTS.md Task 1 with key findings (Iron Law final text, checklist item counts). Update PLAN.md: mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: scaffold writing/SKILL.md with Iron Law + shared disciplines`.
 

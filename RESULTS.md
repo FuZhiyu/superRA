@@ -10,7 +10,18 @@
 
 ## Task 1: Scaffold `skills/writing/SKILL.md` — Iron Law + §Three Concurrent Disciplines
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Key findings:**
+
+- **Iron Law final text:** `RESPECT THE AUTHOR'S INTENT` — three clauses (meaning-preserving, scope-bounded, in-progress work respected) + explicit non-goal ("does NOT require preserving word choices, typos, passive-voice awkwardness"). Matches the locked wording from the plan file.
+- **§Common Rationalizations table:** 8 rows covering all three Iron Law clauses (rewrite, guessed meaning, structural reorder, voice/diction confusion, TODO handling, warnings, author-mind-reading, post-hoc reversion).
+- **§Three Concurrent Disciplines (Preserve / Improve / Verify):** 18 severity-marked items total — Preserve 4, Improve 5, Verify 4, Implementation standards 3, Documentation/handoff 2. Counts: 14 `[BLOCKING]`, 4 `[ADVISORY]`. Reviewer verdict protocol (APPROVE / REVISE) mirrors `econ-data-analysis` exactly.
+- **§Pitfalls pointer list:** 7 operation-conditional pointers (sentence edits, structural drafting, multi-dim consistency sweep, single-dim consistency, terminology/notation refactor, build fix, user-work detected). All eight consistency dimensions addressed generically via `consistency/*.md`.
+- **§Mode selection** and **§Key References** present and pointing forward at references that will land in subsequent tasks.
+- **Architectural parity with `econ-data-analysis/SKILL.md`:** frontmatter shape, Stage-Scoped References table, Iron Law + Common Rationalizations + §Three Concurrent Disciplines + §Pitfalls + §Key References — same anatomy, adapted for writing vertical.
+
+**File:** `skills/writing/SKILL.md` (296 lines).
 
 ## Task 2: `style-checklist.md` + `structure-checklist.md`
 
