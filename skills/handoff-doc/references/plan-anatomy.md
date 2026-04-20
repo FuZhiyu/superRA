@@ -46,14 +46,14 @@ The header is the project's standing context, written at planning time and updat
 
 ## Workflow Status
 
-A checklist of irreversible workflow milestones. Each box is a rollup over per-task `**Review status:**` and `**Integration status:**` fields — it flips only when all tasks that contribute to the milestone have the appropriate per-task status. Each box flips at the moment its workflow step completes, in the same commit that completes the step. A new agent reads this section first to know where the project stands without having to scan task blocks or grep commits. On re-entry, the orchestrator unchecks affected boxes by judgment and declares in §Decisions which boxes were cleared and why. The full drift-test suite must re-run green before rechecking `Drift tests created` — see `planning-workflow §Changing Plans`.
+A checklist of irreversible workflow milestones. Each box is a rollup over per-task `**Review status:**` and `**Integration status:**` fields — it flips only when all tasks that contribute to the milestone have the appropriate per-task status. Each box flips at the moment its workflow step completes, in the same commit that completes the step. A new agent reads this section first to know where the project stands without having to scan task blocks or grep commits. On re-entry, the orchestrator unchecks affected boxes by judgment and declares in §Decisions which boxes were cleared and why. The full drift-test suite must re-run green before rechecking `Drift tests created` — see `planning-workflow §User Feedback and Changing Plans`.
 
 - [ ] **Plan approved** — researcher signed off on data inventory + plan (`planning-workflow` Phase 2)
 - [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`execution-workflow` Step 3)
-- [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Stage 1)
-- [ ] **Refactored** — integration-reviewer `APPROVED` on refactored code (`integration-workflow` Stage 2)
-- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Step 3)
-- [ ] **Merged** — branch merged to main or PR opened (`merge-workflow` Step 4)
+- [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Phase A)
+- [ ] **Refactored** — integration reviewer `APPROVED` on the unified sync+refactor diff (`integration-workflow` Phase B)
+- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Phase C)
+- [ ] **Merged** — branch merged to main or PR opened (`integration-workflow` Phase D)
 
 ---
 ```
@@ -64,7 +64,7 @@ Only the orchestrator (or standalone author) edits the header, including `## Wor
 
 ### `## Decisions` placement
 
-When the first cross-task user decision arrives, insert a `## Decisions` heading immediately after `## Workflow Status` and before the first task block — so the header order is: standing context → `## Workflow Status` → `## Decisions` (when present) → `---` → task blocks. Format and rules per `SKILL.md` §User Decisions Log. Omit the heading entirely until there is a first decision to record.
+When the first cross-task user decision arrives, insert a `## Decisions` heading immediately after `## Workflow Status` and before the first task block — so the header order is: standing context → `## Workflow Status` → `## Decisions` (when present) → `## Integration Intent` (when present) → `---` → task blocks. Format and rules per `SKILL.md` §User Decisions Log. Omit the heading entirely until there is a first decision to record.
 
 ## Project Conventions
 
@@ -103,7 +103,7 @@ Researcher answers to `AskUserQuestion` / plain-text pauses land in `PLAN.md` **
 **Where it lands:**
 
 - **Task-scoped decision** (affects one task's scope, methodology, or implementation) → blockquote inside that task block, directly under `**Review status:**`. Uses the same blockquote syntax as review notes, so it sits naturally beside the adjudication protocol in `agents/implementer.md` / `agents/reviewer.md`.
-- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `execution-workflow` Step 4 merge-menu choice, `integration-workflow` Step 1 drift-test selection, `integration-workflow` Step 3 doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed immediately after the header / `## Project Conventions` and before the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
+- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `execution-workflow` Step 4 merge-menu choice, `integration-workflow` Phase A drift-test selection, `integration-workflow` Phase C doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed immediately after the header / `## Project Conventions` and before the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
 
 **Format (both locations):**
 
@@ -118,6 +118,31 @@ Three lines, blockquote, dated. `Question asked` is the agent's own short restat
 The `ask-user-question-logger` PostToolUse hook reminds the agent to log after each `AskUserQuestion` call; when the harness does not expose the hook, set a TodoWrite reminder.
 
 If it is unclear whether an answer counts as a decision worth logging: if acting on it would change the code, data, or methodology in a way another agent could not reconstruct from the code alone, log it.
+
+## Integration Intent
+
+The `## Integration Intent` section bridges the integration reviewer's Phase B main-side scan and the per-task fix-review loop. When the reviewer scans `merge-base..origin/<base>` and finds incoming changes on main that materially affect this branch, it writes (or updates) this section to record what changed and which tasks need adaptation — so the orchestrator and downstream implementers know exactly what integration work is needed and why.
+
+**Ownership:** Written and maintained by the integration reviewer only. The implementer does not edit this section. The orchestrator may append `→ orchestrator:` annotations to individual items (to reject, redirect, or flag for a second opinion), but the reviewer owns the prose.
+
+**Lifecycle:**
+
+1. Reviewer writes the section at `integration-workflow` Phase B Step 1 when the main-side scan surfaces material incoming changes.
+2. When the last task named in a cluster reaches `Integration status: APPROVED`, the reviewer removes the corresponding item from the section.
+3. When the last item is removed, the reviewer removes the section entirely. An empty section is never left in PLAN.md — its absence signals clean integration.
+
+**Format:**
+
+```markdown
+## Integration Intent
+
+> **Main-side change (2026-04-19):** `origin/main` added a session-start hook that drops a banner into every new session; touches no analysis files but adds a new `hooks/session-start` script and updates `README.md §Hooks`. Affects Tasks 5, 7 (README edit conflicts).
+> **Adaptation needed:** Tasks 5 and 7's README edits must be re-based on top of the new §Hooks language.
+```
+
+One blockquote cluster per incoming change. Each cluster has two lines: `Main-side change (YYYY-MM-DD)` naming what landed on main and which tasks are affected, and `Adaptation needed` describing the specific work required. Affected task IDs are named explicitly so the orchestrator can scope implementer dispatches without re-reading the diff.
+
+**Placement:** Directly after `## Decisions` (if present) and before the first task block, in the same position as that section in the header order. Omit entirely until the reviewer's first Phase B main-side scan surfaces a material change.
 
 ## Task Block Anatomy
 
@@ -176,11 +201,11 @@ Validate: row count matches expectation, unmatched rate reasonable, distribution
 ## Field-by-Field Notes
 
 - **`**Review status:**`** is always present on a task once execution begins. Valid values: `IMPLEMENTED`, `REVISE (<stage>)`, `APPROVED`. Before execution starts, leave it as a placeholder or omit. On re-entry, tasks in the transitive downstream closure of a modified task have their status cleared by default; the orchestrator may exempt a downstream task by documenting why the upstream change does not affect its inputs (one blockquote per exempted task in §Decisions).
-- **`**Integration status:**`** is set by the integration reviewer, considering drift-test coverage, refactor coverage, and doc coverage for that task's contribution. Valid values: unset / `IMPLEMENTED` / `REVISE` / `APPROVED`. The same DAG cascade rule applies as for `**Review status:**` — downstream tasks in the closure of a modified task have their Integration status cleared by default, with documented exemptions in §Decisions.
+- **`**Integration status:**`** is owned by the integration reviewer and the implementer across Phase B's choreography — symmetric with `**Review status:**`, where the reviewer itself sets REVISE / APPROVED and the orchestrator intervenes only to overrule. The **integration reviewer** (annotation pass) flips to `REVISE` on tasks it annotates with integration review-notes (tasks it does not annotate stay `APPROVED`), in the same commit that writes the blockquote. The **implementer** flips to `IMPLEMENTED` on each in-scope task when it commits the refactor. The **integration reviewer** (verify pass) flips the in-scope tasks to `APPROVED` when the cumulative diff passes (or back to `REVISE` on specific tasks if it finds issues), in the same commit that writes its review. The orchestrator does not flip Integration status by default; it only overrules a reviewer's flip via a `→ orchestrator: ...` annotation when it disagrees, same as for Review status. Valid values: unset / `IMPLEMENTED` / `REVISE` / `APPROVED`. The same DAG cascade rule applies as for `**Review status:**` — downstream tasks in the closure of a modified task have their Integration status cleared by default, with documented exemptions in §Decisions. **B→B re-entry trigger:** when main advances mid-integration, the integration reviewer's annotation gates the flip — tasks it annotates get `**Integration status:** REVISE`; tasks it does not annotate stay `APPROVED`.
 - **Script / Input / Output** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **Steps** are editable by the implementer: they may rewrite, reorder, add, or remove steps when the data forces deviation from the planned approach. Steps are expressed as checkbox items with inline code blocks that contain the actual analyst code.
 - **Review notes blockquote** is present only when there are active items. On `APPROVED`, the blockquote is removed entirely. For how items enter, get annotated, and exit across iterations, see `agents/reviewer.md` (first-round REVISE and re-review deletion) and `agents/implementer.md` (annotating fixes with `→ implemented: ...`).
-- **`## Workflow Status` checkboxes** are flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. Each box is a rollup over per-task statuses: e.g., `Execution complete` flips only when every task has `**Review status:** APPROVED`; `Drift tests created` flips only when the full drift-test suite passes (which requires all tasks to have `**Integration status:**` coverage). A box is unchecked again only when a scope change or post-merge refactor invalidates the milestone — see `planning-workflow §Changing Plans`. Subagents may not flip boxes; if a subagent reports work that completes a milestone, the orchestrator flips the box in the next commit.
+- **`## Workflow Status` checkboxes** are flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. Each box is a rollup over per-task statuses: e.g., `Execution complete` flips only when every task has `**Review status:** APPROVED`; `Drift tests created` flips only when the full drift-test suite passes (which requires all tasks to have `**Integration status:**` coverage). A box is unchecked again only when a scope change or post-merge refactor invalidates the milestone — see `planning-workflow §User Feedback and Changing Plans`. Subagents may not flip boxes; if a subagent reports work that completes a milestone, the orchestrator flips the box in the next commit.
 
 ## No Placeholders
 

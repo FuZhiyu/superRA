@@ -159,4 +159,4 @@ For worktree removal itself (`git worktree remove`, branch deletion, and safety 
 ## See Also
 
 - `skills/agent-orchestration/references/worktree-harness-fallback.md` — worktree lifecycle (create / enter / remove), harness tools preferred, raw-git fallback, placement conventions.
-- `skills/agent-orchestration/SKILL.md` §Concurrent Writers Require Worktree Isolation — when parallel implementers each need their own worktree, and how data seeding fits into that flow.
+- `skills/agent-orchestration/SKILL.md` §Parallelization and Worktree Isolation — when parallel subagents each need their own worktree, and how data seeding fits into that flow.

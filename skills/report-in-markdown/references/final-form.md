@@ -1,6 +1,6 @@
 # Final form: consolidation discipline for Stage 2 `RESULTS.md`
 
-Load this reference when you are either the **doc-writer subagent maturing `RESULTS.md` at `integration-workflow` Step 3** or the **doc-reviewer subagent reviewing that matured file**. This is the gate that the superRA IMPLEMENT phase deliberately defers so it can stay fast.
+Load this reference when you are either the **doc-writer subagent maturing `RESULTS.md` at `integration-workflow` Phase C** or the **doc-reviewer subagent reviewing that matured file**. This is the gate that the superRA IMPLEMENT phase deliberately defers so it can stay fast.
 
 The Stage 1 dev-log form of `RESULTS.md` is task-indexed, terse, agent-facing, reviewer caveats inline. The Stage 2 permanent form is reader-facing, fact-checked, and co-located with the analysis code. Consolidation **rewrites the file in place** before relocating it — it does not create a new file.
 
@@ -122,13 +122,13 @@ A "Limitations" section that lists factual caveats (unresolved reviewer notes, d
 
 ## Cross-consistency with project docs
 
-The Stage 2 doc-writer matures `RESULTS.md` only; project-level docs (`CLAUDE.md` / `AGENTS.md` / `README.md`) are audited during `integration-workflow` Stage 2 per `refactor-and-integrate/references/codebase-integration.md` §Project Doc Audit. The doc-reviewer still checks that the matured `RESULTS.md` does not contradict project docs:
+The Stage 2 doc-writer matures `RESULTS.md` only; project-level docs (`CLAUDE.md` / `AGENTS.md` / `README.md`) are audited during `integration-workflow` Phase B per `refactor-and-integrate/references/codebase-integration.md` §Project Doc Audit. The doc-reviewer still checks that the matured `RESULTS.md` does not contradict project docs:
 
 - [ ] **Methodology descriptions** in the matured RESULTS.md match the current code — no references to dropped approaches, superseded variable definitions, or removed processing steps
 - [ ] **Headline results cited in project docs** (if any) match the matured RESULTS.md — no stale numbers from before the last revision
 - [ ] **File paths and command names cited in RESULTS.md** are accurate — no references to moved, renamed, or deleted files
 
-If the reviewer finds stale claims in `CLAUDE.md` / `AGENTS.md` / `README.md` themselves, that is a Stage 2 regression — flag it but recognize the primary gate for project-doc accuracy was Stage 2.
+If the reviewer finds stale claims in `CLAUDE.md` / `AGENTS.md` / `README.md` themselves, that is a Phase B regression — flag it but recognize the primary gate for project-doc accuracy was Phase B.
 
 ## Severity for integration review
 

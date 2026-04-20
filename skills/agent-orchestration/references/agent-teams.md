@@ -43,10 +43,8 @@ The full superRA workflow spans three team-worthy phases:
 ```
 execution-workflow (analysis team)
   → cleanup
-    → integration-workflow (integration team)
+    → integration-workflow (integration team, Phases A–D)
       → cleanup
-        → merge-workflow (merge team)
-          → cleanup
 ```
 
 Sequential teams with cleanup. The lead cleans up each team before spawning the next.
@@ -98,11 +96,11 @@ For 2+ independent tasks that can be worked on without shared state or sequentia
 
 ### Infrastructure for Parallel Work
 
-When dispatching parallel agents that need isolated workspaces, follow `SKILL.md` §Concurrent Writers Require Worktree Isolation:
+When dispatching parallel agents that need isolated workspaces, follow `SKILL.md` §Parallelization and Worktree Isolation:
 
 - Provision one worktree per agent per `references/worktree-harness-fallback.md` (harness tools preferred; raw `git worktree` otherwise).
 - Seed non-git data via `superRA:worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink`.
-- Merge back with plain `git merge` on the `parallel/<branch>/<slug>` branches.
+- Merge back with plain `git merge` on the `<branch>/parallel/<slug>` branches.
 
 Do not hand-roll worktree setup or data-copy scripts.
 
