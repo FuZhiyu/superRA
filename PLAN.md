@@ -133,7 +133,7 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 
 **Expected result.** A `README.md` a first-time user can read front-to-back in 5 minutes and know: what this is, when to use it, what skills ship, how to install, and where to read more.
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(docs-only; N/A)*
 
 ---
