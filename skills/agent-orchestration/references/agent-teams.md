@@ -205,5 +205,5 @@ On session resume, this tells the new lead exactly where to pick up.
 - **Task status can lag** — teammates sometimes fail to mark tasks as completed; check if work is actually done.
 - **One team per session** — must clean up before starting a new team.
 - **No nested teams** — teammates cannot spawn their own teams (they can use subagents via Task tool).
-- **Skills / mcpServers frontmatter** — not applied to team teammates; they load from project and user settings like regular sessions. The `superRA:using-superRA` master skill reaches them via the SessionStart-injection path, not via per-teammate frontmatter.
+- **Skills / mcpServers frontmatter** — not applied to team teammates; they load from project and user settings like regular sessions. Teammates pick up `superRA:using-superRA` the same way as any regular session — via the `Skill` tool — since there is no per-teammate frontmatter preload.
 - **Shutdown can be slow** — teammates finish current request / tool call before shutting down.
