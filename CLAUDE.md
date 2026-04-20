@@ -11,6 +11,8 @@ When you are modifying superRA itself (skills, hooks, agents, docs), you are edi
 - **Describe the problem, not just the change.** Commit messages should explain what was broken or missing, not just what moved.
 - **Test on at least one harness** (Claude Code is primary) before claiming a change works. Skills are code — verify behavior, don't just read the diff.
 
+Treat the domain as "Skill-creation" and load `skill-creator` skill or any relevant skill for all agents if you are following the superRA workflow. 
+
 ## Skill Changes
 
 Skills are not prose. If you modify skill content:
@@ -37,14 +39,29 @@ These principles are domain-agnostic. They shape every workflow skill and apply 
 
 4. **Autonomous with human in the loop.** The agent drives the workflow forward under its own power between legitimate stop points. It does not ask permission to continue, re-confirm approved plans, or solicit reassurance — an `APPROVED` task dispatches the next task without a check-in, and a completed workflow step moves to the next step without a "shall I proceed?". It **does** stop, and uses the `AskUserQuestion` tool when the harness exposes it (plain text otherwise), for exactly three classes of pause: (a) a hard blocker the RA cannot resolve from the code and data (missing access, corrupted inputs, ambiguous upstream dependency), (b) a decision that is beyond the RA's authority because it belongs to the researcher — methodology choices, research intent, scope changes, sample/variable definition calls, any tradeoff where the "right" answer depends on the research question, and (c) user-defined milestones explicitly baked into a workflow (e.g., execution-workflow Step 4's four completion options, integration-workflow's drift-test selection and doc disposition). Every user decision produced at a stop point is written into `PLAN.md` (or `RESULTS.md` where relevant) **before** the agent acts on it, and committed atomically with the work it unblocks — so the handoff doc remains the record of record and the next session can reconstruct *why* the work took the shape it did. A change that inserts gratuitous "should I continue?" prompts, decides a methodology question unilaterally, or lets a user decision live only in chat violates this principle. See `handoff-doc` §User Decisions Log for the logging format.
 
+
+
 ### RA framing (cross-cutting)
 
 The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. Challenges to methodology are escalated to the human partner, never decided unilaterally. This applies to every domain vertical.
 
 ### Architectural pattern
 
-- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. The Skill-Load Manifest in `superRA:using-superRA` is the authoritative map from `Stage:` value to required skills + stage-scoped references; `agents/implementer.md` / `agents/reviewer.md` carry one-line pointers at it.
-- **Flat skills/ layout.** No nested subfolders — every skill lives at `skills/<name>/SKILL.md`. Grouping into Workflow / Domain / Utility / Meta is documented in `skills/CATEGORIES.md` and mirrored in `README.md`, not in the filesystem. This preserves compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders.
+- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. The Skill-Load Manifest in `superRA:using-superRA` is the authoritative map from `Stage:` value to required skills + stage-scoped references; `agents/implementer.md` / `agents/reviewer.md` carry one-line pointers at it; Agents only load what they need to load; when adding new instructions, think carefully where it should be to make sure only relevant agents learn about it; 
+- Domain skills and utility skills can both be used stand-alone or as part of the workflow. Hence, the language there need to be workflow neutral; 
+- 
+
+
+### Skill Design Patterns
+
+- Activate skill-creator skill or similar skills you have when working in this repo; 
+- Positive instruction rather than negative instruction. That is, prefer specify "Do this" rather than "Don't do that". 
+- Provide minimal instruction needed for agents; unless the rationale is helpful for agents to carry out the instruction better, do not provide them. 
+   Most commonly we spill the design reasoning into the instruction. Don't. For example, we may write in the instruction: 
+      > This skill is **domain-agnostic**. Today's only implemented domain vertical is data analysis; future verticals (theory / modeling, literature review, simulation, writing) plug in by providing their own domain skill with a `references/planning.md`. The procedure here stays the same.
+
+   This is unnecessary for the agent to know; all they need to know is to plan and how to load the plan. 
+
 
 ### DRY, composability, extensibility
 
@@ -75,24 +92,6 @@ superRA's workflow scaffolding is domain-agnostic. Domain-specific discipline li
 Data analysis is the flagship vertical, not the whole product. The workflow skills do not assume data analysis; they route to the domain skill only when the task matches.
 
 Before proposing structural changes to skill design, workflow phases, or agent orchestration, read the existing skills in `skills/` and the workflow skills they reference, and verify the proposal strengthens (or at least preserves) all four workflow principles.
-
-## Roadmap: Extending Beyond Data Analysis
-
-Adding a new vertical means adding a domain skill — not forking the workflow. The four workflow principles, the implementer/reviewer pair, the handoff-doc discipline, semantic-merges, and the autonomous-with-human-in-loop stop-point pattern all carry over unchanged. A new vertical plugs in by providing:
-
-1. **A domain skill** at `skills/<vertical>/SKILL.md` carrying the cross-cutting discipline of that domain.
-2. **Stage-scoped references** inside the domain skill: at minimum a `references/planning.md` consumed by `planning-workflow` Phase 1. Other stage references as the vertical needs.
-3. **A row in `skills/CATEGORIES.md` and `README.md`** under Domain — data analysis (or under a new vertical heading).
-4. **An entry in `planning-workflow` Phase 1's vertical table** so the workflow routes correctly when it sees a task in that domain.
-
-**Planned verticals (hooks for future work, not commitments):**
-
-- **Theory / modeling.** Derivation discipline (step-by-step algebra, symbol tracking), notation consistency, proof checks, simulation or numerical verification of derived formulas.
-- **Literature review.** Citation integrity (every claim traces to a cited source with the page / line), claim-evidence mapping, coverage audit across a reading list, systematic note-taking format.
-- **Simulation.** Seed discipline, stochastic reproducibility across platforms, sensitivity to parameter grids, convergence diagnostics, calibration-vs-estimation separation.
-- **Writing / paper drafting.** Figure and table consistency with the underlying code, cross-reference integrity (labels, citations), narrative coherence across sections, versioning of the manuscript alongside the analysis branch.
-
-When you pick one up, create the domain skill first, then do one real project end-to-end with the existing workflow skills to find the gaps. The workflow skills are meant to bend; the principles are not.
 
 ## General
 
