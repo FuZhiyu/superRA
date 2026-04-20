@@ -39,7 +39,7 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 ## Workflow Status
 
 - [x] Plan approved
-- [ ] Task 1a — Mermaid workflow diagram
+- [x] Task 1a — Mermaid workflow diagram
 - [ ] Task 1b — README prose rewrite
 - [ ] Task 2 — CLAUDE.md consolidation
 - [ ] Task 3 — plugin.json + marketplace.json descriptions
@@ -87,15 +87,15 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 
 **Steps:**
 
-- [ ] Read `README.md` (current state) and `docs/plans/round-3/PLAN.md` or the prior archived Mermaid Workflow Map (search `skills/` + `docs/plans/`) to see the density ceiling.
-- [ ] Draft the diagram. Prefer `flowchart TB` with subgraphs for IMPLEMENT (implementer/reviewer loop) and INTEGRATE (Phases A–D).
-- [ ] Validate Mermaid syntax — paste into `https://mermaid.live` or run `npx @mermaid-js/mermaid-cli -i <file>` if installed; report which method was used.
-- [ ] Save to `docs/drafts/workflow-diagram.mmd` with a one-line comment noting the target embed location (README §Plan-Implement-Integrate Workflow).
-- [ ] Commit: `docs(readme): draft workflow diagram for embedding`.
+- [x] Read `README.md` (current state) and the prior Workflow Map diagram (via `git show 3970828^:README.md`) to set the density ceiling — the new diagram sits well below it (no cross-cutting rail, no skill-load manifest detail).
+- [x] Draft the diagram as `flowchart TB` with subgraphs for IMPLEMENT (implementer/reviewer loop) and INTEGRATE (Phases A–D); scope-change dotted arrows from both subgraphs back to PLAN; terminal `merged` node off Phase D.
+- [x] Validated via `npx @mermaid-js/mermaid-cli` (rendered `/tmp/diagram-test.svg` cleanly, no syntax errors).
+- [x] Saved to `docs/drafts/workflow-diagram.mmd` with a leading comment noting the target embed location (README §Plan-Implement-Integrate Workflow).
+- [x] Commit: `docs(readme): draft workflow diagram for embedding`.
 
 **Expected result.** A self-contained Mermaid file that Task 1b can lift into README without further thought.
 
-**Review status:** not started
+**Review status:** IMPLEMENTED
 **Integration status:** *(N/A)*
 
 ---
@@ -200,13 +200,13 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 
 **Steps:**
 
-- [ ] Verify the canonical remote URL — `git remote -v` and `gh repo view` to confirm whether it's `FuZhiyu/superRA` or `FuZhiyu/econ-superpowers`. Update the README clone URL accordingly.
-- [ ] Research current Claude Code plugin install flow (as of 2026-04): does `claude-code` support `/plugin install <github-url>` directly, or is local-clone-plus-`.claude/settings.json` still required? Check Claude Code release notes / docs.
-- [ ] Update the README Installation section with the current canonical flow. If direct install from remote now works, lead with it and demote the clone-plus-settings flow to "for development / forking".
-- [ ] Verify the "Other Platforms" subsection (Copilot CLI, Gemini CLI, Codex) — check whether `AGENTS.md` + `GEMINI.md` + `gemini-extension.json` are still the right entry points
-- [ ] Commit: `docs(readme): modernize installation instructions`
+- [x] Verified canonical remote URL via `git remote -v` + `gh repo view FuZhiyu/superRA`: `https://github.com/FuZhiyu/superRA` (PUBLIC). The `econ-superpowers` name in the old crude-draft clone URL is stale.
+- [x] Researched current Claude Code plugin install flow. Claude Code v2.1+ ships a `claude plugin` CLI: `claude plugin marketplace add <github-repo>` registers a GitHub repo as a marketplace, and `claude plugin install <plugin>@<marketplace>` installs from it. Local-clone install is supported by passing a directory path to `marketplace add`. The old `.claude/settings.json` flow is no longer the recommended path.
+- [x] Rewrote README §Installation: lead with the direct `claude plugin marketplace add FuZhiyu/superRA` + `claude plugin install superRA@superRA-dev` flow; demoted local-clone flow to a "development or forking" subsection; added an update snippet. Marketplace name `superRA-dev` and plugin name `superRA` confirmed from `.claude-plugin/marketplace.json`.
+- [x] Verified "Other Platforms" entry files exist at repo root (`AGENTS.md`, `GEMINI.md`, `gemini-extension.json`) and named them explicitly in the subsection with direct links. Users no longer have to guess what the upstream Superpowers docs refer to.
+- [x] Commit: `docs(readme): modernize installation instructions`
 
-**Review status:** not started
+**Review status:** IMPLEMENTED
 **Integration status:** *(N/A)*
 
 ---

@@ -1,0 +1,37 @@
+%% Target embed location: README.md §Plan-Implement-Integrate Workflow (Task 1b).
+%% Paste the fenced ```mermaid ... ``` block below into the README verbatim.
+
+```mermaid
+flowchart TB
+    PLAN["<b>PLAN</b><br/>Scope · task decomposition<br/>PLAN.md + RESULTS.md"]
+
+    subgraph IMPLEMENT["<b>IMPLEMENT</b> (per task)"]
+        direction LR
+        IMPL["implementer<br/>code + doc commit"]
+        REV["reviewer<br/>APPROVE / REVISE"]
+        IMPL --> REV
+        REV -->|REVISE| IMPL
+    end
+
+    subgraph INTEGRATE["<b>INTEGRATE</b>"]
+        direction TB
+        A["Phase A<br/>drift tests for key results"]
+        B["Phase B<br/>review-led sync + refactor"]
+        C["Phase C<br/>mature RESULTS.md + doc audit"]
+        D["Phase D<br/>merge / PR / cleanup"]
+        A --> B --> C --> D
+    end
+
+    PLAN --> IMPLEMENT
+    REV -->|task APPROVED, next task| IMPL
+    IMPLEMENT -->|all tasks APPROVED,<br/>user chooses merge| INTEGRATE
+    D --> MERGED(["merged"])
+
+    IMPLEMENT -. "scope change<br/>(§User Feedback and Changing Plans)" .-> PLAN
+    INTEGRATE -. "scope change<br/>(§User Feedback and Changing Plans)" .-> PLAN
+
+    classDef phase fill:#eef7ff,stroke:#0366d6,color:#000
+    classDef terminal fill:#e8f5e9,stroke:#2e7d32,color:#000
+    class PLAN,IMPL,REV,A,B,C,D phase
+    class MERGED terminal
+```
