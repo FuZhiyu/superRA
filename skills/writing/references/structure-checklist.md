@@ -2,7 +2,7 @@
 
 > Load at the **IMPLEMENT phase** when the task drafts, restructures, or reviews the structure of a section or paper (methods section draft, intro revision, pre-submission structure check). The implementer walks §Gated Checklist as pre-handoff self-check; the reviewer walks the same items as verification.
 
-Sources: Minto, B., *The Pyramid Principle* (governing idea, MECE, horizontal/vertical logic, SCQ / SCQA framing). Chaubey, V. (2018), *The Little Book on Research Writing* (RAP = Research question + Answer + Positioning, three-layer building: argument → outline → paragraphs, two-part introduction). Little Red Schoolhouse (UChicago) — introductions (LRS 5, 6), argument structure (LRS Arg 1–3), triage. Supporting: Brandeis, CGDev, IZA DP15057, Bellemare, Conversable Economist guidance on economics-paper structure.
+Sources: Minto, B., *The Pyramid Principle* (governing idea, MECE, horizontal/vertical logic, SCQ / SCQA framing). Chaubey, V. (2018), *The Little Book on Research Writing* (RAP = Research question + Answer + Positioning, three-layer building: argument → outline → paragraphs, two-part introduction). Little Red Schoolhouse plan summaries (LRS 5, 6, Arg 1–3 — pending source verification; PDFs were unavailable at drafting time). Supporting: Brandeis, CGDev, IZA DP15057, Bellemare, Conversable Economist guidance on economics-paper structure.
 
 The rules below describe how a well-structured research paper reads to its audience. Per the Iron Law (main SKILL.md), structural changes beyond the requested scope are *proposed*, not performed unilaterally.
 
@@ -41,7 +41,7 @@ An economics paper's abstract and introduction should distill down to three lett
 
 Most economics intros order it RAP or APR; Chaubey's default is RPA (p. 65). Choose for your audience.
 
-### Two-part introduction (Chaubey, LRS 5–6)
+### Two-part introduction (Chaubey p. 108)
 
 An introduction has two jobs, in order (Chaubey p. 108):
 
@@ -92,15 +92,12 @@ Miller's 7±2 rule (Chaubey p. 20): a reader holds about 7 items in working memo
 
 ## Gated Checklist
 
+> **Walked in addition to `skills/writing/SKILL.md` §Three Concurrent Disciplines — SKILL.md's scope / voice / compile / cross-reference items are not repeated here. The structural-authorization gate lives in SKILL.md §Preserve and §Implementation standards.**
+
 Walked top to bottom when the task drafts, restructures, or reviews structure. Severity markers apply:
 
-- `[BLOCKING]` — fix to earn APPROVE. Anchors the Iron Law (no unilateral structural changes) and correctness.
+- `[BLOCKING]` — fix to earn APPROVE. Anchors correctness of structural operations.
 - `[ADVISORY]` — best-practice heuristic. Reviewer MAY flag as MINOR. Does not block APPROVE.
-
-### Scope and authorization
-
-- `[BLOCKING]` Structural changes (reorder, add, remove sections or subsections; merge or split paragraphs at the subsection level) were *requested* by the researcher, or are *proposed* rather than performed.
-- `[BLOCKING]` Author's argument and claim structure preserved. No section that previously argued for X now argues for X' as a side-effect of restructuring.
 
 ### Governing idea + MECE
 

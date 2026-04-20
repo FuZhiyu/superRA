@@ -147,12 +147,11 @@ When in doubt: **would the author's co-author recognize this as the author's par
 
 ## Gated Checklist
 
+> **Walked in addition to `skills/writing/SKILL.md` §Three Concurrent Disciplines — SKILL.md's Preserve quartet (no edits outside scope, voice preservation, in-progress-work respected, meaning preservation) is not repeated here. This file adds collaboration-specific detection and escalation gates.**
+
 - `[BLOCKING]` **`git status` / `git diff` checked before editing any file** — in-flight user work identified.
-- `[BLOCKING]` **TODO / placeholder / commented-out-text markers respected** — none touched in the diff unless the request names them.
-- `[BLOCKING]` **Hot lines identified and handled explicitly** — either skipped, or the user was asked first.
-- `[BLOCKING]` **Structural changes proposed, not performed** unless the request explicitly authorizes them.
-- `[BLOCKING]` **Meaning-changing edits escalated, not performed** regardless of request framing.
-- `[BLOCKING]` **Voice preserved** — diction, register, sentence-shape reflect the author's own patterns.
+- `[BLOCKING]` **Hot lines identified and handled explicitly** — either skipped, or the user was asked first (collaboration-specific detection).
+- `[BLOCKING]` **Escalation template used** when an edit fell into the "propose" or "ask" row of the decision matrix — no silent performs.
 - `[BLOCKING]` **User decisions from escalations logged** — per `handoff-doc` §User Decisions Log if `PLAN.md` is in use, or in the commit message if in a workflow mode that skips `PLAN.md`.
 - `[ADVISORY]` **Scope-boundary ambiguities raised** — when unclear whether footnotes / boxes / captions / appendices are in scope, ask.
 - `[ADVISORY]` **Nearby-but-out-of-scope issues flagged** for the researcher as low-stakes proposals.

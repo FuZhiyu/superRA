@@ -2,7 +2,7 @@
 
 > Load at the **IMPLEMENT phase** when edits touch sentence-level prose (polish, proofread, tighten, sentence-level clarity pass). The implementer walks §Gated Checklist as pre-handoff self-check; the reviewer walks the same items as verification. Severity markers: `[BLOCKING]` must be fixed to earn APPROVE; `[ADVISORY]` is flaggable as MINOR and does not block APPROVE.
 
-Sources: Little Red Schoolhouse (UChicago ENGL 13000/33000) — actions/nominalization (LRS 1-1a), character (LRS 1-1b), coherence/cohesion (LRS 2), information flow (LRS 3-4). Chaubey, *The Little Book on Research Writing* (2018) — reader-model, paragraph construction, key-idea-first.
+Sources: Little Red Schoolhouse (UChicago ENGL 13000/33000) — actions/nominalization (LRS 1-1a), information flow (LRS 3-4). Chaubey, *The Little Book on Research Writing* (2018) — reader-model, paragraph construction, key-idea-first.
 
 The rules below are **heuristics the writer applies in service of the reader**, not mechanical must-rewrite mandates. Every rule has cases where it should NOT fire — those are called out explicitly. Per the Iron Law (main SKILL.md), meaning and voice are sovereign; rules apply inside the scope of the request and where they actually improve readability.
 
@@ -92,9 +92,13 @@ The rules below are **heuristics the writer applies in service of the reader**, 
 - Before: *Firm-year panel data regression specification issues.*
 - After: *Specification issues in the firm-year panel regression.*
 
+**Do NOT split when** the cluster is a recognized term of art for the audience (e.g., `mutual fund holdings data`, `heteroskedasticity-robust standard errors`). Field vocabulary is faster than its denominalized form.
+
 ### Sentence-length guidance
 
 **Principle.** Aim for ~20–25 words as a default; vary deliberately. Sentences above ~40 words almost always benefit from splitting — nested clauses and multiple subjects lose the reader. Very short sentences (<8 words) provide rhythm and emphasis when used sparingly.
+
+**Do NOT split when** the length is deliberately carrying a cumulative argument or a long parallel list — splitting would break the parallelism or bury the argument's shape.
 
 ### Dangling modifier check
 
@@ -105,33 +109,32 @@ The rules below are **heuristics the writer applies in service of the reader**, 
 - Before: *Using panel data, the coefficient is negative.* — the coefficient is not using panel data.
 - After: *Using panel data, we estimate a negative coefficient.*
 
+**Do NOT rewrite when** the antecedent is unambiguous from the preceding clause and a fluent reader will not misparse — idiomatic scientific prose tolerates some modifier looseness.
+
 ### Paragraph-level rules
 
-**Topic sentence first.** Every paragraph carries its main message in its first sentence. The first sentence should (1) include the paragraph's main message, (2) be recognizable as linked to the overall story, (3) provoke follow-up questions the rest of the paragraph answers. (Chaubey p. 137, 141.)
+**Topic sentence first.** Every paragraph carries its main message in its first sentence. The first sentence should (1) include the paragraph's main message, (2) be recognizable as linked to the overall story, (3) provoke follow-up questions the rest of the paragraph answers. (Chaubey p. 137, 141.) *No exceptions — this is a structural norm for academic prose.*
 
-**One idea per paragraph.** Chaubey (p. 158): RAP paragraphs should have 5–6 sentences. If an idea requires more, it is probably two ideas and the paragraph should split. If an idea is buried at the bottom, the paragraph is probably backward — move the buried idea up.
+**One idea per paragraph.** Chaubey (p. 158): RAP paragraphs should have 5–6 sentences. If an idea requires more, it is probably two ideas and the paragraph should split. If an idea is buried at the bottom, the paragraph is probably backward — move the buried idea up. *Do NOT split when the two apparent ideas are a single claim + its immediate qualification, which belong together.*
 
-**Transitions at paragraph start.** Place transition words (`however`, `moreover`, `in contrast`, `consequently`) near the start of the paragraph or the start of the sentence that pivots, not buried mid-sentence.
+**Transitions at paragraph start.** Place transition words (`however`, `moreover`, `in contrast`, `consequently`) near the start of the paragraph or the start of the sentence that pivots, not buried mid-sentence. *No exceptions — this is a structural norm.*
 
-**First-sentence link test.** Take the first sentence of every paragraph in a section; put them in a separate document; see if they read as a coherent storyline (Chaubey p. 128). If they do, the section's paragraph structure is sound. If they don't, the paragraph-level argument is broken and no amount of sentence polish will fix it.
+**First-sentence link test.** Take the first sentence of every paragraph in a section; put them in a separate document; see if they read as a coherent storyline (Chaubey p. 128). If they do, the section's paragraph structure is sound. If they don't, the paragraph-level argument is broken and no amount of sentence polish will fix it. *Do NOT enforce rigidly when the section is a deliberate list or taxonomy where each paragraph is a peer — parallelism replaces the narrative link.*
 
 ### Precision of reference
 
 Ambiguous pronouns — `this`, `it`, `that`, `these`, `those` — without a clear antecedent force the reader to reread. When a pronoun could refer to more than one recent noun, replace it with the noun or add a noun after it (`this effect`, `this result`, `this specification`).
 
+**Do NOT replace `this` with a noun when** the paragraph's focus is the referent just named and the antecedent is singular and immediate — adding a noun clutters the prose.
+
 ## Gated Checklist
+
+> **Walked in addition to `skills/writing/SKILL.md` §Three Concurrent Disciplines — SKILL.md's scope / voice / compile / cross-reference items are not repeated here.**
 
 Walked top to bottom for every sentence-level edit. Severity markers apply:
 
 - `[BLOCKING]` — fix to earn APPROVE. Anchors the Iron Law (Preserve side) and correctness.
 - `[ADVISORY]` — best-practice heuristic. Reviewer MAY flag as MINOR. Does not block APPROVE.
-
-### Scope and voice
-
-- `[BLOCKING]` Edits confined to the requested scope. No silent style-polishing of adjacent paragraphs.
-- `[BLOCKING]` Author's voice recognizable after the edit (diction + register + sentence-shape preserved where the request is style, not rewrite).
-- `[BLOCKING]` Claims unchanged. No sentence whose meaning, hedge strength, or emphasis shifted as a side-effect of a "style" edit.
-- `[BLOCKING]` Broken grammar / typos introduced by the edit? (Self-check reads the diff end-to-end.)
 
 ### Sentence-level rules
 

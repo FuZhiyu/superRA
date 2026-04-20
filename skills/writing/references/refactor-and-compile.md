@@ -25,7 +25,8 @@ This reference has two sections:
 | Target | False-positive matches | Fix |
 |---|---|---|
 | `estimate` | `underestimate`, `estimation`, `estimator`, `estimates` | Word-boundary + decide on inflections explicitly |
-| `Table 1` | `acceptable`, `Tablespoon` (if unlikely but imagine) | Word-boundary; or search `Table 1\b` |
+| `Table` | `Tablespoon`, `TableView`, `turntable` | Word-boundary (`\bTable\b`); or search `Table 1\b` when renumbering a specific table |
+| `est` | `estimate`, `underestimate`, `estimator`, `tested`, `manifest` | Almost always a bad target — use a longer, more unique string |
 | `y` (variable name) | Every word containing `y` — `policy`, `they`, `yield` | Never substitute a single letter without a mathmode / code-block constraint |
 | `OLS` | `ROLS`, `TOOLS` (unlikely but imagine) | Word-boundary; all-caps-only often enough |
 | `reg` | `region`, `regardless`, `aggregate` | Almost always a bad target — use a longer, more unique target |
@@ -150,10 +151,10 @@ For non-trivial edits, include in the handoff:
 
 ### Compile Gated Checklist
 
-- `[BLOCKING]` Document builds after the edit. Command used is stated in handoff.
-- `[BLOCKING]` No new unresolved cross-references (`??` in output, `undefined references` warnings) introduced by the edit.
-- `[BLOCKING]` No new undefined citations introduced by the edit.
-- `[BLOCKING]` No new `File not found` errors introduced by the edit.
+> **Walked in addition to `skills/writing/SKILL.md` §Three Concurrent Disciplines §Verify — SKILL.md already owns "document builds", "no new unresolved cross-references", and "no new undefined citations" as BLOCKING items. This section adds compile-specific operational items (triage rationale, handoff shape).**
+
+- `[BLOCKING]` Build command used is stated in handoff.
+- `[BLOCKING]` No new `File not found` errors introduced by the edit (missing figure / `\input` / package — compile-specific beyond cross-ref / citation).
 - `[ADVISORY]` Build warnings enumerated in handoff (new vs pre-existing).
 - `[ADVISORY]` Each new warning has a ≤1-line triage rationale.
 
