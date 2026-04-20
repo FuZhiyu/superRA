@@ -56,11 +56,15 @@ will be reviewed in isolation.
 
 ### Difficulty and Agent Type
 
-Harnesses often expose multiple tiers of model capacity (e.g., Sonnet vs. Opus in Claude Code; configurable thinking depth in Codex). Match the tier to the task:
+Harnesses expose multiple tiers of model capacity (Sonnet vs. Opus in Claude Code; configurable thinking depth in Codex). Tier 1 trivial work runs inline in the orchestrator — the choice below is about dispatched subagents.
 
-- Conceptually simple tasks — prefer a lower-tier agent for efficiency.
-- First-pass review of substantive work — prefer a higher-tier agent; adversarial review benefits from capacity.
-- Follow-up confirmation checks after a REVISE fix — a lower-tier agent usually suffices.
+**Default to medium tier (Sonnet in Claude Code, medium thinking in Codex).** Step up to higher tier (Opus / deep thinking) when *any* of these apply:
+
+- **Spec emerges mid-task.** The right approach only becomes clear after investigation, or the task requires re-scoping from what `PLAN.md` says.
+- **Silent-error risk is high.** Results-bearing code (data transforms, methodology, drift tests) where a wrong output ships without obvious failure.
+- **Adversarial first-pass review.** The failure mode is *not noticing* — capacity buys thoroughness, and lower-tier agents tend to over-comply, which breaks adversarial review. Narrow re-review of a cited fix stays on Sonnet.
+- **Heavy context synthesis.** Many files/skills must be reconciled in one head; Sonnet degrades faster under context pressure.
+
 
 These are defaults, not rules. Use your discretion and honor any explicit user preference.
 
@@ -81,7 +85,9 @@ Parallel dispatch is often worthwhile: multiple implementers working disjoint ta
 
 **Prefer background dispatch** so the orchestrator remains available to the user while subagents run.
 
-When a parallel dispatch batch contains **≥2 subagents**, each runs in its own git worktree on a `<current-branch>/parallel/<slug>` branch (slug is orchestrator-chosen — `a`, `b`, `alpha`, a bundle name). Two subagents sharing a worktree race on `PLAN.md` / `RESULTS.md` and any shared output path; worktree isolation is the only safe concurrency model for parallel writes.
+If multiple agents are running simultaneously, **you must isolate them in separate worktrees**:
+
+Each runs in its own git worktree on a `<current-branch>/parallel/<slug>` branch (slug is orchestrator-chosen — `a`, `b`, `alpha`, a bundle name). Two subagents sharing a worktree race on `PLAN.md` / `RESULTS.md` and any shared output path; worktree isolation is the only safe concurrency model for parallel writes.
 
 
 ### Ownership split
