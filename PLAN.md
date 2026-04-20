@@ -161,14 +161,15 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 
 **Steps:**
 
-- [ ] Read current `CLAUDE.md` end-to-end
-- [ ] Complete the "Skill Design Patterns" subsection per scope item 2
-- [ ] Restore Roadmap section (copy from prior `main` version + trim redundant prose)
-- [ ] Absorb Plugin Design Philosophy bullets into §Design Principles
-- [ ] `rg -n "TODO|placeholder" CLAUDE.md` to confirm clean
-- [ ] Commit: `docs(claude-md): consolidate developer-facing design doc`
+- [x] Read current `CLAUDE.md` end-to-end
+- [x] Complete the "Skill Design Patterns" subsection per scope item 2
+- [x] Restore Roadmap section (copy from prior `main` version + trim redundant prose)
+- [x] Absorb Plugin Design Philosophy bullets into §Design Principles (folded "Composable / stand-alone" into §Architectural pattern as a new "Composable by category" bullet; "Lean agent" was already covered; "DRY" already owns its own subsection)
+- [x] Sweep §General — removed stale `RELEASE-NOTES.md` reference, pointed instead at `superRA:using-superRA` skill inventory
+- [x] `rg -n "TODO|placeholder|tbd" CLAUDE.md` → clean
+- [x] Commit: `docs(claude-md): consolidate developer-facing design doc`
 
-**Review status:** not started
+**Review status:** IMPLEMENTED
 **Integration status:** *(N/A)*
 
 ---

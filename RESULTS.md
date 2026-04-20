@@ -30,7 +30,21 @@
 
 ## Task 2: Consolidate CLAUDE.md as the developer / contributor doc
 
-**Status:** Not started
+**Status:** IMPLEMENTED.
+
+**Summary.** Finished the stash's mid-rewrite of `CLAUDE.md` into a coherent contributor doc. Section-by-section:
+
+- **Top-of-file framing.** Added a dedicated paragraph directing any agent that modifies `skills/*/SKILL.md` to load `skill-creator` alongside the superRA workflow skills, and stating this file's audience (contributor-facing, developer-internal). Removed the stash's dangling trailing sentence after the §Working-in-This-Repo bullets.
+- **§Working in This Repo, §Skill Changes.** Unchanged — already coherent.
+- **§Design Principles workflow principles 1–4.** Unchanged per scope item 3; verified byte-equal to the pre-edit state.
+- **§RA framing.** Unchanged.
+- **§Architectural pattern.** Closed the dangling `- ` bullet the stash introduced. Reworded the "Lean agents, rich references" bullet to drop the stash's inline "Agents only load what they need" clause (that belongs in Skill Design Patterns, where it now lives). Added a new middle bullet **"Composable by category"** absorbing two of the crude-draft README's "Plugin Design Philosophy" bullets (Composable / stand-alone). The fourth crude-draft bullet (DRY) already owns its own `### DRY, composability, extensibility` subsection; the "Lean agent" crude-draft bullet was already covered by the existing "Lean agents, rich references" bullet. Preserved the existing "Flat `skills/` layout" bullet.
+- **§Skill Design Patterns.** Completed the four-bullet section the user sketched. Bullet 1 (activate `skill-creator`) reworded for clarity. Bullet 2 (positive over negative) kept and given a concrete example ("Describe the data before transforming it" vs the negative form). Bullet 3 (minimum instruction) reformulated so the user's "domain-agnostic" paragraph reads as an explicit "Avoid this anti-pattern" call-out with a one-line "why" after the quoted block. Bullet 4 (new, from scope item 2) added: agents only load what they need, so place new instructions where only the right agents pick them up.
+- **§DRY, composability, extensibility; §Domain verticals.** Unchanged.
+- **§Roadmap: Extending Beyond Data Analysis.** Restored from `git show 3970828~1:CLAUDE.md` and placed after §Domain verticals (where it lived before). Trimmed scope item 3's "(or under a new vertical heading)" parenthetical since §Domain has a single category heading now.
+- **§General.** Removed the stale `RELEASE-NOTES.md` reference (file is deleted on this branch). Sync guidance now points at `README.md`, `skills/CATEGORIES.md`, and the skill inventory in `superRA:using-superRA` — three real, live docs.
+
+**Verification.** `rg -n "TODO|placeholder|tbd" CLAUDE.md` → clean. `rg -n "RELEASE-NOTES" CLAUDE.md` → clean. No dangling bullets. All four workflow principles unchanged (byte-equal to the pre-edit state).
 
 ## Task 3: Update plugin.json + marketplace.json descriptions
 
