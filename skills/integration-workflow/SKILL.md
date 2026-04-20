@@ -131,17 +131,15 @@ Agent(subagent_type: "superRA:reviewer"):
     items. Tasks needing no changes get no annotation.
 ```
 
-The recon reviewer follows the standard reviewer protocol end-to-end — the distribution of findings into per-task PLAN.md blockquotes is the same mechanism every reviewer uses. The trial-merge happens in a scratch ref that the recon pass does not push; only the Tier classification and the annotations persist.
+The recon reviewer follows the standard reviewer protocol end-to-end — the distribution of findings into per-task PLAN.md blockquotes is the same mechanism every reviewer uses, and the per-task `**Integration status:** REVISE` flip on annotated tasks is the recon reviewer's own act (symmetric with the reviewer flipping `**Review status:** REVISE` during execution). Tasks recon does not annotate stay `Integration status: APPROVED`. The trial-merge happens in a scratch ref that the recon pass does not push; only the Tier classification, the annotations, and the per-task status flips persist.
 
-### Step 2: Orchestrator — flip statuses, evaluate shortcuts
+### Step 2: Orchestrator — evaluate shortcuts
 
-After recon commits, the orchestrator reads PLAN.md:
+After recon commits (with per-task annotations and `Integration status: REVISE` flips on annotated tasks already in place), the orchestrator reads PLAN.md and evaluates the two shortcut axes (Tier from §Decisions log; annotation count from the task blocks):
 
-1. For each task carrying a new integration review-notes blockquote → flip `Integration status: REVISE`. Tasks without annotations stay `APPROVED`. Commit the flips atomically with any §Decisions log additions.
-2. Evaluate the two shortcut axes (Tier from §Decisions log; annotation count from the task blocks):
-   - **Tier 1 + zero annotations** → execute `git merge --ff-only <base-branch>` on the analysis branch; Phase B terminates; proceed to Phase C. Degenerate case: if `git merge-base --is-ancestor origin/<base-branch> HEAD`, the fast-forward merge is a true no-op — skip the merge command entirely and note the skip in the orchestrator's §Decisions log.
-   - **Tier 1 + annotations** → execute `git merge --ff-only <base-branch>` as Commit 1; skip to Step 3 (refactor-only dispatch, no `Skills: superRA:semantic-merge` on follow-ups). Degenerate case: if `git merge-base --is-ancestor origin/<base-branch> HEAD`, the fast-forward is a true no-op — skip Commit 1 and note the skip in the implementer's status return. The two-commit structure collapses to one commit (Commit 2 = unified refactor).
-   - **Tier 2/3** → proceed to Step 2b, then Step 3 with `Skills: superRA:semantic-merge` on the implementer.
+- **Tier 1 + zero annotations** → execute `git merge --ff-only <base-branch>` on the analysis branch; Phase B terminates; proceed to Phase C. Degenerate case: if `git merge-base --is-ancestor origin/<base-branch> HEAD`, the fast-forward merge is a true no-op — skip the merge command entirely and note the skip in the orchestrator's §Decisions log.
+- **Tier 1 + annotations** → execute `git merge --ff-only <base-branch>` as Commit 1; skip to Step 3 (refactor-only dispatch, no `Skills: superRA:semantic-merge` on follow-ups). Degenerate case: if `git merge-base --is-ancestor origin/<base-branch> HEAD`, the fast-forward is a true no-op — skip Commit 1 and note the skip in the implementer's status return. The two-commit structure collapses to one commit (Commit 2 = unified refactor).
+- **Tier 2/3** → proceed to Step 2b, then Step 3 with `Skills: superRA:semantic-merge` on the implementer.
 
 ### Step 2b: Batched user decisions
 
@@ -177,7 +175,7 @@ Agent(subagent_type: "superRA:implementer"):
 - **Pass** → return control for Step 4 review.
 - **Fail** → same adjudication protocol.
 
-As part of the Commit 2 handoff, the unified implementer flips each in-scope task's `**Integration status:** IMPLEMENTED` (per `superRA:handoff-doc` `references/plan-anatomy.md` Integration-status lifecycle); the orchestrator flips to `APPROVED` only after the Step 4 verify reviewer APPROVEs.
+As part of the Commit 2 handoff, the unified implementer flips each in-scope task's `**Integration status:** IMPLEMENTED` (per `superRA:handoff-doc` `references/plan-anatomy.md` Integration-status lifecycle); the verify reviewer flips to `APPROVED` (or back to `REVISE` on failing tasks) in Step 4 as part of its own review commit.
 
 ### Step 4: Dispatch the verify reviewer
 
@@ -199,8 +197,8 @@ Agent(subagent_type: "superRA:reviewer"):
 
 Orchestrator split safety-valve applies here too when the in-scope list is large — sibling reviewers on disjoint slices, orchestrator aggregates verdicts.
 
-- **APPROVE** → flip the in-scope tasks' `Integration status: APPROVED`. If every task is now APPROVED, flip the `Refactored` milestone in PLAN.md §Workflow Status and proceed to Phase C.
-- **REVISE** → adjudicate per `superRA:agent-orchestration` §Handling Reviewer Feedback. For accepted findings, re-dispatch the implementer (narrow scope — cited fixes plus dependent findings), then re-dispatch this reviewer. Iterate until APPROVE.
+- **APPROVE** → the verify reviewer has already flipped the in-scope tasks to `Integration status: APPROVED` in its review commit. If every task is now APPROVED, the orchestrator flips the `Refactored` milestone in PLAN.md §Workflow Status and proceeds to Phase C.
+- **REVISE** → the verify reviewer has already flipped the failing tasks back to `Integration status: REVISE` (and written blockquotes on them) in its review commit. Adjudicate per `superRA:agent-orchestration` §Handling Reviewer Feedback. For accepted findings, re-dispatch the implementer (narrow scope — cited fixes plus dependent findings), then re-dispatch this reviewer. Iterate until APPROVE.
 
 If Phase C or D later triggers a new sync+refactor round, uncheck `Refactored` on entry and re-check on the next verify-reviewer APPROVE.
 

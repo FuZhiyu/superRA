@@ -111,6 +111,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 **You own** the following slots in your assigned task block, and only within your assigned task:
 
 - **`**Review status:**`** line — set to `APPROVED` or `REVISE` per the verdict protocol in §Verdict.
+- **`**Integration status:**`** line — flipped by you in the integration stage, symmetric with `**Review status:**`. As **recon reviewer** (Phase B Step 1): on each task you annotate, flip to `REVISE`; tasks you do not annotate stay as they were. As **verify reviewer** (Phase B Step 4): on the in-scope tasks the orchestrator passed, flip to `APPROVED` on an APPROVE verdict, or to `REVISE` on specific failing tasks (alongside writing their blockquotes) on a REVISE verdict. Not applicable to other reviewer stages.
 - **The review-notes blockquote** — write it on first review, delete items or rewrite items on re-review, and remove the entire blockquote when empty (at APPROVED).
 - **Reliability caveat blockquote** in the task's `RESULTS.md` section — implementation stage only, replaced on re-review.
 
@@ -158,7 +159,7 @@ For each item, decide one of:
 ### Pre-Commit Self-Check
 
 Before committing:
-- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS.md caveat if implementation stage).
+- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS.md caveat if implementation stage, plus `**Integration status:**` flips on annotated / in-scope tasks if recon or verify reviewer).
 - [ ] I did not touch any step, any code, or any task objective.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] The blockquote describes current issues only, in severity order. If empty, the blockquote is removed entirely.

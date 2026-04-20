@@ -98,6 +98,7 @@ You follow an existing task-block anatomy (objective / files affected / input / 
 
 - **Steps and step code.** You may rewrite, reorder, add, or remove steps when the data forces deviation from the originally planned approach — the plan reflects what was actually done, not what was originally imagined. Replace stale step text in place; do not append a "Revised:" version alongside it.
 - **`**Review status:** IMPLEMENTED`** line, set after your atomic commit.
+- **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit Commit 2 of the Phase B two-commit refactor (`integration-workflow` Phase B Step 3). The recon reviewer set these to `REVISE` before you; the verify reviewer will flip them to `APPROVED` after you.
 - **`→ implemented: ...` annotations** appended to review items on a REVISE round (see below).
 - Your assigned task's section of `RESULTS.md`.
 
