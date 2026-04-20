@@ -1,5 +1,11 @@
 # Superpowers Release Notes
 
+## Unreleased — session-start hook dropped
+
+**`hooks/session-start` removed.** The plugin no longer auto-injects `using-superRA` into every session. Main agents and team teammates now pick it up the same way as any other skill — through the `Skill` tool — while implementer / reviewer subagents still preload it via the `skills:` frontmatter key in `agents/implementer.md` / `agents/reviewer.md`, unchanged. Removes the hook's `startup|clear|compact` cost on every new session / `/clear` / `/compact` and the maintenance tail of platform-specific injection formats (Claude Code `hookSpecificOutput`, Cursor `additional_context`, Copilot CLI `additionalContext`).
+
+**Files touched.** `hooks/hooks.json` + `hooks/hooks-cursor.json` (SessionStart / sessionStart entries removed); `hooks/session-start` (deleted); `.gitattributes` (line-ending rule for the deleted script removed); `README.md` (Hooks table row dropped); `skills/using-superRA/SKILL.md` + `skills/using-superRA/references/main-agent.md` (wording that said "main agents at session start" / "via SessionStart injection" retargeted to the `Skill` tool); `skills/agent-orchestration/references/agent-teams.md` (teammate loading note retargeted).
+
 ## Unreleased — iterative re-entry mechanism + main-agent reference consolidation
 
 **Iterative re-entry mechanism.** `planning-workflow/SKILL.md §Changing Plans` owns a single 6-step protocol subsuming both in-execution researcher scope drift and post-integration scope additions (PR-review requests, adjacent features, follow-on ideas). The body moved out of `handoff-doc` — which previously hosted it under `§Mid-Session Scope Changes` and then briefly under `§Scope Changes and Re-entry` — into `planning-workflow` so re-entry lives alongside the other planning choreography; `handoff-doc/SKILL.md` retains only a one-sentence pointer under `§PLAN.md Is the Task Tracker`. The protocol now covers re-entry after integration or merge, not just mid-execution pings. Key features of the protocol:
