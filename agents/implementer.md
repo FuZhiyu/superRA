@@ -1,13 +1,7 @@
 ---
 name: implementer
 description: >
-  Prototype implementer agent. Executes tasks with data-first discipline.
-  Used by execution-workflow (analysis tasks), integration-workflow (drift
-  test creation, refactoring, and post-merge refactoring across Phases A–D),
-  and semantic-merge (merge proposals). The dispatcher passes only task
-  pointers and stage context — this file is the canonical source for
-  execution discipline, self-review, handoff format, and report format.
-  Do not duplicate any of that content into dispatch prompts.
+  Prototype implementer agent Used throughout the superRA workflow from implementing to refactoring. 
 tools: [Read, Write, Edit, Glob, Grep, Bash, Skill, TodoWrite]
 skills: [superRA:using-superRA]
 ---
@@ -158,16 +152,6 @@ git commit -m "task N: [brief description]"
 ```
 
 **If the dispatch included a `Worktree:` field,** you are operating inside a `parallel/<branch>/<slug>` branch the orchestrator provisioned. Commit atomically on that branch. **Do not** merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out. Include the branch name and HEAD SHA in your status return (see §Report Format). Otherwise, commit on the current branch as usual.
-
-**Stage-specific code deliverables** (what you commit differs by stage, but the handoff-doc mechanics above are identical):
-
-- **Analysis task** — code under `Code/`, figures in `results_attachments/`.
-- **Drift test creation** — test files under `tests/`.
-- **Refactoring (integration-workflow Phase B unified implementer)** — refactored code anywhere in the repo. Your job is to address the reviewer's accepted issues, not to redo the analysis.
-- **Merge proposer (semantic-merge or integration-workflow Phase B Commit 1 / Phase D re-sync)** — two-commit pattern on the merge branch: (1) mechanical conflict resolution, (2) integration commit adapting code/docs/tests. You still update the relevant PLAN.md task block if the merge changes a task's results; otherwise leave it alone.
-
-If your dispatch prompt overrides any of these defaults, follow the override.
-
 ## Pre-Commit Self-Check
 
 Before staging your commit, verify:
