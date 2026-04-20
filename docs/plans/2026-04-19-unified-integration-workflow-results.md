@@ -3,11 +3,11 @@ author: "[[Julie Zhiyu Fu]]"
 date: 2026-04-19
 timestamp: "2026-04-19T00:00:00"
 session_id: "session-20260419-integration-phaseC"
-git_commit: "b015b8e71cb2152032deb5d47990903ffa3b4ecf"
-git_message: "results: fact-check Stage 2 RESULTS.md"
+git_commit: "df9ec045218ce2d91be08bb4bff07aa7c013cbb3"
+git_message: "results: fact-check Stage 2 RESULTS.md (Phase C re-entry)"
 git_dirty: false
 branch: "refactor/unified-integration"
-merge_base: "92a685ba67970f00f3009fa51acd67292ce64715"
+merge_base: "6d4a0ea4b14eb09dc61613598575641902798247"
 tags: ["report", "results", "superRA", "skill-refactor", "integration-workflow"]
 project: "[[superRA]]"
 permalink: "docs/plans/2026-04-19-unified-integration-workflow-results"
@@ -15,9 +15,9 @@ permalink: "docs/plans/2026-04-19-unified-integration-workflow-results"
 
 # Unified Integration-Workflow Refactor — Results
 
-**Status:** Complete — all 7 tasks APPROVED; Phase A (`Drift tests created`) and Phase B (`Refactored`) milestones flipped; Phase C docs finalization in progress (this document).
+**Status:** Complete — all 8 tasks APPROVED; Phase A (`Drift tests created`) and Phase B (`Refactored`) milestones flipped (Phase B re-entered once to absorb main's session-start-hook removal via Tier 2 semantic-merge); Phase C docs finalization in progress (this document).
 **Branch:** `refactor/unified-integration`
-**Merge base:** `92a685b` (`origin/main`, 0 commits behind at integration recon)
+**Merge base:** `6d4a0ea` (`origin/main`, post-merge head after the Phase B re-entry Tier 2 absorption; original merge base at plan bootstrap was `92a685b`)
 **Companion plan:** `docs/plans/2026-04-19-unified-integration-workflow-plan.md` (to be relocated alongside this file on final disposition).
 
 ---
@@ -97,7 +97,7 @@ All five scenarios resolved on the committed skill text with no gaps. Seventeen 
 
 ### Integration Phase B recon
 
-Recon (`Stage: integration`, loaded with `superRA:semantic-merge`) classified the branch as **Tier 1** — trivial fast-forward; `origin/main` 0 commits ahead of merge-base `92a685b`, `git merge-tree` clean, branch 31 commits ahead. Two `[ADVISORY]` pointer issues were annotated on Task 1 and Task 2 PLAN.md blockquotes; both fixed in the unified Phase B refactor commit and verified by the Phase B verify reviewer. Per the two-axis shortcut rule: Tier 1 + non-zero annotations → fast-forward merge + refactor-only pass; follow-ups did not load `semantic-merge`.
+Recon (`Stage: integration`, loaded with `superRA:semantic-merge`) classified the branch as **Tier 1** — trivial fast-forward; `origin/main` 0 commits ahead of merge-base `92a685b` at recon time, `git merge-tree` clean, branch 31 commits ahead of that base. Two `[ADVISORY]` pointer issues were annotated on Task 1 and Task 2 PLAN.md blockquotes; both fixed in the unified Phase B refactor commit and verified by the Phase B verify reviewer. Per the two-axis shortcut rule: Tier 1 + non-zero annotations → fast-forward merge + refactor-only pass; follow-ups did not load `semantic-merge`.
 
 ### Skill-graph consistency sweeps
 
