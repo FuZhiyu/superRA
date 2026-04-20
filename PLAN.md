@@ -1,78 +1,71 @@
-# Unified Integration-Workflow Refactor
+# `writing` Domain Skill
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. This refactor edits skill files — every implementer and reviewer dispatch MUST additionally load `document-skills:skill-creator` and apply its conciseness, progressive-disclosure, and one-source-of-truth discipline. Preserve carefully-tuned content (Red Flags tables, rationalization lists, RA-framing language) per `/CLAUDE.md §Skill Changes`. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. This project authors new skill files — every implementer and reviewer dispatch MUST additionally load `document-skills:skill-creator` and apply its conciseness, progressive-disclosure, and one-source-of-truth discipline. Preserve carefully-tuned content patterns (Iron Law, Common Rationalizations table, RA-framing, `[BLOCKING]`/`[ADVISORY]` severity markers) per `/CLAUDE.md §Skill Changes`. Steps use checkbox (`- [ ]`) syntax.
 
-**Objective:** Unify `integration-workflow` + `merge-workflow` into a single iterative INTEGRATE phase (Phases A–D); rebuild `refactor-and-integrate` as a gated checklist shared by implementer + reviewer (`[BLOCKING]` / `[ADVISORY]` markers, minimum-net-diff-to-merge-base as the top blocking item); refactor all dispatch prompts to the canonical `agent-orchestration §Dispatch Templates` shape; delete `merge-workflow`; retain `semantic-merge` as standalone utility.
+**Objective:** Ship `skills/writing/` as a new superRA domain vertical parallel to `econ-data-analysis` — a practical, checklist-oriented skill that teaches agents to edit, polish, proofread, consistency-check, refactor wording, and draft technical sections of academic papers while respecting the researcher's intent and producing compilable documents.
 
-**Methodology:** This is a skill-design refactor. No data, no pipeline. Work is in superRA skill files and cross-cutting docs (README, CATEGORIES, RELEASE-NOTES, CLAUDE.md). Each task block defines one coherent sub-change to the skill graph. Verification is a skill-graph consistency sweep + an end-to-end dry-run on a throwaway worktree.
+**Methodology:** Skill-authoring project, not data analysis. Distill source material (Little Red Schoolhouse notes at `/Users/zhiyufu/Dropbox/PhD/writing_resources/`, Chaubey's *Research Writing*, Pyramid Principle) into mechanically-checkable rules; split consistency checks by dimension so multiple reviewers dispatch in parallel; encode flexible usage modes (direct-edit / pure-review / review-edit loop / full workflow) in a dedicated `workflow.md` reference. Mirror `econ-data-analysis` architecture: main SKILL.md (Iron Law + Common Rationalizations + §Three Concurrent Disciplines + §Pitfalls) plus stage-scoped references under `skills/writing/references/`. Verification is dogfooding — run the skill on a real manuscript section and watch it behave.
 
-**Conventions:** (to be populated as the refactor progresses — emergent naming / section titles / stage-label conventions land here)
+**Source Material Inventory:**
 
-**Output:** Modified skills under `/skills/`, deleted `skills/merge-workflow/`, updated top-level docs (`README.md`, `RELEASE-NOTES.md`, `CLAUDE.md`), updated `skills/CATEGORIES.md`. No code artifacts, no data outputs.
+### Available
+| Source | Path | Purpose |
+|--------|------|---------|
+| Little Red Schoolhouse (LRS) writing notes | `/Users/zhiyufu/Dropbox/PhD/writing_resources/` | Nominalization discipline, old→new information flow, paragraph unity, noun-cluster avoidance |
+| Chaubey, "Research Writing" | Chaubey PDF (Squarespace URL) | Academic-writing rules aimed at the economics audience |
+| Pyramid Principle (Minto) | Web references (Minto / McKinsey / ModelThinkers / Management Consulted) | Governing idea, MECE, horizontal/vertical logic, SCQ framing for intros |
+| `draft-reviewer:*` plugin subagents | `~/.claude/plugins/` (draft-reviewer plugin) | Dimension split for consistency references (argument-logic, citation-checker, consistency-checker, math-reviewer, proofreader, writing-clarity, code-paper-consistency) |
+| `skills/econ-data-analysis/` | repo | Architectural template for main SKILL.md + references layout, Iron Law pattern, shared checklist with severity markers |
 
-**Expected Results:** (a) boundary confusion between integration, merge, and semantic-merge eliminated; (b) minimum-net-diff principle is load-bearing in refactor checklist and verified by implementer self-check + reviewer walk; (c) dispatch prompts carry no content duplicated from loaded skills; (d) mid-integration task restructuring flows through existing `planning-workflow §Changing Plans` with only minimal additions.
+### Quality Notes
+- LRS notes are University of Chicago ENGL 13000/33000 slide content — concrete checklist-able rules, high confidence.
+- Draft-reviewer agents supply review *dimensions*; the actual rule content for each dimension is re-derived in superRA's style so the plugin is a harvest target, not a runtime dependency.
 
-**Pipeline:** N/A (skill refactor, not analysis).
+**Conventions:** (populated as the skill emerges — emergent section titles, reference-file naming, severity-marker usage land here)
+
+**Output:** One new skill at `skills/writing/SKILL.md` with eleven references (2 top-level + 1 workflow + 8 consistency-dimension files, see Task blocks), plus routing updates to `skills/using-superRA/`, `skills/planning-workflow/`, `skills/integration-workflow/`, `skills/merge-workflow/`, `skills/CATEGORIES.md`, and `README.md`. Possible amendment to `/CLAUDE.md` making the "domain skills are standalone-usable" property explicit. No code artifacts, no data outputs.
+
+**Expected Results:** (a) The Iron Law **"Respect the Author's Intent"** fires on deliberate scope-violation attempts; (b) the §Three Concurrent Disciplines shared checklist catches compile failures and cross-reference breaks; (c) parallel-dispatched consistency reviewers (one per `consistency/*.md`) cover a real manuscript section faster than a single reviewer would; (d) the skill loads cleanly standalone without the PLAN→IMPLEMENT→VALIDATE→INTEGRATE workflow wrapper for tiny edits and pure-review sessions; (e) no regression in the existing `econ-data-analysis` flow.
+
+**Sensitivity / robustness:** N/A (skill-design project). Substitute: the Phase H dogfood runs three mode variants (direct edit, review-edit loop, optional full workflow) so the skill is exercised across its documented usage modes.
+
+**Pipeline:** N/A (skill authoring, not analysis).
 
 ---
 
 ## Workflow Status
 
-- [x] **Plan approved** — researcher signed off on this plan (2026-04-19; re-approved after §Changing Plans protocol on 2026-04-19 for recon-as-reviewer architecture and shortcut axes)
-- [x] **Execution complete** — all tasks `APPROVED` (2026-04-19)
-- [x] **Drift tests created** — N/A for skill refactor; substitute satisfied by Task 7 end-to-end dry-run + skill-graph consistency sweep (2026-04-19)
+- [ ] **Plan approved** — researcher signed off on this plan
+- [ ] **Execution complete** — all tasks `APPROVED`
+- [ ] **Drift tests created** — **N/A for skill authoring**; substitute satisfied by Task 8 dogfood (three-mode real-session verification) + skill-graph consistency sweep
 - [ ] **Refactored** — final integration-review approval on the consolidated skill changes
-- [ ] **Docs finalized** — README / RELEASE-NOTES / CATEGORIES / CLAUDE.md audited and consistent with new skill graph
+- [ ] **Docs finalized** — README / RELEASE-NOTES / CATEGORIES / CLAUDE.md audited and consistent with the new skill
 - [ ] **Merged** — branch merged to main or PR opened
 
 ---
 
 ## Decisions
 
-> **User decision (2026-04-19):** Delete `skills/merge-workflow/` entirely and note the deprecation in `RELEASE-NOTES.md`. No redirect stub.
-> **Question asked:** How should the ex-merge-workflow content be retired?
+> **User decision (2026-04-19):** Iron Law framed as author-respect only; compile is a `[BLOCKING]` item inside §Three Concurrent Disciplines, not part of the Iron Law.
+> **Question asked:** Single 3-clause law vs two laws vs author-respect-only with compile demoted.
+> **Rationale:** "Respect authors" means respecting the **intention/meaning** of the author — it does *not* mean preserving word choices or typos. The Iron Law forbids overriding authorial intent; word-level fixes remain the RA's job and live in the shared checklist.
 
-> **User decision (2026-04-19):** Use the existing `planning-workflow §Changing Plans` protocol as-is for mid-integration plan changes. Only minimal additions — one pointer bullet acknowledging the INTEGRATE-phase trigger and the orchestrator-authors / researcher-decides ownership rule.
-> **Question asked:** Where should the mid-integration plan-change trigger live structurally?
-> **Rationale:** Existing protocol already covers it; one source of truth; minimize churn.
+> **User decision (2026-04-19):** Fold figure/table/caption consistency into `consistency/numerical.md`. No separate figure-table reference file.
+> **Question asked:** Separate `figure-table-checklist.md` vs folded.
 
-> **User decision (2026-04-19):** Phase B (Integrate — sync + refactor) is re-enterable multiple times within a single integration pass. Supports the explicitly iterative design.
-> **Question asked:** Phase B cadence — once per pass or iterative?
+> **User decision (2026-04-19):** Domain skills are usable standalone — without the full PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow scaffold. Primary expected usage of the writing skill is standalone; the full workflow applies only to major changes (whole-section drafts, whole-paper revisions).
+> **Question asked:** Should `workflow.md` expose a lightweight escape hatch for tiny polish tasks?
+> **Rationale:** For tiny edits and iterative polish work, the user wants to iterate directly with the main agent. `workflow.md` documents four modes: direct-edit, pure-review, review-edit-loop, full-workflow. `CLAUDE.md` will be audited (Task 7) to confirm this property is stated explicitly.
 
-> **User decision (2026-04-19):** Collapse the former Phase B (sync) and Phase C (refactor) into a single unified Phase B ("Integrate — sync + refactor"). Minimum-net-diff principle demands merge and refactor target the same final state in one two-commit structure. Internal structure: recon reviewer → batched user decisions → unified implementer (two-commit merge) → verify reviewer. Orchestrator split safety-valve when integration map is large.
-> **Question asked:** Should B (sync) and C (refactor) be separate stages or collapsed?
-> **Rationale:** Two separate diffs against merge-base violate minimum-net-diff; collapsed flow produces one coherent diff.
+> **User decision (2026-04-19):** Reviewer dispatch is never skipped, ever. Every mode — including direct-edit — requires an *independent* dispatched reviewer.
+> **Question asked:** Implied by the direct-mode discussion.
+> **Rationale:** Preserves workflow principle #1. Orchestrator may step into the implementer role (direct edit while in live conversation), but the reviewer role is always a fresh dispatched agent.
 
-> **User decision (2026-04-19):** Add an implementer self-check step before every commit: run `git diff <merge-base>..HEAD` and review the cumulative diff against the minimum-net-diff rule; revert or re-justify any hunk not tied to the integration map or gated-checklist items. Walked by the verify reviewer as part of `refactor-and-integrate`.
-> **Question asked:** Should there be an explicit self-check for minimum-change discipline?
+> **User decision (2026-04-19):** Split consistency checks by dimension and dispatch multiple reviewers in parallel, one per dimension. Mirrors the `draft-reviewer:*` plugin's one-agent-per-aspect pattern.
+> **Question asked:** Implied — follows the draft-reviewer architecture.
 
-> **User decision (2026-04-19):** In `refactor-and-integrate`, SKILL.md body highlights principles only — tuned content (Red Flags, Tier 3 escalation, rationalization lists, RA-framing) lives **only** in references, which are required loads. Restructure references as how-tos + checklists. No duplication between body and references.
-> **Question asked:** How to de-duplicate tuned content between SKILL.md body and references?
-> **Rationale:** DRY / one-source-of-truth; mirrored content in Task 1's first pass would drift on future edits.
-
-> **User decision (2026-04-19):** Phase B recon is a reviewer following the standard reviewer protocol. Its specialty is also running `semantic-merge` to produce a Tier classification. Recon output is distributed across PLAN.md task blocks as per-task integration review-notes blockquotes with `[BLOCKING]` / `[ADVISORY]` items — not a monolithic return payload. Orchestrator reads PLAN.md: any task with a new integration review-notes blockquote gets its `Integration status:` flipped to `REVISE`; tasks without annotations stay `APPROVED`. Tier classification is logged as a one-line entry under §Decisions for the integration pass.
-> **Question asked:** How does recon communicate the integration map?
-> **Rationale:** All important communication goes through handoff doc, not return text. Recon is already a reviewer; following the standard reviewer annotation protocol means one source of truth and no custom return contract.
-
-> **User decision (2026-04-19):** Tier-1 / refactor-path shortcut axes are independent.
-> - **Tier classification** (from recon's `semantic-merge` run) gates the **merge path**. Tier 1 → fast-forward merge only (Commit 1 = `git merge --ff-only`); follow-up agents do not load `semantic-merge`. Tier 2/3 → `semantic-merge` loaded by follow-up agents for proper merge resolution.
-> - **Per-task integration annotations** gate the **refactor path**. Zero annotations across all APPROVED-integration tasks → skip unified implementer + verify reviewer entirely. Non-zero → dispatch them, scoped to the annotated task list.
-> - Combined: Tier 1 + zero annotations → Phase B = fast-forward only, terminates. Tier 1 + annotations → fast-forward + refactor-only implementer + verify reviewer (no semantic-merge load). Tier 2/3 regardless of annotations → full flow.
-> **Question asked:** How do Tier and annotation-count gates combine into shortcuts?
-> **Rationale:** Decomposing the single "Tier-1 shortcut" into two independent axes prevents the class of bugs where one axis is clean but the other isn't.
-
-> **User decision (2026-04-19):** Refactor implementer and verify reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution. Mirrors the existing Review-status DAG cascade rule in `handoff-doc/references/plan-anatomy.md`. The dispatch `Task:` or `Tasks in scope:` field names the explicit list.
-> **Question asked:** Do refactorer / verify-reviewer know to skip already-integrated tasks?
-> **Rationale:** Without scoping, a second integration pass either redoes work or silently lets reviewer flag already-APPROVED tasks — violates minimum-net-diff.
-
-> **User decision (2026-04-19):** Recon loads `superRA:semantic-merge` via the canonical `Skills:` dispatch field (per `agent-orchestration §Dispatch Templates`) on top of its Stage-default loads. No new Manifest stage required.
-> **Question asked:** How does recon get the `semantic-merge` load without adding a new stage?
-> **Rationale:** The `Skills:` field is the canonical extra-load mechanism; introducing a new stage for one use case is heavier than needed.
-
-> **User decision (2026-04-19):** Push `refactor/unified-integration` to origin and create a PR against main for review.
-> **Question asked:** All 7 tasks APPROVED — merge locally, push+PR, keep as-is, or discard?
-
-> **Integration recon (2026-04-19):** Tier 1 — trivial fast-forward; `origin/main` has not advanced since merge-base `92a685b` (0 commits behind), `git merge-tree` reports no conflicts, branch is 31 commits ahead. Phase B merge path = `git merge --ff-only`; follow-ups do NOT load `semantic-merge`.
+> **User decision (2026-04-19):** PLAN.md and RESULTS.md are both optional for small/iterative writing tasks. Full handoff-doc discipline only for major changes.
+> **Question asked:** Implied by the workflow-mode discussion.
 
 ---
 
@@ -81,179 +74,330 @@
 Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Repo root
-- `/CLAUDE.md` (HEAD at 92a685b): Contributor guide for superRA fork. Four workflow principles (implementer-reviewer pair, handoff docs as auditable record, fast-early-strict-before-merge with semantic-merges, autonomous with human-in-loop). Architectural pattern: lean agents, rich references, flat skills/ layout. DRY with one source of truth per concern — duplication is a code smell. Domain skills own domain discipline; workflow skills own choreography; `agent-orchestration` owns cross-stage orchestration; `refactor-and-integrate` owns generic integration discipline; `handoff-doc` owns handoff-doc mechanics. Extensibility path is adding a new domain skill, not forking workflow skills. Skill edits require reading before changing (tuned content), one problem per commit, commit messages describe the problem not the change, and testing on at least one harness.
-- `/AGENTS.md`: (not present at repo root — only subagent role docs under `/agents/`)
-- `/README.md`: superRA skill inventory organized by Workflow / Domain / Utility / Meta categories; skill triggers and what-to-load guidance.
+- `/CLAUDE.md` (HEAD at b58c3fc): superRA contributor guidelines. Four load-bearing workflow principles (implementer–reviewer pair at every step, handoff docs are the auditable record, fast-early-strict-before-merge + semantic merges, autonomous with human in the loop); RA-framing; lean-agents-rich-references architectural pattern; DRY / composability / extensibility rules; roadmap for new verticals; §Skill Changes requires real-session testing and warns against editing tuned content (Red Flags tables, rationalization lists, severity protocols) on stylistic preference.
+- `/AGENTS.md`: symlink to `/CLAUDE.md`.
+- `/GEMINI.md`: mirror of `/CLAUDE.md` for Gemini harness.
+- `/README.md` (HEAD at b58c3fc): plugin overview + skill inventory table. Lists Workflow / Domain / Utility / Meta categories and which skills belong to each.
 
-### Module-level docs walked
-- `/skills/CATEGORIES.md`: Workflow / Domain / Utility / Meta grouping table; must stay in sync with README when skills are added, renamed, or removed.
-- `/skills/using-superRA/SKILL.md` §Skill-Load Manifest: authoritative map from `Stage:` value to required skills + stage-scoped references. `Additionally:` dispatch line is the on-demand override pattern for utility skills like `document-skills:skill-creator`.
-- `/skills/agent-orchestration/SKILL.md` §Dispatch Templates: canonical dispatch shape (required fields first, `Additionally:` anchor-last with additive signal only, canonical prefix `"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed."`). Banned in dispatch: `Work from:`, restated PLAN.md content, duplicated checklist items.
-- `/skills/handoff-doc/references/plan-anatomy.md`: PLAN.md anatomy — Header → `## Workflow Status` → `## Decisions` (when present) → `## Project Conventions` → task blocks. Task-block fields `**Review status:**` / `**Integration status:**` with DAG cascade on re-entry.
-- `/skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines: reference pattern for gated checklists. `[BLOCKING]` / `[ADVISORY]` markers. Shared by implementer (self-check before handoff) and reviewer (verification). Narrow re-review after REVISE.
-- `/skills/planning-workflow/SKILL.md` §Changing Plans: re-entry protocol — confirm intent, log User Decision, inline-edit PLAN.md (prefer modifying existing blocks), update `## Workflow Status` rollup by orchestrator judgment, commit atomically, resume with full drift-test re-run.
+### Module-level docs to walk on demand
+- `skills/CATEGORIES.md` — authoritative skill categorization; writing skill must be added to the Domain section.
+- `skills/econ-data-analysis/SKILL.md` + `skills/econ-data-analysis/references/*` — architectural template for the writing skill.
+- `skills/using-superRA/SKILL.md` + `references/main-agent.md` — Skill Inventory and Skill-Load Manifest must be extended.
+- `skills/handoff-doc/` — PLAN.md + RESULTS.md editing discipline (already loaded for this plan).
+- `skills/planning-workflow/SKILL.md` — vertical routing table needs a writing row.
+- `skills/integration-workflow/SKILL.md` + `skills/merge-workflow/SKILL.md` — needs a writing branch (build + outline-stability gate in place of drift tests).
+- `skills/refactor-and-integrate/` — paired with writing's `references/integration.md`, no change expected.
 
 ### Not walked (not reachable from the planned diff)
-- `/hooks/` — no hook changes expected.
-- `/skills/econ-data-analysis/**` — domain vertical unaffected by this refactor.
-- `/skills/report-in-markdown/**`, `/skills/worktree-data-sync/**`, `/skills/zotero-paper-reader/**` — unaffected utility skills.
+- `Code/`, `Data/`, `Output/` — no such directories; this is a skill plugin, not an analysis repo.
+- `docs/archive/` — out of scope.
+- `hooks/` — merge-guard already handles semantic-merge routing; no change expected for the writing vertical.
 
 ---
 
-### Task 1: Rebuild `refactor-and-integrate` as a gated checklist
+## Task 1: Scaffold `skills/writing/SKILL.md` — Iron Law + §Three Concurrent Disciplines
+
 **Depends on:** *(none)*
-**Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Review status:**
+**Integration status:**
 
-**Script:** N/A (skill file refactor)
-**Input:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines (pattern reference)
-**Output:** Rewritten `skills/refactor-and-integrate/SKILL.md` with §Three Concurrent Disciplines-style gated checklist; references preserved only where load-bearing (long-form operational procedures); body walked by both implementer (self-check before commit) and reviewer (verification).
+**Files:** `skills/writing/SKILL.md` (new)
+**Input:** `skills/econ-data-analysis/SKILL.md` (template), plan file at `/Users/zhiyufu/.claude/plans/bubbly-wondering-parnas.md` (Iron Law + checklist content)
+**Output:** `skills/writing/SKILL.md` with frontmatter + RA framing + Iron Law + Common Rationalizations table + §Three Concurrent Disciplines (Preserve / Improve / Verify) + §Pitfalls pointer list + §Mode-selection pointer + §Key References. No referenced files exist yet — §Pitfalls and §Key References point forward.
 
-- [x] **Step 1: Describe — read tuned content carefully before touching**
+- [ ] **Step 1: Draft frontmatter + RA framing**
 
-  Read all three references in full. Identify Red Flags tables, rationalization lists, and severity-marked items. Per `/CLAUDE.md §Skill Changes`, this content is tuned through real sessions — paraphrasing is forbidden; relocation must preserve wording.
+```markdown
+---
+name: writing
+description: Use PROACTIVELY whenever editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting technical sections of an academic paper or manuscript. Triggers include "polish this section", "proofread", "check consistency", "rename variable X to Y throughout", "write the methods section", "make the intro flow better", LaTeX / manuscript files touched, or any task that edits prose a human will read. Language/format-agnostic (LaTeX, Markdown, Quarto, plain text). Loaded by implementer and reviewer subagents at dispatch time when the stage touches writing, per superRA:using-superRA §Skill-Load Manifest.
+---
 
-- [x] **Step 2: Design the gated checklist structure**
+## RA framing
 
-  Three disciplines (Drift-Test Integrity, Codebase Integration, Merge Quality) as top-level sections. Each item marked `[BLOCKING]` or `[ADVISORY]`. Top-level item:
+You are assisting the researcher, not replacing them. The researcher's voice is the final voice. Your edits serve the researcher's intent — never your own preference.
+```
 
-  > `[BLOCKING] Minimum net diff to merge base.` Cumulative refactor across all integration rounds touches only what drift-test preservation, convention fit, handoff-doc coherence, and documentation demand. No unrelated cleanup, no speculative abstractions, no "while I'm here" edits. Implementer runs `git diff <merge-base>..HEAD` before each commit and reviews the cumulative diff; reviewer computes the same diff as evidence.
+- [ ] **Step 2: Write the Iron Law**
 
-  Include an explicit **Implementer self-check** subsection at the end of the checklist restating the pre-commit `git diff` procedure and what to do when a hunk fails justification (revert or re-justify in the integration map + commit message).
+Heading: `## The Iron Law: RESPECT THE AUTHOR'S INTENT`. Three clauses:
 
-- [x] **Step 3: Fold references into body where load-bearing**
+1. **Meaning-preserving edits only.** If a fix would change what the sentence/paragraph *says* (not just how it says it), stop and ask. Word-choice fixes, typo fixes, nominalization fixes, hedging fixes, broken-parallelism fixes, cross-reference fixes — all inside scope when the request covers style/polish/consistency. Rewrites that change the claim, emphasis, or argument — escalate.
+2. **Scope-bounded edits only.** Edit what was asked. Structural or substantive changes beyond the request are *proposed* (in chat or PLAN.md), never performed unilaterally.
+3. **In-progress work respected.** Unfinished paragraphs, inline TODOs, commented-out text, and visibly-being-edited sections are not touched unless the request names them.
 
-  Long-form operational content stays in references (e.g., Project Doc Audit walk-up algorithm, two-commit merge mechanics). Short checklist items fold into SKILL.md body per `skill-creator §Progressive Disclosure`.
+**Explicit non-goal:** The Iron Law does NOT require preserving word choices, typos, passive-voice awkwardness, or weak diction. Fixing those is the RA's job. What it forbids is overriding *authorial intent*.
 
-- [x] **Step 4: Validate — confirm implementer + reviewer walk the same file**
+- [ ] **Step 3: Write §Common Rationalizations table**
 
-  Cross-read with `/agents/implementer.md` and `/agents/reviewer.md`. Both must point at the single gated-checklist section. No parallel review-only document. Commit.
+Heading: `## §Common Rationalizations`. Table columns `Rationalization | Reality`:
 
-- [x] **Step 5: Add scope-by-Integration-status rule** *(added 2026-04-19 via §Changing Plans)*
+| Rationalization | Reality |
+|---|---|
+| "This whole paragraph is clearly better my way — I'll just rewrite it." | Scope + meaning violation. Propose the rewrite; do not perform it. |
+| "The author probably meant X — I'll just write X." | Meaning violation. If you have to guess, escalate. |
+| "This structure is obviously suboptimal, I should reorder the sections." | Scope violation. Structural changes are out-of-scope unless requested. |
+| "The request said 'polish', so editing voice is fair game." | Voice ≠ diction. Fix nominalization / passive / hedging. Do not homogenize tone. |
+| "The TODO marker is obviously going to be filled in the same way I'd fill it." | In-progress work violation. Leave TODOs for the author. |
+| "Warnings are never important — compile-clean enough." | Verify violation. Triage each warning; escalate on doubt. |
 
-  In `skills/refactor-and-integrate/SKILL.md` body, add an explicit principle: *"Refactor implementer and verify reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution."* Point at `handoff-doc/references/plan-anatomy.md` for the DAG cascade semantics. Commit.
+- [ ] **Step 4: Write §Three Concurrent Disciplines (Preserve / Improve / Verify) — shared checklist**
 
-> **Integration review notes (recon, 2026-04-19):**
-> 1. **[ADVISORY]** `skills/refactor-and-integrate/SKILL.md:104` — `§Integration → Used by workflow skills → superRA:integration-workflow` bullet says the workflow dispatches "Phase D post-merge drift-test + integration-review re-runs (`references/codebase-integration.md`) when main advanced." Phase D as authored in `skills/integration-workflow/SKILL.md` does not itself dispatch a drift-test run or integration review; when main advances it re-enters Phase B (line 319), and Phase D Step 3a only verifies the pipeline. The "re-runs when main advanced" phrasing conflates the Phase D→B re-entry with a Phase D dispatch. Minor prose clarity; no `[BLOCKING]` impact on the checklist's load-bearing content. Fix: reword to "Phase D pipeline verification; the Phase D→B re-entry trigger on main advancement then runs the Phase B drift-test + verify-review dispatches again."
->    → implemented: reworded line 104 to name Phase D as pipeline verification and the Phase D→B re-entry trigger as the dispatcher of the re-run (`skills/refactor-and-integrate/SKILL.md:104`)
+Heading: `## §Three Concurrent Disciplines: Preserve–Improve–Verify`. Walked top-to-bottom for every writing task. Severity markers `[BLOCKING]` / `[ADVISORY]`. Shared between implementer self-check and reviewer verification.
+
+```markdown
+### Preserve (scope + voice)
+- [BLOCKING] No edits outside the requested scope
+- [BLOCKING] Author's voice recognizable in the diff (diction, register, sentence-shape preserved)
+- [BLOCKING] User's in-progress edits respected — TODOs, commented-out text, unfinished paragraphs not touched unless the request names them
+- [ADVISORY] Style corrections applied minimally — smallest edit that fixes the identified problem
+
+### Improve (clarity + structure, as requested)
+- [BLOCKING] Edits address the specific problem named in the request
+- [BLOCKING] For consistency-check tasks: every mismatch found is reported; none silently fixed beyond scope
+- [ADVISORY] Sentence-level style rules applied where they fire (→ references/style-checklist.md)
+- [ADVISORY] Paragraph-level flow checked (topic sentence, old→new order, transitions)
+
+### Verify (compile + consistency)
+- [BLOCKING] Document compiles after the edit (errors block; warnings triaged)
+- [BLOCKING] No new cross-reference breaks (\ref, \cite, \eqref, label consistency)
+- [BLOCKING] Numbers-in-text match numbers-in-tables if the edit touched quantitative claims
+- [ADVISORY] Build warnings enumerated in handoff with ≤1-line rationale each
+```
+
+- [ ] **Step 5: Write §Pitfalls pointer list + §Mode selection + §Key References**
+
+```markdown
+## §Pitfalls (operation-conditional)
+- Sentence-level edits → references/style-checklist.md
+- Structural / section drafting → references/structure-checklist.md
+- Multi-dimensional consistency sweep → references/consistency/*.md (dispatch one reviewer per file in parallel; see references/workflow.md)
+- Single-dimension consistency check → load the one relevant consistency/*.md
+- Terminology / notation refactor → references/refactor-and-compile.md + consistency/terminology.md + consistency/notation.md
+- Build / compilation fix → references/refactor-and-compile.md §Compile
+- User-work detected in repo → references/collaboration.md
+
+## §Mode selection
+See references/workflow.md for the four modes (direct-edit / pure-review / review-edit-loop / full-workflow). Two hard rules: (1) reviewer dispatch is never skipped; (2) for multi-dimensional consistency work, dispatch reviewers in parallel, one per dimension.
+
+## §Key References
+- planning.md — scope inventory, PLAN/RESULTS optionality
+- workflow.md — usage modes + dispatch rules
+- style-checklist.md — sentence + paragraph rules
+- structure-checklist.md — Pyramid Principle + section anatomy
+- consistency/*.md — one file per review dimension (8 total)
+- refactor-and-compile.md — safe find-replace + build gate
+- collaboration.md — user-work respect patterns
+- integration.md — pre-merge gates
+```
+
+- [ ] **Step 6: Self-review against template + commit**
+
+Self-check: (a) Iron Law protected by a Common Rationalizations table covering all three clauses? (b) Every §Three Concurrent Disciplines item has a severity marker? (c) §Pitfalls pointers list all eight consistency dimensions generically as `consistency/*.md`? Update RESULTS.md Task 1 with key findings (Iron Law final text, checklist item counts). Update PLAN.md: mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: scaffold writing/SKILL.md with Iron Law + shared disciplines`.
 
 ---
 
-### Task 2: Unify `integration-workflow` — Phases A–D with iterative Phase B
+## Task 2: `style-checklist.md` + `structure-checklist.md`
+
 **Depends on:** Task 1
-**Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Review status:**
+**Integration status:**
 
-**Script:** N/A
-**Input:** current `skills/integration-workflow/SKILL.md`, current `skills/merge-workflow/SKILL.md`, Task 1's rewritten `refactor-and-integrate`, `agent-orchestration §Dispatch Templates`
-**Output:** Rewritten `skills/integration-workflow/SKILL.md` covering Phases A (drift-test creation, unchanged), B (Integrate — sync + refactor, three-dispatch internal structure, iterative), C (docs maturation + disposition, unchanged), D (final merge / PR / cleanup, folded in from merge-workflow); all dispatches use canonical shape with no content duplicated from loaded skills; re-entry arrows explicit.
+**Files:** `skills/writing/references/style-checklist.md` (new), `skills/writing/references/structure-checklist.md` (new)
+**Input:** LRS notes at `/Users/zhiyufu/Dropbox/PhD/writing_resources/`, Pyramid Principle web sources, Chaubey PDF, Phase-1 Explore-agent distillations (categorized rule inventory with source citations)
+**Output:** two reference files, each a how-to + gated checklist
 
-- [x] **Step 1: Draft phase skeleton** — Phases A–D with explicit re-entry arrows (B→A, B→B, C→B, D→B, Anywhere→`planning-workflow §Changing Plans`).
+- [ ] **Step 1: Draft `style-checklist.md`**
 
-- [x] **Step 2: Write Phase B internal structure** *(rewritten 2026-04-19 via §Changing Plans — see §Decisions, 4 new decisions)*
+Structure: §How-To (teaching content with before/after examples) + §Gated Checklist (severity-marked). Cover: nominalization (detect + move action to verb; keep nominalization for daisy-chain / after-strong-verb / field-term cases); noun-cluster avoidance (break clusters of 3+ modifying nouns); active voice with clear agency; single-hedge-per-claim rule; parallel structure for lists and comparisons; sentence-length guidance (~20–25 words); dangling-modifier check; old→new information flow inside paragraphs; topic-sentence-first; transition placement at paragraph start. Each rule cites LRS or Chaubey section.
 
-  Phase B uses standard reviewer/implementer dispatches with two shortcut axes.
-  - **Recon reviewer** (Stage: `integration`; **Skills: superRA:semantic-merge** via canonical `Skills:` dispatch field). Follows the standard reviewer protocol: walks every APPROVED-integration task, appends per-task integration review-notes blockquotes with `[BLOCKING]`/`[ADVISORY]` items for any task whose outputs need codebase-fit refactor, drift-test update, handoff-doc coherence, or merge-induced semantic clash. Additionally, runs `semantic-merge` trial-merge + drift tests to produce a **Tier classification**, logged as a one-line User Decision entry in §Decisions for this integration pass.
-  - **Orchestrator post-recon actions** (reads PLAN.md after recon commits):
-    - For each task carrying a new integration review-notes blockquote → flip `Integration status: REVISE`. Tasks without annotations stay `APPROVED`. Commit the flips atomically.
-    - Evaluate the two independent shortcut axes:
-      - **Tier 1 + zero annotations** → fast-forward merge only (Commit 1 = `git merge --ff-only`). Phase B terminates. Skip Steps 2b/3/4.
-      - **Tier 1 + annotations** → fast-forward merge (Commit 1); dispatch unified implementer + verify reviewer scoped to the flagged task list; follow-ups do NOT load `semantic-merge`.
-      - **Tier 2/3** (regardless of annotations) → full flow; follow-ups load `semantic-merge` via the `Skills:` field for proper merge resolution.
-  - **Step 2b — Batched user decisions**: collect research-meaningful items from recon's blockquotes into a single `AskUserQuestion` call (merge-base target + user-decision items). Log each per `handoff-doc §User Decisions Log`. Commit PLAN.md before dispatching the implementer.
-  - **Step 3 — Unified implementer** (Stage: `integration`; `Skills: superRA:semantic-merge` IF Tier 2/3; `Tasks in scope:` field names flagged task list). Two-commit structure: Commit 1 = mechanical merge (semantic-merge if Tier 2/3; `git merge --ff-only` if Tier 1); Commit 2 = unified refactor across flagged tasks. Pre-commit self-check per `refactor-and-integrate`.
-  - **Step 4 — Verify reviewer** (Stage: `integration`; walks cumulative diff; refuses to walk APPROVED-integration tasks not in scope). Orchestrator split safety-valve applies when the in-scope task list is large enough to exceed context threshold.
+- [ ] **Step 2: Draft `structure-checklist.md`**
 
-- [x] **Step 3: Refactor every dispatch prompt** to canonical shape. Required-fields-first (`Stage:`, `Task:`, `Worktree:` / `Git range:`; `Skills:` / `References:` where override needed); `Additionally:` anchor-last with additive signal only. Canonical prefix verbatim. No restated PLAN.md content or checklist items.
+Structure: §How-To + §Gated Checklist. Cover: Pyramid Principle (governing idea first, MECE supporting points, horizontal logic — sibling points parallel in type, vertical logic — each level answers questions raised above); SCQ (Situation–Complication–Question) for intros; section-level anatomy (intro: motivation → gap → RQ → contribution → roadmap; methods: data + specification + identification; results: main first then robustness; conclusion: restate + limitations, no new findings); title-should-state-finding rule; table-of-contents paragraph at end of intro; "no mystery novel" front-loading rule.
 
-- [x] **Step 4: Fold Phase D (merge/PR/cleanup)** from former `merge-workflow`. Drift tests run once on final state. PR body template preserved verbatim — strip or rewrite any branch whose condition no longer exists in unified Phase D (e.g., any `[OR: skipped per Step 2.0 …]` referencing the old Tier-1 branch if the new shortcut architecture removes it).
+- [ ] **Step 3: Cross-link from SKILL.md §Pitfalls + self-review + commit**
 
-- [x] **Step 5: Add plan-change trigger pointer** — one bullet in Phase B acknowledging that substantive restructure findings escalate to `planning-workflow §Changing Plans` (orchestrator proposes, researcher decides). Not a duplicated protocol — a pointer.
-
-- [x] **Step 6: Validate — walk the four workflow principles** against the draft. Confirm each principle preserved or strengthened. Commit.
-
-> **Integration review notes (recon, 2026-04-19):**
-> 1. **[ADVISORY]** `skills/integration-workflow/SKILL.md:441` — `§Integration → Invokes` says `superRA:semantic-merge` is "REQUIRED for the main update in Phase B Commit 1 and any Phase D pre-merge re-sync (delegated mode)." This contradicts Step 2's two-shortcut-axes logic: Tier 1 uses `git merge --ff-only` (line 142–143) and the Red Flags list at line 408 explicitly says "delegated mode is load-bearing when semantic-merge runs at all (Tier 2/3)." The word "REQUIRED" overstates — semantic-merge is Tier-conditional, not unconditional. Minor doc coherence; does not mis-operate because Step 2 is authoritative on control flow. Fix: change "REQUIRED for the main update in Phase B Commit 1" → "REQUIRED for Phase B Commit 1 on Tier 2/3 (Tier 1 uses `git merge --ff-only`; see Phase B Step 2)".
->    → implemented: softened line 441 to Tier-conditional wording per recon's suggested fix (`skills/integration-workflow/SKILL.md:441`)
+Ensure SKILL.md §Pitfalls pointers resolve. Self-check: every rule has a ≤10-word name + 1–2 sentence explanation + source citation; severity markers on every checklist item; no "TBD" or "similar to". Update RESULTS.md Task 2. Commit: `skill: writing style + structure checklists`.
 
 ---
 
-### Task 3: Delete `skills/merge-workflow/`
-**Depends on:** Task 2
-**Review status:** APPROVED
-**Integration status:** APPROVED
+## Task 3: `consistency/*.md` — 8 dimension-scoped reference files
 
-**Script:** N/A
-**Input:** `skills/merge-workflow/SKILL.md` + references; every caller of `superRA:merge-workflow` across the repo (grep).
-**Output:** Directory deleted; callers outside Task 6's peripheral-surfaces scope repointed at `integration-workflow`; `RELEASE-NOTES.md` carries one deprecation line pointing at `integration-workflow`. Task 6 owns the remaining inventory / Workflow Status / CLAUDE.md / README / CATEGORIES / Skill-Load Manifest sync; Task 3 does not pre-empt those files.
+**Depends on:** Task 1
+**Review status:**
+**Integration status:**
 
-- [x] **Step 1: Audit callers** — `grep -rn "merge-workflow" skills/ agents/ hooks/ README.md CLAUDE.md RELEASE-NOTES.md`. Hits outside Task 6's scope (the ones Task 3 owns): `agents/implementer.md` (×3), `agents/reviewer.md` (×1), `skills/refactor-and-integrate/SKILL.md` (×2), `skills/refactor-and-integrate/references/drift-test-quality.md` (×1), `skills/agent-orchestration/references/agent-teams.md` (×1), `skills/using-superRA/references/codex-tools.md` (×1), `tests/structural-invariants.sh` (×1). Task 6's scope (deferred): `README.md`, `CLAUDE.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`. RELEASE-NOTES pre-existing entries remain as historical record.
-- [x] **Step 2: Update each in-scope caller** to point at `integration-workflow` (Phase A–D vocabulary). Done: agents/implementer.md + agents/reviewer.md stage listings + agents/implementer.md §Stage-specific code deliverables; refactor-and-integrate/SKILL.md §Workflow-skills line folded into a single integration-workflow bullet citing Phase A / Phase B / Phase D call sites and the residual "Workflow skills (...)" parenthetical trimmed to `superRA:integration-workflow` only; drift-test-quality.md cross-cutting Red Flags preamble; agent-teams.md diagram; codex-tools.md finishing-branch pointer; tests/structural-invariants.sh dispatch_files list.
-- [x] **Step 3: Delete the directory** — `git rm -r skills/merge-workflow/` (one file: SKILL.md).
-- [x] **Step 4: Add deprecation line to `RELEASE-NOTES.md`** — single bullet under a new "Unreleased — unified integration-workflow refactor" heading, naming Phase D as the new home and listing the caller-file classes that were repointed.
-- [x] **Step 5: Validate — re-grep** remaining hits confirmed to be either Task 6's scope or pre-existing historical RELEASE-NOTES entries. Commit.
+**Files:** `skills/writing/references/consistency/terminology.md`, `consistency/notation.md`, `consistency/cross-references.md`, `consistency/citations.md`, `consistency/numerical.md`, `consistency/math.md`, `consistency/argument-logic.md`, `consistency/code-paper.md` (all new)
+**Input:** `draft-reviewer:*` plugin agent definitions (argument-logic-reviewer, citation-checker, code-paper-consistency, consistency-checker, mathematical-reviewer, writing-clarity-reviewer); Phase-1 Explore-agent dimension harvest
+**Output:** eight small reference files, each sized for a single parallel reviewer to load
 
----
+- [ ] **Step 1: Draft `terminology.md` + `notation.md` + `cross-references.md`**
 
-### Task 4: Update `semantic-merge` caller paths and handoff-doc coherence rule
-**Depends on:** Task 2
-**Review status:** APPROVED
-**Integration status:** APPROVED
+- `terminology.md`: term-drift scan (variable-name drift, synonyms drift within a section, defined-term reuse discipline, glossary audit, treatment-group-vs-treatment-sample style mismatches). Severity-marked gated checklist + how-to.
+- `notation.md`: math symbol consistency (bold/italic/hat conventions, subscript/superscript reuse, Greek-letter conflicts, abbreviations).
+- `cross-references.md`: `\ref` / `\eqref` / `\cite` / label resolution; figure/table/section numbering consistency; undefined-reference scan.
 
-**Script:** N/A
-**Input:** `skills/semantic-merge/SKILL.md`, `skills/refactor-and-integrate/references/merge-quality.md` (or its successor location post-Task 1).
-**Output:** `semantic-merge` caller-path text updated (`merge-workflow Step 1` → `integration-workflow Phase B`); `[BLOCKING] Handoff-doc coherence` item added to merge-quality; escalation rule stated: substantive handoff-doc restructures (task add/remove/combine, DAG edge flip, APPROVED status invalidation) escalate to `planning-workflow §Changing Plans` before the merge proceeds.
+- [ ] **Step 2: Draft `citations.md` + `numerical.md`**
 
-- [x] **Step 1: Update caller-path references** in `semantic-merge/SKILL.md` (delegated-mode invocation section, return contract section, standalone-invocation section).
-- [x] **Step 2: Add `[BLOCKING] Handoff-doc coherence`** item to merge-quality checklist (Task 1's successor location). Include the escalation-to-Change-Plans rule.
-- [x] **Step 3: Validate** — dry-read through a Tier 3 example where PLAN.md is in the conflict set. Confirm the escalation path is discoverable from semantic-merge alone. Commit.
+- `citations.md`: citation completeness (every non-common-knowledge claim cited); reference-citation matching (no orphan citations or uncited references); format consistency (author-year vs numbered); outdated-working-paper detection; foundational-reference audit.
+- `numerical.md`: numbers-in-text vs numbers-in-tables (every number in prose traces to a table/figure cell); figure–caption–text alignment (caption matches what's shown and what prose claims); table caption accuracy; ±-sign / units / percentage-point vs percent consistency.
 
----
+- [ ] **Step 3: Draft `math.md` + `argument-logic.md` + `code-paper.md`**
 
-### Task 5: Minimal `planning-workflow §Changing Plans` extension + B→B re-entry trigger
-**Depends on:** Task 2
-**Review status:** APPROVED
-**Integration status:** APPROVED
+- `math.md`: derivation step-by-step correctness; proof integrity; statistical-model correctness (iid assumptions stated where used, standard-error clustering named); notation stability across sections.
+- `argument-logic.md`: claim–evidence mapping (every main claim traces to a cited source or an empirical finding in this paper); causal inference validity (identification assumption stated, alternative explanations addressed); overclaiming detection; hedging appropriate to evidence strength.
+- `code-paper.md`: methodology match (code implements what paper describes); variable-definition alignment; sample-construction alignment; reproducibility from paper alone. Only loaded when the paper wraps an empirical code project.
 
-**Script:** N/A
-**Input:** `skills/planning-workflow/SKILL.md` §Changing Plans; `skills/handoff-doc/references/plan-anatomy.md` (DAG cascade rule for Integration status).
-**Output:** (a) One bullet in `planning-workflow §Changing Plans` acknowledging INTEGRATE-phase findings can trigger the protocol; one line stating orchestrator authors the Restructure Proposal and researcher decides. (b) In `plan-anatomy.md`, alongside the existing Integration-status cascade rule (lines 178–179), add one sentence documenting the **B→B re-entry trigger**: when main advances mid-integration, the recon reviewer's per-task annotations gate the flip — tasks it annotates get `Integration status: REVISE`; tasks it does not annotate stay `APPROVED`. No duplication of the cascade semantics elsewhere.
+- [ ] **Step 4: Cross-link + self-review + commit**
 
-- [x] **Step 1: Add the pointer bullet and authorship rule** to `planning-workflow §Changing Plans`. No other changes — existing cascade semantics already cover mid-INTEGRATE rollback.
-- [x] **Step 2: Add B→B re-entry trigger sentence** to `plan-anatomy.md` adjacent to the Integration-status cascade rule. Format: one sentence; references `integration-workflow` Phase B recon as the trigger author.
-- [x] **Step 3: Validate** — cross-read with Task 2's Phase B plan-change pointer and recon protocol; confirm the two pointers + the trigger sentence are consistent and not duplicative. Commit.
+Each file ≤ ~150 lines (fits in a single reviewer's context comfortably). Each has severity-marked checklist items. SKILL.md §Pitfalls pointer `consistency/*.md` resolves to all eight. Update RESULTS.md Task 3. Commit: `skill: writing consistency references (8 dimensions)`.
 
 ---
 
-### Task 6: Sync peripheral surfaces
-**Depends on:** Tasks 2, 3, 4, 5
-**Review status:** APPROVED
-**Integration status:** APPROVED
+## Task 4: `refactor-and-compile.md` + `collaboration.md`
 
-**Script:** N/A
-**Input:** `skills/using-superRA/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/agent-orchestration/SKILL.md`, `README.md`, `RELEASE-NOTES.md`, `skills/CATEGORIES.md`, `/CLAUDE.md`.
-**Output:** All skill inventories, the Skill-Load Manifest, the execution-workflow hand-off, the PLAN.md template's Workflow Status milestones, the agent-orchestration override-pattern language, and the contributor CLAUDE.md reflect the unified `integration-workflow` and the deletion of `merge-workflow`.
+**Depends on:** Task 1
+**Review status:**
+**Integration status:**
 
-- [x] **Step 1: Skill-Load Manifest** — Skill Inventory `merge-workflow` row removed; `integration-workflow` row rewritten to "INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup." `merge` stage row in the Manifest retained but clarified in a follow-up paragraph: used only for standalone `semantic-merge` delegated-mode dispatches; inside Phase B the unified implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the canonical `Skills:` field on Tier 2/3. The existing `Skills:` + `References:` override-pattern language in `agent-orchestration §Dispatch Templates` (lines 147–148) already supports on-demand utility-skill loading (e.g., `document-skills:skill-creator`) — no edit needed.
-- [x] **Step 2: `execution-workflow` Step 4 completion menu** — confirmed Option 1 and Option 2 already dispatch `integration-workflow` only (line 186 unchanged). SKILL.md preamble, top-level process loop Step 4, and §Integration "Required workflow skills" list updated to cite `integration-workflow` Phases A–D only (removed the `merge-workflow` bullet).
-- [x] **Step 3: `plan-anatomy.md` Workflow Status** — milestone list rewritten: `Drift tests created` → Phase A; `Refactored` → Phase B verify reviewer APPROVED; `Docs finalized` → Phase C; `Merged` → Phase D (kept as a standalone milestone for visibility into the final merge action). §Field-by-Field §User Decisions Log location list updated from `integration-workflow` Step 1 / Step 3 to Phase A / Phase C.
-- [x] **Step 4: `agent-orchestration`** — override-pattern language (lines 147–148) confirmed adequate for utility-skill on-demand loading via `Skills:` / `References:` fields; no edit. Removed the `merge-workflow` citation from the reviewer-feedback-discipline call-site list (now names `execution-workflow`, `integration-workflow` Phase A/B/C, and standalone `semantic-merge`).
-- [x] **Step 5: README / RELEASE-NOTES / CATEGORIES / CLAUDE.md** — README workflow-map ASCII + Mermaid diagram retooled to Phases A–D with B→B re-entry and D→B re-entry arrows; skill-inventory table dropped `merge-workflow` row and widened `integration-workflow` to Phases A–D; `semantic-merge` row updated to cite `integration-workflow` Phase B as caller. CATEGORIES.md same pattern. CLAUDE.md §DRY workflow-skills list updated to drop `merge-workflow`. RELEASE-NOTES Task 3 bullet augmented with Task 6's peripheral-surface summary.
-- [x] **Step 6: Validate** — post-edit `grep merge-workflow` sweep: only PLAN.md / RESULTS.md / RELEASE-NOTES.md / `docs/` (historical plan archive) remain — all expected. Dispatch prompts in `integration-workflow` Phase B already use canonical `Skills:` / `Task:` / `Git range:` fields (Steps 1, 3, 4 — inspected). Commit.
+**Files:** `skills/writing/references/refactor-and-compile.md` (new), `skills/writing/references/collaboration.md` (new)
+**Input:** plan file (refactor-and-compile + collaboration sections), LaTeX / Quarto / Markdown build conventions (generic)
+**Output:** two operational reference files
+
+- [ ] **Step 1: Draft `refactor-and-compile.md`**
+
+Two sections: §Refactor (safe context-aware find-replace — always preview matches, always confirm word-boundary, always check plural/singular forms, always check case variants; provide worked examples of false-positive matches like `estimate` matching inside `underestimate`) and §Compile (build commands per engine: `latexmk -pdf`, `quarto render`, `pandoc`; warning triage heuristics — ignore overfull-hbox by default, escalate undefined references, escalate missing citations; error escalation rules).
+
+- [ ] **Step 2: Draft `collaboration.md`**
+
+Cover: detecting user's in-progress work (uncommitted edits via `git status`, inline TODOs, `\todo{}` macros, commented-out text, recently-modified hunks); respecting it (never touch lines the user is actively editing); when to ask (structural changes, any edit that would change the argument); how to frame proposed structural changes (show the current vs proposed outline; don't just do it); escalation patterns (escalate via `AskUserQuestion` when available, plain text otherwise).
+
+- [ ] **Step 3: Cross-link + self-review + commit**
+
+Self-check: do the two files respect the one-source-of-truth principle (no duplication with style-checklist or consistency refs)? Severity markers present? Update RESULTS.md Task 4. Commit: `skill: writing refactor-and-compile + collaboration refs`.
 
 ---
 
-### Task 7: End-to-end dry-run verification
-**Depends on:** Tasks 1–6
-**Review status:** APPROVED
-**Integration status:** APPROVED
+## Task 5: `planning.md` + `workflow.md` — mode-heavy orchestration guidance
 
-**Script:** N/A (on-paper dry-read / simulation)
-**Input:** All refactored skills; a hypothetical dummy branch with APPROVED PLAN.md and code-complete state.
-**Output:** Walk-through notes in RESULTS.md showing Phases A → D exercised on paper, with B → B re-entry (main advances mid-integration), a mid-Phase-B plan-change restructure triggering `planning-workflow §Changing Plans`, an unrelated-hunk injection caught by the Implementer Self-Check + verify reviewer, and D → B re-entry (main advances during Phase C). Confirms per-task `Integration status` flip logic, Workflow Status rollback, minimum-net-diff protection via self-check + reviewer walk, and B→B trigger-sentence consistency with Task 5's addition.
+**Depends on:** Tasks 2, 3, 4
+**Review status:**
+**Integration status:**
 
-- [x] **Step 1: Dry-read Phase A → D** on the refactored `integration-workflow` SKILL.md with a hypothetical dummy branch in mind; log every dispatch, user stop-point, and re-entry arrow encountered.
-- [x] **Step 2: B→B re-entry scenario** — inject main advancing mid-integration on paper; walk recon-reviewer flip logic; confirm consistency with the B→B trigger sentence in `plan-anatomy.md` line 179 (added by Task 5).
-- [x] **Step 3: Mid-Phase-B plan-change scenario** — inject a substantive restructure need surfaced by recon; walk `planning-workflow §Changing Plans` with the INTEGRATE-trigger bullet (added by Task 5); confirm orchestrator-authors / researcher-decides ownership is unambiguous.
-- [x] **Step 4: Unrelated-hunk injection scenario** — on paper, inject an out-of-scope hunk in the implementer's Commit 2; walk the Implementer Self-Check (`git diff <merge-base>..HEAD`) and the verify reviewer's minimum-net-diff catch; confirm both independently catch it.
-- [x] **Step 5: D→B re-entry scenario** + write findings to RESULTS.md. Fix any ADVISORY stale-vocabulary hits found during the sweep in-place (no tuned content touched). Any `[BLOCKING]` issues would have been opened as new review-notes entries on the relevant prior task; none found.
+**Files:** `skills/writing/references/planning.md` (new), `skills/writing/references/workflow.md` (new)
+**Input:** all prior references (to reference from workflow-mode descriptions), plan file
+**Output:** two reference files — what a fresh orchestrator loads first on any writing task
+
+- [ ] **Step 1: Draft `planning.md`**
+
+Sections: §Scope Inventory (who asked, what level of document, which sections, deadline) + §Task-Size Triage + §PLAN.md/RESULTS.md Decision Matrix. Decision matrix:
+
+| Task shape | PLAN.md? | RESULTS.md? | Mode (see workflow.md) |
+|---|---|---|---|
+| Typo / one-sentence polish | No | No | Direct-edit |
+| Single-aspect review (e.g., citations) | No | No | Pure-review |
+| Multi-aspect consistency sweep | Optional | Optional | Pure-review + parallel reviewers |
+| Iterative proofread of a section | Optional | No | Review-edit loop |
+| Drafting a new section / major revision | Yes | Yes | Full workflow |
+| Whole-paper review / pre-submission sweep | Yes | Yes | Full workflow |
+
+- [ ] **Step 2: Draft `workflow.md` — four modes + hard rules**
+
+Four modes:
+- **(a) Direct edit.** Orchestrator edits directly while in live conversation with the researcher, then dispatches an independent reviewer. Appropriate for tiny polishes, typo fixes, single-paragraph rewrites at the researcher's explicit request.
+- **(b) Pure review.** No edits. Dispatch one or more reviewer agents in parallel, each loaded with one `consistency/*.md` (or `style-checklist.md` / `structure-checklist.md`). Report findings; the researcher decides what to act on.
+- **(c) Review → edit → re-review loop.** Iterative. Each cycle is one reviewer dispatch → orchestrator adjudicates → orchestrator (or dispatched implementer) edits → fresh reviewer dispatch. Common for consistency sweeps and proofreading passes.
+- **(d) Full workflow.** Plug into PLAN → IMPLEMENT → VALIDATE → INTEGRATE (`planning-workflow` → `execution-workflow` → `integration-workflow` → `merge-workflow`). Used only for major changes.
+
+Two hard rules:
+1. **Reviewer dispatch is never skipped.** In every mode — including direct-edit — the reviewer is a separately-dispatched agent. Self-review by the orchestrator is not a substitute.
+2. **Parallel-dispatch multiple reviewers for multi-dimensional consistency work.** One reviewer per `consistency/*.md` file. Single message, multiple Agent-tool calls. Each reviewer is focused on its one dimension.
+
+- [ ] **Step 3: Cross-link + self-review + commit**
+
+`workflow.md` references each `consistency/*.md` by name; `planning.md` references `workflow.md`. Update RESULTS.md Task 5. Commit: `skill: writing planning + workflow refs`.
+
+---
+
+## Task 6: `integration.md` + routing updates
+
+**Depends on:** Tasks 1, 2, 3, 4, 5
+**Review status:**
+**Integration status:**
+
+**Files:** `skills/writing/references/integration.md` (new); **edits:** `skills/using-superRA/SKILL.md` (Skill Inventory + Skill-Load Manifest), `skills/planning-workflow/SKILL.md` (vertical table), `skills/integration-workflow/SKILL.md` (writing branch), `skills/merge-workflow/SKILL.md` (writing branch), `skills/CATEGORIES.md`, `README.md`
+**Input:** `skills/econ-data-analysis/references/integration.md` (template), all prior writing references
+**Output:** `integration.md` + routing diff across six files
+
+- [ ] **Step 1: Draft `integration.md`**
+
+Pre-merge gates: (a) document builds clean on the merged state; (b) all `consistency/*.md` dimensions relevant to the edited sections pass; (c) voice preserved across the full diff (sample check — random 3 hunks, does the diff still sound like the author?); (d) scope respected (no edits outside the original request). Severity-marked shared checklist.
+
+- [ ] **Step 2: Routing updates — `using-superRA`, `planning-workflow`, CATEGORIES, README**
+
+- Add `writing` row to `using-superRA/SKILL.md` §Skill Inventory (one-liner pointing at `skills/writing/SKILL.md`).
+- Add four rows to §Skill-Load Manifest covering `planning-review`, `implementation`, `integration`, `documentation` stages in the writing domain.
+- Add `writing` row to `planning-workflow/SKILL.md` Phase 1 vertical routing table (trigger: editing/polishing/proofreading/consistency/refactor/draft tasks).
+- Add `writing` row to `skills/CATEGORIES.md` under Domain.
+- Add `writing` row to `README.md` domain-skill table.
+
+- [ ] **Step 3: Routing updates — `integration-workflow`, `merge-workflow`**
+
+- `integration-workflow/SKILL.md`: Stage 1 gate for writing domain is "build + outline-stability check" instead of drift tests (unless the task produced numbers — then drift tests still apply). One-paragraph branch, pointer to `writing/references/integration.md`.
+- `merge-workflow/SKILL.md`: one-line note under Step 2 — for writing domain, post-merge verification is build + outline check.
+
+- [ ] **Step 4: Self-review + commit**
+
+Self-check: every routing table has the new row; Skill-Load Manifest entries are consistent with writing's actual reference file names; no route leads to a nonexistent file. Update RESULTS.md Task 6. Commit: `skill: writing integration ref + routing updates`.
+
+---
+
+## Task 7: `CLAUDE.md` audit
+
+**Depends on:** Task 1
+**Review status:**
+**Integration status:**
+
+**Files:** `/CLAUDE.md` (possibly edited)
+**Input:** `/CLAUDE.md` §Design Principles and §Roadmap sections, the two 2026-04-19 memory entries `feedback_domain_skills_standalone.md` and `feedback_reviewer_dispatch_never_skipped.md`
+**Output:** confirmation that CLAUDE.md states (a) "domain skills are usable standalone without the workflow scaffold" and (b) "reviewer dispatch is never skipped, even in standalone modes"; edit if either is missing/ambiguous
+
+- [ ] **Step 1: Read `/CLAUDE.md` §Design Principles + §Roadmap end-to-end and audit**
+
+Record in RESULTS.md Task 7 whether properties (a) and (b) are already stated, partially stated, or absent.
+
+- [ ] **Step 2: If absent or ambiguous — amend**
+
+Add a short paragraph under §Architectural pattern (or §Domain verticals) stating the standalone-usability property. Add a short clause to workflow principle #1 (or a dedicated note) stating that reviewer dispatch is never skipped across modes. Keep the additions concise — this is a cross-cutting correction, not a rewrite.
+
+- [ ] **Step 3: Commit**
+
+If edits were made: commit separately with `docs: CLAUDE.md — standalone skill usability + reviewer-dispatch rule`. If no edits needed: note in RESULTS.md Task 7 that the properties were already traceable, mark task APPROVED without a commit. Update RESULTS.md Task 7.
+
+---
+
+## Task 8: Dogfood — three-mode verification
+
+**Depends on:** Tasks 1, 2, 3, 4, 5, 6, 7
+**Review status:**
+**Integration status:**
+
+**Files:** no code/skill edits expected (only adjustments if dogfood surfaces bugs)
+**Input:** a real manuscript section (user-nominated) or a suitable sample
+**Output:** three dogfood reports in RESULTS.md Task 8; any adjustments to references committed separately
+
+- [ ] **Step 1: Mode (a) — direct edit**
+
+Pick a trivial polish task ("fix a typo" or "tighten this sentence"). Invoke the writing skill directly (no planning-workflow wrapper). Orchestrator performs the edit; dispatches one reviewer loaded with `writing/SKILL.md` + `style-checklist.md`. Verify: Iron Law fires if a scope violation is injected; reviewer returns APPROVE or REVISE per severity.
+
+- [ ] **Step 2: Mode (c) — review → edit → re-review loop**
+
+Pick a section with known inconsistencies (or inject some). Dispatch two parallel reviewers: one loaded with `consistency/terminology.md`, one with `consistency/cross-references.md`. Orchestrator adjudicates findings, edits, re-dispatches fresh reviewers. Verify: parallel dispatch actually runs in parallel; each reviewer stays scoped to its dimension; iteration terminates on APPROVE.
+
+- [ ] **Step 3 (optional): Mode (d) — full workflow**
+
+Only if a real drafting task is available. Run a small section through `planning-workflow` → `execution-workflow` → `integration-workflow` with the writing vertical. Verify routing works end-to-end.
+
+- [ ] **Step 4: Adjust + commit adjustments**
+
+Any reference that didn't fire correctly gets a small fix. Each fix is its own commit with a message naming the dogfood observation that prompted it. Update RESULTS.md Task 8 with the three dogfood reports. Mark task APPROVED when all three modes pass (or (d) is skipped with justification).
