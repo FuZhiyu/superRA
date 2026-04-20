@@ -38,8 +38,9 @@ Structural changes, mapped to existing tasks per the "prefer modifying existing 
 - **Task 5 (peripheral sync)** — reopened. Cross-references to the old section name and old branch-naming convention live across README, RELEASE-NOTES, CATEGORIES, using-superRA, and worktree-harness-fallback; these are the same peripheral surface Task 5 owns. Step set extended with 5.
 - **Task 6 (end-to-end dry-read)** — reopened. Adds a Round 3 scenario pass covering the non-main integration base, collapsed Step 3b dispatch, trimmed Red Flags, and relaxed merge-commit structure. Step set extended with 8–11.
 - **New Task 7 — refactor-and-integrate extensions (C4 + C5).** Genuinely new: `refactor-and-integrate` was explicitly "preserved unchanged" in Round 2's Project Conventions, so these concerns fall outside every existing task's scope. Bundles §Scope by Integration Status evaluation (C4) and merge-quality two-commit relaxation (C5) because both live in the same skill and share a DRY rationale.
+- **New Task 8 — Changing Plans protocol + Stale Content Checklist polish.** Genuinely new: `planning-workflow/SKILL.md` and `handoff-doc/SKILL.md` were preserved in Rounds 1–2 (Task 2 touched only `handoff-doc/references/plan-anatomy.md`, not the parent SKILL.md). Driven by the experience of restructuring Round 3 itself — the "prefer modifying existing task blocks" rule needed operationalization, and a staleness sweep belongs as a discrete protocol step.
 
-DAG cascade. Reopening Tasks 1, 4, 5, 6 clears their per-task `**Review status:**` and `**Integration status:**` because each gets new skill-prose work. No task's objective or output is wholesale-rewritten — Round 3 steps extend the Round 2 steps without invalidating them — so reopened tasks keep their existing step history intact and append Round 3 steps. Downstream audit: Task 5 depended on 1–4 originally; reopening 1 and 4 means 5's sync must re-run; Task 6 depended on 1–5, so it re-runs last. New Task 7 has no dependency; Task 6's Round 3 scenarios pick it up.
+DAG cascade. Reopening Tasks 1, 4, 5, 6 clears their per-task `**Review status:**` and `**Integration status:**` because each gets new skill-prose work. No task's objective or output is wholesale-rewritten — Round 3 steps extend the Round 2 steps without invalidating them — so reopened tasks keep their existing step history intact and append Round 3 steps. Downstream audit: Task 5 depended on 1–4 originally; reopening 1 and 4 means 5's sync must re-run; Task 6 depended on 1–5, so it re-runs last. Tasks 7 and 8 have no upstream dependency; Task 6's Round 3 scenarios pick up Task 7 but not Task 8 (Task 8 is protocol polish, not behavior that a dry-read scenario exercises).
 
 Authorization: explicit user request on 2026-04-20 to update the plan with these changes via the Changing Plans protocol.
 
@@ -59,7 +60,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 - `skills/agent-orchestration/SKILL.md` §Dispatch Templates + §Handling Reviewer Feedback + §Concurrent Writers Require Worktree Isolation: canonical dispatch shape and parallel-dispatch pattern; §Concurrent Writers currently frames around implementers (Worktree field is implementer-only per SKILL.md:143) — Task 4 extends with a parallel-reviewer note.
 - `skills/handoff-doc/references/plan-anatomy.md`: PLAN.md anatomy. Integration-status lifecycle paragraph (line 179, round-1 Task 8) is symmetric with Review-status and stays. Task 2 adds a new `## Integration Intent` subsection.
 - `skills/refactor-and-integrate/SKILL.md` + references: minimum-net-diff, scope-by-integration-status, drift-test integrity. **Preserved unchanged in Rounds 1–2; Round 3 Task 7 revisits §Scope by Integration Status and `merge-quality.md` §Two-commit structure.**
-- `skills/planning-workflow/SKILL.md` §Changing Plans: re-entry protocol covering B→B, C→B, D→B, mid-workflow scope change. **Preserved unchanged** — the round-1 B→B trigger sentence in `plan-anatomy.md:179` stays.
+- `skills/planning-workflow/SKILL.md`: re-entry protocol covering B→B, C→B, D→B, mid-workflow scope change. **Mostly preserved in Rounds 1–2; Round 3 Task 8 tightens §User Feedback and Changing Plans (was §Changing Plans) — operationalize the "prefer modifying existing task blocks" rule and add a pre-commit staleness sweep.** The round-1 B→B trigger sentence in `plan-anatomy.md:179` stays.
 - `skills/integration-workflow/SKILL.md`: target of the main rewrite. Currently ~450 lines; carries Tier matrix (Phase B Step 2), shortcut-axis evaluation, two-commit implementer contract (Step 3), and recon/verify naming split — all removed by Task 1.
 - `skills/semantic-merge/SKILL.md`: target of Task 3. Currently carries Standalone/Delegated mode split, named return-field contract, in-skill dispatch blocks, analysis-only vocabulary — all removed.
 - `~/.claude/skills/semantic-merge-integration/SKILL.md` (global): domain-neutral baseline for Task 3's rewrite. Read-only reference.
@@ -225,7 +226,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 - [ ] **Step 5 (Round 3): Cross-surface sweep for renames + branch-naming flip**
 
-  Two renames need sweeping across active surfaces: (a) `§Concurrent Writers Require Worktree Isolation` → `§Parallelization and Worktree Isolation`; (b) `parallel/<analysis-branch>/<slug>` → `<analysis-branch>/parallel/<slug>`. Run `grep -rn "§Concurrent Writers\|parallel/<branch>/<slug>\|parallel/<analysis-branch>\|parallel/\*\|parallel/\$BR" skills/ agents/ README.md RELEASE-NOTES.md hooks/`. Classify hits as active (update) or historical (leave) — `docs/plans/2026-04-17-*` round-1 artifacts and prior-round `RESULTS.md` log entries are historical. Also add a RELEASE-NOTES.md entry for the Round 3 extensions (flexible integration base, collapsed Step 3b dispatch, Red Flags triage, refactor-and-integrate simplifications, `§Parallelization and Worktree Isolation` rename, `<branch>/parallel/<slug>` naming flip, `§Difficulty and Agent Type`). Re-run the grep; confirm zero active hits remain. Commit.
+  Three renames need sweeping across active surfaces: (a) `§Concurrent Writers Require Worktree Isolation` → `§Parallelization and Worktree Isolation`; (b) `parallel/<analysis-branch>/<slug>` → `<analysis-branch>/parallel/<slug>`; (c) `§Changing Plans` → `§User Feedback and Changing Plans` (renamed in `planning-workflow/SKILL.md` per commit `a8c4113`; active references in at least `semantic-merge`, `handoff-doc`, `execution-workflow`, `integration-workflow`, `refactor-and-integrate/references/merge-quality.md`, `using-superRA`). Run `grep -rn "§Concurrent Writers\|parallel/<branch>/<slug>\|parallel/<analysis-branch>\|parallel/\*\|parallel/\$BR\|§Changing Plans" skills/ agents/ README.md RELEASE-NOTES.md hooks/`. Classify hits as active (update) or historical (leave) — `docs/plans/2026-04-17-*` round-1 artifacts and prior-round `RESULTS.md` log entries are historical. Also add a RELEASE-NOTES.md entry for the Round 3 extensions (flexible integration base, collapsed Step 3b dispatch, Red Flags triage, refactor-and-integrate simplifications, `§Parallelization and Worktree Isolation` rename, `<branch>/parallel/<slug>` naming flip, `§Difficulty and Agent Type`, Changing Plans protocol polish + Stale Content Checklist addition). Re-run the grep; confirm zero active hits remain. Commit.
 
 ---
 
@@ -309,3 +310,27 @@ Rationale for bundling C4 + C5: both live in the same skill (`refactor-and-integ
 
   Grep `skills/ agents/` for `§Scope by Integration Status` cross-references; update any that break. Cross-read against `semantic-merge/SKILL.md` (the 1+N "one possible workflow" language) and `integration-workflow` Phase B to confirm nothing elsewhere now demands two commits in contradiction. Commit.
 
+---
+
+### Task 8: Tighten Changing Plans protocol + Stale Content Checklist
+**Depends on:** *(none)*
+**Review status:** IMPLEMENTED
+**Integration status:**
+
+**Script:** N/A
+**Input:** `skills/planning-workflow/SKILL.md` §User Feedback and Changing Plans (renamed from §Changing Plans in Round 3 commit `a8c4113`); `skills/handoff-doc/SKILL.md` §What Counts as Stale.
+**Output:** (a) Changing Plans protocol Step 3 operationalizes the "prefer modifying existing task blocks" rule with a task-list walk that names every affected task; the new-task branch only triggers when the change is genuinely independent of every existing task. (b) New protocol Step 5 ("sweep PLAN.md for stale content per `handoff-doc` §Stale Content Checklist") inserted between status-flipping and atomic commit; subsequent steps renumbered to 6 (commit) and 7 (resume). (c) Standalone "DAG cascade on re-entry" paragraph removed — Step 4 already carries the cascade rule. (d) Stale Content Checklist gains one bullet for task-output descriptions superseded by a later task (rewrite the earlier task's **Output:** to the latest shape; keep the "what changed" narrative in the Decisions log only).
+
+Rationale for standalone task: both skills were preserved through Rounds 1–2. Motivated by the lived experience of restructuring Round 3 itself (commit `273de6c`) — the protocol gaps that made that restructure longer than it needed to be are what this task closes.
+
+- [x] **Step 1: Describe — identify the protocol gaps**
+
+  Round 3 restructure surfaced three operational gaps: (a) Step 3 said "prefer modifying existing task blocks" but gave no procedure for finding them; (b) no discrete pre-commit step to sweep PLAN.md for now-stale cross-references; (c) Stale Content Checklist did not name the "earlier task output superseded by later task" pattern that this plan itself exhibits (e.g., Round 2 Task 4's Output: referenced §Concurrent Writers, a section Round 3 Task 4 Step 4 renames). Landed in commit `749c522`.
+
+- [x] **Step 2: Apply**
+
+  planning-workflow: rewrote Step 3 to mandate the task-list walk; inserted new Step 5 (staleness sweep); renumbered commit + resume steps to 6 and 7; removed the redundant "DAG cascade on re-entry" paragraph since Step 4 already carries the rule. handoff-doc: added the superseded-output bullet to the Stale Content Checklist. Landed in commit `749c522`.
+
+- [ ] **Step 3: Validate**
+
+  Reviewer dispatch. Grep the plugin for cross-references to §Changing Plans that now miss the renamed section (`§User Feedback and Changing Plans`); update any that break. Dry-read the polished protocol against the actual Round 3 restructure commit to confirm the new Step 3 wording would have produced the same task-list decisions without the intermediate wrong structure.
