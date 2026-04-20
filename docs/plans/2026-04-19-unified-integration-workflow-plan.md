@@ -22,7 +22,7 @@
 - [x] **Execution complete** — all tasks `APPROVED` (2026-04-19)
 - [x] **Drift tests created** — N/A for skill refactor; substitute satisfied by Task 7 end-to-end dry-run + skill-graph consistency sweep (2026-04-19)
 - [x] **Refactored** — Phase B verify reviewer APPROVED cumulative diff (2026-04-19); Tasks 1, 2 Integration status APPROVED; Tasks 3–7 APPROVED (no recon annotations)
-- [ ] **Docs finalized** — README / RELEASE-NOTES / CATEGORIES / CLAUDE.md audited and consistent with new skill graph
+- [x] **Docs finalized** — Phase C doc-reviewer APPROVED matured RESULTS.md at `docs/plans/2026-04-19-unified-integration-workflow-results.md` (2026-04-19); README / RELEASE-NOTES / CATEGORIES / CLAUDE.md audited during Task 6 + Phase B verify review
 - [ ] **Merged** — branch merged to main or PR opened
 
 ---
@@ -77,6 +77,10 @@
 > **Orchestrator decision (2026-04-19):** `RESULTS_DIR` = `docs/plans/`; target filename `2026-04-19-unified-integration-workflow-results.md` per existing repo convention (date-prefixed plan/results pairs alongside historical refactors). No researcher stop needed — convention is unambiguous from `docs/plans/` contents.
 > **Question asked:** Where should the matured RESULTS.md land?
 > **Rationale:** `docs/plans/` is the established archive for refactor plans and results; filename mirrors sibling entries like `2026-04-16-design-coherence-refactor-results.md`. No figures in this refactor → attachments step is a no-op.
+
+> **Orchestrator decision (2026-04-19):** PLAN.md disposition = Option 1 (relocate alongside matured RESULTS.md at `docs/plans/2026-04-19-unified-integration-workflow-plan.md`). No `results_attachments/` rename needed (no figures). Sibling precedent: `docs/plans/2026-04-16-design-coherence-refactor.md` + `-results.md` pair.
+> **Question asked:** How to dispose of PLAN.md?
+> **Rationale:** Option 1 is the established repo convention for refactor plan/results pairs; preserves prescriptive history alongside the permanent archive.
 
 ---
 
