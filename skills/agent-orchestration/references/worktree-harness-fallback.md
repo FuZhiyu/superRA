@@ -1,6 +1,6 @@
 # Worktree Lifecycle — Harness Tools and Raw-Git Fallback
 
-Loaded by the orchestrator when it needs to **create**, **enter**, or **remove** a git worktree and no dedicated harness tool is available. Worktree lifecycle is an orchestration concern — see `SKILL.md` §Concurrent Writers Require Worktree Isolation for when parallel implementers require their own worktrees, and `skills/worktree-data-sync/SKILL.md` for seeding non-git data into an existing worktree (out of scope here).
+Loaded by the orchestrator when it needs to **create**, **enter**, or **remove** a git worktree and no dedicated harness tool is available. Worktree lifecycle is an orchestration concern — see `SKILL.md` §Parallelization and Worktree Isolation for when parallel subagents require their own worktrees, and `skills/worktree-data-sync/SKILL.md` for seeding non-git data into an existing worktree (out of scope here).
 
 ## Prefer Harness Tools
 

@@ -53,7 +53,7 @@ After cross-session detection, **load `superRA:handoff-doc`**. The main agent lo
 
 ## Changes of the Plan
 
-Whenever the plan meaningfully changes — a new task, a removed or reordered task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `planning-workflow` and follow the  §Changing Plans protocol (confirm → log decision → inline-edit PLAN.md → roll back milestones → atomic commit → resume). This is the hinge that keeps the handoff doc honest across iterations; rewording a step inside an in-flight task to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §Changing Plans` for the full material-vs-not-material list and the 6-step protocol.
+Whenever the plan meaningfully changes — a new task, a removed or reordered task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `planning-workflow` and follow the §User Feedback and Changing Plans protocol (confirm → log decision → inline-edit PLAN.md → roll back milestones → sweep for stale content → atomic commit → resume). This is the hinge that keeps the handoff doc honest across iterations; rewording a step inside an in-flight task to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §User Feedback and Changing Plans` for the full material-vs-not-material list and the 7-step protocol.
 
 
 ## The Three Pause Classes

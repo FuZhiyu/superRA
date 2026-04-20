@@ -197,7 +197,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 ### Task 5: Sync peripheral surfaces
 **Depends on:** Tasks 1, 2, 3, 4
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** N/A
@@ -224,9 +224,14 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
   `grep -rn "recon reviewer|verify reviewer|delegated mode|Standalone mode" skills/ agents/ README.md` → empty (active content only; RELEASE-NOTES historical entries excluded). Remaining `two-commit` hits are in `refactor-and-integrate/SKILL.md` merge-quality section (legitimate 1+N merge commit vocabulary, not the removed integration-workflow two-commit contract). R1–R4 advisory fixes applied; see RESULTS.md Task 5 for per-item notes.
 
-- [ ] **Step 5 (Round 3): Cross-surface sweep for renames + branch-naming flip**
+- [x] **Step 5 (Round 3): Cross-surface sweep for renames + branch-naming flip**
 
-  Three renames need sweeping across active surfaces: (a) `§Concurrent Writers Require Worktree Isolation` → `§Parallelization and Worktree Isolation`; (b) `parallel/<analysis-branch>/<slug>` → `<analysis-branch>/parallel/<slug>`; (c) `§Changing Plans` → `§User Feedback and Changing Plans` (renamed in `planning-workflow/SKILL.md` per commit `a8c4113`; active references in at least `semantic-merge`, `handoff-doc`, `execution-workflow`, `integration-workflow`, `refactor-and-integrate/references/merge-quality.md`, `using-superRA`). Run `grep -rn "§Concurrent Writers\|parallel/<branch>/<slug>\|parallel/<analysis-branch>\|parallel/\*\|parallel/\$BR\|§Changing Plans" skills/ agents/ README.md RELEASE-NOTES.md hooks/`. Classify hits as active (update) or historical (leave) — `docs/plans/2026-04-17-*` round-1 artifacts and prior-round `RESULTS.md` log entries are historical. Also add a RELEASE-NOTES.md entry for the Round 3 extensions (flexible integration base, collapsed Step 3b dispatch, Red Flags triage, refactor-and-integrate simplifications, `§Parallelization and Worktree Isolation` rename, `<branch>/parallel/<slug>` naming flip, `§Difficulty and Agent Type`, Changing Plans protocol polish + Stale Content Checklist addition). Re-run the grep; confirm zero active hits remain. Commit.
+  Three renames swept across active surfaces:
+  - `§Concurrent Writers Require Worktree Isolation` → `§Parallelization and Worktree Isolation`: fixed in `agents/implementer.md`, `skills/worktree-data-sync/SKILL.md`, `skills/execution-workflow/SKILL.md` (two hits), `skills/agent-orchestration/references/agent-teams.md`, `skills/agent-orchestration/references/worktree-harness-fallback.md`.
+  - Branch-naming flip to `<branch>/parallel/<slug>`: already complete in Round 2 sweep; re-verified — all active hits use new convention.
+  - `§Changing Plans` → `§User Feedback and Changing Plans`: fixed in `skills/semantic-merge/SKILL.md` (two hits), `skills/handoff-doc/SKILL.md`, `skills/execution-workflow/SKILL.md` (two hits), `skills/integration-workflow/SKILL.md` (two hits), `skills/refactor-and-integrate/references/merge-quality.md` (two hits), `skills/planning-workflow/SKILL.md` (two in-skill self-references), `skills/using-superRA/SKILL.md`, `skills/using-superRA/references/main-agent.md` (two hits; plus updated "6-step" to "7-step"), `skills/handoff-doc/references/plan-anatomy.md` (two hits), `README.md` (two hits), `/CLAUDE.md`. `RELEASE-NOTES.md` Round 3 entries extended with 9 new bullets covering: §Parallelization rename + generalization, §Difficulty and Agent Type, branch-naming flip, flexible integration base, collapsed Phase B Step 3b, trimmed Red Flags, §Scope by Integration Status removal, merge-quality intent-separation reframing, Changing Plans protocol tightening + Stale Content Checklist addition.
+
+  Remaining `§Concurrent Writers` / `§Changing Plans` hits (all in RELEASE-NOTES.md historical entries describing past states) intentionally preserved as history.
 
 ---
 
@@ -315,7 +320,7 @@ Rationale for bundling C4 + C5: both live in the same skill (`refactor-and-integ
 ### Task 8: Tighten Changing Plans protocol + Stale Content Checklist
 **Depends on:** *(none)*
 **Review status:** IMPLEMENTED
-**Integration status:**
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md` §User Feedback and Changing Plans (renamed from §Changing Plans in Round 3 commit `a8c4113`); `skills/handoff-doc/SKILL.md` §What Counts as Stale.
@@ -331,6 +336,6 @@ Rationale for standalone task: both skills were preserved through Rounds 1–2. 
 
   planning-workflow: rewrote Step 3 to mandate the task-list walk; inserted new Step 5 (staleness sweep); renumbered commit + resume steps to 6 and 7; removed the redundant "DAG cascade on re-entry" paragraph since Step 4 already carries the rule. handoff-doc: added the superseded-output bullet to the Stale Content Checklist. Landed in commit `749c522`.
 
-- [ ] **Step 3: Validate**
+- [x] **Step 3: Validate**
 
-  Reviewer dispatch. Grep the plugin for cross-references to §Changing Plans that now miss the renamed section (`§User Feedback and Changing Plans`); update any that break. Dry-read the polished protocol against the actual Round 3 restructure commit to confirm the new Step 3 wording would have produced the same task-list decisions without the intermediate wrong structure.
+  Cross-reference sweep carried out as part of Task 5 Step 5 (consolidated one-pass walk of all three Round 3 renames). Every active `§Changing Plans` hit across `skills/`, `agents/`, `README.md`, and `CLAUDE.md` updated to `§User Feedback and Changing Plans`. Dry-read the polished protocol against `273de6c` (the Round 3 restructure commit): the new Step 3 "walk the task list, identify every affected task" direction would have produced the same map (Tasks 1, 4, 5, 6 reopened; Task 7 + Task 8 genuinely new) directly, without the intermediate Task-7-through-13 structure. The new Step 5 stale-content sweep would have caught the stale "Preserved unchanged" Project Conventions entries in the same pass they were introduced.
