@@ -103,7 +103,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ### Task 1: Rebuild `refactor-and-integrate` as a gated checklist
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(set during integration)*
+**Integration status:** REVISE
 
 **Script:** N/A (skill file refactor)
 **Input:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines (pattern reference)
@@ -137,7 +137,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 > 1. **[ADVISORY]** `skills/refactor-and-integrate/SKILL.md:104` — `§Integration → Used by workflow skills → superRA:integration-workflow` bullet says the workflow dispatches "Phase D post-merge drift-test + integration-review re-runs (`references/codebase-integration.md`) when main advanced." Phase D as authored in `skills/integration-workflow/SKILL.md` does not itself dispatch a drift-test run or integration review; when main advances it re-enters Phase B (line 319), and Phase D Step 3a only verifies the pipeline. The "re-runs when main advanced" phrasing conflates the Phase D→B re-entry with a Phase D dispatch. Minor prose clarity; no `[BLOCKING]` impact on the checklist's load-bearing content. Fix: reword to "Phase D pipeline verification; the Phase D→B re-entry trigger on main advancement then runs the Phase B drift-test + verify-review dispatches again."
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** REVISE
 
 **Script:** N/A
 **Input:** current `skills/integration-workflow/SKILL.md`, current `skills/merge-workflow/SKILL.md`, Task 1's rewritten `refactor-and-integrate`, `agent-orchestration §Dispatch Templates`
@@ -175,7 +175,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ### Task 3: Delete `skills/merge-workflow/`
 **Depends on:** Task 2
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/merge-workflow/SKILL.md` + references; every caller of `superRA:merge-workflow` across the repo (grep).
@@ -192,7 +192,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ### Task 4: Update `semantic-merge` caller paths and handoff-doc coherence rule
 **Depends on:** Task 2
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/semantic-merge/SKILL.md`, `skills/refactor-and-integrate/references/merge-quality.md` (or its successor location post-Task 1).
@@ -207,7 +207,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ### Task 5: Minimal `planning-workflow §Changing Plans` extension + B→B re-entry trigger
 **Depends on:** Task 2
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md` §Changing Plans; `skills/handoff-doc/references/plan-anatomy.md` (DAG cascade rule for Integration status).
@@ -222,7 +222,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ### Task 6: Sync peripheral surfaces
 **Depends on:** Tasks 2, 3, 4, 5
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/using-superRA/SKILL.md`, `skills/execution-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/agent-orchestration/SKILL.md`, `README.md`, `RELEASE-NOTES.md`, `skills/CATEGORIES.md`, `/CLAUDE.md`.
@@ -240,7 +240,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ### Task 7: End-to-end dry-run verification
 **Depends on:** Tasks 1–6
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** N/A (on-paper dry-read / simulation)
 **Input:** All refactored skills; a hypothetical dummy branch with APPROVED PLAN.md and code-complete state.
