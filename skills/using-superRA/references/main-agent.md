@@ -1,6 +1,6 @@
 # Main Agent — Session Start and Autonomy Contract
 
-Main agent loads this when it first invokes `using-superRA`; subagents skip — they inherit task context from their dispatch and do not make autonomy decisions of their own; they implement the task they were dispatched with and return a status.
+Carries the mandatory session-start actions (cross-session detection), the handoff-doc default-load cue, the three pause classes, proceed-without-asking patterns, banned check-in phrasings, and the "log before you act" rule. Subagents do not load this file — they inherit task context from their dispatch and do not make autonomy decisions.
 
 ## MANDATORY: Session Start Actions
 
