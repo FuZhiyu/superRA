@@ -63,7 +63,17 @@
 
 ## Task 4: `refactor-and-compile.md` + `collaboration.md`
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Key findings:**
+
+- **`refactor-and-compile.md`:** Two sections. §Refactor covers the Four Always (preview, word-boundary, case/plural variants, quotations sacred), worked false-positive table (7 rows with concrete examples: `estimate`/`underestimate`, `Table 1`/`acceptable`, `reg`/`region`, `\cite`/`\citep`/`\citet`, etc.), math-mode refactor approach, terminology refactor rules. §Compile covers build commands for LaTeX (latexmk), Quarto, Pandoc; 11-row warning triage table; error-escalation rules; handoff format. 6 BLOCKING + 1 ADVISORY refactor items; 4 BLOCKING + 2 ADVISORY compile items.
+- **`collaboration.md`:** Detection patterns (git-level: `git status`/`git diff`/`git log`; in-file: TODO, `\todo{}`, `[fill in]`, `??`, commented-out text, unfinished paragraphs; file-level: `*-draft`, `.gitignore`, read-only). Edit-vs-propose-vs-ask decision matrix (7 rows). Four escalation templates ("I noticed...", "should I include...", "conflict with in-progress work", "structural proposal"). Voice-preservation operational definition (diction + register + sentence-shape; 6 concrete signals). §Gated Checklist: 7 BLOCKING + 2 ADVISORY items.
+- **One-source-of-truth discipline:** Style rules are NOT re-explained in refactor-and-compile.md (cross-refs to `style-checklist.md`). Cross-reference check in §Refactor points at `consistency/cross-references.md` rather than re-stating the rules. Collaboration.md points at `consistency/terminology.md` for terminology legitimacy rather than duplicating.
+- **Iron-Law alignment:** collaboration.md explicitly operationalizes the Preserve side of the Iron Law (detection patterns for in-progress work, escalation templates for structural changes, voice-preservation checks). refactor-and-compile.md §Refactor gates on "direct quotations and block quotes not touched (quotes are sacred)" — the Iron Law meaning-preservation clause operationalized.
+- **Handoff-doc discipline:** collaboration.md references `handoff-doc` §User Decisions Log for logging escalation outcomes, and `AskUserQuestion` for the escalation tool.
+
+**Files:** `skills/writing/references/refactor-and-compile.md` (154 lines), `skills/writing/references/collaboration.md` (158 lines).
 
 ## Task 5: `planning.md` + `workflow.md` — mode-heavy orchestration guidance
 

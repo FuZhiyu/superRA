@@ -274,22 +274,22 @@ Each file ≤ ~150 lines (fits in a single reviewer's context comfortably). Each
 ## Task 4: `refactor-and-compile.md` + `collaboration.md`
 
 **Depends on:** Task 1
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:** `skills/writing/references/refactor-and-compile.md` (new), `skills/writing/references/collaboration.md` (new)
 **Input:** plan file (refactor-and-compile + collaboration sections), LaTeX / Quarto / Markdown build conventions (generic)
 **Output:** two operational reference files
 
-- [ ] **Step 1: Draft `refactor-and-compile.md`**
+- [x] **Step 1: Draft `refactor-and-compile.md`**
 
 Two sections: §Refactor (safe context-aware find-replace — always preview matches, always confirm word-boundary, always check plural/singular forms, always check case variants; provide worked examples of false-positive matches like `estimate` matching inside `underestimate`) and §Compile (build commands per engine: `latexmk -pdf`, `quarto render`, `pandoc`; warning triage heuristics — ignore overfull-hbox by default, escalate undefined references, escalate missing citations; error escalation rules).
 
-- [ ] **Step 2: Draft `collaboration.md`**
+- [x] **Step 2: Draft `collaboration.md`**
 
 Cover: detecting user's in-progress work (uncommitted edits via `git status`, inline TODOs, `\todo{}` macros, commented-out text, recently-modified hunks); respecting it (never touch lines the user is actively editing); when to ask (structural changes, any edit that would change the argument); how to frame proposed structural changes (show the current vs proposed outline; don't just do it); escalation patterns (escalate via `AskUserQuestion` when available, plain text otherwise).
 
-- [ ] **Step 3: Cross-link + self-review + commit**
+- [x] **Step 3: Cross-link + self-review + commit**
 
 Self-check: do the two files respect the one-source-of-truth principle (no duplication with style-checklist or consistency refs)? Severity markers present? Update RESULTS.md Task 4. Commit: `skill: writing refactor-and-compile + collaboration refs`.
 
