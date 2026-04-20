@@ -199,39 +199,39 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 ### Task 6: End-to-end dry-read verification
 **Depends on:** Tasks 1, 2, 3, 4, 5
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A
 **Input:** All round-2 refactored skills + agent files + peripheral docs.
 **Output:** Walk-through notes in `RESULTS.md` covering seven scenarios; confirms the refactor is internally coherent and the round-1 invariants still hold; any [ADVISORY] stale-vocabulary hits fixed in-place (no tuned content touched); any [BLOCKING] issue opened as a review-notes entry on the relevant prior task for re-entry.
 
-- [ ] **Step 1: Scenario (a) — no-main-movement fast path**
+- [x] **Step 1: Scenario (a) — no-main-movement fast path**
 
   Hypothetical branch: APPROVED PLAN.md, code-complete, `origin/main` has not advanced since merge-base. Walk Phase A (drift tests authored, all pass) → Phase B Step 1 (integration reviewer walks both diffs; main-side scan finds nothing; no Integration Intent section written; no per-task annotations; Integration status stays APPROVED across all tasks) → Step 2 (orchestrator reads PLAN.md, no adjudication needed) → Step 3 (skipped — no REVISE tasks; mechanical merge is a no-op fast-forward since merge-base is main tip) → Step 4 (Refactored milestone flips) → Phase C → Phase D. Confirm the flow terminates cleanly.
 
-- [ ] **Step 2: Scenario (b) — Integration Intent path**
+- [x] **Step 2: Scenario (b) — Integration Intent path**
 
   Hypothetical branch: main has advanced with a cross-cutting refactor of a shared utility; incoming change touches the utility plus a README section that two of this branch's tasks also edit. Walk Phase B Step 1 (reviewer writes Integration Intent section with two bullets + per-task annotations; flips two tasks to REVISE); Step 2 (orchestrator batches a single user-decision on adaptation approach); Step 3 (mechanical merge commit first via `semantic-merge`; then refactor commits scoped to the two REVISE tasks; reviewer re-review APPROVES both, removes review-notes, removes the corresponding Integration Intent bullets, and when both bullets are gone, removes the section). Confirm the ownership contract (reviewer-only for Intent writes + removes) holds.
 
-- [ ] **Step 3: Scenario (c) — parallel reviewers on a large diff**
+- [x] **Step 3: Scenario (c) — parallel reviewers on a large diff**
 
   Hypothetical branch: 20+ tasks; Phase B Step 1 needs to walk a cumulative diff that would exceed one reviewer's context. Walk the orchestrator split: three reviewers dispatched on disjoint worktrees, each walking a ~7-task slice; their verdicts aggregated; per-task annotations land in PLAN.md as if from one reviewer. Confirm the Task 4 extension paragraph covers the mechanics; confirm disjoint-scope invariant holds.
 
-- [ ] **Step 4: Scenario (d) — 1+N with parallel refactor implementers**
+- [x] **Step 4: Scenario (d) — 1+N with parallel refactor implementers**
 
   Hypothetical continuation of Scenario (b) but with five tasks flipped to REVISE and adaptation work that is independent across them. Walk Step 3's mechanical-merge commit (one implementer, serial, branch-wide) then the N refactor commits dispatched as five parallel sibling implementers on worktrees. Confirm the 1+N shape reads as "one possible workflow" in both `integration-workflow` Phase B and `semantic-merge`, not mandated.
 
-- [ ] **Step 5: Scenario (e) — B→B re-entry**
+- [x] **Step 5: Scenario (e) — B→B re-entry**
 
   Hypothetical: Phase B had approved; while Phase C was mid-flight, main advanced again. Walk the C→B re-entry via `planning-workflow §Changing Plans`: `Refactored` unchecks, re-enter Phase B Step 1; reviewer re-walks; new Integration Intent bullet written if material; fix-review loop re-runs. Confirm the existing `plan-anatomy.md:179` B→B trigger sentence (round-1 Task 5) still reads correctly against Task 2's rewritten `**Integration status:**` paragraph.
 
-- [ ] **Step 6: Scenarios (f) + (g) — plan-change escalation and standalone semantic-merge**
+- [x] **Step 6: Scenarios (f) + (g) — plan-change escalation and standalone semantic-merge**
 
   (f): Phase B Step 1 reviewer surfaces a finding that is a substantive restructure (a task needs to be removed because main deleted the feature it analyzed). Walk the escalation to `planning-workflow §Changing Plans` — orchestrator authors the proposal, researcher decides, PLAN.md updated inline, re-entry.
 
   (g): A human runs `git merge` at the terminal on a paper-drafting branch that has no PLAN.md and no drift tests. Walk the rewritten `semantic-merge/SKILL.md` from top to bottom. Confirm nothing in the skill forces the existence of a PLAN.md, drift tests, or a dispatching caller; confirm the handoff-doc coherence and drift-test integrity clauses degrade gracefully to no-ops when those artifacts are absent.
 
-- [ ] **Step 7: Write findings to `RESULTS.md`; fix ADVISORY issues in place; commit**
+- [x] **Step 7: Write findings to `RESULTS.md`; fix ADVISORY issues in place; commit**
 
   For each scenario, write a short paragraph in RESULTS.md noting pass/fail and any residual stale vocabulary or coherence gaps. Fix [ADVISORY] items in place (naming-only, prose-only). Open [BLOCKING] items as review-notes entries on the relevant prior task for re-entry. Commit.

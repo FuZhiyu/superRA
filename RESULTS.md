@@ -98,4 +98,22 @@ Follow-up: R4 advisory — added `Worktree: <absolute path>   # optional — par
 ---
 
 ### Task 6: End-to-end dry-read verification
-**Status:** Not started
+**Status:** Implemented
+
+Seven scenarios simulated on paper against the round-2 refactored skills (`integration-workflow`, `semantic-merge`, `plan-anatomy`, `agent-orchestration`) plus agent files and peripheral surfaces. All seven pass. No BLOCKING issues found.
+
+**Scenario (a) — No-main-movement fast path:** PASS. Phase B Step 2's "zero annotated tasks" branch routes cleanly to a fast-forward merge and then Phase C. The `When to Lighten §Standalone analysis` entry confirms the same shortcut in prose. Lifecycle terminates correctly without stale vocabulary.
+
+**Scenario (b) — Integration Intent path:** PASS. Reviewer writes `## Integration Intent` (two bullets); implementer hands off (confirmed in `implementer.md §What You Don't Own`); reviewer removes bullets as tasks reach APPROVED and removes section when empty. Ownership contract is three-way consistent across `plan-anatomy.md §Integration Intent`, `reviewer.md §What You Own`, and `implementer.md §What You Don't Own`. The lifecycle trigger (remove bullet when the last named task reaches APPROVED, remove section when empty) matches across all three sources.
+
+**Scenario (c) — Parallel reviewers on a large diff:** PASS. `agent-orchestration §Concurrent Writers` paragraph (Task 4 extension) covers mechanics; `integration-workflow` Phase B Step 1 dispatch template forward-references it. `Worktree:` field appears in the Reviewer Dispatch Template block (R4 fix). Disjoint-scope invariant stated explicitly. One ADVISORY: the `§Concurrent Writers` ownership table rows ("Inside worktree", "Harvest-out") name implementers but not reviewers; the prose covers it but the table is implementer-framed. This is pre-existing and low-priority; no change made.
+
+**Scenario (d) — 1+N with parallel refactor implementers:** PASS. The mechanical merge commit is correctly serialized ("no parallelization for this commit"). N parallel refactor implementers on disjoint worktrees are supported per §Concurrent Writers. The 1+N commit shape is consistently non-mandating in both `integration-workflow` Phase B Step 3 and `semantic-merge §Step 5` ("one possible workflow, not mandatory").
+
+**Scenario (e) — B→B re-entry:** PASS. `plan-anatomy.md §Field-by-Field Notes` B→B trigger sentence is coherent with Task 2's rewritten `**Integration status:**` paragraph and Task 1's Phase B structure. Non-annotated tasks stay APPROVED; annotated tasks flip to REVISE — consistent across `plan-anatomy.md`, `integration-workflow`, and `reviewer.md §What You Own`. `planning-workflow §Changing Plans` Step 4 covers the C→B rollback ("If the change rolled back `Refactored`, re-enter `integration-workflow` Phase B").
+
+**Scenario (f) — Plan-change escalation:** PASS. Substantive restructure findings escalate to `planning-workflow §Changing Plans` cleanly. The trigger is named in `integration-workflow §Phase B Step 2` (task add/remove/combine, DAG flip), in `semantic-merge §Step 3` (PLAN.md conflict implying structural reorganization), and in `planning-workflow §Changing Plans §Material`. All three sources are consistent. Protocol covers task removal without leaving stale review-notes or integration-status artifacts.
+
+**Scenario (g) — Standalone semantic-merge:** PASS. `semantic-merge/SKILL.md` degrades gracefully when PLAN.md, drift tests, and a dispatching caller are all absent. Drift-test checks are conditional ("if the branch has them"). Domain-discipline artifacts use explicit "(for data analysis: ...)" qualifiers. Step 4 provides a fallback for logging user decisions without PLAN.md ("record the decision in the merge commit message instead"). No caller-assumption vocabulary remains. Skill reads coherently for a human running `git merge` on a paper-drafting branch.
+
+**Overall verdict:** All seven scenarios pass. The round-2 refactor is internally coherent; round-1 invariants hold. No BLOCKING issues. Two ADVISORY observations noted in scenarios (c) and the commit-hygiene reading of Phase C Option 2/3's `git add -A results_attachments/` — both are pre-existing, in-bounds, or low-priority; no edits required.
