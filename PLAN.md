@@ -69,6 +69,9 @@
 > **Question asked:** How does recon get the `semantic-merge` load without adding a new stage?
 > **Rationale:** The `Skills:` field is the canonical extra-load mechanism; introducing a new stage for one use case is heavier than needed.
 
+> **User decision (2026-04-19):** Push `refactor/unified-integration` to origin and create a PR against main for review.
+> **Question asked:** All 7 tasks APPROVED — merge locally, push+PR, keep as-is, or discard?
+
 ---
 
 ## Project Conventions
