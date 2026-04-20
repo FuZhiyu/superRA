@@ -4,7 +4,7 @@ superRA turns AI coding agents into disciplined Research Assistants. It ships:
 
 1. An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
 2. **Domain skills** that teach agents how to do research work properly — starting with economic data analysis; theory, writing, and modeling are on the roadmap.
-3. **Utility skills** for human-friendly Jupyter notebooks, technical reports in markdown, semantic branch merges, and data sync across git worktrees.
+3. **Utility skills** for technical reports in markdown, gated integration checklists, semantic branch merges, and data sync across git worktrees.
 
 superRA is inspired by the [Superpowers](https://github.com/obra/superpowers) plugin, which centers on test-driven development. superRA adapts the same spine to scientific research, which is exploratory, iterative, and fluid.
 
