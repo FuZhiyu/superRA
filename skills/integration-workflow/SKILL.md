@@ -9,7 +9,7 @@ Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the ful
 
 Assumes execution-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in execution-workflow.
 
-**Core principle.** Tests guard results. Minimum net diff relative to main (see `superRA:refactor-and-integrate`). Nothing advances without reviewer APPROVE at every gate (drift-test review, integration review, doc review). Non-trivial merges with main use `superRA:semantic-merge`; the integration reviewer decides whether one is needed.
+**Core principle.** Tests guard results. Minimum net diff relative to integration base. Nothing advances without reviewer APPROVE at every gate (drift-test review, integration review, doc review). Non-trivial merges with main use `superRA:semantic-merge`; the integration reviewer decides whether one is needed.
 
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
@@ -82,7 +82,7 @@ Drift tests guard key results from unintended changes during Phase B refactoring
 
 ## Phase B — Integrate (Sync + Refactor, Iterative)
 
-**Integration base.** Phase B integrates the analysis branch against a researcher-specified base — `<base-branch>` in every reference below. The default is `origin/main`; the researcher may override at `execution-workflow` Step 4 when the analysis branched off a release, a co-authored track, or another analysis's sibling branch. The ref is fetched fresh (`git fetch origin <base-branch>`) at the start of Phase B so "main-side" scans walk current upstream state.
+**Integration base.** Phase B integrates the analysis branch against a researcher-specified base — `<base-branch>` in every reference below. `origin/main` is the typical default, but confirm with the researcher; override is expected when the analysis branched off a release, a co-authored track, or another analysis's sibling branch. The ref is fetched fresh (`git fetch origin <base-branch>`) at the start of Phase B so base-branch-side scans walk current upstream state.
 
 The integration reviewer drives the loop. It walks both the branch diff and the base-branch-side changes, writes per-task annotations in PLAN.md, and writes or updates a `## Integration Intent` section when material incoming changes need adaptation (see `superRA:handoff-doc` `references/plan-anatomy.md` §Integration Intent for the section's anatomy and ownership rules). The orchestrator adjudicates findings, batches user decisions, then dispatches implementer(s) to fix, and re-dispatches the reviewer. Repeat until every in-scope task is APPROVED.
 

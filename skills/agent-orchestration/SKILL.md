@@ -107,9 +107,9 @@ Force-symlink seeding is safe because parallel tasks have disjoint write paths b
 git worktree add -b "$(git branch --show-current)/parallel/<slug>" <worktree-path> HEAD
 ```
 
-The `/parallel/` infix is load-bearing — the `merge-guard` hook exempts `*/parallel/*` source refs on merge-back, so the orchestrator's `git merge <branch>/parallel/<slug>` is not blocked. Pass the absolute `<worktree-path>` via the dispatch `Worktree:` field. The subagent enters via `EnterWorktree(path=...)` (or `cd` as fallback), works on whatever branch the worktree is on, and never creates its own worktree or touches the branch name.
+The `/parallel/` infix is important — the `merge-guard` hook exempts `*/parallel/*` source refs on merge-back, so the orchestrator's `git merge <branch>/parallel/<slug>` is not blocked. Pass the absolute `<worktree-path>` via the dispatch `Worktree:` field. The subagent enters via `EnterWorktree(path=...)` (or `cd` as fallback), works on whatever branch the worktree is on, and never creates its own worktree or touches the branch name.
 
-**Never use the `Agent` tool's `isolation: "worktree"` parameter.** It branches off main's HEAD, not the orchestrator's current tip, so the subagent cannot see in-flight analysis state.
+For Claude Code: **Never use the `Agent` tool's `isolation: "worktree"` parameter.** It branches off main's HEAD, not the orchestrator's current tip, so the subagent cannot see in-flight analysis state.
 
 Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `PLAN.md` — git (`git worktree list`, `git branch`) is the source of truth.
 

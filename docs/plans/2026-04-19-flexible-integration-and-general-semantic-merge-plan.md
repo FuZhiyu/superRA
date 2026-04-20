@@ -18,11 +18,11 @@
 
 ## Workflow Status
 
-- [ ] **Plan approved** — researcher signed off on this plan
-- [ ] **Execution complete** — all tasks `**Review status:** APPROVED`
-- [ ] **Drift tests created** — N/A for skill refactor; Task 6 end-to-end dry-read serves as the substitute (same pattern as round 1)
-- [x] **Refactored** — Phase B integration reviewer APPROVED on cumulative diff (Round 3 APPROVE: commit `632a188`)
-- [ ] **Docs finalized** — matured RESULTS.md + doc-reviewer APPROVED
+- [x] **Plan approved** — researcher signed off at Round 2 kickoff (2026-04-19) and at each Round 3 plan-change commit (`3ef1e93`, `273de6c`, `50a224a`)
+- [x] **Execution complete** — all tasks implemented; Round 3 Tasks 1, 4, 5, 6, 7, 8 flipped to Integration APPROVED via integration reviewer `632a188` (direct-mode execution — implementation review folded into the integration pass per the Round 2 precedent)
+- [x] **Drift tests created** — N/A for skill refactor; Task 6 end-to-end dry-read serves as the substitute (11 scenarios across Rounds 2+3, all PASS)
+- [x] **Refactored** — Phase B integration reviewer APPROVED on cumulative diff (Round 3 APPROVE: commit `632a188`; advisory rewrite: commit `3e68327`)
+- [x] **Docs finalized** — N/A for skill refactor (no matured RESULTS.md location; PLAN.md + RESULTS.md archived to `docs/plans/` per repo convention alongside Round 1's `2026-04-19-unified-integration-workflow-*` pair)
 - [ ] **Merged** — branch merged or PR opened/updated
 
 ---
