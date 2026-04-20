@@ -62,7 +62,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 1: Rewrite `integration-workflow` Phase B
 **Depends on:** *(none)*
 **Review status:** IMPLEMENTED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** current `skills/integration-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md` (Integration Intent anatomy produced by Task 2 — cross-referenced only after Task 2 lands; Task 1 names the section and describes purpose/ownership inline), `skills/agent-orchestration/SKILL.md` §Dispatch Templates + §Handling Reviewer Feedback + §Concurrent Writers (parallel-reviewer extension produced by Task 4 — cross-referenced only after Task 4 lands), `skills/refactor-and-integrate/SKILL.md` + references (linked, unchanged)
@@ -116,7 +116,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 3: Rewrite `semantic-merge/SKILL.md` as general-purpose skill
 **Depends on:** *(none)*
 **Review status:** IMPLEMENTED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** current `skills/semantic-merge/SKILL.md`, global `~/.claude/skills/semantic-merge-integration/SKILL.md` as tone/structure baseline.
