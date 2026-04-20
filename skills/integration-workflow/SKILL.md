@@ -1,6 +1,6 @@
 ---
 name: integration-workflow
-description: Use when a plan is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the branch needs to be brought up to date with main and refactored to fit codebase conventions (review-led iterative sync + refactor targeting minimum-net-diff); when the Stage 1 dev-log RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form; when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "integrate", "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `execution-workflow`'s completion menu.
+description: Use when a plan is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the branch needs to be brought up to date with main and refactored to fit codebase conventions (review-led iterative sync + refactor targeting minimum-net-diff); when the working RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form (Phase C); when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "integrate", "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `execution-workflow`'s completion menu.
 ---
 
 # Integration Workflow
@@ -35,7 +35,7 @@ Phase D — Final merge / PR / cleanup
 - Phase A Step 2 — drift-test candidate confirmation
 - Phase B — batched research-meaningful decisions surfaced by the integration reviewer (see Phase B Step 2)
 - Phase B / Phase D — meaningful drift after refactor or post-merge (see `superRA:refactor-and-integrate` `references/drift-test-quality.md`)
-- Phase C Step 1 — Stage 2 RESULTS.md relocation target when project guidance is silent
+- Phase C Step 1 — Phase C RESULTS.md relocation target when project guidance is silent
 - Phase C Step 4 — PLAN.md disposition
 
 See `superRA:using-superRA` §Universal Principles (#4) for the full autonomy contract, and `superRA:handoff-doc` §User Decisions Log for how every answer must land in PLAN.md before the workflow acts on it.
@@ -153,7 +153,7 @@ Format discipline for sub-part A (maturation) lives entirely in `superRA:report-
 The matured `RESULTS.md` lands in the analysis's permanent code folder, **per project guidance**. Read `CLAUDE.md`, `AGENTS.md`, or the project README for the convention. If none exists, legitimate stop point — ask via `AskUserQuestion` (plain text if unavailable):
 
 ```
-Stage 2 RESULTS.md needs a permanent location in this project. The matured
+Phase C RESULTS.md needs a permanent location in this project. The matured
 file will be co-located with the analysis code so it travels with it.
 Where should it land?
 
@@ -167,7 +167,7 @@ Log per `superRA:handoff-doc` §User Decisions Log **before** dispatching the do
 ```
 Agent(subagent_type: "superRA:implementer"):
   Stage: documentation
-  Task: Task N in PLAN.md — Stage 2 RESULTS.md maturation
+  Task: Task N in PLAN.md — Phase C RESULTS.md maturation
   RESULTS_DIR: <resolved permanent folder>
   RESULTS_ATTACHMENTS_DIR: ${RESULTS_DIR}/attachments
 
@@ -188,7 +188,7 @@ The doc-writer always re-runs the whole matured doc on every integration pass; t
 ```
 Agent(subagent_type: "superRA:reviewer"):
   Stage: documentation
-  Task: Task N in PLAN.md — review of matured Stage 2 RESULTS.md
+  Task: Task N in PLAN.md — review of matured Phase C RESULTS.md
   Git range: <BASE_SHA>..<HEAD_SHA>
   RESULTS_DIR: <resolved permanent folder>
 
@@ -205,7 +205,7 @@ Iterate REVISE → fix → narrow re-review until APPROVE. If a reviewer finding
 
 Legitimate stop point. Orchestrator-handled directly — not delegated, because disposition is a user-facing decision.
 
-By this point `RESULTS.md` has graduated to `${RESULTS_DIR}` and project docs are in sync (audited during Phase B per `superRA:refactor-and-integrate` `references/codebase-integration.md` §Project Doc Audit). `PLAN.md` and the working `results_attachments/` folder are the last Stage 1 scaffolds at the worktree root.
+By this point `RESULTS.md` has graduated to `${RESULTS_DIR}` and project docs are in sync (audited during Phase B per `superRA:refactor-and-integrate` `references/codebase-integration.md` §Project Doc Audit). `PLAN.md` and the working `results_attachments/` folder are the last in-progress scaffolds at the worktree root.
 
 Ask via `AskUserQuestion` (plain text if unavailable). Default suggestion is Option 1:
 

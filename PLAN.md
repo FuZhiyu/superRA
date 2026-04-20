@@ -237,15 +237,17 @@ DAG cascade: Task 1a `**Review status:**` rolled back APPROVED → REVISE. Task 
 
 **Steps:**
 
-- [ ] `rg -n "Changing Plans" -- '!docs/plans/'` — every hit must read `User Feedback and Changing Plans` unless it's inside an archived plan.
-- [ ] `rg -n "Stage 1|Stage 2|Stage 3" skills/integration-workflow/ README.md CLAUDE.md` — post-unified-integration, the vocabulary is Phases A–D in user-facing docs.
-- [ ] `rg -n "merge-workflow"` — must not appear in README, CLAUDE.md, or `skills/CATEGORIES.md`.
-- [ ] `rg -n "RELEASE-NOTES"` — must not appear as an active cross-reference in README, CLAUDE.md, `skills/CATEGORIES.md`, or any SKILL.md (release notes were deleted in this branch).
-- [ ] `rg -n "VALIDATE|four-phase"` across README + CLAUDE.md — the user's crude draft renames to three-phase (PLAN → IMPLEMENT → INTEGRATE) with VALIDATE folded into IMPLEMENT's reviewer loop. Every phase-list in user-facing docs must match. CLAUDE.md may still say four-phase if it's describing the internal workflow skills' decomposition; pick one framing and use it consistently.
-- [ ] `rg -n "\[.*\]\(.*\.md\)"` spot-check markdown links for broken paths after any file renames
-- [ ] Commit: `docs: cross-reference + terminology sweep`
+- [x] `rg -n "Changing Plans" -- '!docs/plans/'` — every hit reads `User Feedback and Changing Plans`. All hits were already correct; no changes needed.
+- [x] `rg -n "Stage 1|Stage 2|Stage 3" skills/integration-workflow/ README.md CLAUDE.md` — fixed 4 stale "Stage 1" / "Stage 2" references in `skills/integration-workflow/SKILL.md` (frontmatter description, Phase C stop-point bullet, two dispatch task strings, and Phase D disposition paragraph).
+- [x] `rg -n "merge-workflow"` — clean in README, CLAUDE.md, `skills/CATEGORIES.md`. Only appears in archived `docs/plans/` (expected historical record).
+- [x] `rg -n "RELEASE-NOTES"` — clean in README, CLAUDE.md, `skills/CATEGORIES.md`, and all `skills/*/SKILL.md` files. No active cross-references remain.
+- [x] `rg -n "VALIDATE|four-phase"` — fixed `CLAUDE.md` line 3: `PLAN → IMPLEMENT → VALIDATE → INTEGRATE` → `PLAN → IMPLEMENT → INTEGRATE`. README already correct.
+- [x] `rg -n "\[.*\]\(.*\.md\)"` markdown links spot-check: README links to `AGENTS.md`, `GEMINI.md`, `gemini-extension.json`, `CLAUDE.md` — all exist at repo root. No broken links found.
+- [x] Extra item 6 (tagline bullet 3): fixed README tagline bullet 3 — replaced "human-friendly Jupyter notebooks" (no standalone notebook skill) with "gated integration checklists" (maps to `refactor-and-integrate`). Utility Skills table is now 1:1 consistent with the tagline.
+- [x] Extra item 7 (GEMINI.md stale @-include): updated `GEMINI.md` — `./skills/using-superpowers/SKILL.md` → `./skills/using-superRA/SKILL.md`; `./skills/using-superpowers/references/gemini-tools.md` → `./skills/using-superRA/references/gemini-tools.md`. Verified both targets exist.
+- [x] Commit: `docs: cross-reference + terminology sweep`
 
-**Review status:** not started
+**Review status:** IMPLEMENTED
 **Integration status:** *(N/A)*
 
 ---

@@ -72,7 +72,21 @@
 
 ## Task 5: Cross-reference + terminology sweep across all docs
 
-**Status:** Not started
+**Status:** IMPLEMENTED.
+
+**Files touched:** `CLAUDE.md`, `README.md`, `GEMINI.md`, `skills/integration-workflow/SKILL.md`
+
+**Fixes by sweep category:**
+
+- **Sweep 1 — "Changing Plans" residuals:** 0 fixes. All existing hits already read `§User Feedback and Changing Plans` correctly. No changes needed.
+- **Sweep 2 — Stage 1/2/3 vocabulary:** 4 fixes in `skills/integration-workflow/SKILL.md`. Replaced "Stage 1 dev-log RESULTS.md" (frontmatter description) with "working RESULTS.md (Phase C)"; "Stage 1 scaffolds" (Phase D paragraph) with "in-progress scaffolds"; "Stage 2 RESULTS.md" (Phase C stop-point bullet, two dispatch task strings) with "Phase C RESULTS.md".
+- **Sweep 3 — merge-workflow:** 0 fixes. Clean in README, CLAUDE.md, `skills/CATEGORIES.md`. Only appears in archived `docs/plans/` — expected historical record.
+- **Sweep 4 — RELEASE-NOTES:** 0 fixes. Already clean in all scanned files (README, CLAUDE.md, CATEGORIES.md, all SKILL.md files).
+- **Sweep 5 — VALIDATE/four-phase:** 1 fix in `CLAUDE.md` line 3: `PLAN → IMPLEMENT → VALIDATE → INTEGRATE` → `PLAN → IMPLEMENT → INTEGRATE`. README was already correct.
+- **Extra item 6 — tagline Jupyter notebook:** 1 fix in `README.md` tagline bullet 3: removed "human-friendly Jupyter notebooks" (no standalone notebook skill ships; notebook guidance is buried inside `econ-data-analysis/references/notebook-format.md`) and replaced with "gated integration checklists" (maps to `refactor-and-integrate` in the Utility Skills table). The tagline's four utility-skill callouts now map 1:1 to entries in the Utility Skills table: technical reports in markdown (`report-in-markdown`), gated integration checklists (`refactor-and-integrate`), semantic branch merges (`semantic-merge`), data sync across git worktrees (`worktree-data-sync`).
+- **Extra item 7 — GEMINI.md stale @-include:** 2 fixes in `GEMINI.md`: `./skills/using-superpowers/SKILL.md` → `./skills/using-superRA/SKILL.md`; `./skills/using-superpowers/references/gemini-tools.md` → `./skills/using-superRA/references/gemini-tools.md`. Both target paths verified to exist.
+
+**Deferred items:** None — all task-spec items addressed.
 
 ## Task 6: Final human read-through + release tag decision
 
