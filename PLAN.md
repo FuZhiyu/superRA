@@ -237,7 +237,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 ### Task 6: End-to-end dry-read verification
 **Depends on:** Tasks 1, 2, 3, 4, 5, 7
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** N/A
@@ -274,21 +274,21 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
   For each scenario, write a short paragraph in RESULTS.md noting pass/fail and any residual stale vocabulary or coherence gaps. Fix [ADVISORY] items in place (naming-only, prose-only). Open [BLOCKING] items as review-notes entries on the relevant prior task for re-entry. Commit.
 
-- [ ] **Step 8 (Round 3): Scenario — non-main integration base**
+- [x] **Step 8 (Round 3): Scenario — non-main integration base**
 
-  Hypothetical branch integrating into `release/2026-Q2`. Walk Phase B Step 1 dispatch + Integration Intent scan with `<integration-base>=release/2026-Q2`. Confirm no hardcoded main vocabulary remains in Phase B. Covers Task 1 Step 6.
+  Walked integration against `release/2026-Q2`. Phase B opener's new "Integration base" paragraph, Step 1 dispatch steering, Step 2 fast path, Step 3a merge gate, Phase D freshness check — all read correctly with `<base-branch>` generalized. Red Flag "advance to Phase D without a freshness check on the integration base" catches the failure mode. PASS.
 
-- [ ] **Step 9 (Round 3): Scenario — collapsed Phase B Step 3b dispatch**
+- [x] **Step 9 (Round 3): Scenario — collapsed Phase B Step 3b dispatch**
 
-  Walk the orchestrator dispatching an implementer via the canonical `agent-orchestration §Dispatch Templates` + integration-specific annotation. Confirm the implementer has every field it needs (scope list, mechanical-merge invariant, drift-test re-run order). Covers Task 1 Step 7.
+  Walked orchestrator constructing an implementer dispatch from `agent-orchestration §Dispatch Templates` canonical shape + four Step 3b additions (Stage, Tasks in scope + refusal + IMPLEMENTED flip, mechanical-first, drift tests re-run). Every field the old embedded block carried is reconstructible. `grep -n "Agent(subagent_type:" skills/integration-workflow/SKILL.md` returns three expected hits (Phase B reviewer, Phase C doc-writer, Phase C doc-reviewer); Step 3b is dispatch-block-free. PASS.
 
-- [ ] **Step 10 (Round 3): Scenario — §Red Flags regression check + refactor-and-integrate simplifications**
+- [x] **Step 10 (Round 3): Scenario — §Red Flags regression check + refactor-and-integrate simplifications**
 
-  List the rationalizations that the Round 2 §Red Flags caught in `integration-workflow`. For each, confirm either (i) the bullet survived Task 1 Step 8, or (ii) another surface (checklist, skill body) catches it. Separately, walk Task 7's output: if §Scope by Integration Status was dropped, verify implementer-refusal semantics still live somewhere; walk a trivial one-commit merge and confirm `merge-quality.md` reads as one-commit-allowed without losing the "separate when different intent" discipline. Covers Task 1 Step 8, Task 7.
+  Walked each dropped Red Flags bullet against where the underlying rationalization is now caught (11 prior rationalizations: 4 retained as Never bullets, 6 covered by phase prose or `[BLOCKING]` items in `refactor-and-integrate` / `using-superRA`, 1 covered by a new cross-cutting pointer block). `§Scope by Integration Status` removal: `grep -rn "§Scope by Integration Status" skills/ agents/` → empty; invariant relocated to Implementer Self-Check step 4. `merge-quality.md` intent-separation: trivial merges can now land as one commit; non-trivial as two or N. PASS.
 
-- [ ] **Step 11 (Round 3): Write findings + commit**
+- [x] **Step 11 (Round 3): Write findings + commit**
 
-  Append a Round 3 section to `RESULTS.md` covering Steps 8–10 + the Task 4 / Task 5 cross-surface verification. Fix any [ADVISORY] stale-vocabulary hits in place. Surface any [BLOCKING] issues as review-notes on the responsible task for re-entry.
+  Round 3 section appended to `RESULTS.md` with findings for Steps 8–11 (scenarios (h), (i), (j), (k)). No `[BLOCKING]` issues surfaced; no review-notes entries opened on prior tasks. Scenario (k) uses the Round 3 restructure commit (`273de6c`) itself as the natural test case for the tightened Changing Plans protocol.
 
 ---
 
