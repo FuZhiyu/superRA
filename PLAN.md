@@ -143,11 +143,14 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 4: Extend `agent-orchestration §Concurrent Writers` with parallel-reviewer note
 **Depends on:** *(none)*
 **Review status:** IMPLEMENTED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/agent-orchestration/SKILL.md` §Concurrent Writers Require Worktree Isolation (existing section, implementer-framed).
 **Output:** One additional short paragraph in `agent-orchestration §Concurrent Writers` generalizing the pattern to parallel reviewers walking disjoint slices of a large diff — same worktree isolation, same split-by-disjoint-scope, same orchestrator-aggregates-verdicts pattern. One-sentence note that the `Worktree:` dispatch field applies to reviewers in this configuration too.
+
+> **Review notes (integration):**
+> 1. [MINOR] `skills/agent-orchestration/SKILL.md` line 125 area — the Reviewer Dispatch Template block shows no `Worktree:` optional field line, while the Implementer block (line 115) shows `Worktree: <absolute path>   # optional — parallel-dispatch only`. The `Worktree:` field spec paragraph (line 145) covers both roles in prose, so an orchestrator who reads the full spec will find it. But a reader building a reviewer dispatch from the template block alone won't see the field as an option. Pre-existing gap, not introduced by this commit; low priority since the spec paragraph is just a few lines below. Task 5 or a targeted follow-on could add `Worktree: <absolute path>   # optional — parallel-reviewer pattern only` to the Reviewer template block for symmetry.
 
 - [x] **Step 1: Describe — read the current §Concurrent Writers**
 
