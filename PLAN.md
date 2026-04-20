@@ -63,6 +63,8 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 
 No downstream per-task `**Review status:**` rollback needed — nothing has been implemented yet.
 
+**2026-04-20 — Version bump for initial release.** User chose 0.1.0 (was 0.0.4.1) to mark this as the first public release. Rationale: README + CLAUDE.md split complete, install flow modernized, workflow diagram added — milestone is meaningful.
+
 ---
 
 ## Task 1a: Mermaid workflow diagram for README
@@ -181,13 +183,13 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 
 **Steps:**
 
-- [ ] Draft the new one-liner: something like "Disciplined AI research assistant for economists: plan-implement-integrate workflow with implementer–reviewer pair, domain-aware data-analysis discipline, and semantic merges." Validate against the README tagline for consistency.
-- [ ] Update `plugin.json` `description` + `keywords` (consider adding `research-workflow`, `agent-orchestration`)
-- [ ] Update `marketplace.json` `description` to match
-- [ ] Decide version: keep `0.0.4.1` (in-flight docs) or bump to `0.1.0` (first public release) — **this is a user decision, log via `AskUserQuestion` and record in §Decisions before editing**
-- [ ] Commit: `plugin: user-facing description + version bump for initial release`
+- [x] Draft the new one-liner: something like "Disciplined AI research assistant for economists: plan-implement-integrate workflow with implementer–reviewer pair, domain-aware data-analysis discipline, and semantic merges." Validate against the README tagline for consistency.
+- [x] Update `plugin.json` `description` + `keywords` (consider adding `research-workflow`, `agent-orchestration`)
+- [x] Update `marketplace.json` `description` to match
+- [x] Decide version: keep `0.0.4.1` (in-flight docs) or bump to `0.1.0` (first public release) — **this is a user decision, log via `AskUserQuestion` and record in §Decisions before editing**
+- [x] Commit: `plugin: user-facing description + version bump for initial release`
 
-**Review status:** not started
+**Review status:** IMPLEMENTED
 **Integration status:** *(N/A)*
 
 ---

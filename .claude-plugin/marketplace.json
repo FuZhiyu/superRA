@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "superRA",
-      "description": "superRA plugin",
-      "version": "0.0.4.1",
+      "description": "Disciplined AI Research Assistant for economists: plan-implement-integrate workflow with implementer–reviewer pair, data-analysis discipline, and drift-test-verified integration.",
+      "version": "0.1.0",
       "source": "./",
       "author": {
         "name": "Julie Zhiyu Fu",
