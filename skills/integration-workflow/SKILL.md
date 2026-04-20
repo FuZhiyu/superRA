@@ -9,7 +9,7 @@ Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the ful
 
 Assumes execution-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in execution-workflow.
 
-**Core principle.** Tests guard results. A single unified diff against the merge base — produced by one two-commit sync+refactor pass per round — carries both the main update and every codebase-fit change; minimum-net-diff is load-bearing (see `superRA:refactor-and-integrate`). Nothing advances without reviewer APPROVE at every gate (drift-test review, verify review, doc review). Non-trivial merges with main use `superRA:semantic-merge` in delegated mode; Tier 1 clean merges take the fast-forward shortcut (Phase B Step 2).
+**Core principle.** Tests guard results. Minimum-net-diff is load-bearing (see `superRA:refactor-and-integrate`). Nothing advances without reviewer APPROVE at every gate (drift-test review, integration review, doc review). Non-trivial merges with main use `superRA:semantic-merge`; the integration reviewer decides whether one is needed.
 
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
@@ -20,7 +20,7 @@ Phase A — Drift Test Creation
    ↓
 Phase B — Integrate (sync + refactor, iterative)
    ↓               ↑  (re-enter B when main moves again, or when
-Phase C — Docs  ───┘   verify reviewer triggers a new round)
+Phase C — Docs  ───┘   integration reviewer triggers a new round)
    ↓               ↑
 Phase D — Final merge / PR / cleanup
                    ↑
@@ -30,12 +30,12 @@ Phase D — Final merge / PR / cleanup
                          proposes, researcher decides)
 ```
 
-**Re-entry is the normal case.** `B → A` when a new task is added mid-integration. `B → B` when main advances and needs another sync. `C → B` when doc-reviewer surfaces a code issue. `D → B` when the semantic-merge in Phase D reveals main moved again. Any phase can escalate to `planning-workflow §Changing Plans`.
+**Re-entry is the normal case.** `B → A` when a new task is added mid-integration. `B → B` when main advances and needs another sync. `C → B` when doc-reviewer surfaces a code issue. `D → B` when Phase D's pre-merge check reveals main moved again. Any phase can escalate to `planning-workflow §Changing Plans`.
 
 **Autonomy.** Between stop points, run on your own power — do not check in after each phase, do not re-confirm a reviewer's APPROVE. Legitimate stop points:
 
 - Phase A Step 2 — drift-test candidate confirmation
-- Phase B — batched research-meaningful decisions surfaced by the recon reviewer (see Phase B Step 2b)
+- Phase B — batched research-meaningful decisions surfaced by the integration reviewer (see Phase B Step 2)
 - Phase B / Phase D — meaningful drift after refactor or post-merge (see `superRA:refactor-and-integrate` `references/drift-test-quality.md`)
 - Phase C Step 1 — Stage 2 RESULTS.md relocation target when project guidance is silent
 - Phase C Step 4 — PLAN.md disposition
@@ -84,123 +84,71 @@ Drift tests guard key results from unintended changes during Phase B refactoring
 
 ## Phase B — Integrate (Sync + Refactor, Iterative)
 
-**Single unified pass targeting one final state.** See `superRA:refactor-and-integrate` `references/merge-quality.md` for the two-commit structure (Commit 1 mechanical merge; Commit 2 unified integration) and why a single cumulative diff is load-bearing.
+The integration reviewer drives the loop. It walks both the branch diff and main-side changes, writes per-task annotations in PLAN.md, and writes or updates a `## Integration Intent` section when material main-side changes need adaptation (see `superRA:handoff-doc` `references/plan-anatomy.md` §Integration Intent for the section's anatomy and ownership rules). The orchestrator adjudicates findings, batches user decisions, then dispatches implementer(s) to fix, and re-dispatches the reviewer. Repeat until every in-scope task is APPROVED.
 
-**Re-enterable.** If main advances again before Phase D, or if a later phase surfaces a code issue, loop back to Phase B Step 1 and run another unified pass.
-
-**Plan-change trigger.** If the recon reviewer (Step 1) or verify reviewer (Step 4) surfaces a substantive restructure finding — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation — escalate via `planning-workflow §Changing Plans` (orchestrator authors the restructure proposal; researcher decides) before continuing.
-
-### Internal Structure — Recon-Driven, Two Shortcut Axes
-
-```
-1. Recon reviewer  →  per-task integration review-notes in PLAN.md + Tier classification
-2. Orchestrator    →  flip Integration status; evaluate shortcut axes
-3. Batched AskUserQuestion  →  collect research-meaningful decisions (when needed)
-4. Unified implementer  →  two commits: (1) mechanical merge, (2) unified refactor
-5. Verify reviewer  →  cumulative diff across in-scope tasks only
-```
-
-Two **independent** shortcut axes govern Phase B path length:
-
-- **Tier axis** (from recon's `semantic-merge` trial-merge) gates the **merge path**. Tier 1 → fast-forward only; follow-ups do NOT load `semantic-merge`. Tier 2/3 → follow-ups load `semantic-merge` via the canonical `Skills:` dispatch field.
-- **Annotation axis** (count of tasks carrying new integration review-notes) gates the **refactor path**. Zero annotations → skip Steps 2b/3/4 entirely. Non-zero → dispatch the unified implementer + verify reviewer scoped to the annotated task list.
-
-**Combined shortcuts:**
-- Tier 1 + zero annotations → Phase B = `git merge --ff-only` only; terminates.
-- Tier 1 + annotations → fast-forward + refactor-only implementer + verify reviewer (no `semantic-merge` load on follow-ups).
-- Tier 2/3 regardless of annotations → full flow with `semantic-merge` loaded on follow-ups.
-
-### Step 1: Dispatch the recon reviewer
+### Step 1: Dispatch the integration reviewer
 
 ```
 Agent(subagent_type: "superRA:reviewer"):
   Stage: integration
-  Task: Phase B recon — per-task integration review + Tier classification
-  Git range: <merge-base>..HEAD   (analysis branch vs target base branch tip)
-  Skills: superRA:semantic-merge
+  Task: Phase B integration review
+  Git range: <merge-base>..HEAD
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
-    recon pass — do not refactor. Run a trial `semantic-merge` against
-    the base branch to produce a Tier classification (1 / 2 / 3); log
-    the Tier as a one-line entry under §Decisions for this integration
-    pass. For every APPROVED-integration task whose outputs need
+    walk (a) <merge-base>..HEAD for integration fit per
+    `refactor-and-integrate`; (b) <merge-base>..origin/<base-branch>
+    for material incoming changes on main. For (b): if incoming changes
+    could affect this branch's code or docs, write or update a
+    `## Integration Intent` section in PLAN.md per `plan-anatomy.md`
+    and annotate affected tasks. For every in-scope task needing
     codebase-fit refactor, drift-test update, handoff-doc coherence
     fix, or merge-induced semantic adaptation, append a per-task
     integration review-notes blockquote with [BLOCKING] / [ADVISORY]
-    items. Tasks needing no changes get no annotation.
+    items. Tasks needing no changes get no annotation; flip each
+    annotated task to `Integration status: REVISE` in the same review
+    commit. When the diff to walk is large (see `agent-orchestration`
+    §Workload Balancing), the orchestrator may dispatch parallel
+    sibling reviewers on disjoint worktrees per §Concurrent Writers
+    (Task 4 extension) — each walks a disjoint slice.
+    <prior-round adjudication notes if re-dispatching>.
 ```
 
-The recon reviewer follows the standard reviewer protocol end-to-end — the distribution of findings into per-task PLAN.md blockquotes is the same mechanism every reviewer uses, and the per-task `**Integration status:** REVISE` flip on annotated tasks is the recon reviewer's own act (symmetric with the reviewer flipping `**Review status:** REVISE` during execution). Tasks recon does not annotate stay `Integration status: APPROVED`. The trial-merge happens in a scratch ref that the recon pass does not push; only the Tier classification, the annotations, and the per-task status flips persist.
+### Step 2: Orchestrator — adjudicate and batch user decisions
 
-### Step 2: Orchestrator — evaluate shortcuts
+Read PLAN.md (Integration Intent section + per-task annotations). Two branching points:
 
-After recon commits (with per-task annotations and `Integration status: REVISE` flips on annotated tasks already in place), the orchestrator reads PLAN.md and evaluates the two shortcut axes (Tier from §Decisions log; annotation count from the task blocks):
+- **Zero annotated tasks** — no refactor needed. If main-side scan also found nothing material, Phase B terminates: execute `git merge --ff-only <base-branch>` (or skip if `git merge-base --is-ancestor origin/<base-branch> HEAD`), note in §Decisions, proceed to Phase C.
+- **Annotated tasks exist** — collect every research-meaningful item from the per-task blockquotes. Batch into a single `AskUserQuestion` (plain text if unavailable) — one stop point, not N interruptions. If findings imply a substantive restructure (task add/remove/combine, DAG flip), escalate to `planning-workflow §Changing Plans` instead. Otherwise log each answer per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching implementer(s).
 
-- **Tier 1 + zero annotations** → execute `git merge --ff-only <base-branch>` on the analysis branch; Phase B terminates; proceed to Phase C. Degenerate case: if `git merge-base --is-ancestor origin/<base-branch> HEAD`, the fast-forward merge is a true no-op — skip the merge command entirely and note the skip in the orchestrator's §Decisions log.
-- **Tier 1 + annotations** → execute `git merge --ff-only <base-branch>` as Commit 1; skip to Step 3 (refactor-only dispatch, no `Skills: superRA:semantic-merge` on follow-ups). Degenerate case: if `git merge-base --is-ancestor origin/<base-branch> HEAD`, the fast-forward is a true no-op — skip Commit 1 and note the skip in the implementer's status return. The two-commit structure collapses to one commit (Commit 2 = unified refactor).
-- **Tier 2/3** → proceed to Step 2b, then Step 3 with `Skills: superRA:semantic-merge` on the implementer.
+### Step 3: Fix-review loop
 
-### Step 2b: Batched user decisions
+**3a — Mechanical merge first (when main has diverged).** Before any refactor, land the merge commit on its own. Orchestrator executes directly or dispatches one implementer — no parallelization for this commit. Use `superRA:semantic-merge` when there are conflicts or material main-side changes that need intent-based resolution; `git merge --ff-only` when main is an ancestor. Run drift tests on the merged tree; meaningful drift is a legitimate stop point per `superRA:refactor-and-integrate` `references/drift-test-quality.md`. If merge is a no-op (branch already ahead of main), skip.
 
-Collect every research-meaningful item from recon's per-task blockquotes into a single `AskUserQuestion` call (plain text if unavailable) — one batched stop point rather than interrupting mid-implementation. Include the merge-base target and the Tier classification so the researcher sees the scope at once. Log each answer per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching the implementer.
-
-**Orchestrator split safety-valve.** If the in-scope task list (tasks flipped to `REVISE`) is large enough that the implementer's projected context exceeds the ~150k threshold in `superRA:agent-orchestration` §Workload Balancing, split into sibling implementers on parallel worktrees per §Concurrent Writers Require Worktree Isolation. Each sibling owns a disjoint slice of the in-scope list; the orchestrator harvests and the verify reviewer walks the combined diff.
-
-### Step 3: Dispatch the unified implementer (two-commit)
+**3b — Refactor commits (one per logical change, scoped to REVISE tasks).** Dispatch implementer(s) to address accepted findings. The implementer refuses to touch APPROVED-integration tasks per `refactor-and-integrate` §Scope by Integration Status. Commit granularity is the implementer's judgment; minimum-net-diff self-check before every commit; run drift tests after any refactor that could affect them. When the REVISE task list is large enough to exceed the ~150k context threshold (`agent-orchestration` §Workload Balancing), split into sibling implementers on parallel worktrees per §Concurrent Writers — each owns a disjoint task slice.
 
 ```
 Agent(subagent_type: "superRA:implementer"):
   Stage: integration
-  Task: Phase B unified sync + refactor (two-commit)
+  Task: Phase B refactor — address accepted integration findings
   Tasks in scope: <list of tasks with Integration status: REVISE>
-  Skills: superRA:semantic-merge        # omit when Tier 1
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
-    two-commit structure — Commit 1 is the mechanical merge
-    (`semantic-merge` delegated mode if Tier 2/3; `git merge --ff-only`
-    if Tier 1), Commit 2 is the unified refactor across the in-scope
-    task list. Refuse to refactor code belonging to any task not listed
-    in `Tasks in scope:` — those are APPROVED-integration and out of
-    scope per `refactor-and-integrate` §Scope by Integration Status.
+    address accepted findings from the integration reviewer's
+    blockquotes. Refuse to refactor code belonging to any task
+    not listed in `Tasks in scope:` — those are APPROVED-integration
+    and out of scope per `refactor-and-integrate` §Scope by
+    Integration Status. Flip each in-scope task to
+    `Integration status: IMPLEMENTED` when you commit its fix.
     <prior-round adjudication notes if re-dispatching>.
 ```
 
-**Between the two commits — drift tests.**
-- **Pass after Commit 1** → proceed to Commit 2.
-- **Fail after Commit 1** → drift from main. Follow `superRA:refactor-and-integrate` `references/drift-test-quality.md` for the adjudication protocol (minor vs meaningful); meaningful drift is a legitimate stop point.
+**3c — Re-dispatch integration reviewer.** Walk the cumulative diff; refuse to walk APPROVED-integration tasks not in scope. On APPROVE: the reviewer has flipped in-scope tasks to `Integration status: APPROVED`, removed its per-task review-notes blockquotes, and updated the Integration Intent section (removing resolved items; removing the section when empty). On REVISE: adjudicate per `superRA:agent-orchestration` §Handling Reviewer Feedback; iterate from 3b.
 
-**After Commit 2 — drift tests again.**
-- **Pass** → return control for Step 4 review.
-- **Fail** → same adjudication protocol.
+### Step 4: Flip `Refactored` milestone
 
-As part of the Commit 2 handoff, the unified implementer flips each in-scope task's `**Integration status:** IMPLEMENTED` (per `superRA:handoff-doc` `references/plan-anatomy.md` Integration-status lifecycle); the verify reviewer flips to `APPROVED` (or back to `REVISE` on failing tasks) in Step 4 as part of its own review commit.
-
-### Step 4: Dispatch the verify reviewer
-
-```
-Agent(subagent_type: "superRA:reviewer"):
-  Stage: integration
-  Task: Phase B verify review (unified sync + refactor)
-  Git range: <merge-base>..HEAD   (post-implementer cumulative diff)
-  Tasks in scope: <same list passed to Step 3>
-
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    walk the cumulative diff restricted to the in-scope task list;
-    refuse to walk APPROVED-integration tasks not in scope per
-    `refactor-and-integrate` §Scope by Integration Status. Raise any
-    out-of-scope hunk as a [BLOCKING] finding against Minimum-net-diff.
-    <prior-round adjudication notes if re-dispatching>.
-```
-
-Orchestrator split safety-valve applies here too when the in-scope list is large — sibling reviewers on disjoint slices, orchestrator aggregates verdicts.
-
-- **APPROVE** → the verify reviewer has already flipped the in-scope tasks to `Integration status: APPROVED` in its review commit. If every task is now APPROVED, the orchestrator flips the `Refactored` milestone in PLAN.md §Workflow Status and proceeds to Phase C.
-- **REVISE** → the verify reviewer has already flipped the failing tasks back to `Integration status: REVISE` (and written blockquotes on them) in its review commit. Adjudicate per `superRA:agent-orchestration` §Handling Reviewer Feedback. For accepted findings, re-dispatch the implementer (narrow scope — cited fixes plus dependent findings), then re-dispatch this reviewer. Iterate until APPROVE.
-
-If Phase C or D later triggers a new sync+refactor round, uncheck `Refactored` on entry and re-check on the next verify-reviewer APPROVE.
+When every in-scope task is `Integration status: APPROVED` and the Integration Intent section is empty or absent, the orchestrator flips the `Refactored` box in PLAN.md §Workflow Status and proceeds to Phase C. If Phase C or D later triggers a new sync+refactor round, uncheck `Refactored` on re-entry and re-check on the next reviewer APPROVE.
 
 ## Phase C — Documentation Finalization + PLAN.md Disposition
 
@@ -365,7 +313,7 @@ gh pr create --title "<title>" --body "$(cat <<'EOF'
 ## Pre-Merge Quality
 - Drift tests: included in `tests/` (guard key results); passed on merged state
 - Code refactored for codebase integration
-- Integration review: passed pre-merge (Phase B verify reviewer APPROVE)
+- Integration review: passed pre-merge (Phase B integration reviewer APPROVE)
 
 ## Review Checklist
 - [ ] Pipeline runs end-to-end
@@ -386,7 +334,7 @@ Report what was merged/pushed and what was cleaned up.
 
 **Standalone analysis (no existing codebase to integrate with):**
 - Phase A: Always run.
-- Phase B: Recon reviewer typically leaves zero annotations and reports Tier 1; the Tier 1 + zero-annotations shortcut then collapses Phase B to a single fast-forward merge (or, on a true greenfield branch with no base yet, Phase B is a no-op until a base exists).
+- Phase B: Integration reviewer typically leaves zero annotations and finds no material main-side changes; Phase B then collapses to a single fast-forward merge (or is a no-op on a true greenfield branch).
 
 **Small changes (single-file analysis, few results):**
 - Phase A: Still run, fewer tests.
@@ -394,22 +342,20 @@ Report what was merged/pushed and what was cleaned up.
 
 ## Agent Loads
 
-See `superRA:using-superRA` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows. The Phase B implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the `Skills:` dispatch field on Tier 2/3 — not a separate Stage.
+See `superRA:using-superRA` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows. The Phase B implementer runs `Stage: integration`; `superRA:semantic-merge` is loaded when the mechanical merge needs intent-based resolution (the integration reviewer's annotation drives that call, not a Tier gate).
 
-Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates RESULTS.md maturation per workflow principle P1. Step 4 (PLAN.md disposition) and Phase D Step 2 (milestone flip) stay with the orchestrator because they are user-facing decisions, not RA-implementable tasks. Project-level doc audit is covered by the Phase B verify reviewer per `codebase-integration.md` §Project Doc Audit — not by Phase C.
+Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates RESULTS.md maturation per workflow principle P1. Step 4 (PLAN.md disposition) and Phase D Step 2 (milestone flip) stay with the orchestrator because they are user-facing decisions, not RA-implementable tasks. Project-level doc audit is covered by the Phase B integration reviewer per `codebase-integration.md` §Project Doc Audit — not by Phase C.
 
 ## Red Flags
 
 **Never:**
 - Skip Phase A — drift tests are the safety net for everything downstream
-- Run Phase B as two separate rounds (sync-only, then refactor-only) — that produces two diffs against the merge base and violates minimum-net-diff; always one unified two-commit pass
-- Skip the recon reviewer and dispatch the implementer blind — the per-task integration annotations, the Tier classification, and the user-decision batch all come from recon
-- Interrupt the implementer mid-run with user questions — batch every research-meaningful decision at Phase B Step 2b
-- Invoke semantic-merge in its default (standalone) mode inside Phase B — delegated mode is load-bearing when semantic-merge runs at all (Tier 2/3); Phase B owns the post-merge drift tests and verify review
+- Skip the integration reviewer and dispatch the implementer blind — per-task annotations, Integration Intent updates, and the user-decision batch all come from the reviewer
+- Interrupt the implementer mid-run with user questions — batch every research-meaningful decision at Phase B Step 2 before dispatching
 - Refactor APPROVED-integration tasks not named in `Tasks in scope:` — those are out of scope per `refactor-and-integrate` §Scope by Integration Status
-- Strip domain-discipline artifacts during refactoring — see the `integration` row of the Skill-Load Manifest (plus the conditional `superRA:semantic-merge` Skills-load on Tier 2/3)
+- Strip domain-discipline artifacts during refactoring — see the `integration` row of the Skill-Load Manifest
 - Judge the researcher's methodology — challenges to methodology escalate (RA framing, `using-superRA` §Universal Principles)
-- Advance to Phase C before the verify reviewer APPROVES the unified diff
+- Advance to Phase C before the integration reviewer APPROVES all in-scope tasks
 - Advance to Phase D without a freshness check on the base branch — if main advanced, re-enter Phase B
 - Hand off Phase C Step 4 (PLAN.md disposition) to a subagent — it is a researcher-owned decision
 - Inline Phase C's fact-check checklist or frontmatter spec — it lives in `superRA:report-in-markdown`'s `final-form.md` and `baseline-io.md`
@@ -417,20 +363,19 @@ Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer sub
 
 **Always:**
 - Confirm key-result coverage with the researcher before creating tests, logged per `superRA:handoff-doc` §User Decisions Log
-- Run the recon reviewer first in every Phase B round — per-task annotations + Tier classification drive every downstream decision
-- Evaluate the two shortcut axes (Tier + annotation count) before dispatching any follow-up agent; load `semantic-merge` on follow-ups only when Tier 2/3
-- Batch user decisions at Phase B Step 2b — one stop, not N interruptions
-- Use `superRA:semantic-merge` in delegated mode for the Phase B Commit 1 when Tier 2/3, and for any Phase D re-sync that is itself non-trivial
-- Run drift tests between Commit 1 and Commit 2 when the implementer ran the two-commit structure, and again after Commit 2
+- Dispatch the integration reviewer at the start of every Phase B round — per-task annotations and Integration Intent updates drive every downstream decision
+- Batch user decisions at Phase B Step 2 — one stop, not N interruptions
+- Land the mechanical merge commit before any refactor commits when main has diverged; use `superRA:semantic-merge` when there are conflicts or material main-side changes requiring intent-based resolution
+- Run drift tests after the mechanical merge commit and after each refactor commit that could affect them
 - Run the Implementer Self-Check (`git diff <merge-base>..HEAD`) before every Phase B commit
-- Re-submit to the verify reviewer after every Phase B implementer round
+- Re-submit to the integration reviewer after every Phase B implementer round; iterate until APPROVE
 - Keep and re-validate drift tests through refactoring; author new tests only for tasks with `**Integration status:** ≠ APPROVED`, but run the full suite on every integration pass
 - Dispatch the Phase C doc-writer with `superRA:report-in-markdown` (full mode); dispatch the doc-reviewer afterward; iterate to APPROVE
 - Resolve `RESULTS_DIR` before dispatching the doc-writer — project guidance or `AskUserQuestion`, logged in PLAN.md `## Decisions`
 - Commit at each phase boundary and after each Phase C sub-step (Step 2 sub-commits and Step 4 disposition each land separately)
 - Re-enter Phase B if main advances between Phase B APPROVE and Phase D merge
 
-**Drift-test integrity** is governed by the cross-cutting rules in `superRA:refactor-and-integrate` `references/drift-test-quality.md` — failing tests must be adjudicated, not silently re-expected; tolerance bumps require justification; test removal during refactoring is forbidden. **Merge quality** is governed by `references/merge-quality.md` — Tier 3 conflicts escalate; mechanical/intent commits stay separate. **Codebase integration + minimum net diff** is governed by `references/codebase-integration.md` and the body of `refactor-and-integrate` (Minimum-net-diff top item + Implementer Self-Check).
+**Drift-test integrity** is governed by the cross-cutting rules in `superRA:refactor-and-integrate` `references/drift-test-quality.md` — failing tests must be adjudicated, not silently re-expected; tolerance bumps require justification; test removal during refactoring is forbidden. **Merge quality** is governed by `references/merge-quality.md` — conflicts escalate to the user when research-meaningful; mechanical and intent commits stay separate. **Codebase integration + minimum net diff** is governed by `references/codebase-integration.md` and the body of `refactor-and-integrate` (Minimum-net-diff top item + Implementer Self-Check).
 
 ## Integration
 
@@ -438,7 +383,7 @@ Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer sub
 - **superRA:execution-workflow** Step 4 — when the user chooses Option 1 (merge) or Option 2 (PR) after reproducibility has been verified
 
 **Invokes:**
-- **superRA:semantic-merge** — REQUIRED for Phase B Commit 1 on Tier 2/3 (Tier 1 uses `git merge --ff-only`; see Phase B Step 2) and any Phase D pre-merge re-sync (delegated mode)
+- **superRA:semantic-merge** — invoked by Phase B Step 3's mechanical-merge commit when there are conflicts or material main-side changes requiring intent-based resolution (the integration reviewer's findings determine whether this is needed); also used for any Phase D pre-merge re-sync that is non-trivial
 - **superRA:refactor-and-integrate** — loaded by every dispatched implementer and reviewer in Phases A, B, and D; principles in body, `[BLOCKING]` / `[ADVISORY]` items in stage-scoped references
 - **superRA:report-in-markdown** — loaded by the Phase C doc-writer (full mode) and doc-reviewer
 - **superRA:handoff-doc** — loaded on demand for User Decisions Log format and PLAN.md anatomy
