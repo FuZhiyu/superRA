@@ -30,7 +30,7 @@
 
 ## Task 2: Consolidate CLAUDE.md as the developer / contributor doc
 
-**Status:** IMPLEMENTED.
+**Status:** APPROVED.
 
 **Summary.** Finished the stash's mid-rewrite of `CLAUDE.md` into a coherent contributor doc. Section-by-section:
 

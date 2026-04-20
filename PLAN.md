@@ -182,7 +182,7 @@ DAG cascade: Task 1a `**Review status:**` rolled back APPROVED → REVISE. Task 
 - [x] `rg -n "TODO|placeholder|tbd" CLAUDE.md` → clean
 - [x] Commit: `docs(claude-md): consolidate developer-facing design doc`
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(N/A)*
 
 ---
