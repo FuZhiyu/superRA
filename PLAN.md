@@ -74,7 +74,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
 ### Task 1: Rewrite `integration-workflow` Phase B
 **Depends on:** *(none)*
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** N/A
@@ -101,17 +101,17 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 
   All four workflow principles preserved. `grep -n "Tier 1\|Tier 2\|Tier 3\|recon reviewer\|verify reviewer\|two-commit\|shortcut ax" skills/integration-workflow/SKILL.md` → empty. Committed.
 
-- [ ] **Step 6 (Round 3, C1): Loosen integration base to be researcher-selectable**
+- [x] **Step 6 (Round 3, C1): Loosen integration base to be researcher-selectable**
 
-  Replace hardcoded `merge-base..origin/<base-branch>` in Phase B Step 1's dispatch block + surrounding prose with a named `<integration-base>` that defaults to `origin/main` but can be overridden. The override surfaces at `execution-workflow` Step 4 when the researcher picks Option 1 / Option 2 — that is where the integration target is known. Update §Phase Map, §Always list, and Integration Intent walking instructions so nothing else in Phase B asserts main-only.
+  Added an "Integration base" intro paragraph to Phase B establishing that `<base-branch>` is researcher-specified (default `origin/main`, overridable at `execution-workflow` Step 4). Updated the Step 1 dispatch steering to say "base-branch-side" / "integration base" instead of "main"; Step 2 zero-annotation path same; Step 3a "when the base branch has diverged" / "when `<base-branch>` is an ancestor".
 
-- [ ] **Step 7 (Round 3, C2): Collapse Phase B Step 3b dispatch block**
+- [x] **Step 7 (Round 3, C2): Collapse Phase B Step 3b dispatch block**
 
-  The current Step 3b embeds a full `Agent(subagent_type: "superRA:implementer"): …` block that duplicates the canonical template in `agent-orchestration §Dispatch Templates`. Collapse to a short paragraph that (a) points at the canonical template and (b) lists only the integration-specific additions (`Tasks in scope:` = REVISE list; mechanical merge first; drift tests after refactor). If additions cannot fit cleanly under the canonical shape, either extend the canonical template with an optional integration note or keep a tight annotated block with a one-line comment explaining why it stays. Grep target: `grep -n "Agent(subagent_type:" skills/integration-workflow/SKILL.md` → 0 or 1 hit with justification.
+  Dispatch block deleted. Replaced with a paragraph pointing at `agent-orchestration §Dispatch Templates` for canonical shape + a four-bullet list of integration-stage additions (`Stage: integration`, `Tasks in scope:` + refusal-to-refactor-APPROVED semantics + IMPLEMENTED flip, mechanical merge must land first, drift tests re-run after affecting refactor). Grep `Agent(subagent_type:` against `integration-workflow/SKILL.md` now shows three hits: one Phase B Step 1 reviewer dispatch (canonical for that stage) + two Phase C doc-writer / doc-reviewer dispatches (out of scope for Step 7). Phase B Step 3b is dispatch-block-free.
 
-- [ ] **Step 8 (Round 3, C3): Triage §Red Flags**
+- [x] **Step 8 (Round 3, C3): Triage §Red Flags**
 
-  Walk each `Never:` / `Always:` bullet against two criteria: (a) warns against a rationalization the RA is plausibly going to make; (b) not already implied by a `[BLOCKING]` item in `refactor-and-integrate` or `using-superRA` §Universal Principles. Bullets that fail both are removed; bullets that restate content carried elsewhere are replaced with a pointer; if the whole section loses its teeth, drop it entirely. Preserve carefully-tuned content load-bearing from Round 1 (integration reviewer cannot be skipped, implementer not to be interrupted mid-run). Commit.
+  Cut 11 Never bullets → 4; 12 Always bullets → 1. Kept: (a) Never skip the integration reviewer; (b) Never advance to Phase D without a base-branch freshness check; (c) Never hand off Phase C Step 4 to a subagent; (d) Never clean up the worktree before the merge/push completes; (e) Always scope new-drift-test authoring to non-APPROVED tasks but run the full suite. Dropped bullets were either sequencing reminders already stated in the phase prose, or restatements of `refactor-and-integrate` / `using-superRA` universal principles; one pointer block at the end of the section names the cross-cutting owners. Added a lede sentence making the triage criterion explicit.
 
 ---
 

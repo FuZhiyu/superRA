@@ -82,7 +82,9 @@ Drift tests guard key results from unintended changes during Phase B refactoring
 
 ## Phase B — Integrate (Sync + Refactor, Iterative)
 
-The integration reviewer drives the loop. It walks both the branch diff and main-side changes, writes per-task annotations in PLAN.md, and writes or updates a `## Integration Intent` section when material main-side changes need adaptation (see `superRA:handoff-doc` `references/plan-anatomy.md` §Integration Intent for the section's anatomy and ownership rules). The orchestrator adjudicates findings, batches user decisions, then dispatches implementer(s) to fix, and re-dispatches the reviewer. Repeat until every in-scope task is APPROVED.
+**Integration base.** Phase B integrates the analysis branch against a researcher-specified base — `<base-branch>` in every reference below. The default is `origin/main`; the researcher may override at `execution-workflow` Step 4 when the analysis branched off a release, a co-authored track, or another analysis's sibling branch. The ref is fetched fresh (`git fetch origin <base-branch>`) at the start of Phase B so "main-side" scans walk current upstream state.
+
+The integration reviewer drives the loop. It walks both the branch diff and the base-branch-side changes, writes per-task annotations in PLAN.md, and writes or updates a `## Integration Intent` section when material incoming changes need adaptation (see `superRA:handoff-doc` `references/plan-anatomy.md` §Integration Intent for the section's anatomy and ownership rules). The orchestrator adjudicates findings, batches user decisions, then dispatches implementer(s) to fix, and re-dispatches the reviewer. Repeat until every in-scope task is APPROVED.
 
 ### Step 1: Dispatch the integration reviewer
 
@@ -96,19 +98,21 @@ Agent(subagent_type: "superRA:reviewer"):
     relevant skills and documents to proceed. Additionally,
     walk (a) <merge-base>..HEAD for integration fit per
     `refactor-and-integrate`; (b) <merge-base>..origin/<base-branch>
-    for material incoming changes on main. For (b): if incoming changes
-    could affect this branch's code or docs, write or update a
-    `## Integration Intent` section in PLAN.md per `plan-anatomy.md`
-    and annotate affected tasks. For every in-scope task needing
-    codebase-fit refactor, drift-test update, handoff-doc coherence
-    fix, or merge-induced semantic adaptation, append a per-task
-    integration review-notes blockquote with [BLOCKING] / [ADVISORY]
-    items. Tasks needing no changes get no annotation; flip each
-    annotated task to `Integration status: REVISE` in the same review
-    commit. When the diff to walk is large (see `agent-orchestration`
+    for material incoming changes on the integration base. For (b):
+    if incoming changes could affect this branch's code or docs,
+    write or update a `## Integration Intent` section in PLAN.md
+    per `plan-anatomy.md` and annotate affected tasks. For every
+    in-scope task needing codebase-fit refactor, drift-test update,
+    handoff-doc coherence fix, or merge-induced semantic adaptation,
+    append a per-task integration review-notes blockquote with
+    [BLOCKING] / [ADVISORY] items. Tasks needing no changes get
+    no annotation; flip each annotated task to
+    `Integration status: REVISE` in the same review commit. When
+    the diff to walk is large (see `agent-orchestration`
     §Workload Balancing), the orchestrator may dispatch parallel
-    sibling reviewers on disjoint worktrees per §Concurrent Writers
-    (Task 4 extension) — each walks a disjoint slice.
+    sibling reviewers on disjoint worktrees per
+    §Parallelization and Worktree Isolation — each walks a
+    disjoint slice.
     <prior-round adjudication notes if re-dispatching>.
 ```
 
@@ -116,31 +120,21 @@ Agent(subagent_type: "superRA:reviewer"):
 
 Read PLAN.md (Integration Intent section + per-task annotations). Two branching points:
 
-- **Zero annotated tasks** — no refactor needed. If main-side scan also found nothing material, Phase B terminates: execute `git merge --ff-only <base-branch>` (or skip if `git merge-base --is-ancestor origin/<base-branch> HEAD`), note in §Decisions, proceed to Phase C.
-- **Annotated tasks exist** — collect every research-meaningful item from the per-task blockquotes. Batch into a single `AskUserQuestion` (plain text if unavailable) — one stop point, not N interruptions. If findings imply a substantive restructure (task add/remove/combine, DAG flip), escalate to `planning-workflow §Changing Plans` instead. Otherwise log each answer per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching implementer(s).
+- **Zero annotated tasks** — no refactor needed. If the base-branch-side scan also found nothing material, Phase B terminates: execute `git merge --ff-only <base-branch>` (or skip if `git merge-base --is-ancestor origin/<base-branch> HEAD`), note in §Decisions, proceed to Phase C.
+- **Annotated tasks exist** — collect every research-meaningful item from the per-task blockquotes. Batch into a single `AskUserQuestion` (plain text if unavailable) — one stop point, not N interruptions. If findings imply a substantive restructure (task add/remove/combine, DAG flip), escalate to `planning-workflow §User Feedback and Changing Plans` instead. Otherwise log each answer per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching implementer(s).
 
 ### Step 3: Fix-review loop
 
-**3a — Mechanical merge first (when main has diverged).** Before any refactor, land the merge commit on its own. Orchestrator executes directly or dispatches one implementer — no parallelization for this commit. Use `superRA:semantic-merge` when there are conflicts or material main-side changes that need intent-based resolution; `git merge --ff-only` when main is an ancestor. Run drift tests on the merged tree; meaningful drift is a legitimate stop point per `superRA:refactor-and-integrate` `references/drift-test-quality.md`. If merge is a no-op (branch already ahead of main), skip.
+**3a — Mechanical merge first (when the base branch has diverged).** Before any refactor, land the merge commit on its own. Orchestrator executes directly or dispatches one implementer — no parallelization for this commit. Use `superRA:semantic-merge` when there are conflicts or material base-branch-side changes that need intent-based resolution; `git merge --ff-only` when `<base-branch>` is an ancestor. Run drift tests on the merged tree; meaningful drift is a legitimate stop point per `superRA:refactor-and-integrate` `references/drift-test-quality.md`. If merge is a no-op (branch already ahead of `<base-branch>`), skip.
 
-**3b — Refactor commits (one per logical change, scoped to REVISE tasks).** Dispatch implementer(s) to address accepted findings. The implementer refuses to touch APPROVED-integration tasks per `refactor-and-integrate` §Scope by Integration Status. Commit granularity is the implementer's judgment; minimum-net-diff self-check before every commit; run drift tests after any refactor that could affect them. When the REVISE task list is large enough to exceed the ~150k context threshold (`agent-orchestration` §Workload Balancing), split into sibling implementers on parallel worktrees per §Concurrent Writers — each owns a disjoint task slice.
+**3b — Refactor commits (one per logical change, scoped to REVISE tasks).** Dispatch implementer(s) to address accepted findings using the canonical implementer template in `agent-orchestration §Dispatch Templates`. Integration-stage additions to the template:
 
-```
-Agent(subagent_type: "superRA:implementer"):
-  Stage: integration
-  Task: Phase B refactor — address accepted integration findings
-  Tasks in scope: <list of tasks with Integration status: REVISE>
+- `Stage: integration`.
+- `Tasks in scope: <list of tasks with Integration status: REVISE>` — the implementer refuses to refactor any task not in this list; flips each in-scope task to `Integration status: IMPLEMENTED` on commit.
+- Mechanical merge (3a) must land before any refactor commit.
+- Drift tests are re-run after any refactor that could affect them.
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    address accepted findings from the integration reviewer's
-    blockquotes. Refuse to refactor code belonging to any task
-    not listed in `Tasks in scope:` — those are APPROVED-integration
-    and out of scope per `refactor-and-integrate` §Scope by
-    Integration Status. Flip each in-scope task to
-    `Integration status: IMPLEMENTED` when you commit its fix.
-    <prior-round adjudication notes if re-dispatching>.
-```
+Commit granularity is the implementer's judgment; minimum-net-diff self-check before every commit. When the REVISE task list is large enough to exceed the ~150k context threshold (`agent-orchestration` §Workload Balancing), split into sibling implementers on parallel worktrees per `agent-orchestration §Parallelization and Worktree Isolation` — each owns a disjoint task slice.
 
 **3c — Re-dispatch integration reviewer.** Walk the cumulative diff; refuse to walk APPROVED-integration tasks not in scope. On APPROVE: the reviewer has flipped in-scope tasks to `Integration status: APPROVED`, removed its per-task review-notes blockquotes, and updated the Integration Intent section (removing resolved items; removing the section when empty). On REVISE: adjudicate per `superRA:agent-orchestration` §Handling Reviewer Feedback; iterate from 3b.
 
@@ -346,31 +340,15 @@ Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer sub
 
 ## Red Flags
 
+Each bullet below catches a rationalization the RA is plausibly going to make *in this phase*. Sequencing reminders and cross-skill principles (integration discipline, merge quality, drift-test integrity, RA framing) live where they are owned and are not restated here. See the cross-cutting references at the end of this section.
+
 **Never:**
-- Skip Phase A — drift tests are the safety net for everything downstream
 - Skip the integration reviewer and dispatch the implementer blind — per-task annotations, Integration Intent updates, and the user-decision batch all come from the reviewer
-- Interrupt the implementer mid-run with user questions — batch every research-meaningful decision at Phase B Step 2 before dispatching
-- Refactor APPROVED-integration tasks not named in `Tasks in scope:` — those are out of scope per `refactor-and-integrate` §Scope by Integration Status
-- Strip domain-discipline artifacts during refactoring — see the `integration` row of the Skill-Load Manifest
-- Judge the researcher's methodology — challenges to methodology escalate (RA framing, `using-superRA` §Universal Principles)
-- Advance to Phase C before the integration reviewer APPROVES all in-scope tasks
-- Advance to Phase D without a freshness check on the base branch — if main advanced, re-enter Phase B
+- Advance to Phase D without a freshness check on the integration base — if the base branch advanced, re-enter Phase B
 - Hand off Phase C Step 4 (PLAN.md disposition) to a subagent — it is a researcher-owned decision
-- Inline Phase C's fact-check checklist or frontmatter spec — it lives in `superRA:report-in-markdown`'s `final-form.md` and `baseline-io.md`
-- Cleanup the worktree before the merge or push has actually completed
+- Clean up the worktree before the merge or push has actually completed
 
 **Always:**
-- Confirm key-result coverage with the researcher before creating tests, logged per `superRA:handoff-doc` §User Decisions Log
-- Dispatch the integration reviewer at the start of every Phase B round — per-task annotations and Integration Intent updates drive every downstream decision
-- Batch user decisions at Phase B Step 2 — one stop, not N interruptions
-- Land the mechanical merge commit before any refactor commits when main has diverged; use `superRA:semantic-merge` when there are conflicts or material main-side changes requiring intent-based resolution
-- Run drift tests after the mechanical merge commit and after each refactor commit that could affect them
-- Run the Implementer Self-Check (`git diff <merge-base>..HEAD`) before every Phase B commit
-- Re-submit to the integration reviewer after every Phase B implementer round; iterate until APPROVE
-- Keep and re-validate drift tests through refactoring; author new tests only for tasks with `**Integration status:** ≠ APPROVED`, but run the full suite on every integration pass
-- Dispatch the Phase C doc-writer with `superRA:report-in-markdown` (full mode); dispatch the doc-reviewer afterward; iterate to APPROVE
-- Resolve `RESULTS_DIR` before dispatching the doc-writer — project guidance or `AskUserQuestion`, logged in PLAN.md `## Decisions`
-- Commit at each phase boundary and after each Phase C sub-step (Step 2 sub-commits and Step 4 disposition each land separately)
-- Re-enter Phase B if main advances between Phase B APPROVE and Phase D merge
+- Author new drift tests only for tasks with `**Integration status:** ≠ APPROVED`, but run the **full** drift-test suite on every integration pass (scope is for authoring; running is not scoped)
 
-**Drift-test integrity** is governed by the cross-cutting rules in `superRA:refactor-and-integrate` `references/drift-test-quality.md` — failing tests must be adjudicated, not silently re-expected; tolerance bumps require justification; test removal during refactoring is forbidden. **Merge quality** is governed by `references/merge-quality.md` — conflicts escalate to the user when research-meaningful; mechanical and intent commits stay separate. **Codebase integration + minimum net diff** is governed by `references/codebase-integration.md` and the body of `refactor-and-integrate` (Minimum-net-diff top item + Implementer Self-Check).
+**Drift-test integrity** is governed by the cross-cutting rules in `superRA:refactor-and-integrate` `references/drift-test-quality.md`. **Merge quality** is governed by `references/merge-quality.md`. **Codebase integration + minimum net diff** is governed by `references/codebase-integration.md` and the body of `refactor-and-integrate` (Minimum-net-diff top item + Implementer Self-Check). **RA framing** (no unilateral methodology judgments; escalate via `AskUserQuestion`) is governed by `superRA:using-superRA` §Universal Principles.
