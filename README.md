@@ -27,35 +27,20 @@ superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. 
 
 ```mermaid
 flowchart TB
-    PLAN["<b>PLAN</b><br/>Scope · task decomposition<br/>PLAN.md + RESULTS.md"]
-
-    subgraph IMPLEMENT["<b>IMPLEMENT</b> (per task)"]
-        IMPL["implementer<br/>code + doc commit"]
-        REV["reviewer<br/>APPROVE / REVISE"]
-        IMPL --> REV
-        REV -->|REVISE| IMPL
-    end
-
-    subgraph INTEGRATE["<b>INTEGRATE</b>"]
-        A["A · drift tests for key results"]
-        B["B · review-led sync + refactor"]
-        C["C · mature RESULTS.md + doc audit"]
-        D["D · merge / PR / cleanup"]
-        A --> B --> C --> D
-    end
-
+    PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
+    IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
+    INTEGRATE["<b>INTEGRATE</b><br/>A drift tests · B review-led sync + refactor<br/>C mature RESULTS.md + doc audit · D merge / PR / cleanup"]
     MERGED(["merged"])
 
     PLAN --> IMPLEMENT
-    IMPLEMENT -->|all tasks APPROVED, user chooses merge| INTEGRATE
-    D --> MERGED
+    IMPLEMENT --> INTEGRATE
+    INTEGRATE --> MERGED
 
-    PLAN -. "scope change (§User Feedback and Changing Plans)" .- IMPLEMENT
-    PLAN -. "scope change" .- INTEGRATE
+    INTEGRATE -. "scope change" .-> PLAN
 
     classDef phase fill:#eef7ff,stroke:#0366d6,color:#000
     classDef terminal fill:#e8f5e9,stroke:#2e7d32,color:#000
-    class PLAN,IMPL,REV,A,B,C,D phase
+    class PLAN,IMPLEMENT,INTEGRATE phase
     class MERGED terminal
 ```
 
