@@ -20,7 +20,7 @@
 
 - [x] **Plan approved** — researcher signed off on this plan (2026-04-19; re-approved after §Changing Plans protocol on 2026-04-19 for recon-as-reviewer architecture and shortcut axes)
 - [x] **Execution complete** — all tasks `APPROVED` (2026-04-19)
-- [ ] **Drift tests created** — N/A for skill refactor; substitute: skill-graph consistency sweep + end-to-end dry-run verified
+- [x] **Drift tests created** — N/A for skill refactor; substitute satisfied by Task 7 end-to-end dry-run + skill-graph consistency sweep (2026-04-19)
 - [ ] **Refactored** — final integration-review approval on the consolidated skill changes
 - [ ] **Docs finalized** — README / RELEASE-NOTES / CATEGORIES / CLAUDE.md audited and consistent with new skill graph
 - [ ] **Merged** — branch merged to main or PR opened
