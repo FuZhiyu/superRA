@@ -39,8 +39,8 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 ## Workflow Status
 
 - [x] Plan approved
-- [ ] Task 1a — Mermaid workflow diagram (REVISE: layout rejected on visual inspection)
-- [ ] Task 1b — README prose rewrite (REVISE: diagram re-embed only)
+- [ ] Task 1a — Mermaid workflow diagram (awaiting re-review)
+- [ ] Task 1b — README prose rewrite (awaiting re-review)
 - [ ] Task 2 — CLAUDE.md consolidation
 - [ ] Task 3 — plugin.json + marketplace.json descriptions
 - [ ] Task 4 — installation instructions verified
@@ -99,16 +99,17 @@ DAG cascade: Task 1a `**Review status:**` rolled back APPROVED → REVISE. Task 
 **Steps:**
 
 - [x] Read `README.md` (current state) and the prior Workflow Map diagram (via `git show 3970828^:README.md`) to set the density ceiling — the new diagram sits well below it (no cross-cutting rail, no skill-load manifest detail).
-- [x] Draft the diagram as `flowchart TB` with subgraphs for IMPLEMENT (implementer/reviewer loop) and INTEGRATE (Phases A–D); scope-change dotted arrows from both subgraphs back to PLAN; terminal `merged` node off Phase D.
-- [x] Validated via `npx @mermaid-js/mermaid-cli` (rendered `/tmp/diagram-test.svg` cleanly, no syntax errors).
+- [x] Draft the diagram as `flowchart TB` with one IMPLEMENT subgraph (implementer ⇄ reviewer loop, default TB) and one INTEGRATE subgraph (A → B → C → D chain); main column is PLAN → IMPLEMENT → INTEGRATE → `merged`; scope-change back-arrows represented as undirected dotted edges (`PLAN -. scope change .- IMPLEMENT` and `PLAN -. scope change .- INTEGRATE`) so dagre routes them along the sides without dragging PLAN off-column.
+- [x] Render + visually inspect: `npx @mermaid-js/mermaid-cli -i /tmp/wfdiag/src.mmd -o /tmp/wfdiag/out.png -b white`, viewed output via Read tool. Confirmed: PLAN is at top of a single vertical column, IMPLEMENT stacks below it, INTEGRATE below that, `merged` terminal at the bottom; the two dotted scope-change edges curve along the left (PLAN ↔ IMPLEMENT) and right (PLAN ↔ INTEGRATE) sides of the column; implementer ⇄ reviewer loop readable inside IMPLEMENT; A → B → C → D chain readable inside INTEGRATE.
 - [x] Saved to `docs/drafts/workflow-diagram.mmd` with a leading comment noting the target embed location (README §Plan-Implement-Integrate Workflow).
 - [x] Commit: `docs(readme): draft workflow diagram for embedding`.
 
 **Expected result.** A self-contained Mermaid file that Task 1b can lift into README without further thought.
 
 > **Reviewer revision — 2026-04-20 (user feedback):** Prior `APPROVE` rolled back. The two-subgraph layout (`flowchart TB` with IMPLEMENT subgraph in `direction LR`) breaks the linear PLAN → IMPLEMENT → INTEGRATE reading order the user wants. Redo per the layout brief in §Decisions (strict vertical column, dotted back-arrows for scope-change routed along the side, render + visually inspect before claiming done).
+> → implemented: rewrote `docs/drafts/workflow-diagram.mmd` — dropped the `direction LR` override on IMPLEMENT, kept both subgraphs in default TB, and replaced the directed `IMPLEMENT -.-> PLAN` / `INTEGRATE -.-> PLAN` back-arrows with undirected dotted edges `PLAN -. scope change .- IMPLEMENT` / `PLAN -. scope change .- INTEGRATE`. Undirected edges don't feed dagre's rank solver, so PLAN stays at the top of the column; the edges render as dotted curves along the left and right sides of the main column without disrupting the vertical reading order. Rendered to PNG and visually inspected before handing off (evidence via Read on `/tmp/wfdiag/out.png`).
 
-**Review status:** REVISE
+**Review status:** IMPLEMENTED
 **Integration status:** *(N/A)*
 
 ---
@@ -147,8 +148,9 @@ DAG cascade: Task 1a `**Review status:**` rolled back APPROVED → REVISE. Task 
 **Expected result.** A `README.md` a first-time user can read front-to-back in 5 minutes and know: what this is, when to use it, what skills ship, how to install, and where to read more.
 
 > **Reviewer revision — 2026-04-20 (cascade from Task 1a):** Prior `APPROVE` rolled back because the embedded Mermaid diagram is now stale. Scope of the re-revision: replace the ```mermaid``` fenced block in README §Plan-Implement-Integrate Workflow with the revised `docs/drafts/workflow-diagram.mmd`. Every other section of README stays as-is.
+> → implemented: re-embedded the revised diagram — replaced only the ```mermaid ... ``` fenced block in README §Plan-Implement-Integrate Workflow with the body of `docs/drafts/workflow-diagram.mmd` verbatim. All surrounding prose (the paragraph above the diagram, §Key principles, §Domain Skills, §Utility Skills, §Installation, §Hooks, §Contributing, §Upstream, §License) is byte-identical to the APPROVED state in commit `9825529`.
 
-**Review status:** REVISE
+**Review status:** IMPLEMENTED
 **Integration status:** *(docs-only; N/A)*
 
 ---
