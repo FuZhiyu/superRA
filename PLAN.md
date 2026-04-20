@@ -189,7 +189,7 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 - [x] Decide version: keep `0.0.4.1` (in-flight docs) or bump to `0.1.0` (first public release) — **this is a user decision, log via `AskUserQuestion` and record in §Decisions before editing**
 - [x] Commit: `plugin: user-facing description + version bump for initial release`
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(N/A)*
 
 ---

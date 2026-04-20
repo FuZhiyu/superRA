@@ -34,7 +34,7 @@
 
 ## Task 3: Update plugin.json + marketplace.json descriptions
 
-**Status:** IMPLEMENTED.
+**Status:** APPROVED.
 
 **Summary.** Updated `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` to reflect the broadened scope of superRA and to mark the first public release.
 
