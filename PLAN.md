@@ -74,6 +74,10 @@
 
 > **Integration recon (2026-04-19):** Tier 1 — trivial fast-forward; `origin/main` has not advanced since merge-base `92a685b` (0 commits behind), `git merge-tree` reports no conflicts, branch is 31 commits ahead. Phase B merge path = `git merge --ff-only`; follow-ups do NOT load `semantic-merge`.
 
+> **Orchestrator decision (2026-04-19):** `RESULTS_DIR` = `docs/plans/`; target filename `2026-04-19-unified-integration-workflow-results.md` per existing repo convention (date-prefixed plan/results pairs alongside historical refactors). No researcher stop needed — convention is unambiguous from `docs/plans/` contents.
+> **Question asked:** Where should the matured RESULTS.md land?
+> **Rationale:** `docs/plans/` is the established archive for refactor plans and results; filename mirrors sibling entries like `2026-04-16-design-coherence-refactor-results.md`. No figures in this refactor → attachments step is a no-op.
+
 ---
 
 ## Project Conventions
