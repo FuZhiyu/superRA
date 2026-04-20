@@ -201,7 +201,6 @@ Future verticals — theory/modeling, literature review, simulation, writing/pap
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
-| **session-start** | Session start, `/clear`, `/compact` | Inject using-superRA skill |
 | **merge-guard** | Before any `git merge/rebase/cherry-pick` | Remind to use semantic-merge skill |
 | **ask-user-question-logger** | After `AskUserQuestion` | Remind to log the decision in PLAN.md before acting |
 | **exit-plan-mode** | After `ExitPlanMode` | Remind to materialize plan into PLAN.md + RESULTS.md before implementing |
