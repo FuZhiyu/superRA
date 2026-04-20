@@ -21,7 +21,7 @@
 - [x] **Plan approved** — researcher signed off on this plan (2026-04-19; re-approved after §Changing Plans protocol on 2026-04-19 for recon-as-reviewer architecture and shortcut axes)
 - [x] **Execution complete** — all tasks `APPROVED` (2026-04-19)
 - [x] **Drift tests created** — N/A for skill refactor; substitute satisfied by Task 7 end-to-end dry-run + skill-graph consistency sweep (2026-04-19)
-- [ ] **Refactored** — final integration-review approval on the consolidated skill changes
+- [x] **Refactored** — Phase B verify reviewer APPROVED cumulative diff (2026-04-19); Tasks 1, 2 Integration status APPROVED; Tasks 3–7 APPROVED (no recon annotations)
 - [ ] **Docs finalized** — README / RELEASE-NOTES / CATEGORIES / CLAUDE.md audited and consistent with new skill graph
 - [ ] **Merged** — branch merged to main or PR opened
 
@@ -103,7 +103,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ### Task 1: Rebuild `refactor-and-integrate` as a gated checklist
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 
 **Script:** N/A (skill file refactor)
 **Input:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines (pattern reference)
@@ -142,7 +142,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only.
 ### Task 2: Unify `integration-workflow` — Phases A–D with iterative Phase B
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** current `skills/integration-workflow/SKILL.md`, current `skills/merge-workflow/SKILL.md`, Task 1's rewritten `refactor-and-integrate`, `agent-orchestration §Dispatch Templates`
