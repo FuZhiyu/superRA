@@ -262,9 +262,14 @@ DAG cascade: Task 1a `**Review status:**` rolled back APPROVED → REVISE. Task 
 > - `skills/agent-orchestration/SKILL.md` line 3: `"...Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / VALIDATE / INTEGRATE)."` — same four-phase string.
 >
 > Both should read `PLAN → IMPLEMENT → INTEGRATE` / `(PLAN / IMPLEMENT / INTEGRATE)`. Note: `execution-workflow/SKILL.md` lines 3 and 8 also reference "IMPLEMENT and VALIDATE phases" — this is an intentional skill-internal term for that skill's reproducibility-verification step and does not need changing; only the top-level three-phase workflow description strings above require the fix.
+> → implemented: commit 70daa81 (`docs(skills): drop VALIDATE from planning-workflow + agent-orchestration descriptions`) — both frontmatter descriptions updated; `PLAN → IMPLEMENT → INTEGRATE` and `(PLAN / IMPLEMENT / INTEGRATE)` confirmed in the current file state.
+
+> **Integration review — 2026-04-20:**
+>
+> **BLOCKING — Review status not closed out.** The MAJOR item above was fixed in commit 70daa81 (merged 101df95), but `**Review status:**` still reads REVISE and the blockquote has no `→ implemented:` marker closing the item. The handoff doc misrepresents the code state. Fix: add the `→ implemented:` annotation (done above), flip `**Review status:**` to APPROVED, and flip this task's `**Integration status:**` to APPROVED.
 
 **Review status:** REVISE
-**Integration status:** *(N/A)*
+**Integration status:** REVISE
 
 ---
 
