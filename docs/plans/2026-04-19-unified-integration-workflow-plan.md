@@ -23,7 +23,7 @@
 - [x] **Drift tests created** — N/A for skill refactor; substitute satisfied by Task 7 end-to-end dry-run + skill-graph consistency sweep (2026-04-19)
 - [x] **Refactored** — Phase B re-entry verify reviewer APPROVED (2026-04-19) cumulative diff post-semantic-merge (Tier 2 absorption of origin/main 9831255..6d4a0ea into merge commit `712602e`); all 8 tasks `**Integration status:** APPROVED`
 - [x] **Docs finalized** — Phase C re-entry doc-reviewer APPROVED (2026-04-19) re-matured RESULTS.md with Task 8 retrospective-refinements subsection + Phase B re-entry Tier 2 validation narrative
-- [ ] **Merged** — rolled back 2026-04-19 by §Changing Plans; PR #5 description and branch both require the Task 8 changes before merge
+- [x] **Merged** — PR #5 updated (2026-04-19); Phase D Step 1 freshness check confirmed `origin/main` unchanged since post-semantic-merge merge-base `6d4a0ea`
 
 ---
 
