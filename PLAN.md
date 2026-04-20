@@ -206,7 +206,7 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 - [x] Verified "Other Platforms" entry files exist at repo root (`AGENTS.md`, `GEMINI.md`, `gemini-extension.json`) and named them explicitly in the subsection with direct links. Users no longer have to guess what the upstream Superpowers docs refer to.
 - [x] Commit: `docs(readme): modernize installation instructions`
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(N/A)*
 
 ---
