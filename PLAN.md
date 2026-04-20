@@ -75,7 +75,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 1: Rewrite `integration-workflow` Phase B
 **Depends on:** *(none)*
 **Review status:** IMPLEMENTED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** current `skills/integration-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/agent-orchestration/SKILL.md` §Dispatch Templates + §Handling Reviewer Feedback + §Parallelization and Worktree Isolation, `skills/refactor-and-integrate/SKILL.md` + references (linked, unchanged).
@@ -168,7 +168,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 4: Generalize `agent-orchestration §Parallelization and Worktree Isolation`
 **Depends on:** *(none)*
 **Review status:** IMPLEMENTED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/agent-orchestration/SKILL.md` (section was §Concurrent Writers Require Worktree Isolation in Round 2; renamed to §Parallelization and Worktree Isolation in Round 3 as part of this task's extension).
@@ -198,7 +198,10 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 5: Sync peripheral surfaces
 **Depends on:** Tasks 1, 2, 3, 4
 **Review status:** IMPLEMENTED
-**Integration status:**
+**Integration status:** APPROVED
+
+> **Review notes (integration, Round 3):**
+> 1. [ADVISORY] `skills/refactor-and-integrate/SKILL.md` lines 90–91 (§Integration block) carry pre-existing stale vocabulary that survived the Round 2 sweep: "Phase B recon, unified-implementer, and verify-reviewer dispatches" and "semantic-merge … Dispatches merge proposer and merge reviewer for tier classification and conflict resolution". These reference constructs explicitly removed in Round 2 (recon/verify-reviewer naming split per Task 1; Tier 1/2/3 matrix + in-skill dispatch blocks per Task 3). Round 2 Task 5 Step 4's grep pattern (`recon reviewer|verify reviewer|delegated mode|Standalone mode`) missed the hyphenated forms. Round 3 Task 5 Step 5 swept three renames but did not re-audit the Round 2 removal targets. Fix is a two-sentence rewrite of §Integration's workflow-skill bullets to match the current phase language ("Phase B integration reviewer", "integration-stage implementer") and drop the tier-classification framing. Does not block merge — the section is metadata linking from `refactor-and-integrate` out to its workflow callers, not load-bearing prose for any in-flight decision.
 
 **Script:** N/A
 **Input:** `README.md`, `skills/CATEGORIES.md`, `RELEASE-NOTES.md`, `skills/using-superRA/SKILL.md` §Skill-Load Manifest, `agents/reviewer.md`, `agents/implementer.md`.
@@ -238,7 +241,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 6: End-to-end dry-read verification
 **Depends on:** Tasks 1, 2, 3, 4, 5, 7
 **Review status:** IMPLEMENTED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** All round-2 refactored skills + agent files + peripheral docs.
@@ -295,7 +298,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 7: Simplify `refactor-and-integrate` — §Scope by Integration Status + merge-quality two-commit mandate (C4 + C5)
 **Depends on:** Task 1 (Task 1 Step 7's collapse of the Phase B Step 3b dispatch may already carry the scope-list semantics that §Scope by Integration Status currently codifies)
 **Review status:** IMPLEMENTED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/refactor-and-integrate/SKILL.md` §Scope by Integration Status; `skills/refactor-and-integrate/references/merge-quality.md` §How-To §Two-commit structure + associated gated checklist items; Task 1 Step 7's output (to see what dispatch-level scope info now lives in Phase B Step 3b).
@@ -320,7 +323,7 @@ Rationale for bundling C4 + C5: both live in the same skill (`refactor-and-integ
 ### Task 8: Tighten Changing Plans protocol + Stale Content Checklist
 **Depends on:** *(none)*
 **Review status:** IMPLEMENTED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md` §User Feedback and Changing Plans (renamed from §Changing Plans in Round 3 commit `a8c4113`); `skills/handoff-doc/SKILL.md` §What Counts as Stale.
