@@ -95,7 +95,7 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 
 **Expected result.** A self-contained Mermaid file that Task 1b can lift into README without further thought.
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(N/A)*
 
 ---

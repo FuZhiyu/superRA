@@ -8,7 +8,7 @@
 
 ## Task 1a: Mermaid workflow diagram for README
 
-**Status:** IMPLEMENTED — awaiting review.
+**Status:** APPROVED.
 
 **Artifact:** [`docs/drafts/workflow-diagram.mmd`](docs/drafts/workflow-diagram.mmd) — self-contained Mermaid diagram ready for Task 1b to embed verbatim in README §Plan-Implement-Integrate Workflow.
 
