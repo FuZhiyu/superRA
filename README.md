@@ -30,7 +30,6 @@ flowchart TB
     PLAN["<b>PLAN</b><br/>Scope · task decomposition<br/>PLAN.md + RESULTS.md"]
 
     subgraph IMPLEMENT["<b>IMPLEMENT</b> (per task)"]
-        direction LR
         IMPL["implementer<br/>code + doc commit"]
         REV["reviewer<br/>APPROVE / REVISE"]
         IMPL --> REV
@@ -38,21 +37,21 @@ flowchart TB
     end
 
     subgraph INTEGRATE["<b>INTEGRATE</b>"]
-        direction TB
-        A["Phase A<br/>drift tests for key results"]
-        B["Phase B<br/>review-led sync + refactor"]
-        C["Phase C<br/>mature RESULTS.md + doc audit"]
-        D["Phase D<br/>merge / PR / cleanup"]
+        A["A · drift tests for key results"]
+        B["B · review-led sync + refactor"]
+        C["C · mature RESULTS.md + doc audit"]
+        D["D · merge / PR / cleanup"]
         A --> B --> C --> D
     end
 
-    PLAN --> IMPLEMENT
-    REV -->|task APPROVED, next task| IMPL
-    IMPLEMENT -->|all tasks APPROVED,<br/>user chooses merge| INTEGRATE
-    D --> MERGED(["merged"])
+    MERGED(["merged"])
 
-    IMPLEMENT -. "scope change<br/>(§User Feedback and Changing Plans)" .-> PLAN
-    INTEGRATE -. "scope change<br/>(§User Feedback and Changing Plans)" .-> PLAN
+    PLAN --> IMPLEMENT
+    IMPLEMENT -->|all tasks APPROVED, user chooses merge| INTEGRATE
+    D --> MERGED
+
+    PLAN -. "scope change (§User Feedback and Changing Plans)" .- IMPLEMENT
+    PLAN -. "scope change" .- INTEGRATE
 
     classDef phase fill:#eef7ff,stroke:#0366d6,color:#000
     classDef terminal fill:#e8f5e9,stroke:#2e7d32,color:#000
