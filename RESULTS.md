@@ -91,7 +91,23 @@
 
 ## Task 6: `integration.md` + routing updates
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Key findings:**
+
+- **`integration.md` drafted.** Writing-specific pre-merge gates organized as six numbered gates: (1) document builds clean on merged state; (2) outline stability; (3) cross-reference integrity; (4) applicable consistency dimensions pass (parallel reviewers); (5) voice preserved (three-hunk sample check); (6) scope respected (every hunk traceable). Includes a dispatch-guidance table mapping edit type → applicable consistency dimensions. Data-analysis-touching writing tasks note: when the writing task produced numbers, `econ-data-analysis/references/integration.md` applies in addition. §Gated Checklist: 7 BLOCKING + 3 ADVISORY items.
+- **Routing updates applied across 5 files** (not 6 — `merge-workflow/SKILL.md` does not exist in this repo):
+  - **`skills/using-superRA/SKILL.md` §Skill Inventory:** added `Domain | writing` row.
+  - **`skills/using-superRA/SKILL.md` §Skill-Load Manifest:** extended the `implementation`, `integration`, `drift-test`, and `planning-review` rows with writing-specific stage-scoped references.
+  - **`skills/planning-workflow/SKILL.md` Phase 1 vertical table:** added `Writing` row pointing at `superRA:writing` + `writing/references/planning.md`. Added routing explanation that most writing tasks skip `planning-workflow` entirely (modes a/b/c in `workflow.md`); only mode (d) full-workflow enters.
+  - **`skills/integration-workflow/SKILL.md` Phase A:** added writing-vertical branch — drift tests replaced by build + outline-stability for writing-only tasks.
+  - **`skills/integration-workflow/SKILL.md` Phase D Step 3a:** added writing-vertical post-merge verification note.
+  - **`skills/CATEGORIES.md`:** added `writing` row under Domain; removed writing from the future-verticals list.
+  - **`README.md`:** added `writing` row to the Domain skill table; updated section heading to "Domain — Data Analysis and Writing"; updated roadmap to say writing is implemented.
+- **Manifest path verification:** all 16 `writing/references/*` files referenced in the Skill-Load Manifest and elsewhere exist on disk. Checked: `planning.md`, `workflow.md`, `style-checklist.md`, `structure-checklist.md`, `refactor-and-compile.md`, `collaboration.md`, `integration.md`, plus 8 consistency files (`terminology.md`, `notation.md`, `cross-references.md`, `citations.md`, `numerical.md`, `math.md`, `argument-logic.md`, `code-paper.md`). No broken pointers.
+- **Plan deviation note (Step 3):** the PLAN.md spec named `merge-workflow/SKILL.md` as an edit target; that skill does not exist in this repo (merge choreography is Phase D of `integration-workflow`). The Phase D writing note covers the same concern. Plan step rewritten in place.
+
+**Files:** `skills/writing/references/integration.md` (95 lines) + 5 routing-edit files modified (`using-superRA/SKILL.md`, `planning-workflow/SKILL.md`, `integration-workflow/SKILL.md`, `CATEGORIES.md`, `README.md`).
 
 ## Task 7: `CLAUDE.md` audit
 

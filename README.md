@@ -150,13 +150,14 @@ superRA's skills split into four categories. The directory layout stays flat (on
 | **integration-workflow** | INTEGRATE (Phases A–D) | Phase A drift-test creation, Phase B iterative unified sync+refactor (invokes `semantic-merge` internally on Tier 2/3), Phase C doc finalization (mature RESULTS.md + audit project-level CLAUDE.md / AGENTS.md / README.md), Phase D final merge / PR / cleanup. Re-enterable Phase B on main advancement. |
 | **agent-orchestration** | cross-cutting | Multi-agent dispatch patterns: workload balancing across tiers, parallel subagents for independent tasks, reviewer-feedback adjudication. |
 
-### Domain — Data Analysis
+### Domain — Data Analysis and Writing
 
 | Skill | What It Does |
 |-------|-------------|
 | **econ-data-analysis** | Iron Law (no transformation without prior description). Three concurrent disciplines: Describe, Analyze, Validate (with sensitivity analysis as a first-class validation discipline). Diagnostics-for-validity philosophy. Pitfall catalogs for merges, time series, aggregations, filtering, variable construction, missing data. Common Rationalizations table. Stage-scoped references load per phase: `planning.md` (Data Inventory hard gate + sensitivity design), `integrate-drift-tests.md` (drift-test construction), `integration.md` (data-specific integration gates), `data-robustness-checklist.md` (robustness menu), `notebook-format.md` (cell organization + Python/Julia rendering; companion guides `jupytext-guide.md`, `julia-quarto-guide.md`). |
+| **writing** | Iron Law (respect the author's intent — meaning-preserving, scope-bounded, in-progress-work-respected). Three concurrent disciplines: Preserve, Improve, Verify (scope+voice / clarity+structure / compile+consistency). Four usage modes — direct-edit, pure-review, review-edit-loop, full-workflow — standalone-usable without the PLAN → IMPLEMENT → VALIDATE → INTEGRATE scaffold (mode (d) only for major changes). Parallel-dispatched reviewers, one per consistency dimension. Reviewer dispatch is never skipped, even in direct-edit mode. Stage-scoped references: `planning.md` (scope triage + decision matrix + scope-confirmation hard gate), `workflow.md` (four modes + two hard rules), `style-checklist.md` (LRS + Chaubey sentence/paragraph rules), `structure-checklist.md` (Pyramid Principle + section anatomy), `consistency/*.md` (8 dimension-scoped files — terminology, notation, cross-references, citations, numerical, math, argument-logic, code-paper), `refactor-and-compile.md` (safe find-replace + build gate), `collaboration.md` (respect user's in-progress work), `integration.md` (pre-merge gates). Language/format-agnostic (LaTeX, Quarto, Markdown, plain text). |
 
-Future verticals — theory/modeling, literature review, simulation, writing/paper drafting — are planned; see the Roadmap section at the bottom.
+Future verticals — theory / modeling, literature review, simulation — are planned; see the Roadmap section at the bottom.
 
 ### Utility
 
@@ -231,7 +232,8 @@ Planned verticals (hooks for future work, not commitments):
 - **Theory / modeling.** Derivation discipline, notation consistency, proof checks, numerical verification of derived formulas.
 - **Literature review.** Citation integrity, claim-evidence mapping, coverage audits, systematic note-taking formats.
 - **Simulation.** Seed discipline, stochastic reproducibility, parameter-grid sensitivity, convergence diagnostics.
-- **Writing / paper drafting.** Figure/table consistency with the underlying code, cross-reference integrity, narrative coherence, manuscript versioning alongside the analysis branch.
+
+Writing / paper drafting is now implemented as the `writing` domain skill — see the Domain — Writing table above.
 
 See `CLAUDE.md` §Roadmap for the checklist to add a new vertical.
 

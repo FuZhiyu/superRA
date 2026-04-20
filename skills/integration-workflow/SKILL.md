@@ -54,6 +54,10 @@ Drift tests guard key results from unintended changes during Phase B refactoring
 
 **Always run the full drift-test suite on every integration pass**, regardless of re-entry scope. Authoring new drift tests is scoped to tasks with `**Integration status:** ≠ APPROVED` (plus orchestrator-declared related tasks per `planning-workflow §Changing Plans`); running the suite is not.
 
+### Writing-vertical branch
+
+**For writing-only tasks (no numerical results produced), Phase A's drift-test gate is replaced by `document build + outline-stability check`.** Extract the document outline (section / subsection headings) from the base branch and the integrating branch; compare; any unauthorized structural changes are flagged per `writing/references/integration.md` §Gate 2 (Outline stability). Build the document on the integrating branch and confirm it compiles clean per `writing/references/refactor-and-compile.md` §Compile. No `[BLOCKING]` drift tests are authored. If the writing task also produced numbers (e.g., a methodology revision that re-ran analysis and pulled new coefficients into the prose), drift tests still apply for those numbers per the data-analysis Phase A flow. The full pre-merge writing checklist (consistency dimensions, voice preservation, scope audit) runs in Phase B via `writing/references/integration.md`.
+
 ### Steps
 
 1. **Extract key results from RESULTS.md.** Economic reasoning identifies main findings — not every intermediate number.
@@ -344,6 +348,8 @@ Verify the pipeline still runs on the merged result:
 bash run_all.sh  # or: julia pipeline.jl
 ```
 If it fails, stop and investigate — something moved between Phase B APPROVE and now.
+
+**Writing-vertical branch.** For writing-only tasks, post-merge verification is **document build + outline-stability check** in place of the analysis pipeline — compile the document on the merged state and confirm no outline regressions vs the pre-merge state (per `writing/references/integration.md` Gates 1–2). If the writing task also produced numbers, run the analysis pipeline + drift tests *in addition* to the build + outline check. Pure writing tasks that do not touch `run_all.sh` / `pipeline.jl` do not require those to run.
 
 ### Step 3b — Option 2: Push and open PR
 

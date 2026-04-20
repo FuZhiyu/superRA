@@ -339,18 +339,18 @@ Two hard rules:
 ## Task 6: `integration.md` + routing updates
 
 **Depends on:** Tasks 1, 2, 3, 4, 5
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:** `skills/writing/references/integration.md` (new); **edits:** `skills/using-superRA/SKILL.md` (Skill Inventory + Skill-Load Manifest), `skills/planning-workflow/SKILL.md` (vertical table), `skills/integration-workflow/SKILL.md` (writing branch), `skills/merge-workflow/SKILL.md` (writing branch), `skills/CATEGORIES.md`, `README.md`
 **Input:** `skills/econ-data-analysis/references/integration.md` (template), all prior writing references
 **Output:** `integration.md` + routing diff across six files
 
-- [ ] **Step 1: Draft `integration.md`**
+- [x] **Step 1: Draft `integration.md`**
 
 Pre-merge gates: (a) document builds clean on the merged state; (b) all `consistency/*.md` dimensions relevant to the edited sections pass; (c) voice preserved across the full diff (sample check — random 3 hunks, does the diff still sound like the author?); (d) scope respected (no edits outside the original request). Severity-marked shared checklist.
 
-- [ ] **Step 2: Routing updates — `using-superRA`, `planning-workflow`, CATEGORIES, README**
+- [x] **Step 2: Routing updates — `using-superRA`, `planning-workflow`, CATEGORIES, README**
 
 - Add `writing` row to `using-superRA/SKILL.md` §Skill Inventory (one-liner pointing at `skills/writing/SKILL.md`).
 - Add four rows to §Skill-Load Manifest covering `planning-review`, `implementation`, `integration`, `documentation` stages in the writing domain.
@@ -358,12 +358,13 @@ Pre-merge gates: (a) document builds clean on the merged state; (b) all `consist
 - Add `writing` row to `skills/CATEGORIES.md` under Domain.
 - Add `writing` row to `README.md` domain-skill table.
 
-- [ ] **Step 3: Routing updates — `integration-workflow`, `merge-workflow`**
+- [x] **Step 3: Routing updates — `integration-workflow` (merge-workflow N/A in this repo)**
 
-- `integration-workflow/SKILL.md`: Stage 1 gate for writing domain is "build + outline-stability check" instead of drift tests (unless the task produced numbers — then drift tests still apply). One-paragraph branch, pointer to `writing/references/integration.md`.
-- `merge-workflow/SKILL.md`: one-line note under Step 2 — for writing domain, post-merge verification is build + outline check.
+- `integration-workflow/SKILL.md` Phase A: added writing-vertical branch — "build + outline-stability check" replaces drift tests for writing-only tasks; writing tasks that produce numbers get drift tests in addition. Points at `writing/references/integration.md`.
+- `integration-workflow/SKILL.md` Phase D Step 3a: added writing-vertical post-merge verification note — document build + outline-stability in place of `run_all.sh` / `pipeline.jl` for pure writing tasks.
+- **No separate `merge-workflow` skill exists in this repo** — merge/PR choreography is Phase D of `integration-workflow`. The PLAN.md Step 3 phrasing ("merge-workflow/SKILL.md") was an over-specification; the effective routing lives inside `integration-workflow` Phase D and the Phase D writing note covers the same concern.
 
-- [ ] **Step 4: Self-review + commit**
+- [x] **Step 4: Self-review + commit**
 
 Self-check: every routing table has the new row; Skill-Load Manifest entries are consistent with writing's actual reference file names; no route leads to a nonexistent file. Update RESULTS.md Task 6. Commit: `skill: writing integration ref + routing updates`.
 

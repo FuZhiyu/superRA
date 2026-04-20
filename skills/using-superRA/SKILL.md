@@ -55,6 +55,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Workflow | `integration-workflow` | INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
+| Domain | `writing` | Writing vertical: Iron Law (respect the author's intent), preserve-improve-verify, style + structure + 8 consistency dimensions, four usage modes (direct-edit / pure-review / review-edit-loop / full-workflow), standalone-usable. |
 | Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Phase C doc-writer); usable standalone by a single author. |
 | Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
@@ -74,12 +75,12 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 
 | `Stage:` | Required skills | Stage-scoped references |
 |---|---|---|
-| `implementation` | active domain skill (for data analysis: `econ-data-analysis`) | domain §Three Concurrent Disciplines (teaching + shared severity-marked checklist). For data analysis: **implementer** additionally loads `econ-data-analysis/references/notebook-format.md`; **reviewer** loads SKILL.md only (the main body carries everything — §Three Concurrent Disciplines for verification, §Pitfalls for operation-specific correctness; if the dispatcher wants a specific Pitfalls subsection highlighted for review, it names it in `Additionally:`). |
-| `integration` | `refactor-and-integrate`; domain skill | `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
-| `drift-test` | `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
+| `implementation` | active domain skill (for data analysis: `econ-data-analysis`; for writing: `writing`) | domain §Three Concurrent Disciplines (teaching + shared severity-marked checklist). For data analysis: **implementer** additionally loads `econ-data-analysis/references/notebook-format.md`; **reviewer** loads SKILL.md only. For writing: **implementer** additionally loads `writing/references/style-checklist.md` and/or `structure-checklist.md` per the operation + `writing/references/refactor-and-compile.md` + `writing/references/collaboration.md`; **reviewer** loads SKILL.md + the specific `writing/references/consistency/<dimension>.md` named in the dispatch (or `style-checklist.md` / `structure-checklist.md` for sentence- or structure-level reviews). |
+| `integration` | `refactor-and-integrate`; domain skill | `codebase-integration.md` (generic). Data analysis: `integration.md` (data-specific); `integrate-drift-tests.md` if drift tests exist. Writing: `writing/references/integration.md` (writing-specific — build + outline + cross-refs + consistency + voice + scope gates). |
+| `drift-test` | `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` (data-analysis-specific; N/A for writing-only tasks — writing Stage 1 gate is document build + outline-stability per `writing/references/integration.md`). |
 | `merge` | `refactor-and-integrate` + `semantic-merge`; domain skill | `merge-quality.md` |
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
-| `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
+| `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain). For writing, `writing/references/planning.md` carries task-size triage, PLAN/RESULTS decision matrix, and the full-workflow scope-confirmation hard gate. |
 
 The `merge` stage is used when `semantic-merge` is invoked in delegated mode for a dedicated merge-proposer / merge-reviewer pair (standalone merges). Inside `integration-workflow` Phase B, the unified implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the canonical `Skills:` dispatch field (Tier 2/3 only) rather than switching Stage.
 

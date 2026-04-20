@@ -22,13 +22,13 @@ Carry the domain-specific knowledge that workflow skills invoke when a task touc
 | Skill | Vertical | Flagship discipline |
 |---|---|---|
 | `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), three concurrent disciplines (describe-analyze-validate), diagnostics-for-validity philosophy, pitfall catalogs, common rationalizations. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `data-robustness-checklist.md`, `notebook-format.md` (+ `jupytext-guide.md` and `julia-quarto-guide.md` companions). |
+| `writing` | Writing / paper drafting | Iron Law (respect the author's intent — meaning-preserving, scope-bounded, in-progress-work-respected), three concurrent disciplines (preserve–improve–verify), four usage modes (direct-edit / pure-review / review-edit-loop / full-workflow — standalone-usable without the PLAN → IMPLEMENT → VALIDATE → INTEGRATE scaffold), parallel-dispatched consistency reviewers. Stage-scoped references: `planning.md`, `workflow.md`, `style-checklist.md`, `structure-checklist.md`, `consistency/*.md` (8 dimension-scoped files), `refactor-and-compile.md`, `collaboration.md`, `integration.md`. |
 
 ### Future verticals (roadmap — not yet implemented)
 
 - **Theory / modeling** — derivation discipline, notation consistency, proof checks
 - **Literature review** — citation integrity, claim-evidence mapping
 - **Simulation** — seed discipline, sensitivity to parameter grids, stochastic reproducibility
-- **Writing / paper drafting** — figure/table consistency, cross-reference integrity, narrative coherence
 
 Each future vertical plugs into the same workflow scaffolding — implementer + reviewer pair, handoff docs, autonomous-with-human-in-loop, semantic merges.
 

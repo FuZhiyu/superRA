@@ -32,8 +32,11 @@ Identify the domain of the work and load the matching domain skill's planning re
 | Vertical | Trigger | Domain skill | Planning reference |
 |---|---|---|---|
 | Data analysis | task involves loading, cleaning, merging, transforming, modeling, or visualizing data | `superRA:econ-data-analysis` | `references/planning.md` — carries the **Data Inventory hard gate** (no tasks until data is inventoried and approved) and **Sensitivity Analysis Design** discussion |
+| Writing | task involves editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting sections of a paper / manuscript (LaTeX, Quarto, Markdown, plain text) | `superRA:writing` | `references/planning.md` — carries the **scope inventory**, the **task-size triage** (six shapes), the **PLAN.md / RESULTS.md decision matrix** (most writing tasks skip `planning-workflow` entirely — mode (d) full-workflow is the exception), and the full-workflow **scope-confirmation hard gate** |
 
 If the task is data analysis: **stop here, load `superRA:econ-data-analysis`, read `references/planning.md`, and satisfy its hard gate before returning to Phase 2.** The researcher must approve the Data Inventory before any task structure is drafted.
+
+If the task is writing: **most writing tasks do not enter `planning-workflow` at all** — they run in mode (a) direct-edit, (b) pure-review, or (c) review-edit-loop via `writing/references/workflow.md` without a committed `PLAN.md`. Only mode (d) full-workflow (whole-section draft / whole-paper revision / major revision) enters `planning-workflow`. If the task routes here, **load `superRA:writing`, read `references/planning.md`, confirm the scope with the researcher per the hard gate, and only then proceed to Phase 2.** If you are in doubt whether the task warrants full-workflow, consult the decision matrix in `writing/references/planning.md` §PLAN.md / RESULTS.md Decision Matrix.
 
 If the task is in a domain without an implemented vertical yet: proceed to Phase 2, but flag the gap to the researcher so they know superRA's domain coverage is not complete for this work.
 
