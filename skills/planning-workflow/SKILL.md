@@ -141,9 +141,9 @@ If `TodoWrite` and `PLAN.md` ever disagree about the state of analysis work, `PL
 
 When the plan itself changes — in-session scope change or cross-session re-entry — re-invoke §Changing Plans below and follow its protocol.
 
-## Changing Plans
+## User Feedback and Changing Plans
 
-When the plan changes — new task, removed task, reordered task, objective / sample / methodology edit, scope addition surfaced by a PR reviewer — follow this protocol. The same procedure applies whether the change is raised mid-execution or after integration / merge; the protocol itself records how much rolls back via Step 4's box-unchecking and Step 6's re-entry point. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
+When the plan changes — task details updated, tasks added, removed, or reordered, objective shifted — whether prompted by explicit user feedback or surfaced during execution, follow this protocol. The same procedure applies whether the change is raised mid-execution or after integration / merge; the protocol itself records how much rolls back via Step 4's box-unchecking and Step 6's re-entry point. There is one `PLAN.md` per analysis. Update it inline; do not start a parallel doc, append an "Addendum" section, or carry the change in chat.
 
 **Material (require this protocol):**
 
@@ -162,7 +162,7 @@ When the plan changes — new task, removed task, reordered task, objective / sa
 
 **Protocol:**
 
-1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. This is the same escalation gate as `execution-workflow` Stop-Points class (b).
+1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. 
 2. **Log the decision** per `handoff-doc` §User Decisions Log — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes. The log entry must declare which tasks are affected and which project-level boxes are unchecked.
 3. **Update `PLAN.md` inline:**
    - **Prefer modifying existing task blocks over appending.** Append a new task block only when the change cannot be expressed as an edit to an existing task's scope.
@@ -170,7 +170,8 @@ When the plan changes — new task, removed task, reordered task, objective / sa
    - **Modified task** → rewrite the affected fields in place. Do not strike through. Do not add "Modified:" annotations.
    - **Removed task** → delete the block entirely. The Decisions entry preserves the rationale.
    - **Reordered tasks** → renumber and rewrite. The decision log preserves the original sequence.
-4. **Update `## Workflow Status`** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* boxes are unchecked and *why*. Rules: per-task `**Review status:**` and `**Integration status:**` on fully re-implemented tasks are cleared; untouched tasks retain APPROVED; minor-edited tasks (code unchanged) clear `**Integration status:**` while keeping `**Review status:** APPROVED`. The orchestrator — not the new task's implementer — decides which tasks are "related" and which milestones roll back.
+
+4. **Update statuses** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* boxes are unchecked and *why*, then flips both the project-level `## Workflow Status` checkboxes and the per-task status lines. Rules: per-task `**Review status:**` and `**Integration status:**` on fully re-implemented tasks are cleared; untouched tasks retain APPROVED; minor-edited tasks (code unchanged) clear `**Integration status:**` while keeping `**Review status:** APPROVED`. **DAG cascade:** walk the transitive downstream closure of every changed task and clear statuses on any dependent whose inputs or assumptions shift (see full cascade rules below).
 5. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
 6. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `execution-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Phase B. On every re-entry, `integration-workflow` runs the **full** drift-test suite regardless of which tasks changed — only *authoring* new drift tests is scoped to the affected tasks. The doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff.
 
@@ -183,14 +184,6 @@ When the plan changes — new task, removed task, reordered task, objective / sa
 - Resuming the in-flight task before reflecting the change in the doc — the change is not real until it is committed.
 - Running a subset of the drift-test suite on re-entry because "only these tasks changed" — authoring is scoped, running is not. Always run the full suite.
 
-## No Placeholders
-
-Every step must contain the actual code, instructions, or artifacts someone needs to execute it. These are **plan failures** — never write them:
-- "TBD", "TODO", "implement later", "fill in details"
-- "Add appropriate validation" / "check results" (without actual code or criteria)
-- "Similar to Task N" (repeat the content — the executor may read tasks out of order)
-- "Run descriptive statistics" (without showing which variables and what statistics)
-- Steps that describe what to do without showing how (code blocks required for code steps)
 
 ## Remember
 

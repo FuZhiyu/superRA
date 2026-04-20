@@ -100,7 +100,6 @@ You follow an existing task-block anatomy (objective / files affected / input / 
 - **`**Review status:** IMPLEMENTED`** line, set after your atomic commit.
 - **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit your Phase B refactor work (`integration-workflow` Phase B Step 3). The integration reviewer set these to `REVISE` before you; the integration reviewer will flip them to `APPROVED` after your fix pass.
 
-  **You do not edit the `## Integration Intent` section.** That section is written and maintained exclusively by the integration reviewer. The orchestrator may append `→ orchestrator:` annotations; you never touch the section. If a review item references a cluster in `## Integration Intent`, fix the code per the item's guidance — the reviewer removes the cluster bullet when the task reaches `APPROVED`.
 - **`→ implemented: ...` annotations** appended to review items on a REVISE round (see below).
 - Your assigned task's section of `RESULTS.md`.
 
@@ -154,7 +153,7 @@ git add [code files] PLAN.md RESULTS.md results_attachments/
 git commit -m "task N: [brief description]"
 ```
 
-**If the dispatch included a `Worktree:` field,** you are operating inside a `parallel/<branch>/<slug>` branch the orchestrator provisioned. Commit atomically on that branch. **Do not** merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out. Include the branch name and HEAD SHA in your status return (see §Report Format). Otherwise, commit on the current branch as usual.
+**If the dispatch included a `Worktree:` field,** you are operating inside a `<branch>/parallel/<slug>` branch the orchestrator provisioned. Commit atomically on that branch. **Do not** merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out. Include the branch name and HEAD SHA in your status return (see §Report Format). Otherwise, commit on the current branch as usual.
 ## Pre-Commit Self-Check
 
 Before staging your commit, verify:
@@ -176,7 +175,7 @@ Report:
 - **Key findings:** Headline numbers or surprises only. Point at RESULTS.md Task N section for tables, figures, and full context.
 - **Concerns (if any):** Data quality issues, methodology questions, unexpected results. Bullet points.
 - **Doc edits (what changed since the previous dispatch):** List each file and the specific sections/fields you modified, describing the change. Example: `PLAN.md — Task 3: rewrote Step 2 (merge approach changed after data inspection), marked Steps 1-3 [x], set Review status: IMPLEMENTED, annotated review items 1 and 2 with → implemented markers. RESULTS.md — Task 3 section replaced with new findings and 2 figures.` Say "none" if you touched neither file.
-- **Worktree return (path B only):** branch name (`parallel/<analysis-branch>/<slug>`) and HEAD SHA. Omit this field entirely on path A.
+- **Worktree return (path B only):** branch name (`<analysis-branch>/parallel/<slug>`) and HEAD SHA. Omit this field entirely on path A.
 
 If the orchestrator needs more than this, they will read the docs directly.
 
