@@ -3,8 +3,8 @@ author: "[[Julie Zhiyu Fu]]"
 date: 2026-04-19
 timestamp: "2026-04-19T00:00:00"
 session_id: "session-20260419-integration-phaseC"
-git_commit: "df9ec045218ce2d91be08bb4bff07aa7c013cbb3"
-git_message: "results: fact-check Stage 2 RESULTS.md (Phase C re-entry)"
+git_commit: "e494937"
+git_message: "results: restructure Stage 2 RESULTS.md (Phase C re-entry)"
 git_dirty: false
 branch: "refactor/unified-integration"
 merge_base: "6d4a0ea4b14eb09dc61613598575641902798247"
@@ -61,13 +61,13 @@ Two independent shortcut axes in Phase B: **Tier classification** (from recon's 
 
 **Peripheral surfaces** — skill inventories (`using-superRA §Skill Inventory`, `CATEGORIES.md`, `README.md`), the PLAN.md template's Workflow Status block, `execution-workflow` Step 4 completion menu, `agent-orchestration` reviewer-feedback call-site list, `CLAUDE.md §DRY workflow-skills ownership list`, and `RELEASE-NOTES.md` were all swept to drop `merge-workflow` and widen `integration-workflow` to Phases A–D. README's workflow-map ASCII diagram and Mermaid diagram gained B→B and D→B re-entry arrows.
 
-### Follow-Up Refinements (Task 8)
+### Retrospective refinements from end-to-end dogfooding
 
-Three documentation clarifications surfaced by the end-to-end Phase A–D dogfooding run itself; added post-integration via `planning-workflow §Changing Plans` and applied without touching Tasks 1–7's code content.
+Three clarifications surfaced by walking the refactored workflow end-to-end on a real integration run, routed back into the plan via `planning-workflow §Changing Plans` and applied without touching any Tasks 1–7 code content:
 
-- **Integration-status lifecycle named explicitly.** `handoff-doc/references/plan-anatomy.md` state-setter clause (line 179) now names the three-actor choreography — orchestrator flips to `REVISE` post-recon and to `APPROVED` post-verify, unified implementer flips to `IMPLEMENTED` on Commit 2. `integration-workflow` Phase B gained a one-sentence cross-reference between Step 3 and Step 4 so the lifecycle is discoverable from the workflow skill. Replaces the prior "set by the integration reviewer" phrasing that predated Task 2's recon-as-reviewer architecture.
-- **Annotation etiquette — task-block boundary preservation.** `agents/reviewer.md` and `agents/implementer.md` Editing Etiquette sections gained a boundary-preservation bullet alongside the existing inline-edit rule: never disturb `---` separators or `### Task N:` headings when writing review-notes blockquotes or `→ implemented:` replies. Motivated by the PR #5 Phase B recon elision that commit `b58c3fc` had to restore.
-- **Phase B Tier 1 + unchanged-main degenerate case documented.** `integration-workflow` Phase B Step 2 Tier-1 bullets gained explicit handling for the case where `origin/<base-branch>` has not advanced since merge-base: the fast-forward merge is a true no-op (skip Commit 1, collapse the two-commit structure to one). The PR #5 implementer had to improvise this on the fly.
+- **Integration-status lifecycle named explicitly across three actors.** The `plan-anatomy.md` state-setter clause for `**Integration status:**` (line 179) now names the full choreography — orchestrator flips to `REVISE` after recon annotates a task, flips to `APPROVED` after the verify reviewer APPROVEs the in-scope cumulative diff; the unified implementer flips to `IMPLEMENTED` when it commits Commit 2 of the two-commit refactor. The `integration-workflow` Phase B body gained a one-sentence cross-reference between Step 3 and Step 4 so the lifecycle is discoverable from the workflow skill itself rather than only from the anatomy reference. Replaces the prior "set by the integration reviewer" wording, which predated the recon-as-reviewer architecture introduced in Task 2.
+- **Annotation etiquette: task-block boundary preservation.** The Editing Etiquette sections of `agents/reviewer.md` and `agents/implementer.md` gained a boundary-preservation bullet alongside the existing inline-edit rule — review-notes blockquotes and `→ implemented:` replies must stay strictly within the assigned task block, never disturbing `---` separators or `### Task N:` headings of neighboring tasks, and elisions from a prior annotation round must be restored in the same commit that annotates the current round.
+- **Phase B Tier 1 unchanged-main degenerate case.** The Phase B Step 2 Tier-1 bullets now handle the case where `origin/<base-branch>` has not advanced since merge-base: the fast-forward merge is a true no-op, Commit 1 is skipped entirely, and the two-commit structure collapses to one refactor commit. Previously the implementer had to improvise this on the fly on a live run.
 
 ### Load-bearing design decisions
 
@@ -99,6 +99,10 @@ All five scenarios resolved on the committed skill text with no gaps. Seventeen 
 
 Recon (`Stage: integration`, loaded with `superRA:semantic-merge`) classified the branch as **Tier 1** — trivial fast-forward; `origin/main` 0 commits ahead of merge-base `92a685b` at recon time, `git merge-tree` clean, branch 31 commits ahead of that base. Two `[ADVISORY]` pointer issues were annotated on Task 1 and Task 2 PLAN.md blockquotes; both fixed in the unified Phase B refactor commit and verified by the Phase B verify reviewer. Per the two-axis shortcut rule: Tier 1 + non-zero annotations → fast-forward merge + refactor-only pass; follow-ups did not load `semantic-merge`.
 
+### Phase B re-entry — Tier 2 absorption of `origin/main`
+
+During the end-to-end dogfooding, Phase B was re-entered once when `origin/main` advanced with four commits dropping the session-start auto-injection hook and tightening the `using-superRA` skill description and default-loads wording. Recon on re-entry classified the branch as **Tier 2** — overlapping edits on `skills/using-superRA/SKILL.md`, `references/main-agent.md`, `README.md`, `CATEGORIES.md`, `RELEASE-NOTES.md`, and the `hooks/` tree where main's deletions met this branch's edits — and the follow-ups-load-semantic-merge shortcut triggered: the unified implementer carried `Skills: superRA:semantic-merge` and performed an intent-reconciling merge rather than a fast-forward. Auto-merges composed cleanly on five of six conflict sites; `RELEASE-NOTES.md` was the sole textual conflict (Unreleased entries from both sides preserved verbatim, unified-integration-workflow entry leading). Post-merge skill-graph consistency grep returned zero `merge-workflow` hits in `skills/`, `agents/`, `hooks/`, `tests/`, substituting for drift tests per the plan's Workflow Status. The re-entry validated the Tier 2 shortcut in practice — the two-axis decomposition (Tier × annotations) let the re-entry re-use the same recon → unified implementer → verify reviewer pipeline without special-casing the merge-with-advancing-main case.
+
 ### Skill-graph consistency sweeps
 
 - `grep -rn "merge-workflow"` across `skills/`, `agents/`, `hooks/`, `README.md`, `CLAUDE.md`, `RELEASE-NOTES.md` after all tasks: remaining hits are (a) the RELEASE-NOTES deprecation bullet, (b) pre-existing RELEASE-NOTES entries from prior releases (historical record), and (c) `docs/plans/` archive. No active skill, agent, or hook carries a `merge-workflow` reference.
@@ -121,7 +125,6 @@ Each principle preserved or strengthened:
 - **Pre-commit hook coverage for minimum-net-diff.** The Implementer Self-Check is prose-only; enforcement relies on the implementer running `git diff <merge-base>..HEAD` and the verify reviewer doing the same. A future lightweight hook could surface out-of-scope hunks automatically at commit time.
 - **Mermaid / ASCII diagram maintenance cost.** The README workflow map now carries two views (ASCII block + Mermaid) of the same Phase A–D graph with re-entry arrows. Drift between the two is a future risk; a single source of truth (one diagram format) would be cleaner.
 - **Historical RELEASE-NOTES entries mention `merge-workflow`.** Left as historical record per the deletion-task's scope decision. Future readers of release notes see `merge-workflow` in entries from before this refactor and should read the current "Unreleased — unified integration-workflow refactor" entry for the retirement context.
-- **Stage 2 RESULTS.md co-location.** After this document's relocation to `docs/plans/`, a follow-up session should decide whether to retain the companion `PLAN.md` at the worktree root or also move it to `docs/plans/` alongside the sibling entries' convention of paired `*-plan.md` / `*-results.md` files.
 
 ## Reproducibility
 
