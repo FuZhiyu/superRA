@@ -1,6 +1,6 @@
 # superRA — Contributor Guidelines
 
-This repo is **superRA**, a fork of [Superpowers](https://github.com/obra/superpowers) adapted for economic research. It ships a complete **iterative** PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow for AI agents acting as disciplined Research Assistants — the phases are a cycle, not a one-shot pipeline, and re-entering PLAN mid-execution or after integration is the normal case. `planning-workflow §Changing Plans` is the hinge that makes re-entry safe (full DAG cascade over downstream tasks, full drift-test suite always runs on re-entry, prefer updating existing task blocks over appending new ones). See `README.md` for the full skill inventory and `skills/CATEGORIES.md` for the Workflow / Domain / Utility / Meta grouping.
+This repo is **superRA**, a fork of [Superpowers](https://github.com/obra/superpowers) adapted for economic research. It ships a complete **iterative** PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow for AI agents acting as disciplined Research Assistants — the phases are a cycle, not a one-shot pipeline, and re-entering PLAN mid-execution or after integration is the normal case. `planning-workflow §User Feedback and Changing Plans` is the hinge that makes re-entry safe (full DAG cascade over downstream tasks, full drift-test suite always runs on re-entry, prefer updating existing task blocks over appending new ones). See `README.md` for the full skill inventory and `skills/CATEGORIES.md` for the Workflow / Domain / Utility / Meta grouping.
 
 ## Working in This Repo
 
@@ -52,7 +52,7 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
 
 Concerns and their owners:
 
-- **Workflow skills** own *choreography* — what steps run in what order, what stop points exist, what status transitions apply. `planning-workflow`, `execution-workflow`, `integration-workflow`, `merge-workflow` each own the choreography of their phase and nothing else.
+- **Workflow skills** own *choreography* — what steps run in what order, what stop points exist, what status transitions apply. `planning-workflow`, `execution-workflow`, and `integration-workflow` (Phases A–D) each own the choreography of their phase and nothing else.
 - **`agent-orchestration`** owns *cross-stage orchestration* — dispatch-prompt shape (required-fields-first, `Additionally:` anchor-last), the "Follow the standard stage-relevant workflow" prefix, the relay protocol between orchestrator and subagent (what-changed deltas, review-notes annotation mechanics), and verdict-adjudication discipline (how to handle `REVISE` findings). Execution Modes (subagent dispatch vs direct) are owned by `superRA:using-superRA`.
 - **Domain skills** own *domain discipline* — the Iron Law for data analysis, the gated checklist for that domain (§Three Concurrent Disciplines, domain-specific integration reference), pitfall catalogs, stage-scoped references. Adding a new vertical means adding a domain skill, not forking workflow skills.
 - **`refactor-and-integrate`** owns *generic integration discipline* — code-quality standards, drift-test construction, merge-quality standards. Domain-specific integration content lives alongside the domain skill (for data analysis: `econ-data-analysis/references/integration.md`).

@@ -1,6 +1,6 @@
 # Worktree Lifecycle — Harness Tools and Raw-Git Fallback
 
-Loaded by the orchestrator when it needs to **create**, **enter**, or **remove** a git worktree and no dedicated harness tool is available. Worktree lifecycle is an orchestration concern — see `SKILL.md` §Concurrent Writers Require Worktree Isolation for when parallel implementers require their own worktrees, and `skills/worktree-data-sync/SKILL.md` for seeding non-git data into an existing worktree (out of scope here).
+Loaded by the orchestrator when it needs to **create**, **enter**, or **remove** a git worktree and no dedicated harness tool is available. Worktree lifecycle is an orchestration concern — see `SKILL.md` §Parallelization and Worktree Isolation for when parallel subagents require their own worktrees, and `skills/worktree-data-sync/SKILL.md` for seeding non-git data into an existing worktree (out of scope here).
 
 ## Prefer Harness Tools
 
@@ -15,7 +15,7 @@ git worktree add <path> -b <branch-name> <base-ref>
 ```
 
 - `<path>` — absolute or repo-relative. Placement convention below.
-- `<branch-name>` — new branch to create at `<base-ref>`. For orchestrator-managed parallel slots, use `parallel/<analysis-branch>/<slug>`.
+- `<branch-name>` — new branch to create at `<base-ref>`. For orchestrator-managed parallel slots, use `<analysis-branch>/parallel/<slug>`.
 - `<base-ref>` — typically the current analysis branch (`HEAD` is fine when already on it).
 
 After creation, the orchestrator seeds non-git data via `skills/worktree-data-sync` §`--mode seed` if the task needs data access.
@@ -68,12 +68,12 @@ Global-location worktrees (e.g., `~/.config/superpowers/worktrees/<project>/`) n
 One parallel slot's full lifecycle (create → seed → dispatch → merge → cleanup):
 
 ```bash
-WT=".worktrees/parallel/$BR/$SLUG"
-git worktree add "$WT" -b "parallel/$BR/$SLUG" "$BR"
+WT=".worktrees/$BR/parallel/$SLUG"
+git worktree add "$WT" -b "$BR/parallel/$SLUG" "$BR"
 python3 skills/worktree-data-sync/scripts/sync_worktree_data.py \
-  --to "$WT" --mode seed --seed-sync-mode force-symlink
+  --from "$(pwd)" --to "$WT" --mode seed --seed-sync-mode force-symlink
 # dispatch implementer with Worktree: <absolute path to $WT>
-git merge --no-ff "parallel/$BR/$SLUG"
-git worktree remove "$WT" && git branch -D "parallel/$BR/$SLUG"
+git merge --no-ff "$BR/parallel/$SLUG"
+git worktree remove "$WT" && git branch -D "$BR/parallel/$SLUG"
 ```
 

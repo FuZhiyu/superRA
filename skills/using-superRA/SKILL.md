@@ -52,11 +52,10 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 |---|---|---|
 | Workflow | `planning-workflow` | PLAN phase: scope check, task decomposition, plan draft. |
 | Workflow | `execution-workflow` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
-| Workflow | `integration-workflow` | INTEGRATE (pre-merge): drift tests, refactor, doc finalization. |
-| Workflow | `merge-workflow` | INTEGRATE (merge): update with main, verify, local merge or PR. |
+| Workflow | `integration-workflow` | INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
-| Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Step 3 doc-writer); usable standalone by a single author. |
+| Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Phase C doc-writer); usable standalone by a single author. |
 | Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
 | Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
@@ -82,8 +81,10 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 | `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
+The `merge` stage is used for standalone `semantic-merge` dispatches — a dedicated merge-proposer / merge-reviewer pair resolving a branch outside the normal integration-workflow. Inside `integration-workflow` Phase B, the implementer runs `Stage: integration` and loads `superRA:semantic-merge` when the integration reviewer's annotation calls for intent-based conflict resolution — no Stage switch needed.
 
-**Main-agent default loads.** If you are the main agent, load `references/main-agent.md` and `superRA:handoff-doc` now — before dispatching subagents or touching PLAN.md. `references/main-agent.md` carries the session-start actions and the full autonomy contract; `superRA:handoff-doc` carries the editing discipline needed before any PLAN.md / RESULTS.md edit and resolves the `planning-workflow §Changing Plans` cross-references into `handoff-doc` (User Decisions Log, plan-anatomy). Subagents skip both — they inherit task context from their dispatch and load `handoff-doc` only on `documentation` / `planning-review` stages as listed in the table above.
+
+**Main-agent default loads.** If you are the main agent, load `references/main-agent.md` and `superRA:handoff-doc` now — before dispatching subagents or touching PLAN.md. Subagents skip both.
 
 **Unknown Stage values are a dispatch error.** If the dispatch prompt carries a `Stage:` that does not match a row above, halt and report the mismatch in your status return — do not guess. The manifest is the single source of truth for Stage→{skills, references}.
 
