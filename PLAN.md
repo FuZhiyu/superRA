@@ -169,7 +169,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 ### Task 5: Sync peripheral surfaces
 **Depends on:** Tasks 1, 2, 3, 4
 **Review status:** IMPLEMENTED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `README.md`, `skills/CATEGORIES.md`, `RELEASE-NOTES.md`, `skills/using-superRA/SKILL.md` §Skill-Load Manifest, `agents/reviewer.md`, `agents/implementer.md`.
@@ -199,6 +199,7 @@ Walked at planning time (2026-04-19). Re-walk on-demand only. Round 1 walked the
 > 1. [BLOCKING] `skills/using-superRA/references/main-agent.md:67` — stale "Tier 3" cross-reference to `semantic-merge`. The text reads "Tier 3 conflict escalation in `semantic-merge`" as a user-defined milestone stop point. After Task 3's rewrite, `semantic-merge/SKILL.md` no longer uses "Tier 3" as a label anywhere — the concept (research-meaningful escalation) is covered by Step 4 "Ask the user when the semantic choice is not discoverable," but the label is gone. An agent following this stop-point description will find no "Tier 3" section to anchor to. Fix: replace "Tier 3 conflict escalation in `semantic-merge`" with "research-meaningful conflict escalation in `semantic-merge`" (or equivalent that matches the updated skill's vocabulary — Step 4 or §Working Principles).
 >
 >    The Task 5 sweep ran `grep -rn "recon reviewer|verify reviewer|delegated mode|Standalone mode"` but did not include "Tier 3" in its pattern, so this live-file hit was not caught. The dispatch's full sweep pattern explicitly includes "Tier 3" and per the dispatch instructions this is BLOCKING.
+>    → implemented: replaced "Tier 3 conflict escalation" with "research-meaningful conflict escalation" at `skills/using-superRA/references/main-agent.md:67` (orchestrator-inline fix, trivial tier per workload balancing — commit 7e3092d).
 
 ---
 
