@@ -15,7 +15,17 @@ Stage 1 dev log. Per `superRA:handoff-doc` / `references/results-anatomy.md`, th
 ---
 
 ### Task 3: Rewrite `semantic-merge/SKILL.md` as general-purpose skill
-**Status:** Not started
+**Status:** Implemented
+
+**What changed:** `skills/semantic-merge/SKILL.md` rewritten from ~338 lines to ~170 lines. All dispatch-focused machinery removed: Standalone/Delegated mode split, Mode-aware verification table, in-skill `Agent(subagent_type: ...)` dispatch blocks (Tier 2/3 merge-proposer/reviewer), named return-field contract ("What to Report — delegated mode"), and the Tier 1/2/3 classification matrix. The skill now reads coherently for a human at the terminal, an orchestrator running it directly, or a dispatched agent — same text, no caller assumptions.
+
+**Retained superRA-specific content:** Drift-test integrity clause (run after merge, load `drift-test-quality.md`, adjudicate don't silence meaningful failures); RA framing on research-meaningful decisions; PLAN.md/RESULTS.md as conflictable handoff docs with escalation to `planning-workflow §Changing Plans` when a PLAN.md conflict implies substantive restructure; `handoff-doc §User Decisions Log` logging requirement.
+
+**1+N commit shape:** Stated in Step 5 as "one possible workflow" with explicit note that callers may collapse to a single commit or split integration work across parallel commits.
+
+**Vocabulary:** All analysis-specific names removed (`excess_return`, `variable_construction.py`, `Table 3`, econometric specs, sample filters). Replaced with vertical-neutral phrasing: "results-bearing files", "domain-discipline artifacts". Illustrative example in Step 4 uses generic "outcome variable construction" without analysis-specific names.
+
+**Validation grep results:** `Standalone\|Delegated\|excess_return\|Table 3\|econometric\|variable_construction\|delegated mode` → empty; `Tier 1\|Tier 2\|Tier 3\|recon reviewer\|verify reviewer\|two-commit` → empty.
 
 ---
 
