@@ -39,8 +39,8 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 ## Workflow Status
 
 - [x] Plan approved
-- [x] Task 1a — Mermaid workflow diagram
-- [ ] Task 1b — README prose rewrite
+- [ ] Task 1a — Mermaid workflow diagram (REVISE: layout rejected on visual inspection)
+- [ ] Task 1b — README prose rewrite (REVISE: diagram re-embed only)
 - [ ] Task 2 — CLAUDE.md consolidation
 - [ ] Task 3 — plugin.json + marketplace.json descriptions
 - [ ] Task 4 — installation instructions verified
@@ -64,6 +64,15 @@ Single artifact: the documentation itself. No code pipeline. Verification = `rg`
 No downstream per-task `**Review status:**` rollback needed — nothing has been implemented yet.
 
 **2026-04-20 — Version bump for initial release.** User chose 0.1.0 (was 0.0.4.1) to mark this as the first public release. Rationale: README + CLAUDE.md split complete, install flow modernized, workflow diagram added — milestone is meaningful.
+
+**2026-04-20 — Task 1a diagram revision requested.** User inspected the embedded diagram in README and rejected the layout. Required layout:
+
+- **Strict top-to-bottom linear flow:** PLAN → IMPLEMENT → INTEGRATE as a single vertical column. No subgraphs that break the column or push phases sideways.
+- The implementer ↔ reviewer loop inside IMPLEMENT and the A → B → C → D chain inside INTEGRATE must still be visible, but simpler than the current draft.
+- **Back-arrows for scope-change re-entry must exist** but must NOT disrupt the linear reading order — route as dotted curves along the side of the column, not through it.
+- **Render + visually inspect** before claiming done. Syntax-only validation (`npx mermaid-cli` "no errors") is not sufficient — the reviewer must look at the SVG/PNG output and confirm it matches the layout brief.
+
+DAG cascade: Task 1a `**Review status:**` rolled back APPROVED → REVISE. Task 1b's `**Review status:**` also rolled back APPROVED → REVISE because its embedded diagram is now stale; however Task 1b's non-diagram sections (header, Why, Key principles, Domain/Utility tables, Hooks, Contributing, Upstream, License, the Task 4 Installation block) are untouched and do NOT need to be redone — the revision is scoped to re-embedding the new diagram in README §Plan-Implement-Integrate Workflow. No cascade onto Tasks 2, 3, 4.
 
 ---
 
@@ -97,7 +106,9 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 
 **Expected result.** A self-contained Mermaid file that Task 1b can lift into README without further thought.
 
-**Review status:** APPROVED
+> **Reviewer revision — 2026-04-20 (user feedback):** Prior `APPROVE` rolled back. The two-subgraph layout (`flowchart TB` with IMPLEMENT subgraph in `direction LR`) breaks the linear PLAN → IMPLEMENT → INTEGRATE reading order the user wants. Redo per the layout brief in §Decisions (strict vertical column, dotted back-arrows for scope-change routed along the side, render + visually inspect before claiming done).
+
+**Review status:** REVISE
 **Integration status:** *(N/A)*
 
 ---
@@ -135,7 +146,9 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 
 **Expected result.** A `README.md` a first-time user can read front-to-back in 5 minutes and know: what this is, when to use it, what skills ship, how to install, and where to read more.
 
-**Review status:** APPROVED
+> **Reviewer revision — 2026-04-20 (cascade from Task 1a):** Prior `APPROVE` rolled back because the embedded Mermaid diagram is now stale. Scope of the re-revision: replace the ```mermaid``` fenced block in README §Plan-Implement-Integrate Workflow with the revised `docs/drafts/workflow-diagram.mmd`. Every other section of README stays as-is.
+
+**Review status:** REVISE
 **Integration status:** *(docs-only; N/A)*
 
 ---
