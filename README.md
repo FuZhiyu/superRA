@@ -68,19 +68,46 @@ Currently we ship data analysis skill.
 
 ## Installation
 
-superRA is a fork of [Superpowers](https://github.com/obra/superpowers), adapted for economic research. Clone and install as a local plugin:
+superRA is a fork of [Superpowers](https://github.com/obra/superpowers), adapted for economic research. The canonical repo is [github.com/FuZhiyu/superRA](https://github.com/FuZhiyu/superRA).
 
 ### Claude Code
-<!-- need to be updated. https://github.com/FuZhiyu/superRA. and we can directly install from the remote I think. research on the updated guide on how to install for claude code -->
-```bash
-git clone https://github.com/FuZhiyu/econ-superpowers.git
-# Then add as a local plugin in your project's .claude/settings.json
 
+Claude Code (v2.1+) can install plugins directly from a GitHub repo. Add superRA as a marketplace and install the plugin:
+
+```bash
+claude plugin marketplace add FuZhiyu/superRA
+claude plugin install superRA@superRA-dev
 ```
+
+That's it — restart Claude Code (or start a new session) and the skills, agents, and hooks are available.
+
+To update later:
+
+```bash
+claude plugin marketplace update superRA-dev
+claude plugin update superRA
+```
+
+### Claude Code (local clone, for development or forking)
+
+If you want to modify superRA itself — edit skills, add a domain vertical, tune hooks — install from a local clone instead:
+
+```bash
+git clone https://github.com/FuZhiyu/superRA.git
+claude plugin marketplace add ./superRA
+claude plugin install superRA@superRA-dev
+```
+
+Edits to your clone are picked up on the next session start.
 
 ### Other Platforms
 
-See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plugin installation patterns on Cursor, Codex, Copilot CLI, and Gemini CLI. Point them at this repo instead of the upstream.
+superRA ships entry files for several non-Claude-Code harnesses:
+
+- **Codex / Copilot CLI / any `AGENTS.md`-aware tool** — point at [`AGENTS.md`](./AGENTS.md) at the repo root.
+- **Gemini CLI** — point at [`GEMINI.md`](./GEMINI.md) and [`gemini-extension.json`](./gemini-extension.json).
+
+Harness-specific install flow varies; see the upstream [Superpowers docs](https://github.com/obra/superpowers) for patterns, and substitute this repo's URL.
 
 ## Skills
 

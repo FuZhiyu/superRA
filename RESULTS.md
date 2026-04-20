@@ -34,7 +34,13 @@
 
 ## Task 4: Verify + modernize installation instructions
 
-**Status:** Not started
+**Status:** IMPLEMENTED — awaiting review.
+
+**Summary.** Confirmed the canonical remote is `https://github.com/FuZhiyu/superRA` (PUBLIC) — the stale `FuZhiyu/econ-superpowers` name in the crude draft is wrong. Confirmed Claude Code v2.1+ ships a `claude plugin` CLI with `plugin marketplace add <github-repo>` + `plugin install <plugin>@<marketplace>` — direct-from-remote install is supported, and the old clone-plus-`.claude/settings.json` flow is no longer the recommended path. Rewrote README §Installation accordingly: lead with `claude plugin marketplace add FuZhiyu/superRA` + `claude plugin install superRA@superRA-dev`; demote local-clone install to a "development or forking" subsection; add an update snippet (`claude plugin marketplace update superRA-dev && claude plugin update superRA`). Plugin name (`superRA`) and marketplace name (`superRA-dev`) confirmed from `.claude-plugin/marketplace.json`. For "Other Platforms", named the three repo-root entry files explicitly (`AGENTS.md` for Codex / Copilot CLI, `GEMINI.md` + `gemini-extension.json` for Gemini CLI) with direct links instead of pointing users at upstream Superpowers docs to guess. No other README sections were touched — Task 1b owns the rest.
+
+**Verified (locally).** `claude --version` → `2.1.114`. `claude plugin marketplace list` shows `superRA-dev` currently registered from a local directory, confirming the marketplace name + plugin name pair. Install syntax (`claude plugin install superRA@superRA-dev`) matches Claude Code's `plugin@marketplace` convention as documented in `claude plugin install --help`.
+
+**Out of scope, flagged.** `GEMINI.md` still `@`-includes `./skills/using-superpowers/SKILL.md` (upstream name) — the renamed skill in this repo is `using-superRA`. That is a stale import inside an entry file, not an Installation-section issue; deferred to the cross-reference sweep (Task 5) or the later AGENTS.md / GEMINI.md sweep the user dropped from this round.
 
 ## Task 5: Cross-reference + terminology sweep across all docs
 
