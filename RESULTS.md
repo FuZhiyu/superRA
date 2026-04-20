@@ -22,7 +22,11 @@
 
 ## Task 1b: Rewrite README.md as a careful user-facing doc
 
-**Status:** Not started
+**Status:** IMPLEMENTED.
+
+**Summary.** Rewrote every README section outside the APPROVED `## Installation` block. Header tagline tightened to three offering bullets (workflow / domain skills / utility skills). "Why superRA?" bullets polished, trailing ellipsis dropped, resolution paragraph rewritten to surface the three-part structure (implementer-reviewer pair / domain skills / integration phase). "The Plan-Implement-Integrate Workflow" now embeds the Task 1a Mermaid diagram verbatim from `docs/drafts/workflow-diagram.mmd` (validated with a byte-level diff) and drops the `<!-- -->` TODO comments. "Key principles" polished across all five bullets; principle 3's TODO resolved with explicit definitions of integration (refactor + dovetail with existing codebase, mature docs) and semantic merge (intent-based conflict classification with escalation for research impact). "Domain Skills" replaced with a table row for `econ-data-analysis` plus a flagged-as-hooks roadmap list for theory / lit review / simulation / writing. "Utility Skills" replaced with a table covering `handoff-doc`, `report-in-markdown`, `refactor-and-integrate`, `semantic-merge`, `worktree-data-sync`, each row carrying both *what* and *when to use* per `skill-creator` discipline. The separate downstream "Skills / Workflow / Domain / Utility / Meta" inventory from the pre-draft README was folded into the new Domain + Utility tables; a single pointer to `using-superRA` §Skill-Load Manifest (agent-facing) and `skills/CATEGORIES.md` (contributor-facing) replaces the duplicate surface. Hooks table verified against `hooks/hooks.json` (three entries: `merge-guard`, `ask-user-question-logger`, `exit-plan-mode`). Removed the crude draft's placeholder "Plugin Design Philosophy" section; replaced with a one-paragraph "Contributing" block pointing at `CLAUDE.md`. Restored the "Upstream" paragraph crediting Jesse Vincent / Superpowers that the crude draft deleted.
+
+**Verification.** `rg -n "<!--|TODO|tbd|\.\.\." README.md` returns nothing. Byte-diff of the Mermaid fenced block against `docs/drafts/workflow-diagram.mmd` is empty — diagram embedded verbatim. `## Installation` section (heading through end of `### Other Platforms`) untouched per Task 4 APPROVED scope.
 
 ## Task 2: Consolidate CLAUDE.md as the developer / contributor doc
 

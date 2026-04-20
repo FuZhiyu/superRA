@@ -125,15 +125,15 @@ No downstream per-task `**Review status:**` rollback needed — nothing has been
 
 **Steps:**
 
-- [ ] Read current `README.md` end-to-end; list every surviving stale reference in a scratchpad
-- [ ] Read `docs/drafts/workflow-diagram.mmd` (Task 1a output) to have the diagram ready for embedding
-- [ ] Rewrite sections 1–11 in place, one heading at a time
-- [ ] `rg -n "<!--|TODO|tbd|\.\.\." README.md` to confirm no placeholders survived
-- [ ] Commit: `docs(readme): careful rewrite of user-facing README`
+- [x] Read current `README.md` end-to-end; list every surviving stale reference in a scratchpad
+- [x] Read `docs/drafts/workflow-diagram.mmd` (Task 1a output) to have the diagram ready for embedding
+- [x] Rewrite sections 1–11 in place, one heading at a time
+- [x] `rg -n "<!--|TODO|tbd|\.\.\." README.md` to confirm no placeholders survived
+- [x] Commit: `docs(readme): careful rewrite of user-facing README`
 
 **Expected result.** A `README.md` a first-time user can read front-to-back in 5 minutes and know: what this is, when to use it, what skills ship, how to install, and where to read more.
 
-**Review status:** not started
+**Review status:** IMPLEMENTED
 **Integration status:** *(docs-only; N/A)*
 
 ---
