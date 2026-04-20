@@ -116,7 +116,7 @@ Required header fields and task block structure are non-negotiable. The template
 
 **The plan is NOT a static spec.** Work reveals surprises; the plan evolves in place.
 
-Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a step's method adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits per the discipline below; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §Changing Plans below, which defines the confirm → log → inline-edit → roll-back-milestones → atomic-commit protocol.
+Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a step's method adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits per the discipline below; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §User Feedback and Changing Plans below, which defines the confirm → log → inline-edit → roll-back-milestones → sweep-for-stale-content → atomic-commit protocol.
 
 **The editing discipline and the full anatomy templates** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — live in `superRA:handoff-doc`. Load it when authoring `PLAN.md` / `RESULTS.md` from scratch; its `references/plan-anatomy.md` and `references/results-anatomy.md` carry the full templates. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
@@ -139,7 +139,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 If `TodoWrite` and `PLAN.md` ever disagree about the state of analysis work, `PLAN.md` is right by definition. Update `TodoWrite` to match — never the reverse.
 
-When the plan itself changes — in-session scope change or cross-session re-entry — re-invoke §Changing Plans below and follow its protocol.
+When the plan itself changes — in-session scope change or cross-session re-entry — re-invoke §User Feedback and Changing Plans below and follow its protocol.
 
 ## User Feedback and Changing Plans
 

@@ -24,7 +24,7 @@ Phase C — Docs  ───┘   integration reviewer triggers a new round)
    ↓               ↑
 Phase D — Final merge / PR / cleanup
                    ↑
-         Anywhere ─┴─→  `planning-workflow §Changing Plans`
+         Anywhere ─┴─→  `planning-workflow §User Feedback and Changing Plans`
                         (substantive restructure: task add/remove/combine,
                          DAG flip, APPROVED invalidation; orchestrator
                          proposes, researcher decides)
@@ -50,7 +50,7 @@ The checklist discipline for every implementer self-check and every reviewer wal
 
 Drift tests guard key results from unintended changes during Phase B refactoring, Phase D semantic-merges, and any future modification. They are the safety net that makes everything downstream safe.
 
-**Always run the full drift-test suite on every integration pass**, regardless of re-entry scope. Authoring new drift tests is scoped to tasks with `**Integration status:** ≠ APPROVED` (plus orchestrator-declared related tasks per `planning-workflow §Changing Plans`); running the suite is not.
+**Always run the full drift-test suite on every integration pass**, regardless of re-entry scope. Authoring new drift tests is scoped to tasks with `**Integration status:** ≠ APPROVED` (plus orchestrator-declared related tasks per `planning-workflow §User Feedback and Changing Plans`); running the suite is not.
 
 ### Steps
 

@@ -24,7 +24,7 @@ Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs)
 
    **Rule of thumb:** before typing a finding into a status report, ask "is this written in `PLAN.md` or `RESULTS.md` yet?" If not, write it in the doc first and commit, then point at it in the report.
 
-**`PLAN.md` is the primary task tracker, not `TodoWrite` or chat.** The task-tracker discipline (banned patterns, the `TodoWrite`-as-transient-view rule, and the re-invoke-`§Changing Plans`-on-plan-change pointer) lives in `planning-workflow §PLAN.md Is the Task Tracker`.
+**`PLAN.md` is the primary task tracker, not `TodoWrite` or chat.** The task-tracker discipline (banned patterns, the `TodoWrite`-as-transient-view rule, and the re-invoke-`§User Feedback and Changing Plans`-on-plan-change pointer) lives in `planning-workflow §PLAN.md Is the Task Tracker`.
 
 ## Inline-Edit Rule
 
