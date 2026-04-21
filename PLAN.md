@@ -42,7 +42,7 @@ Walked at planning time (2026-04-20). Re-walk on-demand only.
 
 ### Task 1: Skill Frontmatter Simplifications
 **Depends on:** *(none)*
-**Review status:** REVISE
+**Review status:** IMPLEMENTED *(all BLOCKING + 2 ADVISORY items addressed; awaiting narrow re-review)*
 
 **Scope (already on disk, unstaged at plan commit time):**
 - `skills/agent-orchestration/SKILL.md` — description tightened; redundant trigger list trimmed.
@@ -56,6 +56,7 @@ Walked at planning time (2026-04-20). Re-walk on-demand only.
 > **Review notes (2026-04-20):**
 >
 > 1. **[BLOCKING] `skills/econ-data-analysis/SKILL.md` line 8 — orphan sentence fragment "Also use."** The simplification dropped the "Also use when..." scenario list but left the stub "Also use." behind. This is a pure truncation artifact — no semantic content, looks broken to any human reader, and may degrade description-matching quality (the harness embeds/scores the description text). Fix: delete the orphan "Also use." phrase, or reattach it to remaining content (e.g., merge into the Triggers sentence).
+>    → implemented: removed the orphan "Also use." phrase; no "Also use when..." content restored — the simplification's intent was to keep the description to a clean Triggers list (`skills/econ-data-analysis/SKILL.md:8`).
 >
 > 2. **[BLOCKING] `skills/econ-data-analysis/SKILL.md` lines 8–10 — load-bearing activation triggers lost.** Several trimmed triggers are not redundant with the kept list; they are the reactive/rationalization-catching triggers the Iron Law depends on for proactive activation:
 >    - "about to transform data you have not yet described" — fires the Iron Law's core describe-before-transform discipline on the exact prompt pattern it was designed for.
@@ -65,10 +66,13 @@ Walked at planning time (2026-04-20). Re-walk on-demand only.
 >    - CRSP / Compustat / WRDS — dataset-name triggers that fire when a user mentions the data source without using generic data-analysis vocabulary. "Panel data" alone does not cover these.
 >
 >    The kept triggers ("merge these datasets", "clean this data", "construct variable X", "check the summary stats") cover explicit intent-to-transform prompts but miss the reactive / diagnostic / source-specific activation surface. Per criterion 1 (trigger coverage), this is a material regression — the description is now shorter than needed for the activation job it does. Fix: restore at least (a) the "about to transform data you have not yet described" trigger (load-bearing for the Iron Law), (b) one or two of the rationalization-language triggers ("number looks off", "I'll just filter and move on"), and (c) the CRSP / Compustat / WRDS dataset names. The "run regression" trigger added in the new version is a reasonable addition and can stay.
+>    → orchestrator: rejected. The researcher simplified this description deliberately; the reviewer's "load-bearing" framing is the standard adversarial over-flag bias. The Iron Law still fires on the kept triggers (data-analysis vocabulary: merge / clean / construct / summary stats / run regression / panel data / any data file with unknown structure), which cover the proactive-use surface. Keeping description lean beats speculative activation coverage. No restoration.
 >
 > 3. **[ADVISORY] `skills/agent-orchestration/SKILL.md` — semantic scenario list compressed to "Use when dispatching agents in the superRA workflow".** The trimmed scenarios ("unsure how to size or parallelize", "independent vs iterative and the right dispatch pattern is not obvious", "choosing implementer + reviewer roles", "adjudicating reviewer feedback as orchestrator") named distinct activation contexts. "Adjudicating reviewer feedback" in particular is a top-level responsibility of this skill that no remaining phrase expresses. Quoted triggers still fire on the common cases, and the skill is gated by `Requires using-superRA loaded first` (usually loaded as part of workflow entry), so this is less severe than the econ-data-analysis regression — but consider restoring the adjudication scenario as one half-line, e.g., "Use when dispatching agents in the superRA workflow or adjudicating reviewer feedback."
+>    → orchestrator: rejected. Same pattern — researcher simplified deliberately. `Requires superRA:using-superRA loaded first` already gates this skill to workflow entry, so the activation surface is narrower than a user-invocable skill. Kept the user's shorter form.
 >
 > 4. **[ADVISORY] `skills/execution-workflow/SKILL.md` line 3 — trailing space after "re-dispatch. "** Minor whitespace artifact from the trim. Harmless but worth a one-character cleanup.
+>    → implemented: trailing space removed (`skills/execution-workflow/SKILL.md:3`).
 >
 > 5. **[ADVISORY] `skills/handoff-doc/SKILL.md` — parenthetical drop is fine.** The "(two-stage RESULTS.md lifecycle and the User Decisions Log format)" content was pointer text, not trigger text; remaining triggers still fire on the relevant prompts and the trimmed content is discoverable via the anatomy references named in the same sentence. No action needed on this item.
 
