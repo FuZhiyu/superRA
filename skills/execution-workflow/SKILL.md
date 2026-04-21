@@ -5,6 +5,8 @@ description: Requires `superRA:using-superRA` loaded first. Use when you have a 
 
 # Execution Workflow
 
+**First, load `superRA:using-superRA` if not already loaded.** It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
+
 Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu. 
 
 Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE; the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines` + relevant §Pitfalls). Falls back to direct execution when the user requests it or tasks are trivial.
@@ -18,6 +20,8 @@ Default mode dispatches a fresh subagent per task. Each task gets one comprehens
 3. Fall back to **direct mode** when the harness lacks subagent capability, the user explicitly requests it, or tasks are trivial. Direct mode: main agent implements; reviewer subagents still dispatched after each task (review is never skipped).
 
 ## The Process
+
+**Load `superRA:agent-orchestration` before writing any dispatch prompt** — the canonical template shape, `Additionally:` anchor rules, and banned fields live there. Dispatching without it produces malformed prompts.
 
 1. Read plan, extract all tasks, create TodoWrite.
 2. **Per task:**
@@ -227,3 +231,7 @@ See `superRA:using-superRA` §Skill-Load Manifest — it is the single source of
 - Do NOT skip the re-review
 - Do NOT ask the user whether to fix — iterate automatically
 
+
+---
+
+**Before proceeding:** if you have not loaded `superRA:using-superRA` (and, for main agents, `superRA:using-superRA/references/main-agent.md`), load them now.
