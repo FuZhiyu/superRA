@@ -406,17 +406,20 @@ for h in '^## Skill-Load Manifest$' \
   fi
 done
 [ "$us_missing" -eq 0 ] && pass "using-superRA SKILL.md carries Skill-Load Manifest + Skill Inventory + Execution Modes"
-# Six Stage rows in the manifest, backtick-wrapped stage names in column 1.
-# `refactoring` and `integration-review` collapsed into a single `integration` row.
-stage_rows=$(grep -cE '^\| `(implementation|integration|drift-test|merge|documentation|planning-review)`' "$us_skill")
-if [ "$stage_rows" -eq 6 ]; then
-  pass "using-superRA Skill-Load Manifest has exactly 6 Stage rows"
+# Five Stage rows in the manifest's generic table, backtick-wrapped stage names
+# in column 1. `planning-review` was dropped (no workflow dispatches it); plan
+# authoring runs in-session via planning-workflow rather than as a dispatch
+# Stage. `refactoring` and `integration-review` were previously collapsed into
+# a single `integration` row.
+stage_rows=$(grep -cE '^\| `(implementation|integration|drift-test|merge|documentation)`' "$us_skill")
+if [ "$stage_rows" -eq 5 ]; then
+  pass "using-superRA Skill-Load Manifest has exactly 5 Stage rows"
 else
-  fail "using-superRA Skill-Load Manifest has $stage_rows Stage rows (expected 6)"
+  fail "using-superRA Skill-Load Manifest has $stage_rows Stage rows (expected 5)"
 fi
-# handoff-doc is mentioned in the manifest preamble and in the documentation/
-# planning-review rows (Task 6 dropped it from everyday implementer/reviewer
-# rows); it also appears in the skill inventory. >=3 live mentions is the floor.
+# handoff-doc is mentioned in the manifest preamble and in the documentation
+# row (Task 6 dropped it from everyday implementer/reviewer rows); it also
+# appears in the skill inventory. >=3 live mentions is the floor.
 handoff_hits=$(grep -c 'handoff-doc' "$us_skill")
 if [ "$handoff_hits" -ge 3 ]; then
   pass "using-superRA SKILL.md mentions handoff-doc in >=3 places"
