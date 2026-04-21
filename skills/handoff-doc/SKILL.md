@@ -28,7 +28,7 @@ Subagent-specific review-loop mechanics (annotation protocols, `**Doc edits:**` 
 
 Every edit replaces stale content in place. Never append, never strike through, never use "Update:" / "Revised:" / "Previously..." framing. If you catch yourself writing a sentence that references a prior version of the doc, stop — that sentence belongs in the git commit message.
 
-## What Counts as Stale (remove, don't keep)
+## Stale Content Checklist
 
 - Steps describing an approach abandoned after seeing the data — rewrite them to describe what was actually done.
 - Discovery notes now incorporated into the current steps.
