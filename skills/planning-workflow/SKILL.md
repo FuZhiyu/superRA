@@ -1,11 +1,9 @@
 ---
 name: planning-workflow
-description: Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet; when you have an idea and need to translate it into an executable plan document; when a fresh branch needs its planning artifacts bootstrapped. Triggers include "let's analyze X", "write me a plan for Y", "we're starting a new project on Z", "before writing any code", empty working directory for a new task, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → INTEGRATE workflow; hands off to `execution-workflow` once the plan is approved. Domain-agnostic: for data-analysis planning, invokes `superRA:econ-data-analysis` and reads its `references/planning.md` for the Data Inventory hard gate and sensitivity design.
+description: Requires `superRA:using-superRA` loaded first. Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet; when you have an idea and need to translate it into an executable plan document; when a fresh branch needs its planning artifacts bootstrapped. Triggers include "let's analyze X", "write me a plan for Y", "we're starting a new project on Z", "before writing any code", empty working directory for a new task, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → INTEGRATE workflow; hands off to `execution-workflow` once the plan is approved. Domain-agnostic: for data-analysis planning, invokes `superRA:econ-data-analysis` and reads its `references/planning.md` for the Data Inventory hard gate and sensitivity design.
 ---
 
 # Planning Workflow
-
-**First, load `superRA:using-superRA` if not already loaded** — it carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
 
 ## Overview
 
