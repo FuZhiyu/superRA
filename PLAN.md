@@ -102,18 +102,14 @@ Grep confirms zero live `Stage: merge` emissions. Standalone `semantic-merge` di
 
 ### Task 4: Add "Emitted by" Column to Generic Manifest Table
 **Depends on:** Task 3
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
-- [ ] **Step 1: Add a middle column** to the generic Stage table mapping each Stage to the workflow + phase that emits it:
-  - `implementation` → `implementation-workflow` (post-Task 5 name; if Task 5 hasn't landed yet, use `execution-workflow` here and let Task 5's rename sweep fix it)
-  - `drift-test` → `integration-workflow` Phase A
-  - `integration` → `integration-workflow` Phase B
-  - `documentation` → `integration-workflow` Phase C
-- [ ] **Step 2: Verify each workflow file already names its Stage** in dispatch blocks / self-description. Expected hits:
-  - `execution-workflow` ~line 108 + 211 (`Stage: implementation`)
-  - `integration-workflow` line 69 (`Stage: drift-test`), 93 + 132–133 (`Stage: integration`), 167 + 188 (`Stage: documentation`)
-  If any phase lacks an explicit `Stage: <name>` line, add it.
-- [ ] **Step 3: Run invariants, commit.**
+- [x] **Step 1: Add a middle column** to the generic Stage table mapping each Stage to the workflow + phase that emits it. Used `execution-workflow` for `implementation` row (Task 5 rename sweep will update). Row order reordered to match workflow phase order (implementation → drift-test → integration → documentation).
+- [x] **Step 2: Verify each workflow file already names its Stage.** Confirmed:
+  - `execution-workflow` lines 108 + 211 mention `Stage: implementation` (dispatch template prose + Agent Loads section).
+  - `integration-workflow` line 69 uses inline `Stage \`drift-test\`` (canonical shape reference); lines 93 + 132 have `Stage: integration`; lines 167 + 188 have `Stage: documentation`.
+  No additions needed — all stages are named in their emitting phase.
+- [x] **Step 3: Run invariants.** `bash tests/structural-invariants.sh` — manifest 4-row invariant passes. Pre-existing README `## Workflow Map` failure is out of scope.
 
 ### Task 5: Rename `execution-workflow` → `implementation-workflow`
 **Depends on:** Task 3 (structural), Task 4 (content)
