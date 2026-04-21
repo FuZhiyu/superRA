@@ -1,6 +1,6 @@
 ---
 name: execution-workflow
-description: Use when a PLAN.md already exists and work should move into per-task implementation, review, reproducibility checks, and branch-completion choices.
+description: Use when an approved PLAN.md needs per-task implementation with an implementer-reviewer pair, when resuming work where some tasks are IMPLEMENTED / some REVISE / some not started, or when an analysis is code-complete and needs reproducibility verification plus a completion menu. Triggers include "execute the plan", "run task N", "implement this PLAN.md", "finish this analysis". Covers IMPLEMENT and VALIDATE; hands off to `integration-workflow` on merge or PR.
 ---
 
 # Execution Workflow
