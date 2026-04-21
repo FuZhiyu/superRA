@@ -291,10 +291,11 @@ Hooks are **extensionless bash scripts** at `hooks/<name>` (so Windows auto-dete
 6. **CI guidance.** Add a top-of-file comment explaining (a) how to run locally, (b) that the suite is not part of default `tests/` runs (network / auth required), (c) the env vars it consumes.
 
 **Steps:**
-- [ ] Dispatch implementer subagent in a parallel worktree branched off the post-harvest orchestrator HEAD so all three hooks + registrations are in-tree.
-- [ ] Implementer authors `tests/hooks/test-e2e-cli.sh` and any fixtures; runs S1/S2/S3/S6 locally (hook-only scenarios, no API turns) to sanity-check the harness; records run output in RESULTS.md Task 6.
-- [ ] Implementer commits as `hooks: add CLI-driven end-to-end test suite for autoload + gate hooks`.
+- [x] Dispatch implementer subagent in a parallel worktree branched off the post-harvest orchestrator HEAD so all three hooks + registrations are in-tree.
+- [x] Implementer authors `tests/hooks/test-e2e-cli.sh`. Methodology revisions during implementation: (a) `--tools ""` + `--append-system-prompt` does NOT suppress model turns on CLI 2.1.116; every invocation therefore passes `--model haiku` instead to cap cost. (b) `CLAUDE_CONFIG_DIR` is NOT overridden because a fresh dir breaks auth; isolation uses per-scenario temp cwd + `--no-session-persistence` + trap-cleanup of matching `~/.claude/projects/<cwd-hash>/`. (c) `hook_name` in the event stream is the event (plus matcher), not the hook script; assertions target the `stdout` payload of `hook_response` records grouped by `hook_event`. No fixture files are written.
+- [x] Implementer runs the default suite (S1 S2 S3 S6) and the full suite (adds S4 S5 under `CLAUDE_E2E_FULL=1`). Default: 5/5 PASS at ~$0.08 total. Full adds S5 PASS + S4 FAIL; S4 fails structurally because `autoload-superra` makes compliant models load `using-superRA` before the workflow-skill call, so `ensure-using-superra` is never in the deny state. See RESULTS.md Task 6 for full outputs and a discussion of the S4 design trade-off.
+- [x] Implementer commits as `hooks: add CLI-driven end-to-end test suite for autoload + gate hooks`.
 - [ ] Reviewer subagent runs a comprehensive pass: confirms assertions target event-stream structure (not prose), session-isolation prevents state leakage, cost envelope is honored, retries are bounded.
 - [ ] On APPROVE, orchestrator harvests the branch back via `git merge --no-ff`.
 
-**Review status:**
+**Review status:** IMPLEMENTED

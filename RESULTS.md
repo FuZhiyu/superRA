@@ -119,4 +119,91 @@ Appended two `"matcher": "Skill"` entries to the existing `PreToolUse` array in 
 
 ## Task 6: Automate end-to-end verification via the claude CLI
 
-**Status:** Not started
+**Status:** IMPLEMENTED (with one scenario flagged for design discussion — see Concerns)
+
+Delivered `tests/hooks/test-e2e-cli.sh`, a driver that runs the real `claude` CLI (2.1.116) with `--include-hook-events --output-format=stream-json` and asserts on the NDJSON event stream. Every invocation passes `--model haiku` (claude-haiku-4-5) to keep cost minimal, and uses `--plugin-dir $REPO_ROOT` so the in-tree `hooks.json` registration is the one under test.
+
+### Event-stream shape discovered
+
+Each hook invocation produces two NDJSON records:
+- `{"type":"system","subtype":"hook_started","hook_name":"<event[:matcher]>","hook_event":"<event>",...}` — e.g. `hook_name="PreToolUse:Skill"`, `hook_name="UserPromptSubmit"`.
+- `{"type":"system","subtype":"hook_response","hook_name":"<event[:matcher]>","stdout":"<hook-script-stdout>","exit_code":0,...}` — the hook script's stdout is carried verbatim inside the `stdout` field (with `\n` preserved and inner JSON escaped once).
+
+**`hook_name` is the event name (plus `:matcher` for tool-matched hooks), NOT the hook script file name.** When two hooks are registered for the same `PreToolUse:Skill` event (as is the case here for `ensure-using-superra` and `ensure-agent-orchestration`), both fire in parallel and both produce separate `hook_started` / `hook_response` records with identical `hook_name`. They can only be distinguished by inspecting the `stdout` payload (one may emit `{}`, the other a deny JSON).
+
+The driver therefore asserts on the *set* of `stdout` payloads per event rather than per-hook-script. For a silent pass-through we require every `PreToolUse:Skill` `hook_response` to have stdout in `{"", "{}\n"}`; for a deny we require at least one to contain the target companion's name in a `permissionDecisionReason`.
+
+### Session / state isolation + auto-cleanup
+
+- Every scenario uses a fresh UUID via `--session-id` and runs in a per-scenario temp cwd rooted at a session-wide `TMPROOT=$(mktemp -d)`.
+- `trap cleanup EXIT INT TERM` removes `TMPROOT` (NDJSON captures + scenario cwds) and every matching `~/.claude/projects/<cwd-hash>/` dir.
+- The project-dir key is derived from the canonical cwd (macOS `/var/folders/` → `/private/var/folders/`) with both `/` and `.` translated to `-`. The canonical path is recorded at cwd-creation time so the trap can still derive the key after the scratch dir has been removed.
+- The canonical path is stored via module-level globals (`TMP_CWD`, `TMP_CWD_CANON`) instead of command-substitution return values, because `arr+=(x)` inside `$(...)` only mutates the subshell's array — the parent shell's cleanup arrays would otherwise be empty.
+- **Pre/post `ls ~/.claude/projects/` diff confirms zero residue.**
+- `CLAUDE_CONFIG_DIR` is deliberately NOT overridden: a fresh config dir breaks auth (the user's OAuth token is not there), so the suite uses `--no-session-persistence` + cwd isolation + trap cleanup instead. This deviates from the dispatch prescription of a scratch `CLAUDE_CONFIG_DIR`, but the prescription does not work in practice on this machine.
+
+### Cost discipline
+
+The dispatch proposed `--tools ""` + `--append-system-prompt` to make hook-only scenarios free of model turns. **This did not work on 2.1.116** — the model still takes one turn per `claude -p` invocation even with zero tools enabled; `--tools ""` only prevents tool *invocation*, not the turn itself. As fallback the driver passes `--model haiku` on every invocation. Observed cost on the runs below: ~$0.01–$0.03 per hook-only scenario, ~$0.05–$0.10 for S4/S5 (multi-turn). S4/S5 are gated behind `CLAUDE_E2E_FULL=1`.
+
+### Default-run output (S1/S2/S3/S6, no CLAUDE_E2E_FULL)
+
+```
+claude CLI: 2.1.116
+plugin dir: /Users/zhiyufu/Dropbox/package_dev/econ-superpowers.worktrees/task6-cli-tests
+mode:       DEFAULT (CLAUDE_E2E_FULL=0)
+
+=== S1 ===
+PASS  S1 autoload reminder fires on superRA                        (reminder injected)
+       cost: $0.0136
+
+=== S2 ===
+PASS  S2 setup load using-superRA                                  (setup skill loaded)
+PASS  S2 autoload suppressed after skill load                      (silent as expected)
+       setup cost: $0.0191    check cost: $0.0177
+
+=== S3 ===
+PASS  S3 autoload silent without trigger                           (silent as expected)
+       cost: $0.0118
+
+=== S6 ===
+PASS  S6 non-workflow Skill passes through both gates silently     (all PreToolUse silent)
+       cost: $0.0177
+
+
+Passed: 5    Failed: 0
+```
+
+Total default-run cost: ~$0.08. Pre/post `~/.claude/projects/` diff empty (NO_LEAK).
+
+### Full-run output (CLAUDE_E2E_FULL=1, adds S4 + S5)
+
+```
+=== S4 (FULL) ===
+FAIL  S4 ensure-using-superra denies workflow skill                no deny payload naming superRA:using-superRA
+       cost: $0.0473
+
+=== S5 (FULL) ===
+PASS  S5 ensure-agent-orchestration denies after using-superRA loads (deny with superRA:agent-orchestration in reason)
+       cost: $0.0844
+
+
+Passed: 6    Failed: 1
+```
+
+### S4 failure mode (discussion needed — see Concerns below)
+
+S4 fails because the three hooks *interact* in a way S4 was written to probe naively: `autoload-superra` fires on the user prompt and injects a reminder naming `superRA:using-superRA`. A compliant model (Haiku here) reads the reminder and loads `superRA:using-superRA` BEFORE attempting the workflow skill. By the time `Skill(superRA:planning-workflow)` is dispatched, the companion is already in the transcript and `ensure-using-superra` passes silently — so no `permissionDecision: deny` naming `superRA:using-superRA` ever appears in the stream.
+
+In other words, in the live system the soft reminder wins and the hard gate never needs to fire for compliant models. The hard gate's actual purpose — to catch model non-compliance — is **structurally invisible** to a CLI probe that uses the same model the soft reminder is supposed to persuade.
+
+The S4 FAIL is therefore *expected* under the combined system as currently designed, not a bug in the hooks. S5 still validates the hard-gate deny mechanism because by the time S5 probes `ensure-agent-orchestration`, `using-superRA` has already been loaded, so `autoload-superra` has nothing to inject. S5 is the cleanest live-CLI assertion the three-hook system admits.
+
+### Run this locally
+
+```bash
+bash tests/hooks/test-e2e-cli.sh                  # S1 S2 S3 S6
+CLAUDE_E2E_FULL=1 bash tests/hooks/test-e2e-cli.sh # + S4 S5
+```
+
+Requires `claude` on PATH (logged in via keychain), `python3`, and `uuidgen`. Not part of default `tests/` runs.
