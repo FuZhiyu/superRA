@@ -5,6 +5,8 @@ description: Requires `superRA:using-superRA` loaded first. Use when a plan is c
 
 # Integration Workflow
 
+**First, load `superRA:using-superRA` if not already loaded.** It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
+
 Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the full finishing sequence that takes a reproducibility-verified analysis branch to a merged state on main: drift-test creation (Phase A), unified sync-with-main + refactor (Phase B, iterative), documentation maturation + PLAN.md disposition (Phase C), and final local merge or PR push + cleanup (Phase D).
 
 Assumes execution-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in execution-workflow.
@@ -39,6 +41,8 @@ Phase D — Final merge / PR / cleanup
 Every stop: log the answer per `superRA:handoff-doc` §User Decisions Log **before** acting.
 
 ## Dispatch Convention
+
+**Load `superRA:agent-orchestration` before writing any dispatch prompt** — the canonical template shape, `Additionally:` anchor rules, and banned fields live there. Dispatching without it produces malformed prompts.
 
 All dispatches: canonical template in `superRA:agent-orchestration` §Dispatch Templates; skill loads per `superRA:using-superRA` §Skill-Load Manifest; checklist discipline per `superRA:refactor-and-integrate`. REVISE adjudication: `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
@@ -340,3 +344,7 @@ See `superRA:using-superRA` §Skill-Load Manifest — the single source of truth
 
 **Always:**
 - Author new drift tests only for tasks with `**Integration status:** ≠ APPROVED`, but run the **full** drift-test suite on every integration pass (scope is for authoring; running is not scoped)
+
+---
+
+**Before proceeding:** if you have not loaded `superRA:using-superRA` (and, for main agents, `superRA:using-superRA/references/main-agent.md`), load them now.

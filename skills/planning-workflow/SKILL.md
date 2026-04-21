@@ -5,6 +5,8 @@ description: Requires `superRA:using-superRA` loaded first. Use when starting a 
 
 # Planning Workflow
 
+**First, load `superRA:using-superRA` if not already loaded.** It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
+
 ## Overview
 
 Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the execution-workflow to consume.
@@ -203,3 +205,7 @@ After finalizing the plan, check the **`Plan approved`** box in `PLAN.md` §Work
 - Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's §Three Concurrent Disciplines)
 - Falls back to direct mode for simple tasks or when user requests it
 - Review always happens regardless of mode
+
+---
+
+**Before proceeding:** if you have not loaded `superRA:using-superRA` (and, for main agents, `superRA:using-superRA/references/main-agent.md`), load them now.
