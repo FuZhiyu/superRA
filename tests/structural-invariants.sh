@@ -142,7 +142,7 @@ fi
 # prompt is additive steering on top of the agent's standard protocol; the
 # prefix is the anchor that tells the agent the standard Before-You-Start
 # is in effect.
-dispatch_files="skills/execution-workflow/SKILL.md
+dispatch_files="skills/implementation-workflow/SKILL.md
 skills/integration-workflow/SKILL.md
 skills/semantic-merge/SKILL.md
 skills/refactor-and-integrate/SKILL.md"
@@ -211,25 +211,25 @@ else
   pass "no separate implementation-review.md / integration-review.md reference (shared gating in main body)"
 fi
 
-# 12. execution-workflow domain-agnosticism invariants.
+# 12. implementation-workflow domain-agnosticism invariants.
 # The workflow skill should no longer carry data-flavored two-stage review
 # language or legacy CONDITIONAL APPROVE references, and should have
 # dropped the data-analysis-specific Sensitivity Analysis Tasks section.
-ew_skill="skills/execution-workflow/SKILL.md"
+ew_skill="skills/implementation-workflow/SKILL.md"
 if grep -qE 'data integrity|two-stage review|REVISE \(data integrity\)|REVISE \(implementation\)' "$ew_skill"; then
-  fail "execution-workflow SKILL.md still contains two-stage-review phrasing (data integrity / two-stage review / REVISE (data integrity) / REVISE (implementation))"
+  fail "implementation-workflow SKILL.md still contains two-stage-review phrasing (data integrity / two-stage review / REVISE (data integrity) / REVISE (implementation))"
 else
-  pass "execution-workflow SKILL.md free of two-stage-review phrasing"
+  pass "implementation-workflow SKILL.md free of two-stage-review phrasing"
 fi
 if grep -qE '^## Sensitivity Analysis Tasks' "$ew_skill"; then
-  fail "execution-workflow SKILL.md still carries '## Sensitivity Analysis Tasks' section (content lives in domain skill)"
+  fail "implementation-workflow SKILL.md still carries '## Sensitivity Analysis Tasks' section (content lives in domain skill)"
 else
-  pass "execution-workflow SKILL.md has dropped '## Sensitivity Analysis Tasks' section"
+  pass "implementation-workflow SKILL.md has dropped '## Sensitivity Analysis Tasks' section"
 fi
 if grep -Fq 'CONDITIONAL APPROVE' "$ew_skill"; then
-  fail "execution-workflow SKILL.md still mentions CONDITIONAL APPROVE — should be removed with verdict simplification"
+  fail "implementation-workflow SKILL.md still mentions CONDITIONAL APPROVE — should be removed with verdict simplification"
 else
-  pass "execution-workflow SKILL.md free of CONDITIONAL APPROVE references"
+  pass "implementation-workflow SKILL.md free of CONDITIONAL APPROVE references"
 fi
 
 # 13. Agent files point at the manifest for stage-based loads; the
@@ -254,12 +254,12 @@ else
 fi
 
 # 14. Cross-stage orchestration content lives in agent-orchestration, not
-# execution-workflow. agent-orchestration/SKILL.md owns these top-level
+# implementation-workflow. agent-orchestration/SKILL.md owns these top-level
 # sections: Workload Balancing, Dispatch Templates, Handling Reviewer
 # Feedback, Review Status Reference. Dispatch-Return Deltas was removed
 # (D1 in the feedback round — content lives in agents/implementer.md and
 # agents/reviewer.md §Report Format). Direct Mode was relocated to
-# using-superRA in Round 3 and no longer appears here. execution-workflow/
+# using-superRA in Round 3 and no longer appears here. implementation-workflow/
 # SKILL.md does NOT carry '## Dispatch Templates' as a heading (pointers to
 # agent-orchestration only).
 ao_skill="skills/agent-orchestration/SKILL.md"
@@ -286,10 +286,10 @@ if grep -Eq '^## Integration$' "$ao_skill"; then
 else
   pass "agent-orchestration SKILL.md no longer carries '## Integration' section"
 fi
-if grep -Eq '^## Dispatch Templates' "skills/execution-workflow/SKILL.md"; then
-  fail "execution-workflow SKILL.md still carries '## Dispatch Templates' as a top-level heading (should be lifted to agent-orchestration)"
+if grep -Eq '^## Dispatch Templates' "skills/implementation-workflow/SKILL.md"; then
+  fail "implementation-workflow SKILL.md still carries '## Dispatch Templates' as a top-level heading (should be lifted to agent-orchestration)"
 else
-  pass "execution-workflow SKILL.md no longer carries '## Dispatch Templates' as a top-level heading"
+  pass "implementation-workflow SKILL.md no longer carries '## Dispatch Templates' as a top-level heading"
 fi
 
 # 15. Alias-only protocol skills (implementer-protocol, reviewer-protocol) are

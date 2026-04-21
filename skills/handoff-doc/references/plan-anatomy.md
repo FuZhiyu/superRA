@@ -49,7 +49,7 @@ The header is the project's standing context, written at planning time and updat
 A checklist of irreversible workflow milestones. Each box is a rollup over per-task `**Review status:**` and `**Integration status:**` fields — it flips only when all tasks that contribute to the milestone have the appropriate per-task status. Each box flips at the moment its workflow step completes, in the same commit that completes the step. A new agent reads this section first to know where the project stands without having to scan task blocks or grep commits. On re-entry, the orchestrator unchecks affected boxes by judgment and declares in §Decisions which boxes were cleared and why. The full drift-test suite must re-run green before rechecking `Drift tests created` — see `planning-workflow §User Feedback and Changing Plans`.
 
 - [ ] **Plan approved** — researcher signed off on data inventory + plan (`planning-workflow` Phase 2)
-- [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`execution-workflow` Step 3)
+- [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
 - [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Phase A)
 - [ ] **Refactored** — integration reviewer `APPROVED` on the unified sync+refactor diff (`integration-workflow` Phase B)
 - [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Phase C)
@@ -68,7 +68,7 @@ When the first cross-task user decision arrives, insert a `## Decisions` heading
 
 ## Project Conventions
 
-Sits between the header's closing `---` and the first task block (or, if a `## Decisions` section is present, directly above it). Populated by the orchestrator at `planning-workflow` Phase 3 and refreshed at `execution-workflow` Step 1 when new upstream docs are discovered. Subagents read this section instead of re-walking the project's `CLAUDE.md` / `AGENTS.md` / `README.md` tree on every dispatch; if something they need is missing, they walk on-demand and flag the omission in their status return so the orchestrator can update the section.
+Sits between the header's closing `---` and the first task block (or, if a `## Decisions` section is present, directly above it). Populated by the orchestrator at `planning-workflow` Phase 3 and refreshed at `implementation-workflow` Step 1 when new upstream docs are discovered. Subagents read this section instead of re-walking the project's `CLAUDE.md` / `AGENTS.md` / `README.md` tree on every dispatch; if something they need is missing, they walk on-demand and flag the omission in their status return so the orchestrator can update the section.
 
 ```markdown
 ## Project Conventions
@@ -103,7 +103,7 @@ Researcher answers to `AskUserQuestion` / plain-text pauses land in `PLAN.md` **
 **Where it lands:**
 
 - **Task-scoped decision** (affects one task's scope, methodology, or implementation) → blockquote inside that task block, directly under `**Review status:**`. Uses the same blockquote syntax as review notes, so it sits naturally beside the adjudication protocol in `agents/implementer.md` / `agents/reviewer.md`.
-- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `execution-workflow` Step 4 merge-menu choice, `integration-workflow` Phase A drift-test selection, `integration-workflow` Phase C doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed immediately after the header / `## Project Conventions` and before the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
+- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `implementation-workflow` Step 4 merge-menu choice, `integration-workflow` Phase A drift-test selection, `integration-workflow` Phase C doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed immediately after the header / `## Project Conventions` and before the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
 
 **Format (both locations):**
 

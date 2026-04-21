@@ -1,9 +1,9 @@
 ---
-name: execution-workflow
+name: implementation-workflow
 description: Requires `superRA:using-superRA` loaded first. Use when you have a PLAN.md in the superRA task-block format and are ready to implement its tasks; when a plan has been approved and you need per-task implementation with an implementer-reviewer pair; when resuming work on a plan where some tasks are `IMPLEMENTED`, some `REVISE`, and some not started; when an analysis is code-complete and you want to verify reproducibility and present completion options (merge / PR / keep / discard). Triggers include "execute the plan", "run task N", "implement this PLAN.md", "finish this analysis", a branch with an APPROVED plan but no code yet, or a REVISE state that needs orchestrator adjudication before re-dispatch.
 ---
 
-# Execution Workflow
+# Implementation Workflow
 
 **First, load `superRA:using-superRA` if not already loaded.** It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
 
@@ -11,7 +11,7 @@ Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA work
 
 Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE; the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines` + relevant §Pitfalls). Falls back to direct execution when the user requests it or tasks are trivial.
 
-**Announce at start:** "I'm using the execution-workflow skill to implement this plan."
+**Announce at start:** "I'm using the implementation-workflow skill to implement this plan."
 
 ## Execution Modes
 
@@ -62,7 +62,7 @@ After the branch check, confirm `PLAN.md` and `RESULTS.md` exist, are tracked, *
 
 All four conjuncts must succeed. The first two confirm existence and tracking; the last two confirm the worktree copy matches the committed copy (neither a dirty edit nor a staged-but-uncommitted change).
 
-**If the check fails, halt and invoke `superRA:planning-workflow` to bootstrap the docs.** Do not inline planning-workflow content here — proceed through its full Phase 1 / Phase 2 / Self-Review; resume execution-workflow at Step 1 after planning-workflow completes.
+**If the check fails, halt and invoke `superRA:planning-workflow` to bootstrap the docs.** Do not inline planning-workflow content here — proceed through its full Phase 1 / Phase 2 / Self-Review; resume implementation-workflow at Step 1 after planning-workflow completes.
 
 Step 0 (branch check) must have already run — Step 0b comes after Step 0 so bootstrap commits cannot silently land on `main` / `master`.
 
@@ -198,7 +198,7 @@ These are the things the orchestrator does that no subagent does:
 
 ## Autonomy and Stop Points
 
-The autonomy contract (proceed-without-asking patterns, stop-and-ask classes, banned phrasings) is in `superRA:using-superRA/references/main-agent.md` — main-agent only. Read it at session start; it applies to every workflow phase, not just execution. This section lists only the **execution-workflow-specific stop points** — the legitimate pauses baked into this workflow that plug into the autonomy contract's three pause classes.
+The autonomy contract (proceed-without-asking patterns, stop-and-ask classes, banned phrasings) is in `superRA:using-superRA/references/main-agent.md` — main-agent only. Read it at session start; it applies to every workflow phase, not just execution. This section lists only the **implementation-workflow-specific stop points** — the legitimate pauses baked into this workflow that plug into the autonomy contract's three pause classes.
 
 - **Step 4 completion menu.** The 4-option menu (merge now / continue another task / sensitivity task / discard) is a user-defined workflow milestone.
 - **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.

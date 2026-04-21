@@ -30,7 +30,7 @@ Skip this skill for agent-only text handoffs with no figures, no math, no tables
 |---|---|
 | Implementer writing a `RESULTS.md` task section with figures / math / tables | `rich-content.md` |
 | Implementer writing a text-only `RESULTS.md` task section | nothing beyond this file |
-| `execution-workflow` reviewer (implementation review) | nothing beyond this file |
+| `implementation-workflow` reviewer (implementation review) | nothing beyond this file |
 | `integration-workflow` Phase C doc-writer subagent (maturing `RESULTS.md`) | `baseline-io.md` + `rich-content.md` + `final-form.md` |
 | `integration-workflow` Phase C doc-reviewer subagent | `final-form.md` |
 | Standalone markdown report (any context) | `baseline-io.md` + `rich-content.md` |

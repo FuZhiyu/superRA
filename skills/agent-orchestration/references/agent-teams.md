@@ -41,7 +41,7 @@ Only one team can exist per session. The lead must clean up the current team bef
 The full superRA workflow spans three team-worthy phases:
 
 ```
-execution-workflow (analysis team)
+implementation-workflow (analysis team)
   → cleanup
     → integration-workflow (integration team, Phases A–D)
       → cleanup

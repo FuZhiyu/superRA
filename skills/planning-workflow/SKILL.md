@@ -1,6 +1,6 @@
 ---
 name: planning-workflow
-description: Requires `superRA:using-superRA` loaded first. Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet; when you have an idea and need to translate it into an executable plan document; when a fresh branch needs its planning artifacts bootstrapped. Triggers include "let's analyze X", "write me a plan for Y", "we're starting a new project on Z", "before writing any code", empty working directory for a new task, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → INTEGRATE workflow; hands off to `execution-workflow` once the plan is approved. Domain-agnostic: for data-analysis planning, invokes `superRA:econ-data-analysis` and reads its `references/planning.md` for the Data Inventory hard gate and sensitivity design.
+description: Requires `superRA:using-superRA` loaded first. Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet; when you have an idea and need to translate it into an executable plan document; when a fresh branch needs its planning artifacts bootstrapped. Triggers include "let's analyze X", "write me a plan for Y", "we're starting a new project on Z", "before writing any code", empty working directory for a new task, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → INTEGRATE workflow; hands off to `implementation-workflow` once the plan is approved. Domain-agnostic: for data-analysis planning, invokes `superRA:econ-data-analysis` and reads its `references/planning.md` for the Data Inventory hard gate and sensitivity design.
 ---
 
 # Planning Workflow
@@ -9,7 +9,7 @@ description: Requires `superRA:using-superRA` loaded first. Use when starting a 
 
 ## Overview
 
-Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the execution-workflow to consume.
+Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the implementation-workflow to consume.
 
 Write comprehensive plans for a reader skilled at the craft but with zero context for this specific project — which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Frequent commits.
 
@@ -150,7 +150,7 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 4. **Update statuses** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* boxes are unchecked and *why*, then flips both the project-level `## Workflow Status` checkboxes and the per-task status lines. Rules: per-task `**Review status:**` and `**Integration status:**` on fully re-implemented tasks are cleared; untouched tasks retain APPROVED; minor-edited tasks (code unchanged) clear `**Integration status:**` while keeping `**Review status:** APPROVED`. **DAG cascade:** walk the transitive downstream closure of every changed task and clear statuses on any dependent whose inputs or assumptions shift.
 5. **Sweep PLAN.md for stale content** per `handoff-doc` §Stale Content Checklist. Earlier task blocks whose output has been superseded by a later task, cross-references to removed sections, review notes resolved by subsequent work — fix in place now, not later.
 6. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
-7. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `execution-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Phase B. On every re-entry, `integration-workflow` runs the **full** drift-test suite regardless of which tasks changed — only *authoring* new drift tests is scoped to the affected tasks. The doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff.
+7. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `implementation-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Phase B. On every re-entry, `integration-workflow` runs the **full** drift-test suite regardless of which tasks changed — only *authoring* new drift tests is scoped to the affected tasks. The doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff.
 
 
 **Banned shortcuts:**
@@ -197,11 +197,11 @@ After finalizing the plan, check the **`Plan approved`** box in `PLAN.md` §Work
 
 **1. Subagent-Driven (recommended for independent tasks)** - I dispatch a fresh subagent per task, review between tasks, fast iteration. Best when tasks don't heavily depend on each other's outputs.
 
-**2. Inline Execution (recommended for sequential pipelines)** - Execute tasks in this session using execution-workflow, context preserved across steps. Best when each step's output informs the next.
+**2. Inline Execution (recommended for sequential pipelines)** - Execute tasks in this session using implementation-workflow, context preserved across steps. Best when each step's output informs the next.
 
 **Which approach?"**
 
-**REQUIRED DISCIPLINE:** Use `superRA:execution-workflow`
+**REQUIRED DISCIPLINE:** Use `superRA:implementation-workflow`
 - Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's §Three Concurrent Disciplines)
 - Falls back to direct mode for simple tasks or when user requests it
 - Review always happens regardless of mode
