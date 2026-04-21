@@ -195,7 +195,7 @@ Hooks are **extensionless bash scripts** at `hooks/<name>` (so Windows auto-dete
 - [x] Run both test scripts. Both report `Passed: 16    Failed: 0`. Paste full driver output into RESULTS.md Task 3.
 - [x] Commit as `hooks: add ensure-using-superra + ensure-agent-orchestration PreToolUse gates`.
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 ---
 
@@ -227,7 +227,7 @@ Hooks are **extensionless bash scripts** at `hooks/<name>` (so Windows auto-dete
 - [x] Validate both files with `python3 -m json.tool`; both parse cleanly.
 - [x] Commit as `hooks: register ensure-using-superra and ensure-agent-orchestration PreToolUse gates`.
 
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 ---
 
