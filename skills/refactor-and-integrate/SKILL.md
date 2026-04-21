@@ -1,6 +1,6 @@
 ---
 name: refactor-and-integrate
-description: Utility skill (any phase). Use when creating drift tests, refactoring analysis code for codebase integration, or writing clean merge integration commits. Indexes the three gated checklists — Drift-Test Integrity, Codebase Integration, Merge Quality — carried in stage-scoped references and shared by implementer (self-check before commit) and reviewer (verification). Standalone-invokable — usable outside the integration phase for any refactoring task. Dispatched implementer/reviewer subagents load this skill when their Stage is `drift-test`, `integration`, or `merge` (per `superRA:using-superRA` §Skill-Load Manifest).
+description: Utility skill (any phase). Use when creating drift tests, refactoring analysis code for codebase integration, or writing clean merge integration commits. Indexes the three gated checklists — Drift-Test Integrity, Codebase Integration, Merge Quality — carried in stage-scoped references and shared by implementer (self-check before commit) and reviewer (verification). Standalone-invokable — usable outside the integration phase for any refactoring task. Dispatched implementer/reviewer subagents load this skill when their Stage is `drift-test` or `integration` (per `superRA:using-superRA` §Skill-Load Manifest); merge-quality content is loaded on demand during `integration-workflow` Phase B (when `semantic-merge` is in play) and standalone `semantic-merge` dispatches.
 ---
 
 # Refactor and Integrate
@@ -27,7 +27,7 @@ Stage `integration` → load `references/codebase-integration.md` (naming, utili
 
 ### 3. Merge Quality
 
-Stage `merge` → load `references/merge-quality.md` (intent preservation, Tier 3 escalation, commit-structure templates, integration-map format, data discipline).
+Load `references/merge-quality.md` (intent preservation, Tier 3 escalation, commit-structure templates, integration-map format, data discipline) when merging — inside `integration-workflow` Phase B when `semantic-merge` is invoked for conflict resolution, or on any standalone `semantic-merge` dispatch. No dedicated manifest Stage; merge work rides on top of `Stage: integration` or runs standalone.
 
 ---
 
