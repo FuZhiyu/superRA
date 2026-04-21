@@ -100,7 +100,7 @@ Grep confirms zero live `Stage: merge` emissions. Standalone `semantic-merge` di
 
 ### Task 5: Rename `execution-workflow` → `implementation-workflow`
 **Depends on:** Task 3 (structural), Task 4 (content)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 - [x] **Step 1: Rename the directory.** `git mv skills/execution-workflow skills/implementation-workflow`.
 - [x] **Step 2: Update the skill frontmatter** in `skills/implementation-workflow/SKILL.md` — `name: implementation-workflow`; refresh self-announce line and internal self-references (resume line, stop-points section).
