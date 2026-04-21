@@ -89,7 +89,7 @@ Grep confirms zero live `Stage: merge` emissions. Standalone `semantic-merge` di
 
 ### Task 4: Add "Emitted by" Column to Generic Manifest Table
 **Depends on:** Task 3
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 - [x] **Step 1: Add a middle column** to the generic Stage table mapping each Stage to the workflow + phase that emits it. Used `execution-workflow` for `implementation` row (Task 5 rename sweep will update). Row order reordered to match workflow phase order (implementation → drift-test → integration → documentation).
 - [x] **Step 2: Verify each workflow file already names its Stage.** Confirmed:
