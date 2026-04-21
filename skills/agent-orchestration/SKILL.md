@@ -1,6 +1,6 @@
 ---
 name: agent-orchestration
-description: Use when dispatching multiple agents and unsure how to size or parallelize the work; when tasks are independent vs iterative and the right dispatch pattern is not obvious; when choosing implementer + reviewer roles for a multi-step workflow; when adjudicating reviewer feedback as orchestrator. Triggers include "dispatch N agents", "run these in parallel", "who should do the review", a multi-step workflow that needs coordination across roles, or a session handoff where workflow state must survive. Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / INTEGRATE).
+description: Requires `superRA:using-superRA` loaded first. Use when dispatching multiple agents and unsure how to size or parallelize the work; when tasks are independent vs iterative and the right dispatch pattern is not obvious; when choosing implementer + reviewer roles for a multi-step workflow; when adjudicating reviewer feedback as orchestrator. Triggers include "dispatch N agents", "run these in parallel", "who should do the review", a multi-step workflow that needs coordination across roles, or a session handoff where workflow state must survive. Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / INTEGRATE).
 ---
 
 # Agent Orchestration

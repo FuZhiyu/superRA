@@ -69,9 +69,9 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 
 The `merge` stage is used for standalone `semantic-merge` dispatches — a dedicated merge-proposer / merge-reviewer pair resolving a branch outside the normal integration-workflow. Inside `integration-workflow` Phase B, the implementer runs `Stage: integration` and loads `superRA:semantic-merge` when the integration reviewer's annotation calls for intent-based conflict resolution — no Stage switch needed.
 
+**Main agents additionally load** `references/main-agent.md`, `superRA:handoff-doc`, and `superRA:agent-orchestration` before dispatching subagents or touching PLAN.md. Subagents skip these — they inherit context from their dispatch.
 
-**Main agents additionally load** `references/main-agent.md` and `superRA:handoff-doc` before dispatching subagents or touching PLAN.md. Subagents skip both.
-
+**Unknown `Stage:` values are a dispatch error** — halt and report to the orchestrator rather than guessing a skill/reference load.
 
 ## Instruction Priority
 
@@ -82,3 +82,6 @@ SuperRA skills override default system prompt behavior, but **user instructions 
 3. **Default system prompt** — lowest priority
 
 If CLAUDE.md says "skip data description for this dataset" and a skill says "always describe first," follow the user's instructions. The user is in control.
+
+
+**For main agents:** You MUST proceed to read `references/main-agent.md` and `superRA:handoff-doc` before any action. Subagents skip both.
