@@ -39,7 +39,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Category | Skill | One-line purpose |
 |---|---|---|
 | Workflow | `planning-workflow` | PLAN phase: scope check, task decomposition, plan draft. |
-| Workflow | `execution-workflow` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
+| Workflow | `implementation-workflow` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
 | Workflow | `integration-workflow` | INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
@@ -68,7 +68,7 @@ Apply to every dispatch regardless of domain.
 
 | `Stage:` | Emitted by | Required skills | Stage-scoped references |
 |---|---|---|---|
-| `implementation` | `execution-workflow` | — | — |
+| `implementation` | `implementation-workflow` | — | — |
 | `drift-test` | `integration-workflow` Phase A | `refactor-and-integrate` | `drift-test-quality.md` |
 | `integration` | `integration-workflow` Phase B | `refactor-and-integrate` | `codebase-integration.md` |
 | `documentation` | `integration-workflow` Phase C | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |

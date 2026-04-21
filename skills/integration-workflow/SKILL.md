@@ -1,6 +1,6 @@
 ---
 name: integration-workflow
-description: Requires `superRA:using-superRA` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the branch needs to be brought up to date with main and refactored to fit codebase conventions (review-led iterative sync + refactor targeting minimum-net-diff); when the working RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form (Phase C); when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "integrate", "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `execution-workflow`'s completion menu.
+description: Requires `superRA:using-superRA` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the branch needs to be brought up to date with main and refactored to fit codebase conventions (review-led iterative sync + refactor targeting minimum-net-diff); when the working RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form (Phase C); when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "integrate", "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `implementation-workflow`'s completion menu.
 ---
 
 # Integration Workflow
@@ -9,7 +9,7 @@ description: Requires `superRA:using-superRA` loaded first. Use when a plan is c
 
 Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the full finishing sequence that takes a reproducibility-verified analysis branch to a merged state on main: drift-test creation (Phase A), unified sync-with-main + refactor (Phase B, iterative), documentation maturation + PLAN.md disposition (Phase C), and final local merge or PR push + cleanup (Phase D).
 
-Assumes execution-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in execution-workflow.
+Assumes implementation-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in implementation-workflow.
 
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
@@ -254,7 +254,7 @@ git commit -m "remove analysis plan (preserved in branch history)"
 
 ## Phase D — Final Merge / PR / Cleanup
 
-After Phase C completes, execute the user's choice from execution-workflow Step 4. If main has advanced since Phase B, loop back to Phase B first — a fresh sync must precede the merge or push.
+After Phase C completes, execute the user's choice from implementation-workflow Step 4. If main has advanced since Phase B, loop back to Phase B first — a fresh sync must precede the merge or push.
 
 ### Step 1: Pre-merge check — is another Phase B round needed?
 
