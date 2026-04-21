@@ -9,7 +9,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/FuZhiyu/superRA.git",
-        "ref": "fix/codex-marketplace-install"
+        "ref": "main"
       },
       "policy": {
         "installation": "AVAILABLE",
