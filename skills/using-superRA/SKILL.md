@@ -66,12 +66,12 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 
 Apply to every dispatch regardless of domain.
 
-| `Stage:` | Required skills | Stage-scoped references |
-|---|---|---|
-| `implementation` | — | — |
-| `integration` | `refactor-and-integrate` | `codebase-integration.md` |
-| `drift-test` | `refactor-and-integrate` | `drift-test-quality.md` |
-| `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
+| `Stage:` | Emitted by | Required skills | Stage-scoped references |
+|---|---|---|---|
+| `implementation` | `execution-workflow` | — | — |
+| `drift-test` | `integration-workflow` Phase A | `refactor-and-integrate` | `drift-test-quality.md` |
+| `integration` | `integration-workflow` Phase B | `refactor-and-integrate` | `codebase-integration.md` |
+| `documentation` | `integration-workflow` Phase C | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 
 Inside `integration-workflow` Phase B, the implementer runs `Stage: integration` and loads `superRA:semantic-merge` when the integration reviewer's annotation calls for intent-based conflict resolution — no Stage switch needed.
 
