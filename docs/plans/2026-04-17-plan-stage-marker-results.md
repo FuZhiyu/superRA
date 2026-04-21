@@ -60,13 +60,13 @@ The `## Workflow Status` project-level checkboxes are no longer standalone flags
 
 ### Main-agent reference consolidation
 
-[`skills/using-superRA/references/main-agent.md`](../../skills/using-superRA/references/main-agent.md) (new) replaces two prior files — `session-bootstrap.md` and `main-agent-autonomy.md` — with one reference carrying: MANDATORY Session Start Actions; Cross-Session Detection (bash block + incomplete-plan handling + worktree handling); **Load the Handoff-Doc Skill** (new); The Three Pause Classes; Proceed Without Asking; Banned Phrasings; One Question at a Time; Log Before You Act.
+[`skills/using-superra/references/main-agent.md`](../../skills/using-superra/references/main-agent.md) (new) replaces two prior files — `session-bootstrap.md` and `main-agent-autonomy.md` — with one reference carrying: MANDATORY Session Start Actions; Cross-Session Detection (bash block + incomplete-plan handling + worktree handling); **Load the Handoff-Doc Skill** (new); The Three Pause Classes; Proceed Without Asking; Banned Phrasings; One Question at a Time; Log Before You Act.
 
 Main agents now load `superRA:handoff-doc` by default at session start. This makes the editing discipline and all `planning-workflow §Changing Plans` cross-references (User Decisions Log, plan-anatomy templates) available before the main agent touches `PLAN.md`. The subagent-side Skill-Load Manifest rows are unchanged — subagents still load `handoff-doc` only on `documentation` / `planning-review` stages.
 
 ### Iterative framing in top-level docs
 
-[`skills/using-superRA/SKILL.md`](../../skills/using-superRA/SKILL.md) gains a **Significant plan changes re-enter planning-workflow** paragraph at the level every agent reads. When the plan meaningfully changes — new task, removed or reordered task, material update to an existing task, post-integration scope addition — the agent re-invokes `planning-workflow §Changing Plans`.
+[`skills/using-superra/SKILL.md`](../../skills/using-superra/SKILL.md) gains a **Significant plan changes re-enter planning-workflow** paragraph at the level every agent reads. When the plan meaningfully changes — new task, removed or reordered task, material update to an existing task, post-integration scope addition — the agent re-invokes `planning-workflow §Changing Plans`.
 
 [`CLAUDE.md`](../../CLAUDE.md) and [`README.md`](../../README.md) reframe the workflow as **iterative, not linear**: PLAN → IMPLEMENT → VALIDATE → INTEGRATE is a cycle, not a one-shot pipeline; re-entering PLAN mid-execution or after integration is the normal case; `planning-workflow §Changing Plans` is the hinge that makes re-entry safe.
 
@@ -83,10 +83,10 @@ Main agents now load `superRA:handoff-doc` by default at session start. This mak
 | [`skills/handoff-doc/references/plan-anatomy.md`](../../skills/handoff-doc/references/plan-anatomy.md) | `**Integration status:**` added to task-block template; `## Workflow Status` description expanded with rollup + re-entry semantics; Field-by-Field updated with cascade rule |
 | [`skills/execution-workflow/SKILL.md`](../../skills/execution-workflow/SKILL.md) | Step 1 sub-step 2a rewritten as resumption-of-paused-protocol; Stop-Points pointer retargeted to `planning-workflow §Changing Plans` |
 | [`skills/integration-workflow/SKILL.md`](../../skills/integration-workflow/SKILL.md) | Stage 1 always-full-drift-suite rule; Stage 2 scoped refactor; Step 3 doc-writer-full + doc-reviewer-diff; pointers retargeted |
-| [`skills/using-superRA/SKILL.md`](../../skills/using-superRA/SKILL.md) | Main-agent default-load paragraph added; new **Significant plan changes re-enter planning-workflow** paragraph |
-| [`skills/using-superRA/references/main-agent.md`](../../skills/using-superRA/references/main-agent.md) | New consolidated reference |
-| `skills/using-superRA/references/session-bootstrap.md` | Deleted |
-| `skills/using-superRA/references/main-agent-autonomy.md` | Deleted |
+| [`skills/using-superra/SKILL.md`](../../skills/using-superra/SKILL.md) | Main-agent default-load paragraph added; new **Significant plan changes re-enter planning-workflow** paragraph |
+| [`skills/using-superra/references/main-agent.md`](../../skills/using-superra/references/main-agent.md) | New consolidated reference |
+| `skills/using-superra/references/session-bootstrap.md` | Deleted |
+| `skills/using-superra/references/main-agent-autonomy.md` | Deleted |
 | [`agents/implementer.md`](../../agents/implementer.md), [`agents/reviewer.md`](../../agents/reviewer.md) | Header-ownership bullet added to "You may NOT edit" list |
 | [`CLAUDE.md`](../../CLAUDE.md), [`README.md`](../../README.md) | Iterative-workflow reframing |
 | [`skills/agent-orchestration/references/agent-teams.md`](../../skills/agent-orchestration/references/agent-teams.md), [`skills/CATEGORIES.md`](../../skills/CATEGORIES.md) | Stale pointers retargeted to `main-agent.md` |
@@ -95,9 +95,9 @@ Main agents now load `superRA:handoff-doc` by default at session start. This mak
 ## Verification
 
 - `grep -rn "Scope Changes and Re-entry" skills/` → 0 hits. The rename consolidated under `planning-workflow §Changing Plans` is complete.
-- `grep -rn "Changing Plans" skills/` → the new `planning-workflow` section plus retargeted pointers from `execution-workflow`, `integration-workflow`, `plan-anatomy.md`, `main-agent.md`, `using-superRA/SKILL.md`, and `handoff-doc/SKILL.md`.
+- `grep -rn "Changing Plans" skills/` → the new `planning-workflow` section plus retargeted pointers from `execution-workflow`, `integration-workflow`, `plan-anatomy.md`, `main-agent.md`, `using-superra/SKILL.md`, and `handoff-doc/SKILL.md`.
 - `grep -rn "session-bootstrap.md\|main-agent-autonomy.md" skills/` → 0 hits. The two deleted files have no lingering references.
-- `ls skills/using-superRA/references/` shows `main-agent.md` alongside the three pre-existing harness tool references (`codex-tools.md`, `copilot-tools.md`, `gemini-tools.md`); the two deleted files are gone.
+- `ls skills/using-superra/references/` shows `main-agent.md` alongside the three pre-existing harness tool references (`codex-tools.md`, `copilot-tools.md`, `gemini-tools.md`); the two deleted files are gone.
 - `execution-workflow` Step 1 sub-step 2a is two sentences that cleanly name both triggers.
 - [`tests/structural-invariants.sh`](../../tests/structural-invariants.sh) passes (0 FAIL) against the post-re-entry tree.
 - Behavior-based self-test: the `PLAN.md` on this branch is itself the first end-to-end use of the new mechanism. `## Workflow Status` is a rollup over per-task fields; the 2026-04-17 re-entry unchecked `Execution complete`, `Refactored`, `Docs finalized` and declared which tasks to re-work; the 2026-04-18 re-entry added the iterative-framing additions as an inline extension. The mechanism is self-applicable.

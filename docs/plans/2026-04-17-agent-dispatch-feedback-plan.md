@@ -61,8 +61,8 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 > **Question asked:** How should the orchestrator dispatch these six tasks?
 > **Rationale:** Dogfood the framework we are introducing. Bundles T2+T3+T4 into one dispatch; keeps T1 and T6 dedicated.
 
-> **User decision (2026-04-17, merge-time):** Relocate §Shared-Repo Commit Discipline (F5) into `skills/using-superRA/SKILL.md` (next to main's centralized shared-agent discipline), with one-line pointers in `agents/implementer.md` + `agents/reviewer.md`. The discipline binds the main/orchestrator agent too, not just subagents — any agent that stages a commit must respect it.
-> **Question asked:** Where should §Shared-Repo Commit Discipline live now that main consolidated shared-agent content in using-superRA?
+> **User decision (2026-04-17, merge-time):** Relocate §Shared-Repo Commit Discipline (F5) into `skills/using-superra/SKILL.md` (next to main's centralized shared-agent discipline), with one-line pointers in `agents/implementer.md` + `agents/reviewer.md`. The discipline binds the main/orchestrator agent too, not just subagents — any agent that stages a commit must respect it.
+> **Question asked:** Where should §Shared-Repo Commit Discipline live now that main consolidated shared-agent content in using-superra?
 > **Rationale:** DRY with main's task 6 consolidation; user noted main agent must also respect the discipline when other agents are active.
 
 > **User decision (2026-04-17, merge-time):** Move top-level `PLAN.md` + `RESULTS.md` to `docs/plans/2026-04-17-agent-dispatch-feedback-{plan,results}.md` at the integration commit, following main's `docs/plans/` convention.
@@ -73,9 +73,9 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 > **Question asked:** Preserve main's §Agent reuse vs fresh dispatch?
 > **Rationale:** User-directed drop; keeps agent-orchestration lean and focused on Workload Balancing + Dispatch Templates.
 
-> **User decision (2026-04-17, post-merge):** Before landing on main, run a second semantic-merge pass integrating local main's 4 unpushed commits (C-01 planning-workflow template dedup, C-16 using-superRA tool-preference consolidation, D1 drop writing-skills, Stage 2 integration review fixes) into `feedback/agent-dispatch-fixes`. Only then fast-forward local main and push.
+> **User decision (2026-04-17, post-merge):** Before landing on main, run a second semantic-merge pass integrating local main's 4 unpushed commits (C-01 planning-workflow template dedup, C-16 using-superra tool-preference consolidation, D1 drop writing-skills, Stage 2 integration review fixes) into `feedback/agent-dispatch-fixes`. Only then fast-forward local main and push.
 > **Question asked:** Merge target — local main (4 commits ahead), origin/main direct, or via PR?
-> **Rationale:** Those 4 commits touch areas our feedback round also edits (using-superRA, planning-workflow template, writing-skills). A second tier-3 semantic-merge pass protects against silent overlap, matching the discipline we just used for origin/main.
+> **Rationale:** Those 4 commits touch areas our feedback round also edits (using-superra, planning-workflow template, writing-skills). A second tier-3 semantic-merge pass protects against silent overlap, matching the discipline we just used for origin/main.
 
 > **User decision (2026-04-17, push):** Push the fast-forwarded main (at 5c9dc46) to origin/main.
 > **Question asked:** Push main to origin now, or hold local?
@@ -107,7 +107,7 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 - `skills/integration-workflow/SKILL.md` — `## Agent Teams Mode` section removed.
 - `skills/merge-workflow/SKILL.md` — `## Agent Teams Mode` section removed.
 - `skills/semantic-merge/SKILL.md` — `## Agent Teams Mode` section removed; stale `Pairs with` bullet pointing at `agent-orchestration` removed.
-- `skills/using-superRA/SKILL.md` — `## Agent Teams` section removed; intro line updated.
+- `skills/using-superra/SKILL.md` — `## Agent Teams` section removed; intro line updated.
 - `CLAUDE.md` — `agent-teams.md` reference removed from `agent-orchestration` ownership bullet.
 - `skills/CATEGORIES.md` — category description updated.
 
@@ -115,7 +115,7 @@ Source: `git show a48f900` (also saved to `$TMPDIR/feedback-a48f900.diff`).
 
 - [x] **Step 1: Plan — enumerate all active references to Agent Teams**
 
-Before-count across active files (excluding `agent-orchestration/SKILL.md` which is T2 scope and `agent-teams.md` itself): ~28 references across 10 files (`execution-workflow` ×10, `using-superRA` ×3, `integration-workflow` ×2, `merge-workflow` ×2, `semantic-merge` ×2, `agents/implementer.md` ×2, `agents/reviewer.md` ×2, `hooks/session-start` ×2, `CLAUDE.md` ×1, `README.md` ×2). `agent-orchestration/SKILL.md` had ~10 additional references (deferred to T2).
+Before-count across active files (excluding `agent-orchestration/SKILL.md` which is T2 scope and `agent-teams.md` itself): ~28 references across 10 files (`execution-workflow` ×10, `using-superra` ×3, `integration-workflow` ×2, `merge-workflow` ×2, `semantic-merge` ×2, `agents/implementer.md` ×2, `agents/reviewer.md` ×2, `hooks/session-start` ×2, `CLAUDE.md` ×1, `README.md` ×2). `agent-orchestration/SKILL.md` had ~10 additional references (deferred to T2).
 
 - [x] **Step 2: Edit — archive the reference file**
 
@@ -128,7 +128,7 @@ Removed Teams references from all active files. `skills/agent-orchestration/SKIL
 - `agents/implementer.md`: deleted `## If Running as Agent Team Teammate` section.
 - `agents/reviewer.md`: deleted `## If Running as Agent Team Teammate` section.
 - `skills/integration-workflow/SKILL.md`, `skills/merge-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`: deleted `## Agent Teams Mode` sections.
-- `skills/using-superRA/SKILL.md`: deleted `## Agent Teams` section; updated intro sentence.
+- `skills/using-superra/SKILL.md`: deleted `## Agent Teams` section; updated intro sentence.
 - `hooks/session-start`: removed `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` probe and `agent_teams_note` injection.
 - `CLAUDE.md`: removed `agent-teams.md` pointer from `agent-orchestration` ownership description.
 - `skills/CATEGORIES.md`: updated description for `agent-orchestration`.

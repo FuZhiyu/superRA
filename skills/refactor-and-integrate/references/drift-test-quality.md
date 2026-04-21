@@ -1,6 +1,6 @@
 # Drift Test Quality Standards
 
-Shared domain reference for drift test creation and review. Both the implementer (test creator) and reviewer walk the gated checklist at the bottom of this file; the how-to sections above give the procedure, worked examples, and Red Flags rationale that the checklist items encode. Loaded whenever `Stage:` is `drift-test` (per `superRA:using-superRA` §Skill-Load Manifest), or when any stage's task creates, modifies, or assesses a drift test.
+Shared domain reference for drift test creation and review. Both the implementer (test creator) and reviewer walk the gated checklist at the bottom of this file; the how-to sections above give the procedure, worked examples, and Red Flags rationale that the checklist items encode. Loaded whenever `Stage:` is `drift-test` (per `superRA:using-superra` §Skill-Load Manifest), or when any stage's task creates, modifies, or assesses a drift test.
 
 ---
 

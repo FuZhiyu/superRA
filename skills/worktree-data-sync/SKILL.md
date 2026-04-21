@@ -13,7 +13,7 @@ user-invocable: true
 
 # Worktree Data Sync Skill
 
-Non-git data sync between existing worktrees — seed, diff, apply, and data teardown. Worktree lifecycle (create / enter / remove) is an orchestration concern and lives in `skills/agent-orchestration/references/worktree-harness-fallback.md`.
+Non-git data sync between existing worktrees — seed, diff, apply, and data teardown. See also: `skills/agent-orchestration/references/worktree-harness-fallback.md` for worktree lifecycle (create / enter / remove).
 
 ## When to Use
 
@@ -23,29 +23,13 @@ Activate the data-sync CLI below when the request is about:
 - copying managed data from one worktree to another
 - reconciling non-git differences after parallel work
 
-Do **not** use this skill for:
-- creating, entering, or removing worktrees (see `agent-orchestration/references/worktree-harness-fallback.md`)
-- branch checkout / merge / switch logic
-- sandbox permission setup
-
-**Announce at start:** "I'm using the worktree-data-sync skill to sync non-git data."
-
 ## Command Surface
 
-Single CLI entrypoint:
+Single CLI entrypoint (`<skill-dir>` = directory containing this `SKILL.md`; `--from` defaults to main worktree):
 
 ```bash
 python3 <skill-dir>/scripts/sync_worktree_data.py --to <worktree-path> --mode <seed|diff|apply> [OPTIONS]
 ```
-
-Replace `<skill-dir>` with the directory that contains this `SKILL.md`.
-
-### Endpoints
-
-- `--to` is required (destination worktree)
-- `--from` is optional (source worktree)
-- when `--from` is omitted, source defaults to the main worktree
-- both endpoints must be existing worktrees in the same repository
 
 ## Modes
 
