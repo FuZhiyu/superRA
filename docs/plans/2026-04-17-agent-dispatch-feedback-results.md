@@ -17,7 +17,7 @@
 | File | Teams ref count |
 |---|---|
 | `skills/execution-workflow/SKILL.md` | 10 |
-| `skills/using-superRA/SKILL.md` | 3 |
+| `skills/using-superra/SKILL.md` | 3 |
 | `skills/integration-workflow/SKILL.md` | 2 |
 | `skills/merge-workflow/SKILL.md` | 2 |
 | `skills/semantic-merge/SKILL.md` | 2 |
@@ -45,7 +45,7 @@
 - `skills/integration-workflow/SKILL.md` — `## Agent Teams Mode` deleted
 - `skills/merge-workflow/SKILL.md` — `## Agent Teams Mode` deleted
 - `skills/semantic-merge/SKILL.md` — `## Agent Teams Mode` deleted; stale `Pairs with` bullet removed
-- `skills/using-superRA/SKILL.md` — `## Agent Teams` section deleted; intro sentence updated
+- `skills/using-superra/SKILL.md` — `## Agent Teams` section deleted; intro sentence updated
 - `hooks/session-start` — Teams env-probe and injection removed
 - `CLAUDE.md` — `agent-teams.md` pointer removed from ownership description
 - `skills/CATEGORIES.md` — description updated
