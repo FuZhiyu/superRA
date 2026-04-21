@@ -1,10 +1,14 @@
 ---
 name: econ-data-analysis
 description: >
-  Use for empirical work on economic, financial, or panel datasets,
-  especially before transforming, merging, filtering, constructing
-  variables, validating surprising results, or re-checking outputs
-  after refactors.
+  Use PROACTIVELY for data analysis on economic, financial, or panel
+  datasets — importing, cleaning, merging, filtering, constructing
+  variables, aggregating, or building figures. Also use before
+  transforming data not yet described, when a number "looks off",
+  or after a script was refactored. Triggers include CRSP /
+  Compustat / WRDS / panel data, "clean this data", "construct
+  variable X", "why is this number so large", or any data file with
+  unknown structure. Language-agnostic.
 user-invocable: true
 ---
 
