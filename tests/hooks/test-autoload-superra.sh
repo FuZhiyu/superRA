@@ -59,7 +59,24 @@ print(json.dumps({
     got="UNKNOWN: $out"
   fi
 
-  if { [ "$expect" = "expect-reminder" ] && [ "$got" = "reminder" ]; } \
+  # JSON-validity assertion: every non-empty hook payload must parse as
+  # JSON. Without this, a malformed reminder like
+  #   {"additionalContext":"...Skill(skill="superRA:using-superRA")..."}
+  # slips past a plain `grep -q 'additionalContext'` check even though
+  # the harness would drop it. Check before the expect/got comparison
+  # so we fail loudly on invalid JSON regardless of the expected class.
+  local json_ok=1
+  if [ "$got" != "ERROR (rc=$rc)" ] && [ -n "$out" ]; then
+    if ! echo "$out" | python3 -c 'import json,sys; json.loads(sys.stdin.read())' 2>/dev/null; then
+      json_ok=0
+    fi
+  fi
+
+  if [ $json_ok -eq 0 ]; then
+    printf 'FAIL  %-50s (invalid JSON payload: %s)\n' "$name" "$out"
+    failed_names+=("$name")
+    fail=$((fail + 1))
+  elif { [ "$expect" = "expect-reminder" ] && [ "$got" = "reminder" ]; } \
      || { [ "$expect" = "expect-silent" ] && [ "$got" = "silent" ]; }; then
     printf 'PASS  %-50s (got %s)\n' "$name" "$got"
     pass=$((pass + 1))
@@ -95,6 +112,14 @@ run_case "V4b other-superRA-skill" expect-reminder "superRA hello" "$other_skill
 
 # V5: transcript_path empty -> reminder (fail-open)
 run_case "V5 empty-transcript-path" expect-reminder "superRA now"
+
+# V6: prompts with JSON-special / non-ASCII characters must still produce
+# a valid-JSON reminder. The hook does not embed the prompt into its
+# output, but these vectors fence against a regression that would.
+run_case "V6a embedded-dquote"  expect-reminder 'use superRA "properly" now'
+run_case "V6b embedded-bslash"  expect-reminder 'run superRA \path\to\x'
+run_case "V6c multiline-prompt" expect-reminder $'superRA line1\nline2 with more text'
+run_case "V6d non-ascii"        expect-reminder 'superRA — café naïve 你好 🚀'
 
 echo
 echo "Passed: $pass    Failed: $fail"

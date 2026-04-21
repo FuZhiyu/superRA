@@ -52,22 +52,28 @@ fi
 # Transcript gate: if the master skill has already been invoked this
 # session, suppress the reminder. The Claude Code transcript stores
 # Skill tool calls as JSON; match the skill-name field tolerantly
-# (optional whitespace, case-insensitive) so minor format drift does
-# not cause duplicate reminders.
+# with grep -iE '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"'
+# (case-insensitive, whitespace-tolerant around the colon) so minor
+# format drift does not cause duplicate reminders.
 if [ -n "$transcript_path" ] && [ -f "$transcript_path" ] \
    && grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"' "$transcript_path"; then
   printf '{}\n'
   exit 0
 fi
 
-context="<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load the master skill by invoking Skill(skill=\"superRA:using-superRA\"). It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>"
+context='<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load the master skill by invoking Skill(skill="superRA:using-superRA"). It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>'
+
+# JSON-escape the reminder text so inner double quotes / backslashes do
+# not invalidate the payload. `python3 -m json.dumps` emits the string
+# already surrounded by its own quotes — splice it in without wrapping.
+context_json=$(printf '%s' "$context" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
 
 if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
-  printf '{"additional_context":"%s"}\n' "$context"
+  printf '{"additional_context":%s}\n' "$context_json"
 elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
-  printf '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"%s"}}\n' "$context"
+  printf '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":%s}}\n' "$context_json"
 else
-  printf '{"additionalContext":"%s"}\n' "$context"
+  printf '{"additionalContext":%s}\n' "$context_json"
 fi
 
 exit 0
