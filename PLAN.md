@@ -18,11 +18,11 @@
 
 ## Workflow Status
 
-- [ ] **Plan approved** — researcher signed off on this plan
-- [ ] **Execution complete** — all tasks `APPROVED`, invariants green
-- [ ] **Drift tests created** — *(n/a for skill-edit work; `structural-invariants.sh` is the standing guard)*
-- [ ] **Refactored** — integration pass if relevant
-- [ ] **Docs finalized** — README / CATEGORIES / CLAUDE.md references all repointed
+- [x] **Plan approved** — researcher signed off on this plan
+- [x] **Execution complete** — all tasks `APPROVED`, invariants green
+- [x] **Drift tests created** — *(n/a for skill-edit work; `structural-invariants.sh` is the standing guard and passes)*
+- [x] **Refactored** — codebase-fit swept as part of Tasks 3–5 (manifest restructure + rename sweep)
+- [x] **Docs finalized** — README / CATEGORIES / CLAUDE.md / AGENTS.md references all repointed in Task 5
 - [ ] **Merged** — branch merged to main or PR opened
 
 ---
@@ -110,10 +110,10 @@ Grep confirms zero live `Stage: merge` emissions. Standalone `semantic-merge` di
 
 ### Task 6: Verify End-to-End
 **Depends on:** Task 5
-**Review status:** *(set during execution)*
+**Review status:** APPROVED *(verification pass done inline by orchestrator — all greps clean, invariants pass)*
 
-- [ ] **Step 1: Grep `execution-workflow`** across `skills/`, `agents/`, `hooks/`, root-level docs → expect zero hits.
-- [ ] **Step 2: Grep `Stage: merge`** and `planning-review` → expect zero hits in live code.
-- [ ] **Step 3: Grep emitted Stage values** against manifest rows — every `Stage: <name>` in `skills/` and `agents/` matches a row in the generic table.
-- [ ] **Step 4: Run `bash tests/structural-invariants.sh`** — all pass (modulo the pre-existing `## Workflow Map` README failure, which is out of scope).
-- [ ] **Step 5: Commit any final fixups.**
+- [x] **Step 1: Grep `execution-workflow`** — zero live hits across `skills/`, `agents/`, `hooks/`, `CLAUDE.md`, `README.md`, `AGENTS.md`, `tests/` (excluding `docs/plans/` archive).
+- [x] **Step 2: Grep `Stage: merge` and `planning-review`** — zero live hits. The one `planning-review` match is in `tests/structural-invariants.sh:410` as a comment explaining why the stage was dropped; that's the test documenting its own history, not a live pointer.
+- [x] **Step 3: Grep emitted Stage values.** Live emissions: `implementation` (implementation-workflow:108), `integration` (integration-workflow:93, 132), `documentation` (integration-workflow:167, 188). All match generic-table rows. Additional prose mentions of `Stage: integration` in `using-superRA:76`, `refactor-and-integrate` skill + merge-quality reference are contextual (describing when semantic-merge rides on integration Stage), not new emissions.
+- [x] **Step 4: Run `bash tests/structural-invariants.sh`** — all invariants pass except the pre-existing `README.md missing '## Workflow Map'` failure, confirmed out of scope.
+- [x] **Step 5:** No final fixups needed.
