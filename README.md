@@ -8,6 +8,8 @@ superRA turns AI coding agents into disciplined Research Assistants. It ships:
 
 superRA is inspired by the [Superpowers](https://github.com/obra/superpowers) plugin, which centers on test-driven software development. superRA adapts the same spine to scientific research, which is exploratory, iterative, and fluid.
 
+superRA is compatible with Claude Code, Codex, and any other harness that supports skills and subagents.
+
 ## Why superRA?
 
 AI agents are fast but undisciplined:
@@ -129,11 +131,75 @@ claude plugin install superRA@superRA
 
 Edits to your clone are picked up on the next session start.
 
+### Codex
+
+Codex installation has two pieces:
+
+- **Plugin bundle** from [`.codex-plugin/plugin.json`](./.codex-plugin/plugin.json). This installs the shared superRA skills.
+- **Named custom agents** from `codex-superra-setup`. This installs `superra_implementer` and `superra_reviewer`.
+
+This split is Codex-specific and deliberate. In Codex, plugins are the installable distribution unit for shared skills, while custom agents are discovered separately from `~/.codex/agents/` (global) or `.codex/agents/` (project-scoped).
+
+#### Global install (recommended for normal cross-repo use)
+
+1. Clone this repo somewhere durable:
+
+   ```bash
+   git clone https://github.com/FuZhiyu/superRA.git ~/.codex/plugins/superra
+   ```
+
+2. Add a personal plugin marketplace at `~/.agents/plugins/marketplace.json` that points at that clone. Minimal example:
+
+   ```json
+   {
+     "name": "personal-superra",
+     "interface": {
+       "displayName": "Personal superRA Plugins"
+     },
+     "plugins": [
+       {
+         "name": "superra",
+         "source": {
+           "source": "local",
+           "path": "./.codex/plugins/superra"
+         },
+         "policy": {
+           "installation": "AVAILABLE",
+           "authentication": "ON_INSTALL"
+         },
+         "category": "Productivity"
+       }
+     ]
+   }
+   ```
+
+3. Restart Codex, open the Plugins UI (or run `/plugins` in the CLI), and install `superra`.
+4. Run `codex-superra-setup`.
+5. Choose **global** scope so `superra_implementer` and `superra_reviewer` install into `~/.codex/agents/`.
+6. Restart Codex or start a fresh session if agent discovery has not refreshed yet.
+
+#### Project install (for developing or testing superRA in this repo)
+
+When you are working in this repo itself, you usually want project-scoped agents and a repo-local plugin entry:
+
+- [`./.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json) already points at this repo root, so opening this repo in Codex exposes a repo-local `superra` plugin marketplace entry.
+- Install `superra` from that repo marketplace, then run `codex-superra-setup` with **project** scope.
+- Project scope writes the generated agent TOMLs to [`.codex/agents/`](./.codex/agents/).
+- Opening this repo directly already exposes the skills through [`.agents/skills/`](./.agents/skills/); the repo-local plugin install is mainly for testing the actual plugin packaging and discovery path.
+
+#### Updating a Codex install
+
+- **Plugin updates:** Codex's local plugin install tracks the directory named in the marketplace entry. Update that directory, then restart Codex so it reloads the plugin files. For a global install, that usually means `git -C ~/.codex/plugins/superra pull`. For a project install, pull or edit the repo you already have open.
+- **Agent updates:** rerun `codex-superra-setup` after updating if you want to refresh the generated custom agents. This is required whenever [`agents/implementer.md`](./agents/implementer.md) or [`agents/reviewer.md`](./agents/reviewer.md) changes.
+- **Verification:** global installs should create `~/.codex/agents/superra_implementer.toml` and `~/.codex/agents/superra_reviewer.toml`. Project installs should create the same filenames under [`.codex/agents/`](./.codex/agents/).
+
+For more detail, see the official [Codex plugin docs](https://developers.openai.com/codex/plugins/build), [`docs/README.codex.md`](./docs/README.codex.md), and [`.codex/INSTALL.md`](./.codex/INSTALL.md).
+
 ### Other Platforms
 
 superRA ships entry files for several non-Claude-Code harnesses:
 
-- **Codex / Copilot CLI / any `AGENTS.md`-aware tool** — point at [`AGENTS.md`](./AGENTS.md) at the repo root.
+- **Copilot CLI / any other `AGENTS.md`-aware tool** — point at [`AGENTS.md`](./AGENTS.md) at the repo root.
 - **Gemini CLI** — point at [`GEMINI.md`](./GEMINI.md) and [`gemini-extension.json`](./gemini-extension.json).
 
 Harness-specific install flow varies; see the upstream [Superpowers docs](https://github.com/obra/superpowers) for patterns, and substitute this repo's URL.

@@ -62,6 +62,16 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
   The agent does not need to know the skill is domain-agnostic or what future verticals might look like — they only need to plan and load the plan. Design reasoning in the instruction body bloats context and dilutes the signal.
 - **Agents only load what they need.** When adding a new instruction, think carefully about which agent(s) actually need it and place it where only those agents will pick it up (e.g., inside a stage-scoped reference, not in the top-level SKILL.md). Instructions that apply to one role should not be read by every role.
 
+### Codex design
+
+- **Canonical instructions stay shared.** Keep the authoritative workflow text in root `skills/` and the authoritative role specs in `agents/`. Do not create Codex-only copies of workflow behavior.
+- **Harness differences live in adapter references.** When a workflow needs harness-specific tool naming or runtime behavior, put that in `skills/using-superRA/references/<harness>-tools.md` rather than forking the workflow skill body.
+- **Codex skill discovery uses additive surfaces.** Repo-local discovery comes from `.agents/skills/` symlinks back to canonical `skills/`. Plugin packaging comes from `.codex-plugin/plugin.json`, which points directly at `./skills/`.
+- **Codex named agents are generated artifacts.** `agents/implementer.md` and `agents/reviewer.md` remain canonical. The generated Codex custom-agent files live in `.codex/agents/` and are produced by `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
+- **Cross-repo Codex use depends on global custom agents.** The plugin installs skills; `codex-superra-setup` installs the named agents into `~/.codex/agents/` for normal cross-repo work, or into `.codex/agents/` for repo-local testing and development.
+- **Do not rely on plugin-managed agent installation.** Codex's documented plugin surface packages skills, apps, and MCP configuration; custom named agents use `.codex/agents/` or `~/.codex/agents/`.
+- **Codex contributor docs live here.** `AGENTS.md` is the canonical Codex-facing filename and remains a symlink to this file. `AGENT.md` is also kept as a convenience alias pointing here so the repo exposes the same contributor guidance through either name.
+
 ### DRY, composability, extensibility
 
 **One source of truth per concern.** When a piece of content appears in more than one skill, at most one copy is authoritative; the rest are one-line pointers. Duplicated content is a code smell and a source of drift — future edits will update one copy and miss the others. When adding content, first ask: *what concern does this describe?* Put it in the one skill that owns that concern, and reference it from everywhere else.
