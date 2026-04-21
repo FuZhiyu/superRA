@@ -122,7 +122,7 @@ Grep confirms zero live `Stage: merge` emissions. Standalone `semantic-merge` di
 
 ### Task 7: Consolidate Orchestrator Discipline (DRY)
 **Depends on:** Task 6
-**Review status:** REVISE
+**Review status:** IMPLEMENTED *(BLOCKING + ADVISORY items both addressed in a single edit; awaiting narrow re-review)*
 
 Content-preservation review of commit 7e0ba6f — verifies the consolidation of orchestrator discipline from `implementation-workflow` into `agent-orchestration` is lossless.
 
@@ -135,10 +135,12 @@ Content-preservation review of commit 7e0ba6f — verifies the consolidation of 
 >    The pre-consolidation `### Orchestrator-Only Responsibilities` bullet b had an explicit standalone imperative: **"Do not clear the blockquote."** The new §Orchestrator Duties adjudication bullet (line 149) is a single-line pointer to §Handling Reviewer Feedback. But §Handling Reviewer Feedback (lines 154–187) does NOT contain the "do not clear the blockquote" rule — it only explains how to annotate (`→ orchestrator: rejected`, `→ orchestrator: <second opinion requested>`), classify, push back, and escalate. An orchestrator loading `agent-orchestration` from any stage context (e.g., integration-workflow) and following the §Orchestrator Duties pointer to §Handling Reviewer Feedback will never encounter the instruction that it must not clear the review-notes blockquote itself. The rule currently lives only in `implementation-workflow` line 100 ("Leave the blockquote itself intact"), which is reached via the per-task REVISE prose, not via the orchestrator-discipline canonical home.
 >
 >    **Fix:** Add the "do not clear the blockquote" instruction to agent-orchestration §Handling Reviewer Feedback — e.g., append a short rule after step 3 or in the post-step authority paragraph: "Do not clear the review-notes blockquote yourself — the implementer annotates items with `→ implemented: ...` markers on their pass; the reviewer deletes confirmed-fixed items on re-review."
+>    → implemented: added a new paragraph inside step 3 of §Handling Reviewer Feedback carrying the "Do not clear the blockquote" rule + the `→ implemented: ...` annotation mechanics explanation (`skills/agent-orchestration/SKILL.md:174`).
 >
 > **[ADVISORY] findings (non-blocking):**
 >
 > 2. **[ADVISORY] MINOR — `skills/agent-orchestration/SKILL.md` — named section pointers not in §Handling Reviewer Feedback.** The original bullet b cited `agents/implementer.md §"How You Fix Review Items on a REVISE Round"` and `agents/reviewer.md §"How You Write a Review"` by exact section name. The new state has only a generic pointer at implementation-workflow line 100 ("agents/implementer.md / agents/reviewer.md for the full annotation mechanics") without section names. Orchestrators following only agent-orchestration get no named section hint. Low practical impact since the files are short and sections are clearly named — but the precision loss is real. Consider adding a named-section pointer inside §Handling Reviewer Feedback.
+>    → implemented: named section pointers included in the same new paragraph that fixes finding 1 (`skills/agent-orchestration/SKILL.md:174`).
 >
 > **All other required items verified present:**
 > - 4 orchestrator-only bullets (task sequencing, adjudication, edit-future-tasks-inline, escalate): agent-orchestration lines 148–152. ✓
