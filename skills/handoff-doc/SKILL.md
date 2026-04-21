@@ -39,7 +39,7 @@ Every edit replaces stale content in place. Never append, never strike through, 
 
 ## User Decisions Log
 
-Researcher answers to `AskUserQuestion` / plain-text pauses MUST be written into `PLAN.md` **before** the agent acts on them, committed atomically with the work they unblock. This is the "autonomous with human in the loop" principle (see `using-superRA` §Universal Principles #4) in practice: the decision is not resolved until it is in the record.
+Researcher answers to `AskUserQuestion` / plain-text pauses MUST be written into `PLAN.md` **before** the agent acts on them, committed atomically with the work they unblock. This is the "autonomous with human in the loop" principle (full contract in `using-superRA/references/main-agent.md`) in practice: the decision is not resolved until it is in the record.
 
 Full spec — where task-scoped vs project-level decisions land, the three-line blockquote format, the hook reminder, and what does NOT count as a decision — lives in `references/plan-anatomy.md` §User Decisions Log.
 
