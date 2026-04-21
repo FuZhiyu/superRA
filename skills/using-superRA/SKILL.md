@@ -71,10 +71,9 @@ Apply to every dispatch regardless of domain.
 | `implementation` | — | — |
 | `integration` | `refactor-and-integrate` | `codebase-integration.md` |
 | `drift-test` | `refactor-and-integrate` | `drift-test-quality.md` |
-| `merge` | `refactor-and-integrate` + `semantic-merge` | `merge-quality.md` |
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
 
-The `merge` stage is used for standalone `semantic-merge` dispatches — a dedicated merge-proposer / merge-reviewer pair resolving a branch outside the normal integration-workflow. Inside `integration-workflow` Phase B, the implementer runs `Stage: integration` and loads `superRA:semantic-merge` when the integration reviewer's annotation calls for intent-based conflict resolution — no Stage switch needed.
+Inside `integration-workflow` Phase B, the implementer runs `Stage: integration` and loads `superRA:semantic-merge` when the integration reviewer's annotation calls for intent-based conflict resolution — no Stage switch needed.
 
 ### Domain add-ons (topic-driven)
 

@@ -406,16 +406,18 @@ for h in '^## Skill-Load Manifest$' \
   fi
 done
 [ "$us_missing" -eq 0 ] && pass "using-superRA SKILL.md carries Skill-Load Manifest + Skill Inventory + Execution Modes"
-# Five Stage rows in the manifest's generic table, backtick-wrapped stage names
+# Four Stage rows in the manifest's generic table, backtick-wrapped stage names
 # in column 1. `planning-review` was dropped (no workflow dispatches it); plan
 # authoring runs in-session via planning-workflow rather than as a dispatch
 # Stage. `refactoring` and `integration-review` were previously collapsed into
-# a single `integration` row.
-stage_rows=$(grep -cE '^\| `(implementation|integration|drift-test|merge|documentation)`' "$us_skill")
-if [ "$stage_rows" -eq 5 ]; then
-  pass "using-superRA Skill-Load Manifest has exactly 5 Stage rows"
+# a single `integration` row. `merge` was dropped (no workflow emits Stage: merge;
+# standalone semantic-merge dispatches are handled outside the normal manifest
+# contract, and the Phase B integration note is preserved as inline prose).
+stage_rows=$(grep -cE '^\| `(implementation|integration|drift-test|documentation)`' "$us_skill")
+if [ "$stage_rows" -eq 4 ]; then
+  pass "using-superRA Skill-Load Manifest has exactly 4 Stage rows"
 else
-  fail "using-superRA Skill-Load Manifest has $stage_rows Stage rows (expected 5)"
+  fail "using-superRA Skill-Load Manifest has $stage_rows Stage rows (expected 4)"
 fi
 # handoff-doc is mentioned in the manifest preamble and in the documentation
 # row (Task 6 dropped it from everyday implementer/reviewer rows); it also
