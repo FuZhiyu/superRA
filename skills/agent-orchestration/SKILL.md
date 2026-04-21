@@ -52,7 +52,7 @@ will be reviewed in isolation.
 - A new feature that requires full domain-skill engagement.
 - Any task where bundle-context would exceed ~150k tokens.
 
-**Model tier selection:** See `superRA:using-superRA` §Code-Change Defaults #2. Default to medium tier; step up for adversarial review, silent-error-risk tasks, or heavy context synthesis.
+**Model tier selection:** Use the least capable model that handles the task; reviewers use the most capable available model.
 
 ### Rules of thumb
 
@@ -84,8 +84,6 @@ The `/parallel/` infix matters: the `merge-guard` hook exempts `*/parallel/*` so
 **Harvest-out and conflicts.** `git merge --no-ff <branch>/parallel/<slug>`. Task boundaries are set ex-ante in `PLAN.md`, so parallel branches are mechanically disjoint and typically merge cleanly. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. Cleanup: `git worktree remove` + `git branch -D`.
 
 Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `PLAN.md` — git (`git worktree list`, `git branch`) is the source of truth.
-
-**Note:** Teams-mode parallel dispatch (the archived `references/agent-teams.md` pattern) is deprecated. Use worktree isolation above.
 
 ---
 
