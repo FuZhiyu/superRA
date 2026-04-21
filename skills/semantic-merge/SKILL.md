@@ -1,18 +1,6 @@
 ---
 name: semantic-merge
-description: >-
-  Use when about to run `git merge`, `git rebase`, or `git cherry-pick` on a
-  research branch — or any time incoming changes from another branch may touch
-  results-bearing files, analysis scripts, PLAN.md, RESULTS.md, drift tests, or
-  domain-discipline artifacts — and you want thoughtful, research-aware
-  conflict resolution rather than mechanical ours/theirs. Triggers include:
-  bare `git merge` / `git rebase` / `git cherry-pick` on a research branch (the
-  merge-guard hook flags these automatically), "pull main into this branch",
-  "rebase onto main", "cherry-pick commit X", or any merge where at least one
-  hunk touches a results-bearing file. Invoked by `integration-workflow` Phase
-  B Step 3 mechanical-merge commit when conflicts or material main-side changes
-  exist; also usable standalone by any agent or human doing a research-aware
-  merge.
+description: "Use when about to run `git merge`, `git rebase`, or `git cherry-pick` on a research branch — or any time incoming changes from another branch may touch results-bearing files, analysis scripts, PLAN.md, RESULTS.md, drift tests, or domain-discipline artifacts — and you want thoughtful, research-aware conflict resolution rather than mechanical ours/theirs. Triggers include: bare `git merge` / `git rebase` / `git cherry-pick` on a research branch (the merge-guard hook flags these automatically), \"pull main into this branch\", \"rebase onto main\", \"cherry-pick commit X\", or any merge where at least one hunk touches a results-bearing file. Invoked by `integration-workflow` Phase B Step 3 mechanical-merge commit when conflicts or material main-side changes exist; also usable standalone by any agent or human doing a research-aware merge."
 ---
 
 # Semantic Merge
