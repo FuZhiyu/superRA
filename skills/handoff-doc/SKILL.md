@@ -1,9 +1,14 @@
 ---
 name: handoff-doc
 description: >
-  Use when creating or restructuring PLAN.md or RESULTS.md, maturing
-  RESULTS.md into its final record, or when an agent needs the full
-  task-block editing discipline for handoff docs.
+  Use when creating a PLAN.md or RESULTS.md from scratch, maturing
+  RESULTS.md into its permanent record at INTEGRATE, or when an
+  agent needs the full editing discipline for a task-block handoff
+  document. Carries the four document principles, the inline-edit
+  rule, the stale-content checklist, and pointers to PLAN.md /
+  RESULTS.md anatomy templates. Doc-creation call sites —
+  `planning-workflow` Phase 2 and `integration-workflow` Phase C
+  doc-writer. Usable standalone by a single author.
 ---
 
 # Handoff Doc Discipline
