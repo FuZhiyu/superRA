@@ -9,6 +9,12 @@
     "preToolUse": [
       {
         "command": "./hooks/merge-guard"
+      },
+      {
+        "command": "./hooks/ensure-using-superra"
+      },
+      {
+        "command": "./hooks/ensure-agent-orchestration"
       }
     ],
     "postToolUse": [
