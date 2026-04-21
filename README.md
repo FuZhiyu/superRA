@@ -80,7 +80,7 @@ Utility skills are domain-neutral tools callable by workflow skills, agents, or 
 | **semantic-merge** | Intent-based branch integration that classifies conflicts by research impact and escalates methodology decisions to the user. Use whenever you would otherwise run `git merge` / `git rebase` / `git cherry-pick` on a research branch — the `merge-guard` hook flags bare invocations automatically. |
 | **worktree-data-sync** | Non-git data sync between existing worktrees (seed, diff, apply) plus data teardown. Use when copying data into a new worktree, reconciling data across parallel worktrees, or tearing down a worktree's data cleanly. Worktree lifecycle itself (create/enter/remove) lives in `agent-orchestration`. |
 
-For the full agent-facing map (Stage → required skills + stage-scoped references) see `superRA:using-superRA` §Skill-Load Manifest. For contributor navigation, `skills/CATEGORIES.md` is the authoritative grouping index.
+For the full agent-facing map (Stage → required skills + stage-scoped references) see `superRA:using-superra` §Skill-Load Manifest. For contributor navigation, `skills/CATEGORIES.md` is the authoritative grouping index.
 
 ## Agents
 
