@@ -81,6 +81,10 @@ Walked at planning time (2026-04-17). Re-walk on-demand only.
 > **Question asked:** How should the Codex compatibility plan be archived after the final handoff cleanup?
 > **Rationale (if given):** Keep the prescriptive handoff record beside `docs/plans/2026-04-17-codex-compatibility-results.md`.
 
+> **User decision (2026-04-20):** Minimum-net-diff integration policy for harness-specific content. Short harness-specific comments stay inline in the main file; new harness-specific reference files are created only when the instructions are particularly long. Claude-specific tool names may be used inline as long as other harnesses can understand them; avoid hard-coded tool-call signatures.
+> **Question asked:** How aggressively should harness-specific content be extracted into separate adapter references during this Round 3 integration sync?
+> **Rationale (if given):** Take main verbatim wherever it does not collide with Codex-essential additions; do not over-extract harness-neutral surfaces.
+
 ### Task 1: Codex Plugin and Named-Agent Surfaces
 **Review status:** APPROVED
 
