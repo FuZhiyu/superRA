@@ -1,15 +1,14 @@
 ---
 name: integration-workflow
-description: Use when a plan is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the branch needs to be brought up to date with main and refactored to fit codebase conventions (review-led iterative sync + refactor targeting minimum-net-diff); when the working RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form (Phase C); when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "integrate", "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `execution-workflow`'s completion menu.
+description: Requires `superRA:using-superRA` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the branch needs to be brought up to date with main and refactored to fit codebase conventions (review-led iterative sync + refactor targeting minimum-net-diff); when the working RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form (Phase C); when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "integrate", "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `implementation-workflow`'s completion menu.
 ---
 
 # Integration Workflow
 
+**First, load `superRA:using-superRA` if not already loaded.** It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
+
 Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the full finishing sequence that takes a reproducibility-verified analysis branch to a merged state on main: drift-test creation (Phase A), unified sync-with-main + refactor (Phase B, iterative), documentation maturation + PLAN.md disposition (Phase C), and final local merge or PR push + cleanup (Phase D).
 
-Assumes execution-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in execution-workflow.
-
-**Core principle.** Tests guard results. Minimum net diff relative to integration base. Nothing advances without reviewer APPROVE at every gate (drift-test review, integration review, doc review). Non-trivial merges with main use `superRA:semantic-merge`; the integration reviewer decides whether one is needed.
 
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
@@ -30,21 +29,22 @@ Phase D — Final merge / PR / cleanup
                          proposes, researcher decides)
 ```
 
-**Autonomy.** Between stop points, run on your own power — do not check in after each phase, do not re-confirm a reviewer's APPROVE. Legitimate stop points:
+**Autonomy** — full contract: `superRA:using-superRA/references/main-agent.md`. Legitimate stop points in this workflow:
 
 - Phase A Step 2 — drift-test candidate confirmation
-- Phase B — batched research-meaningful decisions surfaced by the integration reviewer (see Phase B Step 2)
+- Phase B Step 0 — integration-base confirmation (skippable when a prior §Decisions entry already records it)
+- Phase B Step 2 — batched research-meaningful decisions surfaced by the integration reviewer
 - Phase B / Phase D — meaningful drift after refactor or post-merge (see `superRA:refactor-and-integrate` `references/drift-test-quality.md`)
 - Phase C Step 1 — Phase C RESULTS.md relocation target when project guidance is silent
 - Phase C Step 4 — PLAN.md disposition
 
-See `superRA:using-superRA` §Universal Principles (#4) for the full autonomy contract, and `superRA:handoff-doc` §User Decisions Log for how every answer must land in PLAN.md before the workflow acts on it.
+Every stop: log the answer per `superRA:handoff-doc` §User Decisions Log **before** acting.
 
 ## Dispatch Convention
 
-Every dispatch in this skill uses the canonical template in `superRA:agent-orchestration` §Dispatch Templates — required fields first, `Additionally:` anchor last (strictly additive steering only). The Skill-Load Manifest in `superRA:using-superRA` is the single source of truth for what each `Stage:` loads — dispatches do not restate skill/reference loads, do not paraphrase PLAN.md, and do not repeat checklist items the agent already reads. REVISE adjudication follows `superRA:agent-orchestration` §Handling Reviewer Feedback.
+**Load `superRA:agent-orchestration` before writing any dispatch prompt** — the canonical template shape, `Additionally:` anchor rules, and banned fields live there. Dispatching without it produces malformed prompts.
 
-The checklist discipline for every implementer self-check and every reviewer walk in this workflow lives in `superRA:refactor-and-integrate` (principles in body; `[BLOCKING]` / `[ADVISORY]` items in the stage-scoped references).
+All dispatches: canonical template in `superRA:agent-orchestration` §Dispatch Templates; skill loads per `superRA:using-superRA` §Skill-Load Manifest; checklist discipline per `superRA:refactor-and-integrate`. REVISE adjudication: `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
 ## Phase A — Drift Test Creation
 
@@ -82,9 +82,30 @@ Drift tests guard key results from unintended changes during Phase B refactoring
 
 ## Phase B — Integrate (Sync + Refactor, Iterative)
 
-**Integration base.** Phase B integrates the analysis branch against a researcher-specified base — `<base-branch>` in every reference below. `origin/main` is the typical default, but confirm with the researcher; override is expected when the analysis branched off a release, a co-authored track, or another analysis's sibling branch. The ref is fetched fresh (`git fetch origin <base-branch>`) at the start of Phase B so base-branch-side scans walk current upstream state.
+**Integration base.** Phase B integrates the analysis branch against a researcher-specified base — `<base-branch>` in every reference below. `origin/main` is the typical default; override is expected when the analysis branched off a release, a co-authored track, or another analysis's sibling branch.
 
 The integration reviewer drives the loop. It walks both the branch diff and the base-branch-side changes, writes per-task annotations in PLAN.md, and writes or updates a `## Integration Intent` section when material incoming changes need adaptation (see `superRA:handoff-doc` `references/plan-anatomy.md` §Integration Intent for the section's anatomy and ownership rules). The orchestrator adjudicates findings, batches user decisions, then dispatches implementer(s) to fix, and re-dispatches the reviewer. Repeat until every in-scope task is APPROVED.
+
+### Step 0: Resolve and confirm the integration base
+
+Resolve a candidate base from git and any prior §Decisions entry:
+```bash
+git merge-base HEAD origin/main 2>/dev/null \
+  || git merge-base HEAD origin/master 2>/dev/null
+```
+
+Legitimate stop point — ask via `AskUserQuestion` (plain text if unavailable):
+
+```
+Phase B will integrate this analysis branch against <resolved-base>.
+Is that correct, or did this branch split from a different base
+(release branch, co-authored track, sibling analysis)?
+```
+
+If a prior `## Decisions` entry on this branch already records the integration base and it matches the git-resolved candidate, skip the prompt — the researcher has already answered. Otherwise log the confirmed answer per `superRA:handoff-doc` §User Decisions Log as `<base-branch>` **before** fetching or dispatching. Fetch fresh so base-branch-side scans walk current upstream state:
+```bash
+git fetch origin <base-branch>
+```
 
 ### Step 1: Dispatch the integration reviewer
 
@@ -109,10 +130,7 @@ Agent(subagent_type: "superRA:reviewer"):
     no annotation; flip each annotated task to
     `Integration status: REVISE` in the same review commit. When
     the diff to walk is large (see `agent-orchestration`
-    §Workload Balancing), the orchestrator may dispatch parallel
-    sibling reviewers on disjoint worktrees per
-    §Parallelization and Worktree Isolation — each walks a
-    disjoint slice.
+    §Workload Balancing)
     <prior-round adjudication notes if re-dispatching>.
 ```
 
@@ -144,9 +162,7 @@ When every in-scope task is `Integration status: APPROVED` and the Integration I
 
 ## Phase C — Documentation Finalization + PLAN.md Disposition
 
-After Phase B APPROVES the unified diff, `RESULTS.md` still needs to mature from dev log to permanent record and `PLAN.md` still needs disposition. This phase gates the RESULTS.md maturation behind a **single implementer–reviewer pair** (doc-writer + doc-reviewer); the orchestrator handles the user-facing decisions (relocation target, PLAN.md disposition) on either side of the pair.
-
-Format discipline for sub-part A (maturation) lives entirely in `superRA:report-in-markdown`. This phase orchestrates — it does not duplicate the rules.
+Gates `RESULTS.md` maturation (dev log → permanent record) behind a doc-writer + doc-reviewer pair; orchestrator handles user-facing decisions (relocation target, PLAN.md disposition). Format discipline lives in `superRA:report-in-markdown`.
 
 ### Step 1: Resolve `RESULTS_DIR` (orchestrator preamble)
 
@@ -256,7 +272,7 @@ git commit -m "remove analysis plan (preserved in branch history)"
 
 ## Phase D — Final Merge / PR / Cleanup
 
-After Phase C completes, execute the user's choice from execution-workflow Step 4. If main has advanced since Phase B, loop back to Phase B first — a fresh sync must precede the merge or push.
+After Phase C completes, execute the user's choice from implementation-workflow Step 4. If main has advanced since Phase B, loop back to Phase B first — a fresh sync must precede the merge or push.
 
 ### Step 1: Pre-merge check — is another Phase B round needed?
 
@@ -334,13 +350,9 @@ Report what was merged/pushed and what was cleaned up.
 
 ## Agent Loads
 
-See `superRA:using-superRA` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows. The Phase B implementer runs `Stage: integration`; `superRA:semantic-merge` is loaded when the mechanical merge needs intent-based resolution (the integration reviewer's annotation drives that call, not a Tier gate).
-
-Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates RESULTS.md maturation per workflow principle P1. Step 4 (PLAN.md disposition) and Phase D Step 2 (milestone flip) stay with the orchestrator because they are user-facing decisions, not RA-implementable tasks. Project-level doc audit is covered by the Phase B integration reviewer per `codebase-integration.md` §Project Doc Audit — not by Phase C.
+See `superRA:using-superRA` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows.
 
 ## Red Flags
-
-Each bullet below catches a rationalization the RA is plausibly going to make *in this phase*. Sequencing reminders and cross-skill principles (integration discipline, merge quality, drift-test integrity, RA framing) live where they are owned and are not restated here. See the cross-cutting references at the end of this section.
 
 **Never:**
 - Skip the integration reviewer and dispatch the implementer blind — per-task annotations, Integration Intent updates, and the user-decision batch all come from the reviewer
@@ -351,4 +363,6 @@ Each bullet below catches a rationalization the RA is plausibly going to make *i
 **Always:**
 - Author new drift tests only for tasks with `**Integration status:** ≠ APPROVED`, but run the **full** drift-test suite on every integration pass (scope is for authoring; running is not scoped)
 
-**Drift-test integrity** is governed by the cross-cutting rules in `superRA:refactor-and-integrate` `references/drift-test-quality.md`. **Merge quality** is governed by `references/merge-quality.md`. **Codebase integration + minimum net diff** is governed by `references/codebase-integration.md` and the body of `refactor-and-integrate` (Minimum-net-diff top item + Implementer Self-Check). **RA framing** (no unilateral methodology judgments; escalate via `AskUserQuestion`) is governed by `superRA:using-superRA` §Universal Principles.
+---
+
+**Before proceeding:** if you have not loaded `superRA:using-superRA` (and, for main agents, `superRA:using-superRA/references/main-agent.md`), load them now.

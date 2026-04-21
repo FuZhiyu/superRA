@@ -1,19 +1,17 @@
 ---
 name: planning-workflow
-description: Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet; when you have an idea and need to translate it into an executable plan document; when a fresh branch needs its planning artifacts bootstrapped. Triggers include "let's analyze X", "write me a plan for Y", "we're starting a new project on Z", "before writing any code", empty working directory for a new task, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → INTEGRATE workflow; hands off to `execution-workflow` once the plan is approved. Domain-agnostic: for data-analysis planning, invokes `superRA:econ-data-analysis` and reads its `references/planning.md` for the Data Inventory hard gate and sensitivity design.
+description: Requires `superRA:using-superRA` loaded first. Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet; when you have an idea and need to translate it into an executable plan document; when a fresh branch needs its planning artifacts bootstrapped. Triggers include "let's analyze X", "write me a plan for Y", "we're starting a new project on Z", "before writing any code", empty working directory for a new task, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → INTEGRATE workflow; hands off to `implementation-workflow` once the plan is approved. Domain-agnostic: for data-analysis planning, invokes `superRA:econ-data-analysis` and reads its `references/planning.md` for the Data Inventory hard gate and sensitivity design.
 ---
 
 # Planning Workflow
 
+**First, load `superRA:using-superRA` if not already loaded.** It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
+
 ## Overview
 
-Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the execution-workflow to consume.
+Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the implementation-workflow to consume.
 
-This skill is **domain-agnostic**. Today's only implemented domain vertical is data analysis; future verticals (theory / modeling, literature review, simulation, writing) plug in by providing their own domain skill with a `references/planning.md`. The procedure here stays the same.
-
-Write comprehensive plans assuming the next person reading has zero context for this project. Document everything they need: which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Give them the whole plan as bite-sized steps. Frequent commits.
-
-Assume the next reader is skilled at the craft, but knows nothing about this specific project, its data / literature / prior work, or its conventions.
+Write comprehensive plans for a reader skilled at the craft but with zero context for this specific project — which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Frequent commits.
 
 **Announce at start:** "I'm using the planning-workflow skill to create the project plan."
 
@@ -45,8 +43,7 @@ If the work covers multiple independent workstreams (e.g., "analyze portfolio so
 
 Before defining tasks, map out the artifact pipeline:
 
-- What scripts, notebooks, or documents will be created? One per logical phase (e.g., data cleaning → variable construction → analysis → robustness; or derivation → simulation → calibration for theory work).
-- **Analysis scripts**: format for notebook rendering per `econ-data-analysis/references/notebook-format.md`. Runner/pipeline scripts and non-analysis artifacts use standard format.
+- What scripts, notebooks, or documents will be created? One per logical phase (e.g., data cleaning → variable construction → analysis → robustness). Analysis scripts: format for notebook rendering (see `econ-data-analysis/references/notebook-format.md`).
 - What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 
@@ -54,7 +51,7 @@ Before defining tasks, map out the artifact pipeline:
 
 **Pipeline file (required for multi-artifact work):**
 
-If the work involves more than one script, the plan MUST include a pipeline file that runs all scripts in the correct order. This is a reproducibility requirement. Examples and detail for data analysis are in `econ-data-analysis/references/planning.md`. The same principle applies to any multi-artifact workstream: a single entry point that reproduces every output from source.
+If the work involves more than one script, the plan MUST include a pipeline file that runs all scripts in the correct order (see `econ-data-analysis/references/planning.md` for examples). A single entry point that reproduces every output from source.
 
 The pipeline file must:
 - Run all scripts in dependency order
@@ -76,35 +73,14 @@ For other verticals, the operational cycle looks different (e.g., derivation →
 
 ### Task Dependencies
 
-Not every task is sequential. Identify independent branches at plan
-time so the orchestrator can dispatch them in parallel (see
-`agent-orchestration` §Workload Balancing).
+Each task block declares a `**Depends on:**` line (upstream task numbers, or `*(none)*`). See `superRA:handoff-doc` `references/plan-anatomy.md` §Task Block Anatomy for the required format. Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
 
-**Format.** Each task block declares a `**Depends on:**` line listing
-upstream task numbers, or `*(none)*` if the task has no upstream
-dependency. See `superRA:handoff-doc` `references/plan-anatomy.md` §Task Block Anatomy for the required format.
+**A task depends on another when it:**
+- reads the other task's output files;
+- needs a sample / variable / methodology decision finalized in the other task; or
+- runs sensitivity / robustness on the other task's baseline results.
 
-**When a task depends on another.**
-- It reads the other task's output files.
-- It needs a sample / variable / methodology decision finalized in the
-  other task.
-- It runs sensitivity / robustness on the other task's baseline
-  results.
-
-**When a task is independent (`Depends on: *(none)*`).**
-- Loads its own raw inputs, produces its own outputs.
-- Sits in a separate pipeline branch that doesn't meet downstream.
-
-**Orchestration contract.** The `execution-workflow` orchestrator reads
-these fields. Tasks whose dependencies are all `APPROVED` may be
-dispatched as a single parallel Agent-tool batch, subject to
-`agent-orchestration` §Workload Balancing. Mutually independent tasks
-SHOULD run in parallel; serializing them is waste.
-
-**Plan-time DAG sanity.** After writing all tasks, trace the dependency
-edges. No cycles. No `Depends on: Task 99` pointing at a task that
-doesn't exist. The terminal task(s) (no downstream) should be the ones
-that produce the top-line results.
+**After writing all tasks:** trace the dependency edges — no cycles, no references to nonexistent tasks; terminal task(s) produce the top-line results.
 
 ### Plan Document Header and Task Structure
 
@@ -174,7 +150,7 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 4. **Update statuses** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* boxes are unchecked and *why*, then flips both the project-level `## Workflow Status` checkboxes and the per-task status lines. Rules: per-task `**Review status:**` and `**Integration status:**` on fully re-implemented tasks are cleared; untouched tasks retain APPROVED; minor-edited tasks (code unchanged) clear `**Integration status:**` while keeping `**Review status:** APPROVED`. **DAG cascade:** walk the transitive downstream closure of every changed task and clear statuses on any dependent whose inputs or assumptions shift.
 5. **Sweep PLAN.md for stale content** per `handoff-doc` §Stale Content Checklist. Earlier task blocks whose output has been superseded by a later task, cross-references to removed sections, review notes resolved by subsequent work — fix in place now, not later.
 6. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
-7. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `execution-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Phase B. On every re-entry, `integration-workflow` runs the **full** drift-test suite regardless of which tasks changed — only *authoring* new drift tests is scoped to the affected tasks. The doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff.
+7. **Resume the appropriate workflow** for the new state. If the new task is unstarted, dispatch through `implementation-workflow`. If the change rolled back `Refactored`, re-enter `integration-workflow` Phase B. On every re-entry, `integration-workflow` runs the **full** drift-test suite regardless of which tasks changed — only *authoring* new drift tests is scoped to the affected tasks. The doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff.
 
 
 **Banned shortcuts:**
@@ -221,11 +197,15 @@ After finalizing the plan, check the **`Plan approved`** box in `PLAN.md` §Work
 
 **1. Subagent-Driven (recommended for independent tasks)** - I dispatch a fresh subagent per task, review between tasks, fast iteration. Best when tasks don't heavily depend on each other's outputs.
 
-**2. Inline Execution (recommended for sequential pipelines)** - Execute tasks in this session using execution-workflow, context preserved across steps. Best when each step's output informs the next.
+**2. Inline Execution (recommended for sequential pipelines)** - Execute tasks in this session using implementation-workflow, context preserved across steps. Best when each step's output informs the next.
 
 **Which approach?"**
 
-**REQUIRED DISCIPLINE:** Use `superRA:execution-workflow`
-- Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's §Three Concurrent Disciplines)
+**REQUIRED DISCIPLINE:** Use `superRA:implementation-workflow`
+- Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's gated checklist)
 - Falls back to direct mode for simple tasks or when user requests it
 - Review always happens regardless of mode
+
+---
+
+**Before proceeding:** if you have not loaded `superRA:using-superRA` (and, for main agents, `superRA:using-superRA/references/main-agent.md`), load them now.
