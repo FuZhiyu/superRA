@@ -133,13 +133,7 @@ If any check fails: fix it before proceeding. Do not present completion options 
 
 **Once all five checks pass:** check the `Execution complete` box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md) and commit the box-flip before presenting the Step 4 completion menu. The flip records that the branch has reached the IMPLEMENT/VALIDATE terminus and is ready for the researcher's disposition choice.
 
-### Step 4: Determine Base Branch and Present Options
-
-**Base branch:** resolve from git first; only stop and ask if git can't tell you.
-```bash
-git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
-```
-If the branch point is ambiguous, ask via `AskUserQuestion` (question: "Which base branch did this analysis split from?", options: `main`, `master`, other). Plain-text fallback: "This branch split from `main` — is that correct?"
+### Step 4: Present Completion Options
 
 **Present the 4 completion options via `AskUserQuestion` when the tool is available.** This is a legitimate user-defined milestone — the agent has driven the work to an `APPROVED` + reproducible state on its own power, and the next step is the researcher's call. Frame the question as "Work complete and verified. What would you like to do with this branch?" with the four options below; each option also gets a short description so the researcher does not have to re-derive what each one means. When `AskUserQuestion` is unavailable, fall back to the plain-text form.
 
@@ -158,17 +152,16 @@ Log the researcher's answer per `handoff-doc` §User Decisions Log — top-level
 
 **Execute the user's choice:**
 
-- **Option 1 or 2 (Merge or PR):** 
-  Invoke `superRA:integration-workflow` skill to proceed with the integration stage. 
-
-  - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
-- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
+- **Option 1 (Proceed with integration):** Invoke `superRA:integration-workflow`. It resolves the integration base with the researcher and runs Phases A–D (drift tests, sync+refactor, docs, merge/PR).
+- **Option 2 (Change the plan):** Re-enter `superRA:planning-workflow §User Feedback and Changing Plans` — treat the researcher's scope change as the trigger; resume implementation-workflow from Step 1 after the plan is re-approved.
+- **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
+- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
 
 ## Orchestrator Discipline
 
 Cross-stage orchestrator behavior — task sequencing, reviewer-feedback adjudication, implementer-status handling, and escalation — lives in `superRA:agent-orchestration` §Orchestrator Duties, §Handling Reviewer Feedback, §Review Status Reference, and §Handling Implementer Status.
 
-**Workflow-specific review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Three Concurrent Disciplines). Codebase integration review is deferred to `integration-workflow` (dispatched at Step 4 when the user chooses merge or PR).
+**Workflow-specific review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Three Concurrent Disciplines). Codebase integration review is deferred to `integration-workflow` (dispatched at Step 4 when the user chooses Option 1 — Proceed with integration).
 
 ## Autonomy and Stop Points
 
