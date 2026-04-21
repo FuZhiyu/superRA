@@ -28,7 +28,7 @@ Phase D — Final merge / PR / cleanup
                          proposes, researcher decides)
 ```
 
-**Autonomy** — full contract: `superRA:using-superRA` §Universal Principles (#4). Legitimate stop points in this workflow:
+**Autonomy** — full contract: `superRA:using-superRA/references/main-agent.md`. Legitimate stop points in this workflow:
 
 - Phase A Step 2 — drift-test candidate confirmation
 - Phase B — batched research-meaningful decisions surfaced by the integration reviewer (see Phase B Step 2)

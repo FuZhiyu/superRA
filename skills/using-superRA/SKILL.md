@@ -5,18 +5,6 @@ description: Master skill for superRA agents. Carries workflow principles, skill
 
 Loaded by all agents at dispatch time.
 
-## Universal Principles
-
-Four load-bearing principles apply to **every** superRA workflow, regardless of domain.
-
-1. **Implementer–reviewer pair at every step.** No result ships without adversarial review. One comprehensive review pass per task returning `APPROVE` / `REVISE`; the reviewer walks the full checklist regardless of early failures, and the re-review after REVISE is narrow (verify cited fixes + any finding annotated as depending on an upstream fix). Review is never skipped, regardless of perceived triviality. The reviewer is adversarial by design — thorough, skeptical, erring toward over-flagging. The orchestrator is the arbitrator — it made the plan, talks to the researcher, and overrules with documented reasoning when the reviewer is wrong.
-
-2. **Handoff docs are the auditable record AND the continuation point.** Findings, decisions, methodology notes, and results land in committed `PLAN.md` / `RESULTS.md` **before** they appear in any chat message or status report. Any fresh agent can open the repo and resume work from the docs + git state alone — no prompt history required. Atomic commits bundle code + doc edits so every git SHA reconstructs a coherent state. If a result exists only in a status message, it does not exist.
-
-3. **Fast early, strict before merge. Semantic merges always.** Interim work is optimized for speed — no codebase-fit checks at per-task checkpoints. Integration discipline (drift tests, refactor, doc finalization) runs only when the user chooses to merge, inside `integration-workflow`. Every merge into main goes through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`.
-
-4. **Autonomous with human in the loop.** Drive the workflow forward on your own power between legitimate stop points. An `APPROVED` task dispatches the next without a check-in; a completed workflow step proceeds without "shall I continue?". Stop only for: (a) a hard blocker the RA cannot resolve from code and data, (b) a decision beyond the RA's authority that belongs to the researcher (methodology, scope, sample/variable definitions, research-intent calls), or (c) a user-defined milestone baked into a workflow. Use `AskUserQuestion` when the harness exposes it. Log every user decision in `PLAN.md` per `handoff-doc` §User Decisions Log **before** acting on it. The full main-agent autonomy contract — proceed-without-asking patterns, stop-and-ask classes, banned phrasings — lives in `references/main-agent.md` (loaded by the main agent when it invokes this skill; subagents inherit autonomy from their dispatch boundary).
-
 ## Code-Change Defaults
 
 These defaults apply whenever you write, review, or refactor code. They govern micro-level execution and do not replace the workflow rules above.
@@ -84,7 +72,6 @@ The `merge` stage is used for standalone `semantic-merge` dispatches — a dedic
 
 **Main agents additionally load** `references/main-agent.md` and `superRA:handoff-doc` before dispatching subagents or touching PLAN.md. Subagents skip both.
 
-**Unknown `Stage:` values are a dispatch error** — halt and report to the orchestrator rather than guessing a skill/reference load.
 
 ## Instruction Priority
 
