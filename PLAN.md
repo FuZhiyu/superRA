@@ -78,14 +78,14 @@ Walked at planning time (2026-04-20). Re-walk on-demand only.
 
 ### Task 3: Drop `merge` Stage from Manifest
 **Depends on:** Task 2 (restructured manifest)
-**Review status:** *(set during execution — not filled at planning time)*
+**Review status:** IMPLEMENTED
 
 Grep confirms zero live `Stage: merge` emissions. Standalone `semantic-merge` dispatches should carry their Stage on the dispatch side; the manifest stops enumerating it.
 
-- [ ] **Step 1: Remove the `merge` row** from the generic Stage table in `skills/using-superRA/SKILL.md`.
-- [ ] **Step 2: Remove the post-table prose paragraph** that explains the `merge` stage's standalone-`semantic-merge` role. If `semantic-merge` standalone needs a Stage convention, document it in `skills/semantic-merge/SKILL.md` (out of scope for this task unless a reviewer flags it as load-bearing).
-- [ ] **Step 3: Update `tests/structural-invariants.sh`** — drop `merge` from the Stage-row regex, change expected count 5 → 4, update the comment.
-- [ ] **Step 4: Run `bash tests/structural-invariants.sh`**, commit.
+- [x] **Step 1: Remove the `merge` row** from the generic Stage table in `skills/using-superRA/SKILL.md`.
+- [x] **Step 2: Remove the post-table prose paragraph** that explains the `merge` stage's standalone-`semantic-merge` role. Preserved the sentence about `integration-workflow` Phase B loading `semantic-merge` (still valid and useful).
+- [x] **Step 3: Update `tests/structural-invariants.sh`** — dropped `merge` from the Stage-row regex, changed expected count 5 → 4, updated the comment to explain the drop.
+- [x] **Step 4: Run `bash tests/structural-invariants.sh`** — manifest row-count invariant passes at 4. Pre-existing `README.md missing '## Workflow Map'` failure is unrelated and out of scope.
 
 ### Task 4: Add "Emitted by" Column to Generic Manifest Table
 **Depends on:** Task 3
