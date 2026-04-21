@@ -40,7 +40,7 @@
 
 ## Decisions
 
-> **2026-04-18 — Post-merge re-entry after semantic-merge of origin/main (commit `5f98599`).** Main moved ahead 63 commits while this branch's 19 commits were implementing parallel-implementer worktree isolation. semantic-merge classified the update as Tier 2; two conflicts resolved (PLAN.md kept ours; `using-superRA/SKILL.md §Commit Hygiene` synthesized). All eight tasks' deliverables verified intact post-merge: §Concurrent Writers lives in `agent-orchestration/SKILL.md:73`, `Worktree:` dispatch field at line 113, `merge-guard` `parallel/*` exemption at lines 39–41, `worktree-harness-fallback.md` reference at ~30 lines, `semantic-merge/SKILL.md` bypass note at line 23. `tests/structural-invariants.sh` exits 0.
+> **2026-04-18 — Post-merge re-entry after semantic-merge of origin/main (commit `5f98599`).** Main moved ahead 63 commits while this branch's 19 commits were implementing parallel-implementer worktree isolation. semantic-merge classified the update as Tier 2; two conflicts resolved (PLAN.md kept ours; `using-superra/SKILL.md §Commit Hygiene` synthesized). All eight tasks' deliverables verified intact post-merge: §Concurrent Writers lives in `agent-orchestration/SKILL.md:73`, `Worktree:` dispatch field at line 113, `merge-guard` `parallel/*` exemption at lines 39–41, `worktree-harness-fallback.md` reference at ~30 lines, `semantic-merge/SKILL.md` bypass note at line 23. `tests/structural-invariants.sh` exits 0.
 >
 > **Tasks affected:** all (metadata only, no code changes). Adopt main's new task-block anatomy — add `**Integration status:**` (unset, awaiting integration-workflow), rename `Dependencies:` → `Depends on:` for Tasks 1–6 to match Tasks 7–8 which were authored after main's convention landed. Flip `Review status:` from `IMPLEMENTED` to `APPROVED` on all tasks: Task 6 Step 5's batched `code-quality-reviewer` pass adjudicated to APPROVE after revisions; the subsequent simplify pass (`78183d6`) addressed a further 10 integration-review findings in its own commit. Execution is functionally complete pending integration-workflow.
 >
@@ -238,7 +238,7 @@ Walked at planning time (2026-04-17).
   ```markdown
   **Commit discipline depends on your dispatch's worktree context:**
 
-  **(A) Shared-worktree path (no `Worktree:` field in dispatch):** Follow `superRA:using-superRA` §Shared-Repo Commit Discipline — stage by exact path, never `git add -A/./-u`, diff-cached before commit. Single atomic commit on the current branch.
+  **(A) Shared-worktree path (no `Worktree:` field in dispatch):** Follow `superRA:using-superra` §Shared-Repo Commit Discipline — stage by exact path, never `git add -A/./-u`, diff-cached before commit. Single atomic commit on the current branch.
 
   **(B) Dedicated-worktree path (`Worktree:` field present):** You are operating inside a `parallel/<branch>/<slug>` branch provisioned by the orchestrator. Commit code + PLAN.md task block + RESULTS.md task section atomically on that branch. **Do not** merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out. After your commit, report the branch name and HEAD SHA in your status return alongside the usual fields.
   ```
@@ -330,7 +330,7 @@ Walked at planning time (2026-04-17).
 - [x] **Step 4: `skills/semantic-merge/SKILL.md`.** Add a short note near the top of §When to Use:
   > **Exception:** Orchestrator-managed parallel merges — branches matching `parallel/*` under `agent-orchestration` §Concurrent Writers Require Worktree Isolation — bypass this skill. Task boundaries are set ex-ante in PLAN.md, so plain `git merge` is sufficient. See `agent-orchestration` §Concurrent Writers.
 
-- [x] **Step 5: Verify no dangling references remain.** Two additional dangling references found and fixed beyond the planned four files: `skills/using-superRA/references/codex-tools.md:86` (pointed at `worktree-data-sync §Creating a Worktree`) and `skills/agent-orchestration/references/agent-teams.md:101` (same). Both repointed at the new fallback reference and, in agent-teams, to the §Concurrent Writers protocol. Final audit: zero `§Creating a Worktree` or `worktree-data-sync §Cleanup` hits. Grep:
+- [x] **Step 5: Verify no dangling references remain.** Two additional dangling references found and fixed beyond the planned four files: `skills/using-superra/references/codex-tools.md:86` (pointed at `worktree-data-sync §Creating a Worktree`) and `skills/agent-orchestration/references/agent-teams.md:101` (same). Both repointed at the new fallback reference and, in agent-teams, to the §Concurrent Writers protocol. Final audit: zero `§Creating a Worktree` or `worktree-data-sync §Cleanup` hits. Grep:
   ```bash
   grep -rn "worktree-data-sync.*Cleanup\|worktree-data-sync.*§Creating" skills/
   grep -rn "worktree-data-sync/scripts/sync_worktree_data" skills/   # only in worktree-data-sync itself
@@ -374,7 +374,7 @@ Walked at planning time (2026-04-17).
 
 - [x] **Step 5: Batched adversarial review + revisions.** Dispatched `code-quality-reviewer` agent against the full `889f53c^..HEAD` diff. Verdict: REVISE. Adjudication:
   - **MAJOR M1 — ACCEPTED.** `§Seed` anchor in `worktree-data-sync/SKILL.md` doesn't exist (actual heading is `### \`--mode seed\``). Fixed 2 of 3 reviewer-cited call sites (the third — `agent-teams.md:101` — was already using the correct `§\`--mode seed\`` anchor; reviewer miscited).
-  - **MINOR m1 — ACCEPTED.** Updated stale skill-inventory descriptions in `README.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md` to reflect narrowed scope. Also added a RELEASE-NOTES.md entry for this refactor per the `CLAUDE.md` sync-when-renaming rule.
+  - **MINOR m1 — ACCEPTED.** Updated stale skill-inventory descriptions in `README.md`, `skills/CATEGORIES.md`, `skills/using-superra/SKILL.md` to reflect narrowed scope. Also added a RELEASE-NOTES.md entry for this refactor per the `CLAUDE.md` sync-when-renaming rule.
   - **MINOR m2–m5 — ADVISORY, no action.** Regex verified safe; path A/B terminology acceptable; canned-steering justification self-defending; worktree-data-sync standalone post-cut.
 - [x] **Step 6: Commit verification log + revisions.**
 

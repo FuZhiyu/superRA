@@ -1,6 +1,6 @@
 ---
 name: semantic-merge
-description: Use before running `git merge`, `git rebase`, or `git cherry-pick` on a research branch, or any time incoming changes may touch results-bearing files, analysis scripts, PLAN.md, RESULTS.md, drift tests, or domain-discipline artifacts, and you want research-aware conflict resolution rather than mechanical ours/theirs. Flagged automatically by the merge-guard hook. Invoked by `integration-workflow` Phase B, and usable standalone for research-aware merges.
+description: Use when about to run `git merge`, `git rebase`, or `git cherry-pick` on a research branch — or any time incoming changes from another branch may touch results-bearing files, analysis scripts, PLAN.md, RESULTS.md, drift tests, or domain-discipline artifacts — and you want thoughtful, research-aware conflict resolution rather than mechanical ours/theirs. Triggers include: bare `git merge` / `git rebase` / `git cherry-pick` on a research branch (the merge-guard hook flags these automatically), "pull main into this branch", "rebase onto main", "cherry-pick commit X", or any merge where at least one hunk touches a results-bearing file. Invoked by `integration-workflow` Phase B Step 3 mechanical-merge commit when conflicts or material main-side changes exist; also usable standalone by any agent or human doing a research-aware merge.
 ---
 
 # Semantic Merge
@@ -9,7 +9,7 @@ Integrate branches by intent, not by lines. Understand what each side was trying
 
 **Core principle:** Treat conflicts as intent conflicts first and line conflicts second. Research-meaningful conflicts always go to the user. The agent implements the researcher's integration decisions — never judges methodology.
 
-**Exception — orchestrator-managed parallel worktrees bypass this skill.** Branches matching `<branch>/parallel/<slug>` are created by the orchestrator under `superRA:agent-orchestration §Parallelization and Worktree Isolation`. Their task boundaries are set ex-ante in `PLAN.md`, so they are mechanically disjoint and merge with plain `git merge --no-ff`. The `merge-guard` hook exempts `*/parallel/*` source refs.
+**Exception — orchestrator-managed parallel worktrees bypass this skill.** Branches matching `<branch>/parallel/<slug>` merge with plain `git merge --no-ff`. The `merge-guard` hook exempts `*/parallel/*` source refs.
 
 ## The Process
 
@@ -96,28 +96,6 @@ If rebase or cherry-pick is required instead of merge, preserve the same concept
 
 **If called from `integration-workflow` Phase B Step 3 as the mechanical-merge commit**: the caller runs drift tests and post-merge verification — you complete the merge and report back; do not duplicate the caller's verification pass.
 
-## Working Principles
-
-- **Intent first.** Understand why each side made its changes before deciding what to keep.
-- **Never ours/theirs blindly.** Except for generated artifacts that will be regenerated immediately.
-- **Preserve user work.** Never discard dirty state or unrelated edits without explicit approval.
-- **Regenerate over edit.** For generated files, regenerate from merged source rather than hand-editing.
-- **RA framing.** You propose integration, present options, and implement the researcher's decisions. You never judge whether the methodology is correct. Research-meaningful integration decisions belong to the researcher.
-- **Domain-discipline artifacts through the merge.** If incoming changes affect results-bearing files, confirm that the active domain's validation artifacts (whatever the domain skill requires — for data analysis: describe steps, row-count logs, validation checks) are preserved and consistent in the merged result.
-- **Drift tests are the safety net.** When drift tests exist, always run them after the merge. Never skip. Never silently update expectations for meaningful result changes.
-
-## When to Ask the User
-
-Ask a concise question when:
-
-- Two different semantic integrations are both reasonable
-- The branch appears to be changing conclusions or external behavior in a way the repo cannot disambiguate
-- Incoming and current changes point in opposite directions on a research-meaningful dimension (methodology, scope, sample, specification)
-- A PLAN.md conflict implies a substantive restructure — escalate to `planning-workflow §User Feedback and Changing Plans` rather than resolving in-place
-- The repository policy around merge vs rebase vs squash is unclear and affects the required history shape
-
-Do not ask questions that can be answered by inspecting the repo, commit range, tests, or docs.
-
 ## What to Report
 
 When the integration is complete, summarize:
@@ -145,17 +123,6 @@ When the integration is complete, summarize:
 - Run drift tests on the merged result when the branch has them (unless the caller, e.g. `integration-workflow` Phase B, owns that verification pass)
 - Preserve and re-validate domain-discipline artifacts through the merge
 - Log every user decision per `handoff-doc §User Decisions Log`
-
-## Integration
-
-**Called by:**
-- **superRA:integration-workflow** Phase B Step 3 mechanical-merge commit, when conflicts or material main-side changes exist; Phase D re-sync when main has advanced
-- **PreToolUse hook** (merge-guard) — reminds agent to use this skill for any bare `git merge` / `git rebase` / `git cherry-pick`
-- Any agent or human doing a research-aware merge outside the integration workflow
-
-**Pairs with:**
-- **superRA:integration-workflow** — Phase A drift tests are the safety net this skill relies on
-- **superRA:refactor-and-integrate** — `references/drift-test-quality.md` governs post-merge drift-test adjudication
 
 **References:**
 - **semantic-merge-integration** (global skill, `~/.claude/skills/semantic-merge-integration/SKILL.md`) — General-purpose merge philosophy that this skill extends for research contexts
