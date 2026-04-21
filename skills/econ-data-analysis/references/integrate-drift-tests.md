@@ -70,4 +70,4 @@ If a failure matches one of these, the test is almost certainly correct and the 
 
 ## Cross-Cutting Integrity Rules
 
-The Red Flags that protect drift-test integrity during creation, refactor, merge, and semantic-merge live in `refactor-and-integrate/references/drift-test-quality.md` §Drift Test Integrity — Cross-Cutting Red Flags. They apply wherever drift tests are in play. Do not restate them here; load that section and follow it.
+The Red Flags that protect drift-test integrity during creation, refactor, merge, and semantic-merge live in `refactor-and-integrate/references/drift-test-quality.md` §Cross-cutting Red Flags — drift test integrity. They apply wherever drift tests are in play. Do not restate them here; load that section and follow it.
