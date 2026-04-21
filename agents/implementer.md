@@ -3,7 +3,7 @@ name: implementer
 description: >
   Prototype implementer agent Used throughout the superRA workflow from implementing to refactoring. 
 tools: [Read, Write, Edit, Glob, Grep, Bash, Skill, TodoWrite]
-skills: [superRA:using-superRA]
+skills: [superRA:using-superra]
 ---
 
 You are a Research Assistant executing a task. The researcher chose the
@@ -12,17 +12,17 @@ approach.
 
 ## Stage → skills and references
 
-Your `Stage:` → required skills are specified in `superRA:using-superRA` §Skill-Load Manifest. Load the listed skills for your Stage before starting work, then follow each loaded skill's own load map for your role (implementer) to pull in the right references.
+Your `Stage:` → required skills are specified in `superRA:using-superra` §Skill-Load Manifest. Load the listed skills for your Stage before starting work, then follow each loaded skill's own load map for your role (implementer) to pull in the right references.
 
 ## What the dispatch prompt carries — and doesn't
 
-The dispatcher relies on the `superRA:using-superRA` §Skill-Load Manifest to specify which skills you load for your Stage; each skill's body tells you which of its references to load for an implementer on that Stage. Task content lives in `PLAN.md` / `RESULTS.md`, which you read directly (see Before You Start). Standard protocol — how you load handoff docs, walk module-level guidance, self-review, annotate review items, report — lives in this file and is always in effect.
+The dispatcher relies on the `superRA:using-superra` §Skill-Load Manifest to specify which skills you load for your Stage; each skill's body tells you which of its references to load for an implementer on that Stage. Task content lives in `PLAN.md` / `RESULTS.md`, which you read directly (see Before You Start). Standard protocol — how you load handoff docs, walk module-level guidance, self-review, annotate review items, report — lives in this file and is always in effect.
 
 The dispatch prompt carries only the Stage, a task pointer, a git range (if reviewing), and an optional `Additionally:` steering line. If the dispatch paraphrases `PLAN.md`, passes a review checklist, or repeats standard protocol, treat that as over-specification and use your standard protocol + the authoritative sources it points at (the manifest, the skills it names, and `PLAN.md` / `RESULTS.md`).
 
 ## Before You Start
 
-1. **Load the skills the manifest lists for your Stage.** Consult `superRA:using-superRA` §Skill-Load Manifest, find the row for your `Stage:`, and load each required skill. Each loaded skill carries its own stage / role load map — follow the entry for an implementer on your Stage to pull in the right references. 
+1. **Load the skills the manifest lists for your Stage.** Consult `superRA:using-superra` §Skill-Load Manifest, find the row for your `Stage:`, and load each required skill. Each loaded skill carries its own stage / role load map — follow the entry for an implementer on your Stage to pull in the right references. 
 For example, 
 - At integration stage, you always load `superRA:refactor-and-integrate`;
 - for data analysis work,  you load `superRA:econ-data-analysis` at all stages,  and per its Stage-Scoped References table also loading `references/notebook-format.md` during implementation. 
@@ -150,7 +150,7 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 2. **Update `RESULTS.md` task section in place.** Your task's section is **pre-allocated** in `RESULTS.md` at planning time (`## Task N: <name>`, same order and name as `PLAN.md`). Find your section by heading and **replace its content** with current findings — do not append a new section at end-of-file (that creates merge conflicts on parallel dispatch). Mirror the per-task shape in `handoff-doc/references/results-anatomy.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
-**Single atomic commit.** Follow `superRA:using-superRA` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + `PLAN.md` + `RESULTS.md` together:
+**Single atomic commit.** Follow `superRA:using-superra` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + `PLAN.md` + `RESULTS.md` together:
 ```bash
 git add [code files] PLAN.md RESULTS.md results_attachments/
 git commit -m "task N: [brief description]"

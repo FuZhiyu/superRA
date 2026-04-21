@@ -45,7 +45,7 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
 
 ### Architectural pattern
 
-- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. The Skill-Load Manifest in `superRA:using-superRA` is the authoritative map from `Stage:` value to required skills + stage-scoped references; `agents/implementer.md` / `agents/reviewer.md` carry one-line pointers at it.
+- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. The Skill-Load Manifest in `superRA:using-superra` is the authoritative map from `Stage:` value to required skills + stage-scoped references; `agents/implementer.md` / `agents/reviewer.md` carry one-line pointers at it.
 - **Composable by category.** Workflow, domain, and utility skills compose; they do not duplicate. Domain and utility skills are usable **stand-alone** outside the workflow — their language stays workflow-neutral so a researcher (or a different orchestrator) can load them directly. Workflow skills assemble these pieces at dispatch time rather than restating their content.
 - **Flat `skills/` layout.** No nested subfolders — every skill lives at `skills/<name>/SKILL.md`. Grouping into Workflow / Domain / Utility / Meta is documented in `skills/CATEGORIES.md` and mirrored in `README.md`, not in the filesystem. This preserves compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders.
 
@@ -69,7 +69,7 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
 Concerns and their owners:
 
 - **Workflow skills** own *choreography* — what steps run in what order, what stop points exist, what status transitions apply. `planning-workflow`, `implementation-workflow`, and `integration-workflow` (Phases A–D) each own the choreography of their phase and nothing else.
-- **`agent-orchestration`** owns *cross-stage orchestration* — dispatch-prompt shape (required-fields-first, `Additionally:` anchor-last), the "Follow the standard stage-relevant workflow" prefix, the relay protocol between orchestrator and subagent (what-changed deltas, review-notes annotation mechanics), and verdict-adjudication discipline (how to handle `REVISE` findings). Execution Modes (subagent dispatch vs direct) are owned by `superRA:using-superRA`.
+- **`agent-orchestration`** owns *cross-stage orchestration* — dispatch-prompt shape (required-fields-first, `Additionally:` anchor-last), the "Follow the standard stage-relevant workflow" prefix, the relay protocol between orchestrator and subagent (what-changed deltas, review-notes annotation mechanics), and verdict-adjudication discipline (how to handle `REVISE` findings). Execution Modes (subagent dispatch vs direct) are owned by `superRA:using-superra`.
 - **Domain skills** own *domain discipline* — the Iron Law for data analysis, the gated checklist for that domain (§Three Concurrent Disciplines, domain-specific integration reference), pitfall catalogs, stage-scoped references. Adding a new vertical means adding a domain skill, not forking workflow skills.
 - **`refactor-and-integrate`** owns *generic integration discipline* — code-quality standards, drift-test construction, merge-quality standards. Domain-specific integration content lives alongside the domain skill (for data analysis: `econ-data-analysis/references/integration.md`).
 - **`handoff-doc`** owns *handoff-doc mechanics* — latest-state-only, inline-edit rule, task-block structure, `## Decisions` section shape. It does NOT own role permissions or dispatch/status-return protocols — those are orchestration concerns and live in `agent-orchestration` + the agent files.
@@ -112,6 +112,6 @@ When you pick one up, create the domain skill first, then do one real project en
 
 ## General
 
-- Keep `README.md`, `skills/CATEGORIES.md`, and the skill inventory in `superRA:using-superRA` in sync when adding or renaming skills.
+- Keep `README.md`, `skills/CATEGORIES.md`, and the skill inventory in `superRA:using-superra` in sync when adding or renaming skills.
 - Prefer editing existing skills over creating new ones. New skills should carve out a clearly distinct concern.
 - Domain-specific or project-specific configuration does not belong in core superRA — publish it as a separate plugin.
