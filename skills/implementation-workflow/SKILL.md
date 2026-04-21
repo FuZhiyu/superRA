@@ -9,7 +9,7 @@ description: Requires `superRA:using-superRA` loaded first. Use when you have a 
 
 Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu. 
 
-Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE; the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task (for data analysis: `econ-data-analysis/SKILL.md §Three Concurrent Disciplines` + relevant §Pitfalls). Falls back to direct execution when the user requests it or tasks are trivial.
+Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE; the reviewer walks the active domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. Falls back to direct execution when the user requests it or tasks are trivial.
 
 **Announce at start:** "I'm using the implementation-workflow skill to implement this plan."
 
@@ -95,7 +95,7 @@ available.
 
 1. **Dispatch implementer.** Subagent mode: dispatch agents following `superRA:agent-orchestration`. 
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
-3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task, and returns one of two verdicts:
+3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task, and returns one of two verdicts:
    - **APPROVE** — no `[BLOCKING]` findings. Proceed to the next task.
    - **REVISE** — at least one `[BLOCKING]` finding. Adjudicate feedback in place inside the PLAN.md review-notes blockquote — append `→ orchestrator: rejected <reason>` or `→ orchestrator: <second opinion requested> <reason>` annotations to items you are rejecting or flagging, rewrite task steps in place for items you are accepting, commit, then re-dispatch the implementer. Leave the blockquote itself intact — the implementer will annotate items with `→ implemented: ...` markers on their pass, and the reviewer will delete confirmed-fixed items on re-review. The reviewer's re-review is **narrow by default**: verify the cited fixes + any finding annotated as depending on an upstream fix; everything else is accepted from the first pass. See the "Handling Reviewer Feedback" section below and `agents/implementer.md` / `agents/reviewer.md` for the full annotation mechanics. Iterate until APPROVE.
 4. **Once APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
@@ -161,7 +161,7 @@ Log the researcher's answer per `handoff-doc` §User Decisions Log — top-level
 
 Cross-stage orchestrator behavior — task sequencing, reviewer-feedback adjudication, implementer-status handling, and escalation — lives in `superRA:agent-orchestration` §Orchestrator Duties, §Handling Reviewer Feedback, §Review Status Reference, and §Handling Implementer Status.
 
-**Workflow-specific review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Three Concurrent Disciplines). Codebase integration review is deferred to `integration-workflow` (dispatched at Step 4 when the user chooses Option 1 — Proceed with integration).
+**Workflow-specific review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's gated checklist). Codebase integration review is deferred to `integration-workflow` (dispatched at Step 4 when the user chooses Option 1 — Proceed with integration).
 
 ## Autonomy and Stop Points
 
