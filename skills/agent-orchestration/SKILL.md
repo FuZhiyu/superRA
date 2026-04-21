@@ -52,7 +52,18 @@ will be reviewed in isolation.
 - A new feature that requires full domain-skill engagement.
 - Any task where bundle-context would exceed ~150k tokens.
 
-**Model tier selection:** Use the least capable model that handles the task; reviewers use the most capable available model.
+### Model Tier Selection
+
+Harnesses expose multiple tiers of model capacity (Sonnet vs. Opus in Claude Code; configurable thinking depth in Codex).
+
+**Default to medium tier (Sonnet in Claude Code, medium thinking in Codex).** Step up to higher tier (Opus / deep thinking) when *any* of these apply:
+
+- **Spec emerges mid-task.** The right approach only becomes clear after investigation, or the task requires re-scoping from what `PLAN.md` says.
+- **Silent-error risk is high.** Results-bearing code (data transforms, methodology, drift tests) where a wrong output ships without obvious failure.
+- **Adversarial first-pass review.** The failure mode is *not noticing* — capacity buys thoroughness, and lower-tier agents tend to over-comply, which breaks adversarial review. Narrow re-review of a cited fix stays on Sonnet.
+- **Heavy context synthesis.** Many files/skills must be reconciled in one head; Sonnet degrades faster under context pressure.
+
+These are defaults, not rules. Use your discretion and honor any explicit user preference.
 
 ### Rules of thumb
 
