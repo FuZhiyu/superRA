@@ -5,10 +5,10 @@ description: >
   financial, or panel datasets — importing raw data, cleaning,
   merging, filtering, constructing variables, aggregating, computing
   summary statistics, producing regression inputs, building figures,
-  or writing analysis scripts. Also use. Triggers
-  include panel data, "merge these datasets", "run regression",
-  "clean this data", "construct variable X", "check the summary stats", or any data file with unknown structure. Language-agnostic (Python,
-  Julia, R, Stata).
+  or writing analysis scripts. Triggers include panel data, "merge
+  these datasets", "run regression", "clean this data", "construct
+  variable X", "check the summary stats", or any data file with
+  unknown structure. Language-agnostic (Python, Julia, R, Stata).
 user-invocable: true
 ---
 
