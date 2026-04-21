@@ -58,7 +58,7 @@ For execution throughout the workflows, the main agent can dispatch subagents fo
 
 ## Skill-Load Manifest
 
-For each Stage, load the listed skills and references. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Role differentiation shows up explicitly on the `implementation` and `documentation` rows where the implementer and reviewer load different references.
+For each Stage, load the listed skills. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Each loaded skill's own body carries its stage- and role-scoped reference load map — after loading a skill, follow its load map for your Stage and role.
 
 **The "Required skills" column lists what loads *in addition to* `superRA:using-superRA`** — the master skill every agent already loads (implementer / reviewer via frontmatter preload at dispatch time; main agent and team teammates via explicit `Skill` invocation). `using-superRA` carries the Skill Inventory and this manifest. Handoff-doc editing discipline is owned by `superRA:handoff-doc`; subagents get a compact etiquette from `agents/implementer.md` / `agents/reviewer.md` step 1 and load the full skill only on demand or when creating docs from scratch.
 
@@ -66,22 +66,20 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 
 Apply to every dispatch regardless of domain.
 
-| `Stage:` | Emitted by | Required skills | Stage-scoped references |
-|---|---|---|---|
-| `implementation` | `implementation-workflow` | — | — |
-| `drift-test` | `integration-workflow` Phase A | `refactor-and-integrate` | `drift-test-quality.md` |
-| `integration` | `integration-workflow` Phase B | `refactor-and-integrate` | `codebase-integration.md` |
-| `documentation` | `integration-workflow` Phase C | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
-
-Inside `integration-workflow` Phase B, the implementer runs `Stage: integration` and loads `superRA:semantic-merge` when the integration reviewer's annotation calls for intent-based conflict resolution — no Stage switch needed.
+| `Stage:` | Emitted by | Required skills |
+|---|---|---|
+| `implementation` | `implementation-workflow` | — |
+| `drift-test` | `integration-workflow` Phase A | `refactor-and-integrate` |
+| `integration` | `integration-workflow` Phase B | `refactor-and-integrate` |
+| `documentation` | `integration-workflow` Phase C | `handoff-doc` + `report-in-markdown` |
 
 ### Domain add-ons (topic-driven)
 
-If the task/topic matches a row below, load the listed skill **in addition to** the generic row for the current Stage. Domain add-ons compose with the generic table; they do not replace it. These apply to both the main agents as well as the subagent. 
+If the task/topic matches a row below, load the listed skill **in addition to** the generic row for the current Stage. Domain add-ons compose with the generic table; they do not replace it. These apply to both the main agents as well as the subagent.
 
-| If the task involves… | Also load | Additional references (by Stage) |
-|---|---|---|
-| Economic / financial / panel data analysis — importing, cleaning, merging, filtering, constructing variables, summary stats, regressions (CRSP, Compustat, WRDS, etc.) | `superRA:econ-data-analysis` | `implementation`: **Implementer** additionally loads `notebook-format.md` when writing analysis scripts; <br>`drift-test`: `integrate-drift-tests.md`; <br>`integration`: `integration.md`; `integrate-drift-tests.md` if drift tests exist.  <br>**Plan authoring** (used by `planning-workflow` Phase 1 in-session, not a dispatch Stage): `planning.md`. |
+| If the task involves… | Also load |
+|---|---|
+| Economic / financial / panel data analysis — importing, cleaning, merging, filtering, constructing variables, summary stats, regressions (CRSP, Compustat, WRDS, etc.) | `superRA:econ-data-analysis` |
 
 Add a new row when introducing a vertical (theory, literature review, simulation, writing). Keep the generic table untouched — only the add-on table grows.
 
