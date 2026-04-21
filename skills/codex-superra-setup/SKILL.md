@@ -39,22 +39,22 @@ Install superRA's Codex agents globally in ~/.codex/agents for cross-repo use, o
 2. Pick the scope:
    - Global: `global`
    - Project: `project`
-3. Run the installer:
+3. Resolve the installer script relative to **this skill's directory**, not relative to the current working directory. For normal plugin use, Codex is often running in some other repo, so `skills/codex-superra-setup/...` from the current repo would be wrong. Set your working directory to this skill directory and run:
 
 ```bash
-python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope global
+python3 scripts/sync_codex_agents.py --scope global
 ```
 
 or:
 
 ```bash
-python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project
+python3 scripts/sync_codex_agents.py --scope project
 ```
 
 4. If the script reports an unmanaged conflicting file, stop and ask before overwriting it. Only rerun with `--force` after the user explicitly approves:
 
 ```bash
-python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope global --force
+python3 scripts/sync_codex_agents.py --scope global --force
 ```
 
 5. Verify the files landed where expected:
@@ -75,4 +75,4 @@ They expect the superRA skills to be available in the parent session. If the nam
 
 - The canonical role instructions still live in `agents/implementer.md` and `agents/reviewer.md`.
 - The generated TOMLs are derived from those files; do not hand-edit the generated agent files unless you are intentionally breaking the sync model.
-- For contributor verification, `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` must pass.
+- For contributor verification, from this skill directory run `python3 scripts/sync_codex_agents.py --scope project --check`.
