@@ -11,6 +11,20 @@ Use **global agent install** for normal work across other repos.
 
 ## Recommended Setup
 
+### Remote marketplace install
+
+1. Add the repo as a marketplace:
+   ```bash
+   codex plugin marketplace add FuZhiyu/superRA
+   ```
+2. Restart Codex and install the `superra` plugin.
+3. Run `codex-superra-setup`.
+4. Choose **global** scope so `superra_implementer` and `superra_reviewer` install into `~/.codex/agents/`.
+
+Codex should cache the installed plugin under `~/.codex/plugins/cache/...`.
+
+### Manual local-clone install
+
 1. Clone this repo to a durable location, for example:
    ```bash
    git clone https://github.com/FuZhiyu/superRA.git ~/.codex/plugins/superra
@@ -19,6 +33,8 @@ Use **global agent install** for normal work across other repos.
 3. Restart Codex and install the `superra` plugin.
 4. Run `codex-superra-setup`.
 5. Choose **global** scope so `superra_implementer` and `superra_reviewer` install into `~/.codex/agents/`.
+
+Use this path when you want the plugin to track a local clone directly.
 
 ## Why This Split Exists
 
