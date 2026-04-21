@@ -5,6 +5,8 @@ description: Use when starting a new piece of research work with an objective an
 
 # Planning Workflow
 
+**First, load `superRA:using-superRA` if not already loaded** — it carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
+
 ## Overview
 
 Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the execution-workflow to consume.
