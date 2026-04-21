@@ -1,6 +1,11 @@
 {
   "version": 1,
   "hooks": {
+    "userPromptSubmit": [
+      {
+        "command": "./hooks/autoload-superra"
+      }
+    ],
     "preToolUse": [
       {
         "command": "./hooks/merge-guard"
