@@ -68,7 +68,8 @@ python3 - <<'PY'
 import re
 from pathlib import Path
 
-# (i) Every skills/*/SKILL.md frontmatter parses and description ≤ 500 chars.
+# (i) Every skills/*/SKILL.md frontmatter parses and description ≤ 1024 chars
+# (Agent Skills spec: https://agentskills.io/specification — `description` max 1024).
 skills_root = Path("skills")
 errors = []
 for skill_md in sorted(skills_root.glob("*/SKILL.md")):
@@ -108,8 +109,8 @@ for skill_md in sorted(skills_root.glob("*/SKILL.md")):
         errors.append(f"{skill_md}: frontmatter missing 'name'")
     if not desc:
         errors.append(f"{skill_md}: frontmatter missing 'description'")
-    if len(desc) > 500:
-        errors.append(f"{skill_md}: description length {len(desc)} > 500 (Codex limit)")
+    if len(desc) > 1024:
+        errors.append(f"{skill_md}: description length {len(desc)} > 1024 (Agent Skills spec limit)")
 
 # (ii) Every skill under skills/ has a corresponding .agents/skills/ symlink.
 agents_root = Path(".agents/skills")
