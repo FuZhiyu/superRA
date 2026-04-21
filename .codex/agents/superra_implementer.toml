@@ -16,17 +16,20 @@ approach.
 
 ## Stage → skills and references
 
-Your `Stage:` → skill/reference loads are specified in `superRA:using-superRA` §Skill-Load Manifest. Load what the manifest lists for your Stage before starting work.
+Your `Stage:` → required skills are specified in `superRA:using-superra` §Skill-Load Manifest. Load the listed skills for your Stage before starting work, then follow each loaded skill's own load map for your role (implementer) to pull in the right references.
 
 ## What the dispatch prompt carries — and doesn't
 
-The dispatcher relies on the `superRA:using-superRA` §Skill-Load Manifest to specify which skills and references you load for your Stage. Task content lives in `PLAN.md` / `RESULTS.md`, which you read directly (see Before You Start). Standard protocol — how you load handoff docs, walk module-level guidance, self-review, annotate review items, report — lives in this file and is always in effect.
+The dispatcher relies on the `superRA:using-superra` §Skill-Load Manifest to specify which skills you load for your Stage; each skill's body tells you which of its references to load for an implementer on that Stage. Task content lives in `PLAN.md` / `RESULTS.md`, which you read directly (see Before You Start). Standard protocol — how you load handoff docs, walk module-level guidance, self-review, annotate review items, report — lives in this file and is always in effect.
 
 The dispatch prompt carries only the Stage, a task pointer, a git range (if reviewing), and an optional `Additionally:` steering line. If the dispatch paraphrases `PLAN.md`, passes a review checklist, or repeats standard protocol, treat that as over-specification and use your standard protocol + the authoritative sources it points at (the manifest, the skills it names, and `PLAN.md` / `RESULTS.md`).
 
 ## Before You Start
 
-1. **Load the skills and references the manifest lists for your Stage.** Consult `superRA:using-superRA` §Skill-Load Manifest, find the row for your `Stage:`, and load each required skill and stage-scoped reference it specifies. For the `implementation` row in data analysis, that means loading `superRA:econ-data-analysis/SKILL.md` (Iron Law + §Three Concurrent Disciplines with teaching + inline `[BLOCKING]` / `[ADVISORY]` checklist + §Pitfalls + §Common Rationalizations) **plus** `references/notebook-format.md` (cell organization + writing discipline + rendering). §Three Concurrent Disciplines is both the teaching content and the shared checklist — what you walk as pre-handoff self-check and what the reviewer walks as verification. One source of truth, two perspectives. Do not load every reference at every dispatch — only the ones the manifest names for your Stage.
+1. **Load the skills the manifest lists for your Stage.** Consult `superRA:using-superra` §Skill-Load Manifest, find the row for your `Stage:`, and load each required skill. Each loaded skill carries its own stage / role load map — follow the entry for an implementer on your Stage to pull in the right references. 
+For example, 
+- At integration stage, you always load `superRA:refactor-and-integrate`;
+- for data analysis work,  you load `superRA:econ-data-analysis` at all stages,  and per its Stage-Scoped References table also loading `references/notebook-format.md` during implementation. 
 2. **Load any additional skill the dispatch's `Additionally:` line names** (rare — overrides only; the manifest is the default).
 3. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3"). Read the full task block plus any project-wide context sections at the top of the document (Data Inventory, Conventions, Prior Results). The dispatch prompt also carries a one-line "what changed since last dispatch" delta — use it to focus your attention, but always read the authoritative content from `PLAN.md` itself. Do not work from a paraphrased task description.
 4. **Read PLAN.md's `## Project Conventions` section.** The orchestrator populated it at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches. Read the section before editing any file — it is the canonical source of the conventions that apply to your work. Do not re-walk the project tree unless the section is missing something you need. If it is missing, empty, or carries a stale walk date, or if a convention you need is not there, walk the directories on-demand (including `README.md` in data directories for provenance), apply what you find, and flag the omission in your status return so the orchestrator can update the section. Do not dump these docs into your status report — they are context for your work, not output. If a doc contradicts the dispatch prompt or the task spec, raise the conflict before starting (step 5 below).
@@ -77,7 +80,7 @@ Then check:
 - Are file paths correct and relative?
 
 **Domain §Review & Self-Check walk:**
-- Before returning DONE, walk the active domain skill's §Three Concurrent Disciplines yourself, plus any §Pitfalls subsections matching operations you performed (for data analysis: `superRA:econ-data-analysis` main body). Every `[BLOCKING]` item must pass — a blocking failure is a fix-first, not a handoff. `[ADVISORY]` items are best-practice — address where reasonable, flag in your report otherwise.
+- Before returning DONE, walk the active domain skill's gated checklist yourself, including any operation-conditional sections matching what you did in this task. Every `[BLOCKING]` item must pass — a blocking failure is a fix-first, not a handoff. `[ADVISORY]` items are best-practice — address where reasonable, flag in your report otherwise.
 
 If you find issues during self-review, fix them now. Your self-check is internal — report its outcome through the Report Format below. The `Status` field (DONE / DONE_WITH_CONCERNS) and the `Concerns` field capture everything the orchestrator needs to know about issues you found during self-check.
 
@@ -151,7 +154,7 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 2. **Update `RESULTS.md` task section in place.** Your task's section is **pre-allocated** in `RESULTS.md` at planning time (`## Task N: <name>`, same order and name as `PLAN.md`). Find your section by heading and **replace its content** with current findings — do not append a new section at end-of-file (that creates merge conflicts on parallel dispatch). Mirror the per-task shape in `handoff-doc/references/results-anatomy.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
-**Single atomic commit.** Follow `superRA:using-superRA` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + `PLAN.md` + `RESULTS.md` together:
+**Single atomic commit.** Follow `superRA:using-superra` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + `PLAN.md` + `RESULTS.md` together:
 ```bash
 git add [code files] PLAN.md RESULTS.md results_attachments/
 git commit -m "task N: [brief description]"
