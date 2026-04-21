@@ -78,7 +78,7 @@ Walked at planning time (2026-04-20). Re-walk on-demand only.
 
 ### Task 3: Drop `merge` Stage from Manifest
 **Depends on:** Task 2 (restructured manifest)
-**Review status:** REVISE
+**Review status:** IMPLEMENTED *(2 BLOCKING items fixed; awaiting narrow re-review)*
 
 Grep confirms zero live `Stage: merge` emissions. Standalone `semantic-merge` dispatches should carry their Stage on the dispatch side; the manifest stops enumerating it.
 
@@ -90,8 +90,10 @@ Grep confirms zero live `Stage: merge` emissions. Standalone `semantic-merge` di
 > **Review notes (2026-04-20):**
 >
 > 1. **[BLOCKING] MAJOR — `skills/refactor-and-integrate/SKILL.md` lines 3 and 30 — stale `merge` Stage pointer.** The frontmatter description (line 3) still says dispatched subagents load this skill when their Stage is `"drift-test', 'integration', or 'merge'"`, and the §Three Concurrent Disciplines §3 Merge Quality body (line 30) says `"Stage 'merge' → load 'references/merge-quality.md'"`. Both are live, skill-consumer-facing statements pointing at a manifest row that no longer exists. Any agent reading this skill will see a valid-looking pointer to `Stage: merge` that contradicts the manifest. Fix: update both to remove the `Stage: merge` framing — the merge-quality discipline is still valid and `references/merge-quality.md` still exists (for use by agents inside `integration-workflow` Phase D), but the triggering condition should be reworded to remove the manifest-row claim (e.g., "during merge integration commits within `integration-workflow` Phase D").
+>    → implemented: frontmatter description reworded — load triggers now "Stage `drift-test` or `integration`"; merge-quality content framed as on-demand during `integration-workflow` Phase B semantic-merge invocations and standalone `semantic-merge` dispatches (`skills/refactor-and-integrate/SKILL.md:3`). §3 Merge Quality body rewritten to remove "Stage `merge` → load" framing; now says "Load … when merging — inside `integration-workflow` Phase B when `semantic-merge` is invoked, or on any standalone `semantic-merge` dispatch. No dedicated manifest Stage." (`skills/refactor-and-integrate/SKILL.md:30`).
 >
 > 2. **[BLOCKING] MAJOR — `skills/refactor-and-integrate/references/merge-quality.md` line 3 — stale manifest pointer.** Opening sentence says `"Loaded whenever 'Stage:' is 'merge' (per 'superRA:using-superRA' §Skill-Load Manifest)"`. After this commit the manifest no longer has a `merge` row, so this sentence is factually wrong. Fix: reword the opening sentence to reflect how the file is now loaded (by agents doing merge integration inside `integration-workflow` Phase D or standalone `semantic-merge` dispatches, not via a manifest Stage row).
+>    → implemented: opening sentence rewritten — "Loaded on demand during `integration-workflow` Phase B when `superRA:semantic-merge` is invoked for conflict resolution, and on any standalone `semantic-merge` dispatch. No dedicated `Stage:` — merge work rides on `Stage: integration` or runs standalone." (`skills/refactor-and-integrate/references/merge-quality.md:3`).
 >
 > **Verified passing:**
 > - `using-superRA/SKILL.md` generic table: 4 rows, no `merge` row present.

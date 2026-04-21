@@ -1,6 +1,6 @@
 # Merge Integration Quality Standards
 
-Shared domain reference for merge proposals and merge review. Both the implementer (merge proposer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the commit-message templates, integration-map format, and Tier 3 escalation procedure the checklist items encode. Loaded whenever `Stage:` is `merge` (per `superRA:using-superRA` §Skill-Load Manifest).
+Shared domain reference for merge proposals and merge review. Both the implementer (merge proposer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the commit-message templates, integration-map format, and Tier 3 escalation procedure the checklist items encode. Loaded on demand during `integration-workflow` Phase B when `superRA:semantic-merge` is invoked for conflict resolution, and on any standalone `semantic-merge` dispatch. No dedicated `Stage:` — merge work rides on `Stage: integration` or runs standalone.
 
 ---
 
