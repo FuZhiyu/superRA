@@ -9,7 +9,6 @@ description: Requires `superRA:using-superRA` loaded first. Use when a plan is c
 
 Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the full finishing sequence that takes a reproducibility-verified analysis branch to a merged state on main: drift-test creation (Phase A), unified sync-with-main + refactor (Phase B, iterative), documentation maturation + PLAN.md disposition (Phase C), and final local merge or PR push + cleanup (Phase D).
 
-Assumes implementation-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in implementation-workflow.
 
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
@@ -33,7 +32,8 @@ Phase D — Final merge / PR / cleanup
 **Autonomy** — full contract: `superRA:using-superRA/references/main-agent.md`. Legitimate stop points in this workflow:
 
 - Phase A Step 2 — drift-test candidate confirmation
-- Phase B — batched research-meaningful decisions surfaced by the integration reviewer (see Phase B Step 2)
+- Phase B Step 0 — integration-base confirmation (skippable when a prior §Decisions entry already records it)
+- Phase B Step 2 — batched research-meaningful decisions surfaced by the integration reviewer
 - Phase B / Phase D — meaningful drift after refactor or post-merge (see `superRA:refactor-and-integrate` `references/drift-test-quality.md`)
 - Phase C Step 1 — Phase C RESULTS.md relocation target when project guidance is silent
 - Phase C Step 4 — PLAN.md disposition
@@ -82,9 +82,30 @@ Drift tests guard key results from unintended changes during Phase B refactoring
 
 ## Phase B — Integrate (Sync + Refactor, Iterative)
 
-**Integration base.** Phase B integrates the analysis branch against a researcher-specified base — `<base-branch>` in every reference below. `origin/main` is the typical default, but confirm with the researcher; override is expected when the analysis branched off a release, a co-authored track, or another analysis's sibling branch. The ref is fetched fresh (`git fetch origin <base-branch>`) at the start of Phase B so base-branch-side scans walk current upstream state.
+**Integration base.** Phase B integrates the analysis branch against a researcher-specified base — `<base-branch>` in every reference below. `origin/main` is the typical default; override is expected when the analysis branched off a release, a co-authored track, or another analysis's sibling branch.
 
 The integration reviewer drives the loop. It walks both the branch diff and the base-branch-side changes, writes per-task annotations in PLAN.md, and writes or updates a `## Integration Intent` section when material incoming changes need adaptation (see `superRA:handoff-doc` `references/plan-anatomy.md` §Integration Intent for the section's anatomy and ownership rules). The orchestrator adjudicates findings, batches user decisions, then dispatches implementer(s) to fix, and re-dispatches the reviewer. Repeat until every in-scope task is APPROVED.
+
+### Step 0: Resolve and confirm the integration base
+
+Resolve a candidate base from git and any prior §Decisions entry:
+```bash
+git merge-base HEAD origin/main 2>/dev/null \
+  || git merge-base HEAD origin/master 2>/dev/null
+```
+
+Legitimate stop point — ask via `AskUserQuestion` (plain text if unavailable):
+
+```
+Phase B will integrate this analysis branch against <resolved-base>.
+Is that correct, or did this branch split from a different base
+(release branch, co-authored track, sibling analysis)?
+```
+
+If a prior `## Decisions` entry on this branch already records the integration base and it matches the git-resolved candidate, skip the prompt — the researcher has already answered. Otherwise log the confirmed answer per `superRA:handoff-doc` §User Decisions Log as `<base-branch>` **before** fetching or dispatching. Fetch fresh so base-branch-side scans walk current upstream state:
+```bash
+git fetch origin <base-branch>
+```
 
 ### Step 1: Dispatch the integration reviewer
 
@@ -109,10 +130,7 @@ Agent(subagent_type: "superRA:reviewer"):
     no annotation; flip each annotated task to
     `Integration status: REVISE` in the same review commit. When
     the diff to walk is large (see `agent-orchestration`
-    §Workload Balancing), the orchestrator may dispatch parallel
-    sibling reviewers on disjoint worktrees per
-    §Parallelization and Worktree Isolation — each walks a
-    disjoint slice.
+    §Workload Balancing)
     <prior-round adjudication notes if re-dispatching>.
 ```
 
