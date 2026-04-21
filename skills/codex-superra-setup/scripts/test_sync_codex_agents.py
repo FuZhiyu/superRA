@@ -59,6 +59,24 @@ class SyncCodexAgentsTests(unittest.TestCase):
     def test_project_check_matches_committed_agents(self) -> None:
         self.run_script("--scope", "project", "--check")
 
+    def test_generated_agents_have_repo_agnostic_regenerate_hint(self) -> None:
+        with tempfile.TemporaryDirectory() as home:
+            home_dir = Path(home)
+            target_dir = home_dir / ".codex" / "agents"
+
+            self.run_script("--scope", "global", "--home-dir", str(home_dir))
+            generated = (target_dir / "superra_implementer.toml").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn(
+                "# Regenerate with: rerun superRA:codex-superra-setup",
+                generated,
+            )
+            self.assertNotIn(
+                "skills/codex-superra-setup/scripts/sync_codex_agents.py",
+                generated,
+            )
+
     def run_script(self, *args: str) -> None:
         subprocess.run(
             ["python3", str(SCRIPT), *args],

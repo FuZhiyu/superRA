@@ -1,10 +1,10 @@
 {
   "name": "superra",
-  "version": "0.0.0-local",
+  "version": "0.1.0",
   "description": "superRA skills for disciplined research-assistant workflows in Codex.",
   "author": "Zhiyu Fu",
-  "homepage": "https://github.com/FuZhiyu/econ-superpowers",
-  "repository": "https://github.com/FuZhiyu/econ-superpowers",
+  "homepage": "https://github.com/FuZhiyu/superRA",
+  "repository": "https://github.com/FuZhiyu/superRA",
   "license": "MIT",
   "keywords": [
     "codex",
@@ -23,6 +23,6 @@
     "capabilities": [
       "skills"
     ],
-    "websiteURL": "https://github.com/FuZhiyu/econ-superpowers"
+    "websiteURL": "https://github.com/FuZhiyu/superRA"
   }
 }

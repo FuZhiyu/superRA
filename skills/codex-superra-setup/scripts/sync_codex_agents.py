@@ -128,7 +128,7 @@ def render_agent(repo_root: Path, spec: AgentSpec) -> str:
     return (
         f"{MANAGED_HEADER}\n"
         f"# Source: {spec.source_md}\n"
-        "# Regenerate with: python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project\n\n"
+        "# Regenerate with: rerun superRA:codex-superra-setup\n\n"
         f'name = "{spec.codex_name}"\n'
         f'description = "{escape_toml_basic_string(description)}"\n'
         f"nickname_candidates = [{nicknames}]\n"

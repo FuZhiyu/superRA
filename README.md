@@ -138,7 +138,7 @@ Codex installation has two pieces:
 - **Plugin bundle** from [`.codex-plugin/plugin.json`](./.codex-plugin/plugin.json). This installs the shared superRA skills.
 - **Named custom agents** from `codex-superra-setup`. This installs `superra_implementer` and `superra_reviewer`.
 
-This split is Codex-specific and deliberate. In Codex, plugins are the installable distribution unit for shared skills, while custom agents are discovered separately from `~/.codex/agents/` (global) or `.codex/agents/` (project-scoped).
+This split is Codex-specific and deliberate. In Codex, plugins are the installable distribution unit for shared skills, while custom agents are discovered separately from `~/.codex/agents/`.
 
 #### Global install (recommended for normal cross-repo use)
 
@@ -152,9 +152,9 @@ This split is Codex-specific and deliberate. In Codex, plugins are the installab
 
    ```json
    {
-     "name": "personal-superra",
+     "name": "superra",
      "interface": {
-       "displayName": "Personal superRA Plugins"
+       "displayName": "superRA"
      },
      "plugins": [
        {
@@ -178,22 +178,13 @@ This split is Codex-specific and deliberate. In Codex, plugins are the installab
 5. Choose **global** scope so `superra_implementer` and `superra_reviewer` install into `~/.codex/agents/`.
 6. Restart Codex or start a fresh session if agent discovery has not refreshed yet.
 
-#### Project install (for developing or testing superRA in this repo)
-
-When you are working in this repo itself, you usually want project-scoped agents and a repo-local plugin entry:
-
-- [`./.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json) already points at this repo root, so opening this repo in Codex exposes a repo-local `superra` plugin marketplace entry.
-- Install `superra` from that repo marketplace, then run `codex-superra-setup` with **project** scope.
-- Project scope writes the generated agent TOMLs to [`.codex/agents/`](./.codex/agents/).
-- Opening this repo directly already exposes the skills through [`.agents/skills/`](./.agents/skills/); the repo-local plugin install is mainly for testing the actual plugin packaging and discovery path.
-
 #### Updating a Codex install
 
-- **Plugin updates:** Codex's local plugin install tracks the directory named in the marketplace entry. Update that directory, then restart Codex so it reloads the plugin files. For a global install, that usually means `git -C ~/.codex/plugins/superra pull`. For a project install, pull or edit the repo you already have open.
+- **Plugin updates:** Codex's local plugin install tracks the directory named in the marketplace entry. Update that directory, then restart Codex so it reloads the plugin files. For the recommended install, that usually means `git -C ~/.codex/plugins/superra pull`.
 - **Agent updates:** rerun `codex-superra-setup` after updating if you want to refresh the generated custom agents. This is required whenever [`agents/implementer.md`](./agents/implementer.md) or [`agents/reviewer.md`](./agents/reviewer.md) changes.
-- **Verification:** global installs should create `~/.codex/agents/superra_implementer.toml` and `~/.codex/agents/superra_reviewer.toml`. Project installs should create the same filenames under [`.codex/agents/`](./.codex/agents/).
+- **Verification:** the global install should create `~/.codex/agents/superra_implementer.toml` and `~/.codex/agents/superra_reviewer.toml`.
 
-For more detail, see the official [Codex plugin docs](https://developers.openai.com/codex/plugins/build), [`docs/README.codex.md`](./docs/README.codex.md), and [`.codex/INSTALL.md`](./.codex/INSTALL.md).
+For more detail, see the official [Codex plugin docs](https://developers.openai.com/codex/plugins/build) and [`docs/README.codex.md`](./docs/README.codex.md).
 
 ### Other Platforms
 
