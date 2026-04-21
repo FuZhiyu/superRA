@@ -42,8 +42,9 @@ assert plugin["name"] == "superra", plugin["name"]
 assert plugin["skills"] == "./skills/", plugin["skills"]
 assert "skills" in plugin["interface"]["capabilities"], plugin["interface"]["capabilities"]
 assert entry["name"] == plugin["name"], (entry["name"], plugin["name"])
-assert entry["source"]["source"] == "local", entry["source"]
-assert entry["source"]["path"] == "./", entry["source"]["path"]
+assert entry["source"]["source"] == "url", entry["source"]
+assert entry["source"]["url"] == "https://github.com/FuZhiyu/superRA.git", entry["source"]["url"]
+assert entry["source"]["ref"] == "main", entry["source"]["ref"]
 PY
 
 section "Shared harness adapters"

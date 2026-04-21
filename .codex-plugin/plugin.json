@@ -1,6 +1,6 @@
 {
   "name": "superra",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "superRA skills for disciplined research-assistant workflows in Codex.",
   "author": "Zhiyu Fu",
   "homepage": "https://github.com/FuZhiyu/superRA",
@@ -17,7 +17,7 @@
   "interface": {
     "displayName": "superRA",
     "shortDescription": "Disciplined research-assistant workflows for Codex.",
-    "longDescription": "superRA adds plan, execution, review, integration, and merge discipline for research-oriented coding workflows. Install the plugin for shared skills, then run codex-superra-setup to install the named Codex agents.",
+    "longDescription": "superRA adds plan, execution, review, integration, and merge discipline for research-oriented coding workflows. Install the shared skills from the superRA marketplace entry, then run codex-superra-setup to install the named Codex agents.",
     "developerName": "Zhiyu Fu",
     "category": "Productivity",
     "capabilities": [

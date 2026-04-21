@@ -128,11 +128,9 @@ If you want to modify superRA itself — edit skills, add a domain vertical, tun
 
 ```bash
 git clone https://github.com/FuZhiyu/superRA.git
-claude plugin marketplace add ./superRA
-claude plugin install superRA@superRA
 ```
 
-Edits to your clone are picked up on the next session start.
+The committed repo marketplace now targets the published GitHub source so remote installs work cleanly in Codex. For a live local-development install, create your own personal marketplace entry that points directly at your clone instead of relying on the repo's committed marketplace file.
 
 ### Codex
 
@@ -143,7 +141,22 @@ Codex installation has two pieces:
 
 This split is Codex-specific and deliberate. In Codex, plugins are the installable distribution unit for shared skills, while custom agents are discovered separately from `~/.codex/agents/`.
 
-#### Global install (recommended for normal cross-repo use)
+#### Remote marketplace install (recommended)
+
+1. Add the repo as a marketplace:
+
+   ```bash
+   codex plugin marketplace add FuZhiyu/superRA
+   ```
+
+2. Restart Codex, open the Plugins UI (or run `/plugins` in the CLI), and install `superra`.
+3. Run `codex-superra-setup`.
+4. Choose **global** scope so `superra_implementer` and `superra_reviewer` install into `~/.codex/agents/`.
+5. Restart Codex or start a fresh session if agent discovery has not refreshed yet.
+
+Codex should cache the plugin after install under `~/.codex/plugins/cache/...`.
+
+#### Manual local-clone install (for development or explicit local control)
 
 1. Clone this repo somewhere durable:
 
@@ -183,7 +196,8 @@ This split is Codex-specific and deliberate. In Codex, plugins are the installab
 
 #### Updating a Codex install
 
-- **Plugin updates:** Codex's local plugin install tracks the directory named in the marketplace entry. Update that directory, then restart Codex so it reloads the plugin files. For the recommended install, that usually means `git -C ~/.codex/plugins/superra pull`.
+- **Remote marketplace install:** update the marketplace and plugin from Codex, then restart if the UI has not refreshed yet.
+- **Manual local-clone install:** Codex tracks the directory named in your personal marketplace entry. Update that clone, then restart Codex so it reloads the plugin files. For the example above, that usually means `git -C ~/.codex/plugins/superra pull`.
 - **Agent updates:** rerun `codex-superra-setup` after updating if you want to refresh the generated custom agents. This is required whenever [`agents/implementer.md`](./agents/implementer.md) or [`agents/reviewer.md`](./agents/reviewer.md) changes.
 - **Verification:** the global install should create `~/.codex/agents/superra_implementer.toml` and `~/.codex/agents/superra_reviewer.toml`.
 
