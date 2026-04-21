@@ -141,6 +141,16 @@ Agent(subagent_type: "superRA:reviewer"):
 
 If a non-default skill load, an extra domain reference, or an override is required, add `Skills:` and `References:` lines between the required fields and the prefix line.
 
+## Orchestrator Duties
+
+These are the things the orchestrator does that no subagent does. Applies at every workflow stage.
+
+- **Task sequencing and dispatch.** Read `PLAN.md`, decide what to dispatch next, apply §Workload Balancing to size and bundle.
+- **Adjudicate reviewer feedback in place.** See §Handling Reviewer Feedback below for the full protocol.
+- **Handle implementer status returns.** See §Handling Implementer Status below.
+- **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text in place, do not annotate. Commit atomically with the commit that completes the triggering task.
+- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck — hard blocker, methodology decision beyond RA authority, CRITICAL override, repeated reviewer disagreement. Log per `handoff-doc` §User Decisions Log **before** acting.
+
 ## Handling Reviewer Feedback (Orchestrator Discipline)
 
 The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between a REVISE verdict and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
@@ -190,4 +200,17 @@ Implementer and reviewer agents own their commits and document updates — see `
 **A task is complete only when its status is `APPROVED`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
 
 For direct mode (orchestrator executes the step itself), see `superRA:using-superRA` §Execution Modes.
+
+## Handling Implementer Status
+
+Implementers return one of four statuses in their dispatch response. Applies at every Stage (implementation, drift-test, integration, documentation).
+
+- **DONE:** Proceed to review.
+- **DONE_WITH_CONCERNS:** Read the concerns. If about input quality or unexpected findings, investigate before review. If about methodology choices, note and proceed to review.
+- **NEEDS_CONTEXT:** Provide missing upstream inputs, documentation, or methodology details and re-dispatch.
+- **BLOCKED:** Assess the blocker:
+  1. Required input not available → help locate or download.
+  2. Input quality too poor → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
+  3. Task requires methodology decisions → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
+  4. Task too complex → break into smaller pieces or use a more capable model.
 

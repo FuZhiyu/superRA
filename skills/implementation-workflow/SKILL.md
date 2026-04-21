@@ -23,12 +23,11 @@ Default mode dispatches a fresh subagent per task. Each task gets one comprehens
 
 **Load `superRA:agent-orchestration` before writing any dispatch prompt** — the canonical template shape, `Additionally:` anchor rules, and banned fields live there. Dispatching without it produces malformed prompts.
 
-1. Read plan, extract all tasks, create TodoWrite.
-2. **Per task:**
+1. Read plan, extract all tasks;
+2. **Go through tasks:**
    a. Dispatch implementer subagent. Answer context questions, re-dispatch if needed.
-   b. Implementer runs describe → analyze → validate → commit.
-   c. Dispatch reviewer subagent (one comprehensive pass).
-   d. **APPROVE** → update plan file + commit, next task. **REVISE** → fix `[BLOCKING]` findings → narrow re-review (cited fixes + dependent findings). Loop until APPROVE, then update plan file + commit.
+   b. Dispatch reviewer subagent (one comprehensive pass).
+   c. **APPROVE** → update plan file + commit, next task. **REVISE** → fix `[BLOCKING]` findings → narrow re-review (cited fixes + dependent findings). Loop until APPROVE, then update plan file + commit.
 3. When no tasks remain → verify pipeline + reproducibility (Step 3).
 4. Present Step 4 completion menu; dispatch `integration-workflow` on merge/PR.
 
@@ -73,7 +72,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed to Step 1.
 1. Read `PLAN.md` and `RESULTS.md`. `PLAN.md` is the task tracker (`superRA:planning-workflow §PLAN.md Is the Task Tracker`); `TodoWrite` mirrors it as a transient session view, not a substitute.
 2. **Read `## Workflow Status`** at the top of `PLAN.md`. The checklist names which milestones are complete (`Plan approved`, `Execution complete`, `Drift tests created`, `Refactored`, `Docs finalized`, `Merged`) and tells a resuming agent exactly which phase this branch is at without grepping commits. If `Execution complete` is already checked, skip to Step 3 (verification); if earlier milestones are unchecked unexpectedly, raise it with the user before dispatching tasks.
    - **Also read per-task `**Review status:**` and `**Integration status:**` fields alongside `## Workflow Status`.** If any project-level box is unchecked while some tasks remain APPROVED, a prior `planning-workflow §User Feedback and Changing Plans` invocation unchecked those boxes (Step 4) and paused — resume that protocol at Step 6 before dispatching any implementer. Enter `§User Feedback and Changing Plans` at Step 1 if the researcher instead pings mid-execution with a scope change.
-3. **Load the active domain skill(s) PLAN.md identifies.** For data analysis, this is `superRA:econ-data-analysis` (plus `references/notebook-format.md` when analysis scripts are being written or reviewed). Any task-specific helper skills named in PLAN.md's header — load those too. Subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time; the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
+3. **Load the active domain skill(s) following the manifest** Any task-specific helper skills named in PLAN.md's header — load those too. Subagents load these same skills per `superRA:using-superRA` §Skill-Load Manifest at dispatch time; the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
 4. **Read PLAN.md's `## Project Conventions` section** (anatomy: `handoff-doc/references/plan-anatomy.md` §Project Conventions). If the section is missing, empty, or stale, walk and populate it now — commit before dispatching subagents.
 5. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources / inputs available and accessible?
@@ -92,20 +91,17 @@ single parallel Agent-tool batch (subject to `agent-orchestration`
 §Workload Balancing). Serialize only when no parallel batch is
 available.
 
-#### Per-Task Execution Steps
+#### Task Execution Steps
 
-1. **Dispatch implementer.** Subagent mode: `Agent(subagent_type: "superRA:implementer")` — see template below. Direct mode: follow `superRA:using-superRA` §Execution Modes, then implement yourself. When several small tasks share context, see `superRA:agent-orchestration` §Workload Balancing Tier 2 for bundling them into a single dispatch.
+1. **Dispatch implementer.** Subagent mode: dispatch agents following `superRA:agent-orchestration`. 
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
 3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task, and returns one of two verdicts:
    - **APPROVE** — no `[BLOCKING]` findings. Proceed to the next task.
    - **REVISE** — at least one `[BLOCKING]` finding. Adjudicate feedback in place inside the PLAN.md review-notes blockquote — append `→ orchestrator: rejected <reason>` or `→ orchestrator: <second opinion requested> <reason>` annotations to items you are rejecting or flagging, rewrite task steps in place for items you are accepting, commit, then re-dispatch the implementer. Leave the blockquote itself intact — the implementer will annotate items with `→ implemented: ...` markers on their pass, and the reviewer will delete confirmed-fixed items on re-review. The reviewer's re-review is **narrow by default**: verify the cited fixes + any finding annotated as depending on an upstream fix; everything else is accepted from the first pass. See the "Handling Reviewer Feedback" section below and `agents/implementer.md` / `agents/reviewer.md` for the full annotation mechanics. Iterate until APPROVE.
 4. **Once APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
 
-**In direct mode:** Steps 1–2 are done by the main agent directly (follow `superRA:using-superRA` §Execution Modes). Steps 3–4 are unchanged — still dispatch reviewer subagents.
+**In direct mode:** Steps 1–2 are done by the main agent directly (follow `superRA:using-superRA` §Execution Modes). Steps 3–4 are unchanged — still dispatch reviewer subagents unless overridden by the user.
 
-#### Dispatch Templates
-
-See `superRA:agent-orchestration` §Dispatch Templates for the canonical shape (required fields first, `Additionally:` anchor last; the "Follow the standard stage-relevant workflow" prefix; banned-in-dispatch list). Both implementer and reviewer dispatches in this workflow use `Stage: implementation` — the `subagent_type` (`superRA:implementer` vs `superRA:reviewer`) carries the role split. A reviewer re-dispatch after REVISE is narrow by default (verify cited fixes + any finding annotated as depending on an upstream fix); if a particular fix is substantial enough to cast doubt on other findings, use `Additionally:` to widen the scope.
 
 #### Handling Reviewer Feedback (Orchestrator Discipline)
 
@@ -148,10 +144,12 @@ If the branch point is ambiguous, ask via `AskUserQuestion` (question: "Which ba
 **Present the 4 completion options via `AskUserQuestion` when the tool is available.** This is a legitimate user-defined milestone — the agent has driven the work to an `APPROVED` + reproducible state on its own power, and the next step is the researcher's call. Frame the question as "Work complete and verified. What would you like to do with this branch?" with the four options below; each option also gets a short description so the researcher does not have to re-derive what each one means. When `AskUserQuestion` is unavailable, fall back to the plain-text form.
 
 ```
-Work complete and verified. What would you like to do?
+Work complete and verified. Here are the results summary:
+<summarize the results>
+What would you like to do?
 
-1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
+1. Proceed with integration
+2. Change the plan
 3. Keep the branch as-is (I'll handle it later)
 4. Discard this work
 ```
@@ -164,37 +162,13 @@ Log the researcher's answer per `handoff-doc` §User Decisions Log — top-level
   Invoke `superRA:integration-workflow` skill to proceed with the integration stage. 
 
   - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
-- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree — `git worktree remove <path>` per `superRA:agent-orchestration/references/worktree-harness-fallback.md` §Remove. Stop after the branch and worktree are removed. Report what was deleted.
+- **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
 
-## Review Status Reference
+## Orchestrator Discipline
 
-See `superRA:agent-orchestration` §Review Status Reference.
+Cross-stage orchestrator behavior — task sequencing, reviewer-feedback adjudication, implementer-status handling, and escalation — lives in `superRA:agent-orchestration` §Orchestrator Duties, §Handling Reviewer Feedback, §Review Status Reference, and §Handling Implementer Status.
 
-### Orchestrator-Only Responsibilities
-
-These are the things the orchestrator does that no subagent does:
-
-- **Task sequencing and dispatch.** Read PLAN.md, decide what to dispatch next.
-- **Adjudicate reviewer feedback in place** in the PLAN.md review-notes blockquote before re-dispatching the implementer (see Handling Reviewer Feedback above). Append `→ orchestrator: rejected <reason>` annotations to items you are rejecting, `→ orchestrator: <second opinion requested> <reason>` to items you are flagging for the reviewer, and rewrite task steps in place for items you are accepting. **Do not clear the blockquote.** The implementer appends `→ implemented: ...` annotations on their pass; the reviewer deletes confirmed-fixed items on re-review. See `agents/implementer.md` §"How You Fix Review Items on a REVISE Round" and `agents/reviewer.md` §"How You Write a Review" for the full annotation mechanics. Commit the annotated PLAN.md.
-- **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text, don't annotate it. Commit.
-- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck: BLOCKED, methodology disagreement, CRITICAL issue you want to override, repeated reviewer disagreement. Log per `handoff-doc` §User Decisions Log.
-
-**Review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Three Concurrent Disciplines). Codebase integration review is deferred to integration-workflow (dispatched by this skill at Step 4 when the user chooses merge or PR).
-
-
-## Handling Implementer Status
-
-**DONE:** Proceed to review.
-
-**DONE_WITH_CONCERNS:** Read the concerns. If about input quality or unexpected findings, investigate before review. If about methodology choices, note and proceed to review.
-
-**NEEDS_CONTEXT:** Provide missing upstream inputs, documentation, or methodology details and re-dispatch.
-
-**BLOCKED:** Assess the blocker:
-1. Required input not available → help locate or download
-2. Input quality too poor → escalate via `AskUserQuestion`, log answer in PLAN.md before proceeding
-3. Task requires methodology decisions → escalate via `AskUserQuestion`, log answer in PLAN.md before proceeding
-4. Task too complex → break into smaller pieces or use more capable model
+**Workflow-specific review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's §Three Concurrent Disciplines). Codebase integration review is deferred to `integration-workflow` (dispatched at Step 4 when the user chooses merge or PR).
 
 ## Autonomy and Stop Points
 
