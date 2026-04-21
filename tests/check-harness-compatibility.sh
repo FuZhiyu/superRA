@@ -64,64 +64,61 @@ python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py
 python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check
 
 section "Codex skill packaging invariants"
+ruby - <<'RUBY'
+require "yaml"
+
+# (i) Every skills/*/SKILL.md frontmatter parses as real YAML and description
+# ≤ 1024 chars (Agent Skills spec: https://agentskills.io/specification).
+errors = []
+Dir.glob("skills/*/SKILL.md").sort.each do |skill_md|
+  text = File.read(skill_md, encoding: "utf-8")
+  unless text.start_with?("---\n")
+    errors << "#{skill_md}: missing leading '---' frontmatter fence"
+    next
+  end
+
+  parts = text.split(/^---\s*$\n?/, 3)
+  if parts.length < 3
+    errors << "#{skill_md}: missing closing '---' frontmatter fence"
+    next
+  end
+
+  frontmatter = parts[1]
+  begin
+    fields = YAML.safe_load(frontmatter) || {}
+  rescue Psych::SyntaxError => e
+    errors << "#{skill_md}: invalid YAML: #{e.message.sub(/\A\(<unknown>\):\s*/, "")}"
+    next
+  end
+
+  unless fields.is_a?(Hash)
+    errors << "#{skill_md}: frontmatter must parse to a mapping"
+    next
+  end
+
+  name = fields["name"].to_s
+  desc = fields["description"].to_s
+  errors << "#{skill_md}: frontmatter missing 'name'" if name.empty?
+  errors << "#{skill_md}: frontmatter missing 'description'" if desc.empty?
+  if desc.length > 1024
+    errors << "#{skill_md}: description length #{desc.length} > 1024 (Agent Skills spec limit)"
+  end
+end
+
+abort(errors.join("\n")) unless errors.empty?
+RUBY
+
 python3 - <<'PY'
-import re
 from pathlib import Path
 
-# (i) Every skills/*/SKILL.md frontmatter parses and description ≤ 1024 chars
-# (Agent Skills spec: https://agentskills.io/specification — `description` max 1024).
-skills_root = Path("skills")
-errors = []
-for skill_md in sorted(skills_root.glob("*/SKILL.md")):
-    text = skill_md.read_text(encoding="utf-8")
-    if not text.startswith("---\n"):
-        errors.append(f"{skill_md}: missing leading '---' frontmatter fence")
-        continue
-    end = text.find("\n---", 4)
-    if end == -1:
-        errors.append(f"{skill_md}: missing closing '---' frontmatter fence")
-        continue
-    fm = text[4:end]
-    # Tolerant parse: collect simple key: value pairs and folded-block 'description: >'.
-    fields = {}
-    lines = fm.splitlines()
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        m = re.match(r"^([A-Za-z_][\w-]*):\s*(.*)$", line)
-        if not m:
-            i += 1
-            continue
-        key, val = m.group(1), m.group(2).strip()
-        if val in (">", "|", ">-", "|-"):
-            block = []
-            i += 1
-            while i < len(lines) and (lines[i].startswith(" ") or lines[i] == ""):
-                block.append(lines[i].strip())
-                i += 1
-            fields[key] = " ".join(s for s in block if s)
-            continue
-        fields[key] = val
-        i += 1
-    name = fields.get("name", "")
-    desc = fields.get("description", "")
-    if not name:
-        errors.append(f"{skill_md}: frontmatter missing 'name'")
-    if not desc:
-        errors.append(f"{skill_md}: frontmatter missing 'description'")
-    if len(desc) > 1024:
-        errors.append(f"{skill_md}: description length {len(desc)} > 1024 (Agent Skills spec limit)")
-
 # (ii) Every skill under skills/ has a corresponding .agents/skills/ symlink.
+skills_root = Path("skills")
 agents_root = Path(".agents/skills")
 canonical = {p.name for p in skills_root.iterdir() if p.is_dir()}
 exposed = {p.name for p in agents_root.iterdir() if p.is_symlink() or p.is_dir()}
 missing = canonical - exposed
 if missing:
-    errors.append(f".agents/skills/ missing symlinks for: {sorted(missing)}")
-
-if errors:
-    raise SystemExit("\n".join(errors))
+    raise SystemExit(f".agents/skills/ missing symlinks for: {sorted(missing)}")
 PY
 
 section "Optional local CLIs"
