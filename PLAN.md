@@ -2,26 +2,7 @@
 
 ## Phase B Integration Review (51b7fbe..HEAD)
 
-**Review status:** REVISE
-
-> **Review — Phase B integration, meta-refactor branch `jzf/simplify-skill`** (scope: 51b7fbe..HEAD; drift tests N/A per researcher — no numeric results). Per-task granularity does not fit cleanly for branch-wide findings (stale pointers, load-guard consistency) so findings are grouped by focus area. A per-task item for Task 5 is repeated inline below.
->
-> 1. **[BLOCKING] Stale self-description in `skills/using-superRA/SKILL.md:59`.** The §Skill-Load Manifest preamble still says: "`using-superRA` carries §Universal Principles, the Skill Inventory, the composable-design map, and this manifest." §Universal Principles was cut in commit 337ad73; the sentence now asserts content that no longer exists. Fix: drop "§Universal Principles, " from the enumeration (and re-check the surrounding sentence still reads naturally). Commit 337ad73's message claims "Updated three cross-references" but this self-reference inside `using-superRA` itself was missed.
->
-> 2. **[BLOCKING] Orphaned anaphora in `skills/using-superRA/SKILL.md:10`.** §Code-Change Defaults opens: "These defaults apply whenever you write, review, or refactor code. They govern micro-level execution and **do not replace the workflow rules above**." There are no workflow rules above — §Universal Principles was the referent and is gone. Fix: either delete the clause "and do not replace the workflow rules above" or restate the referent (e.g., "… and do not replace the workflow principles enforced operationally by the agent files and workflow skills").
->
-> 3. **[ADVISORY] PLAN.md task-status staleness.** Tasks 1–14 all still read `**Status**: NOT STARTED` even though their changes landed in c0d7a69 and follow-ups. This is a handoff-doc coherence issue — a fresh agent reading PLAN.md cannot tell what landed. The researcher may elect Phase C disposition Option 2 (archive) or Option 3 (discard) and skip reconciliation; flag so the choice is explicit. Note: no Workflow Status checklist or `**Review status:**` lines in this PLAN — the task-block anatomy for this meta-refactor was already minimal and not following the standard template.
->
-> 4. **[ADVISORY — pre-existing] Frontmatter `name:` casing.** `skills/using-superRA/SKILL.md` uses `name: using-superRA` with uppercase `RA`. Pre-dates this branch; not introduced here. Reported per Additionally instruction; not a blocker. Fix belongs to a separate branch if the convention is tightened.
->
-> **Focus-area verdicts for the record:**
->
-> - **Pointer integrity after §Universal Principles / §Reviewer Verdict Protocol / §Implementer Self-Check dedup** — two `[BLOCKING]` stale references above (both inside `using-superRA/SKILL.md`). Grep across `skills/` and `agents/` returned no other stale pointers: §Reviewer Verdict Protocol references in `refactor-and-integrate/SKILL.md:42` and `econ-data-analysis/references/integration.md:35` correctly resolve to the anchor at `refactor-and-integrate/references/codebase-integration.md:38`. Agent files are clean.
-> - **Load-guard consistency across workflow skills** — four layers (frontmatter prefix, top-of-body guard, bottom-of-body guard, pre-dispatch guard) present and consistently worded on all three workflow skills. `planning-workflow` correctly omits the pre-dispatch guard (does not itself write dispatch prompts). No finding.
-> - **Cross-skill coherence** — Iron Law, §Three Concurrent Disciplines, `[BLOCKING]`/`[ADVISORY]` markers, Red Flags tables, and Common Rationalizations are all preserved. Descriptions across all 11 skills retain their trigger phrases. No orphaned anaphora elsewhere (greps for "as noted above / this is why / discussed above" returned no matches in `skills/`). Outside of the two Task-5-adjacent items above, no finding.
-> - **Main-side intersection (51b7fbe..origin/main)** — only `0277ea6` on origin/main, and `git diff 51b7fbe..origin/main --stat` returns zero files (merge commit with no net delta against the branch point). No intersection with this branch's edits; no `## Integration Intent` section needed.
->
-> Re-review scope: verify items 1–2 on re-dispatch; item 3 is acknowledgment-only (researcher decides at Phase C disposition); item 4 is pre-existing.
+**Review status:** APPROVED
 
 ---
 
@@ -105,8 +86,6 @@ Target: ~10–15% body-text reduction across the 11 skills; tighter YAML `descri
 ## Task 5 — `using-superRA/SKILL.md`
 
 **Status**: NOT STARTED
-
-> **Phase B integration review — [BLOCKING] items on this file.** See Phase B Integration Review blockquote at top of PLAN.md, items 1–2: stale self-description at L59 and orphaned anaphora at L10, both introduced (or uncorrected) by commit 337ad73's cut of §Universal Principles. Fix required before APPROVE.
 
 **Cuts / tightens**:
 - Description: trim to "Master skill for superRA agents. Carries workflow principles, skill inventory, and the Stage → skill Load Manifest."
