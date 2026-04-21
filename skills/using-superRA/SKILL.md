@@ -1,6 +1,6 @@
 ---
 name: using-superRA
-description: Master skill for superRA agents. Carries workflow principles, skill inventory, and the Stage → skill Load Manifest. Invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching handoff docs.
+description: Master skill for superRA agents. Carries workflow principles, skill inventory, and the Stage → skill Load Manifest. Must invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching handoff docs.
 ---
 
 Loaded by all agents at dispatch time.
@@ -62,16 +62,29 @@ For each Stage, load the listed skills and references. The Stage is role-indepen
 
 **The "Required skills" column lists what loads *in addition to* `superRA:using-superRA`** — the master skill every agent already loads (implementer / reviewer via frontmatter preload at dispatch time; main agent and team teammates via explicit `Skill` invocation). `using-superRA` carries the Skill Inventory and this manifest. Handoff-doc editing discipline is owned by `superRA:handoff-doc`; subagents get a compact etiquette from `agents/implementer.md` / `agents/reviewer.md` step 1 and load the full skill only on demand or when creating docs from scratch.
 
+### Generic (stage-driven)
+
+Apply to every dispatch regardless of domain.
+
 | `Stage:` | Required skills | Stage-scoped references |
 |---|---|---|
-| `implementation` | active domain skill (for data analysis: `econ-data-analysis`) | domain §Three Concurrent Disciplines (teaching + shared severity-marked checklist). For data analysis: **implementer** additionally loads `econ-data-analysis/references/notebook-format.md`; **reviewer** loads SKILL.md only (the main body carries everything — §Three Concurrent Disciplines for verification, §Pitfalls for operation-specific correctness; if the dispatcher wants a specific Pitfalls subsection highlighted for review, it names it in `Additionally:`). |
-| `integration` | `refactor-and-integrate`; domain skill | `codebase-integration.md` (generic); `integration.md` (data-analysis); `integrate-drift-tests.md` if drift tests exist |
-| `drift-test` | `refactor-and-integrate`; domain skill | `integrate-drift-tests.md` + `drift-test-quality.md` |
-| `merge` | `refactor-and-integrate` + `semantic-merge`; domain skill | `merge-quality.md` |
+| `implementation` | — | — |
+| `integration` | `refactor-and-integrate` | `codebase-integration.md` |
+| `drift-test` | `refactor-and-integrate` | `drift-test-quality.md` |
+| `merge` | `refactor-and-integrate` + `semantic-merge` | `merge-quality.md` |
 | `documentation` | `handoff-doc` + `report-in-markdown` | implementer role: `baseline-io.md` + `rich-content.md` + `final-form.md`; reviewer role: `final-form.md` |
-| `planning-review` | `handoff-doc` + domain skill | `planning.md` (domain) |
 
 The `merge` stage is used for standalone `semantic-merge` dispatches — a dedicated merge-proposer / merge-reviewer pair resolving a branch outside the normal integration-workflow. Inside `integration-workflow` Phase B, the implementer runs `Stage: integration` and loads `superRA:semantic-merge` when the integration reviewer's annotation calls for intent-based conflict resolution — no Stage switch needed.
+
+### Domain add-ons (topic-driven)
+
+If the task/topic matches a row below, load the listed skill **in addition to** the generic row for the current Stage. Domain add-ons compose with the generic table; they do not replace it.
+
+| If the task involves… | Also load | Additional references (by Stage) |
+|---|---|---|
+| Economic / financial / panel data analysis — importing, cleaning, merging, filtering, constructing variables, summary stats, regressions (CRSP, Compustat, WRDS, etc.) | `superRA:econ-data-analysis` | `implementation`: §Three Concurrent Disciplines (main body; shared severity-marked checklist). **Implementer** additionally loads `notebook-format.md` when writing analysis scripts; **reviewer** loads SKILL.md only (§Pitfalls subsections named by the dispatcher in `Additionally:`). <br>`integration`: `integration.md`; `integrate-drift-tests.md` if drift tests exist. <br>`drift-test`: `integrate-drift-tests.md`. <br>**Plan authoring** (used by `planning-workflow` Phase 1 in-session, not a dispatch Stage): `planning.md`. |
+
+Add a new row when introducing a vertical (theory, literature review, simulation, writing). Keep the generic table untouched — only the add-on table grows.
 
 **Main agents additionally load** `references/main-agent.md`, `superRA:handoff-doc`, and `superRA:agent-orchestration` before dispatching subagents or touching PLAN.md. Subagents skip these — they inherit context from their dispatch.
 
