@@ -116,3 +116,7 @@ Appended two `"matcher": "Skill"` entries to the existing `PreToolUse` array in 
 ## Task 5: End-to-end verification in a fresh session
 
 **Status:** Not started
+
+## Task 6: Automate end-to-end verification via the claude CLI
+
+**Status:** Not started

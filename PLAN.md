@@ -256,3 +256,45 @@ Hooks are **extensionless bash scripts** at `hooks/<name>` (so Windows auto-dete
 - [ ] Commit as `hooks: verify all three autoload hooks end-to-end`.
 
 **Review status:**
+
+---
+
+## Task 6: Automate end-to-end verification via the claude CLI
+
+**Depends on:** 4
+
+**Objective:** Replace the manual Task 5 probes with a scripted test suite that drives the `claude` CLI non-interactively, captures hook-event telemetry via `--include-hook-events --output-format=stream-json`, and asserts each of the three hooks fires (or stays silent) as designed. The CLI suite validates what the stdin-synthesis unit tests cannot: that the hooks are correctly *registered* in `hooks.json`, that Claude Code's platform-output branch selection matches what `CLAUDE_PLUGIN_ROOT` produces at runtime, and that a real session experiences the deny-and-retry loop as a single coherent flow.
+
+**Input:**
+- `claude` CLI ≥ 2.1 (confirmed 2.1.116 on this machine) with `-p / --print`, `--session-id <uuid>`, `--include-hook-events`, `--output-format=stream-json`, `--settings`, `--plugin-dir`, `--bare`.
+- All three hook scripts and the `hooks/hooks.json` + `hooks/hooks-cursor.json` registration (now on HEAD after Task 3+4 harvest).
+- Test-isolation scaffolding: per-test temp `CLAUDE_CONFIG_DIR` (or equivalent) so sessions do not pollute the user's real `~/.claude/projects/`.
+
+**Output:**
+- `tests/hooks/test-e2e-cli.sh` — shell driver that runs each scenario under `claude -p`, captures the stream-json output, and asserts on hook-event records + tool-call records.
+- `tests/hooks/fixtures/` (optional) — JSON settings, sentinel prompts, or recorded "golden" stream-json excerpts the driver diffs against.
+- RESULTS.md Task 6 records the vector-by-vector outcomes on the orchestrator's machine.
+
+**Methodology:**
+
+1. **Session isolation.** Each scenario runs with a fresh UUID via `--session-id`, a scratch `$CLAUDE_CONFIG_DIR` pointing at a per-test temp directory, and `--no-session-persistence` if persistence would leak state. Use `--plugin-dir $(pwd)` so the in-tree hooks are the ones under test, not an installed plugin copy. Consider `--bare` + `--append-system-prompt` to strip harness noise and make assertions deterministic, then re-enable whatever is required for the Skill tool to be callable.
+2. **Telemetry capture.** `claude -p "$PROMPT" --include-hook-events --output-format=stream-json --session-id <uuid> ...` emits NDJSON events — each line is one record. The driver pipes this through `jq`/`python3` to extract (a) `hook_event_name` + `hook_name` + hook stdout for every `PreToolUse` / `UserPromptSubmit` firing, (b) tool invocations and their `permissionDecision` outcomes, (c) the final assistant response. Assert on these structured records, **not** on the prose.
+3. **Scenarios (one driver, six vectors):**
+   - **S1 — soft reminder fires (autoload-superra).** Prompt: `"quick superRA sanity check"`. Assert: a `UserPromptSubmit` hook event with `hook_name="autoload-superra"` whose stdout contains `additionalContext` naming `superRA:using-superRA`.
+   - **S2 — soft reminder suppressed after load.** Same session as S1 (resume via `--resume`) with a second superRA prompt *after* the agent has invoked `Skill(superRA:using-superRA)`. Assert: `autoload-superra` fires but its stdout is `{}` (no reminder).
+   - **S3 — soft reminder silent without trigger.** Prompt: `"what time is it"`. Assert: `autoload-superra` fires but emits `{}`.
+   - **S4 — hard deny on workflow-skill without using-superRA.** Fresh session. Prompt tuned so the model's first action is `Skill(skill="superRA:planning-workflow")` without pre-loading the companion. Assert: a `PreToolUse` event with `hook_name="ensure-using-superra"` and `permissionDecision="deny"`; the subsequent event stream shows the model loading `superRA:using-superRA` and retrying the workflow-skill call (which then either passes or is denied by `ensure-agent-orchestration`, S5's concern).
+   - **S5 — hard deny chains through agent-orchestration.** Continuation of S4. Assert that after `using-superRA` loads, the retried workflow-skill call triggers `ensure-agent-orchestration` with `permissionDecision="deny"`; after that companion loads, the final retry passes through both hooks silently.
+   - **S6 — silent pass-through on a non-workflow Skill.** Fresh session. Prompt the model to invoke `Skill(skill="superRA:handoff-doc")` directly. Assert: both ensure-* hooks fire with stdout `{}`; no deny.
+4. **Robustness.** The driver is authoritative for correctness *of the hook registration and trigger conditions*, NOT of the model's response text. Do not assert on natural-language content; assert on event-stream structure. Retry flaky scenarios up to 3× (the model is non-deterministic about which Skill it calls first); mark a scenario FAIL only after three attempts fail the structural assertion.
+5. **Cost envelope.** Document the approximate API spend per run in the script header. Skip S4/S5 by default (they require model turns) unless `CLAUDE_E2E_FULL=1` is set; S1/S2/S3/S6 can run hook-only without billing a model turn if the driver uses `--tools ""` + a crafted system prompt that forces the agent to no-op after hook evaluation.
+6. **CI guidance.** Add a top-of-file comment explaining (a) how to run locally, (b) that the suite is not part of default `tests/` runs (network / auth required), (c) the env vars it consumes.
+
+**Steps:**
+- [ ] Dispatch implementer subagent in a parallel worktree branched off the post-harvest orchestrator HEAD so all three hooks + registrations are in-tree.
+- [ ] Implementer authors `tests/hooks/test-e2e-cli.sh` and any fixtures; runs S1/S2/S3/S6 locally (hook-only scenarios, no API turns) to sanity-check the harness; records run output in RESULTS.md Task 6.
+- [ ] Implementer commits as `hooks: add CLI-driven end-to-end test suite for autoload + gate hooks`.
+- [ ] Reviewer subagent runs a comprehensive pass: confirms assertions target event-stream structure (not prose), session-isolation prevents state leakage, cost envelope is honored, retries are bounded.
+- [ ] On APPROVE, orchestrator harvests the branch back via `git merge --no-ff`.
+
+**Review status:**
