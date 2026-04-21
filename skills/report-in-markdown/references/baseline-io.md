@@ -13,8 +13,6 @@ Define:
 - `REPORT_DIR` = resolved directory
 - `REPORT_ATTACHMENTS_DIR` = `${REPORT_DIR}/attachments` (or the directory the caller passed in)
 
-superRA skills should never hard-code either `REPORT_DIR` or `REPORT_ATTACHMENTS_DIR`. Project conventions live in the project's `CLAUDE.md`/`AGENTS.md`, not in superRA.
-
 ## Gather metadata
 
 ```bash
