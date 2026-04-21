@@ -157,7 +157,7 @@ If something looks unexpected, STOP and investigate before proceeding.
 ### Stage-scoped discipline (not walked at every implementation dispatch)
 
 - **`integration` stage** — `references/integration.md` carries the full integration-stage checklist (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations) with its own `[BLOCKING]` / `[ADVISORY]` markers and a two-verdict protocol. Loaded by implementer and reviewer at the `integration` stage per `superRA:using-superRA` §Skill-Load Manifest.
-- **End-of-workflow completion verification** — `superRA:execution-workflow` §Step 3 carries the reproducibility gate (pipeline runs end-to-end, outputs generated from committed code, docs current, deferred MINORs resolved). Walked by the orchestrator, not by dispatched subagents.
+- **End-of-workflow completion verification** — `superRA:implementation-workflow` §Step 3 carries the reproducibility gate (pipeline runs end-to-end, outputs generated from committed code, docs current, deferred MINORs resolved). Walked by the orchestrator, not by dispatched subagents.
 
 ## Pitfalls
 

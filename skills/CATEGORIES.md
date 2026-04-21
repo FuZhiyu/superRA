@@ -11,7 +11,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 | Skill | Phase | Role |
 |---|---|---|
 | `planning-workflow` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
-| `execution-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
+| `implementation-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
 | `integration-workflow` | INTEGRATE (Phases A–D) | Drift-test creation (A), review-led iterative sync + refactor (B), doc finalization (C), final merge / PR / cleanup (D). `semantic-merge` invoked from Phase B when the integration reviewer calls for intent-based conflict resolution. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 

@@ -100,29 +100,13 @@ Grep confirms zero live `Stage: merge` emissions. Standalone `semantic-merge` di
 
 ### Task 5: Rename `execution-workflow` → `implementation-workflow`
 **Depends on:** Task 3 (structural), Task 4 (content)
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
-- [ ] **Step 1: Rename the directory.** `git mv skills/execution-workflow skills/implementation-workflow`.
-- [ ] **Step 2: Update the skill frontmatter** in `skills/implementation-workflow/SKILL.md` — `name: implementation-workflow`; refresh self-announce line and any internal `execution-workflow` self-reference.
-- [ ] **Step 3: Sweep all references across repo.** Files identified at planning time (grep count):
-  - `CLAUDE.md` (2)
-  - `README.md`
-  - `skills/CATEGORIES.md` (1)
-  - `skills/using-superRA/SKILL.md` (1)
-  - `skills/using-superRA/references/main-agent.md` (1)
-  - `skills/using-superRA/references/codex-tools.md` (1)
-  - `skills/using-superRA/references/gemini-tools.md` (1)
-  - `skills/planning-workflow/SKILL.md` (5)
-  - `skills/integration-workflow/SKILL.md` (3)
-  - `skills/handoff-doc/references/plan-anatomy.md` (3)
-  - `skills/agent-orchestration/references/agent-teams.md` (1)
-  - `skills/econ-data-analysis/SKILL.md` (1)
-  - `skills/econ-data-analysis/references/planning.md` (1)
-  - `skills/report-in-markdown/SKILL.md` (1)
-  - `tests/structural-invariants.sh`
-  Re-grep after edits to confirm zero remaining `execution-workflow` occurrences outside `docs/plans/` (historical, untouched).
-- [ ] **Step 4: Run `bash tests/structural-invariants.sh`.** If any test references `execution-workflow` by name, update the test.
-- [ ] **Step 5: Commit** as one atomic rename commit.
+- [x] **Step 1: Rename the directory.** `git mv skills/execution-workflow skills/implementation-workflow`.
+- [x] **Step 2: Update the skill frontmatter** in `skills/implementation-workflow/SKILL.md` — `name: implementation-workflow`; refresh self-announce line and internal self-references (resume line, stop-points section).
+- [x] **Step 3: Sweep all references across repo.** Updated files: `CLAUDE.md` (2 hits), `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md` (2 hits: inventory row + manifest table), `skills/using-superRA/references/main-agent.md`, `skills/using-superRA/references/codex-tools.md`, `skills/using-superRA/references/gemini-tools.md`, `skills/planning-workflow/SKILL.md` (5 hits), `skills/integration-workflow/SKILL.md` (3 hits), `skills/handoff-doc/references/plan-anatomy.md` (3 hits), `skills/agent-orchestration/references/agent-teams.md` (1 hit), `skills/econ-data-analysis/SKILL.md`, `skills/econ-data-analysis/references/planning.md`, `skills/report-in-markdown/SKILL.md`, `hooks/exit-plan-mode`, `tests/structural-invariants.sh`. README.md had zero hits. Re-grep confirmed zero remaining `execution-workflow` occurrences outside `docs/plans/`.
+- [x] **Step 4: Run `bash tests/structural-invariants.sh`.** Updated all `execution-workflow` references in the test to `implementation-workflow`. All invariants pass except the pre-existing `README.md missing '## Workflow Map'` failure (out of scope).
+- [x] **Step 5: Commit** as one atomic rename commit.
 
 ### Task 6: Verify End-to-End
 **Depends on:** Task 5
