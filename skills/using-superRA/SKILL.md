@@ -77,11 +77,11 @@ Inside `integration-workflow` Phase B, the implementer runs `Stage: integration`
 
 ### Domain add-ons (topic-driven)
 
-If the task/topic matches a row below, load the listed skill **in addition to** the generic row for the current Stage. Domain add-ons compose with the generic table; they do not replace it.
+If the task/topic matches a row below, load the listed skill **in addition to** the generic row for the current Stage. Domain add-ons compose with the generic table; they do not replace it. These apply to both the main agents as well as the subagent. 
 
 | If the task involves… | Also load | Additional references (by Stage) |
 |---|---|---|
-| Economic / financial / panel data analysis — importing, cleaning, merging, filtering, constructing variables, summary stats, regressions (CRSP, Compustat, WRDS, etc.) | `superRA:econ-data-analysis` | `implementation`: §Three Concurrent Disciplines (main body; shared severity-marked checklist). **Implementer** additionally loads `notebook-format.md` when writing analysis scripts; **reviewer** loads SKILL.md only (§Pitfalls subsections named by the dispatcher in `Additionally:`). <br>`integration`: `integration.md`; `integrate-drift-tests.md` if drift tests exist. <br>`drift-test`: `integrate-drift-tests.md`. <br>**Plan authoring** (used by `planning-workflow` Phase 1 in-session, not a dispatch Stage): `planning.md`. |
+| Economic / financial / panel data analysis — importing, cleaning, merging, filtering, constructing variables, summary stats, regressions (CRSP, Compustat, WRDS, etc.) | `superRA:econ-data-analysis` | `implementation`: **Implementer** additionally loads `notebook-format.md` when writing analysis scripts; <br>`drift-test`: `integrate-drift-tests.md`; <br>`integration`: `integration.md`; `integrate-drift-tests.md` if drift tests exist.  <br>**Plan authoring** (used by `planning-workflow` Phase 1 in-session, not a dispatch Stage): `planning.md`. |
 
 Add a new row when introducing a vertical (theory, literature review, simulation, writing). Keep the generic table untouched — only the add-on table grows.
 
