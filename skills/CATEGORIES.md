@@ -2,7 +2,7 @@
 
 superRA skills split into four categories. The directory layout stays flat (one `skills/<name>/SKILL.md` per skill) for compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders. This file is the authoritative grouping index — when adding a skill, place it in the right category here and in the `README.md` skill tables.
 
-For the runtime-facing master map (universal principles, skill-discovery rules, and the Stage → required-skills / references table agents actually load), see `superRA:using-superRA` §Skill Inventory and §Skill-Load Manifest. This file groups skills for contributor navigation; `using-superRA` is the agent-facing authority.
+For the runtime-facing master map (universal principles, skill-discovery rules, and the Stage → required-skills / references table agents actually load), see `superRA:using-superra` §Skill Inventory and §Skill-Load Manifest. This file groups skills for contributor navigation; `using-superra` is the agent-facing authority.
 
 ## Workflow — domain-agnostic choreography
 
@@ -11,7 +11,7 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 | Skill | Phase | Role |
 |---|---|---|
 | `planning-workflow` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
-| `execution-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
+| `implementation-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
 | `integration-workflow` | INTEGRATE (Phases A–D) | Drift-test creation (A), review-led iterative sync + refactor (B), doc finalization (C), final merge / PR / cleanup (D). `semantic-merge` invoked from Phase B when the integration reviewer calls for intent-based conflict resolution. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
@@ -48,8 +48,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 
 | Skill | Purpose |
 |---|---|
-| `using-superRA` | Master skill every agent reads. Carries the distilled universal principles, code-change defaults, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Main-agent loads (cross-session detection, autonomy contract, handoff-doc default) live in `references/main-agent.md`. |
-| `codex-superra-setup` | Codex-only bootstrap for installing or refreshing the named custom agents in either project scope (`.codex/agents/`) or global scope (`~/.codex/agents/`). |
+| `using-superra` | Master skill every agent reads. Carries the distilled universal principles, code-change defaults, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Main-agent loads (cross-session detection, autonomy contract, handoff-doc default) live in `references/main-agent.md`. |
 
 ## Adding a Skill
 

@@ -49,7 +49,7 @@ for worktree create / enter / remove mechanics (harness tools preferred;
 raw `git worktree` fallback) and `superRA:worktree-data-sync` for seeding
 non-git data into an existing worktree. Finishing a development branch —
 push, PR, or discard — is covered by `superRA:integration-workflow`
-Phase D and `superRA:execution-workflow` Step 4 Option 4.
+Phase D and `superRA:implementation-workflow` Step 4 Option 4.
 
 ## Codex App Finishing
 
