@@ -74,7 +74,7 @@ Walked at planning time (2026-04-20). Re-walk on-demand only.
 
 ### Task 2: Manifest Restructure — Generic + Domain Add-on Split; Drop `planning-review`
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED *(landed in the same commit as this plan)*
+**Review status:** APPROVED *(retroactive review of commit 1c25b13, 2026-04-20)*
 
 **Scope (already on disk, unstaged at plan commit time):**
 - `skills/using-superRA/SKILL.md` — Skill-Load Manifest split into two tables: (1) **Generic (stage-driven)** — `implementation`, `integration`, `drift-test`, `merge`, `documentation`; (2) **Domain add-ons (topic-driven)** — one row per vertical, currently just `econ-data-analysis`. Removed `planning-review` Stage (no dispatcher emits it). `planning.md` is now labeled a "Plan authoring" reference used in-session by `planning-workflow` Phase 1.
@@ -82,6 +82,18 @@ Walked at planning time (2026-04-20). Re-walk on-demand only.
 
 - [x] Edits applied.
 - [x] `bash tests/structural-invariants.sh` — Manifest row-count invariant passes with 5 rows.
+
+> **Review notes (retroactive, 2026-04-20):**
+>
+> No [BLOCKING] findings. One [ADVISORY] noted below; APPROVE.
+>
+> 1. **[ADVISORY] MINOR — `skills/using-superRA/SKILL.md:83-85` — add-on row packs all Stages into one cell.** The add-on table uses one row per domain with per-Stage references inside a single cell separated by `<br>` and Stage-prefix labels (`implementation: …`, `integration: …`, `drift-test: …`). The composability prose at line 81 makes the union rule clear, and the prefix labels are unambiguous, so readers should not be misled. But when a second vertical is added the single-cell shape will be hard to scan — consider re-shaping to a long-form `| domain | Stage | Also load | Additional references |` table at that point. No action now.
+>
+> **Verification performed (all green):**
+> - **Emitted-Stage coverage.** Grep of `skills/`, `agents/`, `hooks/` (excluding `docs/plans/` historical) shows live `Stage:` emissions are `implementation`, `drift-test`, `integration`, `documentation` — all present in the generic table. `merge` is kept as a standalone-dispatch row per the post-table prose at line 77. Zero live `Stage: planning-review` / `Stage: planning` emissions — drop is safe.
+> - **Content-loss check (pre-restructure single table vs post-restructure generic ∪ data-analysis add-on).** All Stages compose to the same load set as before: `implementation` → `econ-data-analysis` + §Three Concurrent Disciplines + implementer's `notebook-format.md` / reviewer SKILL.md-only; `integration` → `refactor-and-integrate` + `econ-data-analysis` + `codebase-integration.md` + `integration.md` + `integrate-drift-tests.md` (if drift tests exist); `drift-test` → `refactor-and-integrate` + `econ-data-analysis` + `drift-test-quality.md` + `integrate-drift-tests.md`; `merge` → `refactor-and-integrate` + `semantic-merge` + `econ-data-analysis` (row-level "Also load" applies to all Stages) + `merge-quality.md`; `documentation` unchanged. No silent drops.
+> - **Invariant test.** `bash tests/structural-invariants.sh` — manifest row-count passes at 5. The one remaining FAIL is the pre-existing unrelated README `## Workflow Map` check, explicitly out of scope.
+> - **Stale-prose sweep.** All pointers at §Skill-Load Manifest across `skills/`, `agents/`, `README.md`, `CLAUDE.md` remain valid. No live file references the dropped `planning-review` row or the old single-table shape.
 
 ### Task 3: Drop `merge` Stage from Manifest
 **Depends on:** Task 2 (restructured manifest)
