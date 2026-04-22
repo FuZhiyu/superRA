@@ -25,7 +25,7 @@
 - [x] **Drift tests created** - N/A for this skill refactor; the Task 4 verification bundle is the approved substitute for Phase A coverage (2026-04-22)
 - [x] **Refactored** - Phase B integration reviewer approved the merged-tree sync/refactor diff and the Integration Intent section is cleared (2026-04-22)
 - [x] **Docs finalized** - Phase C doc-review passed on the archived permanent record at `docs/plans/2026-04-22-objective-first-task-step-semantics-results.md` (2026-04-22)
-- [x] **Merged** - local merge into `main` prepared after Phase D freshness check confirmed `origin/main` had not advanced beyond merge-base `addc9ca` (2026-04-22)
+- [ ] **Merged** - pending PR creation after the user switched Phase D from local merge to a pull request (2026-04-22)
 
 ## Project Conventions
 
@@ -56,6 +56,10 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 > **User decision (2026-04-22):** Proceed with integration after implementation verification and use superRA agents for both implementation and integration work.
 > **Question asked:** What should happen after the plan is approved and execution is complete?
 > **Rationale (if given):** Carry the branch through the superRA implementation-workflow and integration-workflow rather than stopping at the execution checkpoint.
+
+> **User decision (2026-04-22):** Finish Phase D by opening a pull request instead of doing the previously prepared local merge into `main`.
+> **Question asked:** How should the integrated branch be finalized?
+> **Rationale (if given):** Create a PR instead.
 
 ### Task 1: Canonicalize objective-first task-block semantics
 **Depends on:** *(none)*
