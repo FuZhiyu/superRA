@@ -49,7 +49,7 @@ PY
 
 section "Shared harness adapters"
 test -f skills/using-superRA/references/claude-tools.md
-test -f skills/using-superRA/references/codex-tools.md
+test -f skills/using-superRA/references/codex-instructions.md
 test "$(readlink AGENTS.md)" = "CLAUDE.md"
 test "$(readlink AGENT.md)" = "CLAUDE.md"
 python3 - <<'PY'
