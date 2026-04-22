@@ -37,12 +37,12 @@ These conflicts **MUST** be flagged for the researcher. Ask via `AskUserQuestion
 - **Sample construction / model setup:** Incoming changes alter sample filters, data sources, timing, information structure, normalizations, or calibration baselines
 - **Specifications / solution concepts:** Incoming changes alter model specifications, control variables, clustering, equilibrium concepts, or branch-selection rules
 - **Data processing / derivation logic:** Incoming changes alter merge logic, data cleaning, symbolic steps, or transformations
-- **Results:** Incoming changes affect analysis outputs
+- **Results / headline outputs:** Incoming changes affect reported results, derived implications, or other outputs the branch treats as headline findings
 
 **Never:**
-- Silently change analysis results
+- Silently change headline results
 - Choose ours/theirs for research-meaningful conflicts
-- Remove domain-discipline artifacts
+- Remove active domain-discipline artifacts
 - Judge whether a methodology choice is correct
 
 ### Identify governing upstream intent
@@ -96,7 +96,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Research integrity:**
 
-- `[BLOCKING]` **No silent result changes.** Analysis outputs are either unchanged, or the change was flagged to the user.
+- `[BLOCKING]` **No silent result changes.** Headline outputs are either unchanged, or the change was flagged to the user.
 - `[BLOCKING]` **Variable definitions consistent** across merged code.
 - `[BLOCKING]` **Domain setup preserved.** Sample filters and data sources, or model assumptions, normalizations, and branch-selection rules, are correct in the merged result.
 - `[BLOCKING]` **User decisions implemented correctly** (Tier 3) — the researcher's decisions on research-meaningful conflicts were implemented as stated.
@@ -109,8 +109,8 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Research-Meaningful Escalation (full procedure and Never-list in §How-To → Research-Meaningful Escalation (Tier 3)):**
 
-- `[BLOCKING]` Every Tier 3 conflict (variable definitions, sample construction, econometric specifications, data processing, results) flagged to the researcher via `AskUserQuestion`, logged per `handoff-doc` §User Decisions Log, and implemented per the answer.
-- `[BLOCKING]` None of the four Tier 3 "Never" items violated (silent result changes, ours/theirs on research-meaningful conflicts, removing data discipline artifacts, judging methodology choices).
+- `[BLOCKING]` Every Tier 3 conflict (definitions / notation, sample construction / model setup, specifications / solution concepts, data processing / derivation logic, results / headline outputs) flagged to the researcher via `AskUserQuestion`, logged per `handoff-doc` §User Decisions Log, and implemented per the answer.
+- `[BLOCKING]` None of the four Tier 3 "Never" items violated (silent result changes, ours/theirs on research-meaningful conflicts, removing active domain-discipline artifacts, judging methodology choices).
 
 **Handoff-doc coherence (full procedure in §How-To → Handoff-doc coherence through the merge):**
 
