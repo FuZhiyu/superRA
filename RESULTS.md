@@ -10,4 +10,17 @@
 
 ## Task 1: Update the Codex harness adapter so superRA invocation authorizes named-agent dispatch
 
-**Status:** Not started
+**Status:** Completed (Task 1 implemented 2026-04-22)
+
+### Key Findings
+- `skills/using-superRA/references/codex-tools.md` now tells Codex to
+  treat user-invoked superRA workflow/orchestration as explicit
+  authorization for named-agent dispatch.
+- The Codex adapter now states that reviewer dispatch remains mandatory
+  by default and that direct mode is only a fallback when the user opts
+  out, the task is trivial, or agent tools are unavailable.
+
+### Notes
+- Existing shared workflow files already carried the general
+  implementer-reviewer and direct-mode rules, so no adjacent
+  consistency edits were required after the adapter update.

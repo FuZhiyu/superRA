@@ -47,13 +47,13 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 1: Update the Codex harness adapter so superRA invocation authorizes named-agent dispatch
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** `skills/using-superRA/references/codex-tools.md` (primary); `skills/using-superRA/references/main-agent.md`, `skills/agent-orchestration/SKILL.md`, and `README.md` only if the adapter change makes an existing statement misleading
 **Input:** repo-root contributor docs, current Codex harness adapter wording, current execution-mode/orchestration wording
 **Output:** minimal committed instruction update that (a) treats user-invoked superRA workflow/skills as explicit delegation preference in Codex, (b) keeps reviewer dispatch mandatory unless the user explicitly says no or agent tools are unavailable, and (c) preserves the shared workflow files as the source of truth
 
-- [ ] Confirm the ownership boundary between shared workflow text and Codex-specific harness adapters.
-- [ ] Add the Codex-specific delegation rule in the owning file with the minimum wording needed.
-- [ ] Sync adjacent docs only if the new adapter text would otherwise leave a stale or contradictory claim.
+- [x] Confirmed the ownership boundary between shared workflow text and Codex-specific harness adapters.
+- [x] Added the Codex-specific delegation rule in the owning file with the minimum wording needed.
+- [x] Checked adjacent docs for stale or contradictory claims; no consistency edits were needed.
