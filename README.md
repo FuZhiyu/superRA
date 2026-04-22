@@ -101,6 +101,9 @@ Currently hooks are only supported by Claude Code.
 | **merge-guard** | Before any `git merge` / `git rebase` / `git cherry-pick` | Remind to use the `semantic-merge` skill. |
 | **ask-user-question-logger** | After `AskUserQuestion` | Remind to log the decision in `PLAN.md` before acting on it. |
 | **exit-plan-mode** | After `ExitPlanMode` | Remind to materialize the plan into `PLAN.md` + `RESULTS.md` before implementing. |
+| **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Inject a reminder to load `superRA:using-superRA` if the master skill has not yet loaded this session. |
+| **ensure-using-superra** | `PreToolUse` on `Skill(superRA:*-workflow)` | Hard-deny the workflow-skill call when `superRA:using-superRA` is not yet loaded; reason directs Claude to load it and retry. |
+| **ensure-agent-orchestration** | `PreToolUse` on `Skill(superRA:*-workflow)` | Same pattern as above, gating on `superRA:agent-orchestration`. |
 
 ## Installation
 

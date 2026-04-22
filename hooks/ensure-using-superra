@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# PreToolUse hook: hard-gate superRA:*-workflow Skill calls on
+# superRA:using-superRA being loaded first.
+#
+# Fires on every PreToolUse event. Only acts when:
+#   tool_name == "Skill" AND
+#   tool_input.skill in {superRA:planning-workflow,
+#                        superRA:implementation-workflow,
+#                        superRA:integration-workflow}
+# and the session transcript does NOT already show a Skill invocation
+# for superRA:using-superRA. In that case the hook emits a
+# permissionDecision: deny payload instructing Claude to load the
+# companion skill and retry. All other cases emit `{}`.
+#
+# Fail-open: if transcript_path is empty or unreadable, emit `{}` —
+# a misconfigured transcript must never wedge a session.
+#
+# Test vectors (see tests/hooks/test-ensure-using-superra.sh):
+#   V1  tool_name="Bash"                                     -> {}
+#   V2  skill="superRA:handoff-doc"                          -> {}
+#   V3  skill="superRA:planning-workflow", not loaded        -> deny
+#   V4  skill="superRA:planning-workflow", already loaded    -> {}
+#   V5  transcript_path empty / nonexistent                  -> {}
+#   V6  deny payload is valid JSON with round-tripping reason
+
+set -euo pipefail
+
+COMPANION="superRA:using-superRA"
+
+input=$(cat)
+
+# Parse tool_name, tool_input.skill, transcript_path from the PreToolUse
+# JSON payload as tab-separated fields so IFS=$'\t' read splits cleanly
+# even when fields contain spaces.
+parsed=$(echo "$input" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("\t\t")
+    sys.exit(0)
+tool_name = d.get("tool_name", "") or ""
+tool_input = d.get("tool_input", {}) or {}
+skill = ""
+if isinstance(tool_input, dict):
+    skill = tool_input.get("skill", "") or ""
+tp = d.get("transcript_path", "") or ""
+# Flatten any stray tabs so the downstream read gets three clean fields.
+for s in (tool_name, skill, tp):
+    pass
+tool_name = tool_name.replace("\t", " ")
+skill = skill.replace("\t", " ")
+tp = tp.replace("\t", " ")
+print(tool_name + "\t" + skill + "\t" + tp)
+' 2>/dev/null || printf '\t\t')
+
+IFS=$'\t' read -r tool_name skill transcript_path <<<"$parsed"
+
+# Fast path: only act on Skill invocations.
+if [ "$tool_name" != "Skill" ]; then
+  printf '{}\n'
+  exit 0
+fi
+
+# Fast path: only act on the three workflow skills.
+case "$skill" in
+  superRA:planning-workflow|superRA:implementation-workflow|superRA:integration-workflow)
+    ;;
+  *)
+    printf '{}\n'
+    exit 0
+    ;;
+esac
+
+# Fail-open: missing/unreadable transcript -> do not block.
+if [ -z "$transcript_path" ] || [ ! -f "$transcript_path" ]; then
+  printf '{}\n'
+  exit 0
+fi
+
+# Companion check: if the companion skill has already been invoked this
+# session, let the call through. Match the skill-name field tolerantly
+# (case-insensitive, whitespace-tolerant around the colon) so minor
+# transcript-format drift does not cause a spurious deny.
+if grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"' "$transcript_path"; then
+  printf '{}\n'
+  exit 0
+fi
+
+# Deny branch: instruct Claude to load the companion first, then retry.
+reason="The superRA workflow skill \"$skill\" requires the master skill \"$COMPANION\" to be loaded first. Invoke Skill(skill=\"$COMPANION\") now, then retry the original Skill(skill=\"$skill\") call. The master skill carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every workflow task depends on."
+
+# JSON-escape the reason through python3 json.dumps so any inner `"` or
+# `\` in the text cannot break the payload. `json.dumps` returns the
+# string already wrapped in quotes — splice it without extra wrapping.
+reason_json=$(printf '%s' "$reason" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' "$reason_json"
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' "$reason_json"
+else
+  printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}\n' "$reason_json"
+fi
+
+exit 0
