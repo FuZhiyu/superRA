@@ -27,7 +27,7 @@ superRA has a tested philosophy that every skill, hook, and agent file is built 
 
 ### Workflow principles (load-bearing across all domains)
 
-These principles are domain-agnostic. They shape every workflow skill and apply to data analysis today and to any future vertical (theory, literature review, simulation, writing) tomorrow.
+These principles are domain-agnostic. They shape every workflow skill and apply to the currently implemented verticals (data analysis and theory/modeling) and to future verticals (literature review, simulation, writing).
 
 1. **Enforced implementer–reviewer pair at every step.** No result is accepted until a reviewer has signed off. One comprehensive review pass per task during execution (the reviewer walks the active domain skill's gated checklist top to bottom plus any operation-conditional sections matching operations performed, and returns `APPROVE` / `REVISE`); a drift-test review and an integration review before merge; a fresh integration review after semantic-merge. Review is never skipped, regardless of perceived triviality. A change that would let a step ship without review violates this principle.
 
@@ -57,7 +57,7 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
 
   Avoid this anti-pattern:
 
-  > This skill is **domain-agnostic**. Today's only implemented domain vertical is data analysis; future verticals (theory / modeling, literature review, simulation, writing) plug in by providing their own domain skill with a `references/planning.md`. The procedure here stays the same.
+  > This skill is **domain-agnostic**. Today's implemented domain verticals are data analysis and theory / modeling; future verticals (literature review, simulation, writing) plug in by providing their own domain skill with a `references/planning.md`. The procedure here stays the same.
 
   The agent does not need to know the skill is domain-agnostic or what future verticals might look like — they only need to plan and load the plan. Design reasoning in the instruction body bloats context and dilutes the signal.
 - **Agents only load what they need.** When adding a new instruction, think carefully about which agent(s) actually need it and place it where only those agents will pick it up (e.g., inside a stage-scoped reference, not in the top-level SKILL.md). Instructions that apply to one role should not be read by every role.
@@ -83,14 +83,14 @@ Concerns and their owners:
 - **Workflow skills** own *choreography* — what steps run in what order, what stop points exist, what status transitions apply. `planning-workflow`, `implementation-workflow`, and `integration-workflow` (Phases A–D) each own the choreography of their phase and nothing else.
 - **`agent-orchestration`** owns *cross-stage orchestration* — dispatch-prompt shape (required-fields-first, `Additionally:` anchor-last), the "Follow the standard stage-relevant workflow" prefix, the relay protocol between orchestrator and subagent (what-changed deltas, review-notes annotation mechanics), and verdict-adjudication discipline (how to handle `REVISE` findings). Execution Modes (subagent dispatch vs direct) are owned by `superRA:using-superra`.
 - **Domain skills** own *domain discipline* — the Iron Law for data analysis, the gated checklist for that domain (§Three Concurrent Disciplines, domain-specific integration reference), pitfall catalogs, stage-scoped references. Adding a new vertical means adding a domain skill, not forking workflow skills.
-- **`refactor-and-integrate`** owns *generic integration discipline* — code-quality standards, drift-test construction, merge-quality standards. Domain-specific integration content lives alongside the domain skill (for data analysis: `econ-data-analysis/references/integration.md`).
+- **`refactor-and-integrate`** owns *generic integration discipline* — code-quality standards, drift-test construction, merge-quality standards. Domain-specific integration content lives alongside the domain skill (for data analysis: `econ-data-analysis/references/integration.md`; for theory / modeling: `theory-modeling/references/integration.md`).
 - **`handoff-doc`** owns *handoff-doc mechanics* — latest-state-only, inline-edit rule, task-block structure, `## Decisions` section shape. It does NOT own role permissions or dispatch/status-return protocols — those are orchestration concerns and live in `agent-orchestration` + the agent files.
 
-**Shared-flow checklists.** Implementer and reviewer always walk the **same file** for any gated checklist. `[BLOCKING]` / `[ADVISORY]` markers encode severity — blocking items must be fixed to earn APPROVE; advisory items MAY be flagged as MINOR but do not block. The implementer walks the checklist as pre-handoff self-check; the reviewer walks the same checklist as verification criteria. Same content, two perspectives — no drift possible because there is no second document. Applies to `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines (and conditionally the relevant §Pitfalls subsections) and to every other gated checklist in the plugin (domain-specific integration references, future vertical checklists).
+**Shared-flow checklists.** Implementer and reviewer always walk the **same file** for any gated checklist. `[BLOCKING]` / `[ADVISORY]` markers encode severity — blocking items must be fixed to earn APPROVE; advisory items MAY be flagged as MINOR but do not block. The implementer walks the checklist as pre-handoff self-check; the reviewer walks the same checklist as verification criteria. Same content, two perspectives — no drift possible because there is no second document. Applies to `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines, `theory-modeling/SKILL.md`'s shared checklist, and every other gated checklist in the plugin (domain-specific integration references, future vertical checklists).
 
 **Composition at the workflow edge.** A workflow step's content is assembled at dispatch time from: (a) the workflow skill for sequencing, (b) `agent-orchestration` for dispatch shape + verdict adjudication, (c) the agent file for execution / review protocol, (d) the domain skill + stage-scoped references for what to check. None of these pieces duplicate what the others carry.
 
-**Extension path.** Adding a new vertical (theory, literature review, simulation, writing) is composing existing pieces, not forking workflow skills. Create `skills/<vertical>/SKILL.md` with its Iron-Law-equivalent, add the vertical's gated checklist (§Review + §Integration), add stage-scoped references for the phases the vertical touches, add the vertical to the planning-workflow routing table. The workflow skills, `agent-orchestration`, and the agent files carry over unchanged.
+**Extension path.** Adding a new vertical (literature review, simulation, writing) is composing existing pieces, not forking workflow skills. Create `skills/<vertical>/SKILL.md` with its Iron-Law-equivalent, add the vertical's gated checklist (§Review + §Integration), add stage-scoped references for the phases the vertical touches, add the vertical to the planning-workflow routing table. The workflow skills, `agent-orchestration`, and the agent files carry over unchanged.
 
 ### Domain verticals
 
@@ -99,12 +99,13 @@ superRA's workflow scaffolding is domain-agnostic. Domain-specific discipline li
 **Currently implemented:**
 
 - **Data analysis** — `superRA:econ-data-analysis`. Load-bearing rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION.** Non-negotiable; protected by the Common Rationalizations table in the skill body and the inline severity-marked checklist in §Three Concurrent Disciplines. Stage-scoped references: `references/planning.md` (Data Inventory hard gate + sensitivity design), `references/integrate-drift-tests.md` (drift-test construction), `references/integration.md` (data-specific integration gates), `references/data-robustness-checklist.md`.
+- **Theory / modeling** — `superRA:theory-modeling`. Load-bearing rule: **No manipulation without declared objects, assumptions, and justification.** The shared checklist enforces define → derive → validate: explicit primitives and notation, interpretable assumptions on primitives, step-by-step derivations, proof / special-case / numerical verification, and renderable math output. Stage-scoped references: `references/planning.md` (Model Inventory / Assumption Map hard gate + verification planning), `references/integrate-drift-tests.md` (symbolic/numerical drift-test construction), `references/integration.md` (modeling-specific integration gates).
 
-Data analysis is the flagship vertical, not the whole product. The workflow skills do not assume data analysis; they route to the domain skill only when the task matches.
+Data analysis is the flagship vertical, not the whole product. The workflow skills do not assume data analysis; they route to the active domain skill only when the task matches.
 
 Before proposing structural changes to skill design, workflow phases, or agent orchestration, read the existing skills in `skills/` and the workflow skills they reference, and verify the proposal strengthens (or at least preserves) all four workflow principles.
 
-## Roadmap: Extending Beyond Data Analysis
+## Roadmap: Extending Beyond Current Verticals
 
 Adding a new vertical means adding a domain skill — not forking the workflow. The four workflow principles, the implementer/reviewer pair, the handoff-doc discipline, semantic-merges, and the autonomous-with-human-in-loop stop-point pattern all carry over unchanged. A new vertical plugs in by providing:
 
@@ -115,7 +116,6 @@ Adding a new vertical means adding a domain skill — not forking the workflow. 
 
 **Planned verticals (hooks for future work, not commitments):**
 
-- **Theory / modeling.** Derivation discipline (step-by-step algebra, symbol tracking), notation consistency, proof checks, simulation or numerical verification of derived formulas.
 - **Literature review.** Citation integrity (every claim traces to a cited source with the page / line), claim-evidence mapping, coverage audit across a reading list, systematic note-taking format.
 - **Simulation.** Seed discipline, stochastic reproducibility across platforms, sensitivity to parameter grids, convergence diagnostics, calibration-vs-estimation separation.
 - **Writing / paper drafting.** Figure and table consistency with the underlying code, cross-reference integrity (labels, citations), narrative coherence across sections, versioning of the manuscript alongside the analysis branch.

@@ -60,6 +60,11 @@ from pathlib import Path
 text = Path("skills/using-superRA/SKILL.md").read_text(encoding="utf-8")
 m = re.search(r"^name:\s*(\S+)\s*$", text, re.MULTILINE)
 assert m and m.group(1) == "using-superra", f"using-superRA SKILL.md name must be lowercase 'using-superra', got {m and m.group(1)!r}"
+using_text = text
+planning_text = Path("skills/planning-workflow/SKILL.md").read_text(encoding="utf-8")
+assert "`theory-modeling`" in using_text, "using-superRA must list theory-modeling"
+assert "superRA:theory-modeling" in using_text, "using-superRA manifest must reference theory-modeling"
+assert "`superRA:theory-modeling`" in planning_text, "planning-workflow must route theory-modeling"
 PY
 
 section "Phase B upstream-intent contract"
@@ -134,6 +139,11 @@ end
 
 abort(errors.join("\n")) unless errors.empty?
 RUBY
+
+test -f skills/theory-modeling/SKILL.md
+test -f skills/theory-modeling/references/planning.md
+test -f skills/theory-modeling/references/integrate-drift-tests.md
+test -f skills/theory-modeling/references/integration.md
 
 python3 - <<'PY'
 from pathlib import Path

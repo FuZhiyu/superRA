@@ -1,0 +1,168 @@
+---
+name: theory-modeling
+description: >
+  Use PROACTIVELY whenever doing mathematical-modeling work:
+  defining primitives, stating assumptions, setting timing or
+  information structure, deriving optimality conditions, solving
+  equilibria, checking comparative statics, writing proofs,
+  running simple numerical verification, or producing renderable
+  markdown/LaTeX model notes. Triggers include "derive the
+  model", "solve the equilibrium", "check the proof", "write
+  the FOCs", "verify the comparative statics", "calibrate a toy
+  example", or any task where algebra and assumptions must stay
+  explicit.
+user-invocable: true
+---
+
+# Theory Modeling
+
+Domain skill for rigorous mathematical-modeling work; body carries
+Stage-Scoped References, the Iron Law, Define-Derive-Validate, and
+Common Rationalizations.
+
+## Stage-Scoped References
+
+Companion reference files carry content that applies at a specific
+phase. Load per stage; do not load them all at every dispatch:
+
+| Reference | Load when |
+|---|---|
+| `references/planning.md` | PLAN phase - covers the **Model Inventory / Assumption Map hard gate** and the **Verification Plan**. Loaded by `planning-workflow` when the work is theory/modeling. |
+| `references/integrate-drift-tests.md` | `drift-test` stage - identifies modeling results worth protecting, sets symbolic and numerical tolerance conventions, and catalogs theory-modeling failure modes drift tests catch. Loaded by `integration-workflow` Phase A. |
+| `references/integration.md` | `integration` stage - modeling-specific refactor-integrity gates (notation consistency, assumption-map preservation, derivation discipline preserved through refactoring, verification pass-through). |
+
+## The Iron Law
+
+```
+NO DERIVATION WITHOUT DEFINED OBJECTS AND STATED ASSUMPTIONS
+```
+
+If a symbol appears before it is defined, or a result needs a
+restriction that has not been stated, back up and write the missing
+definition or assumption first.
+
+**No exceptions:**
+- Do not hide a key restriction in "assume interior solution" after the algebra is already written.
+- Do not rename objects mid-derivation without mapping the notation.
+- Do not move a restriction from primitives to an endogenous variable just because the latter is shorter to write.
+- Do not rely on memory of a previous draft or paper note.
+- Back up means back up.
+
+---
+
+## Define-Derive-Validate
+
+Three disciplines underpin trustworthy modeling work. They are
+**concurrent, not sequential** - every modeling step exercises all
+three. Documentation runs continuously alongside them as a cross-cutting
+writing practice, not a fourth phase.
+
+This section is both **teaching content** and the **shared checklist**.
+The implementer walks it before returning DONE; the reviewer walks the
+same items as verification.
+
+- `[BLOCKING]` - must fix to earn APPROVE. Encodes the Iron Law,
+  handoff-doc discipline, and other required items.
+- `[ADVISORY]` - best practice. The reviewer MAY flag as MINOR; does
+  not block APPROVE.
+
+### Reviewer verdict protocol
+
+**Walk `Define-Derive-Validate` top to bottom every time. Never halt on
+a failure.** One comprehensive pass per review - halting early forces a
+full re-review on the next pass, and reviewer dispatches are costly.
+
+Two verdicts:
+
+- **APPROVE** - no `[BLOCKING]` findings.
+- **REVISE** - at least one `[BLOCKING]` finding.
+
+**Handling dependent findings.** When a later finding depends on an
+earlier `[BLOCKING]` item being fixed first, say so in plain prose
+alongside the finding.
+
+**Re-review after REVISE.** Implementer fixes all `[BLOCKING]` findings
+and re-dispatches. The reviewer then (1) verifies each fix, and
+(2) re-checks any finding that depended on an upstream fix. Everything
+else is accepted from the first pass.
+
+### Define
+
+The most common modeling error is pushing symbols before the model
+objects are actually pinned down. Define the model before you manipulate
+it.
+
+- `[BLOCKING]` Every symbol is defined before first use: primitives, choice variables, state variables, parameters, shocks, constraints, value objects, prices, and equilibrium conditions.
+- `[BLOCKING]` Notation is explicit and interpretable or genuinely conventional. Arbitrary placeholder labels like `A/B/C/D`, `T1/T2`, `eq1`, and `var2` are not acceptable. Conventional notation such as `r` for an interest rate or `w` for a wage is acceptable when defined at first use.
+- `[BLOCKING]` Assumptions are explicit and attached to primitives: preferences, technology, endowments, information, timing, distributions, parameter domains, boundary conditions, and normalizations. Do not state assumptions as desired properties of endogenous objects unless those properties are later proved.
+- `[BLOCKING]` Domains, units, and sign restrictions are clear whenever they matter for the algebra, comparative statics, or numerical checks.
+- `[BLOCKING]` The active solution concept is named before derivation starts: planner problem, competitive equilibrium, recursive equilibrium, steady state, fixed point, or other relevant concept.
+- `[ADVISORY]` When multiple notation choices are reasonable, prefer the one matching the literature or existing project docs; if you deviate, note the mapping.
+
+### Derive
+
+Derivations must be auditable. A correct result that cannot be checked is
+not an acceptable handoff artifact.
+
+- `[BLOCKING]` One logical algebraic move per displayed step. Do not collapse multiple substitutions, cancellations, and sign changes into "therefore".
+- `[BLOCKING]` Each non-obvious step states the rule being used: substitute a constraint, differentiate with respect to a variable, apply the envelope theorem, impose market clearing, linearize around a point, or similar.
+- `[BLOCKING]` When a result depends on case splits or domains (interior vs corner, positive vs negative branch, existence/uniqueness conditions), the active case is stated and excluded cases are either checked or explicitly deferred.
+- `[BLOCKING]` Comparative statics state what is held fixed, which object moves, and what sign or ranking is being claimed.
+- `[BLOCKING]` Reused symbols keep the same meaning throughout the task. If notation changes, old and new notation are mapped explicitly.
+- `[BLOCKING]` Claims of existence, uniqueness, monotonicity, or concavity are supported by a stated argument, not asserted by inspection.
+- `[ADVISORY]` Keep displayed equations short enough to audit; break long chains into aligned steps rather than dense one-line algebra.
+
+### Validate
+
+Symbolic work still needs verification. A derivation is not complete
+until it has survived at least one independent check.
+
+- `[BLOCKING]` Every headline symbolic result is checked against at least one independent verification mode: substitute back into the original conditions, test a limiting or special case, or evaluate a simple numerical example.
+- `[BLOCKING]` Numerical verification uses explicit parameter values and states what is being checked: residual near zero, sign, monotonicity, feasibility, branch selection, or fixed-point convergence.
+- `[BLOCKING]` Special cases and limiting cases are compared against intuition and any stated hypotheses in `PLAN.md`; divergences are flagged before proceeding.
+- `[BLOCKING]` Results are checked back against the assumption map. If a step quietly needs a stronger sign, domain, or regularity restriction than the current map states, update the assumption map before using the result.
+- `[BLOCKING]` When code, CAS output, or a solver is used, the human-readable result matches the computed object exactly. No manual transcription drift.
+- `[BLOCKING]` If an expression is rendered for a human reader, markdown and LaTeX are unambiguous: subscripts, superscripts, fractions, summation limits, and align environments read cleanly.
+- `[ADVISORY]` For numerically delicate objects, verify more than one parameter set or a small perturbation around the baseline.
+
+### Implementation standards
+
+- `[BLOCKING]` Each task satisfies the current `PLAN.md` objective and scope. When steps are present, they stay in sync with the current route rather than drifting away from the work.
+- `[BLOCKING]` If the evidence shows that an extra lemma, case split, derivation step, or verification pass is required to trust the result, add it inside the current task and rewrite the step text to match.
+- `[BLOCKING]` Solver scripts, symbolic code, and model notes are organized so a reviewer can trace the chain from primitives and assumptions to the reported result.
+- `[BLOCKING]` Major modeling decisions (normalization, timing, equilibrium selection, parameter baseline, approximation point) carry a markdown explanation or nearby comment.
+
+### Documentation and handoff
+
+- `[BLOCKING]` `RESULTS.md` is updated in place for this task's section. The doc is the record - findings live there before they appear in any status report.
+- `[BLOCKING]` Definitions, assumptions, and the reason for major derivation choices are written alongside the math or code, not left only in chat.
+- `[BLOCKING]` When a task section includes equations, tables, or figures for human reading, use `superRA:report-in-markdown`; do not invent a separate rendering utility.
+- `[BLOCKING]` Rendered math, prose, and any supporting code use consistent notation for the same object.
+- `[BLOCKING]` No dangling TODO / placeholder / `XXX` strings ship.
+
+### Stage-scoped discipline (not walked at every implementation dispatch)
+
+- **`drift-test` stage** - `references/integrate-drift-tests.md` carries the modeling-specific guidance for symbolic identities, comparative statics, and simple numerical invariants that should be protected before merge.
+- **`integration` stage** - `references/integration.md` carries the full integration-stage checklist (notation consistency, assumption-map preservation, verification checks surviving refactors, rendering utility reuse) with its own `[BLOCKING]` / `[ADVISORY]` markers and two-verdict protocol.
+- **End-of-workflow completion verification** - `superRA:implementation-workflow` Step 3 carries the reproducibility gate. Walked by the orchestrator, not by dispatched subagents.
+
+## Common Rationalizations
+
+LLM-specific excuses that usually precede broken derivations or hidden
+assumptions. When you catch yourself forming one of these, stop and make
+the definitions or assumptions explicit.
+
+| Excuse | Reality |
+|---|---|
+| "The notation is obvious from context." | If it is not named, the reviewer cannot audit it. |
+| "I can clean up assumptions after the algebra." | Late assumptions are usually post-hoc patches for a broken step. |
+| "A/B/C is temporary; I will rename it later." | Temporary placeholder notation spreads and becomes the model. |
+| "The numerical check is only illustrative." | Even toy checks need explicit parameters and a stated pass condition. |
+| "The CAS says it simplifies to zero." | You still need to say what was checked and under which assumptions. |
+
+## Key References
+
+- `references/planning.md` - planning hard gate: Model Inventory / Assumption Map plus Verification Plan
+- `references/integrate-drift-tests.md` - drift-test guidance for symbolic and numerical invariants
+- `references/integration.md` - integration-stage checklist for modeling work
+- `superRA:report-in-markdown` - format discipline for equations, tables, figures, and LaTeX in markdown

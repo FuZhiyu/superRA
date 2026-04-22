@@ -19,11 +19,11 @@ The three disciplines are **concurrent, not sequential**. A single integration p
 
 ### 1. Drift-Test Integrity
 
-Stage `drift-test` → load `references/drift-test-quality.md` (coverage, tolerance calibration, independence, red-green cycle, test-format conventions, Red Flags).
+Stage `drift-test` → load `references/drift-test-quality.md` (coverage, tolerance calibration, independence, red-green cycle, test-format conventions, Red Flags). When the active domain also provides drift-test guidance, load it alongside the generic checklist (for data analysis: `econ-data-analysis/references/integrate-drift-tests.md`; for theory/modeling: `theory-modeling/references/integrate-drift-tests.md`).
 
 ### 2. Codebase Integration
 
-Stage `integration` → load `references/codebase-integration.md` (naming, utility reuse, PR quality, documentation currency, Project Doc Audit walk-up). For data-analysis work, also load `econ-data-analysis/references/integration.md` as the primary reference.
+Stage `integration` → load `references/codebase-integration.md` (naming, utility reuse, PR quality, documentation currency, Project Doc Audit walk-up). For data-analysis work, also load `econ-data-analysis/references/integration.md` as the primary reference. For theory/modeling work, also load `theory-modeling/references/integration.md` as the primary reference.
 
 ### 3. Merge Quality
 

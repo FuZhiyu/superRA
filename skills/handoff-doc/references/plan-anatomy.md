@@ -11,26 +11,13 @@ The header is the project's standing context, written at planning time and updat
 ```markdown
 # [Analysis Name] Plan
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use `superRA:econ-data-analysis` for every step that touches data. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use the active domain skill for every step that touches that domain (for example, `superRA:econ-data-analysis` for data work or `superRA:theory-modeling` for model-derivation work). Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
 
 **Objective:** [One sentence describing what this analysis produces]
 
 **Methodology:** [Brief description — the researcher has already decided this]
 
-**Data Inventory:**
-
-### Available
-| Dataset | Path | Format | Rows | Date Range | Key Variables |
-|---------|------|--------|------|------------|---------------|
-| ... | ... | ... | ... | ... | ... |
-
-### Needed (Not Yet Available)
-| Dataset | Source | Access Method | Notes |
-|---------|--------|---------------|-------|
-| ... | ... | ... | ... |
-
-### Data Quality Notes
-- [Any known issues, missing coverage, etc.]
+**[Domain-specific planning section(s) from the active domain reference]:** [For example: `Data Inventory` for data analysis, or `Model Inventory / Assumption Map` for theory/modeling.]
 
 **Conventions:** [Naming rules, file layout, unit choices, variable definitions that apply across tasks. Populated during execution as conventions emerge.]
 
@@ -48,7 +35,7 @@ The header is the project's standing context, written at planning time and updat
 
 A checklist of irreversible workflow milestones. Each box is a rollup over per-task `**Review status:**` and `**Integration status:**` fields — it flips only when all tasks that contribute to the milestone have the appropriate per-task status. Each box flips at the moment its workflow step completes, in the same commit that completes the step. A new agent reads this section first to know where the project stands without having to scan task blocks or grep commits. On re-entry, the orchestrator unchecks affected boxes by judgment and declares in §Decisions which boxes were cleared and why. The full drift-test suite must re-run green before rechecking `Drift tests created` — see `planning-workflow §User Feedback and Changing Plans`.
 
-- [ ] **Plan approved** — researcher signed off on data inventory + plan (`planning-workflow` Phase 2)
+- [ ] **Plan approved** — researcher signed off on the required domain gate + plan (`planning-workflow` Phase 2)
 - [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
 - [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Phase A)
 - [ ] **Refactored** — integration reviewer `APPROVED` on the unified sync+refactor diff (`integration-workflow` Phase B)
@@ -60,7 +47,7 @@ A checklist of irreversible workflow milestones. Each box is a rollup over per-t
 
 ### Header ownership
 
-Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read the header but treat it as read-only. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
+Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read the header but treat it as read-only. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a domain-inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
 
 `## Upstream Intent` is the narrow Phase B exception. When Phase B needs it, the integration reviewer owns the active section for the current round. The orchestrator passes the round context (`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range) in the reviewer dispatch; implementers never edit the section; the orchestrator removes it at Phase B closeout because it is stale once the round is complete.
 
@@ -90,6 +77,13 @@ Walked at planning time (YYYY-MM-DD). Re-walk on-demand only.
 ### Not walked (not reachable from the planned diff)
 - `docs/archive/`, `sandbox/`, `Notebooks/exploratory/` — out of scope for this plan.
 ```
+
+### Domain-specific header sections
+
+The active domain skill's planning reference defines any required header sections beyond the generic fields above. Examples:
+
+- **Data analysis** → `Data Inventory` with available/needed datasets and data quality notes.
+- **Theory / modeling** → `Model Inventory / Assumption Map` with primitives, endogenous objects, timing, solution concept, notation conventions, assumptions, and the planned proof / numerical checks.
 
 **Discipline:**
 
