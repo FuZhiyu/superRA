@@ -25,7 +25,7 @@
 - [x] **Drift tests created** - N/A for this skill refactor; the Task 4 verification bundle is the approved substitute for Phase A coverage (2026-04-22)
 - [x] **Refactored** - Phase B integration reviewer approved the merged-tree sync/refactor diff and the Integration Intent section is cleared (2026-04-22)
 - [x] **Docs finalized** - Phase C doc-review passed on the archived permanent record at `docs/plans/2026-04-22-objective-first-task-step-semantics-results.md` (2026-04-22)
-- [ ] **Merged** - no merge or PR action yet
+- [x] **Merged** - local merge into `main` prepared after Phase D freshness check confirmed `origin/main` had not advanced beyond merge-base `addc9ca` (2026-04-22)
 
 ## Project Conventions
 
