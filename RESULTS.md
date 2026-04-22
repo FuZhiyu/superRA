@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each task with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-22 (post-main sync)
+**Last updated:** 2026-04-19 (bootstrap)
 **Status:** In Progress
 
 ---
@@ -110,8 +110,6 @@
 - **Manifest path verification:** all 16 `writing/references/*` files referenced in the Skill-Load Manifest and elsewhere exist on disk. Checked: `planning.md`, `workflow.md`, `style-checklist.md`, `structure-checklist.md`, `refactor-and-compile.md`, `collaboration.md`, `integration.md`, plus 8 consistency files (`terminology.md`, `notation.md`, `cross-references.md`, `citations.md`, `numerical.md`, `math.md`, `argument-logic.md`, `code-paper.md`). No broken pointers.
 - **Plan deviation note (Step 3):** the PLAN.md spec named `merge-workflow/SKILL.md` as an edit target; that skill does not exist in this repo (merge choreography is Phase D of `integration-workflow`). The Phase D writing note covers the same concern. Plan step rewritten in place.
 - **Re-reviewed 2026-04-19:** addressed MINOR 14 — Gate 4 text no longer requires per-dimension consistency reviewers to load `integration.md`. Per-dimension reviewers load `writing/SKILL.md` + their one `consistency/*.md`; the integration-gate reviewer (orchestrator-dispatched separately) loads this `integration.md`.
-- **Main-sync 2026-04-22:** after merging `main` at `addc9ca`, the routing surface was refreshed onto the current plugin architecture without dropping the writing vertical. Concretely: `README.md` and `skills/CATEGORIES.md` now reflect `implementation-workflow`, Codex install/setup, and the autoload / ensure hook set; `skills/using-superRA/SKILL.md` now exposes lowercase `using-superra` frontmatter, the Codex setup utility row, and current harness-adapter guidance; `skills/writing/references/workflow.md` no longer points at `execution-workflow` / `merge-workflow`; `.agents/skills/writing` now exists for Codex discovery.
-- **Validation 2026-04-22:** `tests/check-harness-compatibility.sh`, `tests/hooks/test-autoload-superra.sh`, `tests/hooks/test-ensure-using-superra.sh`, and `tests/hooks/test-ensure-agent-orchestration.sh` all pass after the sync. `tests/hooks/test-e2e-cli.sh` still fails locally, but the same failures reproduce unchanged on clean `main`, so the E2E issue is not introduced by this branch merge.
 
 **Files:** `skills/writing/references/integration.md` (95 lines) + 5 routing-edit files modified (`using-superRA/SKILL.md`, `planning-workflow/SKILL.md`, `integration-workflow/SKILL.md`, `CATEGORIES.md`, `README.md`).
 
@@ -150,7 +148,6 @@ Parallel sweep of the same stale "writing-as-future-vertical" framing across thr
 - `skills/planning-workflow/SKILL.md` — "writing" removed from future-verticals parenthetical.
 
 See commit `bc885fe`.
-- **Main-sync 2026-04-22:** `CLAUDE.md` absorbed current `main` cleanly while preserving the writing-implemented state. The synced file now also carries the current Codex-design guidance and `implementation-workflow` naming, with no reintroduction of the old "writing is future work" framing.
 
 ## Task 8: Dogfood — three-mode verification
 
