@@ -55,7 +55,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 1: Canonicalize objective-first task-block semantics
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** N/A
 **Input:** `/CLAUDE.md`, `skills/handoff-doc/references/plan-anatomy.md`, and the source-intent specification captured in this plan header.
@@ -65,11 +65,6 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 2: Edit `/CLAUDE.md`.** Added one concise contributor principle stating that the task heading names the objective, `Script` / `Input` / `Output` bind scope, steps are the suggested route, and review is objective-completeness first while the exact mechanics stay owned by `plan-anatomy.md`.
 - [x] **Step 3: Edit the handoff-doc canon.** Updated `plan-anatomy.md` and `results-anatomy.md` so every demonstrated task heading uses an objective-style placeholder, while the canonical scope/step semantics remain owned by `plan-anatomy.md`.
 - [x] **Step 4: Update the live results handoff and verify coherence.** Refreshed the root `RESULTS.md` header so it reflects that execution has begun, then re-read the affected handoff-doc references together and confirmed the objective-first rule is expressed consistently without creating a new source of truth.
-
-> 1. [MAJOR] `skills/handoff-doc/references/plan-anatomy.md:152` still instantiates the canonical task template as `### Task N: [Phase Name]` even though the new rule says the task heading carries the objective. That leaves the handoff-doc references with competing models for what the heading represents, especially because `skills/handoff-doc/references/results-anatomy.md:33,37,49` still repeats the same phase-name placeholder. Update the template placeholders and adjacent prose so the heading is shown as an objective-style task name everywhere the handoff-doc canon demonstrates task titles.
->    → implemented: objective-style task-title placeholders now used in both handoff-doc references (`skills/handoff-doc/references/plan-anatomy.md:152`, `skills/handoff-doc/references/results-anatomy.md:33`)
-> 2. [MAJOR] `RESULTS.md:6-7` is stale after this task's implementation: the header still says `planning only` and `execution not started` while Task 1 is marked implemented below. `RESULTS.md` is part of the live handoff record, so its top-level status needs to reflect that execution has begun in the same commit as the new Task 1 findings.
->    → implemented: root results header now reflects active execution and current task progress (`RESULTS.md:6`)
 
 ### Task 2: Reframe implementer and reviewer role contracts
 **Depends on:** Task 1
