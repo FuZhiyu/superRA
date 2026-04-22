@@ -21,7 +21,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on data inventory + plan (`planning-workflow` Phase 2)
-- [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
+- [x] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
 - [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Phase A)
 - [ ] **Refactored** — integration reviewer `APPROVED` on the unified sync+refactor diff (`integration-workflow` Phase B)
 - [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Phase C)
