@@ -148,6 +148,7 @@ If something looks unexpected, STOP and investigate before proceeding.
 ### Implementation standards
 
 - `[BLOCKING]` Each step implements what `PLAN.md` specifies; deviations are rewritten into the step text, not layered on top.
+- `[BLOCKING]` If the evidence shows that an extra diagnostic, validation pass, or within-task robustness check is required to trust the result, add it inside the current task and rewrite the step text to match. Literal adherence to an under-specified step list is not acceptable.
 - `[BLOCKING]` Analysis scripts follow the notebook-compatible format per `references/notebook-format.md`.
 - `[BLOCKING]` Major decisions (filter threshold, join type, variable definition, sample period) carry a markdown-cell justification; minor decisions carry an inline comment.
 - `[BLOCKING]` Outputs (tables, figures) are generated from committed code, not ad-hoc REPL state.

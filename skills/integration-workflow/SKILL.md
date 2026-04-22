@@ -128,8 +128,12 @@ Agent(subagent_type: "superRA:reviewer"):
     append a per-task integration review-notes blockquote with
     [BLOCKING] / [ADVISORY] items. Tasks needing no changes get
     no annotation; flip each annotated task to
-    `Integration status: REVISE` in the same review commit. When
-    the diff to walk is large (see `agent-orchestration`
+    `Integration status: REVISE` in the same review commit. If
+    a finding implies task add/remove/combine/split or a change to
+    the task heading / `Script` / `Input` / `Output`, do not rewrite
+    the task boundary yourself — label it as a restructure finding to
+    be routed through `planning-workflow` §User Feedback and Changing Plans.
+    When the diff to walk is large (see `agent-orchestration`
     §Workload Balancing)
     <prior-round adjudication notes if re-dispatching>.
 ```
@@ -139,7 +143,7 @@ Agent(subagent_type: "superRA:reviewer"):
 Read PLAN.md (Integration Intent section + per-task annotations). Two branching points:
 
 - **Zero annotated tasks** — no refactor needed. If the base-branch-side scan also found nothing material, Phase B terminates: execute `git merge --ff-only <base-branch>` (or skip if `git merge-base --is-ancestor origin/<base-branch> HEAD`), note in §Decisions, proceed to Phase C.
-- **Annotated tasks exist** — collect every research-meaningful item from the per-task blockquotes. Batch into a single `AskUserQuestion` (plain text if unavailable) — one stop point, not N interruptions. If findings imply a substantive restructure (task add/remove/combine, DAG flip), escalate to `planning-workflow §User Feedback and Changing Plans` instead. Otherwise log each answer per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching implementer(s).
+- **Annotated tasks exist** — collect every research-meaningful item from the per-task blockquotes. Batch into a single `AskUserQuestion` (plain text if unavailable) — one stop point, not N interruptions. If findings imply a substantive restructure (task add/remove/combine/split, DAG flip, or a task-boundary change to the heading / `Script` / `Input` / `Output`), escalate to `planning-workflow §User Feedback and Changing Plans` instead of handling it inline in Phase B. Otherwise log each answer per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching implementer(s).
 
 ### Step 3: Fix-review loop
 
