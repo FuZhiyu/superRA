@@ -1,5 +1,6 @@
 # Codex Tool Reference
 
+Codex agents load this reference immediately after `superRA:using-superra`.
 These skills still mention Claude-oriented tool names in places. In Codex, read them as the corresponding Codex action:
 
 | Skill term | Codex action |

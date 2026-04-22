@@ -53,7 +53,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 
 **Composable design:** Workflow skills own sequencing; domain skills own vertical discipline; utility skills are called on demand. One source of truth per concern.
 
-**Harness adapters:** When this skill or its references mention a Claude-specific tool name (e.g. `AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), Codex agents map them via `references/codex-tools.md`; Claude-only notes live in `references/claude-tools.md`.
+**Harness adapters:** When this skill or its references mention a Claude-specific tool name (e.g. `AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), use the harness adapter reference before interpreting the tool name. Codex agents load `references/codex-tools.md` immediately after loading `superRA:using-superra`; Claude-only notes live in `references/claude-tools.md`.
 
 ## Execution Modes
 
