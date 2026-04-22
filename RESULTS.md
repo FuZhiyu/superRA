@@ -50,11 +50,10 @@
 **Status:** Completed (Task 4 approved 2026-04-22)
 
 ### Key Findings
-- `tests/test-phase-b-upstream-intent-contract.sh` remains a narrow structural guard over canonical runtime files only, and now additionally asserts the no-overlap re-entry cleanup path and the non-Phase-B governing-baseline fallback.
-- Wired the new guard into `tests/check-harness-compatibility.sh` so the repo's top-level compatibility entry point now covers this Phase B contract as part of the standard structural check surface.
-- Refreshing `.codex/agents/superra_implementer.toml` and `.codex/agents/superra_reviewer.toml` was necessary after editing `agents/implementer.md` and `agents/reviewer.md`; the existing Codex generation check correctly caught that drift before the rerun passed.
+- `tests/test-phase-b-upstream-intent-contract.sh` remains a narrow structural guard over canonical runtime files only, and it asserts the no-overlap re-entry cleanup path alongside the non-Phase-B governing-baseline fallback.
+- `tests/check-harness-compatibility.sh` includes that Phase B guard as part of the standard structural check surface, then runs the Codex agent-generation tests plus `sync_codex_agents.py --scope project --check`.
+- The current project-scoped Codex agents are in sync with `agents/implementer.md` and `agents/reviewer.md`; the compatibility check reports the generated files are up to date.
 
 ### Notes
 - Verification run 1: `bash tests/test-phase-b-upstream-intent-contract.sh` -> `Passed: 31    Failed: 0`.
-- Verification run 2: `bash tests/check-harness-compatibility.sh` -> passed after regenerating the project-scoped Codex agent files with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
-- Direct-mode reviewer pass over the touched canonical files found no blocking inconsistencies after the test rerun; all four task blocks are approved with no open review-notes blockquotes.
+- Verification run 2: `bash tests/check-harness-compatibility.sh` -> passed, including the Codex agent-generation tests (`Ran 3 tests ... OK`) and the project-scoped up-to-date assertion from `sync_codex_agents.py --scope project --check`.
