@@ -1,0 +1,2 @@
+$ python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check
+All generated agent files are up to date in /Users/zhiyufu/Dropbox/package_dev/superRA-task-step-refinment/.codex/agents

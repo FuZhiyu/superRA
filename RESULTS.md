@@ -1,67 +1,66 @@
-# Objective-First Task/Step Semantics - Results
-
-> Mirrors PLAN.md structure. Updated after each step with key findings.
-> New agents: read PLAN.md for what to do, RESULTS.md for what was found.
-
-**Last updated:** 2026-04-22 (Execution complete)
-**Status:** Completed
-
+---
+author: "[[Julie Zhiyu Fu]]"
+date: 2026-04-22
+timestamp: "2026-04-22T06:23:26"
+session_id: "session-20260422-objective-first-task-step-semantics-phasec"
+git_commit: "5be602fef1b282dc3d9e00c012fd0b1b7f2574a2"
+git_message: "results: fact-check root RESULTS.md"
+git_dirty: false
+branch: "superRA-task-step-refinment"
+merge_base: "addc9ca7fe1bdbedb080d92095facb649074c1e4"
+tags: ["report", "results", "superRA", "skill-refactor", "documentation"]
+project: "[[superRA]]"
+permalink: "docs/plans/2026-04-22-objective-first-task-step-semantics-results"
 ---
 
-## Task 1: Canonicalize objective-first task-block semantics
+# Objective-First Task/Step Semantics — Results
 
-**Status:** Approved (Task 1 approved 2026-04-22)
+**Status:** Phase C permanent-form content prepared at the repository root; relocation to `docs/plans/2026-04-22-objective-first-task-step-semantics-results.md` is the remaining documentation step. [PLAN.md](PLAN.md) remains at the repository root for the later disposition step.
+**Branch:** `superRA-task-step-refinment`
+**Merge base:** `addc9ca` (`origin/main`)
+**Companion plan:** [PLAN.md](PLAN.md)
 
-### Key Findings
-- `CLAUDE.md` now carries a contributor-level rule that the task heading names the objective, `Script` / `Input` / `Output` bind scope, steps are the current best route, and review is objective-first.
-- `skills/handoff-doc/references/plan-anatomy.md` and `skills/handoff-doc/references/results-anatomy.md` now show objective-style task-title placeholders everywhere the handoff-doc canon demonstrates task headings.
-- The root `RESULTS.md` header now reflects that execution has started and Task 1 is implemented, instead of leaving the file in a planning-only state.
+## Objective
 
-### Notes
-- The current task-block anatomy has no per-task `**Objective:**` line, so the canonical wording treats the task heading as the objective carrier and preserves the existing block shape.
-- Re-read both concern owners after editing and kept the exact task-block mechanics in `plan-anatomy.md` rather than duplicating them in contributor guidance.
+The refactor changes task semantics across the workflow stack: the task heading plus `Script` / `Input` / `Output` define scope, and planner-authored steps are the starting route inside that boundary. The project-level objective is recorded in [PLAN.md](PLAN.md), and the same scope rule now appears in contributor guidance and task-block canon at [CLAUDE.md](CLAUDE.md) and [skills/handoff-doc/references/plan-anatomy.md](skills/handoff-doc/references/plan-anatomy.md).
 
-## Task 2: Reframe implementer and reviewer role contracts
+## Canonical Scope Contract
 
-**Status:** Approved (Task 2 approved 2026-04-22)
+- Contributor-facing guidance states `Task heading = objective; steps = suggested route` in [CLAUDE.md](CLAUDE.md).
+- The handoff-doc template states that the task heading names the objective, `Script` / `Input` / `Output` are invariant, and steps are planner-authored starter guidance in [skills/handoff-doc/references/plan-anatomy.md](skills/handoff-doc/references/plan-anatomy.md).
+- The implementer contract tells agents to treat the task heading plus `Script` / `Input` / `Output` as the scope contract, and it keeps within-task route rationale in the status message rather than in `PLAN.md` history in [agents/implementer.md](agents/implementer.md).
+- The reviewer contract judges objective completion first, flags missing diagnostics or validation even when the listed steps were followed, and routes whole-task boundary changes through `planning-workflow §User Feedback and Changing Plans` in [agents/reviewer.md](agents/reviewer.md).
+- The generated Codex mirrors repeat the same implementer and reviewer language in [.codex/agents/superra_implementer.toml](.codex/agents/superra_implementer.toml) and [.codex/agents/superra_reviewer.toml](.codex/agents/superra_reviewer.toml).
 
-### Key Findings
-- `agents/implementer.md` now treats the task heading/objective plus `Script` / `Input` / `Output` as the scope contract, allows within-task step split/combine plus extra diagnostics/validation/robustness work when needed, and directs any step-path rationale to the status return instead of `PLAN.md` history.
-- `agents/reviewer.md` now judges objective completion before literal step adherence, treats missing necessary checks as review findings even when the listed steps were followed, and routes integration-stage whole-task combine/split recommendations through `planning-workflow §User Feedback and Changing Plans`.
-- The managed Codex mirrors were regenerated only through `skills/codex-superra-setup/scripts/sync_codex_agents.py`, and `--check` confirmed both `.codex/agents/*.toml` files are up to date.
+## Workflow And Domain Propagation
 
-### Notes
-- Re-read the regenerated TOML prompts to confirm the new objective-first language appears in both managed Codex agent files.
-- No manual edits were made to `.codex/agents/superra_implementer.toml` or `.codex/agents/superra_reviewer.toml`.
+- The implementation workflow now tells the orchestrator to judge task completion against the task objective and scope boundary rather than literal step adherence in [skills/implementation-workflow/SKILL.md](skills/implementation-workflow/SKILL.md).
+- The orchestration guidance separates within-task adaptation from scope change and keeps route-rewrite rationale in the status-return layer in [skills/agent-orchestration/SKILL.md](skills/agent-orchestration/SKILL.md).
+- The data-analysis discipline states that if the evidence requires extra diagnostics, validation, or within-task robustness work, the implementer adds it inside the current task and rewrites the step text to match in [skills/econ-data-analysis/SKILL.md](skills/econ-data-analysis/SKILL.md).
+- The release ledger records the change under version `0.1.1` in [RELEASE-NOTES.md](RELEASE-NOTES.md).
 
-## Task 3: Update workflow and domain skills to treat steps as mutable guidance
+## Verification Coverage
 
-**Status:** Approved (Task 3 approved 2026-04-22)
+- The supported fast Claude Code suite contains one default smoke test, `test-objective-first-task-semantics.sh`, as listed in [tests/claude-code/run-skill-tests.sh](tests/claude-code/run-skill-tests.sh).
+- The smoke-test prompt asks about a task whose step list omits duplicate-key validation after a merge, and the assertions require three behaviors: scope-contract language, an added within-task validation step, and reviewer pushback on a mechanical omission in [tests/claude-code/test-objective-first-task-semantics.sh](tests/claude-code/test-objective-first-task-semantics.sh).
+- The test README documents the repo-local execution path, keeps the objective-first smoke test as the supported default path, and labels the archived `subagent-driven-development` scripts as manual-only coverage in [tests/claude-code/README.md](tests/claude-code/README.md).
+- The shared helper runs test commands through `run_with_timeout` and passes the prompt to `claude -p` as argv-safe arguments in [tests/claude-code/test-helpers.sh](tests/claude-code/test-helpers.sh).
+- Phase C reran the fast suite and the Codex agent parity check; the command outputs are archived in [docs/plans/attachments/2026-04-22-objective-first-smoke-test.txt](docs/plans/attachments/2026-04-22-objective-first-smoke-test.txt) and [docs/plans/attachments/2026-04-22-codex-agent-parity-check.txt](docs/plans/attachments/2026-04-22-codex-agent-parity-check.txt).
 
-### Key Findings
-- `RELEASE-NOTES.md` now records the objective-first task/step semantics change under `0.1.1`, capturing the user-visible scope contract: task heading plus `Script` / `Input` / `Output` bind scope, steps are mutable guidance inside that boundary, and reviewers escalate whole-task restructure through `planning-workflow`.
-- `skills/planning-workflow/SKILL.md` now tells planners that task headings plus `Script` / `Input` / `Output` bind scope, while steps are the best current route and should guide execution without trying to pre-script every in-task diagnostic or robustness branch.
-- `skills/implementation-workflow/SKILL.md` now makes the orchestrator check task-boundary clarity during Step 1 and judge completion against the task objective/scope plus the checklist during Step 2, instead of grading literal adherence to the planner's first step wording.
-- `skills/agent-orchestration/SKILL.md` and `skills/integration-workflow/SKILL.md` now separate normal within-task route adaptation from scope change, keep the explanation for route rewrites in the implementer status message layer, and route whole-task combine/split or boundary-change findings back through `planning-workflow §User Feedback and Changing Plans`.
-- `skills/econ-data-analysis/SKILL.md` now explicitly requires implementers to add evidence-driven diagnostics, validation passes, or within-task robustness checks when needed to trust a result, even if the original step list omitted them.
+## Live Verification
 
-### Notes
-- The stale-language sweep used targeted `rg` queries plus a focused `git diff` review over the five touched skill files; the remaining “literal adherence” phrasing is now only the deliberate guardrail in `econ-data-analysis` that rejects literalism when the evidence demands extra checks.
-- The sweep also caught one lingering mid-INTEGRATE restructure example in `planning-workflow` that still said task add/remove/combine; it now says add/remove/combine/split so the owned workflow surfaces tell the same story.
-- The REVISE pass fixed one additional stale summary in `skills/integration-workflow/SKILL.md`'s Phase Map so the high-level overview now matches the file's later operative rules on whole-task split and task-boundary changes.
-- The merged-tree project-doc audit required a new release-ledger entry but no further root `README.md` or `CLAUDE.md` changes after the `origin/main` sync.
+- `cd tests/claude-code && ./run-skill-tests.sh` returned `Passed: 1`, `Failed: 0`, and `Skipped: 0`, with the summary line `STATUS: PASSED` and the note that legacy integration tests were not run. [log](docs/plans/attachments/2026-04-22-objective-first-smoke-test.txt)
+- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` returned `All generated agent files are up to date in /Users/zhiyufu/Dropbox/package_dev/superRA-task-step-refinment/.codex/agents`. [log](docs/plans/attachments/2026-04-22-codex-agent-parity-check.txt)
 
-## Task 4: Add verification coverage and validate the change end-to-end
+## Limitations
 
-**Status:** Approved (Task 4 approved 2026-04-22)
+- This Phase C pass records current file content plus fresh 2026-04-22 command output. It does not carry forward the earlier manual Claude session from the Stage 1 dev log because that session was not rerun during documentation maturation.
+- The archived `subagent-driven-development` scripts remain in-tree and outside the supported fast suite. [tests/claude-code/README.md](tests/claude-code/README.md) [tests/claude-code/run-skill-tests.sh](tests/claude-code/run-skill-tests.sh)
 
-### Key Findings
-- `cd tests/claude-code && ./run-skill-tests.sh` passed on 2026-04-22 with `Passed: 1`, `Failed: 0`, and `Skipped: 0`; the summary also notes that the legacy integration tests were not run.
-- The default fast suite still runs only `test-objective-first-task-semantics.sh`, and `tests/claude-code/README.md` documents the archived `subagent-driven-development` scripts as manual-only coverage.
-- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` reported that all generated project agent files are up to date.
-- `tests/claude-code/test-objective-first-task-semantics.sh` still checks the three intended behaviors: scope contract, omitted within-task validation, and reviewer pushback on mechanical step-following.
-- `tests/claude-code/test-helpers.sh` still provides the portable `run_with_timeout` wrapper and argv-safe `run_claude` helper that the fast suite uses on this macOS environment.
+## Reproducibility
 
-### Notes
-- Phase C did not rerun the earlier manual Claude session recorded during implementation; the permanent record will keep only the file-backed and freshly rerun verification claims.
-- The supported local-development path remains `cd tests/claude-code && ./run-skill-tests.sh`.
+Reproduce from commit `5be602f` on branch `superRA-task-step-refinment`:
+
+1. Run `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check`.
+2. Run `cd tests/claude-code && ./run-skill-tests.sh`.
+3. Compare the outputs to [docs/plans/attachments/2026-04-22-codex-agent-parity-check.txt](docs/plans/attachments/2026-04-22-codex-agent-parity-check.txt) and [docs/plans/attachments/2026-04-22-objective-first-smoke-test.txt](docs/plans/attachments/2026-04-22-objective-first-smoke-test.txt).
