@@ -24,9 +24,10 @@ Phase C — Docs  ───┘   integration reviewer triggers a new round)
 Phase D — Final merge / PR / cleanup
                    ↑
          Anywhere ─┴─→  `planning-workflow §User Feedback and Changing Plans`
-                        (substantive restructure: task add/remove/combine,
-                         DAG flip, APPROVED invalidation; orchestrator
-                         proposes, researcher decides)
+                        (substantive restructure: task add/remove/combine/split,
+                         task-boundary changes to the heading / `Script` /
+                         `Input` / `Output`, DAG flip, APPROVED invalidation;
+                         orchestrator proposes, researcher decides)
 ```
 
 **Autonomy** — full contract: `superRA:using-superra/references/main-agent.md`. Legitimate stop points in this workflow:
@@ -84,7 +85,7 @@ Drift tests guard key results from unintended changes during Phase B refactoring
 
 **Integration base.** Phase B integrates the analysis branch against a researcher-specified base — `<base-branch>` in every reference below. `origin/main` is the typical default; override is expected when the analysis branched off a release, a co-authored track, or another analysis's sibling branch.
 
-The integration reviewer drives the loop. It walks both the branch diff and the base-branch-side changes, writes per-task annotations in PLAN.md, and writes or updates a `## Integration Intent` section when material incoming changes need adaptation (see `superRA:handoff-doc` `references/plan-anatomy.md` §Integration Intent for the section's anatomy and ownership rules). The orchestrator adjudicates findings, batches user decisions, then dispatches implementer(s) to fix, and re-dispatches the reviewer. Repeat until every in-scope task is APPROVED.
+The integration reviewer drives the loop. It walks both the branch diff and the base-branch-side changes, writes per-task annotations in PLAN.md, and writes or updates a `## Integration Intent` section when material incoming changes need adaptation (see `superRA:handoff-doc` `references/plan-anatomy.md` §Integration Intent for the section's anatomy and ownership rules). The orchestrator adjudicates findings, batches user decisions, then dispatches implementer(s) to fix, and re-dispatches the reviewer. Repeat until every in-scope task is APPROVED. Phase B may reveal that a different task shape would integrate the work better; reviewers and refactors should aim for that, but any task-level change still routes through `planning-workflow §User Feedback and Changing Plans` under user discretion.
 
 ### Step 0: Resolve and confirm the integration base
 
@@ -128,8 +129,14 @@ Agent(subagent_type: "superRA:reviewer"):
     append a per-task integration review-notes blockquote with
     [BLOCKING] / [ADVISORY] items. Tasks needing no changes get
     no annotation; flip each annotated task to
-    `Integration status: REVISE` in the same review commit. When
-    the diff to walk is large (see `agent-orchestration`
+    `Integration status: REVISE` in the same review commit. If
+    a finding implies task add/remove/combine/split or a change to
+    the task heading / `Script` / `Input` / `Output`, do not rewrite
+    the task boundary yourself — record that recommendation in the
+    task's review-notes blockquote and mention it in your report so
+    the orchestrator can decide whether to route it through
+    `planning-workflow` §User Feedback and Changing Plans.
+    When the diff to walk is large (see `agent-orchestration`
     §Workload Balancing)
     <prior-round adjudication notes if re-dispatching>.
 ```
@@ -139,7 +146,7 @@ Agent(subagent_type: "superRA:reviewer"):
 Read PLAN.md (Integration Intent section + per-task annotations). Two branching points:
 
 - **Zero annotated tasks** — no refactor needed. If the base-branch-side scan also found nothing material, Phase B terminates: execute `git merge --ff-only <base-branch>` (or skip if `git merge-base --is-ancestor origin/<base-branch> HEAD`), note in §Decisions, proceed to Phase C.
-- **Annotated tasks exist** — collect every research-meaningful item from the per-task blockquotes. Batch into a single `AskUserQuestion` (plain text if unavailable) — one stop point, not N interruptions. If findings imply a substantive restructure (task add/remove/combine, DAG flip), escalate to `planning-workflow §User Feedback and Changing Plans` instead. Otherwise log each answer per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching implementer(s).
+- **Annotated tasks exist** — collect every research-meaningful item from the per-task blockquotes. Batch into a single `AskUserQuestion` (plain text if unavailable) — one stop point, not N interruptions. If findings imply a substantive restructure (task add/remove/combine/split, DAG flip, or a task-boundary change to the heading / `Script` / `Input` / `Output`), escalate to `planning-workflow §User Feedback and Changing Plans` instead of handling it inline in Phase B. Otherwise log each answer per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching implementer(s).
 
 ### Step 3: Fix-review loop
 

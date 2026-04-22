@@ -43,6 +43,10 @@ These principles are domain-agnostic. They shape every workflow skill and apply 
 
 The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. Challenges to methodology are escalated to the human partner, never decided unilaterally. This applies to every domain vertical.
 
+### Task semantics (cross-cutting)
+
+- **Task heading = objective; steps = suggested route.** The task heading names what must be achieved, and `Script` / `Input` / `Output` usually define the current working task boundary. Planner-authored steps are optional starter guidance, not a literal script: implementers and refactors adapt the within-task route as the work becomes clearer, reviewers judge objective completion plus required checks, and if execution or integration shows the task boundary itself should change, that recommendation routes through `planning-workflow §User Feedback and Changing Plans` under user discretion. Canonical task-block mechanics live in `skills/handoff-doc/references/plan-anatomy.md`.
+
 ### Architectural pattern
 
 - **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. The Skill-Load Manifest in `superRA:using-superra` is the authoritative map from `Stage:` value to required skills + stage-scoped references; `agents/implementer.md` / `agents/reviewer.md` carry one-line pointers at it.
@@ -53,7 +57,7 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
 
 - **Activate `skill-creator` when editing skills.** Any agent modifying a `skills/*/SKILL.md` should have `skill-creator` (or an equivalent skill-authoring skill) loaded, alongside the superRA workflow skills. Skill writing has its own discipline (description triggers, frontmatter shape, references-one-level-deep) and this is where that discipline lives.
 - **Prefer positive instructions over negative ones.** Tell the agent what to do, not what to avoid. Example: write "Describe the data before transforming it" rather than "Don't transform data without describing it first." Positive instructions are easier to follow and easier to verify.
-- **Give the minimum instruction needed — skip the design reasoning.** Agents need to know *what* to do; the *why* belongs in commit messages and contributor docs, not in skill bodies. Include rationale only when it meaningfully helps the agent execute better.
+- **Give the minimum instruction needed — skip the design reasoning.** Agents need to know *what* to do; the *why* belongs in commit messages and contributor docs, not in skill bodies. Include rationale only when it meaningfully helps the agent execute better. Prefer short principles that let the workflow adapt case by case over long contingency trees.
 
   Avoid this anti-pattern:
 

@@ -30,11 +30,11 @@ Together with `PLAN.md`, Stage 1 `RESULTS.md` forms a complete handoff: context 
 At planning time, `RESULTS.md` is created with **one stub per PLAN.md task block**, in the same order and with the same task name:
 
 ```markdown
-## Task 1: [Phase name as in PLAN.md]
+## Task 1: [Objective-style task title as in PLAN.md]
 
 **Status:** Not started
 
-## Task 2: [Phase name as in PLAN.md]
+## Task 2: [Objective-style task title as in PLAN.md]
 
 **Status:** Not started
 
@@ -46,7 +46,7 @@ During execution, the implementer replaces its task's stub with the per-task sec
 ## Per-task section (executed)
 
 ```markdown
-## Task N: [Phase Name]
+## Task N: [Objective-style task title]
 
 **Status:** Completed (Task N approved YYYY-MM-DD)
 

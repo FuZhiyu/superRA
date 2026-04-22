@@ -11,6 +11,11 @@
 - **Hook test suites.** Per-hook stdin-synthesis drivers (16 vectors each, 48 total) under `tests/hooks/test-{autoload-superra,ensure-using-superra,ensure-agent-orchestration}.sh` covering happy path, suppression after companion-load, trigger-boundary cases, JSON-special characters, fail-open on missing transcript, and deny-reason JSON round-trip. A CLI-driven end-to-end driver (`tests/hooks/test-e2e-cli.sh`, 6 scenarios) validates registration + wiring against the live `claude` CLI on Haiku for ~$0.27 per run.
 - **README §Hooks** table extended to list all six registered hooks.
 
+### Changed
+
+- **Objective-first task semantics across the workflow stack.** Task headings plus `Script` / `Input` / `Output` are now explicitly the scope contract, while planner-authored steps are starter guidance that implementers may rewrite inside that boundary when diagnostics, validation, or robustness work is needed. Reviewer and integration guidance now judge objective completion and necessary checks first, while whole-task add / remove / combine / split still routes through `planning-workflow §User Feedback and Changing Plans`.
+- **Adaptive planning principles tightened.** Plans now default to objective-defined tasks with optional step guidance, exact-code plan steps are no longer the default style, and handoff docs remain the auditable record: durable current state and open concerns live in `PLAN.md` / `RESULTS.md`, while status reports add rationale and summaries after the docs are updated.
+
 ### Fixed
 
 - **Version drift across plugin manifests.** `package.json` (0.0.5), `.claude-plugin/plugin.json` (0.1.0), `.cursor-plugin/plugin.json` (0.0.3), `.claude-plugin/marketplace.json` (0.1.0), and `gemini-extension.json` (5.0.7 — leftover upstream Superpowers tag) are now all in sync at 0.1.1 via `scripts/bump-version.sh`.

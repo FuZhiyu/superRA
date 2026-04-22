@@ -11,7 +11,7 @@ description: "Requires `superRA:using-superra` loaded first. Use when starting a
 
 Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the implementation-workflow to consume.
 
-Write comprehensive plans for a reader skilled at the craft but with zero context for this specific project — which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Frequent commits.
+Write comprehensive plans for a reader skilled at the craft but with zero context for this specific project. Break the work into objective-defined tasks first: which files are in play, what inputs each task reads, what outputs it must produce, and what results matter. Task scope is carried by the task heading plus `Script` / `Input` / `Output`; steps are optional suggested route notes inside that scope, not an exhaustive script. Frequent commits.
 
 **Announce at start:** "I'm using the planning-workflow skill to create the project plan."
 
@@ -63,13 +63,13 @@ The pipeline file must:
 
 ### Step Granularity
 
-**Each step is one logical unit of work with full discipline applied.** For data analysis, that discipline is the three concurrent disciplines describe-analyze-validate (see `superRA:econ-data-analysis` main body). Documentation is written continuously alongside the three, not as a separate step. Typical step shapes:
+**Task decomposition comes first; step detail is optional.** Define tasks by binding objective and scope. Add steps only when they give a genuinely useful starting route. If the route is still exploratory, omit the step section rather than inventing fake detail. When you do include steps, each step is one logical unit of work with full discipline applied, and the list should be light enough to guide without pretending to script every in-task diagnostic, validation branch, or robustness check. Typical step shapes:
 
 - "Describe the raw holdings data (panel structure, key variables, missing values)" — step
 - "Merge holdings with fund characteristics (left join on fund_id × date)" — step
 - "Validate merge result (row counts, check unmatched, spot-check merged variables), commit" — step
 
-For other verticals, the operational cycle looks different (e.g., derivation → verification → proof-check for theory work), but the granularity rule is the same: one logical operation per step, with the cycle completed in-step.
+For other verticals, the operational cycle looks different (e.g., derivation → verification → proof-check for theory work), but the principle is the same: steps, when present, are lightweight route guidance inside an objective-defined task. Implementers are expected to refine, reorder, add, or remove steps within the task's existing scope when the work reveals a better route.
 
 ### Task Dependencies
 
@@ -86,7 +86,7 @@ Each task block declares a `**Depends on:**` line (upstream task numbers, or `*(
 
 For the canonical `PLAN.md` template — required header (objective, methodology, domain-specific sections, output, expected results, pipeline) plus task block structure with the domain's step cycle and a worked example — load `superRA:handoff-doc` and read `references/plan-anatomy.md`. Domain-specific header sections (e.g., the Data Inventory section for data analysis) come from the domain skill's planning reference.
 
-Required header fields and task block structure are non-negotiable. The template's example code is illustrative — adapt the content to your domain and methodology, but preserve the step-cycle rhythm the domain prescribes.
+Required header fields and task block structure are non-negotiable. The template's worked examples are illustrative — adapt the content to your domain and methodology. Do not bulk up the plan with exact code or pseudo-certainty just to look complete; a clean objective-defined task with no step list is better than a fake script.
 
 ## Living Plan and Results Docs
 
@@ -100,7 +100,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 ### PLAN.md Is the Task Tracker
 
-**`PLAN.md` is the primary task tracker** — not `Todo` tools, not chat, not status reports, not a session-internal scratchpad. The task blocks with their `- [ ]` / `- [x]` checkbox steps and `**Review status:**` lines are the authoritative state of what is planned, what is in progress, and what is done. Persistence across sessions, agent handoffs, and harness boundaries depends on this being true.
+**`PLAN.md` is the primary task tracker** — not `Todo` tools, not chat, not status reports, not a session-internal scratchpad. The task blocks and their status lines are the authoritative state of what is planned, what is in progress, and what is done. Step checkboxes, when present, show the current route inside a task; they are not the task contract on their own. Persistence across sessions, agent handoffs, and harness boundaries depends on this being true.
 
 `TodoWrite` (or any equivalent harness-provided todo UI) has a narrower role: a transient view of *what the agent is doing right now in this session*. It is acceptable for ephemeral session-internal todos that do not represent analysis tasks (e.g., "read three reference files, then summarize for the user", "fix three lint errors before re-running the test"). It is **not** acceptable as a substitute for a PLAN.md task block. If the work is part of the analysis — a new task, a discovered subtask, a methodology check, a sensitivity run, a refactor pass — it lives in `PLAN.md` first, then optionally mirrors into `TodoWrite` as a working view.
 
@@ -128,11 +128,11 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 - Changing the analysis-level objective, methodology, sample definition, or expected output.
 - Changing data sources or project-wide conventions.
 - Scope additions arriving after integration or merge (post-PR additions, adjacent features surfaced by reviewers, follow-on ideas).
-- Substantive restructure findings surfaced mid-INTEGRATE (by `integration-workflow` Phase B integration reviewer, Phase C doc-reviewer, or Phase D semantic-merge) — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
+- Substantive restructure findings surfaced mid-INTEGRATE (by `integration-workflow` Phase B integration reviewer, Phase C doc-reviewer, or Phase D semantic-merge) — task add/remove/combine/split, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
 
 **Not material (handle as inline discovery edits per the Living Plan section above):**
 
-- Rewording a step within an in-flight task to match what the data forced.
+- Rewording a step within an in-flight task to match what the work forced, including adding, reordering, or dropping in-scope diagnostics / validation / robustness work.
 - Adjusting expected results based on early findings.
 - Refining methodology details that the researcher already approved at planning time.
 
@@ -164,9 +164,9 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 ## Remember
 
 - Exact file paths always
-- Complete content in every step
+- Objective-defined tasks first; steps only when they genuinely help
 - For data analysis, row counts logged for every sample-changing operation
-- Domain-appropriate discipline (for data: describe → analyze → validate at each step, with commit bundled into the validate step; documentation written continuously — see `superRA:econ-data-analysis`)
+- Domain-appropriate discipline (for data: describe → analyze → validate inside the task's current route; documentation written continuously — see `superRA:econ-data-analysis`)
 - Pipeline file for multi-artifact work
 
 ## Self-Review
@@ -175,17 +175,17 @@ After writing the complete plan:
 
 **1. Domain inventory coverage (where applicable):** For data analysis, can you point to a task that handles each dataset from the Data Inventory section?
 
-**2. Placeholder scan:** Search for the red flags listed in the "No Placeholders" section. Fix them.
+**2. Fake-specificity scan:** Search for the red flags listed in the "No Fake Specificity" section. Fix them. If a step only pretends to know the route, simplify it or remove it.
 
 **3. Pipeline consistency:** Do the artifact names in the pipeline file match the artifacts created in each task? Are they in the right order?
 
-**4. Validation coverage:** Does every transformative step have a corresponding validation step? (For data: every merge, filter, and variable construction.)
+**4. Validation coverage:** Where you included steps, do they point at the important transformations and checks without pretending to enumerate every branch? (For data: merges, filters, and variable construction still need clear validation expectations.)
 
 **5. Plan serves as handoff:** If you stopped here and a new agent read only this plan and `RESULTS.md`, could they continue? Is there enough context?
 
 **6. Sensitivity / robustness coverage (where applicable):** For data analysis, are sensitivity analysis tasks included? Were they discussed with the researcher to determine which checks matter most?
 
-**7. Dependency graph sanity:** Every task has a `**Depends on:**` line. No cycles. If the plan has ≥2 independent branches, at least one pair of tasks is marked parallelizable.
+**7. Dependency graph sanity:** Every task has a `**Depends on:**` line. No cycles. If the plan has ≥2 independent branches, that should already be obvious from the dependency lines alone; remove fake dependencies that hide parallel work.
 
 Fix issues inline. No need to re-review — just fix and move on.
 

@@ -5,6 +5,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
+source "$SCRIPT_DIR/test-helpers.sh"
 
 echo "========================================"
 echo " Claude Code Skills Test Suite"
@@ -53,14 +54,18 @@ while [[ $# -gt 0 ]]; do
             echo "  --verbose, -v        Show verbose output"
             echo "  --test, -t NAME      Run only the specified test"
             echo "  --timeout SECONDS    Set timeout per test (default: 300)"
-            echo "  --integration, -i    Run integration tests (slow, 10-30 min)"
+            echo "  --integration, -i    Run legacy integration tests (slow, pre-superRA coverage)"
             echo "  --help, -h           Show this help"
             echo ""
-            echo "Tests:"
-            echo "  test-subagent-driven-development.sh  Test skill loading and requirements"
+            echo "Fast Tests (run by default):"
+            echo "  test-adaptive-planning-principles.sh  Planning stays objective-first without fake specificity"
+            echo "  test-doc-before-report-task-shape.sh  Durable task-shape concerns go in PLAN.md before the report"
+            echo "  test-objective-first-task-semantics.sh  Current superRA objective-first smoke test"
+            echo "  test-integration-task-shape-escalation.sh  Integration recommends task-shape changes upward"
             echo ""
-            echo "Integration Tests (use --integration):"
-            echo "  test-subagent-driven-development-integration.sh  Full workflow execution"
+            echo "Legacy Manual Tests (not run by default):"
+            echo "  test-subagent-driven-development.sh  Historical pre-superRA skill smoke test"
+            echo "  test-subagent-driven-development-integration.sh  Historical pre-superRA workflow integration test"
             exit 0
             ;;
         *)
@@ -73,10 +78,13 @@ done
 
 # List of skill tests to run (fast unit tests)
 tests=(
-    "test-subagent-driven-development.sh"
+    "test-adaptive-planning-principles.sh"
+    "test-doc-before-report-task-shape.sh"
+    "test-objective-first-task-semantics.sh"
+    "test-integration-task-shape-escalation.sh"
 )
 
-# Integration tests (slow, full execution)
+# Legacy integration tests (slow, historical pre-superRA coverage)
 integration_tests=(
     "test-subagent-driven-development-integration.sh"
 )
@@ -118,7 +126,7 @@ for test in "${tests[@]}"; do
     start_time=$(date +%s)
 
     if [ "$VERBOSE" = true ]; then
-        if timeout "$TIMEOUT" bash "$test_path"; then
+        if run_with_timeout "$TIMEOUT" bash "$test_path"; then
             end_time=$(date +%s)
             duration=$((end_time - start_time))
             echo ""
@@ -138,7 +146,7 @@ for test in "${tests[@]}"; do
         fi
     else
         # Capture output for non-verbose mode
-        if output=$(timeout "$TIMEOUT" bash "$test_path" 2>&1); then
+        if output=$(run_with_timeout "$TIMEOUT" bash "$test_path" 2>&1); then
             end_time=$(date +%s)
             duration=$((end_time - start_time))
             echo "  [PASS] (${duration}s)"
@@ -173,8 +181,8 @@ echo "  Skipped: $skipped"
 echo ""
 
 if [ "$RUN_INTEGRATION" = false ] && [ ${#integration_tests[@]} -gt 0 ]; then
-    echo "Note: Integration tests were not run (they take 10-30 minutes)."
-    echo "Use --integration flag to run full workflow execution tests."
+    echo "Note: Legacy integration tests were not run."
+    echo "Use --integration only for the archived pre-superRA workflow coverage."
     echo ""
 fi
 
