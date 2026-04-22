@@ -57,11 +57,6 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 > **Question asked:** What should happen after the plan is approved and execution is complete?
 > **Rationale (if given):** Carry the branch through the superRA implementation-workflow and integration-workflow rather than stopping at the execution checkpoint.
 
-## Integration Intent
-
-> **Main-side change (2026-04-22):** `origin/main` added a root `RELEASE-NOTES.md`, synced plugin-manifest versions to `0.1.1`, and expanded `README.md §Hooks` while moving the autoload-hooks handoff docs into `docs/plans/`. Affects Tasks 3 and 4 because this branch changes workflow semantics and Claude Code test/docs surfaces that now need to fit the new release/documentation layer.
-> **Adaptation needed:** Rebase any public-doc edits on top of the current README/Hooks and release-note surfaces from `origin/main`, and add release-note coverage for the objective-first workflow change before the branch is merge-ready.
-
 ### Task 1: Canonicalize objective-first task-block semantics
 **Depends on:** *(none)*
 **Review status:** APPROVED
@@ -92,7 +87,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/integration-workflow/SKILL.md`, and `skills/econ-data-analysis/SKILL.md`.
@@ -104,14 +99,10 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 4: Edit `econ-data-analysis/SKILL.md`.** Added the narrow implementation-standard reinforcement that evidence-driven diagnostics, validation passes, or within-task robustness checks must be added when needed and reflected in the rewritten step text.
 - [x] **Step 5: Run a stale-language sweep and merged-tree project-doc audit.** Re-read the touched workflow/domain files plus the merged root release/documentation surfaces with targeted `rg` and `git diff` checks, tightened the remaining contradictory literal-adherence wording, aligned the mid-INTEGRATE restructure example in `planning-workflow` with whole-task combine/split routing, added `RELEASE-NOTES.md` coverage for the objective-first semantics change, and confirmed no further root `README.md` or `CLAUDE.md` updates were needed on top of `origin/main`.
 
-> **Integration review (2026-04-22):**
-> 1. **[BLOCKING]** `CLAUDE.md:48` — `origin/main` now carries a root `RELEASE-NOTES.md` and treats it as the release ledger for user-facing plugin changes. This task changes workflow semantics across contributor docs, agent contracts, and workflow skills, but the branch has no adaptation for that new surface yet. Rebase onto current `origin/main`, add a release-note entry covering the objective-first task/step semantics change (and any shipped user-visible consequences), then re-run the project-doc audit on the merged tree.
->    → implemented: added a `0.1.1` release-note entry for the objective-first scope/step contract and re-audited merged root docs (`RELEASE-NOTES.md:16`)
-
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** The cumulative diff from Tasks 1-3, `tests/claude-code/run-skill-tests.sh`, `tests/claude-code/test-helpers.sh`, the existing Claude Code tests, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -123,9 +114,3 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 4: Re-run generated-agent verification.** Ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` and confirmed the tracked `.codex/agents/*.toml` files are still up to date with no manual drift.
 - [x] **Step 5: Run one manual Claude Code validation session.** Used a temporary toy `PLAN.md` / `RESULTS.md` pair with an omitted within-task merge check and confirmed that Claude rewrote the step list to add describe-before-merge and key-uniqueness checks, returned `REVISE` for a reviewer if the check were skipped, and routed any genuine whole-task split recommendation through `planning-workflow §User Feedback and Changing Plans`.
 - [x] **Step 6: Sweep the final diff and record verification.** Re-read the owned diff for Task 4 scope, confirmed no manual edits were made to generated agent files, ran `./run-skill-tests.sh` from `tests/claude-code` to verify the documented default fast path now passes on the merged tree, and recorded the focused test result, the consistency sweep, the generated-agent check, the manual validation outcome, and the legacy-suite disposition in `RESULTS.md`.
-
-> **Integration review (2026-04-22):**
-> 1. **[BLOCKING]** `tests/claude-code/README.md:3` — this touched module README still says the suite is for "superpowers" and requires a local superpowers plugin install. The project-doc audit for a modified README should have updated the stale product/plugin naming to `superRA`.
->    → implemented: rewrote the module README to use superRA naming and repo-local test guidance, with legacy tests marked manual-only (`tests/claude-code/README.md:3`)
-> 2. **[BLOCKING]** `tests/claude-code/README.md:16` and `tests/claude-code/run-skill-tests.sh:77` — the module README still presents `./run-skill-tests.sh` as the recommended fast check, but I verified that command exits 1 because `test-subagent-driven-development.sh` targets a nonexistent `subagent-driven-development` skill. Either remove that legacy test from the default fast suite until its fixture is brought back into sync, or update the README/help text so the recommended path is no longer the known-red command.
->    → implemented: removed `test-subagent-driven-development.sh` from the default fast suite, documented the legacy/manual-only split, and verified `./run-skill-tests.sh` passes (`tests/claude-code/run-skill-tests.sh:77`)
