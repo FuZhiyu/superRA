@@ -77,31 +77,31 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 1: Create the `theory-modeling` domain skill and its stage-scoped references
 **Depends on:** *(none)*
-**Review status:** *(set during execution — not filled at planning time)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration — not filled at planning time)*
 
 **Script:** `skills/theory-modeling/SKILL.md`, `skills/theory-modeling/references/*.md`
 **Input:** Existing domain-skill pattern in `skills/econ-data-analysis/` plus the approved v1 requirements in this plan’s Decisions section
 **Output:** New `theory-modeling` skill directory with a main checklist and the planning / drift-test / integration references
 
-- [ ] Draft `SKILL.md` with trigger language, stage-scoped references, a short iron-law equivalent, and a shared `Define–Derive–Validate` checklist using `[BLOCKING]` / `[ADVISORY]`.
-- [ ] Draft `references/planning.md` with the `Model Inventory / Assumption Map` hard gate and the result-verification planning rules.
-- [ ] Draft `references/integrate-drift-tests.md` and `references/integration.md` so integration has modeling-specific guardrails for symbolic identities, comparative statics, and simple numerical checks.
-- [ ] Sanity-read the new vertical for internal consistency, then update `RESULTS.md` Task 1 with the new checklist and any open caveats.
+- [x] Draft `SKILL.md` with trigger language, stage-scoped references, a short iron-law equivalent, and a shared `Define–Derive–Validate` checklist using `[BLOCKING]` / `[ADVISORY]`.
+- [x] Draft `references/planning.md` with the `Model Inventory / Assumption Map` hard gate and the result-verification planning rules.
+- [x] Draft `references/integrate-drift-tests.md` and `references/integration.md` so integration has modeling-specific guardrails for symbolic identities, comparative statics, and simple numerical checks.
+- [x] Sanity-read the new vertical for internal consistency, then update `RESULTS.md` Task 1 with the new checklist and any open caveats.
 
 ### Task 2: Wire the new vertical into runtime surfaces, docs, and discovery
 **Depends on:** *(none)*
-**Review status:** *(set during execution — not filled at planning time)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration — not filled at planning time)*
 
 **Script:** Existing workflow/docs/hook/test files named in the Implementation Inventory, plus `.agents/skills/theory-modeling`
 **Input:** The approved skill name, the new file layout from Task 1, and the current runtime/docs wording in the repo
 **Output:** Updated manifest/routing/docs/hook/test surfaces that expose `theory-modeling` as an implemented vertical and remove the remaining single-vertical assumptions that would block it
 
-- [ ] Update `skills/using-superRA/SKILL.md`, `skills/planning-workflow/SKILL.md`, and `skills/refactor-and-integrate/SKILL.md` so the new vertical loads at planning, drift-test, and integration time.
-- [ ] Generalize `skills/handoff-doc/references/plan-anatomy.md` and `hooks/exit-plan-mode` so planning guidance and reminders support both data-analysis and theory-modeling hard gates.
-- [ ] Update `README.md`, `skills/CATEGORIES.md`, and `CLAUDE.md` so the vertical is documented as implemented rather than roadmap-only.
-- [ ] Add `.agents/skills/theory-modeling` and extend `tests/check-harness-compatibility.sh` with the new discovery/wiring assertions.
+- [x] Update `skills/using-superRA/SKILL.md`, `skills/planning-workflow/SKILL.md`, and `skills/refactor-and-integrate/SKILL.md` so the new vertical loads at planning, drift-test, and integration time.
+- [x] Generalize `skills/handoff-doc/references/plan-anatomy.md` and `hooks/exit-plan-mode` so planning guidance and reminders support both data-analysis and theory-modeling hard gates.
+- [x] Update `README.md`, `skills/CATEGORIES.md`, and `CLAUDE.md` so the vertical is documented as implemented rather than roadmap-only.
+- [x] Add `.agents/skills/theory-modeling` and extend `tests/check-harness-compatibility.sh` with the new discovery/wiring assertions.
 
 ### Task 3: Verify the new vertical end to end and reconcile any drift
 **Depends on:** Task 1, Task 2

@@ -43,6 +43,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Workflow | `integration-workflow` | INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
+| Domain | `theory-modeling` | Theory/modeling vertical: define-derive-validate, notation and assumption discipline, proof and numerical verification. |
 | Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Phase C doc-writer); usable standalone by a single author. |
 | Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
@@ -83,8 +84,9 @@ If the task/topic matches a row below, load the listed skill **in addition to** 
 | If the task involves… | Also load |
 |---|---|
 | Economic / financial / panel data analysis — importing, cleaning, merging, filtering, constructing variables, summary stats, regressions (CRSP, Compustat, WRDS, etc.) | `superRA:econ-data-analysis` |
+| Theoretical / mathematical modeling — derivations, equilibrium setup, symbolic manipulation, proofs, comparative statics, or simple numerical verification of derived formulas | `superRA:theory-modeling` |
 
-Add a new row when introducing a vertical (theory, literature review, simulation, writing). Keep the generic table untouched — only the add-on table grows.
+Add a new row when introducing a vertical (literature review, simulation, writing). Keep the generic table untouched — only the add-on table grows.
 
 **Main agents additionally load** `references/main-agent.md`, `superRA:handoff-doc`, and `superRA:agent-orchestration` before dispatching subagents or touching PLAN.md. Subagents skip these — they inherit context from their dispatch.
 
