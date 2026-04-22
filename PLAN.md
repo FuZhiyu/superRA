@@ -244,11 +244,12 @@ Hooks are **extensionless bash scripts** at `hooks/<name>` (so Windows auto-dete
 - [x] Commit as `hooks: register ensure-using-superra and ensure-agent-orchestration PreToolUse gates`.
 
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 > **Integration review (2026-04-21):**
 >
 > 1. `[BLOCKING]` **`README.md §Hooks` table is stale post-merge.** README lines 94–98 list only `merge-guard`, `ask-user-question-logger`, and `exit-plan-mode`. After this branch merges, the codebase will register six hooks (the three above plus `autoload-superra`, `ensure-using-superra`, `ensure-agent-orchestration`), all three of which are user-visible behaviors a reader of the README needs to know about. Per `codebase-integration.md` §Documentation currency ("No stale output lists: every output file mentioned in documentation is actually produced by the current code"), the table must be extended to list all six hooks before merge. Suggested rows: **autoload-superra** (`UserPromptSubmit`, "Inject a reminder to load `superRA:using-superRA` when the prompt mentions a superRA term and the master skill has not yet loaded this session"); **ensure-using-superra** (`PreToolUse:Skill` on `superRA:*-workflow`, "Hard-deny workflow-skill calls when `superRA:using-superRA` is not yet loaded; reason instructs Claude to load it and retry"); **ensure-agent-orchestration** (`PreToolUse:Skill` on `superRA:*-workflow`, "Same pattern, gating on `superRA:agent-orchestration`"). Fix in `README.md` only; no code change.
+>    → implemented: appended three rows to `README.md` §Hooks (lines 99–101) using the suggested wording; no other README sections changed.
 >
 > Other audits passed:
 > - **Upstream semantic interaction:** `tests/check-harness-compatibility.sh` makes no assertion about the registered hook set; the Codex `.codex-plugin/plugin.json` declares `capabilities: ["skills"]` only (no Codex hook surface to conflict with); `skills/codex-superra-setup/` introduces no hook-loading machinery; the existing `hooks/run-hook.cmd` wrapper and `hooks/hooks-cursor.json` enumeration absorb the three new hooks via the same name-based dispatch already used by `merge-guard` etc. No upstream rename touched the `superRA:planning-workflow` / `superRA:implementation-workflow` / `superRA:integration-workflow` allow-list or the `superRA:using-superRA` / `superRA:agent-orchestration` companion names that the hooks grep for (`skills/agent-orchestration/`, `skills/implementation-workflow/`, `skills/integration-workflow/` are unchanged on origin/main vs `df806fc`; the upstream `using-superRA/SKILL.md` and `planning-workflow/SKILL.md` description-only edits do not affect skill names).
