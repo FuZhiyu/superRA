@@ -82,15 +82,16 @@
 Walked at planning time (2026-04-19). Re-walk on-demand only.
 
 ### Repo root
-- `/CLAUDE.md` (HEAD at b58c3fc): superRA contributor guidelines. Four load-bearing workflow principles (implementer–reviewer pair at every step, handoff docs are the auditable record, fast-early-strict-before-merge + semantic merges, autonomous with human in the loop); RA-framing; lean-agents-rich-references architectural pattern; DRY / composability / extensibility rules; roadmap for new verticals; §Skill Changes requires real-session testing and warns against editing tuned content (Red Flags tables, rationalization lists, severity protocols) on stylistic preference.
+- `/CLAUDE.md` (HEAD at 656e974): contributor guidelines now include the current `implementation-workflow` naming, the standalone-writing vertical as implemented (not future), and a dedicated Codex-design section covering canonical instructions in `skills/` / `agents/`, harness-adapter references, `.agents/skills/` / `.codex-plugin/` packaging, and generated Codex agents via `codex-superra-setup`. Skill edits still require real-session testing and preserving tuned Red Flags / rationalization / severity content.
 - `/AGENTS.md`: symlink to `/CLAUDE.md`.
 - `/GEMINI.md`: mirror of `/CLAUDE.md` for Gemini harness.
-- `/README.md` (HEAD at b58c3fc): plugin overview + skill inventory table. Lists Workflow / Domain / Utility / Meta categories and which skills belong to each.
+- `/README.md` (HEAD at 656e974): user-facing overview now reflects `implementation-workflow`, the writing vertical as implemented, current Claude Code and Codex installation flows, the Codex agent-setup split (`codex-superra-setup`), and the current hook inventory (`autoload-superra`, `ensure-using-superra`, `ensure-agent-orchestration`, plus merge / question / plan guards).
 
 ### Module-level docs to walk on demand
 - `skills/CATEGORIES.md` — authoritative skill categorization; writing skill must be added to the Domain section.
 - `skills/econ-data-analysis/SKILL.md` + `skills/econ-data-analysis/references/*` — architectural template for the writing skill.
 - `skills/using-superRA/SKILL.md` + `references/main-agent.md` — Skill Inventory and Skill-Load Manifest must be extended.
+- `docs/README.codex.md` — Codex-specific plugin and custom-agent install/update notes; read when touching `.codex-plugin/`, `.agents/skills/`, or Codex-facing docs.
 - `skills/handoff-doc/` — PLAN.md + RESULTS.md editing discipline (already loaded for this plan).
 - `skills/planning-workflow/SKILL.md` — vertical routing table needs a writing row.
 - `skills/integration-workflow/SKILL.md` + `skills/merge-workflow/SKILL.md` — needs a writing branch (build + outline-stability gate in place of drift tests).
