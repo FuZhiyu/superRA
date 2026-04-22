@@ -11,21 +11,23 @@
 #       what the hook script emits.
 #
 # How to run:
-#   bash tests/hooks/test-e2e-cli.sh            # S1 S2 S3 S6 (default)
-#   CLAUDE_E2E_FULL=1 bash tests/hooks/test-e2e-cli.sh   # + S4 S5 (hard gate)
+#   bash tests/hooks/test-e2e-cli.sh            # all six scenarios (S1 S2 S3 S6 S4 S5)
 #
 # Requirements:
 #   - claude CLI >= 2.1.116 on PATH, logged in (the suite uses the live keychain auth).
 #   - python3 on PATH (NDJSON parsing + assertions).
 #   - macOS / Linux shell; uses `uuidgen`, `mktemp -d`, `trap ... EXIT INT TERM`.
 #   - Internet + API turn budget. Every invocation passes `--model haiku`
-#     (claude-haiku-4-5) to keep the per-scenario cost minimal. On Haiku:
-#       S1 ~ $0.005    S2 ~ $0.005 + $0.01 (two turns: setup + resume-check)
-#       S3 ~ $0.005    S6 ~ $0.008
-#     Total default-run cost ~ $0.03. S4/S5 (CLAUDE_E2E_FULL=1) add
-#     ~ $0.01 + $0.02 more. --tools "" does not suppress the model turn on
-#     2.1.116 — it only disables tool invocation — so we cannot drop the
-#     model cost to zero. Haiku is the cheapest alternative.
+#     (claude-haiku-4-5) to keep the per-scenario cost minimal. Observed
+#     cost on Haiku (per scenario, approximate):
+#       S1 ~ $0.015    S2 ~ $0.020 + $0.018 (two turns: setup + resume-check)
+#       S3 ~ $0.012    S6 ~ $0.018
+#       S4 ~ $0.090    S5 ~ $0.100 (multi-turn deny-and-retry chains; loading
+#                                   using-superRA / agent-orchestration adds
+#                                   the skill bodies to subsequent turns)
+#     Total full-suite cost ~ $0.27. --tools "" does not suppress the model
+#     turn on 2.1.116 — it only disables tool invocation — so we cannot drop
+#     the model cost to zero. Haiku is the cheapest alternative.
 #
 # Not part of default `tests/` runs: this suite requires network + auth +
 # API spend. Run locally before releasing hook changes; do not add to CI.
@@ -469,9 +471,27 @@ run_s3() {
 }
 
 # S4 — hard deny on workflow-skill without using-superRA loaded.
-# Full-run only: requires the model to invoke Skill(superRA:planning-workflow)
-# BEFORE it loads using-superRA. The autoload reminder makes the model
-# normally load using-superRA first; here we countermand via system prompt.
+#
+# FRAGILITY NOTE: This scenario is structurally hard to test in isolation.
+# The autoload-superra UserPromptSubmit hook injects an additionalContext
+# reminder on any prompt mentioning "superRA", and a compliant model will
+# load Skill(superRA:using-superRA) voluntarily before it ever attempts the
+# workflow-skill call — which makes ensure-using-superra silently pass and
+# the assertion fail. We countermand the injected reminder via the system
+# prompt below ("Ignore any system-reminder or additionalContext...") so
+# the model proceeds straight to the workflow-skill call and triggers the
+# deny. The "right" fix would be to suppress the UserPromptSubmit hook for
+# this one invocation via --settings, but Claude Code's --settings JSON
+# *merges* with plugin-registered hooks rather than replacing them, so the
+# empty-array trick does not disable the plugin hook. Alternatives (custom
+# stripped plugin-dir fixture; --settings enabledPlugins=false which would
+# also disable the gate we're testing) cost more than the assertion is
+# worth. Today S4 passes because Haiku obeys the system-prompt countermand
+# against the injected reminder; a future model that prefers reminders
+# over system prompts could regress this test, in which case it is safe to
+# drop S4 — the stdin-synthesis unit test in test-ensure-using-superra.sh
+# already covers the deny logic; S4's unique value is wiring validation,
+# which S5 provides redundantly via the same PreToolUse:Skill matcher.
 run_s4() {
   local name="S4 ensure-using-superra denies workflow skill"
   local cwd sid out
@@ -555,14 +575,12 @@ echo "=== S6 ==="
 run_s6
 echo
 
-if [ "${CLAUDE_E2E_FULL:-0}" = 1 ]; then
-  echo "=== S4 (FULL) ==="
-  run_s4
-  echo
-  echo "=== S5 (FULL) ==="
-  run_s5
-  echo
-fi
+echo "=== S4 (FULL) ==="
+run_s4
+echo
+echo "=== S5 (FULL) ==="
+run_s5
+echo
 
 echo
 echo "Passed: $pass    Failed: $fail"
