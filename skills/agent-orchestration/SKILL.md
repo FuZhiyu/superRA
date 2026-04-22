@@ -149,6 +149,7 @@ These are the things the orchestrator does that no subagent does. Applies at eve
 - **Adjudicate reviewer feedback in place.** See §Handling Reviewer Feedback below for the full protocol.
 - **Handle implementer status returns.** See §Handling Implementer Status below.
 - **Separate within-task adaptation from scope change.** Rewritten, reordered, added, or removed steps are valid when they stay inside the task heading plus `Script` / `Input` / `Output`; task add/remove/combine/split or any boundary change routes through `planning-workflow` §User Feedback and Changing Plans.
+- **Keep docs and reports distinct.** `PLAN.md` / `RESULTS.md` carry durable current state. Status returns carry rationale, uncertainty, and recommendations until you decide they should be promoted into the docs.
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text in place, do not annotate. Commit atomically with the commit that completes the triggering task.
 - **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck — hard blocker, methodology decision beyond RA authority, CRITICAL override, repeated reviewer disagreement. Log per `handoff-doc` §User Decisions Log **before** acting.
 
@@ -157,6 +158,8 @@ These are the things the orchestrator does that no subagent does. Applies at eve
 The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. This is the intended dynamic. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Your job between a REVISE verdict and re-dispatch is to independently evaluate each issue against that context, not to forward findings mechanically or defer to the reviewer's judgment.
 
 Start by separating **within-task route adaptation** from **scope change**. If the implementer added diagnostics, validation, or robustness work and rewrote the task steps to match while staying inside the task heading plus `Script` / `Input` / `Output`, that is normal execution drift. If the change alters those boundary fields or implies task add/remove/combine/split, stop the review loop and route it through `planning-workflow` §User Feedback and Changing Plans instead of treating it as an inline fix.
+
+Treat reviewer or implementer suggestions that the task itself should change shape as recommendations in the message layer until you decide they represent a real planning change. Once you decide they do, promote the accepted change into `PLAN.md` through the existing planning protocol rather than stacking provisional proposals into the doc.
 
 When a reviewer returns REVISE:
 
@@ -210,7 +213,7 @@ For direct mode (orchestrator executes the step itself), see `superRA:using-supe
 
 Implementers return one of four statuses in their dispatch response. Applies at every Stage (implementation, drift-test, integration, documentation).
 
-If an implementer rewrote the within-task route, expect the status return to explain why the route changed. That rationale lives in the message layer for the orchestrator and researcher; `PLAN.md` stays latest-state only and does not carry "previously / updated from" history.
+If an implementer rewrote the within-task route, expect the status return to explain why the route changed. That rationale lives in the message layer for the orchestrator and researcher; `PLAN.md` stays latest-state only and does not carry "previously / updated from" history. Promote only the durable current route into the doc, and only when it helps continuity or review.
 
 - **DONE:** Proceed to review.
 - **DONE_WITH_CONCERNS:** Read the concerns. If about input quality or unexpected findings, investigate before review. If about methodology choices, note and proceed to review.

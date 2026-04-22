@@ -77,7 +77,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed to Step 1.
 5. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources / inputs available and accessible?
    - Are the task heading and `Script` / `Input` / `Output` clear enough to judge completion?
-   - Are the steps in the right order and specific enough to serve as starter guidance, rather than pretending to script every in-task branch?
+   - If steps are present, do they serve as useful starter guidance rather than pretending to script every in-task branch? If steps are absent, is the objective still clear enough to execute?
    - Is the pipeline file included (for multi-script analyses)?
    - Does any step conflict with a project convention you found in step 4?
 6. Review RESULTS.md for context on any completed steps (if resuming).
@@ -92,7 +92,7 @@ single parallel Agent-tool batch (subject to `agent-orchestration`
 §Workload Balancing). Serialize only when no parallel batch is
 available.
 
-Judge task completion against the task's objective/scope boundary plus the relevant checklist, not against literal adherence to the planner's first wording of the steps. When an implementer rewrites, reorders, adds, or removes steps but stays inside the task heading and `Script` / `Input` / `Output`, keep the updated steps in `PLAN.md`; route only true scope changes through `planning-workflow` §User Feedback and Changing Plans.
+Judge task completion against the task's objective/scope boundary plus the relevant checklist, not against literal adherence to the planner's first wording of the steps. Steps may start sparse or omitted; what matters is that the current route becomes legible enough to review once work is underway. When an implementer rewrites, reorders, adds, or removes steps but stays inside the task heading and `Script` / `Input` / `Output`, keep the updated steps in `PLAN.md`; route only true scope changes through `planning-workflow` §User Feedback and Changing Plans.
 
 #### Task Execution Steps
 
@@ -122,7 +122,7 @@ After every task is APPROVED, verify the work end-to-end before presenting compl
    ```
    If uncommitted changes exist: investigate (probably an agent missed an inline-edit), commit, or ask the user.
 
-2. **PLAN.md up to date?** All tasks have `**Review status:** APPROVED`. All steps marked `- [x]` with result notes. No tasks stuck in `IMPLEMENTED` or `REVISE`. Discovery notes captured. Upcoming-task descriptions reflect current understanding.
+2. **PLAN.md up to date?** All tasks have `**Review status:** APPROVED`. Where steps are present, they reflect the current route and are marked consistently. No tasks stuck in `IMPLEMENTED` or `REVISE`. Discovery notes captured. Upcoming-task descriptions reflect current understanding.
 
 3. **RESULTS.md up to date?** Has findings for all completed tasks. Figure attachments in `results_attachments/` committed.
 

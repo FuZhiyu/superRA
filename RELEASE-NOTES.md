@@ -14,6 +14,7 @@
 ### Changed
 
 - **Objective-first task semantics across the workflow stack.** Task headings plus `Script` / `Input` / `Output` are now explicitly the scope contract, while planner-authored steps are starter guidance that implementers may rewrite inside that boundary when diagnostics, validation, or robustness work is needed. Reviewer and integration guidance now judge objective completion and necessary checks first, while whole-task add / remove / combine / split still routes through `planning-workflow §User Feedback and Changing Plans`.
+- **Adaptive planning principles tightened.** Plans now default to objective-defined tasks with optional step guidance, exact-code plan steps are no longer the default style, and agent reports versus handoff docs are separated by principle: the docs hold durable current state, while rationale and provisional recommendations stay in the message layer until the orchestrator promotes them.
 
 ### Fixed
 

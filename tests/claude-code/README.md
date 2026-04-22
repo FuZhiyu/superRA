@@ -22,9 +22,19 @@ This test suite verifies that skills are loaded correctly and Claude follows the
 
 This default path is the supported green smoke suite for the current superRA checkout.
 
-### Run the focused objective-first test directly:
+### Run the focused planning-principles test directly:
+```bash
+./run-skill-tests.sh --test test-adaptive-planning-principles.sh
+```
+
+### Run the focused objective-first execution test directly:
 ```bash
 ./run-skill-tests.sh --test test-objective-first-task-semantics.sh
+```
+
+### Run the focused integration escalation test directly:
+```bash
+./run-skill-tests.sh --test test-integration-task-shape-escalation.sh
 ```
 
 ### Run legacy integration coverage manually (slow, archival pre-superRA coverage):
@@ -97,6 +107,18 @@ Focused coverage for the objective-first task/step rule (~30 seconds):
 - Treats the task heading plus `Script` / `Input` / `Output` as the real scope contract
 - Requires the implementer to add an omitted within-task validation check
 - Requires the reviewer to flag mechanical step-following that misses a necessary check
+
+#### test-adaptive-planning-principles.sh
+Focused coverage for adaptive planning principles (~30 seconds):
+- Keeps the task objective and scope fields as the center of the plan
+- Allows the step section to stay open when the route is exploratory
+- Rejects fake specificity such as invented exact-code planning steps
+
+#### test-integration-task-shape-escalation.sh
+Focused coverage for integration-stage task-shape escalation (~30 seconds):
+- Lets reviewers or refactors recommend a better task shape
+- Routes the recommendation through `planning-workflow` rather than rewriting the task boundary directly
+- Keeps the final task-boundary decision under user discretion
 
 ### Legacy Manual Tests (not run by default)
 

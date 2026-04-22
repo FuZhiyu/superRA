@@ -58,7 +58,9 @@ while [[ $# -gt 0 ]]; do
             echo "  --help, -h           Show this help"
             echo ""
             echo "Fast Tests (run by default):"
+            echo "  test-adaptive-planning-principles.sh  Planning stays objective-first without fake specificity"
             echo "  test-objective-first-task-semantics.sh  Current superRA objective-first smoke test"
+            echo "  test-integration-task-shape-escalation.sh  Integration recommends task-shape changes upward"
             echo ""
             echo "Legacy Manual Tests (not run by default):"
             echo "  test-subagent-driven-development.sh  Historical pre-superRA skill smoke test"
@@ -75,7 +77,9 @@ done
 
 # List of skill tests to run (fast unit tests)
 tests=(
+    "test-adaptive-planning-principles.sh"
     "test-objective-first-task-semantics.sh"
+    "test-integration-task-shape-escalation.sh"
 )
 
 # Legacy integration tests (slow, historical pre-superRA coverage)

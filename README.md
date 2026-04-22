@@ -27,6 +27,8 @@ This workflow assumes basic familiarity with git branch/PR workflow; worktrees h
 
 superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. Each phase corresponds to a workflow skill to teach agents how to carry out in order, and a `using-superra` skill serves as the shared disciplines and knowledges across agents. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases form a cycle, not a pipeline: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope change after merge all route back through `planning-workflow §User Feedback and Changing Plans`, which walks the task DAG and resumes at the right re-entry point.
 
+Plans are intentionally adaptive. Tasks carry the binding objective and current file boundary; step lists are optional route notes that agents refine as the work becomes clearer. superRA teaches the principles, then lets local context and user judgment handle the details.
+
 ```mermaid
 flowchart TB
     PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
@@ -55,7 +57,7 @@ To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, 
 2. **Handoff docs always reflect the current state.** Material progress lives in committed `PLAN.md` and `RESULTS.md`, not in the chat log. A fresh agent can open the repo and resume from the docs plus git state alone.
 3. **Fast early for exploration, strict for integration. Semantic merges always.** During implementation, optimize for speed and correctness of the analysis itself. Once results are in hand, the integration phase refactors the code to dovetail with the existing codebase and matures documentation for the long haul. Every merge into `main` runs through `semantic-merge` — an intent-based conflict resolution pass that classifies conflicts by research impact and escalates methodology-level decisions to the user — never a bare `git merge`.
 4. **Autonomous with human in the loop.** The agent drives work forward on its own power and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
-5. **Adaptive and composable.** Research is rarely linear and never has a single style. The workflow supplies protocols, not requirements, and can be adapted to different rhythms. It is domain-agnostic: data analysis today; theory, modeling, and writing in the pipeline.
+5. **Adaptive and composable.** Research is rarely linear and never has a single style. The workflow teaches simple principles rather than exhaustive contingency trees: objective-defined tasks, optional route guidance, durable current state in the docs, and user discretion for true task-level changes. It is domain-agnostic: data analysis today; theory, modeling, and writing in the pipeline.
 
 ## Domain Skills
 

@@ -11,7 +11,7 @@ The header is the project's standing context, written at planning time and updat
 ```markdown
 # [Analysis Name] Plan
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use `superRA:econ-data-analysis` for every step that touches data. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use `superRA:econ-data-analysis` for every step that touches data. When a task includes steps, use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
 
 **Objective:** [One sentence describing what this analysis produces]
 
@@ -146,7 +146,7 @@ One blockquote cluster per incoming change. Each cluster has two lines: `Main-si
 
 ## Task Block Anatomy
 
-The task heading names the objective for that block. `Script`, `Input`, and `Output` are the invariant scope boundary. Step checkboxes are planner-authored starter guidance that implementers rewrite in place as the best within-task route becomes clearer; within-task step reorder/add/remove/combine/split is routine, but whole-task add/split/combine/remove still routes through `planning-workflow §User Feedback and Changing Plans`.
+The task heading names the objective for that block. `Script`, `Input`, and `Output` usually define the current working scope boundary. Steps are optional current-route notes: planners may add them when they are genuinely helpful, or omit them when the route is still exploratory. Implementers and refactors keep any step list aligned with the current route. If execution or integration shows the task itself should change shape, agents recommend that upward and the orchestrator routes it through `planning-workflow §User Feedback and Changing Plans`.
 
 ````markdown
 ### Task N: [Objective-style task title]
@@ -158,40 +158,9 @@ The task heading names the objective for that block. `Script`, `Input`, and `Out
 **Input:** `Data/input_file.parquet`
 **Output:** `Data/output_file.parquet`, `Output/figure.pdf`
 
-- [ ] **Step 1: Describe — input data**
-
-```python
-# %% [markdown]
-"""
-## Load Raw Holdings
-Source: CRSP mutual fund holdings, 2000-2020.
-Expect ~4.7M rows across ~12K funds.
-"""
-
-# %%
-df = pd.read_parquet("Data/holdings.parquet")
-print(f"Shape: {df.shape}")
-print(f"Funds: {df['fund_id'].nunique()}, Dates: {df['date'].nunique()}")
-```
-
-- [ ] **Step 2: Analyze — merge with fund characteristics**
-
-```python
-# %% [markdown]
-"""
-## Merge with Fund Characteristics
-Left join on fund_id × date. Expect same row count (fund_chars is m:1).
-"""
-
-# %%
-n_before = len(df)
-df = df.merge(chars, on=["fund_id", "date"], how="left")
-print(f"Rows: {n_before} → {len(df)} (delta: {len(df) - n_before})")
-```
-
-- [ ] **Step 3: Validate — verify the result, document, commit**
-
-Validate: row count matches expectation, unmatched rate reasonable, distributions sensible, magnitudes economically plausible. Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Update RESULTS.md (key findings, figures in `results_attachments/`). Commit code + handoff docs in a single atomic commit.
+- [ ] Describe both source tables and verify the join keys.
+- [ ] Build the firm-month panel and log row-count effects.
+- [ ] Validate the resulting panel, record findings, and commit the task handoff.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] Step 2 uses inner join; should be left join to preserve all rows. (`Code/03.py:42`)
@@ -200,21 +169,26 @@ Validate: row count matches expectation, unmatched rate reasonable, distribution
 >    → orchestrator: rejected — row count is logged two lines above, reviewer misread
 ````
 
+The step section is optional. If the route is genuinely exploratory, omit it entirely rather than inventing fake detail. If execution later needs more explicit route notes for continuity or review, the implementer writes the current route in place.
+
 ## Field-by-Field Notes
 
 - **`**Review status:**`** is always present on a task once execution begins. Valid values: `IMPLEMENTED`, `REVISE (<stage>)`, `APPROVED`. Before execution starts, leave it as a placeholder or omit. On re-entry, tasks in the transitive downstream closure of a modified task have their status cleared by default; the orchestrator may exempt a downstream task by documenting why the upstream change does not affect its inputs (one blockquote per exempted task in §Decisions).
 - **`**Integration status:**`** is owned by the integration reviewer and the implementer across Phase B's choreography — symmetric with `**Review status:**`, where the reviewer itself sets REVISE / APPROVED and the orchestrator intervenes only to overrule. The **integration reviewer** (annotation pass) flips to `REVISE` on tasks it annotates with integration review-notes (tasks it does not annotate stay `APPROVED`), in the same commit that writes the blockquote. The **implementer** flips to `IMPLEMENTED` on each in-scope task when it commits the refactor. The **integration reviewer** (verify pass) flips the in-scope tasks to `APPROVED` when the cumulative diff passes (or back to `REVISE` on specific tasks if it finds issues), in the same commit that writes its review. The orchestrator does not flip Integration status by default; it only overrules a reviewer's flip via a `→ orchestrator: ...` annotation when it disagrees, same as for Review status. Valid values: unset / `IMPLEMENTED` / `REVISE` / `APPROVED`. The same DAG cascade rule applies as for `**Review status:**` — downstream tasks in the closure of a modified task have their Integration status cleared by default, with documented exemptions in §Decisions. **B→B re-entry trigger:** when main advances mid-integration, the integration reviewer's annotation gates the flip — tasks it annotates get `**Integration status:** REVISE`; tasks it does not annotate stay `APPROVED`.
-- **Task heading / Script / Input / Output** together define task scope. The heading names the objective; `Script`, `Input`, and `Output` are fixed at planning time; only the orchestrator may change any of them.
-- **Steps** are planner-authored starter guidance expressed as checkbox items with inline code blocks that contain the actual analyst code. Implementers rewrite them inline to match the latest within-task route and may reorder, add, remove, combine, or split steps when execution reveals a better path inside the same task scope. That flexibility does not authorize whole-task add/split/combine/remove; task-level restructuring still goes through `planning-workflow §User Feedback and Changing Plans`.
+- **Task heading / Script / Input / Output** together define the current task scope. The heading names the objective; `Script`, `Input`, and `Output` usually bind the working boundary. If execution or integration reveals that the task itself should be split, combined, or otherwise re-scoped, agents recommend that upward and the orchestrator routes the change through `planning-workflow §User Feedback and Changing Plans`.
+- **Steps** are optional route notes, not the task contract. Planners may omit them when the route is still exploratory. When steps exist, they should describe the current route clearly enough for continuity or review, and implementers may rewrite, reorder, add, remove, combine, or split them as execution reveals a better path inside the same task scope.
+- **Per-task status lines** are the authoritative task tracker. Step checkboxes, when present, show the current route inside the task; they do not override the objective or boundary fields.
 - **Review notes blockquote** is present only when there are active items. On `APPROVED`, the blockquote is removed entirely. For how items enter, get annotated, and exit across iterations, see `agents/reviewer.md` (first-round REVISE and re-review deletion) and `agents/implementer.md` (annotating fixes with `→ implemented: ...`).
 - **`## Workflow Status` checkboxes** are flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. Each box is a rollup over per-task statuses: e.g., `Execution complete` flips only when every task has `**Review status:** APPROVED`; `Drift tests created` flips only when the full drift-test suite passes (which requires all tasks to have `**Integration status:**` coverage). A box is unchecked again only when a scope change or post-merge refactor invalidates the milestone — see `planning-workflow §User Feedback and Changing Plans`. Subagents may not flip boxes; if a subagent reports work that completes a milestone, the orchestrator flips the box in the next commit.
 
-## No Placeholders
+## No Fake Specificity
 
-Every step must contain the actual code an analyst needs. These are **plan failures**:
+Omitted steps are allowed. What is not allowed is pretending the plan knows more than it does. These are **plan failures**:
 
-- "TBD", "TODO", "implement later", "fill in details"
-- "Add appropriate validation" / "check results" (without actual code)
-- "Similar to Task N" (repeat the code — readers may jump tasks)
-- "Run descriptive statistics" (without naming variables and statistics)
-- Prose that describes what to do without showing how (code blocks required)
+- "TBD", "TODO", "implement later", or "fill in details" in the task heading, `Script`, `Input`, `Output`, or dependency fields
+- A step list that exists only to look complete when the route is still uncertain; omit the steps instead
+- Steps that merely restate the objective without giving real route guidance
+- "Similar to Task N" / "do the usual checks" without enough context for a fresh agent to continue
+- Exact command or code dumps used as the default plan style when the planner does not yet know they are right
+
+Rare low-freedom or fragile tasks may include exact commands or code, but that is an exception, not the default way to write a plan.
