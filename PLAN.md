@@ -61,6 +61,9 @@
 > **Question asked:** How strict should the notation rule be in v1?
 > **Rationale:** The vertical should reject arbitrary `A/B/C/D` or `T1/T2` labels while still permitting field-standard notation such as `r` for an interest rate.
 
+> **User decision (2026-04-22):** Skip Phase A drift-test creation for this branch and proceed directly to Phase B integration work.
+> **Question asked:** Which key results should be protected with drift tests before integration?
+
 ## Project Conventions
 
 Walked at planning time (2026-04-22). Re-walk on-demand only.
