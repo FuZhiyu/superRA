@@ -62,4 +62,4 @@
 
 ### Notes
 - `tests/claude-code/README.md` now documents the new focused fast test and the shared timeout helper so the documented suite matches the runner.
-- The default fast suite is not fully green yet: `tests/claude-code/run-skill-tests.sh` still times out in the pre-existing `test-subagent-driven-development.sh` after the new focused test passes. Task 4 did not retarget that legacy coverage, so this remains an open follow-up for the broader Claude Code suite rather than a regression introduced by the new objective-first test.
+- The default fast suite is not fully green yet: the pre-existing legacy `tests/claude-code/test-subagent-driven-development.sh` still fails because it probes a nonexistent `subagent-driven-development` skill and expects Claude to describe it. Task 4 did not retarget that legacy coverage, so this remains an open follow-up for the broader Claude Code suite rather than a regression introduced by the new objective-first test.
