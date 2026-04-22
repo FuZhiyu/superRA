@@ -3,14 +3,14 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-22 (Task 1 revise pass)
-**Status:** In Progress - Task 1 implemented, Tasks 2-4 not started
+**Last updated:** 2026-04-22 (Tasks 1-3 approved)
+**Status:** In Progress - Tasks 1-3 approved, Task 4 not started
 
 ---
 
 ## Task 1: Canonicalize objective-first task-block semantics
 
-**Status:** Implemented (awaiting review 2026-04-22)
+**Status:** Approved (Task 1 approved 2026-04-22)
 
 ### Key Findings
 - `CLAUDE.md` now carries a contributor-level rule that the task heading names the objective, `Script` / `Input` / `Output` bind scope, steps are the current best route, and review is objective-first.
@@ -23,7 +23,7 @@
 
 ## Task 2: Reframe implementer and reviewer role contracts
 
-**Status:** Implemented (awaiting review 2026-04-22)
+**Status:** Approved (Task 2 approved 2026-04-22)
 
 ### Key Findings
 - `agents/implementer.md` now treats the task heading/objective plus `Script` / `Input` / `Output` as the scope contract, allows within-task step split/combine plus extra diagnostics/validation/robustness work when needed, and directs any step-path rationale to the status return instead of `PLAN.md` history.
@@ -36,7 +36,7 @@
 
 ## Task 3: Update workflow and domain skills to treat steps as mutable guidance
 
-**Status:** Implemented (awaiting review 2026-04-22)
+**Status:** Approved (Task 3 approved 2026-04-22)
 
 ### Key Findings
 - `skills/planning-workflow/SKILL.md` now tells planners that task headings plus `Script` / `Input` / `Output` bind scope, while steps are the best current route and should guide execution without trying to pre-script every in-task diagnostic or robustness branch.
