@@ -132,8 +132,9 @@ Agent(subagent_type: "superRA:reviewer"):
     `Integration status: REVISE` in the same review commit. If
     a finding implies task add/remove/combine/split or a change to
     the task heading / `Script` / `Input` / `Output`, do not rewrite
-    the task boundary yourself — surface that recommendation in your
-    report so the orchestrator can decide whether to route it through
+    the task boundary yourself — record that recommendation in the
+    task's review-notes blockquote and mention it in your report so
+    the orchestrator can decide whether to route it through
     `planning-workflow` §User Feedback and Changing Plans.
     When the diff to walk is large (see `agent-orchestration`
     §Workload Balancing)

@@ -185,7 +185,7 @@ After writing the complete plan:
 
 **6. Sensitivity / robustness coverage (where applicable):** For data analysis, are sensitivity analysis tasks included? Were they discussed with the researcher to determine which checks matter most?
 
-**7. Dependency graph sanity:** Every task has a `**Depends on:**` line. No cycles. If the plan has ≥2 independent branches, at least one pair of tasks is marked parallelizable.
+**7. Dependency graph sanity:** Every task has a `**Depends on:**` line. No cycles. If the plan has ≥2 independent branches, that should already be obvious from the dependency lines alone; remove fake dependencies that hide parallel work.
 
 Fix issues inline. No need to re-review — just fix and move on.
 

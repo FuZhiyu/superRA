@@ -114,9 +114,15 @@ Focused coverage for adaptive planning principles (~30 seconds):
 - Allows the step section to stay open when the route is exploratory
 - Rejects fake specificity such as invented exact-code planning steps
 
+#### test-doc-before-report-task-shape.sh
+Focused coverage for handoff-doc priority (~30 seconds):
+- Keeps durable task-shape concerns and current-route state in `PLAN.md`
+- Uses the status report for rationale and summary after the doc is updated
+- Ensures the orchestrator still routes actual task-boundary changes through `planning-workflow`
+
 #### test-integration-task-shape-escalation.sh
 Focused coverage for integration-stage task-shape escalation (~30 seconds):
-- Lets reviewers or refactors recommend a better task shape
+- Requires reviewers or refactors to record a better task-shape recommendation in the handoff docs
 - Routes the recommendation through `planning-workflow` rather than rewriting the task boundary directly
 - Keeps the final task-boundary decision under user discretion
 

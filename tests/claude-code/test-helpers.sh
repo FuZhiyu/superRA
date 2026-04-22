@@ -173,6 +173,37 @@ assert_order() {
     fi
 }
 
+# Check whether the first line matching a label also contains a content pattern
+# Usage: assert_line_contains "output" "label_pattern" "content_pattern" "test name"
+assert_line_contains() {
+    local output="$1"
+    local label_pattern="$2"
+    local content_pattern="$3"
+    local test_name="${4:-test}"
+    local line
+
+    line=$(echo "$output" | grep "$label_pattern" | head -1 || true)
+
+    if [ -z "$line" ]; then
+        echo "  [FAIL] $test_name"
+        echo "  Expected to find a line matching: $label_pattern"
+        echo "  In output:"
+        echo "$output" | sed 's/^/    /'
+        return 1
+    fi
+
+    if echo "$line" | grep -q "$content_pattern"; then
+        echo "  [PASS] $test_name"
+        return 0
+    else
+        echo "  [FAIL] $test_name"
+        echo "  Expected matching line to contain: $content_pattern"
+        echo "  Matching line:"
+        echo "    $line"
+        return 1
+    fi
+}
+
 # Create a temporary test project directory
 # Usage: test_project=$(create_test_project)
 create_test_project() {
@@ -249,6 +280,7 @@ export -f assert_contains
 export -f assert_not_contains
 export -f assert_count
 export -f assert_order
+export -f assert_line_contains
 export -f create_test_project
 export -f cleanup_test_project
 export -f create_test_plan

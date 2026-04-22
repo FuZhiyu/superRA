@@ -59,6 +59,7 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Fast Tests (run by default):"
             echo "  test-adaptive-planning-principles.sh  Planning stays objective-first without fake specificity"
+            echo "  test-doc-before-report-task-shape.sh  Durable task-shape concerns go in PLAN.md before the report"
             echo "  test-objective-first-task-semantics.sh  Current superRA objective-first smoke test"
             echo "  test-integration-task-shape-escalation.sh  Integration recommends task-shape changes upward"
             echo ""
@@ -78,6 +79,7 @@ done
 # List of skill tests to run (fast unit tests)
 tests=(
     "test-adaptive-planning-principles.sh"
+    "test-doc-before-report-task-shape.sh"
     "test-objective-first-task-semantics.sh"
     "test-integration-task-shape-escalation.sh"
 )

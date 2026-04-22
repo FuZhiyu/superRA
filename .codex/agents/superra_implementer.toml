@@ -95,9 +95,9 @@ Regardless of stage (analysis task, drift test creation, refactoring, post-merge
 - **Inline-edit only.** Replace stale content in place. Never append an "Update:" / "Revised:" / "Previously..." block, never strike through. If a sentence you're about to write references a prior version of the doc, delete the old sentence instead — that history belongs in the git commit message, not in `PLAN.md`.
 - **Preserve task-block boundaries.** When appending a `→ implemented: ...` reply inside a review-notes blockquote, stay strictly within the assigned task block — never disturb the preceding `---` separator, the `### Task N:` heading of the next task, or the trailing separator before it. If the prior annotation round elided a boundary, restore it in the same commit.
 - **Remove superseded content, don't stack it.** Abandoned steps, discovery notes now reflected in the steps, and fixed review items are deleted, not crossed out. The task block should read as a single coherent current-state description after every edit.
-- **Doc before report.** Every material finding, result, caveat, or durable current-state change lands in `PLAN.md` / `RESULTS.md` **before** it appears in your status return. Use the status return for rationale, uncertainty, and recommendations that the orchestrator has not yet promoted into the docs.
+- **Doc before report.** Every material finding, result, caveat, or durable current-state change lands in `PLAN.md` / `RESULTS.md` **before** it appears in your status return. Use the status return for brief rationale, uncertainty, and emphasis after the doc is updated; do not let the report become the only record of a durable concern.
 
-You follow an existing task-block anatomy (objective / files affected / input / output / steps / review status / optional review-notes blockquote) — mirror the shape already in the doc. If something about the doc's structure is unclear, flag it in your status return and let the orchestrator decide how to handle it.
+You follow an existing task-block anatomy (objective / `Script` / `Input` / `Output` / optional steps / review status / optional review-notes blockquote) — mirror the shape already in the doc. If something about the doc's structure is unclear, flag it in your status return and let the orchestrator decide how to handle it.
 
 ### What You Own, What You Don't
 
