@@ -68,7 +68,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 2: Reframe implementer and reviewer role contracts
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** N/A
 **Input:** `agents/implementer.md`, `agents/reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
