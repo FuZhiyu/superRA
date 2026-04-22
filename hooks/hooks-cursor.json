@@ -1,9 +1,20 @@
 {
   "version": 1,
   "hooks": {
+    "userPromptSubmit": [
+      {
+        "command": "./hooks/autoload-superra"
+      }
+    ],
     "preToolUse": [
       {
         "command": "./hooks/merge-guard"
+      },
+      {
+        "command": "./hooks/ensure-using-superra"
+      },
+      {
+        "command": "./hooks/ensure-agent-orchestration"
       }
     ],
     "postToolUse": [

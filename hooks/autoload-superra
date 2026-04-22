@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# UserPromptSubmit hook: auto-load the superRA master skill.
+#
+# Fires on every user prompt. If the prompt mentions "superRA" (or a
+# case/spacing variant) AND the session transcript does not already
+# show a Skill invocation for superRA:using-superRA, inject a
+# system-reminder telling Claude to load the master skill before
+# responding. Suppressed on non-matching prompts and on sessions where
+# the skill is already loaded.
+# Does NOT block — the discipline system handles enforcement.
+#
+# Test vectors (see tests/hooks/test-autoload-superra.sh):
+#   V1  prompt="let's refactor the data loader"              -> {}
+#   V2a prompt="let's use superRA here"                      -> reminder
+#   V2b prompt="run super RA on this"                        -> reminder
+#   V2c prompt="kick off super-ra workflow"                  -> reminder
+#   V2d prompt="Super_RA time"                               -> reminder
+#   V2e prompt="superra please"                              -> reminder
+#   V3  prompt="this is superrapid"                          -> {}  (word boundary)
+#   V4  prompt="superRA again", transcript contains the load -> {}
+#   V5  prompt="superRA fresh", transcript_path missing      -> reminder (fail-open)
+
+set -euo pipefail
+
+input=$(cat)
+
+# Parse prompt + transcript_path from the UserPromptSubmit JSON payload.
+# Emit tab-separated so IFS=$'\t' read cleanly splits them even when the
+# prompt itself contains spaces.
+parsed=$(echo "$input" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("\t")
+    sys.exit(0)
+prompt = d.get("prompt", "") or ""
+tp = d.get("transcript_path", "") or ""
+# Flatten newlines/tabs in prompt so the downstream read gets one line.
+prompt = prompt.replace("\t", " ").replace("\n", " ").replace("\r", " ")
+print(prompt + "\t" + tp)
+' 2>/dev/null || printf '\t')
+
+IFS=$'\t' read -r prompt transcript_path <<<"$parsed"
+
+# Fast path: no superRA mention -> silent.
+if ! printf '%s' "$prompt" | grep -iqE '(^|[^[:alnum:]])super[-_ ]?ra([^[:alnum:]]|$)'; then
+  printf '{}\n'
+  exit 0
+fi
+
+# Transcript gate: if the master skill has already been invoked this
+# session, suppress the reminder. The Claude Code transcript stores
+# Skill tool calls as JSON; match the skill-name field tolerantly
+# with grep -iE '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"'
+# (case-insensitive, whitespace-tolerant around the colon) so minor
+# format drift does not cause duplicate reminders.
+if [ -n "$transcript_path" ] && [ -f "$transcript_path" ] \
+   && grep -iEq '"skill"[[:space:]]*:[[:space:]]*"superRA:using-superRA"' "$transcript_path"; then
+  printf '{}\n'
+  exit 0
+fi
+
+context='<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load the master skill by invoking Skill(skill="superRA:using-superRA"). It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>'
+
+# JSON-escape the reminder text so inner double quotes / backslashes do
+# not invalidate the payload. `python3 -m json.dumps` emits the string
+# already surrounded by its own quotes — splice it in without wrapping.
+context_json=$(printf '%s' "$context" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
+  printf '{"additional_context":%s}\n' "$context_json"
+elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then
+  printf '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":%s}}\n' "$context_json"
+else
+  printf '{"additionalContext":%s}\n' "$context_json"
+fi
+
+exit 0
