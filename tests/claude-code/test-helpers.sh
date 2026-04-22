@@ -1,6 +1,58 @@
 #!/usr/bin/env bash
 # Helper functions for Claude Code skill tests
 
+# Run a command with a timeout using the first available implementation.
+# Returns exit code 124 on timeout to match GNU timeout behavior.
+run_with_timeout() {
+    local timeout_seconds="$1"
+    shift
+
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$timeout_seconds" "$@"
+        return $?
+    fi
+
+    if command -v gtimeout >/dev/null 2>&1; then
+        gtimeout "$timeout_seconds" "$@"
+        return $?
+    fi
+
+    perl -e '
+        use strict;
+        use warnings;
+
+        my $timeout = shift @ARGV;
+        my $pid = fork();
+        die "fork failed\n" unless defined $pid;
+
+        if ($pid == 0) {
+            exec @ARGV or die "exec failed: $!\n";
+        }
+
+        local $SIG{ALRM} = sub {
+            kill "TERM", $pid;
+            sleep 1;
+            kill "KILL", $pid;
+            waitpid($pid, 0);
+            exit 124;
+        };
+
+        alarm $timeout;
+        waitpid($pid, 0);
+        alarm 0;
+
+        if ($? == -1) {
+            exit 1;
+        }
+
+        if ($? & 127) {
+            exit 128 + ($? & 127);
+        }
+
+        exit $? >> 8;
+    ' "$timeout_seconds" "$@"
+}
+
 # Run Claude Code with a prompt and capture output
 # Usage: run_claude "prompt text" [timeout_seconds] [allowed_tools]
 run_claude() {
@@ -8,15 +60,14 @@ run_claude() {
     local timeout="${2:-60}"
     local allowed_tools="${3:-}"
     local output_file=$(mktemp)
+    local -a cmd=(claude -p "$prompt")
 
-    # Build command
-    local cmd="claude -p \"$prompt\""
     if [ -n "$allowed_tools" ]; then
-        cmd="$cmd --allowed-tools=$allowed_tools"
+        cmd+=("--allowed-tools=$allowed_tools")
     fi
 
     # Run Claude in headless mode with timeout
-    if timeout "$timeout" bash -c "$cmd" > "$output_file" 2>&1; then
+    if run_with_timeout "$timeout" "${cmd[@]}" > "$output_file" 2>&1; then
         cat "$output_file"
         rm -f "$output_file"
         return 0
@@ -193,6 +244,7 @@ EOF
 
 # Export functions for use in tests
 export -f run_claude
+export -f run_with_timeout
 export -f assert_contains
 export -f assert_not_contains
 export -f assert_count

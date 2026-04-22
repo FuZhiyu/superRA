@@ -42,6 +42,7 @@ This test suite verifies that skills are loaded correctly and Claude follows the
 
 ### test-helpers.sh
 Common functions for skills testing:
+- `run_with_timeout SECONDS cmd ...` - Run a command with a portable timeout wrapper
 - `run_claude "prompt" [timeout]` - Run Claude with prompt
 - `assert_contains output pattern name` - Verify pattern exists
 - `assert_not_contains output pattern name` - Verify pattern absent
@@ -81,6 +82,12 @@ echo "=== All tests passed ==="
 ## Current Tests
 
 ### Fast Tests (run by default)
+
+#### test-objective-first-task-semantics.sh
+Focused coverage for the objective-first task/step rule (~30 seconds):
+- Treats the task heading plus `Script` / `Input` / `Output` as the real scope contract
+- Requires the implementer to add an omitted within-task validation check
+- Requires the reviewer to flag mechanical step-following that misses a necessary check
 
 #### test-subagent-driven-development.sh
 Tests skill content and requirements (~2 minutes):

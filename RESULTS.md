@@ -51,4 +51,15 @@
 
 ## Task 4: Add verification coverage and validate the change end-to-end
 
-**Status:** Not started
+**Status:** Implemented (awaiting review)
+
+### Key Findings
+- Added `tests/claude-code/test-objective-first-task-semantics.sh` and wired it into the default fast suite; `tests/claude-code/run-skill-tests.sh --test test-objective-first-task-semantics.sh --verbose` passed, with the focused Claude Code check completing in 16 seconds.
+- Updated the shared Claude Code harness so prompts are passed to `claude` as argv-safe arguments and all suite entry points use a portable `run_with_timeout` wrapper instead of assuming GNU `timeout`, which is absent in this macOS environment.
+- The text-level consistency sweep over `skills/`, `agents/`, `tests/`, and `.codex/agents/` found no contradictory "follow the steps literally" surfaces; the only remaining literal-adherence wording is the deliberate reviewer/domain guardrail language plus the new focused test prompt itself.
+- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` reported that all generated project agent files are already up to date.
+- In one manual Claude Code session against a temporary toy handoff pair with an omitted merge-validation step, Claude rewrote the implementer steps to add describe-before-merge, key-cardinality, and uniqueness checks, gave the reviewer a `REVISE` verdict for a mechanical load-merge-save implementation, and treated any real task split as a `planning-workflow §User Feedback and Changing Plans` escalation rather than an ad hoc boundary rewrite.
+
+### Notes
+- `tests/claude-code/README.md` now documents the new focused fast test and the shared timeout helper so the documented suite matches the runner.
+- The default fast suite is not fully green yet: `tests/claude-code/run-skill-tests.sh` still times out in the pre-existing `test-subagent-driven-development.sh` after the new focused test passes. Task 4 did not retarget that legacy coverage, so this remains an open follow-up for the broader Claude Code suite rather than a regression introduced by the new objective-first test.
