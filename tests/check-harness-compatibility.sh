@@ -72,7 +72,17 @@ assert "`superRA:theory-modeling`" in planning_text, "planning-workflow must rou
 assert "theory-modeling" in impl_text, "implementer agent must mention theory-modeling"
 assert "theory-modeling" in reviewer_text, "reviewer agent must mention theory-modeling"
 assert "theory-modeling/references/integration.md" in codeint_text, "codebase integration reference must point to theory-modeling integration guidance"
-assert "Domain discipline" in merge_text and "theory/modeling" in merge_text, "merge-quality must preserve non-data domain discipline too"
+required_merge_phrases = {
+    "tier3 setup": "sample construction / model setup",
+    "tier3 specifications": "specifications / solution concepts",
+    "tier3 logic": "data processing / derivation logic",
+    "tier3 results": "results / headline outputs",
+    "tier3 never-list": "active domain-discipline artifacts",
+}
+for label, snippet in required_merge_phrases.items():
+    assert snippet in merge_text, f"merge-quality missing generalized {label} wording: {snippet!r}"
+for stale in ("econometric specifications", "removing data discipline artifacts"):
+    assert stale not in merge_text, f"merge-quality still contains stale data-only phrasing: {stale!r}"
 PY
 
 section "Phase B upstream-intent contract"

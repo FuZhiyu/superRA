@@ -37,12 +37,34 @@
 
 ## Task 3: Verify the new vertical end to end and reconcile any drift
 
-**Status:** Implemented (checks passed; pending final review)
+**Status:** Implemented (final structural verification passed; pending final review)
 
 ### Key Findings
-- `bash tests/check-harness-compatibility.sh` passed on the final wiring state, including the new assertions for theory-modeling coverage in `using-superRA`, `planning-workflow`, the canonical implementer/reviewer prompts, and the generic integration references.
-- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` passed, confirming the regenerated `.codex/agents/superra_implementer.toml` and `.codex/agents/superra_reviewer.toml` artifacts match source.
-- A targeted smoke check passed for repo-local discovery and routing semantics: `.agents/skills/theory-modeling` resolves to the canonical skill directory, `planning-workflow` routes to `superRA:theory-modeling`, `using-superRA` lists the vertical in its manifest, and the `Model Inventory / Assumption Map` hard gate is present in the planning reference.
+- `bash tests/check-harness-compatibility.sh` passed after the final Task 3 fixes. The merge-quality portion now requires the generalized Tier 3 phrases `sample construction / model setup`, `specifications / solution concepts`, `data processing / derivation logic`, `results / headline outputs`, and `active domain-discipline artifacts`, and explicitly fails if stale data-only phrases such as `econometric specifications` or `removing data discipline artifacts` reappear.
+- The same harness-compatibility run re-ran the embedded Codex agent generation checks (`python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py` and `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check`), and both passed.
+- A targeted smoke check passed for repo-local discovery and routing semantics: `.agents/skills/theory-modeling` resolves to `../../skills/theory-modeling`, `planning-workflow` routes to `superRA:theory-modeling`, `using-superRA` lists the vertical in its manifest, and the `Model Inventory / Assumption Map` hard gate remains present in the theory-modeling planning reference.
 
 ### Notes
-- This verification pass was structural and workflow-facing. It did not run a live Claude/Codex end-to-end dispatch session against a toy modeling prompt in this turn.
+- Remaining risk: this pass was structural and workflow-facing. It did not run a live Claude/Codex end-to-end dispatch session against a toy modeling prompt in this turn.
+- No generated artifacts needed reconciliation in this round because the only code changes were the merge-quality reference and the structural compatibility test.
+
+### Verification Commands
+```bash
+bash tests/check-harness-compatibility.sh
+
+python3 - <<'PY'
+import os
+from pathlib import Path
+
+link = Path('.agents/skills/theory-modeling')
+assert link.is_symlink(), '.agents/skills/theory-modeling must be a symlink'
+assert os.readlink(link) == '../../skills/theory-modeling', os.readlink(link)
+using_text = Path('skills/using-superRA/SKILL.md').read_text(encoding='utf-8')
+planning_text = Path('skills/planning-workflow/SKILL.md').read_text(encoding='utf-8')
+theory_planning_text = Path('skills/theory-modeling/references/planning.md').read_text(encoding='utf-8')
+assert 'superRA:theory-modeling' in using_text, 'using-superRA manifest must mention theory-modeling'
+assert '`superRA:theory-modeling`' in planning_text, 'planning-workflow routing must mention theory-modeling'
+assert 'Model Inventory / Assumption Map' in theory_planning_text, 'theory-modeling planning reference must expose the hard gate'
+print('theory-modeling discovery/routing smoke check passed')
+PY
+```
