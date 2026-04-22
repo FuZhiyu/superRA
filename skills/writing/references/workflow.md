@@ -2,7 +2,7 @@
 
 > Load on every writing task. Specifies the four modes the writing skill supports — **direct-edit, pure-review, review-edit-loop, full-workflow** — and the two non-negotiable rules that apply across all of them. Severity markers: `[BLOCKING]` must fix to earn APPROVE; `[ADVISORY]` flaggable as MINOR.
 
-The writing skill is **standalone-usable** (per user decision 2026-04-19, recorded in `PLAN.md` §Decisions). Most writing work does NOT go through the full superRA `planning-workflow` → `execution-workflow` → `integration-workflow` → `merge-workflow` pipeline — that scaffold exists for major changes (whole-section drafts, whole-paper revisions). This reference documents the lightweight modes for everything else.
+The writing skill is **standalone-usable** (per user decision 2026-04-19, recorded in `PLAN.md` §Decisions). Most writing work does NOT go through the full superRA `planning-workflow` → `implementation-workflow` → `integration-workflow` scaffold — that full workflow exists for major changes (whole-section drafts, whole-paper revisions). This reference documents the lightweight modes for everything else.
 
 ## Two Hard Rules
 
@@ -94,9 +94,8 @@ Each reviewer is dispatched with `Stage: implementation` (reviewer role) and `Ad
 **Flow.** Plug into the standard superRA workflow pipeline:
 
 1. **`superRA:planning-workflow`** — scope check (per `writing/references/planning.md` §Hard Gate), task decomposition, `PLAN.md` + `RESULTS.md` bootstrapped.
-2. **`superRA:execution-workflow`** — per-task implementer + reviewer dispatch. Each task is atomic (one section or one dimension per task).
-3. **`superRA:integration-workflow`** — pre-merge gates per `writing/references/integration.md` (build clean, consistency dimensions passed, voice preserved, scope respected). No drift tests (unless the task produced numbers — then data-analysis drift tests apply); Stage 1 gate is **document build + outline-stability check**.
-4. **`superRA:merge-workflow`** — local merge or PR, via `superRA:semantic-merge`.
+2. **`superRA:implementation-workflow`** — per-task implementer + reviewer dispatch. Each task is atomic (one section or one dimension per task).
+3. **`superRA:integration-workflow`** — pre-merge gates per `writing/references/integration.md` (build clean, consistency dimensions passed, voice preserved, scope respected) and Phase D final merge / PR handling via `superRA:semantic-merge` when needed. No drift tests for pure writing tasks; the writing substitute gate is **document build + outline-stability check**. If the writing task produced numbers, data-analysis drift tests apply in addition.
 
 **`PLAN.md` required; `RESULTS.md` required.** Full handoff-doc discipline applies (`superRA:handoff-doc`).
 
@@ -142,7 +141,7 @@ Additionally: Load writing/SKILL.md + references/consistency/<dimension>.md.
 
 **Mode (c) iterative loop:** Mode (b) + mode (a) interleaved. Each round is one reviewer dispatch + one edit batch + one narrow re-review dispatch.
 
-**Mode (d) full workflow:** Standard `planning-workflow` → `execution-workflow` → `integration-workflow` → `merge-workflow` dispatches per their respective choreographies.
+**Mode (d) full workflow:** Standard `planning-workflow` → `implementation-workflow` → `integration-workflow` dispatches per their respective choreographies.
 
 ---
 

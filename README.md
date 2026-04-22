@@ -25,12 +25,12 @@ PLAN            planning-workflow (domain vertical setup → scope check → tas
                   (data analysis: econ-data-analysis/references/planning.md — Data Inventory hard gate, sensitivity design)
                 Break work into tasks. Output: PLAN.md + RESULTS.md (living handoff docs).
                     |
-IMPLEMENT       execution-workflow (implementer agent per task)
+IMPLEMENT       implementation-workflow (implementer agent per task)
                 Apply domain discipline at every step.
                   (data analysis: Describe / Analyze / Validate — econ-data-analysis main body)
                 Atomic commit per task: code + PLAN.md status + RESULTS.md findings.
                     |
-VALIDATE        execution-workflow (reviewer agent after each task)
+VALIDATE        implementation-workflow (reviewer agent after each task)
                 One comprehensive review pass: the reviewer walks the domain skill's §Three Concurrent Disciplines
                 top to bottom plus any §Pitfalls subsections matching operations performed. Returns APPROVE / REVISE.
                 REVISE triggers a narrow re-review (cited fixes + dependent findings) until APPROVED.
@@ -55,10 +55,10 @@ flowchart TB
     PLAN["<b>PLAN</b><br/>planning-workflow<br/>+ econ-data-analysis/references/planning.md<br/>Data Inventory hard gate, sensitivity design"]
     PLAN --> IMPL
 
-    IMPL["<b>IMPLEMENT</b> (per task)<br/>execution-workflow Step 2<br/>Stage: implementation<br/>→ implementer agent<br/>+ econ-data-analysis main body (Iron Law, Describe/Analyze/Validate)<br/>+ econ-data-analysis/references/notebook-format.md"]
+    IMPL["<b>IMPLEMENT</b> (per task)<br/>implementation-workflow Step 2<br/>Stage: implementation<br/>→ implementer agent<br/>+ econ-data-analysis main body (Iron Law, Describe/Analyze/Validate)<br/>+ econ-data-analysis/references/notebook-format.md"]
     IMPL --> VAL
 
-    VAL["<b>VALIDATE</b> (per task)<br/>execution-workflow Step 2 review<br/>Stage: implementation (subagent_type encodes role)<br/>→ reviewer agent<br/>+ econ-data-analysis §Three Concurrent Disciplines + §Pitfalls (conditional)<br/>APPROVE / REVISE"]
+    VAL["<b>VALIDATE</b> (per task)<br/>implementation-workflow Step 2 review<br/>Stage: implementation (subagent_type encodes role)<br/>→ reviewer agent<br/>+ econ-data-analysis §Three Concurrent Disciplines + §Pitfalls (conditional)<br/>APPROVE / REVISE"]
     VAL -->|REVISE loop| IMPL
     VAL -->|APPROVED, next task| IMPL
     VAL -->|all tasks APPROVED, user chooses merge| INT1
@@ -119,26 +119,77 @@ Below the four workflow principles sits one load-bearing architectural rule that
 
 ## Installation
 
-superRA is a fork of [Superpowers](https://github.com/obra/superpowers), adapted for economic research. Clone and install as a local plugin:
-
 ### Claude Code
 
+Claude Code (v2.1+) can install plugins directly from a GitHub repo. Add superRA as a marketplace and install the plugin:
+
 ```bash
-git clone https://github.com/FuZhiyu/econ-superpowers.git
-# Then add as a local plugin in your project's .claude/settings.json
+claude plugin marketplace add FuZhiyu/superRA
+claude plugin install superRA@superRA
 ```
+
+To update later:
+
+```bash
+claude plugin marketplace update superRA
+claude plugin update superRA
+```
+
+### Claude Code (local clone, for development or forking)
+
+If you want to modify superRA itself, install from a local clone instead:
+
+```bash
+git clone https://github.com/FuZhiyu/superRA.git
+```
+
+For live local-development installs, point your personal marketplace entry at that clone rather than relying on the repo's committed marketplace file.
+
+### Codex
+
+Codex installation has two pieces:
+
+- Plugin bundle from [`.codex-plugin/plugin.json`](./.codex-plugin/plugin.json)
+- Named custom agents from `codex-superra-setup`
+
+Remote marketplace install:
+
+```bash
+codex plugin marketplace add FuZhiyu/superRA
+```
+
+Then restart Codex, install `superra`, run `codex-superra-setup`, choose global scope, and restart if agent discovery has not refreshed yet.
+
+Manual local-clone install:
+
+1. Clone the repo somewhere durable, for example `~/.codex/plugins/superra`.
+2. Add a personal marketplace entry in `~/.agents/plugins/marketplace.json` that points at that clone.
+3. Restart Codex, install `superra`, run `codex-superra-setup`, choose global scope, and restart if needed.
+
+Updating a Codex install:
+
+- Remote marketplace install: update the marketplace and plugin from Codex.
+- Manual local-clone install: update the tracked clone and restart Codex.
+- Agent updates: rerun `codex-superra-setup` whenever [`agents/implementer.md`](./agents/implementer.md) or [`agents/reviewer.md`](./agents/reviewer.md) changes.
+
+For more detail, see the official [Codex plugin docs](https://developers.openai.com/codex/plugins/build) and [`docs/README.codex.md`](./docs/README.codex.md).
 
 ### Other Platforms
 
-See the upstream [Superpowers docs](https://github.com/obra/superpowers) for plugin installation patterns on Cursor, Codex, Copilot CLI, and Gemini CLI. Point them at this repo instead of the upstream.
+superRA ships entry files for several non-Claude-Code harnesses:
+
+- Copilot CLI / any other `AGENTS.md`-aware tool — point at [`AGENTS.md`](./AGENTS.md) at the repo root.
+- Gemini CLI — point at [`GEMINI.md`](./GEMINI.md) and [`gemini-extension.json`](./gemini-extension.json).
+
+See the upstream [Superpowers docs](https://github.com/obra/superpowers) for harness-specific installation patterns and substitute this repo's URL.
 
 ## Skills
 
 superRA's skills split into four categories. The directory layout stays flat (one `skills/<name>/SKILL.md` per skill); `skills/CATEGORIES.md` is the authoritative grouping index.
 
 - **Workflow skills** — domain-agnostic choreography for each phase. What agent to dispatch, in what sequence, with what handoff rules. Reused across every domain vertical.
-- **Domain skills** — vertical-specific discipline (today: data analysis). Loaded by workflow skills when a task touches the matching domain. Organized with stage-scoped references so only the relevant chunk loads per phase.
-- **Utility skills** — reusable, domain-neutral tools. Handoff-doc discipline, report formatting, notebook rendering, worktree management, semantic merge, verification.
+- **Domain skills** — vertical-specific discipline (today: data analysis and writing). Loaded by workflow skills when a task touches the matching domain. Organized with stage-scoped references so only the relevant chunk loads per phase.
+- **Utility skills** — reusable, domain-neutral tools. Handoff-doc discipline, report formatting, integration checklists, semantic merge, worktree data sync, and Codex agent setup.
 - **Meta skills** — session bootstrap and skill authoring.
 
 ### Workflow
@@ -146,7 +197,7 @@ superRA's skills split into four categories. The directory layout stays flat (on
 | Skill | Phase | What It Does |
 |-------|-------|-------------|
 | **planning-workflow** | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the active domain skill for domain-specific gates and templates. |
-| **execution-workflow** | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE) with orchestrator-discipline filter, pipeline + reproducibility verification, 4-option completion menu. |
+| **implementation-workflow** | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE) with orchestrator-discipline filter, pipeline + reproducibility verification, 4-option completion menu. |
 | **integration-workflow** | INTEGRATE (Phases A–D) | Phase A drift-test creation, Phase B iterative unified sync+refactor (invokes `semantic-merge` internally on Tier 2/3), Phase C doc finalization (mature RESULTS.md + audit project-level CLAUDE.md / AGENTS.md / README.md), Phase D final merge / PR / cleanup. Re-enterable Phase B on main advancement. |
 | **agent-orchestration** | cross-cutting | Multi-agent dispatch patterns: workload balancing across tiers, parallel subagents for independent tasks, reviewer-feedback adjudication. |
 
@@ -168,6 +219,7 @@ Future verticals — theory / modeling, literature review, simulation — are pl
 | **report-in-markdown** | Format discipline for markdown reports with figures, LaTeX math, tables. Lean SKILL.md body; three references loaded on demand: `baseline-io.md`, `rich-content.md`, `final-form.md`. |
 | **semantic-merge** | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions to the user. Invoked by `integration-workflow` Phase B (recon + Tier 2/3 implementer) and by the merge-guard hook; also usable standalone. |
 | **worktree-data-sync** | Non-git data sync between existing worktrees (seed, diff, apply modes) and data teardown. Worktree lifecycle (create / enter / remove) lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
+| **codex-superra-setup** | Generates and installs the `superra_implementer` and `superra_reviewer` Codex custom agents into `~/.codex/agents/` or `.codex/agents/`. |
 
 ### Meta
 
@@ -202,10 +254,12 @@ Future verticals — theory / modeling, literature review, simulation — are pl
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
-| **session-start** | Session start, `/clear`, `/compact` | Inject using-superRA skill |
 | **merge-guard** | Before any `git merge/rebase/cherry-pick` | Remind to use semantic-merge skill |
 | **ask-user-question-logger** | After `AskUserQuestion` | Remind to log the decision in PLAN.md before acting |
 | **exit-plan-mode** | After `ExitPlanMode` | Remind to materialize plan into PLAN.md + RESULTS.md before implementing |
+| **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Inject a reminder to load `superRA:using-superRA` if the master skill has not yet loaded this session. |
+| **ensure-using-superra** | `PreToolUse` on `Skill(superRA:*-workflow)` | Hard-deny the workflow-skill call when `superRA:using-superRA` has not yet loaded; the reason directs the agent to load it and retry. |
+| **ensure-agent-orchestration** | `PreToolUse` on `Skill(superRA:*-workflow)` | Same pattern as above, gating on `superRA:agent-orchestration`. |
 
 ## Philosophy
 

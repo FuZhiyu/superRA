@@ -5,24 +5,16 @@ description: >
   financial, or panel datasets — importing raw data, cleaning,
   merging, filtering, constructing variables, aggregating, computing
   summary statistics, producing regression inputs, building figures,
-  or writing analysis scripts. Also use when about to transform data
-  you have not yet described; when merging two datasets; when
-  filtering by a condition you have not yet profiled; when a number
-  "looks off"; when outputs fail to match literature or intuition;
-  when a script was just refactored and needs re-validation. Triggers
-  include CRSP / Compustat / WRDS / panel data, "merge these datasets",
-  "clean this data", "construct variable X", "check the summary stats",
-  "why is this number so large", "I'll just filter and move on",
-  or any data file with unknown structure. Language-agnostic (Python,
-  Julia, R, Stata). Loaded by implementer and reviewer subagents
-  at dispatch time when the stage touches analysis code, per the
-  `superRA:using-superRA` §Skill-Load Manifest.
+  or writing analysis scripts. Triggers include panel data, "merge
+  these datasets", "run regression", "clean this data", "construct
+  variable X", "check the summary stats", or any data file with
+  unknown structure. Language-agnostic (Python, Julia, R, Stata).
 user-invocable: true
 ---
 
 # Economic Data Analysis
 
-superRA's flagship domain skill. Carries the cross-cutting discipline that applies at every stage of a data analysis — the Iron Law, the three concurrent disciplines (Describe, Analyze, Validate) with inline severity markers, the pitfalls catalog, and the common rationalizations. Main body is loaded by implementer and reviewer subagents at every analysis-touching dispatch.
+Domain skill for rigorous economic data work; body carries §Three Concurrent Disciplines, §Pitfalls, §Common Rationalizations.
 
 ## Stage-Scoped References
 
@@ -31,12 +23,15 @@ Companion reference files carry content that applies at a specific phase or oper
 | Reference | Load when |
 |---|---|
 | `references/planning.md` | PLAN phase — covers the **Data Inventory hard gate** and **Sensitivity Analysis Design**. Loaded by `planning-workflow` when the analysis involves data work. |
-| `references/integrate-drift-tests.md` | INTEGRATE phase — identifies key results worth protecting, sets econ-specific tolerances, and catalogs data-analysis failure modes drift tests catch. Loaded by `integration-workflow` Phase A (drift-test creation + review). |
-| `references/integration.md` | INTEGRATE phase — data-specific refactor-integrity gates (variable-construction consistency, transformation-pattern consistency, preserved describe steps / row-count prints / validation checks, drift-test pass-through). Loaded at the `integration` stage. |
-| `references/data-robustness-checklist.md` | PLAN phase (design) and IMPLEMENT phase (execution of sensitivity tasks) — menu of robustness checks. |
-| `references/notebook-format.md` | IMPLEMENT + VALIDATE phase — cell organization, markdown narrative, writing discipline (major-vs-minor-decision rule, figure placement), output idioms, and language-specific rendering (Python via jupytext, Julia via QuartoNotebookRunner). Loaded by the **implementer** alongside the main body whenever analysis scripts are being written or rendered. Companion guides: `jupytext-guide.md`, `julia-quarto-guide.md`. |
+| `references/data-robustness-checklist.md` | PLAN stage (design) and IMPLEMENT phase when execution of sensitivity tasks — menu of robustness checks. |
+| `references/integrate-drift-tests.md` | drift-test stage — identifies key results worth protecting, sets econ-specific tolerances, and catalogs data-analysis failure modes drift tests catch. Loaded by `integration-workflow` Phase A (drift-test creation + review). |
+| `references/integration.md` | INTEGRATE stage — data-specific refactor-integrity gates (variable-construction consistency, transformation-pattern consistency, preserved describe steps / row-count prints / validation checks, drift-test pass-through). |
 
-The main body below is the shared base that both implementer and reviewer load — it carries §Three Concurrent Disciplines (teaching + inline severity-marked checklist), §Pitfalls (operation-specific correctness), §Common Rationalizations, and §Key References. The implementer additionally loads `references/notebook-format.md` for analysis-script stages (per the manifest). The reviewer loads SKILL.md only.
+**For implementer only:**
+
+| Reference | Load when |
+|---|---|
+| `references/notebook-format.md` | IMPLEMENT stage — cell organization, markdown narrative, writing discipline (major-vs-minor-decision rule, figure placement), output idioms, and language-specific rendering (Python via jupytext, Julia via QuartoNotebookRunner). Loaded by the **implementer** alongside the main body whenever analysis scripts are being written or rendered. Companion guides to load on demand: `jupytext-guide.md`, `julia-quarto-guide.md`. |
 
 ## The Iron Law
 
@@ -53,8 +48,6 @@ Transformed data without describing it first? Undo the transformation. Start ove
 - Undo means undo
 
 Describe fresh from the current data state. Period.
-
-**Violating the letter of the rules is violating the spirit of the rules.**
 
 ---
 
@@ -108,15 +101,13 @@ When data was already imported and validated upstream, read existing diagnostics
 
 **Visualization for key variables:**
 
-Supplement summary statistics with diagnostic plots — part of Describe, created alongside the statistics they complement. Not publication quality; clear axis labels, informative titles, readable scales. Save to the output directory alongside notebook renders; for rendering see `references/notebook-format.md`.
-
 - `[ADVISORY]` **Distributions**: histograms for continuous variables — reveal skew, modes, outliers that summary stats miss. Use for any variable about to be transformed, winsorized, or filtered on.
 - `[ADVISORY]` **Relationships**: scatter plots for variable pairs — show nonlinearity, clusters, influential observations that correlations hide.
 - `[ADVISORY]` **Temporal patterns**: line plots of variable vs time — detect structural breaks, trends, seasonality. Essential for any time-series variable.
 
 ### Analyze
 
-Transform data with integrity. This is the shortest of the three disciplines — most of the work is in getting Describe right before and Validate right after. Operation-specific traps live in §Pitfalls below — walk the subsections matching the operations this task actually performs.
+Transform data with integrity. Operation-specific traps live in §Pitfalls below — walk the subsections matching the operations this task actually performs.
 
 - `[BLOCKING]` **One logical operation per step.** Don't chain merge + filter + construct in a single step. Each Analyze step corresponds to one verb: merge, filter, construct, aggregate, reshape, deduplicate.
 - `[BLOCKING]` **Row-count logging at every sample-changing operation.** Print `before → after` for every merge, filter, drop, deduplication, or sample restriction. Major operations typically warrant their own cell; minor operations can share a cell as long as the count is printed.
@@ -170,8 +161,8 @@ If something looks unexpected, STOP and investigate before proceeding.
 
 ### Stage-scoped discipline (not walked at every implementation dispatch)
 
-- **`integration` stage** — `references/integration.md` carries the full integration-stage checklist (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations) with its own `[BLOCKING]` / `[ADVISORY]` markers and a two-verdict protocol. Loaded by implementer and reviewer at the `integration` stage per `superRA:using-superRA` §Skill-Load Manifest.
-- **End-of-workflow completion verification** — `superRA:execution-workflow` §Step 3 carries the reproducibility gate (pipeline runs end-to-end, outputs generated from committed code, docs current, deferred MINORs resolved). Walked by the orchestrator, not by dispatched subagents.
+- **`integration` stage** — `references/integration.md` carries the full integration-stage checklist (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations) with its own `[BLOCKING]` / `[ADVISORY]` markers and a two-verdict protocol. Loaded by implementer and reviewer at the `integration` stage per `superRA:using-superra` §Skill-Load Manifest.
+- **End-of-workflow completion verification** — `superRA:implementation-workflow` §Step 3 carries the reproducibility gate (pipeline runs end-to-end, outputs generated from committed code, docs current, deferred MINORs resolved). Walked by the orchestrator, not by dispatched subagents.
 
 ## Pitfalls
 

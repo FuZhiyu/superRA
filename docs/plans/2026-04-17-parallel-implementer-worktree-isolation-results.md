@@ -55,9 +55,9 @@ Post-refactor outline: frontmatter → `# Worktree Data Sync Skill` → §When t
 - [`skills/execution-workflow/SKILL.md`](../../skills/execution-workflow/SKILL.md) — Option 4 Discard retargeted at `agent-orchestration/references/worktree-harness-fallback.md §Remove`; the Red Flag about "dispatch multiple implementers in parallel on the same working tree" reworded to point at §Concurrent Writers; §Integration workflow-skill list deduplicated the two `worktree-data-sync` entries and added `agent-orchestration` as the owner of parallel-dispatch discipline.
 - [`skills/merge-workflow/SKILL.md`](../../skills/merge-workflow/SKILL.md) — Step 5 Cleanup Worktree and §Pairs with list split: lifecycle → the fallback reference, data teardown → `worktree-data-sync §Data Teardown`.
 - [`skills/semantic-merge/SKILL.md`](../../skills/semantic-merge/SKILL.md) — §When to Use gained an Exception paragraph noting that `parallel/*` branches bypass this skill.
-- [`skills/using-superRA/references/codex-tools.md`](../../skills/using-superRA/references/codex-tools.md) and [`skills/agent-orchestration/references/agent-teams.md`](../../skills/agent-orchestration/references/agent-teams.md) — two additional dangling `§Creating a Worktree` references caught in cross-reference audit, rewritten to point at the fallback reference and describe the §Concurrent Writers flow.
+- [`skills/using-superra/references/codex-tools.md`](../../skills/using-superra/references/codex-tools.md) and [`skills/agent-orchestration/references/agent-teams.md`](../../skills/agent-orchestration/references/agent-teams.md) — two additional dangling `§Creating a Worktree` references caught in cross-reference audit, rewritten to point at the fallback reference and describe the §Concurrent Writers flow.
 
-Skill-inventory blurbs in `README.md`, `skills/CATEGORIES.md`, and `skills/using-superRA/SKILL.md` are updated to reflect the narrowed `worktree-data-sync` scope. `RELEASE-NOTES.md` carries a 2-bullet entry under 2026-04-17 covering the refactor.
+Skill-inventory blurbs in `README.md`, `skills/CATEGORIES.md`, and `skills/using-superra/SKILL.md` are updated to reflect the narrowed `worktree-data-sync` scope. `RELEASE-NOTES.md` carries a 2-bullet entry under 2026-04-17 covering the refactor.
 
 ## Verification
 
