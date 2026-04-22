@@ -2,7 +2,7 @@
 
 Shared cross-cutting code-quality reference for code refactoring and integration review. Both the implementer (refactorer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the procedures and decision trees the checklist items encode. Loaded whenever `Stage:` is `integration` (per `superRA:using-superra` §Skill-Load Manifest).
 
-> **Primary reference for data-analysis work:** load `econ-data-analysis/references/integration.md` for the data-analysis-specific integration gates (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations — with `[BLOCKING]` / `[ADVISORY]` markers and its own reviewer verdict protocol). This file covers the generic cross-cutting code-quality companion (naming, utility reuse, PR-friendly diffs, debug-artifact cleanup, documentation currency) that applies regardless of domain.
+> **Primary domain references:** load `econ-data-analysis/references/integration.md` for data-analysis-specific integration gates, or `theory-modeling/references/integration.md` for theory/modeling-specific integration gates. This file covers the generic cross-cutting code-quality companion (naming, utility reuse, PR-friendly diffs, debug-artifact cleanup, documentation currency) that applies regardless of domain.
 
 ---
 
@@ -14,7 +14,7 @@ When you find inconsistencies between new code and existing codebase:
 
 - **Clear convention exists:** Follow the convention.
 - **Ambiguous or conflicting conventions:** Use best judgment and document the choice.
-- **Methodological question** (e.g., different control variable set, different variable definition): Do NOT resolve — flag for the user. This is a research decision, not a code quality decision. Domain-specific gates for data analysis live in the domain integration reference cited in the blockquote above.
+- **Methodological question** (e.g., different control variable set, different variable definition, different equilibrium concept, different normalization): Do NOT resolve — flag for the user. This is a research decision, not a code quality decision. Domain-specific gates live in the active domain integration reference cited in the blockquote above.
 
 ### Project Doc Audit — walk-up algorithm
 
@@ -78,7 +78,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Handling inconsistencies (decision tree in §How-To → Handling inconsistencies):**
 
-- `[BLOCKING]` **Methodological questions escalated, not resolved.** Different control variable sets, different variable definitions, different sample filters — these are research decisions, not code-quality decisions. Flag for the user; do not choose silently. Domain-specific methodological gates for data analysis live in `econ-data-analysis/references/integration.md`.
+- `[BLOCKING]` **Methodological questions escalated, not resolved.** Different control variable sets, different variable definitions, different sample filters, different equilibrium concepts, or different normalization choices are research decisions, not code-quality decisions. Flag for the user; do not choose silently. Domain-specific methodological gates live in the active domain integration reference.
 - `[ADVISORY]` **Clear convention exists:** follow the convention. **Ambiguous or conflicting conventions:** use best judgment and document the choice.
 
 **PR quality:**

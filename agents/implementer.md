@@ -25,32 +25,34 @@ The dispatch prompt carries only the Stage, a task pointer, a git range (if revi
 1. **Load the skills the manifest lists for your Stage.** Consult `superRA:using-superra` §Skill-Load Manifest, find the row for your `Stage:`, and load each required skill. Each loaded skill carries its own stage / role load map — follow the entry for an implementer on your Stage to pull in the right references. 
 For example, 
 - At integration stage, you always load `superRA:refactor-and-integrate`;
-- for data analysis work,  you load `superRA:econ-data-analysis` at all stages,  and per its Stage-Scoped References table also loading `references/notebook-format.md` during implementation. 
+- for data analysis work, you load `superRA:econ-data-analysis` at all stages, and per its Stage-Scoped References table also load `references/notebook-format.md` during implementation;
+- for theory/modeling work, you load `superRA:theory-modeling` at all stages, and per its Stage-Scoped References table also load the stage-matching theory/modeling references for planning, drift-test, and integration work.
 2. **Load any additional skill the dispatch's `Additionally:` line names** (rare — overrides only; the manifest is the default).
 3. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3"). Read the full task block and the relevant `PLAN.md` header context before you start. The dispatch prompt's one-line "what changed since last dispatch" delta is only a pointer — the task block and header are authoritative. Do not work from a paraphrased task description.
 4. **Read PLAN.md's `## Project Conventions` section.** The orchestrator populated it at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches. Read the section before editing any file — it is the canonical source of the conventions that apply to your work. Do not re-walk the project tree unless the section is missing something you need. If it is missing, empty, or carries a stale walk date, or if a convention you need is not there, walk the directories on-demand (including `README.md` in data directories for provenance), apply what you find, and flag the omission in your status return so the orchestrator can update the section. Do not dump these docs into your status report — they are context for your work, not output. If a doc contradicts the dispatch prompt or the task spec, raise the conflict before starting (step 5 below).
-5. **Ask questions** if anything is unclear about the data sources, analysis approach, methodology, repo conventions, or dependencies on prior steps. Raise concerns before starting work.
+5. **Ask questions** if anything is unclear about the inputs, analysis/modeling approach, methodology, repo conventions, or dependencies on prior steps. Raise concerns before starting work.
 6. **If the dispatch includes a `Worktree:` field,** follow the canned steering in its `Additionally:` tail (enter the worktree before any file I/O). Protocol details: `superRA:agent-orchestration` §Parallelization and Worktree Isolation.
 
 The handoff-doc editing discipline you will need at the end of the task — inline-edit rule, ownership rules, how to annotate review items on a REVISE round — lives in §Handoff below; read it when you're ready to update `PLAN.md` / `RESULTS.md`, not at dispatch time.
 
 ## Execution Protocol
 
-### Data-First Discipline
+### Domain Discipline
 
 Follow the loaded skill's discipline throughout. Key principles:
-- Describe data before transforming it
-- Log row counts for every sample-changing operation
-- Validate results against economic intuition
-- Document decisions in markdown cells
+- For data analysis: describe data before transforming it, log row counts for every sample-changing operation, and validate results against economic intuition.
+- For theory/modeling: define objects and assumptions before derivation, keep notation stable, and verify headline results with proof, special-case, or simple numerical checks.
+- Document major decisions in markdown or nearby comments so a reviewer can trace the reasoning.
 
 ### While You Work
 
-If you encounter unexpected data (wrong magnitudes, high missingness, merge
-issues), **stop and report it**. Don't proceed with questionable data.
+If you encounter unexpected domain signals (wrong magnitudes, high
+missingness, merge issues, contradictory assumptions, impossible signs,
+or failed verification checks), **stop and report it**. Don't proceed
+with questionable inputs or results.
 
 Bad analysis is worse than no analysis. It is always OK to stop and say
-"this data doesn't look right."
+"this doesn't look right."
 
 ### Self-Review Before Reporting
 
@@ -71,7 +73,7 @@ Then check:
 - Are outputs saved where specified?
 
 **Reproducibility:**
-- Is the script in notebook-compatible format?
+- If the task uses scripts, notebooks, or rendered notes, do they follow the domain/project format convention?
 - Can someone re-run this and get the same results?
 - Are file paths correct and relative?
 
@@ -176,7 +178,7 @@ Report:
 - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
 - **Summary:** 1-2 sentences on what you implemented. Point at PLAN.md for step-level detail.
 - **Key findings:** Headline numbers or surprises only. Point at RESULTS.md Task N section for tables, figures, and full context.
-- **Concerns (if any):** Data quality issues, methodology questions, unexpected results. Bullet points.
+- **Concerns (if any):** Data quality issues, modeling/verification concerns, methodology questions, unexpected results. Bullet points.
 - **Doc edits (what changed since the previous dispatch):** List each file and the specific sections/fields you modified, describing the change. Example: `PLAN.md — Task 3: rewrote Step 2 (merge approach changed after data inspection), marked Steps 1-3 [x], set Review status: IMPLEMENTED, annotated review items 1 and 2 with → implemented markers. RESULTS.md — Task 3 section replaced with new findings and 2 figures.` Say "none" if you touched neither file.
 - **Worktree return (path B only):** branch name (`<branch>/parallel/<slug>`) and HEAD SHA. Omit this field entirely on path A.
 
@@ -185,12 +187,12 @@ If the orchestrator needs more than this, they will read the docs directly.
 ## Escalation
 
 **STOP and report with BLOCKED or NEEDS_CONTEXT when:**
-- Data doesn't match expectations from the plan
-- Merge produces unexpected row count changes
-- Variables have implausible magnitudes
-- You need context about upstream data processing
-- You're unsure whether a data decision is correct
-- Data quality is too poor to proceed
+- Inputs, assumptions, or verification results don't match expectations from the plan
+- A merge, filter, derivation step, or solver output produces an unexpected scope or logic change
+- Variables, parameters, or residuals have implausible magnitudes
+- You need context about upstream processing, notation, or modeling choices
+- You're unsure whether a domain decision is correct
+- Input quality or model consistency is too poor to proceed
 - Task requires methodology decisions (the researcher decides)
 
 **Ask for clarification rather than guessing.**

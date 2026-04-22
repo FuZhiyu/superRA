@@ -33,16 +33,16 @@ A merge integration can land as **one commit or many**. The load-bearing discipl
 
 These conflicts **MUST** be flagged for the researcher. Ask via `AskUserQuestion` (plain text if unavailable) — when the resolution has a closed set of options (`--ours`, `--theirs`, synthesize, regenerate, roll back), pass them as question options; when it's methodology-level, ask in free-form prose. Mark such rows as `ASK USER` in the integration map while still open, and replace with the researcher's resolution once it comes back. Every answer is a user decision and must be logged per `handoff-doc` §User Decisions Log before the resolution is committed — into `PLAN.md`'s `## Decisions` section if the branch still has `PLAN.md`, otherwise into the integration commit message (which becomes the record of record once `PLAN.md` is gone).
 
-- **Variable definitions:** Incoming changes redefine a variable used in this branch's analysis
-- **Sample construction:** Incoming changes alter sample filters or data sources
-- **Econometric specifications:** Incoming changes alter model specifications, control variables, or clustering
-- **Data processing:** Incoming changes alter merge logic, data cleaning, or transformations
+- **Definitions / notation:** Incoming changes redefine a variable, symbol, or object used in this branch's analysis or model
+- **Sample construction / model setup:** Incoming changes alter sample filters, data sources, timing, information structure, normalizations, or calibration baselines
+- **Specifications / solution concepts:** Incoming changes alter model specifications, control variables, clustering, equilibrium concepts, or branch-selection rules
+- **Data processing / derivation logic:** Incoming changes alter merge logic, data cleaning, symbolic steps, or transformations
 - **Results:** Incoming changes affect analysis outputs
 
 **Never:**
 - Silently change analysis results
 - Choose ours/theirs for research-meaningful conflicts
-- Remove data discipline artifacts
+- Remove domain-discipline artifacts
 - Judge whether a methodology choice is correct
 
 ### Identify governing upstream intent
@@ -98,7 +98,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 - `[BLOCKING]` **No silent result changes.** Analysis outputs are either unchanged, or the change was flagged to the user.
 - `[BLOCKING]` **Variable definitions consistent** across merged code.
-- `[BLOCKING]` **Sample construction preserved.** Sample filters and data sources are correct in the merged result.
+- `[BLOCKING]` **Domain setup preserved.** Sample filters and data sources, or model assumptions, normalizations, and branch-selection rules, are correct in the merged result.
 - `[BLOCKING]` **User decisions implemented correctly** (Tier 3) — the researcher's decisions on research-meaningful conflicts were implemented as stated.
 
 **Commit structure (templates in §How-To → Commit structure):**
@@ -128,6 +128,6 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 - `[BLOCKING]` **Pipeline runs** (if applicable): End-to-end pipeline produces expected outputs.
 - `[ADVISORY]` **No outdated labels:** Comments, docstrings, and documentation reflect the merged state.
 
-**Data discipline:**
+**Domain discipline:**
 
-- `[BLOCKING]` Data discipline artifacts (description steps, row counts, validation checks, documentation cells) preserved through the merge. See loaded `econ-data-analysis` for the full list of artifacts.
+- `[BLOCKING]` Domain-discipline artifacts preserved through the merge. For data analysis: description steps, row counts, validation checks, documentation cells. For theory/modeling: definitions, assumption maps, derivation-step explanations, verification notes, and renderable math blocks. See the loaded active domain skill for the full list of artifacts.

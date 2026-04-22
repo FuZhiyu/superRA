@@ -36,7 +36,7 @@ simplicity.
 
 ### Checklist
 
-Create a task for each of these items and complete them in order:
+Complete the following planning checks in order:
 
 1. **Understand the modeling goal** - ask the researcher what the model is meant to explain, what outputs matter, and whether the task is derivation, proof, comparative statics, calibration, or a mixed workflow.
 
@@ -54,6 +54,17 @@ Create a task for each of these items and complete them in order:
 
 ```markdown
 **Model Inventory / Assumption Map:**
+
+### Timing / Information Structure
+- [State the sequence of moves, information available at each step, and any commitment or observability assumptions.]
+
+### Solution Concept
+- [State the active solution concept: planner problem, competitive equilibrium, recursive equilibrium, steady state, fixed point, or other.]
+
+### Notation Conventions
+| Symbol | Meaning | Why this notation |
+|---|---|---|
+| ... | ... | ... |
 
 ### Primitives
 | Object | Meaning | Domain / Units | Notes |
