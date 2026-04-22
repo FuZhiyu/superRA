@@ -1,0 +1,21 @@
+{
+  "name": "superra",
+  "interface": {
+    "displayName": "superRA"
+  },
+  "plugins": [
+    {
+      "name": "superra",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/FuZhiyu/superRA.git",
+        "ref": "main"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -8,14 +8,16 @@ superRA turns AI coding agents into disciplined Research Assistants. It ships:
 
 superRA is inspired by the [Superpowers](https://github.com/obra/superpowers) plugin, which centers on test-driven software development. superRA adapts the same spine to scientific research, which is exploratory, iterative, and fluid.
 
+superRA is compatible with Claude Code, Codex, and any other harness that supports skills and subagents. See below for installation. 
+
 ## Why superRA?
 
 AI agents are fast but undisciplined:
 
 - Agents generate far more code than anyone will carefully review, often inconsistent with the existing codebase.
-- Half the sample is silently dropped before a regression runs, while the agent declares "everything looks good".
 - As the context window fills, agents become more error-prone — but starting fresh loses the thread of what was done and why.
 - After several iterations, the results quietly drift from the original, and neither you nor the agent can reconstruct why.
+- Half the sample is silently dropped before a regression runs, while the agent declares "everything looks good".
 
 superRA brings discipline to the agent on three fronts. An **implementer–reviewer pair** sits at every step so no result ships without adversarial review. **Domain skills** teach the agent the right protocol for the work at hand (for data analysis: always describe before you transform). And an explicit **integration phase** folds each task into the existing codebase and maturing documentation, so what lands on `main` is coherent rather than a pile of single-shot outputs.
 
@@ -23,13 +25,13 @@ superRA brings discipline to the agent on three fronts. An **implementer–revie
 
 This workflow assumes basic familiarity with git branch/PR workflow; worktrees help but are optional.
 
-superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases form a cycle, not a pipeline: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope change after merge all route back through `planning-workflow §User Feedback and Changing Plans`, which walks the task DAG and resumes at the right re-entry point.
+superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. Each phase corresponds to a workflow skill to teach agents how to carry out in order, and a `using-superra` skill serves as the shared disciplines and knowledges across agents. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases form a cycle, not a pipeline: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope change after merge all route back through `planning-workflow §User Feedback and Changing Plans`, which walks the task DAG and resumes at the right re-entry point.
 
 ```mermaid
 flowchart TB
     PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
     IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
-    INTEGRATE["<b>INTEGRATE</b><br/>A drift tests<br/>B sync + refactor<br/>C report.md + doc audit<br/>D merge / PR / cleanup"]
+    INTEGRATE["<b>INTEGRATE</b><br/>A drift tests<br/>B refactor + simplify <br/>C final report + doc audit<br/>D merge / PR / cleanup"]
     MERGED(["merged"])
 
     PLAN --> IMPLEMENT
@@ -45,6 +47,8 @@ flowchart TB
     class MERGED terminal
 ```
 
+To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, `implement according to the plan`, `integrate it with the update on the main`, ...
+
 ### Key principles of the workflow
 
 1. **Implementer–reviewer pair at every step.** An adversarial reviewer inspects every implementation; work only advances after `APPROVE`. Review is never skipped, regardless of how trivial a step looks.
@@ -55,11 +59,11 @@ flowchart TB
 
 ## Domain Skills
 
-Domain skills teach agents the discipline that applies to a particular kind of research work. They load on top of the workflow skills when a task touches their domain.
+Domain skills teach agents the discipline that applies to a particular kind of research work. They load on top of the workflow skills when a task touches their domain. Domain skills will be invoked automatically when agents detect the relevant domain, or they can be invoked stand alone during interactive sessions. 
 
 | Skill | Flagship discipline |
 |-------|---------------------|
-| **econ-data-analysis** | Iron Law: no transformation without prior description. Three concurrent disciplines — Describe, Analyze, Validate — plus pitfall catalogs for merges, time series, aggregations, filtering, variable construction, and missing data. Stage-scoped references load per phase (planning, integration, drift tests, robustness, notebook format). |
+| **econ-data-analysis** | Iron Law: no transformation without prior description. Three concurrent disciplines — Describe, Analyze, Validate — plus pitfall catalogs for merges, time series, aggregations, filtering, variable construction, and missing data, and how to render human-friendly notebook. |
 
 Future verticals are planned hooks, not commitments:
 
@@ -74,13 +78,12 @@ Utility skills are domain-neutral tools callable by workflow skills, agents, or 
 
 | Skill | What + when to use |
 |-------|--------------------|
-| **handoff-doc** | Editing discipline for `PLAN.md` / `RESULTS.md` — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, full task-block anatomy templates. Use when creating a handoff doc from scratch, maturing `RESULTS.md` into its permanent form, or when the compact etiquette baked into the agent files is not enough. |
-| **report-in-markdown** | Format discipline for markdown reports containing figures, LaTeX math, or tables. Use when producing a standalone human-readable report, or when an implementer task section in `RESULTS.md` embeds a figure or math expression. |
+| **handoff-doc** | Teaches agents how to create a handoff document. Editing discipline for `PLAN.md` / `RESULTS.md` — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, full task-block anatomy templates. Use when creating a handoff doc from scratch, maturing `RESULTS.md` into its permanent form, or when the compact etiquette baked into the agent files is not enough. |
+| **report-in-markdown** | Format rules for markdown reports containing figures, LaTeX math, or tables. Use when producing a standalone human-readable report, or when an implementer task section in `RESULTS.md` embeds a figure or math expression. |
 | **refactor-and-integrate** | Three gated checklists — drift-test quality, codebase integration, merge quality — shared by implementer and reviewer. Use during integration-phase work, or standalone for any refactor that needs consistent quality gates. |
 | **semantic-merge** | Intent-based branch integration that classifies conflicts by research impact and escalates methodology decisions to the user. Use whenever you would otherwise run `git merge` / `git rebase` / `git cherry-pick` on a research branch — the `merge-guard` hook flags bare invocations automatically. |
-| **worktree-data-sync** | Non-git data sync between existing worktrees (seed, diff, apply) plus data teardown. Use when copying data into a new worktree, reconciling data across parallel worktrees, or tearing down a worktree's data cleanly. Worktree lifecycle itself (create/enter/remove) lives in `agent-orchestration`. |
+| **worktree-data-sync** | Research project often depends on non-git-controlled data. It syncs data between existing git-controlled worktrees (seed, diff, apply) plus data teardown. Use when copying data into a new worktree, reconciling data across parallel worktrees, or tearing down a worktree's data cleanly. Worktree lifecycle itself (create/enter/remove) lives in `agent-orchestration`. |
 
-For the full agent-facing map (Stage → required skills + stage-scoped references) see `superRA:using-superra` §Skill-Load Manifest. For contributor navigation, `skills/CATEGORIES.md` is the authoritative grouping index.
 
 ## Agents
 
@@ -90,6 +93,8 @@ For the full agent-facing map (Stage → required skills + stage-scoped referenc
 | **reviewer** | Prototype reviewer agent. Verifies work independently using the APPROVE / REVISE protocol. Dispatched with a workflow skill and the active domain skill's stage reference. |
 
 ## Hooks
+
+Currently hooks are only supported by Claude Code. 
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
@@ -126,17 +131,86 @@ If you want to modify superRA itself — edit skills, add a domain vertical, tun
 
 ```bash
 git clone https://github.com/FuZhiyu/superRA.git
-claude plugin marketplace add ./superRA
-claude plugin install superRA@superRA
 ```
 
-Edits to your clone are picked up on the next session start.
+The committed repo marketplace now targets the published GitHub source so remote installs work cleanly in Codex. For a live local-development install, create your own personal marketplace entry that points directly at your clone instead of relying on the repo's committed marketplace file.
+
+### Codex
+
+Codex installation has two pieces:
+
+- **Plugin bundle** from [`.codex-plugin/plugin.json`](./.codex-plugin/plugin.json). This installs the shared superRA skills.
+- **Named custom agents** from `codex-superra-setup`. This installs `superra_implementer` and `superra_reviewer`.
+
+This split is Codex-specific and deliberate. In Codex, plugins are the installable distribution unit for shared skills, while custom agents are discovered separately from `~/.codex/agents/`.
+
+#### Remote marketplace install (recommended)
+
+1. Add the repo as a marketplace:
+
+   ```bash
+   codex plugin marketplace add FuZhiyu/superRA
+   ```
+
+2. Restart Codex, open the Plugins UI (or run `/plugins` in the CLI), and install `superra`.
+3. Run `codex-superra-setup`.
+4. Choose **global** scope so `superra_implementer` and `superra_reviewer` install into `~/.codex/agents/`.
+5. Restart Codex or start a fresh session if agent discovery has not refreshed yet.
+
+Codex should cache the plugin after install under `~/.codex/plugins/cache/...`.
+
+#### Manual local-clone install (for development or explicit local control)
+
+1. Clone this repo somewhere durable:
+
+   ```bash
+   git clone https://github.com/FuZhiyu/superRA.git ~/.codex/plugins/superra
+   ```
+
+2. Add a personal plugin marketplace at `~/.agents/plugins/marketplace.json` that points at that clone. Minimal example:
+
+   ```json
+   {
+     "name": "superra",
+     "interface": {
+       "displayName": "superRA"
+     },
+     "plugins": [
+       {
+         "name": "superra",
+         "source": {
+           "source": "local",
+           "path": "./.codex/plugins/superra"
+         },
+         "policy": {
+           "installation": "AVAILABLE",
+           "authentication": "ON_INSTALL"
+         },
+         "category": "Productivity"
+       }
+     ]
+   }
+   ```
+
+3. Restart Codex, open the Plugins UI (or run `/plugins` in the CLI), and install `superra`.
+4. Run `codex-superra-setup`.
+5. Choose **global** scope so `superra_implementer` and `superra_reviewer` install into `~/.codex/agents/`.
+6. Restart Codex or start a fresh session if agent discovery has not refreshed yet.
+
+#### Updating a Codex install
+
+- **Remote marketplace install:** update the marketplace and plugin from Codex, then restart if the UI has not refreshed yet.
+- **Manual local-clone install:** Codex tracks the directory named in your personal marketplace entry. Update that clone, then restart Codex so it reloads the plugin files. For the example above, that usually means `git -C ~/.codex/plugins/superra pull`.
+- **Agent updates:** rerun `codex-superra-setup` after updating if you want to refresh the generated custom agents. This is required whenever [`agents/implementer.md`](./agents/implementer.md) or [`agents/reviewer.md`](./agents/reviewer.md) changes.
+- **Verification:** the global install should create `~/.codex/agents/superra_implementer.toml` and `~/.codex/agents/superra_reviewer.toml`.
+
+For more detail, see the official [Codex plugin docs](https://developers.openai.com/codex/plugins/build) and [`docs/README.codex.md`](./docs/README.codex.md).
 
 ### Other Platforms
 
 superRA ships entry files for several non-Claude-Code harnesses:
 
-- **Codex / Copilot CLI / any `AGENTS.md`-aware tool** — point at [`AGENTS.md`](./AGENTS.md) at the repo root.
+- **Copilot CLI / any other `AGENTS.md`-aware tool** — point at [`AGENTS.md`](./AGENTS.md) at the repo root.
 - **Gemini CLI** — point at [`GEMINI.md`](./GEMINI.md) and [`gemini-extension.json`](./gemini-extension.json).
 
 Harness-specific install flow varies; see the upstream [Superpowers docs](https://github.com/obra/superpowers) for patterns, and substitute this repo's URL.
@@ -148,7 +222,7 @@ Design principles, DRY / composability rules, skill-design patterns, and the ext
 
 ## Upstream
 
-superRA is a fork of [Superpowers](https://github.com/obra/superpowers) by [Jesse Vincent](https://blog.fsck.com). The upstream project provides the plugin infrastructure, skill system, and several general-purpose skills that superRA inherits and extends.
+superRA started as a fork of [Superpowers](https://github.com/obra/superpowers) by [Jesse Vincent](https://blog.fsck.com). The upstream project provides the plugin infrastructure, skill system, and several general-purpose skills that superRA inherits and extends.
 
 ## License
 
