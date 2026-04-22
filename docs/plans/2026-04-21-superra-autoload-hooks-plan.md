@@ -61,7 +61,7 @@ Not applicable — this is plugin tooling, not an analysis pipeline.
 - [x] Plan approved
 - [x] Implementation complete
 - [x] Review passed
-- [ ] Integration complete
+- [x] Integration complete
 
 ## Project Conventions
 
