@@ -81,7 +81,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1
-**Review status:** REVISE
+**Review status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/integration-workflow/SKILL.md`, and `skills/econ-data-analysis/SKILL.md`.
@@ -95,6 +95,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes:**
 > 1. [MAJOR] `skills/integration-workflow/SKILL.md:27` — the Phase overview still summarizes substantive restructure as `task add/remove/combine`, which omits both `split` and task-boundary changes to the heading / `Script` / `Input` / `Output`. Task 3's objective is to make the five owned skill files consistent on what must route back through `planning-workflow`, so this leftover summary means the stale-language sweep is incomplete. Update the overview text so it matches the operative rules later in the file.
+>    → implemented: updated the Phase Map substantive-restructure summary to include whole-task split and task-boundary changes to the heading / `Script` / `Input` / `Output` (`skills/integration-workflow/SKILL.md:27`)
 
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3

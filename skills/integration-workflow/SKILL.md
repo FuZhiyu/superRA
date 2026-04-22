@@ -24,9 +24,10 @@ Phase C — Docs  ───┘   integration reviewer triggers a new round)
 Phase D — Final merge / PR / cleanup
                    ↑
          Anywhere ─┴─→  `planning-workflow §User Feedback and Changing Plans`
-                        (substantive restructure: task add/remove/combine,
-                         DAG flip, APPROVED invalidation; orchestrator
-                         proposes, researcher decides)
+                        (substantive restructure: task add/remove/combine/split,
+                         task-boundary changes to the heading / `Script` /
+                         `Input` / `Output`, DAG flip, APPROVED invalidation;
+                         orchestrator proposes, researcher decides)
 ```
 
 **Autonomy** — full contract: `superRA:using-superra/references/main-agent.md`. Legitimate stop points in this workflow:

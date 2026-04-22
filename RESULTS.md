@@ -38,6 +38,7 @@
 ### Notes
 - The stale-language sweep used targeted `rg` queries plus a focused `git diff` review over the five touched skill files; the remaining “literal adherence” phrasing is now only the deliberate guardrail in `econ-data-analysis` that rejects literalism when the evidence demands extra checks.
 - The sweep also caught one lingering mid-INTEGRATE restructure example in `planning-workflow` that still said task add/remove/combine; it now says add/remove/combine/split so the owned workflow surfaces tell the same story.
+- The REVISE pass fixed one additional stale summary in `skills/integration-workflow/SKILL.md`'s Phase Map so the high-level overview now matches the file's later operative rules on whole-task split and task-boundary changes.
 
 ## Task 4: Add verification coverage and validate the change end-to-end
 
