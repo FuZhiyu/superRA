@@ -12,6 +12,26 @@ These skills still mention Claude-oriented tool names in places. In Codex, read 
 | `SendMessage` | send input to the existing warm agent |
 | parallel agent dispatch | use Codex parallel-agent tools when available; otherwise fall back to ordinary agent fan-out |
 
+## Delegation Priority in Codex
+
+When the user invokes `superRA`, a `superRA:*workflow` skill, or
+`superRA:agent-orchestration`, treat that as an explicit user preference
+for the named-agent workflow in Codex. Under
+`superRA:using-superra` §Instruction Priority, that user choice outranks
+Codex's generic default caution about spawning agents.
+
+- When a workflow step says to dispatch an implementer or reviewer, spawn
+  `superra_implementer` or `superra_reviewer` rather than staying inline
+  because of the harness-default anti-delegation guidance.
+- Independent review is mandatory. After any implementation step,
+  dispatch `superra_reviewer` unless the user explicitly asked for no
+  subagents or Codex truly lacks agent support. If agent support is
+  unavailable, fall back to in-session reviewer mode and state that the
+  fallback was forced by the harness.
+- Direct mode remains a fallback, not the Codex default. Use it only
+  when the workflow allows it and the user requested it, the task is
+  trivial, or agent tools are unavailable.
+
 ## Named Agent Setup
 
 Codex supports custom named agents through `.codex/agents/` and `~/.codex/agents/`. superRA uses that documented path rather than prompt-wrapping built-in workers.
