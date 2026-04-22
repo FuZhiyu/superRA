@@ -75,6 +75,10 @@
 > **Question asked:** Which integration base and sync strategy should this branch use now that `main` has several major improvements?
 > **Rationale:** The goal is to preserve the writing-vertical work while absorbing current `main` improvements with the smallest justified cumulative diff.
 
+> **User decision (2026-04-22):** Undo the 2026-04-22 `main` sync. The prior merge misread `main`'s integration intent by carrying forward `skills/using-superRA/SKILL.md`'s `## Universal Principles` block even though `main` had intentionally removed it.
+> **Question asked:** "Undo these merges. I don't think you fully capture the integration idea: in the main, we intentionally dropped the universal principles; in the current branch we still kept it. Why? can you go through the log and the handoff doc to explain the rationale"
+> **Rationale:** Main's history shows the removal was deliberate de-duplication, not drift: `564021b` simplified skills by cutting duplicate protocol text, and `72c38e3` explicitly moved the four-principle content to its owning files (`main-agent.md`, workflow structure, `handoff-doc`, reviewer/integration references). The archived codex-compatibility handoff (`docs/plans/2026-04-17-codex-compatibility-plan.md`, Task 5 Step 3) also states that minimum-net-diff syncs should take `main` verbatim on shared files and re-thread only branch-specific additive surfaces. Reverting the sync restores that discipline.
+
 ---
 
 ## Project Conventions
