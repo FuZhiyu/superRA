@@ -11,7 +11,7 @@ description: "Requires `superRA:using-superra` loaded first. Use when starting a
 
 Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the implementation-workflow to consume.
 
-Write comprehensive plans for a reader skilled at the craft but with zero context for this specific project — which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Frequent commits.
+Write comprehensive plans for a reader skilled at the craft but with zero context for this specific project — which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Task scope is carried by the task heading plus `Script` / `Input` / `Output`; steps are the best current route inside that scope, not an exhaustive script. Frequent commits.
 
 **Announce at start:** "I'm using the planning-workflow skill to create the project plan."
 
@@ -63,13 +63,13 @@ The pipeline file must:
 
 ### Step Granularity
 
-**Each step is one logical unit of work with full discipline applied.** For data analysis, that discipline is the three concurrent disciplines describe-analyze-validate (see `superRA:econ-data-analysis` main body). Documentation is written continuously alongside the three, not as a separate step. Typical step shapes:
+**Each step is one logical unit of work with full discipline applied.** For data analysis, that discipline is the three concurrent disciplines describe-analyze-validate (see `superRA:econ-data-analysis` main body). Documentation is written continuously alongside the three, not as a separate step. Write enough steps to give implementers an actionable starting route; do not try to pre-script every in-task diagnostic, validation branch, or robustness check. Typical step shapes:
 
 - "Describe the raw holdings data (panel structure, key variables, missing values)" — step
 - "Merge holdings with fund characteristics (left join on fund_id × date)" — step
 - "Validate merge result (row counts, check unmatched, spot-check merged variables), commit" — step
 
-For other verticals, the operational cycle looks different (e.g., derivation → verification → proof-check for theory work), but the granularity rule is the same: one logical operation per step, with the cycle completed in-step.
+For other verticals, the operational cycle looks different (e.g., derivation → verification → proof-check for theory work), but the granularity rule is the same: one logical operation per step, with the cycle completed in-step. Implementers are expected to refine, reorder, add, or remove steps within the task's existing scope when the work reveals a better route.
 
 ### Task Dependencies
 
@@ -128,11 +128,11 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 - Changing the analysis-level objective, methodology, sample definition, or expected output.
 - Changing data sources or project-wide conventions.
 - Scope additions arriving after integration or merge (post-PR additions, adjacent features surfaced by reviewers, follow-on ideas).
-- Substantive restructure findings surfaced mid-INTEGRATE (by `integration-workflow` Phase B integration reviewer, Phase C doc-reviewer, or Phase D semantic-merge) — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
+- Substantive restructure findings surfaced mid-INTEGRATE (by `integration-workflow` Phase B integration reviewer, Phase C doc-reviewer, or Phase D semantic-merge) — task add/remove/combine/split, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
 
 **Not material (handle as inline discovery edits per the Living Plan section above):**
 
-- Rewording a step within an in-flight task to match what the data forced.
+- Rewording a step within an in-flight task to match what the work forced, including adding, reordering, or dropping in-scope diagnostics / validation / robustness work.
 - Adjusting expected results based on early findings.
 - Refining methodology details that the researcher already approved at planning time.
 

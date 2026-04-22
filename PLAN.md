@@ -82,16 +82,17 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1
+**Review status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/integration-workflow/SKILL.md`, and `skills/econ-data-analysis/SKILL.md`.
 **Output:** Workflow wording aligned with objective-first semantics: planners write steps as actionable suggested routes, implementation flow checks objective clarity rather than treating steps as a literal contract, orchestration/reporting guidance distinguishes within-task adaptation from scope change and keeps the rationale for within-task route rewrites in the agent message layer rather than as handoff-doc history, integration review escalates whole-task restructure through `planning-workflow`, and `econ-data-analysis` adds a narrow within-task robustness/diagnostic reinforcement.
 
-- [ ] **Step 1: Edit `planning-workflow/SKILL.md`.** Clarify that planners should decompose enough to guide execution, but steps are a best-current route rather than an exhaustive script and are expected to be refined within task scope.
-- [ ] **Step 2: Edit `implementation-workflow/SKILL.md`.** In Step 1 and Step 2, make the orchestrator check whether task objectives are clear and steps are adequate starting guidance, and keep accepted in-scope implementer deviations when they stay inside task scope.
-- [ ] **Step 3: Edit `agent-orchestration/SKILL.md` and `integration-workflow/SKILL.md`.** Add the adjudication rule that separates justified within-task step adaptation from silent scope change, make the orchestrator expect rationale for within-task route rewrites in agent status messages rather than in `PLAN.md` history, and make integration reviewers explicitly route whole-task combine/split recommendations through the existing changing-plans protocol.
-- [ ] **Step 4: Edit `econ-data-analysis/SKILL.md`.** Add the narrow data-analysis reinforcement that missing robustness or validation work inside a task should be added when the evidence demands it, even if the original steps omitted it.
-- [ ] **Step 5: Run a stale-language sweep.** Search touched workflow surfaces for leftover "follow the steps mechanically" or literal-adherence wording and tighten only the phrases that now contradict the new semantics.
+- [x] **Step 1: Edit `planning-workflow/SKILL.md`.** Clarified that task headings plus `Script` / `Input` / `Output` carry scope, planners write steps as the best current route rather than an exhaustive script, and in-scope step refinement is expected during execution.
+- [x] **Step 2: Edit `implementation-workflow/SKILL.md`.** Updated Step 1 and Step 2 so the orchestrator checks task-boundary clarity, treats steps as starter guidance, and keeps accepted in-scope implementer step rewrites in `PLAN.md`.
+- [x] **Step 3: Edit `agent-orchestration/SKILL.md` and `integration-workflow/SKILL.md`.** Added the within-task-adaptation versus scope-change rule, made the orchestrator expect route-rewrite rationale in the agent status message layer rather than in `PLAN.md`, and routed whole-task combine/split or boundary-change findings back through `planning-workflow`.
+- [x] **Step 4: Edit `econ-data-analysis/SKILL.md`.** Added the narrow implementation-standard reinforcement that evidence-driven diagnostics, validation passes, or within-task robustness checks must be added when needed and reflected in the rewritten step text.
+- [x] **Step 5: Run a stale-language sweep.** Re-read the touched workflow/domain files with targeted `rg` and `git diff` checks, tightened the remaining contradictory literal-adherence wording, and aligned the mid-INTEGRATE restructure example in `planning-workflow` with whole-task combine/split routing.
 
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3

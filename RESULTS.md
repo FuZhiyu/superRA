@@ -36,7 +36,18 @@
 
 ## Task 3: Update workflow and domain skills to treat steps as mutable guidance
 
-**Status:** Not started
+**Status:** Implemented (awaiting review 2026-04-22)
+
+### Key Findings
+- `skills/planning-workflow/SKILL.md` now tells planners that task headings plus `Script` / `Input` / `Output` bind scope, while steps are the best current route and should guide execution without trying to pre-script every in-task diagnostic or robustness branch.
+- `skills/implementation-workflow/SKILL.md` now makes the orchestrator check task-boundary clarity during Step 1 and judge completion against the task objective/scope plus the checklist during Step 2, instead of grading literal adherence to the planner's first step wording.
+- `skills/agent-orchestration/SKILL.md` and `skills/integration-workflow/SKILL.md` now separate normal within-task route adaptation from scope change, keep the explanation for route rewrites in the implementer status message layer, and route whole-task combine/split or boundary-change findings back through `planning-workflow §User Feedback and Changing Plans`.
+- `skills/econ-data-analysis/SKILL.md` now explicitly requires implementers to add evidence-driven diagnostics, validation passes, or within-task robustness checks when needed to trust a result, even if the original step list omitted them.
+
+### Notes
+- The stale-language sweep used targeted `rg` queries plus a focused `git diff` review over the five touched skill files; the remaining “literal adherence” phrasing is now only the deliberate guardrail in `econ-data-analysis` that rejects literalism when the evidence demands extra checks.
+- The sweep also caught one lingering mid-INTEGRATE restructure example in `planning-workflow` that still said task add/remove/combine; it now says add/remove/combine/split so the owned workflow surfaces tell the same story.
+- The REVISE pass fixed one additional stale summary in `skills/integration-workflow/SKILL.md`'s Phase Map so the high-level overview now matches the file's later operative rules on whole-task split and task-boundary changes.
 
 ## Task 4: Add verification coverage and validate the change end-to-end
 
