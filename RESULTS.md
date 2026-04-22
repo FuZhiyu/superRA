@@ -56,14 +56,12 @@
 **Status:** Approved (Task 4 approved 2026-04-22)
 
 ### Key Findings
-- The supported fast suite now runs only current superRA coverage; `cd tests/claude-code && ./run-skill-tests.sh` passed in 18 seconds on the merged tree (1 passed, 0 failed, 0 skipped).
-- Added `tests/claude-code/test-objective-first-task-semantics.sh` and kept it as the default smoke test; `tests/claude-code/run-skill-tests.sh --test test-objective-first-task-semantics.sh --verbose` had already passed during implementation, with the focused Claude Code check completing in 16 seconds.
-- `tests/claude-code/README.md` now uses superRA naming, explains that the supported local-development path runs against this repo clone without a separate plugin install, and marks the `subagent-driven-development` scripts as legacy manual-only coverage.
-- Updated the shared Claude Code harness so prompts are passed to `claude` as argv-safe arguments and all suite entry points use a portable `run_with_timeout` wrapper instead of assuming GNU `timeout`, which is absent in this macOS environment.
-- The text-level consistency sweep over `skills/`, `agents/`, `tests/`, and `.codex/agents/` found no contradictory "follow the steps literally" surfaces; the only remaining literal-adherence wording is the deliberate reviewer/domain guardrail language plus the new focused test prompt itself.
-- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` reported that all generated project agent files are already up to date.
-- In one manual Claude Code session against a temporary toy handoff pair with an omitted merge-validation step, Claude rewrote the implementer steps to add describe-before-merge, key-cardinality, and uniqueness checks, gave the reviewer a `REVISE` verdict for a mechanical load-merge-save implementation, and treated any real task split as a `planning-workflow §User Feedback and Changing Plans` escalation rather than an ad hoc boundary rewrite.
+- `cd tests/claude-code && ./run-skill-tests.sh` passed on 2026-04-22 with `Passed: 1`, `Failed: 0`, and `Skipped: 0`; the summary also notes that the legacy integration tests were not run.
+- The default fast suite still runs only `test-objective-first-task-semantics.sh`, and `tests/claude-code/README.md` documents the archived `subagent-driven-development` scripts as manual-only coverage.
+- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` reported that all generated project agent files are up to date.
+- `tests/claude-code/test-objective-first-task-semantics.sh` still checks the three intended behaviors: scope contract, omitted within-task validation, and reviewer pushback on mechanical step-following.
+- `tests/claude-code/test-helpers.sh` still provides the portable `run_with_timeout` wrapper and argv-safe `run_claude` helper that the fast suite uses on this macOS environment.
 
 ### Notes
-- `tests/claude-code/README.md` now documents the focused fast test, the shared timeout helper, and the legacy/manual-only split so the documented suite matches the runner.
-- The pre-existing `subagent-driven-development` fast and integration scripts remain in-tree only as archival pre-superRA coverage; they are no longer part of the supported green default path.
+- Phase C did not rerun the earlier manual Claude session recorded during implementation; the permanent record will keep only the file-backed and freshly rerun verification claims.
+- The supported local-development path remains `cd tests/claude-code && ./run-skill-tests.sh`.
