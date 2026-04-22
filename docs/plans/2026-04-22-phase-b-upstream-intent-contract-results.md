@@ -1,11 +1,11 @@
 ---
 author: "[[Julie Zhiyu Fu]]"
 date: 2026-04-22
-timestamp: "2026-04-22T23:22:13"
+timestamp: "2026-04-22T23:24:06"
 session_id: "session-20260422-phase-c-results-maturation"
-git_commit: "303bc96fcbf2b78ce2076da76ed7b5b8f7c64dde"
-git_message: "results: fact-check Stage 2 RESULTS.md"
-git_dirty: true
+git_commit: "bdd8cf99e0d73ca6fa84ddeb250f3d1b3ea05014"
+git_message: "results: relocate RESULTS.md to docs/plans"
+git_dirty: false
 branch: "tighten-integration-rules"
 merge_base: "addc9ca7fe1bdbedb080d92095facb649074c1e4"
 tags: ["report", "results", "superRA", "phase-b", "integration-workflow"]
@@ -77,4 +77,4 @@ This branch changes workflow, handoff, and verification instructions only. It do
 
 ## Reproducibility
 
-Reproduce the structural state documented here from commit `303bc96fcbf2b78ce2076da76ed7b5b8f7c64dde` with `bash tests/test-phase-b-upstream-intent-contract.sh && bash tests/check-harness-compatibility.sh`.
+Reproduce the permanent-record state documented here from commit `bdd8cf99e0d73ca6fa84ddeb250f3d1b3ea05014` with `bash tests/test-phase-b-upstream-intent-contract.sh && bash tests/check-harness-compatibility.sh`.
