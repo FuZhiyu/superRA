@@ -149,7 +149,7 @@ One blockquote cluster per incoming change. Each cluster has two lines: `Main-si
 The task heading names the objective for that block. `Script`, `Input`, and `Output` are the invariant scope boundary. Step checkboxes are planner-authored starter guidance that implementers rewrite in place as the best within-task route becomes clearer; within-task step reorder/add/remove/combine/split is routine, but whole-task add/split/combine/remove still routes through `planning-workflow §User Feedback and Changing Plans`.
 
 ````markdown
-### Task N: [Phase Name]
+### Task N: [Objective-style task title]
 **Depends on:** Task N-1 [, Task N-2] | *(none)*
 **Review status:** *(set during execution — not filled at planning time)*
 **Integration status:** *(set during integration — not filled at planning time)*
