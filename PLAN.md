@@ -81,7 +81,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/integration-workflow/SKILL.md`, and `skills/econ-data-analysis/SKILL.md`.
@@ -92,10 +92,6 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 3: Edit `agent-orchestration/SKILL.md` and `integration-workflow/SKILL.md`.** Added the within-task-adaptation versus scope-change rule, made the orchestrator expect route-rewrite rationale in the agent status message layer rather than in `PLAN.md`, and routed whole-task combine/split or boundary-change findings back through `planning-workflow`.
 - [x] **Step 4: Edit `econ-data-analysis/SKILL.md`.** Added the narrow implementation-standard reinforcement that evidence-driven diagnostics, validation passes, or within-task robustness checks must be added when needed and reflected in the rewritten step text.
 - [x] **Step 5: Run a stale-language sweep.** Re-read the touched workflow/domain files with targeted `rg` and `git diff` checks, tightened the remaining contradictory literal-adherence wording, and aligned the mid-INTEGRATE restructure example in `planning-workflow` with whole-task combine/split routing.
-
-> **Review notes:**
-> 1. [MAJOR] `skills/integration-workflow/SKILL.md:27` — the Phase overview still summarizes substantive restructure as `task add/remove/combine`, which omits both `split` and task-boundary changes to the heading / `Script` / `Input` / `Output`. Task 3's objective is to make the five owned skill files consistent on what must route back through `planning-workflow`, so this leftover summary means the stale-language sweep is incomplete. Update the overview text so it matches the operative rules later in the file.
->    → implemented: updated the Phase Map substantive-restructure summary to include whole-task split and task-boundary changes to the heading / `Script` / `Input` / `Output` (`skills/integration-workflow/SKILL.md:27`)
 
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
