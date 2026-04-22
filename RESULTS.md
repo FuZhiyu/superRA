@@ -39,6 +39,7 @@
 **Status:** Approved (Task 3 approved 2026-04-22)
 
 ### Key Findings
+- `RELEASE-NOTES.md` now records the objective-first task/step semantics change under `0.1.1`, capturing the user-visible scope contract: task heading plus `Script` / `Input` / `Output` bind scope, steps are mutable guidance inside that boundary, and reviewers escalate whole-task restructure through `planning-workflow`.
 - `skills/planning-workflow/SKILL.md` now tells planners that task headings plus `Script` / `Input` / `Output` bind scope, while steps are the best current route and should guide execution without trying to pre-script every in-task diagnostic or robustness branch.
 - `skills/implementation-workflow/SKILL.md` now makes the orchestrator check task-boundary clarity during Step 1 and judge completion against the task objective/scope plus the checklist during Step 2, instead of grading literal adherence to the planner's first step wording.
 - `skills/agent-orchestration/SKILL.md` and `skills/integration-workflow/SKILL.md` now separate normal within-task route adaptation from scope change, keep the explanation for route rewrites in the implementer status message layer, and route whole-task combine/split or boundary-change findings back through `planning-workflow §User Feedback and Changing Plans`.
@@ -48,18 +49,21 @@
 - The stale-language sweep used targeted `rg` queries plus a focused `git diff` review over the five touched skill files; the remaining “literal adherence” phrasing is now only the deliberate guardrail in `econ-data-analysis` that rejects literalism when the evidence demands extra checks.
 - The sweep also caught one lingering mid-INTEGRATE restructure example in `planning-workflow` that still said task add/remove/combine; it now says add/remove/combine/split so the owned workflow surfaces tell the same story.
 - The REVISE pass fixed one additional stale summary in `skills/integration-workflow/SKILL.md`'s Phase Map so the high-level overview now matches the file's later operative rules on whole-task split and task-boundary changes.
+- The merged-tree project-doc audit required a new release-ledger entry but no further root `README.md` or `CLAUDE.md` changes after the `origin/main` sync.
 
 ## Task 4: Add verification coverage and validate the change end-to-end
 
 **Status:** Approved (Task 4 approved 2026-04-22)
 
 ### Key Findings
-- Added `tests/claude-code/test-objective-first-task-semantics.sh` and wired it into the default fast suite; `tests/claude-code/run-skill-tests.sh --test test-objective-first-task-semantics.sh --verbose` passed, with the focused Claude Code check completing in 16 seconds.
+- The supported fast suite now runs only current superRA coverage; `cd tests/claude-code && ./run-skill-tests.sh` passed in 18 seconds on the merged tree (1 passed, 0 failed, 0 skipped).
+- Added `tests/claude-code/test-objective-first-task-semantics.sh` and kept it as the default smoke test; `tests/claude-code/run-skill-tests.sh --test test-objective-first-task-semantics.sh --verbose` had already passed during implementation, with the focused Claude Code check completing in 16 seconds.
+- `tests/claude-code/README.md` now uses superRA naming, explains that the supported local-development path runs against this repo clone without a separate plugin install, and marks the `subagent-driven-development` scripts as legacy manual-only coverage.
 - Updated the shared Claude Code harness so prompts are passed to `claude` as argv-safe arguments and all suite entry points use a portable `run_with_timeout` wrapper instead of assuming GNU `timeout`, which is absent in this macOS environment.
 - The text-level consistency sweep over `skills/`, `agents/`, `tests/`, and `.codex/agents/` found no contradictory "follow the steps literally" surfaces; the only remaining literal-adherence wording is the deliberate reviewer/domain guardrail language plus the new focused test prompt itself.
 - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` reported that all generated project agent files are already up to date.
 - In one manual Claude Code session against a temporary toy handoff pair with an omitted merge-validation step, Claude rewrote the implementer steps to add describe-before-merge, key-cardinality, and uniqueness checks, gave the reviewer a `REVISE` verdict for a mechanical load-merge-save implementation, and treated any real task split as a `planning-workflow §User Feedback and Changing Plans` escalation rather than an ad hoc boundary rewrite.
 
 ### Notes
-- `tests/claude-code/README.md` now documents the new focused fast test and the shared timeout helper so the documented suite matches the runner.
-- The default fast suite is not fully green yet: the pre-existing legacy `tests/claude-code/test-subagent-driven-development.sh` still fails because it probes a nonexistent `subagent-driven-development` skill and expects Claude to describe it. Task 4 did not retarget that legacy coverage, so this remains an open follow-up for the broader Claude Code suite rather than a regression introduced by the new objective-first test.
+- `tests/claude-code/README.md` now documents the focused fast test, the shared timeout helper, and the legacy/manual-only split so the documented suite matches the runner.
+- The pre-existing `subagent-driven-development` fast and integration scripts remain in-tree only as archival pre-superRA coverage; they are no longer part of the supported green default path.

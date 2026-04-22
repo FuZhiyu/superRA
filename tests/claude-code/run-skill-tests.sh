@@ -54,15 +54,15 @@ while [[ $# -gt 0 ]]; do
             echo "  --verbose, -v        Show verbose output"
             echo "  --test, -t NAME      Run only the specified test"
             echo "  --timeout SECONDS    Set timeout per test (default: 300)"
-            echo "  --integration, -i    Run integration tests (slow, 10-30 min)"
+            echo "  --integration, -i    Run legacy integration tests (slow, pre-superRA coverage)"
             echo "  --help, -h           Show this help"
             echo ""
-            echo "Tests:"
-            echo "  test-objective-first-task-semantics.sh  Focused coverage for missing within-task checks"
-            echo "  test-subagent-driven-development.sh  Test skill loading and requirements"
+            echo "Fast Tests (run by default):"
+            echo "  test-objective-first-task-semantics.sh  Current superRA objective-first smoke test"
             echo ""
-            echo "Integration Tests (use --integration):"
-            echo "  test-subagent-driven-development-integration.sh  Full workflow execution"
+            echo "Legacy Manual Tests (not run by default):"
+            echo "  test-subagent-driven-development.sh  Historical pre-superRA skill smoke test"
+            echo "  test-subagent-driven-development-integration.sh  Historical pre-superRA workflow integration test"
             exit 0
             ;;
         *)
@@ -76,10 +76,9 @@ done
 # List of skill tests to run (fast unit tests)
 tests=(
     "test-objective-first-task-semantics.sh"
-    "test-subagent-driven-development.sh"
 )
 
-# Integration tests (slow, full execution)
+# Legacy integration tests (slow, historical pre-superRA coverage)
 integration_tests=(
     "test-subagent-driven-development-integration.sh"
 )
@@ -176,8 +175,8 @@ echo "  Skipped: $skipped"
 echo ""
 
 if [ "$RUN_INTEGRATION" = false ] && [ ${#integration_tests[@]} -gt 0 ]; then
-    echo "Note: Integration tests were not run (they take 10-30 minutes)."
-    echo "Use --integration flag to run full workflow execution tests."
+    echo "Note: Legacy integration tests were not run."
+    echo "Use --integration only for the archived pre-superRA workflow coverage."
     echo ""
 fi
 

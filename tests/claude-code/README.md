@@ -1,6 +1,6 @@
 # Claude Code Skills Tests
 
-Automated tests for superpowers skills using Claude Code CLI.
+Automated tests for superRA skills using Claude Code CLI.
 
 ## Overview
 
@@ -9,21 +9,30 @@ This test suite verifies that skills are loaded correctly and Claude follows the
 ## Requirements
 
 - Claude Code CLI installed and in PATH (`claude --version` should work)
-- Local superpowers plugin installed (see main README for installation)
+- Run the suite from a local clone of this repo
+- No separate plugin install is required for the default local-development path; these tests exercise the repo-local superRA checkout
+- If you want to compare against an installed plugin instead, install `superRA` using the root README first
 
 ## Running Tests
 
-### Run all fast tests (recommended):
+### Run all supported fast tests (recommended):
 ```bash
 ./run-skill-tests.sh
 ```
 
-### Run integration tests (slow, 10-30 minutes):
+This default path is the supported green smoke suite for the current superRA checkout.
+
+### Run the focused objective-first test directly:
+```bash
+./run-skill-tests.sh --test test-objective-first-task-semantics.sh
+```
+
+### Run legacy integration coverage manually (slow, archival pre-superRA coverage):
 ```bash
 ./run-skill-tests.sh --integration
 ```
 
-### Run specific test:
+### Run a legacy manual-only test explicitly:
 ```bash
 ./run-skill-tests.sh --test test-subagent-driven-development.sh
 ```
@@ -35,7 +44,7 @@ This test suite verifies that skills are loaded correctly and Claude follows the
 
 ### Set custom timeout:
 ```bash
-./run-skill-tests.sh --timeout 1800  # 30 minutes for integration tests
+./run-skill-tests.sh --timeout 1800  # 30 minutes for legacy integration tests
 ```
 
 ## Test Structure
@@ -89,8 +98,10 @@ Focused coverage for the objective-first task/step rule (~30 seconds):
 - Requires the implementer to add an omitted within-task validation check
 - Requires the reviewer to flag mechanical step-following that misses a necessary check
 
+### Legacy Manual Tests (not run by default)
+
 #### test-subagent-driven-development.sh
-Tests skill content and requirements (~2 minutes):
+Archived pre-superRA smoke test (~2 minutes):
 - Skill loading and accessibility
 - Workflow ordering (spec compliance before code quality)
 - Self-review requirements documented
@@ -99,10 +110,12 @@ Tests skill content and requirements (~2 minutes):
 - Review loops documented
 - Task context provision documented
 
-### Integration Tests (use --integration flag)
+This file still targets the historical `subagent-driven-development` skill naming. It is retained as an archival reference only and is not part of the supported green default suite.
+
+### Legacy Integration Tests (use `--integration` only when intentionally auditing archived coverage)
 
 #### test-subagent-driven-development-integration.sh
-Full workflow execution test (~10-30 minutes):
+Archived pre-superRA full-workflow execution test (~10-30 minutes):
 - Creates real test project with Node.js setup
 - Creates implementation plan with 2 tasks
 - Executes plan using subagent-driven-development
@@ -121,6 +134,8 @@ Full workflow execution test (~10-30 minutes):
 - Our improvements are actually applied
 - Subagents follow the skill correctly
 - Final code is functional and tested
+
+Like the legacy fast test above, this script still targets the historical `subagent-driven-development` workflow naming and is not part of the supported green path for current superRA development.
 
 ## Adding New Tests
 
@@ -141,7 +156,7 @@ Full workflow execution test (~10-30 minutes):
 
 With `--verbose`, you'll see full Claude output:
 ```bash
-./run-skill-tests.sh --verbose --test test-subagent-driven-development.sh
+./run-skill-tests.sh --verbose
 ```
 
 Without verbose, only failures show output.
@@ -158,6 +173,8 @@ To run in CI:
 
 ## Notes
 
+- The supported green local-development path is `./run-skill-tests.sh`
+- Legacy `subagent-driven-development` scripts remain in-tree only as historical reference coverage and are manual-only
 - Tests verify skill *instructions*, not full execution
 - Full workflow tests would be very slow
 - Focus on verifying key skill requirements
