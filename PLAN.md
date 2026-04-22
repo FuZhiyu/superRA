@@ -68,16 +68,17 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 2: Reframe implementer and reviewer role contracts
 **Depends on:** Task 1
+**Review status:** APPROVED
 
 **Script:** N/A
 **Input:** `agents/implementer.md`, `agents/reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
 **Output:** Implementer guidance that prioritizes the task objective over literal step adherence while allowing necessary within-task diagnostics/robustness work, and that requires the rationale for any within-task path rewrite to be communicated in the status return to the orchestrator/user rather than logged as prior-vs-current history in `PLAN.md`; reviewer guidance that judges objective completion, flags missing necessary checks and unjustified step drift, and routes whole-task combine/split through the existing restructure protocol; refreshed generated Codex mirrors with no manual drift.
 
-- [ ] **Step 1: Inspect the current agent-role boundaries.** Read both agent files to find the existing "you own steps" and review-verdict language that should be tightened rather than replaced wholesale.
-- [ ] **Step 2: Edit `agents/implementer.md`.** Strengthen the within-task autonomy rule into objective-first execution guidance, explicitly allow extra diagnostics/validation/robustness work when the code or data demands it, require the implementer to explain the reason for any within-task step-path rewrite in the status return to the orchestrator/user, and preserve the ban on silently changing `Objective` / `Script` / `Input` / `Output`.
-- [ ] **Step 3: Edit `agents/reviewer.md`.** Reframe review around whether the task objective was achieved under the relevant checklist, add duties to flag under-scoped mechanical execution and unjustified step drift, and add the integration-stage whole-task combine/split escalation rule.
-- [ ] **Step 4: Refresh generated Codex agents.** Run `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` after the canonical agent edits so `.codex/agents/superra_implementer.toml` and `.codex/agents/superra_reviewer.toml` match the new guidance.
-- [ ] **Step 5: Verify generated-to-canonical parity.** Re-read the generated TOML prompts and confirm they reflect the updated agent semantics without manual hand-edit drift.
+- [x] **Step 1: Inspect the current agent-role boundaries.** Re-read `agents/implementer.md`, `agents/reviewer.md`, and the current generated TOML mirrors together to isolate the existing ownership, verdict, and reporting language that needed tightening without replacing the broader handoff protocol.
+- [x] **Step 2: Edit `agents/implementer.md`.** Updated the implementer contract so the task heading/objective plus `Script` / `Input` / `Output` define scope, the step list is the planner's current best route, in-scope step split/combine plus extra diagnostics/validation/robustness work are allowed when needed, and any within-task route rewrite is explained in the status return rather than as `PLAN.md` history.
+- [x] **Step 3: Edit `agents/reviewer.md`.** Updated the reviewer contract to judge objective completion before literal step adherence, flag under-scoped mechanical execution and unjustified step drift, and route integration-stage whole-task combine/split recommendations through `planning-workflow §User Feedback and Changing Plans`.
+- [x] **Step 4: Refresh generated Codex agents.** Ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` after the canonical agent edits so `.codex/agents/superra_implementer.toml` and `.codex/agents/superra_reviewer.toml` were regenerated from the updated markdown.
+- [x] **Step 5: Verify generated-to-canonical parity.** Re-read the generated TOML prompts and ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` to confirm the updated agent semantics landed in both files with no manual hand-edit drift.
 
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1

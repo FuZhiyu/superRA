@@ -23,7 +23,16 @@
 
 ## Task 2: Reframe implementer and reviewer role contracts
 
-**Status:** Not started
+**Status:** Implemented (awaiting review 2026-04-22)
+
+### Key Findings
+- `agents/implementer.md` now treats the task heading/objective plus `Script` / `Input` / `Output` as the scope contract, allows within-task step split/combine plus extra diagnostics/validation/robustness work when needed, and directs any step-path rationale to the status return instead of `PLAN.md` history.
+- `agents/reviewer.md` now judges objective completion before literal step adherence, treats missing necessary checks as review findings even when the listed steps were followed, and routes integration-stage whole-task combine/split recommendations through `planning-workflow §User Feedback and Changing Plans`.
+- The managed Codex mirrors were regenerated only through `skills/codex-superra-setup/scripts/sync_codex_agents.py`, and `--check` confirmed both `.codex/agents/*.toml` files are up to date.
+
+### Notes
+- Re-read the regenerated TOML prompts to confirm the new objective-first language appears in both managed Codex agent files.
+- No manual edits were made to `.codex/agents/superra_implementer.toml` or `.codex/agents/superra_reviewer.toml`.
 
 ## Task 3: Update workflow and domain skills to treat steps as mutable guidance
 
