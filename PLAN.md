@@ -71,6 +71,10 @@
 > **User decision (2026-04-19):** PLAN.md and RESULTS.md are both optional for small/iterative writing tasks. Full handoff-doc discipline only for major changes.
 > **Question asked:** Implied by the workflow-mode discussion.
 
+> **User decision (2026-04-22):** Refresh `domain/writing-skills` against `main`; prioritize the minimum-net-diff path. A semantic merge is acceptable, and rebase/reapply is also authorized if it proves cleaner during conflict resolution.
+> **Question asked:** Which integration base and sync strategy should this branch use now that `main` has several major improvements?
+> **Rationale:** The goal is to preserve the writing-vertical work while absorbing current `main` improvements with the smallest justified cumulative diff.
+
 ---
 
 ## Project Conventions
