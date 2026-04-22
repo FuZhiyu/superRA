@@ -96,7 +96,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
-**Review status:** IMPLEMENTED
+**Review status:** REVISE
 
 **Script:** N/A
 **Input:** The cumulative diff from Tasks 1-3, `tests/claude-code/run-skill-tests.sh`, `tests/claude-code/test-helpers.sh`, the existing Claude Code tests, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -108,3 +108,5 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 4: Re-run generated-agent verification.** Ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` and confirmed the tracked `.codex/agents/*.toml` files are still up to date with no manual drift.
 - [x] **Step 5: Run one manual Claude Code validation session.** Used a temporary toy `PLAN.md` / `RESULTS.md` pair with an omitted within-task merge check and confirmed that Claude rewrote the step list to add describe-before-merge and key-uniqueness checks, returned `REVISE` for a reviewer if the check were skipped, and routed any genuine whole-task split recommendation through `planning-workflow §User Feedback and Changing Plans`.
 - [x] **Step 6: Sweep the final diff and record verification.** Re-read the owned diff for Task 4 scope, confirmed no manual edits were made to generated agent files, and recorded the focused test result, the consistency sweep, the generated-agent check, the manual validation outcome, and the remaining fast-suite concern in `RESULTS.md`.
+
+> 1. MAJOR — [RESULTS.md](/Users/zhiyufu/Dropbox/package_dev/superRA-task-step-refinment/RESULTS.md:65): the non-regression note records the wrong remaining fast-suite failure mode. Re-running `tests/claude-code/run-skill-tests.sh` on this branch failed in 23s because the pre-existing legacy `tests/claude-code/test-subagent-driven-development.sh` still probes a nonexistent `subagent-driven-development` skill, not because it timed out. Update the Task 4 verification notes to describe the actual current failure while keeping it scoped as a legacy-suite follow-up rather than a blocker introduced by the new objective-first test.
