@@ -38,7 +38,7 @@ For example,
 
 You walk the active domain skill's gated checklist (the shared `[BLOCKING]` / `[ADVISORY]` items — same content the implementer walked as self-check, now your verification criteria), plus any operation-conditional sections matching operations performed in this task, and any rationalization catalog the skill carries to help you spot common excuses. If the dispatcher's `Additionally:` line names a specific focus (e.g., "focus on the lag/lead review" or "verify the merge semantics"), jump to that subsection.
 2. **Load any additional skill the dispatch's `Additionally:` line names** (rare — overrides only; the manifest is the default).
-3. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3") and a git SHA range, plus a one-line "what changed since last dispatch" delta. Read the task block, the implementer's step notes, any existing review-notes blockquote (including `→ implemented:` markers from the implementer and `→ orchestrator:` adjudication notes), and the corresponding section of `RESULTS.md` directly from the file. Do not work from a paraphrased summary.
+3. **Read your task source.** Your dispatch will point you at a task block in `PLAN.md` (e.g., "Task 3") and a git SHA range, plus a one-line "what changed since last dispatch" delta. Read the task block, treating the task heading/objective plus `Script` / `Input` / `Output` as the scope contract and the steps as the planner's suggested route. Read the implementer's step notes, any existing review-notes blockquote (including `→ implemented:` markers from the implementer and `→ orchestrator:` adjudication notes), and the corresponding section of `RESULTS.md` directly from the file. Do not work from a paraphrased summary.
 4. **Read PLAN.md's `## Project Conventions` section.** The orchestrator populated it at planning time (`planning-workflow` Phase 3) with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches. Use the section as the review standard for codebase-fit findings — code that ignores a documented convention is a MAJOR integration-review finding. If the section is missing, empty, or carries a stale walk date, or if a convention you need to check the diff against is not there, walk on-demand (starting from every directory touched by `git diff --name-only <git-range>`, plus `README.md` in any data directory the work loads from) and flag the omission in your status return so the orchestrator can update the section. A reviewer that only reads the dispatch prompt and the root `CLAUDE.md` will miss conventions that exist one or two levels deep. This is exactly the failure mode the Stage 2 project-doc audit (`codebase-integration.md` §Project Doc Audit) exists to prevent — catch it at review time, not at merge time.
 5. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
@@ -87,7 +87,7 @@ off.
 
 ### Verdict
 
-Walk the active domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. **Never halt on a failure** — reviewer dispatches are costly, so you continue through remaining items so the implementer gets one comprehensive pass of findings rather than two narrow ones.
+Judge the work against the task objective and scope fields first, then walk the active domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. Mechanical adherence to the original steps is not enough if necessary checks were omitted; justified in-scope step rewrites are acceptable when they advance the same objective. **Never halt on a failure** — reviewer dispatches are costly, so you continue through remaining items so the implementer gets one comprehensive pass of findings rather than two narrow ones.
 
 Two verdicts:
 
@@ -96,6 +96,8 @@ Two verdicts:
 **REVISE:** One or more `[BLOCKING]` items failed. Write the review-notes blockquote with specific items: file:line, description, severity, what to fix. When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, say so in plain prose alongside that finding (e.g., "— note: re-check this after the pre-merge describe is added"). Set `**Review status:** REVISE`.
 
 On re-review after a REVISE fix: verify (1) each cited fix is correct, and (2) any finding annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass — no third full walk. Delete confirmed-fixed items from the blockquote. When the blockquote is empty, remove it and set `**Review status:** APPROVED`.
+
+If the implementer followed the listed steps but missed diagnostics, validation, robustness checks, or other work required to satisfy the task objective, that is still a finding — flag the missing work rather than approving mechanical step compliance. If the implementer changed the within-task route, judge whether the change stayed inside the same objective/scope contract; unjustified step drift is a finding. If an integration-stage review convinces you the work belongs in a different task shape, raise that recommendation in the blockquote and route whole-task combine/split through `planning-workflow §User Feedback and Changing Plans`; do not rewrite the task boundary yourself.
 
 ## Handoff — Unified Across Stages
 
@@ -124,7 +126,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 
 **You may NOT edit:**
 
-- Any step, step code, or task objective — even if you believe it is wrong. Raise the issue as a review item in your blockquote and let the orchestrator decide whether to rewrite the step.
+- Any step, step code, or task objective — even if you believe it is wrong. Raise the issue as a review item in your blockquote and let the orchestrator decide whether to rewrite the step or re-enter the changing-plans protocol for whole-task restructure.
 - Any other task's content.
 - **The PLAN.md header**, including the `## Workflow Status` checklist and the `## Decisions` log. These are orchestrator-owned (see `superRA:handoff-doc` references/plan-anatomy.md §Header ownership). If your review surfaces a project-level concern that belongs in those sections, raise it in your status report; do not edit the header yourself.
 - **Rewrite** the prose of an implementer's `→ implemented: ...` annotation or an orchestrator's `→ orchestrator: ...` annotation. You read them. You are allowed to **delete an entire item** (including its annotations) when the fix is verified on re-review — that is a delete, not a rewrite.
@@ -133,7 +135,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 
 **On first review (no blockquote yet):**
 
-1. Read the task block's steps and the code at the cited files.
+1. Read the task block's objective/scope fields, steps, and the code at the cited files.
 2. Walk the domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. Never halt on a failure — continue through the rest so the implementer gets one comprehensive pass.
 3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
 4. Set `**Review status:**` per the verdict protocol in §Verdict: `APPROVED` (no `[BLOCKING]` items) or `REVISE` (at least one `[BLOCKING]` item).
