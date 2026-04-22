@@ -60,6 +60,9 @@ m = re.search(r"^name:\s*(\S+)\s*$", text, re.MULTILINE)
 assert m and m.group(1) == "using-superra", f"using-superRA SKILL.md name must be lowercase 'using-superra', got {m and m.group(1)!r}"
 PY
 
+section "Phase B upstream-intent contract"
+bash tests/test-phase-b-upstream-intent-contract.sh
+
 section "Codex agent generation"
 python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py
 python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check
