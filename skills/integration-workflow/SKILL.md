@@ -84,7 +84,7 @@ Drift tests guard key results from unintended changes during Phase B refactoring
 
 **Integration base.** Phase B integrates the analysis branch against a researcher-specified base — `<base-branch>` in every reference below. `origin/main` is the typical default; override is expected when the analysis branched off a release, a co-authored track, or another analysis's sibling branch.
 
-The integration reviewer drives the loop. It walks both the branch diff and the base-branch-side changes, writes per-task annotations in PLAN.md, and writes or updates a `## Integration Intent` section when material incoming changes need adaptation (see `superRA:handoff-doc` `references/plan-anatomy.md` §Integration Intent for the section's anatomy and ownership rules). The orchestrator adjudicates findings, batches user decisions, then dispatches implementer(s) to fix, and re-dispatches the reviewer. Repeat until every in-scope task is APPROVED.
+The base branch is authoritative by default. Phase B freezes one merge-base snapshot for the active round, records the branch-wide upstream contract in `PLAN.md` as `## Upstream Intent` when material overlap exists, and then forces every surviving branch delta to justify against approved task objectives plus that recorded contract. The integration reviewer drives the loop: it walks both the branch diff and the base-branch-side changes, writes branch-wide upstream-intent clusters when needed, and writes task-local annotations so implementers do not have to reconstruct upstream intent from git history. The orchestrator adjudicates findings, batches user decisions, then dispatches implementer(s) to fix, and re-dispatches the reviewer. Repeat until every in-scope task is APPROVED and the reviewer confirms the surviving diff is justified.
 
 ### Step 0: Resolve and confirm the integration base
 
@@ -105,7 +105,18 @@ Is that correct, or did this branch split from a different base
 If a prior `## Decisions` entry on this branch already records the integration base and it matches the git-resolved candidate, skip the prompt — the researcher has already answered. Otherwise log the confirmed answer per `superRA:handoff-doc` §User Decisions Log as `<base-branch>` **before** fetching or dispatching. Fetch fresh so base-branch-side scans walk current upstream state:
 ```bash
 git fetch origin <base-branch>
+MERGE_BASE_SHA=$(git merge-base HEAD origin/<base-branch>)
 ```
+
+Use this `MERGE_BASE_SHA` as the frozen anchor for the active Phase B round. If `PLAN.md` already has a `## Upstream Intent` section from an earlier round, rewrite its anchor lines in place before dispatching the reviewer:
+
+```markdown
+**Base branch:** `origin/<base-branch>`
+**Frozen merge base SHA:** `<MERGE_BASE_SHA>`
+**Reviewed upstream range:** `<MERGE_BASE_SHA>..origin/<base-branch>`
+```
+
+If no such section exists yet, pass the same anchor values in the reviewer dispatch; the reviewer creates the section only if the base-side scan finds material overlap.
 
 ### Step 1: Dispatch the integration reviewer
 
@@ -113,20 +124,25 @@ git fetch origin <base-branch>
 Agent(subagent_type: "superRA:reviewer"):
   Stage: integration
   Task: Phase B integration review
-  Git range: <merge-base>..HEAD
+  Git range: <MERGE_BASE_SHA>..HEAD
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
-    walk (a) <merge-base>..HEAD for integration fit per
-    `refactor-and-integrate`; (b) <merge-base>..origin/<base-branch>
-    for material incoming changes on the integration base. For (b):
-    if incoming changes could affect this branch's code or docs,
-    write or update a `## Integration Intent` section in PLAN.md
-    per `plan-anatomy.md` and annotate affected tasks. For every
-    in-scope task needing codebase-fit refactor, drift-test update,
-    handoff-doc coherence fix, or merge-induced semantic adaptation,
-    append a per-task integration review-notes blockquote with
-    [BLOCKING] / [ADVISORY] items. Tasks needing no changes get
+    walk (a) <MERGE_BASE_SHA>..HEAD for integration fit per
+    `refactor-and-integrate`; (b) <MERGE_BASE_SHA>..origin/<base-branch>
+    for material incoming changes on the integration base. Treat the
+    base branch as canonical by default. If (b) surfaces material
+    overlap, write or update the branch-wide change clusters under
+    `## Upstream Intent` in PLAN.md using the Step 0 anchor, and for
+    each affected task append a task-local integration review-notes
+    item that names the upstream file / commit / change being honored,
+    the upstream intent in plain language, the minimal allowed branch
+    delta, and any stale branch-side content that must not survive.
+    If (b) finds no material overlap, do not create `## Upstream Intent`.
+    For every in-scope task needing codebase-fit refactor, drift-test
+    update, handoff-doc coherence fix, or merge-induced semantic
+    adaptation, append a per-task integration review-notes blockquote
+    with [BLOCKING] / [ADVISORY] items. Tasks needing no changes get
     no annotation; flip each annotated task to
     `Integration status: REVISE` in the same review commit. When
     the diff to walk is large (see `agent-orchestration`
@@ -136,7 +152,7 @@ Agent(subagent_type: "superRA:reviewer"):
 
 ### Step 2: Orchestrator — adjudicate and batch user decisions
 
-Read PLAN.md (Integration Intent section + per-task annotations). Two branching points:
+Read PLAN.md (`## Upstream Intent` when present + per-task annotations). Two branching points:
 
 - **Zero annotated tasks** — no refactor needed. If the base-branch-side scan also found nothing material, Phase B terminates: execute `git merge --ff-only <base-branch>` (or skip if `git merge-base --is-ancestor origin/<base-branch> HEAD`), note in §Decisions, proceed to Phase C.
 - **Annotated tasks exist** — collect every research-meaningful item from the per-task blockquotes. Batch into a single `AskUserQuestion` (plain text if unavailable) — one stop point, not N interruptions. If findings imply a substantive restructure (task add/remove/combine, DAG flip), escalate to `planning-workflow §User Feedback and Changing Plans` instead. Otherwise log each answer per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching implementer(s).
@@ -154,11 +170,11 @@ Read PLAN.md (Integration Intent section + per-task annotations). Two branching 
 
 Commit granularity is the implementer's judgment; minimum-net-diff self-check before every commit. When the REVISE task list is large enough to exceed the ~150k context threshold (`agent-orchestration` §Workload Balancing), split into sibling implementers on parallel worktrees per `agent-orchestration §Parallelization and Worktree Isolation` — each owns a disjoint task slice.
 
-**3c — Re-dispatch integration reviewer.** Walk the cumulative diff; refuse to walk APPROVED-integration tasks not in scope. On APPROVE: the reviewer has flipped in-scope tasks to `Integration status: APPROVED`, removed its per-task review-notes blockquotes, and updated the Integration Intent section (removing resolved items; removing the section when empty). On REVISE: adjudicate per `superRA:agent-orchestration` §Handling Reviewer Feedback; iterate from 3b.
+**3c — Re-dispatch integration reviewer.** Walk the cumulative diff; refuse to walk APPROVED-integration tasks not in scope. On APPROVE: the reviewer has flipped in-scope tasks to `Integration status: APPROVED`, removed its per-task review-notes blockquotes, and confirmed that every surviving hunk in `git diff <MERGE_BASE_SHA>..HEAD` is justified by approved task objectives plus the recorded upstream contract. `## Upstream Intent` remains in place as the active round's branch-wide record when present. On REVISE: adjudicate per `superRA:agent-orchestration` §Handling Reviewer Feedback; iterate from 3b.
 
 ### Step 4: Flip `Refactored` milestone
 
-When every in-scope task is `Integration status: APPROVED` and the Integration Intent section is empty or absent, the orchestrator flips the `Refactored` box in PLAN.md §Workflow Status and proceeds to Phase C. If Phase C or D later triggers a new sync+refactor round, uncheck `Refactored` on re-entry and re-check on the next reviewer APPROVE.
+When every in-scope task is `Integration status: APPROVED` and the reviewer has confirmed the surviving diff is justified against approved task objectives plus the recorded upstream contract, the orchestrator flips the `Refactored` box in PLAN.md §Workflow Status and proceeds to Phase C. If Phase C or D later triggers a new sync+refactor round, uncheck `Refactored` on re-entry, rewrite the frozen anchor / upstream contract for the new round, and re-check on the next reviewer APPROVE.
 
 ## Phase C — Documentation Finalization + PLAN.md Disposition
 
@@ -355,7 +371,7 @@ See `superRA:using-superra` §Skill-Load Manifest — the single source of truth
 ## Red Flags
 
 **Never:**
-- Skip the integration reviewer and dispatch the implementer blind — per-task annotations, Integration Intent updates, and the user-decision batch all come from the reviewer
+- Skip the integration reviewer and dispatch the implementer blind — per-task annotations, branch-wide upstream-intent clusters, and the user-decision batch all come from the reviewer
 - Advance to Phase D without a freshness check on the integration base — if the base branch advanced, re-enter Phase B
 - Hand off Phase C Step 4 (PLAN.md disposition) to a subagent — it is a researcher-owned decision
 - Clean up the worktree before the merge or push has actually completed
