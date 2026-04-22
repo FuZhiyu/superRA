@@ -14,7 +14,7 @@
 
 **Expected Results / Hypotheses:** Canonical Phase B surfaces use `## Upstream Intent` instead of `## Integration Intent`; the section records `Base branch`, `Frozen merge base SHA`, and `Reviewed upstream range`; reviewer task-local notes carry the local upstream-intent contract; minimum-net-diff is evaluated against `git diff <frozen-merge-base>..HEAD`; upstream deletions and relocations are authoritative by default; and narrow structural guards fail fast if the retired section name or stale workflow contract reappears in canonical surfaces.
 
-**Sensitivity Analysis:** Verify the four contract shapes in the user plan at the structural level: the retired-construct failure shape (`## Universal Principles` restoration rejected), a legitimate shared-file additive adaptation, D->B re-entry with rewritten frozen anchor and upstream contract, and the no-material-upstream-change path where no `## Upstream Intent` section is created.
+**Sensitivity Analysis:** Verify four structural shapes: the retired-construct failure shape (`## Universal Principles` restoration rejected), a legitimate shared-file additive adaptation, D->B re-entry that deletes a stale `## Upstream Intent` section when the new round has no material overlap, and the no-material-upstream-change path where no `## Upstream Intent` section is created.
 
 **Pipeline:** `bash tests/check-harness-compatibility.sh && bash tests/test-phase-b-upstream-intent-contract.sh`
 
@@ -23,7 +23,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — user supplied the target contract and explicitly asked to execute it through superRA workflows on 2026-04-22.
-- [ ] **Execution complete** — reopened on 2026-04-22 after an independent reviewer pass found open issues in Tasks 1-4.
+- [x] **Execution complete** — direct-mode fix/re-review loop completed on 2026-04-22 after the reopened Tasks 1-4 issues were resolved and verification passed.
 - [ ] **Drift tests created** — not applicable to this workflow/doc task; leave unchecked.
 - [ ] **Refactored** — not applicable to this workflow/doc task; leave unchecked.
 - [ ] **Docs finalized** — not applicable to this workflow/doc task; leave unchecked.
@@ -58,7 +58,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 1: Replace the branch-wide Phase B record with `## Upstream Intent`
 
 **Depends on:** *(none)*
-**Review status:** REVISE
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Files affected:** `skills/handoff-doc/references/plan-anatomy.md`, `agents/reviewer.md`, `agents/implementer.md`
@@ -75,16 +75,12 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] Update `agents/implementer.md` so implementers remain hands-off on `## Upstream Intent` but are explicitly required to read the branch-wide section plus task-local upstream-intent notes before editing.
 - [x] Verify that canonical runtime surfaces under `skills/` and `agents/` no longer use the retired `## Integration Intent` name once this task is complete.
 
-> **Review notes:**
-> 1. [MAJOR] `skills/handoff-doc/references/plan-anatomy.md:132` and `agents/implementer.md:30` leave no coherent rule for a new Phase B round that rewrites the anchor on an existing `## Upstream Intent` section and then finds no material overlap. The current lifecycle keeps the section stable within the round and tells implementers to read it before editing, so stale prior-round clusters could survive under a fresh anchor. Fix this task's side of the contract by explicitly saying whether the old section is removed or fully rewritten when the new round has no material overlap.
-> 2. [MAJOR] `agents/reviewer.md:157` still says re-review after `REVISE` is narrow by default, but Task 2 now asks the reviewer to confirm the whole surviving diff against the frozen anchor. Fix the reviewer-protocol side of that mismatch so the reviewer can satisfy the branch-wide confirmation without silently broadening every re-review.
-
 ---
 
 ### Task 2: Rewrite `integration-workflow` Phase B around the frozen upstream contract
 
 **Depends on:** 1
-**Review status:** REVISE
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Files affected:** `skills/integration-workflow/SKILL.md`
@@ -101,16 +97,12 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] Add the D->B re-entry rule: when the base advances after a prior approval, the frozen anchor and `## Upstream Intent` are rewritten in place against the new upstream range before the next review loop starts.
 - [x] Sweep the file for stale `Integration Intent` language and any zero-annotation / no-material-change prose that still assumes the old section lifecycle.
 
-> **Review notes:**
-> 1. [MAJOR] `skills/integration-workflow/SKILL.md:111` rewrites the `## Upstream Intent` anchor in place and `skills/integration-workflow/SKILL.md:141` says "do not create `## Upstream Intent`" when the new base-side scan finds no overlap, but the choreography never says what happens to an existing section from the previous round. Fix Phase B Step 0 / Step 1 so D->B re-entry with no material overlap removes or fully rewrites stale prior-round clusters instead of leaving them under a fresh anchor.
-> 2. [MAJOR] `skills/integration-workflow/SKILL.md:173` requires the reviewer to confirm that every surviving hunk in `git diff <MERGE_BASE_SHA>..HEAD` is justified, but the surrounding workflow still relies on narrow re-review and out-of-scope-task refusal. Fix the choreography so that branch-wide confirmation composes cleanly with prior approvals and task scope instead of implicitly requiring a fresh whole-plan walk on every re-review.
-
 ---
 
 ### Task 3: Tighten generic integration and merge gates to "base-owned by default"
 
 **Depends on:** 1, 2
-**Review status:** REVISE
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Files affected:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/semantic-merge/SKILL.md`
@@ -126,15 +118,12 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] Update `skills/semantic-merge/SKILL.md` so when it is invoked from Phase B it preserves base intent by default, treats the recorded upstream contract as authoritative, and does not preserve stale branch structure merely because it existed before the merge.
 - [x] Re-read the touched generic integration surfaces for DRY: the choreography should stay in `integration-workflow`, while the generic blocking rules stay in `refactor-and-integrate` / `semantic-merge` without duplicating design rationale.
 
-> **Review notes:**
-> 1. [MAJOR] `skills/refactor-and-integrate/SKILL.md:36` makes the frozen-merge-base diff mandatory for every drift-test, refactor, and merge use of the skill, but the frozen anchor only exists after Phase B Step 0. The skill description still explicitly covers Stage `drift-test` and standalone refactor / merge work. Narrow this top item to Phase B / upstream-contract paths and give non-Phase-B invocations a valid default rule.
-
 ---
 
 ### Task 4: Add focused structural invariants and verify the new contract
 
 **Depends on:** 1, 2, 3
-**Review status:** REVISE
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Files affected:** `tests/check-harness-compatibility.sh`, `tests/test-phase-b-upstream-intent-contract.sh`, `RESULTS.md`
@@ -149,7 +138,3 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] Update `tests/check-harness-compatibility.sh` only if needed so the focused contract guard is part of the standard verification entry point without broadening that script beyond structural invariants.
 - [x] Run the focused guard and the top-level compatibility check, then record exact pass/fail results and any residual limitations in `RESULTS.md`.
 - [x] Perform a direct-mode reviewer pass over the touched files after implementation, using reviewer severity discipline to confirm the new contract is coherent across handoff-doc, workflow, role, and merge surfaces before marking execution complete.
-
-> **Review notes:**
-> 1. [MAJOR] `tests/test-phase-b-upstream-intent-contract.sh:147` and `tests/check-harness-compatibility.sh:63` codify the over-broad frozen-anchor rule from Task 3, so the harness currently blesses the wrong contract and would reject the correct fix. Update the structural guard to validate the Phase B-specific contract without hard-coding the impossible standalone / drift-test behavior.
-> 2. [MINOR] The current PLAN header's `**Sensitivity Analysis:**` paragraph and `RESULTS.md:57` overstate coverage of the no-material-upstream-change path. The executed verification covers only the simple "no section created" case, not D->B re-entry with an existing stale section. Rewrite the handoff write-up so it matches the tested surface until that re-entry case is actually covered.

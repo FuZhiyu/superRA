@@ -105,6 +105,11 @@ assert_contains \
   "**Default merged expectation:**"
 
 assert_contains \
+  "Plan anatomy removes stale prior-round Upstream Intent sections on no-overlap re-entry" \
+  "skills/handoff-doc/references/plan-anatomy.md" \
+  'a stale prior-round `## Upstream Intent` section is deleted in the same review commit'
+
+assert_contains \
   "Reviewer protocol records upstream file or commit evidence" \
   "agents/reviewer.md" \
   "upstream file / commit / change"
@@ -122,12 +127,22 @@ assert_contains \
 assert_contains \
   "Implementer protocol requires reading Upstream Intent before integration edits" \
   "agents/implementer.md" \
-  'At Stage `integration`, also read `## Upstream Intent`'
+  'At Stage `integration`, also read `## Upstream Intent` (if present for the active round)'
 
 assert_contains \
   "Implementer protocol keeps Upstream Intent hands-off" \
   "agents/implementer.md" \
   "do not rewrite, append to, or delete it"
+
+assert_contains \
+  "Implementer protocol treats an absent Upstream Intent section as the current no-overlap path" \
+  "agents/implementer.md" \
+  "If the section is absent after a D->B re-entry, treat that as the no-material-overlap path for the current round"
+
+assert_contains \
+  "Reviewer protocol keeps narrow re-review plus a branch-wide pruning sweep" \
+  "agents/reviewer.md" \
+  'treat `git diff <MERGE_BASE_SHA>..HEAD` as a pruning sweep, not a fresh full-task checklist walk'
 
 assert_contains \
   "Integration workflow computes MERGE_BASE_SHA from the chosen base branch" \
@@ -137,7 +152,12 @@ assert_contains \
 assert_contains \
   "Integration workflow preserves the no-material-upstream-change path" \
   "skills/integration-workflow/SKILL.md" \
-  'If (b) finds no material overlap, do not create `## Upstream Intent`.'
+  'If (b) finds no material overlap, do not create `## Upstream Intent`;'
+
+assert_contains \
+  "Integration workflow deletes stale Upstream Intent on no-overlap re-entry" \
+  "skills/integration-workflow/SKILL.md" \
+  "if a stale section from a prior round exists, delete it in the same"
 
 assert_contains \
   "Integration workflow requires reviewer confirmation of the surviving diff" \
@@ -145,14 +165,24 @@ assert_contains \
   'every surviving hunk in `git diff <MERGE_BASE_SHA>..HEAD` is justified'
 
 assert_contains \
-  "Refactor-and-integrate uses the frozen merge base diff" \
+  "Integration workflow separates narrow task re-review from branch-wide diff pruning" \
+  "skills/integration-workflow/SKILL.md" \
+  "treating it as a pruning sweep rather than a full-task re-review"
+
+assert_contains \
+  "Refactor-and-integrate keeps the frozen merge base diff for Phase B paths" \
   "skills/refactor-and-integrate/SKILL.md" \
-  "git diff <frozen-merge-base>..HEAD"
+  '**Phase B / upstream-contract path:** implementer runs `git diff <frozen-merge-base>..HEAD`'
 
 assert_contains \
   "Refactor-and-integrate keeps upstream deletions and relocations authoritative" \
   "skills/refactor-and-integrate/SKILL.md" \
   "upstream deletions and relocations remain deleted or relocated"
+
+assert_contains \
+  "Refactor-and-integrate defines a non-Phase-B baseline rule" \
+  "skills/refactor-and-integrate/SKILL.md" \
+  "use the task's governing git range or touched-file diff as the baseline"
 
 assert_contains \
   "Codebase integration makes base-diff pruning mandatory" \

@@ -108,7 +108,7 @@ git fetch origin <base-branch>
 MERGE_BASE_SHA=$(git merge-base HEAD origin/<base-branch>)
 ```
 
-Use this `MERGE_BASE_SHA` as the frozen anchor for the active Phase B round. If `PLAN.md` already has a `## Upstream Intent` section from an earlier round, rewrite its anchor lines in place before dispatching the reviewer:
+Use this `MERGE_BASE_SHA` as the frozen anchor for the active Phase B round. If `PLAN.md` already has a `## Upstream Intent` section from an earlier round, rewrite its anchor lines in place before dispatching the reviewer so the next review pass evaluates the old round against the new base:
 
 ```markdown
 **Base branch:** `origin/<base-branch>`
@@ -116,7 +116,7 @@ Use this `MERGE_BASE_SHA` as the frozen anchor for the active Phase B round. If 
 **Reviewed upstream range:** `<MERGE_BASE_SHA>..origin/<base-branch>`
 ```
 
-If no such section exists yet, pass the same anchor values in the reviewer dispatch; the reviewer creates the section only if the base-side scan finds material overlap.
+If no such section exists yet, pass the same anchor values in the reviewer dispatch; the reviewer creates the section only if the base-side scan finds material overlap. If Step 1 finds no material overlap for the new round, the reviewer deletes any stale prior-round `## Upstream Intent` section instead of leaving old clusters beneath the refreshed anchor.
 
 ### Step 1: Dispatch the integration reviewer
 
@@ -138,7 +138,9 @@ Agent(subagent_type: "superRA:reviewer"):
     item that names the upstream file / commit / change being honored,
     the upstream intent in plain language, the minimal allowed branch
     delta, and any stale branch-side content that must not survive.
-    If (b) finds no material overlap, do not create `## Upstream Intent`.
+    If (b) finds no material overlap, do not create `## Upstream Intent`;
+    if a stale section from a prior round exists, delete it in the same
+    review commit.
     For every in-scope task needing codebase-fit refactor, drift-test
     update, handoff-doc coherence fix, or merge-induced semantic
     adaptation, append a per-task integration review-notes blockquote
@@ -170,7 +172,7 @@ Read PLAN.md (`## Upstream Intent` when present + per-task annotations). Two bra
 
 Commit granularity is the implementer's judgment; minimum-net-diff self-check before every commit. When the REVISE task list is large enough to exceed the ~150k context threshold (`agent-orchestration` §Workload Balancing), split into sibling implementers on parallel worktrees per `agent-orchestration §Parallelization and Worktree Isolation` — each owns a disjoint task slice.
 
-**3c — Re-dispatch integration reviewer.** Walk the cumulative diff; refuse to walk APPROVED-integration tasks not in scope. On APPROVE: the reviewer has flipped in-scope tasks to `Integration status: APPROVED`, removed its per-task review-notes blockquotes, and confirmed that every surviving hunk in `git diff <MERGE_BASE_SHA>..HEAD` is justified by approved task objectives plus the recorded upstream contract. `## Upstream Intent` remains in place as the active round's branch-wide record when present. On REVISE: adjudicate per `superRA:agent-orchestration` §Handling Reviewer Feedback; iterate from 3b.
+**3c — Re-dispatch integration reviewer.** Walk the cumulative diff in two layers. First, perform the narrow task re-review: verify the cited fixes and any findings marked as dependent, and refuse a fresh checklist walk on `APPROVED`-integration tasks that are still out of scope. Second, perform the branch-wide surviving-diff confirmation over `git diff <MERGE_BASE_SHA>..HEAD`, treating it as a pruning sweep rather than a full-task re-review. If that sweep surfaces a new unjustified hunk in a previously `APPROVED` task, annotate that task and bring it back into scope; otherwise leave prior approvals intact. On APPROVE: the reviewer has flipped in-scope tasks to `Integration status: APPROVED`, removed its per-task review-notes blockquotes, and confirmed that every surviving hunk in `git diff <MERGE_BASE_SHA>..HEAD` is justified by approved task objectives plus the recorded upstream contract. `## Upstream Intent` remains in place as the active round's branch-wide record when present. On REVISE: adjudicate per `superRA:agent-orchestration` §Handling Reviewer Feedback; iterate from 3b.
 
 ### Step 4: Flip `Refactored` milestone
 
