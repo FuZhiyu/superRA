@@ -25,7 +25,7 @@
 - [x] **Plan approved** — user supplied the target contract and explicitly asked to execute it through superRA workflows on 2026-04-22.
 - [x] **Execution complete** — direct-mode fix/re-review loop completed on 2026-04-22 after the reopened Tasks 1-4 issues were resolved and verification passed.
 - [ ] **Drift tests created** — not applicable to this workflow/doc task; leave unchecked.
-- [ ] **Refactored** — not applicable to this workflow/doc task; leave unchecked.
+- [x] **Refactored** — Phase B integration reviewer approved the cumulative diff on 2026-04-22 with zero task annotations; `origin/main` still matched the frozen merge base, so the merge step was a no-op.
 - [ ] **Docs finalized** — not applicable to this workflow/doc task; leave unchecked.
 - [ ] **Merged** — not applicable to this workflow/doc task; leave unchecked.
 
@@ -52,6 +52,9 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **User decision (2026-04-22):** Use `origin/main` as the integration base for Phase B.
 > **Question asked:** Is `origin/main` the correct integration base for this branch?
+
+> **Orchestrator decision (2026-04-22):** Phase B integration review against `origin/main` returned APPROVE with zero task annotations. `origin/main` still resolved to the frozen merge base `addc9ca7fe1bdbedb080d92095facb649074c1e4`, so there was no `## Upstream Intent` section to create and the Phase B merge step was a no-op.
+> **Reviewer evidence:** `2652d81` made the zero-annotation approval state explicit by flipping Tasks 1-4 to `Integration status: APPROVED`; the reviewer also confirmed `bash tests/test-phase-b-upstream-intent-contract.sh` and `bash tests/check-harness-compatibility.sh` passed on the approved diff.
 
 > **Orchestrator re-entry (2026-04-22):** Independent reviewer agents audited commit `4036130` and found four MAJOR issues plus one MINOR that require a normal fix / re-review loop. Re-open Task 1 for the no-material-overlap re-entry lifecycle gap in `plan-anatomy.md` / `agents/implementer.md` and the reviewer-protocol side of the whole-diff confirmation mismatch. Re-open Task 2 for the same no-overlap lifecycle gap in `integration-workflow` plus the unresolved interaction between branch-wide hunk confirmation and narrow re-review. Re-open Task 3 because `refactor-and-integrate` applies the frozen-anchor rule to non-Phase-B uses. Re-open Task 4 because the structural guard encodes that over-broad rule and the handoff write-up overstates no-material-overlap coverage.
 > **Boxes unchecked:** `Execution complete` only. `Plan approved` still stands, and no later workflow milestone had been checked.
