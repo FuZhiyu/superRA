@@ -32,4 +32,11 @@ Generic cross-cutting code-integration concerns (naming consistency, utility reu
 
 ## Reviewer verdict protocol
 
-Verdict protocol: `refactor-and-integrate/references/codebase-integration.md §Reviewer Verdict Protocol`.
+Same as `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines: **walk this file and `codebase-integration.md` top to bottom. Never halt on a failure.** One comprehensive pass per dispatch.
+
+Two verdicts:
+
+- **APPROVE** — no `[BLOCKING]` findings.
+- **REVISE** — at least one `[BLOCKING]` finding.
+
+When a finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, note that dependency in plain prose alongside the finding. On re-dispatch after REVISE, the reviewer verifies each fix and re-checks any finding annotated as depending on an upstream fix — everything else is accepted from the first pass.

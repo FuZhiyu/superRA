@@ -30,7 +30,7 @@ fi
 
 context="<IMPORTANT>You just received a user decision via AskUserQuestion. Before taking any other action (no code edits, no further tool calls that act on the answer), open PLAN.md and log the decision as a dated blockquote: task-scoped decisions go inside the relevant task block under **Review status:**, cross-task decisions go in a top-level ## Decisions section after the header. Format: three lines — **User decision (YYYY-MM-DD):** <answer>, **Question asked:** <short restatement>, **Rationale:** <only if the user gave one>. Commit PLAN.md atomically with the work the decision unblocks. See superRA:handoff-doc §User Decisions Log for the full format and the distinction from the reviewer-feedback adjudication blockquote.</IMPORTANT>"
 
-# Platform-appropriate output format (matches merge-guard / autoload hook pattern)
+# Platform-appropriate output format (matches merge-guard / session-start pattern)
 if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
   printf '{"additional_context":"%s"}\n' "$context"
 elif [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -z "${COPILOT_CLI:-}" ]; then

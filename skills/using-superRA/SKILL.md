@@ -1,5 +1,5 @@
 ---
-name: using-superra
+name: using-superRA
 description: Master skill every agent reads. Carries the universal workflow principles, code-change defaults, the skill inventory, the composable-design map, the Skill-Load Manifest (required skills + stage-scoped references per Stage), Execution Modes (subagent dispatch vs direct), skill-invocation rules, and instruction priority. Main agents additionally load `references/main-agent.md` at session start for cross-session detection, autonomy contract, and handoff-doc default load; subagents inherit task context from their dispatch and skip this reference.
 ---
 
@@ -51,7 +51,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Category | Skill | One-line purpose |
 |---|---|---|
 | Workflow | `planning-workflow` | PLAN phase: scope check, task decomposition, plan draft. |
-| Workflow | `implementation-workflow` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
+| Workflow | `execution-workflow` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
 | Workflow | `integration-workflow` | INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
@@ -61,20 +61,17 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
 | Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
 | Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
-| Utility | `codex-superra-setup` | Generate and install the named `superra_implementer` / `superra_reviewer` Codex custom agents into `~/.codex/agents/` (global) or `.codex/agents/` (project). |
 | Meta | `using-superRA` | This skill — the master skill every agent reads. |
 
 ## Composable Design
 
 Skills compose by category. **Workflow skills** own sequencing — they decide what happens when, and dispatch agents to do it. **Domain skills** own domain discipline — the vertical-specific knowledge a workflow skill invokes when a task touches that domain (today: `econ-data-analysis` and `writing`). **Utility skills** are called on demand by workflow skills, agent files, or other skills — they are domain-agnostic and reusable. **Meta skills** shape the skill system itself (`using-superRA`). One source of truth per concern: if two skills seem to overlap, one of them should be pointing at the other rather than duplicating content.
 
-**Harness adapters:** When this skill or its references mention a Claude-specific tool name (e.g. `AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), Codex agents map them via `references/codex-tools.md`; Claude-only notes live in `references/claude-tools.md`.
-
 ## Skill-Load Manifest
 
 For each Stage, load the listed skills and references. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Role differentiation shows up explicitly on the `implementation` and `documentation` rows where the implementer and reviewer load different references.
 
-**The "Required skills" column lists what loads *in addition to* `superRA:using-superRA`** — the master skill every agent already loads at dispatch time (implementer / reviewer via frontmatter preload; main agents and teammates via explicit load or harness autoload). `using-superRA` carries §Universal Principles, the Skill Inventory, the composable-design map, and this manifest. Handoff-doc editing discipline is owned by `superRA:handoff-doc`; subagents get a compact etiquette from `agents/implementer.md` / `agents/reviewer.md` step 1 and load the full skill only on demand or when creating docs from scratch.
+**The "Required skills" column lists what loads *in addition to* `superRA:using-superRA`** — the master skill every agent already loads at dispatch time (implementer / reviewer via frontmatter preload; team teammates via SessionStart injection). `using-superRA` carries §Universal Principles, the Skill Inventory, the composable-design map, and this manifest. Handoff-doc editing discipline is owned by `superRA:handoff-doc`; subagents get a compact etiquette from `agents/implementer.md` / `agents/reviewer.md` step 1 and load the full skill only on demand or when creating docs from scratch.
 
 | `Stage:` | Required skills | Stage-scoped references |
 |---|---|---|

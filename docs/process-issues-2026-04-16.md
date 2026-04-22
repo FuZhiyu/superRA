@@ -20,7 +20,7 @@ Session date: 2026-04-16. Branch: `refactor/workflow-domain-split`. Context: exe
 
 **Repro.** After every tool-use gap of >10 minutes, the harness injects a reminder suggesting TaskCreate. During the session, a prior team's TaskCreate entries persisted and had to be manually deleted with TaskUpdate status=deleted.
 
-**Proposed fix.** Document in `using-superra` (or CLAUDE.md) that TaskCreate is for team-coordination only; PLAN.md is the authoritative record of work. Optionally suppress the system reminder via hook configuration for superRA sessions. At minimum, add a line to the system that says "When PLAN.md exists, TaskCreate is optional and must not duplicate PLAN.md's task blocks."
+**Proposed fix.** Document in `using-superRA` (or CLAUDE.md) that TaskCreate is for team-coordination only; PLAN.md is the authoritative record of work. Optionally suppress the system reminder via hook configuration for superRA sessions. At minimum, add a line to the system that says "When PLAN.md exists, TaskCreate is optional and must not duplicate PLAN.md's task blocks."
 
 ---
 

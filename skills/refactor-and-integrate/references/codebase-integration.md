@@ -1,6 +1,6 @@
 # Codebase Integration Standards
 
-Shared cross-cutting code-quality reference for code refactoring and integration review. Both the implementer (refactorer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the procedures and decision trees the checklist items encode. Loaded whenever `Stage:` is `integration` (per `superRA:using-superra` §Skill-Load Manifest).
+Shared cross-cutting code-quality reference for code refactoring and integration review. Both the implementer (refactorer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the procedures and decision trees the checklist items encode. Loaded whenever `Stage:` is `integration` (per `superRA:using-superRA` §Skill-Load Manifest).
 
 > **Primary reference for data-analysis work:** load `econ-data-analysis/references/integration.md` for the data-analysis-specific integration gates (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations — with `[BLOCKING]` / `[ADVISORY]` markers and its own reviewer verdict protocol). This file covers the generic cross-cutting code-quality companion (naming, utility reuse, PR-friendly diffs, debug-artifact cleanup, documentation currency) that applies regardless of domain.
 
@@ -32,31 +32,6 @@ For each doc in the set:
 Do **not** propagate upward for the sake of it: leave `CLAUDE.md` / `AGENTS.md` above the affected area alone unless something in them is stale.
 
 The refactorer applies this as part of the refactoring pass; the integration reviewer verifies it as part of integration review. Results-level documentation (`RESULTS.md` itself) is a separate concern — it matures at `integration-workflow` Phase C via the doc-writer + doc-reviewer pair.
-
----
-
-## Reviewer Verdict Protocol
-
-Every reviewer walks top-to-bottom through the Minimum-net-diff top item (in SKILL.md) plus every discipline's checklist that the task touches. **Never halt on a failure** — one comprehensive pass every time; halting early forces a full re-review on the next pass, and reviewer dispatches are costly.
-
-Two verdicts:
-
-- **APPROVE** — no `[BLOCKING]` findings.
-- **REVISE** — at least one `[BLOCKING]` finding.
-
-**Handling dependent findings.** When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first (e.g., "couldn't fully assess the refactor until the drift tests are passing"), say so in plain prose alongside the finding. No separate verdict, no formal tag.
-
-**Re-review after REVISE.** Implementer fixes all `[BLOCKING]` findings and re-dispatches. Reviewer then (1) verifies each fix is correct, and (2) re-checks any finding the first pass annotated as depending on an upstream fix. Everything else is accepted from the first pass — no third full walk. APPROVE once all `[BLOCKING]` findings are resolved.
-
-**Implementer self-check (before every commit).** Run before every commit on the integration branch:
-
-1. **Compute the cumulative diff.** `git diff <merge-base>..HEAD` where `<merge-base>` is the merge base the integration is targeting (e.g., `$(git merge-base HEAD main)` or whatever the workflow specifies).
-2. **Review every hunk** against the loaded references' checklists. For each hunk, ask: *which `[BLOCKING]` or `[ADVISORY]` item justifies this change?* A hunk may be tied to drift-test preservation, codebase-convention fit, handoff-doc coherence, documentation currency, or an explicit item in the integration map.
-3. **Any hunk without a justification is out of scope.** Revert it, OR re-justify it by adding the underlying need to the integration map (and the commit message) so the reviewer can check the same evidence.
-4. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` — named explicitly in the dispatch's `Task:` or `Tasks in scope:` field. `APPROVED`-integration tasks are out of scope: do not walk their code; do not touch their output files except through legitimate merge resolution. A hunk touching an APPROVED task that is not named in scope fails step 3.
-5. **Stage only files you touched this turn** (per `superRA:using-superra` §Commit Hygiene); `git diff --cached` before `git commit`.
-
-The integration reviewer runs the same `git diff <merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists. One source of truth, two perspectives.
 
 ---
 

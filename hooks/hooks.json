@@ -1,11 +1,12 @@
 {
   "hooks": {
-    "UserPromptSubmit": [
+    "SessionStart": [
       {
+        "matcher": "startup|clear|compact",
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" autoload-superra",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start",
             "async": false
           }
         ]
@@ -18,26 +19,6 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" merge-guard",
-            "async": false
-          }
-        ]
-      },
-      {
-        "matcher": "Skill",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" ensure-using-superra",
-            "async": false
-          }
-        ]
-      },
-      {
-        "matcher": "Skill",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" ensure-agent-orchestration",
             "async": false
           }
         ]

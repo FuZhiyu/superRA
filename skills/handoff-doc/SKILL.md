@@ -1,16 +1,16 @@
 ---
 name: handoff-doc
-description: "Use whenever creating a PLAN.md / RESULTS.md from scratch, maturing RESULTS.md into its permanent record at INTEGRATE, or when you need the full editing discipline for a task-block-structured handoff document. Carries the four document principles, the inline-edit rule, the stale-content checklist, and pointers to full PLAN.md / RESULTS.md anatomy templates. Usable standalone by a single author with no subagents — the author plays all roles and reads this skill directly. Doc-creation call sites: `planning-workflow` Phase 2 (new plan + RESULTS.md skeleton) and `integration-workflow` Step 3 doc-writer (Stage 2 maturation)."
+description: Use whenever creating a PLAN.md / RESULTS.md from scratch, maturing RESULTS.md into its permanent record at INTEGRATE, or when you need the full editing discipline for a task-block-structured handoff document. Carries the four document principles, the inline-edit rule, the stale-content checklist, and pointers to full PLAN.md / RESULTS.md anatomy templates (which cover the two-stage RESULTS.md lifecycle and the User Decisions Log format). Usable standalone by a single author with no subagents — the author plays all roles and reads this skill directly. Doc-creation call sites: `planning-workflow` Phase 2 (new plan + RESULTS.md skeleton) and `integration-workflow` Step 3 doc-writer (Stage 2 maturation).
 ---
 
 # Handoff Doc Discipline
 
-Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs) are the persistent state of a project — multiple agents and sessions read and write them. References:
+Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs) are the persistent state of a project — multiple agents and sessions read and write them. This skill defines the discipline. The main body below carries the load-bearing principles; the references carry the full templates and detailed section specs.
 
-- `references/plan-anatomy.md` — full `PLAN.md` template (header, `## Project Conventions`, `## Decisions`, task blocks, review-notes blockquote format) and the full **User Decisions Log** spec.
-- `references/results-anatomy.md` — full `RESULTS.md` template, the **two-stage RESULTS.md lifecycle** (Stage 1 dev log → Stage 2 permanent record), and the Stage 2 transition.
+- `references/plan-anatomy.md` — full `PLAN.md` template (header, `## Project Conventions`, `## Decisions`, task blocks, review-notes blockquote format) and the full **User Decisions Log** spec (where decisions land, format, not-covered cases).
+- `references/results-anatomy.md` — full `RESULTS.md` template (header, per-task sections, figure embedding, reviewer caveats), the **two-stage RESULTS.md lifecycle** (Stage 1 dev log → Stage 2 permanent record), and the transition to Stage 2 consolidation.
 
-Subagent-specific review-loop mechanics (annotation protocols, `**Doc edits:**` format) live in `agents/implementer.md` and `agents/reviewer.md`.
+**Subagent-specific execution protocol** — review-loop mechanics (who writes what in the review-notes blockquote, who may delete items, the `→ implemented:` / `→ orchestrator:` annotation protocols, the `**Doc edits:**` status-line format) — lives in `agents/implementer.md` and `agents/reviewer.md`. This skill does not duplicate that.
 
 ## The Four Principles
 
@@ -24,25 +24,34 @@ Subagent-specific review-loop mechanics (annotation protocols, `**Doc edits:**` 
 
    **Rule of thumb:** before typing a finding into a status report, ask "is this written in `PLAN.md` or `RESULTS.md` yet?" If not, write it in the doc first and commit, then point at it in the report.
 
+**`PLAN.md` is the primary task tracker, not `TodoWrite` or chat.** The task-tracker discipline (banned patterns, the `TodoWrite`-as-transient-view rule, and the re-invoke-`§Changing Plans`-on-plan-change pointer) lives in `planning-workflow §PLAN.md Is the Task Tracker`.
+
 ## Inline-Edit Rule
 
 Every edit replaces stale content in place. Never append, never strike through, never use "Update:" / "Revised:" / "Previously..." framing. If you catch yourself writing a sentence that references a prior version of the doc, stop — that sentence belongs in the git commit message.
 
-## Stale Content Checklist
+## What Counts as Stale (remove, don't keep)
 
 - Steps describing an approach abandoned after seeing the data — rewrite them to describe what was actually done.
 - Discovery notes now incorporated into the current steps.
 - Review items confirmed fixed on re-review (the reviewer deletes them).
 - "Previously we tried X" / "Update:" / "Revised:" framing — delete the old text and write the new.
 - Upcoming task descriptions that assume an earlier approach which has since changed.
-- Task output descriptions that have been superseded or further modified by a later task in the plan — rewrite the earlier task's **Output:** to reflect the latest shape, and keep the narrative of "what changed" in the Decisions log only.
 
 ## User Decisions Log
 
-Researcher answers to `AskUserQuestion` / plain-text pauses MUST be written into `PLAN.md` **before** the agent acts on them, committed atomically with the work they unblock. This is the "autonomous with human in the loop" principle (full contract in `using-superra/references/main-agent.md`) in practice: the decision is not resolved until it is in the record.
+Researcher answers to `AskUserQuestion` / plain-text pauses MUST be written into `PLAN.md` **before** the agent acts on them, committed atomically with the work they unblock. This is the "autonomous with human in the loop" principle (see `using-superRA` §Universal Principles #4) in practice: the decision is not resolved until it is in the record.
 
 Full spec — where task-scoped vs project-level decisions land, the three-line blockquote format, the hook reminder, and what does NOT count as a decision — lives in `references/plan-anatomy.md` §User Decisions Log.
 
-**`## Project Conventions`** — populated at `planning-workflow` Phase 3; anatomy in `references/plan-anatomy.md §Project Conventions`.
+## Project Conventions and Figure Embedding
 
-**Figure embedding** — discipline in `report-in-markdown/references/rich-content.md`; Stage 2 materialization in `report-in-markdown/references/final-form.md`.
+- **`## Project Conventions`** — section of `PLAN.md` populated by the orchestrator at `planning-workflow` Phase 3 with one-paragraph summaries of every `CLAUDE.md` / `AGENTS.md` / `README.md` walked from the directories the plan touches. Subagents read this section rather than re-walking the tree each dispatch. Full anatomy in `references/plan-anatomy.md` §Project Conventions.
+- **Figure embedding** — Stage 1 `RESULTS.md` uses `![caption](results_attachments/fig_name.png)` pointing at committed PNGs. The full discipline (PDF→PNG, captions, math, tables) lives in `skills/report-in-markdown/references/rich-content.md`; the Stage 2 materialization + relocation lives in `skills/report-in-markdown/references/final-form.md`.
+
+## How This Skill Is Used
+
+- **Standalone use:** a single author maintaining handoff docs without subagents — read the four principles and the anatomy references; the author plays all roles.
+- **`planning-workflow` Phase 2:** the planner loads this skill for the templates and drafts `PLAN.md` + a Stage 1 `RESULTS.md` skeleton.
+- **`integration-workflow` Phase C doc-writer:** loads this skill (for `references/results-anatomy.md` — carries the two-stage lifecycle and the transition pointer) plus `report-in-markdown/references/final-form.md` for the Stage 2 materialization and relocation discipline.
+- **Implementer / reviewer subagents during execution:** do NOT load this skill by default — a compact editing etiquette lives in `agents/implementer.md` / `agents/reviewer.md` step 1 (inline-edit, remove-stale, no-append). Load on demand when the etiquette is not enough (unusual structural edit, first-time encounter with the doc format, writing a User Decisions Log entry).

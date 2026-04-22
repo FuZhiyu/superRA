@@ -2,7 +2,7 @@
 
 superRA skills split into four categories. The directory layout stays flat (one `skills/<name>/SKILL.md` per skill) for compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders. This file is the authoritative grouping index — when adding a skill, place it in the right category here and in the `README.md` skill tables.
 
-For the runtime-facing master map (universal principles, skill-discovery rules, and the Stage → required-skills / references table agents actually load), see `superRA:using-superra` §Skill Inventory and §Skill-Load Manifest. This file groups skills for contributor navigation; `using-superra` is the agent-facing authority.
+For the runtime-facing master map (universal principles, skill-discovery rules, and the Stage → required-skills / references table agents actually load), see `superRA:using-superRA` §Skill Inventory and §Skill-Load Manifest. This file groups skills for contributor navigation; `using-superRA` is the agent-facing authority.
 
 ## Workflow — domain-agnostic choreography
 
@@ -11,13 +11,13 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 | Skill | Phase | Role |
 |---|---|---|
 | `planning-workflow` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
-| `implementation-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
-| `integration-workflow` | INTEGRATE (Phases A–D) | Drift-test creation (A), review-led iterative sync + refactor (B), doc finalization (C), final merge / PR / cleanup (D). `semantic-merge` invoked from Phase B when the integration reviewer calls for intent-based conflict resolution. |
+| `execution-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
+| `integration-workflow` | INTEGRATE (Phases A–D) | Drift-test creation (A), iterative unified sync + refactor (B), doc finalization (C), final merge / PR / cleanup (D). Invokes `semantic-merge` internally for Tier 2/3 syncs. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
 ## Domain — vertical-specific discipline
 
-Carry the domain-specific knowledge that workflow skills invoke when a task touches that domain. Organized by reference files split by stage so the right chunk loads at the right phase. Today's implemented verticals are data analysis and writing; the architecture is designed to grow.
+Carry the domain-specific knowledge that workflow skills invoke when a task touches that domain. Organized by reference files split by stage so the right chunk loads at the right phase. Today's only vertical is data analysis; the architecture is designed to grow.
 
 | Skill | Vertical | Flagship discipline |
 |---|---|---|
@@ -41,15 +41,14 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Phase C doc-writer). Usable standalone by a single author with no subagents. |
 | `refactor-and-integrate` | Drift-test quality, codebase integration, and merge quality checklists. Loaded by integration-phase agents. |
 | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. Progressive-reveal references by stage. |
-| `semantic-merge` | Intent-based branch integration for any vertical or caller. Resolves conflicts by intent, escalates research-meaningful decisions to the user. Invoked by `integration-workflow` Phase B when the integration reviewer calls for it; usable standalone by a human, orchestrator, or dispatched agent. |
+| `semantic-merge` | Intent-based branch integration. Classifies conflicts by research impact, escalates methodology decisions. Invoked by `integration-workflow` Phase B (recon + Tier 2/3 implementer) and standalone outside the workflow. |
 | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle is in `agent-orchestration/references/worktree-harness-fallback.md`. |
-| `codex-superra-setup` | Generate and install the named `superra_implementer` / `superra_reviewer` Codex custom agents into `~/.codex/agents/` (global) or `.codex/agents/` (project). |
 
 ## Meta — system-level
 
 | Skill | Purpose |
 |---|---|
-| `using-superra` | Master skill every agent reads. Carries the distilled universal principles, code-change defaults, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Main-agent loads (cross-session detection, autonomy contract, handoff-doc default) live in `references/main-agent.md`. |
+| `using-superRA` | Master skill every agent reads. Carries the distilled universal principles, code-change defaults, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Main-agent session-start loads (cross-session detection, autonomy contract, handoff-doc default) live in `references/main-agent.md`. |
 
 ## Adding a Skill
 

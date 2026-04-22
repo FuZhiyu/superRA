@@ -1,33 +1,25 @@
 # Merge Integration Quality Standards
 
-Shared domain reference for merge proposals and merge review. Both the implementer (merge proposer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the commit-message templates, integration-map format, and Tier 3 escalation procedure the checklist items encode. Loaded on demand during `integration-workflow` Phase B when `superRA:semantic-merge` is invoked for conflict resolution, and on any standalone `semantic-merge` dispatch.
+Shared domain reference for merge proposals and merge review. Both the implementer (merge proposer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the commit-message templates, integration-map format, and Tier 3 escalation procedure the checklist items encode. Loaded whenever `Stage:` is `merge` (per `superRA:using-superRA` §Skill-Load Manifest).
 
 ---
 
 ## How-To
 
-### Commit structure — one or more commits, separate when intent differs
+### Two-commit structure — templates
 
-A merge integration can land as **one commit or many**. The load-bearing discipline is *intent separation*, not commit count: mechanical reconciliation and intent-bearing adaptation are different kinds of work, and when they are both non-trivial they must not be conflated. The two-commit shape below is the canonical example of that separation, not a mandate.
-
-**When one commit is sufficient:** the mechanical merge is trivial (no real conflicts, or a clean fast-forward) **and** the integration adaptation is small enough that the commit message can describe both pieces honestly. A plain `git merge --ff-only` or a near-empty `--no-ff` merge with a few label fixes is the typical shape.
-
-**When to split into multiple commits (the canonical template):** either side is non-trivial — conflicts need human-visible reconciliation, or the intent adaptation rewrites derived artifacts, regenerates outputs, or touches multiple files. Split so a reviewer can see the mechanical reconciliation alone, then the intent adaptation alone.
-
-**Commit 1 (mechanical merge) — when split:**
+**Commit 1 (mechanical merge):**
 - Complete the merge with lowest-assumption reconciliation
 - Preserve information from both sides
 - Restore a buildable, runnable state
 - No opportunistic cleanup or reinterpretation
 - Message: `"merge [incoming] into [current]: mechanical resolution"`
 
-**Commit 2 (integration) — when split:**
+**Commit 2 (integration):**
 - Adapt code, docs, tests, and generated artifacts so the branch incorporates the incoming objective
 - Rewrite stale names, labels, paths, and references
 - Regenerate derived outputs from merged source code
 - Message: `"integrate [incoming] intent: [brief description]"`
-
-**More than two commits:** legitimate when the intent adaptation decomposes into independent logical changes (e.g., one commit per affected task in a multi-task integration). Sequence them after Commit 1; keep each one's message honest about what it carries.
 
 ### Research-Meaningful Escalation (Tier 3)
 
@@ -49,7 +41,7 @@ These conflicts **MUST** be flagged for the researcher. Ask via `AskUserQuestion
 
 The incoming branch can carry edits to `PLAN.md` / `RESULTS.md` that substantively restructure the work — adding, removing, or combining tasks; flipping a DAG edge; invalidating a prior `APPROVED` (review or integration) status because the incoming diff changed an upstream task's outputs. These are **not** content conflicts to resolve mechanically. They are plan changes.
 
-**Before the merge proceeds**, escalate any such restructure to `planning-workflow §User Feedback and Changing Plans`: the orchestrator authors the Restructure Proposal, the researcher decides, the plan change is logged per `handoff-doc` §User Decisions Log, and `PLAN.md` is updated atomically. Only after the plan-change protocol completes does the merge continue — Commit 2 (integration) then reflects the post-restructure plan, not the pre-merge plan.
+**Before the merge proceeds**, escalate any such restructure to `planning-workflow §Changing Plans`: the orchestrator authors the Restructure Proposal, the researcher decides, the plan change is logged per `handoff-doc` §User Decisions Log, and `PLAN.md` is updated atomically. Only after the plan-change protocol completes does the merge continue — Commit 2 (integration) then reflects the post-restructure plan, not the pre-merge plan.
 
 Trigger list — if any of these is present in the incoming diff or in the merged state of `PLAN.md`, escalate before Commit 2:
 
@@ -89,11 +81,10 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 - `[BLOCKING]` **Sample construction preserved.** Sample filters and data sources are correct in the merged result.
 - `[BLOCKING]` **User decisions implemented correctly** (Tier 3) — the researcher's decisions on research-meaningful conflicts were implemented as stated.
 
-**Commit structure (templates in §How-To → Commit structure):**
+**Two-commit structure (templates in §How-To → Two-commit structure):**
 
-- `[BLOCKING]` **Intent separation.** If both the mechanical reconciliation and the intent adaptation are non-trivial, they land in separate commits (canonical two-commit shape, templates in §How-To). A single commit is acceptable only when one side is trivial (clean fast-forward or near-empty intent edit) and the commit message honestly describes both pieces.
-- `[ADVISORY]` **Mechanical-commit discipline (when split):** lowest-assumption reconciliation; preserves information from both sides; restores a buildable, runnable state; no opportunistic cleanup or reinterpretation.
-- `[ADVISORY]` **Integration-commit discipline (when split):** adapts code, docs, tests, and generated artifacts so the branch incorporates the incoming objective; rewrites stale names, labels, paths, and references; regenerates derived outputs from merged source code (not hand-edited).
+- `[BLOCKING]` **Commit 1 (mechanical merge):** lowest-assumption reconciliation; preserves information from both sides; restores a buildable, runnable state; no opportunistic cleanup or reinterpretation.
+- `[BLOCKING]` **Commit 2 (integration):** adapts code, docs, tests, and generated artifacts so the branch incorporates the incoming objective; rewrites stale names, labels, paths, and references; regenerates derived outputs from merged source code (not hand-edited).
 
 **Research-Meaningful Escalation (full procedure and Never-list in §How-To → Research-Meaningful Escalation (Tier 3)):**
 
@@ -102,7 +93,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Handoff-doc coherence (full procedure in §How-To → Handoff-doc coherence through the merge):**
 
-- `[BLOCKING]` **Handoff-doc coherence.** `PLAN.md` / `RESULTS.md` in the merged state reflect a single coherent plan. Substantive handoff-doc restructures introduced by the incoming branch — task add/remove/combine, DAG edge flip, or APPROVED (review or integration) status invalidation from a cascade — were escalated to `planning-workflow §User Feedback and Changing Plans` **before** the merge proceeded (orchestrator authors proposal, researcher decides, decision logged per `handoff-doc` §User Decisions Log). Commit 2 (integration) reflects the post-restructure plan. Routine content conflicts (reworded prose, updated numbers, new review-notes text) are resolved inline in Commit 1/2 without escalation.
+- `[BLOCKING]` **Handoff-doc coherence.** `PLAN.md` / `RESULTS.md` in the merged state reflect a single coherent plan. Substantive handoff-doc restructures introduced by the incoming branch — task add/remove/combine, DAG edge flip, or APPROVED (review or integration) status invalidation from a cascade — were escalated to `planning-workflow §Changing Plans` **before** the merge proceeded (orchestrator authors proposal, researcher decides, decision logged per `handoff-doc` §User Decisions Log). Commit 2 (integration) reflects the post-restructure plan. Routine content conflicts (reworded prose, updated numbers, new review-notes text) are resolved inline in Commit 1/2 without escalation.
 
 **Integration map (format in §How-To → Integration map format):**
 

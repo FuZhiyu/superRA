@@ -1,6 +1,6 @@
 ---
 name: agent-orchestration
-description: Requires `superRA:using-superra` loaded first. Use when dispatching agents in the superRA workflow. Triggers include "dispatch N agents", "run these in parallel", "who should do the review", a multi-step workflow that needs coordination across roles, or a session handoff where workflow state must survive. Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / INTEGRATE).
+description: Use when dispatching multiple agents and unsure how to size or parallelize the work; when tasks are independent vs iterative and the right dispatch pattern is not obvious; when choosing implementer + reviewer roles for a multi-step workflow; when adjudicating reviewer feedback as orchestrator. Triggers include "dispatch N agents", "run these in parallel", "who should do the review", a multi-step workflow that needs coordination across roles, or a session handoff where workflow state must survive. Usable in any phase of the superRA workflow (PLAN / IMPLEMENT / VALIDATE / INTEGRATE).
 ---
 
 # Agent Orchestration
@@ -9,7 +9,9 @@ description: Requires `superRA:using-superra` loaded first. Use when dispatching
 
 You delegate tasks to specialized agents with isolated context. This skill carries the **high-level orchestrator guidance** — when to dispatch, what dispatch shape to use, how to read the resulting state from `PLAN.md`, and how to adjudicate reviewer feedback.
 
-Parallel-dispatch independent tasks/reviews; serialize iterative loops; do trivial work inline.
+**Core principle:** parallel-dispatch independent tasks; serialize iterative
+loops; do trivial work inline. See §Workload Balancing for how to size each
+dispatch.
 
 ## Workload Balancing
 
@@ -52,19 +54,6 @@ will be reviewed in isolation.
 - A new feature that requires full domain-skill engagement.
 - Any task where bundle-context would exceed ~150k tokens.
 
-### Model Tier Selection
-
-Harnesses expose multiple tiers of model capacity (Sonnet vs. Opus in Claude Code; configurable thinking depth in Codex).
-
-**Default to medium tier (Sonnet in Claude Code, medium thinking in Codex).** Step up to higher tier (Opus / deep thinking) when *any* of these apply:
-
-- **Spec emerges mid-task.** The right approach only becomes clear after investigation, or the task requires re-scoping from what `PLAN.md` says.
-- **Silent-error risk is high.** Results-bearing code (data transforms, methodology, drift tests) where a wrong output ships without obvious failure.
-- **Adversarial first-pass review.** The failure mode is *not noticing* — capacity buys thoroughness, and lower-tier agents tend to over-comply, which breaks adversarial review. Narrow re-review of a cited fix stays on Sonnet.
-- **Heavy context synthesis.** Many files/skills must be reconciled in one head; Sonnet degrades faster under context pressure.
-
-These are defaults, not rules. Use your discretion and honor any explicit user preference.
-
 ### Rules of thumb
 
 **≤150k tokens per agent.** When estimating: manifest skill loads (~5–15k
@@ -74,25 +63,35 @@ across two agents even when the individual items are small — context
 thrash degrades output quality more than the cost of a second spawn.
 
 
+**Parallelize independent tasks.** Tasks whose `Depends on:` lines (see
+`planning-workflow` §Task Dependencies) are all satisfied and that share
+no mutable state are encouraged to be dispatched in parallel to separate agents.
+
+
 ---
 
-## Parallelization and Worktree Isolation
+## Concurrent Writers Require Worktree Isolation
 
-Parallel dispatch is worthwhile for independent tasks or reviewers covering disjoint work. Tasks with all `Depends on:` lines satisfied and no shared mutable state are natural candidates. **Prefer background dispatch.**
+When a parallel dispatch batch contains **≥2 implementers**, each runs in its own git worktree on a `parallel/<analysis-branch>/<slug>` branch (slug is orchestrator-chosen — `a`, `b`, `alpha`, a bundle name). Two implementers sharing a worktree race on `PLAN.md` / `RESULTS.md` and any shared output path; worktree isolation is the only safe concurrency model for parallel writes.
 
-Parallel agents **must** run in separate worktrees. Create each with raw git before dispatch (branching off the current branch, **not** via the `Agent` tool's `isolation: "worktree"` parameter — that branches off main's HEAD and the subagent cannot see in-flight state):
+Applies to implementers only. Reviewers run post-merge on the analysis branch. Read-only research subagents return findings to the orchestrator, which does the single write.
 
-```bash
-git worktree add -b "$(git branch --show-current)/parallel/<slug>" <worktree-path> HEAD
-```
+### Ownership split
 
-The `/parallel/` infix matters: the `merge-guard` hook exempts `*/parallel/*` source refs on merge-back. Pass the absolute `<worktree-path>` via the dispatch `Worktree:` field. The subagent enters via `EnterWorktree(path=...)` (or `cd` as fallback), works on whatever branch the worktree is on, and **never creates its own worktree or touches the branch name**. The `Worktree:` field in the dispatch **requires** this steering in `Additionally:`:
+| Direction | Owner | When | How |
+|---|---|---|---|
+| Seed-in (inputs → worktree) | Orchestrator | Before dispatch | `worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink` |
+| Inside worktree (task execution) | Subagent | During dispatch | Normal file I/O on the `parallel/…` branch |
+| Harvest-out (merge back) | Orchestrator | After all siblings return | Plain `git merge --no-ff parallel/<branch>/<slug>` |
+| Cleanup | Orchestrator | After merge | Harness worktree tool or `git worktree remove` + `git branch -D` |
 
-> *Work inside the worktree at `<path>`. Enter via `EnterWorktree` if available, otherwise `cd <path>`. Do not edit files outside. Do not merge or push — the orchestrator owns merge-back.*
+Task boundaries are set ex-ante in `PLAN.md`, so `parallel/…` branches are mechanically disjoint and merge without `semantic-merge`. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. The `merge-guard` hook exempts `parallel/*` source branches.
 
-**Seeding data in.** Use `worktree-data-sync` in `--mode seed`. **Always pass `--from "$(pwd)"` (or an explicit path)** — never rely on `sync_worktree_data.py`'s `--from` default, which points at the main worktree, not the orchestrator's analysis worktree.
+Force-symlink seeding is safe because parallel tasks have disjoint write paths by construction. A task that would mutate seeded data either needs a redrawn boundary or `--seed-sync-mode force-cow`.
 
-**Harvest-out and conflicts.** `git merge --no-ff <branch>/parallel/<slug>`. Task boundaries are set ex-ante in `PLAN.md`, so parallel branches are mechanically disjoint and typically merge cleanly. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. Cleanup: `git worktree remove` + `git branch -D`.
+### Worktree lifecycle
+
+Prefer harness worktree tools (`EnterWorktree`, `ExitWorktree`); fall back to raw git per `references/worktree-harness-fallback.md`, which also covers placement and gotchas.
 
 Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `PLAN.md` — git (`git worktree list`, `git branch`) is the source of truth.
 
@@ -102,7 +101,7 @@ Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `P
 
 Every workflow skill that dispatches an `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules.
 
-Every template opens with the canonical prefix **"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …"**. The prefix tells the agent that its standard Before-You-Start is in effect and it loads what `superRA:using-superra` §Skill-Load Manifest specifies for its Stage; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or additional non-default skill/reference. The dispatch prompt does not repeat the standard protocol, never paraphrases `PLAN.md` content, and never restates checklist items the agent already reads.
+Every template opens with the canonical prefix **"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …"**. The prefix tells the agent that its standard Before-You-Start is in effect and it loads what `superRA:using-superRA` §Skill-Load Manifest specifies for its Stage; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or additional non-default skill/reference. The dispatch prompt does not repeat the standard protocol, never paraphrases `PLAN.md` content, and never restates checklist items the agent already reads.
 
 **Canonical shape — required fields first, `Additionally:` anchor last:**
 
@@ -127,7 +126,6 @@ Agent(subagent_type: "superRA:reviewer"):
   Stage: <stage-name>
   Task: <task pointer>
   Git range: <BASE_SHA>..<HEAD_SHA>
-  Worktree: <absolute path>   # optional — parallel-reviewer pattern only
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
@@ -137,19 +135,21 @@ Agent(subagent_type: "superRA:reviewer"):
     says.>
 ```
 
-**Optional steering is strictly additive.** If your `Additionally:` line only paraphrases the default protocol, the skill-load manifest, or `PLAN.md` content, delete it — the agent reads those itself. Never include `Work from:` (cwd is implicit) or restate `PLAN.md` content / manifest loads.
+**Optional steering is strictly additive.** If your `Additionally:` line
+only paraphrases the default protocol, the skill-load manifest, or
+`PLAN.md` content, delete it — re-statement of content the agent will
+read itself is noise that clutters the dispatch without adding signal.
 
-If a non-default skill load, an extra domain reference, or an override is required, add `Skills:` and `References:` lines between the required fields and the prefix line.
+**`Worktree:` field (implementer-only, parallel-dispatch only).** Absolute path to the dedicated worktree provisioned per §Concurrent Writers. When present, the dispatch **must** include this canned steering in the `Additionally:` tail — the one case where that tail carries required, non-additive content:
 
-## Orchestrator Duties
+> *Work inside the worktree at `<path>`. Enter via `EnterWorktree` if available, otherwise `cd <path>`. Do not edit files outside. Do not merge or push — the orchestrator owns merge-back.*
 
-These are the things the orchestrator does that no subagent does. Applies at every workflow stage.
+The agent reads `PLAN.md`, Data Inventory, Conventions, and prior results from `RESULTS.md` directly — the dispatch does not re-state them. If a non-default skill load, an extra domain reference, or an override of the standard handoff is required for this particular call, add `Skills:` and `References:` lines between the required fields and the prefix line.
 
-- **Task sequencing and dispatch.** Read `PLAN.md`, decide what to dispatch next, apply §Workload Balancing to size and bundle.
-- **Adjudicate reviewer feedback in place.** See §Handling Reviewer Feedback below for the full protocol.
-- **Handle implementer status returns.** See §Handling Implementer Status below.
-- **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text in place, do not annotate. Commit atomically with the commit that completes the triggering task.
-- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck — hard blocker, methodology decision beyond RA authority, CRITICAL override, repeated reviewer disagreement. Log per `handoff-doc` §User Decisions Log **before** acting.
+**Banned in dispatch prompts:**
+
+- `Work from:` — the worker's cwd is the default; stating it is noise.
+- Re-statement of `PLAN.md` content, standard protocol, or the manifest's skill/reference loads — the agent reads those itself.
 
 ## Handling Reviewer Feedback (Orchestrator Discipline)
 
@@ -172,8 +172,6 @@ When a reviewer returns REVISE:
    ```
    For items you are flagging for a second opinion, use `→ orchestrator: <second opinion requested> <reason>` instead. The implementer will see these annotations and leave those items alone; the reviewer will see them on re-review and either accept the override (by deleting the item) or escalate.
 
-   **Do not clear the blockquote.** For items you accept, rewrite the task steps in place; the blockquote itself stays intact. The implementer appends `→ implemented: ...` annotations on their fix pass; the reviewer deletes confirmed-fixed items on re-review. For the full annotation mechanics see `agents/implementer.md §"How You Fix Review Items on a REVISE Round"` and `agents/reviewer.md §"How You Write a Review"`. Commit the annotated `PLAN.md` atomically with the adjudication.
-
    This protects you in three ways: (a) the human partner can audit the override, (b) future sessions see why the reviewer's note was ignored, (c) it forces you to articulate the reasoning rather than wave it away.
 
 4. **If you push back on the reviewer (rather than override them), re-dispatch the same reviewer with counter-evidence.** Cite the file:line that proves the reviewer wrong, the methodology section that overrides their suggestion, or the human partner conversation that established the convention. The reviewer should then either retract or escalate.
@@ -186,7 +184,7 @@ When a reviewer returns REVISE:
 - You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `handoff-doc` §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
 - You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `handoff-doc` §User Decisions Log.
 
-This discipline applies equally to all stages of the using superRA workflow. The orchestrator owns the final call in every loop.
+This discipline applies equally to `execution-workflow` (implementation review), `integration-workflow` (Phase A drift-test review, Phase B recon + verify reviews, Phase C doc review), and `semantic-merge` (merge review, standalone delegated-mode dispatches). The orchestrator owns the final call in every loop.
 
 ## Review Status Reference
 
@@ -201,18 +199,5 @@ Implementer and reviewer agents own their commits and document updates — see `
 
 **A task is complete only when its status is `APPROVED`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
 
-For direct mode (orchestrator executes the step itself), see `superRA:using-superra` §Execution Modes.
-
-## Handling Implementer Status
-
-Implementers return one of four statuses in their dispatch response. Applies at every Stage (implementation, drift-test, integration, documentation).
-
-- **DONE:** Proceed to review.
-- **DONE_WITH_CONCERNS:** Read the concerns. If about input quality or unexpected findings, investigate before review. If about methodology choices, note and proceed to review.
-- **NEEDS_CONTEXT:** Provide missing upstream inputs, documentation, or methodology details and re-dispatch.
-- **BLOCKED:** Assess the blocker:
-  1. Required input not available → help locate or download.
-  2. Input quality too poor → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
-  3. Task requires methodology decisions → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
-  4. Task too complex → break into smaller pieces or use a more capable model.
+For direct mode (orchestrator executes the step itself), see `superRA:using-superRA` §Execution Modes.
 
