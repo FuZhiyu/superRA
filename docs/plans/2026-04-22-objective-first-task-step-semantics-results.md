@@ -15,14 +15,14 @@ permalink: "docs/plans/2026-04-22-objective-first-task-step-semantics-results"
 
 # Objective-First Task/Step Semantics — Results
 
-**Status:** Phase C permanent-form record archived at `docs/plans/2026-04-22-objective-first-task-step-semantics-results.md`. [PLAN.md](../../PLAN.md) remains at the repository root for the later disposition step.
+**Status:** Phase C permanent-form record archived at `docs/plans/2026-04-22-objective-first-task-step-semantics-results.md`, with the companion plan archived alongside it at [2026-04-22-objective-first-task-step-semantics-plan.md](2026-04-22-objective-first-task-step-semantics-plan.md).
 **Branch:** `superRA-task-step-refinment`
 **Merge base:** `addc9ca` (`origin/main`)
-**Companion plan:** [PLAN.md](../../PLAN.md)
+**Companion plan:** [2026-04-22-objective-first-task-step-semantics-plan.md](2026-04-22-objective-first-task-step-semantics-plan.md)
 
 ## Objective
 
-The refactor changes task semantics across the workflow stack: the task heading plus `Script` / `Input` / `Output` define scope, and planner-authored steps are the starting route inside that boundary. The project-level objective is recorded in [PLAN.md](../../PLAN.md), and the same scope rule now appears in contributor guidance and task-block canon at [CLAUDE.md](../../CLAUDE.md) and [skills/handoff-doc/references/plan-anatomy.md](../../skills/handoff-doc/references/plan-anatomy.md).
+The refactor changes task semantics across the workflow stack: the task heading plus `Script` / `Input` / `Output` define scope, and planner-authored steps are the starting route inside that boundary. The project-level objective is recorded in [2026-04-22-objective-first-task-step-semantics-plan.md](2026-04-22-objective-first-task-step-semantics-plan.md), and the same scope rule now appears in contributor guidance and task-block canon at [CLAUDE.md](../../CLAUDE.md) and [skills/handoff-doc/references/plan-anatomy.md](../../skills/handoff-doc/references/plan-anatomy.md).
 
 ## Canonical Scope Contract
 
