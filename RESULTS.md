@@ -1,59 +1,80 @@
-# Tighten Phase B Upstream-Intent and Minimum-Net-Diff Contract Plan — Results
-
-> Mirrors PLAN.md structure. Updated after each task with key findings.
-> New agents: read PLAN.md for what to do, RESULTS.md for what was found.
-
-**Last updated:** 2026-04-22 (Task 4 verification, agent refresh, and reviewer pass)
-**Status:** Completed
-
+---
+author: "[[Julie Zhiyu Fu]]"
+date: 2026-04-22
+timestamp: "2026-04-22T23:22:13"
+session_id: "session-20260422-phase-c-results-maturation"
+git_commit: "303bc96fcbf2b78ce2076da76ed7b5b8f7c64dde"
+git_message: "results: fact-check Stage 2 RESULTS.md"
+git_dirty: true
+branch: "tighten-integration-rules"
+merge_base: "addc9ca7fe1bdbedb080d92095facb649074c1e4"
+tags: ["report", "results", "superRA", "phase-b", "integration-workflow"]
+project: "[[superRA]]"
+permalink: "docs/plans/2026-04-22-phase-b-upstream-intent-contract-results"
 ---
 
-## Task 1: Replace the branch-wide Phase B record with `## Upstream Intent`
+# Tighten Phase B Upstream-Intent and Minimum-Net-Diff Contract — Results
 
-**Status:** Completed (Task 1 approved 2026-04-22)
+**Status:** Complete — Tasks 1-4 are approved, Phase B integration review returned zero task annotations, and this file is the Phase C permanent record for the branch's results. [`PLAN.md`](../../PLAN.md)
+**Branch:** `tighten-integration-rules`
+**Frozen merge base:** `addc9ca7fe1bdbedb080d92095facb649074c1e4` against `origin/main`. [`PLAN.md`](../../PLAN.md)
+**Companion plan:** [`PLAN.md`](../../PLAN.md)
 
-### Key Findings
-- `skills/handoff-doc/references/plan-anatomy.md` now defines `## Upstream Intent` as the Phase B branch-wide contract, with explicit anchor lines for `Base branch`, `Frozen merge base SHA`, and `Reviewed upstream range`.
-- The branch-wide cluster format now records `Upstream change cluster`, `Upstream intent`, and `Default merged expectation`, shifting the section from a disappearing todo list to a stable round-level contract.
-- `agents/reviewer.md` and `agents/implementer.md` now split section ownership cleanly: orchestrator owns the anchor lines, reviewer owns the change clusters plus stale-section cleanup on no-overlap re-entry, and implementers must read but not edit the section.
+## Objective
 
-### Notes
-- The task-local overlap note contract remains explicit in both the anatomy and reviewer protocol: upstream file / commit / change, plain-language upstream intent, minimal allowed branch delta, and stale branch-side content that must not survive. Implementer guidance now also makes the no-material-overlap path explicit: if `## Upstream Intent` is absent after re-entry, no prior-round branch-wide contract survives.
+Recast Phase B around a frozen-base upstream-intent contract so the base branch is authoritative by default, branch deltas survive only when they serve approved task objectives, and implementers receive task-local upstream-intent instructions without reconstructing git history. [`PLAN.md`](../../PLAN.md)
 
-## Task 2: Rewrite `integration-workflow` Phase B around the frozen upstream contract
+## Source Surfaces
 
-**Status:** Completed (Task 2 approved 2026-04-22)
+No empirical dataset was used. The source material for this refactor is the repository itself:
 
-### Key Findings
-- `skills/integration-workflow/SKILL.md` now freezes a `MERGE_BASE_SHA` for each active Phase B round and threads that anchor through the reviewer dispatch and surviving-diff confirmation.
-- The reviewer dispatch now separates the branch-wide upstream-intent pass from the task-local review-note pass, and explicitly preserves the no-material-upstream-change path by deleting any stale prior-round `## Upstream Intent` section when the new base-side scan finds no overlap.
-- Phase B completion no longer depends on the branch-wide section draining to empty; instead, the reviewer performs a narrow task re-review plus a branch-wide pruning sweep over `git diff <MERGE_BASE_SHA>..HEAD`, confirming the surviving diff is justified by approved task objectives plus the recorded upstream contract.
+- Handoff and role surfaces: [`skills/handoff-doc/references/plan-anatomy.md`](../../skills/handoff-doc/references/plan-anatomy.md), [`agents/implementer.md`](../../agents/implementer.md), and [`agents/reviewer.md`](../../agents/reviewer.md)
+- Phase B choreography: [`skills/integration-workflow/SKILL.md`](../../skills/integration-workflow/SKILL.md)
+- Generic integration and merge rules: [`skills/refactor-and-integrate/SKILL.md`](../../skills/refactor-and-integrate/SKILL.md), [`skills/refactor-and-integrate/references/codebase-integration.md`](../../skills/refactor-and-integrate/references/codebase-integration.md), [`skills/refactor-and-integrate/references/merge-quality.md`](../../skills/refactor-and-integrate/references/merge-quality.md), and [`skills/semantic-merge/SKILL.md`](../../skills/semantic-merge/SKILL.md)
+- Verification surface: [`tests/test-phase-b-upstream-intent-contract.sh`](../../tests/test-phase-b-upstream-intent-contract.sh), [`tests/check-harness-compatibility.sh`](../../tests/check-harness-compatibility.sh), [`skills/codex-superra-setup/scripts/test_sync_codex_agents.py`](../../skills/codex-superra-setup/scripts/test_sync_codex_agents.py), and [`skills/codex-superra-setup/scripts/sync_codex_agents.py`](../../skills/codex-superra-setup/scripts/sync_codex_agents.py)
 
-### Notes
-- D->B re-entry is now defined as a rewrite of the frozen anchor / upstream contract for the new round rather than appending a second round of branch-wide intent beneath the first; if the new round finds no material overlap, the stale section is removed instead of being re-anchored.
+## Methodology
 
-## Task 3: Tighten generic integration and merge gates to "base-owned by default"
+The integration pass covered three layers. First, the handoff and role surfaces were checked for the branch-wide `## Upstream Intent` contract and the reviewer / implementer ownership split. [`skills/handoff-doc/references/plan-anatomy.md`](../../skills/handoff-doc/references/plan-anatomy.md) [`agents/reviewer.md`](../../agents/reviewer.md) [`agents/implementer.md`](../../agents/implementer.md) Second, the Phase B workflow choreography was checked for frozen-anchor recording, no-overlap cleanup on re-entry, and the surviving-diff confirmation pass. [`skills/integration-workflow/SKILL.md`](../../skills/integration-workflow/SKILL.md) Third, the reusable integration and merge references were checked for the base-owned-by-default rule on Phase B paths and the governing-baseline fallback elsewhere. [`skills/refactor-and-integrate/SKILL.md`](../../skills/refactor-and-integrate/SKILL.md) [`skills/refactor-and-integrate/references/codebase-integration.md`](../../skills/refactor-and-integrate/references/codebase-integration.md) [`skills/refactor-and-integrate/references/merge-quality.md`](../../skills/refactor-and-integrate/references/merge-quality.md) [`skills/semantic-merge/SKILL.md`](../../skills/semantic-merge/SKILL.md)
 
-**Status:** Completed (Task 3 approved 2026-04-22)
+## Results
 
-### Key Findings
-- `skills/refactor-and-integrate/SKILL.md` now narrows the frozen merge-base diff rule to Phase B / upstream-contract paths and adds a governing-baseline fallback for drift-test and standalone refactor / merge uses.
-- `skills/refactor-and-integrate/references/codebase-integration.md` now requires base-diff pruning in every integration review pass and adds blocking checks for silent restorations and unjustified surviving hunks.
-- `skills/refactor-and-integrate/references/merge-quality.md` and `skills/semantic-merge/SKILL.md` now align Phase B merge behavior with the same rule: preserve base intent by default and let current-branch hunks survive only when approved task objectives or reviewer-recorded allowed deltas require them.
+### Approved branch state
 
-### Notes
-- The generic integration and merge surfaces were kept DRY: `integration-workflow` owns the Phase B choreography, while `refactor-and-integrate` and `semantic-merge` own the reusable blocking rules and merge behavior.
-- After an independent reviewer reopened Task 3 for stale handoff wording, the Task 3 `PLAN.md` block was corrected to match the implemented governing-baseline contract; the substantive code and verification results were unchanged.
+The approved Phase B round used `origin/main` as the integration base and froze merge base `addc9ca7fe1bdbedb080d92095facb649074c1e4`. That round ended with zero task annotations, and the merge step was a no-op because `origin/main` still matched the frozen base. [`PLAN.md`](../../PLAN.md)
 
-## Task 4: Add focused structural invariants and verify the new contract
+Because the approved round found no material overlap, this branch did not carry an active `## Upstream Intent` section into Phase C. The permanent record therefore documents the shipped contract surfaces rather than a live branch-specific overlap log. [`PLAN.md`](../../PLAN.md) [`skills/integration-workflow/SKILL.md`](../../skills/integration-workflow/SKILL.md)
 
-**Status:** Completed (Task 4 approved 2026-04-22)
+### Handoff and role contract
 
-### Key Findings
-- `tests/test-phase-b-upstream-intent-contract.sh` remains a narrow structural guard over canonical runtime files only, and it asserts the no-overlap re-entry cleanup path alongside the non-Phase-B governing-baseline fallback.
-- `tests/check-harness-compatibility.sh` includes that Phase B guard as part of the standard structural check surface, then runs the Codex agent-generation tests plus `sync_codex_agents.py --scope project --check`.
-- The current project-scoped Codex agents are in sync with `agents/implementer.md` and `agents/reviewer.md`; the compatibility check reports the generated files are up to date.
+[`skills/handoff-doc/references/plan-anatomy.md`](../../skills/handoff-doc/references/plan-anatomy.md) now defines `## Upstream Intent` as the Phase B branch-wide contract. The section records `Base branch`, `Frozen merge base SHA`, and `Reviewed upstream range`, and each change cluster records `Upstream change cluster`, `Upstream intent`, and `Default merged expectation`. [`skills/handoff-doc/references/plan-anatomy.md`](../../skills/handoff-doc/references/plan-anatomy.md)
 
-### Notes
-- Verification run 1: `bash tests/test-phase-b-upstream-intent-contract.sh` -> `Passed: 31    Failed: 0`.
-- Verification run 2: `bash tests/check-harness-compatibility.sh` -> passed, including the Codex agent-generation tests (`Ran 3 tests ... OK`) and the project-scoped up-to-date assertion from `sync_codex_agents.py --scope project --check`.
+[`agents/reviewer.md`](../../agents/reviewer.md) writes the branch-wide clusters and the task-local overlap notes, including the upstream file / commit / change being honored, the upstream intent in plain language, the minimal allowed branch delta, and stale branch-side content that must not survive. [`agents/reviewer.md`](../../agents/reviewer.md) [`agents/implementer.md`](../../agents/implementer.md) reads the branch-wide section before integration edits, treats an absent section after D->B re-entry as the current no-overlap path, and does not edit the reviewer-owned contract. [`agents/implementer.md`](../../agents/implementer.md)
+
+### Phase B choreography
+
+[`skills/integration-workflow/SKILL.md`](../../skills/integration-workflow/SKILL.md) freezes `MERGE_BASE_SHA` before reviewer dispatch and records the active-round anchor in `PLAN.md`. The reviewer writes `## Upstream Intent` only when the base-side scan finds material overlap; if a new round finds no material overlap, a stale prior-round section is deleted in the same review pass instead of being re-anchored. [`skills/integration-workflow/SKILL.md`](../../skills/integration-workflow/SKILL.md)
+
+The review loop no longer treats an empty branch-wide section as the completion criterion. The completion condition is that in-scope tasks reach `Integration status: APPROVED` and the reviewer confirms that every surviving hunk in `git diff <MERGE_BASE_SHA>..HEAD` is justified by approved task objectives plus the recorded upstream contract. [`skills/integration-workflow/SKILL.md`](../../skills/integration-workflow/SKILL.md)
+
+### Generic integration and merge rules
+
+[`skills/refactor-and-integrate/SKILL.md`](../../skills/refactor-and-integrate/SKILL.md) narrows the frozen merge-base diff rule to Phase B / upstream-contract paths and uses the governing git range or touched-file diff as the baseline elsewhere. [`skills/refactor-and-integrate/references/codebase-integration.md`](../../skills/refactor-and-integrate/references/codebase-integration.md) makes base-diff pruning part of every integration review pass and treats upstream deletions and relocations as the default merged state unless an approved task objective and reviewer note authorize restoration. [`skills/refactor-and-integrate/references/codebase-integration.md`](../../skills/refactor-and-integrate/references/codebase-integration.md)
+
+[`skills/refactor-and-integrate/references/merge-quality.md`](../../skills/refactor-and-integrate/references/merge-quality.md) and [`skills/semantic-merge/SKILL.md`](../../skills/semantic-merge/SKILL.md) apply the same base-owned-by-default rule when Phase B calls semantic merge: current-branch hunks survive only when approved task objectives or reviewer-recorded allowed deltas require them. [`skills/refactor-and-integrate/references/merge-quality.md`](../../skills/refactor-and-integrate/references/merge-quality.md) [`skills/semantic-merge/SKILL.md`](../../skills/semantic-merge/SKILL.md)
+
+## Verification
+
+`bash tests/test-phase-b-upstream-intent-contract.sh` passed 31 assertions and 0 failures on the current tree. The guard checks the retired-label removal, the upstream-intent anchor lines, the no-overlap cleanup path, the branch-wide pruning sweep wording, the governing-baseline fallback outside Phase B, and the Phase B semantic-merge contract. [`tests/test-phase-b-upstream-intent-contract.sh`](../../tests/test-phase-b-upstream-intent-contract.sh)
+
+`bash tests/check-harness-compatibility.sh` also passed. That run includes the Phase B contract guard, the three tests in [`skills/codex-superra-setup/scripts/test_sync_codex_agents.py`](../../skills/codex-superra-setup/scripts/test_sync_codex_agents.py), and the project-scoped up-to-date assertion in [`skills/codex-superra-setup/scripts/sync_codex_agents.py`](../../skills/codex-superra-setup/scripts/sync_codex_agents.py). The current generated agents in [`.codex/agents/superra_implementer.toml`](../../.codex/agents/superra_implementer.toml) and [`.codex/agents/superra_reviewer.toml`](../../.codex/agents/superra_reviewer.toml) matched the canonical role specs during that run. [`tests/check-harness-compatibility.sh`](../../tests/check-harness-compatibility.sh)
+
+## Limitations
+
+This branch changes workflow, handoff, and verification instructions only. It does not produce an empirical dataset, analysis table, or figure output.
+
+`PLAN.md` remains at the repo root because Phase C Step 4 disposition has not happened yet. This document is the permanent results record; the plan remains the live workflow scaffold for the branch. [`PLAN.md`](../../PLAN.md)
+
+## Reproducibility
+
+Reproduce the structural state documented here from commit `303bc96fcbf2b78ce2076da76ed7b5b8f7c64dde` with `bash tests/test-phase-b-upstream-intent-contract.sh && bash tests/check-harness-compatibility.sh`.
