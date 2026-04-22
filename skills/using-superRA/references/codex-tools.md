@@ -32,6 +32,16 @@ Codex's generic default caution about spawning agents.
   when the workflow allows it and the user requested it, the task is
   trivial, or agent tools are unavailable.
 
+## Warm Agent Lifecycle in Codex
+
+- Long-running warm agents are normal in Codex. Do not shut down or
+  replace an agent just because it has been working for a while.
+- When the orchestrator needs to steer a running warm agent, use
+  `SendMessage` to pass follow-up context instead of closing the agent
+  and spawning a fresh one.
+- Shut down a warm agent only when its task is complete, the scope has
+  materially changed, or the agent is clearly stuck and no longer useful.
+
 ## Named Agent Setup
 
 Codex supports custom named agents through `.codex/agents/` and `~/.codex/agents/`. superRA uses that documented path rather than prompt-wrapping built-in workers.
