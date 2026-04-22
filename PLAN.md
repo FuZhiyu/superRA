@@ -132,7 +132,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 4: Add focused structural invariants and verify the new contract
 
 **Depends on:** 1, 2, 3
-**Review status:** APPROVED
+**Review status:** REVISE
 **Integration status:** APPROVED
 
 **Files affected:** `tests/check-harness-compatibility.sh`, `tests/test-phase-b-upstream-intent-contract.sh`, `RESULTS.md`
@@ -147,3 +147,5 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] Update `tests/check-harness-compatibility.sh` only if needed so the focused contract guard is part of the standard verification entry point without broadening that script beyond structural invariants.
 - [x] Run the focused guard and the top-level compatibility check, then record exact pass/fail results and any residual limitations in `RESULTS.md`.
 - [x] Perform a direct-mode reviewer pass over the touched files after implementation, using reviewer severity discipline to confirm the new contract is coherent across handoff-doc, workflow, role, and merge surfaces before marking execution complete.
+
+> 1. **CRITICAL** — `docs/plans/2026-04-22-phase-b-upstream-intent-contract-results.md:6`, `:7`, `:8`, `:80`: the Phase C permanent record still anchors itself to the pre-restructure fact-check revision (`303bc96`, `results: fact-check Stage 2 RESULTS.md`, `git_dirty: true`). That revision predates both the reader-facing rewrite (`d9df121`) and the relocation commit (`bdd8cf9`); `git show 303bc96:docs/plans/2026-04-22-phase-b-upstream-intent-contract-results.md` fails because this permanent artifact did not exist there. Refresh the frontmatter and the reproducibility paragraph against the actual reader-facing Phase C state that produced the permanent file, with truthful commit/message/timestamp/dirty metadata.
