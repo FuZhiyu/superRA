@@ -1,6 +1,11 @@
-# Codex Tool Reference
+# Codex Instructions
 
 Codex agents load this reference immediately after `superRA:using-superra`.
+This file carries the must-know Codex-specific instructions for superRA:
+tool-name mappings, high-level dispatch overrides, warm-agent lifecycle
+rules, and other harness guidance that should win over generic Codex
+agent defaults while superRA is active.
+
 These skills still mention Claude-oriented tool names in places. In Codex, read them as the corresponding Codex action:
 
 | Skill term | Codex action |

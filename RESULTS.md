@@ -8,14 +8,14 @@
 
 ---
 
-## Task 1: Update the Codex harness adapter for named-agent dispatch and warm-agent lifecycle guidance
+## Task 1: Update the Codex instructions surface for dispatch, warm-agent lifecycle, and load semantics
 
 **Status:** In Progress (integration follow-up updated 2026-04-22)
 
 ### Key Findings
-- `skills/using-superRA/references/codex-tools.md` now tells Codex to
-  treat user-invoked superRA workflow/orchestration as explicit
-  authorization for named-agent dispatch.
+- `skills/using-superRA/references/codex-instructions.md` now tells
+  Codex to treat user-invoked superRA workflow/orchestration as
+  explicit authorization for named-agent dispatch.
 - The Codex adapter now states that reviewer dispatch remains mandatory
   by default and that direct mode is only a fallback when the user opts
   out, the task is trivial, or agent tools are unavailable.
@@ -24,8 +24,9 @@
   warm-agent messaging when the orchestrator needs to steer a running
   subagent.
 - `skills/using-superRA/SKILL.md` now explicitly tells Codex agents to
-  load `references/codex-tools.md` whenever they load the master skill,
-  so the adapter is no longer only implied by the harness-adapter note.
+  load `references/codex-instructions.md` whenever they load the master
+  skill, so the Codex instructions surface is no longer only implied by
+  the harness-adapter note.
 
 ### Notes
 - Existing shared workflow files already carried the general
