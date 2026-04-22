@@ -43,6 +43,7 @@
 
 ### Notes
 - The generic integration and merge surfaces were kept DRY: `integration-workflow` owns the Phase B choreography, while `refactor-and-integrate` and `semantic-merge` own the reusable blocking rules and merge behavior.
+- After an independent reviewer reopened Task 3 for stale handoff wording, the Task 3 `PLAN.md` block was corrected to match the implemented governing-baseline contract; the substantive code and verification results were unchanged.
 
 ## Task 4: Add focused structural invariants and verify the new contract
 

@@ -23,7 +23,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — user supplied the target contract and explicitly asked to execute it through superRA workflows on 2026-04-22.
-- [x] **Execution complete** — direct-mode fix/re-review loop completed on 2026-04-22 after the reopened Tasks 1-4 issues were resolved and verification passed.
+- [ ] **Execution complete** — reopened on 2026-04-22 after an independent reviewer found one remaining Task 3 handoff-doc mismatch between the implemented governing-baseline contract and the task block summary.
 - [ ] **Drift tests created** — not applicable to this workflow/doc task; leave unchecked.
 - [ ] **Refactored** — not applicable to this workflow/doc task; leave unchecked.
 - [ ] **Docs finalized** — not applicable to this workflow/doc task; leave unchecked.
@@ -102,17 +102,17 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 3: Tighten generic integration and merge gates to "base-owned by default"
 
 **Depends on:** 1, 2
-**Review status:** REVISE
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Files affected:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/semantic-merge/SKILL.md`
 
 **Input:** The current minimum-net-diff top item, integration self-check / reviewer protocol, merge-quality checklist, and semantic-merge process.
 
-**Output:** Canonical generic integration and merge instructions that treat the frozen base snapshot and recorded upstream contract as the authority for what survives.
+**Output:** Canonical generic integration and merge instructions that treat the frozen Phase B base snapshot plus recorded upstream contract as the authority when that contract exists, and otherwise use the task's governing baseline for drift-test and standalone refactor / merge work.
 
 **Steps:**
-- [x] Rewrite the top blocking item in `skills/refactor-and-integrate/SKILL.md` so every surviving hunk in `git diff <frozen-merge-base>..HEAD` must justify either as an approved task objective or as an explicit allowed delta recorded in reviewer upstream-intent notes.
+- [x] Rewrite the top blocking item in `skills/refactor-and-integrate/SKILL.md` so the Phase B / upstream-contract path uses `git diff <frozen-merge-base>..HEAD`, while drift-test and standalone refactor / merge work use the task's governing baseline with the same scope-pruning rule.
 - [x] Update `skills/refactor-and-integrate/references/codebase-integration.md` so implementer self-check and reviewer evidence explicitly include base-diff pruning, the "base-owned by default" rule, and the default-authority of upstream deletions / relocations unless the task objective and review notes authorize restoration.
 - [x] Update `skills/refactor-and-integrate/references/merge-quality.md` so Phase B semantic merges use the recorded upstream contract as the source of truth for what current-branch deltas are allowed to survive.
 - [x] Update `skills/semantic-merge/SKILL.md` so when it is invoked from Phase B it preserves base intent by default, treats the recorded upstream contract as authoritative, and does not preserve stale branch structure merely because it existed before the merge.
@@ -120,6 +120,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes:**
 > 1. [MAJOR] `PLAN.md:112-116` still records the superseded universal frozen-merge-base rule for Task 3 even though `skills/refactor-and-integrate/SKILL.md:38-40` now correctly narrows that rule to Phase B and adds a non-Phase-B governing-baseline fallback. Rewrite this task block's Output / Step 1 so the handoff doc matches the implemented contract; the task should not claim the rejected rule as its completed scope.
+>    → implemented: rewrote Task 3 Output and Step 1 to describe the Phase B-only frozen-anchor rule plus the non-Phase-B governing-baseline fallback (`PLAN.md:111-116`)
 
 ---
 
