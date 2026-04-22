@@ -3,8 +3,8 @@ author: "[[Julie Zhiyu Fu]]"
 date: 2026-04-22
 timestamp: "2026-04-22T06:23:26"
 session_id: "session-20260422-objective-first-task-step-semantics-phasec"
-git_commit: "5be602fef1b282dc3d9e00c012fd0b1b7f2574a2"
-git_message: "results: fact-check root RESULTS.md"
+git_commit: "1fbd4a7b54689230f3c9d6040a03fc26a3d6f728"
+git_message: "results: relocate objective-first archive record"
 git_dirty: false
 branch: "superRA-task-step-refinment"
 merge_base: "addc9ca7fe1bdbedb080d92095facb649074c1e4"
@@ -59,7 +59,7 @@ The refactor changes task semantics across the workflow stack: the task heading 
 
 ## Reproducibility
 
-Reproduce from commit `5be602f` on branch `superRA-task-step-refinment`:
+Reproduce from commit `1fbd4a7` on branch `superRA-task-step-refinment`:
 
 1. Run `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check`.
 2. Run `cd tests/claude-code && ./run-skill-tests.sh`.
