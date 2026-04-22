@@ -102,7 +102,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 3: Tighten generic integration and merge gates to "base-owned by default"
 
 **Depends on:** 1, 2
-**Review status:** APPROVED
+**Review status:** REVISE
 **Integration status:** *(not started)*
 
 **Files affected:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/semantic-merge/SKILL.md`
@@ -117,6 +117,9 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] Update `skills/refactor-and-integrate/references/merge-quality.md` so Phase B semantic merges use the recorded upstream contract as the source of truth for what current-branch deltas are allowed to survive.
 - [x] Update `skills/semantic-merge/SKILL.md` so when it is invoked from Phase B it preserves base intent by default, treats the recorded upstream contract as authoritative, and does not preserve stale branch structure merely because it existed before the merge.
 - [x] Re-read the touched generic integration surfaces for DRY: the choreography should stay in `integration-workflow`, while the generic blocking rules stay in `refactor-and-integrate` / `semantic-merge` without duplicating design rationale.
+
+> **Review notes:**
+> 1. [MAJOR] `PLAN.md:112-116` still records the superseded universal frozen-merge-base rule for Task 3 even though `skills/refactor-and-integrate/SKILL.md:38-40` now correctly narrows that rule to Phase B and adds a non-Phase-B governing-baseline fallback. Rewrite this task block's Output / Step 1 so the handoff doc matches the implemented contract; the task should not claim the rejected rule as its completed scope.
 
 ---
 
