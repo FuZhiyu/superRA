@@ -129,10 +129,10 @@ The `## Upstream Intent` section bridges the Phase B base-branch scan and the pe
 
 **Lifecycle:**
 
-1. Phase B Step 0 resolves `<base-branch>`, fetches it, computes the frozen merge base, and rewrites the anchor lines for the active round if the section already exists.
-2. Phase B Step 1 creates the section only when the reviewer finds material overlap between `git diff <frozen-merge-base>..HEAD` and `git diff <frozen-merge-base>..origin/<base-branch>`. No material overlap means no section.
+1. Phase B Step 0 resolves `<base-branch>`, fetches it, computes the frozen merge base, and rewrites the anchor lines for the active round if the section already exists, so the reviewer evaluates the current round against the new anchor.
+2. Phase B Step 1 creates the section only when the reviewer finds material overlap between `git diff <frozen-merge-base>..HEAD` and `git diff <frozen-merge-base>..origin/<base-branch>`. If the new round finds no material overlap, there is no active-round section: a stale prior-round `## Upstream Intent` section is deleted in the same review commit rather than carried forward under the refreshed anchor.
 3. Within an active Phase B round, keep the section stable as the branch-wide upstream contract. Do not delete resolved clusters task-by-task; task-local review notes carry the per-task fix loop.
-4. On D->B re-entry after the base advances, rewrite the section in place against the new frozen anchor rather than stacking a second round beneath it.
+4. On D->B re-entry after the base advances, rewrite the section in place against the new frozen anchor rather than stacking a second round beneath it. If the new round has no material overlap, remove the stale prior-round section instead of leaving old clusters beneath the new anchor.
 5. Remove the section only when final integration closeout / PLAN disposition removes the Phase B scaffold.
 
 **Format:**
