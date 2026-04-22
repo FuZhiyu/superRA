@@ -43,6 +43,10 @@ These principles are domain-agnostic. They shape every workflow skill and apply 
 
 The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. Challenges to methodology are escalated to the human partner, never decided unilaterally. This applies to every domain vertical.
 
+### Task semantics (cross-cutting)
+
+- **Task heading = objective; steps = suggested route.** The task heading names what must be achieved, and `Script` / `Input` / `Output` bind the task scope. Planner-authored steps are the current best route, not a literal script: implementers rewrite them inline as the best within-task path becomes clear, reviewers judge objective completion plus required checks, and whole-task add/split/combine/remove still routes through `planning-workflow §User Feedback and Changing Plans`. Canonical task-block mechanics live in `skills/handoff-doc/references/plan-anatomy.md`.
+
 ### Architectural pattern
 
 - **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. The Skill-Load Manifest in `superRA:using-superra` is the authoritative map from `Stage:` value to required skills + stage-scoped references; `agents/implementer.md` / `agents/reviewer.md` carry one-line pointers at it.

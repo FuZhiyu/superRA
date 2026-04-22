@@ -55,15 +55,16 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 1: Canonicalize objective-first task-block semantics
 **Depends on:** *(none)*
+**Review status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `/CLAUDE.md`, `skills/handoff-doc/references/plan-anatomy.md`, and the source-intent specification captured in this plan header.
 **Output:** A concise contributor principle in `/CLAUDE.md` and canonical handoff-doc wording in `plan-anatomy.md` that establish: task objective/scope fields are invariant, steps are planner-authored starter guidance, within-task step combine/split is routine, and whole-task combine/split is restructure routed through the existing planning protocol.
 
-- [ ] **Step 1: Read the current semantics in both concern owners.** Identify where `/CLAUDE.md` should carry the high-level rule and where `plan-anatomy.md` should carry the canonical task-block semantics without duplicating workflow choreography.
-- [ ] **Step 2: Edit `/CLAUDE.md`.** Add one concise design principle that states `task = objective`, `steps = suggested route`, and review is objective-completeness first; keep it high-level and point to canonical concern owners rather than restating workflow detail.
-- [ ] **Step 3: Edit `plan-anatomy.md`.** Make the task-block semantics explicit: `Objective` / `Script` / `Input` / `Output` are the invariant boundary, step text is mutable latest-state guidance, and within-task step combining/splitting differs from whole-task restructure.
-- [ ] **Step 4: Verify structural coherence.** Re-read both files together and confirm the rule is expressed once per concern owner, `AGENTS.md` remains an untouched symlink surface, and no new source of truth is created.
+- [x] **Step 1: Read the current semantics in both concern owners.** Re-read `/CLAUDE.md` and `plan-anatomy.md` together to separate the contributor-level principle from the canonical handoff-doc mechanics without duplicating workflow choreography.
+- [x] **Step 2: Edit `/CLAUDE.md`.** Added one concise contributor principle stating that the task heading names the objective, `Script` / `Input` / `Output` bind scope, steps are the suggested route, and review is objective-completeness first while the exact mechanics stay owned by `plan-anatomy.md`.
+- [x] **Step 3: Edit `plan-anatomy.md`.** Made the task-block semantics explicit: the task heading names the objective, `Script` / `Input` / `Output` are the invariant boundary, step text is mutable latest-state guidance, and within-task step combining/splitting differs from whole-task restructure.
+- [x] **Step 4: Verify structural coherence.** Re-read both files together and confirmed the rule is expressed once per concern owner, `AGENTS.md` remains an untouched symlink surface, and no new source of truth was created.
 
 ### Task 2: Reframe implementer and reviewer role contracts
 **Depends on:** Task 1
