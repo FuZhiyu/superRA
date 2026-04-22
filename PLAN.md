@@ -62,7 +62,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Files affected:** `skills/handoff-doc/references/plan-anatomy.md`, `agents/reviewer.md`, `agents/implementer.md`
 
@@ -84,7 +84,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 **Depends on:** 1
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Files affected:** `skills/integration-workflow/SKILL.md`
 
@@ -106,7 +106,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 **Depends on:** 1, 2
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Files affected:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `skills/semantic-merge/SKILL.md`
 
@@ -127,7 +127,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 **Depends on:** 1, 2, 3
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Files affected:** `tests/check-harness-compatibility.sh`, `tests/test-phase-b-upstream-intent-contract.sh`, `RESULTS.md`
 
