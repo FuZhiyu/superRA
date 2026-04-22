@@ -64,6 +64,9 @@
 > **User decision (2026-04-22):** Skip Phase A drift-test creation for this branch and proceed directly to Phase B integration work.
 > **Question asked:** Which key results should be protected with drift tests before integration?
 
+> **User decision (2026-04-22):** Use `main` as the integration base.
+> **Question asked:** Is `origin/main` the correct base for Phase B integration, or did this branch split from a different base?
+
 ## Project Conventions
 
 Walked at planning time (2026-04-22). Re-walk on-demand only.
