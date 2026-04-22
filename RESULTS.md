@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each task with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-19 (bootstrap)
+**Last updated:** 2026-04-22 (rollback rationale logged)
 **Status:** In Progress
 
 ---
@@ -110,6 +110,9 @@
 - **Manifest path verification:** all 16 `writing/references/*` files referenced in the Skill-Load Manifest and elsewhere exist on disk. Checked: `planning.md`, `workflow.md`, `style-checklist.md`, `structure-checklist.md`, `refactor-and-compile.md`, `collaboration.md`, `integration.md`, plus 8 consistency files (`terminology.md`, `notation.md`, `cross-references.md`, `citations.md`, `numerical.md`, `math.md`, `argument-logic.md`, `code-paper.md`). No broken pointers.
 - **Plan deviation note (Step 3):** the PLAN.md spec named `merge-workflow/SKILL.md` as an edit target; that skill does not exist in this repo (merge choreography is Phase D of `integration-workflow`). The Phase D writing note covers the same concern. Plan step rewritten in place.
 - **Re-reviewed 2026-04-19:** addressed MINOR 14 — Gate 4 text no longer requires per-dimension consistency reviewers to load `integration.md`. Per-dimension reviewers load `writing/SKILL.md` + their one `consistency/*.md`; the integration-gate reviewer (orchestrator-dispatched separately) loads this `integration.md`.
+- **Rollback 2026-04-22:** reverted the attempted `main` sync (`99fb3ba`, `656e974`) after reviewing `main`'s intent. The critical mismatch was `skills/using-superRA/SKILL.md`: `main` deliberately removed `## Universal Principles` in `72c38e3` after `564021b`'s broader duplicate-protocol simplification, redistributing that content to owner files (`references/main-agent.md`, workflow structure, `handoff-doc`, reviewer/integration references). Carrying the section forward on this branch violated the minimum-net-diff rule for shared surfaces.
+- **Archived-handoff rationale:** the pre-revert `main` archive at `docs/plans/2026-04-17-codex-compatibility-plan.md` explicitly says that a minimum-net-diff sync should take `main` verbatim on shared files and re-thread only branch-specific additive surfaces. The reverted sync did the opposite for `using-superRA`: it preserved an older branch-local structure on a file where `main` had already changed the source-of-truth split.
+- **Current branch state after rollback:** restored to the pre-sync writing branch plus a new `PLAN.md` decision entry documenting why the sync was rejected. Any future refresh against `main` should start from `main`'s simplified shared skill surfaces and reapply only the writing-vertical deltas.
 
 **Files:** `skills/writing/references/integration.md` (95 lines) + 5 routing-edit files modified (`using-superRA/SKILL.md`, `planning-workflow/SKILL.md`, `integration-workflow/SKILL.md`, `CATEGORIES.md`, `README.md`).
 
