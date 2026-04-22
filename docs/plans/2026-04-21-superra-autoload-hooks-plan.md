@@ -102,6 +102,12 @@ Hooks are **extensionless bash scripts** at `hooks/<name>` (so Windows auto-dete
 
 > **Convention applied (2026-04-21, no user prompt):** Phase C disposition follows the established `docs/plans/<YYYY-MM-DD>-<slug>-{plan,results}.md` convention (17 sibling pairs already in `docs/plans/` on origin/main). PLAN.md and RESULTS.md were moved to `docs/plans/2026-04-21-superra-autoload-hooks-{plan,results}.md` (Option 1 of the Phase C Step 4 disposition menu). The doc-writer / doc-reviewer maturation pass was skipped: RESULTS.md is plugin-tooling dev log with no figures, math, or LaTeX, and the integration reviewer already verified content currency in commit `85847d7`. Workflow stop point bypassed because the convention is unambiguous and the answer would not change with user input.
 
+> **User decision (2026-04-22):** Phase D disposition — push the branch to origin and open a PR; do not perform a local merge to main. Worktree cleanup deferred; orchestrator will report the cleanup commands so the user can run them later.
+>
+> **Question asked:** Phase D execution mode: (1) fast-forward main now, (2) stop without merging, (3) push the branch only. Worktree cleanup: remove now, keep, or decide later. The user then added "create a PR" as a follow-up.
+>
+> **Rationale:** The user has uncommitted in-progress work in the main worktree (`agents/reviewer.md` modified, untracked `.vscode/`); a local fast-forward would change `main`'s SHA underneath that work. Pushing the branch to origin and opening a PR preserves the integration outcome on the remote without touching the user's local main, and lets the merge happen via GitHub review at their convenience.
+
 ---
 
 ## Task 1: Write the autoload-superra hook script
