@@ -53,6 +53,10 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 > **Question asked:** Should the workflow also capture why an implementer changed the in-task route, and where should that rationale live?
 > **Rationale (if given):** `PLAN.md` should reflect only the latest state per handoff-doc discipline; the explanation belongs in the message layer to the orchestrator/user.
 
+> **User decision (2026-04-22):** Proceed with integration after implementation verification and use superRA agents for both implementation and integration work.
+> **Question asked:** What should happen after the plan is approved and execution is complete?
+> **Rationale (if given):** Carry the branch through the superRA implementation-workflow and integration-workflow rather than stopping at the execution checkpoint.
+
 ### Task 1: Canonicalize objective-first task-block semantics
 **Depends on:** *(none)*
 **Review status:** APPROVED
