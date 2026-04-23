@@ -243,24 +243,24 @@ Re-check `CLAUDE.md §Ownership Boundaries`. After trimming, each concern should
 
 ### Task 8: Audit Utility, Domain, and Meta Skills
 **Depends on:** Task 5
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** Line-by-line instruction audit against the Task 5 principle; edits applied inline.
 **Input:** `skills/handoff-doc/`, `skills/refactor-and-integrate/`, `skills/report-in-markdown/`, `skills/semantic-merge/`, `skills/worktree-data-sync/`, `skills/econ-data-analysis/`, `skills/codex-superra-setup/` — each skill's `SKILL.md` plus all files under its `references/`.
 **Output:** Trimmed utility / domain / meta skills, a findings note in `RESULTS.md` summarizing per-file cuts / pointers / kept lines, and confirmation that domain and utility skills remain standalone-usable (per `CLAUDE.md §Adaptive, Composable Workflows`).
 
-- [ ] **Step 1: Survey each file line by line**
+- [x] **Step 1: Survey each file line by line**
 
-Apply the two tests to each line. For utility / domain / meta skills, additionally check: does this line still make sense when the skill is loaded standalone (without a surrounding workflow)? Classify KEEP / POINTER / DELETE in `RESULTS.md` Task 8 findings.
+Applied the two tests (DRY, necessity) plus the standalone-usability check to each line across all 22 in-scope files. Full per-file KEEP / POINTER / DELETE summary lives in `RESULTS.md` Task 8 findings.
 
-- [ ] **Step 2: Apply the edits**
+- [x] **Step 2: Apply the edits**
 
-Trim DELETEs, replace POINTERs with single-line references. Preserve the standalone-usability guarantee — a utility skill should still work when invoked outside the superRA workflow.
+Trimmed DELETE lines; replaced POINTER lines with single-line references to the authoritative owner. 19 of 22 files received edits (the 3 `SKILL.md` files under `refactor-and-integrate`, `handoff-doc` root SKILL, and two fully-functional CLI/rendering guides already met the bar in most sections; the edits in scope reflect where the principle surfaced violations). No gated checklist item removed; no `SKILL.md` frontmatter changed.
 
-- [ ] **Step 3: Verify standalone usability**
+- [x] **Step 3: Verify standalone usability**
 
-For each domain and utility skill, confirm its `SKILL.md` still reads coherently on its own. Note any follow-up needed in `RESULTS.md` Task 8.
+Re-read each skill's post-edit SKILL.md as if loaded outside the superRA workflow — `handoff-doc`, `refactor-and-integrate`, `report-in-markdown`, `semantic-merge`, `worktree-data-sync`, `econ-data-analysis`, `codex-superra-setup` all read coherently without orchestration context. Where an instruction needed a workflow callsite (e.g., `integration-workflow` Phase B), it now reads as an example caller rather than a prerequisite. Details in `RESULTS.md` Task 8 §Standalone-usability check.
 
 ### Task 9: Cross-Audit Consistency Sweep
 **Depends on:** Task 6, Task 7, Task 8

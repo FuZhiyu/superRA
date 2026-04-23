@@ -1,8 +1,8 @@
 # Integration Discipline for Data Analysis
 
-> This reference is the single source of truth for data-analysis integration discipline at the `integration` stage. The implementer walks it as pre-handoff self-check; the reviewer walks it as verification criteria. Same content, two perspectives — no drift possible. `[BLOCKING]` items must be fixed to earn APPROVE; `[ADVISORY]` items are suggestions the reviewer MAY flag as MINOR and do not block APPROVE. The verdict protocol is the same as `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines — two verdicts (APPROVE / REVISE).
+> Single source of truth for data-analysis integration discipline at the `integration` stage. Implementer walks it as self-check; reviewer walks it as verification. `[BLOCKING]` must be fixed for APPROVE; `[ADVISORY]` may be flagged as MINOR. Verdict protocol per `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines.
 
-Generic cross-cutting code-integration concerns (naming consistency, utility reuse, PR-friendly diffs, documentation currency) live in `refactor-and-integrate/references/codebase-integration.md`. Load both files at the `integration` stage — this one owns the data-analysis-specific gates; the generic file owns the cross-cutting code-quality gates.
+Generic cross-cutting code-integration concerns (naming, utility reuse, PR-friendly diffs, documentation currency) live in `refactor-and-integrate/references/codebase-integration.md`. Load both files at the `integration` stage.
 
 ## Consistency with the codebase
 
@@ -32,4 +32,4 @@ Generic cross-cutting code-integration concerns (naming consistency, utility reu
 
 ## Reviewer verdict protocol
 
-Verdict protocol: `refactor-and-integrate/references/codebase-integration.md §Reviewer Verdict Protocol`.
+See `refactor-and-integrate/references/codebase-integration.md §Reviewer Verdict Protocol`.
