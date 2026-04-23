@@ -52,7 +52,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 ### Task 1: Redesign semantic-merge as standalone semantic sync
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(pending)*
 
 **Files:** `skills/semantic-merge/SKILL.md`, `skills/semantic-merge/references/sync-quality.md`, legacy `skills/refactor-and-integrate/references/merge-quality.md`
@@ -68,15 +68,11 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 - [x] **Step 3: Validate scope**
   Search for semantic-merge language that still delegates sync ownership to refactor-and-integrate or references legacy upstream-intent language as the authority.
 
-> **Review notes:**
-> 1. MAJOR [BLOCKING] — `skills/semantic-merge/references/sync-quality.md:44`: the Sync Map format hard-codes `origin/main` as the base branch and incoming range endpoint even though the workflow supports researcher-confirmed release, sibling, or other base refs. This would write wrong handoff evidence for non-main syncs. Replace the hard-coded ref with a placeholder for the confirmed base ref and make the incoming range use the same ref/anchor consistently, e.g. `<PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>` or `<PRE_SYNC_BASE_SHA>..<base-ref>`.
->    → implemented: replaced hard-coded `origin/main` with `<base-ref>` and `<PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>` in the Sync Map format (`skills/semantic-merge/references/sync-quality.md:44`).
-
 ---
 
 ### Task 2: Rewrite integration-workflow choreography
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(pending)*
 
 **Files:** `skills/integration-workflow/SKILL.md`
@@ -91,10 +87,6 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 - [x] **Step 3: Split sync from integrate**
   Dispatch one serialized `Stage: sync` implementer for semantic sync, handle research-owned sync decisions through the standard implementer `NEEDS_CONTEXT` / `BLOCKED` statuses, then dispatch integration reviewer over `BASE_HEAD_SHA..HEAD`.
-
-> **Review notes:**
-> 1. MAJOR [BLOCKING] — `skills/integration-workflow/SKILL.md:75`: the target-base resolution step uses `git merge-base HEAD origin/main ...`, which returns a commit SHA, but the rest of Sync needs a base ref for `git fetch origin <base-branch>`, `git rev-parse origin/<base-branch>`, dispatch, and Sync Map evidence. As written, an agent can log/pass a merge-base SHA as `<resolved-base>` or leave `<base-branch>` undefined. Resolve and record the branch/ref name first, then compute `PRE_SYNC_BASE_SHA` and `BASE_HEAD_SHA` from that confirmed ref.
->    → implemented: `BASE_REF` is now resolved and logged as a branch/ref before fetch, `PRE_SYNC_BASE_SHA`, `BASE_HEAD_SHA`, dispatch context, and final freshness checks use that ref (`skills/integration-workflow/SKILL.md:75`).
 
 ---
 
