@@ -19,21 +19,21 @@ direct-mode implementer and reviewer protocol from the shared
 `skills/using-superRA/references/` surface rather than depending on raw
 `agents/implementer.md` / `agents/reviewer.md`, and the harness
 compatibility check now guards that path against regression. The
-permanent plan companion will be
+permanent plan companion is
 [2026-04-22-direct-mode-role-references-plan.md](./2026-04-22-direct-mode-role-references-plan.md).
 
 ## Permanent Artifacts
 
 - The direct-mode implementer mirror is
-  [skills/using-superRA/references/direct-mode-implementer.md](./skills/using-superRA/references/direct-mode-implementer.md).
+  [../../skills/using-superRA/references/direct-mode-implementer.md](../../skills/using-superRA/references/direct-mode-implementer.md).
 - The direct-mode reviewer mirror is
-  [skills/using-superRA/references/direct-mode-reviewer.md](./skills/using-superRA/references/direct-mode-reviewer.md).
+  [../../skills/using-superRA/references/direct-mode-reviewer.md](../../skills/using-superRA/references/direct-mode-reviewer.md).
 - The main-agent direct-mode load rule is
-  [skills/using-superRA/references/main-agent.md](./skills/using-superRA/references/main-agent.md).
+  [../../skills/using-superRA/references/main-agent.md](../../skills/using-superRA/references/main-agent.md).
 - Contributor guidance for the manual-mirror rule is
-  [CLAUDE.md](./CLAUDE.md).
+  [../../CLAUDE.md](../../CLAUDE.md).
 - The drift guard and compatibility gate are in
-  [tests/check-harness-compatibility.sh](./tests/check-harness-compatibility.sh).
+  [../../tests/check-harness-compatibility.sh](../../tests/check-harness-compatibility.sh).
 
 ## Implementation
 
@@ -54,7 +54,7 @@ permanent plan companion will be
   path itself and the regression assertions that reject a return to raw
   `agents/*.md` loads.
 - The existing assertions in
-  [tests/check-harness-compatibility.sh](./tests/check-harness-compatibility.sh)
+  [../../tests/check-harness-compatibility.sh](../../tests/check-harness-compatibility.sh)
   now serve as the drift guard for this follow-up; the suite re-ran
   green on the integration baseline.
 - `origin/main` remained the integration base for this branch, matching
@@ -78,9 +78,9 @@ permanent plan companion will be
 
 - This record covers the post-archive direct-mode follow-up only. The
   original Codex dispatch-preference scope remains documented in
-  [2026-04-22-codex-agent-dispatch-preference-plan.md](./docs/plans/2026-04-22-codex-agent-dispatch-preference-plan.md)
+  [2026-04-22-codex-agent-dispatch-preference-plan.md](./2026-04-22-codex-agent-dispatch-preference-plan.md)
   and
-  [2026-04-22-codex-agent-dispatch-preference-results.md](./docs/plans/2026-04-22-codex-agent-dispatch-preference-results.md).
+  [2026-04-22-codex-agent-dispatch-preference-results.md](./2026-04-22-codex-agent-dispatch-preference-results.md).
 - No `results_attachments/` directory or figure-materialization pass was
   needed for this follow-up.
 
