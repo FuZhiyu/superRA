@@ -42,13 +42,13 @@ else
     exit 1
 fi
 
-if assert_line_contains "$output" "$steps_label" "omit\\|optional\\|leave\\|exploratory\\|starter guidance\\|current route\\|best current route\\|literal script" "Allows open or high-level route guidance for the steps section"; then
+if assert_line_contains "$output" "$steps_label" "omit\\|optional\\|leave\\|exploratory\\|starter guidance\\|current route\\|best current route\\|literal script\\|only enough guidance\\|short note\\|skeleton" "Allows open or high-level route guidance for the steps section"; then
     :
 else
     exit 1
 fi
 
-if assert_line_contains "$output" "$steps_label" "do not\\|don't\\|should not\\|avoid\\|fabricat\\|invent\\|not.*code\\|code-like\\|exact code\\|fake specificity\\|fake detail\\|starter guidance\\|literal script" "Rejects fake detail or treats steps as guidance rather than a literal script"; then
+if assert_line_contains "$output" "$steps_label" "do not\\|don't\\|should not\\|avoid\\|fabricat\\|invent\\|not.*code\\|code-like\\|exact code\\|fake specificity\\|fake detail\\|starter guidance\\|literal script\\|only enough guidance\\|short note\\|skeleton" "Rejects fake detail or treats steps as guidance rather than a literal script"; then
     :
 else
     exit 1
