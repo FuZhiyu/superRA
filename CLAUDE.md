@@ -65,7 +65,7 @@ The agent is a Research Assistant implementing the researcher's ideas, not judgi
 ### Codex design
 
 - **Canonical instructions stay shared.** Keep the authoritative workflow text in root `skills/` and the authoritative role specs in `agents/`. Do not create Codex-only copies of workflow behavior.
-- **Harness differences live in adapter references.** When a workflow needs harness-specific tool naming or runtime behavior, put that in `skills/using-superRA/references/<harness>-tools.md` rather than forking the workflow skill body.
+- **Harness differences live in adapter references.** When a workflow needs harness-specific tool naming or runtime behavior, put that in the owning adapter reference under `skills/using-superRA/references/` (for example `codex-instructions.md` or `claude-tools.md`) rather than forking the workflow skill body.
 - **Codex skill discovery uses additive surfaces.** Repo-local discovery comes from `.agents/skills/` symlinks back to canonical `skills/`. Plugin packaging comes from `.codex-plugin/plugin.json`, which points directly at `./skills/`.
 - **Codex named agents are generated artifacts.** `agents/implementer.md` and `agents/reviewer.md` remain canonical. The generated Codex custom-agent files live in `.codex/agents/` and are produced by `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
 - **Cross-repo Codex use depends on global custom agents.** The plugin installs skills; `codex-superra-setup` installs the named agents into `~/.codex/agents/` for normal cross-repo work, or into `.codex/agents/` for repo-local testing and development.
