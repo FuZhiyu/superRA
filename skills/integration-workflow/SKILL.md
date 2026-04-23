@@ -27,8 +27,8 @@ Any step -> planning-workflow §User Feedback and Changing Plans
 Use `AskUserQuestion` (plain text if unavailable) only for legitimate stop points. Log every answer per `superRA:handoff-doc` §User Decisions Log before acting.
 
 - **Protect:** key result / drift-test coverage confirmation.
-- **Sync:** target base confirmation when no prior decision records it; research-meaningful conflicts surfaced by `semantic-merge`.
-- **Integrate:** meaningful drift after sync or refactor; research-owned choices surfaced by the integration reviewer.
+- **Sync:** target base confirmation when no prior decision records it; intent-changing conflicts surfaced by `semantic-merge`.
+- **Integrate:** meaningful drift after sync or refactor; user-owned choices surfaced by the integration reviewer.
 - **Document:** RESULTS.md permanent location when project guidance is silent; PLAN.md disposition.
 - **Finish:** hard blockers only, such as target base advancing again after Integrate.
 
@@ -141,7 +141,7 @@ Agent(generic):
   run, and post-sync obligations.
 ```
 
-If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a research-owned sync decision is required, the orchestrator asks the researcher, logs the decision, commits the log entry, and re-dispatches the sync author with the decision context.
+If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision is required, the orchestrator asks the user, logs the decision, commits the log entry, and re-dispatches the sync author with the decision context.
 
 ### Step 4: Dispatch the sync reviewer
 
@@ -208,7 +208,7 @@ Agent(subagent_type: "superRA:reviewer"):
 
 Read the task-local integration notes. Classify reviewer findings per `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
-- Batch all research-owned questions into one stop point.
+- Batch all user-owned questions into one stop point.
 - Route substantive plan restructures through `planning-workflow §User Feedback and Changing Plans`.
 - Log user decisions before dispatching fixes.
 
@@ -380,6 +380,6 @@ Report what was published or landed and what was cleaned up.
 
 **Always:**
 - Run the full drift-test suite on every integration pass.
-- Use semantic-merge for research-aware branch syncs.
+- Use semantic-merge for intent-aware branch syncs.
 - Keep Sync serialized and refactor parallelizable only after Sync lands.
 - Log user decisions before acting.

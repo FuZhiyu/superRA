@@ -46,7 +46,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Document doc-writer); usable standalone by a single author. |
 | Utility | `refactor-and-integrate` | Drift-test quality, post-sync codebase integration, project-doc audit, Sync impact propagation, and minimum surviving branch delta. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
-| Utility | `semantic-merge` | Semantic sync: intent-based branch integration, workflow sync author/reviewer mode references, standalone merge mode, Sync Map / impact handoff, and research-meaningful conflict escalation. |
+| Utility | `semantic-merge` | Semantic sync: intent-based branch integration, workflow sync author/reviewer mode references, standalone merge mode, Sync Map / impact handoff, and intent-changing conflict escalation. |
 | Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
 | Utility | `codex-superra-setup` | Generate and install the named `superra_implementer` / `superra_reviewer` Codex custom agents into `~/.codex/agents/` (global) or `.codex/agents/` (project). |
 | Meta | `using-superra` | This skill — the master skill every agent reads. |
