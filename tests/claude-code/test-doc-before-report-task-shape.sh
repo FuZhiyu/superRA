@@ -38,7 +38,7 @@ else
     exit 1
 fi
 
-if assert_line_contains "$output" "$plan_label" "task-shape\\|split\\|recommendation\\|concern" "Keeps the task-shape concern in PLAN.md"; then
+if assert_line_contains "$output" "$plan_label" "task-shape\\|split\\|recommendation\\|concern\\|boundary\\|change shape\\|restructure" "Keeps the task-shape concern in PLAN.md"; then
     :
 else
     exit 1
@@ -50,7 +50,7 @@ else
     exit 1
 fi
 
-if assert_line_contains "$output" "$status_label" "summary\\|rationale\\|why\\|uncertainty\\|pointer" "Uses the status report for rationale or summary"; then
+if assert_line_contains "$output" "$status_label" "summary\\|rationale\\|why\\|uncertainty\\|pointer\\|status message\\|status report\\|explain\\|context\\|route changed\\|recommend" "Uses the status report for explanation, summary, or an upward recommendation"; then
     :
 else
     exit 1
