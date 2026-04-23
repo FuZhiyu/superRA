@@ -62,9 +62,11 @@ A checklist of irreversible workflow milestones. Each box is a rollup over per-t
 
 Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read these sections but do not modify them. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
 
+`## Upstream Intent` is the narrow Phase B exception. When Phase B needs it, the integration reviewer owns the active section for the current round. The orchestrator passes the round context (`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range) in the reviewer dispatch; implementers never edit the section; the orchestrator removes it at Phase B closeout because it is stale once the round is complete.
+
 ### `## Decisions` placement
 
-When the first cross-task user decision arrives, insert a `## Decisions` heading immediately after `## Workflow Status` and before the first task block — so the header order is: standing context → `## Workflow Status` → `## Decisions` (when present) → `## Integration Intent` (when present) → `---` → task blocks. Format and rules per `SKILL.md` §User Decisions Log. Omit the heading entirely until there is a first decision to record.
+When the first cross-task user decision arrives, insert a `## Decisions` heading immediately after `## Workflow Status` and before the first task block — so the header order is: standing context → `## Workflow Status` → `## Decisions` (when present) → `## Upstream Intent` (when present) → `---` → task blocks. Format and rules per `SKILL.md` §User Decisions Log. Omit the heading entirely until there is a first decision to record.
 
 ## Project Conventions
 
@@ -119,34 +121,44 @@ The `ask-user-question-logger` PostToolUse hook reminds the agent to log after e
 
 If it is unclear whether an answer counts as a decision worth logging: if acting on it would change the code, data, or methodology in a way another agent could not reconstruct from the code alone, log it.
 
-## Integration Intent
+## Upstream Intent
 
-The `## Integration Intent` section bridges the integration reviewer's Phase B main-side scan and the per-task fix-review loop. When the reviewer scans `merge-base..origin/<base>` and finds incoming changes on main that materially affect this branch, it writes (or updates) this section to record what changed and which tasks need adaptation — so the orchestrator and downstream implementers know exactly what integration work is needed and why.
+The `## Upstream Intent` section bridges the Phase B base-branch scan and the per-task fix-review loop. It answers the branch-wide question, "what was upstream trying to do in this integration round?" so implementers do not have to reconstruct that intent from git history while acting on task-local review notes.
 
-**Ownership:** Written and maintained by the integration reviewer only. The implementer does not edit this section. The orchestrator may append `→ orchestrator:` annotations to individual items (to reject, redirect, or flag for a second opinion), but the reviewer owns the prose.
+**Ownership:** Reviewer-owned for the active Phase B round. The integration reviewer creates or updates the section when the base-side scan finds material overlap, using the round context the orchestrator passed in the dispatch. The implementer does not edit this section. The orchestrator removes it at Phase B closeout because it is temporary scaffolding, not a later-phase record.
 
 **Lifecycle:**
 
-1. Reviewer writes the section at `integration-workflow` Phase B Step 1 when the main-side scan surfaces material incoming changes.
-2. When the last task named in a cluster reaches `Integration status: APPROVED`, the reviewer removes the corresponding item from the section.
-3. When the last item is removed, the reviewer removes the section entirely. An empty section is never left in PLAN.md — its absence signals clean integration.
+1. Phase B Step 0 resolves `<base-branch>`, fetches it, computes `MERGE_BASE_SHA`, and passes the round context to the integration reviewer dispatch.
+2. Phase B Step 1 creates or updates the section only when the reviewer finds material overlap between `git diff <frozen-merge-base>..HEAD` and `git diff <frozen-merge-base>..origin/<base-branch>`. If there is no material overlap for the round, leave the section absent.
+3. Within an active Phase B round, keep the section stable as the branch-wide upstream contract. Do not delete resolved clusters task-by-task; task-local review notes carry the per-task fix loop.
+4. Phase B Step 4 removes the section in the same closeout commit that flips `Refactored`. It does not survive beyond the round that needed it.
 
 **Format:**
 
 ```markdown
-## Integration Intent
+## Upstream Intent
 
-> **Main-side change (2026-04-19):** `origin/main` added a session-start hook that drops a banner into every new session; touches no analysis files but adds a new `hooks/session-start` script and updates `README.md §Hooks`. Affects Tasks 5, 7 (README edit conflicts).
-> **Adaptation needed:** Tasks 5 and 7's README edits must be re-based on top of the new §Hooks language.
+**Base branch:** `origin/main`
+**Frozen merge base SHA:** `abc1234`
+**Reviewed upstream range:** `abc1234..origin/main`
+
+> **Upstream change cluster (2026-04-22):** commits `1234abc`, `4567def`; paths `skills/using-superRA/SKILL.md`, `README.md`; affects Tasks 2, 3.
+> **Upstream intent:** Upstream deleted the duplicated `## Universal Principles` section and moved the shared discipline into `using-superRA` so there is one canonical runtime home for those rules.
+> **Default merged expectation:** Preserve the upstream deletion and new shared wording. This branch should add only the approved Phase B upstream-contract instructions needed by Tasks 2 and 3; the deleted section must not be restored.
 ```
 
-One blockquote cluster per incoming change. Each cluster has two lines: `Main-side change (YYYY-MM-DD)` naming what landed on main and which tasks are affected, and `Adaptation needed` describing the specific work required. Affected task IDs are named explicitly so the orchestrator can scope implementer dispatches without re-reading the diff.
+One blockquote cluster per upstream change cluster. Each cluster has three lines:
 
-**Placement:** Directly after `## Decisions` (if present) and before the first task block, in the same position as that section in the header order. Omit entirely until the reviewer's first Phase B main-side scan surfaces a material change.
+- `Upstream change cluster (YYYY-MM-DD)` naming the commits, paths, and affected task IDs.
+- `Upstream intent` stating in plain language what the base branch was trying to accomplish, including intentional deletions or relocations.
+- `Default merged expectation` stating what the merged tree should look like if this branch adds nothing beyond its approved objectives.
+
+**Placement:** Directly after `## Decisions` (if present) and before the first task block, in the same position as that section in the header order. Omit entirely until the reviewer's first Phase B base-side scan surfaces a material change.
 
 ## Task Block Anatomy
 
-The task heading names the objective for that block. `Script`, `Input`, and `Output` usually define the current working scope boundary. Steps are optional current-route notes: planners may add them when they are genuinely helpful, or omit them when the route is still exploratory. Implementers and refactors keep any step list aligned with the current route. If execution or integration shows the task itself should change shape, agents record that recommendation in the relevant task block (or `## Integration Intent`) and the orchestrator routes it through `planning-workflow §User Feedback and Changing Plans`.
+The task heading names the objective for that block. `Script`, `Input`, and `Output` usually define the current working scope boundary. Steps are optional current-route notes: planners may add them when they are genuinely helpful, or omit them when the route is still exploratory. Implementers and refactors keep any step list aligned with the current route. If execution or integration shows the task itself should change shape, agents record that recommendation in the relevant task block (or `## Upstream Intent`) and the orchestrator routes it through `planning-workflow §User Feedback and Changing Plans`.
 
 ````markdown
 ### Task N: [Objective-style task title]
