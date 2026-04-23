@@ -130,7 +130,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** The cumulative diff from Tasks 1-3, `tests/claude-code/run-skill-tests.sh`, `tests/claude-code/test-helpers.sh`, the existing Claude Code tests, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -145,3 +145,4 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `tests/claude-code/test-adaptive-planning-principles.sh:40-51` and `tests/claude-code/test-doc-before-report-task-shape.sh:44-50` are still too brittle to support the documented green fast suite. Fresh evidence on this tree: `tests/claude-code/./run-skill-tests.sh` failed with `Passed: 2`, `Failed: 2`, `STATUS: FAILED`; an independent rerun of `./run-skill-tests.sh --test test-adaptive-planning-principles.sh` then passed, confirming that test is flaky against semantically-correct planning answers; and `./run-skill-tests.sh --test test-doc-before-report-task-shape.sh` failed again on a semantically-correct status line that routed the task-boundary decision upward without using one of the hard-coded rationale keywords. Across those runs Claude stayed within the current objective-first planning and doc-before-report contract, but the regexes still require narrow wording families (`omit|optional|leave`, explicit anti-code phrasing, or `summary|rationale|why|uncertainty|pointer`) and reject acceptable formulations like "starter guidance, not a literal script" or "recommend the user invoke `planning-workflow §User Feedback and Changing Plans` at their discretion." Minimal allowed branch delta: keep both smoke tests, but make their assertions robust to the accepted current semantics rather than one exact wording family. Stale branch-side content that must not survive: line-level assertions that fail semantically-correct planning or status-report answers on the supported fast path.
+>    → implemented: broadened the task-line assertions to accept open or high-level starter-guidance phrasing and relaxed the status-report checks to accept explanation or upward-recommendation language that still matches the current superRA contract.
