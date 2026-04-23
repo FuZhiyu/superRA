@@ -22,10 +22,10 @@
 
 - [x] **Plan approved** - researcher approved the task decomposition and clarified that rationale for within-task path changes belongs in agent status messages to the orchestrator/user, not as "change" logging in `PLAN.md` (2026-04-22)
 - [x] **Execution complete** - all tasks APPROVED; focused Claude Code coverage passed; generated-agent parity check passed; verification recorded in `RESULTS.md` (2026-04-22)
-- [x] **Drift tests created** - N/A for this skill refactor; the Task 4 verification bundle is the approved substitute for Phase A coverage (2026-04-22)
-- [x] **Refactored** - Phase B integration reviewer approved the merged-tree sync/refactor diff and the Upstream Intent section is cleared (2026-04-22)
-- [x] **Docs finalized** - Phase C doc-review passed on the archived permanent record at `docs/plans/2026-04-22-objective-first-task-step-semantics-results.md` (2026-04-22)
-- [x] **Merged** - PR [#16](https://github.com/FuZhiyu/superRA/pull/16) opened against `main` after the Phase D freshness check confirmed `origin/main` had not advanced beyond merge-base `addc9ca` (2026-04-22)
+- [ ] **Drift tests created** - Cleared for the 2026-04-22 re-entry against current `origin/main`; the Task 4 verification bundle must be rerun on the refreshed tree before this milestone can be checked again.
+- [ ] **Refactored** - Cleared for the 2026-04-22 Phase B re-entry because `origin/main` advanced beyond the previously reviewed range and Tasks 1-3 still need reviewer re-approval on the refreshed tree.
+- [ ] **Docs finalized** - Cleared pending a fresh Phase C documentation pass after the branch is updated against current `origin/main`.
+- [ ] **Merged** - Cleared pending a new Phase D freshness check and refreshed PR state after the current `origin/main` update pass.
 
 ## Project Conventions
 
@@ -60,6 +60,10 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 > **User decision (2026-04-22):** Finish Phase D by opening a pull request instead of doing the previously prepared local merge into `main`.
 > **Question asked:** How should the integrated branch be finalized?
 > **Rationale (if given):** Create a PR instead.
+
+> **User decision (2026-04-22):** Re-enter the integration workflow against current `origin/main` and dispatch reviewer agents first to plan the branch update; this invalidates the previously checked `Drift tests created`, `Refactored`, `Docs finalized`, and `Merged` milestones until the refreshed pass completes.
+> **Question asked:** Which base branch should this branch refresh against for the next integration pass, and should the next step be a reviewer-led planning pass?
+> **Rationale (if given):** Update this branch with `main`.
 
 ## Upstream Intent
 
