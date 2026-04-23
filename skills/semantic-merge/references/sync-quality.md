@@ -41,10 +41,10 @@ Format:
 ```markdown
 ## Sync Map
 
-**Base branch:** `origin/main`
+**Base branch:** `<base-ref>`
 **Pre-sync merge base:** `<PRE_SYNC_BASE_SHA>`
 **Synced base head:** `<BASE_HEAD_SHA>`
-**Incoming range:** `<PRE_SYNC_BASE_SHA>..origin/main`
+**Incoming range:** `<PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>`
 **Sync commit:** `<SYNC_COMMIT_SHA>`
 
 > **Sync cluster (YYYY-MM-DD):** commits `<sha...>`; paths `<paths>`; affects `<tasks/files>`.

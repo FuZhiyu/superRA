@@ -72,31 +72,40 @@ Sync brings the analysis branch onto the current base before refactor starts. It
 
 ### Step 1: Resolve the target base
 
-Resolve a candidate base from prior `## Decisions` or git:
+Resolve and record a candidate base ref from prior `## Decisions` or git. This is a branch/ref name, not a merge-base SHA:
 
 ```bash
-git merge-base HEAD origin/main 2>/dev/null \
-  || git merge-base HEAD origin/master 2>/dev/null
+if git rev-parse --verify --quiet origin/main >/dev/null; then
+  BASE_REF=origin/main
+elif git rev-parse --verify --quiet origin/master >/dev/null; then
+  BASE_REF=origin/master
+else
+  BASE_REF=
+fi
 ```
 
 If no prior decision records the base, ask:
 
 ```text
-This integration will sync the analysis branch against <resolved-base>.
+This integration will sync the analysis branch against <base-ref>.
 Is that correct, or did it split from a release branch, co-authored track,
 or sibling analysis branch?
 ```
 
-Log the confirmed base before fetching or dispatching.
+Log the confirmed `BASE_REF` before fetching, computing anchors, or dispatching.
 
 ### Step 2: Compute sync anchors
 
-Fetch the confirmed base and record two anchors:
+Fetch the confirmed base when it is a remote-tracking ref and record two anchors from that same ref:
 
 ```bash
-git fetch origin <base-branch>
-PRE_SYNC_BASE_SHA=$(git merge-base HEAD origin/<base-branch>)
-BASE_HEAD_SHA=$(git rev-parse origin/<base-branch>)
+REMOTE=${BASE_REF%%/*}
+REMOTE_BRANCH=${BASE_REF#*/}
+if git remote get-url "$REMOTE" >/dev/null 2>&1; then
+  git fetch "$REMOTE" "$REMOTE_BRANCH:refs/remotes/$REMOTE/$REMOTE_BRANCH"
+fi
+PRE_SYNC_BASE_SHA=$(git merge-base HEAD "$BASE_REF")
+BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 ```
 
 - `PRE_SYNC_BASE_SHA` is evidence for incoming intent: `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
@@ -111,8 +120,8 @@ Otherwise dispatch one implementer:
 ```text
 Agent(subagent_type: "superRA:implementer"):
   Stage: sync
-  Task: Sync this analysis branch with origin/<base-branch>
-  Base branch: origin/<base-branch>
+  Task: Sync this analysis branch with <base-ref>
+  Base branch: <base-ref>
   PRE_SYNC_BASE_SHA: <PRE_SYNC_BASE_SHA>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
   Incoming range: <PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>
@@ -277,14 +286,18 @@ Finish executes the user's completion choice from `implementation-workflow`.
 
 ### Step 1: Freshness check
 
-Fetch the target base and check whether it advanced since Integrate:
+Fetch the recorded `BASE_REF` when it is a remote-tracking ref and check whether it advanced since Integrate:
 
 ```bash
-git fetch origin <base-branch>
-git rev-parse origin/<base-branch>
+REMOTE=${BASE_REF%%/*}
+REMOTE_BRANCH=${BASE_REF#*/}
+if git remote get-url "$REMOTE" >/dev/null 2>&1; then
+  git fetch "$REMOTE" "$REMOTE_BRANCH:refs/remotes/$REMOTE/$REMOTE_BRANCH"
+fi
+CURRENT_BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 ```
 
-If `origin/<base-branch>` differs from the recorded `BASE_HEAD_SHA`, re-enter Sync before publishing or landing the work.
+If `CURRENT_BASE_HEAD_SHA` differs from the recorded `BASE_HEAD_SHA`, re-enter Sync before publishing or landing the work.
 
 ### Step 2: Mark final action in PLAN.md if present
 

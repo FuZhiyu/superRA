@@ -64,13 +64,32 @@ Only the orchestrator (or standalone author) edits the header, including `## Wor
 
 `## Sync Map` is the narrow Sync/Integrate exception. When Sync needs it, the sync agent owns the active section for the current round. Integration reviewers and implementers consume it; the orchestrator removes it at Integrate closeout because it is stale once all obligations are satisfied.
 
-### `## Decisions` placement
+### Top-Level Order
 
-When the first cross-task user decision arrives, insert a `## Decisions` heading immediately after `## Workflow Status` and before the first task block — so the header order is: standing context -> `## Workflow Status` -> `## Decisions` (when present) -> `## Sync Map` (when present) -> `---` -> task blocks. Format and rules per `SKILL.md` §User Decisions Log. Omit the heading entirely until there is a first decision to record.
+Use one top-level order for every PLAN.md:
+
+```markdown
+# [Analysis Name] Plan
+[standing context fields]
+---
+## Workflow Status
+[milestone checklist]
+---
+## Project Conventions
+[walk summaries]
+## Decisions
+[optional; omit until the first cross-task decision]
+## Sync Map
+[optional; omit unless the current Sync round needs it]
+---
+### Task 1: ...
+```
+
+`## Decisions` and `## Sync Map` both sit after `## Project Conventions` and before the separator that opens task blocks. If `## Decisions` is absent, insert `## Sync Map` directly after `## Project Conventions` and before that separator. If both are present, `## Sync Map` follows `## Decisions`.
 
 ## Project Conventions
 
-Sits between the header's closing `---` and the first task block (or, if a `## Decisions` section is present, directly above it). Populated by the orchestrator at `planning-workflow` Phase 3 and refreshed at `implementation-workflow` Step 1 when new upstream docs are discovered. Subagents read this section instead of re-walking the project's `CLAUDE.md` / `AGENTS.md` / `README.md` tree on every dispatch; if something they need is missing, they walk on-demand and flag the omission in their status return so the orchestrator can update the section.
+Sits after `## Workflow Status` and before optional `## Decisions` / `## Sync Map` sections. Populated by the orchestrator at `planning-workflow` Phase 3 and refreshed at `implementation-workflow` Step 1 when new upstream docs are discovered. Subagents read this section instead of re-walking the project's `CLAUDE.md` / `AGENTS.md` / `README.md` tree on every dispatch; if something they need is missing, they walk on-demand and flag the omission in their status return so the orchestrator can update the section.
 
 ```markdown
 ## Project Conventions
@@ -105,7 +124,7 @@ Researcher answers to `AskUserQuestion` / plain-text pauses land in `PLAN.md` **
 **Where it lands:**
 
 - **Task-scoped decision** (affects one task's scope, methodology, or implementation) → blockquote inside that task block, directly under `**Review status:**`. Uses the same blockquote syntax as review notes, so it sits naturally beside the adjudication protocol in `agents/implementer.md` / `agents/reviewer.md`.
-- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `implementation-workflow` Step 4 completion choice, `integration-workflow` Protect drift-test selection, `integration-workflow` Document doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed immediately after the header / `## Project Conventions` and before the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
+- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `implementation-workflow` Step 4 completion choice, `integration-workflow` Protect drift-test selection, `integration-workflow` Document doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed after `## Project Conventions` and before `## Sync Map` / the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
 
 **Format (both locations):**
 
@@ -129,7 +148,7 @@ The `## Sync Map` section bridges Sync and Integrate. It answers the branch-wide
 
 **Lifecycle:**
 
-1. Sync resolves `<base-branch>`, fetches it, computes `PRE_SYNC_BASE_SHA` and `BASE_HEAD_SHA`, and dispatches `Stage: sync` when the base has advanced.
+1. Sync resolves `<base-ref>`, fetches it when it is a remote-tracking ref, computes `PRE_SYNC_BASE_SHA` and `BASE_HEAD_SHA`, and dispatches `Stage: sync` when the base has advanced.
 2. The sync agent writes `## Sync Map` only when needed. If Sync is a no-op or trivial with no obligations, leave the section absent.
 3. Integrate consumes the section: the integration reviewer turns open obligations into task-local review notes; refactor implementers satisfy accepted obligations.
 4. Integrate closeout removes the section in the same commit that flips `Integrated`. It does not survive beyond the round that needed it.
@@ -139,10 +158,10 @@ The `## Sync Map` section bridges Sync and Integrate. It answers the branch-wide
 ```markdown
 ## Sync Map
 
-**Base branch:** `origin/main`
+**Base branch:** `<base-ref>`
 **Pre-sync merge base:** `abc1234`
 **Synced base head:** `def5678`
-**Incoming range:** `abc1234..origin/main`
+**Incoming range:** `abc1234..def5678`
 **Sync commit:** `fedcba9`
 
 > **Sync cluster (2026-04-22):** commits `1234abc`, `4567def`; paths `skills/using-superRA/SKILL.md`, `README.md`; affects Tasks 2, 3.
@@ -160,7 +179,7 @@ One blockquote cluster per sync cluster. Each cluster has five lines:
 - `Post-sync obligations` naming what Integrate still has to propagate, regenerate, review, or clean up.
 - `User decision` summarizing a logged decision or `None`.
 
-**Placement:** Directly after `## Decisions` (if present) and before the first task block, in the same position as that section in the header order. Omit entirely until Sync surfaces a material change.
+**Placement:** After `## Project Conventions` and optional `## Decisions`, before the separator that opens task blocks. Omit entirely until Sync surfaces a material change.
 
 ## Task Block Anatomy
 

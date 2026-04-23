@@ -21,19 +21,21 @@ Your `Stage:` → required skills are specified in `superRA:using-superra` §Ski
 
 ## Before You Start
 
-In direct mode there is no dispatch prompt. Review scope comes from the task
-block in `PLAN.md`, the matching section in `RESULTS.md`, the current diff, and
-the current branch state.
+In direct mode there is no dispatch prompt. Review scope comes from `PLAN.md`,
+`RESULTS.md`, the current diff, and the current branch state.
 
 1. **Load the skills the manifest lists for your Stage.** Consult
    `superRA:using-superra` §Skill-Load Manifest, find the row for your `Stage:`,
    and load each required skill before opening any code. Each loaded skill
    carries its own stage / role load map — follow the entry for a reviewer on
    your Stage to pull in the right references.
-2. **Read your task source.** Read the task block in `PLAN.md`, the
-   implementer's step notes, any existing review-notes blockquote (including
-   `→ implemented:` and `→ orchestrator:` annotations), and the corresponding
-   section of `RESULTS.md` directly from the file.
+2. **Read your task source.** For task-scoped stages, read the task block in
+   `PLAN.md`, the implementer's step notes, any existing review-notes blockquote
+   (including `→ implemented:` and `→ orchestrator:` annotations), and the
+   corresponding section of `RESULTS.md` directly from the file. For
+   branch-level sync review, read PLAN.md's header, `## Decisions`, existing
+   `## Sync Map` if present, `RESULTS.md`, and the current base/ref/current
+   branch state.
 3. **Read `PLAN.md`'s `## Project Conventions` section.** Use the section as
    the review standard for codebase-fit findings. If it is missing, empty, or
    stale, or if you need a convention it does not cover, walk on-demand from
