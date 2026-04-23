@@ -40,7 +40,8 @@ Before entering a workflow, resuming after interruption, or reacting to a change
 - **needs implementation** — task dependencies are satisfied, but the task has no committed implementation or has an omitted / placeholder / cleared `Review status`.
 - **awaiting review** — task `Review status: IMPLEMENTED`.
 - **needs revise/adjudication** — task `Review status: REVISE` or active review notes need orchestrator adjudication before re-dispatch.
-- **needs integration** — implementation is approved, integration / PR intent is supplied by the implementation-workflow Step 4 disposition or directly by the current user request, and affected task(s) have unset / `REVISE` / `IMPLEMENTED` `Integration status` or an integration rollup was invalidated.
+- **needs validation/completion** — all affected implementation tasks are approved, but `Execution complete` is unchecked, reproducibility has not been verified for the current committed outputs, or the implementation-workflow Step 4 integration / PR disposition has not been logged.
+- **needs integration** — implementation is approved, `Execution complete` is checked from implementation-workflow Step 3, reproducibility is current, the logged Step 4 disposition chooses integration / PR, and affected task(s) have unset / `REVISE` / `IMPLEMENTED` `Integration status` or an integration rollup was invalidated.
 - **needs documentation** — integration is approved for the affected frontier, but `Docs finalized` is unchecked or doc-reviewer feedback is open.
 - **ready for merge** — documentation is finalized, the requested final action is known, and the integration base freshness check has passed.
 - **preserved-approved** — tasks outside the affected frontier whose `Review status` and `Integration status` remain valid. Do not rework these tasks just because a rollup milestone was unchecked.
@@ -51,17 +52,17 @@ Before entering a workflow, resuming after interruption, or reacting to a change
 - Affected frontier: tasks and workflow layer(s) that need work.
 - Preserved-approved tasks: tasks whose `Review status` / `Integration status` remain valid.
 - Invalidated milestones: `## Workflow Status` boxes that are no longer true.
-- Next safe workflow entry point: planning, implementation, review/adjudication, integration, documentation, or final merge / PR.
-- Required stop point: any researcher decision or irreparable inconsistency that must be resolved before action, including a missing implementation-workflow Step 4 disposition after implementation is approved and reproducibility has been verified.
+- Next safe workflow entry point: planning, implementation, review/adjudication, validation/completion, integration, documentation, or final merge / PR.
+- Required stop point: any researcher decision or irreparable inconsistency that must be resolved before action, including approved implementation work that still lacks Step 3 reproducibility / `Execution complete`, or a missing logged Step 4 disposition after reproducibility has been verified.
 
 **Choose the next safe action:**
 
 1. If the frontier is **inconsistent**, repair the handoff docs mechanically when durable facts determine the correct status. If the inconsistency depends on researcher intent, stop under §The Three Pause Classes and log the answer before action.
 2. If the frontier is **needs plan repair**, invoke `planning-workflow` or its §User Feedback and Changing Plans protocol before any implementation or integration work.
-3. Otherwise pick the earliest invalid layer in the affected frontier: implementation → review/adjudication → reproducibility verification → implementation-workflow Step 4 disposition → integration → documentation → final merge / PR.
+3. Otherwise pick the earliest invalid layer in the affected frontier: implementation → review/adjudication → reproducibility verification → `Execution complete` box flip → implementation-workflow Step 4 disposition → integration → documentation → final merge / PR.
 4. Invoke the workflow skill that owns that layer. The workflow skill runs its canonical mechanics; the resolver only selects the entry point and preserves unrelated approved work.
 5. Unchecked workflow milestones are rollup evidence, not commands to redo every task. Re-enter only the affected frontier, while still running any global verification gate the target workflow requires before merge / PR.
-6. Do not select integration merely because `Integration status` is unset after implementation approval. If the Step 4 disposition is not logged and the current user request does not directly ask for integration / PR, re-enter `implementation-workflow` at its completion menu and log the researcher's choice before any integration action.
+6. Do not select integration merely because `Integration status` is unset after implementation approval. If `Execution complete` is unchecked, reproducibility is not current, or the Step 4 integration / PR disposition is not logged, return `needs validation/completion` and re-enter `implementation-workflow` at Step 3 / Step 4. A current integration / PR request supplies intent only after implementation-workflow logs it as the Step 4 disposition; it is not a bypass around validation or decision logging.
 
 **Required guarantees:**
 
