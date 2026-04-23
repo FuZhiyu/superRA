@@ -27,8 +27,8 @@ EOF
 
 output=$(run_claude "$prompt" 90)
 
-plan_label="PLAN.md:\\|\\*\\*PLAN.md\\*\\*:"
-status_label="Status report:\\|\\*\\*Status report\\*\\*:"
+plan_label="PLAN.md[[:space:]]*[:—-]\\|\\*\\*PLAN.md\\*\\*[[:space:]]*[:—-]"
+status_label="Status report[[:space:]]*[:—-]\\|\\*\\*Status report\\*\\*[[:space:]]*[:—-]"
 
 if assert_contains "$output" "$plan_label" "Uses the requested PLAN.md line"; then
     :
