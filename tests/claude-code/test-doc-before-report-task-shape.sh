@@ -15,9 +15,13 @@ the current route is still inside the task objective, but the task probably
 needs to be split later through `planning-workflow §User Feedback and Changing
 Plans`. The implementer also wants to explain why the current route changed.
 Reply with exactly two bullets:
-- PLAN.md: ...
-- Status report: ...
-What belongs in each?
+- PLAN.md: include both the durable task-shape recommendation/concern and the
+  current-route note that future agents need in the handoff doc.
+- Status report: include both the rationale/summary for the route change and
+  the upward pointer that this planning decision belongs with the
+  orchestrator/researcher via `planning-workflow §User Feedback and Changing
+  Plans`.
+Do not merge the two surfaces together.
 EOF
 )
 
@@ -39,6 +43,12 @@ else
 fi
 
 if assert_line_contains "$output" "$plan_label" "task-shape\\|split\\|recommendation\\|concern\\|boundary\\|change shape\\|restructure" "Keeps the task-shape concern in PLAN.md"; then
+    :
+else
+    exit 1
+fi
+
+if assert_line_contains "$output" "$plan_label" "current route\\|route change\\|steps\\|task block\\|review-notes\\|handoff doc\\|PLAN.md" "Keeps the durable current-route note in PLAN.md"; then
     :
 else
     exit 1
