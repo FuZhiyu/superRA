@@ -264,7 +264,7 @@ Re-read each skill's post-edit SKILL.md as if loaded outside the superRA workflo
 
 ### Task 9: Cross-Audit Consistency Sweep
 **Depends on:** Task 6, Task 7, Task 8
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** Whole-repo verification that the audit edits compose cleanly.
