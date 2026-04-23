@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-23 (Tasks 1-4 implemented)
-**Status:** Implementation committed; independent review pending.
+**Last updated:** 2026-04-23 (implementation verification)
+**Status:** Implementation complete and verified; awaiting researcher disposition.
 
 ---
 
@@ -25,7 +25,7 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 
 ## Task 1: Add Runtime Workflow Overview and Resolver Value Proposition
 
-**Status:** Implemented; independent review pending.
+**Status:** Approved.
 
 ### Findings
 - Added `skills/using-superRA/SKILL.md` `## Runtime Workflow Map`, which gives loaded agents the PLAN -> IMPLEMENT -> INTEGRATE order without importing README-level product explanation.
@@ -38,7 +38,7 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 
 ## Task 2: Replace Contingency Taxonomy with a Frontier Mechanism
 
-**Status:** Implemented; independent review pending.
+**Status:** Approved.
 
 ### Findings
 - Replaced the resolver's named `needs ...` outcome list with an ordered mechanism in `skills/using-superRA/references/main-agent.md`.
@@ -51,7 +51,7 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 
 ## Task 3: Simplify Workflow Call Sites Around the Mechanism
 
-**Status:** Implemented; independent review pending.
+**Status:** Approved.
 
 ### Findings
 - `implementation-workflow` no longer branches on resolver state labels. It now enters only when the resolver selects implementation, review, reproducibility verification, or the completion disposition.
@@ -68,7 +68,7 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 
 ## Task 4: Audit Against Adaptive-Composable Design
 
-**Status:** Implemented; independent review pending.
+**Status:** Approved.
 
 ### Findings
 - The modified resolver reads as a mechanism: evidence first, affected-frontier calculation, ordered owner routing, and safety invariants.
