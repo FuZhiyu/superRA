@@ -86,7 +86,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 1: Canonicalize objective-first task-block semantics
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `/CLAUDE.md`, `skills/handoff-doc/references/plan-anatomy.md`, and the source-intent specification captured in this plan header.
@@ -97,14 +97,10 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 3: Edit the handoff-doc canon.** Updated `plan-anatomy.md` and `results-anatomy.md` so every demonstrated task heading uses an objective-style placeholder, while the canonical scope/step semantics remain owned by `plan-anatomy.md`.
 - [x] **Step 4: Update the live results handoff and verify coherence.** Refreshed the root `RESULTS.md` header so it reflects that execution has begun, then re-read the affected handoff-doc references together and confirmed the objective-first rule is expressed consistently without creating a new source of truth.
 
-> **Review notes (present only during active REVISE rounds):**
-> 1. [MAJOR] `CLAUDE.md:72-74` and `skills/handoff-doc/references/plan-anatomy.md:67`, `skills/handoff-doc/references/plan-anatomy.md:122-149` still diverge from the current `origin/main` contract recorded in `## Upstream Intent`. `origin/main` commits `b7f0f02`, `cc192a3`, `4036130`, and `24f157e` kept the direct-mode role-reference ownership rule in `CLAUDE.md` and replaced the older Phase B `## Integration Intent` model with `## Upstream Intent` in `plan-anatomy.md`; the current branch diff still drops the direct-mode role-reference bullets from `CLAUDE.md` and still teaches `## Integration Intent` in `plan-anatomy.md`. Preserve Task 1's objective-first task-boundary semantics, but port them onto those newer concern-owner surfaces. Minimal allowed branch delta: keep the objective-first task-semantics paragraph, keep the direct-mode generated-artifact / main-agent ownership bullets from current `origin/main`, and express the same boundary semantics under `## Upstream Intent` with the frozen-merge-base placement, ownership, and lifecycle. Stale branch-side content that must not survive: the `plan-anatomy.md` `## Integration Intent` section / field-note language and any `CLAUDE.md` Codex-design prose that removes the direct-mode role-reference ownership model.
->    → implemented: restored the current `origin/main` direct-mode role-reference ownership model in `CLAUDE.md` and ported `plan-anatomy.md` to the frozen-merge-base `## Upstream Intent` contract while preserving the branch's objective-first task-boundary semantics (`CLAUDE.md:72-76`, `skills/handoff-doc/references/plan-anatomy.md:65-161`)
-
 ### Task 2: Reframe implementer and reviewer role contracts
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `agents/implementer.md`, `agents/reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -116,14 +112,10 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 4: Refresh generated Codex agents.** Ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` after the canonical agent edits so `.codex/agents/superra_implementer.toml` and `.codex/agents/superra_reviewer.toml` were regenerated from the updated markdown.
 - [x] **Step 5: Verify generated-to-canonical parity.** Re-read the generated TOML prompts and ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` to confirm the updated agent semantics landed in both files with no manual hand-edit drift.
 
-> **Review notes (present only during active REVISE rounds):**
-> 1. [MAJOR] `agents/reviewer.md:111-123`, `.codex/agents/superra_reviewer.toml:112-124`, and `skills/using-superRA/references/main-agent.md:83-90` still sit on the pre-upstream direct-mode / Phase B contract, and `skills/using-superRA/references/direct-mode-implementer.md` plus `skills/using-superRA/references/direct-mode-reviewer.md` are missing from this branch. `origin/main` commits `b7f0f02`, `cc192a3`, and `24f157e` moved direct-mode execution onto those skill-surface role refs, kept `main-agent.md` loading them, and updated reviewer-facing Phase B language to `## Upstream Intent` plus the surviving-diff pruning sweep. Preserve Task 2's objective-first role semantics, but land them on those newer owners. Minimal allowed branch delta: the direct-mode role refs exist and mirror the objective-first implementer / reviewer contracts, `main-agent.md` points direct mode at those refs, and reviewer-facing surfaces use `## Upstream Intent` with the pruning-sweep re-review rule. Stale branch-side content that must not survive: `main-agent.md` telling direct mode to read raw `agents/*.md`, missing direct-mode role-reference files, and any reviewer-facing `## Integration Intent` language.
->    → implemented: restored generator-backed direct-mode role refs, pointed direct mode at those skill-surface refs, and regenerated the reviewer-facing managed artifacts on the `## Upstream Intent` pruning-sweep contract (`skills/using-superRA/references/main-agent.md:86`, `skills/using-superRA/references/direct-mode-implementer.md:5`, `skills/using-superRA/references/direct-mode-reviewer.md:115`, `skills/codex-superra-setup/scripts/sync_codex_agents.py:29`, `.codex/agents/superra_reviewer.toml:121`)
-
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** REVISE
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/integration-workflow/SKILL.md`, and `skills/econ-data-analysis/SKILL.md`.
@@ -136,13 +128,12 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 5: Run a stale-language sweep and merged-tree project-doc audit.** Re-read the touched workflow/domain files plus the merged root release/documentation surfaces with targeted `rg` and `git diff` checks, tightened the remaining contradictory literal-adherence wording, aligned the mid-INTEGRATE restructure example in `planning-workflow` with whole-task combine/split routing, added `RELEASE-NOTES.md` coverage for the objective-first semantics change, and confirmed no further root `README.md` or `CLAUDE.md` updates were needed on top of `origin/main`.
 
 > **Review notes (present only during active REVISE rounds):**
-> 1. [MAJOR] `skills/integration-workflow/SKILL.md:88`, `skills/integration-workflow/SKILL.md:111-168` still reverts Phase B to the older `## Integration Intent` / `<merge-base>` loop and drops the frozen-merge-base surviving-diff confirmation that current `origin/main` records across the integration workflow and shared refactor / merge references. `origin/main` commits `4036130`, `ead1439`, and `24f157e` changed Phase B to freeze `MERGE_BASE_SHA`, treat the base branch as canonical by default, record `## Upstream Intent` only when overlap requires it, and keep the reviewer re-dispatch as a narrow fix verification plus `git diff <MERGE_BASE_SHA>..HEAD` pruning sweep. Preserve Task 3's objective-first boundary-change escalation / route-rewrite guidance, but port it into the newer Phase B intro, reviewer dispatch template, Step 2 adjudication, Step 3c pruning sweep, Step 4 closeout, and the matching `refactor-and-integrate` references named in `## Upstream Intent`. Stale branch-side content that must not survive: instructions that reintroduce `## Integration Intent`, tell the reviewer to walk `<merge-base>` without the frozen round context, or omit the surviving-diff justification pass against the base-owned contract.
->    → implemented: ported Phase B to the frozen-base / `## Upstream Intent` contract, restored base-owned surviving-diff pruning in the shared refactor/merge refs, and kept task-boundary escalation plus within-task route-rewrite guidance (`skills/integration-workflow/SKILL.md:88`, `skills/refactor-and-integrate/SKILL.md:38`, `skills/refactor-and-integrate/references/codebase-integration.md:53`, `skills/refactor-and-integrate/references/merge-quality.md:48`)
+> 1. [MAJOR] `skills/agent-orchestration/SKILL.md:162` still tells the orchestrator to keep a task-shape recommendation in `## Integration Intent` when it comes from the main-side scan. `origin/main` commits `4036130`, `ead1439`, and `24f157e` replaced the older Phase B `## Integration Intent` model with the frozen-merge-base `## Upstream Intent` contract plus task-local review notes, and Task 3's own objective explicitly includes keeping orchestration/reporting guidance aligned with that contract. Preserve Task 3's within-task-route / boundary-change guidance, but land it on the current owner: the relevant task block or the active `## Upstream Intent` section for the round. Minimal allowed branch delta: keep the new route-adaptation and doc-vs-report guidance in `agent-orchestration`, but update the main-side-scan recommendation location to `## Upstream Intent` to match the rest of the Phase B surfaces. Stale branch-side content that must not survive: the literal `## Integration Intent` reference in `skills/agent-orchestration/SKILL.md`.
 
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
 **Review status:** APPROVED
-**Integration status:** APPROVED
+**Integration status:** REVISE
 
 **Script:** N/A
 **Input:** The cumulative diff from Tasks 1-3, `tests/claude-code/run-skill-tests.sh`, `tests/claude-code/test-helpers.sh`, the existing Claude Code tests, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -154,3 +145,6 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 4: Re-run generated-agent verification.** Ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` and confirmed the tracked `.codex/agents/*.toml` files are still up to date with no manual drift.
 - [x] **Step 5: Run one manual Claude Code validation session.** Used a temporary toy `PLAN.md` / `RESULTS.md` pair with an omitted within-task merge check and confirmed that Claude rewrote the step list to add describe-before-merge and key-uniqueness checks, returned `REVISE` for a reviewer if the check were skipped, and routed any genuine whole-task split recommendation through `planning-workflow §User Feedback and Changing Plans`.
 - [x] **Step 6: Sweep the final diff and record verification.** Re-read the owned diff for Task 4 scope, confirmed no manual edits were made to generated agent files, ran `./run-skill-tests.sh` from `tests/claude-code` to verify the documented default fast path now passes on the merged tree, and recorded the focused test result, the consistency sweep, the generated-agent check, the manual validation outcome, and the legacy-suite disposition in `RESULTS.md`.
+
+> **Review notes (present only during active REVISE rounds):**
+> 1. [MAJOR] `tests/claude-code/test-integration-task-shape-escalation.sh:35` still accepts `Integration Intent` as a correct place to record the integration-stage task-shape recommendation. The current Phase B contract on this branch and on `origin/main` is `## Upstream Intent` plus task-local review notes (`skills/handoff-doc/references/plan-anatomy.md:124-157`, `skills/integration-workflow/SKILL.md:88-186`), so this test can pass an answer that uses the retired section name and fails to guard the merged-tree behavior Task 4 is supposed to validate. Minimal allowed branch delta: keep the integration-stage escalation smoke test, but require current record locations (`PLAN.md` task-local review notes / handoff docs, plus `## Upstream Intent` when the recommendation comes from the main-side scan) instead of the retired `## Integration Intent` wording. Stale branch-side content that must not survive: the `Integration Intent` alternative in the record-line assertion regex.
