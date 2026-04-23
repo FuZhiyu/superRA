@@ -51,42 +51,43 @@ you're ready to update `PLAN.md`.
 
 ### Read Code First
 
-**DO NOT** take the implementer's word for row counts, data descriptions, or
-results. **DO** read the actual script code, check for describe steps before
-transformations, verify row counts are logged, and look for undocumented
-decisions.
+**DO NOT** take the implementer's word for domain-critical artifacts. **DO**
+read the actual scripts, derivations, or notes; check that required
+definitions, assumptions, validation steps, and documented decisions are
+present in the work itself.
 
 ### Verify Claims Independently
 
 **DO NOT take the implementer's word.** Check the git diff, not just the status return — agents can report "success" for partial work, missing edits, or claims that do not match the committed state. The status return is a navigation aid; the diff is the evidence.
 
-You have full access to run code. Use it. For key results: check that output
-files exist and spot-check that reported values match the actual outputs. If
-you identify inconsistencies or want to see more diagnostics, run additional
-code — inspect intermediate data, re-derive a number, check a merge result.
-You are not limited to passive code reading. Full pipeline re-runs are not
-required, but targeted verification runs are encouraged when something looks
-off.
+You have full access to run code. Use it. For key results: check that
+output files exist, re-derive a number or identity when useful, inspect
+intermediate data or residuals, and verify that reported values match
+actual outputs. You are not limited to passive code reading. Full
+pipeline re-runs are not required, but targeted verification runs are
+encouraged when something looks off.
 
 ### Severity Levels
 
 **CRITICAL** — will produce wrong results:
 - Many-to-many merge creating duplicates
 - Wrong aggregation function (averaging dollar amounts, summing rates)
-- Gap-unaware lag/lead on panel with gaps
-- Variables with wrong magnitudes used downstream
+- Hidden assumption or wrong branch choice that invalidates a reported theorem, comparative static, or equilibrium result
+- Numerical verification contradicts a reported symbolic result
+- Variables or residuals with wrong magnitudes used downstream
 
 **MAJOR** — likely problem or significant violation:
 - Missing description before major transformation
-- No row count tracking for sample-changing operations
-- No external validation for key constructed variables
+- Missing definitions or assumptions before a derivation that relies on them
+- No row count tracking for sample-changing operations when the task touches data
+- No independent validation for a headline symbolic or numerical result
 - Unreproducible outputs
 
 **MINOR** — suggestion or incomplete compliance:
-- Not in notebook-compatible format (but otherwise documented)
-- Missing markdown cells for minor decisions
-- Incomplete diagnostics
-- **Active check for notebook format:** Open each analysis script and verify it follows the project's cell convention for its language (Python: `# %%` cells per `econ-data-analysis/references/notebook-format.md`; Julia: check if project uses QuartoNotebookRunner or `# %%`). If the project has no convention for the language, note "not applicable" with reasoning — do not silently skip.
+- Not in the project's expected format (but otherwise documented)
+- Missing markdown cells or nearby explanation for minor decisions
+- Incomplete diagnostics or notation mapping
+- **Active check for task format:** For data-analysis scripts, verify notebook format per `econ-data-analysis/references/notebook-format.md`. For theory/modeling notes or reports, verify that renderable math follows `superRA:report-in-markdown` when equations, tables, or figures are part of the artifact. If no project convention applies, note "not applicable" with reasoning — do not silently skip.
 
 ### Verdict
 

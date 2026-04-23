@@ -44,21 +44,22 @@ and `RESULTS.md`.
 
 ## Execution Protocol
 
-### Data-First Discipline
+### Domain Discipline
 
 Follow the loaded skill's discipline throughout. Key principles:
-- Describe data before transforming it
-- Log row counts for every sample-changing operation
-- Validate results against economic intuition
-- Document decisions in markdown cells
+- For data analysis: describe data before transforming it, log row counts for every sample-changing operation, and validate results against economic intuition.
+- For theory/modeling: define objects and assumptions before derivation, keep notation stable, and verify headline results with proof, special-case, or simple numerical checks.
+- Document major decisions in markdown or nearby comments so a reviewer can trace the reasoning.
 
 ### While You Work
 
-If you encounter unexpected data (wrong magnitudes, high missingness, merge
-issues), **stop and report it**. Don't proceed with questionable data.
+If you encounter unexpected domain signals (wrong magnitudes, high
+missingness, merge issues, contradictory assumptions, impossible signs,
+or failed verification checks), **stop and report it**. Don't proceed
+with questionable inputs or results.
 
 Bad analysis is worse than no analysis. It is always OK to stop and say
-"this data doesn't look right."
+"this doesn't look right."
 
 ### Self-Review Before Reporting
 
@@ -79,7 +80,7 @@ Then check:
 - Are outputs saved where specified?
 
 **Reproducibility:**
-- Is the script in notebook-compatible format?
+- If the task uses scripts, notebooks, or rendered notes, do they follow the domain/project format convention?
 - Can someone re-run this and get the same results?
 - Are file paths correct and relative?
 
@@ -178,12 +179,12 @@ Before staging your commit, verify:
 ## Escalation
 
 **STOP and report with BLOCKED or NEEDS_CONTEXT when:**
-- Data doesn't match expectations from the plan
-- Merge produces unexpected row count changes
-- Variables have implausible magnitudes
-- You need context about upstream data processing
-- You're unsure whether a data decision is correct
-- Data quality is too poor to proceed
+- Inputs, assumptions, or verification results don't match expectations from the plan
+- A merge, filter, derivation step, or solver output produces an unexpected scope or logic change
+- Variables, parameters, or residuals have implausible magnitudes
+- You need context about upstream processing, notation, or modeling choices
+- You're unsure whether a domain decision is correct
+- Input quality or model consistency is too poor to proceed
 - Task requires methodology decisions (the researcher decides)
 
 **Ask for clarification rather than guessing.**
