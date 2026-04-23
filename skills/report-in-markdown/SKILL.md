@@ -19,10 +19,9 @@ Skip this skill for agent-only text handoffs with no figures, no math, no tables
 
 ## Invocation contract
 
-1. Decide your caller role from the load map below.
-2. Load only the references you need.
-3. Write the content yourself following the rules in the loaded references. This skill does not generate content — it defines the format contract.
-4. If producing a file at a location with an `attachments/` directory requirement, the target directory is a **caller parameter**. This skill does not hard-code it.
+1. Decide your caller role from the load map below and load only those references.
+2. Write content yourself following the loaded references' rules — this skill defines format, not content.
+3. The target `attachments/` directory is a **caller parameter**; this skill does not hard-code it.
 
 ## Load map
 
@@ -35,15 +34,9 @@ Skip this skill for agent-only text handoffs with no figures, no math, no tables
 | `integration-workflow` Phase C doc-reviewer subagent | `final-form.md` |
 | Standalone markdown report (any context) | `baseline-io.md` + `rich-content.md` |
 
-## Figure directory: caller decides
+## Figure directory
 
-`rich-content.md` describes *how* to embed figures, but the target attachments directory is passed in by the caller, not hard-coded:
-
-- **Stage 1** (`RESULTS.md` dev log): use `results_attachments/` at the project root (superRA convention in `handoff-doc`).
-- **Stage 2** (permanent `RESULTS.md` at INTEGRATE Phase C): use an `attachments/` folder next to the relocated file.
-- **Standalone report**: use `./attachments/` relative to the report file.
-
-If you are the caller and unsure which directory applies, the skill that invoked you (e.g., `handoff-doc`, `integration-workflow`) should tell you. If nothing specifies one, default to `attachments/` next to the output file.
+The target attachments directory is a caller parameter; this skill does not hard-code it. Stage defaults and the "unsure which directory" fallback are in `references/rich-content.md` §Figures → The attachments directory is a caller parameter.
 
 ## References
 

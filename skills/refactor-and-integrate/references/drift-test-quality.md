@@ -1,6 +1,6 @@
 # Drift Test Quality Standards
 
-Shared domain reference for drift test creation and review. Both the implementer (test creator) and reviewer walk the gated checklist at the bottom of this file; the how-to sections above give the procedure, worked examples, and Red Flags rationale that the checklist items encode. Loaded whenever `Stage:` is `drift-test` (per `superRA:using-superra` §Skill-Load Manifest), or when any stage's task creates, modifies, or assesses a drift test.
+Shared reference for drift-test creation and review. Implementer (test creator) and reviewer both walk the gated checklist at the bottom; the how-to sections above give procedures, worked examples, and Red Flags rationale the checklist encodes. Loadable by anyone writing or reviewing a drift/regression test.
 
 ---
 
@@ -61,7 +61,7 @@ Follow the project's testing conventions:
 
 ### Cross-cutting Red Flags — drift test integrity
 
-These rules apply wherever drift tests are in play — during creation (`integration-workflow` Phase A), after any refactor (`integration-workflow` Phase B), after a main update (`integration-workflow` Phase D post-merge verification), and after any `semantic-merge` operation. The workflow skills and the SKILL.md body point at this section rather than restate the rules locally.
+These rules apply wherever drift tests are in play — creation, refactor, post-merge verification, and any `semantic-merge` operation.
 
 **Never:**
 - **Silently update drift test expectations for meaningful result changes.** A test failure after a refactor, merge, or rebase means one of three things: (a) the change broke something and must be fixed, (b) the change revealed a tolerance too tight and must be justified with economic reasoning and an `AskUserQuestion` confirmation from the researcher, or (c) the change meaningfully shifted a result, which is a research conversation with the researcher — surface it via `AskUserQuestion` (plain text fallback when unavailable), log the answer per `handoff-doc` §User Decisions Log, and commit the log entry before updating the expectation. Never a silent expectation bump.
@@ -69,7 +69,7 @@ These rules apply wherever drift tests are in play — during creation (`integra
 - **Remove or weaken existing drift tests during refactoring or merge integration.** Tests are part of the analysis contract.
 - **Treat the drift tests as the only safety net.** They protect key results; they do not replace the one-pass review or the data-discipline protocol.
 
-When a drift test fails, follow the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback — read the cited output, classify the failure, and either fix, justify, or escalate.
+When a drift test fails: read the cited output, classify the failure, and either fix, justify, or escalate. Orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback (when working inside superRA).
 
 ---
 

@@ -1,12 +1,10 @@
 # Final form: consolidation discipline for Stage 2 `RESULTS.md`
 
-Load this reference when you are either the **doc-writer subagent maturing `RESULTS.md` at `integration-workflow` Phase C** or the **doc-reviewer subagent reviewing that matured file**.
-
-Consolidation **rewrites the file in place** before relocating it — it does not create a new file.
+Load when maturing `RESULTS.md` into its permanent form, or reviewing that matured file. Consolidation **rewrites the file in place** before relocating it — it does not create a new file.
 
 ## The consolidation pass — four ordered commits
 
-Sub-part A lands as **four separate commits, in order**. Each commit is independently recoverable — a session interruption mid-pass leaves the tree git-coherent and the next dispatch resumes at the first un-landed step. Do NOT bundle these into one commit: the atomicity is the whole point (a file move mixed with a fact-check edit is very hard to audit or revert).
+Sub-part A lands as **four separate commits, in order**. Each commit is independently recoverable — a session interruption mid-pass leaves the tree git-coherent and the next dispatch resumes at the first un-landed step. Do NOT bundle these into one commit: a file move mixed with a fact-check edit is very hard to audit or revert.
 
 ### Commit 1 — Fact-check in place
 
