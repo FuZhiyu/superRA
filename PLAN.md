@@ -120,7 +120,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 ### Task 4: Update manifests, role docs, and handoff anatomy
 **Depends on:** Task 1, Task 2, Task 3
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(pending)*
 
 **Files:** `skills/using-superRA/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `agents/implementer.md`, `agents/reviewer.md`, generated direct-mode and Codex agent files.
@@ -135,14 +135,6 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 - [x] **Step 3: Update role docs and regenerate**
   Update canonical role specs, then run the Codex agent sync script instead of editing generated files by hand.
-
-> **Review notes:**
-> 1. [MAJOR] The canonical implementer role still makes every implementer update an assigned task block and set `Review status: IMPLEMENTED`, and its pre-commit check still says every PLAN.md edit must stay inside the assigned task block (`agents/implementer.md:151`, `agents/implementer.md:165`). That contradicts the new branch-level `Stage: sync` path, where there may be no task block and the sync implementer is explicitly allowed to edit header-level `## Sync Map`. Fix the Update Docs / Commit and Pre-Commit Self-Check sections so `Stage: sync` records the Sync Map / sync commit handoff without inventing a task block or failing its own self-check, then regenerate Codex/direct-mode artifacts.
->    → implemented: Update Docs / Commit and pre-commit checks now split task-scoped handoff from `Stage: sync` Sync Map / commit-body handoff, then generated artifacts were refreshed (`agents/implementer.md:151`).
-> 2. [MAJOR] The generated direct-mode role references still tell agents that task context/review scope comes from a PLAN.md task block (`skills/using-superRA/references/direct-mode-implementer.md:27`, `skills/using-superRA/references/direct-mode-reviewer.md:33`). Main-agent direct mode loads these generated references instead of raw `agents/*.md`, so direct-mode `Stage: sync` misses the branch-level context added to the canonical roles: PLAN header, `## Decisions`, existing `## Sync Map`, RESULTS.md, and base/ref/current branch state. Update the generator/direct-mode rendering to include the branch-level sync exception for implementer and reviewer direct mode, then regenerate.
->    → implemented: direct-mode rendering now includes `Stage: sync` / branch-level sync context and the generated direct-mode references were refreshed from the generator (`skills/codex-superra-setup/scripts/sync_codex_agents.py:307`).
-> 3. [MAJOR] The handoff anatomy gives conflicting placement instructions for `## Sync Map`: the Decisions placement says the header order is `Workflow Status` -> `Decisions` -> `Sync Map` -> `---` -> task blocks, while Project Conventions says it sits between the header separator and the first task block and directly above Decisions when present, and the Sync Map section says it goes after Decisions before the first task block (`skills/handoff-doc/references/plan-anatomy.md:69`, `skills/handoff-doc/references/plan-anatomy.md:73`, `skills/handoff-doc/references/plan-anatomy.md:163`). Spell out one complete top-level order that includes Project Conventions, Decisions, Sync Map, separators, and task blocks, matching where a sync agent should actually insert the temporary section.
->    → implemented: plan anatomy now gives one top-level order with Project Conventions before optional Decisions / Sync Map and the task-block separator after them (`skills/handoff-doc/references/plan-anatomy.md:67`).
 
 ---
 
