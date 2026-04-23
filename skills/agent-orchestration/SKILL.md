@@ -159,7 +159,7 @@ The reviewer is adversarial by design — it flags aggressively, and some findin
 
 Start by separating **within-task route adaptation** from **scope change**. If the implementer added diagnostics, validation, or robustness work and rewrote the task steps to match while staying inside the task heading plus `Script` / `Input` / `Output`, that is normal execution drift. If the change alters those boundary fields or implies task add/remove/combine/split, stop the review loop and route it through `planning-workflow` §User Feedback and Changing Plans instead of treating it as an inline fix.
 
-Treat reviewer or implementer suggestions that the task itself should change shape as documented recommendations, not unilateral edits. Keep the recommendation in the relevant task block (or `## Integration Intent` when it comes from the main-side scan), then decide whether it represents a real planning change. Once you decide it does, update `PLAN.md` through the existing planning protocol rather than rewriting the task boundary inline.
+Treat reviewer or implementer suggestions that the task itself should change shape as documented recommendations, not unilateral edits. Keep the recommendation in the relevant task block (or the active `## Upstream Intent` section when it comes from the main-side scan), then decide whether it represents a real planning change. Once you decide it does, update `PLAN.md` through the existing planning protocol rather than rewriting the task boundary inline.
 
 When a reviewer returns REVISE:
 
