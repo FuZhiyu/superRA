@@ -1,6 +1,6 @@
 # Workflow Sync Author Mode
 
-Use when `integration-workflow` dispatches a generic sync author to bring the current branch onto a confirmed base. Also load `sync-quality.md` and `sync-map-format.md`.
+Use when `integration-workflow` dispatches a generic sync author to bring the current branch onto a confirmed base. Also load `sync-quality.md` for the gated checklist. Walk the Shared Procedure in `semantic-merge/SKILL.md` (repo-state grounding, intent research with role classification, resolution plan, research-meaningful escalation, stale-reference sweep) — this reference only carries mode-specific content.
 
 ## Inputs
 
@@ -12,18 +12,59 @@ The dispatch supplies:
 - incoming range `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`
 - operation direction, defaulting to merging the confirmed base into the current branch
 
-## Process
+Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing `## Sync Map`, and `RESULTS.md`. Incoming intent comes from commits, diffs, and docs in `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
 
-1. Confirm the worktree is clean enough to sync. If dirty state is unrelated, preserve it with a reversible named stash and report it.
-2. Read PLAN.md header, `## Decisions`, any existing `## Sync Map`, RESULTS.md, and the incoming range.
-3. Summarize current-branch intent from PLAN.md / RESULTS.md. Do not duplicate that full summary in task blocks.
-4. Summarize incoming intent from commits, diffs, and docs in `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
-5. Build a branch-level Sync Map when there is material overlap, a conflict, a user decision, sync-review carryover, or a post-sync obligation.
-6. Run the requested sync operation after intent research. For the normal workflow path, merge `BASE_REF` into the current branch.
-7. Resolve conflicts by intent. Preserve base-current deletions and relocations by default unless an approved task objective, logged user decision, or Sync Map / Sync impact obligation justifies restoring branch-side content.
-8. Add task-local `**Sync impact:**` annotations only to affected task blocks. Keep them short and point back to the relevant Sync Map cluster.
-9. Land exactly one sync commit. Include code, resolved docs, PLAN.md Sync Map, and task-local Sync impact annotations in the same commit.
-10. Run targeted checks where cheap and relevant. Leave generated-output refreshes, broad refactor, drift-test expectation updates, and project-doc audit for Integrate.
+## Mode-Specific Process
+
+1. Run the requested sync operation after intent research. For the normal workflow path, merge `BASE_REF` into the current branch.
+2. Write the branch-level `## Sync Map` in `PLAN.md` when there is material overlap, a conflict, a user decision, sync-review carryover, or a post-sync obligation. Omit it for no-op or trivial syncs with no obligations.
+3. Add task-local `**Sync impact:**` annotations only to task blocks that need task-specific propagation during Integrate. Keep them short and point back to the relevant Sync Map cluster.
+4. **Land exactly one sync commit.** Include code, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations in the same commit.
+5. Leave generated-output refreshes, broad refactor, drift-test expectation updates, and project-doc audit for Integrate. Record them as post-sync obligations in the Sync Map.
+
+## Workflow Sync Map Format
+
+```markdown
+## Sync Map
+
+**Base branch:** `<base-ref>`
+**Pre-sync merge base:** `<PRE_SYNC_BASE_SHA>`
+**Synced base head:** `<BASE_HEAD_SHA>`
+**Incoming range:** `<PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>`
+**Sync commit:** `<SYNC_COMMIT_SHA>`
+**Sync review status:** `IMPLEMENTED | REVISE | APPROVED`
+
+### Branch Summary
+
+**Current branch intent:** <one paragraph, usually from PLAN.md / RESULTS.md>.
+**Incoming intent:** <one paragraph from incoming commits and diffs>.
+**Resolution thesis:** <one paragraph describing the governing resolution>.
+
+### Sync Clusters
+
+> **Sync cluster `<cluster-id>` (YYYY-MM-DD):** commits `<sha...>`; paths `<paths>`; affects Tasks `<ids>`.
+> **Incoming intent:** <plain-language purpose of incoming/base changes>.
+> **Sync resolution:** <what the sync commit kept, dropped, or synthesized>.
+> **Post-sync obligations:** <task IDs, stale paths, APIs, docs, generated outputs, tests, or review areas for Integrate>.
+> **User decision:** <summary or "None">.
+
+> **Sync review notes (present only while REVISE is active):**
+> 1. [MAJOR] <specific unresolved sync issue, with file/path evidence>.
+```
+
+`## Sync Map` carries the big picture. It is temporary scaffolding for the active Sync / Integrate round.
+
+## Task-Local Sync Impact Format
+
+When a cluster affects a task, add a compact field to that task block, directly after `**Integration status:**`:
+
+```markdown
+**Sync impact:** Cluster `<cluster-id>` requires <task-specific integration obligation>. Source: `PLAN.md ## Sync Map`.
+```
+
+The task-local impact is not a second Sync Map. It gives task-scoped integration implementers and reviewers the relevant sync intent without making them reconstruct branch history.
+
+Remove satisfied task-local Sync impact fields when Integrate closes, unless a lasting task assumption still belongs in the task block.
 
 ## Status Return
 
@@ -34,4 +75,4 @@ Return one of:
 - `NEEDS_CONTEXT`: missing upstream context or a research-owned decision is needed.
 - `BLOCKED`: the sync cannot proceed safely.
 
-Report the sync commit SHA, Sync Map location or why none was needed, task-local Sync impact annotations added, checks run, and post-sync obligations.
+Report the sync commit SHA, Sync Map location or why none was needed, task-local Sync impact annotations added, stash status (if any), checks run, and post-sync obligations.

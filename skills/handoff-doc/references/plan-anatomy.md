@@ -155,13 +155,13 @@ The `## Sync Map` section bridges Sync and Integrate. It answers the branch-wide
 5. Integrate consumes task-local Sync impact plus the referenced Sync Map clusters: the integration reviewer turns open obligations into task-local review notes; refactor implementers satisfy accepted obligations.
 6. Integrate closeout removes the section and satisfied task-local Sync impact fields in the same commit that flips `Integrated`.
 
-**Format:** see `semantic-merge/references/sync-map-format.md §Workflow Sync Map`.
+**Format:** see `semantic-merge/references/workflow-sync-author.md §Workflow Sync Map Format`.
 
 **Placement:** After `## Project Conventions` and optional `## Decisions`, before the separator that opens task blocks. Omit entirely until Sync surfaces a material change.
 
 ### Task-local Sync impact
 
-When a Sync cluster affects a task, add a compact `**Sync impact:**` field directly after `**Integration status:**`. **Format and removal rule:** see `semantic-merge/references/sync-map-format.md §Task-Local Sync Impact`.
+When a Sync cluster affects a task, add a compact `**Sync impact:**` field directly after `**Integration status:**`. **Format and removal rule:** see `semantic-merge/references/workflow-sync-author.md §Task-Local Sync Impact Format`.
 
 ## Task Block Anatomy
 

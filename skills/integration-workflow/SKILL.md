@@ -124,7 +124,6 @@ Agent(generic):
   References:
     - semantic-merge/references/workflow-sync-author.md
     - semantic-merge/references/sync-quality.md
-    - semantic-merge/references/sync-map-format.md
 
   Task: Sync this analysis branch with <base-ref>
   Base branch: <base-ref>
@@ -155,7 +154,6 @@ Agent(generic):
   References:
     - semantic-merge/references/workflow-sync-reviewer.md
     - semantic-merge/references/sync-quality.md
-    - semantic-merge/references/sync-map-format.md
 
   Task: Review the semantic sync with <base-ref>
   Base branch: <base-ref>
