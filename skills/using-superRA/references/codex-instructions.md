@@ -1,6 +1,5 @@
 # Codex Instructions
 
-Codex agents load this reference immediately after `superRA:using-superra`.
 This file carries the must-know Codex-specific instructions for superRA:
 tool-name mappings, high-level dispatch overrides, warm-agent lifecycle
 rules, and other harness guidance that should win over generic Codex

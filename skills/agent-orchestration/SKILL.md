@@ -80,7 +80,9 @@ thrash degrades output quality more than the cost of a second spawn.
 
 Parallel dispatch is worthwhile for independent tasks or reviewers covering disjoint work. Tasks with all `Depends on:` lines satisfied and no shared mutable state are natural candidates. **Prefer background dispatch.**
 
-Parallel agents **must** run in separate worktrees. Create each with raw git before dispatch (branching off the current branch, **not** via the `Agent` tool's `isolation: "worktree"` parameter — that branches off main's HEAD and the subagent cannot see in-flight state):
+Parallel agents **must** run in separate worktrees. Create each with raw git before dispatch. 
+
+CLaude Code Agents: branching off the current branch, **not** via the `Agent` tool's `isolation: "worktree"` parameter — that branches off main's HEAD and the subagent cannot see in-flight state:
 
 ```bash
 git worktree add -b "$(git branch --show-current)/parallel/<slug>" <worktree-path> HEAD

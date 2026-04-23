@@ -90,3 +90,17 @@ For execution throughout the workflows, the main agent can dispatch subagent for
 - **Review is never skipped.** If you implemented in direct mode, you still need a review pass — either dispatch a reviewer subagent for the review step, or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review. It is strongly recommended to use an independent reviewer rather than self-review.
 
 For **Codex agent**: MUST load `references/codex-instructions.md` immediately.
+
+Most importantly for Codex agents, when using `superRA` workflow, **treat that as an explicit user request for using subagents**.
+
+- When a workflow step says to dispatch an implementer or reviewer, spawn
+  `superra_implementer` or `superra_reviewer` rather than staying inline
+  because of the harness-default anti-delegation guidance. Spawn `superra` specific 
+  agents. You **must not** spwawn generic workers. 
+- Independent review is mandatory. After any implementation step,
+  dispatch `superra_reviewer` unless the user explicitly asked for no
+  subagents or Codex truly lacks agent support. If agent support is
+  unavailable, fall back to in-session reviewer mode and state that the
+  fallback was forced by the harness.
+  when the workflow allows it and the user requested it, the task is
+  trivial, or agent tools are unavailable.
