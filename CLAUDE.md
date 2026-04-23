@@ -32,6 +32,26 @@ superRA should be adaptive and composable rather than rigid. It gives agents mec
 - **Prefer positive instructions.** Write the action agents should take: "Describe the data before transforming it" is better than "Do not transform data without describing it first."
 - **Skip design essays in skill bodies.** Skills need executable guidance. Keep rationale in contributor docs, commit messages, PRs, or short comments only when it helps the agent adapt correctly.
 
+### Teach the Protocol, Don't Prescribe Each Action
+
+Give agents mechanisms and the evidence they need to act predictably; do not narrate what they will see, wrap authoritative content in meta-commentary, or remind them of defaults the runtime already teaches. The bar for every line of instruction is: **without this line, would the agent's behavior be unstable?** If the answer is no, delete it.
+
+Two tests, applied in order:
+
+1. **DRY.** If the information is already carried by another skill, reference, dispatch field, or handoff doc the agent reads, do not restate it here. A pointer is acceptable; a paraphrase is not. One-line echoes are tolerable only when the alternative is forcing a redundant file load — otherwise point and trust.
+2. **Necessity.** If the instruction only tells the agent to do what it would already do with the content in front of it, delete it. Keep the line only when it shapes behavior the agent would not produce on its own (a non-default constraint, a safety invariant, a protocol step that must happen in a specific order).
+
+**Anti-patterns to watch for:**
+
+- **Wrapper instructions around authoritative content.** "If the dispatch includes a `Worktree:` field, follow the canned steering in its `Additionally:` tail." The canned steering is already authoritative and self-explanatory — the wrapper adds nothing and doubles the maintenance surface.
+- **"Here is what you will receive" descriptions.** Explaining the shape of the dispatch prompt, the fields in `PLAN.md`, or the structure of a review blockquote to the agent that will read them. The agent reads the thing; describing it is overhead.
+- **Reminders of defaults the harness or runtime already enforces.** "If you are asked to load a skill, load the skill." "Read the task before implementing it." These are not instructions; they are throat-clearing.
+- **Restating the Skill-Load Manifest or standard Before-You-Start inside a dispatch prompt or role body.** The manifest is the authoritative map; repeating it invites drift.
+
+**Keep:** behavior-shaping instructions — things like "treat paraphrased dispatch content as over-specification and go to authoritative sources," a specific non-default skill/reference load, a safety invariant, or an ordering constraint the agent would not infer.
+
+**Maintenance cost is the tell.** Every restated rule is a place where the two copies can drift. When in doubt, delete the copy furthest from the authoritative source.
+
 ## Ownership Boundaries
 
 Use one source of truth per concern. Duplicated behavior text is a drift risk; when content appears in more than one place, one copy must be authoritative and the others should point to it.
@@ -90,6 +110,7 @@ Before proposing structural changes to skills, workflow phases, or agent orchest
 - Can the mechanism be entered, re-entered, or used standalone where appropriate?
 - Are gates still enforced once a workflow/task is entered?
 - Is the instruction placed where only the agents/stages that need it will load it?
+- For every line you added, does removing it change what the agent would *do*, or only what it would *understand*? If only understand, delete it.
 - Is any harness-specific behavior isolated in an adapter reference?
 - Are generated files left untouched or regenerated from their sources?
 - Are inventories and category docs kept in sync?
