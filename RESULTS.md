@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-23 (plan redesign)
-**Status:** Plan changed; implementation pending.
+**Last updated:** 2026-04-23 (Tasks 1-4 implemented)
+**Status:** Execution complete; integration pending.
 
 ---
 
@@ -25,55 +25,58 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 
 ## Task 1: Add Runtime Workflow Overview and Resolver Value Proposition
 
-**Status:** Not started after plan redesign.
+**Status:** Approved.
 
-### Planned Findings
-- Add a concise runtime overview of PLAN -> IMPLEMENT -> INTEGRATE and the re-entry/adaptability principle.
-- State the resolver's value proposition as mechanism-level guidance: durable evidence, affected frontier, owner routing, and gates.
-- Avoid moving README-level product explanation into runtime skill prose.
+### Findings
+- Added `skills/using-superRA/SKILL.md` `## Runtime Workflow Map`, which gives loaded agents the PLAN -> IMPLEMENT -> INTEGRATE order without importing README-level product explanation.
+- The overview states the adaptive re-entry principle: enter at the earliest invalid layer for the affected task frontier while preserving unrelated approved work.
+- The resolver value proposition is now explicit: inspect durable evidence, compute the affected frontier, route to the owning workflow, and enforce non-negotiable gates.
 
-### Files Planned
+### Files Changed
 - `skills/using-superRA/SKILL.md`
 - `skills/using-superRA/references/main-agent.md`
 
 ## Task 2: Replace Contingency Taxonomy with a Frontier Mechanism
 
-**Status:** Not started after plan redesign.
+**Status:** Approved.
 
-### Planned Findings
-- Keep the evidence contract and decision object.
-- Replace `needs ...` state labels with ordered reasoning over the canonical workflow.
-- Keep only explicit guards needed to prevent unpredictable or unsafe behavior.
+### Findings
+- Replaced the resolver's named `needs ...` outcome list with an ordered mechanism in `skills/using-superRA/references/main-agent.md`.
+- Preserved the evidence contract: git state, handoff-doc presence and consistency, workflow rollups, decisions, upstream intent, task dependencies/statuses/review notes, and RESULTS.md sections.
+- Preserved the decision object: affected frontier, preserved-approved tasks, invalidated milestones, next owner/layer, and required stop point.
+- Kept explicit safety invariants for the predictable failure modes: no global `Current state` field, no unlogged material decisions, no clearing unrelated task statuses, no implementation advancement without review/adjudication, no integration before reproducibility/disposition, and no merge/PR before integration/docs/freshness gates.
 
-### Files Planned
+### Files Changed
 - `skills/using-superRA/references/main-agent.md`
 
 ## Task 3: Simplify Workflow Call Sites Around the Mechanism
 
-**Status:** Not started after plan redesign.
+**Status:** Approved.
 
-### Planned Findings
-- Workflow skills should point to the resolver for cross-workflow entry selection.
-- Workflow skills should retain only their local mechanics and gates.
-- Utility/domain skills should remain standalone.
+### Findings
+- `implementation-workflow` no longer branches on resolver state labels. It now enters only when the resolver selects implementation, review, reproducibility verification, or the completion disposition.
+- `planning-workflow` points to the resolver for cross-workflow entry selection after a material plan change and leaves local plan-change mechanics in the planning skill.
+- `integration-workflow` keeps the Phase A-D gate map and scopes work to the affected frontier without restating resolver selection logic.
+- `agent-orchestration` still owns dispatch and review-status mechanics; a status-table phrase was tightened so it does not resemble the old resolver taxonomy.
+- `handoff-doc` and `plan-anatomy.md` remain standalone sources for handoff status semantics; no change was needed there.
 
-### Files Planned
+### Files Changed
+- `skills/agent-orchestration/SKILL.md`
 - `skills/planning-workflow/SKILL.md`
 - `skills/implementation-workflow/SKILL.md`
 - `skills/integration-workflow/SKILL.md`
-- `skills/agent-orchestration/SKILL.md`
-- `skills/handoff-doc/references/plan-anatomy.md`
 
 ## Task 4: Audit Against Adaptive-Composable Design
 
-**Status:** Not started after plan redesign.
+**Status:** Approved.
 
-### Planned Findings
-- Verify the modified docs no longer read like a contingency tree.
-- Verify the canonical workflow/adaptability overview is present in a loaded runtime surface.
-- Verify ownership boundaries remain consistent with AGENTS.md.
-- Run `git diff --check`.
+### Findings
+- The modified resolver reads as a mechanism: evidence first, affected-frontier calculation, ordered owner routing, and safety invariants.
+- The loaded runtime overview is in `skills/using-superRA/SKILL.md`, not only README or AGENTS.
+- Ownership boundaries remain aligned with AGENTS.md: `using-superRA` owns the shared workflow map, `main-agent.md` owns the resolver, workflow skills own local gates, `agent-orchestration` owns dispatch/status mechanics, and `handoff-doc` owns document semantics.
+- Design-text search no longer finds the old resolver state labels in modified resolver/call-site prose. Remaining hits are intentional non-taxonomy uses: the explicit `Current state` prohibition, local `skip` / `re-entry` wording in workflow gates and adapter/domain skills, and unrelated discard/AskUserQuestion wording.
 
-### Verification Commands Planned
+### Verification Commands
 - `rg -n "needs plan repair|needs implementation|awaiting review|needs validation|Current state|state machine|skip|resume|re-entry|if .* then|under .* condition" skills/using-superRA skills/*/SKILL.md`
 - `git diff --check`
+- `uv run python /Users/zhiyufu/Dropbox/app_settings/dotfiles/claude/.claude/skills/.system/skill-creator/scripts/quick_validate.py <modified-skill-folder>` for `skills/using-superRA`, `skills/planning-workflow`, `skills/implementation-workflow`, `skills/integration-workflow`, and `skills/agent-orchestration`

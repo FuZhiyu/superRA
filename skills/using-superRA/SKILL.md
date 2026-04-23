@@ -15,6 +15,16 @@ These defaults apply whenever you write, review, or refactor code.
 
 3. **Keep edits surgical.** Touch only what the task requires. Match the surrounding style. Do not refactor adjacent code, comments, or formatting unless the task requires it. Remove imports, variables, and helper code only when your own change made them unused; mention unrelated dead code instead of deleting it.
 
+## Runtime Workflow Map
+
+SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
+
+1. `planning-workflow` creates or revises `PLAN.md` / `RESULTS.md`, records researcher decisions, and declares which task-local statuses or workflow rollups a plan change invalidates.
+2. `implementation-workflow` executes task blocks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
+3. `integration-workflow` creates drift tests, syncs and refactors against the integration base, matures documentation, and performs the final merge / PR / cleanup action.
+
+The map is ordered, but re-entry is normal. A changed task, reviewer finding, scope revision, or interrupted session re-enters at the earliest invalid layer for the affected task frontier while preserving unrelated approved work. The main-agent Workflow Frontier Resolver adds four things agents must do consistently: inspect durable evidence, compute the affected frontier, route to the workflow that owns the earliest invalid layer, and enforce the non-negotiable gates before advancement.
+
 ## Commit Hygiene
 
 Any agent that stages a commit — main agent, orchestrator, or subagent — stages **only the files it modified this turn**. Untracked files not your work (editor scratch, `__pycache__`, `.DS_Store`, harness artifacts, or other agents' in-flight edits in a shared worktree) show up in `git status`; `git add -A/./-u` sweeps them in silently and produces cross-agent commit contamination that is hard to unwind.

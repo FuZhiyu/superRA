@@ -24,7 +24,7 @@ Phase C — Docs
 Phase D — Final merge / PR / cleanup
 ```
 
-The main agent's Workflow Frontier Resolver chooses where to enter this map. Once this skill is entered, run the selected phase's local gates exactly; do not redo preserved-approved tasks simply because a rollup milestone was unchecked.
+The main agent's Workflow Frontier Resolver chooses where to enter this map. Once this skill is entered, run the selected phase's local gates exactly; do not redo task-local approvals outside the affected frontier simply because a rollup milestone was unchecked.
 
 **Autonomy** — full contract: `superRA:using-superra/references/main-agent.md`. Legitimate stop points in this workflow:
 
@@ -356,7 +356,7 @@ Report what was merged/pushed and what was cleaned up.
 
 ## Frontier Entry
 
-Partial integration entry is selected by `using-superRA/references/main-agent.md` §Workflow Frontier Resolver. This workflow owns the local phase gates after entry: drift-test coverage in Phase A, integration review in Phase B, doc-writer/doc-reviewer in Phase C, and freshness + merge/PR cleanup in Phase D. If the resolver returns a narrow affected frontier, scope authoring/fix work to that frontier while still running required global verification gates before merge / PR.
+Partial integration entry is selected by `using-superRA/references/main-agent.md` §Workflow Frontier Resolver. This workflow owns the local phase gates after entry: drift-test coverage in Phase A, integration review in Phase B, doc-writer/doc-reviewer in Phase C, and freshness + merge/PR cleanup in Phase D. Scope authoring and fix work to the affected frontier while still running required global verification gates before merge / PR.
 
 ## Agent Loads
 

@@ -23,7 +23,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** - researcher requested the material redesign toward mechanisms over contingency prose on 2026-04-23.
-- [ ] **Execution complete** - unchecked because the approved implementation no longer matches the revised design target.
+- [x] **Execution complete** - Tasks 1-4 are approved and the static verification checks passed for the documentation-only implementation.
 - [ ] **Drift tests created** - not yet reached; documentation/package integration gate remains pending.
 - [ ] **Refactored** - not yet reached; integration review remains pending.
 - [ ] **Docs finalized** - not yet reached; this RESULTS.md is Stage 1 handoff state.
@@ -72,96 +72,96 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 ### Task 1: Add Runtime Workflow Overview and Resolver Value Proposition
 **Depends on:** *(none)*
-**Review status:** *(not started)*
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; documentation/reference edit.
 **Input:** `README.md`, `AGENTS.md`, `skills/using-superRA/SKILL.md`, `skills/using-superRA/references/main-agent.md`.
 **Output:** Concise runtime overview plus a clear statement of what the resolver adds.
 
-- [ ] **Step 1: Add the loaded overview**
+- [x] **Step 1: Add the loaded overview**
 
 Add a compact PLAN -> IMPLEMENT -> INTEGRATE overview and adaptability statement to the runtime surface agents actually read, preferably `skills/using-superRA/SKILL.md`. Keep it procedural and avoid duplicating README-owned product explanation.
 
-- [ ] **Step 2: Define the resolver's value added**
+- [x] **Step 2: Define the resolver's value added**
 
 State that the resolver exists to make agents do four things consistently: inspect durable evidence, compute the affected task frontier while preserving unrelated approved work, route to the workflow that owns the earliest invalid layer, and enforce non-negotiable gates before advancement.
 
-- [ ] **Step 3: Separate mechanism from examples**
+- [x] **Step 3: Separate mechanism from examples**
 
 Keep the resolver's mechanism in `main-agent.md`; avoid named state taxonomies or long scenario examples unless a specific guard is otherwise unpredictable.
 
 ### Task 2: Replace Contingency Taxonomy with a Frontier Mechanism
 **Depends on:** Task 1
-**Review status:** *(not started)*
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; documentation/reference edit.
 **Input:** `skills/using-superRA/references/main-agent.md`.
 **Output:** Shorter resolver that returns a decision object and selects the next owner by walking the canonical workflow order.
 
-- [ ] **Step 1: Keep the evidence contract**
+- [x] **Step 1: Keep the evidence contract**
 
 Retain the durable facts agents must read: git status/log, PLAN/RESULTS presence and consistency, workflow rollups, decisions, task dependencies, task-local statuses, review notes, upstream intent, and current results.
 
-- [ ] **Step 2: Keep the decision object**
+- [x] **Step 2: Keep the decision object**
 
 Return the same practical decision shape: affected tasks, preserved-approved tasks, invalidated milestones, next workflow owner/entry layer, and any required researcher stop point.
 
-- [ ] **Step 3: Replace state labels with ordered reasoning**
+- [x] **Step 3: Replace state labels with ordered reasoning**
 
 Replace the `needs ...` taxonomy with a canonical-order procedure: repair/log plan changes first; compute the changed-task closure; preserve unaffected local statuses; choose the earliest invalid layer across planning, implementation/review, validation/completion, integration, documentation, and final merge/PR.
 
-- [ ] **Step 4: Keep only safety invariants**
+- [x] **Step 4: Keep only safety invariants**
 
 Retain explicit guards where unpredictable behavior is likely: no unlogged material user decision, no new global `Current state` field, no clearing unrelated task statuses, no integration before implementation validation and logged disposition, and no merge/PR before integration, documentation, and freshness gates.
 
 ### Task 3: Simplify Workflow Call Sites Around the Mechanism
 **Depends on:** Task 2
-**Review status:** *(not started)*
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; documentation/reference edit.
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`.
 **Output:** Workflow docs that point to the resolver for cross-workflow re-entry while preserving local gates.
 
-- [ ] **Step 1: Keep local ownership boundaries**
+- [x] **Step 1: Keep local ownership boundaries**
 
 Ensure planning owns plan edits/status invalidation, implementation owns review/reproducibility/completion, integration owns drift/refactor/docs/merge gates, orchestration owns dispatch mechanics, and handoff-doc owns status semantics.
 
-- [ ] **Step 2: Remove duplicated entry-selection prose**
+- [x] **Step 2: Remove duplicated entry-selection prose**
 
 Search for resume/re-entry/frontier/skip/status wording that restates the resolver. Replace duplicated phase-selection prose with pointers to the mechanism, while keeping local phase gate instructions.
 
-- [ ] **Step 3: Preserve standalone utility semantics**
+- [x] **Step 3: Preserve standalone utility semantics**
 
 Make sure `handoff-doc` and other utility/domain skills remain usable directly and do not depend on a main-agent scenario tree.
 
 ### Task 4: Audit Against Adaptive-Composable Design
 **Depends on:** Task 1, Task 2, Task 3
-**Review status:** *(not started)*
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** Static documentation audit.
 **Input:** Modified skill/reference files and contributor design checklist.
 **Output:** Verified diff and audit notes in `RESULTS.md`.
 
-- [ ] **Step 1: Run design-text search**
+- [x] **Step 1: Run design-text search**
 
 Search modified files for contingency-heavy phrases and old taxonomy labels: `needs plan repair`, `needs implementation`, `awaiting review`, `needs validation`, `if .* then`, `under .* condition`, `Current state`, `state machine`, `skip`, `resume`, `re-entry`, and similar wording.
 
-- [ ] **Step 2: Verify overview placement**
+- [x] **Step 2: Verify overview placement**
 
 Confirm the canonical workflow overview and adaptability principle are present in a loaded runtime surface, not only in README or AGENTS.
 
-- [ ] **Step 3: Verify mechanism-only resolver**
+- [x] **Step 3: Verify mechanism-only resolver**
 
 Check the resolver against the value-added list: durable evidence, affected frontier/preserved work, owner routing, and safety gates. Remove anything that is just a scenario agents can infer from the canonical map.
 
-- [ ] **Step 4: Verify ownership boundaries**
+- [x] **Step 4: Verify ownership boundaries**
 
 Confirm the diff respects the AGENTS.md ownership table and does not put workflow choreography, dispatch mechanics, handoff-doc mechanics, or README-owned explanation in the wrong owner.
 
-- [ ] **Step 5: Run diff hygiene check**
+- [x] **Step 5: Run diff hygiene check**
 
 Run `git diff --check`.
