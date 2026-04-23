@@ -45,6 +45,17 @@ These conflicts **MUST** be flagged for the researcher. Ask via `AskUserQuestion
 - Remove data discipline artifacts
 - Judge whether a methodology choice is correct
 
+### Identify governing upstream intent
+
+Before deciding what survives, identify the upstream-intent source for this merge.
+
+- Phase B caller: use the active `## Upstream Intent` section in `PLAN.md` when the reviewer recorded one for the current round, plus any relevant task-local review notes.
+- Standalone caller: use the caller-supplied context that records upstream intent for this merge (incoming objective, commit range, integration map, reviewer notes, or an equivalent recorded contract).
+
+Start from **base-owned by default**:
+
+- Keep the base branch's structure, wording, deletions, and relocations unless an approved task objective plus a reviewer-recorded allowed delta requires something different.
+- Treat current-branch hunks as earned, not inherited. If a surviving current-branch hunk is not justified by the task objective or the recorded upstream contract, drop it.
 ### Handoff-doc coherence through the merge
 
 The incoming branch can carry edits to `PLAN.md` / `RESULTS.md` that substantively restructure the work — adding, removing, or combining tasks; flipping a DAG edge; invalidating a prior `APPROVED` (review or integration) status because the incoming diff changed an upstream task's outputs. These are **not** content conflicts to resolve mechanically. They are plan changes.
@@ -78,8 +89,9 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 **Intent preservation:**
 
 - `[BLOCKING]` **Incoming intent understood.** Correctly identified what the incoming changes were trying to accomplish — read commits and diffs to understand WHY, not just WHAT.
-- `[BLOCKING]` **Current branch preserved** where intended.
+- `[BLOCKING]` **Current-branch delta preserved only where intended.** When called from Phase B, keep current-branch hunks only when approved task objectives or the recorded upstream contract require them.
 - `[BLOCKING]` **No silent losses.** No changes from either side silently dropped without justification.
+- `[BLOCKING]` **No silent restorations.** Upstream deletions and relocations remain unless the recorded upstream contract explicitly authorizes restoration.
 - `[ADVISORY]` **Synthesis coherent.** Where both sides were combined, result is logically consistent.
 
 **Research integrity:**
@@ -107,6 +119,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 **Integration map (format in §How-To → Integration map format):**
 
 - `[BLOCKING]` For each conflict area, documented file + location, classification, decision, and rationale. User decisions presented in terms of **intent and consequences**, not raw diffs.
+- `[BLOCKING]` **Upstream-intent source honored.** The governing upstream-intent source was read first and treated as the authority for what survives. In Phase B, that source is `## Upstream Intent` plus the task-local review notes.
 
 **Verification:**
 

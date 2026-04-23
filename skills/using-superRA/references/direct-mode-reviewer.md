@@ -84,7 +84,10 @@ issues only.
 - **Preserve task-block boundaries.** Edit only inside the assigned task
   block.
 - **Remove superseded content.** When a blockquote becomes empty, remove
-  it entirely.
+  it entirely. The same inline-edit and boundary-preservation rules
+  apply to `## Upstream Intent` edits during integration review: keep
+  only the current Phase B round's branch-wide upstream contract, and
+  leave final removal to the orchestrator's closeout commit.
 - **Doc before report.** Every material review finding lands in the
   blockquote before it is reported elsewhere.
 
@@ -95,7 +98,7 @@ issues only.
 - `**Review status:**` set to `APPROVED` or `REVISE`
 - `**Integration status:**` when acting as the integration reviewer
 - The review-notes blockquote
-- `## Integration Intent` when acting as the integration reviewer
+- `## Upstream Intent` when acting as the integration reviewer
 - The reliability caveat blockquote in the task's `RESULTS.md` section
   during implementation review
 
@@ -133,6 +136,8 @@ When the blockquote is empty, remove it and set `**Review status:** APPROVED`.
 ### Pre-Commit Self-Check
 
 - [ ] Only the review-owned fields were edited.
+- [ ] Any `## Upstream Intent` edit is limited to the reviewer-owned
+  active integration-round section.
 - [ ] No task steps, code, or objectives were modified.
 - [ ] Confirmed-fixed items were deleted rather than marked resolved.
 - [ ] The blockquote describes current issues only; if empty, it is gone.
