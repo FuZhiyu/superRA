@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-23 (clarity revision verified)
-**Status:** Implementation complete and verified; awaiting researcher disposition.
+**Last updated:** 2026-04-23 (over-prescription audit scope added)
+**Status:** Tasks 1-4 approved; Task 5 implemented and awaiting review; Tasks 6-9 pending.
 
 ---
 
@@ -85,3 +85,30 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 - `rg -n "needs plan repair|needs implementation|awaiting review|needs validation|Current state|state machine|skip|resume|re-entry|if .* then|under .* condition" skills/using-superRA skills/*/SKILL.md`
 - `git diff --check`
 - `uv run python /Users/zhiyufu/Dropbox/app_settings/dotfiles/claude/.claude/skills/.system/skill-creator/scripts/quick_validate.py <modified-skill-folder>` for `skills/using-superRA`, `skills/planning-workflow`, `skills/implementation-workflow`, `skills/integration-workflow`, and `skills/agent-orchestration`
+
+## Task 5: Document "Teach the Protocol, Don't Prescribe Each Action" Principle
+
+**Status:** Implemented; awaiting review.
+
+### Findings
+- Added `CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action` under `## Internal Design Philosophy` with the governing test, two ordered sub-tests (DRY, necessity), anti-patterns drawn from current repo examples, and a distinction for behavior-shaping instructions that must be kept.
+- Extended `## Design Audit Checklist` with a per-line test: does removing it change what the agent would *do*, or only what it would *understand*?
+
+### Files Changed
+- `CLAUDE.md`
+
+## Task 6: Audit Agent Role Specs and `using-superRA` Surfaces
+
+**Status:** Not started.
+
+## Task 7: Audit Workflow Skills and `agent-orchestration`
+
+**Status:** Not started.
+
+## Task 8: Audit Utility, Domain, and Meta Skills
+
+**Status:** Not started.
+
+## Task 9: Cross-Audit Consistency Sweep
+
+**Status:** Not started.

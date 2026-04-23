@@ -23,7 +23,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** - researcher requested the material redesign toward mechanisms over contingency prose on 2026-04-23.
-- [x] **Execution complete** - Tasks 1-4 are reviewer-approved; static verification and skill validation passed after the resolver clarity revision.
+- [ ] **Execution complete** - Tasks 1-4 approved and closed, but Tasks 5-9 (over-prescription audit) were added 2026-04-23 and are not yet implemented.
 - [ ] **Drift tests created** - not yet reached; documentation/package integration gate remains pending.
 - [ ] **Refactored** - not yet reached; integration review remains pending.
 - [ ] **Docs finalized** - not yet reached; this RESULTS.md is Stage 1 handoff state.
@@ -71,6 +71,10 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 > **User decision (2026-04-23):** Improve the resolver prose for clarity without changing the design.
 > **Question asked:** Should the current resolver wording be tightened and reviewed by reviewer agents?
 > **Rationale (if given):** The mechanism is accepted, but the current writing is too verbose and unclear. This affects Task 2 and Task 4 only; Task 1 and Task 3 remain approved.
+
+> **User decision (2026-04-23):** Extend the plan with an over-prescription audit across package instruction surfaces.
+> **Question asked:** Should additional tasks be added to audit instructions for lines that restate what agents already know or can read from authoritative sources?
+> **Rationale (if given):** Current instructions in several places (e.g., the implementer's `Worktree:` wrapper, the "what the dispatch prompt carries" narration) tell agents what they would already do with the content they receive. The design principle to apply: keep a line only if, without it, agent behavior would be unstable — otherwise delete or replace with a pointer. The principle is documented in `CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action` (Task 5). Tasks 6-9 audit role specs, workflow skills + orchestration, and utility/domain skills against the principle and apply the edits. This adds Tasks 5-9 and unchecks `Execution complete`; Tasks 1-4 remain APPROVED (the principle tightens future edits rather than overturning the resolver redesign).
 
 ---
 
@@ -174,6 +178,107 @@ Confirm the diff respects the AGENTS.md ownership table and does not put workflo
 
 Run `git diff --check`.
 
-- [ ] **Step 6: Review clarity with parallel reviewers**
+- [x] **Step 6: Review clarity with parallel reviewers**
 
 Spawn reviewer agents after the prose edit. One reviewer should focus on plain-language clarity and ambiguity; another should focus on consistency with workflow ownership and the change-plan protocol.
+
+### Task 5: Document "Teach the Protocol, Don't Prescribe Each Action" Principle
+**Depends on:** *(none)*
+**Review status:** IMPLEMENTED
+**Integration status:** *(not started)*
+
+**Script:** Not applicable; contributor-doc edit.
+**Input:** `CLAUDE.md` (aliased from `AGENTS.md` / `AGENT.md`).
+**Output:** New `CLAUDE.md` subsection under `## Internal Design Philosophy` naming the principle, stating the two tests (DRY, necessity), listing anti-patterns, and adding a line-level check to the Design Audit Checklist.
+
+- [x] **Step 1: Add the principle and anti-patterns**
+
+Add a subsection titled "Teach the Protocol, Don't Prescribe Each Action" after `### Minimal, Targeted Instructions`. State the governing test (without this line, would the agent's behavior be unstable?), the two ordered sub-tests (DRY, then necessity), and concrete anti-patterns drawn from the current repo: wrapper instructions around authoritative content (e.g., `Worktree:` steering), "here is what you will receive" descriptions of the dispatch prompt, reminders of runtime defaults, and restatements of the Skill-Load Manifest inside dispatch or role bodies. Contrast with behavior-shaping instructions that must be kept.
+
+- [x] **Step 2: Extend the Design Audit Checklist**
+
+Add a single-line check to `## Design Audit Checklist`: for every added line, does removing it change what the agent would *do*, or only what it would *understand*? If only understand, delete it.
+
+### Task 6: Audit Agent Role Specs and `using-superRA` Surfaces
+**Depends on:** Task 5
+**Review status:** *(not started)*
+**Integration status:** *(not started)*
+
+**Script:** Line-by-line instruction audit against the Task 5 principle; edits applied inline.
+**Input:** `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superRA/SKILL.md` and all files under `skills/using-superRA/references/` (including `main-agent.md`, `codex-instructions.md`, `claude-tools.md`, and any generated `direct-mode-*.md` — edit source specs and regenerate rather than editing generated files directly).
+**Output:** Trimmed role specs / runtime surfaces, a findings note in `RESULTS.md` summarizing what was cut, replaced with a pointer, or kept with rationale. Verify generated direct-mode reference files are regenerated from their canonical agent specs.
+
+- [ ] **Step 1: Survey each file line by line**
+
+For every paragraph, bullet, and sentence, apply the two tests from `CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action`: (a) is this already carried by another authoritative source the agent reads? (b) without this line, would agent behavior be unstable? Classify each line as KEEP / POINTER / DELETE and record the rationale in `RESULTS.md` Task 6 findings.
+
+- [ ] **Step 2: Apply the edits and regenerate**
+
+Trim DELETE lines; replace POINTER lines with a one-line reference to the authoritative source. When editing anything that feeds generated direct-mode role references, update the canonical source spec and regenerate per `CLAUDE.md §Architectural Patterns`.
+
+- [ ] **Step 3: Verify no behavior was lost**
+
+Cross-check each DELETE / POINTER decision against the authoritative source it points at — the source must actually carry the deleted content. Note any gap where a deleted line exposed a real missing instruction elsewhere and fix by adding the line to its correct owner.
+
+### Task 7: Audit Workflow Skills and `agent-orchestration`
+**Depends on:** Task 5
+**Review status:** *(not started)*
+**Integration status:** *(not started)*
+
+**Script:** Line-by-line instruction audit against the Task 5 principle; edits applied inline.
+**Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, and every reference file under those four skills' `references/` directories.
+**Output:** Trimmed workflow skills, a findings note in `RESULTS.md` summarizing cuts / pointers / kept lines per file, and confirmation that ownership boundaries from `CLAUDE.md §Ownership Boundaries` are preserved.
+
+- [ ] **Step 1: Survey each file line by line**
+
+Apply the two tests to each line. Pay particular attention to (a) lines that restate the Skill-Load Manifest, (b) lines that describe the dispatch-prompt shape, (c) lines that narrate what `PLAN.md` or `RESULTS.md` will contain, (d) lines that remind agents of runtime defaults, and (e) paraphrases of content owned by another workflow skill. Classify each line KEEP / POINTER / DELETE in `RESULTS.md` Task 7 findings.
+
+- [ ] **Step 2: Apply the edits**
+
+Trim DELETEs, replace POINTERs with a single-line reference. Preserve local gate instructions (review thresholds, blocking checklist items, stop-point obligations) — they are behavior-shaping.
+
+- [ ] **Step 3: Verify ownership boundaries are intact**
+
+Re-check `CLAUDE.md §Ownership Boundaries`. After trimming, each concern should still have exactly one authoritative owner. Record any remaining ambiguity in `RESULTS.md` Task 7 for follow-up.
+
+### Task 8: Audit Utility, Domain, and Meta Skills
+**Depends on:** Task 5
+**Review status:** *(not started)*
+**Integration status:** *(not started)*
+
+**Script:** Line-by-line instruction audit against the Task 5 principle; edits applied inline.
+**Input:** `skills/handoff-doc/`, `skills/refactor-and-integrate/`, `skills/report-in-markdown/`, `skills/semantic-merge/`, `skills/worktree-data-sync/`, `skills/econ-data-analysis/`, `skills/codex-superra-setup/` — each skill's `SKILL.md` plus all files under its `references/`.
+**Output:** Trimmed utility / domain / meta skills, a findings note in `RESULTS.md` summarizing per-file cuts / pointers / kept lines, and confirmation that domain and utility skills remain standalone-usable (per `CLAUDE.md §Adaptive, Composable Workflows`).
+
+- [ ] **Step 1: Survey each file line by line**
+
+Apply the two tests to each line. For utility / domain / meta skills, additionally check: does this line still make sense when the skill is loaded standalone (without a surrounding workflow)? Classify KEEP / POINTER / DELETE in `RESULTS.md` Task 8 findings.
+
+- [ ] **Step 2: Apply the edits**
+
+Trim DELETEs, replace POINTERs with single-line references. Preserve the standalone-usability guarantee — a utility skill should still work when invoked outside the superRA workflow.
+
+- [ ] **Step 3: Verify standalone usability**
+
+For each domain and utility skill, confirm its `SKILL.md` still reads coherently on its own. Note any follow-up needed in `RESULTS.md` Task 8.
+
+### Task 9: Cross-Audit Consistency Sweep
+**Depends on:** Task 6, Task 7, Task 8
+**Review status:** *(not started)*
+**Integration status:** *(not started)*
+
+**Script:** Whole-repo verification that the audit edits compose cleanly.
+**Input:** The full diff produced by Tasks 6-8.
+**Output:** A consolidated audit summary in `RESULTS.md` Task 9 listing any residual duplication, pointer targets that do not actually carry the referenced content, and any newly-introduced gaps where a deleted line's content is not recoverable from an authoritative source.
+
+- [ ] **Step 1: Pointer integrity check**
+
+For every POINTER introduced in Tasks 6-8, confirm the cited source actually contains the referenced content at the expected location.
+
+- [ ] **Step 2: Residual-duplication search**
+
+Grep for repeated phrases across `skills/`, `agents/`, and `CLAUDE.md` for behavior-shaping instructions (not just resolver taxonomy) and confirm each concern has a single owner.
+
+- [ ] **Step 3: Anti-pattern regression check**
+
+Re-run the CLAUDE.md anti-pattern tests against the post-audit tree: (a) wrapper instructions around authoritative content, (b) "here is what you will receive" descriptions, (c) reminders of runtime defaults, (d) restatements of the Skill-Load Manifest inside dispatch or role bodies. Any surviving instance must be justified in `RESULTS.md` Task 9 as behavior-shaping.
