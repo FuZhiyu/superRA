@@ -73,7 +73,7 @@ For execution throughout the workflows, the main agent can dispatch subagents fo
 
 For each Stage, load the listed skills. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Each loaded skill's own body carries its stage- and role-scoped reference load map — after loading a skill, follow its load map for your Stage and role.
 
-**The "Required skills" column lists what loads *in addition to* `superRA:using-superra`** — the master skill every agent already loads (implementer / reviewer via frontmatter preload at dispatch time; main agent and team teammates via explicit `Skill` invocation). `using-superra` carries the Skill Inventory and this manifest. Handoff-doc editing discipline is owned by `superRA:handoff-doc`; subagents get a compact etiquette from `agents/implementer.md` / `agents/reviewer.md` step 1 and load the full skill only on demand or when creating docs from scratch.
+**The "Required skills" column lists what loads *in addition to* `superRA:using-superra`** — the master skill every agent already loads (implementer / reviewer via frontmatter preload at dispatch time; main agent and team teammates via explicit `Skill` invocation). Subagents get a compact handoff-doc etiquette from `agents/implementer.md` / `agents/reviewer.md` and load `superRA:handoff-doc` on demand or when creating docs from scratch.
 
 ### Generic (stage-driven)
 

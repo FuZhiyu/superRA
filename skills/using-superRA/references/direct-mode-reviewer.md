@@ -15,37 +15,16 @@ implementer missed. When uncertain whether something is a problem, flag it —
 the orchestrator will evaluate with big-picture context and filter out false
 positives. A missed real issue is far worse than a flagged non-issue.
 
-## Stage → skills and references
-
-Your `Stage:` → required skills are specified in `superRA:using-superra` §Skill-Load Manifest. Load the listed skills for your Stage before opening any code, then follow each loaded skill's own load map for your role (reviewer) to pull in the right references. You walk the same gated checklist from the active domain skill that the implementer walks as pre-handoff self-check — one source of truth, two perspectives.
-
 ## Before You Start
 
-In direct mode there is no dispatch prompt. Review scope comes from the task
-block in `PLAN.md`, the matching section in `RESULTS.md`, the current diff, and
-the current branch state.
+In direct mode there is no dispatch prompt. Review scope comes from the task block in `PLAN.md`, the matching section in `RESULTS.md`, the current diff, and the current branch state.
 
-1. **Load the skills the manifest lists for your Stage.** Consult
-   `superRA:using-superra` §Skill-Load Manifest, find the row for your `Stage:`,
-   and load each required skill before opening any code. Each loaded skill
-   carries its own stage / role load map — follow the entry for a reviewer on
-   your Stage to pull in the right references.
-2. **Read your task source.** Read the task block in `PLAN.md`, the
-   implementer's step notes, any existing review-notes blockquote (including
-   `→ implemented:` and `→ orchestrator:` annotations), and the corresponding
-   section of `RESULTS.md` directly from the file.
-3. **Read `PLAN.md`'s `## Project Conventions` section.** Use the section as
-   the review standard for codebase-fit findings. If it is missing, empty, or
-   stale, or if you need a convention it does not cover, walk on-demand from
-   the touched directories and flag the omission in your status return so the
-   orchestrator can update the section.
-4. **Read the actual code.** Do not trust summaries, reports, or claims from
-   the implementer. Verify independently.
+1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:` before opening any code, and follow each loaded skill's own stage/role load map for reviewer references. You walk the same `[BLOCKING]` / `[ADVISORY]` checklist the implementer walked as self-check — one source of truth, two perspectives.
+2. **Read your task source directly from `PLAN.md`.** Read the task block, the implementer's step notes, any existing review-notes blockquote (with `→ implemented:` and `→ orchestrator:` annotations), and the corresponding `RESULTS.md` section.
+3. **Read `PLAN.md`'s `## Project Conventions` section** as the review standard for codebase-fit findings — code that ignores a documented convention is a MAJOR integration-review finding. If the section is missing, empty, stale, or does not cover a convention you need, walk on-demand starting from every touched directory and flag the omission in your status return.
+4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
-The handoff-doc editing discipline you will need when writing the review
-blockquote and setting `**Review status:**` — inline-edit rule, re-review
-deletion rules, ownership boundaries — lives in §Handoff below; read it when
-you're ready to update `PLAN.md`.
+The handoff-doc editing discipline you will need when writing the review blockquote lives in §Handoff below; read it when you are ready to update `PLAN.md`.
 
 ## Review Protocol
 
@@ -106,14 +85,14 @@ Regardless of stage (implementation review, drift test review, integration revie
 
 ### Editing Etiquette
 
-**The handoff doc always reflects the latest state, not a log.** Git owns history — the commit log carries every prior version of the review blockquote, along with who changed it and why. The doc itself is for currently open issues only; every item you leave in the blockquote should describe a problem that is still unresolved in the committed code. Three rules follow from this:
+Compact etiquette below; full discipline in `superRA:handoff-doc`. Load it on demand if anything below is unclear.
 
-- **Inline-edit only.** Replace stale content in place. Never append "Update:" / "Revised:" / "Previously..." blocks, never strike through. On re-review, confirmed-fixed items are **removed** from the review-notes blockquote, not marked "resolved" — the prior review text lives in git history, not in `PLAN.md`.
-- **Preserve task-block boundaries.** When writing or editing a review-notes blockquote, stay strictly within the assigned task block — never disturb the preceding `---` separator, the `### Task N:` heading of the next task, or the trailing separator before it. If removing the blockquote (empty after re-review), remove only the blockquote lines; leave the surrounding task-block anatomy intact.
-- **Remove superseded content, don't stack it.** When the blockquote is empty after re-review, remove the blockquote entirely. Prior reliability caveats in `RESULTS.md` are replaced, not stacked across rounds. The same inline-edit + boundary-preservation rules apply to `## Upstream Intent` edits — keep it as the current Phase B round's branch-wide upstream contract only, replace stale text in place, and leave final removal to the orchestrator's closeout commit.
-- **Doc before report.** Every material review finding lands in the blockquote in `PLAN.md` **before** it appears in your status return. The blockquote is the record; the report only points at it.
+- **Inline-edit only.** On re-review, confirmed-fixed items are **removed** from the blockquote, not marked "resolved" or struck through. Git owns history.
+- **Preserve task-block boundaries.** Stay strictly within the assigned task block when writing, editing, or removing the blockquote — leave adjacent `---` separators and `### Task N:` headings intact.
+- **Remove superseded content, don't stack it.** Prior reliability caveats in `RESULTS.md` are replaced, not stacked across rounds. The same rules apply to `## Upstream Intent` edits — keep it as the current Phase B round's branch-wide upstream contract only; the orchestrator removes it in closeout.
+- **Doc before report.** Every material review finding lands in the blockquote in `PLAN.md` **before** it appears in your status return.
 
-If something about the review blockquote's structure or the surrounding `PLAN.md` shape is unclear, flag it in your status return and let the orchestrator decide how to handle it.
+If the review blockquote's structure or surrounding `PLAN.md` shape is unclear, flag it in your status return rather than inventing one.
 
 ### What You Own, What You Don't
 
@@ -122,7 +101,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 - **`**Review status:**`** line — set to `APPROVED` or `REVISE` per the verdict protocol in §Verdict.
 - **`**Integration status:**`** line — flipped by you in the integration stage, symmetric with `**Review status:**`. As **integration reviewer** (Phase B Step 1 annotation pass): on each task you annotate, flip to `REVISE`; tasks you do not annotate stay as they were. As **integration reviewer** (Phase B verify pass): on the in-scope tasks the orchestrator passed, flip to `APPROVED` on an APPROVE verdict, or to `REVISE` on specific failing tasks (alongside writing their blockquotes) on a REVISE verdict. Not applicable to other reviewer stages.
 - **The review-notes blockquote** — write it on first review, delete items or rewrite items on re-review, and remove the entire blockquote when empty (at APPROVED).
-- **The `## Upstream Intent` section in PLAN.md** — reviewer-owned for the active Phase B round. Use the current round context (`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range, and any special steering) from `PLAN.md` / the current session when the base-side scan surfaces material overlap, and create or update the section for the current round from that context. Implementers are hands-off. Keep the section current while the round is active; the orchestrator removes it in the Phase B closeout commit.
+- **The `## Upstream Intent` section in PLAN.md** — reviewer-owned for the active Phase B round. Use the current round context (`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range) from `PLAN.md` and the current session when the base-side scan surfaces material overlap, and create or update the section for the current round from that context. Keep the section current while the round is active; remove it in the Phase B closeout commit.
 - **Reliability caveat blockquote** in the task's `RESULTS.md` section — implementation stage only, replaced on re-review.
 
 **You may NOT edit:**
