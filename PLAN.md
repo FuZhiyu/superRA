@@ -130,7 +130,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** The cumulative diff from Tasks 1-3, `tests/claude-code/run-skill-tests.sh`, `tests/claude-code/test-helpers.sh`, the existing Claude Code tests, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -145,3 +145,4 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `tests/claude-code/test-doc-before-report-task-shape.sh:32-38` is still keeping the fast suite red on the current merged tree. Fresh evidence on this tree: after the latest Task 4 fix, `tests/claude-code/./run-skill-tests.sh` still failed with `Passed: 3`, `Failed: 1`, `STATUS: FAILED` because Claude answered the `PLAN.md:` line with durable route-change documentation ("Inline-edit the current task block's steps ... add a brief decision note ...") but omitted the task-shape split recommendation, and the test therefore failed the `Keeps the task-shape concern in PLAN.md` assertion. The assertion itself is semantically correct; the blocker is that the current prompt / assertion package does not yet elicit and verify the full superRA separation reliably on the supported fast path. Minimal allowed branch delta: keep the doc-before-report smoke test and preserve the requirement that the `PLAN.md:` line include the durable task-shape concern, but tighten the prompt and any supporting assertions so a green result reliably reflects the current contract: `PLAN.md` records both the durable task-shape recommendation/concern and the current-route note, while the status report carries summary/rationale and points the planning decision upward. Stale branch-side content that must not survive: a prompt/assertion combination that lets semantically incomplete PLAN.md answers keep flaking the supported fast path.
+>    → implemented: tightened the prompt so each bullet must cover both halves of its surface and added a supporting assertion that the `PLAN.md:` line includes the durable current-route note alongside the task-shape concern.
