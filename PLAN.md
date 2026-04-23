@@ -133,7 +133,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** The cumulative diff from Tasks 1-3, `tests/claude-code/run-skill-tests.sh`, `tests/claude-code/test-helpers.sh`, the existing Claude Code tests, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -148,3 +148,4 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `tests/claude-code/test-integration-task-shape-escalation.sh:35` still accepts `Integration Intent` as a correct place to record the integration-stage task-shape recommendation. The current Phase B contract on this branch and on `origin/main` is `## Upstream Intent` plus task-local review notes (`skills/handoff-doc/references/plan-anatomy.md:124-157`, `skills/integration-workflow/SKILL.md:88-186`), so this test can pass an answer that uses the retired section name and fails to guard the merged-tree behavior Task 4 is supposed to validate. Minimal allowed branch delta: keep the integration-stage escalation smoke test, but require current record locations (`PLAN.md` task-local review notes / handoff docs, plus `## Upstream Intent` when the recommendation comes from the main-side scan) instead of the retired `## Integration Intent` wording. Stale branch-side content that must not survive: the `Integration Intent` alternative in the record-line assertion regex.
+>    → implemented: tightened the record-line assertion to require current durable Phase B locations (`review notes`, handoff docs / `RESULTS.md`, or `## Upstream Intent` for main-side-scan recommendations) and added a negative assertion so stale `Integration Intent` wording now fails the smoke test.
