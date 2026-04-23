@@ -46,7 +46,7 @@ is repo-local Codex skill discovery, not a stray custom-agent artifact.
 - [x] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
 - [x] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Phase A)
 - [x] **Refactored** — integration reviewer `APPROVED` on the unified sync+refactor diff (`integration-workflow` Phase B)
-- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Phase C)
+- [x] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Phase C)
 - [ ] **Merged** — branch merged to main or PR opened (`integration-workflow` Phase D)
 
 ---
@@ -110,11 +110,11 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
-**Script:** `CLAUDE.md`, `tests/check-harness-compatibility.sh`, archived 2026-04-22 plan/results pair, `RESULTS.md`
+**Script:** `CLAUDE.md`, `tests/check-harness-compatibility.sh`, archived 2026-04-22 plan/results pair, `docs/plans/2026-04-22-direct-mode-role-references-results.md`
 **Input:** the new direct-mode references from Task 1, current contributor guidance, current compatibility guard, and the user concern about repo-local `.agents` surfaces
 **Output:** development-facing docs that mention the temporary manual-mirror rule, a compatibility check covering the new direct-mode references, archived 2026-04-22 handoff docs updated with a pointer to this re-entry, and a recorded judgment that `.agents/skills/` stays because it is repo-local Codex skill discovery
 
 - [x] **Step 1: Update the development-facing docs.** Added contributor guidance in `CLAUDE.md` describing the direct-mode role mirrors and the requirement to update the canonical agent files and the mirrors together until automation exists.
 - [x] **Step 2: Add validation coverage.** Extended `tests/check-harness-compatibility.sh` so it now requires the new direct-mode references, checks that `main-agent.md` points at them, rejects regressions back to raw `agents/*.md`, and verifies each mirror declares its canonical source and manual-mirror status.
-- [x] **Step 3: Keep the archived handoff coherent.** Confirmed the archived 2026-04-22 plan/results pair already points at this follow-up plan/results from commit `cc4ea46`; no further archive edit was needed in this pass.
-- [x] **Step 4: Record the `.agents` audit result.** Recorded in `RESULTS.md` that `.agents/skills/` remains a load-bearing repo-local Codex skill-discovery surface, so this pass does not delete it.
+- [x] **Step 3: Keep the archived handoff coherent.** Updated the archived 2026-04-22 plan/results pair so the original permanent record now points at `docs/plans/2026-04-22-direct-mode-role-references-plan.md` and `docs/plans/2026-04-22-direct-mode-role-references-results.md` rather than the old root follow-up files.
+- [x] **Step 4: Record the `.agents` audit result.** Recorded in `docs/plans/2026-04-22-direct-mode-role-references-results.md` that `.agents/skills/` remains a load-bearing repo-local Codex skill-discovery surface, so this pass does not delete it.
