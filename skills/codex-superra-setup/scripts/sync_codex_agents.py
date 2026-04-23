@@ -171,12 +171,18 @@ def render_direct_mode_ref(repo_root: Path, spec: RoleSpec) -> str:
 
     # `## Dispatch Inputs` in the source describes the subagent dispatch
     # contract; direct mode has no dispatch, so we drop that section and
-    # substitute a direct-mode-specific `## Before You Start`.
+    # substitute a direct-mode-specific `## Before You Start`. Other
+    # subagent-only fragments (dispatch prompts, re-dispatch deltas,
+    # Worktree: fields) leak into the retained sections and are rewritten
+    # below by `cleanup_*_handoff` before being spliced in.
     if "implementer" in spec.codex_name:
         before_you_start = render_implementer_direct_mode_before_you_start()
+        handoff = cleanup_implementer_handoff(
+            sections["## Handoff — Unified Across Stages"]
+        )
         tail_sections = (
             sections["## Execution Protocol"],
-            sections["## Handoff — Unified Across Stages"],
+            handoff,
             sections["## Pre-Commit Self-Check"],
             sections["## Escalation"],
         )
@@ -190,6 +196,7 @@ def render_direct_mode_ref(repo_root: Path, spec: RoleSpec) -> str:
             "**ad-hoc** (report-only).",
             "",
         )
+        role_section = cleanup_reviewer_handoff(role_section)
         role_section = strip_subsection(role_section, "### Report Format")
         tail_sections = (review_protocol, role_section)
 
@@ -316,6 +323,80 @@ In direct mode there is no dispatch prompt. Review scope comes from the task blo
 4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
 The handoff-doc editing discipline you will need when writing the review blockquote lives in §Handoff below; read it when you are ready to update `PLAN.md`."""
+
+
+def cleanup_implementer_handoff(section: str) -> str:
+    """Strip subagent-dispatch-only wording from the implementer handoff section."""
+    # Rewrite the §How You Fix Review Items opening paragraph. The source
+    # wording references "first dispatch", "re-dispatch prompt", and a
+    # one-line delta, none of which exist in direct mode.
+    source_opener = (
+        "On a first dispatch there is no review-notes blockquote yet; you just "
+        "implement the steps, update the docs, and commit. On a REVISE round "
+        "the blockquote exists — the reviewer wrote it, and the orchestrator "
+        "may have rewritten some steps (for accepted items) or appended "
+        "`→ orchestrator: ...` notes to items it is rejecting or flagging for "
+        "a second opinion. Your re-dispatch prompt carries a one-line delta "
+        "pointing at what changed."
+    )
+    direct_opener = (
+        "On a first pass there is no review-notes blockquote yet; you just "
+        "implement the steps, update the docs, and commit. On a REVISE round "
+        "the blockquote exists — it was written previously, and items may "
+        "carry `→ orchestrator: ...` notes rejecting them or flagging them for "
+        "a second opinion."
+    )
+    if source_opener not in section:
+        raise ValueError(
+            "cleanup_implementer_handoff: expected dispatch-only opener not found "
+            "in implementer §How You Fix Review Items; source may have been reworded."
+        )
+    section = section.replace(source_opener, direct_opener)
+
+    # Drop the Parallel worktree dispatch paragraph entirely — Worktree: is
+    # a subagent dispatch field.
+    worktree_block = (
+        "\n\n**Parallel worktree dispatch (`Worktree:` field set).** Return the "
+        "`<branch>/parallel/<slug>` branch name and HEAD SHA in your status "
+        "report. Do not merge, rebase, push, or touch worktree lifecycle — the "
+        "orchestrator owns harvest-out."
+    )
+    if worktree_block not in section:
+        raise ValueError(
+            "cleanup_implementer_handoff: expected Parallel worktree dispatch "
+            "paragraph not found; source may have been reworded."
+        )
+    section = section.replace(worktree_block, "")
+    return section
+
+
+def cleanup_reviewer_handoff(section: str) -> str:
+    """Strip subagent-dispatch-only wording from the reviewer handoff section."""
+    source_paragraph = (
+        "**The `## Upstream Intent` section in PLAN.md** — reviewer-owned for "
+        "the active Phase B round. The orchestrator passes the round context "
+        "(`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range, "
+        "and any special steering) in the dispatch. When the base-side scan "
+        "surfaces material overlap, you create or update the section for the "
+        "current round using that context. Implementers are hands-off. Keep "
+        "the section current while the round is active; the orchestrator "
+        "removes it in the Phase B closeout commit."
+    )
+    direct_paragraph = (
+        "**The `## Upstream Intent` section in PLAN.md** — reviewer-owned for "
+        "the active Phase B round. Use the current round context "
+        "(`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range) "
+        "from `PLAN.md` and the current session when the base-side scan "
+        "surfaces material overlap, and create or update the section for the "
+        "current round from that context. Keep the section current while the "
+        "round is active; remove it in the Phase B closeout commit."
+    )
+    if source_paragraph not in section:
+        raise ValueError(
+            "cleanup_reviewer_handoff: expected Upstream Intent paragraph with "
+            "dispatch-only wording not found; source may have been reworded."
+        )
+    return section.replace(source_paragraph, direct_paragraph)
 
 
 def strip_subsection(section: str, heading: str) -> str:

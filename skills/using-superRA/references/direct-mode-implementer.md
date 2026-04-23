@@ -91,7 +91,7 @@ If you believe a review item is invalid or already handled, do NOT annotate it a
 
 ### How You Fix Review Items on a REVISE Round
 
-On a first dispatch there is no review-notes blockquote yet; you just implement the steps, update the docs, and commit. On a REVISE round the blockquote exists — the reviewer wrote it, and the orchestrator may have rewritten some steps (for accepted items) or appended `→ orchestrator: ...` notes to items it is rejecting or flagging for a second opinion. Your re-dispatch prompt carries a one-line delta pointing at what changed.
+On a first pass there is no review-notes blockquote yet; you just implement the steps, update the docs, and commit. On a REVISE round the blockquote exists — it was written previously, and items may carry `→ orchestrator: ...` notes rejecting them or flagging them for a second opinion.
 
 For each item in the blockquote:
 
@@ -127,8 +127,6 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 git add [code files] PLAN.md RESULTS.md results_attachments/
 git commit -m "task N: [brief description]"
 ```
-
-**Parallel worktree dispatch (`Worktree:` field set).** Return the `<branch>/parallel/<slug>` branch name and HEAD SHA in your status report. Do not merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out.
 
 ## Pre-Commit Self-Check
 
