@@ -50,13 +50,14 @@ Two verdicts:
 
 **Implementer self-check (before every commit).** Run before every commit on the integration branch:
 
-1. **Compute the cumulative diff.** `git diff <merge-base>..HEAD` where `<merge-base>` is the merge base the integration is targeting (e.g., `$(git merge-base HEAD main)` or whatever the workflow specifies).
-2. **Review every hunk** against the loaded references' checklists. For each hunk, ask: *which `[BLOCKING]` or `[ADVISORY]` item justifies this change?* A hunk may be tied to drift-test preservation, codebase-convention fit, handoff-doc coherence, documentation currency, or an explicit item in the integration map.
+1. **Compute the cumulative diff from the frozen anchor.** `git diff <frozen-merge-base>..HEAD` where `<frozen-merge-base>` is the Phase B anchor recorded for the active round.
+2. **Review every hunk** against the loaded references' checklists, the approved task objectives, and any reviewer-recorded upstream-intent notes. For each hunk, ask: *which `[BLOCKING]` / `[ADVISORY]` item, approved objective, or explicit allowed delta justifies this change?*
 3. **Any hunk without a justification is out of scope.** Revert it, OR re-justify it by adding the underlying need to the integration map (and the commit message) so the reviewer can check the same evidence.
-4. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` — named explicitly in the dispatch's `Task:` or `Tasks in scope:` field. `APPROVED`-integration tasks are out of scope: do not walk their code; do not touch their output files except through legitimate merge resolution. A hunk touching an APPROVED task that is not named in scope fails step 3.
-5. **Stage only files you touched this turn** (per `superRA:using-superra` §Commit Hygiene); `git diff --cached` before `git commit`.
+4. **Perform base-diff pruning.** Ask hunk-by-hunk whether the base branch deleted or relocated this content between `<frozen-merge-base>` and `origin/<base-branch>`. If yes, keep the base-side deletion / relocation unless the task objective explicitly requires restoration and the review note recorded that allowed delta.
+5. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` — named explicitly in the dispatch's `Task:` or `Tasks in scope:` field. `APPROVED`-integration tasks are out of scope: do not walk their code; do not touch their output files except through legitimate merge resolution. A hunk touching an APPROVED task that is not named in scope fails step 3.
+6. **Stage only files you touched this turn** (per `superRA:using-superra` §Commit Hygiene); `git diff --cached` before `git commit`.
 
-The integration reviewer runs the same `git diff <merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists. One source of truth, two perspectives.
+The integration reviewer runs the same `git diff <frozen-merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists. Base-diff pruning is part of every integration review pass, not an optional extra evidence sweep. One source of truth, two perspectives.
 
 ---
 
@@ -66,6 +67,8 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Code integration:**
 
+- `[BLOCKING]` **Base-diff pruning performed:** Every surviving hunk in `git diff <frozen-merge-base>..HEAD` ties to an approved task objective or an explicit reviewer-recorded upstream-intent delta.
+- `[BLOCKING]` **Upstream deletions / relocations honored by default:** Restorations exist only when the task objective explicitly requires them and the reviewer recorded that allowed delta.
 - `[BLOCKING]` **Naming consistency:** Variable names, function names, and file names follow codebase conventions.
 - `[BLOCKING]` **Utility usage:** Existing utility functions are used where appropriate instead of hand-rolled equivalents.
 - `[BLOCKING]` **No debug artifacts:** No leftover debug prints, commented-out experiments, or temporary variables.
@@ -80,7 +83,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **PR quality:**
 
-- `[BLOCKING]` **Focused diff:** Changes limited to analysis scope; no unrelated formatting or restructuring. (Reinforced by the Minimum-net-diff top item in SKILL.md.)
+- `[BLOCKING]` **Focused diff:** Changes limited to analysis scope; no unrelated formatting or restructuring. (Reinforced by the frozen-base minimum-net-diff top item in SKILL.md.)
 - `[BLOCKING]` **Self-contained:** The analysis can be understood from the code and its documentation without external context.
 - `[ADVISORY]` **Clean commits:** Commit history is logical and messages are descriptive.
 - `[ADVISORY]` **Appropriate tolerances** documented and economically reasonable (where drift tests exist).
