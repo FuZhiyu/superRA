@@ -53,7 +53,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 
 **Composable design:** Workflow skills own sequencing; domain skills own vertical discipline; utility skills are called on demand. One source of truth per concern.
 
-**Harness adapters:** When this skill or its references mention a Claude-specific tool name (e.g. `AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), use the harness adapter reference before interpreting the tool name. Codex agents load `references/codex-instructions.md` immediately after loading `superRA:using-superra`.
+**Harness adapters:** When this skill or its references mention a Claude-specific tool name (e.g. `AskUserQuestion`, `Skill`, `TodoWrite`, `Agent(subagent_type:)`), use the harness adapter reference before interpreting the tool name. 
 
 ## Execution Modes
 
@@ -101,4 +101,4 @@ SuperRA skills override default system prompt behavior, but **user instructions 
 If CLAUDE.md says "skip data description for this dataset" and a skill says "always describe first," follow the user's instructions. The user is in control.
 
 
-**For main agents:** You MUST proceed to read `references/main-agent.md` and `superRA:handoff-doc` before any action. Subagents skip both.
+**For main agents:** You MUST proceed to read `references/main-agent.md`. 

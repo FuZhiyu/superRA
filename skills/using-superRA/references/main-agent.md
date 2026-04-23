@@ -88,3 +88,5 @@ For execution throughout the workflows, the main agent can dispatch subagent for
 - **The dispatch-prompt contract does not apply — there is no dispatch.** Task context comes from `PLAN.md`, `RESULTS.md`, and the current session; you do not write an `Additionally:` line to yourself.
 - **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's gated checklist before committing. Update `PLAN.md` / `RESULTS.md` inline per the direct-mode role reference you loaded, or load `superRA:handoff-doc` if you need the full discipline. Reviewer verdicts are still APPROVE / REVISE even when you render them as your own conclusion.
 - **Review is never skipped.** If you implemented in direct mode, you still need a review pass — either dispatch a reviewer subagent for the review step, or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review. It is strongly recommended to use an independent reviewer rather than self-review.
+
+For **Codex agent**: MUST load `references/codex-instructions.md` immediately.
