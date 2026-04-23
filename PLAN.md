@@ -52,100 +52,100 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 ### Task 1: Redesign semantic-merge as standalone semantic sync
 **Depends on:** *(none)*
-**Review status:** *(pending)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(pending)*
 
 **Files:** `skills/semantic-merge/SKILL.md`, `skills/semantic-merge/references/sync-quality.md`, legacy `skills/refactor-and-integrate/references/merge-quality.md`
 **Input:** Existing semantic-merge and legacy merge-quality instructions.
 **Output:** Semantic-merge owns intent research, conflict resolution, sync commit discipline, Sync Map format, user-decision escalation, and standalone baseline/direction rules.
 
-- [ ] **Step 1: Move merge quality ownership**
+- [x] **Step 1: Move merge quality ownership**
   Move the actionable legacy merge-quality protocol into a semantic-merge-owned reference. Remove the old refactor-and-integrate reference path unless a compatibility pointer is required.
 
-- [ ] **Step 2: Rewrite semantic-merge body**
+- [x] **Step 2: Rewrite semantic-merge body**
   Update semantic-merge to frame the workflow as semantic sync: identify the governing baseline/direction, research incoming intent, build a Sync Map, land one sync commit when called from integration-workflow, and return post-sync obligations for later integration.
 
-- [ ] **Step 3: Validate scope**
+- [x] **Step 3: Validate scope**
   Search for semantic-merge language that still delegates sync ownership to refactor-and-integrate or references legacy upstream-intent language as the authority.
 
 ---
 
 ### Task 2: Rewrite integration-workflow choreography
 **Depends on:** Task 1
-**Review status:** *(pending)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(pending)*
 
 **Files:** `skills/integration-workflow/SKILL.md`
 **Input:** Existing legacy lettered integration workflow.
 **Output:** Clear Protect, Sync, Integrate, Document, Finish workflow.
 
-- [ ] **Step 1: Replace phase map and stop points**
+- [x] **Step 1: Replace phase map and stop points**
   Remove A-D labels from the operational flow. Use named steps: Protect, Sync, Integrate, Document, Finish.
 
-- [ ] **Step 2: Add sync anchors**
+- [x] **Step 2: Add sync anchors**
   Define `PRE_SYNC_BASE_SHA` for incoming intent research and `BASE_HEAD_SHA` for post-sync minimum net diff.
 
-- [ ] **Step 3: Split sync from integrate**
+- [x] **Step 3: Split sync from integrate**
   Dispatch one serialized `Stage: sync` implementer for semantic sync, then dispatch integration reviewer over `BASE_HEAD_SHA..HEAD`.
 
 ---
 
 ### Task 3: Narrow refactor-and-integrate to post-sync quality
 **Depends on:** Task 1, Task 2
-**Review status:** *(pending)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(pending)*
 
 **Files:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/drift-test-quality.md`
 **Input:** Existing refactor-and-integrate skill and references.
 **Output:** Refactor-and-integrate owns drift-test quality, codebase fit, project doc audit, semantic propagation from Sync Map, and minimum surviving branch delta.
 
-- [ ] **Step 1: Remove merge-execution ownership**
+- [x] **Step 1: Remove merge-execution ownership**
   Remove language presenting merge quality as a refactor-and-integrate discipline.
 
-- [ ] **Step 2: Update baseline language**
+- [x] **Step 2: Update baseline language**
   Replace frozen old-merge-base net-diff language with governing-baseline language, using `BASE_HEAD_SHA..HEAD` for post-sync integration-workflow review.
 
-- [ ] **Step 3: Add Sync Map consumption**
+- [x] **Step 3: Add Sync Map consumption**
   State that post-sync integration review and refactor propagate obligations recorded in `## Sync Map`.
 
 ---
 
 ### Task 4: Update manifests, role docs, and handoff anatomy
 **Depends on:** Task 1, Task 2, Task 3
-**Review status:** *(pending)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(pending)*
 
 **Files:** `skills/using-superRA/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `agents/implementer.md`, `agents/reviewer.md`, generated direct-mode and Codex agent files.
 **Input:** Current manifest, role docs, handoff anatomy, and generated artifacts.
 **Output:** `Stage: sync` manifest row; `## Sync Map` ownership and lifecycle; generated artifacts refreshed from canonical role specs.
 
-- [ ] **Step 1: Add manifest stage**
+- [x] **Step 1: Add manifest stage**
   Add `sync` as the integration-workflow Sync step stage that loads `semantic-merge`.
 
-- [ ] **Step 2: Replace legacy intent anatomy**
+- [x] **Step 2: Replace legacy intent anatomy**
   Replace active legacy upstream-intent handoff guidance with `## Sync Map` guidance owned by the sync agent and consumed by integration review.
 
-- [ ] **Step 3: Update role docs and regenerate**
+- [x] **Step 3: Update role docs and regenerate**
   Update canonical role specs, then run the Codex agent sync script instead of editing generated files by hand.
 
 ---
 
 ### Task 5: Update public docs and verify
 **Depends on:** Task 1, Task 2, Task 3, Task 4
-**Review status:** *(pending)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(pending)*
 
 **Files:** `README.md`, `skills/CATEGORIES.md`, `CLAUDE.md`, generated artifacts as needed.
 **Input:** Updated skills and role docs.
 **Output:** Public and contributor docs aligned with semantic sync design; verification completed.
 
-- [ ] **Step 1: Refresh public docs**
+- [x] **Step 1: Refresh public docs**
   Update README and CATEGORIES to describe Protect -> Sync -> Integrate -> Document -> Finish and the standalone semantic-merge utility.
 
-- [ ] **Step 2: Refresh contributor ownership notes**
+- [x] **Step 2: Refresh contributor ownership notes**
   Update CLAUDE.md ownership language so `semantic-merge` owns semantic sync and refactor-and-integrate owns post-sync quality.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
   Run:
   ```bash
   python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check
