@@ -15,7 +15,7 @@ Default mode dispatches a fresh subagent per task. Each task gets one comprehens
 
 ## Execution Modes
 
-1. Load plan from `PLAN.md` (run `superRA:planning-workflow` first if no plan exists).
+1. Load plan from `PLAN.md`; if the docs are missing or inconsistent, the main agent's Workflow Frontier Resolver routes to `superRA:planning-workflow` first.
 2. Use **subagent mode** (default): dispatch implementer subagent per task; fresh context per task; orchestrator preserves context for coordination.
 3. Fall back to **direct mode** when the harness lacks subagent capability, the user explicitly requests it, or tasks are trivial. Direct mode: main agent implements; reviewer subagents still dispatched after each task (review is never skipped).
 
@@ -61,7 +61,7 @@ After the branch check, confirm `PLAN.md` and `RESULTS.md` exist, are tracked, *
 
 All four conjuncts must succeed. The first two confirm existence and tracking; the last two confirm the worktree copy matches the committed copy (neither a dirty edit nor a staged-but-uncommitted change).
 
-**If the check fails, halt and invoke `superRA:planning-workflow` to bootstrap the docs.** Do not inline planning-workflow content here — proceed through its full Phase 1 / Phase 2 / Self-Review; resume implementation-workflow at Step 1 after planning-workflow completes.
+**If the check fails, treat the frontier as `needs plan repair` and invoke `superRA:planning-workflow` to bootstrap or repair the docs.** Do not inline planning-workflow content here — proceed through its full Phase 1 / Phase 2 / Self-Review. After the repair commit, the main agent runs `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next entry point.
 
 Step 0 (branch check) must have already run — Step 0b comes after Step 0 so bootstrap commits cannot silently land on `main` / `master`.
 
@@ -70,8 +70,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed to Step 1.
 ### Step 1: Load and Review Plan
 
 1. Read `PLAN.md` and `RESULTS.md`. `PLAN.md` is the task tracker (`superRA:planning-workflow §PLAN.md Is the Task Tracker`); `TodoWrite` mirrors it as a transient session view, not a substitute.
-2. **Read `## Workflow Status`** at the top of `PLAN.md`. The checklist names which milestones are complete (`Plan approved`, `Execution complete`, `Drift tests created`, `Refactored`, `Docs finalized`, `Merged`) and tells a resuming agent exactly which phase this branch is at without grepping commits. If `Execution complete` is already checked, skip to Step 3 (verification); if earlier milestones are unchecked unexpectedly, raise it with the user before dispatching tasks.
-   - **Also read per-task `**Review status:**` and `**Integration status:**` fields alongside `## Workflow Status`.** If any project-level box is unchecked while some tasks remain APPROVED, a prior `planning-workflow §User Feedback and Changing Plans` invocation unchecked those boxes (Step 4) and paused — resume that protocol at Step 6 before dispatching any implementer. Enter `§User Feedback and Changing Plans` at Step 1 if the researcher instead pings mid-execution with a scope change.
+2. **Read `## Workflow Status` and per-task status lines as frontier evidence.** If the main agent has not already resolved the frontier for this invocation, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver now. Continue in this workflow only for a `needs implementation`, `awaiting review`, or `needs revise/adjudication` frontier; for every other frontier, follow the resolver's selected owner and stop point.
 3. **Load the active domain skill(s) following the manifest** Any task-specific helper skills named in PLAN.md's header — load those too. Subagents load these same skills per `superRA:using-superra` §Skill-Load Manifest at dispatch time; the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
 4. **Read PLAN.md's `## Project Conventions` section** (anatomy: `handoff-doc/references/plan-anatomy.md` §Project Conventions). If the section is missing, empty, or stale, walk and populate it now — commit before dispatching subagents.
 5. Review PLAN.md critically — identify any questions or concerns:
@@ -85,7 +84,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed to Step 1.
 
 ### Step 2: Execute Tasks
 
-**Before dispatching, read each pending task's `Depends on:` field.**
+**Before dispatching, read each frontier task's `Depends on:` field.**
 Tasks whose dependencies are all `APPROVED` may be dispatched as a
 single parallel Agent-tool batch (subject to `agent-orchestration`
 §Workload Balancing). Serialize only when no parallel batch is
@@ -153,7 +152,7 @@ Log the researcher's answer per `handoff-doc` §User Decisions Log — top-level
 **Execute the user's choice:**
 
 - **Option 1 (Proceed with integration):** Invoke `superRA:integration-workflow`. It resolves the integration base with the researcher and runs Phases A–D (drift tests, sync+refactor, docs, merge/PR).
-- **Option 2 (Change the plan):** Re-enter `superRA:planning-workflow §User Feedback and Changing Plans` — treat the researcher's scope change as the trigger; resume implementation-workflow from Step 1 after the plan is re-approved.
+- **Option 2 (Change the plan):** Re-enter `superRA:planning-workflow §User Feedback and Changing Plans` — treat the researcher's scope change as the trigger; after the plan edit commit, run the main-agent Workflow Frontier Resolver to choose the next entry point.
 - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
 - **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
 
@@ -169,7 +168,7 @@ The autonomy contract (proceed-without-asking patterns, stop-and-ask classes, ba
 
 - **Step 4 completion menu.** The 4-option menu (merge now / continue another task / sensitivity task / discard) is a user-defined workflow milestone.
 - **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
-- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `planning-workflow §User Feedback and Changing Plans` (confirm → log → inline-edit PLAN.md → roll back milestone checkboxes → atomic commit → resume). Pause class (2) in the autonomy contract.
+- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `planning-workflow §User Feedback and Changing Plans`; after the plan edit commit, run the Workflow Frontier Resolver. Pause class (2) in the autonomy contract.
 
 Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log per `handoff-doc` §User Decisions Log **before** acting on it.
 
