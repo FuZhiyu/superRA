@@ -127,7 +127,7 @@ Agent(subagent_type: "superRA:implementer"):
     Sync Map status, checks run, and post-sync obligations.
 ```
 
-If the sync agent returns `NEEDS_USER_DECISION`, the orchestrator asks the researcher, logs the decision, commits the log entry, and re-dispatches the sync agent with the decision context.
+If the sync agent returns `NEEDS_CONTEXT` or `BLOCKED` because a research-owned sync decision is required, the orchestrator asks the researcher, logs the decision, commits the log entry, and re-dispatches the sync agent with the decision context.
 
 ## Integrate
 
