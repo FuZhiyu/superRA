@@ -24,7 +24,7 @@ After cross-session detection, **load `superRA:handoff-doc`**. The main agent lo
 
 ## Workflow Frontier Resolver
 
-Before entering a workflow, resuming after interruption, or reacting to a changed plan, derive the current frontier from durable facts. Do not add or trust a single `Current state` field. Mixed state is normal: some tasks may remain fully approved and integrated while changed tasks and their downstream dependents roll back.
+Before entering a workflow, resuming after interruption, or reacting to a changed plan, derive the current frontier from durable facts. Mixed state is normal: some tasks may remain fully approved and integrated while changed tasks and their downstream dependents roll back. The resolver is a decision procedure, not a catalog of named outcomes.
 
 **Read facts first:**
 
@@ -34,43 +34,38 @@ Before entering a workflow, resuming after interruption, or reacting to a change
 - Task blocks: `Depends on`, checkbox completion, `Review status`, `Integration status`, active review-notes blockquotes, and task/output references.
 - RESULTS.md: task sections exist for planned tasks and contain findings for completed work.
 
-**Normalize the frontier:**
+**Compute the affected frontier:**
 
-- **needs plan repair** — no PLAN.md / RESULTS.md when the requested workflow requires them; a previously made material user decision was not logged; task graph is incomplete; completed work or checked rollup milestones lack the task-local status evidence they require; or a plan change has not gone through `planning-workflow §User Feedback and Changing Plans`.
-- **needs implementation** — task dependencies are satisfied, but the task has no committed implementation or has an omitted / placeholder / cleared `Review status`.
-- **awaiting review** — task `Review status: IMPLEMENTED`.
-- **needs revise/adjudication** — task `Review status: REVISE` or active review notes need orchestrator adjudication before re-dispatch.
-- **needs validation/completion** — all affected implementation tasks are approved, but `Execution complete` is unchecked, reproducibility has not been verified for the current committed outputs, or the implementation-workflow Step 4 integration / PR disposition has not been logged.
-- **needs integration** — implementation is approved, `Execution complete` is checked from implementation-workflow Step 3, reproducibility is current, the logged Step 4 disposition chooses integration / PR, and affected task(s) have unset / `REVISE` / `IMPLEMENTED` `Integration status` or an integration rollup was invalidated.
-- **needs documentation** — integration is approved for the affected frontier, but `Docs finalized` is unchecked or doc-reviewer feedback is open.
-- **ready for merge** — documentation is finalized, the requested final action is known, and the integration base freshness check has passed.
-- **preserved-approved** — tasks outside the affected frontier whose `Review status` and `Integration status` remain valid. Do not rework these tasks just because a rollup milestone was unchecked.
-- **inconsistent** — milestone checkboxes and task evidence disagree in a way you cannot repair mechanically, e.g. `Execution complete` checked while a task is `REVISE`, `Refactored` checked while an affected task lacks `Integration status: APPROVED`, completed work with no review-status evidence, or active `## Upstream Intent` remains after Phase B was supposedly closed.
+1. Identify the changed or untrusted starting points from the durable facts: explicit user scope change, dirty or recent task-file edits, unchecked task steps, omitted / placeholder / cleared task status, active review notes, failed or missing reproducibility evidence, unchecked workflow rollups, or a requested final action.
+2. If `PLAN.md` / `RESULTS.md` are missing, untracked, structurally incomplete, or contradicted by an unlogged material user decision, route to `planning-workflow` before implementation or integration work. Material plan changes use `planning-workflow §User Feedback and Changing Plans`.
+3. For each changed task, include transitive downstream dependents whose inputs, outputs, or assumptions may have shifted. Preserve task-local `Review status` / `Integration status` for unrelated approved tasks. Document any downstream exemption in `## Decisions`.
+4. Treat `## Workflow Status` checkboxes as rollup evidence. Uncheck boxes whose guarantee is false, but do not clear unrelated task-local statuses just because a rollup is unchecked.
+5. If durable facts disagree in a way you cannot repair mechanically, stop under §The Three Pause Classes and log the answer before acting.
 
 **Return the decision:**
 
 - Affected frontier: tasks and workflow layer(s) that need work.
 - Preserved-approved tasks: tasks whose `Review status` / `Integration status` remain valid.
 - Invalidated milestones: `## Workflow Status` boxes that are no longer true.
-- Next safe workflow entry point: planning, implementation, review/adjudication, validation/completion, integration, documentation, or final merge / PR.
-- Required stop point: any researcher decision or irreparable inconsistency that must be resolved before action, including approved implementation work that still lacks Step 3 reproducibility / `Execution complete`, or a missing logged Step 4 disposition after reproducibility has been verified.
+- Next safe workflow owner and entry layer: planning, implementation / review, validation / completion, integration, documentation, or final merge / PR.
+- Required stop point: any researcher decision or irreparable contradiction that must be resolved before action.
 
 **Choose the next safe action:**
 
-1. If the frontier is **inconsistent**, repair the handoff docs mechanically when durable facts determine the correct status. If the inconsistency depends on researcher intent, stop under §The Three Pause Classes and log the answer before action.
-2. If the frontier is **needs plan repair**, invoke `planning-workflow` or its §User Feedback and Changing Plans protocol before any implementation or integration work.
-3. Otherwise pick the earliest invalid layer in the affected frontier: implementation → review/adjudication → reproducibility verification → `Execution complete` box flip → implementation-workflow Step 4 disposition → integration → documentation → final merge / PR.
-4. Invoke the workflow skill that owns that layer. The workflow skill runs its canonical mechanics; the resolver only selects the entry point and preserves unrelated approved work.
-5. Unchecked workflow milestones are rollup evidence, not commands to redo every task. Re-enter only the affected frontier, while still running any global verification gate the target workflow requires before merge / PR.
-6. Do not select integration merely because `Integration status` is unset after implementation approval. If `Execution complete` is unchecked, reproducibility is not current, or the Step 4 integration / PR disposition is not logged, return `needs validation/completion` and re-enter `implementation-workflow` at Step 3 / Step 4. A current integration / PR request supplies intent only after implementation-workflow logs it as the Step 4 disposition; it is not a bypass around validation or decision logging.
+1. Walk the canonical workflow order: plan repair or plan-change logging -> implementation / review -> reproducibility verification -> `Execution complete` box flip -> implementation-workflow Step 4 disposition -> integration -> documentation -> final merge / PR.
+2. Enter the earliest invalid layer for the affected frontier. Invoke the workflow skill that owns that layer; the workflow then runs its local mechanics and gates.
+3. When the selected layer is implementation / review, dispatch or review only tasks whose dependencies are satisfied and whose local status is not valid for that layer.
+4. When all affected implementation tasks are approved but reproducibility, `Execution complete`, or the Step 4 disposition is missing, enter `implementation-workflow` at Step 3 / Step 4. A current integration / PR request supplies intent only after that disposition is logged.
+5. When the selected layer is integration or later, scope authoring and fix work to the affected frontier while still running required global gates before merge / PR.
 
-**Required guarantees:**
+**Safety invariants:**
 
-- Work advances only after the relevant reviewer has approved it, or after an explicit documented orchestrator/user adjudication allowed the next step.
-- User-owned decisions are logged in PLAN.md before the agent acts on them.
-- Handoff docs reflect current state before status reports summarize that state.
-- Blocking review items are fixed, adjudicated, or escalated before the task advances.
-- Merge / PR happens only after integration and documentation gates are valid for the current frontier, and after the target base freshness check passes.
+- Do not add or trust a single global `Current state` field.
+- Do not act on a material user decision before it is logged in PLAN.md.
+- Do not clear unrelated task-local statuses when only a rollup milestone is invalid.
+- Do not advance past implementation work without reviewer approval or documented adjudication of blocking review items.
+- Do not enter integration before implementation reproducibility and the Step 4 disposition are current.
+- Do not merge or open a PR before integration, documentation, and base-freshness gates are valid for the current frontier.
 
 ## Changes of the Plan
 

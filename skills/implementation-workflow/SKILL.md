@@ -15,7 +15,7 @@ Default mode dispatches a fresh subagent per task. Each task gets one comprehens
 
 ## Execution Modes
 
-1. Load plan from `PLAN.md`; if the docs are missing or inconsistent, the main agent's Workflow Frontier Resolver routes to `superRA:planning-workflow` first.
+1. Load plan from `PLAN.md`; if the handoff docs are missing, structurally incomplete, or contradicted by unlogged material decisions, the main agent's Workflow Frontier Resolver routes to `superRA:planning-workflow` first.
 2. Use **subagent mode** (default): dispatch implementer subagent per task; fresh context per task; orchestrator preserves context for coordination.
 3. Fall back to **direct mode** when the harness lacks subagent capability, the user explicitly requests it, or tasks are trivial. Direct mode: main agent implements; reviewer subagents still dispatched after each task (review is never skipped).
 
@@ -28,7 +28,7 @@ Default mode dispatches a fresh subagent per task. Each task gets one comprehens
    a. Dispatch implementer subagent. Answer context questions, re-dispatch if needed.
    b. Dispatch reviewer subagent (one comprehensive pass).
    c. **APPROVE** → update plan file + commit, next task. **REVISE** → fix `[BLOCKING]` findings → narrow re-review (cited fixes + dependent findings). Loop until APPROVE, then update plan file + commit.
-3. When no tasks remain, or the resolver returns `needs validation/completion` → verify pipeline + reproducibility (Step 3).
+3. When no selected task still requires implementation or review, verify pipeline + reproducibility (Step 3).
 4. Present Step 4 completion menu; dispatch `integration-workflow` on merge/PR.
 
 ### Step 0: Branch Check
@@ -61,7 +61,7 @@ After the branch check, confirm `PLAN.md` and `RESULTS.md` exist, are tracked, *
 
 All four conjuncts must succeed. The first two confirm existence and tracking; the last two confirm the worktree copy matches the committed copy (neither a dirty edit nor a staged-but-uncommitted change).
 
-**If the check fails, treat the frontier as `needs plan repair` and invoke `superRA:planning-workflow` to bootstrap or repair the docs.** Do not inline planning-workflow content here — proceed through its full Phase 1 / Phase 2 / Self-Review. After the repair commit, the main agent runs `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next entry point.
+**If the check fails, the handoff docs are outside this workflow's valid entry conditions. Invoke `superRA:planning-workflow` to bootstrap or repair the docs.** Do not inline planning-workflow content here — proceed through its full Phase 1 / Phase 2 / Self-Review. After the repair commit, the main agent runs `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next entry point.
 
 Step 0 (branch check) must have already run — Step 0b comes after Step 0 so bootstrap commits cannot silently land on `main` / `master`.
 
@@ -70,7 +70,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed to Step 1.
 ### Step 1: Load and Review Plan
 
 1. Read `PLAN.md` and `RESULTS.md`. `PLAN.md` is the task tracker (`superRA:planning-workflow §PLAN.md Is the Task Tracker`); `TodoWrite` mirrors it as a transient session view, not a substitute.
-2. **Read `## Workflow Status` and per-task status lines as frontier evidence.** If the main agent has not already resolved the frontier for this invocation, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver now. Continue in this workflow only for a `needs implementation`, `awaiting review`, `needs revise/adjudication`, or `needs validation/completion` frontier; for every other frontier, follow the resolver's selected owner and stop point. For `needs validation/completion`, skip task dispatch unless task statuses regressed and start at Step 3 / Step 4 so all-approved work is verified and disposition-logged before integration can be selected.
+2. **Read `## Workflow Status` and per-task status lines as frontier evidence.** If the main agent has not already resolved the frontier for this invocation, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver now. Continue here only when the resolver selects implementation, review, reproducibility verification, or the Step 4 completion disposition. For any earlier or later layer, follow the resolver's selected owner and stop point. If all selected tasks are already approved, skip task dispatch unless task statuses regressed and start at Step 3 / Step 4 so approved work is verified and disposition-logged before integration can be selected.
 3. **Load the active domain skill(s) following the manifest** Any task-specific helper skills named in PLAN.md's header — load those too. Subagents load these same skills per `superRA:using-superra` §Skill-Load Manifest at dispatch time; the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
 4. **Read PLAN.md's `## Project Conventions` section** (anatomy: `handoff-doc/references/plan-anatomy.md` §Project Conventions). If the section is missing, empty, or stale, walk and populate it now — commit before dispatching subagents.
 5. Review PLAN.md critically — identify any questions or concerns:

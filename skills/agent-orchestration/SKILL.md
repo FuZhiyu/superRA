@@ -197,7 +197,7 @@ Implementer and reviewer agents own their commits and document updates — see `
 | Status line | Meaning | Orchestrator action |
 |---|---|---|
 | *(no line)* | Not started | Dispatch implementer |
-| `IMPLEMENTED` | Code committed, awaiting review | Dispatch reviewer |
+| `IMPLEMENTED` | Code committed and ready for review | Dispatch reviewer |
 | `REVISE` | Reviewer found `[BLOCKING]` issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
 | `APPROVED` | Review passed | Proceed to next task |
 
