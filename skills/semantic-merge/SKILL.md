@@ -9,7 +9,7 @@ Integrate branches by intent, not by lines. Understand what each side was trying
 
 **Core principle:** Treat conflicts as intent conflicts first and line conflicts second. Research-meaningful conflicts always go to the user. The agent implements the researcher's integration decisions — never judges methodology.
 
-**Phase B rule:** When this skill is called from `integration-workflow` Phase B, preserve base intent by default. Read `PLAN.md`'s `## Upstream Intent` section and any relevant task-local review notes before changing files. The merged tree should match the base branch unless approved task objectives or those notes explicitly authorize a surviving branch-side delta. Upstream deletions and relocations stay deleted or relocated unless the recorded contract says otherwise.
+**Upstream-intent rule:** Identify the governing upstream intent before changing files. In Phase B, use the active `## Upstream Intent` section in `PLAN.md` when the reviewer recorded one for the current round, plus any relevant task-local review notes. Otherwise use the caller-supplied upstream-intent context for the incoming objective and allowed deltas. Preserve base intent by default: the merged tree should match the base branch unless approved task objectives or the recorded contract explicitly authorize a surviving branch-side delta. Upstream deletions and relocations stay deleted or relocated unless the recorded contract says otherwise.
 
 **Exception — orchestrator-managed parallel worktrees bypass this skill.** Branches matching `<branch>/parallel/<slug>` merge with plain `git merge --no-ff`. The `merge-guard` hook exempts `*/parallel/*` source refs.
 
@@ -50,7 +50,7 @@ Read commit messages and diffs since the merge base. Classify changes by role:
 
 Do the same for the current branch if its purpose is not already obvious.
 
-If `PLAN.md` has `## Upstream Intent`, read it now before building the integration map. It records the frozen anchor, the branch-wide upstream contract for the active Phase B round, and the default merged expectation when the branch adds nothing beyond its approved objectives.
+If `PLAN.md` has an active `## Upstream Intent` section for this Phase B round, read it now before building the integration map. Otherwise read the caller-supplied upstream-intent context now. Use that source as the authority for what survives.
 
 ### Step 3: Build an integration map
 
@@ -64,7 +64,7 @@ For each overlapping area, decide one of:
 
 Prefer synthesis over picking sides when both changes are valid and compatible. Prefer regeneration over manual editing for generated files.
 
-When called from Phase B, start from the recorded upstream contract rather than inventing a new default. Base intent wins unless an approved task objective or reviewer-recorded allowed delta says the current branch has earned a surviving hunk.
+Base intent wins unless an approved task objective or reviewer-recorded allowed delta says the current branch has earned a surviving hunk.
 
 **PLAN.md / RESULTS.md conflicts** require extra care: a conflict here may indicate that the incoming branch reorganized a task, removed a section, or changed research scope. If the conflict implies a substantive restructure of the analysis plan, escalate to `planning-workflow §User Feedback and Changing Plans` rather than resolving it as a line conflict. The researcher decides — the agent proposes.
 
@@ -121,12 +121,12 @@ When the integration is complete, summarize:
 - Judge the researcher's methodology — you integrate; you do not evaluate
 - Discard dirty worktree state without explicit approval
 - Silently update drift-test expectations after a meaningful result change
-- Restore upstream-deleted or relocated content during Phase B without an explicit allowed delta in the recorded upstream contract
+- Restore upstream-deleted or relocated content without an explicit allowed delta in the governing upstream-intent contract
 
 **Always:**
 - Understand incoming intent before resolving conflicts
 - Prefer synthesis over picking sides when both changes are valid
-- When called from Phase B, use `## Upstream Intent` as the authority for what survives
+- Use the governing upstream-intent source as the authority for what survives. In Phase B, that source is `## Upstream Intent`
 - Escalate research-meaningful conflicts to the user with intent and consequences, not raw diffs
 - Run drift tests on the merged result when the branch has them (unless the caller, e.g. `integration-workflow` Phase B, owns that verification pass)
 - Preserve and re-validate domain-discipline artifacts through the merge

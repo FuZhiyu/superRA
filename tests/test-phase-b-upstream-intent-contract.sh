@@ -105,9 +105,14 @@ assert_contains \
   "**Default merged expectation:**"
 
 assert_contains \
-  "Plan anatomy removes stale prior-round Upstream Intent sections on no-overlap re-entry" \
+  "Plan anatomy makes the reviewer own the active Upstream Intent section" \
   "skills/handoff-doc/references/plan-anatomy.md" \
-  'a stale prior-round `## Upstream Intent` section is deleted in the same review commit'
+  "Reviewer-owned for the active Phase B round."
+
+assert_contains \
+  "Plan anatomy removes Upstream Intent at Phase B closeout" \
+  "skills/handoff-doc/references/plan-anatomy.md" \
+  'Phase B Step 4 removes the section in the same closeout commit that flips `Refactored`.'
 
 assert_contains \
   "Reviewer protocol records upstream file or commit evidence" \
@@ -125,19 +130,19 @@ assert_contains \
   "stale branch-side content that must not survive"
 
 assert_contains \
-  "Implementer protocol requires reading Upstream Intent before integration edits" \
-  "agents/implementer.md" \
-  'At Stage `integration`, also read `## Upstream Intent` (if present for the active round)'
+  "Reviewer protocol owns the active Upstream Intent section" \
+  "agents/reviewer.md" \
+  "reviewer-owned for the active Phase B round"
 
 assert_contains \
-  "Implementer protocol keeps Upstream Intent hands-off" \
+  "Implementer protocol requires reading task block plus relevant header context" \
   "agents/implementer.md" \
-  "do not rewrite, append to, or delete it"
+  'Read the full task block and the relevant `PLAN.md` header context before you start.'
 
 assert_contains \
-  "Implementer protocol treats an absent Upstream Intent section as the current no-overlap path" \
+  "Implementer protocol keeps the PLAN header read-only" \
   "agents/implementer.md" \
-  "If the section is absent after a D->B re-entry, treat that as the no-material-overlap path for the current round"
+  "Read it, but do not edit it."
 
 assert_contains \
   "Reviewer protocol keeps narrow re-review plus a branch-wide pruning sweep" \
@@ -150,14 +155,24 @@ assert_contains \
   'MERGE_BASE_SHA=$(git merge-base HEAD origin/<base-branch>)'
 
 assert_contains \
-  "Integration workflow preserves the no-material-upstream-change path" \
+  "Integration workflow dispatch loads the Upstream Intent anatomy reference" \
   "skills/integration-workflow/SKILL.md" \
-  'If (b) finds no material overlap, do not create `## Upstream Intent`;'
+  'References: `superRA:handoff-doc` `references/plan-anatomy.md` §Upstream Intent'
 
 assert_contains \
-  "Integration workflow deletes stale Upstream Intent on no-overlap re-entry" \
+  "Integration workflow passes base context through the reviewer dispatch" \
   "skills/integration-workflow/SKILL.md" \
-  "if a stale section from a prior round exists, delete it in the same"
+  'context while doing (b): base branch `origin/<base-branch>`, frozen'
+
+assert_contains \
+  "Integration workflow tells the reviewer to use the handoff reference for section format" \
+  "skills/integration-workflow/SKILL.md" \
+  "Use the cited handoff reference for the section's"
+
+assert_contains \
+  "Integration workflow leaves Upstream Intent absent when not needed" \
+  "skills/integration-workflow/SKILL.md" \
+  'If (b) finds no material overlap, leave `## Upstream Intent` absent'
 
 assert_contains \
   "Integration workflow requires reviewer confirmation of the surviving diff" \
@@ -165,9 +180,19 @@ assert_contains \
   'every surviving hunk in `git diff <MERGE_BASE_SHA>..HEAD` is justified'
 
 assert_contains \
-  "Integration workflow separates narrow task re-review from branch-wide diff pruning" \
+  "Integration workflow uses one reviewer pass for re-review plus pruning" \
   "skills/integration-workflow/SKILL.md" \
-  "treating it as a pruning sweep rather than a full-task re-review"
+  "Do one reviewer pass over the cumulative diff."
+
+assert_contains \
+  "Integration workflow treats branch-wide confirmation as pruning, not a fresh checklist walk" \
+  "skills/integration-workflow/SKILL.md" \
+  "Treat that branch-wide pass as pruning, not a fresh checklist walk"
+
+assert_contains \
+  "Integration workflow removes Upstream Intent at Phase B closeout" \
+  "skills/integration-workflow/SKILL.md" \
+  "deletes it in the same closeout commit before proceeding to Phase C"
 
 assert_contains \
   "Refactor-and-integrate keeps the frozen merge base diff for Phase B paths" \
@@ -195,9 +220,9 @@ assert_contains \
   "Upstream deletions / relocations honored by default"
 
 assert_contains \
-  "Merge-quality reference defines the Phase B upstream contract" \
+  "Merge-quality reference defines the upstream-intent source section" \
   "skills/refactor-and-integrate/references/merge-quality.md" \
-  "### Phase B upstream contract"
+  "### Identify governing upstream intent"
 
 assert_contains \
   "Merge-quality reference uses the base-owned-by-default rule" \
@@ -205,19 +230,39 @@ assert_contains \
   "Start from **base-owned by default**"
 
 assert_contains \
+  "Merge-quality reference supports standalone caller-supplied upstream intent" \
+  "skills/refactor-and-integrate/references/merge-quality.md" \
+  "Standalone caller: use the caller-supplied context that records upstream intent for this merge"
+
+assert_contains \
   "Merge-quality reference forbids silent restorations" \
   "skills/refactor-and-integrate/references/merge-quality.md" \
   "**No silent restorations.**"
 
 assert_contains \
-  "Semantic merge carries the Phase B base-intent rule" \
+  "Semantic merge defines the governing upstream-intent rule" \
   "skills/semantic-merge/SKILL.md" \
-  '**Phase B rule:** When this skill is called from `integration-workflow` Phase B, preserve base intent by default.'
+  '**Upstream-intent rule:** Identify the governing upstream intent before changing files.'
 
 assert_contains \
-  "Semantic merge uses Upstream Intent as Phase B authority" \
+  "Semantic merge preserves base intent by default" \
   "skills/semantic-merge/SKILL.md" \
-  'When called from Phase B, use `## Upstream Intent` as the authority for what survives'
+  "Preserve base intent by default: the merged tree should match the base branch unless approved task objectives or the recorded contract explicitly authorize a surviving branch-side delta."
+
+assert_contains \
+  "Semantic merge supports standalone caller-supplied upstream intent" \
+  "skills/semantic-merge/SKILL.md" \
+  "Otherwise use the caller-supplied upstream-intent context for the incoming objective and allowed deltas."
+
+assert_absent_regex \
+  "Explicit Phase B re-entry mnemonics removed from canonical runtime surfaces" \
+  "B->B|B→B|D->B" \
+  skills agents
+
+assert_absent \
+  "Split ownership wording removed from canonical runtime surfaces" \
+  "Shared Phase B ownership with a narrow split" \
+  skills agents
 
 echo
 echo "Passed: $pass    Failed: $fail"

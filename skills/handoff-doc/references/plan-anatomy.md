@@ -6,7 +6,7 @@ A plan has two top-level parts: a **header** (project-wide context) and a sequen
 
 ## Header
 
-The header is the project's standing context, written at planning time and updated in place as the project evolves (new datasets, emergent conventions). Subagents read it at the start of every task.
+The header is the project's standing context, written at planning time and updated in place as the project evolves (new datasets, emergent conventions). Subagents read the relevant header context at the start of every task.
 
 ```markdown
 # [Analysis Name] Plan
@@ -60,9 +60,9 @@ A checklist of irreversible workflow milestones. Each box is a rollup over per-t
 
 ### Header ownership
 
-Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read these sections but do not modify them. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
+Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read the header but treat it as read-only. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
 
-`## Upstream Intent` is the narrow Phase B exception. The orchestrator writes or rewrites the active round's anchor lines (`Base branch`, `Frozen merge base SHA`, `Reviewed upstream range`) at `integration-workflow` Phase B Step 0. The integration reviewer writes and maintains the branch-wide change clusters beneath that anchor during Phase B. Implementers never edit the section.
+`## Upstream Intent` is the narrow Phase B exception. When Phase B needs it, the integration reviewer owns the active section for the current round. The orchestrator passes the round context (`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range) in the reviewer dispatch; implementers never edit the section; the orchestrator removes it at Phase B closeout because it is stale once the round is complete.
 
 ### `## Decisions` placement
 
@@ -125,15 +125,14 @@ If it is unclear whether an answer counts as a decision worth logging: if acting
 
 The `## Upstream Intent` section bridges the Phase B base-branch scan and the per-task fix-review loop. It answers the branch-wide question, "what was upstream trying to do in this integration round?" so implementers do not have to reconstruct that intent from git history while acting on task-local review notes.
 
-**Ownership:** Shared Phase B ownership with a narrow split. The orchestrator writes or rewrites the anchor lines for the active round at Phase B Step 0. The integration reviewer writes and maintains the branch-wide change clusters beneath that anchor when the base-side scan finds material overlap. The implementer does not edit this section. The orchestrator may append `→ orchestrator:` annotations to individual clusters, but the reviewer owns the cluster prose.
+**Ownership:** Reviewer-owned for the active Phase B round. The integration reviewer creates or updates the section when the base-side scan finds material overlap, using the round context the orchestrator passed in the dispatch. The implementer does not edit this section. The orchestrator removes it at Phase B closeout because it is temporary scaffolding, not a later-phase record.
 
 **Lifecycle:**
 
-1. Phase B Step 0 resolves `<base-branch>`, fetches it, computes the frozen merge base, and rewrites the anchor lines for the active round if the section already exists, so the reviewer evaluates the current round against the new anchor.
-2. Phase B Step 1 creates the section only when the reviewer finds material overlap between `git diff <frozen-merge-base>..HEAD` and `git diff <frozen-merge-base>..origin/<base-branch>`. If the new round finds no material overlap, there is no active-round section: a stale prior-round `## Upstream Intent` section is deleted in the same review commit rather than carried forward under the refreshed anchor.
+1. Phase B Step 0 resolves `<base-branch>`, fetches it, computes `MERGE_BASE_SHA`, and passes the round context to the integration reviewer dispatch.
+2. Phase B Step 1 creates or updates the section only when the reviewer finds material overlap between `git diff <frozen-merge-base>..HEAD` and `git diff <frozen-merge-base>..origin/<base-branch>`. If there is no material overlap for the round, leave the section absent.
 3. Within an active Phase B round, keep the section stable as the branch-wide upstream contract. Do not delete resolved clusters task-by-task; task-local review notes carry the per-task fix loop.
-4. On D->B re-entry after the base advances, rewrite the section in place against the new frozen anchor rather than stacking a second round beneath it. If the new round has no material overlap, remove the stale prior-round section instead of leaving old clusters beneath the new anchor.
-5. Remove the section only when final integration closeout / PLAN disposition removes the Phase B scaffold.
+4. Phase B Step 4 removes the section in the same closeout commit that flips `Refactored`. It does not survive beyond the round that needed it.
 
 **Format:**
 
@@ -214,7 +213,7 @@ Validate: row count matches expectation, unmatched rate reasonable, distribution
 ## Field-by-Field Notes
 
 - **`**Review status:**`** is always present on a task once execution begins. Valid values: `IMPLEMENTED`, `REVISE (<stage>)`, `APPROVED`. Before execution starts, leave it as a placeholder or omit. On re-entry, tasks in the transitive downstream closure of a modified task have their status cleared by default; the orchestrator may exempt a downstream task by documenting why the upstream change does not affect its inputs (one blockquote per exempted task in §Decisions).
-- **`**Integration status:**`** is owned by the integration reviewer and the implementer across Phase B's choreography — symmetric with `**Review status:**`, where the reviewer itself sets REVISE / APPROVED and the orchestrator intervenes only to overrule. The **integration reviewer** (annotation pass) flips to `REVISE` on tasks it annotates with integration review-notes (tasks it does not annotate stay `APPROVED`), in the same commit that writes the blockquote. The **implementer** flips to `IMPLEMENTED` on each in-scope task when it commits the refactor. The **integration reviewer** (verify pass) flips the in-scope tasks to `APPROVED` when the cumulative diff passes (or back to `REVISE` on specific tasks if it finds issues), in the same commit that writes its review. The orchestrator does not flip Integration status by default; it only overrules a reviewer's flip via a `→ orchestrator: ...` annotation when it disagrees, same as for Review status. Valid values: unset / `IMPLEMENTED` / `REVISE` / `APPROVED`. The same DAG cascade rule applies as for `**Review status:**` — downstream tasks in the closure of a modified task have their Integration status cleared by default, with documented exemptions in §Decisions. **B→B / D->B re-entry trigger:** when the base advances mid-integration or after a prior Phase B approval, the orchestrator rewrites the active round's `## Upstream Intent` anchor and the integration reviewer annotates only the tasks that now need rework — tasks it annotates get `**Integration status:** REVISE`; tasks it does not annotate stay `APPROVED`.
+- **`**Integration status:**`** is owned by the integration reviewer and the implementer across Phase B's choreography — symmetric with `**Review status:**`, where the reviewer itself sets REVISE / APPROVED and the orchestrator intervenes only to overrule. The **integration reviewer** (annotation pass) flips to `REVISE` on tasks it annotates with integration review-notes (tasks it does not annotate stay `APPROVED`), in the same commit that writes the blockquote. The **implementer** flips to `IMPLEMENTED` on each in-scope task when it commits the refactor. The **integration reviewer** (verify pass) flips the in-scope tasks to `APPROVED` when the cumulative diff passes (or back to `REVISE` on specific tasks if it finds issues), in the same commit that writes its review. The orchestrator does not flip Integration status by default; it only overrules a reviewer's flip via a `→ orchestrator: ...` annotation when it disagrees, same as for Review status. Valid values: unset / `IMPLEMENTED` / `REVISE` / `APPROVED`. The same DAG cascade rule applies as for `**Review status:**` — downstream tasks in the closure of a modified task have their Integration status cleared by default, with documented exemptions in §Decisions.
 - **Script / Input / Output** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **Steps** are editable by the implementer: they may rewrite, reorder, add, or remove steps when the data forces deviation from the planned approach. Steps are expressed as checkbox items with inline code blocks that contain the actual analyst code.
 - **Review notes blockquote** is present only when there are active items. On `APPROVED`, the blockquote is removed entirely. During Phase B integration review, overlap-driven items carry the task-local upstream contract directly in the blockquote: the upstream file / commit / change being honored, the upstream intent in plain language, the minimal allowed branch delta for that task, and any stale branch-side content that must not survive. For how items enter, get annotated, and exit across iterations, see `agents/reviewer.md` (first-round REVISE and re-review deletion) and `agents/implementer.md` (annotating fixes with `→ implemented: ...`).
