@@ -18,16 +18,13 @@ Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the ful
 Phase A — Drift Test Creation
    ↓
 Phase B — Integrate (sync + refactor, iterative)
-   ↓               ↑  (re-enter B when main moves again, or when
-Phase C — Docs  ───┘   integration reviewer triggers a new round)
-   ↓               ↑
+   ↓
+Phase C — Docs
+   ↓
 Phase D — Final merge / PR / cleanup
-                   ↑
-         Anywhere ─┴─→  `planning-workflow §User Feedback and Changing Plans`
-                        (substantive restructure: task add/remove/combine,
-                         DAG flip, APPROVED invalidation; orchestrator
-                         proposes, researcher decides)
 ```
+
+The main agent's Workflow Frontier Resolver chooses where to enter this map. Once this skill is entered, run the selected phase's local gates exactly; do not redo preserved-approved tasks simply because a rollup milestone was unchecked.
 
 **Autonomy** — full contract: `superRA:using-superra/references/main-agent.md`. Legitimate stop points in this workflow:
 
@@ -215,7 +212,7 @@ Agent(subagent_type: "superRA:implementer"):
     <prior-round doc-reviewer feedback if re-dispatching>.
 ```
 
-The doc-writer always re-runs the whole matured doc on every integration pass; the doc-reviewer reviews the diff from the last APPROVED state plus any section a newly-reworked task touches. Per-commit validation and recovery rules live in `superRA:report-in-markdown` `final-form.md`.
+When the frontier reaches Phase C, the doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff from the last APPROVED state plus any section a newly-reworked task touches. Per-commit validation and recovery rules live in `superRA:report-in-markdown` `final-form.md`.
 
 ### Step 3: Dispatch the doc-reviewer
 
@@ -291,7 +288,7 @@ git commit -m "remove analysis plan (preserved in branch history)"
 
 ## Phase D — Final Merge / PR / Cleanup
 
-After Phase C completes, execute the user's choice from implementation-workflow Step 4. If main has advanced since Phase B, loop back to Phase B first — a fresh sync must precede the merge or push.
+After Phase C completes, execute the user's choice from implementation-workflow Step 4. The final freshness check below may route back to Phase B before merge or push.
 
 ### Step 1: Pre-merge check — is another Phase B round needed?
 
@@ -357,15 +354,9 @@ If the analysis was done in a git worktree, remove it per `superRA:agent-orchest
 
 Report what was merged/pushed and what was cleaned up.
 
-## When to Lighten
+## Frontier Entry
 
-**Standalone analysis (no existing codebase to integrate with):**
-- Phase A: Always run.
-- Phase B: Integration reviewer typically leaves zero annotations and finds no material main-side changes; Phase B then collapses to a single fast-forward merge (or is a no-op on a true greenfield branch).
-
-**Small changes (single-file analysis, few results):**
-- Phase A: Still run, fewer tests.
-- Phase B: Integration reviewer may APPROVE immediately with no annotations.
+Partial integration entry is selected by `using-superRA/references/main-agent.md` §Workflow Frontier Resolver. This workflow owns the local phase gates after entry: drift-test coverage in Phase A, integration review in Phase B, doc-writer/doc-reviewer in Phase C, and freshness + merge/PR cleanup in Phase D. If the resolver returns a narrow affected frontier, scope authoring/fix work to that frontier while still running required global verification gates before merge / PR.
 
 ## Agent Loads
 

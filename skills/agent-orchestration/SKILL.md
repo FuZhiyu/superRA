@@ -147,7 +147,7 @@ If a non-default skill load, an extra domain reference, or an override is requir
 
 These are the things the orchestrator does that no subagent does. Applies at every workflow stage.
 
-- **Task sequencing and dispatch.** Read `PLAN.md`, decide what to dispatch next, apply §Workload Balancing to size and bundle.
+- **Task sequencing and dispatch inside the selected frontier.** The main agent's Workflow Frontier Resolver chooses the workflow/frontier; this skill sizes, bundles, and dispatches the work inside that frontier.
 - **Adjudicate reviewer feedback in place.** See §Handling Reviewer Feedback below for the full protocol.
 - **Handle implementer status returns.** See §Handling Implementer Status below.
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text in place, do not annotate. Commit atomically with the commit that completes the triggering task.
@@ -217,4 +217,3 @@ Implementers return one of four statuses in their dispatch response. Applies at 
   2. Input quality too poor → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
   3. Task requires methodology decisions → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
   4. Task too complex → break into smaller pieces or use a more capable model.
-
