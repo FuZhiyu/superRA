@@ -1,13 +1,13 @@
 ---
 name: semantic-merge
-description: "Use when about to run `git merge`, `git rebase`, or `git cherry-pick` on a research branch; when syncing a feature or analysis branch with a current base branch before integration; or when incoming changes may touch results-bearing files, analysis scripts, PLAN.md, RESULTS.md, drift tests, or domain-discipline artifacts. Triggers include: bare `git merge` / `git rebase` / `git cherry-pick` on a research branch (the merge-guard hook flags these automatically), \"sync with main\", \"pull main into this branch\", \"rebase onto main\", \"cherry-pick commit X\", or any branch integration where conflict resolution must preserve research intent. Invoked by `integration-workflow` during Sync and usable standalone by any agent or human doing a research-aware branch integration."
+description: "Use when about to run `git merge`, `git rebase`, or `git cherry-pick`; when syncing a feature, analysis, or work branch with a current base branch before integration; or when incoming changes may touch results-bearing files, source scripts, PLAN.md, RESULTS.md, drift tests, or domain-discipline artifacts. Triggers include: bare `git merge` / `git rebase` / `git cherry-pick` (the merge-guard hook flags these automatically), \"sync with main\", \"pull main into this branch\", \"rebase onto main\", \"cherry-pick commit X\", or any branch integration where conflict resolution must preserve the intent behind each side. Invoked by `integration-workflow` during Sync and usable standalone by any agent or human doing an intent-aware branch integration."
 ---
 
 # Semantic Merge
 
-Integrate branches by intent, not by lines. Understand what each side was trying to achieve, synthesize where both changes are valid, escalate research-meaningful decisions to the researcher, and leave a documented trail that later agents can follow.
+Integrate branches by intent, not by lines. Understand what each side was trying to achieve, synthesize where both changes are valid, escalate decisions that would change what the branch means to the user, and leave a documented trail that later agents can follow.
 
-**Core principle:** Treat conflicts as intent conflicts first and line conflicts second. Research-meaningful conflicts always go to the researcher. The agent implements the researcher's integration decisions; it does not judge methodology.
+**Core principle:** Treat conflicts as intent conflicts first and line conflicts second. Conflicts that change intent always go to the user. The agent implements the user's integration decisions; it does not override them.
 
 ## Choose a Mode
 
@@ -32,20 +32,20 @@ Inspect before changing anything:
 
 If the worktree is dirty with unrelated changes, preserve them reversibly with a named stash before any sync operation and report the stash in the status return. Stop and clarify only when the repository is already mid-operation (unresolved merge, in-flight rebase, detached HEAD) in a way that makes intent ambiguous.
 
-### 2. Research intent on both sides
+### 2. Investigate intent on both sides
 
 Read commit messages, diffs, and handoff docs for each side. For workflow mode, current-branch intent comes from `PLAN.md` / `RESULTS.md`; for standalone mode, it comes from the branch name, commits, any present handoff docs, and diffs. Incoming intent comes from the commit range on the other side of the merge base.
 
 **Classify each cluster of changes by role.** The role drives how the cluster is resolved:
 
 - **Behavior or API** — code that changes what the program does or how it is called. Synthesize when both sides extend behavior compatibly; escalate when they contradict.
-- **Data or schema** — column names, file formats, key definitions, sample filters. Research-meaningful; escalate before choosing.
+- **Data or schema** — column names, file formats, key definitions, sample filters. Escalate before choosing — the user owns these calls.
 - **Docs or narrative** — prose explaining intent. Prefer synthesis; stale claims from either side get rewritten.
 - **Generated outputs** — figures, tables, compiled artifacts, fixtures. Prefer **regeneration** from merged sources over hand-editing either side's copy.
-- **Tests** — including drift tests. Preserve both sides' assertions unless a research-meaningful result change justifies re-expecting; escalate meaningful result changes rather than silently updating.
+- **Tests** — including drift tests. Preserve both sides' assertions unless a meaningful result change justifies re-expecting; escalate result changes rather than silently updating.
 - **Config or build** — dependencies, pipeline wiring, environment. Synthesize when additive; escalate when directions diverge.
 
-The agent classifies and executes within each role; research-meaningful calls inside data, tests, and analysis outputs go to the researcher.
+The agent classifies and executes within each role; calls that would change intent — data contracts, test expectations, outputs — go to the user.
 
 ### 3. Build a resolution plan
 
@@ -55,24 +55,24 @@ For each overlapping area, pick one of:
 - keep current-branch,
 - **synthesize** both (preferred when both are valid and compatible),
 - **regenerate** derived artifacts from merged sources,
-- escalate to the researcher.
+- escalate to the user.
 
 Prefer synthesis over picking sides. Prefer regeneration over hand-editing generated files.
 
-### 4. Escalate research-meaningful choices
+### 4. Escalate intent-changing choices
 
-Ask the researcher before resolving — with intent and consequences, not raw diff chunks — when:
+Ask the user before resolving — with intent and consequences, not raw diff chunks — when:
 
-- both sides imply different valid research goals,
-- a conflict changes variable definitions, sample construction, filters, data sources, econometric specifications, or analysis outputs,
+- both sides imply different valid intents,
+- a conflict changes data contracts, inputs, test expectations, program outputs, or the meaning of a published result,
 - task structure in `PLAN.md` would change (routed through `planning-workflow §User Feedback and Changing Plans`),
-- drift-test expectations would move because results meaningfully changed.
+- drift-test or result-level expectations would move because outputs meaningfully changed.
 
 Log every answer per `handoff-doc` §User Decisions Log before committing the resolution. When `PLAN.md` is absent, record the decision in the standalone merge record and the sync commit body.
 
 ### 5. Resolve and land
 
-Run the sync operation only after intent research. Resolve by the plan from Step 3. Preserve base-current deletions and relocations by default; restore branch-side content only when an approved task objective, logged user decision, or Sync impact obligation justifies it.
+Run the sync operation only after intent investigation. Resolve by the plan from Step 3. Preserve base-current deletions and relocations by default; restore branch-side content only when an approved task objective, logged user decision, or Sync impact obligation justifies it.
 
 Mode references specify commit shape: workflow lands exactly one sync commit; standalone lands a sync commit plus as many semantic propagation commits as the resolution needs.
 
