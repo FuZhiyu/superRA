@@ -6,7 +6,7 @@ A plan has two top-level parts: a **header** (project-wide context) and a sequen
 
 ## Header
 
-The header is the project's standing context, written at planning time and updated in place as the project evolves (new datasets, emergent conventions). Subagents read the relevant header context at the start of every task.
+The header is the project's standing context, written at planning time and updated in place as the project evolves (new datasets, emergent conventions).
 
 ```markdown
 # [Analysis Name] Plan
@@ -62,7 +62,7 @@ A checklist of workflow milestone rollups. Each box summarizes task-local validi
 
 Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read the header but treat it as read-only. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
 
-`## Upstream Intent` is the narrow Phase B exception. When Phase B needs it, the integration reviewer owns the active section for the current round. The orchestrator passes the round context (`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range) in the reviewer dispatch; implementers never edit the section; the orchestrator removes it at Phase B closeout because it is stale once the round is complete.
+`## Upstream Intent` is the narrow Phase B exception — ownership and lifecycle in §Upstream Intent below.
 
 ### `## Decisions` placement
 

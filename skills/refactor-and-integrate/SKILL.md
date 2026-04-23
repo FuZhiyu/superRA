@@ -11,7 +11,7 @@ Utility skill carrying the domain knowledge for three closely related tasks in t
 2. **Refactoring analysis code** for codebase integration — making the code fit the host project's conventions, utilities, and style without losing data discipline or results.
 3. **Writing clean merge integration commits** that preserve intent and research integrity when combining branches.
 
-Load per stage; implementer self-checks, reviewer verifies the same content. The gated checklists — with `[BLOCKING]` / `[ADVISORY]` severity markers, tuned Red Flags, escalation lists, worked examples, and operational procedures — live in the three references named per Stage in `superRA:using-superra` §Skill-Load Manifest.
+Load per stage; implementer self-checks, reviewer verifies the same content. Gated checklists live in the three references named per Stage in `superRA:using-superra` §Skill-Load Manifest.
 
 ## Three Concurrent Disciplines — Principles
 
@@ -19,15 +19,15 @@ The three disciplines are **concurrent, not sequential**. A single integration p
 
 ### 1. Drift-Test Integrity
 
-Stage `drift-test` → load `references/drift-test-quality.md` (coverage, tolerance calibration, independence, red-green cycle, test-format conventions, Red Flags).
+Stage `drift-test` → load `references/drift-test-quality.md`.
 
 ### 2. Codebase Integration
 
-Stage `integration` → load `references/codebase-integration.md` (naming, utility reuse, PR quality, documentation currency, Project Doc Audit walk-up). For data-analysis work, also load `econ-data-analysis/references/integration.md` as the primary reference.
+Stage `integration` → load `references/codebase-integration.md`. For data-analysis work, also load `econ-data-analysis/references/integration.md` as the primary reference.
 
 ### 3. Merge Quality
 
-Load `references/merge-quality.md` (intent preservation, Tier 3 escalation, commit-structure templates, integration-map format, data discipline) when merging — inside `integration-workflow` Phase B when `semantic-merge` is invoked for conflict resolution, or on any standalone `semantic-merge` dispatch. No dedicated manifest Stage; merge work rides on top of `Stage: integration` or runs standalone.
+Load `references/merge-quality.md` when merging — inside `integration-workflow` Phase B when `semantic-merge` is invoked for conflict resolution, or on any standalone `semantic-merge` dispatch. No dedicated manifest Stage; merge work rides on top of `Stage: integration` or runs standalone.
 
 ---
 

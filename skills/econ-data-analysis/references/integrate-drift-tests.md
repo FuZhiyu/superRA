@@ -1,14 +1,10 @@
 # Drift Tests for Data-Analysis Results
 
-Load at the **INTEGRATE phase** when preparing drift tests that guard a data analysis's key results before it is merged. `integration-workflow` Phase A invokes this reference alongside the quality checklist.
+Load at the **INTEGRATE phase** when preparing drift tests that guard a data analysis's key results.
 
-This reference answers the data-analysis-specific questions:
+Answers the data-analysis-specific questions: what should a drift test protect, how to set econ tolerances, and how to pull candidate invariants out of `RESULTS.md`.
 
-1. **What should a drift test for this analysis actually protect?**
-2. **What are the conventions for setting tolerances on econ / panel-data results?**
-3. **How do I pull candidate invariants out of `RESULTS.md`?**
-
-For the implementation-level quality checklist (coverage, independence, clarity, robustness, test format, cross-cutting integrity Red Flags), load `skills/refactor-and-integrate/references/drift-test-quality.md`. This file and that checklist are both read at drift-test creation and at drift-test review.
+For the implementation-level quality checklist (coverage, independence, clarity, robustness, test format, cross-cutting integrity Red Flags), also load `skills/refactor-and-integrate/references/drift-test-quality.md`.
 
 ---
 
@@ -43,14 +39,7 @@ Drift tests should protect **headline findings**, not every number in the analys
 
 ## Tolerance Conventions for Econ Results
 
-Set tolerances based on **economic reasoning**, not arbitrary thresholds. Summary (full rubric in `refactor-and-integrate/references/drift-test-quality.md`):
-
-| Result type | Typical tolerance | Rationale |
-|---|---|---|
-| Point estimates (coefficients, portfolio returns, means) | 1–5% of estimate magnitude, or a few units in the last decimal | Allows FP reordering and merge-order variation, catches meaningful coefficient drift |
-| Standard errors | 5–10% of SE | SEs are more sensitive to clustering and sample composition than point estimates |
-| Counts (N obs, N firms, N periods) | 0 or very small integer | Should not change unless sample construction changes |
-| Signs and significance | Exact (directional) | Sign flip or loss of significance is the failure mode drift tests most need to catch |
+Set tolerances based on **economic reasoning**, not arbitrary thresholds. Full rubric (point estimates, standard errors, counts, signs/significance) in `refactor-and-integrate/references/drift-test-quality.md` §Tolerance calibration — worked examples.
 
 ---
 
@@ -70,4 +59,4 @@ If a failure matches one of these, the test is almost certainly correct and the 
 
 ## Cross-Cutting Integrity Rules
 
-The Red Flags that protect drift-test integrity during creation, refactor, merge, and semantic-merge live in `refactor-and-integrate/references/drift-test-quality.md` §Cross-cutting Red Flags — drift test integrity. They apply wherever drift tests are in play. Do not restate them here; load that section and follow it.
+See `refactor-and-integrate/references/drift-test-quality.md` §Cross-cutting Red Flags — drift test integrity.

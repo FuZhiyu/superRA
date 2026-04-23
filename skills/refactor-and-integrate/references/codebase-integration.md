@@ -1,8 +1,8 @@
 # Codebase Integration Standards
 
-Shared cross-cutting code-quality reference for code refactoring and integration review. Both the implementer (refactorer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the procedures and decision trees the checklist items encode. Loaded whenever `Stage:` is `integration` (per `superRA:using-superra` §Skill-Load Manifest).
+Cross-cutting code-quality reference for refactoring and integration review. Implementer (refactorer) and reviewer both walk the gated checklist; the how-to sections give the procedures and decision trees the checklist encodes.
 
-> **Primary reference for data-analysis work:** load `econ-data-analysis/references/integration.md` for the data-analysis-specific integration gates (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations — with `[BLOCKING]` / `[ADVISORY]` markers and its own reviewer verdict protocol). This file covers the generic cross-cutting code-quality companion (naming, utility reuse, PR-friendly diffs, debug-artifact cleanup, documentation currency) that applies regardless of domain.
+> **Data-analysis work:** also load `econ-data-analysis/references/integration.md` as the primary reference for data-analysis-specific gates. This file covers the cross-cutting code-quality companion (naming, utility reuse, PR-friendly diffs, debug-artifact cleanup, documentation currency).
 
 ---
 
@@ -57,7 +57,7 @@ Two verdicts:
 5. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` — named explicitly in the dispatch's `Task:` or `Tasks in scope:` field. `APPROVED`-integration tasks are out of scope: do not walk their code; do not touch their output files except through legitimate merge resolution. A hunk touching an APPROVED task that is not named in scope fails step 3.
 6. **Stage only files you touched this turn** (per `superRA:using-superra` §Commit Hygiene); `git diff --cached` before `git commit`.
 
-The integration reviewer runs the same `git diff <frozen-merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists. Base-diff pruning is part of every integration review pass, not an optional extra evidence sweep. One source of truth, two perspectives.
+The integration reviewer runs the same `git diff <frozen-merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists. Base-diff pruning is part of every integration review pass, not an optional extra evidence sweep.
 
 ---
 
