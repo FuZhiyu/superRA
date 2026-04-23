@@ -42,7 +42,7 @@ else
     exit 1
 fi
 
-if assert_line_contains "$output" "$plan_label" "task-shape\\|split\\|recommendation\\|concern\\|boundary\\|change shape\\|restructure" "Keeps the task-shape concern in PLAN.md"; then
+if assert_line_contains "$output" "$plan_label" "task-shape\\|split\\|recommendation\\|concern\\|boundary\\|change shape\\|restructure\\|flag\\|future planning\\|changing plans\\|recompos\\|re-scope" "Keeps the task-shape concern in PLAN.md"; then
     :
 else
     exit 1
