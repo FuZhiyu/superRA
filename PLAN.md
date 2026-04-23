@@ -104,7 +104,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 2: Reframe implementer and reviewer role contracts
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `agents/implementer.md`, `agents/reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -118,6 +118,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `agents/reviewer.md:111-123`, `.codex/agents/superra_reviewer.toml:112-124`, and `skills/using-superRA/references/main-agent.md:83-90` still sit on the pre-upstream direct-mode / Phase B contract, and `skills/using-superRA/references/direct-mode-implementer.md` plus `skills/using-superRA/references/direct-mode-reviewer.md` are missing from this branch. `origin/main` commits `b7f0f02`, `cc192a3`, and `24f157e` moved direct-mode execution onto those skill-surface role refs, kept `main-agent.md` loading them, and updated reviewer-facing Phase B language to `## Upstream Intent` plus the surviving-diff pruning sweep. Preserve Task 2's objective-first role semantics, but land them on those newer owners. Minimal allowed branch delta: the direct-mode role refs exist and mirror the objective-first implementer / reviewer contracts, `main-agent.md` points direct mode at those refs, and reviewer-facing surfaces use `## Upstream Intent` with the pruning-sweep re-review rule. Stale branch-side content that must not survive: `main-agent.md` telling direct mode to read raw `agents/*.md`, missing direct-mode role-reference files, and any reviewer-facing `## Integration Intent` language.
+>    → implemented: restored generator-backed direct-mode role refs, pointed direct mode at those skill-surface refs, and regenerated the reviewer-facing managed artifacts on the `## Upstream Intent` pruning-sweep contract (`skills/using-superRA/references/main-agent.md:86`, `skills/using-superRA/references/direct-mode-implementer.md:5`, `skills/using-superRA/references/direct-mode-reviewer.md:115`, `skills/codex-superra-setup/scripts/sync_codex_agents.py:29`, `.codex/agents/superra_reviewer.toml:121`)
 
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1
