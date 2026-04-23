@@ -67,14 +67,8 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 ### Task 1: Add Main-Agent Frontier Resolver
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
-
-> **Review notes:**
-> 1. [MAJOR] `skills/using-superRA/references/main-agent.md:43` classifies any implementation-approved task with unset / non-APPROVED `Integration status` as `needs integration`, and `skills/using-superRA/references/main-agent.md:61` then sends the agent to integration as the next invalid layer. That skips the `implementation-workflow` Step 4 completion menu, which is explicitly the researcher-owned decision point before integration / keep / discard (`skills/implementation-workflow/SKILL.md:133`, `skills/implementation-workflow/SKILL.md:137`, `skills/implementation-workflow/SKILL.md:150`, `skills/implementation-workflow/SKILL.md:154`; also `skills/using-superRA/references/main-agent.md:86`). Fix by making a missing logged Step 4 disposition decision a required stop point or explicit frontier before `needs integration` can be selected; only route to integration when the user has requested integration / PR or the current user request directly supplies that intent.
->    → implemented: `needs integration` now requires approved implementation plus logged/current integration or PR intent, and the action order stops at the implementation-workflow Step 4 disposition before integration (`skills/using-superRA/references/main-agent.md:43`, `skills/using-superRA/references/main-agent.md:55`, `skills/using-superRA/references/main-agent.md:61`).
-> 2. [MAJOR] `skills/using-superRA/references/main-agent.md:39` treats missing required task-local status fields as `needs plan repair`, but an omitted pre-execution `Review status` is a valid not-started task state (`skills/handoff-doc/references/plan-anatomy.md:164`, `skills/handoff-doc/references/plan-anatomy.md:215`; `skills/agent-orchestration/SKILL.md:197`-`skills/agent-orchestration/SKILL.md:200`), and unset `Integration status` is valid before integration coverage exists (`skills/handoff-doc/references/plan-anatomy.md:165`, `skills/handoff-doc/references/plan-anatomy.md:216`). As written, a fresh approved plan or newly inserted unstarted task can be misrouted to planning repair instead of implementation. Fix by distinguishing valid not-started / not-yet-integrated omitted statuses from truly inconsistent missing statuses, such as completed work or checked rollups whose required status evidence is absent.
->    → implemented: omitted / placeholder / cleared `Review status` now maps to `needs implementation`, while missing status evidence routes to repair or inconsistency only when completed work or checked rollups require that evidence (`skills/using-superRA/references/main-agent.md:39`, `skills/using-superRA/references/main-agent.md:40`, `skills/using-superRA/references/main-agent.md:47`).
 
 **Script:** Not applicable; documentation/reference edit.
 **Input:** User handoff plan; `skills/using-superRA/references/main-agent.md`.
