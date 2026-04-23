@@ -23,7 +23,7 @@
 - [x] **Plan approved** - researcher approved the task decomposition and clarified that rationale for within-task path changes belongs in agent status messages to the orchestrator/user, not as "change" logging in `PLAN.md` (2026-04-22)
 - [x] **Execution complete** - all tasks APPROVED; focused Claude Code coverage passed; generated-agent parity check passed; verification recorded in `RESULTS.md` (2026-04-22)
 - [x] **Drift tests created** - N/A for this skill refactor; the Task 4 verification bundle is the approved substitute for Phase A coverage (2026-04-22)
-- [x] **Refactored** - Phase B integration reviewer approved the merged-tree sync/refactor diff and the Integration Intent section is cleared (2026-04-22)
+- [x] **Refactored** - Phase B integration reviewer approved the merged-tree sync/refactor diff and the Upstream Intent section is cleared (2026-04-22)
 - [x] **Docs finalized** - Phase C doc-review passed on the archived permanent record at `docs/plans/2026-04-22-objective-first-task-step-semantics-results.md` (2026-04-22)
 - [x] **Merged** - PR [#16](https://github.com/FuZhiyu/superRA/pull/16) opened against `main` after the Phase D freshness check confirmed `origin/main` had not advanced beyond merge-base `addc9ca` (2026-04-22)
 
@@ -61,18 +61,24 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 > **Question asked:** How should the integrated branch be finalized?
 > **Rationale (if given):** Create a PR instead.
 
-## Integration Intent
+## Upstream Intent
 
-> **Main-side change (2026-04-22):** `origin/main` direct-mode follow-up (`b7f0f02`, `cc192a3`, `24f157e`) moved direct-mode role protocol onto `skills/using-superRA/references/direct-mode-implementer.md` and `skills/using-superRA/references/direct-mode-reviewer.md`, updated `skills/using-superRA/references/main-agent.md`, and added contributor guidance in `CLAUDE.md` that those skill-surface files are manual mirrors of `agents/*.md`. Affects Tasks 1, 2.
-> **Adaptation needed:** Preserve Task 1's objective-first contributor language and Task 2's objective-first role-contract changes while rebasing them onto the new direct-mode mirror owners; the merged tree must not leave direct mode on pre-objective-first semantics or drop the manual-mirror maintenance rule.
+**Base branch:** `origin/main`
+**Frozen merge base SHA:** `addc9ca`
+**Reviewed upstream range:** `addc9ca..origin/main`
 
-> **Main-side change (2026-04-22):** `origin/main` Phase B upstream-intent follow-up (`4036130`, `ead1439`, `24f157e`) replaced the older `## Integration Intent` round model with a frozen-merge-base / `## Upstream Intent` contract in `skills/handoff-doc/references/plan-anatomy.md`, `skills/integration-workflow/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, and `agents/reviewer.md`. Affects Tasks 1, 2, 3.
-> **Adaptation needed:** Reconcile the objective-first task-boundary guidance with the newer `## Upstream Intent` anatomy, reviewer protocol, and surviving-diff confirmation rules instead of letting this branch reintroduce the superseded `Integration Intent` workflow terms.
+> **Upstream change cluster (2026-04-22):** commits `b7f0f02`, `cc192a3`, `24f157e`; paths `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `skills/using-superRA/references/main-agent.md`, `CLAUDE.md`; affects Tasks 1, 2.
+> **Upstream intent:** Upstream moved direct-mode role protocol onto the skill-surface mirrors, taught the main agent to read those mirrors, and documented in `CLAUDE.md` that they are temporary manual mirrors of `agents/*.md`.
+> **Default merged expectation:** Preserve the upstream direct-mode ownership and the manual-mirror contributor rule. This branch keeps the objective-first contributor and canonical-agent semantics without restoring pre-mirror ownership; direct-mode mirror content itself remains out of scope for this branch per the current dispatch.
+
+> **Upstream change cluster (2026-04-22):** commits `4036130`, `ead1439`, `24f157e`; paths `skills/handoff-doc/references/plan-anatomy.md`, `skills/integration-workflow/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, `agents/reviewer.md`; affects Tasks 1, 2, 3.
+> **Upstream intent:** Upstream replaced the older Phase B `## Integration Intent` round model with a frozen-merge-base / `## Upstream Intent` contract, treated the base branch as canonical by default, and required a final surviving-diff confirmation before closeout.
+> **Default merged expectation:** Preserve the `## Upstream Intent` section name, placement, and ownership, plus the branch-wide pruning sweep over `git diff <MERGE_BASE_SHA>..HEAD`. This branch should add only the approved objective-first boundary-change escalation and route-rewrite guidance inside that newer Phase B contract.
 
 ### Task 1: Canonicalize objective-first task-block semantics
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `/CLAUDE.md`, `skills/handoff-doc/references/plan-anatomy.md`, and the source-intent specification captured in this plan header.
@@ -85,11 +91,12 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `CLAUDE.md:46`, `CLAUDE.md:71`, `skills/handoff-doc/references/plan-anatomy.md:67`, and `skills/handoff-doc/references/plan-anatomy.md:122` now sit on top of newer `origin/main` Phase B and direct-mode contributor contracts. `origin/main` commits `b7f0f02`, `cc192a3`, `4036130`, and `24f157e` added the manual direct-mode mirror rule in `CLAUDE.md` and replaced the older Phase B `## Integration Intent` model with `## Upstream Intent` in `plan-anatomy.md`. Preserve Task 1's objective-first task-boundary semantics, but port them onto those newer concern-owner surfaces instead of letting the merged tree drop the direct-mode mirror guidance or reintroduce `Integration Intent` as the active Phase B contract. Minimal allowed branch delta: keep the task-heading/scope rule while adopting the upstream section name, placement, and ownership. Stale branch-side content that must not survive: merged `CLAUDE.md` / `plan-anatomy.md` prose that omits the manual-mirror rule or still tells Phase B reviewers to maintain `## Integration Intent`.
+>    → implemented: preserved the upstream manual-mirror contributor rule by leaving `CLAUDE.md` on its `origin/main` wording and rewrote `plan-anatomy.md` onto the `## Upstream Intent` contract while keeping the objective-first task-boundary semantics (`skills/handoff-doc/references/plan-anatomy.md`)
 
 ### Task 2: Reframe implementer and reviewer role contracts
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `agents/implementer.md`, `agents/reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -103,11 +110,12 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `agents/implementer.md:30`, `agents/reviewer.md:111`, and `agents/reviewer.md:123` carry the objective-first role contract only in the canonical agent files, but `origin/main` commit `b7f0f02` moved direct-mode execution onto `skills/using-superRA/references/direct-mode-implementer.md` and `skills/using-superRA/references/direct-mode-reviewer.md`, and commit `24f157e` updated the reviewer-side Phase B contract there to `## Upstream Intent`. Rebase Task 2 onto those newer owners: keep the objective/scope-vs-steps semantics, route-rewrite reporting rule, and reviewer objective-completion standard in both the canonical agents and the direct-mode mirrors, then regenerate the Codex mirrors if the canonical agent files change. Minimal allowed branch delta: merged direct-mode and reviewer surfaces tell the same objective-first story as `agents/*.md` while preserving upstream's newer `Upstream Intent` terminology and branch-wide pruning sweep. Stale branch-side content that must not survive: a merged tree where direct-mode refs still read pre-objective-first role protocol or where `agents/reviewer.md` reverts upstream's `## Upstream Intent` review rules.
+>    → implemented: merged the canonical agents onto the objective-first scope contract plus the newer `## Upstream Intent` reviewer protocol, then regenerated `.codex/agents/*.toml`; the direct-mode mirror files were intentionally left untouched per this dispatch's out-of-scope rule (`agents/implementer.md`, `agents/reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`)
 
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/integration-workflow/SKILL.md`, and `skills/econ-data-analysis/SKILL.md`.
@@ -121,6 +129,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `skills/integration-workflow/SKILL.md:88`, `skills/integration-workflow/SKILL.md:111`, `skills/integration-workflow/SKILL.md:146`, and `skills/integration-workflow/SKILL.md:164` still teach the older `Integration Intent` / `<merge-base>` Phase B loop. `origin/main` commits `4036130`, `ead1439`, and `24f157e` changed Phase B to freeze `MERGE_BASE_SHA`, treat the base branch as canonical by default, record `## Upstream Intent` only when overlap requires it, and confirm that every surviving hunk in `git diff <MERGE_BASE_SHA>..HEAD` is justified before closeout. Merge-semantic adaptation is required before re-approving Task 3: keep this branch's objective-first boundary-change escalation / route-rewrite guidance, but port it into the newer reviewer dispatch, Step 2 adjudication, Step 3c pruning sweep, and Step 4 closeout language. Upstream files to honor: `skills/integration-workflow/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`, and `agents/reviewer.md`. Stale branch-side content that must not survive: instructions that reintroduce `Integration Intent`, omit the frozen-merge-base round context, or skip the surviving-diff confirmation.
+>    → implemented: rewrote the Phase B intro and the canonical handoff/reviewer surfaces onto the frozen-merge-base `## Upstream Intent` loop and surviving-diff confirmation while preserving the branch's objective-first boundary-change escalation (`skills/integration-workflow/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`, `agents/reviewer.md`)
 
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
