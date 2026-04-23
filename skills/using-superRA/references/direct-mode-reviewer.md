@@ -102,7 +102,7 @@ On re-review after a REVISE fix: verify (1) each cited fix is correct, and (2) a
 
 ## Handoff — Unified Across Stages
 
-Regardless of stage (implementation review, drift test review, integration review, merge review, ad-hoc), your review feedback goes into the **review-notes blockquote of your assigned task block in PLAN.md**. The task block may be an analysis task, an integration task, or a post-merge refactor task — the anatomy and mechanics are identical. Exception: **ad-hoc** stage (no assigned task block) is report-only with no document updates.
+For task-scoped stages (implementation review, drift test review, integration review), your review feedback goes into the **review-notes blockquote of your assigned task block in PLAN.md**. The task block may be an analysis task or an integration task — the anatomy and mechanics are identical. Branch-level sync review with no assigned task block is report-only unless the orchestrator explicitly assigned a task block. Exception: **ad-hoc** stage is report-only with no document updates.
 
 ### Editing Etiquette
 
@@ -110,7 +110,7 @@ Regardless of stage (implementation review, drift test review, integration revie
 
 - **Inline-edit only.** Replace stale content in place. Never append "Update:" / "Revised:" / "Previously..." blocks, never strike through. On re-review, confirmed-fixed items are **removed** from the review-notes blockquote, not marked "resolved" — the prior review text lives in git history, not in `PLAN.md`.
 - **Preserve task-block boundaries.** When writing or editing a review-notes blockquote, stay strictly within the assigned task block — never disturb the preceding `---` separator, the `### Task N:` heading of the next task, or the trailing separator before it. If removing the blockquote (empty after re-review), remove only the blockquote lines; leave the surrounding task-block anatomy intact.
-- **Remove superseded content, don't stack it.** When the blockquote is empty after re-review, remove the blockquote entirely. Prior reliability caveats in `RESULTS.md` are replaced, not stacked across rounds. The same inline-edit + boundary-preservation rules apply to `## Upstream Intent` edits — keep it as the current Phase B round's branch-wide upstream contract only, replace stale text in place, and leave final removal to the orchestrator's closeout commit.
+- **Remove superseded content, don't stack it.** When the blockquote is empty after re-review, remove the blockquote entirely. Prior reliability caveats in `RESULTS.md` are replaced, not stacked across rounds. `## Sync Map` is sync-agent-owned and temporary; read it during Integrate but do not rewrite it.
 - **Doc before report.** Every material review finding lands in the blockquote in `PLAN.md` **before** it appears in your status return. The blockquote is the record; the report only points at it.
 
 If something about the review blockquote's structure or the surrounding `PLAN.md` shape is unclear, flag it in your status return and let the orchestrator decide how to handle it.
@@ -120,9 +120,8 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 **You own** the following slots in your assigned task block, and only within your assigned task:
 
 - **`**Review status:**`** line — set to `APPROVED` or `REVISE` per the verdict protocol in §Verdict.
-- **`**Integration status:**`** line — flipped by you in the integration stage, symmetric with `**Review status:**`. As **integration reviewer** (Phase B Step 1 annotation pass): on each task you annotate, flip to `REVISE`; tasks you do not annotate stay as they were. As **integration reviewer** (Phase B verify pass): on the in-scope tasks the orchestrator passed, flip to `APPROVED` on an APPROVE verdict, or to `REVISE` on specific failing tasks (alongside writing their blockquotes) on a REVISE verdict. Not applicable to other reviewer stages.
+- **`**Integration status:**`** line — flipped by you in the integration stage, symmetric with `**Review status:**`. As **integration reviewer**, consume `## Sync Map` if present and review the governing diff. For every touched or Sync-Map-affected task, set `APPROVED` when it passes or `REVISE` when you write task-local review notes. On re-review, flip in-scope tasks to `APPROVED` when fixes pass, or back to `REVISE` on specific failing tasks. Not applicable to other reviewer stages.
 - **The review-notes blockquote** — write it on first review, delete items or rewrite items on re-review, and remove the entire blockquote when empty (at APPROVED).
-- **The `## Upstream Intent` section in PLAN.md** — reviewer-owned for the active Phase B round. Use the current round context (`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range, and any special steering) from `PLAN.md` / the current session when the base-side scan surfaces material overlap, and create or update the section for the current round from that context. Implementers are hands-off. Keep the section current while the round is active; the orchestrator removes it in the Phase B closeout commit.
 - **Reliability caveat blockquote** in the task's `RESULTS.md` section — implementation stage only, replaced on re-review.
 
 **You may NOT edit:**
@@ -138,7 +137,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 
 1. Read the task block's steps and the code at the cited files.
 2. Walk the domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. Never halt on a failure — continue through the rest so the implementer gets one comprehensive pass.
-3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix. In Phase B, any overlap-driven or conflict-driven item also records the upstream file / commit / change being honored, the upstream intent in plain language, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
+3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix. In Integrate, any Sync-Map-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
 4. Set `**Review status:**` per the verdict protocol in §Verdict: `APPROVED` (no `[BLOCKING]` items) or `REVISE` (at least one `[BLOCKING]` item).
 5. Commit `PLAN.md` only: `git commit -m "review: Task N <verdict>"`.
 
@@ -160,7 +159,7 @@ For each item, decide one of:
 
 **When the blockquote is empty, remove the blockquote entirely** and set `**Review status:** APPROVED`. Commit `PLAN.md`.
 
-**Re-review scope:** After a REVISE, your second pass is **narrow** — not a full walk of §Review. Verify (a) each cited fix is correct, and (b) any finding you annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass. If a fix invalidated a dependent finding (different results, different sample, different variable definition), rewrite that item to describe the new problem. At Stage `integration`, keep the task-level walkthrough narrow in this sense, but still perform the branch-wide surviving-diff confirmation required by `integration-workflow`: treat `git diff <MERGE_BASE_SHA>..HEAD` as a pruning sweep, not a fresh full-task checklist walk. Only reopen a previously `APPROVED` integration task if that sweep surfaces a new unjustified surviving hunk touching it.
+**Re-review scope:** After a REVISE, your second pass is **narrow** — not a full walk of §Review. Verify (a) each cited fix is correct, and (b) any finding you annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass. If a fix invalidated a dependent finding (different results, different sample, different variable definition), rewrite that item to describe the new problem. At Stage `integration`, keep the task-level walkthrough narrow in this sense, but still perform the branch-wide surviving-diff confirmation required by `integration-workflow`: treat `git diff <BASE_HEAD_SHA>..HEAD` as a pruning sweep, not a fresh full-task checklist walk. Only reopen a previously `APPROVED` integration task if that sweep surfaces a new unjustified surviving hunk touching it.
 
 **CRITICAL severity:** A CRITICAL item cannot be silently overridden. If you see an `→ orchestrator:` annotation rejecting a CRITICAL item without evidence that the human partner was consulted, leave the item in place and escalate in your status report.
 
@@ -169,7 +168,7 @@ For each item, decide one of:
 ### Pre-Commit Self-Check
 
 Before committing:
-- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS.md caveat if implementation stage, plus `**Integration status:**` flips on annotated / in-scope tasks if integration reviewer, plus the reviewer-owned active `## Upstream Intent` section during integration stages).
+- [ ] I only edited the `**Review status:**` line and review-notes blockquote of my assigned task (plus the RESULTS.md caveat if implementation stage, plus `**Integration status:**` flips on annotated / in-scope tasks if integration reviewer).
 - [ ] I did not touch any step, any code, or any task objective.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] The blockquote describes current issues only, in severity order. If empty, the blockquote is removed entirely.

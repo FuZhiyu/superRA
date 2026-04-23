@@ -40,13 +40,13 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 |---|---|---|
 | Workflow | `planning-workflow` | PLAN phase: scope check, task decomposition, plan draft. |
 | Workflow | `implementation-workflow` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
-| Workflow | `integration-workflow` | INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup. |
+| Workflow | `integration-workflow` | INTEGRATE: Protect, Sync, Integrate, Document, Finish. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
-| Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Phase C doc-writer); usable standalone by a single author. |
-| Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
+| Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Document doc-writer); usable standalone by a single author. |
+| Utility | `refactor-and-integrate` | Drift-test quality, post-sync codebase integration, project-doc audit, and Sync Map propagation. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
-| Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
+| Utility | `semantic-merge` | Semantic sync: intent-based branch integration, Sync Map handoff, and research-meaningful conflict escalation. |
 | Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
 | Utility | `codex-superra-setup` | Generate and install the named `superra_implementer` / `superra_reviewer` Codex custom agents into `~/.codex/agents/` (global) or `.codex/agents/` (project). |
 | Meta | `using-superra` | This skill — the master skill every agent reads. |
@@ -72,9 +72,10 @@ Apply to every dispatch regardless of domain.
 | `Stage:` | Emitted by | Required skills |
 |---|---|---|
 | `implementation` | `implementation-workflow` | — |
-| `drift-test` | `integration-workflow` Phase A | `refactor-and-integrate` |
-| `integration` | `integration-workflow` Phase B | `refactor-and-integrate` |
-| `documentation` | `integration-workflow` Phase C | `handoff-doc` + `report-in-markdown` |
+| `drift-test` | `integration-workflow` Protect | `refactor-and-integrate` |
+| `sync` | `integration-workflow` Sync | `semantic-merge` |
+| `integration` | `integration-workflow` Integrate | `refactor-and-integrate` |
+| `documentation` | `integration-workflow` Document | `handoff-doc` + `report-in-markdown` |
 
 ### Domain add-ons (topic-driven)
 

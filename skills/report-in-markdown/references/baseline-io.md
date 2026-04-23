@@ -31,7 +31,7 @@ Session ID: use context if available; otherwise generate `session-YYYYMMDD-HHMMS
 
 `YYYY-MM-DD-report-[description].md` for standalone reports.
 
-For `RESULTS.md` maturing at INTEGRATE Phase C, the filename is simply `RESULTS.md`, placed at the permanent location (not date-stamped). The name is the identity of the artifact across stages — do not rename.
+For `RESULTS.md` maturing at INTEGRATE Document, the filename is simply `RESULTS.md`, placed at the permanent location (not date-stamped). The name is the identity of the artifact across stages — do not rename.
 
 ## Frontmatter
 

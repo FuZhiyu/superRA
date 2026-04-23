@@ -90,7 +90,7 @@ If you find issues during self-review, fix them now.
 
 ## Handoff — Unified Across Stages
 
-Regardless of stage (analysis task, drift test creation, refactoring, post-merge refactoring), your handoff is the same: update the task block assigned to you in `PLAN.md` and your assigned task's section of `RESULTS.md`. The stage only changes *what* goes into the steps, not *how* you edit the doc.
+For task-scoped stages (analysis task, drift test creation, refactoring), your handoff is the same: update the task block assigned to you in `PLAN.md` and your assigned task's section of `RESULTS.md`. For `Stage: sync`, update `## Sync Map` when semantic-merge requires it and report the sync commit details; there may be no task block to edit.
 
 ### Editing Etiquette
 
@@ -109,7 +109,8 @@ You follow an existing task-block anatomy (objective / files affected / input / 
 
 - **Steps and step code.** You may rewrite, reorder, add, or remove steps when the data forces deviation from the originally planned approach — the plan reflects what was actually done, not what was originally imagined. Replace stale step text in place; do not append a "Revised:" version alongside it.
 - **`**Review status:** IMPLEMENTED`** line, set after your atomic commit.
-- **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit your Phase B refactor work (`integration-workflow` Phase B Step 3). The integration reviewer set these to `REVISE` before you; the integration reviewer will flip them to `APPROVED` after your fix pass.
+- **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit Integrate refactor work. The integration reviewer set these to `REVISE` before you; the integration reviewer will flip them to `APPROVED` after your fix pass.
+- **The `## Sync Map` section in PLAN.md when `Stage: sync`** — created or updated by the sync implementer only when semantic-merge finds material overlap, a conflict, a user decision, or a post-sync obligation. Keep it current for the sync commit. Integration implementers consume it but do not edit it.
 
 - **`→ implemented: ...` annotations** appended to review items on a REVISE round (see below).
 - Your assigned task's section of `RESULTS.md`.
@@ -118,7 +119,7 @@ You follow an existing task-block anatomy (objective / files affected / input / 
 
 - The task objective, script path, or input/output — these define task scope.
 - Any other task's content (steps, status, review notes, results section).
-- **The PLAN.md header.** Read it, but do not edit it. If you identify any change or issue with the header, report it in your status return.
+- **The PLAN.md header.** Read it, but do not edit it, except for the `Stage: sync` ownership of `## Sync Map` described above. If you identify any other header change or issue, report it in your status return.
 - **The reviewer's prose** inside a review-notes blockquote item. You append `→ implemented: ...` annotations; you do not rewrite what the reviewer wrote.
 - **Any `→ orchestrator: ...` annotation** already present on a review item. Leave it intact.
 - **Any review item's existence.** You never delete review items. Only the reviewer and the orchestrator have delete authority; your only tool is the `→ implemented: ...` annotation.

@@ -1,6 +1,6 @@
 # Codebase Integration Standards
 
-Shared cross-cutting code-quality reference for code refactoring and integration review. Both the implementer (refactorer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the procedures and decision trees the checklist items encode. Loaded whenever `Stage:` is `integration` (per `superRA:using-superra` §Skill-Load Manifest).
+Shared cross-cutting code-quality reference for post-sync code refactoring and integration review. Both the implementer (refactorer) and reviewer walk the gated checklist at the bottom; the how-to sections above give the procedures and decision trees the checklist items encode. Loaded whenever `Stage:` is `integration` (per `superRA:using-superra` §Skill-Load Manifest).
 
 > **Primary reference for data-analysis work:** load `econ-data-analysis/references/integration.md` for the data-analysis-specific integration gates (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations — with `[BLOCKING]` / `[ADVISORY]` markers and its own reviewer verdict protocol). This file covers the generic cross-cutting code-quality companion (naming, utility reuse, PR-friendly diffs, debug-artifact cleanup, documentation currency) that applies regardless of domain.
 
@@ -18,7 +18,7 @@ When you find inconsistencies between new code and existing codebase:
 
 ### Project Doc Audit — walk-up algorithm
 
-Phase B refactoring and integration review both cover project-level documentation reachable from the diff — the nested guidance docs that superRA deliberately places near code and that the harness does NOT auto-surface. The goal is to catch stale module-level claims, document new patterns at the right level, and keep the CLAUDE.md / AGENTS.md pair in sync before merge.
+Integrate-step refactoring and integration review both cover project-level documentation reachable from the diff — the nested guidance docs that superRA deliberately places near code and that the harness does NOT auto-surface. The goal is to catch stale module-level claims, document new patterns at the right level, and keep the CLAUDE.md / AGENTS.md pair in sync before Finish.
 
 For every file in the diff `<BASE_SHA>..<HEAD_SHA>`, walk up from its directory to the repo root and collect every `CLAUDE.md` / `AGENTS.md` / `README.md` encountered. Always also check the repo-root `README.md` and root `CLAUDE.md` regardless of the diff (stale skill counts and top-level claims live there).
 
@@ -31,9 +31,13 @@ For each doc in the set:
 
 Do **not** propagate upward for the sake of it: leave `CLAUDE.md` / `AGENTS.md` above the affected area alone unless something in them is stale.
 
-The refactorer applies this as part of the refactoring pass; the integration reviewer verifies it as part of integration review. Results-level documentation (`RESULTS.md` itself) is a separate concern — it matures at `integration-workflow` Phase C via the doc-writer + doc-reviewer pair.
+The refactorer applies this as part of the refactoring pass; the integration reviewer verifies it as part of integration review. Results-level documentation (`RESULTS.md` itself) is a separate concern — it matures during `integration-workflow` Document via the doc-writer + doc-reviewer pair.
 
 ---
+
+### Sync Map obligations
+
+When PLAN.md contains `## Sync Map`, treat its `Post-sync obligations` entries as review evidence. The integration reviewer turns open obligations into task-local review notes, and the refactor implementer satisfies accepted obligations during the Integrate step. The orchestrator removes `## Sync Map` only after integration review APPROVES and the full drift-test suite passes.
 
 ## Reviewer Verdict Protocol
 
@@ -50,14 +54,14 @@ Two verdicts:
 
 **Implementer self-check (before every commit).** Run before every commit on the integration branch:
 
-1. **Compute the cumulative diff from the frozen anchor.** `git diff <frozen-merge-base>..HEAD` where `<frozen-merge-base>` is the Phase B anchor recorded for the active round.
-2. **Review every hunk** against the loaded references' checklists, the approved task objectives, and any reviewer-recorded upstream-intent notes. For each hunk, ask: *which `[BLOCKING]` / `[ADVISORY]` item, approved objective, or explicit allowed delta justifies this change?*
-3. **Any hunk without a justification is out of scope.** Revert it, OR re-justify it by adding the underlying need to the integration map (and the commit message) so the reviewer can check the same evidence.
-4. **Perform base-diff pruning.** Ask hunk-by-hunk whether the base branch deleted or relocated this content between `<frozen-merge-base>` and `origin/<base-branch>`. If yes, keep the base-side deletion / relocation unless the task objective explicitly requires restoration and the review note recorded that allowed delta.
-5. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` — named explicitly in the dispatch's `Task:` or `Tasks in scope:` field. `APPROVED`-integration tasks are out of scope: do not walk their code; do not touch their output files except through legitimate merge resolution. A hunk touching an APPROVED task that is not named in scope fails step 3.
+1. **Compute the cumulative diff from the governing baseline.** In integration-workflow after Sync, use `git diff <BASE_HEAD_SHA>..HEAD`. In standalone refactor work, use the caller-provided git range or touched-file diff.
+2. **Review every hunk** against the loaded references' checklists, approved task objectives, Sync Map obligations, and logged user decisions. For each hunk, ask: *which `[BLOCKING]` / `[ADVISORY]` item, approved objective, Sync Map obligation, or user decision justifies this change?*
+3. **Any hunk without a justification is out of scope.** Revert it, OR re-justify it by adding the underlying need to the Sync Map, task-local review notes, or commit message so the reviewer can check the same evidence.
+4. **Respect the post-sync baseline.** Base-current deletions and relocations are already represented in `BASE_HEAD_SHA`; do not restore or contradict them unless an approved objective, Sync Map obligation, or logged user decision requires it.
+5. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` — named explicitly in the dispatch's `Task:` or `Tasks in scope:` field. `APPROVED`-integration tasks are out of scope unless the Sync Map or accepted reviewer finding names them.
 6. **Stage only files you touched this turn** (per `superRA:using-superra` §Commit Hygiene); `git diff --cached` before `git commit`.
 
-The integration reviewer runs the same `git diff <frozen-merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists. Base-diff pruning is part of every integration review pass, not an optional extra evidence sweep. One source of truth, two perspectives.
+The integration reviewer runs the same governing diff as evidence and walks each hunk through the same reference checklists. One source of truth, two perspectives.
 
 ---
 
@@ -67,13 +71,13 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Code integration:**
 
-- `[BLOCKING]` **Base-diff pruning performed:** Every surviving hunk in `git diff <frozen-merge-base>..HEAD` ties to an approved task objective or an explicit reviewer-recorded upstream-intent delta.
-- `[BLOCKING]` **Upstream deletions / relocations honored by default:** Restorations exist only when the task objective explicitly requires them and the reviewer recorded that allowed delta.
+- `[BLOCKING]` **Governing-diff pruning performed:** Every surviving hunk in the governing diff ties to an approved task objective, Sync Map obligation, logged user decision, or checklist requirement.
+- `[BLOCKING]` **Base-current deletions / relocations honored by default:** Restorations exist only when an approved task objective, Sync Map obligation, or logged user decision requires them.
 - `[BLOCKING]` **Naming consistency:** Variable names, function names, and file names follow codebase conventions.
 - `[BLOCKING]` **Utility usage:** Existing utility functions are used where appropriate instead of hand-rolled equivalents.
 - `[BLOCKING]` **No debug artifacts:** No leftover debug prints, commented-out experiments, or temporary variables.
 - `[BLOCKING]` **Minimal existing-file changes:** Modifications to files outside the analysis scope are minimal and justified (adding an import to a shared module is fine; restructuring a shared module is not).
-- `[ADVISORY]` **Code simplification:** Redundant code removed, repeated patterns consolidated, readability improved — only where the refactor or integration map demanded the touch.
+- `[ADVISORY]` **Code simplification:** Redundant code removed, repeated patterns consolidated, readability improved — only where the refactor task or Sync Map demanded the touch.
 - `[ADVISORY]` **PR-friendly diffs:** Changes produce clean, reviewable diffs — avoid unnecessary reformatting that obscures substantive changes.
 
 **Handling inconsistencies (decision tree in §How-To → Handling inconsistencies):**
@@ -83,7 +87,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **PR quality:**
 
-- `[BLOCKING]` **Focused diff:** Changes limited to analysis scope; no unrelated formatting or restructuring. (Reinforced by the frozen-base minimum-net-diff top item in SKILL.md.)
+- `[BLOCKING]` **Focused diff:** Changes limited to analysis scope; no unrelated formatting or restructuring. (Reinforced by the governing-baseline minimum-net-diff top item in SKILL.md.)
 - `[BLOCKING]` **Self-contained:** The analysis can be understood from the code and its documentation without external context.
 - `[ADVISORY]` **Clean commits:** Commit history is logical and messages are descriptive.
 - `[ADVISORY]` **Appropriate tolerances** documented and economically reasonable (where drift tests exist).

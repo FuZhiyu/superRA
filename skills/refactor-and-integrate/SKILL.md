@@ -1,44 +1,40 @@
 ---
 name: refactor-and-integrate
-description: Utility skill (any phase). Use when creating drift tests, refactoring analysis code for codebase integration, or writing clean merge integration commits. Indexes the three gated checklists — Drift-Test Integrity, Codebase Integration, Merge Quality — carried in stage-scoped references and shared by implementer (self-check before commit) and reviewer (verification). Standalone-invokable — usable outside the integration phase for any refactoring task. Dispatched implementer/reviewer subagents load this skill when their Stage is `drift-test` or `integration` (per `superRA:using-superra` §Skill-Load Manifest).
+description: Utility skill (any phase). Use when creating drift tests, refactoring analysis code for codebase integration, reviewing post-sync branch quality, auditing project docs, or propagating obligations recorded by semantic-merge's Sync Map. Indexes the two gated checklists — Drift-Test Integrity and Codebase Integration — carried in stage-scoped references and shared by implementer (self-check before commit) and reviewer (verification). Standalone-invokable outside the full integration workflow for any refactor that needs consistent quality gates. Dispatched implementer/reviewer subagents load this skill when their Stage is `drift-test` or `integration` (per `superRA:using-superra` §Skill-Load Manifest).
 ---
 
 # Refactor and Integrate
 
-Utility skill carrying the domain knowledge for three closely related tasks in the INTEGRATE phase:
+Utility skill carrying post-sync integration discipline:
 
-1. **Creating drift tests** that guard key results from unintended changes during refactoring or future modifications.
-2. **Refactoring analysis code** for codebase integration — making the code fit the host project's conventions, utilities, and style without losing data discipline or results.
-3. **Writing clean merge integration commits** that preserve intent and research integrity when combining branches.
+1. **Creating drift tests** that guard key results from unintended changes during Sync, refactoring, Finish, or future modifications.
+2. **Refactoring analysis code** for codebase integration — making the code fit host-project conventions, utilities, and style without losing domain discipline or results.
+3. **Propagating Sync Map obligations** after `semantic-merge` has landed the semantic sync commit.
 
-Load per stage; implementer self-checks, reviewer verifies the same content. The gated checklists — with `[BLOCKING]` / `[ADVISORY]` severity markers, tuned Red Flags, escalation lists, worked examples, and operational procedures — live in the three references named per Stage in `superRA:using-superra` §Skill-Load Manifest.
+Semantic sync itself belongs to `superRA:semantic-merge`. This skill consumes the Sync Map; it does not resolve branch syncs or own sync commit discipline.
 
-## Three Concurrent Disciplines — Principles
+Load per stage; implementer self-checks and reviewer verifies the same checklist content.
 
-The three disciplines are **concurrent, not sequential**. A single integration pass typically exercises at least two of them, and the checklists compose: load every reference whose stage your task touches.
+## Disciplines
 
 ### 1. Drift-Test Integrity
 
-Stage `drift-test` → load `references/drift-test-quality.md` (coverage, tolerance calibration, independence, red-green cycle, test-format conventions, Red Flags).
+Stage `drift-test` -> load `references/drift-test-quality.md` (coverage, tolerance calibration, independence, red-green cycle, test-format conventions, Red Flags).
 
 ### 2. Codebase Integration
 
-Stage `integration` → load `references/codebase-integration.md` (naming, utility reuse, PR quality, documentation currency, Project Doc Audit walk-up). For data-analysis work, also load `econ-data-analysis/references/integration.md` as the primary reference.
-
-### 3. Merge Quality
-
-Load `references/merge-quality.md` (intent preservation, Tier 3 escalation, commit-structure templates, integration-map format, data discipline) when merging — inside `integration-workflow` Phase B when `semantic-merge` is invoked for conflict resolution, or on any standalone `semantic-merge` dispatch. No dedicated manifest Stage; merge work rides on top of `Stage: integration` or runs standalone.
+Stage `integration` -> load `references/codebase-integration.md` (minimum surviving branch delta, Sync Map propagation, naming, utility reuse, PR quality, documentation currency, Project Doc Audit walk-up). For data-analysis work, also load `econ-data-analysis/references/integration.md` as the primary domain reference.
 
 ---
 
 ## The Load-Bearing Top Item
 
-Every round of drift-test creation, refactoring, and merge integration shares one top-level constraint that sits above all three checklists:
+Every round of drift-test creation and post-sync integration shares one top-level constraint:
 
-- `[BLOCKING]` **Minimum net diff to the governing baseline.** Every round of drift-test creation, refactor, and merge integration touches only what approved task objectives, drift-test preservation, convention fit, handoff-doc coherence, documentation currency, and explicit reviewer-recorded allowed deltas demand. No unrelated cleanup, no speculative abstractions, no "while I'm here" edits.
-  **Phase B / upstream-contract path:** implementer runs `git diff <frozen-merge-base>..HEAD` before each commit and reviews the cumulative diff; reviewer computes the same diff as evidence and prunes it hunk by hunk. The base branch is authoritative by default: upstream deletions and relocations remain deleted or relocated unless the task objective explicitly requires restoration and the reviewer recorded that allowed delta in the task-local note.
-  **Other paths (drift-test stage, standalone refactor, standalone merge):** when no frozen Phase B anchor exists, use the task's governing git range or touched-file diff as the baseline and apply the same scope-pruning rule. No hunk survives just because it was convenient to edit while nearby.
+- `[BLOCKING]` **Minimum net diff to the governing baseline.** Touch only what approved task objectives, drift-test preservation, convention fit, handoff-doc coherence, documentation currency, Sync Map obligations, and logged user decisions demand. No unrelated cleanup, speculative abstractions, or "while I'm here" edits.
+  **Integration-workflow path:** after Sync, use `git diff <BASE_HEAD_SHA>..HEAD` as the evidence diff. `PRE_SYNC_BASE_SHA` is for semantic-merge intent research only; it is not the post-sync pruning baseline.
+  **Standalone refactor path:** use the caller's governing git range or touched-file diff and apply the same hunk-by-hunk scope rule.
 
-This item frames every checklist item below it — any hunk in the governing baseline diff must be justifiable against one of the three disciplines' checklists, an approved task objective, or an explicit reviewer-recorded allowed delta. A hunk without one of those justifications is out of scope and must be reverted or re-justified.
+Any hunk in the governing diff must be justifiable against the loaded checklists, an approved task objective, a Sync Map obligation, or a logged user decision. A hunk without one of those justifications is out of scope and must be reverted or re-justified in the handoff record before commit.
 
 Verdict protocol and implementer self-check: `references/codebase-integration.md §Reviewer Verdict Protocol`.

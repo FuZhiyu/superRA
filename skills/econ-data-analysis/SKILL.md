@@ -24,7 +24,7 @@ Companion reference files carry content that applies at a specific phase or oper
 |---|---|
 | `references/planning.md` | PLAN phase — covers the **Data Inventory hard gate** and **Sensitivity Analysis Design**. Loaded by `planning-workflow` when the analysis involves data work. |
 | `references/data-robustness-checklist.md` | PLAN stage (design) and IMPLEMENT phase when execution of sensitivity tasks — menu of robustness checks. |
-| `references/integrate-drift-tests.md` | drift-test stage — identifies key results worth protecting, sets econ-specific tolerances, and catalogs data-analysis failure modes drift tests catch. Loaded by `integration-workflow` Phase A (drift-test creation + review). |
+| `references/integrate-drift-tests.md` | drift-test stage — identifies key results worth protecting, sets econ-specific tolerances, and catalogs data-analysis failure modes drift tests catch. Loaded by `integration-workflow` Protect (drift-test creation + review). |
 | `references/integration.md` | INTEGRATE stage — data-specific refactor-integrity gates (variable-construction consistency, transformation-pattern consistency, preserved describe steps / row-count prints / validation checks, drift-test pass-through). |
 
 **For implementer only:**

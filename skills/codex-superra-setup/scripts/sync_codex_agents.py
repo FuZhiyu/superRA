@@ -395,18 +395,6 @@ def cleanup_implementer_handoff(section: str) -> str:
 
 def cleanup_reviewer_handoff(section: str) -> str:
     section = section.replace(
-        "The orchestrator passes the round context (`origin/<base-branch>`, "
-        "`MERGE_BASE_SHA`, reviewed upstream range, and any special steering) "
-        "in the dispatch. When the base-side scan surfaces material overlap, "
-        "you create or update the section for the current round using that "
-        "context.",
-        "Use the current round context (`origin/<base-branch>`, "
-        "`MERGE_BASE_SHA`, reviewed upstream range, and any special steering) "
-        "from `PLAN.md` / the current session when the base-side scan surfaces "
-        "material overlap, and create or update the section for the current "
-        "round from that context.",
-    )
-    section = section.replace(
         "\n\nIf your dispatch prompt does not specify a stage, default to "
         "**ad-hoc** (report-only).",
         "",
