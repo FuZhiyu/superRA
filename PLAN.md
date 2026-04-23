@@ -122,7 +122,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/integration-workflow/SKILL.md`, and `skills/econ-data-analysis/SKILL.md`.
@@ -136,6 +136,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `skills/integration-workflow/SKILL.md:88`, `skills/integration-workflow/SKILL.md:111-168` still reverts Phase B to the older `## Integration Intent` / `<merge-base>` loop and drops the frozen-merge-base surviving-diff confirmation that current `origin/main` records across the integration workflow and shared refactor / merge references. `origin/main` commits `4036130`, `ead1439`, and `24f157e` changed Phase B to freeze `MERGE_BASE_SHA`, treat the base branch as canonical by default, record `## Upstream Intent` only when overlap requires it, and keep the reviewer re-dispatch as a narrow fix verification plus `git diff <MERGE_BASE_SHA>..HEAD` pruning sweep. Preserve Task 3's objective-first boundary-change escalation / route-rewrite guidance, but port it into the newer Phase B intro, reviewer dispatch template, Step 2 adjudication, Step 3c pruning sweep, Step 4 closeout, and the matching `refactor-and-integrate` references named in `## Upstream Intent`. Stale branch-side content that must not survive: instructions that reintroduce `## Integration Intent`, tell the reviewer to walk `<merge-base>` without the frozen round context, or omit the surviving-diff justification pass against the base-owned contract.
+>    → implemented: ported Phase B to the frozen-base / `## Upstream Intent` contract, restored base-owned surviving-diff pruning in the shared refactor/merge refs, and kept task-boundary escalation plus within-task route-rewrite guidance (`skills/integration-workflow/SKILL.md:88`, `skills/refactor-and-integrate/SKILL.md:38`, `skills/refactor-and-integrate/references/codebase-integration.md:53`, `skills/refactor-and-integrate/references/merge-quality.md:48`)
 
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
