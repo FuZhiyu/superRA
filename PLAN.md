@@ -23,7 +23,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** - researcher requested the material redesign toward mechanisms over contingency prose on 2026-04-23.
-- [x] **Execution complete** - Tasks 1-4 are approved and the static verification checks passed for the documentation-only implementation.
+- [ ] **Execution complete** - independent review is pending for the documentation-only implementation.
 - [ ] **Drift tests created** - not yet reached; documentation/package integration gate remains pending.
 - [ ] **Refactored** - not yet reached; integration review remains pending.
 - [ ] **Docs finalized** - not yet reached; this RESULTS.md is Stage 1 handoff state.
@@ -72,7 +72,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 ### Task 1: Add Runtime Workflow Overview and Resolver Value Proposition
 **Depends on:** *(none)*
-**Review status:** APPROVED
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; documentation/reference edit.
@@ -93,7 +93,7 @@ Keep the resolver's mechanism in `main-agent.md`; avoid named state taxonomies o
 
 ### Task 2: Replace Contingency Taxonomy with a Frontier Mechanism
 **Depends on:** Task 1
-**Review status:** APPROVED
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; documentation/reference edit.
@@ -118,7 +118,7 @@ Retain explicit guards where unpredictable behavior is likely: no unlogged mater
 
 ### Task 3: Simplify Workflow Call Sites Around the Mechanism
 **Depends on:** Task 2
-**Review status:** APPROVED
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; documentation/reference edit.
@@ -139,7 +139,7 @@ Make sure `handoff-doc` and other utility/domain skills remain usable directly a
 
 ### Task 4: Audit Against Adaptive-Composable Design
 **Depends on:** Task 1, Task 2, Task 3
-**Review status:** APPROVED
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** Static documentation audit.
