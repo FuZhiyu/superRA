@@ -130,7 +130,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** The cumulative diff from Tasks 1-3, `tests/claude-code/run-skill-tests.sh`, `tests/claude-code/test-helpers.sh`, the existing Claude Code tests, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -145,3 +145,4 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `tests/claude-code/test-doc-before-report-task-shape.sh:24-30` and `tests/claude-code/test-integration-task-shape-escalation.sh:24-35` are still keeping the fast suite red on the current merged tree. Fresh evidence on this tree: after the latest Task 4 fix, `tests/claude-code/./run-skill-tests.sh` still failed with `Passed: 2`, `Failed: 2`, `STATUS: FAILED`. In `test-doc-before-report-task-shape.sh`, the answer used a semantically-correct bold label form (`- **PLAN.md** — ...`) but the label assertion still required `PLAN.md:` or `**PLAN.md**:` specifically. In `test-integration-task-shape-escalation.sh`, the answer recorded the issue as a `REVISE` note in `PLAN.md` before action, but the record-location assertion still rejected that equivalent durable phrasing because it only allowed a narrow keyword family (`review-notes|review notes|Upstream Intent|handoff doc|RESULTS.md`). Minimal allowed branch delta: keep both smoke tests and preserve their semantic requirements, but relax the label / durable-record assertions so they accept equivalent current superRA phrasing and Markdown punctuation instead of one surface form. Stale branch-side content that must not survive: line-level assertions that fail semantically-correct label or durable-record wording on the supported fast path.
+>    → implemented: relaxed the doc-before-report label regexes to accept equivalent bold-label dash punctuation and broadened the integration record-location check to accept equivalent durable `PLAN.md` / `REVISE` phrasing under the current Phase B contract.
