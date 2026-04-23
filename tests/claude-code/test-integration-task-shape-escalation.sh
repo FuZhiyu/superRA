@@ -32,7 +32,13 @@ else
     exit 1
 fi
 
-if assert_line_contains "$output" "$record_label" "PLAN.md\\|review-notes\\|review notes\\|Integration Intent\\|handoff doc\\|RESULTS.md" "Records the issue durably in the handoff docs"; then
+if assert_line_contains "$output" "$record_label" "review-notes\\|review notes\\|Upstream Intent\\|handoff doc\\|RESULTS.md" "Records the issue in the current durable Phase B locations"; then
+    :
+else
+    exit 1
+fi
+
+if assert_not_contains "$output" "Integration Intent" "Rejects retired Integration Intent wording"; then
     :
 else
     exit 1
