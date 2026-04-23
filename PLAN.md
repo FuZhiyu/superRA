@@ -71,6 +71,10 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 > **Question asked:** Do we have a PR up, and if not, create it?
 >
 > **Integration note (2026-04-22):** Opened draft PR [#19](https://github.com/FuZhiyu/superRA/pull/19) from `analysis/codex-agent-dispatch-preference` into `main`.
+>
+> **User decision (2026-04-22):** Polish the Codex adapter wording so the Codex action map uses concrete Codex tool names, replacing `SendMessage` with `send_input` and preserving the explicit load rule.
+> **Question asked:** Review and polish the local edits so the instruction file uses the correct Codex tool names?
+> **Rationale (if given):** Keep the Codex adapter concrete and unambiguous for harness-specific actions without weakening the previously approved load semantics.
 
 ### Task 1: Update the Codex instructions surface for dispatch, warm-agent lifecycle, and load semantics
 **Depends on:** *(none)*
@@ -84,3 +88,4 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] Confirmed the ownership boundary between shared workflow text and Codex-specific harness adapters.
 - [x] Added the Codex-specific delegation, warm-agent lifecycle, explicit instructions-load rules, and renamed the Codex reference to match its broader role.
 - [x] Updated the root contributor guidance after integration review surfaced the stale `<harness>-tools.md` naming pattern; no further consistency edits were needed.
+- [x] Polished the Codex action map to name concrete Codex tools (`request_user_input`, `update_plan`, `spawn_agent`, `send_input`) and restored the explicit load/inventory wording that the local follow-up edit had softened.

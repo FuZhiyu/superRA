@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-22 (Task 1 / PR open)
+**Last updated:** 2026-04-22 (Task 1 / PR polish)
 **Status:** Completed
 
 ---
@@ -27,6 +27,9 @@
   load `references/codex-instructions.md` whenever they load the master
   skill, so the Codex instructions surface is no longer only implied by
   the harness-adapter note.
+- The Codex action map now uses concrete Codex tool names instead of
+  abstract placeholders: `request_user_input`, `update_plan`,
+  `spawn_agent(...)`, and `send_input`.
 
 ### Notes
 - Existing shared workflow files already carried the general
@@ -36,3 +39,6 @@
   reference pattern and names `codex-instructions.md` explicitly.
 - Draft PR [#19](https://github.com/FuZhiyu/superRA/pull/19) is open
   against `main` from `analysis/codex-agent-dispatch-preference`.
+- The local wording pass briefly softened the explicit Codex load rule
+  and dropped `codex-superra-setup` from the `using-superRA` inventory;
+  both were restored in the polish edit.
