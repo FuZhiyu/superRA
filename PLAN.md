@@ -1,20 +1,20 @@
 # Workflow Frontier Resolver Plan
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. This is a package-design change, not a data-analysis task. Task statuses describe the current workflow frontier; do not mark tasks `APPROVED` until a reviewer has actually approved them.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Load `skill-creator` before editing any `skills/*/SKILL.md`. This is a package-design change, not a data-analysis task. Task statuses describe the current workflow frontier; do not mark tasks `APPROVED` until a reviewer has actually approved them.
 
-**Objective:** Centralize partial-workflow and mixed-state handling in `skills/using-superRA/references/main-agent.md` so workflow skills can compose around a single frontier resolver instead of carrying duplicated re-entry contingencies.
+**Objective:** Redesign the Workflow Frontier Resolver so it teaches a small reusable mechanism for workflow re-entry instead of a lengthy taxonomy of contingency outcomes.
 
-**Methodology:** Add a main-agent frontier protocol over existing durable facts, then replace duplicated resume/re-entry prose in workflow skills with pointers to that resolver while preserving local phase gates.
+**Methodology:** Keep only the runtime guidance agents are unlikely to infer reliably: the canonical workflow map, the adaptability principle, the durable evidence to inspect, the decision object to return, the affected-task closure rule, owner routing, and safety invariants. Remove contingency-tree prose and duplicated phase-selection logic from workflow skills.
 
 **Data Inventory:** Not applicable. This change edits package documentation and skill references only.
 
-**Conventions:** Preserve one source of truth per concern: main-agent reference owns cross-workflow entry selection; workflow skills own local mechanics; `handoff-doc` owns document state semantics; `agent-orchestration` owns dispatch and review-loop mechanics.
+**Conventions:** Preserve one source of truth per concern: `using-superRA` owns cross-stage overview and skill loading; `main-agent.md` owns main-agent autonomy and re-entry mechanism; workflow skills own local phase gates; `handoff-doc` owns document state semantics; `agent-orchestration` owns dispatch and review-loop mechanics.
 
-**Output:** Updated workflow/reference docs plus this retroactive `PLAN.md` and `RESULTS.md` handoff pair.
+**Output:** Updated runtime skill/reference docs plus this `PLAN.md` and `RESULTS.md` handoff pair.
 
-**Expected Results / Hypotheses:** Agents can resume safely from mixed branch states without collapsing the branch into one global state label or reworking unrelated approved tasks.
+**Expected Results / Hypotheses:** Agents should understand the PLAN -> IMPLEMENT -> INTEGRATE cycle, why re-entry is adaptive, and how to compute the next safe frontier without needing an enumerated scenario tree. The resolver's value added should be limited to evidence discipline, affected-frontier calculation, workflow-owner routing, and non-negotiable gates.
 
-**Sensitivity Analysis:** Verify the acceptance case where Task 3 changes after implementation and refactor: only Task 3 plus affected downstream tasks lose local validity, unrelated approved tasks remain preserved, rollup milestones are unchecked only where false, and global gates still rerun before merge / PR.
+**Sensitivity Analysis:** Verify the same mixed-state acceptance case as before: when a completed task changes after implementation or integration, only the changed task plus affected downstream dependents lose local validity, unrelated approved work remains preserved, rollup milestones are unchecked only where false, and global gates still rerun before merge / PR.
 
 **Pipeline:** Not applicable. Verification is static documentation audit plus `git diff --check`.
 
@@ -22,8 +22,8 @@
 
 ## Workflow Status
 
-- [x] **Plan approved** - researcher supplied and approved the implementation handoff plan in chat.
-- [x] **Execution complete** - all implementation tasks are reviewer-approved; static verification passed.
+- [x] **Plan approved** - researcher requested the material redesign toward mechanisms over contingency prose on 2026-04-23.
+- [ ] **Execution complete** - unchecked because the approved implementation no longer matches the revised design target.
 - [ ] **Drift tests created** - not yet reached; documentation/package integration gate remains pending.
 - [ ] **Refactored** - not yet reached; integration review remains pending.
 - [ ] **Docs finalized** - not yet reached; this RESULTS.md is Stage 1 handoff state.
@@ -36,10 +36,11 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 ### Repo root
 - `/AGENTS.md`: contributor-facing entry point. It says superRA internal changes should be evaluated against adaptive/composable workflow design, DRY ownership, lean agents with rich references, and skill-authoring discipline when editing `skills/*/SKILL.md`.
 - `/CLAUDE.md`: currently modified in this worktree as part of the broader contributor-guide cleanup. Preserve that outstanding change and do not conflate it with the frontier-resolver task.
-- `/README.md`: user-facing project design belongs there; this task does not duplicate README-level product exposition into runtime skills.
+- `/README.md`: user-facing project design belongs there. Runtime skills may carry a concise operational overview only where agents actually load it.
 
 ### Relevant skill/reference files
-- `skills/using-superRA/references/main-agent.md`: owns main-agent session start, autonomy, direct mode, and now cross-workflow frontier resolution.
+- `skills/using-superRA/SKILL.md`: owns the runtime skill inventory, Skill-Load Manifest, and should carry the compact canonical workflow/adaptability overview loaded by all superRA agents.
+- `skills/using-superRA/references/main-agent.md`: owns main-agent session start, autonomy, direct mode, and the re-entry mechanism.
 - `skills/planning-workflow/SKILL.md`: owns plan creation and the material plan-change protocol, including which task-local statuses and rollup milestones are invalidated.
 - `skills/implementation-workflow/SKILL.md`: owns implementation, review, and reproducibility mechanics after the resolver selects an implementation/review frontier.
 - `skills/integration-workflow/SKILL.md`: owns Phase A-D integration mechanics after the resolver selects an integration/documentation/finalization frontier.
@@ -47,7 +48,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 - `skills/handoff-doc/references/plan-anatomy.md`: owns task-block and workflow-status semantics for handoff docs.
 
 ### Not walked
-- `tests/`, `hooks/`, `scripts/`, and package metadata were not in the planned diff and were not needed for this documentation-design change.
+- `tests/`, `hooks/`, `scripts/`, and package metadata are not in the planned diff unless verification shows they are needed.
 
 ## Decisions
 
@@ -63,108 +64,104 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 > **Question asked:** Should the already-implemented change be recorded in superRA handoff docs?
 > **Rationale (if given):** The package should dogfood its own workflow state discipline.
 
+> **User decision (2026-04-23):** Redesign the resolver around mechanisms over contingency plans.
+> **Question asked:** Should the lengthy resolver be narrowed to guidance agents cannot reliably infer themselves?
+> **Rationale (if given):** The current resolver reads like a condition-by-condition scenario tree. This affects Tasks 1-4, clears their implementation/review validity, and unchecks `Execution complete`; the implementation must now add the missing runtime workflow/adaptability overview and keep only evidence discipline, affected-frontier calculation, owner routing, and safety gates.
+
 ---
 
-### Task 1: Add Main-Agent Frontier Resolver
+### Task 1: Add Runtime Workflow Overview and Resolver Value Proposition
 **Depends on:** *(none)*
-**Review status:** APPROVED
+**Review status:** *(not started)*
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; documentation/reference edit.
-**Input:** User handoff plan; `skills/using-superRA/references/main-agent.md`.
-**Output:** `skills/using-superRA/references/main-agent.md`.
+**Input:** `README.md`, `AGENTS.md`, `skills/using-superRA/SKILL.md`, `skills/using-superRA/references/main-agent.md`.
+**Output:** Concise runtime overview plus a clear statement of what the resolver adds.
 
-- [x] **Step 1: Add resolver section**
+- [ ] **Step 1: Add the loaded overview**
 
-Add a concise `Workflow Frontier Resolver` section to the main-agent reference.
+Add a compact PLAN -> IMPLEMENT -> INTEGRATE overview and adaptability statement to the runtime surface agents actually read, preferably `skills/using-superRA/SKILL.md`. Keep it procedural and avoid duplicating README-owned product explanation.
 
-- [x] **Step 2: Define resolver over durable facts**
+- [ ] **Step 2: Define the resolver's value added**
 
-Define the resolver as a protocol over existing durable facts: `PLAN.md`, `RESULTS.md`, task dependencies, `Review status`, `Integration status`, `## Workflow Status`, review blockquotes, `## Upstream Intent`, and git status/log. Do not introduce a new durable schema or `Current state` field.
+State that the resolver exists to make agents do four things consistently: inspect durable evidence, compute the affected task frontier while preserving unrelated approved work, route to the workflow that owns the earliest invalid layer, and enforce non-negotiable gates before advancement.
 
-- [x] **Step 3: Normalize frontier categories**
+- [ ] **Step 3: Separate mechanism from examples**
 
-Include the categories `needs plan repair`, `needs implementation`, `awaiting review`, `needs revise/adjudication`, `needs validation/completion`, `needs integration`, `needs documentation`, `ready for merge`, `preserved-approved`, and `inconsistent`.
+Keep the resolver's mechanism in `main-agent.md`; avoid named state taxonomies or long scenario examples unless a specific guard is otherwise unpredictable.
 
-- [x] **Step 4: Encode mixed-state and rollup rules**
-
-State that mixed state is normal, preserved-approved tasks are not reworked because a rollup was unchecked, and unchecked rollups are evidence rather than commands to redo every task.
-
-- [x] **Step 5: Add required guarantees**
-
-Add guarantees for review approval before advancement, logging user decisions before action, current handoff docs before status reports, blocking review item handling, and merge / PR only after integration, documentation, and freshness gates are valid.
-
-### Task 2: Simplify Workflow Re-Entry Prose
+### Task 2: Replace Contingency Taxonomy with a Frontier Mechanism
 **Depends on:** Task 1
-**Review status:** APPROVED
+**Review status:** *(not started)*
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; documentation/reference edit.
-**Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`.
-**Output:** Updated workflow skills that delegate cross-workflow entry selection to the main-agent resolver.
+**Input:** `skills/using-superRA/references/main-agent.md`.
+**Output:** Shorter resolver that returns a decision object and selects the next owner by walking the canonical workflow order.
 
-- [x] **Step 1: Keep planning mechanics local**
+- [ ] **Step 1: Keep the evidence contract**
 
-Update `planning-workflow` so it keeps the material plan-change protocol and status-clearing mechanics, then points post-edit resume decisions to the Workflow Frontier Resolver.
+Retain the durable facts agents must read: git status/log, PLAN/RESULTS presence and consistency, workflow rollups, decisions, task dependencies, task-local statuses, review notes, upstream intent, and current results.
 
-- [x] **Step 2: Delegate implementation resume selection**
+- [ ] **Step 2: Keep the decision object**
 
-Update `implementation-workflow` so it treats `## Workflow Status` and task statuses as frontier evidence and continues locally only for implementation/review/adjudication or validation/completion frontiers.
+Return the same practical decision shape: affected tasks, preserved-approved tasks, invalidated milestones, next workflow owner/entry layer, and any required researcher stop point.
 
-- [x] **Step 3: Simplify integration entry prose**
+- [ ] **Step 3: Replace state labels with ordered reasoning**
 
-Update `integration-workflow` so the main-agent resolver selects Phase A-D entry while the integration skill keeps local gates, freshness checks, doc review, and merge/PR mechanics.
+Replace the `needs ...` taxonomy with a canonical-order procedure: repair/log plan changes first; compute the changed-task closure; preserve unaffected local statuses; choose the earliest invalid layer across planning, implementation/review, validation/completion, integration, documentation, and final merge/PR.
 
-- [x] **Step 4: Keep orchestration scoped to selected frontier**
+- [ ] **Step 4: Keep only safety invariants**
 
-Update `agent-orchestration` so it owns dispatch and review loops inside a selected frontier rather than choosing the workflow phase.
+Retain explicit guards where unpredictable behavior is likely: no unlogged material user decision, no new global `Current state` field, no clearing unrelated task statuses, no integration before implementation validation and logged disposition, and no merge/PR before integration, documentation, and freshness gates.
 
-### Task 3: Clarify Handoff-Doc State Semantics
-**Depends on:** Task 1
-**Review status:** APPROVED
+### Task 3: Simplify Workflow Call Sites Around the Mechanism
+**Depends on:** Task 2
+**Review status:** *(not started)*
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; documentation/reference edit.
-**Input:** `skills/handoff-doc/references/plan-anatomy.md`.
-**Output:** Clarified handoff-doc status semantics in `plan-anatomy.md`.
+**Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`.
+**Output:** Workflow docs that point to the resolver for cross-workflow re-entry while preserving local gates.
 
-- [x] **Step 1: Define task statuses as local validity markers**
+- [ ] **Step 1: Keep local ownership boundaries**
 
-State that `Review status` and `Integration status` are task-local validity markers.
+Ensure planning owns plan edits/status invalidation, implementation owns review/reproducibility/completion, integration owns drift/refactor/docs/merge gates, orchestration owns dispatch mechanics, and handoff-doc owns status semantics.
 
-- [x] **Step 2: Define workflow checkboxes as rollups**
+- [ ] **Step 2: Remove duplicated entry-selection prose**
 
-Clarify that `## Workflow Status` checkboxes summarize task-local markers plus required global gates.
+Search for resume/re-entry/frontier/skip/status wording that restates the resolver. Replace duplicated phase-selection prose with pointers to the mechanism, while keeping local phase gate instructions.
 
-- [x] **Step 3: Preserve unrelated local status**
+- [ ] **Step 3: Preserve standalone utility semantics**
 
-Add the rule that invalidating a rollup does not clear unrelated task-local statuses.
+Make sure `handoff-doc` and other utility/domain skills remain usable directly and do not depend on a main-agent scenario tree.
 
-### Task 4: Audit and Tighten References
-**Depends on:** Task 2, Task 3
-**Review status:** APPROVED
+### Task 4: Audit Against Adaptive-Composable Design
+**Depends on:** Task 1, Task 2, Task 3
+**Review status:** *(not started)*
 **Integration status:** *(not started)*
 
 **Script:** Static documentation audit.
-**Input:** Modified skill/reference files.
+**Input:** Modified skill/reference files and contributor design checklist.
 **Output:** Verified diff and audit notes in `RESULTS.md`.
 
-- [x] **Step 1: Search for duplicated state logic**
+- [ ] **Step 1: Run design-text search**
 
-Search for duplicated resume, re-entry, skip, frontier, and workflow-status logic across the modified workflow/reference files.
+Search modified files for contingency-heavy phrases and old taxonomy labels: `needs plan repair`, `needs implementation`, `awaiting review`, `needs validation`, `if .* then`, `under .* condition`, `Current state`, `state machine`, `skip`, `resume`, `re-entry`, and similar wording.
 
-- [x] **Step 2: Replace duplicated entry selection**
+- [ ] **Step 2: Verify overview placement**
 
-Replace broad duplicate entry-selection prose with pointers to `main-agent.md` unless the prose describes local phase mechanics.
+Confirm the canonical workflow overview and adaptability principle are present in a loaded runtime surface, not only in README or AGENTS.
 
-- [x] **Step 3: Verify no new durable state field**
+- [ ] **Step 3: Verify mechanism-only resolver**
 
-Confirm the change uses the existing durable facts and does not add a new `Current state` field or state-machine schema.
+Check the resolver against the value-added list: durable evidence, affected frontier/preserved work, owner routing, and safety gates. Remove anything that is just a scenario agents can infer from the canonical map.
 
-- [x] **Step 4: Verify scope boundaries**
+- [ ] **Step 4: Verify ownership boundaries**
 
-Confirm domain-neutral cleanup is not mixed into this change.
+Confirm the diff respects the AGENTS.md ownership table and does not put workflow choreography, dispatch mechanics, handoff-doc mechanics, or README-owned explanation in the wrong owner.
 
-- [x] **Step 5: Run diff hygiene check**
+- [ ] **Step 5: Run diff hygiene check**
 
 Run `git diff --check`.
