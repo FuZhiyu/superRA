@@ -1,6 +1,6 @@
 # Semantic Sync Quality Standards
 
-Shared gated checklist for workflow Sync, sync review, and standalone semantic-merge. The canonical procedure (repo-state grounding, intent research with role classification, resolution planning, research-meaningful escalation, stale-reference sweep) lives in `semantic-merge/SKILL.md §Shared Procedure`. Commit-shape constraints and format specs live in the owning mode references (`workflow-sync-author.md`, `standalone-merge.md`). This reference carries only the gated checklist both modes walk.
+Shared gated checklist for workflow Sync, sync review, and standalone semantic-merge. The canonical procedure (repo-state grounding, intent investigation with role classification, resolution planning, intent-changing escalation, stale-reference sweep) lives in `semantic-merge/SKILL.md §Shared Procedure`. Commit-shape constraints and format specs live in the owning mode references (`workflow-sync-author.md`, `standalone-merge.md`). This reference carries only the gated checklist both modes walk.
 
 ## Gated Checklist
 
@@ -22,9 +22,9 @@ Walk every item. `[BLOCKING]` items must be satisfied for the sync to be accepte
 - `[BLOCKING]` Standalone semantic-merge completes requested semantic propagation commits when the caller asked for full integration rather than sync-only.
 - `[BLOCKING]` Post-sync obligations are recorded in `## Sync Map`, task-local `**Sync impact:**`, the standalone merge record, or the sync commit body.
 
-**Research integrity:**
+**Intent integrity:**
 
-- `[BLOCKING]` Research-meaningful choices were escalated, logged per `handoff-doc §User Decisions Log`, and implemented as stated.
+- `[BLOCKING]` Intent-changing choices were escalated, logged per `handoff-doc §User Decisions Log`, and implemented as stated.
 - `[BLOCKING]` Data-discipline artifacts and drift tests were preserved.
 - `[BLOCKING]` Meaningful result changes were not silently accepted or re-expected.
 
@@ -41,4 +41,4 @@ Walk every item. `[BLOCKING]` items must be satisfied for the sync to be accepte
 - `[BLOCKING]` Stale-reference sweep covered labels, paths, docs, and generated outputs — not just absence of conflict markers.
 - `[BLOCKING]` Targeted checks were run or explicitly reported as not applicable.
 - `[BLOCKING]` Generated outputs are either regenerated in standalone mode or listed as post-sync obligations in workflow mode.
-- `[BLOCKING]` Dirty-state stash (when used) was reported in the status return so the researcher can restore it.
+- `[BLOCKING]` Dirty-state stash (when used) was reported in the status return so the user can restore it.

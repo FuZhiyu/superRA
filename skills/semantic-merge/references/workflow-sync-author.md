@@ -1,6 +1,6 @@
 # Workflow Sync Author Mode
 
-Use when `integration-workflow` dispatches a generic sync author to bring the current branch onto a confirmed base. Also load `sync-quality.md` for the gated checklist. Walk the Shared Procedure in `semantic-merge/SKILL.md` (repo-state grounding, intent research with role classification, resolution plan, research-meaningful escalation, stale-reference sweep) — this reference only carries mode-specific content.
+Use when `integration-workflow` dispatches a generic sync author to bring the current branch onto a confirmed base. Also load `sync-quality.md` for the gated checklist. Walk the Shared Procedure in `semantic-merge/SKILL.md` (repo-state grounding, intent investigation with role classification, resolution plan, intent-changing escalation, stale-reference sweep) — this reference only carries mode-specific content.
 
 ## Inputs
 
@@ -16,7 +16,7 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing 
 
 ## Mode-Specific Process
 
-1. Run the requested sync operation after intent research. For the normal workflow path, merge `BASE_REF` into the current branch.
+1. Run the requested sync operation after intent investigation. For the normal workflow path, merge `BASE_REF` into the current branch.
 2. Write the branch-level `## Sync Map` in `PLAN.md` when there is material overlap, a conflict, a user decision, sync-review carryover, or a post-sync obligation. Omit it for no-op or trivial syncs with no obligations.
 3. Add task-local `**Sync impact:**` annotations only to task blocks that need task-specific propagation during Integrate. Keep them short and point back to the relevant Sync Map cluster.
 4. **Land exactly one sync commit.** Include code, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations in the same commit.
@@ -72,7 +72,7 @@ Return one of:
 
 - `DONE`: sync commit landed and is ready for sync review.
 - `DONE_WITH_CONCERNS`: sync landed, but non-blocking concerns remain for the reviewer or Integrate.
-- `NEEDS_CONTEXT`: missing upstream context or a research-owned decision is needed.
+- `NEEDS_CONTEXT`: missing upstream context or a user decision is needed.
 - `BLOCKED`: the sync cannot proceed safely.
 
 Report the sync commit SHA, Sync Map location or why none was needed, task-local Sync impact annotations added, stash status (if any), checks run, and post-sync obligations.
