@@ -28,7 +28,7 @@ Default mode dispatches a fresh subagent per task. Each task gets one comprehens
    a. Dispatch implementer subagent. Answer context questions, re-dispatch if needed.
    b. Dispatch reviewer subagent (one comprehensive pass).
    c. **APPROVE** → update plan file + commit, next task. **REVISE** → fix `[BLOCKING]` findings → narrow re-review (cited fixes + dependent findings). Loop until APPROVE, then update plan file + commit.
-3. When no tasks remain → verify pipeline + reproducibility (Step 3).
+3. When no tasks remain, or the resolver returns `needs validation/completion` → verify pipeline + reproducibility (Step 3).
 4. Present Step 4 completion menu; dispatch `integration-workflow` on merge/PR.
 
 ### Step 0: Branch Check
@@ -70,7 +70,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed to Step 1.
 ### Step 1: Load and Review Plan
 
 1. Read `PLAN.md` and `RESULTS.md`. `PLAN.md` is the task tracker (`superRA:planning-workflow §PLAN.md Is the Task Tracker`); `TodoWrite` mirrors it as a transient session view, not a substitute.
-2. **Read `## Workflow Status` and per-task status lines as frontier evidence.** If the main agent has not already resolved the frontier for this invocation, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver now. Continue in this workflow only for a `needs implementation`, `awaiting review`, or `needs revise/adjudication` frontier; for every other frontier, follow the resolver's selected owner and stop point.
+2. **Read `## Workflow Status` and per-task status lines as frontier evidence.** If the main agent has not already resolved the frontier for this invocation, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver now. Continue in this workflow only for a `needs implementation`, `awaiting review`, `needs revise/adjudication`, or `needs validation/completion` frontier; for every other frontier, follow the resolver's selected owner and stop point. For `needs validation/completion`, skip task dispatch unless task statuses regressed and start at Step 3 / Step 4 so all-approved work is verified and disposition-logged before integration can be selected.
 3. **Load the active domain skill(s) following the manifest** Any task-specific helper skills named in PLAN.md's header — load those too. Subagents load these same skills per `superRA:using-superra` §Skill-Load Manifest at dispatch time; the orchestrator loads them in-session because orchestrator judgment happens outside any subagent.
 4. **Read PLAN.md's `## Project Conventions` section** (anatomy: `handoff-doc/references/plan-anatomy.md` §Project Conventions). If the section is missing, empty, or stale, walk and populate it now — commit before dispatching subagents.
 5. Review PLAN.md critically — identify any questions or concerns:
