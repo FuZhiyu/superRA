@@ -24,7 +24,9 @@ After cross-session detection, **load `superRA:handoff-doc`**. The main agent lo
 
 ## Workflow Frontier Resolver
 
-Before entering a workflow, resuming after interruption, or reacting to a changed plan, derive the current frontier from durable facts. Mixed state is normal: some tasks may remain fully approved and integrated while changed tasks and their downstream dependents roll back. The resolver is a decision procedure, not a catalog of named outcomes.
+Before entering a workflow, resuming after interruption, or reacting to a changed plan, resolve the next safe entry point from durable facts. Mixed state is normal: some tasks may remain approved while changed tasks and their downstream dependents roll back.
+
+The resolver diagnoses and routes. It does not perform the plan edit, implementation pass, integration pass, or merge itself; the workflow that owns the selected layer runs its local protocol.
 
 **Read facts first:**
 
@@ -36,10 +38,10 @@ Before entering a workflow, resuming after interruption, or reacting to a change
 
 **Compute the affected frontier:**
 
-1. Identify the changed or untrusted starting points from the durable facts: explicit user scope change, dirty or recent task-file edits, unchecked task steps, omitted / placeholder / cleared task status, active review notes, failed or missing reproducibility evidence, unchecked workflow rollups, or a requested final action.
-2. If `PLAN.md` / `RESULTS.md` are missing, untracked, structurally incomplete, or contradicted by an unlogged material user decision, route to `planning-workflow` before implementation or integration work. Material plan changes use `planning-workflow §User Feedback and Changing Plans`.
-3. For each changed task, include transitive downstream dependents whose inputs, outputs, or assumptions may have shifted. Preserve task-local `Review status` / `Integration status` for unrelated approved tasks. Document any downstream exemption in `## Decisions`.
-4. Treat `## Workflow Status` checkboxes as rollup evidence. Uncheck boxes whose guarantee is false, but do not clear unrelated task-local statuses just because a rollup is unchecked.
+1. First check whether planning must run. If `PLAN.md` / `RESULTS.md` are missing, untracked, structurally incomplete, or contradicted by an unlogged material user decision, enter `planning-workflow` before implementation or integration work. Material scope, objective, input, output, methodology, or task-graph changes use `planning-workflow §User Feedback and Changing Plans`; after that protocol updates the docs, run this resolver again.
+2. Identify the changed or untrusted starting points from the durable facts: explicit user scope change, dirty or recent task-file edits, unchecked task steps, omitted / placeholder / cleared task status, active review notes, failed or missing reproducibility evidence, unchecked workflow rollups, or a requested final action.
+3. For each changed task, include downstream dependents whose inputs, outputs, or assumptions may have shifted. Preserve task-local `Review status` / `Integration status` for unrelated approved tasks. If a downstream task is unaffected, document the exemption in `## Decisions`.
+4. Treat `## Workflow Status` checkboxes as rollups, not task state. If a checked milestone no longer matches the task evidence or required global gate, that milestone is invalid. The owning workflow or plan-change protocol should uncheck it and record why; unrelated task-level statuses remain valid.
 5. If durable facts disagree in a way you cannot repair mechanically, stop under §The Three Pause Classes and log the answer before acting.
 
 **Return the decision:**
@@ -52,11 +54,11 @@ Before entering a workflow, resuming after interruption, or reacting to a change
 
 **Choose the next safe action:**
 
-1. Walk the canonical workflow order: plan repair or plan-change logging -> implementation / review -> reproducibility verification -> `Execution complete` box flip -> implementation-workflow Step 4 disposition -> integration -> documentation -> final merge / PR.
+1. Compare the decision with the canonical workflow order: plan repair or plan-change logging -> implementation / review -> reproducibility verification -> `Execution complete` box flip -> implementation-workflow Step 4 disposition -> integration -> documentation -> final merge / PR.
 2. Enter the earliest invalid layer for the affected frontier. Invoke the workflow skill that owns that layer; the workflow then runs its local mechanics and gates.
-3. When the selected layer is implementation / review, dispatch or review only tasks whose dependencies are satisfied and whose local status is not valid for that layer.
-4. When all affected implementation tasks are approved but reproducibility, `Execution complete`, or the Step 4 disposition is missing, enter `implementation-workflow` at Step 3 / Step 4. A current integration / PR request supplies intent only after that disposition is logged.
-5. When the selected layer is integration or later, scope authoring and fix work to the affected frontier while still running required global gates before merge / PR.
+3. For implementation or review, work only on tasks whose dependencies are satisfied and whose local status is not valid for that layer.
+4. If all affected implementation tasks are approved but reproducibility, `Execution complete`, or the Step 4 disposition is missing, enter `implementation-workflow` at Step 3 / Step 4. A current integration / PR request supplies intent only after that disposition is logged.
+5. For integration or later layers, scope authoring and fix work to the affected frontier while still running required global gates before merge / PR.
 
 **Safety invariants:**
 
