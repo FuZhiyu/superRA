@@ -144,7 +144,7 @@ If it is unclear whether an answer counts as a decision worth logging: if acting
 
 The `## Sync Map` section bridges Sync and Integrate. It answers the branch-wide question, "what did the semantic sync learn, resolve, and leave for post-sync integration?" Task-local `**Sync impact:**` fields answer the narrower question, "what does this specific task need to know?"
 
-**Ownership:** The generic sync author creates or updates `## Sync Map` and affected task-local `**Sync impact:**` fields when there is material overlap, a conflict, a user decision, sync-review carryover, or a post-sync obligation. The generic sync reviewer edits only `**Sync review status:**` and `> **Sync review notes:**` in the map. Integration reviewers and implementers read the map and task-local pointers but do not rewrite them unless their dispatch explicitly assigns the affected task. The orchestrator removes satisfied Sync scaffolding at Integrate closeout because it is temporary, not a later-phase record.
+**Ownership:** The generic sync author creates or updates `## Sync Map` and affected task-local `**Sync impact:**` fields when there is material overlap, a conflict, a user decision, sync-review carryover, or a post-sync obligation. The generic sync reviewer edits only `**Sync review status:**` and `> **Sync review notes:**` in the map, except when no Sync Map exists yet and a finding must be recorded — in that case the reviewer creates a minimal Sync Map with sync-review notes before returning REVISE (see `semantic-merge/references/workflow-sync-reviewer.md`). Integration reviewers and implementers read the map and task-local pointers but do not rewrite them unless their dispatch explicitly assigns the affected task. The orchestrator removes satisfied Sync scaffolding at Integrate closeout because it is temporary, not a later-phase record.
 
 **Lifecycle:**
 
@@ -155,55 +155,13 @@ The `## Sync Map` section bridges Sync and Integrate. It answers the branch-wide
 5. Integrate consumes task-local Sync impact plus the referenced Sync Map clusters: the integration reviewer turns open obligations into task-local review notes; refactor implementers satisfy accepted obligations.
 6. Integrate closeout removes the section and satisfied task-local Sync impact fields in the same commit that flips `Integrated`.
 
-**Format:**
-
-```markdown
-## Sync Map
-
-**Base branch:** `<base-ref>`
-**Pre-sync merge base:** `abc1234`
-**Synced base head:** `def5678`
-**Incoming range:** `abc1234..def5678`
-**Sync commit:** `fedcba9`
-**Sync review status:** `IMPLEMENTED`
-
-### Branch Summary
-
-**Current branch intent:** Update integration workflow semantics.
-**Incoming intent:** Upstream moved shared discipline into `using-superRA`.
-**Resolution thesis:** Preserve the upstream ownership move and keep this branch's integration step wording where compatible.
-
-### Sync Clusters
-
-> **Sync cluster `sync-shared-discipline` (2026-04-22):** commits `1234abc`, `4567def`; paths `skills/using-superRA/SKILL.md`, `README.md`; affects Tasks 2, 3.
-> **Incoming intent:** Upstream deleted the duplicated `## Universal Principles` section and moved shared discipline into `using-superRA`.
-> **Sync resolution:** The sync commit preserved the upstream deletion and kept this branch's new integration step wording where it did not restore deleted content.
-> **Post-sync obligations:** Task 2 must update role references to consume the new wording; Task 3 must remove stale links to the deleted section.
-> **User decision:** None.
-
-> **Sync review notes (present only while REVISE is active):**
-> 1. [MAJOR] Task 2 is missing a task-local Sync impact pointer for `skills/using-superRA/SKILL.md`.
-```
-
-One blockquote cluster per sync cluster. Each cluster has five lines:
-
-- `Sync cluster <cluster-id> (YYYY-MM-DD)` naming the commits, paths, and affected task IDs.
-- `Incoming intent` stating in plain language what the incoming/base changes were trying to accomplish.
-- `Sync resolution` stating what the sync commit kept, dropped, or synthesized.
-- `Post-sync obligations` naming what Integrate still has to propagate, regenerate, review, or clean up.
-- `User decision` summarizing a logged decision or `None`.
+**Format:** see `semantic-merge/references/sync-map-format.md §Workflow Sync Map`.
 
 **Placement:** After `## Project Conventions` and optional `## Decisions`, before the separator that opens task blocks. Omit entirely until Sync surfaces a material change.
 
 ### Task-local Sync impact
 
-When a Sync cluster affects a task, add this compact field directly after `**Integration status:**`:
-
-```markdown
-**Sync impact:** Cluster `sync-shared-discipline` requires Task 2 to update role references to consume the `using-superRA` wording. Source: `PLAN.md ## Sync Map`.
-```
-
-The field is a pointer, not a duplicate merge record. It stays short so task-scoped integration agents see the relevant sync intention without loading full branch history.
+When a Sync cluster affects a task, add a compact `**Sync impact:**` field directly after `**Integration status:**`. **Format and removal rule:** see `semantic-merge/references/sync-map-format.md §Task-Local Sync Impact`.
 
 ## Task Block Anatomy
 

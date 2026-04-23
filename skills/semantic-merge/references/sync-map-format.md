@@ -30,7 +30,7 @@ Write `## Sync Map` in PLAN.md when there is material overlap, a conflict, a use
 > **Post-sync obligations:** <task IDs, stale paths, APIs, docs, generated outputs, tests, or review areas for Integrate>.
 > **User decision:** <summary or "None">.
 
-> **Sync review notes:** <present only while REVISE is active>
+> **Sync review notes (present only while REVISE is active):**
 > 1. [MAJOR] <specific unresolved sync issue, with file/path evidence>.
 ```
 
