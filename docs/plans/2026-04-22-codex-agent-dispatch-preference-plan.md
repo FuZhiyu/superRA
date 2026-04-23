@@ -90,7 +90,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 > **Question asked:** Build the sync mechanism now, or take a simpler copy-paste direct-mode reference first?
 > **Rationale (if given):** Unblock the immediate fix first; improve maintainability in a separate follow-up.
 >
-> **Integration note (2026-04-22):** Active follow-up execution continues in root `PLAN.md` / `RESULTS.md`; this archived pair remains the permanent record for the original dispatch-preference scope.
+> **Integration note (2026-04-22):** The post-archive direct-mode follow-up ultimately matured into `docs/plans/2026-04-22-direct-mode-role-references-plan.md` and `docs/plans/2026-04-22-direct-mode-role-references-results.md`; this archived pair remains the permanent record for the original dispatch-preference scope.
 
 ### Task 1: Update the Codex instructions surface for dispatch, warm-agent lifecycle, and load semantics
 **Depends on:** *(none)*

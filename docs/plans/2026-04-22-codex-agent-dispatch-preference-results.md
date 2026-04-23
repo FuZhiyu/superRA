@@ -74,9 +74,11 @@ explicitly. The permanent plan companion is
 - A post-archive follow-up identified a remaining direct-mode
   accessibility gap: the main agent still relied on raw
   `agents/implementer.md` / `agents/reviewer.md` in direct mode. That
-  follow-up is tracked in the root `PLAN.md` / `RESULTS.md` created
-  after this archived pair and is outside the scope of this permanent
-  record.
+  follow-up ultimately matured into
+  [2026-04-22-direct-mode-role-references-plan.md](./2026-04-22-direct-mode-role-references-plan.md)
+  and
+  [2026-04-22-direct-mode-role-references-results.md](./2026-04-22-direct-mode-role-references-results.md)
+  and is outside the scope of this permanent record.
 
 ## Reproducibility
 

@@ -88,6 +88,8 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 > **Integration note (2026-04-22):** Phase A uses the direct-mode assertions already added to `tests/check-harness-compatibility.sh` as the drift guard for this follow-up; `bash tests/check-harness-compatibility.sh` re-ran green on the current branch baseline before Phase B.
 >
 > **Integration note (2026-04-22):** The existing open PR still targets `main`, matching the earlier branch-level integration-base decision recorded in `docs/plans/2026-04-22-codex-agent-dispatch-preference-plan.md`. `origin/main` remained an ancestor of this branch during Phase B, so no mechanical merge commit was needed; the only cumulative-diff fix was trailing whitespace in `skills/using-superRA/references/main-agent.md`, after which `git diff --check addc9ca7fe1bdbedb080d92095facb649074c1e4..HEAD` and `bash tests/check-harness-compatibility.sh` both passed.
+>
+> **Integration note (2026-04-22):** Phase C moved this follow-up plan alongside its matured results at `docs/plans/2026-04-22-direct-mode-role-references-plan.md` and `docs/plans/2026-04-22-direct-mode-role-references-results.md`, matching the repo's existing permanent-record convention for completed branches.
 
 ### Task 1: Add skill-owned direct-mode role references and wire main-agent direct mode to them
 **Depends on:** *(none)*
