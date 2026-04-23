@@ -65,7 +65,7 @@ PY
 section "Phase B upstream-intent contract"
 bash tests/test-phase-b-upstream-intent-contract.sh
 
-section "Direct mode role mirrors"
+section "Direct mode role references"
 python3 - <<'PY'
 from pathlib import Path
 
@@ -82,7 +82,8 @@ for path, source in [
     text = Path(path).read_text(encoding="utf-8")
     lowered = text.lower()
     assert source in text, f"{path} must cite canonical source {source}"
-    assert "temporary manual mirror" in lowered, f"{path} must declare its temporary manual-mirror status"
+    assert "managed by superra codex-superra-setup" in lowered, f"{path} must declare generator ownership"
+    assert "temporary manual mirror" not in lowered, f"{path} must not claim manual-mirror status"
 PY
 
 section "Codex agent generation"

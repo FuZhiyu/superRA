@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import runpy
 import subprocess
 import tempfile
 import unittest
@@ -11,6 +12,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "skills" / "codex-superra-setup" / "scripts" / "sync_codex_agents.py"
+SCRIPT_NS = runpy.run_path(str(SCRIPT))
 
 
 class SyncCodexAgentsTests(unittest.TestCase):
@@ -56,8 +58,30 @@ class SyncCodexAgentsTests(unittest.TestCase):
                 unmanaged.read_text(encoding="utf-8"),
             )
 
-    def test_project_check_matches_committed_agents(self) -> None:
+    def test_project_check_matches_committed_generated_artifacts(self) -> None:
         self.run_script("--scope", "project", "--check")
+
+    def test_committed_direct_mode_refs_match_generator(self) -> None:
+        expected = SCRIPT_NS["render_all_direct_mode_refs"](REPO_ROOT)
+        for relative_path, content in expected.items():
+            self.assertEqual(
+                (REPO_ROOT / relative_path).read_text(encoding="utf-8"),
+                content,
+            )
+
+    def test_generated_direct_mode_refs_have_managed_headers(self) -> None:
+        expected = SCRIPT_NS["render_all_direct_mode_refs"](REPO_ROOT)
+        for relative_path, content in expected.items():
+            self.assertIn("Managed by superRA codex-superra-setup", content)
+            self.assertIn(
+                "<!-- Regenerate with: rerun superRA:codex-superra-setup -->",
+                content,
+            )
+            self.assertNotIn("temporary manual mirror", content.lower())
+            self.assertNotIn(
+                "skills/codex-superra-setup/scripts/sync_codex_agents.py",
+                content,
+            )
 
     def test_generated_agents_have_repo_agnostic_regenerate_hint(self) -> None:
         with tempfile.TemporaryDirectory() as home:
