@@ -62,13 +62,13 @@ else
     exit 1
 fi
 
-if assert_line_contains "$output" "$do_not_label" "rewrite\\|change\\|merge" "Forbids unilateral boundary rewrites"; then
+if assert_line_contains "$output" "$do_not_label" "rewrite\\|change\\|merge\\|recompose\\|recomposition\\|rename\\|reorder\\|combine\\|split\\|re-scop\\|unilateral" "Forbids unilateral task-structure rewrites"; then
     :
 else
     exit 1
 fi
 
-if assert_line_contains "$output" "$do_not_label" "heading\\|Script\\|Input\\|Output\\|boundary\\|task block\\|task\\|tasks\\|recompose" "Names the protected task boundary"; then
+if assert_line_contains "$output" "$do_not_label" "heading\\|Script\\|Input\\|Output\\|boundary\\|task block\\|task\\|tasks\\|recompose\\|recomposition\\|change shape\\|restructure\\|structural\\|combine\\|split\\|re-scop\\|rewrite the task boundary\\|unilateral" "Names the protected task structure or boundary"; then
     :
 else
     exit 1

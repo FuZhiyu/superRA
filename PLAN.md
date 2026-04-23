@@ -130,7 +130,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** The cumulative diff from Tasks 1-3, `tests/claude-code/run-skill-tests.sh`, `tests/claude-code/test-helpers.sh`, the existing Claude Code tests, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -145,3 +145,4 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `tests/claude-code/test-integration-task-shape-escalation.sh:56-62` is still too brittle to support the documented green fast suite on the current merged tree. Fresh evidence on this tree: after the latest Task 4 fix, `tests/claude-code/./run-skill-tests.sh` still failed with `Passed: 3`, `Failed: 1`, `STATUS: FAILED` because the `Do not:` line named the prohibited action ("Recompose Task 4 and Task 5 unilaterally inside integration-workflow") but the assertion still required one of a narrow keyword set (`heading|Script|Input|Output|boundary|task block|task|tasks|recompose`). That makes the smoke test reject semantically-correct answers that clearly forbid unilateral task-boundary rewrites but use a different surface form. Minimal allowed branch delta: keep the integration-stage escalation smoke test, but relax the protected-boundary assertion so it accepts current superRA language about structural task changes and unilateral recomposition, not just one wording family. Stale branch-side content that must not survive: line-level assertions that fail semantically-correct `Do not:` answers on the supported fast path.
+>    → implemented: broadened the brittle `Do not:` assertions to accept current superRA wording about structural task changes, task-boundary rewrites, and unilateral recomposition instead of only one narrow keyword family.
