@@ -91,6 +91,7 @@ Complete the following planning checks in order:
 
 - **Expose hidden assumptions early** - if a derivation will need positivity, interiority, monotonicity, or boundedness, state that in the map before tasks are drafted.
 - **Prefer interpretable notation** - a reviewer should know what a symbol is without chasing aliases. Conventional symbols are fine; arbitrary placeholders are not.
+- **Notation Conventions is a living record, not a one-time planning artifact** - when implementation introduces a symbol not yet in the table, the implementer inline-edits the Notation Conventions table BEFORE using the symbol in algebra, and commits the `PLAN.md` edit atomically with the derivation work. The table remains the authoritative cross-task source of symbol meanings throughout the workflow.
 - **Keep assumptions on primitives** - "assume `c > 0`" is weaker than naming the primitive restrictions that imply positive consumption. Prefer the latter.
 - **Plan verification up front** - do not leave numerical or special-case checks as an afterthought.
 - **Escalate methodology choices** - if the "right" utility form, equilibrium concept, or normalization depends on research intent, ask the researcher rather than choosing unilaterally.
