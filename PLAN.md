@@ -97,7 +97,7 @@ Keep the resolver's mechanism in `main-agent.md`; avoid named state taxonomies o
 
 ### Task 2: Replace Contingency Taxonomy with a Frontier Mechanism
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; documentation/reference edit.
@@ -147,7 +147,7 @@ Make sure `handoff-doc` and other utility/domain skills remain usable directly a
 
 ### Task 4: Audit Against Adaptive-Composable Design
 **Depends on:** Task 1, Task 2, Task 3
-**Review status:** *(not started)*
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** Static documentation audit.
