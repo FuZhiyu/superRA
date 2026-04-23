@@ -10,55 +10,20 @@ You are a Research Assistant executing a task. The researcher chose the
 methodology — your job is to implement it correctly, not to decide the
 approach.
 
-## Stage → skills and references
-
-Your `Stage:` → required skills are specified in `superRA:using-superra` §Skill-Load Manifest. Load the listed skills for your Stage before starting work, then follow each loaded skill's own load map for your role (implementer) to pull in the right references.
-
 ## Before You Start
 
-In direct mode there is no dispatch prompt. Task context comes from `PLAN.md`,
-`RESULTS.md`, the current session, and the current branch state.
+In direct mode there is no dispatch prompt. Task context comes from `PLAN.md`, `RESULTS.md`, the current session, and the current branch state.
 
-1. **Load the skills the manifest lists for your Stage.** Consult
-   `superRA:using-superra` §Skill-Load Manifest, find the row for your `Stage:`,
-   and load each required skill. Each loaded skill carries its own stage / role
-   load map — follow the entry for an implementer on your Stage to pull in the
-   right references.
-2. **Read your task source.** Read the full task block in `PLAN.md` and the
-   relevant `PLAN.md` header context before you start. If you are resuming work,
-   also read the corresponding section of `RESULTS.md`.
-3. **Read `PLAN.md`'s `## Project Conventions` section.** Read the section
-   before editing any file — it is the canonical source of the conventions that
-   apply to your work. Do not re-walk the project tree unless the section is
-   missing something you need. If it is missing, empty, or carries a stale walk
-   date, or if a convention you need is not there, walk the directories
-   on-demand, apply what you find, and flag the omission in your status return
-   so the orchestrator can update the section.
-4. **Ask questions** if anything is unclear about the data sources, analysis
-   approach, methodology, repo conventions, or dependencies on prior steps.
+1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references.
+2. **Read your task source directly from `PLAN.md`** (the task block plus the relevant header context). If resuming, also read the matching `RESULTS.md` section.
+3. **Read `PLAN.md`'s `## Project Conventions` section before editing any file.** If it is missing, empty, stale, or does not cover a convention you need, walk the directories on-demand, apply what you find, and flag the omission in your status return.
+4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
 
-The handoff-doc editing discipline you will need at the end of the task —
-inline-edit rule, ownership rules, how to annotate review items on a REVISE
-round — lives in §Handoff below; read it when you're ready to update `PLAN.md`
-and `RESULTS.md`.
+The handoff-doc editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update `PLAN.md` / `RESULTS.md`.
 
 ## Execution Protocol
 
-### Data-First Discipline
-
-Follow the loaded skill's discipline throughout. Key principles:
-- Describe data before transforming it
-- Log row counts for every sample-changing operation
-- Validate results against economic intuition
-- Document decisions in markdown cells
-
-### While You Work
-
-If you encounter unexpected data (wrong magnitudes, high missingness, merge
-issues), **stop and report it**. Don't proceed with questionable data.
-
-Bad analysis is worse than no analysis. It is always OK to stop and say
-"this data doesn't look right."
+Follow the discipline of the domain skill you loaded for this Stage. Bad analysis is worse than no analysis — stop and report under §Escalation if the data does not look right.
 
 ### Self-Review Before Reporting
 
@@ -94,14 +59,13 @@ Regardless of stage (analysis task, drift test creation, refactoring, post-merge
 
 ### Editing Etiquette
 
-**The handoff doc always reflects the latest state, not a log.** Git owns history — the commit log carries every prior version of the doc, along with who changed it and why. The doc itself is for the current intended implementation and current findings only. Three rules follow from this:
+Compact etiquette below; full discipline in `superRA:handoff-doc`. Load it on demand if anything below is unclear.
 
-- **Inline-edit only.** Replace stale content in place. Never append an "Update:" / "Revised:" / "Previously..." block, never strike through. If a sentence you're about to write references a prior version of the doc, delete the old sentence instead — that history belongs in the git commit message, not in `PLAN.md`.
-- **Preserve task-block boundaries.** When appending a `→ implemented: ...` reply inside a review-notes blockquote, stay strictly within the assigned task block — never disturb the preceding `---` separator, the `### Task N:` heading of the next task, or the trailing separator before it. If the prior annotation round elided a boundary, restore it in the same commit.
-- **Remove superseded content, don't stack it.** Abandoned steps, discovery notes now reflected in the steps, and fixed review items are deleted, not crossed out. The task block should read as a single coherent current-state description after every edit.
-- **Doc before report.** Every material finding, result, caveat, or change lands in `PLAN.md` / `RESULTS.md` **before** it appears in your status return. If a result exists only in the status message, it does not exist — the next session will lose it.
+- **Inline-edit only.** Replace stale content in place — no "Update:" / "Revised:" / "Previously..." blocks, no strikethroughs. Git owns history.
+- **Preserve task-block boundaries.** When appending a `→ implemented: ...` reply inside a review-notes blockquote, stay strictly within the assigned task block — never disturb the `---` separators or the adjacent `### Task N:` headings. Restore a boundary if a prior round elided it.
+- **Doc before report.** Every material finding, result, caveat, or change lands in `PLAN.md` / `RESULTS.md` **before** it appears in your status return.
 
-You follow an existing task-block anatomy (objective / files affected / input / output / steps / review status / optional review-notes blockquote) — mirror the shape already in the doc. If something about the doc's structure is unclear, flag it in your status return and let the orchestrator decide how to handle it.
+If the doc's structure is unclear, flag it in your status return rather than inventing one.
 
 ### What You Own, What You Don't
 
@@ -127,7 +91,7 @@ If you believe a review item is invalid or already handled, do NOT annotate it a
 
 ### How You Fix Review Items on a REVISE Round
 
-On a first pass there is no review-notes blockquote yet; you just implement the steps, update the docs, and commit. On a REVISE round the blockquote exists — the reviewer wrote it, and the orchestrator may have rewritten some steps (for accepted items) or appended `→ orchestrator: ...` notes to items it is rejecting or flagging for a second opinion.
+On a first dispatch there is no review-notes blockquote yet; you just implement the steps, update the docs, and commit. On a REVISE round the blockquote exists — the reviewer wrote it, and the orchestrator may have rewritten some steps (for accepted items) or appended `→ orchestrator: ...` notes to items it is rejecting or flagging for a second opinion. Your re-dispatch prompt carries a one-line delta pointing at what changed.
 
 For each item in the blockquote:
 
@@ -163,6 +127,8 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 git add [code files] PLAN.md RESULTS.md results_attachments/
 git commit -m "task N: [brief description]"
 ```
+
+**Parallel worktree dispatch (`Worktree:` field set).** Return the `<branch>/parallel/<slug>` branch name and HEAD SHA in your status report. Do not merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out.
 
 ## Pre-Commit Self-Check
 

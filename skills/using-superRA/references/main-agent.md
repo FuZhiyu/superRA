@@ -125,29 +125,14 @@ Every user decision produced at a stop point is written into `PLAN.md` per `hand
 
 ## Execution Modes
 
-For execution throughout the workflows, the main agent can dispatch subagent for implementation, or implement it itself. The subagent mode is the recommended mode and all the following workflows assume operations under the subagent mode. To use that, you must load the skill `superRA:agent-orchestration`.
+Subagent mode is the default — dispatch implementers and reviewers through `superRA:agent-orchestration`. Direct mode is a fallback: only for trivial tasks or when the user explicitly requests it, and you must announce the switch before proceeding.
 
-**Direct mode**: Only when the tasks are very straightforward, or the users requests, you can choose to work in the direct mode. You have to explicitly announce that you are going to follow the direct mode before proceed. In the direct mode:
+**Direct mode protocol:**
 
+- **Read the direct-mode role reference for the role you are playing.** `references/direct-mode-implementer.md` for an implementation step; `references/direct-mode-reviewer.md` for a review step. These are the skill-surface copies of the role protocol that direct mode can load across repos.
+- **The Skill-Load Manifest still drives loads.** Consult the manifest row for your Stage and load the listed skills/references in-session.
+- **Task context comes from `PLAN.md`, `RESULTS.md`, and the current session** — there is no dispatch prompt.
+- **Self-review gate, handoff-doc discipline, and verdict protocol all apply.** Walk the active domain skill's gated checklist before committing. Reviewer verdicts are still APPROVE / REVISE.
+- **Review is never skipped.** Either dispatch a reviewer subagent or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
 
-- **Read the direct-mode role reference for the role you are playing.** For an implementation step, read `references/direct-mode-implementer.md`. For a review step, read `references/direct-mode-reviewer.md`. These are the skill-surface copies of the role protocol that direct mode can load across repos.
-- **The Skill-Load Manifest still drives loads.** Consult the manifest row for your Stage and load the listed skills and references yourself in-session.
-- **The dispatch-prompt contract does not apply — there is no dispatch.** Task context comes from `PLAN.md`, `RESULTS.md`, and the current session; you do not write an `Additionally:` line to yourself.
-- **Self-review gate, handoff-doc edit discipline, and verdict protocol all apply.** Walk the active domain skill's gated checklist before committing. Update `PLAN.md` / `RESULTS.md` inline per the direct-mode role reference you loaded, or load `superRA:handoff-doc` if you need the full discipline. Reviewer verdicts are still APPROVE / REVISE even when you render them as your own conclusion.
-- **Review is never skipped.** If you implemented in direct mode, you still need a review pass — either dispatch a reviewer subagent for the review step, or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review. It is strongly recommended to use an independent reviewer rather than self-review.
-
-For **Codex agent**: MUST load `references/codex-instructions.md` immediately.
-
-Most importantly for Codex agents, when using `superRA` workflow, **treat that as an explicit user request for using subagents**.
-
-- When a workflow step says to dispatch an implementer or reviewer, spawn
-  `superra_implementer` or `superra_reviewer` rather than staying inline
-  because of the harness-default anti-delegation guidance. Spawn `superra` specific 
-  agents. You **must not** spwawn generic workers. 
-- Independent review is mandatory. After any implementation step,
-  dispatch `superra_reviewer` unless the user explicitly asked for no
-  subagents or Codex truly lacks agent support. If agent support is
-  unavailable, fall back to in-session reviewer mode and state that the
-  fallback was forced by the harness.
-  when the workflow allows it and the user requested it, the task is
-  trivial, or agent tools are unavailable.
+**Codex agents: MUST load `references/codex-instructions.md` immediately.** Codex-specific delegation, warm-agent lifecycle, and named-agent rules live there.
