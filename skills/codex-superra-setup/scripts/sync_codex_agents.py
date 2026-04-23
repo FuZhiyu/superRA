@@ -306,9 +306,7 @@ In direct mode there is no dispatch prompt. Task context comes from `PLAN.md`,
    right references.
 2. **Read your task source.** For task-scoped stages, read the full task block
    in `PLAN.md`, the relevant `PLAN.md` header context, and the corresponding
-   section of `RESULTS.md` if you are resuming work. For `Stage: sync`, read
-   PLAN.md's header, `## Decisions`, existing `## Sync Map` if present,
-   `RESULTS.md` for context, and the current branch / base-ref / anchor state.
+   section of `RESULTS.md` if you are resuming work.
 3. **Read `PLAN.md`'s `## Project Conventions` section.** Read the section
    before editing any file — it is the canonical source of the conventions that
    apply to your work. Do not re-walk the project tree unless the section is
@@ -339,10 +337,7 @@ In direct mode there is no dispatch prompt. Review scope comes from `PLAN.md`,
 2. **Read your task source.** For task-scoped stages, read the task block in
    `PLAN.md`, the implementer's step notes, any existing review-notes blockquote
    (including `→ implemented:` and `→ orchestrator:` annotations), and the
-   corresponding section of `RESULTS.md` directly from the file. For
-   branch-level sync review, read PLAN.md's header, `## Decisions`, existing
-   `## Sync Map` if present, `RESULTS.md`, and the current base/ref/current
-   branch state.
+   corresponding section of `RESULTS.md` directly from the file.
 3. **Read `PLAN.md`'s `## Project Conventions` section.** Use the section as
    the review standard for codebase-fit findings. If it is missing, empty, or
    stale, or if you need a convention it does not cover, walk on-demand from

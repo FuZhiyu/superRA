@@ -12,7 +12,7 @@ Workflow skill for the **INTEGRATE** phase of the superRA workflow. It takes a r
 ```
 Protect   -> create or refresh drift tests for key results
 Sync      -> bring the branch onto the current base via semantic-merge
-Integrate -> refactor, propagate sync obligations, and pass integration review
+Integrate -> refactor, propagate Sync impact obligations, and pass integration review
 Document  -> mature RESULTS.md and dispose of PLAN.md
 Finish    -> final freshness check, PR or fast-forward, and cleanup
 
@@ -34,13 +34,13 @@ Use `AskUserQuestion` (plain text if unavailable) only for legitimate stop point
 
 ## Dispatch Convention
 
-Load `superRA:agent-orchestration` before writing any dispatch prompt. Dispatch shape lives there; skill loads live in `superRA:using-superra` §Skill-Load Manifest.
+Load `superRA:agent-orchestration` before writing any dispatch prompt. Standard implementer/reviewer dispatch shape lives there; skill loads for those stages live in `superRA:using-superra` §Skill-Load Manifest.
 
 Role boundaries:
 
 - `Stage: drift-test` agents use `refactor-and-integrate` drift-test quality.
-- `Stage: sync` agent uses `semantic-merge`, lands the semantic sync commit, and writes `## Sync Map` when needed.
-- `Stage: integration` agents use `refactor-and-integrate` for post-sync quality and consume `## Sync Map`.
+- Sync uses generic sync author / sync reviewer agents that explicitly load `semantic-merge` mode references. Sync is branch-level and is not a normal task-scoped manifest stage.
+- `Stage: integration` agents use `refactor-and-integrate` for post-sync quality and consume task-local `**Sync impact:**` plus referenced `## Sync Map` clusters.
 - `Stage: documentation` agents use `handoff-doc` and `report-in-markdown`.
 
 ## Protect
@@ -68,7 +68,7 @@ Drift tests guard key results during Sync, Integrate, Finish, and future work.
 
 ## Sync
 
-Sync brings the analysis branch onto the current base before refactor starts. It is serialized: one sync agent, no parallelization.
+Sync brings the analysis branch onto the current base before refactor starts. It is serialized: one generic sync author followed by one generic sync reviewer, no parallelization.
 
 ### Step 1: Resolve the target base
 
@@ -111,36 +111,71 @@ BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 - `PRE_SYNC_BASE_SHA` is evidence for incoming intent: `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
 - `BASE_HEAD_SHA` is the post-sync governing baseline for Integrate: `BASE_HEAD_SHA..HEAD`.
 
-### Step 3: Dispatch the sync agent when needed
+### Step 3: Dispatch the sync author when needed
 
 If `git merge-base --is-ancestor "$BASE_HEAD_SHA" HEAD` succeeds, the branch is already synced. Record a no-op in the workflow notes if useful and proceed to Integrate.
 
-Otherwise dispatch one implementer:
+Otherwise dispatch one generic sync author:
 
 ```text
-Agent(subagent_type: "superRA:implementer"):
-  Stage: sync
+Agent(generic):
+  Role: sync author
+  Skills: semantic-merge
+  References:
+    - semantic-merge/references/workflow-sync-author.md
+    - semantic-merge/references/sync-quality.md
+    - semantic-merge/references/sync-map-format.md
+
   Task: Sync this analysis branch with <base-ref>
   Base branch: <base-ref>
   PRE_SYNC_BASE_SHA: <PRE_SYNC_BASE_SHA>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
   Incoming range: <PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    use semantic-merge to land exactly one semantic sync commit.
-    Write or update PLAN.md `## Sync Map` only when there is material
-    overlap, a conflict, a user decision, or a post-sync obligation.
-    Do not perform codebase refactor, generated-output refresh, drift-test
-    expectation updates, or project-doc audit. Return the sync commit SHA,
-    Sync Map status, checks run, and post-sync obligations.
+  Use semantic-merge workflow sync author mode. Land exactly one semantic
+  sync commit. Write branch-level PLAN.md `## Sync Map` only when there is
+  material overlap, a conflict, a user decision, sync-review carryover, or a
+  post-sync obligation. Add compact task-local `**Sync impact:**` annotations
+  to affected task blocks. Do not perform codebase refactor, generated-output
+  refresh, drift-test expectation updates, or project-doc audit. Return the
+  sync commit SHA, Sync Map status, task-local Sync impact annotations, checks
+  run, and post-sync obligations.
 ```
 
-If the sync agent returns `NEEDS_CONTEXT` or `BLOCKED` because a research-owned sync decision is required, the orchestrator asks the researcher, logs the decision, commits the log entry, and re-dispatches the sync agent with the decision context.
+If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a research-owned sync decision is required, the orchestrator asks the researcher, logs the decision, commits the log entry, and re-dispatches the sync author with the decision context.
+
+### Step 4: Dispatch the sync reviewer
+
+Before Integrate begins, dispatch one generic sync reviewer:
+
+```text
+Agent(generic):
+  Role: sync reviewer
+  Skills: semantic-merge
+  References:
+    - semantic-merge/references/workflow-sync-reviewer.md
+    - semantic-merge/references/sync-quality.md
+    - semantic-merge/references/sync-map-format.md
+
+  Task: Review the semantic sync with <base-ref>
+  Base branch: <base-ref>
+  PRE_SYNC_BASE_SHA: <PRE_SYNC_BASE_SHA>
+  BASE_HEAD_SHA: <BASE_HEAD_SHA>
+  Incoming range: <PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>
+  Sync commit: <SYNC_COMMIT_SHA>
+
+  Use semantic-merge workflow sync reviewer mode. Verify anchors, incoming
+  intent, current-branch intent, conflict resolution, user-decision logging,
+  Sync Map completeness, task-local Sync impact coverage, and scope boundary.
+  Record sync-review status and notes in PLAN.md `## Sync Map` when a map
+  exists or when review finds a material issue. Return APPROVE or REVISE.
+```
+
+On REVISE, adjudicate sync-review findings per `superRA:agent-orchestration` §Handling Reviewer Feedback, re-dispatch the sync author for accepted items, then re-dispatch the sync reviewer. Integrate starts only after sync review APPROVES.
 
 ## Integrate
 
-Integrate is the post-sync quality gate. It consumes `## Sync Map`, performs semantic propagation into non-conflicted files, fits the code to the host project, audits project docs, and verifies the surviving diff against the current base.
+Integrate is the post-sync quality gate. It consumes task-local `**Sync impact:**` annotations and referenced `## Sync Map` clusters, performs semantic propagation into non-conflicted files, fits the code to the host project, audits project docs, and verifies the surviving diff against the current base.
 
 **Governing diff:** `git diff BASE_HEAD_SHA..HEAD`. Do not use the old merge base for minimum-net-diff review after Sync.
 
@@ -156,17 +191,19 @@ Agent(subagent_type: "superRA:reviewer"):
   Task: Post-sync integration review
   Git range: <BASE_HEAD_SHA>..HEAD
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
-  Sync Map: PLAN.md ## Sync Map, if present
+  Sync impact: task-local `**Sync impact:**` fields plus PLAN.md ## Sync Map, if present
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
-    consume the Sync Map and review `git diff <BASE_HEAD_SHA>..HEAD`.
-    For every touched or Sync-Map-affected task, either set
+    consume task-local Sync impact annotations and referenced Sync Map clusters,
+    then review `git diff <BASE_HEAD_SHA>..HEAD`.
+    For every touched or Sync-impact-affected task, either set
     `Integration status: APPROVED` or write task-local review notes and
     set `Integration status: REVISE`. Findings should cover minimum
-    surviving branch delta, Sync Map obligations, semantic propagation,
+    surviving branch delta, Sync impact obligations, semantic propagation,
     codebase fit, project-doc audit, drift-test implications, and handoff-doc
-    coherence. Do not recreate the incoming-intent research owned by Sync.
+    coherence. Do not recreate incoming-intent research already approved by
+    sync review.
 ```
 
 ### Step 3: Orchestrator adjudication
@@ -190,20 +227,21 @@ Agent(subagent_type: "superRA:implementer"):
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
-    consume PLAN.md `## Sync Map` if present, address accepted review
-    findings, and run the minimum-net-diff self-check against
+    consume task-local `**Sync impact:**` and referenced Sync Map clusters,
+    address accepted review findings, and run the minimum-net-diff self-check against
     `git diff <BASE_HEAD_SHA>..HEAD` before each commit. Do not touch
-    tasks outside `Tasks in scope` except where required by a Sync Map
+    tasks outside `Tasks in scope` except where required by a Sync impact
     obligation or accepted reviewer finding.
 ```
 
-Re-dispatch the reviewer for narrow re-review plus the branch-wide pruning sweep over `BASE_HEAD_SHA..HEAD`. Iterate until all in-scope tasks are `Integration status: APPROVED` and every surviving hunk is justified by approved objectives, Sync Map obligations, logged user decisions, or project convention fit.
+Re-dispatch the reviewer for narrow re-review plus the branch-wide pruning sweep over `BASE_HEAD_SHA..HEAD`. Iterate until all in-scope tasks are `Integration status: APPROVED` and every surviving hunk is justified by approved objectives, Sync impact obligations, logged user decisions, or project convention fit.
 
 ### Step 5: Close Integrate
 
 Run the full drift-test suite again. When it passes and integration review is APPROVED:
 
 - remove temporary `## Sync Map` from PLAN.md, if present
+- remove satisfied task-local `**Sync impact:**` fields unless a lasting task assumption still belongs in the task block
 - flip `Integrated` in PLAN.md §Workflow Status
 - commit the closeout doc edit
 
