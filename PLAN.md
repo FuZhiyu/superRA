@@ -184,7 +184,7 @@ Spawn reviewer agents after the prose edit. One reviewer should focus on plain-l
 
 ### Task 5: Document "Teach the Protocol, Don't Prescribe Each Action" Principle
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** Not applicable; contributor-doc edit.
