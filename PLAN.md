@@ -222,24 +222,24 @@ Cross-check each DELETE / POINTER decision against the authoritative source it p
 
 ### Task 7: Audit Workflow Skills and `agent-orchestration`
 **Depends on:** Task 5
-**Review status:** *(not started)*
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** Line-by-line instruction audit against the Task 5 principle; edits applied inline.
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, and every reference file under those four skills' `references/` directories.
 **Output:** Trimmed workflow skills, a findings note in `RESULTS.md` summarizing cuts / pointers / kept lines per file, and confirmation that ownership boundaries from `CLAUDE.md §Ownership Boundaries` are preserved.
 
-- [ ] **Step 1: Survey each file line by line**
+- [x] **Step 1: Survey each file line by line**
 
-Apply the two tests to each line. Pay particular attention to (a) lines that restate the Skill-Load Manifest, (b) lines that describe the dispatch-prompt shape, (c) lines that narrate what `PLAN.md` or `RESULTS.md` will contain, (d) lines that remind agents of runtime defaults, and (e) paraphrases of content owned by another workflow skill. Classify each line KEEP / POINTER / DELETE in `RESULTS.md` Task 7 findings.
+Applied the two tests to each line across the four SKILL.md files and the two `agent-orchestration/references/` files. Findings recorded in `RESULTS.md` Task 7.
 
-- [ ] **Step 2: Apply the edits**
+- [x] **Step 2: Apply the edits**
 
-Trim DELETEs, replace POINTERs with a single-line reference. Preserve local gate instructions (review thresholds, blocking checklist items, stop-point obligations) — they are behavior-shaping.
+Applied trims and pointer replacements. Preserved all local gate instructions, stop points, status transitions, and review-verdict discipline.
 
-- [ ] **Step 3: Verify ownership boundaries are intact**
+- [x] **Step 3: Verify ownership boundaries are intact**
 
-Re-check `CLAUDE.md §Ownership Boundaries`. After trimming, each concern should still have exactly one authoritative owner. Record any remaining ambiguity in `RESULTS.md` Task 7 for follow-up.
+Re-checked `CLAUDE.md §Ownership Boundaries`. After trimming, each concern still has exactly one authoritative owner. Findings in `RESULTS.md` Task 7.
 
 ### Task 8: Audit Utility, Domain, and Meta Skills
 **Depends on:** Task 5

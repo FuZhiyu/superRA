@@ -4,7 +4,7 @@
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
 **Last updated:** 2026-04-23 (over-prescription audit scope added)
-**Status:** Tasks 1-4 approved; Task 5 implemented and awaiting review; Tasks 6-9 pending.
+**Status:** Tasks 1-4 approved; Task 5 approved; Task 7 implemented and awaiting review; Tasks 6, 8, 9 pending.
 
 ---
 
@@ -103,7 +103,55 @@ There is also an overview placement gap. README explains the PLAN -> IMPLEMENT -
 
 ## Task 7: Audit Workflow Skills and `agent-orchestration`
 
-**Status:** Not started.
+**Status:** Implemented; awaiting review.
+
+### Findings
+
+Applied the two tests from `CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action` to every paragraph in `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, and the two `agent-orchestration/references/` files.
+
+A prior audit session had already trimmed obvious prescription wrappers (the "what the standard protocol carries" rephrasings at each workflow skill's top, the full Handling Reviewer Feedback paraphrase inside `implementation-workflow`, the closing "Before proceeding…" reminders, and the banned-fields paraphrase in the Dispatch Convention lines). This pass extended that work along the audit targets called out in the Task 7 scope warning.
+
+**Edits this pass:**
+
+- **`planning-workflow/SKILL.md`**:
+  - **POINTER** — Living Plan and Results Docs: trimmed the Results-stub narration ("header and one pre-allocated stub per task block — same order, same task name…") to a pointer at `handoff-doc/references/results-anatomy.md`. The anatomy is authoritative there.
+  - **DELETE** — end of §PLAN.md Is the Task Tracker: removed the duplicated "After the plan edit is committed, the main agent runs … Workflow Frontier Resolver to choose the next workflow entry point" sentence. The same instruction appears as Step 7 of the §User Feedback and Changing Plans protocol immediately below.
+  - **POINTER/TIGHTEN** — Step 7 of the change-plan protocol: removed the "It owns cross-workflow entry selection; the target workflow then runs the local gates and any global verification required before merge / PR" paraphrase. The resolver section at `main-agent.md` is authoritative.
+  - **POINTER** — §Execution Handoff: collapsed the two-paragraph "Subagent-Driven vs Inline Execution" description into a single pointer at `using-superra` §Execution Modes. The description was duplicating the Execution Modes definition that `using-superra` owns.
+- **`implementation-workflow/SKILL.md`**:
+  - **TIGHTEN** — Step 1 item 2: shortened the resolver-entry protocol paragraph while preserving the behavior-shaping content (continue only when resolver selects this workflow; skip to Step 3 / 4 when all selected tasks are `APPROVED`).
+  - **TIGHTEN** — §Autonomy and Stop Points: removed the inaccurate "merge now / continue another task / sensitivity task / discard" paraphrase of the Step 4 menu options (the actual options differ) and pointed at Step 4 instead.
+- **`integration-workflow/SKILL.md`**:
+  - **DELETE** — §Frontier Entry: removed the whole section. It restated what §Phase Map already says ("the resolver chooses where to enter this map; run the selected phase's local gates exactly; do not redo task-local approvals outside the affected frontier").
+- **`agent-orchestration/SKILL.md`**:
+  - **TIGHTEN** — Dispatch-template inline comments: shortened the "never restate what the default protocol, skill-load manifest, or PLAN.md already says" boilerplate that appeared inside both Implementer and Reviewer template code blocks. The same rule is stated in the surrounding prose (once in the prefix description, once in "Optional steering is strictly additive"); the in-template copy was a third restatement.
+
+**KEEP (behavior-shaping, not prescription):**
+
+- All local phase gates, step-ordering rules, stop points, status transitions, and review-verdict discipline across the four files.
+- Dispatch Template shape, canonical-prefix description, and "Optional steering is strictly additive" rule in `agent-orchestration` — this skill's raison d'être.
+- Per-workflow `Agent Loads` one-liners pointing at the Skill-Load Manifest — tolerable one-line echoes that save agents a manifest lookup.
+- "First, load `superRA:using-superra` if not already loaded" at the top of each workflow skill — one-line echoes of the frontmatter precondition.
+- Red Flags blocks in `implementation-workflow` / `integration-workflow` — negative-form behavior-shaping rules.
+
+**Ownership boundaries after the trim (re-checked against `CLAUDE.md §Ownership Boundaries`):**
+
+- Phase choreography, stop points, status transitions → still owned by the three workflow skills.
+- Cross-stage orchestration, dispatch-prompt shape, verdict adjudication → still owned by `agent-orchestration`.
+- Execution modes and Skill-Load Manifest → now fully owned by `using-superra`; `planning-workflow §Execution Handoff` points at it instead of restating it.
+- Handoff-doc mechanics, templates, stale-content rules → `planning-workflow §Living Plan and Results Docs` now points at `handoff-doc/references/results-anatomy.md` rather than excerpting it.
+- Workflow Frontier Resolver → still owned by `main-agent.md`; the duplicated "run the resolver after a plan edit" sentence in planning-workflow is removed.
+
+No ambiguity or newly-introduced gap detected. The deleted `integration-workflow §Frontier Entry` content is fully covered by the Phase Map paragraph that remains. The deleted planning-workflow Resolver sentence is fully covered by Step 7 of the change-plan protocol.
+
+### Files Changed
+
+- `skills/planning-workflow/SKILL.md`
+- `skills/implementation-workflow/SKILL.md`
+- `skills/integration-workflow/SKILL.md`
+- `skills/agent-orchestration/SKILL.md`
+- `PLAN.md` (Task 7 status)
+- `RESULTS.md` (Task 7 section)
 
 ## Task 8: Audit Utility, Domain, and Meta Skills
 

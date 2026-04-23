@@ -117,10 +117,8 @@ Agent(subagent_type: "superRA:implementer"):
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
-    <optional steering — focus area, prior-round adjudication notes, or
-    warnings. Must add information on top of the default; never restate
-    what the default protocol, skill-load manifest, or PLAN.md already
-    says.>
+    <optional steering — focus area, prior-round adjudication notes,
+    warnings>.
 ```
 
 **Reviewer:**
@@ -133,10 +131,8 @@ Agent(subagent_type: "superRA:reviewer"):
 
   Follow the standard stage-relevant workflow and load
     relevant skills and documents to proceed. Additionally,
-    <optional steering — focus area, prior-round adjudication notes, or
-    warnings. Must add information on top of the default; never restate
-    what the default protocol, skill-load manifest, or PLAN.md already
-    says.>
+    <optional steering — focus area, prior-round adjudication notes,
+    warnings>.
 ```
 
 **Optional steering is strictly additive.** If your `Additionally:` line only paraphrases the default protocol, the skill-load manifest, or `PLAN.md` content, delete it — the agent reads those itself. Never include `Work from:` (cwd is implicit) or restate `PLAN.md` content / manifest loads.
@@ -188,11 +184,9 @@ When a reviewer returns REVISE:
 - You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `handoff-doc` §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
 - You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `handoff-doc` §User Decisions Log.
 
-This discipline applies equally to all stages of the using superRA workflow. The orchestrator owns the final call in every loop.
-
 ## Review Status Reference
 
-Implementer and reviewer agents own their commits and document updates — see `agents/implementer.md` and `agents/reviewer.md` for the full discipline (scope rule, inline-edit rule, stage-specific handoff). The orchestrator only needs to know how to **read** the resulting state from `PLAN.md`:
+Implementer and reviewer agents own their commits and document updates (see `agents/implementer.md` and `agents/reviewer.md`). The orchestrator only needs to know how to **read** the resulting state from `PLAN.md`:
 
 | Status line | Meaning | Orchestrator action |
 |---|---|---|
