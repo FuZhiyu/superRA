@@ -115,7 +115,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/integration-workflow/SKILL.md`, and `skills/econ-data-analysis/SKILL.md`.
@@ -127,14 +127,10 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 4: Edit `econ-data-analysis/SKILL.md`.** Added the narrow implementation-standard reinforcement that evidence-driven diagnostics, validation passes, or within-task robustness checks must be added when needed and reflected in the rewritten step text.
 - [x] **Step 5: Run a stale-language sweep and merged-tree project-doc audit.** Re-read the touched workflow/domain files plus the merged root release/documentation surfaces with targeted `rg` and `git diff` checks, tightened the remaining contradictory literal-adherence wording, aligned the mid-INTEGRATE restructure example in `planning-workflow` with whole-task combine/split routing, added `RELEASE-NOTES.md` coverage for the objective-first semantics change, and confirmed no further root `README.md` or `CLAUDE.md` updates were needed on top of `origin/main`.
 
-> **Review notes (present only during active REVISE rounds):**
-> 1. [MAJOR] `skills/agent-orchestration/SKILL.md:162` still tells the orchestrator to keep a task-shape recommendation in `## Integration Intent` when it comes from the main-side scan. `origin/main` commits `4036130`, `ead1439`, and `24f157e` replaced the older Phase B `## Integration Intent` model with the frozen-merge-base `## Upstream Intent` contract plus task-local review notes, and Task 3's own objective explicitly includes keeping orchestration/reporting guidance aligned with that contract. Preserve Task 3's within-task-route / boundary-change guidance, but land it on the current owner: the relevant task block or the active `## Upstream Intent` section for the round. Minimal allowed branch delta: keep the new route-adaptation and doc-vs-report guidance in `agent-orchestration`, but update the main-side-scan recommendation location to `## Upstream Intent` to match the rest of the Phase B surfaces. Stale branch-side content that must not survive: the literal `## Integration Intent` reference in `skills/agent-orchestration/SKILL.md`.
->    → implemented: replaced the stale Phase B record location with the active `## Upstream Intent` section in `skills/agent-orchestration/SKILL.md:162`
-
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** REVISE
 
 **Script:** N/A
 **Input:** The cumulative diff from Tasks 1-3, `tests/claude-code/run-skill-tests.sh`, `tests/claude-code/test-helpers.sh`, the existing Claude Code tests, and `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
@@ -148,5 +144,4 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 - [x] **Step 6: Sweep the final diff and record verification.** Re-read the owned diff for Task 4 scope, confirmed no manual edits were made to generated agent files, ran `./run-skill-tests.sh` from `tests/claude-code` to verify the documented default fast path now passes on the merged tree, and recorded the focused test result, the consistency sweep, the generated-agent check, the manual validation outcome, and the legacy-suite disposition in `RESULTS.md`.
 
 > **Review notes (present only during active REVISE rounds):**
-> 1. [MAJOR] `tests/claude-code/test-integration-task-shape-escalation.sh:35` still accepts `Integration Intent` as a correct place to record the integration-stage task-shape recommendation. The current Phase B contract on this branch and on `origin/main` is `## Upstream Intent` plus task-local review notes (`skills/handoff-doc/references/plan-anatomy.md:124-157`, `skills/integration-workflow/SKILL.md:88-186`), so this test can pass an answer that uses the retired section name and fails to guard the merged-tree behavior Task 4 is supposed to validate. Minimal allowed branch delta: keep the integration-stage escalation smoke test, but require current record locations (`PLAN.md` task-local review notes / handoff docs, plus `## Upstream Intent` when the recommendation comes from the main-side scan) instead of the retired `## Integration Intent` wording. Stale branch-side content that must not survive: the `Integration Intent` alternative in the record-line assertion regex.
->    → implemented: tightened the record-line assertion to require current durable Phase B locations (`review notes`, handoff docs / `RESULTS.md`, or `## Upstream Intent` for main-side-scan recommendations) and added a negative assertion so stale `Integration Intent` wording now fails the smoke test.
+> 1. [MAJOR] `tests/claude-code/test-adaptive-planning-principles.sh:45-51` is still too brittle to support the documented green fast suite. Fresh evidence on this tree: `tests/claude-code/./run-skill-tests.sh` failed with `Passed: 3`, `Failed: 1`, `STATUS: FAILED`, and a direct rerun of `./run-skill-tests.sh --test test-adaptive-planning-principles.sh` failed again with a different semantically-correct answer. In both runs Claude stayed within the current objective-first planning contract, but the regexes required particular surface forms (`omit|optional|leave` and specific negative phrasing about code-like steps) and rejected acceptable wording like "blank or minimal steps are better" or "starter guidance, not a literal script." Minimal allowed branch delta: keep the planning-principles smoke test, but make its assertions robust to the accepted current semantics rather than one exact wording family. Stale branch-side content that must not survive: line-level assertions that fail semantically-correct planning answers on the supported fast path.
