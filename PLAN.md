@@ -86,7 +86,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 1: Canonicalize objective-first task-block semantics
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `/CLAUDE.md`, `skills/handoff-doc/references/plan-anatomy.md`, and the source-intent specification captured in this plan header.
@@ -99,6 +99,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `CLAUDE.md:72-74` and `skills/handoff-doc/references/plan-anatomy.md:67`, `skills/handoff-doc/references/plan-anatomy.md:122-149` still diverge from the current `origin/main` contract recorded in `## Upstream Intent`. `origin/main` commits `b7f0f02`, `cc192a3`, `4036130`, and `24f157e` kept the direct-mode role-reference ownership rule in `CLAUDE.md` and replaced the older Phase B `## Integration Intent` model with `## Upstream Intent` in `plan-anatomy.md`; the current branch diff still drops the direct-mode role-reference bullets from `CLAUDE.md` and still teaches `## Integration Intent` in `plan-anatomy.md`. Preserve Task 1's objective-first task-boundary semantics, but port them onto those newer concern-owner surfaces. Minimal allowed branch delta: keep the objective-first task-semantics paragraph, keep the direct-mode generated-artifact / main-agent ownership bullets from current `origin/main`, and express the same boundary semantics under `## Upstream Intent` with the frozen-merge-base placement, ownership, and lifecycle. Stale branch-side content that must not survive: the `plan-anatomy.md` `## Integration Intent` section / field-note language and any `CLAUDE.md` Codex-design prose that removes the direct-mode role-reference ownership model.
+>    → implemented: restored the current `origin/main` direct-mode role-reference ownership model in `CLAUDE.md` and ported `plan-anatomy.md` to the frozen-merge-base `## Upstream Intent` contract while preserving the branch's objective-first task-boundary semantics (`CLAUDE.md:72-76`, `skills/handoff-doc/references/plan-anatomy.md:65-161`)
 
 ### Task 2: Reframe implementer and reviewer role contracts
 **Depends on:** Task 1
