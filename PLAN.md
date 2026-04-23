@@ -127,7 +127,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 ### Task 4: Simplify canonical role docs and post-sync integration consumption
 **Depends on:** Task 1, Task 2, Task 3
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(pending)*
 
 **Files:** `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superRA/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, generated direct-mode and Codex agent files.
@@ -150,7 +150,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 ### Task 5: Update public docs and verify the revised design
 **Depends on:** Task 1, Task 2, Task 3, Task 4
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(pending)*
 
 **Files:** `README.md`, `skills/CATEGORIES.md`, `CLAUDE.md`, generated artifacts as needed, tests under `skills/codex-superra-setup/scripts/` or `tests/claude-code/` as needed.
