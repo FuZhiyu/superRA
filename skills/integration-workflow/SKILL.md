@@ -5,7 +5,7 @@ description: Requires `superRA:using-superra` loaded first. Use when a plan is c
 
 # Integration Workflow
 
-**First, load `superRA:using-superra` if not already loaded.** It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
+**First, load `superRA:using-superra` if not already loaded.**
 
 Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the full finishing sequence that takes a reproducibility-verified analysis branch to a merged state on main: drift-test creation (Phase A), unified sync-with-main + refactor (Phase B, iterative), documentation maturation + PLAN.md disposition (Phase C), and final local merge or PR push + cleanup (Phase D).
 
@@ -39,9 +39,7 @@ Every stop: log the answer per `superRA:handoff-doc` §User Decisions Log **befo
 
 ## Dispatch Convention
 
-**Load `superRA:agent-orchestration` before writing any dispatch prompt** — the canonical template shape, `Additionally:` anchor rules, and banned fields live there. Dispatching without it produces malformed prompts.
-
-All dispatches: canonical template in `superRA:agent-orchestration` §Dispatch Templates; skill loads per `superRA:using-superra` §Skill-Load Manifest; checklist discipline per `superRA:refactor-and-integrate`. REVISE adjudication: `superRA:agent-orchestration` §Handling Reviewer Feedback.
+**Load `superRA:agent-orchestration` before writing any dispatch prompt.** Checklist discipline for this phase comes from `superRA:refactor-and-integrate`.
 
 ## Phase A — Drift Test Creation
 
@@ -354,13 +352,9 @@ If the analysis was done in a git worktree, remove it per `superRA:agent-orchest
 
 Report what was merged/pushed and what was cleaned up.
 
-## Frontier Entry
-
-Partial integration entry is selected by `using-superRA/references/main-agent.md` §Workflow Frontier Resolver. This workflow owns the local phase gates after entry: drift-test coverage in Phase A, integration review in Phase B, doc-writer/doc-reviewer in Phase C, and freshness + merge/PR cleanup in Phase D. Scope authoring and fix work to the affected frontier while still running required global verification gates before merge / PR.
-
 ## Agent Loads
 
-See `superRA:using-superra` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows.
+This workflow runs the `drift-test`, `integration`, and `documentation` Stages (see `superRA:using-superra` §Skill-Load Manifest).
 
 ## Red Flags
 
@@ -372,7 +366,3 @@ See `superRA:using-superra` §Skill-Load Manifest — the single source of truth
 
 **Always:**
 - Author new drift tests only for tasks with `**Integration status:** ≠ APPROVED`, but run the **full** drift-test suite on every integration pass (scope is for authoring; running is not scoped)
-
----
-
-**Before proceeding:** if you have not loaded `superRA:using-superra` (and, for main agents, `superRA:using-superra/references/main-agent.md`), load them now.

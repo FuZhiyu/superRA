@@ -5,7 +5,7 @@ description: "Requires `superRA:using-superra` loaded first. Use when starting a
 
 # Planning Workflow
 
-**First, load `superRA:using-superra` if not already loaded.** It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
+**First, load `superRA:using-superra` if not already loaded.**
 
 ## Overview
 
@@ -47,7 +47,7 @@ Before defining tasks, map out the artifact pipeline:
 - What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 
-**Walk the project guidance docs and cache them in PLAN.md.** Before drafting tasks, walk up from every directory the plan will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the plan will load from. Populate the `## Project Conventions` section of `PLAN.md` with one-paragraph summaries per doc, stamped with the walk date (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy). This is what subagent dispatches read at task time instead of re-walking the whole tree; if a subagent later needs a convention not captured here, it walks on-demand and reports the omission so the orchestrator can update the section.
+**Walk the project guidance docs and cache them in PLAN.md.** Before drafting tasks, walk up from every directory the plan will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the plan will load from. Populate the `## Project Conventions` section of `PLAN.md` with one-paragraph summaries per doc, stamped with the walk date (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy).
 
 **Pipeline file (required for multi-artifact work):**
 
@@ -94,9 +94,9 @@ Required header fields and task block structure are non-negotiable. The template
 
 Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a step's method adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits per the discipline below; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §User Feedback and Changing Plans below, which defines the confirm → log → inline-edit → roll-back-milestones → sweep-for-stale-content → atomic-commit protocol.
 
-**The editing discipline and the full anatomy templates** — the four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, `## Project Conventions` layout, section layouts, code-block examples, status-line formats, the two-stage `RESULTS.md` lifecycle — live in `superRA:handoff-doc`. Load it when authoring `PLAN.md` / `RESULTS.md` from scratch; its `references/plan-anatomy.md` and `references/results-anatomy.md` carry the full templates. Role-by-role ownership and the review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
+**Editing discipline and anatomy templates** live in `superRA:handoff-doc` (load it when authoring `PLAN.md` / `RESULTS.md` from scratch). Role ownership and review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md` with the header and **one pre-allocated stub per task block** — same order, same task name as in `PLAN.md`, body just `**Status:** Not started`. Full anatomy and ownership rules in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Phase C it matures into a permanent record.
+**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the stub anatomy in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Phase C it matures into a permanent record.
 
 ### PLAN.md Is the Task Tracker
 
@@ -115,7 +115,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 If `TodoWrite` and `PLAN.md` ever disagree about the state of analysis work, `PLAN.md` is right by definition. Update `TodoWrite` to match — never the reverse.
 
-When the plan itself changes, re-invoke §User Feedback and Changing Plans below and follow its protocol. After the plan edit is committed, the main agent runs `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point.
+When the plan itself changes, re-invoke §User Feedback and Changing Plans below.
 
 ## User Feedback and Changing Plans
 
@@ -150,7 +150,7 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 4. **Update statuses** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* task-local statuses and rollup boxes are invalidated and *why*. Rules: clear per-task `**Review status:**` and `**Integration status:**` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `APPROVED` tasks. Minor-edited tasks with code unchanged may clear `**Integration status:**` while keeping `**Review status:** APPROVED`. Uncheck project-level `## Workflow Status` boxes whose rollup guarantee is no longer true; unchecking a rollup does not imply clearing every contributing task status.
 5. **Sweep PLAN.md for stale content** per `handoff-doc` §Stale Content Checklist. Earlier task blocks whose output has been superseded by a later task, cross-references to removed sections, review notes resolved by subsequent work — fix in place now, not later.
 6. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
-7. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver. It owns cross-workflow entry selection; the target workflow then runs the local gates and any global verification required before merge / PR.
+7. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point.
 
 
 **Banned shortcuts:**
@@ -191,21 +191,4 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ## Execution Handoff
 
-After finalizing the plan, check the **`Plan approved`** box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md for the checklist anatomy) and commit the plan + box-flip atomically. Then offer execution choice:
-
-**"Plan complete and saved to `PLAN.md`. RESULTS.md created. Two execution options:**
-
-**1. Subagent-Driven (recommended for independent tasks)** - I dispatch a fresh subagent per task, review between tasks, fast iteration. Best when tasks don't heavily depend on each other's outputs.
-
-**2. Inline Execution (recommended for sequential pipelines)** - Execute tasks in this session using implementation-workflow, context preserved across steps. Best when each step's output informs the next.
-
-**Which approach?"**
-
-**REQUIRED DISCIPLINE:** Use `superRA:implementation-workflow`
-- Defaults to subagent mode (fresh subagent per task + one-pass review per the active domain skill's gated checklist)
-- Falls back to direct mode for simple tasks or when user requests it
-- Review always happens regardless of mode
-
----
-
-**Before proceeding:** if you have not loaded `superRA:using-superra` (and, for main agents, `superRA:using-superra/references/main-agent.md`), load them now.
+After finalizing the plan, check the **`Plan approved`** box in `PLAN.md` §Workflow Status and commit the plan + box-flip atomically. Then hand off to `superRA:implementation-workflow`, which owns execution-mode selection (subagent vs direct — see `superRA:using-superra` §Execution Modes) and review discipline.
