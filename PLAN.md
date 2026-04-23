@@ -84,28 +84,28 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 1: Add skill-owned direct-mode role references and wire main-agent direct mode to them
 **Depends on:** *(none)*
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `skills/using-superRA/references/main-agent.md`
 **Input:** canonical role protocols in `agents/implementer.md` and `agents/reviewer.md`, current direct-mode bullets in `skills/using-superRA/references/main-agent.md`
 **Output:** two skill-owned direct-mode role references containing the role protocol the main agent needs in direct mode, plus updated direct-mode instructions that load those references instead of raw `agents/*.md`
 
-- [ ] **Step 1: Choose the manual copy boundary.** Identify which role-protocol sections from `agents/implementer.md` and `agents/reviewer.md` should be copied into skill-owned references for direct mode, excluding dispatch-only framing that `main-agent.md` already covers.
-- [ ] **Step 2: Create the skill-owned references.** Add `skills/using-superRA/references/direct-mode-implementer.md` and `skills/using-superRA/references/direct-mode-reviewer.md` by manually copying the chosen protocol text, with a short note that these are temporary manual mirrors of the canonical agent files.
-- [ ] **Step 3: Rewire direct mode.** Update `skills/using-superRA/references/main-agent.md` so direct mode loads the new skill-owned references rather than `agents/implementer.md` / `agents/reviewer.md`.
-- [ ] **Step 4: Validate the read path.** Re-read the direct-mode bullets and the new references together to confirm the main-agent direct-mode path no longer depends on raw agent files and still preserves the review requirement.
+- [x] **Step 1: Choose the manual copy boundary.** Copied the role-protocol sections the main agent actually needs in direct mode: stage-load guidance, pre-start checks, self-review / review protocol, handoff ownership, inline-edit discipline, and commit / escalation rules. Left dispatch-prompt framing, worktree-return mechanics, and orchestrator-facing report format in the canonical agent files because `main-agent.md` already owns that surface.
+- [x] **Step 2: Create the skill-owned references.** Added `skills/using-superRA/references/direct-mode-implementer.md` and `skills/using-superRA/references/direct-mode-reviewer.md` with explicit notes that they are temporary manual mirrors of the canonical agent files.
+- [x] **Step 3: Rewire direct mode.** Updated `skills/using-superRA/references/main-agent.md` so direct mode now loads the new skill-owned references instead of raw `agents/implementer.md` / `agents/reviewer.md`.
+- [x] **Step 4: Validate the read path.** Re-read the direct-mode bullets and the new references together, then ran `bash tests/check-harness-compatibility.sh`; the direct-mode path no longer depends on raw agent files and still preserves the review requirement.
 
 ### Task 2: Document and validate the temporary manual-mirror approach
 **Depends on:** 1
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** `CLAUDE.md`, `tests/check-harness-compatibility.sh`, archived 2026-04-22 plan/results pair, `RESULTS.md`
 **Input:** the new direct-mode references from Task 1, current contributor guidance, current compatibility guard, and the user concern about repo-local `.agents` surfaces
 **Output:** development-facing docs that mention the temporary manual-mirror rule, a compatibility check covering the new direct-mode references, archived 2026-04-22 handoff docs updated with a pointer to this re-entry, and a recorded judgment that `.agents/skills/` stays because it is repo-local Codex skill discovery
 
-- [ ] **Step 1: Update the development-facing docs.** Add contributor guidance describing the temporary manual direct-mode references and the expectation that future role-protocol changes update both the canonical agent file and the skill-owned mirror until automation exists.
-- [ ] **Step 2: Add validation coverage.** Extend `tests/check-harness-compatibility.sh` so it fails if the new direct-mode references are missing or if `skills/using-superRA/references/main-agent.md` regresses to loading raw `agents/*.md` directly.
-- [ ] **Step 3: Keep the archived handoff coherent.** Update the archived 2026-04-22 plan/results pair with a scoped note pointing at this follow-up plan rather than overwriting the original archived findings.
-- [ ] **Step 4: Record the `.agents` audit result.** Document in `RESULTS.md` and, where appropriate, contributor docs that `.agents/skills/` is a load-bearing repo-local Codex skill-discovery surface and is therefore not deleted in this pass.
+- [x] **Step 1: Update the development-facing docs.** Added contributor guidance in `CLAUDE.md` describing the direct-mode role mirrors and the requirement to update the canonical agent files and the mirrors together until automation exists.
+- [x] **Step 2: Add validation coverage.** Extended `tests/check-harness-compatibility.sh` so it now requires the new direct-mode references, checks that `main-agent.md` points at them, rejects regressions back to raw `agents/*.md`, and verifies each mirror declares its canonical source and manual-mirror status.
+- [x] **Step 3: Keep the archived handoff coherent.** Confirmed the archived 2026-04-22 plan/results pair already points at this follow-up plan/results from commit `cc4ea46`; no further archive edit was needed in this pass.
+- [x] **Step 4: Record the `.agents` audit result.** Recorded in `RESULTS.md` that `.agents/skills/` remains a load-bearing repo-local Codex skill-discovery surface, so this pass does not delete it.
