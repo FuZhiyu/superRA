@@ -32,7 +32,7 @@ Stage `integration` -> load `references/codebase-integration.md` (minimum surviv
 Every round of drift-test creation and post-sync integration shares one top-level constraint:
 
 - `[BLOCKING]` **Minimum net diff to the governing baseline.** Touch only what approved task objectives, drift-test preservation, convention fit, handoff-doc coherence, documentation currency, task-local Sync impact obligations, and logged user decisions demand. No unrelated cleanup, speculative abstractions, or "while I'm here" edits.
-  **Integration-workflow path:** after Sync, use `git diff <BASE_HEAD_SHA>..HEAD` as the evidence diff. `PRE_SYNC_BASE_SHA` is for semantic-merge intent research only; it is not the post-sync pruning baseline.
+  **Integration-workflow path:** after Sync, use `git diff <BASE_HEAD_SHA>..HEAD` as the evidence diff. `PRE_SYNC_BASE_SHA` is for semantic-merge intent investigation only; it is not the post-sync pruning baseline.
   **Standalone refactor path:** use the caller's governing git range or touched-file diff and apply the same hunk-by-hunk scope rule.
 
 Any hunk in the governing diff must be justifiable against the loaded checklists, an approved task objective, a task-local Sync impact obligation, or a logged user decision. A hunk without one of those justifications is out of scope and must be reverted or re-justified in the handoff record before commit.
