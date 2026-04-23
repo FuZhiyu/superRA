@@ -22,8 +22,8 @@
 
 - [x] **Plan approved** - researcher approved the task decomposition and clarified that rationale for within-task path changes belongs in agent status messages to the orchestrator/user, not as "change" logging in `PLAN.md` (2026-04-22)
 - [x] **Execution complete** - all tasks APPROVED; focused Claude Code coverage passed; generated-agent parity check passed; verification recorded in `RESULTS.md` (2026-04-22)
-- [ ] **Drift tests created** - Cleared for the 2026-04-22 re-entry against current `origin/main`; the Task 4 verification bundle must be rerun on the refreshed tree before this milestone can be checked again.
-- [ ] **Refactored** - Cleared for the 2026-04-22 Phase B re-entry because `origin/main` advanced beyond the previously reviewed range and Tasks 1-3 still need reviewer re-approval on the refreshed tree.
+- [x] **Drift tests created** - Refreshed Task 4 verification coverage was rerun on the updated tree, and `tests/claude-code/./run-skill-tests.sh` passed three consecutive times on 2026-04-23.
+- [x] **Refactored** - Phase B reviewer approved Tasks 1-4 on the refreshed tree and confirmed that the surviving `git diff addc9ca..HEAD` is justified against approved task objectives (2026-04-23).
 - [ ] **Docs finalized** - Cleared pending a fresh Phase C documentation pass after the branch is updated against current `origin/main`.
 - [ ] **Merged** - Cleared pending a new Phase D freshness check and refreshed PR state after the current `origin/main` update pass.
 
@@ -64,24 +64,6 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 > **User decision (2026-04-22):** Re-enter the integration workflow against current `origin/main` and dispatch reviewer agents first to plan the branch update; this invalidates the previously checked `Drift tests created`, `Refactored`, `Docs finalized`, and `Merged` milestones until the refreshed pass completes.
 > **Question asked:** Which base branch should this branch refresh against for the next integration pass, and should the next step be a reviewer-led planning pass?
 > **Rationale (if given):** Update this branch with `main`.
-
-## Upstream Intent
-
-**Base branch:** `origin/main`
-**Frozen merge base SHA:** `addc9ca`
-**Reviewed upstream range:** `addc9ca..origin/main`
-
-> **Upstream change cluster (2026-04-22):** commits `b7f0f02`, `cc192a3`, `24f157e`; paths `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `skills/using-superRA/references/main-agent.md`, `CLAUDE.md`; affects Tasks 1, 2.
-> **Upstream intent:** Upstream made the direct-mode role references part of the shared skill surface, kept `main-agent.md` loading those refs in direct mode, and documented in `CLAUDE.md` that the direct-mode role refs are generated artifacts refreshed by `sync_codex_agents.py`.
-> **Default merged expectation:** Preserve Task 1's objective-first contributor semantics and Task 2's objective-first role semantics, but keep the upstream direct-mode ownership model intact: `CLAUDE.md` retains the direct-mode generated-artifact rule, `main-agent.md` still loads the direct-mode refs, and the direct-mode ref files remain present. A surviving branch diff that deletes the direct-mode refs or points direct mode back at raw `agents/*.md` is not allowed.
-
-> **Upstream change cluster (2026-04-22):** commits `4036130`, `ead1439`, `24f157e`; paths `skills/handoff-doc/references/plan-anatomy.md`, `agents/reviewer.md`, `.codex/agents/superra_reviewer.toml`; affects Tasks 1, 2.
-> **Upstream intent:** Upstream replaced the older Phase B `## Integration Intent` model with a frozen-merge-base / `## Upstream Intent` contract, pushed that ownership model into reviewer-facing role surfaces, and required the Phase B re-review to include the surviving-diff pruning sweep.
-> **Default merged expectation:** Preserve Task 1's objective-first task-boundary semantics and Task 2's objective-first reviewer semantics, but land them on the newer `## Upstream Intent` contract in `plan-anatomy.md`, `agents/reviewer.md`, and the generated reviewer TOML. Any surviving branch-side `## Integration Intent` language or missing pruning-sweep re-review rule on those surfaces is not allowed.
-
-> **Upstream change cluster (2026-04-22):** commits `4036130`, `ead1439`, `24f157e`; paths `skills/integration-workflow/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/merge-quality.md`; affects Task 3.
-> **Upstream intent:** Upstream made the frozen merge base the governing Phase B anchor, treated the base branch as canonical by default, and pushed the surviving-diff pruning sweep into the Phase B workflow plus the shared refactor/merge references.
-> **Default merged expectation:** Preserve Task 3's objective-first integration guidance, but land it on the newer frozen-merge-base / `## Upstream Intent` contract. A surviving branch diff that reintroduces `## Integration Intent`, drops the base-owned-by-default pruning rule, or removes the explicit `git diff <MERGE_BASE_SHA>..HEAD` justification pass is not allowed.
 
 ### Task 1: Canonicalize objective-first task-block semantics
 **Depends on:** *(none)*
