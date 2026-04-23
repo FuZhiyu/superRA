@@ -115,7 +115,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 ### Task 3: Update workflow and domain skills to treat steps as mutable guidance
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Script:** N/A
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/integration-workflow/SKILL.md`, and `skills/econ-data-analysis/SKILL.md`.
@@ -129,6 +129,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 > **Review notes (present only during active REVISE rounds):**
 > 1. [MAJOR] `skills/agent-orchestration/SKILL.md:162` still tells the orchestrator to keep a task-shape recommendation in `## Integration Intent` when it comes from the main-side scan. `origin/main` commits `4036130`, `ead1439`, and `24f157e` replaced the older Phase B `## Integration Intent` model with the frozen-merge-base `## Upstream Intent` contract plus task-local review notes, and Task 3's own objective explicitly includes keeping orchestration/reporting guidance aligned with that contract. Preserve Task 3's within-task-route / boundary-change guidance, but land it on the current owner: the relevant task block or the active `## Upstream Intent` section for the round. Minimal allowed branch delta: keep the new route-adaptation and doc-vs-report guidance in `agent-orchestration`, but update the main-side-scan recommendation location to `## Upstream Intent` to match the rest of the Phase B surfaces. Stale branch-side content that must not survive: the literal `## Integration Intent` reference in `skills/agent-orchestration/SKILL.md`.
+>    → implemented: replaced the stale Phase B record location with the active `## Upstream Intent` section in `skills/agent-orchestration/SKILL.md:162`
 
 ### Task 4: Add verification coverage and validate the change end-to-end
 **Depends on:** Tasks 2, 3
