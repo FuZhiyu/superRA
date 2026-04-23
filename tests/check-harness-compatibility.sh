@@ -50,6 +50,8 @@ PY
 section "Shared harness adapters"
 test -f skills/using-superRA/references/claude-tools.md
 test -f skills/using-superRA/references/codex-instructions.md
+test -f skills/using-superRA/references/direct-mode-implementer.md
+test -f skills/using-superRA/references/direct-mode-reviewer.md
 test "$(readlink AGENTS.md)" = "CLAUDE.md"
 test "$(readlink AGENT.md)" = "CLAUDE.md"
 python3 - <<'PY'
@@ -58,6 +60,26 @@ from pathlib import Path
 text = Path("skills/using-superRA/SKILL.md").read_text(encoding="utf-8")
 m = re.search(r"^name:\s*(\S+)\s*$", text, re.MULTILINE)
 assert m and m.group(1) == "using-superra", f"using-superRA SKILL.md name must be lowercase 'using-superra', got {m and m.group(1)!r}"
+PY
+
+section "Direct mode role mirrors"
+python3 - <<'PY'
+from pathlib import Path
+
+main_agent = Path("skills/using-superRA/references/main-agent.md").read_text(encoding="utf-8")
+assert "references/direct-mode-implementer.md" in main_agent, "main-agent direct mode must load direct-mode-implementer.md"
+assert "references/direct-mode-reviewer.md" in main_agent, "main-agent direct mode must load direct-mode-reviewer.md"
+assert "agents/implementer.md" not in main_agent, "main-agent direct mode must not depend on raw agents/implementer.md"
+assert "agents/reviewer.md" not in main_agent, "main-agent direct mode must not depend on raw agents/reviewer.md"
+
+for path, source in [
+    ("skills/using-superRA/references/direct-mode-implementer.md", "agents/implementer.md"),
+    ("skills/using-superRA/references/direct-mode-reviewer.md", "agents/reviewer.md"),
+]:
+    text = Path(path).read_text(encoding="utf-8")
+    lowered = text.lower()
+    assert source in text, f"{path} must cite canonical source {source}"
+    assert "temporary manual mirror" in lowered, f"{path} must declare its temporary manual-mirror status"
 PY
 
 section "Codex agent generation"
