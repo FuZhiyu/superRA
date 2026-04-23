@@ -2,7 +2,7 @@
 
 Use when this skill is invoked directly for a merge, rebase, cherry-pick, or branch sync outside `integration-workflow`. Also load `sync-quality.md` for the gated checklist. Walk the Shared Procedure in `semantic-merge/SKILL.md` (repo-state grounding, intent investigation with role classification, resolution plan, intent-changing escalation, stale-reference sweep) — this reference only carries mode-specific content.
 
-Standalone mode completes semantic merge work. It does not stop after identifying the map.
+Standalone mode lands the minimal safe merge and records remaining work in the merge record so the caller (or `refactor-and-integrate`, when invoked after this skill returns) can satisfy it.
 
 ## Inputs
 
@@ -21,10 +21,9 @@ Current-branch intent comes from branch name, commits, `PLAN.md` / `RESULTS.md` 
 1. Create or update `SEMANTIC_MERGE.md` when the operation is material, lacks PLAN.md task structure, or leaves file/script-level obligations.
 2. When `PLAN.md` is absent, record user decisions in `SEMANTIC_MERGE.md` and the relevant commit body instead of `PLAN.md §Decisions`.
 3. Run the requested merge / rebase / cherry-pick after intent investigation.
-4. Land the **sync commit**.
-5. Make **follow-up semantic propagation commits** when needed so non-conflicted sibling files, scripts, tests, docs, and handoff records reflect the chosen resolution. Separate intent-bearing propagation from the mechanical sync when both are non-trivial; a single combined commit is acceptable only when the sync and propagation are both trivial enough for the commit message to describe honestly.
-6. Run targeted checks and existing drift tests when present. Do not silently re-expect drift tests after meaningful result changes — escalate per `SKILL.md §Shared Procedure` step 4.
-7. Stop before broad codebase refactor. If broad refactor is needed, record it as a remaining obligation in the merge record.
+4. **Land exactly one minimal merge commit.** Include conflict resolution, resolved docs, and `SEMANTIC_MERGE.md` in the same commit. The tree must pass existing tests and drift tests after the commit — that is the unambiguous "coherent tree" test.
+5. Run the existing tests and drift tests. Do not silently re-expect drift tests after meaningful result changes — escalate per `SKILL.md §Shared Procedure` step 4.
+6. Record broader propagation — caller updates for renames, output regeneration, drift-test expectation updates, project-doc audit, broad refactor — in the `SEMANTIC_MERGE.md` File / Script Impact Map under `Follow-up`. The caller can invoke `refactor-and-integrate` after this skill returns to satisfy these, or handle them manually.
 
 ## Semantic Merge Record Format
 
@@ -37,8 +36,7 @@ When no PLAN.md task structure exists, or when standalone semantic-merge needs a
 **Current branch:** `<branch>`
 **Incoming ref:** `<incoming-ref>`
 **Governing baseline:** `<sha/ref>`
-**Sync commit:** `<sha>`
-**Propagation commits:** `<sha... or None>`
+**Merge commit:** `<sha>`
 
 ## Current Branch Intent
 
@@ -68,7 +66,7 @@ When no PLAN.md task structure exists, or when standalone semantic-merge needs a
 
 ## Remaining Obligations
 
-<non-refactor obligations that remain, or "None">
+<deferred propagation / refactor / regeneration / doc-audit work for the caller or `refactor-and-integrate` to satisfy, or "None">
 ```
 
 ## Report
@@ -77,8 +75,8 @@ Report:
 
 - operation, incoming ref, governing baseline, and direction
 - current-branch intent and incoming intent
-- sync commit and propagation commits
+- merge commit SHA
 - merge record location or why none was needed
 - user decisions asked and logged
 - stash status (if any)
-- checks run and remaining obligations
+- checks run (existing tests, drift tests) and remaining obligations deferred to the caller / `refactor-and-integrate`

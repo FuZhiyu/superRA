@@ -19,8 +19,8 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing 
 1. Run the requested sync operation after intent investigation. For the normal workflow path, merge `BASE_REF` into the current branch.
 2. Write the branch-level `## Sync Map` in `PLAN.md` when there is material overlap, a conflict, a user decision, sync-review carryover, or a post-sync obligation. Omit it for no-op or trivial syncs with no obligations.
 3. Add task-local `**Sync impact:**` annotations only to task blocks that need task-specific propagation during Integrate. Keep them short and point back to the relevant Sync Map cluster.
-4. **Land exactly one sync commit.** Include code, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations in the same commit.
-5. Leave generated-output refreshes, broad refactor, drift-test expectation updates, and project-doc audit for Integrate. Record them as post-sync obligations in the Sync Map.
+4. **Land exactly one minimal merge commit.** Include conflict resolution, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations in the same commit. The tree must pass existing protection (drift tests + key-result coverage established in `integration-workflow` Phase A) after the commit — that is the unambiguous "coherent tree" test. Do not include broader propagation in this commit.
+5. Record broader propagation — caller updates for renames, output regeneration, drift-test expectation updates, project-doc audit, broad refactor — as post-sync obligations in the Sync Map. Integrate satisfies them.
 
 ## Workflow Sync Map Format
 

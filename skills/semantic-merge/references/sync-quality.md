@@ -17,10 +17,10 @@ Walk every item. `[BLOCKING]` items must be satisfied for the sync to be accepte
 
 **Scope boundary:**
 
-- `[BLOCKING]` Workflow Sync lands at most one sync commit.
-- `[BLOCKING]` Workflow Sync restores a coherent tree without broad refactor, output regeneration, project-doc audit, or drift expectation updates.
-- `[BLOCKING]` Standalone semantic-merge completes requested semantic propagation commits when the caller asked for full integration rather than sync-only.
-- `[BLOCKING]` Post-sync obligations are recorded in `## Sync Map`, task-local `**Sync impact:**`, the standalone merge record, or the sync commit body.
+- `[BLOCKING]` Exactly one minimal merge commit lands in both modes — no semantic propagation commits in semantic-merge's scope.
+- `[BLOCKING]` Existing protection passes after the merge commit (drift tests + key-result coverage in workflow mode; existing tests and drift tests in standalone mode). Protection-pass is the unambiguous "coherent tree" test.
+- `[BLOCKING]` Broader propagation — caller updates for renames, output regeneration, drift-test expectation updates, project-doc audit, broad refactor — is deferred, not performed in this skill.
+- `[BLOCKING]` Deferred propagation is recorded in `## Sync Map` + task-local `**Sync impact:**` (workflow mode) or the `SEMANTIC_MERGE.md` File / Script Impact Map + Remaining Obligations (standalone mode), so `refactor-and-integrate` or the caller can satisfy it later.
 
 **Intent integrity:**
 
@@ -40,5 +40,5 @@ Walk every item. `[BLOCKING]` items must be satisfied for the sync to be accepte
 - `[BLOCKING]` No conflict markers remain.
 - `[BLOCKING]` Stale-reference sweep covered labels, paths, docs, and generated outputs — not just absence of conflict markers.
 - `[BLOCKING]` Targeted checks were run or explicitly reported as not applicable.
-- `[BLOCKING]` Generated outputs are either regenerated in standalone mode or listed as post-sync obligations in workflow mode.
+- `[BLOCKING]` Generated outputs needing regeneration are listed as post-sync obligations (Sync Map in workflow mode; merge record Follow-up column in standalone mode) — regeneration itself is deferred.
 - `[BLOCKING]` Dirty-state stash (when used) was reported in the status return so the user can restore it.

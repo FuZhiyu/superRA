@@ -74,7 +74,9 @@ Log every answer per `handoff-doc` §User Decisions Log before committing the re
 
 Run the sync operation only after intent investigation. Resolve by the plan from Step 3. Preserve base-current deletions and relocations by default; restore branch-side content only when an approved task objective, logged user decision, or Sync impact obligation justifies it.
 
-Mode references specify commit shape: workflow lands exactly one sync commit; standalone lands a sync commit plus as many semantic propagation commits as the resolution needs.
+**Land exactly one minimal merge commit.** The same rule applies to both modes. The commit must leave the tree passing **existing protection** — drift tests and key-result coverage established in `integration-workflow` Phase A when in workflow mode, or existing tests and drift tests when standalone. Protection-pass is the unambiguous definition of "not broken": if the existing protection passes after the commit, the sync is coherent; if it fails, the commit is not yet minimal enough or needs escalation.
+
+Include in this commit: conflict resolution, resolved docs, and the mode-specific handoff artifact (Sync Map + task-local Sync impact in workflow mode; `SEMANTIC_MERGE.md` merge record in standalone mode). Do not include broader propagation in this commit — caller updates for renames, output regeneration, drift-test expectation updates, project-doc audit. Those defer to `refactor-and-integrate` (via Integrate in workflow mode, or invoked by the caller after standalone returns) and are recorded as post-sync obligations in the handoff artifact.
 
 ### 6. Verify — stale-reference sweep
 
@@ -92,11 +94,11 @@ Run targeted checks for touched subsystems where cheap and relevant. Confirm the
 
 In `integration-workflow`, semantic-merge owns Sync and sync review. The workflow computes `BASE_REF`, `PRE_SYNC_BASE_SHA`, and `BASE_HEAD_SHA`, then dispatches a generic sync author and a generic sync reviewer that load this skill's mode references.
 
-Workflow Sync lands the sync commit, records branch-level `## Sync Map` clusters, and annotates affected task blocks with compact `**Sync impact:**` pointers. It does not perform broad refactoring, codebase-fit cleanup, generated-output refreshes, drift-test expectation updates, or project-doc audit. Those are post-sync `refactor-and-integrate` responsibilities.
+Workflow Sync lands the single minimal merge commit, records branch-level `## Sync Map` clusters, and annotates affected task blocks with compact `**Sync impact:**` pointers. Broader propagation — caller updates for renames, output regeneration, drift-test expectation updates, project-doc audit, broad refactor — defers to the post-sync `refactor-and-integrate` phase and is recorded as a Sync Map obligation.
 
 ## Standalone Boundary
 
-Standalone semantic-merge is complete branch-integration work, not just a map. It creates a merge record when needed, performs the requested merge / rebase / cherry-pick, lands semantic propagation commits when required, runs relevant checks and existing drift tests, and stops before broad codebase refactor. Broad refactor, if needed, is recorded as a remaining obligation.
+Standalone semantic-merge lands the same single minimal merge commit that leaves existing tests and drift tests passing, and captures the resolution plus any remaining obligations in `SEMANTIC_MERGE.md`. Broader propagation and refactor are out of scope for this skill; the caller can invoke `refactor-and-integrate` after this skill returns, or satisfy obligations manually.
 
 ## Exception
 
