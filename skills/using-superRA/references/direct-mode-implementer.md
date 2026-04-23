@@ -26,9 +26,7 @@ In direct mode there is no dispatch prompt. Task context comes from `PLAN.md`,
    right references.
 2. **Read your task source.** For task-scoped stages, read the full task block
    in `PLAN.md`, the relevant `PLAN.md` header context, and the corresponding
-   section of `RESULTS.md` if you are resuming work. For `Stage: sync`, read
-   PLAN.md's header, `## Decisions`, existing `## Sync Map` if present,
-   `RESULTS.md` for context, and the current branch / base-ref / anchor state.
+   section of `RESULTS.md` if you are resuming work.
 3. **Read `PLAN.md`'s `## Project Conventions` section.** Read the section
    before editing any file — it is the canonical source of the conventions that
    apply to your work. Do not re-walk the project tree unless the section is
@@ -92,7 +90,7 @@ If you find issues during self-review, fix them now.
 
 ## Handoff — Unified Across Stages
 
-For task-scoped stages (analysis task, drift test creation, refactoring), your handoff is the same: update the task block assigned to you in `PLAN.md` and your assigned task's section of `RESULTS.md`. For `Stage: sync`, update `## Sync Map` when semantic-merge requires it and report the sync commit details; there may be no task block to edit.
+For task-scoped stages (analysis task, drift test creation, refactoring), your handoff is the same: update the task block assigned to you in `PLAN.md` and your assigned task's section of `RESULTS.md`.
 
 ### Editing Etiquette
 
@@ -112,8 +110,6 @@ You follow an existing task-block anatomy (objective / files affected / input / 
 - **Steps and step code.** You may rewrite, reorder, add, or remove steps when the data forces deviation from the originally planned approach — the plan reflects what was actually done, not what was originally imagined. Replace stale step text in place; do not append a "Revised:" version alongside it.
 - **`**Review status:** IMPLEMENTED`** line, set after your atomic commit.
 - **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit Integrate refactor work. The integration reviewer set these to `REVISE` before you; the integration reviewer will flip them to `APPROVED` after your fix pass.
-- **The `## Sync Map` section in PLAN.md when `Stage: sync`** — created or updated by the sync implementer only when semantic-merge finds material overlap, a conflict, a user decision, or a post-sync obligation. Keep it current for the sync commit. Integration implementers consume it but do not edit it.
-
 - **`→ implemented: ...` annotations** appended to review items on a REVISE round (see below).
 - Your assigned task's section of `RESULTS.md`.
 
@@ -121,7 +117,7 @@ You follow an existing task-block anatomy (objective / files affected / input / 
 
 - The task objective, script path, or input/output — these define task scope.
 - Any other task's content (steps, status, review notes, results section).
-- **The PLAN.md header.** Read it, but do not edit it, except for the `Stage: sync` ownership of `## Sync Map` described above. If you identify any other header change or issue, report it in your status return.
+- **The PLAN.md header.** Read it, but do not edit it. If you identify any header change or issue, report it in your status return.
 - **The reviewer's prose** inside a review-notes blockquote item. You append `→ implemented: ...` annotations; you do not rewrite what the reviewer wrote.
 - **Any `→ orchestrator: ...` annotation** already present on a review item. Leave it intact.
 - **Any review item's existence.** You never delete review items. Only the reviewer and the orchestrator have delete authority; your only tool is the `→ implemented: ...` annotation.
@@ -161,8 +157,6 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 2. **For task-scoped stages, update `RESULTS.md` task section in place.** Your task's section is **pre-allocated** in `RESULTS.md` at planning time (`## Task N: <name>`, same order and name as `PLAN.md`). Find your section by heading and **replace its content** with current findings — do not append a new section at end-of-file (that creates merge conflicts on parallel dispatch). Mirror the per-task shape in `handoff-doc/references/results-anatomy.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
-3. **For `Stage: sync`, record branch-level handoff instead of inventing a task block.** Update PLAN.md `## Sync Map` when semantic-merge requires it. If no Sync Map is required, keep PLAN.md unchanged and put the base ref, anchors, sync commit SHA, checks run, and post-sync obligations in the sync commit body and status return. Do not set `**Review status:**` unless the orchestrator explicitly assigned a task block.
-
 **Single atomic commit.** Follow `superRA:using-superra` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + `PLAN.md` + `RESULTS.md` together:
 ```bash
 git add [code files] PLAN.md RESULTS.md results_attachments/
@@ -172,12 +166,12 @@ git commit -m "task N: [brief description]"
 ## Pre-Commit Self-Check
 
 Before staging your commit, verify:
-- [ ] For task-scoped stages, every PLAN.md edit is inside my assigned task block. For `Stage: sync`, PLAN.md edits are limited to the active `## Sync Map`.
+- [ ] Every PLAN.md edit is inside my assigned task block.
 - [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations.
 - [ ] I replaced stale step notes in place — no "Previously..." or "Update:" blocks, no strikethroughs.
-- [ ] For task-scoped stages, my RESULTS.md edits are confined to my task's pre-allocated section (replaced in place — not a new section appended at EOF). For `Stage: sync`, I did not edit RESULTS.md unless the orchestrator explicitly assigned that handoff.
+- [ ] My RESULTS.md edits are confined to my task's pre-allocated section (replaced in place — not a new section appended at EOF).
 - [ ] Figures are embedded with `![caption](results_attachments/...)` and the image files are committed.
-- [ ] The task block and results section, or the `Stage: sync` Sync Map / commit-body handoff, read as single coherent current-state descriptions.
+- [ ] The task block and results section read as single coherent current-state descriptions.
 - [ ] Every material finding I am about to report is already written into `PLAN.md` (task block) or `RESULTS.md` (task section), not only in my status report. The doc is the record; the report only points at it.
 
 ## Escalation

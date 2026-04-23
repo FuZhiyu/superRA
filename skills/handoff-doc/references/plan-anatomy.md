@@ -62,7 +62,7 @@ A checklist of irreversible workflow milestones. Each box is a rollup over per-t
 
 Only the orchestrator (or standalone author) edits the header, including `## Workflow Status` and (when present) `## Decisions`. Subagents read the header but treat it as read-only. If a subagent discovers something that belongs in the header (a new convention spanning multiple tasks, a data inventory correction), they report it in their status return and the orchestrator decides whether to update the header.
 
-`## Sync Map` is the narrow Sync/Integrate exception. When Sync needs it, the sync agent owns the active section for the current round. Integration reviewers and implementers consume it; the orchestrator removes it at Integrate closeout because it is stale once all obligations are satisfied.
+`## Sync Map` is the narrow Sync/Integrate exception. When Sync needs it, the generic sync author owns the branch-level map and task-local Sync impact annotations for the current round. The generic sync reviewer owns only the sync-review status / notes inside that map. Integration reviewers and implementers consume the map and task-local pointers; the orchestrator removes satisfied Sync scaffolding at Integrate closeout.
 
 ### Top-Level Order
 
@@ -142,16 +142,18 @@ If it is unclear whether an answer counts as a decision worth logging: if acting
 
 ## Sync Map
 
-The `## Sync Map` section bridges Sync and Integrate. It answers the branch-wide question, "what did the semantic sync learn, resolve, and leave for post-sync integration?" so reviewers and refactor implementers do not reconstruct incoming intent from git history while acting on task-local review notes.
+The `## Sync Map` section bridges Sync and Integrate. It answers the branch-wide question, "what did the semantic sync learn, resolve, and leave for post-sync integration?" Task-local `**Sync impact:**` fields answer the narrower question, "what does this specific task need to know?"
 
-**Ownership:** Sync-agent-owned during Sync. The sync agent creates or updates the section when there is material overlap, a conflict, a user decision, or a post-sync obligation. Integration reviewers and implementers read it but do not rewrite it. The orchestrator removes it at Integrate closeout because it is temporary scaffolding, not a later-phase record.
+**Ownership:** The generic sync author creates or updates `## Sync Map` and affected task-local `**Sync impact:**` fields when there is material overlap, a conflict, a user decision, sync-review carryover, or a post-sync obligation. The generic sync reviewer edits only `**Sync review status:**` and `> **Sync review notes:**` in the map. Integration reviewers and implementers read the map and task-local pointers but do not rewrite them unless their dispatch explicitly assigns the affected task. The orchestrator removes satisfied Sync scaffolding at Integrate closeout because it is temporary, not a later-phase record.
 
 **Lifecycle:**
 
-1. Sync resolves `<base-ref>`, fetches it when it is a remote-tracking ref, computes `PRE_SYNC_BASE_SHA` and `BASE_HEAD_SHA`, and dispatches `Stage: sync` when the base has advanced.
-2. The sync agent writes `## Sync Map` only when needed. If Sync is a no-op or trivial with no obligations, leave the section absent.
-3. Integrate consumes the section: the integration reviewer turns open obligations into task-local review notes; refactor implementers satisfy accepted obligations.
-4. Integrate closeout removes the section in the same commit that flips `Integrated`. It does not survive beyond the round that needed it.
+1. Sync resolves `<base-ref>`, fetches it when it is a remote-tracking ref, computes `PRE_SYNC_BASE_SHA` and `BASE_HEAD_SHA`, and dispatches a generic sync author when the base has advanced.
+2. The sync author writes `## Sync Map` only when needed. If Sync is a no-op or trivial with no obligations, leave the section absent.
+3. The sync author adds task-local `**Sync impact:**` fields only to tasks that need task-specific propagation during Integrate.
+4. The sync reviewer verifies the sync and records `**Sync review status:** APPROVED` or tasking notes before Integrate begins.
+5. Integrate consumes task-local Sync impact plus the referenced Sync Map clusters: the integration reviewer turns open obligations into task-local review notes; refactor implementers satisfy accepted obligations.
+6. Integrate closeout removes the section and satisfied task-local Sync impact fields in the same commit that flips `Integrated`.
 
 **Format:**
 
@@ -163,23 +165,45 @@ The `## Sync Map` section bridges Sync and Integrate. It answers the branch-wide
 **Synced base head:** `def5678`
 **Incoming range:** `abc1234..def5678`
 **Sync commit:** `fedcba9`
+**Sync review status:** `IMPLEMENTED`
 
-> **Sync cluster (2026-04-22):** commits `1234abc`, `4567def`; paths `skills/using-superRA/SKILL.md`, `README.md`; affects Tasks 2, 3.
+### Branch Summary
+
+**Current branch intent:** Update integration workflow semantics.
+**Incoming intent:** Upstream moved shared discipline into `using-superRA`.
+**Resolution thesis:** Preserve the upstream ownership move and keep this branch's integration step wording where compatible.
+
+### Sync Clusters
+
+> **Sync cluster `sync-shared-discipline` (2026-04-22):** commits `1234abc`, `4567def`; paths `skills/using-superRA/SKILL.md`, `README.md`; affects Tasks 2, 3.
 > **Incoming intent:** Upstream deleted the duplicated `## Universal Principles` section and moved shared discipline into `using-superRA`.
 > **Sync resolution:** The sync commit preserved the upstream deletion and kept this branch's new integration step wording where it did not restore deleted content.
 > **Post-sync obligations:** Task 2 must update role references to consume the new wording; Task 3 must remove stale links to the deleted section.
 > **User decision:** None.
+
+> **Sync review notes (present only while REVISE is active):**
+> 1. [MAJOR] Task 2 is missing a task-local Sync impact pointer for `skills/using-superRA/SKILL.md`.
 ```
 
 One blockquote cluster per sync cluster. Each cluster has five lines:
 
-- `Sync cluster (YYYY-MM-DD)` naming the commits, paths, and affected task IDs.
+- `Sync cluster <cluster-id> (YYYY-MM-DD)` naming the commits, paths, and affected task IDs.
 - `Incoming intent` stating in plain language what the incoming/base changes were trying to accomplish.
 - `Sync resolution` stating what the sync commit kept, dropped, or synthesized.
 - `Post-sync obligations` naming what Integrate still has to propagate, regenerate, review, or clean up.
 - `User decision` summarizing a logged decision or `None`.
 
 **Placement:** After `## Project Conventions` and optional `## Decisions`, before the separator that opens task blocks. Omit entirely until Sync surfaces a material change.
+
+### Task-local Sync impact
+
+When a Sync cluster affects a task, add this compact field directly after `**Integration status:**`:
+
+```markdown
+**Sync impact:** Cluster `sync-shared-discipline` requires Task 2 to update role references to consume the `using-superRA` wording. Source: `PLAN.md ## Sync Map`.
+```
+
+The field is a pointer, not a duplicate merge record. It stays short so task-scoped integration agents see the relevant sync intention without loading full branch history.
 
 ## Task Block Anatomy
 
@@ -188,6 +212,7 @@ One blockquote cluster per sync cluster. Each cluster has five lines:
 **Depends on:** Task N-1 [, Task N-2] | *(none)*
 **Review status:** *(set during execution — not filled at planning time)*
 **Integration status:** *(set during integration — not filled at planning time)*
+**Sync impact:** *(optional; present only while an active Sync cluster affects this task)*
 
 **Script:** `Code/NN_phase_name.py` (notebook-compatible format)
 **Input:** `Data/input_file.parquet`
@@ -238,10 +263,11 @@ Validate: row count matches expectation, unmatched rate reasonable, distribution
 ## Field-by-Field Notes
 
 - **`**Review status:**`** is always present on a task once execution begins. Valid values: `IMPLEMENTED`, `REVISE (<stage>)`, `APPROVED`. Before execution starts, leave it as a placeholder or omit. On re-entry, tasks in the transitive downstream closure of a modified task have their status cleared by default; the orchestrator may exempt a downstream task by documenting why the upstream change does not affect its inputs (one blockquote per exempted task in §Decisions).
-- **`**Integration status:**`** is owned by the integration reviewer and the implementer across the Integrate step — symmetric with `**Review status:**`, where the reviewer itself sets REVISE / APPROVED and the orchestrator intervenes only to overrule. The **integration reviewer** sets `REVISE` on tasks it annotates with integration review-notes and `APPROVED` on touched or Sync-Map-affected tasks that pass. The **implementer** flips in-scope `REVISE` tasks to `IMPLEMENTED` when it commits refactor work. The **integration reviewer** flips in-scope tasks to `APPROVED` when the cumulative diff passes (or back to `REVISE` on specific tasks if it finds issues), in the same commit that writes its review. The orchestrator does not flip Integration status by default; it only overrules a reviewer's flip via a `→ orchestrator: ...` annotation when it disagrees, same as for Review status. Valid values: unset / `IMPLEMENTED` / `REVISE` / `APPROVED`. The same DAG cascade rule applies as for `**Review status:**` — downstream tasks in the closure of a modified task have their Integration status cleared by default, with documented exemptions in §Decisions.
+- **`**Integration status:**`** is owned by the integration reviewer and the implementer across the Integrate step — symmetric with `**Review status:**`, where the reviewer itself sets REVISE / APPROVED and the orchestrator intervenes only to overrule. The **integration reviewer** sets `REVISE` on tasks it annotates with integration review-notes and `APPROVED` on touched or Sync-impact-affected tasks that pass. The **implementer** flips in-scope `REVISE` tasks to `IMPLEMENTED` when it commits refactor work. The **integration reviewer** flips in-scope tasks to `APPROVED` when the cumulative diff passes (or back to `REVISE` on specific tasks if it finds issues), in the same commit that writes its review. The orchestrator does not flip Integration status by default; it only overrules a reviewer's flip via a `→ orchestrator: ...` annotation when it disagrees, same as for Review status. Valid values: unset / `IMPLEMENTED` / `REVISE` / `APPROVED`. The same DAG cascade rule applies as for `**Review status:**` — downstream tasks in the closure of a modified task have their Integration status cleared by default, with documented exemptions in §Decisions.
+- **`**Sync impact:**`** is temporary Sync/Integrate scaffolding, written by the generic sync author and verified by the generic sync reviewer. It points to the relevant Sync Map cluster and states only the task-specific obligation. Integration implementers and reviewers consume it; the orchestrator removes it at Integrate closeout once satisfied, unless the text describes a lasting task assumption.
 - **Script / Input / Output** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **Steps** are editable by the implementer: they may rewrite, reorder, add, or remove steps when the data forces deviation from the planned approach. Steps are expressed as checkbox items with inline code blocks that contain the actual analyst code.
-- **Review notes blockquote** is present only when there are active items. On `APPROVED`, the blockquote is removed entirely. During Integrate, Sync-Map-driven items carry the task-local obligation directly in the blockquote: the sync cluster, incoming intent, required propagation, minimal surviving branch delta for that task, and stale branch-side content that must not survive. For how items enter, get annotated, and exit across iterations, see `agents/reviewer.md` (first-round REVISE and re-review deletion) and `agents/implementer.md` (annotating fixes with `→ implemented: ...`).
+- **Review notes blockquote** is present only when there are active items. On `APPROVED`, the blockquote is removed entirely. During Integrate, Sync-impact-driven items carry the task-local obligation directly in the blockquote: the sync cluster, incoming intent, required propagation, minimal surviving branch delta for that task, and stale branch-side content that must not survive. For how items enter, get annotated, and exit across iterations, see `agents/reviewer.md` (first-round REVISE and re-review deletion) and `agents/implementer.md` (annotating fixes with `→ implemented: ...`).
 - **`## Workflow Status` checkboxes** are flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. Each box is a rollup over per-task statuses: e.g., `Execution complete` flips only when every task has `**Review status:** APPROVED`; `Drift tests created` flips only when the full drift-test suite passes (which requires all tasks to have `**Integration status:**` coverage). A box is unchecked again only when a scope change or post-sync refactor invalidates the milestone — see `planning-workflow §User Feedback and Changing Plans`. Subagents may not flip boxes; if a subagent reports work that completes a milestone, the orchestrator flips the box in the next commit.
 
 ## No Placeholders

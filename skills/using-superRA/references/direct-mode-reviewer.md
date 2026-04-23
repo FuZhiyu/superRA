@@ -32,10 +32,7 @@ In direct mode there is no dispatch prompt. Review scope comes from `PLAN.md`,
 2. **Read your task source.** For task-scoped stages, read the task block in
    `PLAN.md`, the implementer's step notes, any existing review-notes blockquote
    (including `→ implemented:` and `→ orchestrator:` annotations), and the
-   corresponding section of `RESULTS.md` directly from the file. For
-   branch-level sync review, read PLAN.md's header, `## Decisions`, existing
-   `## Sync Map` if present, `RESULTS.md`, and the current base/ref/current
-   branch state.
+   corresponding section of `RESULTS.md` directly from the file.
 3. **Read `PLAN.md`'s `## Project Conventions` section.** Use the section as
    the review standard for codebase-fit findings. If it is missing, empty, or
    stale, or if you need a convention it does not cover, walk on-demand from
@@ -104,7 +101,7 @@ On re-review after a REVISE fix: verify (1) each cited fix is correct, and (2) a
 
 ## Handoff — Unified Across Stages
 
-For task-scoped stages (implementation review, drift test review, integration review), your review feedback goes into the **review-notes blockquote of your assigned task block in PLAN.md**. The task block may be an analysis task or an integration task — the anatomy and mechanics are identical. Branch-level sync review with no assigned task block is report-only unless the orchestrator explicitly assigned a task block. Exception: **ad-hoc** stage is report-only with no document updates.
+For task-scoped stages (implementation review, drift test review, integration review), your review feedback goes into the **review-notes blockquote of your assigned task block in PLAN.md**. The task block may be an analysis task or an integration task — the anatomy and mechanics are identical. Exception: **ad-hoc** stage is report-only with no document updates.
 
 ### Editing Etiquette
 
@@ -112,7 +109,7 @@ For task-scoped stages (implementation review, drift test review, integration re
 
 - **Inline-edit only.** Replace stale content in place. Never append "Update:" / "Revised:" / "Previously..." blocks, never strike through. On re-review, confirmed-fixed items are **removed** from the review-notes blockquote, not marked "resolved" — the prior review text lives in git history, not in `PLAN.md`.
 - **Preserve task-block boundaries.** When writing or editing a review-notes blockquote, stay strictly within the assigned task block — never disturb the preceding `---` separator, the `### Task N:` heading of the next task, or the trailing separator before it. If removing the blockquote (empty after re-review), remove only the blockquote lines; leave the surrounding task-block anatomy intact.
-- **Remove superseded content, don't stack it.** When the blockquote is empty after re-review, remove the blockquote entirely. Prior reliability caveats in `RESULTS.md` are replaced, not stacked across rounds. `## Sync Map` is sync-agent-owned and temporary; read it during Integrate but do not rewrite it.
+- **Remove superseded content, don't stack it.** When the blockquote is empty after re-review, remove the blockquote entirely. Prior reliability caveats in `RESULTS.md` are replaced, not stacked across rounds. `## Sync Map` and task-local `**Sync impact:**` fields are temporary Sync/Integrate scaffolding; read them during Integrate but do not rewrite them unless the dispatch explicitly assigns integration status review for the affected task.
 - **Doc before report.** Every material review finding lands in the blockquote in `PLAN.md` **before** it appears in your status return. The blockquote is the record; the report only points at it.
 
 If something about the review blockquote's structure or the surrounding `PLAN.md` shape is unclear, flag it in your status return and let the orchestrator decide how to handle it.
@@ -122,7 +119,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 **You own** the following slots in your assigned task block, and only within your assigned task:
 
 - **`**Review status:**`** line — set to `APPROVED` or `REVISE` per the verdict protocol in §Verdict.
-- **`**Integration status:**`** line — flipped by you in the integration stage, symmetric with `**Review status:**`. As **integration reviewer**, consume `## Sync Map` if present and review the governing diff. For every touched or Sync-Map-affected task, set `APPROVED` when it passes or `REVISE` when you write task-local review notes. On re-review, flip in-scope tasks to `APPROVED` when fixes pass, or back to `REVISE` on specific failing tasks. Not applicable to other reviewer stages.
+- **`**Integration status:**`** line — flipped by you in the integration stage, symmetric with `**Review status:**`. As **integration reviewer**, consume task-local `**Sync impact:**` and referenced `## Sync Map` clusters, then review the governing diff. For every touched or Sync-impact-affected task, set `APPROVED` when it passes or `REVISE` when you write task-local review notes. On re-review, flip in-scope tasks to `APPROVED` when fixes pass, or back to `REVISE` on specific failing tasks. Not applicable to other reviewer stages.
 - **The review-notes blockquote** — write it on first review, delete items or rewrite items on re-review, and remove the entire blockquote when empty (at APPROVED).
 - **Reliability caveat blockquote** in the task's `RESULTS.md` section — implementation stage only, replaced on re-review.
 
@@ -139,7 +136,7 @@ If something about the review blockquote's structure or the surrounding `PLAN.md
 
 1. Read the task block's steps and the code at the cited files.
 2. Walk the domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. Never halt on a failure — continue through the rest so the implementer gets one comprehensive pass.
-3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix. In Integrate, any Sync-Map-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
+3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix. In Integrate, any Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
 4. Set `**Review status:**` per the verdict protocol in §Verdict: `APPROVED` (no `[BLOCKING]` items) or `REVISE` (at least one `[BLOCKING]` item).
 5. Commit `PLAN.md` only: `git commit -m "review: Task N <verdict>"`.
 

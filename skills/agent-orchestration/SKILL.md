@@ -102,7 +102,7 @@ Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `P
 
 ## Dispatch Templates
 
-Every workflow skill that dispatches an `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules.
+Every workflow skill that dispatches a task-scoped `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules. Branch-level `integration-workflow` Sync is the exception: it dispatches generic sync author / sync reviewer agents with explicit `semantic-merge` mode references, because Sync is not a task-scoped implementer/reviewer assignment.
 
 Every template opens with the canonical prefix **"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …"**. The prefix tells the agent that its standard Before-You-Start is in effect and it loads what `superRA:using-superra` §Skill-Load Manifest specifies for its Stage; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or additional non-default skill/reference. The dispatch prompt does not repeat the standard protocol, never paraphrases `PLAN.md` content, and never restates checklist items the agent already reads.
 
@@ -217,4 +217,3 @@ Implementers return one of four statuses in their dispatch response. Applies at 
   2. Input quality too poor → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
   3. Task requires methodology decisions → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
   4. Task too complex → break into smaller pieces or use a more capable model.
-
