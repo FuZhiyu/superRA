@@ -92,7 +92,7 @@ The most common modeling error is pushing symbols before the model
 objects are actually pinned down. Define the model before you manipulate
 it.
 
-- `[BLOCKING]` Every symbol is defined before first use: primitives, choice variables, state variables, parameters, shocks, constraints, value objects, prices, and equilibrium conditions.
+- `[BLOCKING]` Every symbol is introduced in narrative order before first use: primitives, choice variables, state variables, parameters, shocks, constraints, value objects, prices, and equilibrium conditions. A symbol may not appear in any derivation, equation, proof step, or verification before the paragraph or table that introduces it. For symbols reused across tasks, `PLAN.md`'s Notation Conventions table is the authoritative source - reuse its meaning rather than redefining the symbol locally.
 - `[BLOCKING]` Notation is explicit and interpretable or genuinely conventional. Arbitrary placeholder labels like `A/B/C/D`, `T1/T2`, `eq1`, and `var2` are not acceptable. Conventional notation such as `r` for an interest rate or `w` for a wage is acceptable when defined at first use.
 - `[BLOCKING]` Assumptions are explicit and attached to primitives: preferences, technology, endowments, information, timing, distributions, parameter domains, boundary conditions, and normalizations. Do not state assumptions as desired properties of endogenous objects unless those properties are later proved.
 - `[BLOCKING]` Domains, units, and sign restrictions are clear whenever they matter for the algebra, comparative statics, or numerical checks.
@@ -135,6 +135,7 @@ until it has survived at least one independent check.
 ### Documentation and handoff
 
 - `[BLOCKING]` `RESULTS.md` is updated in place for this task's section. The doc is the record - findings live there before they appear in any status report.
+- `[BLOCKING]` When implementation introduces a symbol not yet in `PLAN.md`'s Notation Conventions table, update the table via inline-edit BEFORE using the symbol in algebra, and commit the `PLAN.md` edit atomically with the derivation work. Follow `superRA:handoff-doc` inline-edit discipline.
 - `[BLOCKING]` Definitions, assumptions, and the reason for major derivation choices are written alongside the math or code, not left only in chat.
 - `[BLOCKING]` When a task section includes equations, tables, or figures for human reading, use `superRA:report-in-markdown`; do not invent a separate rendering utility.
 - `[BLOCKING]` Rendered math, prose, and any supporting code use consistent notation for the same object.
@@ -159,6 +160,7 @@ the definitions or assumptions explicit.
 | "A/B/C is temporary; I will rename it later." | Temporary placeholder notation spreads and becomes the model. |
 | "The numerical check is only illustrative." | Even toy checks need explicit parameters and a stated pass condition. |
 | "The CAS says it simplifies to zero." | You still need to say what was checked and under which assumptions. |
+| "I'll update the Notation Conventions table after the derivation is clean." | Late notation updates mean the derivation was written against undefined symbols; update the table first, then derive. |
 
 ## Key References
 

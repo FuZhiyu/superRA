@@ -137,15 +137,15 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 4: Tighten notation discipline — strengthen the ordering check and add an explicit Notation Conventions update mechanism
 **Depends on:** Task 1
-**Review status:** *(set at review time)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration — not filled at planning time)*
 
 **Script:** `skills/theory-modeling/SKILL.md`, `skills/theory-modeling/references/planning.md`
 **Input:** Existing Define-Derive-Validate checklist (SKILL.md) and the Model Inventory / Assumption Map template (references/planning.md)
 **Output:** A stronger `Define` block that enforces narrative-order introduction of symbols and names PLAN.md's Notation Conventions table as the authoritative cross-task source, plus an explicit rule — in both the skill body and the planning reference — that implementers inline-edit the Notation Conventions table BEFORE using any newly introduced symbol in algebra, committed atomically with the work.
 
-- [ ] Rewrite the existing `Define` §`[BLOCKING]` *"Every symbol is defined before first use"* item in `skills/theory-modeling/SKILL.md` to require (a) narrative-order introduction — a symbol may not appear in any derivation, equation, proof step, or verification before the paragraph/table that introduces it; and (b) PLAN.md Notation Conventions as the authoritative source for any symbol reused across tasks.
-- [ ] Add a new `[BLOCKING]` item (either in `Define` or in `Documentation and handoff`) stating: when implementation introduces a symbol not yet in PLAN.md's Notation Conventions table, update the table via inline-edit BEFORE using the symbol in algebra, and commit the PLAN.md edit atomically with the derivation work. Reference `superRA:handoff-doc` inline-edit discipline rather than restating it.
-- [ ] Mirror the update mechanism in `skills/theory-modeling/references/planning.md` — under "Principles" or a new short subsection — so the planning reference flags that the Notation Conventions table is a living record, not a one-time planning artifact.
-- [ ] Add one row to the Common Rationalizations table in `SKILL.md` capturing the new failure mode (e.g., "I'll update the Notation Conventions table after the derivation is clean." → "Late notation updates mean the derivation was written against undefined symbols; update the table first, then derive.").
-- [ ] Sanity-read the edits for internal consistency with the Iron Law and existing checklist items; update `RESULTS.md` Task 4 with the final checklist wording and any open caveats.
+- [x] Rewrite the existing `Define` §`[BLOCKING]` *"Every symbol is defined before first use"* item in `skills/theory-modeling/SKILL.md` to require (a) narrative-order introduction — a symbol may not appear in any derivation, equation, proof step, or verification before the paragraph/table that introduces it; and (b) PLAN.md Notation Conventions as the authoritative source for any symbol reused across tasks.
+- [x] Add a new `[BLOCKING]` item in `Documentation and handoff` stating: when implementation introduces a symbol not yet in PLAN.md's Notation Conventions table, update the table via inline-edit BEFORE using the symbol in algebra, and commit the PLAN.md edit atomically with the derivation work. References `superRA:handoff-doc` inline-edit discipline rather than restating it.
+- [x] Mirror the update mechanism in `skills/theory-modeling/references/planning.md` under "Principles" — the planning reference now flags the Notation Conventions table as a living record, not a one-time planning artifact.
+- [x] Add one row to the Common Rationalizations table in `SKILL.md` capturing the new failure mode ("I'll update the Notation Conventions table after the derivation is clean." → "Late notation updates mean the derivation was written against undefined symbols; update the table first, then derive.").
+- [x] Sanity-read the edits for internal consistency with the Iron Law and existing checklist items; updated `RESULTS.md` Task 4 with the final checklist wording and any open caveats.
