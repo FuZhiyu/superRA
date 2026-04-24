@@ -149,7 +149,7 @@ Log the researcher's answer per `handoff-doc` §User Decisions Log — top-level
 
 **Execute the user's choice:**
 
-- **Option 1 (Proceed with integration):** Invoke `superRA:integration-workflow`. It resolves the integration base with the researcher and runs Phases A–D (drift tests, sync+refactor, docs, merge/PR).
+- **Option 1 (Proceed with integration):** Invoke `superRA:integration-workflow`. It runs Protect, Sync, Integrate, Document, and Finish.
 - **Option 2 (Change the plan):** Re-enter `superRA:planning-workflow §User Feedback and Changing Plans` — treat the researcher's scope change as the trigger; after the plan edit commit, run the main-agent Workflow Frontier Resolver to choose the next entry point.
 - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
 - **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.

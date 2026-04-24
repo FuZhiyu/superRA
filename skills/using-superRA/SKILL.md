@@ -21,7 +21,7 @@ SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
 
 1. `planning-workflow` creates or revises `PLAN.md` / `RESULTS.md`, records researcher decisions, and declares which task-local statuses or workflow rollups a plan change invalidates.
 2. `implementation-workflow` executes task blocks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
-3. `integration-workflow` creates drift tests, syncs and refactors against the integration base, matures documentation, and performs the final merge / PR / cleanup action.
+3. `integration-workflow` protects key results, syncs and refactors against the integration base, matures documentation, and performs the final merge / PR / cleanup action.
 
 The map is ordered, but re-entry is normal. A changed task, reviewer finding, scope revision, or interrupted session re-enters at the earliest invalid layer for the affected task frontier while preserving unrelated approved work. The main-agent Workflow Frontier Resolver adds four things agents must do consistently: inspect durable evidence, compute the affected frontier, route to the workflow that owns the earliest invalid layer, and enforce the non-negotiable gates before advancement.
 
@@ -50,13 +50,14 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 |---|---|---|
 | Workflow | `planning-workflow` | PLAN phase: scope check, task decomposition, plan draft. |
 | Workflow | `implementation-workflow` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
-| Workflow | `integration-workflow` | INTEGRATE (Phases A–D): drift tests, iterative sync + refactor, doc finalization, final merge / PR / cleanup. |
+| Workflow | `integration-workflow` | INTEGRATE: Protect, Sync, Integrate, Document, Finish. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
-| Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Phase C doc-writer); usable standalone by a single author. |
-| Utility | `refactor-and-integrate` | Drift-test, codebase-integration, and merge-quality checklists. |
+| Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Document doc-writer); usable standalone by a single author. |
+| Utility | `result-protection` | Tools for protecting key results from unintended changes; drift tests are the current/default mechanism. |
+| Utility | `refactor-and-integrate` | Tools for codebase coherence — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence. |
 | Utility | `report-in-markdown` | Format discipline for markdown reports — figures, LaTeX math, tables. |
-| Utility | `semantic-merge` | Intent-based conflict resolution; escalates methodology conflicts. |
+| Utility | `semantic-merge` | Tools for semantic coherence in branch integration — intent investigation, role classification, conflict resolution, stale-reference detect-and-resolve, propagation-to-coherence — with workflow sync author/reviewer mode references and standalone merge mode. |
 | Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
 | Utility | `codex-superra-setup` | Generate and install the named `superra_implementer` / `superra_reviewer` Codex custom agents into `~/.codex/agents/` (global) or `.codex/agents/` (project). |
 | Meta | `using-superra` | This skill — the master skill every agent reads. |
@@ -82,9 +83,12 @@ Apply to every dispatch regardless of domain.
 | `Stage:` | Emitted by | Required skills |
 |---|---|---|
 | `implementation` | `implementation-workflow` | — |
-| `drift-test` | `integration-workflow` Phase A | `refactor-and-integrate` |
-| `integration` | `integration-workflow` Phase B | `refactor-and-integrate` |
-| `documentation` | `integration-workflow` Phase C | `handoff-doc` + `report-in-markdown` |
+| `protection` | `integration-workflow` Protect | `result-protection` |
+| `sync` | `integration-workflow` Sync | `semantic-merge` |
+| `integration` | `integration-workflow` Integrate | `refactor-and-integrate` |
+| `documentation` | `integration-workflow` Document | `handoff-doc` + `report-in-markdown` |
+
+`Stage: sync` is branch-level. `integration-workflow` dispatches generic sync author / sync reviewer agents with the mode references named in that workflow; the canonical implementer/reviewer role specs do not carry Sync-specific exceptions.
 
 ### Domain add-ons (topic-driven)
 

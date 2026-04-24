@@ -103,9 +103,9 @@ Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `P
 
 ## Dispatch Templates
 
-Every workflow skill that dispatches an `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules.
+Every workflow skill that dispatches a task-scoped `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules. Branch-level `Stage: sync` dispatches generic sync author / sync reviewer agents with explicit `semantic-merge` mode references.
 
-Every template opens with the canonical prefix **"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …"**. The prefix tells the agent that its standard Before-You-Start is in effect and it loads what `superRA:using-superra` §Skill-Load Manifest specifies for its Stage; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or additional non-default skill/reference. The dispatch prompt does not repeat the standard protocol, never paraphrases `PLAN.md` content, and never restates checklist items the agent already reads.
+Templates carry required fields plus an optional `Additionally:` line for task-specific steering: focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. Omit `Additionally:` when there is no extra steering; never use it to restate role protocol, manifest loads, or `PLAN.md` content.
 
 **Canonical shape — required fields first, `Additionally:` anchor last:**
 
@@ -116,10 +116,7 @@ Agent(subagent_type: "superRA:implementer"):
   Task: <task pointer — e.g., "Task N in PLAN.md">
   Worktree: <absolute path>   # optional — parallel-dispatch only
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <optional steering — focus area, prior-round adjudication notes,
-    warnings>.
+  Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
 ```
 
 **Reviewer:**
@@ -130,15 +127,12 @@ Agent(subagent_type: "superRA:reviewer"):
   Git range: <BASE_SHA>..<HEAD_SHA>
   Worktree: <absolute path>   # optional — parallel-reviewer pattern only
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <optional steering — focus area, prior-round adjudication notes,
-    warnings>.
+  Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
 ```
 
 **Optional steering is strictly additive.** If your `Additionally:` line only paraphrases the default protocol, the skill-load manifest, or `PLAN.md` content, delete it — the agent reads those itself. Never include `Work from:` (cwd is implicit) or restate `PLAN.md` content / manifest loads.
 
-If a non-default skill load, an extra domain reference, or an override is required, add `Skills:` and `References:` lines between the required fields and the prefix line.
+If a non-default skill load, an extra domain reference, or an override is required, add `Skills:` and `References:` lines between the required fields and `Additionally:`.
 
 ## Orchestrator Duties
 

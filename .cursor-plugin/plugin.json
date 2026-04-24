@@ -2,7 +2,7 @@
   "name": "superRA",
   "displayName": "SuperRA",
   "description": "Super Research Assistant: data-first discipline, analysis planning, reproducibility, and rigorous data validation for economic research",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": {
     "name": "Jesse Vincent",
     "email": "jesse@fsck.com"

@@ -1,10 +1,10 @@
 # Drift Tests for Data-Analysis Results
 
-Load at the **INTEGRATE phase** when preparing drift tests that guard a data analysis's key results.
+Load during Protect when preparing drift tests that guard a data analysis's key results.
 
 Answers the data-analysis-specific questions: what should a drift test protect, how to set econ tolerances, and how to pull candidate invariants out of `RESULTS.md`.
 
-For the implementation-level quality checklist (coverage, independence, clarity, robustness, test format, cross-cutting integrity Red Flags), also load `skills/refactor-and-integrate/references/drift-test-quality.md`.
+For the implementation-level quality checklist (coverage, independence, clarity, robustness, test format, cross-cutting integrity Red Flags), also load `skills/result-protection/references/drift-test-quality.md`.
 
 ---
 
@@ -33,7 +33,7 @@ Drift tests should protect **headline findings**, not every number in the analys
 - Descriptive statistics on raw inputs (upstream, not load-bearing for conclusions)
 - Sensitivity-analysis numbers (these are already robustness themselves — testing a robustness check against itself adds little)
 
-**Always ask the researcher to confirm the candidate list** before writing tests. Drift-test coverage is a researcher-owned decision because it encodes what counts as a "key result." `integration-workflow` Phase A Step 2 bakes this question into the workflow via `AskUserQuestion`.
+**Always ask the researcher to confirm the candidate list** before writing tests. Drift-test coverage is a researcher-owned decision because it encodes what counts as a "key result." `integration-workflow` Protect bakes this question into the workflow via `AskUserQuestion`.
 
 ---
 
@@ -85,4 +85,4 @@ If a failure matches one of these, the test is almost certainly correct and the 
 
 ## Cross-Cutting Integrity Rules
 
-See `refactor-and-integrate/references/drift-test-quality.md` §Cross-cutting Red Flags — drift test integrity.
+See `result-protection/references/drift-test-quality.md` §Cross-Cutting Red Flags.

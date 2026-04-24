@@ -62,7 +62,7 @@ If you find issues during self-review, fix them now.
 
 ## Handoff — Unified Across Stages
 
-Regardless of stage (analysis task, drift test creation, refactoring, post-merge refactoring), your handoff is the same: update the task block assigned to you in `PLAN.md` and your assigned task's section of `RESULTS.md`. The stage only changes *what* goes into the steps, not *how* you edit the doc.
+When you own a PLAN.md task block, your handoff is the same: update that block and its matching RESULTS.md section.
 
 ### Editing Etiquette
 
@@ -83,8 +83,7 @@ If the doc's structure is unclear, flag it in your status return rather than inv
 
 - **Steps and step code.** You may rewrite, reorder, add, or remove steps when the data forces deviation from the originally planned approach — the plan reflects what was actually done, not what was originally imagined. Replace stale step text in place; do not append a "Revised:" version alongside it.
 - **`**Review status:** IMPLEMENTED`** line, set after your atomic commit.
-- **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit your Phase B refactor work (`integration-workflow` Phase B Step 3). The integration reviewer set these to `REVISE` before you; the integration reviewer will flip them to `APPROVED` after your fix pass.
-
+- **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit Integrate refactor work. The integration reviewer set these to `REVISE` before you; the integration reviewer will flip them to `APPROVED` after your fix pass.
 - **`→ implemented: ...` annotations** appended to review items on a REVISE round (see below).
 - Your assigned task's section of `RESULTS.md`.
 
@@ -92,7 +91,7 @@ If the doc's structure is unclear, flag it in your status return rather than inv
 
 - The task objective, script path, or input/output — these define task scope.
 - Any other task's content (steps, status, review notes, results section).
-- **The PLAN.md header.** Read it, but do not edit it. If you identify any change or issue with the header, report it in your status return.
+- **The PLAN.md header.** Read it, but do not edit it. If you identify any header change or issue, report it in your status return.
 - **The reviewer's prose** inside a review-notes blockquote item. You append `→ implemented: ...` annotations; you do not rewrite what the reviewer wrote.
 - **Any `→ orchestrator: ...` annotation** already present on a review item. Leave it intact.
 - **Any review item's existence.** You never delete review items. Only the reviewer and the orchestrator have delete authority; your only tool is the `→ implemented: ...` annotation.
@@ -128,9 +127,9 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 ### Update the Docs and Commit
 
-1. **Update your assigned task block in PLAN.md in place.** Mark completed steps `[x]`. Rewrite step text if you deviated from the originally planned approach. Annotate review items as described above. Set `**Review status:** IMPLEMENTED`.
+1. **When you own a PLAN.md task block, update it in place.** Mark completed steps `[x]`. Rewrite step text if you deviated from the originally planned approach. Annotate review items as described above. Set `**Review status:** IMPLEMENTED`.
 
-2. **Update `RESULTS.md` task section in place.** Your task's section is **pre-allocated** in `RESULTS.md` at planning time (`## Task N: <name>`, same order and name as `PLAN.md`). Find your section by heading and **replace its content** with current findings — do not append a new section at end-of-file (that creates merge conflicts on parallel dispatch). Mirror the per-task shape in `handoff-doc/references/results-anatomy.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
+2. **When you own a RESULTS.md task section, update it in place.** Your task's section is **pre-allocated** in `RESULTS.md` at planning time (`## Task N: <name>`, same order and name as `PLAN.md`). Find your section by heading and **replace its content** with current findings — do not append a new section at end-of-file (that creates merge conflicts on parallel dispatch). Mirror the per-task shape in `handoff-doc/references/results-anatomy.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `superRA:report-in-markdown` and its `rich-content.md` reference for the full format discipline.
 
 **Single atomic commit.** Follow `superRA:using-superra` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + `PLAN.md` + `RESULTS.md` together:
 ```bash
@@ -143,7 +142,7 @@ git commit -m "task N: [brief description]"
 ## Pre-Commit Self-Check
 
 Before staging your commit, verify:
-- [ ] Every PLAN.md edit is inside my assigned task block (no edits elsewhere).
+- [ ] Every PLAN.md edit is inside my assigned task block.
 - [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations.
 - [ ] I replaced stale step notes in place — no "Previously..." or "Update:" blocks, no strikethroughs.
 - [ ] My RESULTS.md edits are confined to my task's pre-allocated section (replaced in place — not a new section appended at EOF).

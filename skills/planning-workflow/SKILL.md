@@ -96,7 +96,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 **Editing discipline and anatomy templates** live in `superRA:handoff-doc` (load it when authoring `PLAN.md` / `RESULTS.md` from scratch). Role ownership and review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the stub anatomy in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Phase C it matures into a permanent record.
+**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the stub anatomy in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Document it matures into a permanent record.
 
 ### PLAN.md Is the Task Tracker
 
@@ -128,7 +128,7 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 - Changing the analysis-level objective, methodology, sample definition, or expected output.
 - Changing data sources or project-wide conventions.
 - Scope additions arriving after integration or merge (post-PR additions, adjacent features surfaced by reviewers, follow-on ideas).
-- Substantive restructure findings surfaced mid-INTEGRATE (by `integration-workflow` Phase B integration reviewer, Phase C doc-reviewer, or Phase D semantic-merge) — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
+- Substantive restructure findings surfaced mid-INTEGRATE (by the `integration-workflow` Sync agent, Integrate reviewer, or Document reviewer) — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
 
 **Not material (handle as inline discovery edits per the Living Plan section above):**
 
@@ -151,7 +151,7 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 4. **Update statuses** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* task-local statuses and rollup boxes are invalidated and *why*. Rules: clear per-task `**Review status:**` and `**Integration status:**` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `APPROVED` tasks. Minor-edited tasks with code unchanged may clear `**Integration status:**` while keeping `**Review status:** APPROVED`. Uncheck project-level `## Workflow Status` boxes whose rollup guarantee is no longer true; unchecking a rollup does not imply clearing every contributing task status.
 5. **Sweep PLAN.md for stale content** per `handoff-doc` §Stale Content Checklist. Earlier task blocks whose output has been superseded by a later task, cross-references to removed sections, review notes resolved by subsequent work — fix in place now, not later.
 6. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
-7. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point.
+7. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point. On every re-entry through `integration-workflow`, the **full** drift-test suite runs regardless of which tasks changed; only *authoring* new drift tests is scoped to the affected tasks.
 
 
 **Banned shortcuts:**

@@ -83,6 +83,17 @@ class SyncCodexAgentsTests(unittest.TestCase):
                 content,
             )
 
+    def test_generated_direct_mode_refs_do_not_embed_sync_context(self) -> None:
+        expected = SCRIPT_NS["render_all_direct_mode_refs"](REPO_ROOT)
+        implementer = expected[
+            "skills/using-superRA/references/direct-mode-implementer.md"
+        ]
+        reviewer = expected["skills/using-superRA/references/direct-mode-reviewer.md"]
+
+        self.assertNotIn("Stage: sync", implementer)
+        self.assertNotIn("branch-level sync review", reviewer)
+        self.assertNotIn("current base/ref/current", reviewer)
+
     def test_generated_agents_have_repo_agnostic_regenerate_hint(self) -> None:
         with tempfile.TemporaryDirectory() as home:
             home_dir = Path(home)

@@ -34,7 +34,7 @@ superRA should be adaptive and composable rather than rigid. It gives agents mec
 
 ### Teach the Protocol, Don't Prescribe Each Action
 
-**This is a gate.** Every implementer editing any file under `skills/*` or `agents/*` self-applies both tests below before committing. Every reviewer walking such a diff verifies them on every pass. A line that fails either test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the tests are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
+**This is a gate.** Every implementer editing any file under `skills/*` or `agents/*` self-applies both tests below line by line before committing. Every reviewer walking such a diff verifies them line by line on every pass. A line that fails either test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the tests are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
 
 Give agents mechanisms and the evidence they need to act predictably; do not narrate what they will see, wrap authoritative content in meta-commentary, or remind them of defaults the runtime already teaches. The bar for every line of instruction is: **without this line, would the agent's behavior be unstable?** If the answer is no, delete it.
 
@@ -64,10 +64,11 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Cross-stage orchestration, dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` |
 | Execution modes and Skill-Load Manifest | `using-superra` |
 | Domain discipline, domain gates, pitfalls, stage-scoped domain references | The relevant domain skill, e.g. `econ-data-analysis` |
-| Generic drift-test, refactor, integration, and merge-quality discipline | `refactor-and-integrate` |
+| Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, Sync Map + task-local Sync impact formats | `semantic-merge` |
+| Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
+| Codebase-coherence techniques — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
 | Handoff-doc mechanics, templates, stale-content rules, User Decisions Log | `handoff-doc` |
 | Report formatting for figures, math, tables, and final-form markdown | `report-in-markdown` |
-| Intent-aware merge/rebase/cherry-pick behavior | `semantic-merge` |
 | Harness-specific tool names and runtime differences | Adapter references under `skills/using-superRA/references/` |
 | Canonical role behavior | `agents/implementer.md` and `agents/reviewer.md` |
 
@@ -94,6 +95,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 - **Harness differences live in adapters.** Put tool-name mappings and runtime differences in the owning adapter reference under `skills/using-superRA/references/`, such as `codex-instructions.md` or `claude-tools.md`.
 - **Direct mode reads skill-owned role references.** Cross-repo plugin use cannot assume raw repo-relative agent files are available, so direct mode loads the generated role references under `skills/using-superRA/references/`.
 - **Codex named agents are generated.** `.codex/agents/` and global `~/.codex/agents/` files come from `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
+- **Surface generated artifacts in PLAN.md.** When a plan touches `skills/*` or `agents/*`, list the generated files and the generator command in the PLAN.md header so every dispatched agent knows on arrival which files must go through `sync_codex_agents.py` rather than being hand-edited. Currently generated: `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`.
 - **Codex plugin packaging installs skills, not named agents.** `codex-superra-setup` owns named-agent installation.
 - **Contributor aliases point here.** `AGENTS.md` and `AGENT.md` remain aliases for this file so Codex-facing contributor guidance has one source.
 

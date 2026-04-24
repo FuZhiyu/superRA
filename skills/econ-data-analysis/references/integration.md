@@ -2,7 +2,7 @@
 
 > Data-analysis integration discipline at the `integration` stage. Implementer walks it as self-check; reviewer walks it as verification. `[BLOCKING]` must be fixed for APPROVE; `[ADVISORY]` may be flagged as MINOR. Verdict protocol per `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines.
 
-Generic cross-cutting code-integration concerns (naming, utility reuse, PR-friendly diffs, documentation currency) live in `refactor-and-integrate/references/codebase-integration.md`. Load both files at the `integration` stage.
+Generic cross-cutting code-integration concerns (naming, utility reuse, PR-friendly diffs, documentation currency) live in `refactor-and-integrate/SKILL.md`. Load both skills at the `integration` stage.
 
 ## Consistency with the codebase
 
@@ -32,4 +32,4 @@ Generic cross-cutting code-integration concerns (naming, utility reuse, PR-frien
 
 ## Reviewer verdict protocol
 
-See `refactor-and-integrate/references/codebase-integration.md §Reviewer Verdict Protocol`.
+Verdict protocol follows the active reviewer role; walk this checklist alongside `refactor-and-integrate/SKILL.md`.

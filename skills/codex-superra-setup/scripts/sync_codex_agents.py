@@ -196,7 +196,6 @@ def render_direct_mode_ref(repo_root: Path, spec: RoleSpec) -> str:
             "**ad-hoc** (report-only).",
             "",
         )
-        role_section = cleanup_reviewer_handoff(role_section)
         role_section = strip_subsection(role_section, "### Report Format")
         tail_sections = (review_protocol, role_section)
 
@@ -368,35 +367,6 @@ def cleanup_implementer_handoff(section: str) -> str:
         )
     section = section.replace(worktree_block, "")
     return section
-
-
-def cleanup_reviewer_handoff(section: str) -> str:
-    """Strip subagent-dispatch-only wording from the reviewer handoff section."""
-    source_paragraph = (
-        "**The `## Upstream Intent` section in PLAN.md** — reviewer-owned for "
-        "the active Phase B round. The orchestrator passes the round context "
-        "(`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range, "
-        "and any special steering) in the dispatch. When the base-side scan "
-        "surfaces material overlap, you create or update the section for the "
-        "current round using that context. Implementers are hands-off. Keep "
-        "the section current while the round is active; the orchestrator "
-        "removes it in the Phase B closeout commit."
-    )
-    direct_paragraph = (
-        "**The `## Upstream Intent` section in PLAN.md** — reviewer-owned for "
-        "the active Phase B round. Use the current round context "
-        "(`origin/<base-branch>`, `MERGE_BASE_SHA`, reviewed upstream range) "
-        "from `PLAN.md` and the current session when the base-side scan "
-        "surfaces material overlap, and create or update the section for the "
-        "current round from that context. Keep the section current while the "
-        "round is active; remove it in the Phase B closeout commit."
-    )
-    if source_paragraph not in section:
-        raise ValueError(
-            "cleanup_reviewer_handoff: expected Upstream Intent paragraph with "
-            "dispatch-only wording not found; source may have been reworded."
-        )
-    return section.replace(source_paragraph, direct_paragraph)
 
 
 def strip_subsection(section: str, heading: str) -> str:

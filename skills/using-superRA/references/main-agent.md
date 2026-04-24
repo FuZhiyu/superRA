@@ -32,7 +32,7 @@ The resolver diagnoses and routes. It does not perform the plan edit, implementa
 
 - Git: current branch/worktree, `git status`, recent commits relevant to PLAN.md / RESULTS.md / task files, and any active merge/rebase/cherry-pick state.
 - Handoff docs: whether `PLAN.md` and `RESULTS.md` exist, are tracked, and match the committed state expected by the workflow about to run.
-- PLAN header: `## Workflow Status`, `## Decisions`, `## Upstream Intent` when present, project conventions, any logged implementation-workflow Step 4 disposition, and any declared pipeline.
+- PLAN header: `## Workflow Status`, `## Decisions`, `## Sync Map` when present, project conventions, any logged implementation-workflow Step 4 disposition, and any declared pipeline.
 - Task blocks: `Depends on`, checkbox completion, `Review status`, `Integration status`, active review-notes blockquotes, and task/output references.
 - RESULTS.md: task sections exist for planned tasks and contain findings for completed work.
 
@@ -76,13 +76,13 @@ Whenever the plan meaningfully changes — a new task, a removed or reordered ta
 
 ## The Three Pause Classes
 
-This contract applies across every workflow phase — planning, execution, integration, merge, semantic-merge — not just execution. Workflow skills carry phase-specific stop points; those plug into the three classes below.
+This contract applies across every workflow step — planning, execution, integration, semantic sync, and finishing — not just execution. Workflow skills carry step-specific stop points; those plug into the three classes below.
 
 Stop and use `AskUserQuestion` (plain text if the harness does not expose the tool) for exactly three classes of pause, all of which require logging the researcher's answer per `handoff-doc` §User Decisions Log **before** acting on it:
 
 1. **Hard blocker the RA cannot resolve from code and data.** Unexpected input-quality issues, missing or corrupted inputs, ambiguous upstream dependency the agent cannot trace, a transformation that produces an unexpected scope change (row count shift on a merge, date range change after a filter), validation failure against domain expectation, plan with critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required dependency unavailable.
 2. **Decision beyond the RA's authority.** Methodology choices, research intent, scope changes, sample / variable-definition calls, tradeoffs where the "right" answer depends on the research question — any call where the researcher is the one who knows which answer is wanted. Also: methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope change that would affect tasks not yet reached.
-3. **User-defined workflow milestone.** Stops baked into a workflow because the researcher wants a decision at that point. The 4-option completion menu at `implementation-workflow` Step 4; drift-test selection at `integration-workflow` Phase A; doc disposition at `integration-workflow` Phase C; research-meaningful conflict escalation in `semantic-merge`. These are intentional stops, not check-ins.
+3. **User-defined workflow milestone.** Stops baked into a workflow because the researcher wants a decision at that point. The 4-option completion menu at `implementation-workflow` Step 4; drift-test selection at `integration-workflow` Protect; doc disposition at `integration-workflow` Document; intent-changing conflict escalation in `semantic-merge`. These are intentional stops, not check-ins.
 
 All three classes have one thing in common: the agent cannot answer the question from the code and data alone, and the answer will shape downstream work in a way another agent could not reconstruct without it.
 
