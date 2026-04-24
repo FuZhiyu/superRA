@@ -7,7 +7,7 @@
 > possible. `[BLOCKING]` items must be fixed to earn APPROVE;
 > `[ADVISORY]` items are suggestions the reviewer MAY flag as MINOR and
 > do not block APPROVE. The verdict protocol is the same as
-> `theory-modeling/SKILL.md` `# Define-Derive-Validate` - two verdicts
+> `theory-modeling/SKILL.md` `## The Four Gates` - two verdicts
 > (`APPROVE` / `REVISE`).
 
 Generic cross-cutting code-integration concerns (naming consistency,
@@ -37,6 +37,9 @@ verification.
 - `[BLOCKING]` **Drift tests pass post-refactor.** Where drift tests exist, they pass on the refactored work; failures are adjudicated per `references/integrate-drift-tests.md`, never silenced by changing expectations without explanation.
 - `[BLOCKING]` **Rendered markdown/LaTeX describes what the refactored code actually does.** Equation blocks, symbols, and case labels match the live derivation and numerical outputs.
 - `[BLOCKING]` **No derivation-discipline artifact has been deleted.** Definitions, assumptions, verification notes, and renderable math blocks may be reorganized, but they are not silently dropped.
+- `[BLOCKING]` **Stated intuition for new symbols survives.** Every notation entry whose original work carried an intuition or mnemonic (per `SKILL.md` §Objects & Notation) still carries that intuition in the refactored notes — not collapsed into opaque prose or a bare code comment.
+- `[BLOCKING]` **Assumption interpretations survive.** Every assumption whose original work carried a plain-language interpretation (per `SKILL.md` §Assumptions) still carries that interpretation in the refactored notes — not reduced to a math restriction without the economic reading, and not silently merged away when assumptions are consolidated.
+- `[BLOCKING]` **Per-step reasons survive.** Every non-trivial derivation step whose original work carried both the technical rule and a one-sentence reason for invoking it (per `SKILL.md` §Derivations) still carries both in the refactored notes — mechanical rule-labels without a reason, or reasons silently dropped during consolidation, are REVISE.
 
 ## Utility reuse and documented deviations
 

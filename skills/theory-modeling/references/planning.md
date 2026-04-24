@@ -66,6 +66,12 @@ Complete the following planning checks in order:
 |---|---|---|
 | ... | ... | ... |
 
+The **Why this notation** column is required for every non-conventional
+symbol — record the intuition or mnemonic that justifies the choice.
+Conventional symbols already fixed by the literature (for example `r`
+for an interest rate, `beta` for a discount factor, `w` for a wage) may
+leave the column as "conventional" and skip further justification.
+
 ### Primitives
 | Object | Meaning | Domain / Units | Notes |
 |---|---|---|---|
@@ -77,9 +83,10 @@ Complete the following planning checks in order:
 | ... | ... | ... | ... |
 
 ### Assumptions
-| Assumption | Applies to | Role in the model | Notes |
-|---|---|---|---|
-| ... | ... | ... | ... |
+| Assumption | Applies to | Role in the model | Interpretation | Notes |
+|---|---|---|---|---|
+| risk aversion bounded | preferences | ensures the value function is finite | risk aversion bounded so the value function is finite | ... |
+| ... | ... | ... | ... | ... |
 
 ### Verification Plan
 | Result | Verification mode | Baseline case / parameters | Pass condition |
@@ -93,6 +100,7 @@ Complete the following planning checks in order:
 - **Prefer interpretable notation** - a reviewer should know what a symbol is without chasing aliases. Conventional symbols are fine; arbitrary placeholders are not.
 - **Notation Conventions is a living record, not a one-time planning artifact** - when implementation introduces a symbol not yet in the table, the implementer inline-edits the Notation Conventions table BEFORE using the symbol in algebra, and commits the `PLAN.md` edit atomically with the derivation work. The table remains the authoritative cross-task source of symbol meanings throughout the workflow.
 - **Keep assumptions on primitives** - "assume `c > 0`" is weaker than naming the primitive restrictions that imply positive consumption. Prefer the latter.
+- **Interpretability is blocking; prefer synthesis** - every assumption must carry a plain-language interpretation a researcher can defend at planning time, and when multiple scattered weak restrictions can be replaced by a single stronger interpretable primitive, prefer the synthesis. See `skills/theory-modeling/SKILL.md` §Assumptions for the full checklist; do not restate it here.
 - **Plan verification up front** - do not leave numerical or special-case checks as an afterthought.
 - **Escalate methodology choices** - if the "right" utility form, equilibrium concept, or normalization depends on research intent, ask the researcher rather than choosing unilaterally.
 
@@ -101,6 +109,9 @@ Complete the following planning checks in order:
 - **Skipping the inventory because the model is "standard."** Standard models still hide timing, normalization, and branch-choice assumptions.
 - **Drafting tasks while notation is unsettled.** Task steps written against unstable notation are usually rewritten from scratch.
 - **Treating verification as implementation detail.** The plan must already say how trust will be established.
+- **"Notation interpretation TBD."** A symbol without a stated intuition at planning time becomes a symbol nobody owns at implementation time.
+- **"Assumption interpretation later."** Assumption interpretations drafted after the algebra has been written are usually post-hoc rationalizations of whatever the derivation happened to need.
+- **"Scattered weak assumptions that could be synthesized."** A list of narrowly-scoped technical restrictions is harder to defend than a single stronger primitive with a clean economic reading; synthesize at planning time rather than after implementation.
 
 ### Red Flags - Hard Gate Protection
 
@@ -114,6 +125,9 @@ loopholes are closed:
 - Write tasks in parallel with the inventory "to save time."
 - Use "TBD assumptions", "notation to be cleaned later", or "verify numerically if needed" in task steps.
 - Assume existence, uniqueness, or interiority just because the target result would be nicer under those conditions.
+- Leave a new symbol's intuition or mnemonic as "TBD" in the Notation Conventions table.
+- Write an assumption row whose **Interpretation** column is blank or says "later" / "to be explained".
+- Enumerate multiple weak technical assumptions where a single stronger interpretable primitive is clearly available — synthesize instead.
 
 **Common rationalizations that mean STOP:**
 - "This is just a short derivation." Short derivations hide the same assumption drift as long ones.
@@ -152,5 +166,7 @@ After the Model Inventory / Assumption Map is approved, the verification
 plan is agreed, and tasks are drafted, `planning-workflow` commits the
 plan and hands off to `implementation-workflow`. The main
 `theory-modeling` skill body carries the cross-cutting discipline that
-applies at every implementation step: the Iron Law, Define-Derive-
-Validate, verification, and documentation.
+applies at every implementation step: the Iron Law and the intuition +
+interpretability + stated reason through-line running across the four
+gates (Objects & Notation, Assumptions, Derivations, Verification &
+Rendering), verification, and documentation.
