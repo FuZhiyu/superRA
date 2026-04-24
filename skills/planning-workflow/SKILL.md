@@ -27,14 +27,12 @@ Identify the domain of the work and load the matching domain skill's planning re
 
 **Currently implemented verticals:**
 
-| Vertical | Trigger | Domain skill | Planning reference |
-|---|---|---|---|
-| Data analysis | task involves loading, cleaning, merging, transforming, modeling, or visualizing data | `superRA:econ-data-analysis` | `references/planning.md` — carries the **Data Inventory hard gate** (no tasks until data is inventoried and approved) and **Sensitivity Analysis Design** discussion |
-| Theory / modeling | task involves deriving or analyzing a mathematical model, equilibrium conditions, comparative statics, proofs, symbolic manipulation, or model notes | `superRA:theory-modeling` | `references/planning.md` — carries the **Model Inventory / Assumption Map hard gate** (no tasks until model objects, notation, and assumptions are inventoried and approved) and **Verification Plan** discussion |
+| Vertical | Trigger | Domain skill |
+|---|---|---|
+| Data analysis | task involves loading, cleaning, merging, transforming, modeling, or visualizing data | `superRA:econ-data-analysis` |
+| Theory / modeling | task involves deriving or analyzing a mathematical model, equilibrium conditions, comparative statics, proofs, symbolic manipulation, or model notes | `superRA:theory-modeling` |
 
-If the task is data analysis: **stop here, load `superRA:econ-data-analysis`, read `references/planning.md`, and satisfy its hard gate before returning to Phase 2.** The researcher must approve the Data Inventory before any task structure is drafted.
-
-If the task is theory / modeling: **stop here, load `superRA:theory-modeling`, read `references/planning.md`, and satisfy its hard gate before returning to Phase 2.** The researcher must approve the Model Inventory / Assumption Map before any task structure is drafted.
+**Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy its planning hard gate before returning to Phase 2.** The researcher must approve the domain skill's planning-stage inventory artifact (e.g., Data Inventory, Model Inventory / Assumption Map) before any task structure is drafted.
 
 If the task is in a domain without an implemented vertical yet: proceed to Phase 2, but flag the gap to the researcher so they know superRA's domain coverage is not complete for this work.
 
@@ -46,7 +44,7 @@ If the work covers multiple independent workstreams (e.g., "analyze portfolio so
 
 Before defining tasks, map out the artifact pipeline:
 
-- What scripts, notebooks, or documents will be created? One per logical phase (e.g., data cleaning → variable construction → analysis → robustness; or model setup → derivation → verification → write-up). For data-analysis scripts, follow notebook-rendering guidance (see `econ-data-analysis/references/notebook-format.md`).
+- What scripts, notebooks, or documents will be created? One per logical phase (e.g., data cleaning → variable construction → analysis → robustness; or model setup → derivation → verification → write-up). Follow any artifact-format guidance the active domain skill loads at PLAN or IMPLEMENT stage.
 - What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 
@@ -66,7 +64,7 @@ The pipeline file must:
 
 ### Step Granularity
 
-**Each step is one logical unit of work with full discipline applied.** For data analysis, that discipline is the three concurrent disciplines describe-analyze-validate (see `superRA:econ-data-analysis` main body). Documentation is written continuously alongside the three, not as a separate step. Typical step shapes:
+**Each step is one logical unit of work with full discipline applied.** The active domain skill defines that discipline (its main checklist plus any planning-stage step-cycle guidance). Documentation is written continuously alongside the work, not as a separate step. Typical step shapes:
 
 - "Describe the raw holdings data (panel structure, key variables, missing values)" — step
 - "Merge holdings with fund characteristics (left join on fund_id × date)" — step
@@ -171,8 +169,7 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 
 - Exact file paths always
 - Complete content in every step
-- For data analysis, row counts logged for every sample-changing operation
-- Domain-appropriate discipline (for data: describe → analyze → validate at each step, with commit bundled into the validate step; for theory/modeling: define → derive → validate with explicit notation, assumptions, and traceable steps; documentation written continuously — see the active domain skill)
+- Domain-appropriate per-step discipline applied at each step, with documentation written continuously — see the active domain skill's main checklist
 - When the active domain has a hard gate or required verification plan, the finished tasks visibly cover it
 - Pipeline file for multi-artifact work
 
@@ -190,7 +187,7 @@ After writing the complete plan:
 
 **5. Plan serves as handoff:** If you stopped here and a new agent read only this plan and `RESULTS.md`, could they continue? Is there enough context?
 
-**6. Sensitivity / robustness / verification coverage (where applicable):** For data analysis, are sensitivity analysis tasks included? For theory/modeling, is it clear which claims require full derivation, proof sketch, or simple numerical verification?
+**6. Sensitivity / robustness / verification coverage (where applicable):** Does the plan cover the active domain skill's verification / robustness requirements (e.g., sensitivity analysis tasks for data work, or derivation / proof / numerical-check planning for theory work)?
 
 **7. Dependency graph sanity:** Every task has a `**Depends on:**` line. No cycles. If the plan has ≥2 independent branches, at least one pair of tasks is marked parallelizable.
 

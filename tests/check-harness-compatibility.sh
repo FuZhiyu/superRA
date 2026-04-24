@@ -66,7 +66,10 @@ refactor_text = Path("skills/refactor-and-integrate/SKILL.md").read_text(encodin
 assert "`theory-modeling`" in using_text, "using-superRA must list theory-modeling"
 assert "superRA:theory-modeling" in using_text, "using-superRA manifest must reference theory-modeling"
 assert "`superRA:theory-modeling`" in planning_text, "planning-workflow must route theory-modeling"
-assert "theory-modeling/references/integration.md" in refactor_text, "refactor-and-integrate SKILL.md must point to theory-modeling integration guidance"
+# Per Task 7 (domain-neutral workflow/utility skills): refactor-and-integrate must NOT name a specific
+# domain's integration reference; the active domain skill's stage-load table routes it.
+assert "theory-modeling/references/integration.md" not in refactor_text, "refactor-and-integrate SKILL.md must stay domain-neutral"
+assert "econ-data-analysis/references/integration.md" not in refactor_text, "refactor-and-integrate SKILL.md must stay domain-neutral"
 PY
 
 section "Sync integration contract"

@@ -66,7 +66,7 @@ encouraged when something looks off.
 - Not in the project's expected format (but otherwise documented)
 - Missing markdown cells or nearby explanation for minor decisions
 - Incomplete diagnostics or notation mapping
-- **Active check for task format:** For data-analysis scripts, verify notebook format per `econ-data-analysis/references/notebook-format.md`. For theory/modeling notes or reports, verify that renderable math follows `superRA:report-in-markdown` when equations, tables, or figures are part of the artifact. If no project convention applies, note "not applicable" with reasoning — do not silently skip.
+- **Active check for task format:** Verify the artifact against the active domain skill's format / rendering reference (loaded per its stage-load table). If no project convention applies, note "not applicable" with reasoning — do not silently skip.
 
 ### Verdict
 

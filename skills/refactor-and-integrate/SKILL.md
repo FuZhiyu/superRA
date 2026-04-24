@@ -13,7 +13,7 @@ Techniques:
 2. **Governing-diff pruning** — minimize the surviving diff against the caller's baseline or range.
 3. **Sync impact as evidence** — when task-local Sync impact exists, use it to justify existing post-sync hunks; it does not create new refactor targets.
 
-For data-analysis integration, also load `econ-data-analysis/references/integration.md`. For theory/modeling integration, also load `theory-modeling/references/integration.md`.
+The active domain skill's stage-load table routes any domain-specific integration reference at the `integration` stage; load it per that table.
 
 ---
 
