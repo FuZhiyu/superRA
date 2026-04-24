@@ -220,24 +220,40 @@ assert_contains \
   "Broader **codebase-coherence** work"
 
 assert_contains \
-  "Refactor and integrate uses Sync impact as context only" \
+  "Refactor and integrate uses Sync impact as evidence only" \
   "skills/refactor-and-integrate/SKILL.md" \
-  "Use Sync impact as context for existing post-sync hunks, not as a separate work queue."
+  "use it to justify existing post-sync hunks; it does not create new refactor targets."
 
 assert_contains \
   "Refactor and integrate requires line by line governing diff review" \
   "skills/refactor-and-integrate/SKILL.md" \
   "Review the governing diff line by line."
 
-assert_contains \
-  "Codebase integration does not recreate incoming intent research" \
-  "skills/refactor-and-integrate/references/codebase-integration.md" \
-  "Do not recreate incoming-intent research from git history during Integrate."
+assert_absent \
+  "Refactor and integrate no longer owns drift-test quality" \
+  "drift-test-quality.md" \
+  "skills/refactor-and-integrate/SKILL.md" \
+  "skills/refactor-and-integrate/references/codebase-integration.md"
 
 assert_contains \
-  "Codebase integration says sync review approved semantic coherence" \
+  "Codebase integration requires no-change self-check" \
   "skills/refactor-and-integrate/references/codebase-integration.md" \
-  "Sync review already approved semantic coherence"
+  "Run immediately before every return or commit, including no-change cases:"
+
+assert_contains \
+  "Codebase integration summarizes ordinary hunks by class" \
+  "skills/refactor-and-integrate/references/codebase-integration.md" \
+  "Summarize ordinary hunks by class."
+
+assert_contains \
+  "Codebase integration justifies suspicious hunks explicitly" \
+  "skills/refactor-and-integrate/references/codebase-integration.md" \
+  "Justify suspicious hunks by file and line/hunk."
+
+assert_contains \
+  "Codebase integration makes missing self-check blocking" \
+  "skills/refactor-and-integrate/references/codebase-integration.md" \
+  'A missing or stale trail is `[BLOCKING]`, including when no code changed.'
 
 assert_contains \
   "Integration reviewer consumes Sync impact context" \
