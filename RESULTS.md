@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-23 (Execution complete — all 10 tasks approved)
-**Status:** All 10 tasks reviewer-approved; ready for integration disposition.
+**Last updated:** 2026-04-23 (Task 11 added mid-integration — principle promoted to gate)
+**Status:** Tasks 1-10 approved; Task 11 implemented and awaiting review. Integration paused at Phase B Step 0 pending Task 11 approval.
 
 ---
 
@@ -382,3 +382,22 @@ Three of four anti-pattern categories show no regression. Category (b) has one c
 - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`
 - `uv run pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py`
 - `grep -Ei "first dispatch|re-dispatch prompt|parallel worktree dispatch|in the dispatch" skills/using-superRA/references/direct-mode-*.md`
+
+## Task 11: Enshrine the Teach-the-Protocol Principle as a Gate
+
+**Status:** Implemented; awaiting review.
+
+### Findings
+
+Promoted `CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action` from a documented design principle to an explicit gate. The section now leads with a bold **"This is a gate."** paragraph that states:
+- **Scope**: every file under `skills/*` and `agents/*`.
+- **Actors**: implementers self-apply the necessity test before every commit; reviewers verify on every pass.
+- **Severity**: a line that fails the test is a `[BLOCKING]` finding, not a stylistic preference.
+
+Because `CLAUDE.md` is auto-loaded for any edit in this repo, the gate propagates to every future implementer/reviewer working on superRA internals without needing role-spec changes or regeneration. The two ordered tests (DRY, necessity), the anti-pattern list, and the "Keep" carve-out from Task 5 are preserved intact — the gate statement is additive.
+
+### Files Changed
+
+- `CLAUDE.md` (gate statement prepended to the section)
+- `PLAN.md` (Task 11 added, decision log entries for Phase A drift tests, base-branch confirmation, and Task 11 scope add)
+- `RESULTS.md` (this section; top-of-file Status and Last-updated lines)

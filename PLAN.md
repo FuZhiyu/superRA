@@ -23,7 +23,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** - researcher requested the material redesign toward mechanisms over contingency prose on 2026-04-23.
-- [x] **Execution complete** - All 10 tasks reviewer-approved; post-audit refinement formalized; static documentation audits and generator tests passed.
+- [ ] **Execution complete** - Tasks 1-10 approved; Task 11 (enshrine the teach-the-protocol principle as a gate in CLAUDE.md) added 2026-04-23 and awaiting review.
 - [x] **Drift tests created** - existing `skills/codex-superra-setup/scripts/test_sync_codex_agents.py` (5 tests, all passing) is the Phase A coverage per §Decisions 2026-04-23. No new drift tests authored.
 - [ ] **Refactored** - not yet reached; integration review remains pending.
 - [ ] **Docs finalized** - not yet reached; this RESULTS.md is Stage 1 handoff state.
@@ -83,6 +83,14 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 > **User decision (2026-04-23):** Skip programmatic anti-pattern / leak / pointer drift-test authoring at Phase A; rely on the existing `test_sync_codex_agents.py` (generator determinism) as the drift-test coverage for this branch.
 > **Question asked:** Which Phase A drift tests should be authored — anti-pattern regression, direct-mode leak guard, pointer integrity, or none new?
 > **Rationale (if given):** Researcher is skeptical that programmatic guards against anti-patterns are meaningful — the patterns are subjective and false-positive-prone. Existing generator-determinism tests catch the one silent-error class that bit us (the Task 6 cleanup-helper regression) because any future source-text drift makes the cleanup helpers raise `ValueError` and the test suite fails. The `Drift tests created` milestone flips against that existing coverage rather than a new suite.
+
+> **User decision (2026-04-23):** Integrate against `origin/main` — Phase B integration base confirmation.
+> **Question asked:** Which base branch should Phase B integrate against?
+> **Rationale (if given):** Branch was cut from `origin/main` (merge-base `b6e0640`); main has no new commits since then, so Phase B collapses to a trivial fast-forward path after integration review.
+
+> **User decision (2026-04-23):** Enshrine the "Teach the Protocol, Don't Prescribe Each Action" principle as a gate in `CLAUDE.md` — applies to every future implementer and reviewer editing any file under `skills/*` or `agents/*`.
+> **Question asked:** Should the principle be promoted from design-philosophy prose to a gated check that implementers self-apply before commit and reviewers verify on every pass?
+> **Rationale (if given):** The principle has proved load-bearing across Tasks 5-10 — catching it at the edit site is cheaper than the next audit round. Adds Task 11 and unchecks `Execution complete`; Tasks 1-10 remain APPROVED (the gate tightens future edits, does not overturn prior work). After Task 11 APPROVE, resume `integration-workflow` Phase B Step 1 (integration reviewer dispatch) — the base-branch confirmation above does not need re-asking.
 
 > **User decision (2026-04-23):** Refine the post-audit output — relocate the drift-test tolerance rubric, remove an inverted cross-reference, condense role-spec prose.
 > **Question asked:** Two design questions surfaced in the post-audit review: (1) should the drift-test tolerance rubric live in the cross-cutting `refactor-and-integrate/drift-test-quality.md` or in the domain-specific `econ-data-analysis/references/integrate-drift-tests.md`? (2) Should the cross-cutting `codebase-integration.md` carry a "Data-analysis work:" cross-reference back into a domain file?
@@ -315,3 +323,16 @@ Deleted the `> **Data-analysis work:** also load econ-data-analysis/references/i
 - [x] **Step 3: Propagate role-spec condensation**
 
 Accepted the researcher's manual condensation of `agents/implementer.md` and `agents/reviewer.md` (WIP commit `93fda71`): shorter §Dispatch Inputs opening, clearer `PLAN.md`-authoritative rule, unified handoff-doc compact etiquette (including the new "Remove superseded content, don't stack it" bullet already authoritative in `handoff-doc §The Four Principles`). Fixed the typo `authorative → authoritative` in `agents/implementer.md` Before-You-Start bullet 3. Additional rough-edge fixes on the re-dispatch pass: restored the missing period in `agents/implementer.md` frontmatter description (`agent Used` → `agent. Used`, matching `reviewer.md`); collapsed the inconsistent blank line inside the compact-etiquette list that separated the fourth bullet ("Doc before report") from the first three in both role files into a single continuous 4-item list. Regenerated `skills/using-superRA/references/direct-mode-{implementer,reviewer}.md` and `.codex/agents/superra_{implementer,reviewer}.toml` via `sync_codex_agents.py --scope project`; `sync_codex_agents.py --scope project --check` is clean, `test_sync_codex_agents.py` 5/5 pass.
+
+### Task 11: Enshrine the Teach-the-Protocol Principle as a Gate
+**Depends on:** Task 5
+**Review status:** IMPLEMENTED
+**Integration status:** *(not started)*
+
+**Script:** Contributor-doc edit.
+**Input:** `CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action` (authored in Task 5).
+**Output:** The section now leads with a **"This is a gate."** statement making the principle a blocking check for every future implementer editing files under `skills/*` or `agents/*` (self-apply before commit) and every reviewer (verify on every pass). Because `CLAUDE.md` is auto-loaded for any edit in this repo, the gate propagates without role-spec changes.
+
+- [x] **Step 1: Promote the principle to an explicit gate**
+
+Prepended a `**This is a gate.**` paragraph to the section stating scope (files under `skills/*` and `agents/*`), actor (implementer self-check before commit; reviewer verification on every pass), and severity (a failing line is `[BLOCKING]`, not stylistic). Kept the existing two tests, anti-pattern list, and "Keep" carve-out intact — the gate statement is additive.
