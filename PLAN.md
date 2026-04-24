@@ -101,7 +101,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 ### Task 1: Add Runtime Workflow Overview and Resolver Value Proposition
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Not applicable; documentation/reference edit.
 **Input:** `README.md`, `AGENTS.md`, `skills/using-superRA/SKILL.md`, `skills/using-superRA/references/main-agent.md`.
@@ -122,7 +122,7 @@ Keep the resolver's mechanism in `main-agent.md`; avoid named state taxonomies o
 ### Task 2: Replace Contingency Taxonomy with a Frontier Mechanism
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Not applicable; documentation/reference edit.
 **Input:** `skills/using-superRA/references/main-agent.md`.
@@ -151,7 +151,7 @@ Rewrite the resolver section so the distinction between diagnosis, routing, plan
 ### Task 3: Simplify Workflow Call Sites Around the Mechanism
 **Depends on:** Task 2
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Not applicable; documentation/reference edit.
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`.
@@ -172,7 +172,7 @@ Make sure `handoff-doc` and other utility/domain skills remain usable directly a
 ### Task 4: Audit Against Adaptive-Composable Design
 **Depends on:** Task 1, Task 2, Task 3
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Static documentation audit.
 **Input:** Modified skill/reference files and contributor design checklist.
@@ -205,7 +205,7 @@ Spawn reviewer agents after the prose edit. One reviewer should focus on plain-l
 ### Task 5: Document "Teach the Protocol, Don't Prescribe Each Action" Principle
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Not applicable; contributor-doc edit.
 **Input:** `CLAUDE.md` (aliased from `AGENTS.md` / `AGENT.md`).
@@ -222,7 +222,7 @@ Add a single-line check to `## Design Audit Checklist`: for every added line, do
 ### Task 6: Audit Agent Role Specs and `using-superRA` Surfaces
 **Depends on:** Task 5
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Line-by-line instruction audit against the Task 5 principle; edits applied inline.
 **Input:** `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superRA/SKILL.md` and all files under `skills/using-superRA/references/` (including `main-agent.md`, `codex-instructions.md`, `claude-tools.md`, and any generated `direct-mode-*.md` — edit source specs and regenerate rather than editing generated files directly).
@@ -243,7 +243,7 @@ Cross-checked every DELETE/POINTER target: `handoff-doc` carries the full editin
 ### Task 7: Audit Workflow Skills and `agent-orchestration`
 **Depends on:** Task 5
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Line-by-line instruction audit against the Task 5 principle; edits applied inline.
 **Input:** `skills/planning-workflow/SKILL.md`, `skills/implementation-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/agent-orchestration/SKILL.md`, and every reference file under those four skills' `references/` directories.
@@ -264,7 +264,7 @@ Re-checked `CLAUDE.md §Ownership Boundaries`. After trimming, each concern stil
 ### Task 8: Audit Utility, Domain, and Meta Skills
 **Depends on:** Task 5
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Line-by-line instruction audit against the Task 5 principle; edits applied inline.
 **Input:** `skills/handoff-doc/`, `skills/refactor-and-integrate/`, `skills/report-in-markdown/`, `skills/semantic-merge/`, `skills/worktree-data-sync/`, `skills/econ-data-analysis/`, `skills/codex-superra-setup/` — each skill's `SKILL.md` plus all files under its `references/`.
@@ -285,7 +285,7 @@ Re-read each skill's post-edit SKILL.md as if loaded outside the superRA workflo
 ### Task 9: Cross-Audit Consistency Sweep
 **Depends on:** Task 6, Task 7, Task 8
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Whole-repo verification that the audit edits compose cleanly.
 **Input:** The full diff produced by Tasks 6-8.
@@ -306,7 +306,7 @@ Re-ran the four CLAUDE.md anti-pattern categories against the post-audit tree. N
 ### Task 10: Formalize Post-Audit Refinements
 **Depends on:** Task 6, Task 7, Task 8, Task 9
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Documentation refinement + generator regeneration.
 **Input:** Files touched by Tasks 6-8; the researcher's WIP commit `93fda71`.
@@ -327,7 +327,7 @@ Accepted the researcher's manual condensation of `agents/implementer.md` and `ag
 ### Task 11: Enshrine the Teach-the-Protocol Principle as a Gate
 **Depends on:** Task 5
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** Contributor-doc edit.
 **Input:** `CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action` (authored in Task 5).
