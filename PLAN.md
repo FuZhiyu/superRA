@@ -175,15 +175,16 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 6: Propagate intuition/interpretability gates into `references/planning.md` and touch up `references/integration.md`
 **Depends on:** Task 5
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Script:** `skills/theory-modeling/references/planning.md`, `skills/theory-modeling/references/integration.md`
 **Input:** Restructured SKILL.md from Task 5, existing Model Inventory / Assumption Map template, existing integration-stage checklist
 **Output:** Planning template and integration checklist aligned with the intuition-first framing so planning-time inventory records intuition/interpretability up front and integration-time review verifies those artifacts survive refactor
 
-- [ ] In `references/planning.md` Model Inventory template: add an **Interpretation** column to the Assumptions table so every planned assumption records the plain-language reading at planning time; tighten the Notation Conventions section so the existing "Why this notation" column is explicitly required for non-conventional symbols rather than optional.
-- [ ] In `references/planning.md` §Principles: add one principle stating that interpretability of assumptions is a blocking requirement and that synthesizing scattered weak assumptions into a stronger interpretable primitive is preferred. Point at SKILL.md for the checklist; do not restate its items here.
-- [ ] In `references/planning.md` §Common mistakes and §Red Flags — Hard Gate Protection: add items that name the intuition-failure modes the implementer must not defer ("notation interpretation TBD", "assumption interpretation later", "scattered weak assumptions that could be synthesized").
-- [ ] In `references/integration.md` §"Derivation discipline preserved through refactoring": add `[BLOCKING]` items that each new-notation intuition, each assumption interpretation, and each derivation-step reason recorded in the original work survives the refactor — not silently collapsed into opaque prose or code comments.
-- [ ] Sanity-read both references for internal consistency with the new SKILL.md structure and with `superRA:handoff-doc` inline-edit discipline; update `RESULTS.md` Task 6 with the final wording and any open caveats.
+- [x] In `references/planning.md` Model Inventory template: add an **Interpretation** column to the Assumptions table so every planned assumption records the plain-language reading at planning time; tighten the Notation Conventions section so the existing "Why this notation" column is explicitly required for non-conventional symbols rather than optional. The Interpretation column carries one concrete example row ("risk aversion bounded so the value function is finite") showing the target one-short-phrase shape for downstream implementers without prescribing specific economic content.
+- [x] In `references/planning.md` §Principles: add one principle stating that interpretability of assumptions is a blocking requirement and that synthesizing scattered weak assumptions into a stronger interpretable primitive is preferred. Point at SKILL.md for the checklist; do not restate its items here.
+- [x] In `references/planning.md` §Common mistakes and §Red Flags — Hard Gate Protection: add items that name the intuition-failure modes the implementer must not defer ("notation interpretation TBD", "assumption interpretation later", "scattered weak assumptions that could be synthesized").
+- [x] In `references/integration.md` §"Derivation discipline preserved through refactoring": add `[BLOCKING]` items that each new-notation intuition, each assumption interpretation, and each derivation-step reason recorded in the original work survives the refactor — not silently collapsed into opaque prose or code comments.
+- [x] Clean up the two remaining `Define-Derive-Validate` mentions as part of this task: `references/planning.md` §"Handoff to Implementation" now names the new through-line (intuition + interpretability + stated reason across the four gates); `references/integration.md` opening paragraph's verdict-protocol pointer now references `theory-modeling/SKILL.md ## The Four Gates`.
+- [x] Sanity-read both references for internal consistency with the new SKILL.md structure and with `superRA:handoff-doc` inline-edit discipline; update `RESULTS.md` Task 6 with the final wording and any open caveats.
