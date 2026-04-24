@@ -1,12 +1,12 @@
 # Workflow Sync Reviewer Mode
 
-Use when `integration-workflow` dispatches a generic sync reviewer after the workflow sync author lands the sync commits (merge commit plus any propagation commits). Walk the Shared Steps and §Semantic Coherence Checklist in `semantic-merge/SKILL.md` — the checklist is the gated verification list; the §Scope boundary within it is the stopping rule. The reviewer inherits the Workflow Sync scope boundary from `workflow-sync-author.md §Boundary`. For the Sync Map and task-local Sync impact shape the author produced, see `workflow-sync-author.md §Workflow Sync Map Format` and `§Task-Local Sync Impact Format`.
+Workflow sync reviewer mode verifies the sync commit chain before Integrate. Walk `semantic-merge/SKILL.md` §Semantic Coherence Checklist; use `workflow-sync-author.md` for the workflow boundary, Sync Map format, and task-local Sync impact format.
 
 ## Review Scope
 
 Review the sync commits (merge commit plus any propagation commits) and their handoff artifacts before Integrate begins. The goal is to catch wrong branch intent, bad conflict resolution, missing user escalation, misleading task-local Sync impact context, or scope creep before downstream refactor work builds on it.
 
-Inputs include:
+Required inputs:
 
 - `BASE_REF`
 - `PRE_SYNC_BASE_SHA`

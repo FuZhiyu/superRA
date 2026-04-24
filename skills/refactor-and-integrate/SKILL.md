@@ -21,7 +21,7 @@ For data-analysis integration, also load `econ-data-analysis/references/integrat
 
 - `[BLOCKING]` **Minimum net diff to the governing baseline.** Touch only what approved task objectives, codebase-coherence checklist items, handoff-doc coherence, documentation currency, logged user decisions, or supplied Sync impact context justify. No unrelated cleanup, broad reformatting, defensive edits, speculative abstractions, or helper extraction that is not required by the current task.
 
-Use `git diff <BASE_HEAD_SHA>..HEAD` after workflow Sync. In standalone refactor work, use the caller's governing git range or touched-file diff.
+Use `git diff <BASE_HEAD_SHA>..HEAD` in normal integration-workflow after Sync, or the caller-provided range when a dispatch explicitly overrides the baseline. In standalone refactor work, use the caller's governing git range or touched-file diff.
 
 Review the governing diff line by line. Any hunk without a current justification is out of scope; revert it or record the justification before return. A no-change diff still requires the Final Diff Self-Check trail below.
 

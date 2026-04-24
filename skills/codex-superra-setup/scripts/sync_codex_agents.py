@@ -196,7 +196,6 @@ def render_direct_mode_ref(repo_root: Path, spec: RoleSpec) -> str:
             "**ad-hoc** (report-only).",
             "",
         )
-        role_section = cleanup_reviewer_handoff(role_section)
         role_section = strip_subsection(role_section, "### Report Format")
         tail_sections = (review_protocol, role_section)
 
@@ -367,15 +366,6 @@ def cleanup_implementer_handoff(section: str) -> str:
             "paragraph not found; source may have been reworded."
         )
     section = section.replace(worktree_block, "")
-    return section
-
-
-def cleanup_reviewer_handoff(section: str) -> str:
-    """Strip any remaining subagent-dispatch-only wording from the reviewer handoff.
-
-    The caller has already removed the ad-hoc default line. This hook is kept
-    for future dispatch-only passages that surface during audits.
-    """
     return section
 
 

@@ -36,12 +36,9 @@ Legitimate stop points (log every answer per `superRA:handoff-doc` §User Decisi
 
 ## Dispatch Convention
 
-**Load `superRA:agent-orchestration` before writing any dispatch prompt.** Checklist discipline for the drift-test stage comes from `superRA:result-protection`; checklist discipline for the integration stage comes from `superRA:refactor-and-integrate`.
+**Load `superRA:agent-orchestration` before writing any dispatch prompt.** Task-scoped dispatches use the Stage values in `superRA:using-superra` §Skill-Load Manifest; do not restate load lists in prompts.
 
-- `Stage: drift-test` agents use `result-protection`.
-- Sync uses generic sync author / sync reviewer agents that explicitly load `semantic-merge` mode references. Sync is branch-level and is not a normal task-scoped manifest stage.
-- `Stage: integration` agents use `refactor-and-integrate` for post-sync quality and read task-local `**Sync impact:**` plus referenced `## Sync Map` clusters as context.
-- `Stage: documentation` agents use `handoff-doc` and `report-in-markdown`.
+Sync is branch-level and not a normal task-scoped manifest stage. It dispatches generic sync author / sync reviewer agents that explicitly load `semantic-merge` mode references.
 
 ## Protect
 
@@ -191,9 +188,7 @@ Agent(subagent_type: "superRA:reviewer"):
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
   Sync context: task-local `**Sync impact:**` fields plus PLAN.md ## Sync Map, if present
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    read task-local Sync impact annotations and referenced Sync Map clusters as context,
+  Additionally: read task-local Sync impact annotations and referenced Sync Map clusters as context,
     then review `git diff <BASE_HEAD_SHA>..HEAD`.
     For every touched or Sync-impact-affected task, either set
     `Integration status: APPROVED` or write task-local review notes and
@@ -222,9 +217,7 @@ Agent(subagent_type: "superRA:implementer"):
   Tasks in scope: <tasks with Integration status: REVISE>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    read task-local `**Sync impact:**` and referenced Sync Map clusters as context,
+  Additionally: read task-local `**Sync impact:**` and referenced Sync Map clusters as context,
     address accepted review findings, and run the minimum-net-diff self-check against
     `git diff <BASE_HEAD_SHA>..HEAD` before each commit. Do not touch
     tasks outside `Tasks in scope` except where required by an accepted reviewer finding.
@@ -268,9 +261,7 @@ Agent(subagent_type: "superRA:implementer"):
   RESULTS_DIR: <resolved permanent folder>
   RESULTS_ATTACHMENTS_DIR: ${RESULTS_DIR}/attachments
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    mature RESULTS.md per `report-in-markdown/references/final-form.md`:
+  Additionally: mature RESULTS.md per `report-in-markdown/references/final-form.md`:
     fact-check, restructure, materialize figures, and relocate. Land
     recoverable commits and report which sub-commits landed.
 ```
@@ -284,9 +275,7 @@ Agent(subagent_type: "superRA:reviewer"):
   Git range: <BASE_SHA>..<HEAD_SHA>
   RESULTS_DIR: <resolved permanent folder>
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <prior-round adjudication notes if re-dispatching>.
+  Additionally: <prior-round adjudication notes if re-dispatching>
 ```
 
 Iterate REVISE -> fix -> narrow re-review until APPROVE. If a documentation finding traces to analysis code, re-enter Integrate.
