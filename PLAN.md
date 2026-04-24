@@ -326,7 +326,7 @@ Accepted the researcher's manual condensation of `agents/implementer.md` and `ag
 
 ### Task 11: Enshrine the Teach-the-Protocol Principle as a Gate
 **Depends on:** Task 5
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** Contributor-doc edit.
@@ -336,14 +336,3 @@ Accepted the researcher's manual condensation of `agents/implementer.md` and `ag
 - [x] **Step 1: Promote the principle to an explicit gate**
 
 Prepended a `**This is a gate.**` paragraph to the section stating scope (files under `skills/*` and `agents/*`), actor (implementer self-check before commit; reviewer verification on every pass), and severity (a failing line is `[BLOCKING]`, not stylistic). Kept the existing two tests, anti-pattern list, and "Keep" carve-out intact — the gate statement is additive.
-
-> **Review notes (2026-04-23):**
->
-> 1. **[MAJOR] `CLAUDE.md:37` — gate statement names a singular "necessity test" while the body specifies two tests.** The gate paragraph says implementers "self-applies **the necessity test** below before committing" and reviewers "verify **it** on every pass." The body at lines 41–44 specifies *two tests, applied in order* — DRY (test 1) and Necessity (test 2). A strict reader can conclude that only test #2 is gate-enforced, leaving DRY violations as stylistic. That reading is inconsistent with Tasks 6–9 audits, which were substantially DRY-driven (role-spec ↔ handoff-doc duplication, main-agent ↔ codex-instructions duplication, etc.). The dispatch explicitly required the gate to be "actionable, not hortatory" and unambiguous. **Fix:** change "self-applies the necessity test below" → "self-applies the two tests below" (or "self-applies the DRY and necessity tests below"), and "verifies it on every pass" → "verifies them on every pass." Keep everything else.
->    → implemented: `CLAUDE.md` gate paragraph now says "self-applies both tests below" / "verifies them on every pass" / "a line that fails either test is `[BLOCKING]`." Both DRY and necessity are explicitly in scope.
->
-> 2. **[MINOR] `PLAN.md:91` — two new Decisions entries were inserted before the pre-existing Task 10 decision, violating the "append to the bottom" rule in `handoff-doc/references/plan-anatomy.md §User Decisions Log`.** Pre-Task-11 order ended with the Task 10 "Refine post-audit output" decision; the two new entries (base branch; Task 11 gate) were inserted above it. The base-branch entry is a chronological backfill (the decision was committed `7c40e3c` on 2026-04-22 but never actually landed in PLAN.md), so placing it before Task 10 is defensible. The Task 11 gate entry, however, is a new 2026-04-23 decision made this turn and strictly belongs after the Task 10 entry per append-only. **Fix:** move the Task 11 gate decision blockquote to the bottom of the Decisions section (after the Task 10 "Refine post-audit output" entry). The base-branch backfill can stay where it is as a chronological backfill; reviewer will not block on its placement.
->    → implemented: moved the Task 10 "Refine post-audit output" entry to its chronologically correct position (before "Proceed with integration"), so all later decisions (Proceed, Skip drift tests, Integrate against main, Enshrine gate) now sit at the bottom in the order they were taken.
->
-> 3. **[MINOR] `RESULTS.md:7` — step-number mismatch with PLAN.md Task 11 decision.** RESULTS.md says "Integration paused at Phase B Step 0 pending Task 11 approval," but Step 0 (base confirmation) is already complete and its decision is logged. The Task 11 decision blockquote in PLAN.md correctly states resumption at "Phase B Step 1 (integration reviewer dispatch)." **Fix:** change "Step 0" → "Step 1" in the RESULTS.md Status line, matching PLAN.md.
->    → implemented: RESULTS.md Status line now reads "Phase A complete; Phase B Step 0 complete (integration base confirmed as `origin/main`); integration reviewer dispatch pending Task 11 approval."
