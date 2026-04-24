@@ -42,5 +42,5 @@ Walk every item. `[BLOCKING]` items must be satisfied for the sync to be accepte
 - `[BLOCKING]` No conflict markers remain.
 - `[BLOCKING]` Stale-reference sweep covered labels, paths, docs, and generated outputs — not just absence of conflict markers.
 - `[BLOCKING]` Targeted checks were run or explicitly reported as not applicable.
-- `[BLOCKING]` Generated outputs needing regeneration are listed as post-sync obligations (Sync Map in workflow mode; merge record Follow-up column in standalone mode) — regeneration itself is deferred.
+- `[BLOCKING]` Generated outputs made stale by the merge were regenerated within this skill's commit chain, or — when regeneration would change a meaningful result — escalated per `SKILL.md §Techniques` step 4 and recorded as a follow-up obligation (Sync Map in workflow mode; merge record Follow-up column in standalone mode). Regeneration within the merge's semantic reach is not deferred.
 - `[BLOCKING]` Dirty-state stash (when used) was reported in the status return so the user can restore it.
