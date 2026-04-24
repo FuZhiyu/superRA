@@ -138,8 +138,8 @@ Agent(generic):
   `**Sync impact:**` annotations to affected task blocks. Defer codebase
   coherence — convention fit, utility reuse, PR-friendly diffs, Project Doc
   Audit walk-up, minimum net diff — to `refactor-and-integrate` via Integrate.
-  Return the merge + propagation commit SHAs, Sync Map status, task-local Sync
-  impact annotations, checks run, and deferred codebase-coherence obligations.
+  Return the full sync commit chain, Sync Map status, task-local Sync impact
+  annotations, checks run, and deferred codebase-coherence obligations.
 ```
 
 If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision is required, the orchestrator asks the user, logs the decision, commits the log entry, and re-dispatches the sync author with the decision context.
@@ -160,7 +160,7 @@ Agent(generic):
   PRE_SYNC_BASE_SHA: <PRE_SYNC_BASE_SHA>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
   Incoming range: <PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>
-  Sync commits: <MERGE_COMMIT_SHA>[, <PROPAGATION_SHAS>...]
+  Sync commits: <MERGE_COMMIT_SHA>[, <PROPAGATION_OR_DOC_SHAS>...]
 
   Use semantic-merge workflow sync reviewer mode. Verify anchors, incoming
   intent, current-branch intent, conflict resolution, user-decision logging,

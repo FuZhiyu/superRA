@@ -25,7 +25,7 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing 
 1. Run the requested sync operation after intent investigation. For the normal workflow path, merge `BASE_REF` into the current branch.
 2. Write the branch-level `## Sync Map` in `PLAN.md` when there is material overlap, a conflict, a user decision, sync-review carryover, or a post-sync obligation. Omit it for no-op or trivial syncs with no obligations.
 3. Add task-local `**Sync impact:**` annotations only to task blocks that need task-specific propagation during Integrate. Keep them short and point back to the relevant Sync Map cluster.
-4. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** Include conflict resolution, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations with the commits that produce them. Every commit must leave the tree passing existing protection (drift tests + key-result coverage established in `integration-workflow` Protect); per-commit protection-pass is the lower bound, `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule.
+4. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** Include conflict resolution, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations with the commits that produce them. Before returning, update `**Sync commits:**` to list the full commit chain this mode landed. Every commit must leave the tree passing existing protection (drift tests + key-result coverage established in `integration-workflow` Protect); per-commit protection-pass is the lower bound, `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule.
 
 ## Workflow Sync Map Format
 
@@ -36,7 +36,7 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing 
 **Pre-sync merge base:** `<PRE_SYNC_BASE_SHA>`
 **Synced base head:** `<BASE_HEAD_SHA>`
 **Incoming range:** `<PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>`
-**Sync commits:** `<MERGE_COMMIT_SHA>`[, `<PROPAGATION_SHA>`...]
+**Sync commits:** `<MERGE_COMMIT_SHA>`[, `<PROPAGATION_OR_DOC_SHA>`...]
 **Sync review status:** `IMPLEMENTED | REVISE | APPROVED`
 
 ### Branch Summary
@@ -80,4 +80,4 @@ Return one of:
 - `NEEDS_CONTEXT`: missing upstream context or a user decision is needed.
 - `BLOCKED`: the sync cannot proceed safely.
 
-Report the sync commit range, Sync Map location or why none was needed, task-local Sync impact annotations added, stash status (if any), checks run, and post-sync obligations.
+Report the full sync commit chain, Sync Map location or why none was needed, task-local Sync impact annotations added, stash status (if any), checks run, and post-sync obligations.
