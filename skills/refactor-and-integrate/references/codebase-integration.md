@@ -1,6 +1,6 @@
 # Codebase Integration Standards
 
-Cross-cutting code-quality reference for post-sync code refactoring and integration review. Implementer (refactorer) and reviewer both walk the gated checklist; the how-to sections give the procedures and decision trees the checklist encodes. Loaded whenever `Stage:` is `integration` (per `superRA:using-superra` §Skill-Load Manifest).
+Cross-cutting reference for codebase-coherence refactoring and integration review. Implementer (refactorer) and reviewer both walk the gated checklist; the how-to sections give the procedures and decision trees the checklist encodes.
 
 ---
 
@@ -35,35 +35,34 @@ The refactorer applies this as part of the refactoring pass; the integration rev
 
 ### Sync impact context
 
-When PLAN.md task blocks contain `**Sync impact:**`, treat those fields as context for why the approved post-sync diff looks the way it does. Follow the referenced Sync Map cluster for branch-level context only when needed.
+When PLAN.md task blocks contain `**Sync impact:**`, use those fields as evidence for why a hunk already exists in the governing diff. Follow the referenced Sync Map cluster only when needed to evaluate that hunk.
 
-Do not recreate incoming-intent research from git history during Integrate. Sync review already approved semantic coherence, including conflict resolution, propagation commits, stale-reference follow-through, and generated-output handling within the merge's reach. Integrate checks codebase coherence and whether the surviving diff is minimal against `BASE_HEAD_SHA..HEAD`.
-
-The orchestrator removes `## Sync Map` and temporary task-local `**Sync impact:**` fields only after integration review APPROVES and the full drift-test suite passes.
+Sync impact justifies existing hunks only when it is already present; it does not create new refactor targets or excuse unrelated codebase changes.
 
 ## Reviewer Verdict Protocol
 
-Every reviewer walks top-to-bottom through the Minimum-net-diff top item (in SKILL.md) plus every discipline's checklist that the task touches. **Never halt on a failure** — one comprehensive pass every time; halting early forces a full re-review on the next pass, and reviewer dispatches are costly.
+Every reviewer walks top-to-bottom through the Minimum Net Diff section in `SKILL.md` plus this checklist. **Never halt on a failure** — one comprehensive pass every time; halting early forces a full re-review on the next pass.
 
 Two verdicts:
 
 - **APPROVE** — no `[BLOCKING]` findings.
 - **REVISE** — at least one `[BLOCKING]` finding.
 
-**Handling dependent findings.** When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first (e.g., "couldn't fully assess the refactor until the drift tests are passing"), say so in plain prose alongside the finding. No separate verdict, no formal tag.
+**Handling dependent findings.** When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, say so in plain prose alongside the finding. No separate verdict, no formal tag.
 
 **Re-review after REVISE.** Implementer fixes all `[BLOCKING]` findings and re-dispatches. Reviewer then (1) verifies each fix is correct, and (2) re-checks any finding the first pass annotated as depending on an upstream fix. Everything else is accepted from the first pass — no third full walk. APPROVE once all `[BLOCKING]` findings are resolved.
 
-**Implementer self-check (before every commit).** Run before every commit on the integration branch:
+**Implementer Final Diff Self-Check.** Run immediately before every return or commit, including no-change cases:
 
-1. **Compute the cumulative diff from the governing baseline.** In integration-workflow after Sync, use `git diff <BASE_HEAD_SHA>..HEAD`. In standalone refactor work, use the caller-provided git range or touched-file diff.
-2. **Review every hunk** against the loaded references' checklists, approved task objectives, approved semantic-sync context, and logged user decisions. For each hunk, ask: *which `[BLOCKING]` / `[ADVISORY]` item, approved objective, sync context, or user decision justifies this change?*
-3. **Any hunk without a justification is out of scope.** Revert it, OR re-justify it by adding the underlying need to task-local review notes or the commit message so the reviewer can check the same evidence.
-4. **Respect the post-sync baseline.** Base-current deletions and relocations are already represented in `BASE_HEAD_SHA`; do not restore or contradict them unless an approved objective, approved semantic-sync context, or logged user decision requires it.
-5. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` — named explicitly in the dispatch's `Task:` or `Tasks in scope:` field. `APPROVED`-integration tasks are out of scope unless an accepted reviewer finding names them.
-6. **Stage only files you touched this turn** (per `superRA:using-superra` §Commit Hygiene); `git diff --cached` before `git commit`.
+1. **Recompute the governing diff.** In integration-workflow after Sync, use `git diff <BASE_HEAD_SHA>..HEAD`. In standalone refactor work, use the caller-provided git range or touched-file diff.
+2. **Leave a compact trail.** In the assigned PLAN.md task block when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without PLAN.md, put the same line in the status return.
+3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
+4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `Integration status: APPROVED`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
+5. **Prune or record.** Any hunk without a current justification is out of scope. Revert it, or record the underlying need where the reviewer can verify it.
+6. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` and tasks explicitly reopened by accepted review findings.
+7. **Stage only files you touched this turn** (per `superRA:using-superra` §Commit Hygiene); `git diff --cached` before `git commit`.
 
-The integration reviewer runs the same governing diff as evidence and walks each hunk through the same reference checklists. One source of truth, two perspectives.
+The integration reviewer recomputes the same governing diff and compares it with the self-check trail. A missing or stale trail is `[BLOCKING]`, including when no code changed.
 
 ---
 
@@ -73,8 +72,9 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Code integration:**
 
-- `[BLOCKING]` **Governing-diff pruning performed line by line:** Every surviving hunk in the governing diff ties to an approved task objective, approved semantic-sync context, logged user decision, or checklist requirement; unrelated cleanup, formatting churn, and stale branch-side restorations are removed.
-- `[BLOCKING]` **Base-current deletions / relocations honored by default:** Restorations exist only when an approved task objective, approved semantic-sync context, or logged user decision requires them.
+- `[BLOCKING]` **Final Diff Self-Check present and fresh:** The trail names the governing command/range, records no-change outcomes or surviving-change classes, and gives file/hunk justification for suspicious cases.
+- `[BLOCKING]` **Governing-diff pruning performed line by line:** Every surviving hunk in the governing diff ties to an approved task objective, supplied Sync impact context, logged user decision, or checklist requirement; unrelated cleanup, formatting churn, and stale branch-side restorations are removed.
+- `[BLOCKING]` **Base-current deletions / relocations honored by default:** Restorations exist only when an approved task objective, supplied Sync impact context, logged user decision, or checklist requirement requires them.
 - `[BLOCKING]` **Naming consistency:** Variable names, function names, and file names follow codebase conventions.
 - `[BLOCKING]` **Utility usage:** Existing utility functions are used where appropriate instead of hand-rolled equivalents.
 - `[BLOCKING]` **No debug artifacts:** No leftover debug prints, commented-out experiments, or temporary variables.
@@ -92,7 +92,6 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 - `[BLOCKING]` **Focused diff:** Changes limited to analysis scope; no unrelated formatting or restructuring. (Reinforced by the governing-baseline minimum-net-diff top item in SKILL.md.)
 - `[BLOCKING]` **Self-contained:** The analysis can be understood from the code and its documentation without external context.
 - `[ADVISORY]` **Clean commits:** Commit history is logical and messages are descriptive.
-- `[ADVISORY]` **Appropriate tolerances** documented and economically reasonable (where drift tests exist).
 
 **Documentation currency:**
 
