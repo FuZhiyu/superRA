@@ -38,7 +38,7 @@ Legitimate stop points (log every answer per `superRA:handoff-doc` §User Decisi
 
 **Load `superRA:agent-orchestration` before writing any dispatch prompt.** Task-scoped dispatches use the Stage values in `superRA:using-superra` §Skill-Load Manifest; do not restate load lists in prompts.
 
-Sync is branch-level and not a normal task-scoped manifest stage. It dispatches generic sync author / sync reviewer agents that explicitly load `semantic-merge` mode references.
+Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the relevant `semantic-merge` mode reference.
 
 ## Protect
 
@@ -57,8 +57,8 @@ Result protection guards key results during Sync, Integrate, Finish, and future 
 
    Which should be protected? Any to add or remove?
    ```
-3. **Dispatch protection-creator.** `Stage: drift-test`, canonical implementer template.
-4. **Dispatch protection-reviewer.** `Stage: drift-test`, canonical reviewer template. Iterate REVISE -> fix -> narrow re-review until APPROVE.
+3. **Dispatch protection-creator.** `Stage: protection`, canonical implementer template.
+4. **Dispatch protection-reviewer.** `Stage: protection`, canonical reviewer template. Iterate REVISE -> fix -> narrow re-review until APPROVE.
 5. **Run tests on the current branch.** If new tests fail on existing code, fix the tests.
 6. **Commit tests and handoff docs.**
 7. **Flip `Drift tests created`** in PLAN.md §Workflow Status once all confirmed key results are protected and the full drift-test suite passes.
@@ -116,8 +116,8 @@ Otherwise dispatch one generic sync author:
 
 ```text
 Agent(generic):
+  Stage: sync
   Role: sync author
-  Skills: semantic-merge
   References:
     - semantic-merge/references/workflow-sync-author.md
 
@@ -147,8 +147,8 @@ Before Integrate begins, dispatch one generic sync reviewer:
 
 ```text
 Agent(generic):
+  Stage: sync
   Role: sync reviewer
-  Skills: semantic-merge
   References:
     - semantic-merge/references/workflow-sync-reviewer.md
 

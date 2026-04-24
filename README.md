@@ -31,7 +31,7 @@ superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. 
 flowchart TB
     PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
     IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
-    INTEGRATE["<b>INTEGRATE</b><br/>Protect drift tests<br/>Sync with base<br/>Integrate/refactor<br/>Document<br/>Finish"]
+    INTEGRATE["<b>INTEGRATE</b><br/>Protection (default: drift tests)<br/>Sync with base<br/>Integrate/refactor<br/>Document<br/>Finish"]
     FINISHED(["finished"])
 
     PLAN --> IMPLEMENT
@@ -53,7 +53,7 @@ To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, 
 
 1. **Implementer–reviewer pair at every step.** An adversarial reviewer inspects every implementation; work only advances after `APPROVE`. Review is never skipped, regardless of how trivial a step looks.
 2. **Handoff docs always reflect the current state.** Material progress lives in committed `PLAN.md` and `RESULTS.md`, not in the chat log. A fresh agent can open the repo and resume from the docs plus git state alone.
-3. **Fast early for exploration, strict for integration. Semantic sync always.** During implementation, optimize for speed and correctness of the analysis itself. Once results are in hand, the integration phase protects key results with drift tests, syncs against the current base with `semantic-merge`, runs a dedicated sync review, refactors the post-sync diff to fit the codebase, and matures documentation for the long haul. Intent-aware branch syncs never use a bare `git merge`.
+3. **Fast early for exploration, strict for integration. Semantic sync always.** During implementation, optimize for speed and correctness of the analysis itself. Once results are in hand, the integration phase protects key results (drift tests are the default mechanism), syncs against the current base with `semantic-merge`, runs a dedicated sync review, refactors the post-sync diff to fit the codebase, and matures documentation for the long haul. Intent-aware branch syncs never use a bare `git merge`.
 4. **Autonomous with human in the loop.** The agent drives work forward on its own power and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
 5. **Adaptive and composable.** Research is rarely linear and never has a single style. The workflow supplies protocols, not requirements, and can be adapted to different rhythms. It is domain-agnostic: data analysis today; theory, modeling, and writing in the pipeline.
 

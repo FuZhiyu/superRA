@@ -83,11 +83,12 @@ Apply to every dispatch regardless of domain.
 | `Stage:` | Emitted by | Required skills |
 |---|---|---|
 | `implementation` | `implementation-workflow` | — |
-| `drift-test` | `integration-workflow` Protect | `result-protection` |
+| `protection` | `integration-workflow` Protect | `result-protection` |
+| `sync` | `integration-workflow` Sync | `semantic-merge` |
 | `integration` | `integration-workflow` Integrate | `refactor-and-integrate` |
 | `documentation` | `integration-workflow` Document | `handoff-doc` + `report-in-markdown` |
 
-`integration-workflow` Sync is branch-level and not a normal task-scoped manifest stage. It dispatches generic sync author / sync reviewer agents that explicitly load `semantic-merge` and the mode references named in that workflow. The canonical implementer/reviewer role specs do not carry Sync-specific exceptions.
+`Stage: sync` is branch-level. `integration-workflow` dispatches generic sync author / sync reviewer agents with the mode references named in that workflow; the canonical implementer/reviewer role specs do not carry Sync-specific exceptions.
 
 ### Domain add-ons (topic-driven)
 

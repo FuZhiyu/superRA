@@ -102,7 +102,7 @@ Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `P
 
 ## Dispatch Templates
 
-Every workflow skill that dispatches a task-scoped `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules. Branch-level `integration-workflow` Sync is the exception: it dispatches generic sync author / sync reviewer agents with explicit `semantic-merge` mode references, because Sync is not a task-scoped implementer/reviewer assignment.
+Every workflow skill that dispatches a task-scoped `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules. Branch-level `Stage: sync` dispatches generic sync author / sync reviewer agents with explicit `semantic-merge` mode references.
 
 Templates carry required fields plus an optional `Additionally:` line for task-specific steering: focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. Omit `Additionally:` when there is no extra steering; never use it to restate role protocol, manifest loads, or `PLAN.md` content.
 

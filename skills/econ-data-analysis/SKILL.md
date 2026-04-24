@@ -24,7 +24,7 @@ Load per stage; do not load them all at every dispatch:
 |---|---|
 | `references/planning.md` | PLAN phase — Data Inventory hard gate and Sensitivity Analysis Design. |
 | `references/data-robustness-checklist.md` | PLAN (design) and IMPLEMENT (execution of sensitivity tasks) — menu of robustness checks. |
-| `references/integrate-drift-tests.md` | drift-test stage — data-analysis key-result identification, econ-specific tolerances, data-analysis failure modes. |
+| `references/integrate-drift-tests.md` | protection stage — data-analysis key-result identification, econ-specific tolerances, data-analysis failure modes for drift/regression tests. |
 | `references/integration.md` | INTEGRATE stage — data-specific refactor-integrity gates. |
 | `references/notebook-format.md` | IMPLEMENT stage (for implementer) — cell organization, narrative, output idioms, Python jupytext / Julia Quarto rendering. Companions: `jupytext-guide.md`, `julia-quarto-guide.md`. |
 

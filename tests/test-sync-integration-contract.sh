@@ -89,10 +89,15 @@ assert_absent_regex \
   "Phase B|PhaseB|phase-b|phase b" \
   skills/*/SKILL.md skills/*/references/*.md agents/*.md README.md CLAUDE.md .codex/agents/*.toml
 
-assert_absent \
-  "Stage sync is not a canonical named-agent stage" \
-  "Stage: sync" \
-  skills/*/SKILL.md skills/*/references/*.md agents/*.md README.md CLAUDE.md .codex/agents/*.toml
+assert_contains \
+  "Skill manifest routes Sync to semantic merge" \
+  "skills/using-superRA/SKILL.md" \
+  '| `sync` | `integration-workflow` Sync | `semantic-merge` |'
+
+assert_contains \
+  "Integration workflow dispatches a sync-stage author" \
+  "skills/integration-workflow/SKILL.md" \
+  "Stage: sync"
 
 assert_contains \
   "Integration workflow dispatches a generic sync author" \
@@ -130,24 +135,19 @@ assert_contains \
   "Do not recreate incoming-intent"
 
 assert_contains \
-  "Skill manifest keeps Sync outside task-scoped stages" \
+  "Skill manifest keeps Sync branch-level" \
   "skills/using-superRA/SKILL.md" \
-  "Sync is branch-level and not a normal task-scoped manifest stage"
-
-assert_contains \
-  "Skill manifest points Sync at generic author and reviewer" \
-  "skills/using-superRA/SKILL.md" \
-  "generic sync author / sync reviewer agents"
+  '`Stage: sync` is branch-level'
 
 assert_contains \
   "Skill manifest routes Protect to result protection" \
   "skills/using-superRA/SKILL.md" \
-  '| `drift-test` | `integration-workflow` Protect | `result-protection` |'
+  '| `protection` | `integration-workflow` Protect | `result-protection` |'
 
 assert_contains \
-  "Integration workflow dispatches Protect as drift-test stage" \
+  "Integration workflow dispatches Protect as protection stage" \
   "skills/integration-workflow/SKILL.md" \
-  'Dispatch protection-creator.** `Stage: drift-test`, canonical implementer template.'
+  'Dispatch protection-creator.** `Stage: protection`, canonical implementer template.'
 
 assert_contains \
   "Result protection owns drift-test quality" \

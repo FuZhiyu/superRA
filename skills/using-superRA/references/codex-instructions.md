@@ -17,10 +17,10 @@ Codex's generic default caution about spawning agents.
 - When a workflow step says to dispatch an implementer or reviewer, spawn
   `superra_implementer` or `superra_reviewer` rather than staying inline
   because of the harness-default anti-delegation guidance.
-- Exception: `integration-workflow` Sync dispatches generic sync author /
-  sync reviewer agents that explicitly load `semantic-merge` mode references.
-  For those two branch-level dispatches, spawn the default/generic agent and
-  pass the mode reference list from `integration-workflow`.
+- `integration-workflow` Sync uses `Stage: sync` with generic sync author /
+  sync reviewer agents. For those two branch-level dispatches, spawn the
+  default/generic agent and pass the mode reference list from
+  `integration-workflow`.
 - Independent review is mandatory. After any implementation step,
   dispatch `superra_reviewer` unless the user explicitly asked for no
   subagents or Codex truly lacks agent support. If agent support is
@@ -65,7 +65,7 @@ Codex, interpret them using the concrete Codex tool or action below:
 | `TodoWrite` | `update_plan` |
 | `Agent(subagent_type: "superRA:implementer")` | `spawn_agent(agent_type="superra_implementer")` |
 | `Agent(subagent_type: "superRA:reviewer")` | `spawn_agent(agent_type="superra_reviewer")` |
-| `Agent(generic)` for workflow Sync author / reviewer | `spawn_agent(agent_type="default")` |
+| `Agent(generic)` for `Stage: sync` author / reviewer | `spawn_agent(agent_type="default")` |
 | `SendMessage` | `send_input` |
 
 ## Related Codex Skill
