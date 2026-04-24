@@ -5,6 +5,14 @@
 > **INTEGRATION-SPECIFIC DISCIPLINE (2026-04-23):** This branch itself redesigns superRA's workflow skills, so the installed plugin copy is out of date relative to what this branch teaches. When following any superRA workflow during this integration, **read the skill files directly from this repo** (`skills/<name>/SKILL.md` and `skills/<name>/references/*.md`) rather than calling the `Skill` tool — the in-repo versions are the authoritative contract for this integration pass. This applies to `integration-workflow`, `semantic-merge`, `agent-orchestration`, `refactor-and-integrate`, `handoff-doc`, and `using-superRA`. Pass explicit in-repo reference paths in every dispatch prompt.
 >
 > **UPSTREAM INTENT TO HONOR:** Main landed the `improve-design-principle` branch (see `docs/plans/2026-04-23-improve-design-principle-plan.md` after sync) which did two things: (1) redesigned the Workflow Frontier Resolver around a reusable re-entry mechanism, and (2) enshrined **"Teach the Protocol, Don't Prescribe Each Action"** as a gated check in `CLAUDE.md` with a Design Audit Checklist. Implementers must self-apply the gate before committing any edit under `skills/*` or `agents/*`; reviewers must verify it on every pass and **hold this gate tightly** when judging our surviving diff. Surviving hunks that restate what the agent already knows from authoritative sources should be trimmed, not preserved — this is also why every refactor follow-up in this integration must pass the **minimum-net-diff self-check** (`git diff BASE_HEAD_SHA..HEAD`) before each commit.
+>
+> **GENERATED ARTIFACTS — DO NOT HAND-EDIT.** The following files are generated; update the canonical sources + generator, then regenerate:
+> - `skills/using-superRA/references/direct-mode-implementer.md`
+> - `skills/using-superRA/references/direct-mode-reviewer.md`
+> - `.codex/agents/superra_implementer.toml`
+> - `.codex/agents/superra_reviewer.toml`
+>
+> Canonical sources: `agents/implementer.md`, `agents/reviewer.md`. Generator: `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`. Verification: add `--check` (must report up-to-date) and run `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py` (6/6 passing). Stage regenerated artifacts in the same commit as the canonical-source edit.
 
 **Objective:** Redesign superRA integration so semantic sync is a standalone utility skill, workflow Sync uses generic agents plus semantic-merge mode references, and downstream task agents receive sync intent through task-local annotations.
 
