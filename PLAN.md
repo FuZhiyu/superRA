@@ -24,7 +24,7 @@
 
 - [x] **Plan approved** - researcher requested the material redesign toward mechanisms over contingency prose on 2026-04-23.
 - [x] **Execution complete** - All 10 tasks reviewer-approved; post-audit refinement formalized; static documentation audits and generator tests passed.
-- [ ] **Drift tests created** - not yet reached; documentation/package integration gate remains pending.
+- [x] **Drift tests created** - existing `skills/codex-superra-setup/scripts/test_sync_codex_agents.py` (5 tests, all passing) is the Phase A coverage per §Decisions 2026-04-23. No new drift tests authored.
 - [ ] **Refactored** - not yet reached; integration review remains pending.
 - [ ] **Docs finalized** - not yet reached; this RESULTS.md is Stage 1 handoff state.
 - [ ] **Merged** - branch has not been merged or opened as a PR by this workflow.
@@ -79,6 +79,10 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 > **User decision (2026-04-23):** Proceed with integration at the Step 4 completion menu.
 > **Question asked:** Work complete and verified — what disposition for the branch (integrate / change plan / keep as-is / discard)?
 > **Rationale (if given):** *(none given — direct selection at the 4-option menu)*
+
+> **User decision (2026-04-23):** Skip programmatic anti-pattern / leak / pointer drift-test authoring at Phase A; rely on the existing `test_sync_codex_agents.py` (generator determinism) as the drift-test coverage for this branch.
+> **Question asked:** Which Phase A drift tests should be authored — anti-pattern regression, direct-mode leak guard, pointer integrity, or none new?
+> **Rationale (if given):** Researcher is skeptical that programmatic guards against anti-patterns are meaningful — the patterns are subjective and false-positive-prone. Existing generator-determinism tests catch the one silent-error class that bit us (the Task 6 cleanup-helper regression) because any future source-text drift makes the cleanup helpers raise `ValueError` and the test suite fails. The `Drift tests created` milestone flips against that existing coverage rather than a new suite.
 
 > **User decision (2026-04-23):** Refine the post-audit output — relocate the drift-test tolerance rubric, remove an inverted cross-reference, condense role-spec prose.
 > **Question asked:** Two design questions surfaced in the post-audit review: (1) should the drift-test tolerance rubric live in the cross-cutting `refactor-and-integrate/drift-test-quality.md` or in the domain-specific `econ-data-analysis/references/integrate-drift-tests.md`? (2) Should the cross-cutting `codebase-integration.md` carry a "Data-analysis work:" cross-reference back into a domain file?
