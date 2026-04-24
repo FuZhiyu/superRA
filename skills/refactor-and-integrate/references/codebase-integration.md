@@ -12,7 +12,7 @@ When you find inconsistencies between new code and existing codebase:
 
 - **Clear convention exists:** Follow the convention.
 - **Ambiguous or conflicting conventions:** Use best judgment and document the choice.
-- **Methodological question** (e.g., different control variable set, different variable definition): Do NOT resolve — flag for the user. This is a research decision, not a code quality decision. Domain-specific gates for data analysis live in the domain integration reference cited in the blockquote above.
+- **Methodological question** (e.g., different control variable set, different variable definition): Do NOT resolve — flag for the user. This is a research decision, not a code quality decision. Domain-specific gates for data analysis live in `econ-data-analysis/references/integration.md`.
 
 ### Project Doc Audit — walk-up algorithm
 
