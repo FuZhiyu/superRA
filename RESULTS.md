@@ -91,7 +91,26 @@ PY
 
 ## Task 5: Restructure the `theory-modeling` SKILL body around intuition/interpretability as the through-line
 
-**Status:** Not started
+**Status:** Implemented
+
+### Key Findings
+- Rewrote the Iron Law to `NO MANIPULATION WITHOUT DEFINED OBJECTS, INTERPRETABLE ASSUMPTIONS, AND STATED INTUITION`, with the three-line expansion on symbol meaning, plain-language assumption interpretation, and one-sentence reason per non-trivial move. Extended the "No exceptions" bullets to cover intuition, interpretability, and reason-per-move without dropping the original ones (hidden restrictions, mid-derivation renaming, primitive-to-endogenous shifts, memory of prior drafts, back-up-means-back-up).
+- Replaced the `Define-Derive-Validate` section with a four-gate structure — **Objects & Notation → Assumptions → Derivations → Verification & Rendering** — organized around the reader's trust chain. Every load-bearing `[BLOCKING]` / `[ADVISORY]` item from the prior checklist was relocated verbatim to the appropriate gate; none reworded or weakened. Task 4's narrative-ordering rule stays in **Objects & Notation**, and Task 4's atomic `PLAN.md` Notation-Conventions-update rule stays in **Documentation and handoff** referencing `superRA:handoff-doc` for inline-edit mechanics.
+- Added the five new `[BLOCKING]` items verbatim as specified: intuition-per-new-symbol under Objects & Notation; interpretability-per-assumption and synthesis-preferred under Assumptions; reason-per-move under Derivations; economic-interpretation of special/limiting cases under Verification & Rendering.
+- Added four new Common Rationalizations rows for the intuition-failure modes: "The intuition is obvious." / "I'll add interpretation after the algebra is clean." / "Weaker assumptions are always safer." / "This assumption is technical, not economic." Each paired with a reality statement written in the same style as existing rows.
+- Updated all internal SKILL.md references away from `Define-Derive-Validate`: the reviewer-protocol pointer now reads "Walk the four gates top to bottom", the section heading and intro paragraph use "The Four Gates", and the top-of-file summary names the four gates explicitly. The Stage-scoped discipline subsection and Key References block never named `Define-Derive-Validate` and required no edit.
+
+### Final checklist structure (four gates)
+- **Objects & Notation** (4 BLOCKING + 1 ADVISORY): narrative-order introduction + PLAN.md Notation Conventions authoritative; notation explicit/interpretable or conventional; intuition/mnemonic per new symbol (NEW); domains/units/signs; advisory literature-matching notation.
+- **Assumptions** (3 BLOCKING): attached-to-primitives; plain-language interpretation per assumption (NEW); prefer synthesis over scattered weak restrictions with reviewer judgement margin (NEW).
+- **Derivations** (8 BLOCKING + 1 ADVISORY): solution concept named; one move per step; state rule being used; rule + one-sentence reason per non-trivial step (NEW); case splits; comparative statics; reused-symbol consistency; existence/uniqueness arguments; advisory short equations.
+- **Verification & Rendering** (7 BLOCKING + 1 ADVISORY): verification modes; numerical with explicit params; special/limiting cases vs intuition; special/limiting cases interpreted economically (NEW); assumption-map check-back; CAS transcription; rendering clarity; advisory multiple parameter sets.
+- **Implementation standards** and **Documentation and handoff** blocks preserved as-is, including Task 4's atomic Notation-Conventions update rule.
+
+### Notes
+- Task scope was SKILL.md only; `references/planning.md` and `references/integration.md` still reference `Define-Derive-Validate` in two spots (planning.md line 155, integration.md line 10). Task 6 propagates the intuition/interpretability gates into those references and handles those renames.
+- Sanity check — internal consistency: the new Iron Law names the three pillars (objects, interpretable assumptions, stated intuition); the four gates instantiate them; the Common Rationalizations table now covers the failure mode for each pillar. Task 4's notation/update rules compose cleanly under **Objects & Notation** and **Documentation and handoff** without overlap with the new intuition-per-symbol rule (Task 4: ordering + PLAN.md sync; new: intuition/mnemonic content of the entry).
+- No regressions: every original load-bearing item is preserved verbatim under a gate; reviewer-verdict protocol unchanged (two verdicts, no halt-on-failure, re-review discipline).
 
 ## Task 6: Propagate intuition/interpretability gates into `references/planning.md` and touch up `references/integration.md`
 
