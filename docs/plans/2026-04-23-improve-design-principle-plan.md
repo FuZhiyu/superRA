@@ -26,7 +26,7 @@
 - [x] **Execution complete** - All 11 tasks reviewer-approved; principle gate enshrined; inverted cross-references in `codebase-integration.md` fully removed (decision tree + gated-checklist item).
 - [x] **Drift tests created** - existing `skills/codex-superra-setup/scripts/test_sync_codex_agents.py` (5 tests, all passing) is the Phase A coverage per §Decisions 2026-04-23. No new drift tests authored.
 - [x] **Refactored** - Phase B integration review approved all 11 tasks (commit `5479838`); surviving diff justified against approved task objectives; one MINOR polish deferred to RESULTS.md §Known Follow-Ups.
-- [ ] **Docs finalized** - not yet reached; this RESULTS.md is Stage 1 handoff state.
+- [x] **Docs finalized** - PLAN.md + RESULTS.md relocated to `docs/plans/2026-04-23-improve-design-principle-{plan,results}.md` per user decision; no doc-writer/doc-reviewer maturation (contributor-docs change, not an analysis report).
 - [ ] **Merged** - branch has not been merged or opened as a PR by this workflow.
 
 ## Project Conventions
@@ -95,6 +95,10 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 > **User decision (2026-04-23):** Enshrine the "Teach the Protocol, Don't Prescribe Each Action" principle as a gate in `CLAUDE.md` — applies to every future implementer and reviewer editing any file under `skills/*` or `agents/*`.
 > **Question asked:** Should the principle be promoted from design-philosophy prose to a gated check that implementers self-apply before commit and reviewers verify on every pass?
 > **Rationale (if given):** The principle has proved load-bearing across Tasks 5-10 — catching it at the edit site is cheaper than the next audit round. Adds Task 11 and unchecks `Execution complete`; Tasks 1-10 remain APPROVED (the gate tightens future edits, does not overturn prior work). After Task 11 APPROVE, resume `integration-workflow` Phase B Step 1 (integration reviewer dispatch) — the base-branch confirmation above does not need re-asking.
+
+> **User decision (2026-04-23):** Phase C shape — skip the doc-writer / doc-reviewer maturation pass; move `PLAN.md` and `RESULTS.md` into `docs/plans/` (matching the existing `YYYY-MM-DD-<slug>-plan.md` / `-results.md` convention) and flip `Docs finalized` against the current state.
+> **Question asked:** Which Phase C shape — lightweight in-place tighten, full maturation with relocation, or skip-and-flip?
+> **Rationale (if given):** This is a contributor-docs change, not an analysis producing an external report; the dev-log RESULTS.md is already the decision record. `docs/plans/` is the existing convention for superRA's package-design plan + results pairs. Fastest path to Phase D merge consistent with the branch's purpose.
 
 ---
 

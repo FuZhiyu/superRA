@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-23 (Phase B integration review approved; entering Phase C)
-**Status:** All 11 tasks reviewer-approved and integration-approved. Phase A + Phase B complete (1 MINOR polish deferred to §Known Follow-Ups); ready for Phase C doc finalization.
+**Last updated:** 2026-04-23 (Phase C complete — relocated to docs/plans/; Docs finalized flipped)
+**Status:** All 11 tasks reviewer-approved, integration-approved, docs finalized. Ready for Phase D merge.
 
 ---
 
