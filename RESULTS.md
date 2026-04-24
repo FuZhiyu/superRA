@@ -3,8 +3,8 @@
 > Mirrors `PLAN.md` structure. Updated after each task with key findings.
 > New agents: read `PLAN.md` for what to do, `RESULTS.md` for what was found.
 
-**Last updated:** 2026-04-23 (branch rebased onto current `main` `b6e0640`, dropping 34 unrelated objective-first commits; theory-modeling commits replayed with semantic-merge conflict resolution; harness compatibility checks pass)
-**Status:** Execution complete on the rebased branch; Phase B integration review pending against the new base (prior Phase B REVISE findings structurally resolved by the dropped commits)
+**Last updated:** 2026-04-23 (researcher-initiated restructure: `Define-Derive-Validate` replaced by a four-gate structure built around intuition/interpretability; Tasks 5 and 6 added; `Refactored` milestone rolled back for Phase B re-run after Task 6)
+**Status:** Tasks 1–4 APPROVED and preserved under the new structure; Tasks 5 and 6 not started; Phase B integration review pending on the restructured skill
 
 ---
 
@@ -88,3 +88,11 @@ PY
 - Placement of the update-mechanism rule: put it in `Documentation and handoff` per dispatch steering — it is about maintaining `PLAN.md` Notation Conventions, not about whether a symbol is defined in-task. The existing `Define` ordering rule carries the pure narrative-order requirement; the handoff rule carries the cross-task PLAN.md editing obligation. The two compose without overlap.
 - Minimum-net-diff preserved: only the one pre-existing `Define` bullet was rewritten, one bullet was inserted into `Documentation and handoff`, one row was appended to the Common Rationalizations table, and one bullet was inserted into `references/planning.md` Principles. No adjacent items, sections, or reviewer protocols were touched.
 - Internal consistency: the new items reinforce the Iron Law ("NO DERIVATION WITHOUT DEFINED OBJECTS AND STATED ASSUMPTIONS") and sit alongside — without duplicating — the existing `Derive` item on reused-symbol consistency and the existing Common Rationalization on late assumption cleanup.
+
+## Task 5: Restructure the `theory-modeling` SKILL body around intuition/interpretability as the through-line
+
+**Status:** Not started
+
+## Task 6: Propagate intuition/interpretability gates into `references/planning.md` and touch up `references/integration.md`
+
+**Status:** Not started
