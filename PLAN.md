@@ -154,7 +154,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 5: Restructure the `theory-modeling` SKILL body around intuition/interpretability as the through-line
 **Depends on:** Task 1, Task 4
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** `skills/theory-modeling/SKILL.md`
