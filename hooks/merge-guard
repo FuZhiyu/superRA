@@ -4,8 +4,8 @@
 # Does NOT block — the discipline system handles enforcement.
 
 # Test vectors for regression (from RESULTS.md Task 4)
-# - `git merge foo/parallel/a` → emit `{}` (exempt: parallel branch)
-# - `git merge --no-ff feat/parallel/b` → emit `{}` (exempt: parallel branch with flag)
+# - `git merge foo-agent/parallel/a` → emit `{}` (exempt: parallel branch)
+# - `git merge --no-ff feat-agent/parallel/b` → emit `{}` (exempt: parallel branch with flag)
 # - `git merge main` → emit STOP reminder (require semantic-merge)
 # - `git merge --abort` → emit `{}` (skip: abort is not a new merge)
 
@@ -36,7 +36,7 @@ fi
 
 # Exempt orchestrator-managed parallel-task merges.
 # Branch-name convention from superRA:agent-orchestration §Parallelization
-# and Worktree Isolation — <branch>/parallel/<slug> branches are disjoint
+# and Worktree Isolation — <current-branch>-agent/parallel/<slug> branches are disjoint
 # by construction and merge with plain git merge.
 if echo "$command" | grep -qE 'git (merge|rebase|cherry-pick)(\s+--?\S+)*\s+\S+/parallel/'; then
   printf '{}\n'

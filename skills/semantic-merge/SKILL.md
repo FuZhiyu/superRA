@@ -11,7 +11,7 @@ Integrate branches by intent, not by lines. Understand what each side was trying
 
 **Upstream-intent rule:** Identify the governing upstream intent before changing files. In Phase B, use the active `## Upstream Intent` section in `PLAN.md` when the reviewer recorded one for the current round, plus any relevant task-local review notes. Otherwise use the caller-supplied upstream-intent context for the incoming objective and allowed deltas. Preserve base intent by default: the merged tree should match the base branch unless approved task objectives or the recorded contract explicitly authorize a surviving branch-side delta. Upstream deletions and relocations stay deleted or relocated unless the recorded contract says otherwise.
 
-**Exception — orchestrator-managed parallel worktrees bypass this skill.** Branches matching `<branch>/parallel/<slug>` merge with plain `git merge --no-ff` (the `merge-guard` hook exempts `*/parallel/*` source refs).
+**Exception — orchestrator-managed parallel worktrees bypass this skill.** Branches matching `<current-branch>-agent/parallel/<slug>` merge with plain `git merge --no-ff` (the `merge-guard` hook exempts `*/parallel/*` source refs).
 
 ## The Process
 
