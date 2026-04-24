@@ -23,7 +23,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** - researcher requested the material redesign toward mechanisms over contingency prose on 2026-04-23.
-- [ ] **Execution complete** - Tasks 1-10 approved; Task 11 (enshrine the teach-the-protocol principle as a gate in CLAUDE.md) added 2026-04-23 and awaiting review.
+- [x] **Execution complete** - All 11 tasks reviewer-approved; principle gate enshrined; inverted cross-references in `codebase-integration.md` fully removed (decision tree + gated-checklist item).
 - [x] **Drift tests created** - existing `skills/codex-superra-setup/scripts/test_sync_codex_agents.py` (5 tests, all passing) is the Phase A coverage per §Decisions 2026-04-23. No new drift tests authored.
 - [ ] **Refactored** - not yet reached; integration review remains pending.
 - [ ] **Docs finalized** - not yet reached; this RESULTS.md is Stage 1 handoff state.

@@ -12,7 +12,7 @@ When you find inconsistencies between new code and existing codebase:
 
 - **Clear convention exists:** Follow the convention.
 - **Ambiguous or conflicting conventions:** Use best judgment and document the choice.
-- **Methodological question** (e.g., different control variable set, different variable definition): Do NOT resolve — flag for the user. This is a research decision, not a code quality decision. Domain-specific gates for data analysis live in `econ-data-analysis/references/integration.md`.
+- **Methodological question** (e.g., different control variable set, different variable definition): Do NOT resolve — flag for the user. This is a research decision, not a code quality decision. 
 
 ### Project Doc Audit — walk-up algorithm
 
@@ -76,7 +76,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Handling inconsistencies (decision tree in §How-To → Handling inconsistencies):**
 
-- `[BLOCKING]` **Methodological questions escalated, not resolved.** Different control variable sets, different variable definitions, different sample filters — these are research decisions, not code-quality decisions. Flag for the user; do not choose silently. Domain-specific methodological gates for data analysis live in `econ-data-analysis/references/integration.md`.
+- `[BLOCKING]` **Methodological questions escalated, not resolved.** Different control variable sets, different variable definitions, different sample filters — these are research decisions, not code-quality decisions. Flag for the user; do not choose silently.
 - `[ADVISORY]` **Clear convention exists:** follow the convention. **Ambiguous or conflicting conventions:** use best judgment and document the choice.
 
 **PR quality:**
