@@ -18,7 +18,7 @@ The dispatch supplies:
 - incoming range `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`
 - operation direction, defaulting to merging the confirmed base into the current branch
 
-Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing `## Sync Map`, and `RESULTS.md`. Incoming intent comes from commits, diffs, and docs in `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
+Current-branch intent comes from `PLAN.md` header, `## Decisions`, and `RESULTS.md`; existing `## Sync Map` content supplies prior sync obligations. Incoming intent comes from commits, diffs, and docs in `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
 
 ## Mode-Specific Process
 
@@ -41,7 +41,6 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing 
 
 ### Branch Summary
 
-**Current branch intent:** <one paragraph, usually from PLAN.md / RESULTS.md>.
 **Incoming intent:** <one paragraph from incoming commits and diffs>.
 **Resolution thesis:** <one paragraph describing the governing resolution>.
 
@@ -57,7 +56,7 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing 
 > 1. [MAJOR] <specific unresolved sync issue, with file/path evidence>.
 ```
 
-`## Sync Map` carries the big picture. It is temporary scaffolding for the active Sync / Integrate round.
+`## Sync Map` carries the big picture. In workflow mode, do not restate current-branch intent already present in `PLAN.md` / `RESULTS.md`. It is temporary scaffolding for the active Sync / Integrate round.
 
 ## Task-Local Sync Impact Format
 
