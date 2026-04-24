@@ -212,7 +212,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 ### Task 7: Clarify shared-vs-mode-specific content in semantic-merge
 **Depends on:** Task 6
-**Review status:** *(pending)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(pending)*
 
 **Files:** `skills/semantic-merge/SKILL.md`, `skills/semantic-merge/references/workflow-sync-author.md`, `skills/semantic-merge/references/workflow-sync-reviewer.md`, `skills/semantic-merge/references/standalone-merge.md`, `skills/semantic-merge/references/sync-quality.md` (to be deleted), `skills/integration-workflow/SKILL.md`, `CLAUDE.md`.
@@ -226,26 +226,26 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 - `sync-quality.md` is deleted; its gated checklist lives as a `##` section of `SKILL.md` since the skill body is always loaded when any mode is used. Shared-flow-checklist invariant preserved: implementer and reviewer walk the same section.
 - All pointers rewired to `SKILL.md §Semantic Coherence Checklist` (or its sub-section `§Scope boundary`). Integration-workflow dispatch templates drop `sync-quality.md` from reference lists. CLAUDE.md §DRY ownership updated.
 
-- [ ] **Step 1: Adopt researcher's in-flight edits as the starting baseline.**
+- [x] **Step 1: Adopt researcher's in-flight edits as the starting baseline.**
   Keep the `## Shared Steps` rename (from `## Techniques`) and the terse opener "The following steps are shared by all modes." Keep `workflow-sync-author.md` process at 4 steps (no codebase-obligation step 5) and its "sync commit range" Status Return phrasing.
 
-- [ ] **Step 2: Move `## Workflow Boundary` into `workflow-sync-author.md` as §Boundary at the top.**
+- [x] **Step 2: Move `## Workflow Boundary` into `workflow-sync-author.md` as §Boundary at the top.**
   Carry forward the semantic-coherence stopping rule and the deferral of codebase-coherence work to `refactor-and-integrate` via Integrate. The reviewer reference inherits the same boundary by reviewing the same work; point the reviewer's opener at the author's §Boundary rather than restating it.
 
-- [ ] **Step 3: Move `## Standalone Boundary` into `standalone-merge.md` as §Boundary at the top.**
+- [x] **Step 3: Move `## Standalone Boundary` into `standalone-merge.md` as §Boundary at the top.**
   Carry forward the semantic-coherence stopping rule and the caller-level deferral of codebase-coherence work to `refactor-and-integrate` or manual handling.
 
-- [ ] **Step 4: Absorb `sync-quality.md` into `SKILL.md` as §Semantic Coherence Checklist.**
+- [x] **Step 4: Absorb `sync-quality.md` into `SKILL.md` as §Semantic Coherence Checklist.**
   Keep the `[BLOCKING]` / `[ADVISORY]` structure and sub-headings (Intent preservation, Scope boundary, Intent integrity, Handoff docs, Verification). Preserve the shared-flow-checklist invariant: implementer and reviewer walk the same section.
 
-- [ ] **Step 5: Rewire all pointers.**
+- [x] **Step 5: Rewire all pointers.**
   - Mode references: drop "Also load `sync-quality.md`" lines; point at `SKILL.md §Semantic Coherence Checklist` for the checklist walk.
   - `SKILL.md §Shared Steps` step 5 (Resolve and land): `sync-quality.md §Scope boundary` → `§Semantic Coherence Checklist §Scope boundary`.
   - `integration-workflow/SKILL.md` sync-author and sync-reviewer dispatch bodies: drop `semantic-merge/references/sync-quality.md` from reference lists; update `sync-quality.md §Scope boundary` narration to the SKILL.md section.
   - `CLAUDE.md §DRY ownership`: `sync-quality.md §Scope boundary` → `SKILL.md §Semantic Coherence Checklist §Scope boundary`.
   - Delete `skills/semantic-merge/references/sync-quality.md` via `git rm`.
 
-- [ ] **Step 6: Verify.**
+- [x] **Step 6: Verify.**
   Run:
   ```bash
   rg -n "sync-quality" skills agents README.md CLAUDE.md .codex tests

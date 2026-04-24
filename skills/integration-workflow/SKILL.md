@@ -123,7 +123,6 @@ Agent(generic):
   Skills: semantic-merge
   References:
     - semantic-merge/references/workflow-sync-author.md
-    - semantic-merge/references/sync-quality.md
 
   Task: Sync this analysis branch with <base-ref>
   Base branch: <base-ref>
@@ -132,8 +131,8 @@ Agent(generic):
   Incoming range: <PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>
 
   Use semantic-merge workflow sync author mode. Land the merge commit plus
-  any propagation commits needed to reach semantic coherence — `sync-quality.md
-  §Scope boundary` is the stopping rule. Write branch-level PLAN.md `## Sync
+  any propagation commits needed to reach semantic coherence — `SKILL.md
+  §Semantic Coherence Checklist §Scope boundary` is the stopping rule. Write branch-level PLAN.md `## Sync
   Map` only when there is material overlap, a conflict, a user decision,
   sync-review carryover, or a post-sync obligation. Add compact task-local
   `**Sync impact:**` annotations to affected task blocks. Defer codebase
@@ -155,7 +154,6 @@ Agent(generic):
   Skills: semantic-merge
   References:
     - semantic-merge/references/workflow-sync-reviewer.md
-    - semantic-merge/references/sync-quality.md
 
   Task: Review the semantic sync with <base-ref>
   Base branch: <base-ref>

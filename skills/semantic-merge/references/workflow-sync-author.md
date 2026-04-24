@@ -1,6 +1,12 @@
 # Workflow Sync Author Mode
 
-Use when `integration-workflow` dispatches a generic sync author to bring the current branch onto a confirmed base. Also load `sync-quality.md` for the gated checklist — it encodes the semantic-coherence stopping rule. Walk the Techniques in `semantic-merge/SKILL.md` (repo-state grounding, intent investigation with role classification, resolution plan, intent-changing escalation, detect-and-resolve stale references) — this reference only carries mode-specific content.
+Use when `integration-workflow` dispatches a generic sync author to bring the current branch onto a confirmed base. Walk the Shared Steps in `semantic-merge/SKILL.md` (repo-state grounding, intent investigation with role classification, resolution plan, intent-changing escalation, detect-and-resolve stale references) and the §Semantic Coherence Checklist in the same body — this reference only carries mode-specific content.
+
+## Boundary
+
+In `integration-workflow`, semantic-merge owns Sync and sync review. The workflow computes `BASE_REF`, `PRE_SYNC_BASE_SHA`, and `BASE_HEAD_SHA`, then dispatches a generic sync author and a generic sync reviewer that load this skill's mode references.
+
+Workflow Sync lands the merge commit plus any propagation commits needed to reach **semantic coherence**, records branch-level `## Sync Map` clusters, and annotates affected task blocks with compact `**Sync impact:**` pointers. `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule. **Codebase coherence** — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — defers to the post-sync `refactor-and-integrate` step and is recorded as a Sync Map obligation.
 
 ## Inputs
 
@@ -19,8 +25,7 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing 
 1. Run the requested sync operation after intent investigation. For the normal workflow path, merge `BASE_REF` into the current branch.
 2. Write the branch-level `## Sync Map` in `PLAN.md` when there is material overlap, a conflict, a user decision, sync-review carryover, or a post-sync obligation. Omit it for no-op or trivial syncs with no obligations.
 3. Add task-local `**Sync impact:**` annotations only to task blocks that need task-specific propagation during Integrate. Keep them short and point back to the relevant Sync Map cluster.
-4. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** Include conflict resolution, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations with the commits that produce them. Every commit must leave the tree passing existing protection (drift tests + key-result coverage established in `integration-workflow` Phase A); per-commit protection-pass is the lower bound, `sync-quality.md §Scope boundary` is the stopping rule.
-5. Record **codebase-coherence** obligations — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — as post-sync obligations in the Sync Map. Integrate (via `refactor-and-integrate`) satisfies them.
+4. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** Include conflict resolution, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations with the commits that produce them. Every commit must leave the tree passing existing protection (drift tests + key-result coverage established in `integration-workflow` Phase A); per-commit protection-pass is the lower bound, `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule.
 
 ## Workflow Sync Map Format
 
@@ -75,4 +80,4 @@ Return one of:
 - `NEEDS_CONTEXT`: missing upstream context or a user decision is needed.
 - `BLOCKED`: the sync cannot proceed safely.
 
-Report the sync commit SHAs (merge commit plus any propagation commits), Sync Map location or why none was needed, task-local Sync impact annotations added, stash status (if any), checks run, and post-sync obligations.
+Report the sync commit range, Sync Map location or why none was needed, task-local Sync impact annotations added, stash status (if any), checks run, and post-sync obligations.

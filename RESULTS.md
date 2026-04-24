@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-23 (Tasks 1-6 APPROVED after Task 6-7 consolidation; new Task 7 pending — shared-vs-mode-specific clarity pass)
-**Status:** Tasks 1-6 APPROVED; new Task 7 pending
+**Last updated:** 2026-04-23 (Tasks 1-6 APPROVED; Task 7 IMPLEMENTED — shared-vs-mode-specific clarity pass, awaiting review)
+**Status:** Tasks 1-6 APPROVED; Task 7 IMPLEMENTED; awaiting review
 
 ---
 
@@ -122,6 +122,32 @@ git diff --check                                                                
 
 ## Task 7: Clarify shared-vs-mode-specific content in semantic-merge
 
-**Status:** Pending.
+**Status:** Implemented; awaiting review.
 
-Tightens the shared-vs-mode-specific split in the semantic-merge skill. SKILL.md will carry only shared content (core principle, mode selection, §Shared Steps, §Semantic Coherence Checklist, parallel-worktree Exception); mode references will carry §Boundary + §Inputs + §Mode-Specific Process + §Format + §Status/Report. `sync-quality.md` will be absorbed into SKILL.md as §Semantic Coherence Checklist (it was a must-load on every call path; SKILL.md is always loaded when the skill is used). Researcher's in-flight edits — `## Techniques` → `## Shared Steps` with a terse opener, 4-step `workflow-sync-author.md` process, "sync commit range" Status Return phrasing — are adopted as baseline.
+Tightened the shared-vs-mode-specific split in the semantic-merge skill. `SKILL.md` now carries only shared content (core principle, Choose a Mode, §Shared Steps, §Semantic Coherence Checklist, Exception); mode references carry §Boundary + §Inputs + §Mode-Specific Process + §Format + §Status/Report. The separate `sync-quality.md` reference is absorbed into `SKILL.md` as §Semantic Coherence Checklist — it was a must-load on every call path, and `SKILL.md` is always loaded when the skill is used, so folding it in removes a file without reducing availability. The researcher's in-flight hand-edits (§Techniques → §Shared Steps with a terse opener, 4-step `workflow-sync-author.md` process, "sync commit range" Status Return) are adopted as the baseline.
+
+File-by-file changes:
+
+- `skills/semantic-merge/SKILL.md` — Choose a Mode updated: the sync-quality bullet removed; the workflow / standalone boundary sentences extended so each mode reference's §Boundary ownership is explicit, and a new line records that all modes walk the §Semantic Coherence Checklist below. `## Workflow Boundary` and `## Standalone Boundary` sections removed. New `## Semantic Coherence Checklist` section added (absorbed from the former `sync-quality.md`) with preserved sub-headings (Intent preservation, Scope boundary, Intent integrity, Handoff docs, Verification) and `[BLOCKING]` / `[ADVISORY]` markers. Shared Steps step 5 stopping-rule pointer updated from `sync-quality.md §Scope boundary` → `§Semantic Coherence Checklist §Scope boundary` below.
+
+- `skills/semantic-merge/references/workflow-sync-author.md` — new §Boundary at the top (moved and carried forward from `SKILL.md ## Workflow Boundary`). Opener dropped the "Also load `sync-quality.md`" line and flipped `Techniques` → `Shared Steps`; points at `SKILL.md §Semantic Coherence Checklist` for the checklist walk. Process Step 4 stopping-rule pointer updated to the new `SKILL.md §Semantic Coherence Checklist §Scope boundary` location. Process remains 4 steps per the researcher's in-flight edit (no codebase-obligation Step 5). Status Return retains the "sync commit range" phrasing.
+
+- `skills/semantic-merge/references/workflow-sync-reviewer.md` — opener replaced the `sync-quality.md` load with pointers to the new `SKILL.md §Semantic Coherence Checklist` and the inherited `workflow-sync-author.md §Boundary`. Process Step 4 `§Techniques` → `§Shared Steps`; Step 5 "Walk `sync-quality.md` top to bottom." → "Walk `SKILL.md §Semantic Coherence Checklist` top to bottom."; Step 8 `§Techniques` → `§Shared Steps`.
+
+- `skills/semantic-merge/references/standalone-merge.md` — new §Boundary at the top (moved and carried forward from `SKILL.md ## Standalone Boundary`). Opener dropped the "Also load `sync-quality.md`" line and flipped `Techniques` → `Shared Steps`. Process Step 3 stopping-rule pointer updated to the new `SKILL.md §Semantic Coherence Checklist §Scope boundary` location; `§Techniques` → `§Shared Steps` pointer.
+
+- `skills/semantic-merge/references/sync-quality.md` — deleted via `git rm`.
+
+- `skills/integration-workflow/SKILL.md` — sync-author dispatch references list dropped `semantic-merge/references/sync-quality.md`; dispatch body stopping-rule narration updated from `sync-quality.md §Scope boundary` → `SKILL.md §Semantic Coherence Checklist §Scope boundary`. Sync-reviewer dispatch references list dropped the same entry.
+
+- `CLAUDE.md` — §DRY ownership entry for `semantic-merge` updated: `sync-quality.md §Scope boundary` → `SKILL.md §Semantic Coherence Checklist §Scope boundary`.
+
+Verification on 2026-04-23:
+
+```bash
+rg -n "sync-quality" skills agents README.md CLAUDE.md .codex tests      # zero matches
+rg -n "Workflow Boundary|Standalone Boundary" skills/semantic-merge/SKILL.md  # zero matches
+python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check  # up to date
+python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py  # 6/6 passed
+git diff --check  # clean
+```
