@@ -31,7 +31,7 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing 
 **Pre-sync merge base:** `<PRE_SYNC_BASE_SHA>`
 **Synced base head:** `<BASE_HEAD_SHA>`
 **Incoming range:** `<PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>`
-**Sync commit:** `<SYNC_COMMIT_SHA>`
+**Sync commits:** `<MERGE_COMMIT_SHA>`[, `<PROPAGATION_SHA>`...]
 **Sync review status:** `IMPLEMENTED | REVISE | APPROVED`
 
 ### Branch Summary
@@ -44,7 +44,7 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing 
 
 > **Sync cluster `<cluster-id>` (YYYY-MM-DD):** commits `<sha...>`; paths `<paths>`; affects Tasks `<ids>`.
 > **Incoming intent:** <plain-language purpose of incoming/base changes>.
-> **Sync resolution:** <what the sync commit kept, dropped, or synthesized>.
+> **Sync resolution:** <what the sync commits kept, dropped, or synthesized>.
 > **Post-sync obligations:** <task IDs, stale paths, APIs, docs, generated outputs, tests, or review areas for Integrate>.
 > **User decision:** <summary or "None">.
 
@@ -70,9 +70,9 @@ Remove satisfied task-local Sync impact fields when Integrate closes, unless a l
 
 Return one of:
 
-- `DONE`: sync commit landed and is ready for sync review.
+- `DONE`: sync commits landed and are ready for sync review.
 - `DONE_WITH_CONCERNS`: sync landed, but non-blocking concerns remain for the reviewer or Integrate.
 - `NEEDS_CONTEXT`: missing upstream context or a user decision is needed.
 - `BLOCKED`: the sync cannot proceed safely.
 
-Report the sync commit SHA, Sync Map location or why none was needed, task-local Sync impact annotations added, stash status (if any), checks run, and post-sync obligations.
+Report the sync commit SHAs (merge commit plus any propagation commits), Sync Map location or why none was needed, task-local Sync impact annotations added, stash status (if any), checks run, and post-sync obligations.
