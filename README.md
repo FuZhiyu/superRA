@@ -64,7 +64,7 @@ Domain skills teach agents the discipline that applies to a particular kind of r
 | Skill | Flagship discipline |
 |-------|---------------------|
 | **econ-data-analysis** | Iron Law: no transformation without prior description. Three concurrent disciplines — Describe, Analyze, Validate — plus pitfall catalogs for merges, time series, aggregations, filtering, variable construction, and missing data, and how to render human-friendly notebook. |
-| **theory-modeling** | Define–Derive–Validate discipline for mathematical modeling. Explicit primitives, notation, and interpretable assumptions; step-by-step derivations with no skipped algebra; proof/special-case/numerical verification; and renderable markdown/LaTeX output. |
+| **theory-modeling** | Four-gate intuition/interpretability discipline for mathematical modeling — Objects & Notation, Assumptions, Derivations, Verification & Rendering — with stated intuition per symbol, interpretable assumptions, per-step reasons, and proof / special-case / numerical verification rendered to markdown/LaTeX. |
 
 Future verticals are planned hooks, not commitments:
 
