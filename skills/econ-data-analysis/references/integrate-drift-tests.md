@@ -41,6 +41,8 @@ Drift tests should protect **headline findings**, not every number in the analys
 
 Set tolerances based on **economic reasoning**, not arbitrary thresholds. Full rubric (point estimates, standard errors, counts, signs/significance) in `refactor-and-integrate/references/drift-test-quality.md` §Tolerance calibration — worked examples.
 
+<!-- Seems it should be here rather than in the genearl purpose refactor and integrate -->
+
 ---
 
 ## Data-Analysis-Specific Failure Modes

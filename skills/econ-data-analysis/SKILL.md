@@ -26,7 +26,7 @@ Load per stage; do not load them all at every dispatch:
 | `references/data-robustness-checklist.md` | PLAN (design) and IMPLEMENT (execution of sensitivity tasks) — menu of robustness checks. |
 | `references/integrate-drift-tests.md` | drift-test stage — key-result identification, econ-specific tolerances, data-analysis failure modes. |
 | `references/integration.md` | INTEGRATE stage — data-specific refactor-integrity gates. |
-| `references/notebook-format.md` | IMPLEMENT stage (implementer) — cell organization, narrative, output idioms, Python jupytext / Julia Quarto rendering. Companions: `jupytext-guide.md`, `julia-quarto-guide.md`. |
+| `references/notebook-format.md` | IMPLEMENT stage (for implementer) — cell organization, narrative, output idioms, Python jupytext / Julia Quarto rendering. Companions: `jupytext-guide.md`, `julia-quarto-guide.md`. |
 
 ## The Iron Law
 

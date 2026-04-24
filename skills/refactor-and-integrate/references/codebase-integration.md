@@ -2,6 +2,7 @@
 
 Cross-cutting code-quality reference for refactoring and integration review. Implementer (refactorer) and reviewer both walk the gated checklist; the how-to sections give the procedures and decision trees the checklist encodes.
 
+<!-- should  remove it -->
 > **Data-analysis work:** also load `econ-data-analysis/references/integration.md` as the primary reference for data-analysis-specific gates. This file covers the cross-cutting code-quality companion (naming, utility reuse, PR-friendly diffs, debug-artifact cleanup, documentation currency).
 
 ---

@@ -1,6 +1,6 @@
 # Integration Discipline for Data Analysis
 
-> Single source of truth for data-analysis integration discipline at the `integration` stage. Implementer walks it as self-check; reviewer walks it as verification. `[BLOCKING]` must be fixed for APPROVE; `[ADVISORY]` may be flagged as MINOR. Verdict protocol per `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines.
+> Data-analysis integration discipline at the `integration` stage. Implementer walks it as self-check; reviewer walks it as verification. `[BLOCKING]` must be fixed for APPROVE; `[ADVISORY]` may be flagged as MINOR. Verdict protocol per `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines.
 
 Generic cross-cutting code-integration concerns (naming, utility reuse, PR-friendly diffs, documentation currency) live in `refactor-and-integrate/references/codebase-integration.md`. Load both files at the `integration` stage.
 

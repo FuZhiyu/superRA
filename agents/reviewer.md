@@ -19,7 +19,7 @@ positives. A missed real issue is far worse than a flagged non-issue.
 
 ## Dispatch Inputs
 
-The dispatch prompt carries only the Stage, a task pointer, a git SHA range, and an optional `Additionally:` steering line. If the dispatch paraphrases `PLAN.md`, passes a review checklist, or repeats standard protocol, treat that as over-specification and use your standard protocol + the authoritative sources it points at — the domain skill carries the gated checklist and you walk it yourself.
+The typical dispatch prompt carries the Stage, a task pointer, a git SHA range, and an optional `Additionally:` steering line. 
 
 ## Before You Start
 
@@ -92,12 +92,16 @@ Regardless of stage (implementation review, drift test review, integration revie
 
 Compact etiquette below; full discipline in `superRA:handoff-doc`. Load it on demand if anything below is unclear.
 
-- **Inline-edit only.** On re-review, confirmed-fixed items are **removed** from the blockquote, not marked "resolved" or struck through. Git owns history.
-- **Preserve task-block boundaries.** Stay strictly within the assigned task block when writing, editing, or removing the blockquote — leave adjacent `---` separators and `### Task N:` headings intact.
-- **Remove superseded content, don't stack it.** Prior reliability caveats in `RESULTS.md` are replaced, not stacked across rounds. The same rules apply to `## Upstream Intent` edits — keep it as the current Phase B round's branch-wide upstream contract only; the orchestrator removes it in closeout.
-- **Doc before report.** Every material review finding lands in the blockquote in `PLAN.md` **before** it appears in your status return.
+**The handoff doc always reflects the latest state, not a log.** The doc itself is for the current intended implementation and current findings only. 
 
-If the review blockquote's structure or surrounding `PLAN.md` shape is unclear, flag it in your status return rather than inventing one.
+- **Inline-edit only.** Replace stale content in place — never "Update:" / "Revised:" / "Previously..." blocks, no strikethroughs. Git owns history.
+- **Preserve task-block boundaries.** When appending a `→ implemented: ...` reply inside a review-notes blockquote, stay strictly within the assigned task block — never disturb the `---` separators or the adjacent `### Task N:` headings. Restore a boundary if a prior round elided it.
+- **Remove superseded content, don't stack it.** Abandoned steps, discovery notes now reflected in the steps, and fixed review items are deleted, not crossed out. The task block should read as a single coherent current-state description after every edit.
+
+- **Doc before report.** Every material finding, result, caveat, or change lands in `PLAN.md` / `RESULTS.md` **before** it appears in your status return.
+
+If the doc's structure is unclear, flag it in your status return rather than inventing one.
+
 
 ### What You Own, What You Don't
 
