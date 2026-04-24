@@ -18,20 +18,15 @@ Domain skill for rigorous economic data work; body carries §Three Concurrent Di
 
 ## Stage-Scoped References
 
-Companion reference files carry content that applies at a specific phase or operation. Load per stage; do not load them all at every dispatch:
+Load per stage; do not load them all at every dispatch:
 
 | Reference | Load when |
 |---|---|
-| `references/planning.md` | PLAN phase — covers the **Data Inventory hard gate** and **Sensitivity Analysis Design**. Loaded by `planning-workflow` when the analysis involves data work. |
-| `references/data-robustness-checklist.md` | PLAN stage (design) and IMPLEMENT phase when execution of sensitivity tasks — menu of robustness checks. |
-| `references/integrate-drift-tests.md` | drift-test stage — identifies key results worth protecting, sets econ-specific tolerances, and catalogs data-analysis failure modes drift tests catch. Loaded by `integration-workflow` Phase A (drift-test creation + review). |
-| `references/integration.md` | INTEGRATE stage — data-specific refactor-integrity gates (variable-construction consistency, transformation-pattern consistency, preserved describe steps / row-count prints / validation checks, drift-test pass-through). |
-
-**For implementer only:**
-
-| Reference | Load when |
-|---|---|
-| `references/notebook-format.md` | IMPLEMENT stage — cell organization, markdown narrative, writing discipline (major-vs-minor-decision rule, figure placement), output idioms, and language-specific rendering (Python via jupytext, Julia via QuartoNotebookRunner). Loaded by the **implementer** alongside the main body whenever analysis scripts are being written or rendered. Companion guides to load on demand: `jupytext-guide.md`, `julia-quarto-guide.md`. |
+| `references/planning.md` | PLAN phase — Data Inventory hard gate and Sensitivity Analysis Design. |
+| `references/data-robustness-checklist.md` | PLAN (design) and IMPLEMENT (execution of sensitivity tasks) — menu of robustness checks. |
+| `references/integrate-drift-tests.md` | protection stage — data-analysis key-result identification, econ-specific tolerances, data-analysis failure modes for drift/regression tests. |
+| `references/integration.md` | INTEGRATE stage — data-specific refactor-integrity gates. |
+| `references/notebook-format.md` | IMPLEMENT stage (for implementer) — cell organization, narrative, output idioms, Python jupytext / Julia Quarto rendering. Companions: `jupytext-guide.md`, `julia-quarto-guide.md`. |
 
 ## The Iron Law
 
@@ -53,25 +48,25 @@ Describe fresh from the current data state. Period.
 
 ## Three Concurrent Disciplines: Describe–Analyze–Validate
 
-Three disciplines underpin rigorous data work. They are **concurrent, not sequential** — every analysis step exercises all three. Documentation runs continuously alongside them as a cross-cutting writing practice, not a fourth phase.
+Three disciplines underpin rigorous data work. They are **concurrent, not sequential** — every analysis step exercises all three. Documentation runs continuously alongside them, not as a fourth phase.
 
-This section is both **teaching content** (how to do the work) and the **shared checklist**. The implementer walks it before returning DONE; the reviewer walks the same items as verification. The items below apply to every analysis task; operation-conditional items (merges, time-series shifts, aggregations, etc.) live in §Pitfalls and are walked only when the task performs the corresponding operation.
+This section is both teaching content and the shared checklist walked by implementer (before DONE) and reviewer (as verification). Items apply to every analysis task; operation-conditional items live in §Pitfalls and are walked only when the task performs the operation.
 
-- `[BLOCKING]` — must fix to earn APPROVE. Encodes the Iron Law, handoff-doc discipline, and other required items.
-- `[ADVISORY]` — best-practice. The reviewer MAY flag as MINOR; does not block APPROVE.
+- `[BLOCKING]` — must fix to earn APPROVE.
+- `[ADVISORY]` — best-practice; reviewer MAY flag as MINOR; does not block APPROVE.
 
 ### Reviewer verdict protocol
 
-**Walk §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task. Never halt on a failure.** One comprehensive pass every time — halting early forces a full re-review on the next pass, and reviewer dispatches are costly.
+**Walk §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task. Never halt on a failure** — one comprehensive pass every time; halting early forces a full re-review on the next pass.
 
 Two verdicts:
 
 - **APPROVE** — no `[BLOCKING]` findings.
 - **REVISE** — at least one `[BLOCKING]` finding.
 
-**Handling dependent findings.** When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first (e.g., "couldn't fully assess the merge because the pre-merge describe was missing — re-check after the describe is added"), say so in plain prose alongside the finding. No separate verdict, no formal tag.
+**Handling dependent findings.** When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, say so in plain prose alongside the finding. No separate verdict, no formal tag.
 
-**Re-review after REVISE.** Implementer fixes all `[BLOCKING]` findings and re-dispatches. The reviewer then (1) verifies each fix is correct, and (2) re-checks any finding the first pass annotated as depending on an upstream fix. Everything else is accepted from the first pass — no third full walk. APPROVE once all `[BLOCKING]` findings are resolved.
+**Re-review after REVISE.** The reviewer (1) verifies each fix is correct, and (2) re-checks any finding annotated as depending on an upstream fix. Everything else is accepted from the first pass. APPROVE once all `[BLOCKING]` findings are resolved.
 
 ### Describe
 
@@ -161,12 +156,12 @@ If something looks unexpected, STOP and investigate before proceeding.
 
 ### Stage-scoped discipline (not walked at every implementation dispatch)
 
-- **`integration` stage** — `references/integration.md` carries the full integration-stage checklist (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations) with its own `[BLOCKING]` / `[ADVISORY]` markers and a two-verdict protocol. Loaded by implementer and reviewer at the `integration` stage per `superRA:using-superra` §Skill-Load Manifest.
-- **End-of-workflow completion verification** — `superRA:implementation-workflow` §Step 3 carries the reproducibility gate (pipeline runs end-to-end, outputs generated from committed code, docs current, deferred MINORs resolved). Walked by the orchestrator, not by dispatched subagents.
+- **`integration` stage** — `references/integration.md` (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations).
+- **End-of-workflow completion verification** — owned by the orchestrator, not dispatched subagents. In superRA, see `implementation-workflow` §Step 3 (reproducibility gate).
 
 ## Pitfalls
 
-Operation-conditional checklist. The universal checks live in §Three Concurrent Disciplines above and apply to every analysis task; the items here apply only when you perform the corresponding operation (merge, time-series shift, reshape, aggregation, dedupe, filter, variable construction, missing-data handling). The implementer walks the relevant subsections as part of self-check; the reviewer walks the same subsections as verification. Severity markers (`[BLOCKING]` / `[ADVISORY]`) have the same meaning as in the main checklist.
+Operation-conditional checklist — walk a subsection only when the task performs that operation (merge, time-series shift, reshape, aggregation, dedupe, filter, variable construction, missing-data handling). Severity markers match the main checklist.
 
 ### Merges and joins
 

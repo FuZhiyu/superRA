@@ -62,31 +62,15 @@ m = re.search(r"^name:\s*(\S+)\s*$", text, re.MULTILINE)
 assert m and m.group(1) == "using-superra", f"using-superRA SKILL.md name must be lowercase 'using-superra', got {m and m.group(1)!r}"
 using_text = text
 planning_text = Path("skills/planning-workflow/SKILL.md").read_text(encoding="utf-8")
-impl_text = Path("agents/implementer.md").read_text(encoding="utf-8")
-reviewer_text = Path("agents/reviewer.md").read_text(encoding="utf-8")
-codeint_text = Path("skills/refactor-and-integrate/references/codebase-integration.md").read_text(encoding="utf-8")
-merge_text = Path("skills/refactor-and-integrate/references/merge-quality.md").read_text(encoding="utf-8")
+refactor_text = Path("skills/refactor-and-integrate/SKILL.md").read_text(encoding="utf-8")
 assert "`theory-modeling`" in using_text, "using-superRA must list theory-modeling"
 assert "superRA:theory-modeling" in using_text, "using-superRA manifest must reference theory-modeling"
 assert "`superRA:theory-modeling`" in planning_text, "planning-workflow must route theory-modeling"
-assert "theory-modeling" in impl_text, "implementer agent must mention theory-modeling"
-assert "theory-modeling" in reviewer_text, "reviewer agent must mention theory-modeling"
-assert "theory-modeling/references/integration.md" in codeint_text, "codebase integration reference must point to theory-modeling integration guidance"
-required_merge_phrases = {
-    "tier3 setup": "sample construction / model setup",
-    "tier3 specifications": "specifications / solution concepts",
-    "tier3 logic": "data processing / derivation logic",
-    "tier3 results": "results / headline outputs",
-    "tier3 never-list": "active domain-discipline artifacts",
-}
-for label, snippet in required_merge_phrases.items():
-    assert snippet in merge_text, f"merge-quality missing generalized {label} wording: {snippet!r}"
-for stale in ("econometric specifications", "removing data discipline artifacts"):
-    assert stale not in merge_text, f"merge-quality still contains stale data-only phrasing: {stale!r}"
+assert "theory-modeling/references/integration.md" in refactor_text, "refactor-and-integrate SKILL.md must point to theory-modeling integration guidance"
 PY
 
-section "Phase B upstream-intent contract"
-bash tests/test-phase-b-upstream-intent-contract.sh
+section "Sync integration contract"
+bash tests/test-sync-integration-contract.sh
 
 section "Direct mode role references"
 python3 - <<'PY'

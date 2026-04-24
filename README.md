@@ -31,12 +31,12 @@ superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. 
 flowchart TB
     PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
     IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
-    INTEGRATE["<b>INTEGRATE</b><br/>A drift tests<br/>B refactor + simplify <br/>C final report + doc audit<br/>D merge / PR / cleanup"]
-    MERGED(["merged"])
+    INTEGRATE["<b>INTEGRATE</b><br/>Protect results <br/>Sync with base<br/>Integrate/refactor<br/>Document<br/>Finish"]
+    FINISHED(["finished"])
 
     PLAN --> IMPLEMENT
     IMPLEMENT --> INTEGRATE
-    INTEGRATE --> MERGED
+    INTEGRATE --> FINISHED
 
     IMPLEMENT -. "plan change" .-> PLAN
     INTEGRATE -. "plan change" .-> PLAN
@@ -44,7 +44,7 @@ flowchart TB
     classDef phase fill:#eef7ff,stroke:#0366d6,color:#000
     classDef terminal fill:#e8f5e9,stroke:#2e7d32,color:#000
     class PLAN,IMPLEMENT,INTEGRATE phase
-    class MERGED terminal
+    class FINISHED terminal
 ```
 
 To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, `implement according to the plan`, `integrate it with the update on the main`, ...
@@ -53,7 +53,7 @@ To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, 
 
 1. **Implementer–reviewer pair at every step.** An adversarial reviewer inspects every implementation; work only advances after `APPROVE`. Review is never skipped, regardless of how trivial a step looks.
 2. **Handoff docs always reflect the current state.** Material progress lives in committed `PLAN.md` and `RESULTS.md`, not in the chat log. A fresh agent can open the repo and resume from the docs plus git state alone.
-3. **Fast early for exploration, strict for integration. Semantic merges always.** During implementation, optimize for speed and correctness of the analysis itself. Once results are in hand, the integration phase refactors the code to dovetail with the existing codebase and matures documentation for the long haul. Every merge into `main` runs through `semantic-merge` — an intent-based conflict resolution pass that classifies conflicts by research impact and escalates methodology-level decisions to the user — never a bare `git merge`.
+3. **Fast early for exploration, strict for integration. Semantic sync always.** During implementation, optimize for speed and correctness of the analysis itself. Once results are in hand, the integration phase protects key results (drift tests are the default mechanism), syncs against the current base with `semantic-merge`, runs a dedicated sync review, refactors the post-sync diff to fit the codebase, and matures documentation for the long haul. Intent-aware branch syncs never use a bare `git merge`.
 4. **Autonomous with human in the loop.** The agent drives work forward on its own power and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
 5. **Adaptive and composable.** Research is rarely linear and never has a single style. The workflow supplies protocols, not requirements, and can be adapted to different rhythms. It is domain-agnostic: data analysis and theory-modeling today; literature review, simulation, and writing in the pipeline.
 
@@ -80,8 +80,9 @@ Utility skills are domain-neutral tools callable by workflow skills, agents, or 
 |-------|--------------------|
 | **handoff-doc** | Teaches agents how to create a handoff document. Editing discipline for `PLAN.md` / `RESULTS.md` — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, full task-block anatomy templates. Use when creating a handoff doc from scratch, maturing `RESULTS.md` into its permanent form, or when the compact etiquette baked into the agent files is not enough. |
 | **report-in-markdown** | Format rules for markdown reports containing figures, LaTeX math, or tables. Use when producing a standalone human-readable report, or when an implementer task section in `RESULTS.md` embeds a figure or math expression. |
-| **refactor-and-integrate** | Three gated checklists — drift-test quality, codebase integration, merge quality — shared by implementer and reviewer. Use during integration-phase work, or standalone for any refactor that needs consistent quality gates. |
-| **semantic-merge** | Intent-based branch integration that classifies conflicts by research impact and escalates methodology decisions to the user. Use whenever you would otherwise run `git merge` / `git rebase` / `git cherry-pick` on a research branch — the `merge-guard` hook flags bare invocations automatically. |
+| **result-protection** | Tools for protecting key research results from unintended changes. Drift/regression tests are the current/default mechanism. Use during Protect or whenever key-result expectations need guarded review. |
+| **refactor-and-integrate** | Tools for **codebase coherence** — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host, and supplied Sync impact as justification evidence. Shared by implementer and reviewer. Use during Integrate, or standalone for any refactor that needs consistent quality gates. |
+| **semantic-merge** | Tools for **semantic coherence** in branch integration — intent investigation, role classification (behavior/API, data/schema, docs, generated outputs, tests, config/build), conflict resolution, intent-changing escalation, stale-reference detect-and-resolve, and propagation-to-coherence. Lands a merge commit plus propagation commits as needed to reach semantic coherence, with every commit leaving existing protection passing, and records branch-level / task-local / file-local context explaining the approved post-sync diff. Use whenever you would otherwise run `git merge` / `git rebase` / `git cherry-pick` — the `merge-guard` hook flags bare invocations automatically. |
 | **worktree-data-sync** | Research project often depends on non-git-controlled data. It syncs data between existing git-controlled worktrees (seed, diff, apply) plus data teardown. Use when copying data into a new worktree, reconciling data across parallel worktrees, or tearing down a worktree's data cleanly. Worktree lifecycle itself (create/enter/remove) lives in `agent-orchestration`. |
 
 

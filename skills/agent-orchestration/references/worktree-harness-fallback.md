@@ -15,7 +15,7 @@ git worktree add <path> -b <branch-name> <base-ref>
 ```
 
 - `<path>` — absolute or repo-relative. Placement convention below.
-- `<branch-name>` — new branch to create at `<base-ref>`. For orchestrator-managed parallel slots, use `<analysis-branch>/parallel/<slug>`.
+- `<branch-name>` — new branch to create at `<base-ref>`. For orchestrator-managed parallel slots, use `<current-branch>-agent/parallel/<slug>`.
 - `<base-ref>` — typically the current analysis branch (`HEAD` is fine when already on it).
 
 After creation, the orchestrator seeds non-git data via `skills/worktree-data-sync` §`--mode seed` if the task needs data access.
@@ -27,7 +27,7 @@ cd <path>
 git rev-parse --show-toplevel   # verify we landed where we expected
 ```
 
-Agents dispatched with a `Worktree:` field are instructed to do this themselves (see `agents/implementer.md` §Before You Start).
+Agents dispatched with a `Worktree:` field are instructed to do this themselves via the dispatch's `Additionally:` steering (see `SKILL.md` §Parallelization and Worktree Isolation).
 
 ### Remove
 
@@ -68,12 +68,11 @@ Global-location worktrees (e.g., `~/.config/superpowers/worktrees/<project>/`) n
 One parallel slot's full lifecycle (create → seed → dispatch → merge → cleanup):
 
 ```bash
-WT=".worktrees/$BR/parallel/$SLUG"
-git worktree add "$WT" -b "$BR/parallel/$SLUG" "$BR"
+WT=".worktrees/${BR}-agent/parallel/$SLUG"
+git worktree add "$WT" -b "${BR}-agent/parallel/$SLUG" "$BR"
 python3 skills/worktree-data-sync/scripts/sync_worktree_data.py \
   --from "$(pwd)" --to "$WT" --mode seed --seed-sync-mode force-symlink
 # dispatch implementer with Worktree: <absolute path to $WT>
-git merge --no-ff "$BR/parallel/$SLUG"
-git worktree remove "$WT" && git branch -D "$BR/parallel/$SLUG"
+git merge --no-ff "${BR}-agent/parallel/$SLUG"
+git worktree remove "$WT" && git branch -D "${BR}-agent/parallel/$SLUG"
 ```
-

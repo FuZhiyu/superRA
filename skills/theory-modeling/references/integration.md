@@ -12,10 +12,9 @@
 
 Generic cross-cutting code-integration concerns (naming consistency,
 utility reuse, PR-friendly diffs, documentation currency) live in
-`refactor-and-integrate/references/codebase-integration.md`. Load both
-files at the `integration` stage - this one owns the
-theory-modeling-specific gates; the generic file owns the cross-cutting
-code-quality gates.
+`refactor-and-integrate/SKILL.md`. Load both skills at the
+`integration` stage - this one owns the theory-modeling-specific gates;
+the generic file owns the cross-cutting code-quality gates.
 
 ## Consistency with the model and codebase
 
@@ -50,6 +49,4 @@ verification.
 
 ## Reviewer verdict protocol
 
-Verdict protocol:
-`refactor-and-integrate/references/codebase-integration.md`
-`# Reviewer Verdict Protocol`.
+Verdict protocol follows the active reviewer role; walk this checklist alongside `refactor-and-integrate/SKILL.md`.

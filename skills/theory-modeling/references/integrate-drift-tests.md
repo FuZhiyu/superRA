@@ -14,7 +14,7 @@ This reference answers the theory/modeling-specific questions:
 For the implementation-level quality checklist (coverage,
 independence, clarity, robustness, test format, cross-cutting
 integrity Red Flags), load
-`refactor-and-integrate/references/drift-test-quality.md`. This file
+`result-protection/references/drift-test-quality.md`. This file
 and that checklist are both read at drift-test creation and review.
 
 ---
@@ -113,7 +113,7 @@ than a tolerance issue.
 
 The Red Flags that protect drift-test integrity during creation,
 refactor, merge, and semantic-merge live in
-`refactor-and-integrate/references/drift-test-quality.md`
+`result-protection/references/drift-test-quality.md`
 `# Cross-cutting Red Flags - drift test integrity`. They apply wherever
 drift tests are in play. Do not restate them here; load that section and
 follow it.

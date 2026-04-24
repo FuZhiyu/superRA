@@ -1,19 +1,19 @@
 # Data-Analysis Planning Discipline
 
-Load at the **PLAN phase** when the analysis involves data work. `planning-workflow` invokes this reference after Phase 1 (scope check) to apply domain-specific discipline before tasks are drafted.
+Load at the **PLAN phase** when the analysis involves data work.
 
-This reference carries two planning-only concerns that would otherwise bloat the main `econ-data-analysis` SKILL.md:
+Two planning-only concerns:
 
 1. **Data Inventory — the hard gate that blocks task drafting until available data is inventoried and gaps are surfaced.**
-2. **Sensitivity Analysis Design — the researcher-scoped discussion of which robustness checks matter for this specific study.**
+2. **Sensitivity Analysis Design — which robustness checks matter for this specific study.**
 
-Both happen once, at planning time, and then live in `PLAN.md` as sections the whole analysis references.
+Both happen once at planning time and then live in `PLAN.md` as sections the analysis references.
 
 ---
 
 ## Data Inventory (Hard Gate)
 
-The plan cannot be written without a data inventory. The researcher arrives with a research question and methodology already in mind. Your job at this gate is NOT to design the research — it is to help with data logistics: what data exists, what's missing, and where to find it. The inventory becomes the **Data Inventory** section of `PLAN.md`.
+The plan cannot be written without a data inventory. Your job is data logistics — what exists, what's missing, where to find it — not research design. The inventory becomes the **Data Inventory** section of `PLAN.md`.
 
 <HARD-GATE>
 Do NOT write any task structure, invoke any implementation skill, or take any planning action beyond this gate until you have presented a data inventory and the researcher has approved it. This applies to EVERY data analysis regardless of perceived simplicity.
@@ -141,4 +141,4 @@ The pipeline file must:
 
 ## Handoff to Implementation
 
-After the Data Inventory is approved, the sensitivity menu is agreed, and tasks are drafted, `planning-workflow` commits the plan and hands off to `implementation-workflow`. The main `econ-data-analysis` SKILL.md body carries the cross-cutting discipline that applies at every implementation step (Iron Law, describe-analyze-validate, pitfalls, validation). Agents load the main body automatically at dispatch time.
+After the Data Inventory is approved, the sensitivity menu is agreed, and tasks are drafted, hand off to implementation. The main `econ-data-analysis` body carries the cross-cutting discipline that applies at every implementation step (Iron Law, describe-analyze-validate, pitfalls, validation).

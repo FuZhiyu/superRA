@@ -1,5 +1,34 @@
 # superRA Release Notes
 
+## [0.1.2] - 2026-04-24
+
+Includes merged PRs since `0.1.1`: #18 `[codex] tighten Phase B upstream-intent contract`, #19 `[codex] clarify Codex superRA orchestration instructions`, #20 `[codex] generate direct-mode role refs from canonical agents`, #21 `Teach-the-protocol: resolver redesign + over-prescription audit + gated principle`, #22 `planning-workflow: include header fields in change-plan protocol`, plus this release branch.
+
+### Added
+
+- **Result protection utility.** Protect now routes `Stage: protection` to `result-protection`; drift tests remain the current/default protection mechanism.
+- **Explicit Sync stage label.** Sync now has `Stage: sync` for generic sync author/reviewer agents using semantic-merge workflow mode references.
+- **Generated direct-mode role references.** Codex direct mode now reads skill-owned role references generated from canonical agent specs.
+
+### Changed
+
+- **Integration workflow split:** Protect -> Sync -> Integrate -> Document -> Finish now separates key-result protection, semantic sync, and codebase-coherence refactor/review.
+- **Refactor discipline:** `refactor-and-integrate` now focuses on minimum net diff, convention fit, utility reuse, Project Doc Audit walk-up, and caller-supplied Sync impact as context.
+- **Teach-the-protocol gate:** Contributor guidance, workflow resolver behavior, role specs, and skill prose now enforce DRY / Necessity discipline for instruction-bearing changes.
+- **Codex orchestration:** Codex guidance now makes named-agent dispatch and warm-agent lifecycle behavior explicit while keeping generated role artifacts in sync.
+- **Planning changes:** The plan-change protocol now sweeps header fields after task-block edits so scope, output, and methodology stay current.
+- **Docs and harnesses:** README, Mermaid workflow diagram, Codex adapter guidance, generated artifacts, and contract tests now align with Protection / Sync / Integrate terminology.
+
+### Fixed
+
+- Tightened the Phase B upstream-intent contract and retired legacy Phase B / Upstream Intent / merge-quality / refactor-owned drift-test surfaces in favor of semantic-merge, result-protection, and refactor-and-integrate ownership boundaries.
+- Reduced duplicated dispatch and direct-mode instructions by keeping generated artifacts tied to canonical agent sources.
+
+### Release Prep
+
+- Version manifests are bumped to `0.1.2` across package, Claude, Cursor, Codex, marketplace, and Gemini extension metadata.
+- Plan and results are archived under `docs/plans/2026-04-24-semantic-sync-integration-redesign-{plan,results}.md`.
+
 ## [0.1.1] - 2026-04-22
 
 ### Added

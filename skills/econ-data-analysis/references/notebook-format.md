@@ -1,6 +1,6 @@
 # Notebook Format
 
-> Stage-scoped reference of `superRA:econ-data-analysis`. Loaded by implementer subagents (and by the orchestrator in-session) whenever analysis scripts are being written or rendered. Covers cell organization, markdown narrative, equation formatting, and language-specific rendering (Python via jupytext, Julia via QuartoNotebookRunner). Companion guides `jupytext-guide.md` and `julia-quarto-guide.md` carry the full per-language setup.
+> Load whenever analysis scripts are being written or rendered. Covers cell organization, markdown narrative, equation formatting, and language-specific rendering. Per-language setup in companion guides `jupytext-guide.md` (Python) and `julia-quarto-guide.md` (Julia).
 
 ## When to Use
 

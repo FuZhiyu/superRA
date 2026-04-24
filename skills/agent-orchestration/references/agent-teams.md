@@ -100,7 +100,7 @@ When dispatching parallel agents that need isolated workspaces, follow `SKILL.md
 
 - Provision one worktree per agent per `references/worktree-harness-fallback.md` (harness tools preferred; raw `git worktree` otherwise).
 - Seed non-git data via `superRA:worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink`.
-- Merge back with plain `git merge` on the `<branch>/parallel/<slug>` branches.
+- Merge back with plain `git merge` on the `<current-branch>-agent/parallel/<slug>` branches.
 
 Do not hand-roll worktree setup or data-copy scripts.
 
@@ -117,17 +117,13 @@ Do not hand-roll worktree setup or data-copy scripts.
      Stage: <stage-name>
      Task: <task pointer>
 
-     Follow the standard stage-relevant workflow and load
-       relevant skills and documents to proceed. Additionally,
-       <focus: one independent domain>.
+     Additionally: <focus: one independent domain>
 
    Agent(subagent_type: "superRA:implementer"):
      Stage: <stage-name>
      Task: <task pointer>
 
-     Follow the standard stage-relevant workflow and load
-       relevant skills and documents to proceed. Additionally,
-       <focus: a different independent domain>.
+     Additionally: <focus: a different independent domain>
    ```
 
    All dispatches go out in one message so they run concurrently. No per-dispatch recitation of `PLAN.md` content or manifest loads — the agent reads those itself.

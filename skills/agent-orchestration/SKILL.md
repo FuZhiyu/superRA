@@ -85,7 +85,8 @@ Parallel agents **must** run in separate worktrees. Create each with raw git bef
 CLaude Code Agents: branching off the current branch, **not** via the `Agent` tool's `isolation: "worktree"` parameter — that branches off main's HEAD and the subagent cannot see in-flight state:
 
 ```bash
-git worktree add -b "$(git branch --show-current)/parallel/<slug>" <worktree-path> HEAD
+current_branch="$(git branch --show-current)"
+git worktree add -b "${current_branch}-agent/parallel/<slug>" <worktree-path> HEAD
 ```
 
 The `/parallel/` infix matters: the `merge-guard` hook exempts `*/parallel/*` source refs on merge-back. Pass the absolute `<worktree-path>` via the dispatch `Worktree:` field. The subagent enters via `EnterWorktree(path=...)` (or `cd` as fallback), works on whatever branch the worktree is on, and **never creates its own worktree or touches the branch name**. The `Worktree:` field in the dispatch **requires** this steering in `Additionally:`:
@@ -94,7 +95,7 @@ The `/parallel/` infix matters: the `merge-guard` hook exempts `*/parallel/*` so
 
 **Seeding data in.** Use `worktree-data-sync` in `--mode seed`. **Always pass `--from "$(pwd)"` (or an explicit path)** — never rely on `sync_worktree_data.py`'s `--from` default, which points at the main worktree, not the orchestrator's analysis worktree.
 
-**Harvest-out and conflicts.** `git merge --no-ff <branch>/parallel/<slug>`. Task boundaries are set ex-ante in `PLAN.md`, so parallel branches are mechanically disjoint and typically merge cleanly. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. Cleanup: `git worktree remove` + `git branch -D`.
+**Harvest-out and conflicts.** `git merge --no-ff <current-branch>-agent/parallel/<slug>`. Task boundaries are set ex-ante in `PLAN.md`, so parallel branches are mechanically disjoint and typically merge cleanly. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. Cleanup: `git worktree remove` + `git branch -D`.
 
 Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `PLAN.md` — git (`git worktree list`, `git branch`) is the source of truth.
 
@@ -102,9 +103,9 @@ Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `P
 
 ## Dispatch Templates
 
-Every workflow skill that dispatches an `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules.
+Every workflow skill that dispatches a task-scoped `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules. Branch-level `Stage: sync` dispatches generic sync author / sync reviewer agents with explicit `semantic-merge` mode references.
 
-Every template opens with the canonical prefix **"Follow the standard stage-relevant workflow and load relevant skills and documents to proceed. Additionally, …"**. The prefix tells the agent that its standard Before-You-Start is in effect and it loads what `superRA:using-superra` §Skill-Load Manifest specifies for its Stage; whatever follows `Additionally,` is task-specific steering on top — focus areas, prior-round adjudication notes, warnings, or additional non-default skill/reference. The dispatch prompt does not repeat the standard protocol, never paraphrases `PLAN.md` content, and never restates checklist items the agent already reads.
+Templates carry required fields plus an optional `Additionally:` line for task-specific steering: focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. Omit `Additionally:` when there is no extra steering; never use it to restate role protocol, manifest loads, or `PLAN.md` content.
 
 **Canonical shape — required fields first, `Additionally:` anchor last:**
 
@@ -115,12 +116,7 @@ Agent(subagent_type: "superRA:implementer"):
   Task: <task pointer — e.g., "Task N in PLAN.md">
   Worktree: <absolute path>   # optional — parallel-dispatch only
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <optional steering — focus area, prior-round adjudication notes, or
-    warnings. Must add information on top of the default; never restate
-    what the default protocol, skill-load manifest, or PLAN.md already
-    says.>
+  Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
 ```
 
 **Reviewer:**
@@ -131,23 +127,18 @@ Agent(subagent_type: "superRA:reviewer"):
   Git range: <BASE_SHA>..<HEAD_SHA>
   Worktree: <absolute path>   # optional — parallel-reviewer pattern only
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <optional steering — focus area, prior-round adjudication notes, or
-    warnings. Must add information on top of the default; never restate
-    what the default protocol, skill-load manifest, or PLAN.md already
-    says.>
+  Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
 ```
 
 **Optional steering is strictly additive.** If your `Additionally:` line only paraphrases the default protocol, the skill-load manifest, or `PLAN.md` content, delete it — the agent reads those itself. Never include `Work from:` (cwd is implicit) or restate `PLAN.md` content / manifest loads.
 
-If a non-default skill load, an extra domain reference, or an override is required, add `Skills:` and `References:` lines between the required fields and the prefix line.
+If a non-default skill load, an extra domain reference, or an override is required, add `Skills:` and `References:` lines between the required fields and `Additionally:`.
 
 ## Orchestrator Duties
 
 These are the things the orchestrator does that no subagent does. Applies at every workflow stage.
 
-- **Task sequencing and dispatch.** Read `PLAN.md`, decide what to dispatch next, apply §Workload Balancing to size and bundle.
+- **Task sequencing and dispatch inside the selected frontier.** The main agent's Workflow Frontier Resolver chooses the workflow/frontier; this skill sizes, bundles, and dispatches the work inside that frontier.
 - **Adjudicate reviewer feedback in place.** See §Handling Reviewer Feedback below for the full protocol.
 - **Handle implementer status returns.** See §Handling Implementer Status below.
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text in place, do not annotate. Commit atomically with the commit that completes the triggering task.
@@ -188,16 +179,14 @@ When a reviewer returns REVISE:
 - You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `handoff-doc` §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
 - You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `handoff-doc` §User Decisions Log.
 
-This discipline applies equally to all stages of the using superRA workflow. The orchestrator owns the final call in every loop.
-
 ## Review Status Reference
 
-Implementer and reviewer agents own their commits and document updates — see `agents/implementer.md` and `agents/reviewer.md` for the full discipline (scope rule, inline-edit rule, stage-specific handoff). The orchestrator only needs to know how to **read** the resulting state from `PLAN.md`:
+Implementer and reviewer agents own their commits and document updates (see `agents/implementer.md` and `agents/reviewer.md`). The orchestrator only needs to know how to **read** the resulting state from `PLAN.md`:
 
 | Status line | Meaning | Orchestrator action |
 |---|---|---|
 | *(no line)* | Not started | Dispatch implementer |
-| `IMPLEMENTED` | Code committed, awaiting review | Dispatch reviewer |
+| `IMPLEMENTED` | Code committed and ready for review | Dispatch reviewer |
 | `REVISE` | Reviewer found `[BLOCKING]` issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
 | `APPROVED` | Review passed | Proceed to next task |
 
@@ -217,4 +206,3 @@ Implementers return one of four statuses in their dispatch response. Applies at 
   2. Input quality too poor → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
   3. Task requires methodology decisions → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
   4. Task too complex → break into smaller pieces or use a more capable model.
-
