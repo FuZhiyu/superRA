@@ -21,11 +21,11 @@ Load per stage; implementer self-checks and reviewer verifies the same checklist
 
 ### 1. Drift-Test Integrity
 
-Stage `drift-test` -> load `references/drift-test-quality.md` (coverage, tolerance calibration, independence, red-green cycle, test-format conventions, Red Flags).
+Stage `drift-test` → load `references/drift-test-quality.md`.
 
 ### 2. Codebase Integration
 
-Stage `integration` -> load `references/codebase-integration.md` (minimum surviving branch delta, Sync impact propagation, naming, utility reuse, PR quality, documentation currency, Project Doc Audit walk-up). For data-analysis work, also load `econ-data-analysis/references/integration.md` as the primary domain reference.
+Stage `integration` → load `references/codebase-integration.md`. For data-analysis work, also load `econ-data-analysis/references/integration.md` as the primary domain reference.
 
 ---
 

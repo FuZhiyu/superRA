@@ -5,7 +5,7 @@ description: Requires `superRA:using-superra` loaded first. Use when a plan is c
 
 # Integration Workflow
 
-**First, load `superRA:using-superra` if not already loaded.** It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
+**First, load `superRA:using-superra` if not already loaded.**
 
 Workflow skill for the **INTEGRATE** phase of the superRA workflow. It takes a reproducibility-verified analysis branch through five steps:
 
@@ -24,7 +24,9 @@ Any step -> planning-workflow §User Feedback and Changing Plans
 
 ## Stop Points
 
-Use `AskUserQuestion` (plain text if unavailable) only for legitimate stop points. Log every answer per `superRA:handoff-doc` §User Decisions Log before acting.
+The main agent's Workflow Frontier Resolver chooses where to enter this workflow. Once entered, run the selected step's local gates exactly; do not redo task-local approvals outside the affected frontier simply because a rollup milestone was unchecked.
+
+Legitimate stop points (log every answer per `superRA:handoff-doc` §User Decisions Log **before** acting):
 
 - **Protect:** key result / drift-test coverage confirmation.
 - **Sync:** target base confirmation when no prior decision records it; intent-changing conflicts surfaced by `semantic-merge`.
@@ -34,9 +36,7 @@ Use `AskUserQuestion` (plain text if unavailable) only for legitimate stop point
 
 ## Dispatch Convention
 
-Load `superRA:agent-orchestration` before writing any dispatch prompt. Standard implementer/reviewer dispatch shape lives there; skill loads for those stages live in `superRA:using-superra` §Skill-Load Manifest.
-
-Role boundaries:
+**Load `superRA:agent-orchestration` before writing any dispatch prompt.** Checklist discipline for the drift-test and integration stages comes from `superRA:refactor-and-integrate`.
 
 - `Stage: drift-test` agents use `refactor-and-integrate` drift-test quality.
 - Sync uses generic sync author / sync reviewer agents that explicitly load `semantic-merge` mode references. Sync is branch-level and is not a normal task-scoped manifest stage.
@@ -379,7 +379,7 @@ Report what was published or landed and what was cleaned up.
 - Enter Finish without checking whether the base advanced again.
 
 **Always:**
-- Run the full drift-test suite on every integration pass.
+- Run the full drift-test suite on every integration pass (new drift tests scoped to tasks not yet `Integration status: APPROVED`; running the suite is not scoped).
 - Use semantic-merge for intent-aware branch syncs.
 - Keep Sync serialized and refactor parallelizable only after Sync lands.
 - Log user decisions before acting.

@@ -1,40 +1,14 @@
 # Drift Test Quality Standards
 
-Shared domain reference for drift test creation and review. Both the implementer (test creator) and reviewer walk the gated checklist at the bottom of this file; the how-to sections above give the procedure, worked examples, and Red Flags rationale that the checklist items encode. Loaded whenever `Stage:` is `drift-test` (per `superRA:using-superra` §Skill-Load Manifest), or when any stage's task creates, modifies, or assesses a drift test.
+Shared reference for drift-test creation and review. Implementer (test creator) and reviewer both walk the gated checklist at the bottom; the how-to sections above give procedures, worked examples, and Red Flags rationale the checklist encodes. Loadable by anyone writing or reviewing a drift/regression test.
 
 ---
 
 ## How-To
 
-### Tolerance calibration — worked examples
+### Tolerance calibration
 
-Set tolerances based on **economic reasoning**, not arbitrary thresholds.
-
-**Point estimates** (coefficients, means, portfolio returns):
-- Allow minor variation from data ordering, floating-point arithmetic, rounding
-- Typical tolerance: 1-5% of estimate magnitude, or a few units in the last reported decimal place
-
-**Standard errors:**
-- Wider tolerance than point estimates — sensitive to small changes in sample composition, clustering, numerical precision
-- Typical tolerance: 5-10% of the standard error
-
-**Counts and categoricals** (observations, firms, periods):
-- Exact or near-exact — should not change unless sample construction changes
-- Tolerance: 0 or very small integer
-
-**Signs and significance:**
-- Write directional tests ("coefficient is positive", "t-statistic exceeds 1.96") in addition to magnitude tests
-- These catch the most important drift — sign flip or significance loss
-
-**Too tight** → false positives on harmless changes (merge order, floating-point platform differences).
-**Too loose** → misses real drift. Use economic judgment.
-
-**Document every tolerance choice** with a comment explaining why:
-```
-# Coefficient on market_cap: 0.035 +/- 0.002
-# Tolerance: ~5% of estimate. Allows for floating-point variation
-# in OLS solver but catches meaningful coefficient drift.
-```
+Tolerance calibration is domain-specific — reasonable magnitudes for drift depend on what the numbers mean. For data-analysis work, the worked rubric (point estimates, standard errors, counts, signs/significance, with economic-reasoning examples) lives in `econ-data-analysis/references/integrate-drift-tests.md` §Tolerance Conventions for Econ Results.
 
 ### Red-green verification cycle
 
@@ -61,7 +35,7 @@ Follow the project's testing conventions:
 
 ### Cross-cutting Red Flags — drift test integrity
 
-These rules apply wherever drift tests are in play — during Protect, after Sync, after any Integrate refactor, during Finish verification, and after any standalone `semantic-merge` operation. The workflow skills and the SKILL.md body point at this section rather than restate the rules locally.
+These rules apply wherever drift tests are in play — during Protect, after Sync, after any Integrate refactor, during Finish verification, and after any standalone `semantic-merge` operation.
 
 **Never:**
 - **Silently update drift test expectations for meaningful result changes.** A test failure after a refactor, merge, or rebase means one of three things: (a) the change broke something and must be fixed, (b) the change revealed a tolerance too tight and must be justified with economic reasoning and an `AskUserQuestion` confirmation from the researcher, or (c) the change meaningfully shifted a result, which is a research conversation with the researcher — surface it via `AskUserQuestion` (plain text fallback when unavailable), log the answer per `handoff-doc` §User Decisions Log, and commit the log entry before updating the expectation. Never a silent expectation bump.
@@ -69,7 +43,7 @@ These rules apply wherever drift tests are in play — during Protect, after Syn
 - **Remove or weaken existing drift tests during Sync or Integrate.** Tests are part of the analysis contract.
 - **Treat the drift tests as the only safety net.** They protect key results; they do not replace the one-pass review or the data-discipline protocol.
 
-When a drift test fails, follow the orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback — read the cited output, classify the failure, and either fix, justify, or escalate.
+When a drift test fails: read the cited output, classify the failure, and either fix, justify, or escalate. Orchestrator discipline in `superRA:agent-orchestration` §Handling Reviewer Feedback (when working inside superRA).
 
 ---
 
@@ -83,10 +57,10 @@ Walk every item. `[BLOCKING]` items must be satisfied for the reviewer to return
 - `[BLOCKING]` No key result skipped or left unprotected.
 - `[ADVISORY]` Focus on KEY results — findings that define analysis conclusions, not every intermediate number.
 
-**Tolerance calibration (worked examples in §How-To → Tolerance calibration):**
+**Tolerance calibration (domain-specific; worked examples in the domain reference — for data analysis see `econ-data-analysis/references/integrate-drift-tests.md` §Tolerance Conventions for Econ Results):**
 
-- `[BLOCKING]` Point estimates, standard errors, counts, signs/significance each carry a tolerance matched to the type of quantity. Too tight → false positives on harmless changes; too loose → misses real drift.
-- `[BLOCKING]` Every tolerance choice documented with a comment explaining why (the economic reasoning, not a number-pulled-from-the-air justification).
+- `[BLOCKING]` Tolerances matched to the type of quantity and scaled by domain reasoning. Too tight → false positives on harmless changes; too loose → misses real drift.
+- `[BLOCKING]` Every tolerance choice documented with a comment explaining the domain reasoning, not a number-pulled-from-the-air justification.
 
 **Independence:**
 
