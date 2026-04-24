@@ -34,7 +34,7 @@ superRA should be adaptive and composable rather than rigid. It gives agents mec
 
 ### Teach the Protocol, Don't Prescribe Each Action
 
-**This is a gate.** Every implementer editing any file under `skills/*` or `agents/*` self-applies the necessity test below before committing. Every reviewer walking such a diff verifies it on every pass. A line that fails the test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the test are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
+**This is a gate.** Every implementer editing any file under `skills/*` or `agents/*` self-applies both tests below before committing. Every reviewer walking such a diff verifies them on every pass. A line that fails either test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the tests are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
 
 Give agents mechanisms and the evidence they need to act predictably; do not narrate what they will see, wrap authoritative content in meta-commentary, or remind them of defaults the runtime already teaches. The bar for every line of instruction is: **without this line, would the agent's behavior be unstable?** If the answer is no, delete it.
 
