@@ -97,7 +97,11 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 **Synced base head:** `30d6c911c9a2fb62582ad948fd4de82b0b2bf150`
 **Incoming range:** `b6e0640..30d6c91`
 **Sync commits:** `865339c` (merge commit of `origin/main` at `30d6c91` into `tighten-integration-rules`)
-**Sync review status:** `IMPLEMENTED`
+**Sync review status:** `REVISE`
+
+> **Sync review notes:**
+> 1. [MAJOR] The Sync Map header does not list the full sync commit chain. `PLAN.md:99` records only `865339c`, but the reviewed sync chain also includes `e7acf40` (`PLAN.md` Sync Map SHA propagation) and `ff082f4` (`skills/codex-superra-setup/scripts/sync_codex_agents.py` generator follow-through). `workflow-sync-author.md §Workflow Sync Map Format` requires `**Sync commits:** <MERGE_COMMIT_SHA>[, <PROPAGATION_SHA>...]`, so downstream Integrate cannot reconstruct the authoritative sync range from the handoff record.
+> 2. [MAJOR] The PLAN header still carries the superseded one-commit/defer-propagation design. `PLAN.md:29` says workflow and standalone modes land "exactly one minimal merge commit" and defer broader propagation, but the live contract in `skills/semantic-merge/SKILL.md:78` requires "one merge commit plus N propagation commits as needed to reach semantic coherence." Replace the stale header expectation so PLAN.md is coherent before Integrate consumes it.
 
 ### Branch Summary
 
