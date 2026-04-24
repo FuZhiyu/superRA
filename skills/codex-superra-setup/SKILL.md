@@ -5,9 +5,9 @@ description: Use when installing or refreshing superRA's named Codex agents in p
 
 # Codex superRA Setup
 
-Install or refresh superRA's named Codex agents from the canonical role specs in `agents/`. This skill is for the Codex-specific part of the setup: the plugin delivers the shared skills, while the named agents live in `.codex/agents/` or `~/.codex/agents/`.
+Install or refresh superRA's named Codex agents (`superra_implementer`, `superra_reviewer`) from the canonical role specs in `agents/`. The plugin delivers shared skills; this skill installs the named agents into `.codex/agents/` or `~/.codex/agents/`.
 
-**Core rule:** use **global** scope for normal cross-repo work; use **project** scope when testing or developing this repo itself.
+**Core rule:** global scope for normal cross-repo work; project scope when testing or developing this repo itself.
 
 ## When To Use
 
