@@ -17,8 +17,9 @@ user-invocable: true
 # Theory Modeling
 
 Domain skill for rigorous mathematical-modeling work; body carries
-Stage-Scoped References, the Iron Law, Define-Derive-Validate, and
-Common Rationalizations.
+Stage-Scoped References, the Iron Law, the four-gate checklist
+(Objects & Notation / Assumptions / Derivations / Verification &
+Rendering), and Common Rationalizations.
 
 ## Stage-Scoped References
 
@@ -34,15 +35,23 @@ phase. Load per stage; do not load them all at every dispatch:
 ## The Iron Law
 
 ```
-NO DERIVATION WITHOUT DEFINED OBJECTS AND STATED ASSUMPTIONS
+NO MANIPULATION WITHOUT DEFINED OBJECTS, INTERPRETABLE ASSUMPTIONS, AND STATED INTUITION
 ```
 
-If a symbol appears before it is defined, or a result needs a
-restriction that has not been stated, back up and write the missing
-definition or assumption first.
+Every symbol has a meaning. Every assumption has a plain-language
+interpretation a researcher can defend. Every non-trivial move has a
+one-sentence reason.
+
+If a symbol appears without a stated meaning, an assumption is written
+only as a math restriction with no economic reading, or a derivation
+step is invoked mechanically with no reason, back up and write the
+missing meaning, interpretation, or reason first.
 
 **No exceptions:**
+- Do not introduce a symbol without a stated meaning or intuition.
+- Do not state an assumption only as a math restriction without a plain-language interpretation a researcher can defend.
 - Do not hide a key restriction in "assume interior solution" after the algebra is already written.
+- Do not invoke a derivation rule (envelope theorem, market clearing, linearization) without a one-sentence reason for using it here.
 - Do not rename objects mid-derivation without mapping the notation.
 - Do not move a restriction from primitives to an endogenous variable just because the latter is shorter to write.
 - Do not rely on memory of a previous draft or paper note.
@@ -50,12 +59,13 @@ definition or assumption first.
 
 ---
 
-## Define-Derive-Validate
+## The Four Gates
 
-Three disciplines underpin trustworthy modeling work. They are
-**concurrent, not sequential** - every modeling step exercises all
-three. Documentation runs continuously alongside them as a cross-cutting
-writing practice, not a fourth phase.
+Four gates underpin trustworthy modeling work, organized around the
+reader's trust chain: **Objects & Notation → Assumptions → Derivations
+→ Verification & Rendering**. They are **concurrent, not sequential** -
+every modeling step exercises all four. Documentation runs continuously
+alongside them as a cross-cutting writing practice, not a fifth phase.
 
 This section is both **teaching content** and the **shared checklist**.
 The implementer walks it before returning DONE; the reviewer walks the
@@ -68,8 +78,8 @@ same items as verification.
 
 ### Reviewer verdict protocol
 
-**Walk `Define-Derive-Validate` top to bottom every time. Never halt on
-a failure.** One comprehensive pass per review - halting early forces a
+**Walk the four gates top to bottom every time. Never halt on a
+failure.** One comprehensive pass per review - halting early forces a
 full re-review on the next pass, and reviewer dispatches are costly.
 
 Two verdicts:
@@ -86,40 +96,54 @@ and re-dispatches. The reviewer then (1) verifies each fix, and
 (2) re-checks any finding that depended on an upstream fix. Everything
 else is accepted from the first pass.
 
-### Define
+### Objects & Notation
 
-The most common modeling error is pushing symbols before the model
-objects are actually pinned down. Define the model before you manipulate
-it.
+A reader trusts a model only if every symbol has a clear meaning. Pin
+down the objects and their names before manipulating them.
 
 - `[BLOCKING]` Every symbol is introduced in narrative order before first use: primitives, choice variables, state variables, parameters, shocks, constraints, value objects, prices, and equilibrium conditions. A symbol may not appear in any derivation, equation, proof step, or verification before the paragraph or table that introduces it. For symbols reused across tasks, `PLAN.md`'s Notation Conventions table is the authoritative source - reuse its meaning rather than redefining the symbol locally.
 - `[BLOCKING]` Notation is explicit and interpretable or genuinely conventional. Arbitrary placeholder labels like `A/B/C/D`, `T1/T2`, `eq1`, and `var2` are not acceptable. Conventional notation such as `r` for an interest rate or `w` for a wage is acceptable when defined at first use.
-- `[BLOCKING]` Assumptions are explicit and attached to primitives: preferences, technology, endowments, information, timing, distributions, parameter domains, boundary conditions, and normalizations. Do not state assumptions as desired properties of endogenous objects unless those properties are later proved.
+- `[BLOCKING]` Every new symbol introduced during implementation carries a stated intuition or mnemonic (one short sentence), unless it reuses a conventional name already in `PLAN.md`'s Notation Conventions.
 - `[BLOCKING]` Domains, units, and sign restrictions are clear whenever they matter for the algebra, comparative statics, or numerical checks.
-- `[BLOCKING]` The active solution concept is named before derivation starts: planner problem, competitive equilibrium, recursive equilibrium, steady state, fixed point, or other relevant concept.
 - `[ADVISORY]` When multiple notation choices are reasonable, prefer the one matching the literature or existing project docs; if you deviate, note the mapping.
 
-### Derive
+### Assumptions
 
-Derivations must be auditable. A correct result that cannot be checked is
-not an acceptable handoff artifact.
+Assumptions carry the economic content of a model. Each one must be
+attached to a primitive object, readable as economics, and no weaker
+than it needs to be - prefer a single interpretable primitive over a
+scattering of weak technical restrictions.
 
+- `[BLOCKING]` Assumptions are explicit and attached to primitives: preferences, technology, endowments, information, timing, distributions, parameter domains, boundary conditions, and normalizations. Do not state assumptions as desired properties of endogenous objects unless those properties are later proved.
+- `[BLOCKING]` Each assumption carries a one-sentence plain-language interpretation a researcher can defend (e.g., "risk aversion bounded so the value function is finite"); assumptions stated only as math restrictions without economic interpretation are REVISE.
+- `[BLOCKING]` When multiple scattered assumptions can be replaced by a single stronger primitive assumption with a cleaner interpretation, prefer the synthesis and record the trade. Reviewer applies a judgement margin - flag only when a clearly cleaner synthesis is available.
+
+### Derivations
+
+Derivations must be auditable. A correct result that cannot be checked
+is not an acceptable handoff artifact. Every non-trivial move needs both
+the technical rule and a reason for invoking it here.
+
+- `[BLOCKING]` The active solution concept is named before derivation starts: planner problem, competitive equilibrium, recursive equilibrium, steady state, fixed point, or other relevant concept.
 - `[BLOCKING]` One logical algebraic move per displayed step. Do not collapse multiple substitutions, cancellations, and sign changes into "therefore".
 - `[BLOCKING]` Each non-obvious step states the rule being used: substitute a constraint, differentiate with respect to a variable, apply the envelope theorem, impose market clearing, linearize around a point, or similar.
+- `[BLOCKING]` Each non-trivial step carries both the technical rule (envelope theorem, market clearing, ...) and a one-sentence reason for invoking it; mechanical rule-labels without a reason are REVISE.
 - `[BLOCKING]` When a result depends on case splits or domains (interior vs corner, positive vs negative branch, existence/uniqueness conditions), the active case is stated and excluded cases are either checked or explicitly deferred.
 - `[BLOCKING]` Comparative statics state what is held fixed, which object moves, and what sign or ranking is being claimed.
 - `[BLOCKING]` Reused symbols keep the same meaning throughout the task. If notation changes, old and new notation are mapped explicitly.
 - `[BLOCKING]` Claims of existence, uniqueness, monotonicity, or concavity are supported by a stated argument, not asserted by inspection.
 - `[ADVISORY]` Keep displayed equations short enough to audit; break long chains into aligned steps rather than dense one-line algebra.
 
-### Validate
+### Verification & Rendering
 
 Symbolic work still needs verification. A derivation is not complete
-until it has survived at least one independent check.
+until it has survived at least one independent check and reads cleanly
+for a human audience.
 
 - `[BLOCKING]` Every headline symbolic result is checked against at least one independent verification mode: substitute back into the original conditions, test a limiting or special case, or evaluate a simple numerical example.
 - `[BLOCKING]` Numerical verification uses explicit parameter values and states what is being checked: residual near zero, sign, monotonicity, feasibility, branch selection, or fixed-point convergence.
 - `[BLOCKING]` Special cases and limiting cases are compared against intuition and any stated hypotheses in `PLAN.md`; divergences are flagged before proceeding.
+- `[BLOCKING]` Special and limiting cases are interpreted economically, not just numerically confirmed (e.g., "at `β → 0` the policy reduces to the myopic rule, which matches the one-period benchmark").
 - `[BLOCKING]` Results are checked back against the assumption map. If a step quietly needs a stronger sign, domain, or regularity restriction than the current map states, update the assumption map before using the result.
 - `[BLOCKING]` When code, CAS output, or a solver is used, the human-readable result matches the computed object exactly. No manual transcription drift.
 - `[BLOCKING]` If an expression is rendered for a human reader, markdown and LaTeX are unambiguous: subscripts, superscripts, fractions, summation limits, and align environments read cleanly.
@@ -161,6 +185,10 @@ the definitions or assumptions explicit.
 | "The numerical check is only illustrative." | Even toy checks need explicit parameters and a stated pass condition. |
 | "The CAS says it simplifies to zero." | You still need to say what was checked and under which assumptions. |
 | "I'll update the Notation Conventions table after the derivation is clean." | Late notation updates mean the derivation was written against undefined symbols; update the table first, then derive. |
+| "The intuition is obvious." | If the intuition is not written, the reader is reconstructing it from algebra - which is exactly what the Iron Law rules out. |
+| "I'll add interpretation after the algebra is clean." | Post-hoc interpretation is where hidden assumptions hide; the interpretation must be defensible at the moment the assumption is stated. |
+| "Weaker assumptions are always safer." | Scattered weak technical restrictions are harder to defend than one stronger primitive with a clean economic reading; prefer the synthesis when it is available. |
+| "This assumption is technical, not economic." | A technical restriction with no economic reading is a bet the restriction does not bite; if it does not bite, drop it, and if it does, name the economics. |
 
 ## Key References
 
