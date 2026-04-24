@@ -31,7 +31,7 @@ superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. 
 flowchart TB
     PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
     IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
-    INTEGRATE["<b>INTEGRATE</b><br/>Protection (default: drift tests)<br/>Sync with base<br/>Integrate/refactor<br/>Document<br/>Finish"]
+    INTEGRATE["<b>INTEGRATE</b><br/>Protect results <br/>Sync with base<br/>Integrate/refactor<br/>Document<br/>Finish"]
     FINISHED(["finished"])
 
     PLAN --> IMPLEMENT
