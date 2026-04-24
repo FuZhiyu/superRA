@@ -357,7 +357,7 @@ def cleanup_implementer_handoff(section: str) -> str:
     # a subagent dispatch field.
     worktree_block = (
         "\n\n**Parallel worktree dispatch (`Worktree:` field set).** Return the "
-        "`<branch>/parallel/<slug>` branch name and HEAD SHA in your status "
+        "`<current-branch>-agent/parallel/<slug>` branch name and HEAD SHA in your status "
         "report. Do not merge, rebase, push, or touch worktree lifecycle — the "
         "orchestrator owns harvest-out."
     )

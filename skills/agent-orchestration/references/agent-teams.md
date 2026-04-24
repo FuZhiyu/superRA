@@ -100,7 +100,7 @@ When dispatching parallel agents that need isolated workspaces, follow `SKILL.md
 
 - Provision one worktree per agent per `references/worktree-harness-fallback.md` (harness tools preferred; raw `git worktree` otherwise).
 - Seed non-git data via `superRA:worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink`.
-- Merge back with plain `git merge` on the `<branch>/parallel/<slug>` branches.
+- Merge back with plain `git merge` on the `<current-branch>-agent/parallel/<slug>` branches.
 
 Do not hand-roll worktree setup or data-copy scripts.
 
