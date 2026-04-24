@@ -371,17 +371,12 @@ def cleanup_implementer_handoff(section: str) -> str:
 
 
 def cleanup_reviewer_handoff(section: str) -> str:
-    """Strip subagent-dispatch-only wording from the reviewer handoff section."""
-    adhoc_line = (
-        "\n\nIf your dispatch prompt does not specify a stage, default to "
-        "**ad-hoc** (report-only)."
-    )
-    if adhoc_line not in section:
-        raise ValueError(
-            "cleanup_reviewer_handoff: expected ad-hoc default line not found "
-            "in reviewer §Handoff; source may have been reworded."
-        )
-    return section.replace(adhoc_line, "")
+    """Strip any remaining subagent-dispatch-only wording from the reviewer handoff.
+
+    The caller has already removed the ad-hoc default line. This hook is kept
+    for future dispatch-only passages that surface during audits.
+    """
+    return section
 
 
 def strip_subsection(section: str, heading: str) -> str:
