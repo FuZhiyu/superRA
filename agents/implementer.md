@@ -133,7 +133,7 @@ git add [code files] PLAN.md RESULTS.md results_attachments/
 git commit -m "task N: [brief description]"
 ```
 
-**Parallel worktree dispatch (`Worktree:` field set).** Return the `<branch>/parallel/<slug>` branch name and HEAD SHA in your status report. Do not merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out.
+**Parallel worktree dispatch (`Worktree:` field set).** Return the `<current-branch>-agent/parallel/<slug>` branch name and HEAD SHA in your status report. Do not merge, rebase, push, or touch worktree lifecycle — the orchestrator owns harvest-out.
 
 ## Pre-Commit Self-Check
 
@@ -156,7 +156,7 @@ Report:
 - **Key findings:** Headline numbers or surprises only. Point at RESULTS.md Task N section for tables, figures, and full context.
 - **Concerns (if any):** Data quality issues, methodology questions, unexpected results. Bullet points.
 - **Doc edits (what changed since the previous dispatch):** List each file and the specific sections/fields you modified, describing the change. Example: `PLAN.md — Task 3: rewrote Step 2 (merge approach changed after data inspection), marked Steps 1-3 [x], set Review status: IMPLEMENTED, annotated review items 1 and 2 with → implemented markers. RESULTS.md — Task 3 section replaced with new findings and 2 figures.` Say "none" if you touched neither file.
-- **Worktree return (path B only):** branch name (`<branch>/parallel/<slug>`) and HEAD SHA. Omit this field entirely on path A.
+- **Worktree return (path B only):** branch name (`<current-branch>-agent/parallel/<slug>`) and HEAD SHA. Omit this field entirely on path A.
 
 If the orchestrator needs more than this, they will read the docs directly.
 

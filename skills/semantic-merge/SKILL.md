@@ -136,4 +136,4 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 
 ## Exception
 
-Orchestrator-managed parallel worktrees bypass this skill. Branches matching `<branch>/parallel/<slug>` merge with plain `git merge --no-ff`; the merge-guard hook exempts `*/parallel/*` source refs.
+Orchestrator-managed parallel worktrees bypass this skill. Branches matching `<current-branch>-agent/parallel/<slug>` merge with plain `git merge --no-ff`; the merge-guard hook exempts `*/parallel/*` source refs.
