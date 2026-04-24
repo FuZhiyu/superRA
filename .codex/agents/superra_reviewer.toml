@@ -88,7 +88,7 @@ On re-review after a REVISE fix: verify (1) each cited fix is correct, and (2) a
 
 ## Handoff — Unified Across Stages
 
-For task-scoped stages (implementation review, drift test review, integration review), your review feedback goes into the **review-notes blockquote of your assigned task block in PLAN.md**. The task block may be an analysis task or an integration task — the anatomy and mechanics are identical. Exception: **ad-hoc** stage is report-only with no document updates.
+When the review assigns a PLAN.md task block, write feedback in that block's **review-notes** blockquote. If no PLAN.md task block is assigned, report only unless the dispatch says otherwise.
 
 ### Editing Etiquette
 

@@ -201,7 +201,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 ### Task 4: Simplify canonical role docs and post-sync integration consumption
 **Depends on:** Task 1, Task 2, Task 3
 **Review status:** APPROVED
-**Integration status:** APPROVED
+**Integration status:** IMPLEMENTED
 
 **Files:** `agents/implementer.md`, `agents/reviewer.md`, `skills/using-superRA/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, generated direct-mode and Codex agent files.
 **Input:** Current role docs with branch-level `Stage: sync` exceptions and the revised semantic-merge mode design.
@@ -219,12 +219,16 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 - [x] **Step 4: Regenerate generated role artifacts**
   Run the Codex agent sync script after canonical role edits. Do not hand-edit generated direct-mode references or `.codex/agents` files.
 
+> **Review notes:**
+> 1. [MAJOR] Branch-wide integration pruning found the role docs still using broad "task-scoped stages" wording to scope handoff behavior, which duplicates the manifest / workflow-owned Sync boundary and can drift against it. Express the ownership rule in terms of assigned PLAN.md task blocks instead. (`agents/implementer.md:61`, `agents/implementer.md:126`, `agents/reviewer.md:89`)
+>    → implemented: rewrote canonical role handoff lines around assigned PLAN.md task-block ownership and regenerated the direct-mode references plus Codex named-agent files from the canonical sources (`agents/implementer.md:61`, `agents/implementer.md:126`, `agents/reviewer.md:89`).
+
 ---
 
 ### Task 5: Update public docs and verify the revised design
 **Depends on:** Task 1, Task 2, Task 3, Task 4
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 
 **Files:** `README.md`, `skills/CATEGORIES.md`, `CLAUDE.md`, generated artifacts as needed, tests under `skills/codex-superra-setup/scripts/` or `tests/claude-code/` as needed.
 **Input:** Updated skills, references, workflow choreography, role docs, and generated artifacts.
@@ -247,10 +251,6 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
   rg -n "Stage: sync|At sync stage|branch-level sync review|sync implementer|sync reviewer agent uses|Upstream Intent|merge-quality|NEEDS_USER_DECISION" skills agents README.md CLAUDE.md .codex tests -g '*.md' -g '*.toml' -g '*.py'
   ```
   Inspect the search results rather than requiring zero matches; the goal is to confirm remaining legacy sync terms are intentional.
-
-> **Review notes:**
-> 1. [MAJOR] The compatibility suite still runs the obsolete Phase B / `## Upstream Intent` contract test: `tests/check-harness-compatibility.sh:65` invokes `tests/test-phase-b-upstream-intent-contract.sh`, whose assertions still require `## Upstream Intent`, `MERGE_BASE_SHA`, and `skills/refactor-and-integrate/references/merge-quality.md` even though this branch intentionally replaces them with Sync Map / `BASE_HEAD_SHA` / semantic-vs-codebase coherence. `bash tests/check-harness-compatibility.sh` fails in that section with 33 failures, including missing `merge-quality.md`. Fix by replacing or renaming this contract test and harness section so they assert the current Sync Map / generic sync reviewer / codebase-integration contract, or remove the obsolete test from the suite if it is intentionally superseded; then rerun the compatibility suite.
->    → implemented: replaced the obsolete Phase B contract test with a current Sync / Integrate contract test and updated the compatibility harness entry; `bash tests/check-harness-compatibility.sh` now passes (`tests/check-harness-compatibility.sh:65`, `tests/test-sync-integration-contract.sh:1`).
 
 ---
 

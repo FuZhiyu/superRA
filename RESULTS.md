@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-23 (integration review REVISE fixed for Task 5; awaiting narrow re-review)
-**Status:** Tasks 1-4 and 6-8 integration-approved; Task 5 integration fix implemented and awaiting re-review
+**Last updated:** 2026-04-23 (Task 5 compatibility fix approved in PLAN; Task 4 role-doc pruning fix implemented and awaiting narrow re-review)
+**Status:** Tasks 1-3 and 5-8 integration-approved; Task 4 integration fix implemented and awaiting re-review
 
 ---
 
@@ -28,13 +28,15 @@
 
 ## Task 4: Simplify canonical role docs and post-sync integration consumption
 
-**Status:** Implemented; awaiting review
+**Status:** Integration pruning fix implemented; awaiting narrow re-review
 
 Canonical implementer/reviewer docs no longer carry `Stage: sync` branch-level exceptions. `using-superRA` removes Sync from the task-scoped Skill-Load Manifest and records Sync as a generic semantic-merge dispatch. `refactor-and-integrate` now consumes task-local Sync impact and referenced Sync Map clusters without reloading full semantic-merge. Generated Codex agents and direct-mode role references were refreshed.
 
+Integration pruning removed the broad "task-scoped stages" wording from canonical role handoff instructions. The role docs now express ownership in terms of assigned PLAN.md task blocks, and generated direct-mode / Codex role files were regenerated from the canonical sources.
+
 ## Task 5: Update public docs and verify the revised design
 
-**Status:** Integration fix implemented; awaiting narrow re-review
+**Status:** Integration-approved after compatibility fix
 
 README, CATEGORIES, CLAUDE.md, Codex adapter instructions, and generator tests now describe generic Sync dispatch, standalone semantic-merge mode behavior, sync review, and task-local Sync impact context.
 
