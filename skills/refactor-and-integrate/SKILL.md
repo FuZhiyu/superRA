@@ -5,13 +5,15 @@ description: Utility skill (any phase). Use when creating drift tests, refactori
 
 # Refactor and Integrate
 
-Utility skill carrying post-sync integration discipline:
+Tool skill teaching techniques for **codebase coherence** — fitting the resulting code into the host project. Paired with `semantic-merge`: run `semantic-merge` first to reach semantic coherence; this skill picks up to reach codebase coherence.
+
+Three techniques; no prescribed order:
 
 1. **Creating drift tests** that guard key results from unintended changes during Sync, refactoring, Finish, or future modifications.
-2. **Refactoring analysis code** for codebase integration — making the code fit host-project conventions, utilities, and style without losing domain discipline or results.
-3. **Propagating task-local Sync impact obligations** after `semantic-merge` has landed and reviewed the semantic sync commit.
+2. **Codebase-fit refactoring** — aligning naming and utility reuse with host conventions, keeping PR-friendly diffs, walking up project docs, and minimizing net diff against the host.
+3. **Propagating task-local Sync impact obligations** recorded by `semantic-merge` in `## Sync Map` and task-local `**Sync impact:**` fields.
 
-Semantic sync itself belongs to `superRA:semantic-merge`. This skill consumes task-local `**Sync impact:**` and referenced Sync Map clusters; it does not resolve branch syncs, review sync commits, or own sync commit discipline.
+Semantic coherence itself belongs to `superRA:semantic-merge`. This skill consumes task-local `**Sync impact:**` and referenced Sync Map clusters; it does not resolve branch syncs, review sync commits, or own sync commit discipline.
 
 Load per stage; implementer self-checks and reviewer verifies the same checklist content.
 

@@ -1,8 +1,8 @@
 # Standalone Semantic-Merge Mode
 
-Use when this skill is invoked directly for a merge, rebase, cherry-pick, or branch sync outside `integration-workflow`. Also load `sync-quality.md` for the gated checklist. Walk the Shared Procedure in `semantic-merge/SKILL.md` (repo-state grounding, intent investigation with role classification, resolution plan, intent-changing escalation, stale-reference sweep) — this reference only carries mode-specific content.
+Use when this skill is invoked directly for a merge, rebase, cherry-pick, or branch sync outside `integration-workflow`. Also load `sync-quality.md` for the gated checklist — it encodes the semantic-coherence stopping rule. Walk the Techniques in `semantic-merge/SKILL.md` (repo-state grounding, intent investigation with role classification, resolution plan, intent-changing escalation, detect-and-resolve stale references) — this reference only carries mode-specific content.
 
-Standalone mode lands the minimal safe merge and records remaining work in the merge record so the caller (or `refactor-and-integrate`, when invoked after this skill returns) can satisfy it.
+Standalone mode carries the merge through to **semantic coherence** and records any deferred **codebase-coherence** work in the merge record so the caller — or `refactor-and-integrate`, when invoked after this skill returns — can satisfy it.
 
 ## Inputs
 
@@ -18,12 +18,10 @@ Current-branch intent comes from branch name, commits, `PLAN.md` / `RESULTS.md` 
 
 ## Mode-Specific Process
 
-1. Create or update `SEMANTIC_MERGE.md` when the operation is material, lacks PLAN.md task structure, or leaves file/script-level obligations.
-2. When `PLAN.md` is absent, record user decisions in `SEMANTIC_MERGE.md` and the relevant commit body instead of `PLAN.md §Decisions`.
-3. Run the requested merge / rebase / cherry-pick after intent investigation.
-4. **Land exactly one minimal merge commit.** Include conflict resolution, resolved docs, and `SEMANTIC_MERGE.md` in the same commit. The tree must pass existing tests and drift tests after the commit — that is the unambiguous "coherent tree" test.
-5. Run the existing tests and drift tests. Do not silently re-expect drift tests after meaningful result changes — escalate per `SKILL.md §Shared Procedure` step 4.
-6. Record broader propagation — caller updates for renames, output regeneration, drift-test expectation updates, project-doc audit, broad refactor — in the `SEMANTIC_MERGE.md` File / Script Impact Map under `Follow-up`. The caller can invoke `refactor-and-integrate` after this skill returns to satisfy these, or handle them manually.
+1. Create or update `SEMANTIC_MERGE.md` when the operation is material, lacks PLAN.md task structure, or leaves file/script-level obligations. When `PLAN.md` is absent, record user decisions in `SEMANTIC_MERGE.md` and the relevant commit body instead of `PLAN.md §Decisions`.
+2. Run the requested merge / rebase / cherry-pick after intent investigation.
+3. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** `sync-quality.md §Scope boundary` is the checklist. Every commit must leave existing tests and drift tests passing — per-commit protection-pass is the lower bound. Do not silently re-expect drift tests after meaningful result changes; escalate per `SKILL.md §Techniques` step 4. Include conflict resolution, resolved docs, and `SEMANTIC_MERGE.md` with the commits that produce them.
+4. Record **codebase-coherence** obligations — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — in the `SEMANTIC_MERGE.md` File / Script Impact Map under `Follow-up`. The caller can invoke `refactor-and-integrate` after this skill returns to satisfy them, or handle them manually.
 
 ## Semantic Merge Record Format
 
@@ -37,6 +35,7 @@ When no PLAN.md task structure exists, or when standalone semantic-merge needs a
 **Incoming ref:** `<incoming-ref>`
 **Governing baseline:** `<sha/ref>`
 **Merge commit:** `<sha>`
+**Propagation commits:** `<sha1>, <sha2>, ...` (or `None`)
 
 ## Current Branch Intent
 
@@ -75,7 +74,7 @@ Report:
 
 - operation, incoming ref, governing baseline, and direction
 - current-branch intent and incoming intent
-- merge commit SHA
+- merge commit SHA and any propagation-commit SHAs
 - merge record location or why none was needed
 - user decisions asked and logged
 - stash status (if any)

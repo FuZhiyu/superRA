@@ -20,7 +20,7 @@ Inputs include:
 1. Verify the anchors: incoming intent comes from `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`; the post-sync governing baseline is `BASE_HEAD_SHA`.
 2. Read incoming commits and diffs. Independently summarize incoming intent.
 3. Read PLAN.md / RESULTS.md and independently summarize current-branch intent.
-4. Inspect the sync commit diff. Confirm every kept, dropped, or synthesized hunk has a semantic rationale, classified by role per `SKILL.md §Shared Procedure` step 2.
+4. Inspect the sync commit diff. Confirm every kept, dropped, or synthesized hunk has a semantic rationale, classified by role per `SKILL.md §Techniques` step 2.
 5. Walk `sync-quality.md` top to bottom.
 6. Check the Sync Map against the diff and incoming intent. It should explain the branch-level thesis, not bury everything in task-local notes.
 7. Check each affected task block has a compact `**Sync impact:**` pointer when Integrate needs task-specific propagation.

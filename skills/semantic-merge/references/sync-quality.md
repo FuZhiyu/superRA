@@ -1,6 +1,6 @@
 # Semantic Sync Quality Standards
 
-Shared gated checklist for workflow Sync, sync review, and standalone semantic-merge. The canonical procedure (repo-state grounding, intent investigation with role classification, resolution planning, intent-changing escalation, stale-reference sweep) lives in `semantic-merge/SKILL.md §Shared Procedure`. Commit-shape constraints and format specs live in the owning mode references (`workflow-sync-author.md`, `standalone-merge.md`). This reference carries only the gated checklist both modes walk.
+Shared gated checklist for workflow Sync, sync review, and standalone semantic-merge. This is the **semantic coherence** checklist — it defines when semantic-merge is done. The techniques (repo-state grounding, intent investigation with role classification, resolution planning, intent-changing escalation, detect-and-resolve stale references) live in `semantic-merge/SKILL.md §Techniques`. Commit-shape mechanics and format specs live in the owning mode references (`workflow-sync-author.md`, `standalone-merge.md`). This reference carries only the gated checklist both modes walk.
 
 ## Gated Checklist
 
@@ -15,12 +15,14 @@ Walk every item. `[BLOCKING]` items must be satisfied for the sync to be accepte
 - `[BLOCKING]` No silent restorations of base-current deletions or relocations in workflow Sync.
 - `[ADVISORY]` Synthesized changes are coherent and minimal.
 
-**Scope boundary:**
+**Scope boundary (semantic coherence stopping rule):**
 
-- `[BLOCKING]` Exactly one minimal merge commit lands in both modes — no semantic propagation commits in semantic-merge's scope.
-- `[BLOCKING]` Existing protection passes after the merge commit (drift tests + key-result coverage in workflow mode; existing tests and drift tests in standalone mode). Protection-pass is the unambiguous "coherent tree" test.
-- `[BLOCKING]` Broader propagation — caller updates for renames, output regeneration, drift-test expectation updates, project-doc audit, broad refactor — is deferred, not performed in this skill.
-- `[BLOCKING]` Deferred propagation is recorded in `## Sync Map` + task-local `**Sync impact:**` (workflow mode) or the `SEMANTIC_MERGE.md` File / Script Impact Map + Remaining Obligations (standalone mode), so `refactor-and-integrate` or the caller can satisfy it later.
+- `[BLOCKING]` Stale references within the merge's semantic reach are resolved — renamed symbols at old call sites, moved paths referenced by docs describing the merged code, and other follow-through edits the merge itself forced.
+- `[BLOCKING]` Generated outputs made stale by the merged sources are regenerated, or — when regeneration would change a meaningful result — escalated per the intent-changing-escalation technique and recorded as a follow-up obligation.
+- `[BLOCKING]` Docs and comments that describe the merged code are updated to match.
+- `[BLOCKING]` No conflict markers remain in the tree (also checked in Verification below).
+- `[BLOCKING]` Existing protection passes on every commit landed by this skill — drift tests + key-result coverage in workflow mode; existing tests + drift tests in standalone mode. Per-commit protection-pass is the lower bound; semantic coherence is the stopping rule.
+- `[BLOCKING]` Broader **codebase-coherence** work — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — is deferred to `refactor-and-integrate` (or the caller) and recorded in `## Sync Map` + task-local `**Sync impact:**` (workflow mode) or the `SEMANTIC_MERGE.md` File / Script Impact Map + Remaining Obligations (standalone mode).
 
 **Intent integrity:**
 

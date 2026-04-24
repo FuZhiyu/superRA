@@ -1,6 +1,6 @@
 # Workflow Sync Author Mode
 
-Use when `integration-workflow` dispatches a generic sync author to bring the current branch onto a confirmed base. Also load `sync-quality.md` for the gated checklist. Walk the Shared Procedure in `semantic-merge/SKILL.md` (repo-state grounding, intent investigation with role classification, resolution plan, intent-changing escalation, stale-reference sweep) — this reference only carries mode-specific content.
+Use when `integration-workflow` dispatches a generic sync author to bring the current branch onto a confirmed base. Also load `sync-quality.md` for the gated checklist — it encodes the semantic-coherence stopping rule. Walk the Techniques in `semantic-merge/SKILL.md` (repo-state grounding, intent investigation with role classification, resolution plan, intent-changing escalation, detect-and-resolve stale references) — this reference only carries mode-specific content.
 
 ## Inputs
 
@@ -19,8 +19,8 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, any existing 
 1. Run the requested sync operation after intent investigation. For the normal workflow path, merge `BASE_REF` into the current branch.
 2. Write the branch-level `## Sync Map` in `PLAN.md` when there is material overlap, a conflict, a user decision, sync-review carryover, or a post-sync obligation. Omit it for no-op or trivial syncs with no obligations.
 3. Add task-local `**Sync impact:**` annotations only to task blocks that need task-specific propagation during Integrate. Keep them short and point back to the relevant Sync Map cluster.
-4. **Land exactly one minimal merge commit.** Include conflict resolution, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations in the same commit. The tree must pass existing protection (drift tests + key-result coverage established in `integration-workflow` Phase A) after the commit — that is the unambiguous "coherent tree" test. Do not include broader propagation in this commit.
-5. Record broader propagation — caller updates for renames, output regeneration, drift-test expectation updates, project-doc audit, broad refactor — as post-sync obligations in the Sync Map. Integrate satisfies them.
+4. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** Include conflict resolution, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations with the commits that produce them. Every commit must leave the tree passing existing protection (drift tests + key-result coverage established in `integration-workflow` Phase A); per-commit protection-pass is the lower bound, `sync-quality.md §Scope boundary` is the stopping rule.
+5. Record **codebase-coherence** obligations — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — as post-sync obligations in the Sync Map. Integrate (via `refactor-and-integrate`) satisfies them.
 
 ## Workflow Sync Map Format
 

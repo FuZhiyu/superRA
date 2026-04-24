@@ -131,14 +131,16 @@ Agent(generic):
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
   Incoming range: <PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>
 
-  Use semantic-merge workflow sync author mode. Land exactly one semantic
-  sync commit. Write branch-level PLAN.md `## Sync Map` only when there is
-  material overlap, a conflict, a user decision, sync-review carryover, or a
-  post-sync obligation. Add compact task-local `**Sync impact:**` annotations
-  to affected task blocks. Do not perform codebase refactor, generated-output
-  refresh, drift-test expectation updates, or project-doc audit. Return the
-  sync commit SHA, Sync Map status, task-local Sync impact annotations, checks
-  run, and post-sync obligations.
+  Use semantic-merge workflow sync author mode. Land the merge commit plus
+  any propagation commits needed to reach semantic coherence — `sync-quality.md
+  §Scope boundary` is the stopping rule. Write branch-level PLAN.md `## Sync
+  Map` only when there is material overlap, a conflict, a user decision,
+  sync-review carryover, or a post-sync obligation. Add compact task-local
+  `**Sync impact:**` annotations to affected task blocks. Defer codebase
+  coherence — convention fit, utility reuse, PR-friendly diffs, Project Doc
+  Audit walk-up, minimum net diff — to `refactor-and-integrate` via Integrate.
+  Return the merge + propagation commit SHAs, Sync Map status, task-local Sync
+  impact annotations, checks run, and deferred codebase-coherence obligations.
 ```
 
 If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision is required, the orchestrator asks the user, logs the decision, commits the log entry, and re-dispatches the sync author with the decision context.
@@ -160,7 +162,7 @@ Agent(generic):
   PRE_SYNC_BASE_SHA: <PRE_SYNC_BASE_SHA>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
   Incoming range: <PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>
-  Sync commit: <SYNC_COMMIT_SHA>
+  Sync commits: <MERGE_COMMIT_SHA>[, <PROPAGATION_SHAS>...]
 
   Use semantic-merge workflow sync reviewer mode. Verify anchors, incoming
   intent, current-branch intent, conflict resolution, user-decision logging,
