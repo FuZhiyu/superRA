@@ -175,7 +175,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 6: Propagate intuition/interpretability gates into `references/planning.md` and touch up `references/integration.md`
 **Depends on:** Task 5
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** `skills/theory-modeling/references/planning.md`, `skills/theory-modeling/references/integration.md`
