@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-23 (Tasks 1-7 APPROVED; Task 8 IMPLEMENTED — Sync notes reframed as post-sync context, awaiting review)
-**Status:** Tasks 1-7 APPROVED; Task 8 IMPLEMENTED; awaiting review
+**Last updated:** 2026-04-23 (integration review REVISE fixed for Task 5; awaiting narrow re-review)
+**Status:** Tasks 1-4 and 6-8 integration-approved; Task 5 integration fix implemented and awaiting re-review
 
 ---
 
@@ -34,13 +34,17 @@ Canonical implementer/reviewer docs no longer carry `Stage: sync` branch-level e
 
 ## Task 5: Update public docs and verify the revised design
 
-**Status:** Implemented; awaiting review
+**Status:** Integration fix implemented; awaiting narrow re-review
 
 README, CATEGORIES, CLAUDE.md, Codex adapter instructions, and generator tests now describe generic Sync dispatch, standalone semantic-merge mode behavior, sync review, and task-local Sync impact context.
+
+The harness compatibility suite now tests the current Sync / Integrate contract directly: `tests/check-harness-compatibility.sh` invokes `tests/test-sync-integration-contract.sh`, which asserts generic sync author/reviewer dispatch, Sync Map + task-local Sync impact context, `BASE_HEAD_SHA..HEAD` as the integration baseline, retirement of Phase B / `## Upstream Intent` / `MERGE_BASE_SHA`, and line-by-line no-overprescription gates.
 
 Verification passed on 2026-04-23:
 
 ```bash
+bash tests/test-sync-integration-contract.sh
+bash tests/check-harness-compatibility.sh
 python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check
 python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py
 git diff --check

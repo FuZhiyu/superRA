@@ -62,8 +62,8 @@ m = re.search(r"^name:\s*(\S+)\s*$", text, re.MULTILINE)
 assert m and m.group(1) == "using-superra", f"using-superRA SKILL.md name must be lowercase 'using-superra', got {m and m.group(1)!r}"
 PY
 
-section "Phase B upstream-intent contract"
-bash tests/test-phase-b-upstream-intent-contract.sh
+section "Sync integration contract"
+bash tests/test-sync-integration-contract.sh
 
 section "Direct mode role references"
 python3 - <<'PY'

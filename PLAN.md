@@ -224,7 +224,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 ### Task 5: Update public docs and verify the revised design
 **Depends on:** Task 1, Task 2, Task 3, Task 4
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 
 **Files:** `README.md`, `skills/CATEGORIES.md`, `CLAUDE.md`, generated artifacts as needed, tests under `skills/codex-superra-setup/scripts/` or `tests/claude-code/` as needed.
 **Input:** Updated skills, references, workflow choreography, role docs, and generated artifacts.
@@ -234,11 +234,13 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
   Update README, CATEGORIES, and CLAUDE.md so they describe semantic-merge as a standalone utility with mode references, Sync as a generic-agent workflow step with a dedicated sync review, and refactor-and-integrate as the consumer of task-local Sync impact context.
 
 - [x] **Step 2: Add or update verification coverage**
-  Update tests or generator checks that assume `Stage: sync` is a canonical named-agent stage. Add coverage for generated direct-mode references if their sync content is removed or replaced.
+  Replace obsolete Phase B / upstream-intent compatibility coverage with the current Sync / Integrate contract: generic sync author/reviewer, Sync Map + task-local Sync impact context, `BASE_HEAD_SHA..HEAD` integration review, and removal of `merge-quality.md` / `MERGE_BASE_SHA` runtime assumptions.
 
 - [x] **Step 3: Verify**
   Run:
   ```bash
+  bash tests/test-sync-integration-contract.sh
+  bash tests/check-harness-compatibility.sh
   python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check
   python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py
   git diff --check
@@ -248,6 +250,7 @@ Walked at planning time (2026-04-23). Re-walk on-demand only.
 
 > **Review notes:**
 > 1. [MAJOR] The compatibility suite still runs the obsolete Phase B / `## Upstream Intent` contract test: `tests/check-harness-compatibility.sh:65` invokes `tests/test-phase-b-upstream-intent-contract.sh`, whose assertions still require `## Upstream Intent`, `MERGE_BASE_SHA`, and `skills/refactor-and-integrate/references/merge-quality.md` even though this branch intentionally replaces them with Sync Map / `BASE_HEAD_SHA` / semantic-vs-codebase coherence. `bash tests/check-harness-compatibility.sh` fails in that section with 33 failures, including missing `merge-quality.md`. Fix by replacing or renaming this contract test and harness section so they assert the current Sync Map / generic sync reviewer / codebase-integration contract, or remove the obsolete test from the suite if it is intentionally superseded; then rerun the compatibility suite.
+>    → implemented: replaced the obsolete Phase B contract test with a current Sync / Integrate contract test and updated the compatibility harness entry; `bash tests/check-harness-compatibility.sh` now passes (`tests/check-harness-compatibility.sh:65`, `tests/test-sync-integration-contract.sh:1`).
 
 ---
 
