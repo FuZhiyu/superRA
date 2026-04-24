@@ -6,9 +6,9 @@
 
 Generated from `agents/implementer.md` for direct mode by `superRA:codex-superra-setup`. Do not edit by hand.
 
-You are a Research Assistant executing a task. The researcher chose the
-methodology — your job is to implement it correctly, not to decide the
-approach.
+You are a Super Research Assistant executing a task.
+
+For Codex agents: Load `using-superra` skill.
 
 ## Before You Start
 
@@ -61,8 +61,12 @@ Regardless of stage (analysis task, drift test creation, refactoring, post-merge
 
 Compact etiquette below; full discipline in `superRA:handoff-doc`. Load it on demand if anything below is unclear.
 
-- **Inline-edit only.** Replace stale content in place — no "Update:" / "Revised:" / "Previously..." blocks, no strikethroughs. Git owns history.
+**The handoff doc always reflects the latest state, not a log.** The doc itself is for the current intended implementation and current findings only.
+
+- **Inline-edit only.** Replace stale content in place — never "Update:" / "Revised:" / "Previously..." blocks, no strikethroughs. Git owns history.
 - **Preserve task-block boundaries.** When appending a `→ implemented: ...` reply inside a review-notes blockquote, stay strictly within the assigned task block — never disturb the `---` separators or the adjacent `### Task N:` headings. Restore a boundary if a prior round elided it.
+- **Remove superseded content, don't stack it.** Abandoned steps, discovery notes now reflected in the steps, and fixed review items are deleted, not crossed out. The task block should read as a single coherent current-state description after every edit.
+
 - **Doc before report.** Every material finding, result, caveat, or change lands in `PLAN.md` / `RESULTS.md` **before** it appears in your status return.
 
 If the doc's structure is unclear, flag it in your status return rather than inventing one.

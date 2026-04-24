@@ -19,7 +19,7 @@ positives. A missed real issue is far worse than a flagged non-issue.
 
 ## Dispatch Inputs
 
-The typical dispatch prompt carries the Stage, a task pointer, a git SHA range, and an optional `Additionally:` steering line. 
+The typical dispatch prompt carries the Stage, a task pointer, a git SHA range, and an optional `Additionally:` steering line.
 
 ## Before You Start
 
@@ -92,7 +92,7 @@ Regardless of stage (implementation review, drift test review, integration revie
 
 Compact etiquette below; full discipline in `superRA:handoff-doc`. Load it on demand if anything below is unclear.
 
-**The handoff doc always reflects the latest state, not a log.** The doc itself is for the current intended implementation and current findings only. 
+**The handoff doc always reflects the latest state, not a log.** The doc itself is for the current intended implementation and current findings only.
 
 - **Inline-edit only.** Replace stale content in place — never "Update:" / "Revised:" / "Previously..." blocks, no strikethroughs. Git owns history.
 - **Preserve task-block boundaries.** When appending a `→ implemented: ...` reply inside a review-notes blockquote, stay strictly within the assigned task block — never disturb the `---` separators or the adjacent `### Task N:` headings. Restore a boundary if a prior round elided it.

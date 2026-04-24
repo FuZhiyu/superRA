@@ -6,35 +6,9 @@ Shared reference for drift-test creation and review. Implementer (test creator) 
 
 ## How-To
 
-### Tolerance calibration — worked examples
+### Tolerance calibration
 
-Set tolerances based on **economic reasoning**, not arbitrary thresholds.
-
-**Point estimates** (coefficients, means, portfolio returns):
-- Allow minor variation from data ordering, floating-point arithmetic, rounding
-- Typical tolerance: 1-5% of estimate magnitude, or a few units in the last reported decimal place
-
-**Standard errors:**
-- Wider tolerance than point estimates — sensitive to small changes in sample composition, clustering, numerical precision
-- Typical tolerance: 5-10% of the standard error
-
-**Counts and categoricals** (observations, firms, periods):
-- Exact or near-exact — should not change unless sample construction changes
-- Tolerance: 0 or very small integer
-
-**Signs and significance:**
-- Write directional tests ("coefficient is positive", "t-statistic exceeds 1.96") in addition to magnitude tests
-- These catch the most important drift — sign flip or significance loss
-
-**Too tight** → false positives on harmless changes (merge order, floating-point platform differences).
-**Too loose** → misses real drift. Use economic judgment.
-
-**Document every tolerance choice** with a comment explaining why:
-```
-# Coefficient on market_cap: 0.035 +/- 0.002
-# Tolerance: ~5% of estimate. Allows for floating-point variation
-# in OLS solver but catches meaningful coefficient drift.
-```
+Tolerance calibration is domain-specific — reasonable magnitudes for drift depend on what the numbers mean. For data-analysis work, the worked rubric (point estimates, standard errors, counts, signs/significance, with economic-reasoning examples) lives in `econ-data-analysis/references/integrate-drift-tests.md` §Tolerance Conventions for Econ Results.
 
 ### Red-green verification cycle
 
@@ -83,10 +57,10 @@ Walk every item. `[BLOCKING]` items must be satisfied for the reviewer to return
 - `[BLOCKING]` No key result skipped or left unprotected.
 - `[ADVISORY]` Focus on KEY results — findings that define analysis conclusions, not every intermediate number.
 
-**Tolerance calibration (worked examples in §How-To → Tolerance calibration):**
+**Tolerance calibration (domain-specific; worked examples in the domain reference — for data analysis see `econ-data-analysis/references/integrate-drift-tests.md` §Tolerance Conventions for Econ Results):**
 
-- `[BLOCKING]` Point estimates, standard errors, counts, signs/significance each carry a tolerance matched to the type of quantity. Too tight → false positives on harmless changes; too loose → misses real drift.
-- `[BLOCKING]` Every tolerance choice documented with a comment explaining why (the economic reasoning, not a number-pulled-from-the-air justification).
+- `[BLOCKING]` Tolerances matched to the type of quantity and scaled by domain reasoning. Too tight → false positives on harmless changes; too loose → misses real drift.
+- `[BLOCKING]` Every tolerance choice documented with a comment explaining the domain reasoning, not a number-pulled-from-the-air justification.
 
 **Independence:**
 

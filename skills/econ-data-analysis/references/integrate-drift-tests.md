@@ -39,9 +39,33 @@ Drift tests should protect **headline findings**, not every number in the analys
 
 ## Tolerance Conventions for Econ Results
 
-Set tolerances based on **economic reasoning**, not arbitrary thresholds. Full rubric (point estimates, standard errors, counts, signs/significance) in `refactor-and-integrate/references/drift-test-quality.md` §Tolerance calibration — worked examples.
+Set tolerances based on **economic reasoning**, not arbitrary thresholds.
 
-<!-- Seems it should be here rather than in the genearl purpose refactor and integrate -->
+**Point estimates** (coefficients, means, portfolio returns):
+- Allow minor variation from data ordering, floating-point arithmetic, rounding.
+- Typical tolerance: 1-5% of estimate magnitude, or a few units in the last reported decimal place.
+
+**Standard errors:**
+- Wider tolerance than point estimates — sensitive to small changes in sample composition, clustering, numerical precision.
+- Typical tolerance: 5-10% of the standard error.
+
+**Counts and categoricals** (observations, firms, periods):
+- Exact or near-exact — should not change unless sample construction changes.
+- Tolerance: 0 or very small integer.
+
+**Signs and significance:**
+- Write directional tests ("coefficient is positive", "t-statistic exceeds 1.96") in addition to magnitude tests.
+- These catch the most important drift — sign flip or significance loss.
+
+**Too tight** → false positives on harmless changes (merge order, floating-point platform differences).
+**Too loose** → misses real drift. Use economic judgment.
+
+**Document every tolerance choice** with a comment explaining why:
+```
+# Coefficient on market_cap: 0.035 +/- 0.002
+# Tolerance: ~5% of estimate. Allows for floating-point variation
+# in OLS solver but catches meaningful coefficient drift.
+```
 
 ---
 
