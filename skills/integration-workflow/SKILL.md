@@ -1,6 +1,6 @@
 ---
 name: integration-workflow
-description: Requires `superRA:using-superra` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need drift tests before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when RESULTS.md needs to mature into its permanent record; when PLAN.md needs final disposition; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "open the PR", or the transition from `implementation-workflow`'s completion menu.
+description: Requires `superRA:using-superra` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need protection before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when RESULTS.md needs to mature into its permanent record; when PLAN.md needs final disposition; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "protect key results", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "open the PR", or the transition from `implementation-workflow`'s completion menu.
 ---
 
 # Integration Workflow
@@ -10,7 +10,7 @@ description: Requires `superRA:using-superra` loaded first. Use when a plan is c
 Workflow skill for the **INTEGRATE** phase of the superRA workflow. It takes a reproducibility-verified analysis branch through five steps:
 
 ```
-Protect   -> create or refresh drift tests for key results
+Protect   -> protect key results (default: drift tests)
 Sync      -> bring the branch onto the current base via semantic-merge
 Integrate -> refactor with Sync context and pass integration review
 Document  -> mature RESULTS.md and dispose of PLAN.md
@@ -28,7 +28,7 @@ The main agent's Workflow Frontier Resolver chooses where to enter this workflow
 
 Legitimate stop points (log every answer per `superRA:handoff-doc` §User Decisions Log **before** acting):
 
-- **Protect:** key result / drift-test coverage confirmation.
+- **Protect:** key-result protection confirmation.
 - **Sync:** target base confirmation when no prior decision records it; intent-changing conflicts surfaced by `semantic-merge`.
 - **Integrate:** meaningful drift after sync or refactor; user-owned choices surfaced by the integration reviewer.
 - **Document:** RESULTS.md permanent location when project guidance is silent; PLAN.md disposition.
@@ -36,16 +36,16 @@ Legitimate stop points (log every answer per `superRA:handoff-doc` §User Decisi
 
 ## Dispatch Convention
 
-**Load `superRA:agent-orchestration` before writing any dispatch prompt.** Checklist discipline for the drift-test and integration stages comes from `superRA:refactor-and-integrate`.
+**Load `superRA:agent-orchestration` before writing any dispatch prompt.** Checklist discipline for the drift-test stage comes from `superRA:result-protection`; checklist discipline for the integration stage comes from `superRA:refactor-and-integrate`.
 
-- `Stage: drift-test` agents use `refactor-and-integrate` drift-test quality.
+- `Stage: drift-test` agents use `result-protection`.
 - Sync uses generic sync author / sync reviewer agents that explicitly load `semantic-merge` mode references. Sync is branch-level and is not a normal task-scoped manifest stage.
 - `Stage: integration` agents use `refactor-and-integrate` for post-sync quality and read task-local `**Sync impact:**` plus referenced `## Sync Map` clusters as context.
 - `Stage: documentation` agents use `handoff-doc` and `report-in-markdown`.
 
 ## Protect
 
-Drift tests guard key results during Sync, Integrate, Finish, and future work.
+Result protection guards key results during Sync, Integrate, Finish, and future work. Drift tests are the current/default protection mechanism.
 
 **Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `**Integration status:**` unset or not `APPROVED` plus orchestrator-declared related tasks from `planning-workflow §User Feedback and Changing Plans`; running the suite is not scoped.
 
@@ -54,14 +54,14 @@ Drift tests guard key results during Sync, Integrate, Finish, and future work.
 1. **Extract key results from RESULTS.md.** Protect main findings, not every intermediate number.
 2. **Confirm coverage with the researcher.** Stop point:
    ```text
-   These results seem like the key findings to protect with drift tests:
+   These results seem like the key findings to protect:
    - [result 1: description and value]
    - [result 2: description and value]
 
    Which should be protected? Any to add or remove?
    ```
-3. **Dispatch test-creator.** `Stage: drift-test`, canonical implementer template.
-4. **Dispatch test-reviewer.** `Stage: drift-test`, canonical reviewer template. Iterate REVISE -> fix -> narrow re-review until APPROVE.
+3. **Dispatch protection-creator.** `Stage: drift-test`, canonical implementer template.
+4. **Dispatch protection-reviewer.** `Stage: drift-test`, canonical reviewer template. Iterate REVISE -> fix -> narrow re-review until APPROVE.
 5. **Run tests on the current branch.** If new tests fail on existing code, fix the tests.
 6. **Commit tests and handoff docs.**
 7. **Flip `Drift tests created`** in PLAN.md §Workflow Status once all confirmed key results are protected and the full drift-test suite passes.
@@ -179,7 +179,7 @@ Integrate is the post-sync quality gate. It uses task-local `**Sync impact:**` a
 
 ### Step 1: Run the full drift-test suite
 
-Run the full suite after Sync and before refactor. Failing drift tests block Integrate until classified per `refactor-and-integrate/references/drift-test-quality.md`.
+Run the full suite after Sync and before refactor. Failing drift tests block Integrate until classified per `result-protection/references/drift-test-quality.md`.
 
 ### Step 2: Dispatch the integration reviewer
 
