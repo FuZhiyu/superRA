@@ -5,7 +5,7 @@ description: Requires `superRA:using-superra` loaded first. Use when a plan is c
 
 # Integration Workflow
 
-**First, load `superRA:using-superra` if not already loaded.** It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene this workflow assumes.
+**First, load `superRA:using-superra` if not already loaded.**
 
 Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the full finishing sequence that takes a reproducibility-verified analysis branch to a merged state on main: drift-test creation (Phase A), unified sync-with-main + refactor (Phase B, iterative), documentation maturation + PLAN.md disposition (Phase C), and final local merge or PR push + cleanup (Phase D).
 
@@ -18,16 +18,13 @@ Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the ful
 Phase A — Drift Test Creation
    ↓
 Phase B — Integrate (sync + refactor, iterative)
-   ↓               ↑  (re-enter B when main moves again, or when
-Phase C — Docs  ───┘   integration reviewer triggers a new round)
-   ↓               ↑
+   ↓
+Phase C — Docs
+   ↓
 Phase D — Final merge / PR / cleanup
-                   ↑
-         Anywhere ─┴─→  `planning-workflow §User Feedback and Changing Plans`
-                        (substantive restructure: task add/remove/combine,
-                         DAG flip, APPROVED invalidation; orchestrator
-                         proposes, researcher decides)
 ```
+
+The main agent's Workflow Frontier Resolver chooses where to enter this map. Once this skill is entered, run the selected phase's local gates exactly; do not redo task-local approvals outside the affected frontier simply because a rollup milestone was unchecked.
 
 **Autonomy** — full contract: `superRA:using-superra/references/main-agent.md`. Legitimate stop points in this workflow:
 
@@ -42,9 +39,7 @@ Every stop: log the answer per `superRA:handoff-doc` §User Decisions Log **befo
 
 ## Dispatch Convention
 
-**Load `superRA:agent-orchestration` before writing any dispatch prompt** — the canonical template shape, `Additionally:` anchor rules, and banned fields live there. Dispatching without it produces malformed prompts.
-
-All dispatches: canonical template in `superRA:agent-orchestration` §Dispatch Templates; skill loads per `superRA:using-superra` §Skill-Load Manifest; checklist discipline per `superRA:refactor-and-integrate`. REVISE adjudication: `superRA:agent-orchestration` §Handling Reviewer Feedback.
+**Load `superRA:agent-orchestration` before writing any dispatch prompt.** Checklist discipline for this phase comes from `superRA:refactor-and-integrate`.
 
 ## Phase A — Drift Test Creation
 
@@ -215,7 +210,7 @@ Agent(subagent_type: "superRA:implementer"):
     <prior-round doc-reviewer feedback if re-dispatching>.
 ```
 
-The doc-writer always re-runs the whole matured doc on every integration pass; the doc-reviewer reviews the diff from the last APPROVED state plus any section a newly-reworked task touches. Per-commit validation and recovery rules live in `superRA:report-in-markdown` `final-form.md`.
+When the frontier reaches Phase C, the doc-writer re-runs the whole matured doc; the doc-reviewer reviews the diff from the last APPROVED state plus any section a newly-reworked task touches. Per-commit validation and recovery rules live in `superRA:report-in-markdown` `final-form.md`.
 
 ### Step 3: Dispatch the doc-reviewer
 
@@ -291,7 +286,7 @@ git commit -m "remove analysis plan (preserved in branch history)"
 
 ## Phase D — Final Merge / PR / Cleanup
 
-After Phase C completes, execute the user's choice from implementation-workflow Step 4. If main has advanced since Phase B, loop back to Phase B first — a fresh sync must precede the merge or push.
+After Phase C completes, execute the user's choice from implementation-workflow Step 4. The final freshness check below may route back to Phase B before merge or push.
 
 ### Step 1: Pre-merge check — is another Phase B round needed?
 
@@ -357,19 +352,9 @@ If the analysis was done in a git worktree, remove it per `superRA:agent-orchest
 
 Report what was merged/pushed and what was cleaned up.
 
-## When to Lighten
-
-**Standalone analysis (no existing codebase to integrate with):**
-- Phase A: Always run.
-- Phase B: Integration reviewer typically leaves zero annotations and finds no material main-side changes; Phase B then collapses to a single fast-forward merge (or is a no-op on a true greenfield branch).
-
-**Small changes (single-file analysis, few results):**
-- Phase A: Still run, fewer tests.
-- Phase B: Integration reviewer may APPROVE immediately with no annotations.
-
 ## Agent Loads
 
-See `superRA:using-superra` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows.
+This workflow runs the `drift-test`, `integration`, and `documentation` Stages (see `superRA:using-superra` §Skill-Load Manifest).
 
 ## Red Flags
 
@@ -381,7 +366,3 @@ See `superRA:using-superra` §Skill-Load Manifest — the single source of truth
 
 **Always:**
 - Author new drift tests only for tasks with `**Integration status:** ≠ APPROVED`, but run the **full** drift-test suite on every integration pass (scope is for authoring; running is not scoped)
-
----
-
-**Before proceeding:** if you have not loaded `superRA:using-superra` (and, for main agents, `superRA:using-superra/references/main-agent.md`), load them now.

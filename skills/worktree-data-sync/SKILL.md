@@ -13,14 +13,14 @@ user-invocable: true
 
 # Worktree Data Sync Skill
 
-Non-git data sync between existing worktrees — seed, diff, apply, and data teardown. See also: `skills/agent-orchestration/references/worktree-harness-fallback.md` for worktree lifecycle (create / enter / remove).
+Non-git data sync between existing worktrees — seed, diff, apply, and data teardown. For worktree lifecycle (create / enter / remove), see `skills/agent-orchestration/references/worktree-harness-fallback.md`.
 
 ## When to Use
 
-Activate the data-sync CLI below when the request is about:
+Activate the data-sync CLI below for:
 - seeding non-git-controlled data from one existing worktree into another
 - comparing non-git files across existing worktrees
-- copying managed data from one worktree to another
+- copying managed data between worktrees
 - reconciling non-git differences after parallel work
 
 ## Command Surface
