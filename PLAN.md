@@ -253,8 +253,8 @@ Walked at planning time on 2026-04-23; refreshed in this consolidation on 2026-0
 
 ### Task 11: Re-audit the surviving diff under the current integration gate
 **Depends on:** Task 9, Task 10
-**Review status:** IMPLEMENTED
-**Integration status:** IMPLEMENTED
+**Review status:** APPROVED
+**Integration status:** APPROVED
 
 **Files:** `skills/*`, `agents/*`, generated artifacts if canonical role specs change, `README.md`, `CLAUDE.md`, `skills/CATEGORIES.md`, `tests/*`, `PLAN.md`, `RESULTS.md`.
 **Input:** Task 8 review note, Tasks 9-10, current `BASE_REF=origin/main` at `61588d9`, recorded Sync base `30d6c91`, dispatch governing diff `git diff origin/main..HEAD`, and the current `CLAUDE.md` DRY / Necessity gate for instruction-bearing files.
