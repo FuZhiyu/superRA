@@ -135,6 +135,26 @@ assert_contains \
   "generic sync author / sync reviewer agents"
 
 assert_contains \
+  "Skill manifest routes Protect to result protection" \
+  "skills/using-superRA/SKILL.md" \
+  '| `drift-test` | `integration-workflow` Protect | `result-protection` |'
+
+assert_contains \
+  "Integration workflow routes drift-test agents to result protection" \
+  "skills/integration-workflow/SKILL.md" \
+  'Stage: drift-test` agents use `result-protection`'
+
+assert_contains \
+  "Result protection owns drift-test quality" \
+  "skills/result-protection/references/drift-test-quality.md" \
+  "# Drift Test Quality Standards"
+
+assert_contains \
+  "Econ drift tests load result-protection quality" \
+  "skills/econ-data-analysis/references/integrate-drift-tests.md" \
+  "skills/result-protection/references/drift-test-quality.md"
+
+assert_contains \
   "Plan anatomy defines Sync Map section" \
   "skills/handoff-doc/references/plan-anatomy.md" \
   "## Sync Map"
