@@ -90,7 +90,12 @@
 **Synced base head:** `886fda8b6a7862a0a4af8ec7d30fd53ffed6fea3`
 **Incoming range:** `b6e0640..886fda8`
 **Sync commits:** `4b3f9c1`, `872c4d8`
-**Sync review status:** IMPLEMENTED
+**Sync review status:** REVISE
+
+> **Sync review notes:**
+> 1. [MAJOR] Task 6 is named in the `main-restructure` cluster's "affects Tasks" list but carries no `**Sync impact:**` annotation. The sync commit `4b3f9c1` directly touched Task 6's own target file `skills/theory-modeling/references/integration.md` (preamble pointer retargeted from `refactor-and-integrate/references/codebase-integration.md` to `refactor-and-integrate/SKILL.md`; verdict-protocol trailer rewritten from the old reference pointer to "walk this checklist alongside `refactor-and-integrate/SKILL.md`"). Task 6's governing integration diff now mixes sync-origin pointer edits with the task's own new `[BLOCKING]` items. Add a compact Task-6 `**Sync impact:**` pointer naming the two hunks so the integration reviewer can classify them as sync-origin rather than task work. Source: `PLAN.md ## Sync Map`.
+> 2. [MINOR] The `main-restructure` cluster header lists Task 5 under "affects Tasks", but the sync diff does not touch `skills/theory-modeling/SKILL.md` (Task 5's target), and no Task-5 `**Sync impact:**` is written — consistent with no task-specific post-sync context actually existing for Task 5. Either drop Task 5 from the cluster's "affects Tasks" list to keep the header honest, or — if the intent is that Task 5's wider narrative (the four-gate restructure) interacts with main's new agent-body shorter wording — write the task-local pointer explaining that interaction. Current state reads as an unmotivated inclusion.
+> 3. [MINOR] `**Sync commits:**` lists `4b3f9c1, 872c4d8` but omits `ecdd09d`, the bookkeeping commit that extended this very field. Self-reference in a single non-amending commit is structurally impossible, but one more bookkeeping commit appending `ecdd09d` would close the loop and match §workflow-sync-author's "list the full commit chain this mode landed" rule. Leave as-is only if the orchestrator treats the self-reference-cliff as accepted.
 
 ### Branch Summary
 
