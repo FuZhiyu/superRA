@@ -1,6 +1,6 @@
 # Baseline IO: frontmatter, filename, paths, metadata
 
-Load this reference when producing a **permanent** markdown artifact — one that will be committed and read by humans. Stage 1 `RESULTS.md` task sections do *not* need this (they have no per-task frontmatter; the file-level frontmatter, if any, is handled by `handoff-doc`).
+Load when producing a **permanent** markdown artifact — one that will be committed and read by humans. Stage 1 `RESULTS.md` task sections do not need this.
 
 ## Resolve output path
 

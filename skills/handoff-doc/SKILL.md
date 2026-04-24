@@ -7,10 +7,10 @@ description: "Use whenever creating a PLAN.md / RESULTS.md from scratch, maturin
 
 Handoff docs (`PLAN.md`, `RESULTS.md`, and similarly-structured task-block docs) are the persistent state of a project — multiple agents and sessions read and write them. References:
 
-- `references/plan-anatomy.md` — full `PLAN.md` template (header, `## Project Conventions`, `## Decisions`, task blocks, review-notes blockquote format) and the full **User Decisions Log** spec.
-- `references/results-anatomy.md` — full `RESULTS.md` template, the **two-stage RESULTS.md lifecycle** (Stage 1 dev log → Stage 2 permanent record), and the Stage 2 transition.
+- `references/plan-anatomy.md` — full `PLAN.md` template and the **User Decisions Log** spec.
+- `references/results-anatomy.md` — full `RESULTS.md` template and the **two-stage RESULTS.md lifecycle** (Stage 1 dev log → Stage 2 permanent record).
 
-Subagent-specific review-loop mechanics (annotation protocols, `**Doc edits:**` format) live in `agents/implementer.md` and `agents/reviewer.md`.
+Subagent review-loop mechanics live in `agents/implementer.md` and `agents/reviewer.md`.
 
 ## The Four Principles
 
@@ -26,20 +26,21 @@ Subagent-specific review-loop mechanics (annotation protocols, `**Doc edits:**` 
 
 ## Inline-Edit Rule
 
-Every edit replaces stale content in place. Never append, never strike through, never use "Update:" / "Revised:" / "Previously..." framing. If you catch yourself writing a sentence that references a prior version of the doc, stop — that sentence belongs in the git commit message.
+Every edit replaces stale content in place. Never append, never strike through, never use "Update:" / "Revised:" / "Previously..." framing. History belongs in the git commit message.
 
 ## Stale Content Checklist
+
+Common stale content to replace in place:
 
 - Steps describing an approach abandoned after seeing the data — rewrite them to describe what was actually done.
 - Discovery notes now incorporated into the current steps.
 - Review items confirmed fixed on re-review (the reviewer deletes them).
-- "Previously we tried X" / "Update:" / "Revised:" framing — delete the old text and write the new.
 - Upcoming task descriptions that assume an earlier approach which has since changed.
-- Task output descriptions that have been superseded or further modified by a later task in the plan — rewrite the earlier task's **Output:** to reflect the latest shape, and keep the narrative of "what changed" in the Decisions log only.
+- Task output descriptions superseded by a later task — rewrite the earlier task's **Output:** to reflect the latest shape; keep the "what changed" narrative in the Decisions log only.
 
 ## User Decisions Log
 
-Researcher answers to `AskUserQuestion` / plain-text pauses MUST be written into `PLAN.md` **before** the agent acts on them, committed atomically with the work they unblock. This is the "autonomous with human in the loop" principle (full contract in `using-superra/references/main-agent.md`) in practice: the decision is not resolved until it is in the record.
+Researcher answers to `AskUserQuestion` / plain-text pauses are written into `PLAN.md` **before** the agent acts on them, committed atomically with the work they unblock. The decision is not resolved until it is in the record. Full contract: `using-superra/references/main-agent.md`.
 
 Full spec — where task-scoped vs project-level decisions land, the three-line blockquote format, the hook reminder, and what does NOT count as a decision — lives in `references/plan-anatomy.md` §User Decisions Log.
 

@@ -27,7 +27,7 @@ cd <path>
 git rev-parse --show-toplevel   # verify we landed where we expected
 ```
 
-Agents dispatched with a `Worktree:` field are instructed to do this themselves (see `agents/implementer.md` §Before You Start).
+Agents dispatched with a `Worktree:` field are instructed to do this themselves via the dispatch's `Additionally:` steering (see `SKILL.md` §Parallelization and Worktree Isolation).
 
 ### Remove
 

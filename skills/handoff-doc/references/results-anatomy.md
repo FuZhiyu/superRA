@@ -9,8 +9,6 @@ The full template for `RESULTS.md`. Load when you are creating or restructuring 
 
 The Stage 2 consolidation discipline lives in `skills/report-in-markdown/references/final-form.md`. This file defines Stage 1 only.
 
-Together with `PLAN.md`, Stage 1 `RESULTS.md` forms a complete handoff: context + what to do + what was found.
-
 ## Header
 
 ```markdown
