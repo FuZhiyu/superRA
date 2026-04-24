@@ -13,7 +13,7 @@ Techniques:
 2. **Governing-diff pruning** — minimize the surviving diff against the caller's baseline or range.
 3. **Sync impact as evidence** — when task-local Sync impact exists, use it to justify existing post-sync hunks; it does not create new refactor targets.
 
-Load `references/codebase-integration.md` for the checklist, reviewer verdict protocol, and implementer Final Diff Self-Check. For data-analysis integration, also load `econ-data-analysis/references/integration.md`.
+For data-analysis integration, also load `econ-data-analysis/references/integration.md`.
 
 ---
 
@@ -23,4 +23,75 @@ Load `references/codebase-integration.md` for the checklist, reviewer verdict pr
 
 Use `git diff <BASE_HEAD_SHA>..HEAD` after workflow Sync. In standalone refactor work, use the caller's governing git range or touched-file diff.
 
-Review the governing diff line by line. Any hunk without a current justification is out of scope; revert it or record the justification before return. A no-change diff still requires the Final Diff Self-Check trail in `references/codebase-integration.md`.
+Review the governing diff line by line. Any hunk without a current justification is out of scope; revert it or record the justification before return. A no-change diff still requires the Final Diff Self-Check trail below.
+
+## Project Doc Audit
+
+Integrate-step refactoring and integration review both cover project-level docs reachable from the diff.
+
+For every file in the diff `<BASE_SHA>..<HEAD_SHA>`, walk up from its directory to the repo root and collect every `CLAUDE.md` / `AGENTS.md` / `README.md` encountered. Always also check the repo-root `README.md` and root `CLAUDE.md`.
+
+For each doc in the set:
+
+- update stale claims contradicted by the diff;
+- add new patterns at the nearest appropriate level;
+- link rather than duplicate parent-level content;
+- create a missing `CLAUDE.md` + relative `AGENTS.md -> CLAUDE.md` pair for new module directories.
+
+Leave docs above the affected area alone unless they are stale.
+
+## Sync Impact Context
+
+When PLAN.md task blocks contain `**Sync impact:**`, use those fields as evidence for why a hunk already exists in the governing diff. Follow the referenced Sync Map cluster only when needed to evaluate that hunk.
+
+Sync impact justifies existing hunks only when it is already present; it does not create new refactor targets or excuse unrelated codebase changes.
+
+## Final Diff Self-Check
+
+Implementers run this immediately before every return or commit, including no-change cases:
+
+1. **Recompute the governing diff.** In integration-workflow after Sync, use `git diff <BASE_HEAD_SHA>..HEAD`. In standalone refactor work, use the caller-provided git range or touched-file diff.
+2. **Leave a compact trail.** In the assigned PLAN.md task block when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without PLAN.md, put the same line in the status return.
+3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
+4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `Integration status: APPROVED`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
+5. **Prune or record.** Any hunk without a current justification is out of scope. Revert it, or record the underlying need where the reviewer can verify it.
+6. **Respect the dispatch scope.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` and tasks explicitly reopened by accepted review findings.
+
+The integration reviewer recomputes the same governing diff and compares it with the self-check trail. A missing or stale trail is `[BLOCKING]`, including when no code changed.
+
+## Checklist
+
+Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` items may be flagged as MINOR.
+
+**Code integration:**
+
+- `[BLOCKING]` **Final Diff Self-Check present and fresh:** The trail names the governing command/range, records no-change outcomes or surviving-change classes, and gives file/hunk justification for suspicious cases.
+- `[BLOCKING]` **Governing-diff pruning performed line by line:** Every surviving hunk ties to an approved task objective, supplied Sync impact context, logged user decision, or checklist requirement; unrelated cleanup, formatting churn, and stale branch-side restorations are removed.
+- `[BLOCKING]` **Base-current deletions / relocations honored by default:** Restorations exist only when an approved task objective, supplied Sync impact context, logged user decision, or checklist requirement requires them.
+- `[BLOCKING]` **Naming consistency:** variable names, function names, and file names follow codebase conventions.
+- `[BLOCKING]` **Utility usage:** existing utility functions are used where appropriate instead of hand-rolled equivalents.
+- `[BLOCKING]` **No debug artifacts:** no leftover debug prints, commented-out experiments, or temporary variables.
+- `[BLOCKING]` **Minimal existing-file changes:** modifications outside the analysis scope are minimal and justified.
+- `[ADVISORY]` **Code simplification:** redundant code removed and repeated patterns consolidated only where the task or codebase-coherence review demanded the touch.
+- `[ADVISORY]` **PR-friendly diffs:** avoid unnecessary reformatting that obscures substantive changes.
+
+**Handling inconsistencies:**
+
+- `[BLOCKING]` **Methodological questions escalated, not resolved.** Different control variable sets, variable definitions, and sample filters are research decisions.
+- `[ADVISORY]` **Clear convention exists:** follow it. **Ambiguous or conflicting conventions:** use judgment and document the choice.
+
+**PR quality:**
+
+- `[BLOCKING]` **Focused diff:** changes are limited to analysis scope.
+- `[BLOCKING]` **Self-contained:** the analysis can be understood from the code and documentation.
+- `[ADVISORY]` **Clean commits:** commit history is logical and messages are descriptive.
+
+**Documentation currency:**
+
+- `[BLOCKING]` Module `CLAUDE.md` / `AGENTS.md` / `README.md` files do not reference files, functions, outputs, or methodology that no longer exist or have been superseded.
+- `[BLOCKING]` Every output file mentioned in documentation is produced by the current code.
+- `[BLOCKING]` Dates and version claims reflect the current commit.
+
+**Project Doc Audit:**
+
+- `[BLOCKING]` The walk-up audit above was executed for every file in the governing diff; stale claims were updated, new patterns were added at the correct level, parent-level content was not duplicated, missing module guidance pairs were created for new module directories, and docs above the affected area were left alone unless stale.

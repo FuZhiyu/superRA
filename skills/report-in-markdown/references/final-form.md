@@ -120,7 +120,7 @@ A "Limitations" section that lists factual caveats (unresolved reviewer notes, d
 
 ## Cross-consistency with project docs
 
-Project-level docs (`CLAUDE.md` / `AGENTS.md` / `README.md`) are audited during `integration-workflow` Integrate per `refactor-and-integrate/references/codebase-integration.md` §Project Doc Audit. The doc-reviewer still checks that the matured `RESULTS.md` does not contradict them:
+Project-level docs (`CLAUDE.md` / `AGENTS.md` / `README.md`) are audited during `integration-workflow` Integrate per `refactor-and-integrate` §Project Doc Audit. The doc-reviewer still checks that the matured `RESULTS.md` does not contradict them:
 
 - [ ] **Methodology descriptions** in the matured RESULTS.md match the current code — no references to dropped approaches, superseded variable definitions, or removed processing steps
 - [ ] **Headline results cited in project docs** (if any) match the matured RESULTS.md — no stale numbers from before the last revision

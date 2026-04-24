@@ -79,6 +79,11 @@ assert_absent \
   "merge-quality.md" \
   skills/*/SKILL.md skills/*/references/*.md agents/*.md README.md CLAUDE.md .codex/agents/*.toml
 
+assert_absent \
+  "Refactor codebase-integration reference retired" \
+  "codebase-integration.md" \
+  skills/*/SKILL.md skills/*/references/*.md agents/*.md README.md CLAUDE.md .codex/agents/*.toml
+
 assert_absent_regex \
   "Retired Phase B labels absent from runtime surfaces" \
   "Phase B|PhaseB|phase-b|phase b" \
@@ -233,26 +238,26 @@ assert_absent \
   "Refactor and integrate no longer owns drift-test quality" \
   "drift-test-quality.md" \
   "skills/refactor-and-integrate/SKILL.md" \
-  "skills/refactor-and-integrate/references/codebase-integration.md"
+  "skills/refactor-and-integrate"
 
 assert_contains \
   "Codebase integration requires no-change self-check" \
-  "skills/refactor-and-integrate/references/codebase-integration.md" \
-  "Run immediately before every return or commit, including no-change cases:"
+  "skills/refactor-and-integrate/SKILL.md" \
+  "immediately before every return or commit, including no-change cases:"
 
 assert_contains \
   "Codebase integration summarizes ordinary hunks by class" \
-  "skills/refactor-and-integrate/references/codebase-integration.md" \
+  "skills/refactor-and-integrate/SKILL.md" \
   "Summarize ordinary hunks by class."
 
 assert_contains \
   "Codebase integration justifies suspicious hunks explicitly" \
-  "skills/refactor-and-integrate/references/codebase-integration.md" \
+  "skills/refactor-and-integrate/SKILL.md" \
   "Justify suspicious hunks by file and line/hunk."
 
 assert_contains \
   "Codebase integration makes missing self-check blocking" \
-  "skills/refactor-and-integrate/references/codebase-integration.md" \
+  "skills/refactor-and-integrate/SKILL.md" \
   'A missing or stale trail is `[BLOCKING]`, including when no code changed.'
 
 assert_contains \
