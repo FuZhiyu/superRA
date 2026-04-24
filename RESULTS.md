@@ -3,18 +3,16 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-24 (Task 9 implemented; awaiting review)
-**Status:** Integration closeout blocked. The latest integration approval is not trusted for minimum-net-diff / no-overprescription enforcement; Task 9 is implemented and awaiting review.
+**Last updated:** 2026-04-24 (Task 11 branch-wide integration refactor implemented; awaiting integration review)
+**Status:** Integration closeout is pending trusted review of `git diff origin/main..HEAD`. Tasks 8-11 are marked integration IMPLEMENTED after the branch-wide minimum-net-diff / DRY-Necessity pass.
 
 ---
 
 ## Integration Review Quality Blocker
 
-The `30e94f6` integration approval should not be used as a closeout gate. The reviewer later admitted the branch-wide pruning sweep was not a true line-by-line audit of `30d6c91..HEAD`; it relied on grouped diffs, targeted scans, and spot checks.
+The earlier `30e94f6` integration approval remains invalid as a closeout gate. Tasks 9-11 now repair the issue by splitting result protection from codebase integration, rebuilding `refactor-and-integrate` around minimum net diff, and re-auditing the full current governing diff `origin/main..HEAD`.
 
-Concrete issue to carry into replanning: `skills/refactor-and-integrate/SKILL.md` contains boundary-wrapper prose beginning "Semantic coherence itself belongs to `superRA:semantic-merge`..." that duplicates ownership / boundary content instead of changing agent behavior. This is a direct no-overprescription violation, and similar boundary-wrapper / explanatory-prose patterns likely remain across the surviving instruction diff.
-
-Next step: replan the integration-review gate before further fixes or closeout.
+The branch is ready for a fresh integration reviewer pass; closeout should wait for that reviewer to verify the Task 11 Final Diff Self-Check against the actual diff.
 
 ## Task 1: Refactor semantic-merge around shared principles and mode references
 
@@ -197,7 +195,7 @@ The terminology scan returned only the intentional historical command record in 
 
 ## Task 9: Split result protection out of refactor-and-integrate
 
-**Status:** IMPLEMENTED; awaiting review.
+**Status:** IMPLEMENTED for integration; awaiting integration review.
 
 Result protection is now a standalone utility skill. Protect-stage agents load `result-protection` through the `Stage: drift-test` manifest row, while `refactor-and-integrate` remains the Integrate-stage codebase-coherence skill. Drift tests remain the current/default mechanism for protecting key results.
 
@@ -211,4 +209,27 @@ File-by-file changes:
 - `.agents/skills/result-protection` — repo-local Codex discovery symlink for the new canonical skill.
 - `tests/test-sync-integration-contract.sh` — added contract checks for Protect routing, result-protection drift-test quality ownership, and the econ add-on pointer.
 
-Task 10 still owns removing the legacy drift-test ownership text from `refactor-and-integrate`; this task intentionally did not modify that read-only surface.
+Task 10 removed the legacy drift-test ownership text from `refactor-and-integrate`, so this task's split now has matching codebase-integration ownership.
+
+## Task 10: Rebuild refactor-and-integrate around minimum net diff
+
+**Status:** IMPLEMENTED for integration; awaiting integration review.
+
+`refactor-and-integrate` is now a codebase-coherence utility centered on minimum net diff, Project Doc Audit, Sync impact as justification evidence, and implementer Final Diff Self-Check. The old `codebase-integration.md`, `drift-test-quality.md`, and `merge-quality.md` references were removed from this skill's ownership surface; result-protection owns drift-test quality.
+
+This pass also added an explicit caller-provided baseline override so dispatches like the current `origin/main..HEAD` audit can supersede the normal post-Sync `BASE_HEAD_SHA..HEAD` range without another Sync.
+
+## Task 11: Re-audit the surviving diff under the current integration gate
+
+**Status:** IMPLEMENTED; awaiting integration review.
+
+The governing diff for this pass is `git diff origin/main..HEAD`, not the recorded Sync base `30d6c91..HEAD`. The newer `origin/main` commits only overlapped `skills/planning-workflow/SKILL.md`; the branch now preserves main's header-field sweep while retaining this branch's Sync/Document vocabulary, so no semantic re-sync was needed for the refactor pass.
+
+Branch-wide pruning removed or tightened surviving scope-creep surfaces:
+
+- removed stale direct-mode reviewer cleanup for the retired `## Upstream Intent` role text from `sync_codex_agents.py`;
+- removed the canonical dispatch-template prefix and integration-workflow examples that restated role protocol / manifest loads, while keeping Sync as the branch-level generic-agent exception;
+- tightened semantic-merge mode reference openers and input labels so they point to shared protocol instead of describing dispatch shape;
+- refreshed contract-test wording to check the current Protect stage behavior through the manifest and workflow dispatch.
+
+The Task 11 Final Diff Self-Check in `PLAN.md` records the surviving-change classes and suspicious hunk justifications for reviewer verification.

@@ -1,6 +1,6 @@
 # Standalone Semantic-Merge Mode
 
-Use when this skill is invoked directly for a merge, rebase, cherry-pick, or branch sync outside `integration-workflow`. Walk the Shared Steps in `semantic-merge/SKILL.md` (repo-state grounding, intent investigation with role classification, resolution plan, intent-changing escalation, detect-and-resolve stale references) and the §Semantic Coherence Checklist in the same body — this reference only carries mode-specific content.
+Standalone mode uses `semantic-merge/SKILL.md` §Shared Steps and §Semantic Coherence Checklist. This reference carries the standalone boundary, inputs, merge record format, and report fields.
 
 ## Boundary
 

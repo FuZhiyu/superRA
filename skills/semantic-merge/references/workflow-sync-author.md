@@ -1,6 +1,6 @@
 # Workflow Sync Author Mode
 
-Use when `integration-workflow` dispatches a generic sync author to bring the current branch onto a confirmed base. Walk the Shared Steps in `semantic-merge/SKILL.md` (repo-state grounding, intent investigation with role classification, resolution plan, intent-changing escalation, detect-and-resolve stale references) and the §Semantic Coherence Checklist in the same body — this reference only carries mode-specific content.
+Workflow sync author mode uses `semantic-merge/SKILL.md` §Shared Steps and §Semantic Coherence Checklist. This reference carries the workflow Sync boundary, inputs, Sync Map format, task-local Sync impact format, and status return.
 
 ## Boundary
 
@@ -10,7 +10,7 @@ Workflow Sync lands the merge commit plus any propagation commits needed to reac
 
 ## Inputs
 
-The dispatch supplies:
+Required inputs:
 
 - `BASE_REF`
 - `PRE_SYNC_BASE_SHA`

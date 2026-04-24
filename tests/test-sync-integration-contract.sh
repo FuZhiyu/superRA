@@ -145,9 +145,9 @@ assert_contains \
   '| `drift-test` | `integration-workflow` Protect | `result-protection` |'
 
 assert_contains \
-  "Integration workflow routes drift-test agents to result protection" \
+  "Integration workflow dispatches Protect as drift-test stage" \
   "skills/integration-workflow/SKILL.md" \
-  'Stage: drift-test` agents use `result-protection`'
+  'Dispatch protection-creator.** `Stage: drift-test`, canonical implementer template.'
 
 assert_contains \
   "Result protection owns drift-test quality" \
