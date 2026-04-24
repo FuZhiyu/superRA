@@ -14,7 +14,7 @@
 
 - [x] **Plan approved** - researcher requested this direct-mode repo-internal fix.
 - [x] **Execution complete** - task implementation approved and targeted verification passed.
-- [ ] **Merged** - branch pushed and PR opened.
+- [x] **Merged** - branch pushed and PR opened: https://github.com/FuZhiyu/superRA/pull/23.
 
 ---
 

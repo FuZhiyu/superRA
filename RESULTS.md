@@ -5,6 +5,8 @@
 **Last updated:** 2026-04-24 (Task 1 approved)
 **Status:** Completed
 
+**PR:** https://github.com/FuZhiyu/superRA/pull/23
+
 ---
 
 ## Task 1: Fix parallel worktree branch namespace
