@@ -24,16 +24,16 @@
 
 **Sensitivity Analysis:** Verify the surviving diff does not preserve legacy sync-stage, upstream-intent, one-commit, sync-obligation, or boundary-wrapper prose except in intentional tests or current blocker notes.
 
-**Pipeline:** Not applicable. Verification commands are listed in Task 9.
+**Pipeline:** Not applicable. Verification commands are listed in Task 11.
 
 ---
 
 ## Workflow Status
 
 - [x] **Plan approved** - current semantic-sync redesign captured below.
-- [ ] **Execution complete** - blocked on Task 9 re-audit after the latest integration review failed the line-by-line no-overprescription gate.
+- [ ] **Execution complete** - blocked on Tasks 9-11 after the latest integration review exposed a minimum-net-diff failure in `refactor-and-integrate`.
 - [x] **Drift tests created** - not applicable for this skill-design change; no drift-test-bearing outputs changed.
-- [ ] **Integrated** - blocked until Task 8/9 receive trusted integration approval on `BASE_HEAD_SHA..HEAD`.
+- [ ] **Integrated** - blocked until Tasks 8-11 receive trusted integration approval on `BASE_HEAD_SHA..HEAD`.
 - [ ] **Docs finalized** - pending.
 - [ ] **Finished** - not requested in this session.
 
@@ -78,6 +78,10 @@ Walked at planning time on 2026-04-23; refreshed in this consolidation on 2026-0
 > **User decision (2026-04-24, PLAN consolidation):** Keep PLAN.md as current operational state, not a changelog. Preserve current design decisions, Sync anchors, task statuses, active review blocker, and generated-artifact warning; let git history and RESULTS.md carry detailed implementation history.
 > **Question asked:** How should PLAN.md be consolidated without losing important information?
 > **Rationale (if given):** The plan had overlapping task outputs and stale rationale that obscured the active blocker and the required guideline.
+
+> **User decision (2026-04-24, result protection split and minimum-net-diff refactor):** Split result protection out of `refactor-and-integrate` into its own general utility: Protect should mean protecting key results, with drift tests as the current/default mechanism. Rebuild `refactor-and-integrate` around codebase coherence and minimum net diff. Integration implementers must leave a compact final diff self-check trail even when they make no code change; suspicious hunks may carry explicit justification, and the orchestrator removes temporary trails with the Sync Map at Integrate closeout. The repo-specific DRY / Necessity gate remains mandatory for `skills/*` and `agents/*`; the general minimum-net-diff discipline should be framed as avoiding unjustified scope, defensive edits, and overengineering rather than exporting this repo's "no overprescription" label everywhere.
+> **Question asked:** How should the failed Task 8 integration review be repaired structurally?
+> **Rationale (if given):** A reviewer can verify an implementer trail, but reviewing reviewers creates another prose surface. The durable mechanism is an implementer self-check that the reviewer can compare against the actual governing diff.
 
 ## Sync Map
 
@@ -198,19 +202,65 @@ Walked at planning time on 2026-04-23; refreshed in this consolidation on 2026-0
 
 ---
 
-### Task 9: Re-audit the surviving diff under the Teach-the-Protocol gate
+### Task 9: Split result protection out of refactor-and-integrate
 **Depends on:** Task 8
 **Review status:** *(not started)*
 **Integration status:** *(not started)*
 
+**Files:** `skills/result-protection/SKILL.md`, `skills/result-protection/references/*`, `skills/using-superRA/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/econ-data-analysis/SKILL.md`, `skills/econ-data-analysis/references/integrate-drift-tests.md`, tests that route Protect / drift-test behavior.
+**Input:** User decision above; existing `skills/refactor-and-integrate/references/drift-test-quality.md`; `skills/econ-data-analysis`'s stage-scoped-reference style.
+**Output:** Result protection is a standalone utility skill. Integration Protect dispatches this skill for key-result protection; drift tests are documented as the current/default protection mechanism, not the whole concept. `refactor-and-integrate` no longer owns drift-test quality.
+
+- [ ] **Step 1: Create the result-protection skill**
+  Move the drift-test integrity discipline into a standalone skill that can cover broader key-result protection without weakening the current red-green, tolerance, and expectation-update gates.
+
+- [ ] **Step 2: Route Protect to result protection**
+  Update the stage/load surfaces so Protect agents load the new skill. Prefer `result-protection` / key-result protection vocabulary over "create tests" where the workflow is conceptual, while retaining drift-test wording where the concrete artifact is a test.
+
+- [ ] **Step 3: Preserve domain add-ons**
+  Keep econ-specific tolerance guidance in `econ-data-analysis`, with the new skill pointing there only for data-analysis result protection.
+
+- [ ] **Step 4: Update targeted tests**
+  Adjust contract checks that expect `refactor-and-integrate` to own drift-test quality.
+
+---
+
+### Task 10: Rebuild refactor-and-integrate around minimum net diff
+**Depends on:** Task 8
+**Review status:** *(not started)*
+**Integration status:** *(not started)*
+
+**Files:** `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/refactor-and-integrate/references/drift-test-quality.md` if removed, tests that inspect refactor-and-integrate wording.
+**Input:** Task 8 review note; user decision above; `CLAUDE.md` DRY / Necessity gate for this repo's instruction-bearing files.
+**Output:** `refactor-and-integrate` is a codebase-coherence utility centered on minimum net diff. It requires implementer final diff self-check evidence, treats absent pruning as suspicious rather than exempt, and keeps Sync impact as a justification context only when already provided by the workflow.
+
+- [ ] **Step 1: Narrow the skill owner**
+  Remove drift-test ownership and semantic-boundary wrapper prose. Keep only codebase coherence, convention fit, project-doc audit, utility reuse, and minimum-net-diff discipline.
+
+- [ ] **Step 2: Make the governing-diff procedure load-bearing**
+  Require implementers to recompute the governing diff before returning, including no-change cases, and leave a compact self-check trail for reviewer verification.
+
+- [ ] **Step 3: Define proportionate justification**
+  Require summarized surviving-change classes by default. Require explicit hunk/line justification for suspicious cases: `skills/*` or `agents/*`, prior overprescription/scope-creep findings, base-side restoration, touched APPROVED tasks, broad formatting/rewrite hunks, and Sync-impact-only justifications.
+
+- [ ] **Step 4: Keep repo-specific gates local**
+  For this repo's skill/agent prose, preserve the DRY / Necessity line-by-line gate. For general codebase integration, express the broader rule as minimum net diff: no unjustified cleanup, overengineering, defensive edits, or speculative abstractions.
+
+---
+
+### Task 11: Re-audit the surviving diff under the current integration gate
+**Depends on:** Task 9, Task 10
+**Review status:** *(not started)*
+**Integration status:** *(not started)*
+
 **Files:** `skills/*`, `agents/*`, generated artifacts if canonical role specs change, `README.md`, `CLAUDE.md`, `skills/CATEGORIES.md`, `tests/*`, `PLAN.md`, `RESULTS.md`.
-**Input:** Task 8 review note, `BASE_HEAD_SHA=30d6c91`, and the current `CLAUDE.md` DRY / Necessity gate.
+**Input:** Task 8 review note, Tasks 9-10, `BASE_HEAD_SHA=30d6c91`, and the current `CLAUDE.md` DRY / Necessity gate for instruction-bearing files.
 **Output:** A line-by-line pruning pass over `git diff 30d6c91..HEAD` that removes wrapper/explanatory instruction lines, preserves behavior-shaping protocol, updates tests/docs only where the current contract requires it, and earns trusted integration approval.
 
 - [ ] **Step 1: Establish the audit surface**
   List changed instruction-bearing files with `git diff --name-only 30d6c91..HEAD` and separate canonical sources from generated artifacts.
 
-- [ ] **Step 2: Apply the DRY / Necessity gate line by line**
+- [ ] **Step 2: Apply the owner and necessity gates**
   Remove lines that restate authoritative workflow, role, or ownership text. Keep only non-default constraints, ordering requirements, gates, and safety invariants that change agent behavior.
 
 - [ ] **Step 3: Preserve generated-artifact discipline**
@@ -229,4 +279,4 @@ Walked at planning time on 2026-04-23; refreshed in this consolidation on 2026-0
   Inspect matches; the goal is no live legacy contract language outside intentional tests or blocker notes.
 
 - [ ] **Step 5: Review**
-  Integration reviewer walks `git diff 30d6c91..HEAD` line by line before approval, with special attention to `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/integration-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`, and canonical role specs.
+  Integration reviewer walks `git diff 30d6c91..HEAD` line by line before approval, with special attention to `skills/result-protection/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/refactor-and-integrate/references/codebase-integration.md`, `skills/integration-workflow/SKILL.md`, `skills/semantic-merge/SKILL.md`, and canonical role specs.
