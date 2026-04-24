@@ -4,7 +4,7 @@ Use when this skill is invoked directly for a merge, rebase, cherry-pick, or bra
 
 ## Boundary
 
-Standalone semantic-merge carries the merge through to **semantic coherence** using the Shared Steps, landing the merge commit plus any propagation commits needed, and captures the resolution plus any remaining obligations in `SEMANTIC_MERGE.md`. `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule; every commit must leave existing tests and drift tests passing. When **codebase coherence** is also wanted — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — the caller invokes `refactor-and-integrate` after this skill returns, or satisfies those obligations manually.
+Standalone semantic-merge carries the merge through to **semantic coherence** using the Shared Steps, landing the merge commit plus any propagation commits needed, and captures the approved resolution in `SEMANTIC_MERGE.md`. `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule; every commit must leave existing tests and drift tests passing. When **codebase coherence** is also wanted — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — the caller invokes `refactor-and-integrate` after this skill returns, or handles that review manually.
 
 ## Inputs
 
@@ -20,10 +20,10 @@ Current-branch intent comes from branch name, commits, `PLAN.md` / `RESULTS.md` 
 
 ## Mode-Specific Process
 
-1. Create or update `SEMANTIC_MERGE.md` when the operation is material, lacks PLAN.md task structure, or leaves file/script-level obligations. When `PLAN.md` is absent, record user decisions in `SEMANTIC_MERGE.md` and the relevant commit body instead of `PLAN.md §Decisions`.
+1. Create or update `SEMANTIC_MERGE.md` when the operation is material, lacks PLAN.md task structure, or needs durable file/script-level context. When `PLAN.md` is absent, record user decisions in `SEMANTIC_MERGE.md` and the relevant commit body instead of `PLAN.md §Decisions`.
 2. Run the requested merge / rebase / cherry-pick after intent investigation.
 3. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the checklist. Every commit must leave existing tests and drift tests passing — per-commit protection-pass is the lower bound. Do not silently re-expect drift tests after meaningful result changes; escalate per `SKILL.md §Shared Steps` step 4. Include conflict resolution, resolved docs, and `SEMANTIC_MERGE.md` with the commits that produce them.
-4. Record **codebase-coherence** obligations — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — in the `SEMANTIC_MERGE.md` File / Script Impact Map under `Follow-up`. The caller can invoke `refactor-and-integrate` after this skill returns to satisfy them, or handle them manually.
+4. Record any **codebase-coherence** context useful for later review — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — in the `SEMANTIC_MERGE.md` File / Script Impact Map. The record explains the approved post-merge diff; it is not a backlog of unresolved semantic work.
 
 ## Semantic Merge Record Format
 
@@ -53,9 +53,9 @@ When no PLAN.md task structure exists, or when standalone semantic-merge needs a
 
 ## File / Script Impact Map
 
-| Path or path cluster | Incoming intent | Resolution | Follow-up |
+| Path or path cluster | Incoming intent | Resolution | Codebase context |
 |---|---|---|---|
-| `<path>` | `<intent>` | `<resolution>` | `<remaining obligation or None>` |
+| `<path>` | `<intent>` | `<resolution>` | `<context or None>` |
 
 ## User Decisions
 
@@ -65,9 +65,9 @@ When no PLAN.md task structure exists, or when standalone semantic-merge needs a
 
 <commands and outcomes>
 
-## Remaining Obligations
+## Codebase Context
 
-<deferred propagation / refactor / regeneration / doc-audit work for the caller or `refactor-and-integrate` to satisfy, or "None">
+<context useful for later codebase review, or "None">
 ```
 
 ## Report
@@ -80,4 +80,4 @@ Report:
 - merge record location or why none was needed
 - user decisions asked and logged
 - stash status (if any)
-- checks run (existing tests, drift tests) and remaining obligations deferred to the caller / `refactor-and-integrate`
+- checks run (existing tests, drift tests) and codebase context recorded for the caller / `refactor-and-integrate`

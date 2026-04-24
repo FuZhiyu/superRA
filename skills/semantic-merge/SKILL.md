@@ -73,11 +73,11 @@ Log every answer per `handoff-doc` §User Decisions Log before committing the re
 
 ### 5. Resolve and land
 
-Run the sync operation only after intent investigation. Resolve by the plan from Step 3. Preserve base-current deletions and relocations by default; restore branch-side content only when an approved task objective, logged user decision, or Sync impact obligation justifies it.
+Run the sync operation only after intent investigation. Resolve by the plan from Step 3. Preserve base-current deletions and relocations by default; restore branch-side content only when current-branch intent, an approved task objective, or a logged user decision justifies it.
 
 **Land one merge commit plus N propagation commits as needed to reach semantic coherence.** Every commit must leave the tree passing **existing protection** — drift tests and key-result coverage established in `integration-workflow` Protect when in workflow mode, or existing tests and drift tests when standalone. Protection-pass is the per-commit lower bound, not the whole-mode stopping rule: the whole-mode stopping rule is §Semantic Coherence Checklist §Scope boundary below.
 
-Include the conflict resolution, resolved docs, and the mode-specific handoff artifact (Sync Map + task-local Sync impact in workflow mode; `SEMANTIC_MERGE.md` merge record in standalone mode) with the commits that produce them. Broader **codebase-coherence** work — fitting the resulting code into the host project's naming conventions, reusing utilities, keeping the PR-friendly diff, walking up project docs, minimizing net diff against the host — is out of scope for this skill and defers to `refactor-and-integrate` (via Integrate in workflow mode, or invoked by the caller after standalone returns). Record those as post-sync obligations in the handoff artifact.
+Include the conflict resolution, resolved docs, and the mode-specific handoff artifact (Sync Map + task-local Sync impact in workflow mode; `SEMANTIC_MERGE.md` merge record in standalone mode) with the commits that produce them. Broader **codebase-coherence** work — fitting the resulting code into the host project's naming conventions, reusing utilities, keeping the PR-friendly diff, walking up project docs, minimizing net diff against the host — is out of scope for this skill. Handoff artifacts may record context that explains the post-sync diff for later codebase review; they do not carry unresolved semantic-merge work into Integrate.
 
 ### 6. Detect and resolve stale references
 
@@ -107,11 +107,11 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 **Scope boundary (semantic coherence stopping rule):**
 
 - `[BLOCKING]` Stale references within the merge's semantic reach are resolved — renamed symbols at old call sites, moved paths referenced by docs describing the merged code, and other follow-through edits the merge itself forced.
-- `[BLOCKING]` Generated outputs made stale by the merged sources are regenerated, or — when regeneration would change a meaningful result — escalated per the intent-changing-escalation step and recorded as a follow-up obligation.
+- `[BLOCKING]` Generated outputs made stale by the merged sources are regenerated, or — when regeneration would change a meaningful result — escalated per the intent-changing-escalation step and recorded in the handoff artifact.
 - `[BLOCKING]` Docs and comments that describe the merged code are updated to match.
 - `[BLOCKING]` No conflict markers remain in the tree (also checked in Verification below).
 - `[BLOCKING]` Existing protection passes on every commit landed by this skill — drift tests + key-result coverage in workflow mode; existing tests + drift tests in standalone mode. Per-commit protection-pass is the lower bound; semantic coherence is the stopping rule.
-- `[BLOCKING]` Broader **codebase-coherence** work — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — is deferred to `refactor-and-integrate` (or the caller) and recorded in `## Sync Map` + task-local `**Sync impact:**` (workflow mode) or the `SEMANTIC_MERGE.md` File / Script Impact Map + Remaining Obligations (standalone mode).
+- `[BLOCKING]` Broader **codebase-coherence** work — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — is left to `refactor-and-integrate` (or the caller). Handoff artifacts may explain codebase-review context, but they do not define unresolved semantic-sync targets.
 
 **Intent integrity:**
 
@@ -123,7 +123,7 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 
 - `[BLOCKING]` PLAN.md and RESULTS.md remain coherent after the sync when present.
 - `[BLOCKING]` Task-structure changes were routed through `planning-workflow §User Feedback and Changing Plans` before adaptation proceeded.
-- `[BLOCKING]` Affected task blocks have task-local `**Sync impact:**` annotations when workflow Sync leaves task-specific obligations.
+- `[BLOCKING]` Affected task blocks have task-local `**Sync impact:**` annotations when workflow Sync leaves task-specific context needed to understand the post-sync diff.
 - `[ADVISORY]` Routine handoff-doc conflict resolutions are summarized in the Sync Map.
 
 **Verification:**
@@ -131,7 +131,7 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 - `[BLOCKING]` No conflict markers remain.
 - `[BLOCKING]` Stale-reference sweep covered labels, paths, docs, and generated outputs — not just absence of conflict markers.
 - `[BLOCKING]` Targeted checks were run or explicitly reported as not applicable.
-- `[BLOCKING]` Generated outputs made stale by the merge were regenerated within this skill's commit chain, or — when regeneration would change a meaningful result — escalated per Step 4 above and recorded as a follow-up obligation (Sync Map in workflow mode; merge record Follow-up column in standalone mode). Regeneration within the merge's semantic reach is not deferred.
+- `[BLOCKING]` Generated outputs made stale by the merge were regenerated within this skill's commit chain, or — when regeneration would change a meaningful result — escalated per Step 4 above and recorded in the handoff artifact. Regeneration within the merge's semantic reach is not deferred.
 - `[BLOCKING]` Dirty-state stash (when used) was reported in the status return so the user can restore it.
 
 ## Exception

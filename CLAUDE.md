@@ -34,7 +34,7 @@ superRA should be adaptive and composable rather than rigid. It gives agents mec
 
 ### Teach the Protocol, Don't Prescribe Each Action
 
-**This is a gate.** Every implementer editing any file under `skills/*` or `agents/*` self-applies both tests below before committing. Every reviewer walking such a diff verifies them on every pass. A line that fails either test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the tests are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
+**This is a gate.** Every implementer editing any file under `skills/*` or `agents/*` self-applies both tests below line by line before committing. Every reviewer walking such a diff verifies them line by line on every pass. A line that fails either test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the tests are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
 
 Give agents mechanisms and the evidence they need to act predictably; do not narrate what they will see, wrap authoritative content in meta-commentary, or remind them of defaults the runtime already teaches. The bar for every line of instruction is: **without this line, would the agent's behavior be unstable?** If the answer is no, delete it.
 
@@ -65,7 +65,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Execution modes and Skill-Load Manifest | `using-superra` |
 | Domain discipline, domain gates, pitfalls, stage-scoped domain references | The relevant domain skill, e.g. `econ-data-analysis` |
 | Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, Sync Map + task-local Sync impact formats | `semantic-merge` |
-| Codebase-coherence techniques — drift-test construction, convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, Sync impact propagation | `refactor-and-integrate` |
+| Codebase-coherence techniques — drift-test construction, convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and use of Sync impact as post-sync context | `refactor-and-integrate` |
 | Handoff-doc mechanics, templates, stale-content rules, User Decisions Log | `handoff-doc` |
 | Report formatting for figures, math, tables, and final-form markdown | `report-in-markdown` |
 | Harness-specific tool names and runtime differences | Adapter references under `skills/using-superRA/references/` |

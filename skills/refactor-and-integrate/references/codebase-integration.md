@@ -33,13 +33,13 @@ The refactorer applies this as part of the refactoring pass; the integration rev
 
 ---
 
-### Sync impact obligations
+### Sync impact context
 
-When PLAN.md task blocks contain `**Sync impact:**`, treat those fields as review evidence and follow the referenced Sync Map cluster for branch-level context. The integration reviewer turns open task-local obligations into task-local review notes, and the refactor implementer satisfies accepted obligations during the Integrate step.
+When PLAN.md task blocks contain `**Sync impact:**`, treat those fields as context for why the approved post-sync diff looks the way it does. Follow the referenced Sync Map cluster for branch-level context only when needed.
 
-Do not recreate incoming-intent research from git history during Integrate. Sync review already approved that layer. Integrate checks whether the approved sync obligations were propagated correctly and whether the surviving diff is minimal against `BASE_HEAD_SHA..HEAD`.
+Do not recreate incoming-intent research from git history during Integrate. Sync review already approved semantic coherence, including conflict resolution, propagation commits, stale-reference follow-through, and generated-output handling within the merge's reach. Integrate checks codebase coherence and whether the surviving diff is minimal against `BASE_HEAD_SHA..HEAD`.
 
-The orchestrator removes `## Sync Map` and satisfied task-local `**Sync impact:**` fields only after integration review APPROVES and the full drift-test suite passes.
+The orchestrator removes `## Sync Map` and temporary task-local `**Sync impact:**` fields only after integration review APPROVES and the full drift-test suite passes.
 
 ## Reviewer Verdict Protocol
 
@@ -57,10 +57,10 @@ Two verdicts:
 **Implementer self-check (before every commit).** Run before every commit on the integration branch:
 
 1. **Compute the cumulative diff from the governing baseline.** In integration-workflow after Sync, use `git diff <BASE_HEAD_SHA>..HEAD`. In standalone refactor work, use the caller-provided git range or touched-file diff.
-2. **Review every hunk** against the loaded references' checklists, approved task objectives, task-local Sync impact obligations, and logged user decisions. For each hunk, ask: *which `[BLOCKING]` / `[ADVISORY]` item, approved objective, Sync impact obligation, or user decision justifies this change?*
-3. **Any hunk without a justification is out of scope.** Revert it, OR re-justify it by adding the underlying need to task-local Sync impact, task-local review notes, or the commit message so the reviewer can check the same evidence.
-4. **Respect the post-sync baseline.** Base-current deletions and relocations are already represented in `BASE_HEAD_SHA`; do not restore or contradict them unless an approved objective, Sync impact obligation, or logged user decision requires it.
-5. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` — named explicitly in the dispatch's `Task:` or `Tasks in scope:` field. `APPROVED`-integration tasks are out of scope unless task-local Sync impact or an accepted reviewer finding names them.
+2. **Review every hunk** against the loaded references' checklists, approved task objectives, approved semantic-sync context, and logged user decisions. For each hunk, ask: *which `[BLOCKING]` / `[ADVISORY]` item, approved objective, sync context, or user decision justifies this change?*
+3. **Any hunk without a justification is out of scope.** Revert it, OR re-justify it by adding the underlying need to task-local review notes or the commit message so the reviewer can check the same evidence.
+4. **Respect the post-sync baseline.** Base-current deletions and relocations are already represented in `BASE_HEAD_SHA`; do not restore or contradict them unless an approved objective, approved semantic-sync context, or logged user decision requires it.
+5. **Respect the dispatch's scope list.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` — named explicitly in the dispatch's `Task:` or `Tasks in scope:` field. `APPROVED`-integration tasks are out of scope unless an accepted reviewer finding names them.
 6. **Stage only files you touched this turn** (per `superRA:using-superra` §Commit Hygiene); `git diff --cached` before `git commit`.
 
 The integration reviewer runs the same governing diff as evidence and walks each hunk through the same reference checklists. One source of truth, two perspectives.
@@ -73,13 +73,13 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Code integration:**
 
-- `[BLOCKING]` **Governing-diff pruning performed:** Every surviving hunk in the governing diff ties to an approved task objective, task-local Sync impact obligation, logged user decision, or checklist requirement.
-- `[BLOCKING]` **Base-current deletions / relocations honored by default:** Restorations exist only when an approved task objective, Sync impact obligation, or logged user decision requires them.
+- `[BLOCKING]` **Governing-diff pruning performed line by line:** Every surviving hunk in the governing diff ties to an approved task objective, approved semantic-sync context, logged user decision, or checklist requirement; unrelated cleanup, formatting churn, and stale branch-side restorations are removed.
+- `[BLOCKING]` **Base-current deletions / relocations honored by default:** Restorations exist only when an approved task objective, approved semantic-sync context, or logged user decision requires them.
 - `[BLOCKING]` **Naming consistency:** Variable names, function names, and file names follow codebase conventions.
 - `[BLOCKING]` **Utility usage:** Existing utility functions are used where appropriate instead of hand-rolled equivalents.
 - `[BLOCKING]` **No debug artifacts:** No leftover debug prints, commented-out experiments, or temporary variables.
 - `[BLOCKING]` **Minimal existing-file changes:** Modifications to files outside the analysis scope are minimal and justified (adding an import to a shared module is fine; restructuring a shared module is not).
-- `[ADVISORY]` **Code simplification:** Redundant code removed, repeated patterns consolidated, readability improved — only where the refactor task or Sync impact demanded the touch.
+- `[ADVISORY]` **Code simplification:** Redundant code removed, repeated patterns consolidated, readability improved — only where the refactor task or codebase-coherence review demanded the touch.
 - `[ADVISORY]` **PR-friendly diffs:** Changes produce clean, reviewable diffs — avoid unnecessary reformatting that obscures substantive changes.
 
 **Handling inconsistencies (decision tree in §How-To → Handling inconsistencies):**
