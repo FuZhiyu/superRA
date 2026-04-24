@@ -13,14 +13,15 @@ Integrate branches by intent, not by lines. Understand what each side was trying
 
 Load exactly the mode reference that matches the call path:
 
-- **Workflow sync author:** `references/workflow-sync-author.md` when `integration-workflow` dispatches an agent to bring the current branch onto a confirmed base. The author owns the Workflow Sync Map and task-local Sync impact format.
-- **Workflow sync reviewer:** `references/workflow-sync-reviewer.md` when `integration-workflow` dispatches a separate reviewer before Integrate begins. The reviewer points at the author reference for format recognition.
-- **Standalone merge:** `references/standalone-merge.md` when this skill is invoked directly for a merge, rebase, cherry-pick, or branch sync outside the full integration workflow. The standalone reference owns the Semantic Merge Record format.
-- **Shared checklist:** `references/sync-quality.md` carries the gated quality checklist that both modes walk.
+- **Workflow sync author:** `references/workflow-sync-author.md` when `integration-workflow` dispatches an agent to bring the current branch onto a confirmed base. The author owns the Workflow Sync Map and task-local Sync impact format, and carries the Workflow Sync scope boundary.
+- **Workflow sync reviewer:** `references/workflow-sync-reviewer.md` when `integration-workflow` dispatches a separate reviewer before Integrate begins. The reviewer points at the author reference for boundary and format recognition.
+- **Standalone merge:** `references/standalone-merge.md` when this skill is invoked directly for a merge, rebase, cherry-pick, or branch sync outside the full integration workflow. The standalone reference owns the Semantic Merge Record format and the standalone scope boundary.
 
-## Techniques
+All modes walk the §Semantic Coherence Checklist below as the shared gated checklist.
 
-This is a tool skill: it teaches techniques for reaching **semantic coherence** (the merge's meaning is fully represented in the tree — stale references resolved within the merge's reach, generated outputs regenerated or escalated, docs describing the merged code updated, protection passes). It does not prescribe a fixed procedure. `integration-workflow` sequences semantic-merge and `refactor-and-integrate` at the macro level; within one merge operation the techniques below follow a natural micro-order (investigate intent before resolving, resolve before landing, detect and fix stale references before returning, record deferred codebase-coherence obligations before handoff). Mode references add only mode-specific inputs, format specs, commit-shape mechanics, and status returns.
+## Shared Steps
+
+The following steps are shared by all modes.
 
 ### 1. Ground in repository state
 
@@ -74,7 +75,7 @@ Log every answer per `handoff-doc` §User Decisions Log before committing the re
 
 Run the sync operation only after intent investigation. Resolve by the plan from Step 3. Preserve base-current deletions and relocations by default; restore branch-side content only when an approved task objective, logged user decision, or Sync impact obligation justifies it.
 
-**Land one merge commit plus N propagation commits as needed to reach semantic coherence.** Every commit must leave the tree passing **existing protection** — drift tests and key-result coverage established in `integration-workflow` Phase A when in workflow mode, or existing tests and drift tests when standalone. Protection-pass is the per-commit lower bound, not the whole-mode stopping rule: the whole-mode stopping rule is `sync-quality.md §Scope boundary`.
+**Land one merge commit plus N propagation commits as needed to reach semantic coherence.** Every commit must leave the tree passing **existing protection** — drift tests and key-result coverage established in `integration-workflow` Phase A when in workflow mode, or existing tests and drift tests when standalone. Protection-pass is the per-commit lower bound, not the whole-mode stopping rule: the whole-mode stopping rule is §Semantic Coherence Checklist §Scope boundary below.
 
 Include the conflict resolution, resolved docs, and the mode-specific handoff artifact (Sync Map + task-local Sync impact in workflow mode; `SEMANTIC_MERGE.md` merge record in standalone mode) with the commits that produce them. Broader **codebase-coherence** work — fitting the resulting code into the host project's naming conventions, reusing utilities, keeping the PR-friendly diff, walking up project docs, minimizing net diff against the host — is out of scope for this skill and defers to `refactor-and-integrate` (via Integrate in workflow mode, or invoked by the caller after standalone returns). Record those as post-sync obligations in the handoff artifact.
 
@@ -90,15 +91,48 @@ Run more than a "no conflict markers" check. Before returning, sweep for stale r
 
 Run targeted checks for touched subsystems where cheap and relevant. Fix stale references that follow directly from the merge itself (a renamed symbol still used at its old call sites, a moved path referenced by a doc that describes the merged code, a generated output the merged sources made stale). Defer broader codebase-fit work — wider convention alignment, utility reuse, diff minimization — to `refactor-and-integrate`. Confirm the tree matches the integrated intent, not just a conflict-free state.
 
-## Workflow Boundary
+## Semantic Coherence Checklist
 
-In `integration-workflow`, semantic-merge owns Sync and sync review. The workflow computes `BASE_REF`, `PRE_SYNC_BASE_SHA`, and `BASE_HEAD_SHA`, then dispatches a generic sync author and a generic sync reviewer that load this skill's mode references.
+Shared gated checklist. All modes walk it: the implementer as pre-handoff self-check, the reviewer as verification. It defines when semantic-merge is done — the merge's meaning is fully represented in the tree. Walk every item. `[BLOCKING]` items must be satisfied for the sync to be accepted; `[ADVISORY]` items may be flagged without blocking.
 
-Workflow Sync lands the merge commit plus any propagation commits needed to reach **semantic coherence**, records branch-level `## Sync Map` clusters, and annotates affected task blocks with compact `**Sync impact:**` pointers. `sync-quality.md §Scope boundary` is the stopping rule. **Codebase coherence** — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — defers to the post-sync `refactor-and-integrate` step and is recorded as a Sync Map obligation.
+**Intent preservation:**
 
-## Standalone Boundary
+- `[BLOCKING]` Incoming intent understood from commits, diffs, docs, and caller context.
+- `[BLOCKING]` Governing baseline and direction identified before conflict resolution.
+- `[BLOCKING]` Each overlapping cluster classified by role (behavior/API, data/schema, docs/narrative, generated outputs, tests, config/build) before resolution.
+- `[BLOCKING]` No silent losses from either side; dropped hunks have a documented rationale.
+- `[BLOCKING]` No silent restorations of base-current deletions or relocations in workflow Sync.
+- `[ADVISORY]` Synthesized changes are coherent and minimal.
 
-Standalone semantic-merge carries the merge through to **semantic coherence** using its own techniques, landing the merge commit plus any propagation commits needed, and captures the resolution plus any remaining obligations in `SEMANTIC_MERGE.md`. `sync-quality.md §Scope boundary` is the stopping rule; every commit must leave existing tests and drift tests passing. When **codebase coherence** is also wanted, the caller invokes `refactor-and-integrate` after this skill returns, or satisfies those obligations manually.
+**Scope boundary (semantic coherence stopping rule):**
+
+- `[BLOCKING]` Stale references within the merge's semantic reach are resolved — renamed symbols at old call sites, moved paths referenced by docs describing the merged code, and other follow-through edits the merge itself forced.
+- `[BLOCKING]` Generated outputs made stale by the merged sources are regenerated, or — when regeneration would change a meaningful result — escalated per the intent-changing-escalation step and recorded as a follow-up obligation.
+- `[BLOCKING]` Docs and comments that describe the merged code are updated to match.
+- `[BLOCKING]` No conflict markers remain in the tree (also checked in Verification below).
+- `[BLOCKING]` Existing protection passes on every commit landed by this skill — drift tests + key-result coverage in workflow mode; existing tests + drift tests in standalone mode. Per-commit protection-pass is the lower bound; semantic coherence is the stopping rule.
+- `[BLOCKING]` Broader **codebase-coherence** work — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — is deferred to `refactor-and-integrate` (or the caller) and recorded in `## Sync Map` + task-local `**Sync impact:**` (workflow mode) or the `SEMANTIC_MERGE.md` File / Script Impact Map + Remaining Obligations (standalone mode).
+
+**Intent integrity:**
+
+- `[BLOCKING]` Intent-changing choices were escalated, logged per `handoff-doc §User Decisions Log`, and implemented as stated.
+- `[BLOCKING]` Data-discipline artifacts and drift tests were preserved.
+- `[BLOCKING]` Meaningful result changes were not silently accepted or re-expected.
+
+**Handoff docs and merge records:**
+
+- `[BLOCKING]` PLAN.md and RESULTS.md remain coherent after the sync when present.
+- `[BLOCKING]` Task-structure changes were routed through `planning-workflow §User Feedback and Changing Plans` before adaptation proceeded.
+- `[BLOCKING]` Affected task blocks have task-local `**Sync impact:**` annotations when workflow Sync leaves task-specific obligations.
+- `[ADVISORY]` Routine handoff-doc conflict resolutions are summarized in the Sync Map.
+
+**Verification:**
+
+- `[BLOCKING]` No conflict markers remain.
+- `[BLOCKING]` Stale-reference sweep covered labels, paths, docs, and generated outputs — not just absence of conflict markers.
+- `[BLOCKING]` Targeted checks were run or explicitly reported as not applicable.
+- `[BLOCKING]` Generated outputs made stale by the merge were regenerated within this skill's commit chain, or — when regeneration would change a meaningful result — escalated per Step 4 above and recorded as a follow-up obligation (Sync Map in workflow mode; merge record Follow-up column in standalone mode). Regeneration within the merge's semantic reach is not deferred.
+- `[BLOCKING]` Dirty-state stash (when used) was reported in the status return so the user can restore it.
 
 ## Exception
 

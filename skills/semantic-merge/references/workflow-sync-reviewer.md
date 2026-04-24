@@ -1,6 +1,6 @@
 # Workflow Sync Reviewer Mode
 
-Use when `integration-workflow` dispatches a generic sync reviewer after the workflow sync author lands the sync commits (merge commit plus any propagation commits). Also load `sync-quality.md` for the gated checklist. For the Sync Map and task-local Sync impact shape the author produced, see `workflow-sync-author.md §Workflow Sync Map Format` and `§Task-Local Sync Impact Format`.
+Use when `integration-workflow` dispatches a generic sync reviewer after the workflow sync author lands the sync commits (merge commit plus any propagation commits). Walk the Shared Steps and §Semantic Coherence Checklist in `semantic-merge/SKILL.md` — the checklist is the gated verification list; the §Scope boundary within it is the stopping rule. The reviewer inherits the Workflow Sync scope boundary from `workflow-sync-author.md §Boundary`. For the Sync Map and task-local Sync impact shape the author produced, see `workflow-sync-author.md §Workflow Sync Map Format` and `§Task-Local Sync Impact Format`.
 
 ## Review Scope
 
@@ -20,11 +20,11 @@ Inputs include:
 1. Verify the anchors: incoming intent comes from `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`; the post-sync governing baseline is `BASE_HEAD_SHA`.
 2. Read incoming commits and diffs. Independently summarize incoming intent.
 3. Read PLAN.md / RESULTS.md and independently summarize current-branch intent.
-4. Inspect the sync commits (merge commit plus any propagation commits) and their combined diff. Confirm every kept, dropped, or synthesized hunk has a semantic rationale, classified by role per `SKILL.md §Techniques` step 2.
-5. Walk `sync-quality.md` top to bottom.
+4. Inspect the sync commits (merge commit plus any propagation commits) and their combined diff. Confirm every kept, dropped, or synthesized hunk has a semantic rationale, classified by role per `SKILL.md §Shared Steps` step 2.
+5. Walk `SKILL.md §Semantic Coherence Checklist` top to bottom.
 6. Check the Sync Map against the diff and incoming intent. It should explain the branch-level thesis, not bury everything in task-local notes.
 7. Check each affected task block has a compact `**Sync impact:**` pointer when Integrate needs task-specific propagation.
-8. Confirm scope boundary at the semantic-vs-codebase-coherence line. Generated outputs within the merge's semantic reach should be regenerated (or escalated per `SKILL.md §Techniques` step 4 and recorded as a follow-up obligation) — flag if the author skipped regeneration or silently re-expected drift-test results. Codebase-coherence work — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — should be deferred to Sync Map post-sync obligations, not performed in the sync commit chain; flag scope creep across that line.
+8. Confirm scope boundary at the semantic-vs-codebase-coherence line. Generated outputs within the merge's semantic reach should be regenerated (or escalated per `SKILL.md §Shared Steps` step 4 and recorded as a follow-up obligation) — flag if the author skipped regeneration or silently re-expected drift-test results. Codebase-coherence work — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — should be deferred to Sync Map post-sync obligations, not performed in the sync commit chain; flag scope creep across that line.
 9. Confirm the stale-reference sweep covered labels, paths, docs, and generated outputs — not just absence of conflict markers.
 
 ## Verdict
