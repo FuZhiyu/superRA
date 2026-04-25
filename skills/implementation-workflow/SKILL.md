@@ -132,6 +132,8 @@ If any check fails: fix it before proceeding. Do not present completion options 
 
 ### Step 4: Present Completion Options
 
+**Domain pre-step (theory-modeling only): notation/assumption promotion.** Before presenting the completion menu, when the active domain is theory-modeling, scan each task's `RESULTS.md` Notation & Assumptions Ledger and collect every entry whose symbol or assumption is not yet in `PLAN.md`'s Notation Conventions table. If any candidates exist, surface them via `AskUserQuestion` with a per-candidate Promote / Keep-in-ledger / Remove choice. Apply the researcher's answers: promotions are inline-edited into the canonical table atomically with a `## Decisions` log entry recording the promoted symbols; keep-in-ledger candidates stay where they are; remove decisions delete both the ledger entry and any in-text use (re-dispatch the implementer if code changes are needed). Skip this pre-step entirely when the domain is not theory-modeling or when every ledger says "None." The semantics of the necessity gate, the ledger schema, and the canonical-vs-ledger split are owned by `theory-modeling/SKILL.md` §Documentation and handoff — do not restate them here.
+
 **Present the 4 completion options via `AskUserQuestion` when available** (plain-text fallback otherwise). Each option gets a short description.
 
 ```

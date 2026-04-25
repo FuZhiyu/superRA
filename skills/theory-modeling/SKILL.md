@@ -104,6 +104,10 @@ down the objects and their names before manipulating them.
 - `[BLOCKING]` Every symbol is introduced in narrative order before first use: primitives, choice variables, state variables, parameters, shocks, constraints, value objects, prices, and equilibrium conditions. A symbol may not appear in any derivation, equation, proof step, or verification before the paragraph or table that introduces it. For symbols reused across tasks, `PLAN.md`'s Notation Conventions table is the authoritative source - reuse its meaning rather than redefining the symbol locally.
 - `[BLOCKING]` Notation is explicit and interpretable or genuinely conventional. Arbitrary placeholder labels like `A/B/C/D`, `T1/T2`, `eq1`, and `var2` are not acceptable. Conventional notation such as `r` for an interest rate or `w` for a wage is acceptable when defined at first use.
 - `[BLOCKING]` Every new symbol introduced during implementation carries a stated intuition or mnemonic (one short sentence), unless it reuses a conventional name already in `PLAN.md`'s Notation Conventions.
+- `[BLOCKING]` Every new symbol earns its place by both tests, walked symbol by symbol:
+  (a) **Necessity** — removing it makes the exposition harder to follow, the result less intuitive, or the algebra materially longer. Symbols that abbreviate a one-time expression fail this test.
+  (b) **Non-duplication** — no symbol already named in `PLAN.md`'s Notation Conventions, the active lemma proof, or an upstream derivation in this task names the same object. Inheriting notation from a derivation note does not grant legitimacy if the current proof has a cleaner upstream name available.
+  Symbols failing either test are removed or replaced with the existing notation. "Defined locally", "algebraically useful", or "introduced at first use" do not satisfy the gate. The walk and its outcomes are recorded in the per-task **Notation & Assumptions Ledger** in `RESULTS.md` (see §Documentation and handoff).
 - `[BLOCKING]` Domains, units, and sign restrictions are clear whenever they matter for the algebra, comparative statics, or numerical checks.
 - `[ADVISORY]` When multiple notation choices are reasonable, prefer the one matching the literature or existing project docs; if you deviate, note the mapping.
 
@@ -117,6 +121,7 @@ scattering of weak technical restrictions.
 - `[BLOCKING]` Assumptions are explicit and attached to primitives: preferences, technology, endowments, information, timing, distributions, parameter domains, boundary conditions, and normalizations. Do not state assumptions as desired properties of endogenous objects unless those properties are later proved.
 - `[BLOCKING]` Each assumption carries a one-sentence plain-language interpretation a researcher can defend (e.g., "risk aversion bounded so the value function is finite"); assumptions stated only as math restrictions without economic interpretation are REVISE.
 - `[BLOCKING]` When multiple scattered assumptions can be replaced by a single stronger primitive assumption with a cleaner interpretation, prefer the synthesis and record the trade. Reviewer applies a judgement margin - flag only when a clearly cleaner synthesis is available.
+- `[BLOCKING]` The same two-test discipline applied to symbols (§Objects & Notation) applies to every new assumption: an assumption earns its place only if removing it would change what the model concludes (necessity), and only if no existing assumption already covers the same restriction on the same primitive (non-duplication). Compose with the synthesis rule above — assumptions that pass synthesis can still fail necessity. New assumptions are recorded in the per-task **Notation & Assumptions Ledger** alongside symbols.
 
 ### Derivations
 
@@ -132,6 +137,7 @@ the technical rule and a reason for invoking it here.
 - `[BLOCKING]` Comparative statics state what is held fixed, which object moves, and what sign or ranking is being claimed.
 - `[BLOCKING]` Reused symbols keep the same meaning throughout the task. If notation changes, old and new notation are mapped explicitly.
 - `[BLOCKING]` Claims of existence, uniqueness, monotonicity, or concavity are supported by a stated argument, not asserted by inspection.
+- `[BLOCKING]` New equations, named statements (lemmas, propositions, definitions, corollaries), and derivation steps are checked under the same necessity lens as symbols and assumptions: if removal leaves the reasoning intact, remove it. Reviewer applies this at review time on the proof body itself; equations and named statements do not require individual ledger entries (the per-equation cost is too high), but the one-move-per-step and reason-per-move items above are how the lens is enforced in practice.
 - `[ADVISORY]` Keep displayed equations short enough to audit; break long chains into aligned steps rather than dense one-line algebra.
 
 ### Verification & Rendering
@@ -159,7 +165,8 @@ for a human audience.
 ### Documentation and handoff
 
 - `[BLOCKING]` `RESULTS.md` is updated in place for this task's section. The doc is the record - findings live there before they appear in any status report.
-- `[BLOCKING]` When implementation introduces a symbol not yet in `PLAN.md`'s Notation Conventions table, update the table via inline-edit BEFORE using the symbol in algebra, and commit the `PLAN.md` edit atomically with the derivation work. Follow `superRA:handoff-doc` inline-edit discipline.
+- `[BLOCKING]` Per-task **Notation & Assumptions Ledger** in `RESULTS.md`. Every new symbol or assumption introduced in this task is logged as one entry: name, plain-English meaning, why it earns its place (necessity + what distinguishes it from the nearest existing symbol), and any near-duplicate considered and rejected with the reason. Tasks that introduce nothing record "None." The ledger is the working per-task record and the auditable trail of the necessity gate.
+- `[BLOCKING]` `PLAN.md`'s Notation Conventions table is **canonical and user-gated**. Implementers do NOT inline-edit it during implementation. A symbol is promoted from the RESULTS.md ledger to the Notation Conventions table only when the user confirms it should become a canonical project-wide symbol; until then the ledger entry is the source of truth for that task. This keeps the canonical index clean and prevents unconfirmed implementer notation from accreting in the header.
 - `[BLOCKING]` Definitions, assumptions, and the reason for major derivation choices are written alongside the math or code, not left only in chat.
 - `[BLOCKING]` When a task section includes equations, tables, or figures for human reading, use `superRA:report-in-markdown`; do not invent a separate rendering utility.
 - `[BLOCKING]` Rendered math, prose, and any supporting code use consistent notation for the same object.
@@ -184,7 +191,10 @@ the definitions or assumptions explicit.
 | "A/B/C is temporary; I will rename it later." | Temporary placeholder notation spreads and becomes the model. |
 | "The numerical check is only illustrative." | Even toy checks need explicit parameters and a stated pass condition. |
 | "The CAS says it simplifies to zero." | You still need to say what was checked and under which assumptions. |
-| "I'll update the Notation Conventions table after the derivation is clean." | Late notation updates mean the derivation was written against undefined symbols; update the table first, then derive. |
+| "I'll update the Notation Conventions table after the derivation is clean." | The Notation Conventions table is user-gated and canonical; log new symbols to the per-task RESULTS.md ledger instead, and let the user confirm any promotion. |
+| "It's defined locally and used in the algebra, so it's fine." | Local definition is necessary, not sufficient. If an existing upstream symbol names the same object, the local one hides the connection and adds reader load. |
+| "It came from the derivation note, so it's already vetted." | Inherited notation is on trial again in the new proof. Legacy legitimacy does not beat a cleaner upstream name available right now. |
+| "It only abbreviates this one expression." | One-time shorthand adds a symbol the reader must memorize for one line. Expand inline or fold into an existing name. |
 | "The intuition is obvious." | If the intuition is not written, the reader is reconstructing it from algebra - which is exactly what the Iron Law rules out. |
 | "I'll add interpretation after the algebra is clean." | Post-hoc interpretation is where hidden assumptions hide; the interpretation must be defensible at the moment the assumption is stated. |
 | "Weaker assumptions are always safer." | Scattered weak technical restrictions are harder to defend than one stronger primitive with a clean economic reading; prefer the synthesis when it is available. |
