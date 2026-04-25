@@ -41,7 +41,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on the direction and the initial scope for v1
-- [ ] **Execution complete** — Task 8 added 2026-04-25; pending implementation
+- [x] **Execution complete** — all tasks `APPROVED` (Task 8 approved 2026-04-25); harness verification (`tests/check-harness-compatibility.sh` 42/42, Codex 6/6) passes
 - [ ] **Drift tests created** — integration-phase protection added and passing on baseline
 - [ ] **Refactored** — integration reviewer `APPROVED` *(rolled back 2026-04-25 — Task 8 modifies `SKILL.md` and references again, so Phase B re-runs on the new gate / ledger / promotion model)*
 - [ ] **Docs finalized** — `RESULTS.md` matured, project docs audited, doc-reviewer `APPROVED`
@@ -241,7 +241,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 8: Notation & assumption necessity gate, RESULTS.md ledger, and user-gated canonical promotion
 **Depends on:** Task 5, Task 6
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** `skills/theory-modeling/SKILL.md`, `skills/theory-modeling/references/planning.md`, `skills/theory-modeling/references/integration.md`, `skills/handoff-doc/references/results-anatomy.md`, `skills/implementation-workflow/SKILL.md`, `agents/reviewer.md` (and regenerated direct-mode / Codex artifacts)
