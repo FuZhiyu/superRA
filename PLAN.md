@@ -43,7 +43,7 @@
 - [x] **Plan approved** — researcher signed off on the direction and the initial scope for v1
 - [x] **Execution complete** — all tasks `APPROVED` (Task 8 approved 2026-04-25); harness verification (`tests/check-harness-compatibility.sh` 42/42, Codex 6/6) passes
 - [ ] **Drift tests created** — integration-phase protection added and passing on baseline
-- [ ] **Refactored** — integration reviewer `APPROVED` *(rolled back 2026-04-25 — Task 8 modifies `SKILL.md` and references again, so Phase B re-runs on the new gate / ledger / promotion model)*
+- [x] **Refactored** — integration reviewer `APPROVED` *(re-approved 2026-04-25 after Task 8 ledger / user-gated promotion / Step 4 stop-point integration review; sync was a no-op)*
 - [ ] **Docs finalized** — `RESULTS.md` matured, project docs audited, doc-reviewer `APPROVED`
 - [ ] **Merged** — branch merged to main or PR opened
 
