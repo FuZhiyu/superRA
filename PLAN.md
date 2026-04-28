@@ -258,31 +258,25 @@ Re-ran the grep after rewrites; only the intentional anti-pattern example in `sk
 
 ### Task 5: Regenerate Codex named-agent artifacts and verify
 **Depends on:** Task 3, Task 4
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** `python skills/codex-superra-setup/scripts/sync_codex_agents.py`
 **Input:** Updated `agents/implementer.md` and `agents/reviewer.md`.
 **Output:** Regenerated `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml` — committed with the same diff content as the canonical agent files.
 
-- [ ] **Step 1: Run the regeneration script**
+- [x] **Step 1: Run the regeneration script**
 
-```bash
-python skills/codex-superra-setup/scripts/sync_codex_agents.py
-```
+Ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --force`. Wrote four files:
+- `.codex/agents/superra_implementer.toml`
+- `.codex/agents/superra_reviewer.toml`
+- `skills/using-superRA/references/direct-mode-implementer.md`
+- `skills/using-superRA/references/direct-mode-reviewer.md`
 
-- [ ] **Step 2: Verify generated files reflect Task 3 edits**
+- [x] **Step 2: Verify generated files reflect Task 3 edits**
 
-```bash
-grep -n "Code/03.py#L42" skills/using-superRA/references/direct-mode-*.md .codex/agents/*.toml
-```
+`grep -n "Code/03.py#L42"` returned hits in all four generated files; the new markdown-link form `[Code/03.py:42](Code/03.py#L42)` is present in both review-item and `→ implemented:` annotation lines. Also confirmed no stale `(\`Code/...:NN\`)` or `<file:line +` residuals remain in the generated files.
 
-Confirm the new markdown-link example appears in all four generated files. If any file shows the old backtick-path form, the regeneration did not pick it up; investigate `sync_codex_agents.py`.
-
-- [ ] **Step 3: Validate, commit**
-
-Confirm `git diff` of generated files is consistent with the agent-file edits (no unrelated drift). Stage and commit only the four generated files in this task's commit.
-
-Update PLAN.md, RESULTS.md Task 5, commit.
+- [x] **Step 3: Validate, commit**
 
 ---

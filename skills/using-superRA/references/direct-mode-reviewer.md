@@ -75,7 +75,7 @@ Two verdicts:
 
 **APPROVE:** No `[BLOCKING]` findings. No blockquote needed; set `**Review status:** APPROVED`.
 
-**REVISE:** One or more `[BLOCKING]` items failed. Write the review-notes blockquote with specific items: file:line, description, severity, what to fix. When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, say so in plain prose alongside that finding (e.g., "— note: re-check this after the pre-merge describe is added"). Set `**Review status:** REVISE`.
+**REVISE:** One or more `[BLOCKING]` items failed. Write the review-notes blockquote with specific items: markdown-link citation (e.g., `[file.py:42](file.py#L42)`), description, severity, what to fix. When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, say so in plain prose alongside that finding (e.g., "— note: re-check this after the pre-merge describe is added"). Set `**Review status:** REVISE`.
 
 On re-review after a REVISE fix: verify (1) each cited fix is correct, and (2) any finding annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass — no third full walk. Delete confirmed-fixed items from the blockquote. When the blockquote is empty, remove it and set `**Review status:** APPROVED`.
 
@@ -92,6 +92,7 @@ Compact etiquette below; full discipline in `superRA:handoff-doc`. Load it on de
 - **Inline-edit only.** Replace stale content in place — never "Update:" / "Revised:" / "Previously..." blocks, no strikethroughs. Git owns history.
 - **Preserve task-block boundaries.** When writing or editing a review-notes blockquote, stay strictly within the assigned task block — never disturb the `---` separators or the adjacent `### Task N:` headings. If removing the blockquote (empty after re-review), remove only the blockquote lines; leave the surrounding task-block anatomy intact.
 - **Remove superseded content, don't stack it.** When the blockquote is empty after re-review, remove it entirely. Prior reliability caveats in `RESULTS.md` are replaced, not stacked across rounds. `## Sync Map` and task-local `**Sync impact:**` fields are temporary Sync/Integrate scaffolding; read them during Integrate but do not rewrite them unless the dispatch explicitly assigns integration status review for the affected task.
+- **Cite source files as markdown links** per `report-in-markdown` §File-reference rule (e.g., `[file.py:42](file.py#L42)`).
 - **Doc before report.** Every material review finding lands in the blockquote in `PLAN.md` **before** it appears in your status return.
 
 If the doc's structure is unclear, flag it in your status return rather than inventing one.
@@ -118,7 +119,7 @@ If the doc's structure is unclear, flag it in your status return rather than inv
 
 1. Read the task block's steps and the code at the cited files.
 2. Walk the domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. Never halt on a failure — continue through the rest so the implementer gets one comprehensive pass.
-3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), file:line, what is wrong, what to fix. In Integrate, any Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
+3. For each issue you find, add a numbered item to a new review-notes blockquote. Each item has: severity (CRITICAL / MAJOR / MINOR), markdown-link citation (e.g., `[file.py:42](file.py#L42)`), what is wrong, what to fix. In Integrate, any Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
 4. Set `**Review status:**` per the verdict protocol in §Verdict: `APPROVED` (no `[BLOCKING]` items) or `REVISE` (at least one `[BLOCKING]` item).
 5. Commit `PLAN.md` only: `git commit -m "review: Task N <verdict>"`.
 
@@ -128,7 +129,7 @@ If the doc's structure is unclear, flag it in your status return rather than inv
 
 Each item in the blockquote may have been annotated since you last saw it. Expect two kinds of annotation:
 
-- `→ implemented: <file:line + fix description>` — added by the implementer claiming they fixed the item. Go to the cited `file:line` and verify.
+- `→ implemented: <markdown-link citation + fix description>` — added by the implementer claiming they fixed the item. Follow the markdown link to the cited line and verify.
 - `→ orchestrator: <reason>` — added by the orchestrator. Either a flat rejection of your item ("rejected — methodology specifies ...") or a request for your second opinion. The orchestrator may also have rewritten the task's steps/Approach to reflect items it accepted; those items will also carry an `→ implemented: ...` annotation after the implementer's pass.
 
 For each item, decide one of:

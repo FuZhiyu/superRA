@@ -71,4 +71,14 @@ Triage of hits and actions taken:
 
 ## Task 5: Regenerate Codex named-agent artifacts and verify
 
-**Status:** Not started
+**Status:** IMPLEMENTED — pending review
+
+### Key Findings
+- Regeneration command: `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --force`. Wrote four files (two `.codex/agents/*.toml` named-agent specs, two `skills/using-superRA/references/direct-mode-*.md` direct-mode references).
+- All four generated files now carry the markdown-link citation form in their canonical example blockquotes — `grep -n "Code/03.py#L42"` shows hits at line 112-113 in `direct-mode-implementer.md` and line 119-120 in `superra_implementer.toml`. Both review-item and `→ implemented:` annotation lines use the new form.
+- Sweep on the generated files for residuals: zero `(\`Code/...:NN\`)` or `<file:line +` patterns remain — the regeneration picked up all of Task 3 + Task 4's source-file edits.
+- Diff scope: 4 files, +22 / -18 lines, all confined to the canonical example blockquotes and the implementer-template line. No unrelated drift.
+
+### Notes
+- Used `python3` because `python` is not on the worktree shell PATH; the script accepts both interchangeably.
+- Used `--scope project` (writes into the worktree's `.codex/agents/`). Global-scope regeneration into `~/.codex/agents/` is a separate concern owned by `codex-superra-setup` and not in scope for this task.
