@@ -258,7 +258,7 @@ Re-ran the grep after rewrites; only the intentional anti-pattern example in `sk
 
 ### Task 5: Regenerate Codex named-agent artifacts and verify
 **Depends on:** Task 3, Task 4
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(set during integration)*
 
 **Script:** `python skills/codex-superra-setup/scripts/sync_codex_agents.py`
