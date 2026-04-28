@@ -138,37 +138,27 @@ Re-read both files end-to-end. Confirm:
 
 ### Task 2: Make `report-in-markdown` always-loaded in the Skill-Load Manifest
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** `skills/using-superRA/SKILL.md` (§Skill-Load Manifest)
 **Input:** Current manifest §Generic table (lines 79–89), with `report-in-markdown` only at `Stage: documentation`.
 **Output:** Updated manifest where `report-in-markdown` is always loaded (in addition to `using-superra`); each Stage row's "Required skills" column lists it explicitly, or a short "always loaded" note above the table makes the universality clear.
 
-- [ ] **Step 1: Update `skills/using-superRA/SKILL.md` §Skill-Load Manifest**
+- [x] **Step 1: Update `skills/using-superRA/SKILL.md` §Skill-Load Manifest**
 
-Two equivalent forms — pick the one with smallest line growth:
+Took **Form A**: extended the explanatory paragraph above the §Generic table to call out `report-in-markdown` as always loaded alongside `using-superra`, with a one-sentence rationale ("every agent writes markdown"). Dropped `report-in-markdown` from the `documentation` Stage row to avoid double-listing — `handoff-doc` remains there.
 
-**Form A (preferred — single line above the table):** Insert a short note above the §Generic table:
+- [x] **Step 2: Update the §References explanatory paragraph**
 
-> `report-in-markdown` is always loaded — every agent writes markdown. The Stage rows below list what loads *in addition* to `using-superra` and `report-in-markdown`.
+Folded the §References paragraph extension into Step 1 — the rewritten paragraph now both names the always-loaded pair and explains why.
 
-Leave the table rows otherwise unchanged. The `documentation` row no longer needs `report-in-markdown` listed (drop it from that row to avoid double-listing); confirm `handoff-doc` stays.
+- [x] **Step 3: Validate, commit**
 
-**Form B (every row explicit):** Add `report-in-markdown` to every `Required skills` cell. More verbose but harder to miss.
-
-- [ ] **Step 2: Update the §References explanatory paragraph**
-
-The paragraph above the table currently says "the master skill every agent already loads" with `using-superra` as the example. Extend to: "the master skill every agent already loads (along with `report-in-markdown`, the markdown style guide)". One-line change.
-
-- [ ] **Step 3: Validate, commit**
-
-Confirm:
-- Manifest reads correctly: `Stage: documentation` row no longer double-lists `report-in-markdown`.
-- The "always loaded" note is unambiguous — a fresh agent should not be tempted to skip `report-in-markdown` because their Stage row doesn't list it.
-- No conflict with the existing **Main agents additionally load** sentence; that already lists `handoff-doc` separately.
-
-Update PLAN.md, RESULTS.md Task 2, commit.
+Confirmed:
+- `Stage: documentation` row no longer double-lists `report-in-markdown`; `handoff-doc` retained.
+- Always-loaded note is unambiguous and placed where an agent reading the manifest cannot miss it (right above the table).
+- The **Main agents additionally load** sentence below the domain table is unaffected.
 
 ---
 

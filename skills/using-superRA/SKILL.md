@@ -74,7 +74,7 @@ For execution throughout the workflows, the main agent can dispatch subagents fo
 
 For each Stage, load the listed skills. The Stage is role-independent; `subagent_type` (implementer vs reviewer) encodes role. Each loaded skill's own body carries its stage- and role-scoped reference load map — after loading a skill, follow its load map for your Stage and role.
 
-**The "Required skills" column lists what loads *in addition to* `superRA:using-superra`** — the master skill every agent already loads (implementer / reviewer via frontmatter preload at dispatch time; main agent and team teammates via explicit `Skill` invocation). Subagents get a compact handoff-doc etiquette from `agents/implementer.md` / `agents/reviewer.md` and load `superRA:handoff-doc` on demand or when creating docs from scratch.
+**The "Required skills" column lists what loads *in addition to* `superRA:using-superra` and `superRA:report-in-markdown`** — the two skills every agent already loads (implementer / reviewer via frontmatter preload at dispatch time; main agent and team teammates via explicit `Skill` invocation). `report-in-markdown` is always loaded because every agent writes markdown; its body carries the always-applicable file-link citation rule, with deeper format discipline in references loaded on demand. Subagents get a compact handoff-doc etiquette from `agents/implementer.md` / `agents/reviewer.md` and load `superRA:handoff-doc` on demand or when creating docs from scratch.
 
 ### Generic (stage-driven)
 
@@ -86,7 +86,7 @@ Apply to every dispatch regardless of domain.
 | `protection` | `integration-workflow` Protect | `result-protection` |
 | `sync` | `integration-workflow` Sync | `semantic-merge` |
 | `integration` | `integration-workflow` Integrate | `refactor-and-integrate` |
-| `documentation` | `integration-workflow` Document | `handoff-doc` + `report-in-markdown` |
+| `documentation` | `integration-workflow` Document | `handoff-doc` |
 
 `Stage: sync` is branch-level. `integration-workflow` dispatches generic sync author / sync reviewer agents with the mode references named in that workflow; the canonical implementer/reviewer role specs do not carry Sync-specific exceptions.
 
