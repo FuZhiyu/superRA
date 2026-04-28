@@ -138,12 +138,8 @@ Re-read both files end-to-end. Confirm:
 
 ### Task 2: Make `report-in-markdown` always-loaded in the Skill-Load Manifest
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(set during integration)*
-
-> **Review notes:**
-> 1. [MINOR] [skills/using-superRA/SKILL.md:59](skills/using-superRA/SKILL.md#L59) — the §Skill Inventory row for `report-in-markdown` still reads "Format discipline for markdown reports — figures, LaTeX math, tables." This contradicts the new framing introduced 18 lines below at line 77 ("the two skills every agent already loads ... `report-in-markdown` is always loaded because every agent writes markdown ... always-applicable file-link citation rule"). Task 1 already updated the parallel rows in `skills/CATEGORIES.md:44` and `README.md:82` to "Markdown style guide for any agent writing markdown — always-applicable file-link citation rule plus progressive-reveal references for figures, LaTeX math, tables, and Stage 2 final-form." The using-superRA inventory row should match. Fix: rewrite line 59 to mirror the CATEGORIES/README phrasing (e.g. "Markdown style guide for any agent writing markdown — always-applicable file-link citation rule plus on-demand references for figures, LaTeX math, tables, and Stage 2 final-form."). The dispatch's check (3) explicitly flagged this consistency point. Without this, a fresh agent reading the file top-to-bottom sees two different stories about what the skill is.
->    → implemented: rewrote line 59 to "Markdown style guide for any agent writing markdown — always-loaded alongside `using-superra`. Carries the file-link citation rule plus on-demand references for figures, LaTeX math, tables, and Stage 2 final-form." Mirrors the CATEGORIES.md / README.md framing and adds an explicit "always-loaded" cue. ([skills/using-superRA/SKILL.md:59](skills/using-superRA/SKILL.md#L59))
 
 **Script:** `skills/using-superRA/SKILL.md` (§Skill-Load Manifest)
 **Input:** Current manifest §Generic table (lines 79–89), with `report-in-markdown` only at `Stage: documentation`.
