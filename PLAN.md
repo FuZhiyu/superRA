@@ -190,9 +190,13 @@ Update PLAN.md, RESULTS.md Task 2, commit.
 **Review status:** *(set during execution)*
 **Integration status:** *(set during integration)*
 
+> **User decision (2026-04-27):** Add a one-line reminder in `agents/implementer.md` and `agents/reviewer.md` pointing at `report-in-markdown` for the file-link citation rule, even though the manifest update in Task 2 makes it always-loaded. Concise — a single line near the existing handoff/etiquette section in each file is enough.
+> **Question asked:** During Task 1 REVISE round, the user asked whether to add a "highlight" sentence in the agent bodies that points at `report-in-markdown` when the agent is editing PLAN.md / RESULTS.md.
+> **Rationale:** The manifest load makes the skill available, but a one-liner in the agent body increases the chance an agent actually consults it for the citation rule.
+
 **Script:** `agents/implementer.md`, `agents/reviewer.md`, `skills/handoff-doc/SKILL.md`, `skills/handoff-doc/references/plan-anatomy.md`
 **Input:** Existing canonical examples using backtick-path citations and the conditional-load sentence at `agents/implementer.md` line 128.
-**Output:** All canonical example blockquotes use markdown-link citations; conditional-load sentence reflects always-loaded state of `report-in-markdown`; `handoff-doc/SKILL.md` line 49 pointer extended.
+**Output:** All canonical example blockquotes use markdown-link citations; one-line `report-in-markdown` highlight added to each agent body's Editing Etiquette section; conditional-load sentence reflects always-loaded state of `report-in-markdown`; `handoff-doc/SKILL.md` line 49 pointer extended.
 
 - [ ] **Step 1: Update `agents/implementer.md`**
 
@@ -210,11 +214,15 @@ Update PLAN.md, RESULTS.md Task 2, commit.
 
 - Line 128 — drop the conditional `also load` sentence (the skill is now always loaded). Replace with: "If your task section contains figures, LaTeX math, or tables, also load `report-in-markdown/references/rich-content.md` for the format details."
 
-- [ ] **Step 2: Update `agents/reviewer.md`**
+- [ ] **Step 2: Add one-line `report-in-markdown` highlight to both agent bodies**
+
+In each of `agents/implementer.md` and `agents/reviewer.md`, find the Editing Etiquette subsection (the compact handoff-doc etiquette that already lives in each file) and add a single line: "Cite source files as markdown links per `report-in-markdown` §File-reference rule (e.g., `[file.py:42](file.py#L42)`)." Keep it concise — one sentence, no new paragraph.
+
+- [ ] **Step 3: Update `agents/reviewer.md`**
 
 §Review Protocol (around line 126) — the description currently reads "file:line, description, severity, what to fix." Change to: "markdown-link citation (e.g., `[file.py:42](file.py#L42)`), description, severity, what to fix." One-sentence change; no new paragraphs.
 
-- [ ] **Step 3: Update `skills/handoff-doc/SKILL.md` line 49**
+- [ ] **Step 4: Update `skills/handoff-doc/SKILL.md` line 49**
 
 Current: `**Figure embedding** — discipline in `report-in-markdown/references/rich-content.md`; Stage 2 materialization in `report-in-markdown/references/final-form.md`.`
 
@@ -222,11 +230,11 @@ New: `**Figure embedding and code-file citations** — discipline in `report-in-
 
 One-word extension to surface the link-citation rule for handoff-doc readers.
 
-- [ ] **Step 4: Update `skills/handoff-doc/references/plan-anatomy.md`**
+- [ ] **Step 5: Update `skills/handoff-doc/references/plan-anatomy.md`**
 
 Find the example review-notes blockquote (currently around lines 208–212 with `(`Code/03.py:42`)` style). Rewrite to match the agent-body example: markdown-link citations.
 
-- [ ] **Step 5: Validate, commit**
+- [ ] **Step 6: Validate, commit**
 
 Confirm:
 - All four files use markdown-link citations in their canonical examples.
