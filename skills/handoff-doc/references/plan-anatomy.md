@@ -212,8 +212,8 @@ print(f"Rows: {n_before} → {len(df)} (delta: {len(df) - n_before})")
 Validate: row count matches expectation, unmatched rate reasonable, distributions sensible, magnitudes economically plausible. Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Update RESULTS.md (key findings, figures in `results_attachments/`). Commit code + handoff docs in a single atomic commit.
 
 > **Review notes (present only during active REVISE rounds):**
-> 1. [MAJOR] Step 2 uses inner join; should be left join to preserve all rows. (`Code/03.py:42`)
->    → implemented: switched to left join, row count preserved (`Code/03.py:42`)
+> 1. [MAJOR] Step 2 uses inner join; should be left join to preserve all rows. ([Code/03.py:42](Code/03.py#L42))
+>    → implemented: switched to left join, row count preserved ([Code/03.py:42](Code/03.py#L42))
 > 2. [MINOR] Missing row-count log after merge.
 >    → orchestrator: rejected — row count is logged two lines above, reviewer misread
 ````

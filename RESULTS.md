@@ -37,7 +37,16 @@
 
 ## Task 3: Update canonical examples and conditional-load text in agent files and handoff-doc references
 
-**Status:** Not started
+**Status:** IMPLEMENTED — pending review
+
+### Key Findings
+- `agents/implementer.md` updated in three places: (1) §Editing Etiquette gained a one-line "Cite source files as markdown links per `report-in-markdown` §File-reference rule" reminder; (2) lines 113–120 example blockquote rewritten so review items and `→ implemented:` annotations use markdown-link citations like `([Code/03.py:42](Code/03.py#L42))`; (3) line 128 conditional-load sentence reworded — `report-in-markdown` is now always loaded so the sentence only points at the heavier `rich-content.md` reference, not the parent skill.
+- `agents/reviewer.md` updated in three places: (1) §Editing Etiquette gained the same one-line reminder; (2) §Verdict (line 83) "file:line, description, severity, what to fix" → "markdown-link citation (e.g., `[file.py:42](file.py#L42)`), description, severity, what to fix"; (3) §How You Write a Review (line 126) the same wording change applied to the per-issue item description.
+- `skills/handoff-doc/SKILL.md` line 49 pointer extended from "Figure embedding" to "Figure embedding and code-file citations" — surfaces the link-citation rule for handoff-doc readers without restating it.
+- `skills/handoff-doc/references/plan-anatomy.md` lines 215–216 review-notes example rewritten to markdown-link citations, matching the agent-body canonical example.
+
+### Notes
+- Codex generated artifacts (`skills/using-superRA/references/direct-mode-{implementer,reviewer}.md`, `.codex/agents/superra_{implementer,reviewer}.toml`) were intentionally NOT regenerated in this commit. Per PLAN.md header, regeneration happens in Task 5 once Tasks 3 and 4 (the agent-file edits) have both landed.
 
 ## Task 4: Sweep for stale backtick-path citation samples across the repo
 
