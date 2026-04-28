@@ -27,7 +27,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on Option 5 in plan-mode session 2026-04-27 (no domain vertical applies)
-- [ ] **Execution complete** — all tasks `APPROVED`, regeneration script run clean
+- [x] **Execution complete** — all 5 tasks `APPROVED`, `sync_codex_agents.py --check` returns clean (verified by Task 5 reviewer)
 - [ ] **Drift tests created** — n/a for skill-text edits (no numerical results to protect)
 - [ ] **Integrated** — integration reviewer `APPROVED` after Sync
 - [ ] **Docs finalized** — RESULTS.md matured (likely minimal: this work *is* docs), project docs audited
