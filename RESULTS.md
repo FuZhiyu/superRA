@@ -50,7 +50,24 @@
 
 ## Task 4: Sweep for stale backtick-path citation samples across the repo
 
-**Status:** Not started
+**Status:** IMPLEMENTED — pending review
+
+### Key Findings
+Sweep ran two grep patterns:
+1. `` (`<path>:<line>`) `` — backtick-wrapped path:line citations.
+2. `<file:line + ...>` and `\`file:line\`` — file:line in instruction templates and prose.
+
+Triage of hits and actions taken:
+
+- **`agents/implementer.md:106`** — `<file:line + one-line fix description>` instruction template (the MINOR symmetry observation surfaced by the Task 3 reviewer). Rewrote to `<markdown-link citation + one-line fix description>` so the template parallels the canonical example two paragraphs below.
+- **`agents/reviewer.md:137`** — `<file:line + fix description>` describing the implementer's annotation format on re-review. Rewrote to `<markdown-link citation + fix description>`. Also softened the trailing prose "Go to the cited `file:line` and verify" to "Follow the markdown link to the cited line and verify."
+- **`skills/agent-orchestration/SKILL.md:163`** — canonical example blockquote in §Handling Reviewer Feedback used backtick-path form `` (`Code/03.py:42`) ``. Rewrote to markdown-link form `([Code/03.py:42](Code/03.py#L42))` for consistency with the agent-body example.
+- **`skills/using-superRA/references/direct-mode-{implementer,reviewer}.md`** — these are generated artifacts. Left untouched; Task 5 regenerates them via `sync_codex_agents.py` from the updated `agents/*.md` source.
+- **`skills/report-in-markdown/references/rich-content.md:105`** — intentional anti-pattern example labeled "Wrong (backtick path)". Left as-is; this is teaching the wrong form so readers recognize and avoid it.
+- **`agents/implementer.md:105`** — descriptive prose "go to the cited `file:line` and fix the code". Reviewer flagged but said "remains a reasonable English description." Left as-is per reviewer's own judgment.
+
+### Notes
+- Final re-run of both grep patterns shows only the `direct-mode-*` generated files (Task 5 territory) and the rich-content.md anti-pattern example. No other backtick-path or `<file:line>` template residuals.
 
 ## Task 5: Regenerate Codex named-agent artifacts and verify
 

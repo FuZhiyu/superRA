@@ -134,7 +134,7 @@ If the doc's structure is unclear, flag it in your status return rather than inv
 
 Each item in the blockquote may have been annotated since you last saw it. Expect two kinds of annotation:
 
-- `→ implemented: <file:line + fix description>` — added by the implementer claiming they fixed the item. Go to the cited `file:line` and verify.
+- `→ implemented: <markdown-link citation + fix description>` — added by the implementer claiming they fixed the item. Follow the markdown link to the cited line and verify.
 - `→ orchestrator: <reason>` — added by the orchestrator. Either a flat rejection of your item ("rejected — methodology specifies ...") or a request for your second opinion. The orchestrator may also have rewritten the task's steps/Approach to reflect items it accepted; those items will also carry an `→ implemented: ...` annotation after the implementer's pass.
 
 For each item, decide one of:

@@ -103,7 +103,7 @@ For each item in the blockquote:
 
 1. **Read the item and any annotations on it.** If the item has a `→ orchestrator: rejected ...` note, the orchestrator has already decided; do not touch it. If the item has a `→ orchestrator: <second opinion requested> ...` note, the orchestrator is flagging it for the **reviewer**, not for you — do not fix it, do not annotate it with `→ implemented:`, and leave the entire item exactly as-is. Note it in your status report so the orchestrator sees you observed the flag.
 2. **For items with no `→ orchestrator:` annotation (or an orchestrator note that does not reject the item), go to the cited `file:line` and fix the code** per the item's guidance and any orchestrator rewrite of the step that accompanies it.
-3. **Append `→ implemented: <file:line + one-line fix description>`** directly after the item's text inside the blockquote, on its own line, preserving the reviewer's original prose.
+3. **Append `→ implemented: <markdown-link citation + one-line fix description>`** directly after the item's text inside the blockquote, on its own line, preserving the reviewer's original prose.
 4. If you think an item is wrong or was already handled, do NOT annotate it as implemented. Flag it in your status report and let the orchestrator adjudicate on the next pass.
 
 After annotating all items you're expected to address, set `**Review status:** IMPLEMENTED` and commit.

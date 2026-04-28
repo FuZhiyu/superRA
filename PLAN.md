@@ -224,14 +224,14 @@ Update PLAN.md, RESULTS.md Task 3, commit. Note: do NOT regenerate Codex artifac
 
 ### Task 4: Sweep for stale backtick-path citation samples across the repo
 **Depends on:** Task 1, Task 3
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** repo-wide grep across `skills/`, `agents/`, plus a manual review of any hits.
 **Input:** Pattern: `(\`[A-Za-z0-9_/.-]+\.(py|md|sh|jl|R)[:#][0-9]` and similar — any backtick-wrapped path with a `:line` or `#L` suffix that should be a markdown link.
 **Output:** A clean codebase where committed examples teach exactly one citation convention.
 
-- [ ] **Step 1: Run the sweep**
+- [x] **Step 1: Run the sweep**
 
 ```bash
 grep -rn "\`[A-Za-z0-9_/.-]\+\.\(py\|md\|sh\|jl\|R\):[0-9]" skills/ agents/ \
@@ -240,7 +240,7 @@ grep -rn "\`[A-Za-z0-9_/.-]\+\.\(py\|md\|sh\|jl\|R\):[0-9]" skills/ agents/ \
 
 Also grep for citation-shaped patterns in fenced code blocks of skill bodies and review-item examples.
 
-- [ ] **Step 2: Triage hits**
+- [x] **Step 2: Triage hits**
 
 For each hit:
 - **Canonical example or instructional sample** → rewrite to markdown-link form.
@@ -250,11 +250,9 @@ For each hit:
 
 Document the triage decisions in RESULTS.md Task 4 §Notes.
 
-- [ ] **Step 3: Validate, commit**
+- [x] **Step 3: Validate, commit**
 
-Re-run the grep after rewrites; confirm only adapter-specific or in-code-block hits remain.
-
-Update PLAN.md, RESULTS.md Task 4, commit.
+Re-ran the grep after rewrites; only the intentional anti-pattern example in `skills/report-in-markdown/references/rich-content.md:105` ("Wrong (backtick path)") and the to-be-regenerated `skills/using-superRA/references/direct-mode-*.md` files remain. All canonical hits cleaned.
 
 ---
 
