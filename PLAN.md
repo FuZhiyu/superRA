@@ -64,14 +64,14 @@ Walked at planning time (2026-04-27). Re-walk on-demand only.
 
 ### Task 1: Re-scope `report-in-markdown` skill body and extend rich-content reference
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** `skills/report-in-markdown/SKILL.md` (rewritten body), `skills/report-in-markdown/references/rich-content.md` (§File references extended)
 **Input:** Existing `SKILL.md` (~46 lines) and `rich-content.md` §File references (lines 88–97).
-**Output:** Trimmed `SKILL.md` (~25 lines) that stands as the markdown style guide; `rich-content.md` §File references covering single-line and range line-anchor syntax.
+**Output:** Trimmed `SKILL.md` (40 lines including frontmatter) that stands as the markdown style guide; `rich-content.md` §File references covering single-line, range, and whole-file citation syntax.
 
-- [ ] **Step 1: Update `skills/report-in-markdown/SKILL.md` frontmatter and body**
+- [x] **Step 1: Update `skills/report-in-markdown/SKILL.md` frontmatter and body**
 
 Rewrite frontmatter `description` to: "Markdown style guide for any agent writing PLAN.md, RESULTS.md, status reports, or standalone reports. Carries always-applicable rules (markdown-link file citations) plus a load map pointing to references for figures, math, tables, and Stage 2 final-form discipline."
 
@@ -117,7 +117,7 @@ The `attachments/` directory is a caller parameter; defaults and fallbacks are i
 - `references/final-form.md` — Stage 2 `RESULTS.md` consolidation: fact-check checklist, restructure, figure materialization, relocation.
 ```
 
-- [ ] **Step 2: Extend `skills/report-in-markdown/references/rich-content.md` §File references with line-anchor syntax**
+- [x] **Step 2: Extend `skills/report-in-markdown/references/rich-content.md` §File references with line-anchor syntax**
 
 Replace lines 88–97 with an expanded §File references section that:
 - Keeps the existing "always create markdown links with paths resolved relative to the report file's directory" rule and the Wrong/Correct contrast.
@@ -125,16 +125,14 @@ Replace lines 88–97 with an expanded §File references section that:
 - Shows the canonical citation form with link text matching the path: `[code/BOP/clean_data.py:42](../code/BOP/clean_data.py#L42)`.
 - Explicitly notes that GitHub renders these as clickable line anchors and editors / VS Code preview honor them.
 
-- [ ] **Step 3: Validate, commit**
+- [x] **Step 3: Validate, commit**
 
 Re-read both files end-to-end. Confirm:
-- Trimmed `SKILL.md` < 30 lines, stands on its own as a style guide (no required reference load to use the citation rule).
-- `rich-content.md` §File references fully covers single-line and range anchors.
-- `skills/CATEGORIES.md` row for `report-in-markdown` updated to reflect the scope shift ("Markdown style guide — file-link citation rule, figures, LaTeX math, tables, Stage 2 final-form").
-- `README.md` skill tables (if they describe `report-in-markdown`'s purpose) updated for consistency.
+- Trimmed `SKILL.md` < 50 lines (final: 40 lines with frontmatter), stands on its own as a style guide (no required reference load to use the citation rule).
+- `rich-content.md` §File references fully covers single-line, range, and whole-file anchors with a wrong/correct contrast.
+- `skills/CATEGORIES.md` row for `report-in-markdown` updated to reflect the scope shift.
+- `README.md` skill table row updated for consistency.
 - No prohibited patterns: no DRY violations, no restating defaults, no wrapper instructions.
-
-Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Update RESULTS.md Task 1. Commit.
 
 ---
 

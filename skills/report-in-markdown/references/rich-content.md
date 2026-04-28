@@ -87,11 +87,24 @@ When inlining, keep alignment syntax consistent and include units in headers:
 
 ## File references
 
-When mentioning files (scripts, outputs, figures, tables), always create markdown links with **paths resolved relative to the report file's directory**. Do not use bare paths.
+When mentioning files (scripts, outputs, figures, tables), always create markdown links with **paths resolved relative to the report file's directory**. Do not use bare paths or backtick-wrapped paths.
 
-**Example.** Report at `notes/2026-03-07-report-analysis.md`, referenced file at `code/BOP/clean_data.py`:
+**Citation form.**
 
-- Wrong: `code/BOP/clean_data.py`
-- Correct: [`code/BOP/clean_data.py`](../code/BOP/clean_data.py)
+| Use case | Form |
+|---|---|
+| Single line | `[file.py:42](file.py#L42)` |
+| Line range | `[file.py:40-50](file.py#L40-L50)` |
+| Whole file | `[file.py](file.py)` |
 
-Compute the relative path from the markdown file's directory to the target using `../` as needed. For `RESULTS.md` files at the worktree root, relative paths are the same as project-root paths.
+The `#L<n>` and `#L<a>-L<b>` anchors are honored by GitHub, GitLab, VS Code preview, and most markdown renderers — readers click the link and land at the cited line. The link text mirrors the path (and line) so the citation reads naturally even when the renderer ignores the anchor.
+
+**Wrong vs correct.** Report at `notes/2026-03-07-report-analysis.md`, referenced file at `code/BOP/clean_data.py`:
+
+- Wrong (bare path): `code/BOP/clean_data.py`
+- Wrong (backtick path): `` `code/BOP/clean_data.py:42` ``
+- Correct (whole file): [`code/BOP/clean_data.py`](../code/BOP/clean_data.py)
+- Correct (single line): [`code/BOP/clean_data.py:42`](../code/BOP/clean_data.py#L42)
+- Correct (range): [`code/BOP/clean_data.py:40-50`](../code/BOP/clean_data.py#L40-L50)
+
+Compute the relative path from the markdown file's directory to the target using `../` as needed. For `RESULTS.md` and `PLAN.md` files at the worktree root, the relative path equals the project-root path.
