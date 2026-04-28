@@ -23,7 +23,7 @@
 
 ## Task 2: Make `report-in-markdown` always-loaded in the Skill-Load Manifest
 
-**Status:** IMPLEMENTED — pending review
+**Status:** IMPLEMENTED — REVISE round 1 fix applied, pending re-review
 
 ### Key Findings
 - `skills/using-superRA/SKILL.md` §Skill-Load Manifest explanatory paragraph rewritten: now names `superRA:using-superra` **and** `superRA:report-in-markdown` as the two skills every agent loads, with a one-sentence rationale ("every agent writes markdown") and a pointer to where the citation rule lives ("its body carries the always-applicable file-link citation rule, with deeper format discipline in references loaded on demand").
@@ -33,6 +33,7 @@
 ### Notes
 - The **Main agents additionally load** sentence below the domain-add-on table is unchanged. It mentions `references/main-agent.md`, `superRA:handoff-doc`, and `superRA:agent-orchestration` — none of which conflict with the new always-loaded pair.
 - Domain add-on rows are unchanged; they continue to compose with the generic table.
+- REVISE round 1 also rewrote the §Skill Inventory row at line 59 (caught by reviewer — Task 1's parallel update missed this in-file row). The inventory row now matches the CATEGORIES.md and README.md phrasing and explicitly says "always-loaded alongside `using-superra`."
 
 ## Task 3: Update canonical examples and conditional-load text in agent files and handoff-doc references
 
