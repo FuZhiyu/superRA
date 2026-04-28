@@ -164,7 +164,7 @@ Confirmed:
 
 ### Task 3: Update canonical examples and conditional-load text in agent files and handoff-doc references
 **Depends on:** Task 1 (must know the new citation form), Task 2 (must know the new always-loaded state)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(set during integration)*
 
 > **User decision (2026-04-27):** Add a one-line reminder in `agents/implementer.md` and `agents/reviewer.md` pointing at `report-in-markdown` for the file-link citation rule, even though the manifest update in Task 2 makes it always-loaded. Concise — a single line near the existing handoff/etiquette section in each file is enough.
