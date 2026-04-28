@@ -103,8 +103,8 @@ The `#L<n>` and `#L<a>-L<b>` anchors are honored by GitHub, GitLab, VS Code prev
 
 - Wrong (bare path): `code/BOP/clean_data.py`
 - Wrong (backtick path): `` `code/BOP/clean_data.py:42` ``
-- Correct (whole file): [`code/BOP/clean_data.py`](../code/BOP/clean_data.py)
-- Correct (single line): [`code/BOP/clean_data.py:42`](../code/BOP/clean_data.py#L42)
-- Correct (range): [`code/BOP/clean_data.py:40-50`](../code/BOP/clean_data.py#L40-L50)
+- Correct (whole file): [code/BOP/clean_data.py](../code/BOP/clean_data.py)
+- Correct (single line): [code/BOP/clean_data.py:42](../code/BOP/clean_data.py#L42)
+- Correct (range): [code/BOP/clean_data.py:40-50](../code/BOP/clean_data.py#L40-L50)
 
 Compute the relative path from the markdown file's directory to the target using `../` as needed. For `RESULTS.md` and `PLAN.md` files at the worktree root, the relative path equals the project-root path.

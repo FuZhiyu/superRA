@@ -6,9 +6,7 @@ user-invocable: true
 
 # Report in Markdown
 
-The markdown style guide. Every agent loads this skill — every agent writes markdown.
-
-Always-applicable rules below. Details for figures / math / tables / Stage 2 maturation live in references; load only the reference your output needs.
+The markdown style guide for any agent writing markdown. Always-applicable rules below; deeper format discipline (figures, LaTeX math, tables, Stage 2 final-form) lives in references and loads on demand per the load map.
 
 ## File-reference rule
 
