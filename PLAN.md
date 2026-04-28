@@ -224,7 +224,7 @@ Update PLAN.md, RESULTS.md Task 3, commit. Note: do NOT regenerate Codex artifac
 
 ### Task 4: Sweep for stale backtick-path citation samples across the repo
 **Depends on:** Task 1, Task 3
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(set during integration)*
 
 **Script:** repo-wide grep across `skills/`, `agents/`, plus a manual review of any hits.
