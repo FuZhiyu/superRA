@@ -306,7 +306,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 11: Add `theory-modeling/references/objective-first.md` — worked example + identification training
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** `skills/theory-modeling/references/objective-first.md` (new)
 **Input:** The user's attached `\dot{\boldsymbol{\Sigma}}\bar{\mathbf Q}` walkthrough (recorded in the 2026-04-30 conversation): bad pattern starts from a local placeholder `z_j` and only later reveals the target `\dot{\boldsymbol{\Sigma}}\bar{\mathbf Q}`; good pattern starts from `\dot{\boldsymbol{\Sigma}}`, takes the derivative, identifies the only missing object `\boldsymbol{\beta}_{P,E}`, solves for it using existing model equations (law of one price, return-loading equation, state-loading market clearing), substitutes back. The 2026-04-30 Decisions log records that this file is teaching material — principle + worked example + identification training drills — not a checklist (Section A in `integration.md` carries the checklist).
