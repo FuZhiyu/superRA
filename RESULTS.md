@@ -189,16 +189,122 @@ None. Task 8 introduces no mathematical symbols or model assumptions (it is meta
 
 ## Task 10: Rewrite `theory-modeling/references/integration.md` as the rewriting reference
 
-**Status:** Not started
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*To be filled by implementer.*
+
+`skills/theory-modeling/references/integration.md` rewritten from a thin
+55-line refactor-survival checklist into the canonical rewriting reference
+(459 lines). Frontmatter advertises the file as the rewriting playbook
+(structural rewriting + cross-document coherence + reader-perspective
+discipline) and the header carries the halt-and-redispatch scope clause.
+Body has four sections in **principle → identification protocol →
+checklist** layered shape:
+
+- **Section A — Objective-first structural rewriting** (lines 40–133).
+  Principle: forward-written, backward-built; recursive at every level
+  (top-level strategy + sub-argument signposts + transition prose).
+  Pointer to `references/objective-first.md` for the worked example
+  (Task 11 will populate). Identification protocol walks the existing
+  derivation top-to-bottom against five questions; pattern-watch list
+  enumerates the local-detour-first / deferred-goal anti-patterns.
+  Four `[BLOCKING]` items + onion-style `[ADVISORY]`. Differentiation
+  paragraph at lines 66–72 frames Section A as the ex-post
+  detection-and-rewrite layer to distinguish from Gate 3's creation-time
+  audit floor.
+- **Section B — Per-step local obviousness** (lines 137–224). Principle
+  pins the half-page-mask test ("**obvious**, not merely derivable") and
+  enumerates the four-fix taxonomy (define inline / restate the
+  assumption / cite-with-form-recall / split-the-step). Identification
+  protocol teaches the mask test as a procedure on every displayed
+  equation and routes the failure to one of four named types. Four
+  `[BLOCKING]` items + inline-restatement `[ADVISORY]`.
+- **Section C — Cross-document coherence** (lines 228–345). Principle
+  names three coherence layers (notation / prior results / prose
+  integration). Required reads block (lines 254–260) points at
+  `references/audience-discipline-modeling.md` and
+  `references/audience-discipline-writing.md` as bare pointers (no
+  content sketch — the files are authoritative). Three-step
+  identification protocol (notation pre-flight against `PLAN.md`
+  Notation Conventions and prior-task ledgers; prior-result pre-flight
+  by name and by content match; prose-integration pass). Five
+  `[BLOCKING]` items including reader-perspective discipline against
+  the two audience-discipline files and document-code consistency.
+- **Section D — Discipline preserved through refactoring** (lines
+  349–448). Pre-Task-10 content preserved with principle and
+  identification-protocol intros added. The two Task 8 `[BLOCKING]`
+  items (per-task ledger survival; canonical-table user-gating) carry
+  cross-references back to Sections A–C as the rewriting-time
+  companions. Utility reuse + documented-deviations sub-block preserved.
+
+Reviewer verdict protocol (lines 452–459) walks A → D in order alongside
+`refactor-and-integrate/SKILL.md` and reiterates the halt-and-redispatch
+discipline.
 
 ### Notes
-*To be filled by implementer.*
+
+- **Halt-and-redispatch citation.** PLAN spec named
+  `using-superRA/SKILL.md:92` as the citation target for the
+  `Stage: sync` halt-and-redispatch shape. Verification at implementation
+  time showed line 92 carries only "`Stage: sync` is branch-level," not
+  the halt-and-redispatch text. The closest authoritative source for the
+  shape (broader codebase-coherence work is "out of scope for this skill"
+  in `Stage: sync`) is `semantic-merge/SKILL.md:80`. Replaced the
+  line-numbered cite with a content cite to `semantic-merge/SKILL.md`
+  §"out of scope".
+- **Pre-Task-10 head sections folded into A–D.** The committed file's
+  "Consistency with the model and codebase" head section (no-duplicate
+  notation, assumption-map consistency, statement-result consistency,
+  document-code consistency) is folded: notation-duplication into
+  Section C's notation pre-flight; document-code consistency into
+  Section C's checklist as a `[BLOCKING]`; assumption-map and
+  statement-result coherence are now covered jointly by Section C's
+  prose-integration / prior-result pre-flight and Section D's assumption
+  / per-step-reason survival items. No content was lost.
+- **Required-reads pointer trim.** First draft characterized each
+  audience-discipline file in one line ("proof-narrative perspective; the
+  two reader contexts; mid-proof self-narration vs. proof roadmap; …").
+  Per the dispatch's anti-wrapper guidance and CLAUDE.md §"Teach the
+  Protocol" two-test, the sketch was trimmed to bare pointers — the
+  files are authoritative; routing requires only the file names plus a
+  one-noun orientation ("proof-narrative prose" vs "paper-body prose
+  generally").
+- **Recursive-signposting overlap with Gate 3 (interim).** Section A's
+  recursive-sub-argument-signposts `[BLOCKING]` and Gate 3's full
+  recursive-roadmap-signposting `[BLOCKING]` are textually similar but
+  framed differently (Section A is ex-post detection-and-rewrite; Gate 3
+  is creation-time audit floor). The differentiation paragraph at
+  Section A lines 66–72 makes the distinction explicit. This overlap is
+  expected through Task 12 — Task 12 cuts Gate 3 down to a minimal
+  goal-statement floor and leaves the full recursive discipline in
+  Section A.
+- **Untracked audience-discipline files.** Per dispatch instruction,
+  `audience-discipline-modeling.md` and `audience-discipline-writing.md`
+  are referenced by relative path but **not** `git add`-ed in this task.
+  Task 13 owns tracking; this task only wires them into Section C.
+- **No Section E or further sections.** Per the spec the file ends with
+  Section D + reviewer verdict protocol; the four-section design is
+  exhaustive for this stage's scope.
+
+### Open caveats
+
+- The line-numbered citation `implementation-workflow/SKILL.md:135` is
+  used twice (Section C identification protocol and checklist; Section D
+  canonical-table item). Verified at implementation time that line 135
+  carries the "Domain pre-step (theory-modeling only): notation/assumption
+  promotion" prose. The cite will need re-checking if
+  `implementation-workflow/SKILL.md` is reorganized.
+- Once Task 12 lands, the Section A "Differentiation from creation-time
+  discipline" paragraph (lines 66–72) should be sanity-read once more —
+  Gate 3's reduced wording may make the differentiation paragraph
+  partly redundant. Not removing it preemptively because the paragraph
+  also carries the recursive-level framing that Gate 3 will no longer
+  carry.
 
 ### Notation & Assumptions Ledger
-*To be filled by implementer (expected: None — meta-work on the rewriting reference).*
+
+None. Task 10 is meta-work on the rewriting reference; no mathematical
+symbols or model assumptions are introduced.
 
 ## Task 11: Add `theory-modeling/references/objective-first.md` — worked example + identification training
 
