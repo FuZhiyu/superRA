@@ -461,13 +461,38 @@ None — meta-work on Gate 3 wording and the stage-scoped reference table; no ne
 
 ## Task 13: Wire per-task `Stage: integration` note + inventory updates
 
-**Status:** Not started
+**Status:** IMPLEMENTED
 
 ### Key Findings
-*To be filled by implementer.*
+
+Six surgical edits, all minimum-net-diff and pointer-only where applicable:
+
+1. **`skills/implementation-workflow/SKILL.md` line 99** — added one sentence between Task Execution Step 4 and the direct-mode note: "When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, the orchestrator may dispatch `Stage: integration` against that single task before advancing. This uses existing stage flexibility — no new mechanism." No new branch, no new gate, no expanded protocol — the orchestrator was already free to do this; the line just advertises that fact.
+
+2. **`skills/theory-modeling/references/audience-discipline-modeling.md` and `audience-discipline-writing.md`** — both files staged via `git add`. No content edits; the user authored them and Tasks 10 and 12 already wired them in via `integration.md` Section C and `theory-modeling/SKILL.md` stage table.
+
+3. **`skills/CATEGORIES.md` line 25** (theory-modeling row, flagship-discipline column) — extended to mention "task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline) at integration time" and listed the full reference set including `objective-first.md`, `audience-discipline-modeling.md`, `audience-discipline-writing.md` alongside the pre-existing three.
+
+4. **`README.md` line 67** (Domain Skills table, theory-modeling row) — appended one short clause: "Adds a task-level rewriting/coherence reference set (objective-first, audience-discipline) surfaced at `Stage: integration`." Full discipline remains owned by the skill body.
+
+5. **`CLAUDE.md` line 66** (Ownership Boundaries table, Domain-discipline row) — extended the Concern cell with a parenthetical-style clause naming both creation-time four-gate discipline and the task-level rewriting/coherence concern under `theory-modeling`. Owner cell unchanged.
+
+6. **`tests/check-harness-compatibility.sh`** — ran clean: 42/42 PASS, identical to the post-Task-12 baseline. No assertion needed updating; the harness checks target discovery/wiring invariants (skill files exist, manifests reference theory-modeling, refactor-and-integrate stays domain-neutral, `.agents/skills/` symlinks present, frontmatter parses, generated artifacts in sync) — none of which are affected by inventory wording.
+
+### Cross-reference verification (grep audit)
+
+- `audience-discipline-modeling.md`: cited at `integration.md:259` and `integration.md:335` (Task 10 Section C), `SKILL.md:35` (Task 12 stage table), `CATEGORIES.md:25` (Task 13).
+- `audience-discipline-writing.md`: cited at `integration.md:260` and `integration.md:335` (Task 10 Section C), `SKILL.md:36` (Task 12 stage table), `CATEGORIES.md:25` (Task 13).
+- `objective-first.md`: cited at `integration.md:63` and `integration.md:94` (Task 10 Section A), `SKILL.md:34` (Task 12 stage table), `CATEGORIES.md:25` and `README.md:67` and `CLAUDE.md:66` (Task 13 by name).
+
+All three references are now triangulated across discipline (`integration.md`), routing (`SKILL.md` stage table), and inventory (`CATEGORIES.md`/`README.md`/`CLAUDE.md`).
 
 ### Notes
-*To be filled by implementer.*
+
+- The Decisions log entry of 2026-04-30 explicitly framed the `Stage: integration` dispatch as orchestrator flexibility, not a new mechanism. The implementation-workflow note is therefore single-sentence pointer language; expanding it into a procedural branch would re-introduce the very over-specification the "Teach the Protocol, Don't Prescribe Each Action" gate forbids.
+- The CLAUDE.md ownership table's existing structure groups both domain skills (`econ-data-analysis`, `theory-modeling`) into a single "Domain discipline" row. The minimum-net-diff way to surface the rewriting/coherence concern under `theory-modeling` is an inline parenthetical inside the existing Concern cell rather than fragmenting the row; the owner remains `theory-modeling`, which is what the task spec required.
+- README.md was kept short by name-checking only the reference families ("objective-first, audience-discipline") rather than listing each file individually; full file paths live in `CATEGORIES.md` and the SKILL.md stage table.
 
 ### Notation & Assumptions Ledger
-*To be filled by implementer (expected: None — wiring and inventory work).*
+
+None — wiring and inventory work; no new symbols or assumptions introduced.

@@ -22,7 +22,7 @@ Carry the domain-specific knowledge that workflow skills invoke when a task touc
 | Skill | Vertical | Flagship discipline |
 |---|---|---|
 | `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), three concurrent disciplines (describe-analyze-validate), diagnostics-for-validity philosophy, pitfall catalogs, common rationalizations. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `data-robustness-checklist.md`, `notebook-format.md` (+ `jupytext-guide.md` and `julia-quarto-guide.md` companions). |
-| `theory-modeling` | Theory / modeling | Four-gate intuition/interpretability discipline (Objects & Notation, Assumptions, Derivations, Verification & Rendering), stated intuition per symbol, interpretable assumptions, per-step reasons, proof / special-case / numerical verification. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`. |
+| `theory-modeling` | Theory / modeling | Four-gate intuition/interpretability discipline (Objects & Notation, Assumptions, Derivations, Verification & Rendering) at creation time, plus task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline) at integration time. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `objective-first.md`, `audience-discipline-modeling.md`, `audience-discipline-writing.md`. |
 
 ### Future verticals (roadmap — not yet implemented)
 
