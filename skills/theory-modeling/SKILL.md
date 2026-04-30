@@ -30,7 +30,10 @@ phase. Load per stage; do not load them all at every dispatch:
 |---|---|
 | `references/planning.md` | PLAN phase - covers the **Model Inventory / Assumption Map hard gate** and the **Verification Plan**. Loaded by `planning-workflow` when the work is theory/modeling. |
 | `references/integrate-drift-tests.md` | `drift-test` stage - identifies modeling results worth protecting, sets symbolic and numerical tolerance conventions, and catalogs theory-modeling failure modes drift tests catch. Loaded by `integration-workflow` Phase A. |
-| `references/integration.md` | `integration` stage - modeling-specific refactor-integrity gates (notation consistency, assumption-map preservation, derivation discipline preserved through refactoring, verification pass-through). |
+| `references/integration.md` | `integration` stage - modeling-specific refactor-integrity gates (notation consistency, assumption-map preservation, derivation discipline preserved through refactoring, verification pass-through), plus task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline). |
+| `references/objective-first.md` | `integration` stage - worked bad/good walkthrough and identification-training drills for objective-first structural rewriting; loaded on demand from `references/integration.md` Section A. |
+| `references/audience-discipline-modeling.md` | `integration` stage - reader-perspective discipline for modeling work; loaded on demand from `references/integration.md` Section C. |
+| `references/audience-discipline-writing.md` | `integration` stage - reader-perspective discipline for the writing layer; loaded on demand from `references/integration.md` Section C. |
 
 ## The Iron Law
 
@@ -243,7 +246,8 @@ the technical rule and a reason for invoking it here.
 **Checklist:**
 
 - `[BLOCKING]` The active solution concept is named before derivation starts: planner problem, competitive equilibrium, recursive equilibrium, steady state, fixed point, or other relevant concept.
-- `[BLOCKING]` **Recursive roadmap signposting.** Every derivation opens with a one-sentence strategy: what is being shown and the plan for showing it (e.g., "We prove $X$ in two steps: first establish $Y$, then apply $Z$ to conclude"). Sub-arguments of non-trivial length carry their own opening signpost in the same form — the discipline is recursive, applied at every level where the reader could lose the thread. At major transitions, the prose names where we are in the plan ("having established $Y$, we turn to $Z$"). Test: a reader entering at any point should be able to recover the local goal and its place in the parent strategy from the surrounding signposts. Proofs that read as a wall of algebra without strategy prose are REVISE.
+- `[BLOCKING]` Top-level proof goal stated in one sentence before the first displayed equation. Derivations whose first move is algebra without a stated target are REVISE. (Full reader-facing recursive signposting — sub-arguments at every level, transition prose — lives in `references/integration.md` Section A as ex-post rewriting discipline.)
+- `[BLOCKING]` When a derivation step depends on a previously established equation, lemma, or proposition, the dependency is cited by name or equation number. Asserted equations with no path to a named source are REVISE. (Cite-with-operative-form-recall for distant sources is owned by `references/integration.md` Section B.)
 - `[BLOCKING]` One logical algebraic move per displayed step. Do not collapse multiple substitutions, cancellations, and sign changes into "therefore".
 - `[BLOCKING]` Each non-obvious step states the rule being used: substitute a constraint, differentiate with respect to a variable, apply the envelope theorem, impose market clearing, linearize around a point, or similar.
 - `[BLOCKING]` Each non-trivial step carries both the technical rule (envelope theorem, market clearing, ...) and a one-sentence reason for invoking it; mechanical rule-labels without a reason are REVISE.
