@@ -290,7 +290,7 @@ Walked at planning time (2026-04-22). Re-walk on-demand only.
 
 ### Task 10: Rewrite `theory-modeling/references/integration.md` as the rewriting reference
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** `skills/theory-modeling/references/integration.md`
 **Input:** Existing 55-line `integration.md` with frontmatter that advertises a thin "discipline-preserved-through-refactoring" checklist plus two `[BLOCKING]` items added by Task 8 (per-task ledger survival; canonical-table user-gating). The 2026-04-30 Decisions log records the three failure modes (structural / per-step local obviousness / cross-document coherence) and the principle → identification → checklist layered shape. The two currently-untracked references `audience-discipline-modeling.md` and `audience-discipline-writing.md` are reachable from the same directory and need to be wired in via Section C required reads. The new sibling `objective-first.md` (Task 11) carries the worked example referenced from Section A.
