@@ -42,8 +42,8 @@
 
 - [x] **Plan approved** — researcher signed off on the direction and the initial scope for v1
 - [x] **Execution complete** — Tasks 1–13 all `Review status: APPROVED`; working tree clean; harness compatibility test 42/42 PASS at HEAD `3c42565`. No pipeline to run (this plan is plugin-engineering work, not an empirical analysis). Step 4 promotion pre-step vacuous for Tasks 10–13 (every ledger is `None` — meta-work on skill bodies introduces no model symbols or assumptions).
-- [ ] **Drift tests created** — integration-phase protection added and passing on baseline
-- [ ] **Refactored** — rolled back 2026-04-30 because Tasks 10–13 modify `theory-modeling/SKILL.md`, `theory-modeling/references/integration.md`, and `implementation-workflow/SKILL.md`; Phase B integration must re-run on the enriched rewriting reference + restructured Gate 3
+- [ ] **Drift tests created** — skipped per 2026-04-30 user decision (plugin-engineering work; no numerical results to protect; harness compatibility test is the durable check)
+- [x] **Refactored** — post-batch integration review 2026-04-30 APPROVED at `9fbdba3` (Tasks 9 + 10–13 all `Integration status: APPROVED`; sync skipped per user decision; harness compatibility 42/42 PASS; closure-gap on Task 9 fixed in same review pass)
 - [ ] **Docs finalized** — `RESULTS.md` matured, project docs audited, doc-reviewer `APPROVED`
 - [ ] **Merged** — branch merged to main or PR opened
 
