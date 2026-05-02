@@ -47,8 +47,8 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on this redesign plan (2026-05-02)
-- [ ] **Execution complete** — all tasks `APPROVED`
-- [ ] **Drift tests created** — N/A for skill authoring; substitute satisfied by Task 4 dogfood
+- [x] **Execution complete** — all tasks `APPROVED` (2026-05-02)
+- [ ] **Drift tests created** — N/A for skill authoring; substitute satisfied by Task 5 dogfood (Task 4 was the intent-comment task; Task 5 is the dogfood)
 - [ ] **Integrated** — integration reviewer `APPROVED` on the redesign cumulative diff
 - [ ] **Docs finalized** — RESULTS.md matured; routing surfaces (using-superRA / CATEGORIES / README) consistent with the new mode taxonomy
 - [ ] **Finished** — branch landed locally, PR opened, or requested cleanup completed
