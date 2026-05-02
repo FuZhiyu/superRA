@@ -6,7 +6,7 @@ Shared reference for drift-test creation and review. Implementer and reviewer bo
 
 ### Tolerance calibration
 
-Tolerance calibration is domain-specific. For data-analysis work, load `econ-data-analysis/references/integrate-drift-tests.md` section Tolerance Conventions for Econ Results.
+Tolerance calibration is domain-specific. Load the active domain skill's drift-test reference (per its stage-load table) for tolerance conventions specific to that domain.
 
 ### Red-green verification cycle
 

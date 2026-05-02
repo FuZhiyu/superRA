@@ -97,46 +97,51 @@
 > **User decision (2026-05-02, completion disposition):** Proceed with integration via `superRA:integration-workflow` (Protect / Sync / Integrate / Document / Finish). The branch is 215 commits ahead of `origin/domain/writing-skills` and main has likely advanced since the 2026-05-02 sync — Sync will refresh against current main before Integrate.
 > **Question asked:** Step 4 completion menu — Proceed with integration / Change the plan / Keep as-is / Discard.
 
+> **User decision (2026-05-02, integration re-sync):** Re-sync `domain/writing-skills` against `origin/main` at `8c3db7d` to absorb the theory-modeling vertical release, integration-review structure changes, and domain-neutralization of `agents/*` / `.codex/agents/*` / direct-mode references. Strict take-main-verbatim on infrastructure surfaces; synthesize routing rows so writing and theory-modeling coexist. See §Sync Map for the cluster breakdown.
+
 ---
 
 ## Sync Map
 
-**Base branch:** `main`
-**Pre-sync merge base:** `addc9ca7fe1bdbedb080d92095facb649074c1e4`
-**Synced base head:** `886fda8b6a7862a0a4af8ec7d30fd53ffed6fea3`
-**Incoming range:** `addc9ca..886fda8`
-**Sync commits:** `fde4751`, `7a4cf1a`, plus the take-main-verbatim correction commit
-**Sync review status:** APPROVED (after one REVISE round)
+**Base branch:** `origin/main`
+**Pre-sync merge base:** `886fda8b6a7862a0a4af8ec7d30fd53ffed6fea3`
+**Synced base head:** `8c3db7db058539c5cde7e7ffdc360d8d936fe866`
+**Incoming range:** `886fda8..8c3db7d` (66 commits)
+**Sync commits:** *(populated after the merge commit lands)*
+**Sync review status:** IMPLEMENTED
 
 ### Branch Summary
 
-**Incoming intent:** Substantial restructuring of superRA workflow scaffolding while this branch was idle: `execution-workflow` renamed to `implementation-workflow`; `integration-workflow` rewritten around five phases (Protect / Sync / Integrate / Document / Finish); `refactor-and-integrate` narrowed to codebase-coherence with drift-test content moved to a new `result-protection` skill; `semantic-merge` gained mode references; `using-superRA` lost the `## Universal Principles` block (content redistributed); `CLAUDE.md` rewritten around adaptive-composable-workflow design principles. Codex named-agent generation, marketplace metadata, hook surfaces, and harness-compatibility tests advanced.
+**Incoming intent:** Theory-modeling vertical released as `skills/theory-modeling/` (alpha 0.1.3) — `SKILL.md`, `CLAUDE.md`, `references/{planning,integration,integrate-drift-tests,objective-first}.md`, plus marketplace/plugin/version bumps. Routing surfaces (`README.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md`, `skills/planning-workflow/SKILL.md`) gained theory-modeling rows and dropped the now-redundant 4th column from the planning-workflow vertical table. `agents/{implementer,reviewer}.md`, `.codex/agents/superra_*.toml`, and `skills/using-superRA/references/direct-mode-{implementer,reviewer}.md` were domain-neutralized (data-analysis-specific severity wording broadened to cover modeling/derivation work). `skills/handoff-doc/references/{plan,results}-anatomy.md`, `skills/implementation-workflow/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/result-protection/SKILL.md`, `tests/check-harness-compatibility.sh`, and `hooks/exit-plan-mode` saw smaller integration-review-driven edits. No incoming changes to `skills/writing/` or to `skills/{integration-workflow,semantic-merge,planning-workflow main body beyond the table}/SKILL.md`.
 
-**Resolution thesis:** Strict take-main-verbatim on every shared infrastructure surface. Re-thread writing-vertical additions only into the surfaces main reshaped. Drop the renamed/deleted artifacts. Refresh stale references inside `skills/writing/` to point at main's current structure. Full file/script impact map and user-decision log live in `SEMANTIC_MERGE.md`.
+**Resolution thesis:** Take main verbatim on every infrastructure surface (agents, .codex, direct-mode refs, handoff-doc anatomies, workflow skills outside the writing-vertical edits, plugin metadata, tests, hooks). Synthesize the four routing surfaces (README / CATEGORIES / using-superRA / planning-workflow) so writing and theory-modeling rows coexist; preserve main's planning-workflow table restructure (4th column dropped, generic Stop-here paragraph) and drop the writing-row's stale `references/planning.md` + `references/workflow.md` pointers (those reference files were deleted by the writing redesign — the writing SKILL.md `§Coupling to superRA workflows` now carries the standalone-vs-full-workflow split). Add the missing `.agents/skills/writing` symlink so the harness-compatibility test passes.
 
 ### Sync Clusters
 
-> **Sync cluster `cluster-1-shared-skills` (2026-05-02):** commits `fde4751`; paths `CLAUDE.md`, `README.md`, `agents/*`, `hooks/merge-guard`, `skills/{agent-orchestration,econ-data-analysis,handoff-doc,refactor-and-integrate,report-in-markdown,semantic-merge,worktree-data-sync}/...`, `skills/using-superRA/references/main-agent.md`, `.codex*/`, `tests/*`; affects no redesign tasks directly.
-> **Sync resolution:** Took main verbatim. Branch had no writing-vertical content in any of these files.
+> **Sync cluster `cluster-1-theory-modeling-release` (2026-05-02):** incoming commits in `886fda8..8c3db7d`; paths `skills/theory-modeling/**` (new), `docs/plans/2026-04-22-theory-modeling-vertical-{plan,results}.md` (new), `RELEASE-NOTES.md`, `.claude-plugin/{marketplace,plugin}.json`, `.codex-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `gemini-extension.json`, `package.json`, `.agents/skills/theory-modeling` symlink, `tests/check-harness-compatibility.sh` theory-modeling assertions; affects no redesign tasks.
+> **Sync resolution:** Took main verbatim. Branch had no theory-modeling content.
 > **Integration context:** None.
 > **User decision:** None.
 
-> **Sync cluster `cluster-2-routing-rethread` (2026-05-02):** commits `fde4751`; paths `skills/using-superRA/SKILL.md`, `skills/planning-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/CATEGORIES.md`, `README.md`; affects redesign Task 3 (routing surfaces will be edited again to update writing-row descriptions for the new mode taxonomy).
-> **Sync resolution:** Took main's restructured surfaces verbatim, then added writing-vertical rows.
-> **Integration context:** Task 3 of this redesign edits the same row descriptions (one-liner update only — the row's existence is established correctly).
-> **User decision:** Main re-sync (2026-05-02 first §Decisions entry).
+> **Sync cluster `cluster-2-routing-rethread` (2026-05-02):** paths `README.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md`, `skills/planning-workflow/SKILL.md`; affects redesign Task 3 (routing surfaces).
+> **Sync resolution:** Synthesized — kept main's row additions for theory-modeling, kept this branch's row additions for writing. In `using-superRA/SKILL.md` Skill Inventory and Skill-Load Manifest, both rows now sit under `econ-data-analysis`. In `README.md` Domain Skills table, both rows sit under `econ-data-analysis`; the two-vertical mention in headline prose lists both. In `CATEGORIES.md` Domain table, both rows present; intro prose merges main's "designed to grow" framing with the explicit "Currently implemented: data analysis, theory/modeling, and writing." In `planning-workflow/SKILL.md`, took main's restructured 3-column table (4th column dropped) and added the writing row; dropped the writing-specific paragraph that pointed at the redesign-deleted `references/workflow.md` and replaced it with a one-line pointer to `superRA:writing` `SKILL.md §Coupling to superRA workflows`.
+> **Integration context:** Task 3's routing-row outputs (Review status: APPROVED) have been substantively rewritten by this sync. The post-sync state is the new ground truth: the writing row no longer references `writing/references/planning.md` or `writing/references/workflow.md` (both never existed in the redesigned skill). Integrate reviewer should verify the synthesized routing rows are coherent and the planning-workflow writing-row paragraph reads cleanly without the deleted-file dependency.
+> **User decision:** Re-sync against current main (2026-05-02 §Decisions entry, integration re-sync).
 
-> **Sync cluster `cluster-3-stale-refs-in-writing` (2026-05-02):** commits `fde4751`; paths `skills/writing/SKILL.md`, `skills/writing/references/{workflow,integration,planning,collaboration}.md`; affects redesign Tasks 1–3 (these files are being restructured / deleted).
-> **Sync resolution:** Refreshed stale references against main's renamed/restructured surfaces.
-> **Integration context:** All four files touched by this cluster are restructured or deleted in the redesign — Task 1 rewrites `SKILL.md`, Task 3 deletes `workflow.md` / `planning.md` / `collaboration.md` and trims `integration.md`. The post-sync refresh is being superseded, but the rename-fix work it did is what the redesign starts from (so the redesign sees the correct file names, not the pre-rename ones).
+> **Sync cluster `cluster-3-domain-neutral-agents` (2026-05-02):** paths `agents/{implementer,reviewer}.md`, `.codex/agents/superra_{implementer,reviewer}.toml`, `skills/using-superRA/references/direct-mode-{implementer,reviewer}.md`; affects no redesign tasks (writing branch did not edit agent/role specs).
+> **Sync resolution:** Took main verbatim. Severity examples and escalation lists were broadened from data-analysis-specific to include modeling/derivation work; no behavioral conflict with the writing redesign.
+> **Integration context:** None — no writing-task implementer or reviewer dispatched on this branch since 2026-05-02 will see different role behavior, but the new wording is strictly more general and applies cleanly.
 > **User decision:** None.
 
-> **Sync cluster `cluster-4-correction-take-main-verbatim` (2026-05-02):** commits the take-main-verbatim correction; paths `.agents/**`, `.codex/INSTALL.md`, `.gitattributes`, `AGENT.md`, `GEMINI.md`, `docs/README.codex.md`, `hooks/{autoload-superra,...}`, harness adapter references, archived plans, etc.; affects no redesign tasks.
-> **Sync resolution:** `git checkout main -- <path>` for every divergent path outside the writing-vertical allowlist.
+> **Sync cluster `cluster-4-handoff-and-workflow-tightenings` (2026-05-02):** paths `skills/handoff-doc/references/{plan,results}-anatomy.md`, `skills/implementation-workflow/SKILL.md`, `skills/refactor-and-integrate/SKILL.md`, `skills/result-protection/{SKILL.md,references/drift-test-quality.md}`, `hooks/exit-plan-mode`, `CLAUDE.md`; affects no redesign tasks.
+> **Sync resolution:** Took main verbatim. Edits are integration-review tightenings landed by the theory-modeling vertical's integration phase; orthogonal to the writing redesign content.
 > **Integration context:** None.
-> **User decision:** None new.
+> **User decision:** None.
 
-> **Sync review notes (2026-05-02, RESOLVED — round 1):** four findings (CRITICAL × 2, MAJOR × 2) all resolved by `cluster-4-correction-take-main-verbatim`. APPROVED.
+> **Sync cluster `cluster-5-symlink-fix` (2026-05-02):** paths `.agents/skills/writing` (new symlink to `../../skills/writing`); affects no redesign tasks directly but unblocks the harness-compatibility test.
+> **Sync resolution:** Added the missing symlink. The pre-sync branch never created it; main's `tests/check-harness-compatibility.sh` requires every `skills/<name>/` to have a matching `.agents/skills/<name>` symlink.
+> **Integration context:** None.
+> **User decision:** None.
 
 ---
 
@@ -262,6 +267,7 @@ Verify each rewritten header passes the §Teach the Protocol gate. Verify no sur
 **Depends on:** Task 1, Task 2
 **Review status:** APPROVED
 **Integration status:**
+**Sync impact:** Cluster `cluster-2-routing-rethread` rewrote this task's routing-row outputs. The writing rows in `README.md`, `skills/CATEGORIES.md`, and `skills/using-superRA/SKILL.md` now sit alongside theory-modeling rows; the `planning-workflow/SKILL.md` writing row uses main's 3-column shape (no `Planning reference` column) and the post-table writing paragraph was rewritten to point at `superRA:writing` `SKILL.md §Coupling to superRA workflows` (the prior pointer to the redesign-deleted `references/workflow.md` is gone). Source: `PLAN.md ## Sync Map`.
 
 **Files:**
 - Deleted: `skills/writing/references/workflow.md`, `planning.md`, `collaboration.md`.

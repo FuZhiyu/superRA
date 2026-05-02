@@ -15,7 +15,7 @@ Load only the reference needed for the protection mechanism in use:
 |---|---|
 | `references/drift-test-quality.md` | Writing, refreshing, or reviewing drift/regression tests for key results; always for `Stage: protection` when drift/regression tests are the mechanism. |
 
-For data-analysis result protection, also load `econ-data-analysis/references/integrate-drift-tests.md` for key-result selection, tolerance calibration, and data-analysis failure modes.
+The active domain skill's stage-load table routes any domain-specific drift-test reference at the `drift-test` (protection) stage; load it per that table.
 
 ## Scope Gate
 
