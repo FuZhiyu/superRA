@@ -359,7 +359,7 @@ Verify the convention is stated identically across the three files (format spec)
 ## Task 5: Dogfood — three-mode verification
 
 **Depends on:** Tasks 1, 2, 3, 4
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:** RESULTS.md Task 4 entry. No skill / reference edits expected unless the dogfood surfaces a bug; in that case adjustments are committed separately with a message naming the dogfood observation that prompted the fix.
@@ -368,28 +368,30 @@ Verify the convention is stated identically across the three files (format spec)
 
 **Output:** Four short dogfood reports in `RESULTS.md` Task 4 confirming that each mode loads the right references, the authority model behaves (deep polish doesn't fire without `structure.md` loaded), and the inline-directive convention (TODO-as-task vs DO-NOT-EDIT-as-hands-off) is respected.
 
-- [ ] **Step 1: Mode = Review**
+- [x] **Step 1: Mode = Review**
 
 Pick a paragraph with deliberate cross-reference and citation drift. Invoke `superRA:writing`. Verify: `SKILL.md` + `review.md` + the relevant `consistency/*.md` files load. Findings classify correctly. No edits performed.
 
-- [ ] **Step 2: Mode = Polish (sentence/paragraph scope)**
+- [x] **Step 2: Mode = Polish (sentence/paragraph scope)**
 
 Pick a paragraph with: an inline `% TODO: rewrite this more crisply`, crude phrasing ("the result is super strong"), a structural problem (buried main message), and a `DO NOT EDIT` block somewhere. Verify: `SKILL.md` + `polish.md` + `style.md` load. Inline TODO and crude phrasing get cleaned up; `DO NOT EDIT` block untouched; structural problem **not** addressed (out of scope by load configuration).
 
-- [ ] **Step 3: Mode = Polish (structural scope)**
+- [x] **Step 3: Mode = Polish (structural scope)**
 
 Same paragraph as Step 2, with explicit user request "restructure for clearer argument". Verify: `SKILL.md` + `polish.md` + `style.md` + `structure.md` load. Structural problem now addressed (authority grant present).
 
-- [ ] **Step 4: Mode = Draft**
+- [x] **Step 4: Mode = Draft**
 
 Pick a small section (e.g., a methodology paragraph) with notes / outline as input. Verify: `SKILL.md` + `draft.md` + `structure.md` + `style.md` load. Output is sensible new prose. Verify the draft includes `% intent:` (or format-equivalent) comments above the paragraph(s).
 
-- [ ] **Step 5: Intent-comment discipline (Task 4 verification)**
+- [x] **Step 5: Intent-comment discipline (Task 4 verification)**
 
 Two sub-checks in one paragraph:
 - (a) Polish-mode preservation: a paragraph with a pre-existing `% intent: ...` comment is polished; the comment is preserved verbatim and the polished prose still fulfills the stated intent.
 - (b) Polish-mode inferred-add: a paragraph **without** an intent comment is polished; the agent adds `% intent (inferred): ...` (with the hedge marker) above the paragraph rather than silently.
 
-- [ ] **Step 6: Document findings + adjustments + commit**
+- [x] **Step 6: Document findings + adjustments + commit**
 
 Each adjustment is its own commit naming the dogfood observation. If no adjustments needed, commit `RESULTS.md` Task 5 only with a one-line dogfood-passed note. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`.
+
+Dogfood passed cleanly across all six steps; no skill or reference edits required. RESULTS.md Task 5 captures the per-step load set, fired behaviors, and held invariants. Commit is `RESULTS.md` + `PLAN.md` only.

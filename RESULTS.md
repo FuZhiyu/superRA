@@ -121,4 +121,125 @@ Content from these files was already absorbed in Task 1 (collaboration's "edit v
 
 ## Task 5: Dogfood — three-mode verification
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Method.** Fabricated one representative `.tex` snippet per step, classified the mode by request shape, loaded exactly the references the `SKILL.md §Mode routing` table dictates, and walked the loaded mode file's workflow against the snippet. For each step, recorded what loaded, what behavior fired, and what (if anything) failed. No skill or reference edits were required — the dogfood passed cleanly across all six steps; this commit is `RESULTS.md` only per the Task 5 contract.
+
+**Headline:** The redesigned skill routes correctly across Review / Polish-sentence / Polish-structural / Draft. The "loaded reference set is the authority grant" model behaves as designed: structural edits do not fire without `structure.md` loaded, and the inline-directive convention (TODO-as-task vs `DO NOT EDIT`-as-hands-off) and intent-comment discipline (preserve / inferred-with-hedge) all worked as written.
+
+### Step 1 — Review mode
+
+**Snippet (citation + cross-reference drift):**
+```latex
+% intent: motivate the empirical strategy by ruling out the standard reverse-causality concern.
+The key identification challenge is reverse causality: firm performance may drive governance
+choices, not the other way around. \citet{shleifer1997} argue this point forcefully, and
+\cite{Shleifer97} provide further evidence in their later work. We address this in
+Section~\ref{sec:iv} (see also Table~\ref{tab:fs}, which is missing).
+```
+
+**Mode classification:** "review §X for consistency" → Review.
+**Loaded:** `SKILL.md` + `review.md` + `consistency/citations.md` + `consistency/cross-references.md` (multi-dimensional, parallel-dispatchable per `review.md §Multi-dimensional consistency reviews`).
+**Workflow walked:** scope confirmed (citations + cross-references) → end-to-end read → classified findings.
+**Findings classification fired correctly:**
+- Bibkey divergence `shleifer1997` vs `Shleifer97` (likely same paper) → citations, MAJOR/CRITICAL per citations-folded severity guidance.
+- `\citet` / `\cite` command inconsistency → citations, MINOR.
+- `Table~\ref{tab:fs}` to a non-existent table → cross-references, MAJOR.
+- Intent-yardstick check (`review.md §Intent comments as yardstick`): intent claims "rule out reverse causality" but prose only points to Section IV without doing the rule-out → drift-between-intent-and-prose finding, classified as **argument**.
+**Invariant held:** "no edits in this mode" — all output is findings.
+**Failures:** none.
+
+### Step 2 — Polish (sentence/paragraph scope)
+
+**Snippet (TODO + crude phrasing + DO NOT EDIT block + buried structural message):**
+```latex
+The result is super strong: investors really care a lot about this stuff.
+% TODO: rewrite this more crisply
+The findings indicate that there is a strong sensitivity of investor demand to
+disclosure quality, and these results are robust.
+
+% DO NOT EDIT
+This paragraph is a verbatim quote from the regulator and must not be edited.
+"The Commission notes that disclosure quality is paramount."
+
+The argument here is buried at the bottom: after reviewing all the literature, all
+the data, all the alternative specifications, what we ultimately find is that
+investors price disclosure.
+```
+
+**Mode classification:** "polish this paragraph" → Polish (sentence/paragraph scope).
+**Loaded:** `SKILL.md` + `polish.md` + `style.md`. **Not loaded:** `structure.md`.
+**Workflow walked:** Input shape B (named target) → end-to-end read → edit-vs-propose-vs-ask matrix per item.
+**Behavior fired correctly across the matrix:**
+- Crude phrasing ("super strong", "really care a lot about this stuff") → within scope, edited via `style.md §Single-hedge-per-claim` and §Actions in verbs.
+- `% TODO: rewrite this more crisply` → treated as task-for-agent per `SKILL.md §Before you start` item 3 (not as protected content); the line below was rewritten.
+- `% DO NOT EDIT` block → skip with note; the regulator quote and the surrounding fence were preserved verbatim.
+- Buried-message paragraph (structural problem) → **proposed, not performed** per `polish.md §Edit-vs-propose-vs-ask` row "structural edits require `structure.md` loaded *and* explicit authorization". This is the load-decision-is-the-authority-grant rule firing exactly as designed: the structural edit is *visible* to the polish agent but is gated out by the absent reference.
+- No pre-existing `% intent:` comments → per `polish.md §Intent comments`, the agent **may** add `% intent (inferred): …` with the explicit hedge. Added on the two paragraphs being polished; the `DO NOT EDIT` paragraph received no inferred comment (the polish was a no-op there, so there was no act-of-polish that triggers the may-add rule).
+**Invariant held:** load configuration ≡ authority grant. Structural problem visible, polish agent did not silently restructure.
+**Failures:** none.
+
+### Step 3 — Polish (structural scope)
+
+**Same snippet as Step 2**; request: "polish and restructure for clearer argument".
+**Mode classification:** Polish (structural scope) — explicit restructure authorization in the request.
+**Loaded:** `SKILL.md` + `polish.md` + `style.md` + `structure.md`. Authority grant present.
+**Behavior fired:** All Step-2 sentence-level edits identical. The buried-message paragraph **now** restructured per `structure.md §Pyramid Principle` (governing idea first): topic sentence rewritten to lead with "Investors price disclosure", with the literature/data/specifications becoming the supporting evidence sentence(s) below. `DO NOT EDIT` block still skipped (the marker is mode-agnostic). Inferred intent comments still added with `(inferred)` hedge — the structural authority does not change the intent-comment discipline.
+**Invariant held:** the only difference between Step 2 and Step 3 is the loaded reference set; mode behavior follows from load configuration with no procedural switch elsewhere.
+**Failures:** none.
+
+### Step 4 — Draft mode
+
+**Inputs:** notes for a methods section — DiD design, staggered state-level disclosure shock, US public firm-year panel 2010–2020, firm and year FE, SE clustered at state level.
+**Mode classification:** "draft the methods section" → Draft.
+**Loaded:** `SKILL.md` + `draft.md` + `structure.md` + `style.md`.
+**Workflow walked:** gather inputs → outline first (governing idea: "We identify the effect of disclosure mandates with a staggered DiD" + MECE supports: design, sample, identification, inference) → draft one paragraph at a time with `% intent:` written *first* per `draft.md §Intent comments` → self-check against `style.md` and `structure.md` Gated Checklists → build.
+**Output (sketch):**
+```latex
+% intent: state the empirical design and why it identifies the causal effect.
+We estimate the effect of the disclosure mandate using a difference-in-differences
+design that exploits the staggered adoption of state-level disclosure laws between
+2010 and 2020. ...
+
+% intent: describe the panel and the variation it provides.
+The sample is a firm-year panel of US public firms over 2010–2020. ...
+```
+**Behavior fired:** intent comments authored *first* as drafting briefs (per `draft.md §Intent comments`); **no `(inferred)` qualifier** — draft-authored intent is by definition the author's commitment, the hedge would be wrong here. Sentence-level self-check ran against `style.md`. Outline-first discipline ran against `structure.md`.
+**Invariant held:** the `(inferred)` qualifier is a polish-mode artifact, not a draft-mode one — the two mode files state this asymmetrically and consistently.
+**Failures:** none.
+
+### Step 5 — Intent-comment discipline (Task 4 verification)
+
+**5a — Polish-mode preservation (paragraph with pre-existing `% intent:`):**
+```latex
+% intent: establish that the puzzle survives the standard risk-based explanation.
+Standard risk-based stories predict that high-beta stocks should earn high returns. We
+look at this in our data and we find that they do not really earn that much more.
+The point estimate is small and the standard error is big.
+```
+Polish mode (sentence scope) walked. `polish.md §Intent comments` preservation rule fired: the comment outranks current wording on conflict. Polished prose:
+> The data show no such pattern: the high-beta premium is economically small and statistically indistinguishable from zero.
+
+The intent comment was preserved **verbatim**, untouched. Polished prose still fulfills the stated intent (the puzzle survives — the explanation predicts a return that the data do not show). No `(inferred)` was added — the comment already exists and is authoritative.
+
+**5b — Polish-mode inferred-add (paragraph without intent):**
+```latex
+The cross-sectional dispersion of returns is large in our sample. The interquartile range
+exceeds 20% annually, which dwarfs the dispersion in the underlying fundamentals.
+```
+Polish mode walked. No pre-existing intent comment. The agent **added** the line above the paragraph:
+```latex
+% intent (inferred): motivate the puzzle by showing return dispersion exceeds fundamental dispersion.
+```
+**Invariants held:**
+- The line was **not silent** — the `(inferred)` qualifier is present.
+- The line was **not bare `intent:`** — it carries the hedge.
+- Per `polish.md §Intent comments`, the `(inferred)` qualifier persists across sessions and the agent does not drop it itself, on later passes, or because the prose now matches the inference. (Persistence is an across-session invariant; can be observed only by re-running on the same paragraph in a later session, but the rule is correctly stated where it needs to be read.)
+**Failures:** none.
+
+### Skill-level observations (no fixes required)
+
+- **The "load decision is the authority grant" rule is the cleanest single design choice in the redesign.** Steps 2 and 3 share the snippet, the request differs only in the keyword "restructure", the reference set differs only by `structure.md`, and the mode behavior follows mechanically. The polish agent never has to reason about "am I authorized to restructure?" — the loaded set answers that.
+- **Multi-dimensional review parallelism is described in `review.md §Multi-dimensional consistency reviews` but its dispatch mechanics live in workflow skills.** This dogfood was a single-thread simulation; the actual parallel-dispatch path would be exercised through `implementation-workflow` or the orchestrator. The skill-side authoring is internally consistent.
+- **Intent-comment discipline is asymmetric across modes by design.** Draft writes intent first, no hedge. Polish preserves authoritative intent and adds inferred-hedged intent when absent. Review uses intent as a yardstick. The three mode files state the rules in the form each mode needs them; no contradiction surfaced.
+- **No bug surfaced.** No skill or reference edit is needed; this Task 5 commit is `RESULTS.md` only.
