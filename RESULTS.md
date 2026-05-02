@@ -22,6 +22,10 @@ The 2026-04-19 → 2026-05-02 build of `skills/writing/` (Iron Law, Three Concur
 
 **Status:** Not started
 
-## Task 4: Dogfood — three-mode verification
+## Task 4: Add intent-comment discipline to `polish.md` / `draft.md` / `SKILL.md`
+
+**Status:** Not started
+
+## Task 5: Dogfood — three-mode verification
 
 **Status:** Not started

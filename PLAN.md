@@ -80,6 +80,10 @@
 
 > **User decision (2026-05-02, sync):** Re-sync `domain/writing-skills` against `main` using strict take-main-verbatim discipline on shared surfaces. Result captured in §Sync Map below.
 
+> **User decision (2026-05-02, intent-comment discipline):** When editing `.tex` source, agents must use LaTeX inline comments (`%`) to record the intended effect / purpose of paragraphs and sections in-file, so that author intent persists across sessions. Drafted prose carries an `% intent:` line above the paragraph stating one-sentence purpose; polished prose preserves any pre-existing `% intent:` lines and may add inferred ones (with a hedge) when absent. Equivalent comment forms apply to Markdown (`<!-- intent: ... -->`) and Quarto. The discipline lives in the new `polish.md` and `draft.md` mode files plus a one-line summary in `SKILL.md §Before you start`. Authoring of the discipline is Task 4; dogfood (now Task 5) verifies it.
+> **Question asked:** "give instructions to agents when editing .tex files, to use latex inline comment to explain the intended effect of the user for the surrounding paragraphs so it's preserved throughout sessions"
+> **Rationale:** Writing tasks span sessions and context windows; inline comments in the source file are the only intent record that survives a fresh agent reading the .tex. Without the convention, polish-mode agents in later sessions cannot tell what a paragraph is *trying* to do (only what it currently says), and drift toward mechanically-correct prose that misses the intent.
+
 > **User decision (2026-05-02, redesign):** Redesign `skills/writing/` around three working modes — Review / Polish / Draft — instead of superRA workflow phases. Replace the "Iron Law / Three Concurrent Disciplines" framing (a mechanical clone of `econ-data-analysis`) with a single principle: **Preserve substance, polish prose** (preserve = argument, logic, structure, claims, intent, tone; polish = wording, sentence structure, clarity, parallelism, flow, correctness). The previously-implemented skill stands as the *input* to this redesign — substantive content is preserved, the skeleton is rebuilt.
 > **Question asked:** "the current writing skill isn't designed well — unclear when to load what; too much 'preserve voice', too little 'what to do'; design-principle violation. let's redesign."
 > **Rationale (resolved during planning):**
@@ -303,9 +307,50 @@ Re-run the grep checks from Step 1 on the post-edit state — both must return e
 
 ---
 
-## Task 4: Dogfood — three-mode verification
+## Task 4: Add intent-comment discipline to `polish.md` / `draft.md` / `SKILL.md`
 
-**Depends on:** Tasks 1, 2, 3
+**Depends on:** Task 1
+**Review status:**
+**Integration status:**
+
+**Files:**
+- `skills/writing/references/polish.md` — add §Intent comments section.
+- `skills/writing/references/draft.md` — add §Intent comments section.
+- `skills/writing/SKILL.md` §Before you start — add one-line summary that points at the §Intent comments sections in the mode files.
+
+**Input:**
+- Task 1's authored mode files.
+- The 2026-05-02 §Decisions entry for this task (the convention is decided there; this task implements it).
+- `/CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action` — necessity gate applies as usual.
+
+**Output:** A short, format-aware discipline that lives in the mode files and is summarized in `SKILL.md`. Concrete shape:
+
+- **Convention.** When editing `.tex`, an `% intent: <one-sentence purpose>` line sits on its own line **immediately before** the paragraph or section it documents. Markdown / Quarto: `<!-- intent: <one-sentence purpose> -->` in the same position. The comment captures *what the paragraph is trying to do for the reader* — the argument it advances, the question it answers, the position it stakes — not what it currently says.
+- **Draft mode.** Before drafting a paragraph, write the intent comment first. Use it as the brief; then draft prose that fulfills it. The comment ships with the prose.
+- **Polish mode.** Read pre-existing `% intent:` comments before editing — they are the preservation target (more authoritative than the paragraph's current wording, since the wording is exactly what's being polished). When intent comments are absent on a paragraph being polished, the agent **may** add an inferred comment with a hedge (`% intent (inferred): ...`) — never silently. The author can ratify (delete the `(inferred)` qualifier) or correct on review.
+- **Review mode.** Use intent comments as the yardstick: does the prose actually accomplish the stated intent? Drift between intent and prose is a finding.
+
+- [ ] **Step 1: Add §Intent comments to `polish.md`**
+
+A short section (≤25 lines) covering: the convention (format per file extension); how polish mode uses pre-existing comments; the "may add inferred, must hedge" rule; one before/after example with `% intent:` line.
+
+- [ ] **Step 2: Add §Intent comments to `draft.md`**
+
+A short section (≤20 lines) covering: write the intent first as the drafting brief; the comment ships with the prose; format per file extension. One example showing the intent → prose flow.
+
+- [ ] **Step 3: Add one-line summary to `SKILL.md §Before you start`**
+
+A single line near the inline-directive convention, e.g., "When editing `.tex`/`.md`/`.qmd`, preserve and (when polish-mode and absent) add `% intent: …` / `<!-- intent: … -->` comments above paragraphs — see `polish.md §Intent comments` and `draft.md §Intent comments`."
+
+- [ ] **Step 4: Self-review + commit**
+
+Verify the convention is stated identically across the three files (format spec) and that the `polish.md` "may add inferred" rule is explicit about the hedge. Apply the §Teach the Protocol gate — every line earns its keep. Update `RESULTS.md` Task 4. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: writing — intent-comment discipline in polish/draft/SKILL`.
+
+---
+
+## Task 5: Dogfood — three-mode verification
+
+**Depends on:** Tasks 1, 2, 3, 4
 **Review status:**
 **Integration status:**
 
@@ -329,8 +374,14 @@ Same paragraph as Step 2, with explicit user request "restructure for clearer ar
 
 - [ ] **Step 4: Mode = Draft**
 
-Pick a small section (e.g., a methodology paragraph) with notes / outline as input. Verify: `SKILL.md` + `draft.md` + `structure.md` + `style.md` load. Output is sensible new prose.
+Pick a small section (e.g., a methodology paragraph) with notes / outline as input. Verify: `SKILL.md` + `draft.md` + `structure.md` + `style.md` load. Output is sensible new prose. Verify the draft includes `% intent:` (or format-equivalent) comments above the paragraph(s).
 
-- [ ] **Step 5: Document findings + adjustments + commit**
+- [ ] **Step 5: Intent-comment discipline (Task 4 verification)**
 
-Each adjustment is its own commit naming the dogfood observation. If no adjustments needed, commit `RESULTS.md` Task 4 only with a one-line dogfood-passed note. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`.
+Two sub-checks in one paragraph:
+- (a) Polish-mode preservation: a paragraph with a pre-existing `% intent: ...` comment is polished; the comment is preserved verbatim and the polished prose still fulfills the stated intent.
+- (b) Polish-mode inferred-add: a paragraph **without** an intent comment is polished; the agent adds `% intent (inferred): ...` (with the hedge marker) above the paragraph rather than silently.
+
+- [ ] **Step 6: Document findings + adjustments + commit**
+
+Each adjustment is its own commit naming the dogfood observation. If no adjustments needed, commit `RESULTS.md` Task 5 only with a one-line dogfood-passed note. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`.
