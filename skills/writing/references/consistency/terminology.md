@@ -29,7 +29,7 @@ Twenty to thirty terms is usually enough for a paper — focus on the ones that 
 
 ### Check for the four patterns
 
-**Same concept, different names.** For each key entity, `grep` for the variant names. Report every alternate naming alongside the canonical one. Recommend a single canonical form per entity; do not silently rewrite unless the request authorizes it (per the Iron Law).
+**Same concept, different names.** For each key entity, `grep` for the variant names. Report every alternate naming alongside the canonical one. Recommend a single canonical form per entity; do not silently rewrite unless the request authorizes it (`SKILL.md §Preserve substance, polish prose`).
 
 **Different concepts, same name.** When one word is doing double duty ("effect" = coefficient *and* causal mechanism; "model" = econometric specification *and* theoretical framework), flag it. Recommend a disambiguated pair of terms (e.g., "estimate" vs "effect", "specification" vs "model").
 
@@ -64,7 +64,7 @@ If the paper has a glossary, every glossary term should be: (a) used in the pape
 - `[BLOCKING]` **Same concept, different names flagged.** Every identified alias for a key entity is reported (file + line locations) even if not fixed.
 - `[BLOCKING]` **Different concepts, same name flagged.** Any word doing double duty on a key argument is reported with both usages cited.
 - `[BLOCKING]` **Term drift across sections flagged.** Any mid-paper rename of a key concept is reported with earlier and later locations.
-- `[BLOCKING]` **No silent cross-scope rewrites.** For consistency-*check* tasks, mismatches are reported, not rewritten beyond scope (Iron Law §Scope).
+- `[BLOCKING]` **No silent cross-scope rewrites.** For consistency-*check* tasks, mismatches are reported, not rewritten beyond scope (`SKILL.md §Preserve substance, polish prose`).
 - `[BLOCKING]` **Variable-name drift across text and tables flagged.** Every variable used inconsistently between prose and tables is reported.
 - `[ADVISORY]` **Terminology index attached to handoff.** Even a short one (key terms + canonical forms + observed variants) makes follow-up review faster.
 - `[ADVISORY]` **Glossary audit** performed if a glossary exists — orphan and unglossed-but-critical terms reported.

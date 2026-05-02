@@ -53,7 +53,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Workflow | `integration-workflow` | INTEGRATE: Protect, Sync, Integrate, Document, Finish. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
-| Domain | `writing` | Writing vertical: Iron Law (respect the author's intent), preserve-improve-verify, four standalone usage modes, per-dimension consistency reviewers. |
+| Domain | `writing` | Writing vertical: Review / Polish / Draft modes, preserve-substance-polish-prose principle, per-dimension consistency reviewers. |
 | Utility | `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates. Loaded on demand by agents that need the full discipline and always by doc-creators (planning-workflow Phase 2, integration-workflow Document doc-writer); usable standalone by a single author. |
 | Utility | `result-protection` | Tools for protecting key results from unintended changes; drift tests are the current/default mechanism. |
 | Utility | `refactor-and-integrate` | Tools for codebase coherence — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence. |

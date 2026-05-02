@@ -8,7 +8,7 @@ Source dimensions harvested from `draft-reviewer:argument-logic-reviewer` (logic
 
 Covers the **logical and evidential** dimension of the paper: do claims follow from the evidence? Are causal claims backed by identification? Are alternative explanations ruled out? Is the rhetoric calibrated to the evidence? Out of scope: mathematical correctness of derivations (`consistency/math.md`), numerical text-table match (`consistency/numerical.md`), citations (`consistency/citations.md`).
 
-Per the Iron Law (main SKILL.md), **the reviewer flags logical gaps; the researcher decides how to close them.** Do not rewrite claims unilaterally; report with specific evidence and recommended direction.
+**The reviewer flags logical gaps; the researcher decides how to close them** (`SKILL.md §Preserve substance, polish prose`). Do not rewrite claims unilaterally; report with specific evidence and recommended direction.
 
 ## How-To
 
@@ -93,7 +93,7 @@ One hedge per claim; no stacking. See `writing/references/style.md` §Single-hed
 - `[BLOCKING]` **Causal claims** have an identification strategy stated and its assumptions named.
 - `[BLOCKING]` **Plausible alternative explanations** addressed by the paper or flagged as gaps.
 - `[BLOCKING]` **Overclaiming flagged** — causal verbs for correlational evidence; generalizations beyond sample scope.
-- `[BLOCKING]` **No silent claim rewrites.** Per the Iron Law, logical gaps are reported with specific evidence; the researcher decides how to address.
+- `[BLOCKING]` **No silent claim rewrites.** Logical gaps are reported with specific evidence; the researcher decides how to address (`SKILL.md §Preserve substance, polish prose`).
 - `[BLOCKING]` **Tests of testable identifying assumptions** reported (pre-trends / overid / McCrary / etc. as appropriate).
 - `[ADVISORY]` **Underclaiming flagged** — findings that are stronger than the paper admits.
 - `[ADVISORY]` **Hedging calibrated** — no stacked hedges; one hedge per claim proportional to evidence strength.

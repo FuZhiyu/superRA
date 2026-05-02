@@ -75,7 +75,7 @@ For each citation:
 ## Gated Checklist
 
 - `[BLOCKING]` **No orphan citations.** Every `\cite{key}` in text resolves to a bibliography entry.
-- `[BLOCKING]` **Orphan references reported.** Bibliography entries never cited are listed (flagged, not deleted — Iron Law).
+- `[BLOCKING]` **Orphan references reported.** Bibliography entries never cited are listed — flagged, not deleted (`SKILL.md §Preserve substance, polish prose`).
 - `[BLOCKING]` **Uncited claims flagged.** Every statement that needs a citation but lacks one is reported with location and text.
 - `[BLOCKING]` **Foundational methodology references present** — the seminal papers for the paper's method are cited.
 - `[BLOCKING]` **Author / year mismatches flagged.** Any text–bibliography discrepancy reported with both values.

@@ -64,7 +64,7 @@ Domain skills teach agents the discipline that applies to a particular kind of r
 | Skill | Flagship discipline |
 |-------|---------------------|
 | **econ-data-analysis** | Iron Law: no transformation without prior description. Three concurrent disciplines — Describe, Analyze, Validate — plus pitfall catalogs for merges, time series, aggregations, filtering, variable construction, and missing data, and how to render human-friendly notebook. |
-| **writing** | Iron Law: respect the author's intent. Three concurrent disciplines — Preserve, Improve, Verify. Four standalone usage modes (direct-edit, pure-review, review-edit-loop, full-workflow) so most edits skip the full PLAN→IMPLEMENT→INTEGRATE wrapper. Per-dimension consistency reviewers (terminology, notation, cross-references, citations, numerical, math, argument-logic, code–paper) dispatch in parallel. |
+| **writing** | One principle — preserve substance, polish prose — over three working modes: Review, Polish, Draft. Mode classification picks the load set; loaded references *are* the authority grant (structural edits require `structure.md`). Most writing work runs standalone; large work (whole-section drafts, whole-paper revisions, R&R passes) routes through the full PLAN→IMPLEMENT→INTEGRATE workflow. Per-dimension consistency reviewers (terminology, notation, cross-references, citations, numerical, math, argument-logic, code–paper) dispatch in parallel. |
 
 Future verticals are planned hooks, not commitments:
 

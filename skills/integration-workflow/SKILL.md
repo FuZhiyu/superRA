@@ -355,7 +355,7 @@ Report what was published or landed and what was cleaned up.
 
 - **Standalone analysis:** Protect still runs. Sync may be a no-op. Integrate often collapses to a short reviewer pass.
 - **Small changes:** Keep the same five steps, but dispatch fewer agents and keep Sync Map absent when there is no material sync context.
-- **Writing-vertical tasks:** Most writing work uses the four standalone modes documented in `skills/writing/references/workflow.md` (direct-edit / pure-review / review-edit-loop) and does not enter this workflow. Only mode (d) full-workflow (whole-section drafts, whole-paper revisions) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
+- **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
 
 ## Red Flags
 

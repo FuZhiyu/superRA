@@ -73,7 +73,34 @@ The 2026-04-19 → 2026-05-02 build of `skills/writing/` (Iron Law, Three Concur
 
 ## Task 3: Retire deprecated references and update routing
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Deleted (`git rm`):**
+- `skills/writing/references/workflow.md` (160 lines)
+- `skills/writing/references/planning.md` (122 lines)
+- `skills/writing/references/collaboration.md` (161 lines)
+
+Content from these files was already absorbed in Task 1 (collaboration's "edit vs propose vs ask" matrix and `DO NOT EDIT` convention live in `polish.md`; workflow.md's mode descriptions are subsumed by the new mode files; planning.md's task-shape decision matrix is replaced by mode classification in `SKILL.md §Mode routing`).
+
+**Doctrinal residue swept (in-place edits, substance unchanged — only the principle name changes):**
+- `consistency/math.md:11`, `:83` — `Iron Law (main SKILL.md)` → `SKILL.md §Preserve substance, polish prose`.
+- `consistency/citations.md:78` — `Iron Law` → `SKILL.md §Preserve substance, polish prose`.
+- `consistency/terminology.md:32`, `:67` — `Iron Law` / `Iron Law §Scope` → `SKILL.md §Preserve substance, polish prose`.
+- `consistency/argument-logic.md:11`, `:96` — `Iron Law (main SKILL.md)` → `SKILL.md §Preserve substance, polish prose`.
+
+**Cross-skill stale-reference fix:**
+- `skills/integration-workflow/SKILL.md:358` — the "Writing-vertical tasks" lighten-when bullet pointed at the now-deleted `writing/references/workflow.md` and used the four-standalone-modes framing. Rewritten to point at `skills/writing/SKILL.md` and the new Review / Polish / Draft taxonomy. Substance preserved (most writing work doesn't enter Integrate; only large work does, and the integration reviewer walks `writing/references/integration.md`).
+
+**Routing rows refreshed:**
+- `skills/using-superRA/SKILL.md:56` — Skill Inventory writing row reflects the new mode taxonomy and the preserve-substance-polish-prose principle.
+- `skills/CATEGORIES.md:25` — writing row description updated; the pre-rename `style-checklist.md` / `structure-checklist.md` paths flagged by Task 2's last reviewer (and by this task's `Additionally:` line) were corrected to `style.md` / `structure.md`, and the file list now lists the three new mode references (`review.md`, `polish.md`, `draft.md`) ahead of the knowledge files. The Skill-Load Manifest add-on table (line 101) already routes `superRA:writing` correctly — no change there.
+- `README.md:67` — Domain-skills writing-row description updated to the three-mode framing; preserved the per-dimension parallel-consistency-reviewer note (still in force after the redesign per the 2026-04-19 user decision).
+
+**Verification (Step 4 grep checks):**
+- `grep -rn 'references/workflow\.md\|references/planning\.md\|references/collaboration\.md' skills/writing/` — empty.
+- `grep -rn 'writing/references/\(workflow\|planning\|collaboration\)' . --include='*.md'` — empty after excluding PLAN.md self-references (the file describes this task's work).
+- `grep -rn 'Iron Law\|Three Concurrent Disciplines\|Preserve.Improve.Verify' skills/writing/` — empty. Surviving `§Preserve` hits all match the new `§Preserve substance, polish prose` principle name.
+- `grep -n 'style-checklist\|structure-checklist' skills/CATEGORIES.md` — empty.
 
 ## Task 4: Add intent-comment discipline to `polish.md` / `draft.md` / `SKILL.md`
 

@@ -8,7 +8,7 @@ Source dimensions harvested from `draft-reviewer:mathematical-reviewer` (derivat
 
 Covers **correctness and stability of math content**: derivation step-by-step, proof integrity, statistical-model correctness, cross-section notation stability (on the *meaning* side — the typographic stability side is in `consistency/notation.md`). Out of scope: prose terminology (`consistency/terminology.md`), table numbers matching prose (`consistency/numerical.md`).
 
-Per the Iron Law (main SKILL.md): the author owns the math. Your job as reviewer is to *flag* derivations that don't follow — not to rewrite them. Where a step is genuinely broken, escalate.
+The author owns the math (`SKILL.md §Preserve substance, polish prose`). Your job as reviewer is to *flag* derivations that don't follow — not to rewrite them. Where a step is genuinely broken, escalate.
 
 ## How-To
 
@@ -80,7 +80,7 @@ For each proof:
 ## Gated Checklist
 
 - `[BLOCKING]` **Every derivation step walked.** For each step in the derivations of the edited sections, either (a) the step verifies or (b) the step is flagged as broken / unclear with location.
-- `[BLOCKING]` **Broken steps flagged, not fixed.** Per the Iron Law, math errors are escalated to the researcher; the reviewer reports, does not silently rewrite.
+- `[BLOCKING]` **Broken steps flagged, not fixed.** Math errors are escalated to the researcher; the reviewer reports, does not silently rewrite (`SKILL.md §Preserve substance, polish prose`).
 - `[BLOCKING]` **Definitions stable across the paper.** Every defined object has one meaning; any drift is reported.
 - `[BLOCKING]` **Model assumptions stated where used.** Error structure, exogeneity, clustering, distributional assumptions.
 - `[BLOCKING]` **Proofs' assumptions match theorem statements.**

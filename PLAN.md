@@ -257,7 +257,7 @@ Verify each rewritten header passes the §Teach the Protocol gate. Verify no sur
 ## Task 3: Retire deprecated references and update routing
 
 **Depends on:** Task 1, Task 2
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:**
@@ -275,7 +275,7 @@ Verify each rewritten header passes the §Teach the Protocol gate. Verify no sur
 - The three deprecated reference files removed (`git rm`).
 - Routing rows for `writing` updated to reflect the new mode taxonomy (one-liner edit per row — the row's existence and correct skill-name is established already).
 
-- [ ] **Step 1: Verify content extraction is complete + sweep doctrinal residue**
+- [x] **Step 1: Verify content extraction is complete + sweep doctrinal residue**
 
 ```bash
 # All references to the deprecated files inside the writing skill must be gone:
@@ -293,7 +293,7 @@ For the doctrinal-residue grep, expected hits per the Task 2 implementer's flag:
 
 If any matches in the first two greps survive, the implementer must trace each one and resolve before deletion: either the new mode files / SKILL.md should carry the absorbed content (back to Task 1), or the cross-reference is stale (fix it in place).
 
-- [ ] **Step 2: Delete the deprecated reference files**
+- [x] **Step 2: Delete the deprecated reference files**
 
 ```bash
 git rm skills/writing/references/workflow.md
@@ -301,13 +301,14 @@ git rm skills/writing/references/planning.md
 git rm skills/writing/references/collaboration.md
 ```
 
-- [ ] **Step 3: Update routing surfaces**
+- [x] **Step 3: Update routing surfaces**
 
-- `skills/using-superRA/SKILL.md` Skill Inventory writing row — replace the existing one-liner ("Iron Law (respect the author's intent), preserve-improve-verify, four standalone usage modes, per-dimension consistency reviewers.") with one that reflects the new taxonomy (e.g., "Writing vertical: review / polish / draft modes, preserve-substance-polish-prose principle, per-dimension consistency reviewers."). The Skill-Load Manifest add-on row already routes `superRA:writing` correctly — no change needed there.
-- `skills/CATEGORIES.md` writing row — same one-liner refresh.
-- `README.md` writing-row description (in the Domain skills table) — same one-liner refresh.
+- `skills/using-superRA/SKILL.md` Skill Inventory writing row — refreshed to "Review / Polish / Draft modes, preserve-substance-polish-prose principle, per-dimension consistency reviewers." The Skill-Load Manifest add-on row already routes `superRA:writing` correctly — no change there.
+- `skills/CATEGORIES.md` writing row — description refreshed; the pre-rename `style-checklist.md` / `structure-checklist.md` paths flagged by Task 2's last reviewer (and by this task's `Additionally:` line) corrected to `style.md` / `structure.md`; mode references (`review.md`, `polish.md`, `draft.md`) added to the file list.
+- `README.md` writing-row description (Domain skills table) — refreshed to the three-mode framing while preserving the per-dimension parallel-consistency-reviewer note.
+- `skills/integration-workflow/SKILL.md:358` (cross-skill stale-ref fix discovered in Step 1) — the "Writing-vertical tasks" lighten-when bullet pointed at the now-deleted `writing/references/workflow.md` and used the four-standalone-modes framing. Rewritten to point at `skills/writing/SKILL.md` and the new mode taxonomy; substance preserved.
 
-- [ ] **Step 4: Self-review + commit**
+- [x] **Step 4: Self-review + commit**
 
 Re-run all three grep checks from Step 1 on the post-edit state — the first two must return empty (or only return matches inside test files / archived docs / `docs/plans/` that legitimately reference the historical structure); the third (doctrinal residue) must return empty inside `skills/writing/` proper. Update `RESULTS.md` Task 3. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: writing — retire workflow/planning/collaboration refs + Iron Law residue sweep + routing-row refresh`.
 

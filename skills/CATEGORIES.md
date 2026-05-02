@@ -22,7 +22,7 @@ Carry the domain-specific knowledge that workflow skills invoke when a task touc
 | Skill | Vertical | Flagship discipline |
 |---|---|---|
 | `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), three concurrent disciplines (describe-analyze-validate), diagnostics-for-validity philosophy, pitfall catalogs, common rationalizations. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `data-robustness-checklist.md`, `notebook-format.md` (+ `jupytext-guide.md` and `julia-quarto-guide.md` companions). |
-| `writing` | Writing / paper drafting | Iron Law (respect the author's intent), three concurrent disciplines (preserve–improve–verify), four standalone usage modes (direct-edit / pure-review / review-edit-loop / full-workflow), parallel-dispatched per-dimension consistency reviewers. Stage-scoped references: `planning.md`, `workflow.md`, `style-checklist.md`, `structure-checklist.md`, `consistency/*.md` (8 dimension files), `refactor-and-compile.md`, `collaboration.md`, `integration.md`. |
+| `writing` | Writing / paper drafting | Three working modes — Review / Polish / Draft — over a single principle (preserve substance, polish prose) and parallel-dispatched per-dimension consistency reviewers. Mode references: `review.md`, `polish.md`, `draft.md`. Knowledge files: `style.md`, `structure.md`, `consistency/*.md` (8 dimension files), `refactor-and-compile.md`, `integration.md`. |
 
 ### Future verticals (roadmap — not yet implemented)
 
