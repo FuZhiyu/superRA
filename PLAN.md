@@ -85,6 +85,43 @@
 
 ---
 
+## Sync Map
+
+**Base branch:** `main`
+**Pre-sync merge base:** `addc9ca7fe1bdbedb080d92095facb649074c1e4`
+**Synced base head:** `886fda8b6a7862a0a4af8ec7d30fd53ffed6fea3`
+**Incoming range:** `addc9ca..886fda8`
+**Sync commits:** `fde4751`
+**Sync review status:** IMPLEMENTED
+
+### Branch Summary
+
+**Incoming intent:** Substantial restructuring of superRA workflow scaffolding while this branch was idle: `execution-workflow` renamed to `implementation-workflow`; `integration-workflow` rewritten around five phases (Protect / Sync / Integrate / Document / Finish); `refactor-and-integrate` narrowed to codebase-coherence with drift-test content moved to a new dedicated `result-protection` skill (three references — `codebase-integration.md`, `drift-test-quality.md`, `merge-quality.md` — deleted); `semantic-merge` gained mode references (`standalone-merge.md`, `workflow-sync-author.md`, `workflow-sync-reviewer.md`); `using-superRA` lost the `## Universal Principles` block (content redistributed to owner files; `codex-tools.md` renamed to `codex-instructions.md`; `direct-mode-implementer.md` and `direct-mode-reviewer.md` added); `CLAUDE.md` substantially rewritten around adaptive-composable-workflow design principles. Codex named-agent generation, marketplace metadata, hook surfaces, and harness-compatibility tests advanced.
+
+**Resolution thesis:** Strict take-main-verbatim on every shared infrastructure surface (the writing branch had no design intent for any of those files). Re-thread writing-vertical additions only into the surfaces main reshaped, in the spots where main's restructure left explicit hooks for new verticals. Drop the renamed/deleted artifacts. Refresh stale references inside `skills/writing/` so they point at main's current structure rather than the pre-restructure structure they were authored against. The full file/script impact map and user-decision log live in `SEMANTIC_MERGE.md` (entry titled "Semantic Merge Record — 2026-05-02").
+
+### Sync Clusters
+
+> **Sync cluster `cluster-1-shared-skills` (2026-05-02):** commits `fde4751`; paths `CLAUDE.md`, `README.md`, `agents/*`, `hooks/merge-guard`, `skills/{agent-orchestration,econ-data-analysis,handoff-doc,refactor-and-integrate,report-in-markdown,semantic-merge,worktree-data-sync}/...`, `skills/using-superRA/references/main-agent.md`, `.codex*/`, `tests/*`; affects no writing-skill tasks directly.
+> **Incoming intent:** Adaptive-composable-workflow design refresh and Codex compatibility hardening across shared infrastructure.
+> **Sync resolution:** Took main verbatim. Branch had no writing-vertical content in any of these files.
+> **Integration context:** None — these surfaces are owned by main and do not carry writing-vertical surface area.
+> **User decision:** None.
+
+> **Sync cluster `cluster-2-routing-rethread` (2026-05-02):** commits `fde4751`; paths `skills/using-superRA/SKILL.md`, `skills/planning-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/CATEGORIES.md`, `README.md`; affects Task 6.
+> **Incoming intent:** Restructure routing surfaces — `using-superRA` Skill-Load Manifest split into Generic + Domain add-on tables; `planning-workflow` Phase 1 vertical table is the routing surface for new domains; `integration-workflow` reorganized into Protect / Sync / Integrate / Document / Finish.
+> **Sync resolution:** Took main's restructured surfaces verbatim, then added writing-vertical rows: domain row in `using-superRA/SKILL.md` Skill Inventory + Domain add-on row; `Writing` row in `planning-workflow/SKILL.md` Phase 1 vertical table noting that modes a/b/c skip the workflow; one §Protect sentence + one §When to Lighten bullet in `integration-workflow/SKILL.md` documenting that writing substitutes build + outline-stability for drift tests; writing rows in `CATEGORIES.md` Domain table and `README.md` Domain Skills table.
+> **Integration context:** Task 6 Step 2 originally specified four Skill-Load Manifest rows (`planning-review`, `implementation`, `integration`, `documentation`) but main collapsed those into a single Domain add-on row composed with the Generic stage table. The actual implementation matches main's structure — Task 6 Step 2 wording is now describing the pre-restructure manifest shape and should be revised next time the task block is touched. Routing implementation itself is correct.
+> **User decision:** Main re-sync (2026-05-02 §Decisions entry).
+
+> **Sync cluster `cluster-3-stale-refs-in-writing` (2026-05-02):** commits `fde4751`; paths `skills/writing/SKILL.md`, `skills/writing/references/{workflow,integration,planning,collaboration}.md`; affects Tasks 1, 4, 5, 6 (their output files).
+> **Incoming intent:** Implicit — main's renames and deletions mean any reference to `execution-workflow`, `merge-workflow`, `§Universal Principles`, or the deleted `refactor-and-integrate/references/` files inside the writing skill is now broken.
+> **Sync resolution:** Refreshed stale references: `execution-workflow` → `implementation-workflow`; `merge-workflow` → folded into `integration-workflow` Finish (no separate skill); `§Universal Principles #N` references rephrased generically (the principles still hold, but the named anchor was removed when main redistributed the content); deleted-file pointer in `writing/references/integration.md` redirected to the skill-level `superRA:refactor-and-integrate`.
+> **Integration context:** All resolved within the merge commit. No follow-on Integrate work needed for these references.
+> **User decision:** None.
+
+---
+
 ## Project Conventions
 
 Walked at planning time (2026-04-19). Re-walk on-demand only.
@@ -353,6 +390,7 @@ Two hard rules:
 **Depends on:** Tasks 1, 2, 3, 4, 5
 **Review status:** APPROVED (2026-04-19, integration re-review)
 **Integration status:**
+**Sync impact:** Cluster `cluster-2-routing-rethread` reshaped the routing surfaces this task targets. Main collapsed the four Skill-Load Manifest stages this task specified (`planning-review`, `implementation`, `integration`, `documentation`) into a single Domain add-on row composed with the Generic stage table; `merge-workflow/SKILL.md` is now folded into `integration-workflow` Finish; `integration-workflow` is now Protect/Sync/Integrate/Document/Finish (not the old A/B/C/D shape this task's Step 3 referenced). The actual routing rows landed in this sync match main's structure — only the task-block wording is now describing a shape that no longer exists. Source: `PLAN.md ## Sync Map`.
 
 **Files:** `skills/writing/references/integration.md` (new); **edits:** `skills/using-superRA/SKILL.md` (Skill Inventory + Skill-Load Manifest), `skills/planning-workflow/SKILL.md` (vertical table), `skills/integration-workflow/SKILL.md` (writing branch), `skills/merge-workflow/SKILL.md` (writing branch), `skills/CATEGORIES.md`, `README.md`
 **Input:** `skills/econ-data-analysis/references/integration.md` (template), all prior writing references
