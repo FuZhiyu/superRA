@@ -1,37 +1,44 @@
-# `writing` Domain Skill
+# `writing` Skill — Redesign
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. This project authors new skill files — every implementer and reviewer dispatch MUST additionally load `document-skills:skill-creator` and apply its conciseness, progressive-disclosure, and one-source-of-truth discipline. Preserve carefully-tuned content patterns (Iron Law, Common Rationalizations table, RA-framing, `[BLOCKING]`/`[ADVISORY]` severity markers) per `/CLAUDE.md §Skill Changes`. Steps use checkbox (`- [ ]`) syntax.
+> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. **This project authors / restructures skill files** — every implementer and reviewer dispatch MUST additionally load `document-skills:skill-creator` and apply its conciseness, progressive-disclosure, and one-source-of-truth discipline. Apply `/CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action` (the **necessity principle**) line by line on every edit: for every line you write or keep, ask "without this line, would the agent's behavior be unstable?" If the answer is no, delete it. Wrapper sentences around authoritative content, "here is what you will receive" descriptions, and reminders of harness defaults are `[BLOCKING]` findings, not stylistic preferences. Steps use checkbox (`- [ ]`) syntax.
 
-**Objective:** Ship `skills/writing/` as a new superRA domain vertical parallel to `econ-data-analysis` — a practical, checklist-oriented skill that teaches agents to edit, polish, proofread, consistency-check, refactor wording, and draft technical sections of academic papers while respecting the researcher's intent and producing compilable documents.
+**Objective:** Reorganize `skills/writing/` so its top-level routing matches the three real working modes — **Review**, **Polish**, **Draft** — instead of superRA workflow phases (PLAN / IMPLEMENT / INTEGRATE), and replace the doctrinal "Iron Law / Three Concurrent Disciplines" framing with one principle (**Preserve substance, polish prose**). Substantive content (style rules, structure rules, consistency dimensions, refactor-and-compile, build commands) is preserved; the skeleton, load conditions, and authority model are rebuilt.
 
-**Methodology:** Skill-authoring project, not data analysis. Distill source material (Little Red Schoolhouse notes at `/Users/zhiyufu/Dropbox/PhD/writing_resources/`, Chaubey's *Research Writing*, Pyramid Principle) into mechanically-checkable rules; split consistency checks by dimension so multiple reviewers dispatch in parallel; encode flexible usage modes (direct-edit / pure-review / review-edit loop / full workflow) in a dedicated `workflow.md` reference. Mirror `econ-data-analysis` architecture: main SKILL.md (Iron Law + Common Rationalizations + §Three Concurrent Disciplines + §Pitfalls) plus stage-scoped references under `skills/writing/references/`. Verification is dogfooding — run the skill on a real manuscript section and watch it behave.
+**Methodology:** This is a **reorganization**, not a content rewrite. The existing skill at `skills/writing/` is the input. Re-anchor `SKILL.md` around three modes, author three new mode files (`review.md`, `polish.md`, `draft.md`) that own per-mode workflow + authority, lighten the knowledge files (drop severity-tagging on style/structure heuristics, drop phase framing in headers), retire references whose content is now absorbed (`workflow.md`, `planning.md`, `collaboration.md`), and trim `integration.md`. Verification is dogfooding — invoke each mode against a representative scenario and confirm the right references load and the right behavior fires.
 
-**Source Material Inventory:**
+**Design plan reference:** `/Users/zhiyufu/.claude/plans/read-the-current-writing-robust-rivest.md` carries the approved design discussion (problem statement, mode taxonomy, design principles, resolved Q1–Q5). Implementers read this for design intent before authoring.
 
-**READ BEFORE DRAFTING OR REVIEWING.** Every implementer and reviewer must load the corresponding source material before writing or validating a reference file. The task steps below condense rules to check — they are not a substitute for reading the originals. Full catalog + reading map at `docs/writing-references/README.md`.
+**Source-of-truth inputs:**
 
-### Available
-| Source | Path | Purpose |
-|--------|------|---------|
-| Little Red Schoolhouse (LRS) writing notes — 14 PDFs | `/Users/zhiyufu/Dropbox/PhD/writing_resources/LittleRedHouse/` (Dropbox-synced, not committed) | UChicago ENGL 13000/33000 slides. Actions-in-verbs (1-1a), character (1-1b), coherence/cohesion (2), old→new info flow (3-4), introductions (5, 6), argument structure (Arg 1–3), downstream revision (DS 1–2), triage. Main input to `style-checklist.md` and `structure-checklist.md`. |
-| Chaubey, "Research Writing" | `docs/writing-references/Chaubey_Research_Writing.pdf` (committed) | Academic-writing rules targeted at the economics audience — structure, precision, reader-model. Main input to `style-checklist.md` and `structure-checklist.md`. |
-| Pyramid Principle (Minto) | Web reference list in `docs/writing-references/README.md` (Minto / McKinsey / StrategyU / Mental Models / Think Insights / ModelThinkers / Management Consulted) | Governing idea, MECE, horizontal/vertical logic, SCQ (Situation–Complication–Question). Main input to `structure-checklist.md`. |
-| Economics-writing guidance | Web reference list in `docs/writing-references/README.md` (Brandeis, CGDev, IZA DP15057, Bellemare, Conversable Economist) | Supporting guidance for section-level structure in `structure-checklist.md`. |
-| `draft-reviewer:*` plugin subagents | `~/.claude/plugins/draft-reviewer/` | Dimension split for `consistency/*.md`. Harvest the *dimensions*, re-derive the content in superRA style. |
-| `skills/econ-data-analysis/` | repo (`skills/econ-data-analysis/SKILL.md` + `references/*`) | Architectural template for main SKILL.md + references layout, Iron Law pattern, shared checklist with severity markers. |
+| Source | Path | Use |
+|---|---|---|
+| Existing `writing` skill | `skills/writing/SKILL.md` + `references/*` | The substantive content being reorganized. Implementers read the relevant pieces before authoring; the goal is to relocate / reframe content, not to re-derive it. |
+| Approved design discussion | `/Users/zhiyufu/.claude/plans/read-the-current-writing-robust-rivest.md` | Design intent, the three-mode taxonomy, resolved decisions on polish input shapes, the inline-directive convention, light-vs-deep-polish-as-load-decision. |
+| `/CLAUDE.md` §Internal Design Philosophy | repo root | Adaptive-composable workflows, minimal-targeted-instructions, **§Teach the Protocol, Don't Prescribe Each Action** (the necessity principle that every implementer/reviewer applies as a gate). |
+| `document-skills:skill-creator` | plugin | Skill-authoring discipline: conciseness, progressive disclosure, one source of truth, frontmatter trigger phrasing. Loaded by every dispatch. |
+| `skills/econ-data-analysis/` | repo | Architectural reference only. Do **not** mechanically clone its frame — the original `writing` skill's "Three Concurrent Disciplines" was such a clone and is being removed. |
 
-### Quality Notes
-- LRS notes are University of Chicago ENGL 13000/33000 slide content — concrete checklist-able rules, high confidence.
-- Draft-reviewer agents supply review *dimensions*; the actual rule content for each dimension is re-derived in superRA's style so the plugin is a harvest target, not a runtime dependency.
-- `docs/writing-references/README.md` carries the reading-map per task — check it before dispatching an implementer.
+**Output:**
 
-**Conventions:** (populated as the skill emerges — emergent section titles, reference-file naming, severity-marker usage land here)
+- **Rewritten:** `skills/writing/SKILL.md`.
+- **New:** `skills/writing/references/review.md`, `polish.md`, `draft.md`.
+- **Renamed + lightened:** `skills/writing/references/style-checklist.md` → `style.md`; `structure-checklist.md` → `structure.md`. Drop severity tags on heuristic items; drop phase framing in headers.
+- **Header rewrite (content unchanged):** `skills/writing/references/consistency/*.md` (8 files), `refactor-and-compile.md`. One-line "load when" header pointing at modes; drop per-file `## Reviewer verdict protocol` boilerplate; drop `Walked in addition to SKILL.md §Three Concurrent Disciplines` cross-references.
+- **Trimmed:** `skills/writing/references/integration.md` — heavy trim; only loaded when the writing task rides `integration-workflow`.
+- **Deleted:** `skills/writing/references/workflow.md`, `planning.md`, `collaboration.md` (after content absorbed).
+- **Routing updates:** `skills/using-superRA/SKILL.md` Skill Inventory writing row, `skills/CATEGORIES.md`, `README.md` writing row reflect the new mode taxonomy. (No change to Skill-Load Manifest add-on table — the row already routes correctly.)
+- No code artifacts, no data outputs.
 
-**Output:** One new skill at `skills/writing/SKILL.md` with eleven references (2 top-level + 1 workflow + 8 consistency-dimension files, see Task blocks), plus routing updates to `skills/using-superRA/`, `skills/planning-workflow/`, `skills/integration-workflow/`, `skills/merge-workflow/`, `skills/CATEGORIES.md`, and `README.md`. Possible amendment to `/CLAUDE.md` making the "domain skills are standalone-usable" property explicit. No code artifacts, no data outputs.
+**Expected Results:**
 
-**Expected Results:** (a) The Iron Law **"Respect the Author's Intent"** fires on deliberate scope-violation attempts; (b) the §Three Concurrent Disciplines shared checklist catches compile failures and cross-reference breaks; (c) parallel-dispatched consistency reviewers (one per `consistency/*.md`) cover a real manuscript section faster than a single reviewer would; (d) the skill loads cleanly standalone without the PLAN→IMPLEMENT→VALIDATE→INTEGRATE workflow wrapper for tiny edits and pure-review sessions; (e) no regression in the existing `econ-data-analysis` flow.
+- Top-level invocation `writing` polish on a paragraph loads `SKILL.md` + `polish.md` + `style.md` only — no `planning.md`, no `workflow.md`, no `collaboration.md` doctrine.
+- A review request like "check my citations and cross-references" loads `SKILL.md` + `review.md` + the two relevant `consistency/*.md` files; reviewers can be dispatched in parallel.
+- A draft request "draft the methods section" loads `SKILL.md` + `draft.md` + `structure.md` + `style.md`.
+- `SKILL.md` body passes the §Teach the Protocol gate line by line: every sentence shapes a non-default behavior; no wrapper instructions, no descriptions of dispatch shape, no harness-default reminders.
+- A standalone polish does not enforce reviewer dispatch from this skill — that invariant lives in the workflow skills only.
+- Dogfood (Task 4) confirms the three modes route correctly and produce sensible behavior on representative inputs.
 
-**Sensitivity / robustness:** N/A (skill-design project). Substitute: the Phase H dogfood runs three mode variants (direct edit, review-edit loop, optional full workflow) so the skill is exercised across its documented usage modes.
+**Sensitivity / robustness:** N/A (skill-design project). Substitute: Task 4 dogfood exercises Review, Polish (sentence-scope), Polish (structural-scope), and Draft modes on representative inputs to confirm the load-decision authority model behaves.
 
 **Pipeline:** N/A (skill authoring, not analysis).
 
@@ -39,12 +46,12 @@
 
 ## Workflow Status
 
-- [x] **Plan approved** — researcher signed off on this plan (2026-04-19)
+- [x] **Plan approved** — researcher signed off on this redesign plan (2026-05-02)
 - [ ] **Execution complete** — all tasks `APPROVED`
-- [ ] **Drift tests created** — **N/A for skill authoring**; substitute satisfied by Task 8 dogfood (three-mode real-session verification) + skill-graph consistency sweep
-- [ ] **Refactored** — final integration-review approval on the consolidated skill changes
-- [ ] **Docs finalized** — README / RELEASE-NOTES / CATEGORIES / CLAUDE.md audited and consistent with the new skill
-- [ ] **Merged** — branch merged to main or PR opened
+- [ ] **Drift tests created** — N/A for skill authoring; substitute satisfied by Task 4 dogfood
+- [ ] **Integrated** — integration reviewer `APPROVED` on the redesign cumulative diff
+- [ ] **Docs finalized** — RESULTS.md matured; routing surfaces (using-superRA / CATEGORIES / README) consistent with the new mode taxonomy
+- [ ] **Finished** — branch landed locally, PR opened, or requested cleanup completed
 
 ---
 
@@ -53,35 +60,35 @@
 > **User decision (2026-04-19):** Iron Law framed as author-respect only; compile is a `[BLOCKING]` item inside §Three Concurrent Disciplines, not part of the Iron Law.
 > **Question asked:** Single 3-clause law vs two laws vs author-respect-only with compile demoted.
 > **Rationale:** "Respect authors" means respecting the **intention/meaning** of the author — it does *not* mean preserving word choices or typos. The Iron Law forbids overriding authorial intent; word-level fixes remain the RA's job and live in the shared checklist.
+> **Status (2026-05-02):** Superseded by the 2026-05-02 redesign decision below — Iron Law framing is being removed entirely. Kept here as historical record of the rationale, which informs the new "Preserve substance, polish prose" principle.
 
 > **User decision (2026-04-19):** Fold figure/table/caption consistency into `consistency/numerical.md`. No separate figure-table reference file.
-> **Question asked:** Separate `figure-table-checklist.md` vs folded.
 
 > **User decision (2026-04-19):** Domain skills are usable standalone — without the full PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow scaffold. Primary expected usage of the writing skill is standalone; the full workflow applies only to major changes (whole-section drafts, whole-paper revisions).
-> **Question asked:** Should `workflow.md` expose a lightweight escape hatch for tiny polish tasks?
-> **Rationale:** For tiny edits and iterative polish work, the user wants to iterate directly with the main agent. `workflow.md` documents four modes: direct-edit, pure-review, review-edit-loop, full-workflow. `CLAUDE.md` will be audited (Task 7) to confirm this property is stated explicitly.
+> **Rationale:** For tiny edits and iterative polish work, the user wants to iterate directly with the main agent.
 
 > **User decision (2026-04-19):** Reviewer dispatch is never skipped, ever. Every mode — including direct-edit — requires an *independent* dispatched reviewer.
-> **Question asked:** Implied by the direct-mode discussion.
-> **Rationale:** Preserves workflow principle #1. Orchestrator may step into the implementer role (direct edit while in live conversation), but the reviewer role is always a fresh dispatched agent.
+> **Status (2026-05-02):** Superseded by the 2026-05-02 redesign decision. Reviewer-dispatch invariants now belong to the workflow skills (`implementation-workflow` etc.), not to the writing skill itself. Standalone polish/draft invocations of `writing` do not enforce reviewer dispatch from inside the skill.
 
-> **User decision (2026-04-19):** Split consistency checks by dimension and dispatch multiple reviewers in parallel, one per dimension. Mirrors the `draft-reviewer:*` plugin's one-agent-per-aspect pattern.
-> **Question asked:** Implied — follows the draft-reviewer architecture.
+> **User decision (2026-04-19):** Split consistency checks by dimension and dispatch multiple reviewers in parallel, one per dimension. Mirrors the `draft-reviewer:*` plugin's one-agent-per-aspect pattern. (Still in force after the redesign — parallel-dispatch is a workflow-level pattern, the per-dimension `consistency/*.md` files keep their split.)
 
-> **User decision (2026-04-19):** PLAN.md and RESULTS.md are both optional for small/iterative writing tasks. Full handoff-doc discipline only for major changes.
-> **Question asked:** Implied by the workflow-mode discussion.
+> **User decision (2026-04-19):** PLAN.md and RESULTS.md are both optional for small/iterative writing tasks. Full handoff-doc discipline only for major changes. (Still in force.)
 
 > **User decision (2026-04-22):** Refresh `domain/writing-skills` against `main`; prioritize the minimum-net-diff path. A semantic merge is acceptable, and rebase/reapply is also authorized if it proves cleaner during conflict resolution.
-> **Question asked:** Which integration base and sync strategy should this branch use now that `main` has several major improvements?
-> **Rationale:** The goal is to preserve the writing-vertical work while absorbing current `main` improvements with the smallest justified cumulative diff.
 
 > **User decision (2026-04-22):** Undo the 2026-04-22 `main` sync. The prior merge misread `main`'s integration intent by carrying forward `skills/using-superRA/SKILL.md`'s `## Universal Principles` block even though `main` had intentionally removed it.
-> **Question asked:** "Undo these merges. I don't think you fully capture the integration idea: in the main, we intentionally dropped the universal principles; in the current branch we still kept it. Why? can you go through the log and the handoff doc to explain the rationale"
-> **Rationale:** Main's history shows the removal was deliberate de-duplication, not drift: `564021b` simplified skills by cutting duplicate protocol text, and `72c38e3` explicitly moved the four-principle content to its owning files (`main-agent.md`, workflow structure, `handoff-doc`, reviewer/integration references). The archived codex-compatibility handoff (`docs/plans/2026-04-17-codex-compatibility-plan.md`, Task 5 Step 3) also states that minimum-net-diff syncs should take `main` verbatim on shared files and re-thread only branch-specific additive surfaces. Reverting the sync restores that discipline.
 
-> **User decision (2026-05-02):** Re-sync `domain/writing-skills` against `main` using strict take-main-verbatim discipline on shared surfaces. Main has advanced significantly since the rollback: `execution-workflow` was renamed to `implementation-workflow`; `refactor-and-integrate/references/{codebase-integration,drift-test-quality,merge-quality}.md` were deleted (drift-test content moved to the new `result-protection` skill); `semantic-merge` gained mode references (`standalone-merge.md`, `workflow-sync-author.md`, `workflow-sync-reviewer.md`); `using-superRA/references/codex-tools.md` was renamed to `codex-instructions.md`; `using-superRA/references/{direct-mode-implementer,direct-mode-reviewer}.md` were added; `integration-workflow` was restructured into Protect/Sync/Integrate/Document/Finish phases; `CLAUDE.md` was substantially rewritten around adaptive-composable-workflow design principles.
-> **Question asked:** "sync this branch with the main"
-> **Rationale:** Took main verbatim on every shared infrastructure file (CLAUDE.md, README.md, agents/*, hooks/merge-guard, all econ-data-analysis/*, agent-orchestration/*, handoff-doc/*, refactor-and-integrate/SKILL.md, semantic-merge/*, report-in-markdown/*, using-superRA/references/main-agent.md, worktree-data-sync/SKILL.md, plus all codex/* and tests/*). Re-threaded writing-vertical additions only into the surfaces main reshaped: added a writing row to `using-superRA/SKILL.md` Skill Inventory + Skill-Load Manifest add-on table; added a writing row to `planning-workflow/SKILL.md` Phase 1 vertical table; added writing notes to `integration-workflow/SKILL.md` §Protect (build + outline-stability substitutes for drift tests) and §When to Lighten (modes a/b/c skip the workflow); added writing rows to `skills/CATEGORIES.md` and `README.md` domain tables. Dropped `skills/execution-workflow/` (renamed) and the four deleted reference files. Refreshed stale references inside `skills/writing/` to point at the new structure (`execution-workflow` → `implementation-workflow`, `merge-workflow` → folded into `integration-workflow` Finish, `§Universal Principles` references rephrased generically since main moved that content to its owning files).
+> **User decision (2026-05-02, sync):** Re-sync `domain/writing-skills` against `main` using strict take-main-verbatim discipline on shared surfaces. Result captured in §Sync Map below.
+
+> **User decision (2026-05-02, redesign):** Redesign `skills/writing/` around three working modes — Review / Polish / Draft — instead of superRA workflow phases. Replace the "Iron Law / Three Concurrent Disciplines" framing (a mechanical clone of `econ-data-analysis`) with a single principle: **Preserve substance, polish prose** (preserve = argument, logic, structure, claims, intent, tone; polish = wording, sentence structure, clarity, parallelism, flow, correctness). The previously-implemented skill stands as the *input* to this redesign — substantive content is preserved, the skeleton is rebuilt.
+> **Question asked:** "the current writing skill isn't designed well — unclear when to load what; too much 'preserve voice', too little 'what to do'; design-principle violation. let's redesign."
+> **Rationale (resolved during planning):**
+> 1. **One `polish.md`** carries all three input shapes (unstaged edits / named target / review-findings list) as sub-sections. Procedural overlap is high; no need to split.
+> 2. **`TODO` defaults to task-for-agent.** Inline `TODO`, `\todo{...}`, `% TODO:`, and crude / placeholder phrasing are **work assigned to the agent**. Author signals leave-alone explicitly with `DO NOT EDIT` (or equivalent) on the line/block. This **inverts** the prior `collaboration.md` default. Real polish workflows have authors dumping work-in-progress and expecting the agent to clean it up.
+> 3. **Light-vs-deep polish is purely a load decision.** Light polish = `polish.md` + `style.md`; deep (structural) polish = `polish.md` + `style.md` + `structure.md`. Loaded references *are* the authority grant. No procedural difference between the two.
+> 4. **Reviewer-dispatch enforcement leaves this skill.** Workflow skills (`implementation-workflow` etc.) own that invariant when a workflow is in play; standalone invocations terminate at edit + commit.
+> 5. **Frontmatter trigger phrases reorganized by mode.**
+> **Workflow Status impact:** This decision invalidates the prior plan's Tasks 1–8 (their outputs — SKILL.md, references — are being restructured). All `Workflow Status` rollups except this Plan-approved entry remain unchecked. The Sync Map below was for the prior 2026-05-02 main re-sync and is independent of this redesign; it stays until Integrate closeout.
 
 ---
 
@@ -91,393 +98,239 @@
 **Pre-sync merge base:** `addc9ca7fe1bdbedb080d92095facb649074c1e4`
 **Synced base head:** `886fda8b6a7862a0a4af8ec7d30fd53ffed6fea3`
 **Incoming range:** `addc9ca..886fda8`
-**Sync commits:** `fde4751`, `7a4cf1a`, *(this correction commit)*
-**Sync review status:** IMPLEMENTED (after one REVISE round)
+**Sync commits:** `fde4751`, `7a4cf1a`, plus the take-main-verbatim correction commit
+**Sync review status:** APPROVED (after one REVISE round)
 
 ### Branch Summary
 
-**Incoming intent:** Substantial restructuring of superRA workflow scaffolding while this branch was idle: `execution-workflow` renamed to `implementation-workflow`; `integration-workflow` rewritten around five phases (Protect / Sync / Integrate / Document / Finish); `refactor-and-integrate` narrowed to codebase-coherence with drift-test content moved to a new dedicated `result-protection` skill (three references — `codebase-integration.md`, `drift-test-quality.md`, `merge-quality.md` — deleted); `semantic-merge` gained mode references (`standalone-merge.md`, `workflow-sync-author.md`, `workflow-sync-reviewer.md`); `using-superRA` lost the `## Universal Principles` block (content redistributed to owner files; `codex-tools.md` renamed to `codex-instructions.md`; `direct-mode-implementer.md` and `direct-mode-reviewer.md` added); `CLAUDE.md` substantially rewritten around adaptive-composable-workflow design principles. Codex named-agent generation, marketplace metadata, hook surfaces, and harness-compatibility tests advanced.
+**Incoming intent:** Substantial restructuring of superRA workflow scaffolding while this branch was idle: `execution-workflow` renamed to `implementation-workflow`; `integration-workflow` rewritten around five phases (Protect / Sync / Integrate / Document / Finish); `refactor-and-integrate` narrowed to codebase-coherence with drift-test content moved to a new `result-protection` skill; `semantic-merge` gained mode references; `using-superRA` lost the `## Universal Principles` block (content redistributed); `CLAUDE.md` rewritten around adaptive-composable-workflow design principles. Codex named-agent generation, marketplace metadata, hook surfaces, and harness-compatibility tests advanced.
 
-**Resolution thesis:** Strict take-main-verbatim on every shared infrastructure surface (the writing branch had no design intent for any of those files). Re-thread writing-vertical additions only into the surfaces main reshaped, in the spots where main's restructure left explicit hooks for new verticals. Drop the renamed/deleted artifacts. Refresh stale references inside `skills/writing/` so they point at main's current structure rather than the pre-restructure structure they were authored against. The full file/script impact map and user-decision log live in `SEMANTIC_MERGE.md` (entry titled "Semantic Merge Record — 2026-05-02").
+**Resolution thesis:** Strict take-main-verbatim on every shared infrastructure surface. Re-thread writing-vertical additions only into the surfaces main reshaped. Drop the renamed/deleted artifacts. Refresh stale references inside `skills/writing/` to point at main's current structure. Full file/script impact map and user-decision log live in `SEMANTIC_MERGE.md`.
 
 ### Sync Clusters
 
-> **Sync cluster `cluster-1-shared-skills` (2026-05-02):** commits `fde4751`; paths `CLAUDE.md`, `README.md`, `agents/*`, `hooks/merge-guard`, `skills/{agent-orchestration,econ-data-analysis,handoff-doc,refactor-and-integrate,report-in-markdown,semantic-merge,worktree-data-sync}/...`, `skills/using-superRA/references/main-agent.md`, `.codex*/`, `tests/*`; affects no writing-skill tasks directly.
-> **Incoming intent:** Adaptive-composable-workflow design refresh and Codex compatibility hardening across shared infrastructure.
+> **Sync cluster `cluster-1-shared-skills` (2026-05-02):** commits `fde4751`; paths `CLAUDE.md`, `README.md`, `agents/*`, `hooks/merge-guard`, `skills/{agent-orchestration,econ-data-analysis,handoff-doc,refactor-and-integrate,report-in-markdown,semantic-merge,worktree-data-sync}/...`, `skills/using-superRA/references/main-agent.md`, `.codex*/`, `tests/*`; affects no redesign tasks directly.
 > **Sync resolution:** Took main verbatim. Branch had no writing-vertical content in any of these files.
-> **Integration context:** None — these surfaces are owned by main and do not carry writing-vertical surface area.
+> **Integration context:** None.
 > **User decision:** None.
 
-> **Sync cluster `cluster-2-routing-rethread` (2026-05-02):** commits `fde4751`; paths `skills/using-superRA/SKILL.md`, `skills/planning-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/CATEGORIES.md`, `README.md`; affects Task 6.
-> **Incoming intent:** Restructure routing surfaces — `using-superRA` Skill-Load Manifest split into Generic + Domain add-on tables; `planning-workflow` Phase 1 vertical table is the routing surface for new domains; `integration-workflow` reorganized into Protect / Sync / Integrate / Document / Finish.
-> **Sync resolution:** Took main's restructured surfaces verbatim, then added writing-vertical rows: domain row in `using-superRA/SKILL.md` Skill Inventory + Domain add-on row; `Writing` row in `planning-workflow/SKILL.md` Phase 1 vertical table noting that modes a/b/c skip the workflow; one §Protect sentence + one §When to Lighten bullet in `integration-workflow/SKILL.md` documenting that writing substitutes build + outline-stability for drift tests; writing rows in `CATEGORIES.md` Domain table and `README.md` Domain Skills table.
-> **Integration context:** Task 6 Step 2 originally specified four Skill-Load Manifest rows (`planning-review`, `implementation`, `integration`, `documentation`) but main collapsed those into a single Domain add-on row composed with the Generic stage table. The actual implementation matches main's structure — Task 6 Step 2 wording is now describing the pre-restructure manifest shape and should be revised next time the task block is touched. Routing implementation itself is correct.
-> **User decision:** Main re-sync (2026-05-02 §Decisions entry).
+> **Sync cluster `cluster-2-routing-rethread` (2026-05-02):** commits `fde4751`; paths `skills/using-superRA/SKILL.md`, `skills/planning-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`, `skills/CATEGORIES.md`, `README.md`; affects redesign Task 3 (routing surfaces will be edited again to update writing-row descriptions for the new mode taxonomy).
+> **Sync resolution:** Took main's restructured surfaces verbatim, then added writing-vertical rows.
+> **Integration context:** Task 3 of this redesign edits the same row descriptions (one-liner update only — the row's existence is established correctly).
+> **User decision:** Main re-sync (2026-05-02 first §Decisions entry).
 
-> **Sync cluster `cluster-4-correction-take-main-verbatim` (2026-05-02):** commits *(this correction commit)*; paths `.agents/**`, `.codex/INSTALL.md`, `.gitattributes`, `AGENT.md`, `GEMINI.md`, `docs/README.codex.md`, `docs/drafts/workflow-diagram.mmd`, `docs/plans/2026-04-{16,17,19,21}-*.md` (14 files), `docs/process-issues-2026-04-16.md`, `hooks/{autoload-superra,ensure-agent-orchestration,ensure-using-superra,exit-plan-mode,hooks-cursor.json,hooks.json,session-start}`, `skills/report-in-markdown/references/baseline-io.md`, `skills/using-superRA/references/{claude-tools,gemini-tools}.md`, `tests/hooks/*.sh`, `tests/structural-invariants.sh`; affects no writing-skill tasks.
-> **Incoming intent:** Implicit. Where the branch had pre-merge drift from main on shared infrastructure (hook surfaces, harness adapter references, archived plans, agents-harness symlinks, etc.), main's state is the intended baseline.
-> **Sync resolution:** For every divergent path that is NOT in the writing-vertical allowlist (writing skill, writing-references docs, PLAN/RESULTS/SEMANTIC_MERGE, five rethreaded routing surfaces): `git checkout main -- <path>` if main has it; `git rm <path>` if main does not. Brings post-merge `git diff --name-only main..HEAD` to a clean minimum-net-diff state — every surviving difference is now a legitimate writing-vertical artifact, a routing-rethread row, or a branch handoff doc.
-> **Integration context:** Three concrete behavioral consequences resolved by this correction: (a) the three autoload hooks (`autoload-superra`, `ensure-using-superra`, `ensure-agent-orchestration`) are now wired in `hooks/hooks.json` again — runtime autoload of `superRA:using-superRA` would have been broken on this branch otherwise; (b) `.agents/skills/*` symlinks are restored — the agents-harness skill-discovery surface now matches main; (c) `skills/using-superRA/references/gemini-tools.md` no longer says "execution-workflow" (main renamed it; the silent retention had been a CRITICAL finding). See `SEMANTIC_MERGE.md` §"Semantic Merge Record — 2026-05-02 (correction commit)" for the full file/script impact map.
-> **User decision:** None new — the original 2026-05-02 "sync this branch with main" intent is what this correction is fulfilling.
-
-> **Sync review notes (2026-05-02, REVISE round 1, RESOLVED):**
-> 1. [CRITICAL] Silent re-introduction of pre-rename `execution-workflow` text in `skills/using-superRA/references/gemini-tools.md`. — RESOLVED by `cluster-4`.
-> 2. [CRITICAL] Take-main-verbatim rule applied selectively (~50 paths still carried branch-side state). — RESOLVED by `cluster-4`.
-> 3. [MAJOR] `SEMANTIC_MERGE.md` File / Script Impact Map did not match the actual diff. — RESOLVED by appending the correction-commit record to `SEMANTIC_MERGE.md`.
-> 4. [MAJOR] `PLAN.md §Decisions (2026-05-02)` and `RESULTS.md` understated the scope of pre-merge drift. — RESOLVED by this Sync Map update + the RESULTS.md correction note.
-
-> **Sync cluster `cluster-3-stale-refs-in-writing` (2026-05-02):** commits `fde4751`; paths `skills/writing/SKILL.md`, `skills/writing/references/{workflow,integration,planning,collaboration}.md`; affects Tasks 1, 4, 5, 6 (their output files).
-> **Incoming intent:** Implicit — main's renames and deletions mean any reference to `execution-workflow`, `merge-workflow`, `§Universal Principles`, or the deleted `refactor-and-integrate/references/` files inside the writing skill is now broken.
-> **Sync resolution:** Refreshed stale references: `execution-workflow` → `implementation-workflow`; `merge-workflow` → folded into `integration-workflow` Finish (no separate skill); `§Universal Principles #N` references rephrased generically (the principles still hold, but the named anchor was removed when main redistributed the content); deleted-file pointer in `writing/references/integration.md` redirected to the skill-level `superRA:refactor-and-integrate`.
-> **Integration context:** All resolved within the merge commit. No follow-on Integrate work needed for these references.
+> **Sync cluster `cluster-3-stale-refs-in-writing` (2026-05-02):** commits `fde4751`; paths `skills/writing/SKILL.md`, `skills/writing/references/{workflow,integration,planning,collaboration}.md`; affects redesign Tasks 1–3 (these files are being restructured / deleted).
+> **Sync resolution:** Refreshed stale references against main's renamed/restructured surfaces.
+> **Integration context:** All four files touched by this cluster are restructured or deleted in the redesign — Task 1 rewrites `SKILL.md`, Task 3 deletes `workflow.md` / `planning.md` / `collaboration.md` and trims `integration.md`. The post-sync refresh is being superseded, but the rename-fix work it did is what the redesign starts from (so the redesign sees the correct file names, not the pre-rename ones).
 > **User decision:** None.
+
+> **Sync cluster `cluster-4-correction-take-main-verbatim` (2026-05-02):** commits the take-main-verbatim correction; paths `.agents/**`, `.codex/INSTALL.md`, `.gitattributes`, `AGENT.md`, `GEMINI.md`, `docs/README.codex.md`, `hooks/{autoload-superra,...}`, harness adapter references, archived plans, etc.; affects no redesign tasks.
+> **Sync resolution:** `git checkout main -- <path>` for every divergent path outside the writing-vertical allowlist.
+> **Integration context:** None.
+> **User decision:** None new.
+
+> **Sync review notes (2026-05-02, RESOLVED — round 1):** four findings (CRITICAL × 2, MAJOR × 2) all resolved by `cluster-4-correction-take-main-verbatim`. APPROVED.
 
 ---
 
 ## Project Conventions
 
-Walked at planning time (2026-04-19). Re-walk on-demand only.
+Walked at planning time (2026-04-19); refreshed lightly at this redesign (2026-05-02) — Repo root and module-level docs unchanged in substance from the prior walk.
 
 ### Repo root
-- `/CLAUDE.md` (HEAD at b58c3fc): superRA contributor guidelines. Four load-bearing workflow principles (implementer–reviewer pair at every step, handoff docs are the auditable record, fast-early-strict-before-merge + semantic merges, autonomous with human in the loop); RA-framing; lean-agents-rich-references architectural pattern; DRY / composability / extensibility rules; roadmap for new verticals; §Skill Changes requires real-session testing and warns against editing tuned content (Red Flags tables, rationalization lists, severity protocols) on stylistic preference.
-- `/AGENTS.md`: symlink to `/CLAUDE.md`.
-- `/GEMINI.md`: mirror of `/CLAUDE.md` for Gemini harness.
-- `/README.md` (HEAD at b58c3fc): plugin overview + skill inventory table. Lists Workflow / Domain / Utility / Meta categories and which skills belong to each.
+- `/CLAUDE.md` (HEAD at 886fda8): superRA contributor guidelines, **§Teach the Protocol, Don't Prescribe Each Action gate** (the necessity principle every implementer/reviewer applies line-by-line on every edit), **§Adaptive, Composable Workflows** (mechanisms over contingency trees, re-entry is normal, gates are local discipline, domain/utility skills stand alone), **§Ownership Boundaries** (one source of truth per concern), **§Skill Authoring Guidelines** (load `skill-creator` before editing any `skills/*/SKILL.md`).
+- `/AGENTS.md`, `/AGENT.md`, `/GEMINI.md`: aliases / mirrors of `/CLAUDE.md`.
+- `/README.md` (HEAD at 886fda8): plugin overview + skill inventory table.
 
 ### Module-level docs to walk on demand
-- `skills/CATEGORIES.md` — authoritative skill categorization; writing skill must be added to the Domain section.
-- `skills/econ-data-analysis/SKILL.md` + `skills/econ-data-analysis/references/*` — architectural template for the writing skill.
-- `skills/using-superRA/SKILL.md` + `references/main-agent.md` — Skill Inventory and Skill-Load Manifest must be extended.
-- `skills/handoff-doc/` — PLAN.md + RESULTS.md editing discipline (already loaded for this plan).
-- `skills/planning-workflow/SKILL.md` — vertical routing table needs a writing row.
-- `skills/integration-workflow/SKILL.md` + `skills/merge-workflow/SKILL.md` — needs a writing branch (build + outline-stability gate in place of drift tests).
-- `skills/refactor-and-integrate/` — paired with writing's `references/integration.md`, no change expected.
+- `skills/CATEGORIES.md` — authoritative skill categorization.
+- `skills/using-superRA/SKILL.md` — Skill Inventory and Skill-Load Manifest. Writing row description gets refreshed in Task 3.
+- `skills/handoff-doc/` + `references/{plan-anatomy,results-anatomy}.md` — PLAN.md / RESULTS.md editing discipline.
+- `skills/econ-data-analysis/SKILL.md` + `references/*` — architectural reference (do not mechanically clone — the prior writing skill's clone is what is being removed).
+- `skills/writing/` — the existing skill being redesigned. Implementers read the relevant files for content reuse.
 
 ### Not walked (not reachable from the planned diff)
-- `Code/`, `Data/`, `Output/` — no such directories; this is a skill plugin, not an analysis repo.
-- `docs/archive/` — out of scope.
-- `hooks/` — merge-guard already handles semantic-merge routing; no change expected for the writing vertical.
+- `Code/`, `Data/`, `Output/` — no such directories; this is a skill plugin.
+- `docs/archive/`, `hooks/` — out of scope.
 
 ---
 
-## Task 1: Scaffold `skills/writing/SKILL.md` — Iron Law + §Three Concurrent Disciplines
+## Task 1: Rewrite `SKILL.md` + author three mode files
 
 **Depends on:** *(none)*
-**Review status:** APPROVED (2026-04-19, integration re-review)
-**Integration status:**
-
-**Files:** `skills/writing/SKILL.md` (new)
-**Input:**
-- `skills/econ-data-analysis/SKILL.md` — architectural template (Iron Law + §Three Concurrent Disciplines + §Pitfalls + §Common Rationalizations anatomy); read end-to-end before drafting.
-- `/Users/zhiyufu/.claude/plans/bubbly-wondering-parnas.md` — this project's own plan file; has the Iron Law final wording and the full §Three Concurrent Disciplines checklist.
-- `/CLAUDE.md` §RA framing + §Design Principles — for the standalone-usability property and the reviewer-dispatch rule.
-- `docs/writing-references/README.md` — big-picture orientation to why this skill exists.
-
-**Output:** `skills/writing/SKILL.md` with frontmatter + RA framing + Iron Law + Common Rationalizations table + §Three Concurrent Disciplines (Preserve / Improve / Verify) + §Pitfalls pointer list + §Mode-selection pointer + §Key References. No referenced files exist yet — §Pitfalls and §Key References point forward.
-
-- [x] **Step 1: Draft frontmatter + RA framing**
-
-```markdown
----
-name: writing
-description: Use PROACTIVELY whenever editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting technical sections of an academic paper or manuscript. Triggers include "polish this section", "proofread", "check consistency", "rename variable X to Y throughout", "write the methods section", "make the intro flow better", LaTeX / manuscript files touched, or any task that edits prose a human will read. Language/format-agnostic (LaTeX, Markdown, Quarto, plain text). Loaded by implementer and reviewer subagents at dispatch time when the stage touches writing, per superRA:using-superRA §Skill-Load Manifest.
----
-
-## RA framing
-
-You are assisting the researcher, not replacing them. The researcher's voice is the final voice. Your edits serve the researcher's intent — never your own preference.
-```
-
-- [x] **Step 2: Write the Iron Law**
-
-Heading: `## The Iron Law: RESPECT THE AUTHOR'S INTENT`. Three clauses:
-
-1. **Meaning-preserving edits only.** If a fix would change what the sentence/paragraph *says* (not just how it says it), stop and ask. Word-choice fixes, typo fixes, nominalization fixes, hedging fixes, broken-parallelism fixes, cross-reference fixes — all inside scope when the request covers style/polish/consistency. Rewrites that change the claim, emphasis, or argument — escalate.
-2. **Scope-bounded edits only.** Edit what was asked. Structural or substantive changes beyond the request are *proposed* (in chat or PLAN.md), never performed unilaterally.
-3. **In-progress work respected.** Unfinished paragraphs, inline TODOs, commented-out text, and visibly-being-edited sections are not touched unless the request names them.
-
-**Explicit non-goal:** The Iron Law does NOT require preserving word choices, typos, passive-voice awkwardness, or weak diction. Fixing those is the RA's job. What it forbids is overriding *authorial intent*.
-
-- [x] **Step 3: Write §Common Rationalizations table**
-
-Heading: `## §Common Rationalizations`. Table columns `Rationalization | Reality`:
-
-| Rationalization | Reality |
-|---|---|
-| "This whole paragraph is clearly better my way — I'll just rewrite it." | Scope + meaning violation. Propose the rewrite; do not perform it. |
-| "The author probably meant X — I'll just write X." | Meaning violation. If you have to guess, escalate. |
-| "This structure is obviously suboptimal, I should reorder the sections." | Scope violation. Structural changes are out-of-scope unless requested. |
-| "The request said 'polish', so editing voice is fair game." | Voice ≠ diction. Fix nominalization / passive / hedging. Do not homogenize tone. |
-| "The TODO marker is obviously going to be filled in the same way I'd fill it." | In-progress work violation. Leave TODOs for the author. |
-| "Warnings are never important — compile-clean enough." | Verify violation. Triage each warning; escalate on doubt. |
-
-- [x] **Step 4: Write §Three Concurrent Disciplines (Preserve / Improve / Verify) — shared checklist**
-
-Heading: `## §Three Concurrent Disciplines: Preserve–Improve–Verify`. Walked top-to-bottom for every writing task. Severity markers `[BLOCKING]` / `[ADVISORY]`. Shared between implementer self-check and reviewer verification.
-
-```markdown
-### Preserve (scope + voice)
-- [BLOCKING] No edits outside the requested scope
-- [BLOCKING] Author's voice recognizable in the diff (diction, register, sentence-shape preserved)
-- [BLOCKING] User's in-progress edits respected — TODOs, commented-out text, unfinished paragraphs not touched unless the request names them
-- [ADVISORY] Style corrections applied minimally — smallest edit that fixes the identified problem
-
-### Improve (clarity + structure, as requested)
-- [BLOCKING] Edits address the specific problem named in the request
-- [BLOCKING] For consistency-check tasks: every mismatch found is reported; none silently fixed beyond scope
-- [ADVISORY] Sentence-level style rules applied where they fire (→ references/style-checklist.md)
-- [ADVISORY] Paragraph-level flow checked (topic sentence, old→new order, transitions)
-
-### Verify (compile + consistency)
-- [BLOCKING] Document compiles after the edit (errors block; warnings triaged)
-- [BLOCKING] No new cross-reference breaks (\ref, \cite, \eqref, label consistency)
-- [BLOCKING] Numbers-in-text match numbers-in-tables if the edit touched quantitative claims
-- [ADVISORY] Build warnings enumerated in handoff with ≤1-line rationale each
-```
-
-- [x] **Step 5: Write §Pitfalls pointer list + §Mode selection + §Key References**
-
-```markdown
-## §Pitfalls (operation-conditional)
-- Sentence-level edits → references/style-checklist.md
-- Structural / section drafting → references/structure-checklist.md
-- Multi-dimensional consistency sweep → references/consistency/*.md (dispatch one reviewer per file in parallel; see references/workflow.md)
-- Single-dimension consistency check → load the one relevant consistency/*.md
-- Terminology / notation refactor → references/refactor-and-compile.md + consistency/terminology.md + consistency/notation.md
-- Build / compilation fix → references/refactor-and-compile.md §Compile
-- User-work detected in repo → references/collaboration.md
-
-## §Mode selection
-See references/workflow.md for the four modes (direct-edit / pure-review / review-edit-loop / full-workflow). Two hard rules: (1) reviewer dispatch is never skipped; (2) for multi-dimensional consistency work, dispatch reviewers in parallel, one per dimension.
-
-## §Key References
-- planning.md — scope inventory, PLAN/RESULTS optionality
-- workflow.md — usage modes + dispatch rules
-- style-checklist.md — sentence + paragraph rules
-- structure-checklist.md — Pyramid Principle + section anatomy
-- consistency/*.md — one file per review dimension (8 total)
-- refactor-and-compile.md — safe find-replace + build gate
-- collaboration.md — user-work respect patterns
-- integration.md — pre-merge gates
-```
-
-- [x] **Step 6: Self-review against template + commit**
-
-Self-check: (a) Iron Law protected by a Common Rationalizations table covering all three clauses? (b) Every §Three Concurrent Disciplines item has a severity marker? (c) §Pitfalls pointers list all eight consistency dimensions generically as `consistency/*.md`? Update RESULTS.md Task 1 with key findings (Iron Law final text, checklist item counts). Update PLAN.md: mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: scaffold writing/SKILL.md with Iron Law + shared disciplines`.
-
----
-
-## Task 2: `style-checklist.md` + `structure-checklist.md`
-
-**Depends on:** Task 1
-**Review status:** APPROVED (2026-04-19, integration re-review)
-**Integration status:**
-
-**Files:** `skills/writing/references/style-checklist.md` (new), `skills/writing/references/structure-checklist.md` (new)
-**Input:**
-- **For `style-checklist.md`:** LRS 1-1a (actions/nominalization), LRS 1-1b (character), LRS 2 (coherence/cohesion), LRS 3-4 (info flow) at `/Users/zhiyufu/Dropbox/PhD/writing_resources/LittleRedHouse/`; `docs/writing-references/Chaubey_Research_Writing.pdf` sections on sentence-level clarity.
-- **For `structure-checklist.md`:** LRS 5, LRS 6 (introductions), LRS Arg 1–3 (argument structure), LRS triage in the same LittleRedHouse directory; `docs/writing-references/Chaubey_Research_Writing.pdf` sections on paper structure; Pyramid Principle web references listed in `docs/writing-references/README.md`; supporting economics-writing guidance (Brandeis, CGDev, IZA DP15057, Bellemare, Conversable Economist) — also in `docs/writing-references/README.md`.
-- **Template:** `skills/econ-data-analysis/references/*.md` — study the how-to + gated-checklist layout and severity-marker discipline before drafting.
-
-**Output:** two reference files, each a how-to + gated checklist. **Read the source PDFs first** — the task steps below are a condensed target, not a substitute for the originals.
-
-- [x] **Step 1: Draft `style-checklist.md`**
-
-Structure: §How-To (teaching content with before/after examples) + §Gated Checklist (severity-marked). Cover: nominalization (detect + move action to verb; keep nominalization for daisy-chain / after-strong-verb / field-term cases); noun-cluster avoidance (break clusters of 3+ modifying nouns); active voice with clear agency; single-hedge-per-claim rule; parallel structure for lists and comparisons; sentence-length guidance (~20–25 words); dangling-modifier check; old→new information flow inside paragraphs; topic-sentence-first; transition placement at paragraph start. Each rule cites LRS or Chaubey section.
-
-- [x] **Step 2: Draft `structure-checklist.md`**
-
-Structure: §How-To + §Gated Checklist. Cover: Pyramid Principle (governing idea first, MECE supporting points, horizontal logic — sibling points parallel in type, vertical logic — each level answers questions raised above); SCQ (Situation–Complication–Question) for intros; section-level anatomy (intro: motivation → gap → RQ → contribution → roadmap; methods: data + specification + identification; results: main first then robustness; conclusion: restate + limitations, no new findings); title-should-state-finding rule; table-of-contents paragraph at end of intro; "no mystery novel" front-loading rule.
-
-- [x] **Step 3: Cross-link from SKILL.md §Pitfalls + self-review + commit**
-
-Ensure SKILL.md §Pitfalls pointers resolve. Self-check: every rule has a ≤10-word name + 1–2 sentence explanation + source citation; severity markers on every checklist item; no "TBD" or "similar to". Update RESULTS.md Task 2. Commit: `skill: writing style + structure checklists`.
-
----
-
-## Task 3: `consistency/*.md` — 8 dimension-scoped reference files
-
-**Depends on:** Task 1
-**Review status:** APPROVED (2026-04-19, integration re-review)
-**Integration status:**
-
-**Files:** `skills/writing/references/consistency/terminology.md`, `consistency/notation.md`, `consistency/cross-references.md`, `consistency/citations.md`, `consistency/numerical.md`, `consistency/math.md`, `consistency/argument-logic.md`, `consistency/code-paper.md` (all new)
-**Input:**
-- `~/.claude/plugins/draft-reviewer/agents/*.md` — seven subagent definitions (argument-logic-reviewer, citation-checker, code-paper-consistency, consistency-checker, mathematical-reviewer, proofreader, writing-clarity-reviewer). **Read the subagent that corresponds to your target dimension before drafting.** Each subagent's checklist is the spine for the corresponding `consistency/*.md`.
-- `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines — severity-marker model (`[BLOCKING]` / `[ADVISORY]`).
-- `docs/writing-references/Chaubey_Research_Writing.pdf` — for citation / argument / consistency norms in economics.
-
-**Output:** eight small reference files, each sized for a single parallel reviewer to load. **The dimensions come from the draft-reviewer plugin; the superRA-style rule content is re-derived.**
-
-- [x] **Step 1: Draft `terminology.md` + `notation.md` + `cross-references.md`**
-
-- `terminology.md`: term-drift scan (variable-name drift, synonyms drift within a section, defined-term reuse discipline, glossary audit, treatment-group-vs-treatment-sample style mismatches). Severity-marked gated checklist + how-to.
-- `notation.md`: math symbol consistency (bold/italic/hat conventions, subscript/superscript reuse, Greek-letter conflicts, abbreviations).
-- `cross-references.md`: `\ref` / `\eqref` / `\cite` / label resolution; figure/table/section numbering consistency; undefined-reference scan.
-
-- [x] **Step 2: Draft `citations.md` + `numerical.md`**
-
-- `citations.md`: citation completeness (every non-common-knowledge claim cited); reference-citation matching (no orphan citations or uncited references); format consistency (author-year vs numbered); outdated-working-paper detection; foundational-reference audit.
-- `numerical.md`: numbers-in-text vs numbers-in-tables (every number in prose traces to a table/figure cell); figure–caption–text alignment (caption matches what's shown and what prose claims); table caption accuracy; ±-sign / units / percentage-point vs percent consistency.
-
-- [x] **Step 3: Draft `math.md` + `argument-logic.md` + `code-paper.md`**
-
-- `math.md`: derivation step-by-step correctness; proof integrity; statistical-model correctness (iid assumptions stated where used, standard-error clustering named); notation stability across sections.
-- `argument-logic.md`: claim–evidence mapping (every main claim traces to a cited source or an empirical finding in this paper); causal inference validity (identification assumption stated, alternative explanations addressed); overclaiming detection; hedging appropriate to evidence strength.
-- `code-paper.md`: methodology match (code implements what paper describes); variable-definition alignment; sample-construction alignment; reproducibility from paper alone. Only loaded when the paper wraps an empirical code project.
-
-- [x] **Step 4: Cross-link + self-review + commit**
-
-Each file ≤ ~150 lines (fits in a single reviewer's context comfortably). Each has severity-marked checklist items. SKILL.md §Pitfalls pointer `consistency/*.md` resolves to all eight. Update RESULTS.md Task 3. Commit: `skill: writing consistency references (8 dimensions)`.
-
----
-
-## Task 4: `refactor-and-compile.md` + `collaboration.md`
-
-**Depends on:** Task 1
-**Review status:** APPROVED (2026-04-19, integration re-review)
-**Integration status:**
-
-**Files:** `skills/writing/references/refactor-and-compile.md` (new), `skills/writing/references/collaboration.md` (new)
-**Input:** plan file (refactor-and-compile + collaboration sections), LaTeX / Quarto / Markdown build conventions (generic)
-**Output:** two operational reference files
-
-- [x] **Step 1: Draft `refactor-and-compile.md`**
-
-Two sections: §Refactor (safe context-aware find-replace — always preview matches, always confirm word-boundary, always check plural/singular forms, always check case variants; provide worked examples of false-positive matches like `estimate` matching inside `underestimate`) and §Compile (build commands per engine: `latexmk -pdf`, `quarto render`, `pandoc`; warning triage heuristics — ignore overfull-hbox by default, escalate undefined references, escalate missing citations; error escalation rules).
-
-- [x] **Step 2: Draft `collaboration.md`**
-
-Cover: detecting user's in-progress work (uncommitted edits via `git status`, inline TODOs, `\todo{}` macros, commented-out text, recently-modified hunks); respecting it (never touch lines the user is actively editing); when to ask (structural changes, any edit that would change the argument); how to frame proposed structural changes (show the current vs proposed outline; don't just do it); escalation patterns (escalate via `AskUserQuestion` when available, plain text otherwise).
-
-- [x] **Step 3: Cross-link + self-review + commit**
-
-Self-check: do the two files respect the one-source-of-truth principle (no duplication with style-checklist or consistency refs)? Severity markers present? Update RESULTS.md Task 4. Commit: `skill: writing refactor-and-compile + collaboration refs`.
-
----
-
-## Task 5: `planning.md` + `workflow.md` — mode-heavy orchestration guidance
-
-**Depends on:** Tasks 2, 3, 4
-**Review status:** APPROVED (2026-04-19, integration re-review)
-**Integration status:**
-
-**Files:** `skills/writing/references/planning.md` (new), `skills/writing/references/workflow.md` (new)
-**Input:** all prior references (to reference from workflow-mode descriptions), plan file
-**Output:** two reference files — what a fresh orchestrator loads first on any writing task
-
-- [x] **Step 1: Draft `planning.md`**
-
-Sections: §Scope Inventory (who asked, what level of document, which sections, deadline) + §Task-Size Triage + §PLAN.md/RESULTS.md Decision Matrix. Decision matrix:
-
-| Task shape | PLAN.md? | RESULTS.md? | Mode (see workflow.md) |
-|---|---|---|---|
-| Typo / one-sentence polish | No | No | Direct-edit |
-| Single-aspect review (e.g., citations) | No | No | Pure-review |
-| Multi-aspect consistency sweep | Optional | Optional | Pure-review + parallel reviewers |
-| Iterative proofread of a section | Optional | No | Review-edit loop |
-| Drafting a new section / major revision | Yes | Yes | Full workflow |
-| Whole-paper review / pre-submission sweep | Yes | Yes | Full workflow |
-
-- [x] **Step 2: Draft `workflow.md` — four modes + hard rules**
-
-Four modes:
-- **(a) Direct edit.** Orchestrator edits directly while in live conversation with the researcher, then dispatches an independent reviewer. Appropriate for tiny polishes, typo fixes, single-paragraph rewrites at the researcher's explicit request.
-- **(b) Pure review.** No edits. Dispatch one or more reviewer agents in parallel, each loaded with one `consistency/*.md` (or `style-checklist.md` / `structure-checklist.md`). Report findings; the researcher decides what to act on.
-- **(c) Review → edit → re-review loop.** Iterative. Each cycle is one reviewer dispatch → orchestrator adjudicates → orchestrator (or dispatched implementer) edits → fresh reviewer dispatch. Common for consistency sweeps and proofreading passes.
-- **(d) Full workflow.** Plug into PLAN → IMPLEMENT → VALIDATE → INTEGRATE (`planning-workflow` → `execution-workflow` → `integration-workflow` → `merge-workflow`). Used only for major changes.
-
-Two hard rules:
-1. **Reviewer dispatch is never skipped.** In every mode — including direct-edit — the reviewer is a separately-dispatched agent. Self-review by the orchestrator is not a substitute.
-2. **Parallel-dispatch multiple reviewers for multi-dimensional consistency work.** One reviewer per `consistency/*.md` file. Single message, multiple Agent-tool calls. Each reviewer is focused on its one dimension.
-
-- [x] **Step 3: Cross-link + self-review + commit**
-
-`workflow.md` references each `consistency/*.md` by name; `planning.md` references `workflow.md`. Update RESULTS.md Task 5. Commit: `skill: writing planning + workflow refs`.
-
----
-
-## Task 6: `integration.md` + routing updates
-
-**Depends on:** Tasks 1, 2, 3, 4, 5
-**Review status:** APPROVED (2026-04-19, integration re-review)
-**Integration status:**
-**Sync impact:** Cluster `cluster-2-routing-rethread` reshaped the routing surfaces this task targets. Main collapsed the four Skill-Load Manifest stages this task specified (`planning-review`, `implementation`, `integration`, `documentation`) into a single Domain add-on row composed with the Generic stage table; `merge-workflow/SKILL.md` is now folded into `integration-workflow` Finish; `integration-workflow` is now Protect/Sync/Integrate/Document/Finish (not the old A/B/C/D shape this task's Step 3 referenced). The actual routing rows landed in this sync match main's structure — only the task-block wording is now describing a shape that no longer exists. Source: `PLAN.md ## Sync Map`.
-
-**Files:** `skills/writing/references/integration.md` (new); **edits:** `skills/using-superRA/SKILL.md` (Skill Inventory + Skill-Load Manifest), `skills/planning-workflow/SKILL.md` (vertical table), `skills/integration-workflow/SKILL.md` (writing branch), `skills/merge-workflow/SKILL.md` (writing branch), `skills/CATEGORIES.md`, `README.md`
-**Input:** `skills/econ-data-analysis/references/integration.md` (template), all prior writing references
-**Output:** `integration.md` + routing diff across six files
-
-- [x] **Step 1: Draft `integration.md`**
-
-Pre-merge gates: (a) document builds clean on the merged state; (b) all `consistency/*.md` dimensions relevant to the edited sections pass; (c) voice preserved across the full diff (sample check — random 3 hunks, does the diff still sound like the author?); (d) scope respected (no edits outside the original request). Severity-marked shared checklist.
-
-- [x] **Step 2: Routing updates — `using-superRA`, `planning-workflow`, CATEGORIES, README**
-
-- Add `writing` row to `using-superRA/SKILL.md` §Skill Inventory (one-liner pointing at `skills/writing/SKILL.md`).
-- Add four rows to §Skill-Load Manifest covering `planning-review`, `implementation`, `integration`, `documentation` stages in the writing domain.
-- Add `writing` row to `planning-workflow/SKILL.md` Phase 1 vertical routing table (trigger: editing/polishing/proofreading/consistency/refactor/draft tasks).
-- Add `writing` row to `skills/CATEGORIES.md` under Domain.
-- Add `writing` row to `README.md` domain-skill table.
-
-- [x] **Step 3: Routing updates — `integration-workflow` (merge-workflow N/A in this repo)**
-
-- `integration-workflow/SKILL.md` Phase A: added writing-vertical branch — "build + outline-stability check" replaces drift tests for writing-only tasks; writing tasks that produce numbers get drift tests in addition. Points at `writing/references/integration.md`.
-- `integration-workflow/SKILL.md` Phase D Step 3a: added writing-vertical post-merge verification note — document build + outline-stability in place of `run_all.sh` / `pipeline.jl` for pure writing tasks.
-- **No separate `merge-workflow` skill exists in this repo** — merge/PR choreography is Phase D of `integration-workflow`. The PLAN.md Step 3 phrasing ("merge-workflow/SKILL.md") was an over-specification; the effective routing lives inside `integration-workflow` Phase D and the Phase D writing note covers the same concern.
-
-- [x] **Step 4: Self-review + commit**
-
-Self-check: every routing table has the new row; Skill-Load Manifest entries are consistent with writing's actual reference file names; no route leads to a nonexistent file. Update RESULTS.md Task 6. Commit: `skill: writing integration ref + routing updates`.
-
----
-
-## Task 7: `CLAUDE.md` audit
-
-**Depends on:** Task 1
-**Review status:** APPROVED (2026-04-19, integration re-review)
-**Integration status:**
-
-**Files:** `/CLAUDE.md` (possibly edited)
-**Input:** `/CLAUDE.md` §Design Principles and §Roadmap sections, the two 2026-04-19 memory entries `feedback_domain_skills_standalone.md` and `feedback_reviewer_dispatch_never_skipped.md`
-**Output:** confirmation that CLAUDE.md states (a) "domain skills are usable standalone without the workflow scaffold" and (b) "reviewer dispatch is never skipped, even in standalone modes"; edit if either is missing/ambiguous
-
-- [x] **Step 1: Read `/CLAUDE.md` §Design Principles + §Roadmap end-to-end and audit**
-
-Record in RESULTS.md Task 7 whether properties (a) and (b) are already stated, partially stated, or absent.
-
-- [x] **Step 2: If absent or ambiguous — amend**
-
-Add a short paragraph under §Architectural pattern (or §Domain verticals) stating the standalone-usability property. Add a short clause to workflow principle #1 (or a dedicated note) stating that reviewer dispatch is never skipped across modes. Keep the additions concise — this is a cross-cutting correction, not a rewrite.
-
-- [x] **Step 3: Commit**
-
-If edits were made: commit separately with `docs: CLAUDE.md — standalone skill usability + reviewer-dispatch rule`. If no edits needed: note in RESULTS.md Task 7 that the properties were already traceable, mark task APPROVED without a commit. Update RESULTS.md Task 7.
-
----
-
-## Task 8: Dogfood — three-mode verification
-
-**Depends on:** Tasks 1, 2, 3, 4, 5, 6, 7
 **Review status:**
 **Integration status:**
 
-**Files:** no code/skill edits expected (only adjustments if dogfood surfaces bugs)
-**Input:** a real manuscript section (user-nominated) or a suitable sample
-**Output:** three dogfood reports in RESULTS.md Task 8; any adjustments to references committed separately
+**Files:**
+- `skills/writing/SKILL.md` — full rewrite (replaces the existing 171-line Iron-Law-and-Disciplines body).
+- `skills/writing/references/review.md` — new.
+- `skills/writing/references/polish.md` — new.
+- `skills/writing/references/draft.md` — new.
 
-- [ ] **Step 1: Mode (a) — direct edit**
+**Input:**
+- `/Users/zhiyufu/.claude/plans/read-the-current-writing-robust-rivest.md` — design intent, mode taxonomy, resolved decisions.
+- `skills/writing/SKILL.md` (current) — content to be relocated / reframed; do not re-derive substance from scratch.
+- `skills/writing/references/{workflow,planning,collaboration}.md` — content to extract into the new mode files (especially polish-mode input shapes from `collaboration.md` §Detection patterns + §Edit-vs-propose-vs-ask matrix; review-as-planning from `planning.md`; usage-mode descriptions from `workflow.md`).
+- `/CLAUDE.md` §Teach the Protocol, Don't Prescribe Each Action — the necessity gate; apply line by line.
+- `document-skills:skill-creator` — authoring discipline.
 
-Pick a trivial polish task ("fix a typo" or "tighten this sentence"). Invoke the writing skill directly (no planning-workflow wrapper). Orchestrator performs the edit; dispatches one reviewer loaded with `writing/SKILL.md` + `style-checklist.md`. Verify: Iron Law fires if a scope violation is injected; reviewer returns APPROVE or REVISE per severity.
+**Output:** `SKILL.md` + 3 mode files matching the design plan structure. Concrete shape:
 
-- [ ] **Step 2: Mode (c) — review → edit → re-review loop**
+- **`SKILL.md` body** (target ≤120 lines) sections, in order: frontmatter (mode-organized triggers); §What this skill does (one paragraph: Review / Polish / Draft); §Preserve substance, polish prose (one short paragraph stating preserve-list / polish-list / no-restructure-without-authorization); §Before you start (request / input / inline-directive convention with `TODO`-as-task-for-agent default and `DO NOT EDIT` as the explicit hands-off marker); §Mode routing table (Review / Polish-sentence-scope / Polish-structural-scope / Draft) with "load X" being the authority grant; §Knowledge files table (style.md, structure.md, consistency/*.md, refactor-and-compile.md with one-line "load when"); §Coupling to superRA workflows (one short paragraph noting reviewer-dispatch invariants live in the workflow skills, not here); §Sources.
+- **`review.md`** — review-mode workflow: read the draft, classify findings (style / structure / consistency / argument), report. Includes the "review-as-planning" pattern (review feeds into a `PLAN.md` for downstream revision); cross-references `consistency/*.md` for parallel-reviewer pattern. No `[BLOCKING]/[ADVISORY]` decoration on heuristic items.
+- **`polish.md`** — polish-mode workflow with three labeled sub-sections for input shapes (unstaged edits / named target / review-findings list), the `TODO`-is-task / `DO NOT EDIT`-is-hands-off convention spelled out as a first-class rule, the "edit vs propose vs ask" decision matrix (relocated from `collaboration.md`), and a one-paragraph note that structural edits are out-of-scope unless `structure.md` is also loaded.
+- **`draft.md`** — draft-mode workflow: gather inputs (notes, outline, results, prior section), build outline first, draft, self-check against `style.md` and `structure.md`. Acknowledges that draft work is more likely than the other modes to ride the full superRA workflow when large.
 
-Pick a section with known inconsistencies (or inject some). Dispatch two parallel reviewers: one loaded with `consistency/terminology.md`, one with `consistency/cross-references.md`. Orchestrator adjudicates findings, edits, re-dispatches fresh reviewers. Verify: parallel dispatch actually runs in parallel; each reviewer stays scoped to its dimension; iteration terminates on APPROVE.
+- [ ] **Step 1: Read inputs and freeze the design**
 
-- [ ] **Step 3 (optional): Mode (d) — full workflow**
+Implementer reads `/Users/zhiyufu/.claude/plans/read-the-current-writing-robust-rivest.md` end-to-end first. Then reads the four files being relocated/replaced (`skills/writing/SKILL.md`, `references/workflow.md`, `references/planning.md`, `references/collaboration.md`) to identify which content lands in `SKILL.md`, which in `review.md`, which in `polish.md`, which in `draft.md`, and which is dropped. Implementer also reads the existing `style-checklist.md`, `structure-checklist.md`, and one or two `consistency/*.md` to confirm what knowledge content is *not* being touched in this task.
 
-Only if a real drafting task is available. Run a small section through `planning-workflow` → `execution-workflow` → `integration-workflow` with the writing vertical. Verify routing works end-to-end.
+- [ ] **Step 2: Draft `SKILL.md`**
 
-- [ ] **Step 4: Adjust + commit adjustments**
+Apply the §Teach the Protocol gate line by line as you write. Banned: wrapper sentences around authoritative content, "here is what you will receive" descriptions, restating the Skill-Load Manifest, reminders that the agent should "load skills the manifest says to load." Required: every line earns its keep — name a non-default behavior, a safety invariant, or an ordering constraint the agent would not infer.
 
-Any reference that didn't fire correctly gets a small fix. Each fix is its own commit with a message naming the dogfood observation that prompted it. Update RESULTS.md Task 8 with the three dogfood reports. Mark task APPROVED when all three modes pass (or (d) is skipped with justification).
+- [ ] **Step 3: Draft `review.md`, `polish.md`, `draft.md`**
+
+Same gate applies. Each file ≤150 lines; one-line "load when" header pointing at modes; no `## Reviewer verdict protocol` boilerplate (that lives in workflow skills). The polish-mode `TODO`-is-task-for-agent / `DO NOT EDIT`-is-hands-off convention is spelled out once in `polish.md` (the `SKILL.md §Before you start` summary points at it).
+
+- [ ] **Step 4: Self-review against `skill-creator` discipline + necessity gate**
+
+Walk every line of the four new files through the `/CLAUDE.md` necessity test. Delete any line that fails. Verify each mode file's load-when condition matches the routing table in `SKILL.md` exactly. Update `RESULTS.md` Task 1 (key findings: line counts, what was relocated where, what was deleted as redundant). Mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: writing SKILL.md + mode files (review/polish/draft) for the redesign`.
+
+---
+
+## Task 2: Lighten knowledge files and trim `integration.md`
+
+**Depends on:** *(none — can run in parallel with Task 1)*
+**Review status:**
+**Integration status:**
+
+**Files:**
+- Renamed: `skills/writing/references/style-checklist.md` → `style.md`; `structure-checklist.md` → `structure.md` (use `git mv`).
+- Header rewrite (content unchanged): `skills/writing/references/style.md`, `structure.md`, `refactor-and-compile.md`, and 8 × `consistency/*.md`.
+- Trimmed: `skills/writing/references/integration.md`.
+
+**Input:**
+- The current files listed above.
+- The redesign plan file for the "drop severity tags on heuristic items" and "drop phase framing" rules.
+- `/CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action`.
+
+**Output:**
+
+- `style.md` and `structure.md`: drop `[BLOCKING]/[ADVISORY]` severity tagging on the heuristic rules in §Gated Checklist (these are heuristics; tagging them as verdict-determining was the symptom of the doctrinal framing); drop the "Walked in addition to `skills/writing/SKILL.md` §Three Concurrent Disciplines" cross-reference; drop the per-file `## Reviewer verdict protocol` boilerplate; rewrite the one-line file-top header to point at modes ("Load when polish or draft mode applies sentence-level rules" / "...applies structural rules") not phases. Substance of every rule unchanged.
+- `consistency/*.md` (8 files) — same header rewrite. The dimension content stays as-is (the `[BLOCKING]/[ADVISORY]` tagging on consistency findings is load-bearing for reviewer output and stays). Drop the per-file `## Reviewer verdict protocol` boilerplate (workflow skills own that). Drop the "Walked in addition to SKILL.md §Three Concurrent Disciplines" cross-reference where present.
+- `refactor-and-compile.md` — drop the cross-reference to `SKILL.md §Three Concurrent Disciplines §Verify`; rewrite header to point at modes; substance unchanged.
+- `integration.md` — heavy trim. Most of the existing six gates are restatements of mode-level discipline (build clean, consistency dimensions pass, scope respected). Keep only the items that are specific to *integration* of writing (full-document build on the merged state, outline-stability check, voice-preserved sample, scope-tracing). One-line "load when" header pointing at `integration-workflow` riding a writing branch. Target ≤80 lines (down from 119).
+
+- [ ] **Step 1: Rename style-checklist.md → style.md and structure-checklist.md → structure.md (git mv)**
+
+```bash
+cd skills/writing/references
+git mv style-checklist.md style.md
+git mv structure-checklist.md structure.md
+```
+
+The bare-`git mv` is the rename atom; commit after Step 5 with the body edits in the same commit so reviewers see the move + edits together.
+
+- [ ] **Step 2: Rewrite headers in `style.md`, `structure.md`, `refactor-and-compile.md`, 8 × `consistency/*.md`**
+
+For each file, the top section (typically the first 5–10 lines) is rewritten to: a one-line "Load when …" sentence pointing at modes, the source-citation paragraph (kept), and one-line statement of severity-marker convention if the file uses one. **Drop:** "Load at the IMPLEMENT phase…" framing; "Walked in addition to `skills/writing/SKILL.md` §Three Concurrent Disciplines …" cross-references; the per-file `## Reviewer verdict protocol` block at the end of each file.
+
+- [ ] **Step 3: Drop `[BLOCKING]/[ADVISORY]` severity tagging on heuristic rules in `style.md` and `structure.md`**
+
+Style and structure rules are heuristics with explicit "Do NOT apply when …" exceptions. Tagging them as verdict-determining is the doctrinal residue. The Gated Checklist sections become an unbulleted-or-bulleted list of rule names with the same prose, no severity prefix. (The `[BLOCKING]` tag at the bottom of `style.md` on the "every applied rule traceable to a real problem" handoff item stays — that *is* a behavior-shaping rule.)
+
+- [ ] **Step 4: Trim `integration.md`**
+
+Drop redundant gates that restate mode-level discipline. Keep gates specific to integration: full-document build on the merged state; outline stability across the diff; voice-preserved sample (the three-hunk check stays); scope-respected hunk-trace. Drop the data-analysis-touching note's prose detail (one sentence pointer to `econ-data-analysis/references/integration.md` is enough). Target ≤80 lines.
+
+- [ ] **Step 5: Self-review + commit**
+
+Verify each rewritten header passes the §Teach the Protocol gate. Verify no surviving cross-reference points at `§Three Concurrent Disciplines` or `Walked in addition to SKILL.md §Three …`. Update `RESULTS.md` Task 2. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: writing knowledge-file lightening + integration.md trim`.
+
+---
+
+## Task 3: Retire deprecated references and update routing
+
+**Depends on:** Task 1, Task 2
+**Review status:**
+**Integration status:**
+
+**Files:**
+- Deleted: `skills/writing/references/workflow.md`, `planning.md`, `collaboration.md`.
+- Edited: `skills/using-superRA/SKILL.md` (writing row in Skill Inventory), `skills/CATEGORIES.md` (writing row), `README.md` (writing row).
+- Edited if needed: `skills/writing/SKILL.md` (only if Task 1 left forward-references that need cleanup) and any `consistency/*.md` cross-reference that pointed at `workflow.md` / `planning.md` / `collaboration.md`.
+
+**Input:**
+- Tasks 1 and 2 outputs.
+- `grep -rn 'references/workflow\.md\|references/planning\.md\|references/collaboration\.md' skills/writing/` — must return empty after this task.
+- `grep -rn 'writing/references/workflow\|writing/references/planning\|writing/references/collaboration' .` from repo root — must return empty after this task.
+
+**Output:**
+
+- The three deprecated reference files removed (`git rm`).
+- Routing rows for `writing` updated to reflect the new mode taxonomy (one-liner edit per row — the row's existence and correct skill-name is established already).
+
+- [ ] **Step 1: Verify content extraction is complete**
+
+```bash
+# All references to the deprecated files inside the writing skill must be gone:
+grep -rn 'references/workflow\.md\|references/planning\.md\|references/collaboration\.md' skills/writing/
+
+# All references to the deprecated files anywhere in the repo:
+grep -rn 'writing/references/\(workflow\|planning\|collaboration\)' .
+```
+
+If any matches survive, the implementer must trace each one and resolve before deletion: either the new mode files / SKILL.md should carry the absorbed content (back to Task 1), or the cross-reference is stale (fix it in place).
+
+- [ ] **Step 2: Delete the deprecated reference files**
+
+```bash
+git rm skills/writing/references/workflow.md
+git rm skills/writing/references/planning.md
+git rm skills/writing/references/collaboration.md
+```
+
+- [ ] **Step 3: Update routing surfaces**
+
+- `skills/using-superRA/SKILL.md` Skill Inventory writing row — replace the existing one-liner ("Iron Law (respect the author's intent), preserve-improve-verify, four standalone usage modes, per-dimension consistency reviewers.") with one that reflects the new taxonomy (e.g., "Writing vertical: review / polish / draft modes, preserve-substance-polish-prose principle, per-dimension consistency reviewers."). The Skill-Load Manifest add-on row already routes `superRA:writing` correctly — no change needed there.
+- `skills/CATEGORIES.md` writing row — same one-liner refresh.
+- `README.md` writing-row description (in the Domain skills table) — same one-liner refresh.
+
+- [ ] **Step 4: Self-review + commit**
+
+Re-run the grep checks from Step 1 on the post-edit state — both must return empty (or only return matches inside the test files / archived docs that legitimately reference the historical structure). Update `RESULTS.md` Task 3. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: writing — retire workflow/planning/collaboration refs + routing-row refresh`.
+
+---
+
+## Task 4: Dogfood — three-mode verification
+
+**Depends on:** Tasks 1, 2, 3
+**Review status:**
+**Integration status:**
+
+**Files:** RESULTS.md Task 4 entry. No skill / reference edits expected unless the dogfood surfaces a bug; in that case adjustments are committed separately with a message naming the dogfood observation that prompted the fix.
+
+**Input:** A representative paragraph or short section per mode (orchestrator may supply or fabricate the test inputs).
+
+**Output:** Four short dogfood reports in `RESULTS.md` Task 4 confirming that each mode loads the right references, the authority model behaves (deep polish doesn't fire without `structure.md` loaded), and the inline-directive convention (TODO-as-task vs DO-NOT-EDIT-as-hands-off) is respected.
+
+- [ ] **Step 1: Mode = Review**
+
+Pick a paragraph with deliberate cross-reference and citation drift. Invoke `superRA:writing`. Verify: `SKILL.md` + `review.md` + the relevant `consistency/*.md` files load. Findings classify correctly. No edits performed.
+
+- [ ] **Step 2: Mode = Polish (sentence/paragraph scope)**
+
+Pick a paragraph with: an inline `% TODO: rewrite this more crisply`, crude phrasing ("the result is super strong"), a structural problem (buried main message), and a `DO NOT EDIT` block somewhere. Verify: `SKILL.md` + `polish.md` + `style.md` load. Inline TODO and crude phrasing get cleaned up; `DO NOT EDIT` block untouched; structural problem **not** addressed (out of scope by load configuration).
+
+- [ ] **Step 3: Mode = Polish (structural scope)**
+
+Same paragraph as Step 2, with explicit user request "restructure for clearer argument". Verify: `SKILL.md` + `polish.md` + `style.md` + `structure.md` load. Structural problem now addressed (authority grant present).
+
+- [ ] **Step 4: Mode = Draft**
+
+Pick a small section (e.g., a methodology paragraph) with notes / outline as input. Verify: `SKILL.md` + `draft.md` + `structure.md` + `style.md` load. Output is sensible new prose.
+
+- [ ] **Step 5: Document findings + adjustments + commit**
+
+Each adjustment is its own commit naming the dogfood observation. If no adjustments needed, commit `RESULTS.md` Task 4 only with a one-line dogfood-passed note. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`.
