@@ -20,6 +20,10 @@ When the review's findings will drive subsequent edits (the typical case for a s
 
 The boundary between "findings report" and "plan" is fluid. If the requester says "now go fix these", the findings list becomes the implementer's task list directly — don't re-author.
 
+## Intent comments as yardstick
+
+When `% intent: …` (`.tex`) or `<!-- intent: … -->` (`.md`/`.qmd`) comments sit above paragraphs, read them alongside the prose. **Drift between stated intent and prose is a finding** — the intent line is the author's commitment about what the paragraph achieves; prose that misses it is higher-leverage than a sentence-level style issue. Classify these under **argument** or **structure** depending on the gap.
+
 ## No edits in this mode
 
 The reviewer does not edit the target. If the requester reads the findings and asks for fixes, that transitions the work to Polish mode (with the findings as the explicit scope).

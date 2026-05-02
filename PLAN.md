@@ -314,16 +314,17 @@ Re-run all three grep checks from Step 1 on the post-edit state — the first tw
 
 ---
 
-## Task 4: Add intent-comment discipline to `polish.md` / `draft.md` / `SKILL.md`
+## Task 4: Add intent-comment discipline to `polish.md` / `draft.md` / `SKILL.md` / `review.md`
 
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Files:**
 - `skills/writing/references/polish.md` — add §Intent comments section.
 - `skills/writing/references/draft.md` — add §Intent comments section.
 - `skills/writing/SKILL.md` §Before you start — add one-line summary that points at the §Intent comments sections in the mode files.
+- `skills/writing/references/review.md` — add §Intent comments as yardstick (the review-mode operationalization: drift between stated intent and prose is a finding).
 
 **Input:**
 - Task 1's authored mode files.
