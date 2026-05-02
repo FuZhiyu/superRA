@@ -171,7 +171,7 @@ Walked at planning time (2026-04-19); refreshed lightly at this redesign (2026-0
 
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files:**
 - `skills/writing/SKILL.md` — full rewrite (replaces the existing 171-line Iron-Law-and-Disciplines body).
@@ -215,7 +215,7 @@ Walk every line of the four new files through the `/CLAUDE.md` necessity test. D
 
 **Depends on:** *(none — can run in parallel with Task 1)*
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files:**
 - Renamed: `skills/writing/references/style-checklist.md` → `style.md`; `structure-checklist.md` → `structure.md` (use `git mv`).
@@ -266,8 +266,18 @@ Verify each rewritten header passes the §Teach the Protocol gate. Verify no sur
 
 **Depends on:** Task 1, Task 2
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** REVISE
 **Sync impact:** Cluster `cluster-2-routing-rethread` rewrote this task's routing-row outputs. The writing rows in `README.md`, `skills/CATEGORIES.md`, and `skills/using-superRA/SKILL.md` now sit alongside theory-modeling rows; the `planning-workflow/SKILL.md` writing row uses main's 3-column shape (no `Planning reference` column) and the post-table writing paragraph was rewritten to point at `superRA:writing` `SKILL.md §Coupling to superRA workflows` (the prior pointer to the redesign-deleted `references/workflow.md` is gone). Source: `PLAN.md ## Sync Map`.
+
+> **Integration review notes (2026-05-02):**
+>
+> 1. **MAJOR — `docs/writing-references/README.md` references files that no longer exist.** Lines 40-41 still carry pointers to the deleted writing references:
+>    - Line 40: `**For \`collaboration.md\`:** /CLAUDE.md §Design Principles ...`
+>    - Line 41: `**For \`planning.md\` + \`workflow.md\`:** skills/econ-data-analysis/references/planning.md as the template ...`
+>
+>    `skills/writing/references/{workflow,planning,collaboration}.md` were deleted in Task 3 Step 2. This violates the integration checklist's `[BLOCKING]` Documentation currency item ("Module CLAUDE.md / AGENTS.md / README.md files do not reference files, functions, outputs, or methodology that no longer exist or have been superseded"). Task 3's Step 1 grep set was scoped to `skills/writing/` and `writing/references/(workflow|planning|collaboration)` — both miss `docs/writing-references/README.md` because it uses bare filenames `collaboration.md` / `planning.md` / `workflow.md` without the `writing/references/` prefix. Fix: either delete the two stale "Before drafting or reviewing, read" entries (the deleted-file references) or rewrite them to point at the current mode-file structure (`review.md` / `polish.md` / `draft.md`) plus the relocations recorded in `RESULTS.md` Task 1. Re-run the Step 1 grep with a broader scope (`grep -rn 'collaboration\.md\|workflow\.md\|planning\.md' docs/`) to confirm clean.
+>
+> 2. **MINOR — `SEMANTIC_MERGE.md` carries superseded sync records.** Lines 57-178 of `SEMANTIC_MERGE.md` describe two prior syncs (`fde4751` "merge main ... take main verbatim, re-thread writing additions" and `5685451` "fix sync: absorb main verbatim on all non-writing surfaces") against an older base. Those merges have since been superseded by the current 2026-05-02 sync against `8c3db7d`, which is recorded in `PLAN.md ## Sync Map`. The two appended sections in `SEMANTIC_MERGE.md` are now stale relative to the current branch state — they describe a sync state the branch no longer holds, and the authoritative current-sync record lives elsewhere. Per `superRA:handoff-doc`'s inline-edit / no-stacking discipline, the appended sections should either be removed (the branch's current sync is in PLAN.md `## Sync Map` per the workflow choice) or replaced with a single record describing the current sync. The pre-existing `# Semantic Merge Record` block at lines 1-55 (the `tighten-integration-rules` merge that is part of base `8c3db7d`) is unrelated history and stays. This finding falls outside any task's direct scope; flagged here because Task 3 owns the routing-surface sync rethread and the cleanest place to record sync-related coherence is the same task. Defer to orchestrator if it judges this belongs at branch-level Sync closeout instead.
 
 **Files:**
 - Deleted: `skills/writing/references/workflow.md`, `planning.md`, `collaboration.md`.
@@ -327,7 +337,7 @@ Re-run all three grep checks from Step 1 on the post-edit state — the first tw
 
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files:**
 - `skills/writing/references/polish.md` — add §Intent comments section.
@@ -369,7 +379,7 @@ Verify the convention is stated identically across the three files (format spec)
 
 **Depends on:** Tasks 1, 2, 3, 4
 **Review status:** APPROVED
-**Integration status:**
+**Integration status:** APPROVED
 
 **Files:** RESULTS.md Task 4 entry. No skill / reference edits expected unless the dogfood surfaces a bug; in that case adjustments are committed separately with a message naming the dogfood observation that prompted the fix.
 
