@@ -16,15 +16,11 @@ user-invocable: true
 
 # Theory Modeling
 
-Domain skill for rigorous mathematical-modeling work; body carries
-Stage-Scoped References, the Iron Law, the four-gate checklist
-(Objects & Notation / Assumptions / Derivations / Verification &
-Rendering), and Common Rationalizations.
+Domain skill for rigorous mathematical-modeling work; body carries Stage-Scoped References, the Iron Law, the four-gate checklist (Objects & Notation / Assumptions / Derivations / Verification & Rendering), and Common Rationalizations.
 
 ## Stage-Scoped References
 
-Companion reference files carry content that applies at a specific
-phase. Load per stage; do not load them all at every dispatch:
+Companion reference files carry content that applies at a specific phase. Load per stage; do not load them all at every dispatch:
 
 | Reference | Load when |
 |---|---|
@@ -41,14 +37,9 @@ The four gates below are the creation-time correctness floor — walk at every i
 NO MANIPULATION WITHOUT DEFINED OBJECTS, INTERPRETABLE ASSUMPTIONS, AND STATED INTUITION
 ```
 
-Every symbol has a meaning. Every assumption has a plain-language
-interpretation a researcher can defend. Every non-trivial move has a
-one-sentence reason.
+Every symbol has a meaning. Every assumption has a plain-language interpretation a researcher can defend. Every non-trivial move has a one-sentence reason.
 
-If a symbol appears without a stated meaning, an assumption is written
-only as a math restriction with no economic reading, or a derivation
-step is invoked mechanically with no reason, back up and write the
-missing meaning, interpretation, or reason first.
+If a symbol appears without a stated meaning, an assumption is written only as a math restriction with no economic reading, or a derivation step is invoked mechanically with no reason, back up and write the missing meaning, interpretation, or reason first.
 
 **Non-default constraints** (the gates enforce the principle line by line; these catch traps the gates don't):
 
@@ -60,76 +51,29 @@ missing meaning, interpretation, or reason first.
 
 ## The Four Gates
 
-Four gates underpin trustworthy modeling work, organized around the
-reader's trust chain: **Objects & Notation → Assumptions → Derivations
-→ Verification & Rendering**. Each gate has an **artifact** the
-implementer produces and a **checklist** of quality items walked while
-producing it. The gates are **concurrent, not sequential** — every
-modeling step exercises all four. Documentation is built into the
-artifact definitions, not handled as a separate phase.
+Four gates underpin trustworthy modeling work, organized around the reader's trust chain: **Objects & Notation → Assumptions → Derivations → Verification & Rendering**. Each gate has an **artifact** the implementer produces and a **checklist** of quality items walked while producing it. The gates are **concurrent, not sequential** — every modeling step exercises all four. Documentation is built into the artifact definitions, not handled as a separate phase.
 
-`[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items the
-reviewer MAY flag as MINOR. Verdict adjudication follows the standard
-reviewer protocol in `agent-orchestration`.
+`[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items the reviewer MAY flag as MINOR. Verdict adjudication follows the standard reviewer protocol in `agent-orchestration`.
 
 ### Falsification tests (per ledger entry in Gates 1 and 2)
 
-Both tests are diagnostic moves the reviewer runs against a slot they
-suspect is not pulling its weight. The point is to detect text that
-*looks* like a justification but would survive any small change to the
-object it claims to justify.
+Both tests are diagnostic moves the reviewer runs against a slot they suspect is not pulling its weight. The point is to detect text that *looks* like a justification but would survive any small change to the object it claims to justify.
 
-- **Substitution test.** Read the entry's "What the name carries" /
-  "What this assumption carries" slot, then mentally replace the symbol
-  (or assumption) with a hypothetical sibling — a different symbol
-  $\mathbf{z}_q$ from the same proof, or a different assumption on the
-  same primitive. **Re-read the slot under the swap.** If the slot is
-  still true for the substituted object, the slot is generic and pins
-  nothing down → BLOCKING. The slot must contain something that would
-  be *false* of any other object — a specific sign meaning, a specific
-  structural role, a named scalar cited at a specific site.
+- **Substitution test.** Read the entry's "What the name carries" / "What this assumption carries" slot, then mentally replace the symbol (or assumption) with a hypothetical sibling — a different symbol $\mathbf{z}_q$ from the same proof, or a different assumption on the same primitive. **Re-read the slot under the swap.** If the slot is still true for the substituted object, the slot is generic and pins nothing down → BLOCKING. The slot must contain something that would be *false* of any other object — a specific sign meaning, a specific structural role, a named scalar cited at a specific site.
 
-  *Worked example.* Slot: "plays a role in the proof of Lemma 3.1."
-  Swap in $\mathbf{z}_q$: "[$\mathbf{z}_q$] plays a role in the proof of
-  Lemma 3.1" — still true if $\mathbf{z}_q$ also appears in the proof.
-  Vacuous → BLOCKING. Contrast with: "sign-bearing scalar — positive
-  iff the comparative static of price w.r.t. dividend $k$ is positive,
-  cited at eq. (12)." Swap in $\mathbf{z}_q$: the claim is false unless
-  $\mathbf{z}_q$ happens to carry the same sign meaning at the same
-  site. Specific → passes.
+  *Worked example.* Slot: "plays a role in the proof of Lemma 3.1." Swap in $\mathbf{z}_q$: "[$\mathbf{z}_q$] plays a role in the proof of Lemma 3.1" — still true if $\mathbf{z}_q$ also appears in the proof. Vacuous → BLOCKING. Contrast with: "sign-bearing scalar — positive iff the comparative static of price w.r.t. dividend $k$ is positive, cited at eq. (12)." Swap in $\mathbf{z}_q$: the claim is false unless $\mathbf{z}_q$ happens to carry the same sign meaning at the same site. Specific → passes.
 
-- **Proof-deletion test (Meaning slot).** Cover up the surrounding
-  proof and re-read only the Meaning slot. **Can the slot still tell a
-  reader what the object is** — its type, its denotation in
-  already-introduced terms, and how it is constructed? If the slot
-  evaporates without the proof to lean on, it was telling the reader
-  what the symbol is *used for*, not what it *is* → BLOCKING.
+- **Proof-deletion test (Meaning slot).** Cover up the surrounding proof and re-read only the Meaning slot. **Can the slot still tell a reader what the object is** — its type, its denotation in already-introduced terms, and how it is constructed? If the slot evaporates without the proof to lean on, it was telling the reader what the symbol is *used for*, not what it *is* → BLOCKING.
 
-  *Worked example.* Slot: "used to verify $h_k = m_D \beta_{E,k}$."
-  Delete the surrounding proof; there is no $h_k = m_D \beta_{E,k}$
-  visible anywhere, so the slot has nothing left to say. Usage, not
-  meaning → BLOCKING. Contrast with: "column-$k$ object of the loading
-  matrix $H \in \mathbb{R}^{N\times K}$, with
-  $\mathbf{c}_k := H^\top e_k$." Delete the proof; the slot still
-  carries the type ($K$-vector), the parent object ($H$), and the
-  construction ($H^\top e_k$). The reader can rebuild the object from
-  the slot alone → passes.
+  *Worked example.* Slot: "used to verify $h_k = m_D \beta_{E,k}$." Delete the surrounding proof; there is no $h_k = m_D \beta_{E,k}$ visible anywhere, so the slot has nothing left to say. Usage, not meaning → BLOCKING. Contrast with: "column-$k$ object of the loading matrix $H \in \mathbb{R}^{N\times K}$, with $\mathbf{c}_k := H^\top e_k$." Delete the proof; the slot still carries the type ($K$-vector), the parent object ($H$), and the construction ($H^\top e_k$). The reader can rebuild the object from the slot alone → passes.
 
 ### Gate 1 — Objects & Notation
 
-A reader trusts a model only if every symbol has a clear meaning. Pin
-down the objects and their names before manipulating them.
+A reader trusts a model only if every symbol has a clear meaning. Pin down the objects and their names before manipulating them.
 
-**Artifact: per-symbol ledger entry in `RESULTS.md`.** One entry per
-object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one
-object, not $K$. Five distinct symbols sharing a proof passage are
-five entries — bundling distinct objects under a shared justification
-is a format violation, not a judgment call. Tasks that introduce no
-new symbols record "None."
+**Artifact: per-symbol ledger entry in `RESULTS.md`.** One entry per object. An indexed family ($x_k$ for $k=1,\dots,K$) counts as one object, not $K$. Five distinct symbols sharing a proof passage are five entries — bundling distinct objects under a shared justification is a format violation, not a judgment call. Tasks that introduce no new symbols record "None."
 
-Symbols already named in `PLAN.md`'s Notation Conventions table are
-reused with the canonical meaning rather than redefined locally; they
-do not require a new ledger entry.
+Symbols already named in `PLAN.md`'s Notation Conventions table are reused with the canonical meaning rather than redefined locally; they do not require a new ledger entry.
 
 **Slot template** (all required except where noted):
 
@@ -152,21 +96,11 @@ Why this name and not that one:
 
 **Writing the Meaning slot.** Three components, all required:
 
-1. **Type / space.** Scalar in $(0,1)$, $K$-vector in $\mathbb{R}^K$,
-   $N\times N$ symmetric matrix, function $X \to Y$, random variable
-   on $(\Omega,\mathcal{F},\mathbb{P})$. Include dimension and domain
-   wherever applicable.
-2. **Denotation in the model's vocabulary.** What the object
-   represents in already-introduced terms: "the coefficient on $X_t$
-   in eq. (12)", "the Lagrange multiplier on the resource
-   constraint", "row $k$ of the dividend-loading matrix $H$". Must
-   reference only objects already defined.
-3. **Origin if derived.** How the symbol is constructed from prior
-   symbols, e.g. $\mathbf{c}_k := H^\top e_k$. The construction of
-   the symbol, not a step that uses it later.
+1. **Type / space.** Scalar in $(0,1)$, $K$-vector in $\mathbb{R}^K$, $N\times N$ symmetric matrix, function $X \to Y$, random variable on $(\Omega,\mathcal{F},\mathbb{P})$. Include dimension and domain wherever applicable.
+2. **Denotation in the model's vocabulary.** What the object represents in already-introduced terms: "the coefficient on $X_t$ in eq. (12)", "the Lagrange multiplier on the resource constraint", "row $k$ of the dividend-loading matrix $H$". Must reference only objects already defined.
+3. **Origin if derived.** How the symbol is constructed from prior symbols, e.g. $\mathbf{c}_k := H^\top e_k$. The construction of the symbol, not a step that uses it later.
 
-The Proof-deletion test in §Falsification tests is the diagnostic move
-for whether the slot satisfies this recipe.
+The Proof-deletion test in §Falsification tests is the diagnostic move for whether the slot satisfies this recipe.
 
 **Anti-patterns for Meaning:**
 
@@ -193,13 +127,9 @@ for whether the slot satisfies this recipe.
 
 ### Gate 2 — Assumptions
 
-Assumptions carry the economic content of a model. Each one must be
-attached to a primitive object, readable as economics, and no weaker
-than it needs to be — prefer a single interpretable primitive over a
-scattering of weak technical restrictions.
+Assumptions carry the economic content of a model. Each one must be attached to a primitive object, readable as economics, and no weaker than it needs to be — prefer a single interpretable primitive over a scattering of weak technical restrictions.
 
-**Artifact: per-assumption ledger entry in `RESULTS.md`.** One entry
-per assumption. Tasks that introduce no new assumptions record "None."
+**Artifact: per-assumption ledger entry in `RESULTS.md`.** One entry per assumption. Tasks that introduce no new assumptions record "None."
 
 **Slot template:**
 
@@ -236,9 +166,7 @@ Why state it this way and not via the existing one:
 
 ### Gate 3 — Derivations
 
-Derivations must be auditable. A correct result that cannot be checked
-is not an acceptable handoff artifact. Every non-trivial move needs both
-the technical rule and a reason for invoking it here.
+Derivations must be auditable. A correct result that cannot be checked is not an acceptable handoff artifact. Every non-trivial move needs both the technical rule and a reason for invoking it here.
 
 **Artifact: the proof / derivation body in `RESULTS.md`.**
 
@@ -258,15 +186,9 @@ the technical rule and a reason for invoking it here.
 
 ### Gate 4 — Verification & Rendering
 
-Symbolic work still needs verification. A derivation is not complete
-until it has survived at least one independent check and reads cleanly
-for a human audience.
+Symbolic work still needs verification. A derivation is not complete until it has survived at least one independent check and reads cleanly for a human audience.
 
-**Artifact: verification record + rendered output.** The verification
-record states the check performed (substitute back, limiting case,
-numerical evaluation), the parameters used if any, and the pass
-condition. The rendered output is the human-readable markdown / LaTeX
-that ships in `RESULTS.md`.
+**Artifact: verification record + rendered output.** The verification record states the check performed (substitute back, limiting case, numerical evaluation), the parameters used if any, and the pass condition. The rendered output is the human-readable markdown / LaTeX that ships in `RESULTS.md`.
 
 **Checklist:**
 
@@ -287,9 +209,7 @@ that ships in `RESULTS.md`.
 
 ### Documentation and handoff
 
-The ledger artifacts for Gates 1 and 2 already live in `RESULTS.md`;
-the items below are the cross-cutting documentation rules that apply
-beyond the per-symbol / per-assumption ledgers.
+The ledger artifacts for Gates 1 and 2 already live in `RESULTS.md`; the items below are the cross-cutting documentation rules that apply beyond the per-symbol / per-assumption ledgers.
 
 - `[BLOCKING]` `RESULTS.md` is updated in place for this task's section. The doc is the record — findings live there before they appear in any status report.
 - `[BLOCKING]` `PLAN.md`'s Notation Conventions table is **canonical and user-gated**. Implementers do NOT inline-edit it during implementation. A symbol is promoted from the RESULTS.md ledger to the Notation Conventions table only when the user confirms it should become a canonical project-wide symbol; until then the ledger entry is the source of truth for that task.
@@ -300,9 +220,7 @@ beyond the per-symbol / per-assumption ledgers.
 
 ## Common Rationalizations
 
-LLM-specific excuses that the gate checklists alone do not catch — each
-row names a behavior pattern, not a restatement of an existing
-`[BLOCKING]` item.
+LLM-specific excuses that the gate checklists alone do not catch — each row names a behavior pattern, not a restatement of an existing `[BLOCKING]` item.
 
 | Excuse | Reality |
 |---|---|

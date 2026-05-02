@@ -1,28 +1,15 @@
 # Theory-Modeling Planning Discipline
 
-Load at the **PLAN phase** when the work involves mathematical
-modeling. `planning-workflow` invokes this reference after Phase 1
-(scope check) to apply domain-specific discipline before tasks are
-drafted.
+Load at the **PLAN phase** when the work involves mathematical modeling. `planning-workflow` invokes this reference after Phase 1 (scope check) to apply domain-specific discipline before tasks are drafted.
 
 ---
 
 ## Model Inventory / Assumption Map (Hard Gate)
 
-The plan cannot be written without a model inventory. The researcher
-arrives with a question and methodology already in mind. Your job at
-this gate is not to redesign the model. Your job is to surface what the
-model actually contains: primitives, endogenous objects, timing,
-assumptions, normalization choices, and what evidence will count as
-verification. The inventory becomes the **Model Inventory / Assumption
-Map** section of `PLAN.md`.
+The plan cannot be written without a model inventory. The researcher arrives with a question and methodology already in mind. Your job at this gate is not to redesign the model. Your job is to surface what the model actually contains: primitives, endogenous objects, timing, assumptions, normalization choices, and what evidence will count as verification. The inventory becomes the **Model Inventory / Assumption Map** section of `PLAN.md`.
 
 <HARD-GATE>
-Do NOT write any task structure, invoke any implementation skill, or
-take any planning action beyond this gate until you have written the
-Model Inventory / Assumption Map and the researcher has approved it.
-This applies to EVERY theory/modeling project regardless of perceived
-simplicity.
+Do NOT write any task structure, invoke any implementation skill, or take any planning action beyond this gate until you have written the Model Inventory / Assumption Map and the researcher has approved it. This applies to EVERY theory/modeling project regardless of perceived simplicity.
 </HARD-GATE>
 
 ### Checklist
@@ -114,8 +101,7 @@ After the researcher approves the inventory, proceed to task drafting.
 
 ## Verification Plan
 
-Every theory/modeling plan should include explicit verification tasks. At
-the planning stage:
+Every theory/modeling plan should include explicit verification tasks. At the planning stage:
 
 1. **Discuss with the researcher which checks matter.** Typical options:
    - substitution back into first-order conditions, laws of motion, or equilibrium conditions
@@ -136,11 +122,4 @@ the planning stage:
 
 ## Handoff to Implementation
 
-After the Model Inventory / Assumption Map is approved, the verification
-plan is agreed, and tasks are drafted, `planning-workflow` commits the
-plan and hands off to `implementation-workflow`. The main
-`theory-modeling` skill body carries the cross-cutting discipline that
-applies at every implementation step: the Iron Law and the intuition +
-interpretability + stated reason through-line running across the four
-gates (Objects & Notation, Assumptions, Derivations, Verification &
-Rendering), verification, and documentation.
+After the Model Inventory / Assumption Map is approved, the verification plan is agreed, and tasks are drafted, `planning-workflow` commits the plan and hands off to `implementation-workflow`. The main `theory-modeling` skill body carries the cross-cutting discipline that applies at every implementation step: the Iron Law and the intuition + interpretability + stated reason through-line running across the four gates (Objects & Notation, Assumptions, Derivations, Verification & Rendering), verification, and documentation.
