@@ -101,6 +101,11 @@ Content from these files was already absorbed in Task 1 (collaboration's "edit v
 - `grep -rn 'writing/references/\(workflow\|planning\|collaboration\)' . --include='*.md'` — empty after excluding PLAN.md self-references (the file describes this task's work).
 - `grep -rn 'Iron Law\|Three Concurrent Disciplines\|Preserve.Improve.Verify' skills/writing/` — empty. Surviving `§Preserve` hits all match the new `§Preserve substance, polish prose` principle name.
 - `grep -n 'style-checklist\|structure-checklist' skills/CATEGORIES.md` — empty.
+- `grep -rn 'collaboration\.md\|workflow\.md\|planning\.md' docs/` (broader sweep added during integration review) — clean of writing-reference hits; only an unrelated `planning-workflow/references/planning.md` mention in `docs/process-issues-2026-04-16.md`.
+
+**Integration-review fixes (2026-05-02):**
+- `docs/writing-references/README.md:40-41` — items 5 and 6 of the "Before drafting or reviewing, read" list collapsed into one entry pointing at the redesign plan, `/CLAUDE.md §Design Principles`, and LRS argument slides for the new `review.md` / `polish.md` / `draft.md` mode files; `integration.md` entry renumbered. Resolves the integration-checklist Documentation-currency item missed by Task 3 Step 1's narrower grep scope.
+- `SEMANTIC_MERGE.md:57-178` — removed two superseded sync sections (the 2026-05-02 record against an older base + its correction follow-up). Authoritative current-sync record lives in `PLAN.md ## Sync Map`. The pre-existing `tighten-integration-rules` block at lines 1-55 (part of base `8c3db7d`) is unrelated history and stays; file is now 53 lines.
 
 ## Task 4: Add intent-comment discipline to `polish.md` / `draft.md` / `SKILL.md`
 

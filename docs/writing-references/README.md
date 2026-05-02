@@ -37,6 +37,5 @@ Primary web sources gathered during Phase 1 research:
 2. **For `structure.md`:** LRS 5, LRS 6 (introductions), LRS Arg 1–3 (argument structure), LRS triage; Chaubey sections on paper structure; all Pyramid Principle web sources.
 3. **For `consistency/*.md`:** The corresponding `draft-reviewer:*` subagent definition + `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines as the severity-marker model.
 4. **For `refactor-and-compile.md`:** LaTeX/Quarto build docs + your real experience fixing compile errors.
-5. **For `collaboration.md`:** `/CLAUDE.md` §Design Principles (RA framing, autonomous-with-human-in-the-loop) + LRS argument slides (authorial intent is central there).
-6. **For `planning.md` + `workflow.md`:** `skills/econ-data-analysis/references/planning.md` as the template, plus the plan at `/Users/zhiyufu/.claude/plans/bubbly-wondering-parnas.md` for the four-mode design.
-7. **For `integration.md`:** `skills/econ-data-analysis/references/integration.md` as the template.
+5. **For `review.md` / `polish.md` / `draft.md`:** `/Users/zhiyufu/.claude/plans/read-the-current-writing-robust-rivest.md` (the redesign plan with mode taxonomy and resolved decisions); `/CLAUDE.md` §Design Principles for the RA framing that informs polish-mode's edit-vs-propose-vs-ask matrix; LRS argument slides (authorial intent is central there).
+6. **For `integration.md`:** `skills/econ-data-analysis/references/integration.md` as the template.
