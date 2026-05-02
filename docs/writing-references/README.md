@@ -6,9 +6,9 @@ Sources distilled into `skills/writing/` during this branch. Read these to get t
 
 | Source | Location | Feeds into |
 |---|---|---|
-| **Chaubey, *Research Writing*** | `docs/writing-references/Chaubey_Research_Writing.pdf` (committed) | Academic writing rules targeted at the economics audience — structure, precision, the author's mental model of the reader. Main input to `style-checklist.md` and `structure-checklist.md`. |
-| **Little Red Schoolhouse (LRS) notes** | `/Users/zhiyufu/Dropbox/PhD/writing_resources/LittleRedHouse/` (Dropbox-synced, not committed) | University of Chicago ENGL 13000/33000 slides. 14 PDFs covering actions-in-verbs-vs-nominalization (1-1a), character (1-1b), coherence/cohesion (2), old→new information flow (3-4), introductions (5, 6), argument structure (Arg 1–3), downstream revision (DS 1–2), triage. Main input to `style-checklist.md` (LRS 1-1a, 1-1b, 2, 3-4) and `structure-checklist.md` (LRS 5, 6, Arg 1–3). |
-| **Pyramid Principle (Minto)** | Web — see the reference list below | MECE grouping, governing idea, horizontal/vertical logic, SCQ (Situation–Complication–Question) framing. Main input to `structure-checklist.md`. |
+| **Chaubey, *Research Writing*** | `docs/writing-references/Chaubey_Research_Writing.pdf` (committed) | Academic writing rules targeted at the economics audience — structure, precision, the author's mental model of the reader. Main input to `style.md` and `structure.md`. |
+| **Little Red Schoolhouse (LRS) notes** | `/Users/zhiyufu/Dropbox/PhD/writing_resources/LittleRedHouse/` (Dropbox-synced, not committed) | University of Chicago ENGL 13000/33000 slides. 14 PDFs covering actions-in-verbs-vs-nominalization (1-1a), character (1-1b), coherence/cohesion (2), old→new information flow (3-4), introductions (5, 6), argument structure (Arg 1–3), downstream revision (DS 1–2), triage. Main input to `style.md` (LRS 1-1a, 1-1b, 2, 3-4) and `structure.md` (LRS 5, 6, Arg 1–3). |
+| **Pyramid Principle (Minto)** | Web — see the reference list below | MECE grouping, governing idea, horizontal/vertical logic, SCQ (Situation–Complication–Question) framing. Main input to `structure.md`. |
 | **`draft-reviewer:*` plugin subagents** | `~/.claude/plugins/draft-reviewer/` | Seven subagents define the dimension split for `consistency/*.md`. Harvest the *dimensions* — the actual rule content is re-derived in superRA's style so the plugin is a harvest target, not a runtime dependency. |
 | **`skills/econ-data-analysis/`** | repo | Architectural template for the writing skill — Iron Law pattern, §Three Concurrent Disciplines, §Pitfalls, stage-scoped references under `references/`. |
 
@@ -33,8 +33,8 @@ Primary web sources gathered during Phase 1 research:
 
 ## Before drafting or reviewing, read
 
-1. **For `style-checklist.md`:** LRS 1-1a (actions), LRS 1-1b (character), LRS 2 (coherence/cohesion), LRS 3-4 (info flow); Chaubey sections on sentence-level clarity.
-2. **For `structure-checklist.md`:** LRS 5, LRS 6 (introductions), LRS Arg 1–3 (argument structure), LRS triage; Chaubey sections on paper structure; all Pyramid Principle web sources.
+1. **For `style.md`:** LRS 1-1a (actions), LRS 1-1b (character), LRS 2 (coherence/cohesion), LRS 3-4 (info flow); Chaubey sections on sentence-level clarity.
+2. **For `structure.md`:** LRS 5, LRS 6 (introductions), LRS Arg 1–3 (argument structure), LRS triage; Chaubey sections on paper structure; all Pyramid Principle web sources.
 3. **For `consistency/*.md`:** The corresponding `draft-reviewer:*` subagent definition + `skills/econ-data-analysis/SKILL.md` §Three Concurrent Disciplines as the severity-marker model.
 4. **For `refactor-and-compile.md`:** LaTeX/Quarto build docs + your real experience fixing compile errors.
 5. **For `collaboration.md`:** `/CLAUDE.md` §Design Principles (RA framing, autonomous-with-human-in-the-loop) + LRS argument slides (authorial intent is central there).

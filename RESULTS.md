@@ -69,6 +69,8 @@ The 2026-04-19 → 2026-05-02 build of `skills/writing/` (Iron Law, Three Concur
 
 **Knowledge files NOT touched in this task:** None — all in-scope files are now lightened. Task 3 owns the deletion of `workflow.md`, `planning.md`, `collaboration.md` and the routing-row updates.
 
+**REVISE round 1 fix (rename-residue):** `docs/writing-references/README.md` lines 9, 10, 11, 36, 37 carried stale `style-checklist.md` / `structure-checklist.md` paths — direct fallout from the Step 1 `git mv` that the Step 5 self-review's grep set did not target. Updated in place to `style.md` / `structure.md`; post-edit `grep` for the old names in the file returns empty.
+
 ## Task 3: Retire deprecated references and update routing
 
 **Status:** Not started
