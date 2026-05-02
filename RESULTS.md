@@ -17,7 +17,7 @@ The 2026-04-19 → 2026-05-02 build of `skills/writing/` (Iron Law, Three Concur
 **Files written:**
 - `skills/writing/SKILL.md` — full rewrite (54 lines, was 171). Body sections in PLAN order: frontmatter (mode-organized triggers); §What this skill does (one paragraph); §Preserve substance, polish prose (preserve-list / polish-list / no-restructure-without-load); §Before you start (3 numbered items: classify mode, inspect git, inline-directive convention); §Mode routing table (4 rows: Review / Polish-sentence / Polish-structural / Draft); §Knowledge files table (style.md, structure.md, consistency/*.md, refactor-and-compile.md, integration.md); §Coupling to superRA workflows (one paragraph); §Sources.
 - `skills/writing/references/review.md` — new (25 lines). Workflow steps (scope confirm → load dimension files → end-to-end read → classify findings into style/structure/consistency/argument → report); multi-dimensional parallel-reviewer pattern; review-as-planning; "no edits in this mode" invariant.
-- `skills/writing/references/polish.md` — new (49 lines). §Sentence vs structural scope (load-as-authority restated specifically for polish); §Inline-directive convention (points at SKILL.md, adds polish-specific framing); §Input shapes A/B/C (unstaged edits / named target / review-findings list); §Edit-vs-propose-vs-ask matrix (relocated from collaboration.md); §Minimal-edit discipline + post-edit build.
+- `skills/writing/references/polish.md` — new (40 lines). §Input shapes A/B/C (unstaged edits / named target / review-findings list); §Edit-vs-propose-vs-ask matrix (relocated from collaboration.md); §Minimal-edit discipline + post-edit build. The §Sentence-vs-structural-scope and §Inline-directive-convention subsections, plus the §Input-shape-A item 4 commit-handoff line, were cut on REVISE round 1 — all three failed the necessity gate as restatements of `SKILL.md` content or workflow-skill territory.
 - `skills/writing/references/draft.md` — new (19 lines). 5-step workflow (gather inputs → outline → draft → self-check → build); §Workflow coupling (whole-section drafts route through planning-workflow); §Author intent and tone.
 
 **Content relocations from old files:**
@@ -33,8 +33,9 @@ The 2026-04-19 → 2026-05-02 build of `skills/writing/` (Iron Law, Three Concur
 **Necessity-gate audit (CLAUDE.md §Teach the Protocol):**
 - Removed: planned `§Before you start` item 4 (intent comments) — Task 4 owns adding this; including it pre-emptively in Task 1 would conflict with Task 4's authoring.
 - Removed: redundant "polish requests with structural edits route to Polish (structural scope)" tail clause in `SKILL.md §Before you start` item 1 — the Mode routing table below already states this; restating it is wrapper text.
-- Tightened: `polish.md §What polish does` opening paragraph — it paraphrased SKILL.md's principle. Replaced by a tighter "Sentence vs structural scope" framing that adds the load-as-authority rule specifically for polish.
-- Tightened: `polish.md §Inline-directive convention` — replaced full restatement with a pointer + polish-specific framing (the rule lives in `SKILL.md §Before you start`).
+- Cut on REVISE r1: `polish.md §Sentence vs structural scope` — the rule lives in `SKILL.md §Mode routing` and is operationalized again in the §Edit-vs-propose-vs-ask matrix; the subsection added no behavior.
+- Cut on REVISE r1: `polish.md §Inline-directive convention` — bare pointer + paraphrase of `SKILL.md §Before you start`; the operational rule is already stated in §Input shape A items 2–3.
+- Cut on REVISE r1: `polish.md §Input shape A` item 4 (commit-handoff line) — workflow-skill territory; "commit only when requested" is default agent behavior.
 - Tightened: `review.md` multi-dimensional reviews paragraph — removed orchestrator-specific dispatch mechanics (those live in the workflow skills) and the consolidate-relay procedural detail; kept the load-bearing rule (one reviewer per dimension in parallel) and its rationale.
 - Tightened: `draft.md §Coupling to the full superRA workflow` — replaced narrative paragraph with two-line directive.
 

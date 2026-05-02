@@ -2,14 +2,6 @@
 
 > Load when the request is to clean up existing prose — "polish §X", "tighten", "proofread", "clean up these edits", "apply these review findings". Sentence-scope by default; structural-scope only when the loaded reference set includes `structure.md`.
 
-## Sentence vs structural scope
-
-Without `structure.md` loaded, paragraph reorder / section merge / argument-shape changes are out of scope. With `structure.md` loaded, they are in scope. The request authorizes the load; the load authorizes the edit.
-
-## Inline-directive convention
-
-The convention is stated in `SKILL.md §Before you start`. Polish mode is its primary application: TODO-style markers and crude phrasing are inputs to the polish, not fences around it. The default is to engage; the author opts out with explicit `DO NOT EDIT`. Real polish workflows have authors dumping work-in-progress and expecting the agent to finish the sentence — this **inverts** the older "TODOs are sacred" rule.
-
 ## Input shapes
 
 ### A — Unstaged edits
@@ -19,7 +11,6 @@ Author has been editing the file; `git status` shows it modified, `git diff` sho
 1. Read `git diff` first to see what the author was attempting; the polish should land *with* the author's direction, not against it.
 2. Edit in place. Inline `TODO`s and crude phrasing in the diff are part of the work — clean them up.
 3. If the diff includes a `DO NOT EDIT` block or fences, leave that range alone.
-4. Commit only when the request says to commit (or when running standalone — a polish in workflow mode hands the staged diff back for the orchestrator to commit).
 
 ### B — Named target
 
