@@ -257,7 +257,7 @@ Verify each rewritten header passes the §Teach the Protocol gate. Verify no sur
 ## Task 3: Retire deprecated references and update routing
 
 **Depends on:** Task 1, Task 2
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Files:**
