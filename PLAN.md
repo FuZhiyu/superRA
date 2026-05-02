@@ -162,7 +162,7 @@ Walked at planning time (2026-04-19); refreshed lightly at this redesign (2026-0
 ## Task 1: Rewrite `SKILL.md` + author three mode files
 
 **Depends on:** *(none)*
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:**
@@ -185,19 +185,19 @@ Walked at planning time (2026-04-19); refreshed lightly at this redesign (2026-0
 - **`polish.md`** — polish-mode workflow with three labeled sub-sections for input shapes (unstaged edits / named target / review-findings list), the `TODO`-is-task / `DO NOT EDIT`-is-hands-off convention spelled out as a first-class rule, the "edit vs propose vs ask" decision matrix (relocated from `collaboration.md`), and a one-paragraph note that structural edits are out-of-scope unless `structure.md` is also loaded.
 - **`draft.md`** — draft-mode workflow: gather inputs (notes, outline, results, prior section), build outline first, draft, self-check against `style.md` and `structure.md`. Acknowledges that draft work is more likely than the other modes to ride the full superRA workflow when large.
 
-- [ ] **Step 1: Read inputs and freeze the design**
+- [x] **Step 1: Read inputs and freeze the design**
 
 Implementer reads `/Users/zhiyufu/.claude/plans/read-the-current-writing-robust-rivest.md` end-to-end first. Then reads the four files being relocated/replaced (`skills/writing/SKILL.md`, `references/workflow.md`, `references/planning.md`, `references/collaboration.md`) to identify which content lands in `SKILL.md`, which in `review.md`, which in `polish.md`, which in `draft.md`, and which is dropped. Implementer also reads the existing `style-checklist.md`, `structure-checklist.md`, and one or two `consistency/*.md` to confirm what knowledge content is *not* being touched in this task.
 
-- [ ] **Step 2: Draft `SKILL.md`**
+- [x] **Step 2: Draft `SKILL.md`**
 
 Apply the §Teach the Protocol gate line by line as you write. Banned: wrapper sentences around authoritative content, "here is what you will receive" descriptions, restating the Skill-Load Manifest, reminders that the agent should "load skills the manifest says to load." Required: every line earns its keep — name a non-default behavior, a safety invariant, or an ordering constraint the agent would not infer.
 
-- [ ] **Step 3: Draft `review.md`, `polish.md`, `draft.md`**
+- [x] **Step 3: Draft `review.md`, `polish.md`, `draft.md`**
 
 Same gate applies. Each file ≤150 lines; one-line "load when" header pointing at modes; no `## Reviewer verdict protocol` boilerplate (that lives in workflow skills). The polish-mode `TODO`-is-task-for-agent / `DO NOT EDIT`-is-hands-off convention is spelled out once in `polish.md` (the `SKILL.md §Before you start` summary points at it).
 
-- [ ] **Step 4: Self-review against `skill-creator` discipline + necessity gate**
+- [x] **Step 4: Self-review against `skill-creator` discipline + necessity gate**
 
 Walk every line of the four new files through the `/CLAUDE.md` necessity test. Delete any line that fails. Verify each mode file's load-when condition matches the routing table in `SKILL.md` exactly. Update `RESULTS.md` Task 1 (key findings: line counts, what was relocated where, what was deleted as redundant). Mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: writing SKILL.md + mode files (review/polish/draft) for the redesign`.
 
