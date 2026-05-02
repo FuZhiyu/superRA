@@ -33,6 +33,32 @@ For any contemplated edit, route it through this matrix:
 | Outside scope, structural (reorder, merge, add subsection) | Polish / proofread | **Propose, do not perform** — structural edits require `structure.md` loaded *and* an explicit authorization. |
 | Would change meaning, claim, or argument | Any | **Ask.** Meaning preservation is sovereign. |
 
+## Intent comments
+
+Author intent for a paragraph is recorded as a comment on the line immediately above it, in the file's native comment syntax:
+
+- `.tex` → `% intent: <one-sentence purpose>`
+- `.md` → `<!-- intent: <one-sentence purpose> -->`
+- `.qmd` → `<!-- intent: <one-sentence purpose> -->`
+
+The comment captures *what the paragraph is trying to do for the reader* — the argument it advances, the question it answers, the position it stakes — not what it currently says.
+
+**Pre-existing intent comments are the preservation target.** They outrank the paragraph's current wording (the wording is exactly what's being polished). If the polished prose would no longer fulfill the stated intent, the prose is wrong, not the intent.
+
+**Absent intent comments may be added — must be hedged.** When polishing a paragraph that has no intent comment, the agent may add one inferred from the prose, and **must** mark it with the `(inferred)` qualifier:
+
+- `% intent (inferred): <one-sentence purpose>`
+- `<!-- intent (inferred): <one-sentence purpose> -->`
+
+Never add a bare `intent:` line — the hedge signals to the author that the comment is the agent's reading, not their statement. The `(inferred)` qualifier persists across sessions until the author ratifies it; ratification is the author deleting `(inferred)` (or rewriting the line). Do not drop the qualifier yourself, do not drop it on a later polish pass, and do not drop it because the prose has been edited to match the inference.
+
+Example (LaTeX):
+
+```
+% intent (inferred): motivate the regression specification by ruling out the obvious confounder.
+The natural concern is that ...
+```
+
 ## Minimal-edit discipline
 
 For each identified problem, apply the smallest edit that fixes it. A nominalization fix replaces one noun with one verb, not the whole sentence. Over-editing is the most common failure mode of polish mode — every word changed beyond the minimum is voice drift.

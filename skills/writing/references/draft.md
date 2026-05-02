@@ -10,6 +10,22 @@
 4. **Self-check** against `style.md` §Gated Checklist (sentence-level rules) and `structure.md` §Gated Checklist (section anatomy). The self-check is a real walk, not a rubber stamp; if a rule fires and the prose doesn't comply, fix it before handoff.
 5. **Build.** Compile the document; resolve cross-reference breaks before handoff. See `refactor-and-compile.md` §Compile.
 
+## Intent comments
+
+Each drafted paragraph ships with an intent comment on the line immediately above it, recording the paragraph's purpose for the reader:
+
+- `.tex` → `% intent: <one-sentence purpose>`
+- `.md` / `.qmd` → `<!-- intent: <one-sentence purpose> -->`
+
+Write the intent first as the drafting brief, then write prose that fulfills it. The comment ships with the prose — it is part of the draft, not scaffolding. Authored (not inferred) intent in draft mode does **not** carry the `(inferred)` qualifier; later polish passes treat it as the preservation target.
+
+Example (LaTeX):
+
+```
+% intent: establish that the puzzle survives the standard risk-based explanation.
+Standard risk-based stories predict ...
+```
+
 ## Workflow coupling
 
 Whole-section drafts are multi-task work — route through `planning-workflow` (`PLAN.md` + `RESULTS.md`). Paragraph-scale drafts (an abstract from the body, a paragraph from notes) terminate at edit + commit.

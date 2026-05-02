@@ -317,7 +317,7 @@ Re-run all three grep checks from Step 1 on the post-edit state — the first tw
 ## Task 4: Add intent-comment discipline to `polish.md` / `draft.md` / `SKILL.md`
 
 **Depends on:** Task 1
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:**
@@ -337,19 +337,19 @@ Re-run all three grep checks from Step 1 on the post-edit state — the first tw
 - **Polish mode.** Read pre-existing `% intent:` comments before editing — they are the preservation target (more authoritative than the paragraph's current wording, since the wording is exactly what's being polished). When intent comments are absent on a paragraph being polished, the agent **may** add an inferred comment with a hedge (`% intent (inferred): ...`) — never silently. The author can ratify (delete the `(inferred)` qualifier) or correct on review.
 - **Review mode.** Use intent comments as the yardstick: does the prose actually accomplish the stated intent? Drift between intent and prose is a finding.
 
-- [ ] **Step 1: Add §Intent comments to `polish.md`**
+- [x] **Step 1: Add §Intent comments to `polish.md`**
 
-A short section (≤25 lines) covering: the convention (format per file extension); how polish mode uses pre-existing comments; the "may add inferred, must hedge" rule; one before/after example with `% intent:` line.
+A short section (≤25 lines) covering: the convention (format per file extension); how polish mode uses pre-existing comments; the "may add inferred, must hedge" rule with explicit persistence-of-`(inferred)`-until-author-ratifies; one example with `% intent:` line.
 
-- [ ] **Step 2: Add §Intent comments to `draft.md`**
+- [x] **Step 2: Add §Intent comments to `draft.md`**
 
-A short section (≤20 lines) covering: write the intent first as the drafting brief; the comment ships with the prose; format per file extension. One example showing the intent → prose flow.
+A short section (≤20 lines) covering: write the intent first as the drafting brief; the comment ships with the prose; format per file extension; clarification that draft-authored intent is not hedged. One example.
 
-- [ ] **Step 3: Add one-line summary to `SKILL.md §Before you start`**
+- [x] **Step 3: Add one-line summary to `SKILL.md §Before you start`**
 
-A single line near the inline-directive convention, e.g., "When editing `.tex`/`.md`/`.qmd`, preserve and (when polish-mode and absent) add `% intent: …` / `<!-- intent: … -->` comments above paragraphs — see `polish.md §Intent comments` and `draft.md §Intent comments`."
+Item 4 added below the inline-directive convention pointing at the §Intent comments sections in `polish.md` and `draft.md`.
 
-- [ ] **Step 4: Self-review + commit**
+- [x] **Step 4: Self-review + commit**
 
 Verify the convention is stated identically across the three files (format spec) and that the `polish.md` "may add inferred" rule is explicit about the hedge. Apply the §Teach the Protocol gate — every line earns its keep. Update `RESULTS.md` Task 4. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: writing — intent-comment discipline in polish/draft/SKILL`.
 

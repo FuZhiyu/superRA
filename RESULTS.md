@@ -104,7 +104,20 @@ Content from these files was already absorbed in Task 1 (collaboration's "edit v
 
 ## Task 4: Add intent-comment discipline to `polish.md` / `draft.md` / `SKILL.md`
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Files edited:**
+- `skills/writing/references/polish.md` — added §Intent comments (26 lines) between §Edit-vs-propose-vs-ask and §Minimal-edit discipline. Covers: format per extension (`.tex` / `.md` / `.qmd`); pre-existing comments are the preservation target and outrank current wording on conflict; "may add inferred, must hedge" rule with the `(inferred)` qualifier; explicit persistence rule — `(inferred)` survives until the author ratifies (deletes the qualifier or rewrites the line) and the agent must not drop it itself, on a later polish pass, or because the prose now matches the inference; one LaTeX example.
+- `skills/writing/references/draft.md` — added §Intent comments (15 lines) between §Workflow and §Workflow coupling. Covers: format per extension; intent written first as the drafting brief, prose fulfills it; comment ships with the prose; clarification that draft-authored intent does not carry `(inferred)` (later polish passes treat it as the preservation target); one LaTeX example.
+- `skills/writing/SKILL.md` — added §Before you start item 4 (3 sentences, 1 line) summarizing the convention and pointing at the `polish.md` / `draft.md` sections.
+
+**Convention consistency:** Format spec (`% intent: …` for `.tex`, `<!-- intent: … -->` for `.md` / `.qmd`) is identical across the three files. Position spec ("line immediately above the paragraph" / "line above") is consistent.
+
+**`(inferred)` persistence (per `Additionally:` directive):** `polish.md` is explicit on three failure modes: agent does not drop the qualifier itself, does not drop it on a later polish pass, and does not drop it because the prose has been edited to match the inference. Ratification is defined as an author action (deleting `(inferred)` or rewriting the line).
+
+**Necessity-gate audit (CLAUDE.md §Teach the Protocol):**
+- Every line in the new §Intent comments sections names a non-default behavior or a failure mode the agent would otherwise produce. The convention itself is non-default; the preservation-target rule resolves conflict direction (prose vs intent) which an agent would otherwise have to guess; the hedge persistence rule blocks three plausible "agent rationalizes dropping the hedge" failure modes that would otherwise occur on subsequent polish passes.
+- `SKILL.md` item 4 is a one-line summary + pointer (acceptable per CLAUDE.md "one-line echoes are tolerable when the alternative is forcing a redundant file load"); the operational details live only in the references.
 
 ## Task 5: Dogfood — three-mode verification
 
