@@ -206,8 +206,12 @@ Walk every line of the four new files through the `/CLAUDE.md` necessity test. D
 ## Task 2: Lighten knowledge files and trim `integration.md`
 
 **Depends on:** *(none — can run in parallel with Task 1)*
-**Review status:** IMPLEMENTED
+**Review status:** REVISE
 **Integration status:**
+
+> **Review notes (2026-05-02, round 1):**
+>
+> 1. **MINOR** — `docs/writing-references/README.md` lines 9, 10, 11, 36, 37 carry stale paths `style-checklist.md` / `structure-checklist.md`. These are direct rename fallout from Task 2 Step 1 (`git mv style-checklist.md style.md`, `git mv structure-checklist.md structure.md`) and were not picked up by Task 2 Step 5's self-review (which only greps for `Three Concurrent Disciplines` / `Walked in addition to SKILL.md`). They will not be picked up by Task 3 Step 1 either — its three greps target `references/workflow|references/planning|references/collaboration` and Iron-Law/`Three Concurrent Disciplines`/`§Preserve|§Improve|§Verify` residue; nothing in Task 3 scope hits the renamed-checklist paths. Fix: either (a) update the five lines in `docs/writing-references/README.md` in this task with the path swap (one-line edit, same commit / amend), or (b) explicitly add this file to the Task 3 stale-reference sweep with an orchestrator-acknowledged scope extension. The implementer correctly flagged the Iron-Law residue in the 4 consistency files for Task 3 (orchestrator confirmed); this rename-residue deserves the same treatment but was missed.
 
 **Files:**
 - Renamed: `skills/writing/references/style-checklist.md` → `style.md`; `structure-checklist.md` → `structure.md` (use `git mv`).
