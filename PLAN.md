@@ -91,8 +91,8 @@
 **Pre-sync merge base:** `addc9ca7fe1bdbedb080d92095facb649074c1e4`
 **Synced base head:** `886fda8b6a7862a0a4af8ec7d30fd53ffed6fea3`
 **Incoming range:** `addc9ca..886fda8`
-**Sync commits:** `fde4751`
-**Sync review status:** IMPLEMENTED
+**Sync commits:** `fde4751`, `7a4cf1a`, *(this correction commit)*
+**Sync review status:** IMPLEMENTED (after one REVISE round)
 
 ### Branch Summary
 
@@ -113,6 +113,18 @@
 > **Sync resolution:** Took main's restructured surfaces verbatim, then added writing-vertical rows: domain row in `using-superRA/SKILL.md` Skill Inventory + Domain add-on row; `Writing` row in `planning-workflow/SKILL.md` Phase 1 vertical table noting that modes a/b/c skip the workflow; one §Protect sentence + one §When to Lighten bullet in `integration-workflow/SKILL.md` documenting that writing substitutes build + outline-stability for drift tests; writing rows in `CATEGORIES.md` Domain table and `README.md` Domain Skills table.
 > **Integration context:** Task 6 Step 2 originally specified four Skill-Load Manifest rows (`planning-review`, `implementation`, `integration`, `documentation`) but main collapsed those into a single Domain add-on row composed with the Generic stage table. The actual implementation matches main's structure — Task 6 Step 2 wording is now describing the pre-restructure manifest shape and should be revised next time the task block is touched. Routing implementation itself is correct.
 > **User decision:** Main re-sync (2026-05-02 §Decisions entry).
+
+> **Sync cluster `cluster-4-correction-take-main-verbatim` (2026-05-02):** commits *(this correction commit)*; paths `.agents/**`, `.codex/INSTALL.md`, `.gitattributes`, `AGENT.md`, `GEMINI.md`, `docs/README.codex.md`, `docs/drafts/workflow-diagram.mmd`, `docs/plans/2026-04-{16,17,19,21}-*.md` (14 files), `docs/process-issues-2026-04-16.md`, `hooks/{autoload-superra,ensure-agent-orchestration,ensure-using-superra,exit-plan-mode,hooks-cursor.json,hooks.json,session-start}`, `skills/report-in-markdown/references/baseline-io.md`, `skills/using-superRA/references/{claude-tools,gemini-tools}.md`, `tests/hooks/*.sh`, `tests/structural-invariants.sh`; affects no writing-skill tasks.
+> **Incoming intent:** Implicit. Where the branch had pre-merge drift from main on shared infrastructure (hook surfaces, harness adapter references, archived plans, agents-harness symlinks, etc.), main's state is the intended baseline.
+> **Sync resolution:** For every divergent path that is NOT in the writing-vertical allowlist (writing skill, writing-references docs, PLAN/RESULTS/SEMANTIC_MERGE, five rethreaded routing surfaces): `git checkout main -- <path>` if main has it; `git rm <path>` if main does not. Brings post-merge `git diff --name-only main..HEAD` to a clean minimum-net-diff state — every surviving difference is now a legitimate writing-vertical artifact, a routing-rethread row, or a branch handoff doc.
+> **Integration context:** Three concrete behavioral consequences resolved by this correction: (a) the three autoload hooks (`autoload-superra`, `ensure-using-superra`, `ensure-agent-orchestration`) are now wired in `hooks/hooks.json` again — runtime autoload of `superRA:using-superRA` would have been broken on this branch otherwise; (b) `.agents/skills/*` symlinks are restored — the agents-harness skill-discovery surface now matches main; (c) `skills/using-superRA/references/gemini-tools.md` no longer says "execution-workflow" (main renamed it; the silent retention had been a CRITICAL finding). See `SEMANTIC_MERGE.md` §"Semantic Merge Record — 2026-05-02 (correction commit)" for the full file/script impact map.
+> **User decision:** None new — the original 2026-05-02 "sync this branch with main" intent is what this correction is fulfilling.
+
+> **Sync review notes (2026-05-02, REVISE round 1, RESOLVED):**
+> 1. [CRITICAL] Silent re-introduction of pre-rename `execution-workflow` text in `skills/using-superRA/references/gemini-tools.md`. — RESOLVED by `cluster-4`.
+> 2. [CRITICAL] Take-main-verbatim rule applied selectively (~50 paths still carried branch-side state). — RESOLVED by `cluster-4`.
+> 3. [MAJOR] `SEMANTIC_MERGE.md` File / Script Impact Map did not match the actual diff. — RESOLVED by appending the correction-commit record to `SEMANTIC_MERGE.md`.
+> 4. [MAJOR] `PLAN.md §Decisions (2026-05-02)` and `RESULTS.md` understated the scope of pre-merge drift. — RESOLVED by this Sync Map update + the RESULTS.md correction note.
 
 > **Sync cluster `cluster-3-stale-refs-in-writing` (2026-05-02):** commits `fde4751`; paths `skills/writing/SKILL.md`, `skills/writing/references/{workflow,integration,planning,collaboration}.md`; affects Tasks 1, 4, 5, 6 (their output files).
 > **Incoming intent:** Implicit — main's renames and deletions mean any reference to `execution-workflow`, `merge-workflow`, `§Universal Principles`, or the deleted `refactor-and-integrate/references/` files inside the writing skill is now broken.

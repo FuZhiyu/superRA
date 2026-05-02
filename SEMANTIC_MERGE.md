@@ -114,10 +114,64 @@ This is the strict minimum-net-diff path the user requested in PLAN.md §Decisio
 ## Checks
 
 - Conflict-marker sweep across all originally conflicting files — clean.
-- Stale-reference sweep inside `skills/writing/` for `execution-workflow`, `merge-workflow`, `§Universal Principles`, `references/codex-tools`, deleted refactor-and-integrate references — all refreshed.
+- Stale-reference sweep inside `skills/writing/` for `execution-workflow`, `merge-quality`, `merge-workflow`, `§Universal Principles`, `references/codex-tools`, deleted refactor-and-integrate references — all refreshed.
 - `git status` — no remaining `UU` / `UD` / `DU` / `AA` entries before the merge commit.
 - Independent reviewer dispatch is scheduled by the orchestrator after this commit per integration-workflow Sync discipline.
 
 ## Codebase Context
 
 The next caller — whoever opens a PR for this branch — should still walk `superRA:refactor-and-integrate` to look for codebase-coherence work the merge could not address (writing-skill files inevitably accumulated branch-local conventions while main was advancing its own; codebase-coherence is out of scope for semantic-merge per `semantic-merge/SKILL.md §Semantic Coherence Checklist §Scope boundary`). Specific suspects to inspect during Integrate: writing's reference-file naming alongside `econ-data-analysis/references/*` (consistent suffix conventions?), and whether any writing-stage pitfalls subsection now duplicates `result-protection` content.
+
+---
+
+# Semantic Merge Record — 2026-05-02 (correction commit)
+
+**Operation:** correction follow-up to the 2026-05-02 entry above
+**Current branch:** `domain/writing-skills`
+**Triggering review:** the sync reviewer dispatched after `fde4751` returned `REVISE`. The merge had applied "take main verbatim on shared infrastructure" only to files that had three-way merge conflicts; files where the branch had pre-merge drift from main (no conflict, but content already diverged) were silently kept at the branch state.
+
+## Scope of the Correction
+
+The sync reviewer enumerated the divergent surface. After filtering for the legitimate writing-vertical allowlist — `skills/writing/**`, `docs/writing-references/**`, `PLAN.md`, `RESULTS.md`, `SEMANTIC_MERGE.md`, and the five surgically-rethreaded routing surfaces (`README.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md`, `skills/planning-workflow/SKILL.md`, `skills/integration-workflow/SKILL.md`) — 50 paths still needed resolution. For each:
+
+- if main has the file: `git checkout main -- <path>` (= take main verbatim)
+- if main does not have the file: `git rm <path>` (= accept main's "this should not exist" state)
+
+This brings the post-merge tree to a clean minimum-net-diff state: every difference between `domain/writing-skills` and `main` is now a writing-vertical artifact, a routing-rethread row, or a branch handoff doc.
+
+## File / Script Impact Map (correction)
+
+| Path or path cluster | Resolution | Reason |
+|---|---|---|
+| `.agents/skills/{agent-orchestration,codex-superra-setup,econ-data-analysis,handoff-doc,implementation-workflow,integration-workflow,planning-workflow,refactor-and-integrate,report-in-markdown,semantic-merge,using-superRA,worktree-data-sync}` | Restored from main (symlinks for harness skill discovery). | Branch had stripped these in earlier work; main's harness-compatibility surface depends on them. |
+| `.agents/plugins/marketplace.json` | Restored from main. | Marketplace metadata for agents harness. |
+| `.codex/INSTALL.md` | Removed from HEAD (not on main). | Stale install doc; main's Codex install flow lives in `docs/README.codex.md` + `codex-superra-setup`. |
+| `.gitattributes` | Took main verbatim. | — |
+| `AGENT.md` | Restored from main (symlink → `CLAUDE.md`). | Codex-facing alias for contributor guide. |
+| `GEMINI.md` | Took main verbatim. | Branch had stale `using-superpowers` import; main's `using-superra` is correct. |
+| `docs/README.codex.md` | Took main verbatim. | Branch had pre-rebrand "Superpowers for Codex" content; main has the current "superRA for Codex" content. |
+| `docs/drafts/workflow-diagram.mmd` | Took main verbatim. | — |
+| `docs/plans/2026-04-{16,17,19,21}-*.md` (14 files) | Took main verbatim where main has them. | Plan/results archive of completed initiatives. |
+| `docs/process-issues-2026-04-16.md` | Took main verbatim. | — |
+| `hooks/{autoload-superra,ensure-agent-orchestration,ensure-using-superra}` | Restored from main. | The three superRA-autoload hooks listed in `README.md §Hooks`; runtime would have been broken without them. |
+| `hooks/{exit-plan-mode,hooks-cursor.json,hooks.json}` | Took main verbatim. | Branch had pre-autoload-hook content; main has the autoload wiring in `hooks.json`. |
+| `hooks/session-start` | Removed from HEAD (not on main). | Main intentionally dropped this hook; branch retained it. |
+| `skills/report-in-markdown/references/baseline-io.md` | Took main verbatim. | Branch had an extra paragraph main had since removed. |
+| `skills/using-superRA/references/claude-tools.md` | Restored from main. | Branch had deleted it; main has the Claude harness adapter reference. |
+| `skills/using-superRA/references/gemini-tools.md` | Took main verbatim. | Branch text still said "single-session execution via `execution-workflow`" — silent restoration of the rename main had completed. |
+| `tests/hooks/{test-autoload-superra,test-e2e-cli,test-ensure-agent-orchestration,test-ensure-using-superra}.sh` | Restored from main. | Hook test harness for the three autoload hooks. |
+| `tests/structural-invariants.sh` | Removed from HEAD (not on main). | Main dropped this test surface. |
+
+## User Decisions
+
+- 2026-05-02: User invoked the post-merge sync reviewer per integration-workflow §Sync, which surfaced the take-main-verbatim violation. User instruction: "you should also update the PLAN.md per integration instruction" implicitly authorizes the correction. No new decision was needed beyond the original "sync this branch with main" intent.
+
+## Checks
+
+- `git diff --name-only main..HEAD` — every surviving entry is in the legitimate allowlist (writing skill, writing-references docs, PLAN.md / RESULTS.md / SEMANTIC_MERGE.md, the five rethreaded routing surfaces).
+- Conflict-marker sweep — clean.
+- Stale-reference sweep inside `skills/writing/` — clean (no surviving `execution-workflow` / `merge-workflow` / `§Universal Principles` / deleted-reference pointers).
+
+## Codebase Context
+
+The "minimum-net-diff" intent recorded in `PLAN.md §Decisions` is now actually satisfied — only legitimate writing-vertical surface area diverges from main. Codebase-coherence work for the writing skill itself remains out of scope for semantic-merge and is deferred to `superRA:refactor-and-integrate` during integration.

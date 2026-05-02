@@ -1,126 +1,60 @@
-# Superpowers for Codex
+# superRA for Codex
 
-Guide for using Superpowers with OpenAI Codex via native skill discovery.
+Guide for using superRA with OpenAI Codex.
 
-## Quick Install
+The Codex path has two pieces:
 
-Tell Codex:
+- **plugin skills** from `.codex-plugin/plugin.json`
+- **named custom agents** from `codex-superra-setup`
 
-```
-Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.codex/INSTALL.md
-```
+Use **global agent install** for normal work across other repos.
 
-## Manual Installation
+## Recommended Setup
 
-### Prerequisites
+### Remote marketplace install
 
-- OpenAI Codex CLI
-- Git
-
-### Steps
-
-1. Clone the repo:
+1. Add the repo as a marketplace:
    ```bash
-   git clone https://github.com/obra/superpowers.git ~/.codex/superpowers
+   codex plugin marketplace add FuZhiyu/superRA
    ```
+2. Restart Codex and install the `superra` plugin.
+3. Run `codex-superra-setup`.
+4. Choose **global** scope so `superra_implementer` and `superra_reviewer` install into `~/.codex/agents/`.
 
-2. Create the skills symlink:
+Codex should cache the installed plugin under `~/.codex/plugins/cache/...`.
+
+### Manual local-clone install
+
+1. Clone this repo to a durable location, for example:
    ```bash
-   mkdir -p ~/.agents/skills
-   ln -s ~/.codex/superpowers/skills ~/.agents/skills/superpowers
+   git clone https://github.com/FuZhiyu/superRA.git ~/.codex/plugins/superra
    ```
+2. Add a personal marketplace entry in `~/.agents/plugins/marketplace.json` that points to that clone.
+3. Restart Codex and install the `superra` plugin.
+4. Run `codex-superra-setup`.
+5. Choose **global** scope so `superra_implementer` and `superra_reviewer` install into `~/.codex/agents/`.
 
-3. Restart Codex.
+Use this path when you want the plugin to track a local clone directly.
 
-4. **For subagent skills** (optional): Skills like `agent-orchestration` and `subagent-driven-development` require Codex's multi-agent feature. Add to your Codex config:
-   ```toml
-   [features]
-   multi_agent = true
-   ```
+## Why This Split Exists
 
-### Windows
+Codex plugins package skills, apps, and MCP configuration. Codex custom named agents are discovered from `.codex/agents/` or `~/.codex/agents/`. superRA follows that documented separation:
 
-Use a junction instead of a symlink (works without Developer Mode):
+- plugin = shared skill bundle
+- `codex-superra-setup` = named agent installer
 
-```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
-cmd /c mklink /J "$env:USERPROFILE\.agents\skills\superpowers" "$env:USERPROFILE\.codex\superpowers\skills"
-```
+That keeps the workflow single-sourced:
 
-## How It Works
+- canonical skills stay in `skills/`
+- canonical role specs stay in `agents/`
+- Codex-specific surfaces are generated adapters, symlinks, and install metadata
 
-Codex has native skill discovery — it scans `~/.agents/skills/` at startup, parses SKILL.md frontmatter, and loads skills on demand. Superpowers skills are made visible through a single symlink:
+## Verification
 
-```
-~/.agents/skills/superpowers/ → ~/.codex/superpowers/skills/
-```
-
-The `using-superpowers` skill is discovered automatically and enforces skill usage discipline — no additional configuration needed.
-
-## Usage
-
-Skills are discovered automatically. Codex activates them when:
-- You mention a skill by name (e.g., "use brainstorming")
-- The task matches a skill's description
-- The `using-superpowers` skill directs Codex to use one
-
-### Personal Skills
-
-Create your own skills in `~/.agents/skills/`:
+For cross-repo use:
 
 ```bash
-mkdir -p ~/.agents/skills/my-skill
+ls ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.toml
 ```
 
-Create `~/.agents/skills/my-skill/SKILL.md`:
-
-```markdown
----
-name: my-skill
-description: Use when [condition] - [what it does]
----
-
-# My Skill
-
-[Your skill content here]
-```
-
-The `description` field is how Codex decides when to activate a skill automatically — write it as a clear trigger condition.
-
-## Updating
-
-```bash
-cd ~/.codex/superpowers && git pull
-```
-
-Skills update instantly through the symlink.
-
-## Uninstalling
-
-```bash
-rm ~/.agents/skills/superpowers
-```
-
-**Windows (PowerShell):**
-```powershell
-Remove-Item "$env:USERPROFILE\.agents\skills\superpowers"
-```
-
-Optionally delete the clone: `rm -rf ~/.codex/superpowers` (Windows: `Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\superpowers"`).
-
-## Troubleshooting
-
-### Skills not showing up
-
-1. Verify the symlink: `ls -la ~/.agents/skills/superpowers`
-2. Check skills exist: `ls ~/.codex/superpowers/skills`
-3. Restart Codex — skills are discovered at startup
-
-### Windows junction issues
-
-Junctions normally work without special permissions. If creation fails, try running PowerShell as administrator.
-
-## Getting Help
-
-- Report issues: https://github.com/obra/superpowers/issues
-- Main documentation: https://github.com/obra/superpowers
+If the agents exist but Codex still cannot spawn them, restart Codex or start a fresh session.
