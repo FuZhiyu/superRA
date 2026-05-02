@@ -15,6 +15,11 @@
 
 - Routing surfaces (`skills/CATEGORIES.md`, `README.md`, `using-superra` skill inventory) updated to expose the new vertical.
 
+### Release Prep
+
+- Version manifests bumped to `0.1.3` across package, Claude, Cursor, Codex, marketplace, and Gemini extension metadata via `scripts/bump-version.sh`.
+- Plan and results archived under `docs/plans/2026-04-22-theory-modeling-vertical-{plan,results}.md`. Design-choice synthesis lives in `skills/theory-modeling/CLAUDE.md`.
+
 ## [0.1.2] - 2026-04-24
 
 Includes merged PRs since `0.1.1`: #18 `[codex] tighten Phase B upstream-intent contract`, #19 `[codex] clarify Codex superRA orchestration instructions`, #20 `[codex] generate direct-mode role refs from canonical agents`, #21 `Teach-the-protocol: resolver redesign + over-prescription audit + gated principle`, #22 `planning-workflow: include header fields in change-plan protocol`, plus this release branch.
