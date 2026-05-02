@@ -1,102 +1,120 @@
 # superRA — Contributor Guidelines
 
-This repo is **superRA**, a fork of [Superpowers](https://github.com/obra/superpowers) adapted for economic research. It ships a complete **iterative** PLAN → IMPLEMENT → VALIDATE → INTEGRATE workflow for AI agents acting as disciplined Research Assistants — the phases are a cycle, not a one-shot pipeline, and re-entering PLAN mid-execution or after integration is the normal case. `planning-workflow §Changing Plans` is the hinge that makes re-entry safe (full DAG cascade over downstream tasks, full drift-test suite always runs on re-entry, prefer updating existing task blocks over appending new ones). See `README.md` for the full skill inventory and `skills/CATEGORIES.md` for the Workflow / Domain / Utility / Meta grouping.
+This file is the contributor-facing entry point for superRA internals. Read `README.md` first for the user-facing product model; keep that overview there rather than duplicating it here.
 
-## Working in This Repo
+When modifying superRA itself — skills, hooks, agents, harness adapters, or internal docs — treat the work as skill creation. Load `skill-creator` before editing any `skills/*/SKILL.md`, and load the relevant superRA workflow skills before changing workflow behavior.
 
-When you are modifying superRA itself (skills, hooks, agents, docs), you are editing behavior-shaping content. Treat it with care.
+## Contributor Discipline
 
-- **Read before you change.** Skill content has been tuned through real sessions. Understand why a piece of text exists before rewording it. Red Flags tables, rationalization lists, and the "your human partner" / RA-framing language are deliberate.
-- **One problem per commit.** Keep commits focused. Don't bundle unrelated edits.
-- **Describe the problem, not just the change.** Commit messages should explain what was broken or missing, not just what moved.
-- **Test on at least one harness** (Claude Code is primary) before claiming a change works. Skills are code — verify behavior, don't just read the diff.
+- **Read the owning files before editing.** Skill and agent text changes behavior. Understand the owning skill, its references, and the call sites that load it before rewriting.
+- **Change one concern at a time.** Keep commits focused on one design, workflow, or harness concern.
+- **Describe the problem.** Commit messages and PR notes should explain what was broken, duplicated, rigid, or unclear.
+- **Verify behavior, not just prose.** For skill or workflow changes, run at least one realistic harness session or script-level verification that exercises the changed path.
+- **Preserve user-facing/internal separation.** `README.md` explains what superRA is and why a researcher would use it. This file explains how contributors keep the internals coherent.
 
-## Skill Changes
+## Internal Design Philosophy
 
-Skills are not prose. If you modify skill content:
+superRA should be adaptive and composable rather than rigid. It gives agents mechanisms and protocols they can assemble for the current research situation; it should not encode a scenario tree for every contingency.
 
-- Edit skills directly, test on a real session in Claude Code, and iterate based on observed behavior. For upstream skill-writing guidance, see the [Superpowers project docs](https://github.com/obra/superpowers).
-- Run the skill through a realistic session to confirm it triggers when it should and doesn't when it shouldn't.
-- Be cautious editing carefully-tuned content (Red Flags tables, rationalization lists, RA-framing language, severity protocols). Changes here should be driven by observed failures, not stylistic preference.
+### Adaptive, Composable Workflows
 
-## Design Principles
+- **Mechanisms over contingency trees.** Prefer reusable mechanisms such as plan revision, stage-scoped references, dispatch templates, and gated checklists over long branches of "if this happens, then do that" workflow prose.
+- **Re-entry is normal.** A phase, mechanism, or utility should be enterable from different stages, re-enterable after discoveries, and skippable when the user intentionally invokes only part of the workflow.
+- **Keep choreography simple.** Workflow skills should state the sequence and stop points needed for safety, then delegate domain discipline, dispatch mechanics, and document mechanics to their owning skills.
+- **Gates are local discipline.** Adaptability does not mean optional quality control. Once a workflow/task is entered, its review gates, status transitions, and blocking checklist items are enforced.
+- **Domain and utility skills stand alone.** They may mention workflow artifacts such as `PLAN.md`, `RESULTS.md`, implementers, or reviewers as optional context, but their main instructions should work when loaded directly by a researcher or another orchestrator.
+- **Compose at the workflow edge.** A workflow step is assembled from the workflow skill, `agent-orchestration`, the role spec, the active domain skill, and any needed utility skills. Do not restate those pieces inside each other.
 
-superRA has a tested philosophy that every skill, hook, and agent file is built around. **Evaluate every proposed change against all of these principles.** If a change weakens any of them, the commit message must justify why and what compensates. These are not stylistic — they are the load-bearing structure of the plugin.
+### Minimal, Targeted Instructions
 
-### Workflow principles (load-bearing across all domains)
+- **Put instructions where they are loaded.** Place role-specific guidance in role specs or role references, stage-specific guidance in stage references, and cross-stage guidance in the smallest owning skill.
+- **Load only what is needed.** Top-level `SKILL.md` files should route to references instead of carrying every detail. References stay one level deep from the skill unless there is a strong reason.
+- **Prefer positive instructions.** Write the action agents should take: "Describe the data before transforming it" is better than "Do not transform data without describing it first."
+- **Skip design essays in skill bodies.** Skills need executable guidance. Keep rationale in contributor docs, commit messages, PRs, or short comments only when it helps the agent adapt correctly.
 
-These principles are domain-agnostic. They shape every workflow skill and apply to data analysis today and to any future vertical (theory, literature review, simulation, writing) tomorrow.
+### Teach the Protocol, Don't Prescribe Each Action
 
-1. **Enforced implementer–reviewer pair at every step.** No result is accepted until a reviewer has signed off. One comprehensive review pass per task during execution (the reviewer walks the active domain skill's §Three Concurrent Disciplines top to bottom plus any §Pitfalls subsections matching operations performed, and returns `APPROVE` / `REVISE`); a drift-test review and an integration review before merge; a fresh integration review after semantic-merge. Review is never skipped, regardless of perceived triviality. A change that would let a step ship without review violates this principle.
+**This is a gate.** Every implementer editing any file under `skills/*` or `agents/*` self-applies both tests below line by line before committing. Every reviewer walking such a diff verifies them line by line on every pass. A line that fails either test is a `[BLOCKING]` finding, not a stylistic preference. New instruction lines added without passing the tests are the most common source of drift in this repo, and this gate exists to block them at the edit site rather than the next audit round.
 
-   The reviewer's role is **adversarial** — it should be thorough, skeptical, and err on the side of over-flagging. A false positive costs one iteration; a missed issue can ship wrong results. The orchestrator is the **arbitrator**: it made the plan, communicates with the researcher, and has big-picture context the reviewer lacks. It evaluates each review finding independently, understands the reviewer's over-critical bias, and overrules with documented reasoning when the reviewer is wrong. Neither role works without the other — adversarial review surfaces issues, informed arbitration filters them.
+Give agents mechanisms and the evidence they need to act predictably; do not narrate what they will see, wrap authoritative content in meta-commentary, or remind them of defaults the runtime already teaches. The bar for every line of instruction is: **without this line, would the agent's behavior be unstable?** If the answer is no, delete it.
 
-2. **Handoff docs are the auditable record AND the continuation point.** All material findings, decisions, methodology notes, and results land in committed `PLAN.md` / `RESULTS.md` *before* they appear in any status report or chat message. Any fresh agent can open the repo and resume work from the docs + git state alone — no prompt history required. Atomic commits bundle code + doc edits so every git SHA reconstructs a coherent state. A change that creates out-of-doc state (findings only in chat, caveats only in reports, decisions only in dispatch prompts) violates this principle.
+Two tests, applied in order:
 
-3. **Fast early, strict before merge. Semantic merges always.** Work is carried forward for speed during the IMPLEMENT phase — no codebase-fit checks at interim checkpoints. Codebase integration, drift tests (for data analysis) or their domain equivalent, refactoring, and documentation finalization (maturing RESULTS.md into its permanent form + auditing project-level CLAUDE.md / AGENTS.md / README.md via a dedicated doc-writer + doc-reviewer pair) happen only when the user chooses to merge, inside `integration-workflow`. Every merge into main runs through `semantic-merge`, never a bare `git merge` / `rebase` / `cherry-pick`. A change that front-loads integration concerns onto interim tasks, or bypasses semantic-merge, violates this principle.
+1. **DRY.** If the information is already carried by another skill, reference, dispatch field, or handoff doc the agent reads, do not restate it here. A pointer is acceptable; a paraphrase is not. One-line echoes are tolerable only when the alternative is forcing a redundant file load — otherwise point and trust.
+2. **Necessity.** If the instruction only tells the agent to do what it would already do with the content in front of it, delete it. Keep the line only when it shapes behavior the agent would not produce on its own (a non-default constraint, a safety invariant, a protocol step that must happen in a specific order).
 
-4. **Autonomous with human in the loop.** The agent drives the workflow forward under its own power between legitimate stop points. It does not ask permission to continue, re-confirm approved plans, or solicit reassurance — an `APPROVED` task dispatches the next task without a check-in, and a completed workflow step moves to the next step without a "shall I proceed?". It **does** stop, and uses the `AskUserQuestion` tool when the harness exposes it (plain text otherwise), for exactly three classes of pause: (a) a hard blocker the RA cannot resolve from the code and data (missing access, corrupted inputs, ambiguous upstream dependency), (b) a decision that is beyond the RA's authority because it belongs to the researcher — methodology choices, research intent, scope changes, sample/variable definition calls, any tradeoff where the "right" answer depends on the research question, and (c) user-defined milestones explicitly baked into a workflow (e.g., execution-workflow Step 4's four completion options, integration-workflow's drift-test selection and doc disposition). Every user decision produced at a stop point is written into `PLAN.md` (or `RESULTS.md` where relevant) **before** the agent acts on it, and committed atomically with the work it unblocks — so the handoff doc remains the record of record and the next session can reconstruct *why* the work took the shape it did. A change that inserts gratuitous "should I continue?" prompts, decides a methodology question unilaterally, or lets a user decision live only in chat violates this principle. See `handoff-doc` §User Decisions Log for the logging format.
+**Anti-patterns to watch for:**
 
-### RA framing (cross-cutting)
+- **Wrapper instructions around authoritative content.** "If the dispatch includes a `Worktree:` field, follow the canned steering in its `Additionally:` tail." The canned steering is already authoritative and self-explanatory — the wrapper adds nothing and doubles the maintenance surface.
+- **"Here is what you will receive" descriptions.** Explaining the shape of the dispatch prompt, the fields in `PLAN.md`, or the structure of a review blockquote to the agent that will read them. The agent reads the thing; describing it is overhead.
+- **Reminders of defaults the harness or runtime already enforces.** "If you are asked to load a skill, load the skill." "Read the task before implementing it." These are not instructions; they are throat-clearing.
+- **Restating the Skill-Load Manifest or standard Before-You-Start inside a dispatch prompt or role body.** The manifest is the authoritative map; repeating it invites drift.
 
-The agent is a Research Assistant implementing the researcher's ideas, not judging methodology. Challenges to methodology are escalated to the human partner, never decided unilaterally. This applies to every domain vertical.
+**Keep:** behavior-shaping instructions — things like "treat paraphrased dispatch content as over-specification and go to authoritative sources," a specific non-default skill/reference load, a safety invariant, or an ordering constraint the agent would not infer.
 
-### Architectural pattern
+**Maintenance cost is the tell.** Every restated rule is a place where the two copies can drift. When in doubt, delete the copy furthest from the authoritative source.
 
-- **Lean agents, rich references.** Two prototype agents (implementer, reviewer) load stage-specific domain references at dispatch time. The Skill-Load Manifest in `superRA:using-superRA` is the authoritative map from `Stage:` value to required skills + stage-scoped references; `agents/implementer.md` / `agents/reviewer.md` carry one-line pointers at it.
-- **Flat skills/ layout.** No nested subfolders — every skill lives at `skills/<name>/SKILL.md`. Grouping into Workflow / Domain / Utility / Meta is documented in `skills/CATEGORIES.md` and mirrored in `README.md`, not in the filesystem. This preserves compatibility with Claude Code, Copilot CLI, Gemini CLI, and Codex skill loaders.
+## Ownership Boundaries
 
-### DRY, composability, extensibility
+Use one source of truth per concern. Duplicated behavior text is a drift risk; when content appears in more than one place, one copy must be authoritative and the others should point to it.
 
-**One source of truth per concern.** When a piece of content appears in more than one skill, at most one copy is authoritative; the rest are one-line pointers. Duplicated content is a code smell and a source of drift — future edits will update one copy and miss the others. When adding content, first ask: *what concern does this describe?* Put it in the one skill that owns that concern, and reference it from everywhere else.
+| Concern | Owner |
+| --- | --- |
+| Phase choreography, stop points, task/status transitions | `planning-workflow`, `implementation-workflow`, `integration-workflow` |
+| Cross-stage orchestration, dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` |
+| Execution modes and Skill-Load Manifest | `using-superra` |
+| Domain discipline, domain gates, pitfalls, stage-scoped domain references | The relevant domain skill, e.g. `econ-data-analysis` |
+| Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, Sync Map + task-local Sync impact formats | `semantic-merge` |
+| Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
+| Codebase-coherence techniques — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
+| Handoff-doc mechanics, templates, stale-content rules, User Decisions Log | `handoff-doc` |
+| Report formatting for figures, math, tables, and final-form markdown | `report-in-markdown` |
+| Harness-specific tool names and runtime differences | Adapter references under `skills/using-superRA/references/` |
+| Canonical role behavior | `agents/implementer.md` and `agents/reviewer.md` |
 
-Concerns and their owners:
+## Architectural Patterns
 
-- **Workflow skills** own *choreography* — what steps run in what order, what stop points exist, what status transitions apply. `planning-workflow`, `execution-workflow`, and `integration-workflow` (Phases A–D) each own the choreography of their phase and nothing else.
-- **`agent-orchestration`** owns *cross-stage orchestration* — dispatch-prompt shape (required-fields-first, `Additionally:` anchor-last), the "Follow the standard stage-relevant workflow" prefix, the relay protocol between orchestrator and subagent (what-changed deltas, review-notes annotation mechanics), and verdict-adjudication discipline (how to handle `REVISE` findings). Execution Modes (subagent dispatch vs direct) are owned by `superRA:using-superRA`.
-- **Domain skills** own *domain discipline* — the Iron Law for data analysis, the gated checklist for that domain (§Three Concurrent Disciplines, domain-specific integration reference), pitfall catalogs, stage-scoped references. Adding a new vertical means adding a domain skill, not forking workflow skills.
-- **`refactor-and-integrate`** owns *generic integration discipline* — code-quality standards, drift-test construction, merge-quality standards. Domain-specific integration content lives alongside the domain skill (for data analysis: `econ-data-analysis/references/integration.md`).
-- **`handoff-doc`** owns *handoff-doc mechanics* — latest-state-only, inline-edit rule, task-block structure, `## Decisions` section shape. It does NOT own role permissions or dispatch/status-return protocols — those are orchestration concerns and live in `agent-orchestration` + the agent files.
+- **Lean agents, rich references.** Prototype agents carry role protocol and load stage/domain references at dispatch time. The Skill-Load Manifest in `using-superra` is the authoritative map from `Stage:` values to required skills.
+- **Flat skill layout.** Every skill lives at `skills/<name>/SKILL.md`. Grouping lives in `skills/CATEGORIES.md`, `README.md`, and the skill inventory, not in nested directories.
+- **Shared gated checklists.** Implementers and reviewers use the same checklist files. `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items may be reported as minor findings without blocking.
+- **Generated artifacts stay generated.** Direct-mode role references and Codex named-agent files are produced from canonical agent specs. Update the generator or source spec, then regenerate.
 
-**Shared-flow checklists.** Implementer and reviewer always walk the **same file** for any gated checklist. `[BLOCKING]` / `[ADVISORY]` markers encode severity — blocking items must be fixed to earn APPROVE; advisory items MAY be flagged as MINOR but do not block. The implementer walks the checklist as pre-handoff self-check; the reviewer walks the same checklist as verification criteria. Same content, two perspectives — no drift possible because there is no second document. Applies to `econ-data-analysis/SKILL.md` §Three Concurrent Disciplines (and conditionally the relevant §Pitfalls subsections) and to every other gated checklist in the plugin (domain-specific integration references, future vertical checklists).
+## Skill Authoring Guidelines
 
-**Composition at the workflow edge.** A workflow step's content is assembled at dispatch time from: (a) the workflow skill for sequencing, (b) `agent-orchestration` for dispatch shape + verdict adjudication, (c) the agent file for execution / review protocol, (d) the domain skill + stage-scoped references for what to check. None of these pieces duplicate what the others carry.
+- Load `skill-creator` before editing any `skills/*/SKILL.md`.
+- Keep frontmatter descriptions explicit about trigger conditions; Codex and other harnesses use metadata for discovery.
+- Keep `SKILL.md` concise and procedural. Move stage details, examples, checklists, and harness variants into references.
+- Add references only when they have a clear load condition from `SKILL.md`.
+- Preserve standalone usability for domain and utility skills.
+- Add new skills only for distinct concerns. Prefer improving an owning skill when the concern already has an owner.
+- Update `skills/CATEGORIES.md`, `README.md`, and the `using-superra` skill inventory when adding, renaming, or removing skills.
 
-**Extension path.** Adding a new vertical (theory, literature review, simulation) is composing existing pieces, not forking workflow skills. Create `skills/<vertical>/SKILL.md` with its Iron-Law-equivalent, add the vertical's gated checklist (§Review + §Integration), add stage-scoped references for the phases the vertical touches, add the vertical to the planning-workflow routing table. The workflow skills, `agent-orchestration`, and the agent files carry over unchanged.
+## Codex and Harness Design
 
-### Domain verticals
+- **Canonical instructions stay shared.** Workflow behavior lives in root `skills/`; role behavior lives in `agents/`. Do not create Codex-only copies of shared behavior.
+- **Harness differences live in adapters.** Put tool-name mappings and runtime differences in the owning adapter reference under `skills/using-superRA/references/`, such as `codex-instructions.md` or `claude-tools.md`.
+- **Direct mode reads skill-owned role references.** Cross-repo plugin use cannot assume raw repo-relative agent files are available, so direct mode loads the generated role references under `skills/using-superRA/references/`.
+- **Codex named agents are generated.** `.codex/agents/` and global `~/.codex/agents/` files come from `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
+- **Surface generated artifacts in PLAN.md.** When a plan touches `skills/*` or `agents/*`, list the generated files and the generator command in the PLAN.md header so every dispatched agent knows on arrival which files must go through `sync_codex_agents.py` rather than being hand-edited. Currently generated: `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`.
+- **Codex plugin packaging installs skills, not named agents.** `codex-superra-setup` owns named-agent installation.
+- **Contributor aliases point here.** `AGENTS.md` and `AGENT.md` remain aliases for this file so Codex-facing contributor guidance has one source.
 
-superRA's workflow scaffolding is domain-agnostic. Domain-specific discipline lives in **domain skills**, one per vertical, each organized with stage-scoped references so the right chunk loads at the right phase.
+## Domain Vertical Extension
 
-**Domain skills are usable standalone — without the full PLAN → IMPLEMENT → VALIDATE → INTEGRATE scaffold.** A tiny polish, a single-dimension consistency check, or any task that does not warrant task decomposition and a committed `PLAN.md` should invoke the domain skill directly. Each domain skill owns a mode-selection reference that documents its lightweight usage modes alongside the full-workflow case; the writing vertical exemplifies this pattern (`writing/references/workflow.md` — direct-edit / pure-review / review-edit-loop / full-workflow). Workflow principle #1 (implementer–reviewer pair at every step) **still applies in standalone modes** — reviewer dispatch is never skipped even when the implementer is the orchestrator in direct mode. A fresh, independently-dispatched reviewer is the load-bearing guarantee; self-review by the implementing agent is never a substitute.
+Adding a new vertical means composing existing workflow pieces with a new domain skill. Create `skills/<vertical>/SKILL.md`, add its domain discipline and gated checklists, add stage-scoped references only for stages it touches, then add the vertical to routing/inventory surfaces.
 
-**Currently implemented:**
+The workflow skills, agent files, orchestration skill, and generic utility skills should carry over unchanged unless the new vertical exposes a genuinely generic gap.
 
-- **Data analysis** — `superRA:econ-data-analysis`. Load-bearing rule: **Iron Law — NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION.** Non-negotiable; protected by the Common Rationalizations table in the skill body and the inline severity-marked checklist in §Three Concurrent Disciplines. Stage-scoped references: `references/planning.md` (Data Inventory hard gate + sensitivity design), `references/integrate-drift-tests.md` (drift-test construction), `references/integration.md` (data-specific integration gates), `references/data-robustness-checklist.md`.
-- **Writing** — `superRA:writing`. Load-bearing rule: **Iron Law — RESPECT THE AUTHOR'S INTENT.** Three concurrent disciplines (Preserve / Improve / Verify) with inline severity-marked checklist in SKILL.md §Three Concurrent Disciplines. Standalone-usable via four modes (direct-edit / pure-review / review-edit-loop / full-workflow) documented in `skills/writing/references/workflow.md`; most writing work does not need the full PLAN → IMPLEMENT → VALIDATE → INTEGRATE scaffold. Stage-scoped references: `references/planning.md`, `references/workflow.md`, `references/style-checklist.md`, `references/structure-checklist.md`, `references/consistency/*.md` (8 dimension files for parallel review), `references/refactor-and-compile.md`, `references/collaboration.md`, `references/integration.md`.
+## Design Audit Checklist
 
-Data analysis and writing are the two currently implemented verticals. The workflow skills do not assume either; they route to the domain skill only when the task matches.
+Before proposing structural changes to skills, workflow phases, or agent orchestration, check:
 
-Before proposing structural changes to skill design, workflow phases, or agent orchestration, read the existing skills in `skills/` and the workflow skills they reference, and verify the proposal strengthens (or at least preserves) all four workflow principles.
-
-## Roadmap: Extending Beyond Data Analysis
-
-Adding a new vertical means adding a domain skill — not forking the workflow. The four workflow principles, the implementer/reviewer pair, the handoff-doc discipline, semantic-merges, and the autonomous-with-human-in-loop stop-point pattern all carry over unchanged. A new vertical plugs in by providing:
-
-1. **A domain skill** at `skills/<vertical>/SKILL.md` carrying the cross-cutting discipline of that domain.
-2. **Stage-scoped references** inside the domain skill: at minimum a `references/planning.md` consumed by `planning-workflow` Phase 1. Other stage references as the vertical needs.
-3. **A row in `skills/CATEGORIES.md` and `README.md`** under Domain — data analysis (or under a new vertical heading).
-4. **An entry in `planning-workflow` Phase 1's vertical table** so the workflow routes correctly when it sees a task in that domain.
-
-**Planned verticals (hooks for future work, not commitments):**
-
-- **Theory / modeling.** Derivation discipline (step-by-step algebra, symbol tracking), notation consistency, proof checks, simulation or numerical verification of derived formulas.
-- **Literature review.** Citation integrity (every claim traces to a cited source with the page / line), claim-evidence mapping, coverage audit across a reading list, systematic note-taking format.
-- **Simulation.** Seed discipline, stochastic reproducibility across platforms, sensitivity to parameter grids, convergence diagnostics, calibration-vs-estimation separation.
-When you pick one up, create the domain skill first, then do one real project end-to-end with the existing workflow skills to find the gaps. The workflow skills are meant to bend; the principles are not.
-
-## General
-
-- Keep `README.md`, `RELEASE-NOTES.md`, `skills/CATEGORIES.md`, and skill tables in sync when adding or renaming skills.
-- Prefer editing existing skills over creating new ones. New skills should carve out a clearly distinct concern.
-- Domain-specific or project-specific configuration does not belong in core superRA — publish it as a separate plugin.
+- Does this duplicate README-owned user-facing explanation?
+- Does this duplicate behavior already owned by another skill or reference?
+- Can the mechanism be entered, re-entered, or used standalone where appropriate?
+- Are gates still enforced once a workflow/task is entered?
+- Is the instruction placed where only the agents/stages that need it will load it?
+- For every line you added, does removing it change what the agent would *do*, or only what it would *understand*? If only understand, delete it.
+- Is any harness-specific behavior isolated in an adapter reference?
+- Are generated files left untouched or regenerated from their sources?
+- Are inventories and category docs kept in sync?

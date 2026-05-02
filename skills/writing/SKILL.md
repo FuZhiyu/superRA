@@ -152,7 +152,7 @@ See `references/workflow.md` for the four usage modes: (a) **direct edit** — o
 
 Two hard rules:
 
-1. **Reviewer dispatch is never skipped.** In every mode — including direct edit — the reviewer is a separately-dispatched agent. Self-review by the orchestrator is not a substitute. This preserves the implementer–reviewer pair principle (`superRA:using-superRA` §Universal Principles #1).
+1. **Reviewer dispatch is never skipped.** In every mode — including direct edit — the reviewer is a separately-dispatched agent. Self-review by the orchestrator is not a substitute. This preserves the implementer–reviewer pair principle that runs through every superRA workflow.
 2. **Parallel-dispatch multiple reviewers for multi-dimensional consistency work.** One reviewer per `consistency/*.md` file, dispatched in a single message with multiple Agent-tool calls. Each reviewer is focused on its one dimension.
 
 ## §Key References

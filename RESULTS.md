@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each task with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-22 (rollback rationale logged)
+**Last updated:** 2026-05-02 (main re-synced under minimum-net-diff)
 **Status:** In Progress
 
 ---
@@ -113,6 +113,7 @@
 - **Rollback 2026-04-22:** reverted the attempted `main` sync (`99fb3ba`, `656e974`) after reviewing `main`'s intent. The critical mismatch was `skills/using-superRA/SKILL.md`: `main` deliberately removed `## Universal Principles` in `72c38e3` after `564021b`'s broader duplicate-protocol simplification, redistributing that content to owner files (`references/main-agent.md`, workflow structure, `handoff-doc`, reviewer/integration references). Carrying the section forward on this branch violated the minimum-net-diff rule for shared surfaces.
 - **Archived-handoff rationale:** the pre-revert `main` archive at `docs/plans/2026-04-17-codex-compatibility-plan.md` explicitly says that a minimum-net-diff sync should take `main` verbatim on shared files and re-thread only branch-specific additive surfaces. The reverted sync did the opposite for `using-superRA`: it preserved an older branch-local structure on a file where `main` had already changed the source-of-truth split.
 - **Current branch state after rollback:** restored to the pre-sync writing branch plus a new `PLAN.md` decision entry documenting why the sync was rejected. Any future refresh against `main` should start from `main`'s simplified shared skill surfaces and reapply only the writing-vertical deltas.
+- **2026-05-02 re-sync (semantic-merge, standalone mode):** Merged `main` into `domain/writing-skills` using the take-main-verbatim rule on shared surfaces. Re-threaded writing-vertical additions into the surfaces main reshaped: writing row in `using-superRA/SKILL.md` Skill Inventory + Skill-Load Manifest add-on table; writing row in `planning-workflow/SKILL.md` Phase 1 vertical table; writing notes in `integration-workflow/SKILL.md` §Protect and §When to Lighten; writing rows in `skills/CATEGORIES.md` and `README.md` domain tables. Dropped `skills/execution-workflow/` (renamed to `implementation-workflow` on main) and the four reference files main deleted (`refactor-and-integrate/references/{codebase-integration,drift-test-quality,merge-quality}.md`, `using-superRA/references/codex-tools.md`). Refreshed stale references inside `skills/writing/` to match main's new structure (workflow-pipeline names, `§Universal Principles` rephrased generically since main moved that content into its owning files). Recorded as a `SEMANTIC_MERGE.md` entry. Note: `CLAUDE.md` did not need a writing-specific amendment because main's restructured §Adaptive, Composable Workflows already states "Domain and utility skills stand alone" — the original Task 7 amendment is now subsumed.
 
 **Files:** `skills/writing/references/integration.md` (95 lines) + 5 routing-edit files modified (`using-superRA/SKILL.md`, `planning-workflow/SKILL.md`, `integration-workflow/SKILL.md`, `CATEGORIES.md`, `README.md`).
 

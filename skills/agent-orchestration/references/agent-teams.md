@@ -10,7 +10,7 @@ This reference carries the technical how-to for Agent Teams and parallel-dispatc
 
 **Pointers — do not duplicate here:**
 
-- **For skill-loads per stage, see `superRA:using-superRA` §Skill-Load Manifest.** Every agent (main, subagent, team teammate) reads the manifest; this file does not repeat per-stage skill/reference lists.
+- **For skill-loads per stage, see `superRA:using-superra` §Skill-Load Manifest.** Every agent (main, subagent, team teammate) reads the manifest; this file does not repeat per-stage skill/reference lists.
 - **Team composition: spawn one teammate per stage the workflow runs.** Role is encoded by `subagent_type` — `superRA:implementer` for implementer-role stages, `superRA:reviewer` for reviewer-role stages. The teammate then loads what the manifest lists for its Stage. No per-workflow team recipe is needed.
 
 ---
@@ -41,7 +41,7 @@ Only one team can exist per session. The lead must clean up the current team bef
 The full superRA workflow spans three team-worthy phases:
 
 ```
-execution-workflow (analysis team)
+implementation-workflow (analysis team)
   → cleanup
     → integration-workflow (integration team, Phases A–D)
       → cleanup
@@ -51,7 +51,7 @@ Sequential teams with cleanup. The lead cleans up each team before spawning the 
 
 ## Spawning a Team
 
-Team composition is derived from the manifest — the lead spawns one teammate per stage the workflow runs, using `subagent_type: superRA:implementer` for implementer-role stages and `superRA:reviewer` for reviewer-role stages; the teammate loads what `superRA:using-superRA` §Skill-Load Manifest lists for its Stage. There is no per-workflow recipe beyond this; the composition is read from the workflow skill (which stages it runs) and the manifest (what each stage loads).
+Team composition is derived from the manifest — the lead spawns one teammate per stage the workflow runs, using `subagent_type: superRA:implementer` for implementer-role stages and `superRA:reviewer` for reviewer-role stages; the teammate loads what `superRA:using-superra` §Skill-Load Manifest lists for its Stage. There is no per-workflow recipe beyond this; the composition is read from the workflow skill (which stages it runs) and the manifest (what each stage loads).
 
 **Generic spawn template:**
 
@@ -96,11 +96,11 @@ For 2+ independent tasks that can be worked on without shared state or sequentia
 
 ### Infrastructure for Parallel Work
 
-When dispatching parallel agents that need isolated workspaces, follow `SKILL.md` §Concurrent Writers Require Worktree Isolation:
+When dispatching parallel agents that need isolated workspaces, follow `SKILL.md` §Parallelization and Worktree Isolation:
 
 - Provision one worktree per agent per `references/worktree-harness-fallback.md` (harness tools preferred; raw `git worktree` otherwise).
 - Seed non-git data via `superRA:worktree-data-sync` §`--mode seed` with `--seed-sync-mode force-symlink`.
-- Merge back with plain `git merge` on the `parallel/<branch>/<slug>` branches.
+- Merge back with plain `git merge` on the `<current-branch>-agent/parallel/<slug>` branches.
 
 Do not hand-roll worktree setup or data-copy scripts.
 
@@ -117,17 +117,13 @@ Do not hand-roll worktree setup or data-copy scripts.
      Stage: <stage-name>
      Task: <task pointer>
 
-     Follow the standard stage-relevant workflow and load
-       relevant skills and documents to proceed. Additionally,
-       <focus: one independent domain>.
+     Additionally: <focus: one independent domain>
 
    Agent(subagent_type: "superRA:implementer"):
      Stage: <stage-name>
      Task: <task pointer>
 
-     Follow the standard stage-relevant workflow and load
-       relevant skills and documents to proceed. Additionally,
-       <focus: a different independent domain>.
+     Additionally: <focus: a different independent domain>
    ```
 
    All dispatches go out in one message so they run concurrently. No per-dispatch recitation of `PLAN.md` content or manifest loads — the agent reads those itself.
@@ -169,7 +165,7 @@ If context runs out or the session ends mid-team:
 
 - **Teammates are lost.** `/resume` and `/rewind` do not restore teammates.
 - **Completed work is safe.** All completed tasks are committed to git and recorded in `PLAN.md` / `RESULTS.md`.
-- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superRA` `references/main-agent.md`) checks for incomplete `PLAN.md`.
+- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superra` `references/main-agent.md`) checks for incomplete `PLAN.md`.
 - **Resume with new team.** New session reads `PLAN.md` to find last completed task, spawns a fresh team for remaining work.
 
 ### Checkpointing for Team Safety
@@ -205,5 +201,5 @@ On session resume, this tells the new lead exactly where to pick up.
 - **Task status can lag** — teammates sometimes fail to mark tasks as completed; check if work is actually done.
 - **One team per session** — must clean up before starting a new team.
 - **No nested teams** — teammates cannot spawn their own teams (they can use subagents via Task tool).
-- **Skills / mcpServers frontmatter** — not applied to team teammates; they load from project and user settings like regular sessions. The `superRA:using-superRA` master skill reaches them via the SessionStart-injection path, not via per-teammate frontmatter.
+- **Skills / mcpServers frontmatter** — not applied to team teammates; they load from project and user settings like regular sessions. Teammates pick up `superRA:using-superra` the same way as any regular session — via the `Skill` tool — since there is no per-teammate frontmatter preload.
 - **Shutdown can be slow** — teammates finish current request / tool call before shutting down.

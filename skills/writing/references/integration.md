@@ -2,7 +2,7 @@
 
 > This reference is the single source of truth for writing-vertical integration discipline at the `integration` stage. The implementer walks it as pre-handoff self-check; the reviewer walks it as verification criteria. `[BLOCKING]` items must be fixed to earn APPROVE; `[ADVISORY]` items are suggestions the reviewer MAY flag as MINOR and do not block APPROVE. The verdict protocol is the same as `writing/SKILL.md` §Three Concurrent Disciplines — two verdicts (APPROVE / REVISE).
 
-Generic cross-cutting code-integration concerns (naming consistency, utility reuse, PR-friendly diffs, documentation currency) live in `refactor-and-integrate/references/codebase-integration.md`. Load both files at the `integration` stage when the writing work is embedded in a larger codebase — this one owns the writing-specific gates; the generic file owns the cross-cutting ones.
+Generic cross-cutting code-integration concerns (convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff) live in `superRA:refactor-and-integrate`. Load both at the `integration` stage when the writing work is embedded in a larger codebase — this one owns the writing-specific gates; the generic skill owns the cross-cutting ones.
 
 ## Scope of writing integration
 

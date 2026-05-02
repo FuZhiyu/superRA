@@ -106,7 +106,7 @@ When you think a structural change would help:
 - **`AskUserQuestion`** — use when the harness exposes it (Claude Code does). Forces a structured response and logs the decision.
 - **Plain text question in chat** — fallback when the tool is unavailable.
 
-Per `superRA:using-superRA` §Universal Principles #4 and `handoff-doc` §User Decisions Log: **every user decision at an escalation point is logged into `PLAN.md` before you act on it.** If the workflow mode skips `PLAN.md` (direct-edit), the decision is preserved in the commit message and chat transcript.
+Per `superRA:handoff-doc` §User Decisions Log: **every user decision at an escalation point is logged into `PLAN.md` before you act on it.** If the workflow mode skips `PLAN.md` (direct-edit), the decision is preserved in the commit message and chat transcript.
 
 ## Framing proposed structural changes
 

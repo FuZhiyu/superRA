@@ -1,6 +1,6 @@
 # Rich content: figures, math, tables, file references
 
-Load this reference whenever you are writing markdown that contains figures, LaTeX math, tables, or links to code files. The rules here apply at every stage — Stage 1 dev log, Stage 2 permanent record, standalone report.
+Load when writing markdown that contains figures, LaTeX math, tables, or links to code files. Rules apply at every stage.
 
 ## Figures
 
@@ -12,7 +12,7 @@ The target `attachments/` directory is supplied by the caller, not hard-coded in
 - Stage 2 permanent `RESULTS.md` → `attachments/` next to the relocated file.
 - Standalone report → `./attachments/` next to the report file.
 
-Refer to the target as `ATTACH_DIR` in your head; substitute the actual path when embedding.
+If the invoking skill did not specify a directory, default to `attachments/` next to the output file. Refer to the target as `ATTACH_DIR` in your head; substitute the actual path when embedding.
 
 ### Create the directory
 

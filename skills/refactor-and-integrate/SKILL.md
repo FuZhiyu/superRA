@@ -1,108 +1,97 @@
 ---
 name: refactor-and-integrate
-description: Utility skill (any phase). Use when creating drift tests, refactoring analysis code for codebase integration, or writing clean merge integration commits. Indexes the three gated checklists — Drift-Test Integrity, Codebase Integration, Merge Quality — carried in stage-scoped references and shared by implementer (self-check before commit) and reviewer (verification). Standalone-invokable — usable outside the integration phase for any refactoring task. Dispatched implementer/reviewer subagents load this skill when their Stage is `drift-test`, `integration`, or `merge` (per `superRA:using-superRA` §Skill-Load Manifest).
+description: Utility skill (any phase). Use when refactoring analysis code for codebase integration, reviewing post-sync branch quality, auditing project docs, pruning a governing diff to minimum net diff, or using task-local Sync impact context as justification evidence. Carries the Codebase Integration checklist shared by implementer (self-check before commit) and reviewer (verification). Standalone-invokable outside the full integration workflow for any refactor that needs consistent quality gates.
 ---
 
 # Refactor and Integrate
 
-Utility skill carrying the domain knowledge for three closely related tasks in the INTEGRATE phase:
+Tool skill for **codebase coherence**: convention fit, utility reuse, Project Doc Audit, PR-friendly diffs, and minimum net diff against the governing baseline.
 
-1. **Creating drift tests** that guard key results from unintended changes during refactoring or future modifications.
-2. **Refactoring analysis code** for codebase integration — making the code fit the host project's conventions, utilities, and style without losing data discipline or results.
-3. **Writing clean merge integration commits** that preserve intent and research integrity when combining branches.
+Techniques:
 
-This is a utility skill, not a workflow skill. Workflow skills (`superRA:integration-workflow`) own procedural choreography — when to dispatch agents, how to sequence phases, how to handle iteration loops. This skill owns the content.
+1. **Codebase-fit refactoring** — align names and utility reuse with host conventions, walk up project docs, and keep diffs reviewable.
+2. **Governing-diff pruning** — minimize the surviving diff against the caller's baseline or range.
+3. **Sync impact as evidence** — when task-local Sync impact exists, use it to justify existing post-sync hunks; it does not create new refactor targets.
 
-**This body describes principles only.** The gated checklists — with `[BLOCKING]` / `[ADVISORY]` severity markers, tuned Red Flags, escalation lists, worked examples, and operational procedures — live in the three references. The references are **required loads**, named per Stage in `superRA:using-superRA` §Skill-Load Manifest. The implementer walks the reference checklists as self-check before commit; the reviewer walks the same checklists as verification. Same content, two perspectives — no parallel review-only document, no duplication.
-
-**Used by:**
-- Dispatched `superRA:implementer` agents during drift-test creation, refactoring, and merge proposal stages
-- Dispatched `superRA:reviewer` agents during drift-test review, integration review, and merge review stages
-- Anyone invoking this skill directly for an ad-hoc refactoring task outside the formal integration workflow
-
-## Three Concurrent Disciplines — Principles
-
-The three disciplines are **concurrent, not sequential**. A single integration pass typically exercises at least two of them, and the checklists compose: load every reference whose stage your task touches.
-
-### 1. Drift-Test Integrity
-
-**Purpose.** Guard every user-confirmed key result with a test that (a) is calibrated on economic reasoning, (b) runs independently of the full pipeline, (c) has been red-green verified, and (d) is never silently weakened or bumped when a refactor or merge makes it fail.
-
-**Full checklist + how-to:** `references/drift-test-quality.md` (coverage, tolerance calibration worked examples, independence, clarity/robustness, red-green cycle, test-format conventions, cross-cutting Red Flags). Loaded whenever `Stage:` is `drift-test`, or when any task creates, modifies, or assesses a drift test.
-
-### 2. Codebase Integration
-
-**Purpose.** Make the analysis fit the host codebase — naming, utilities, diff shape, debug-artifact cleanup, documentation currency — without sweeping in unrelated cleanup and without silently deciding methodology questions (those escalate to the researcher). Walk up every file in the diff to repo root and update stale module-level docs.
-
-**Full checklist + how-to:** `references/codebase-integration.md` (code integration, handling-inconsistencies decision tree, PR quality, documentation currency, Project Doc Audit walk-up algorithm). Loaded whenever `Stage:` is `integration`. For data-analysis work, `econ-data-analysis/references/integration.md` is the primary reference and this file is the generic cross-cutting companion; load both.
-
-### 3. Merge Quality
-
-**Purpose.** Preserve incoming intent *and* current-branch work across a merge with no silent result changes and no mechanical ours/theirs on research-meaningful conflicts. Structure every merge as a two-commit pair: mechanical first, integration second. Escalate Tier 3 conflicts (variable definitions, sample construction, econometric specifications, data processing, results) to the researcher and log the decision before committing the resolution.
-
-**Full checklist + how-to:** `references/merge-quality.md` (intent preservation, research integrity, two-commit templates, Tier 3 escalation procedure + Never-list, integration-map format, verification, data discipline). Loaded whenever `Stage:` is `merge`.
+For data-analysis integration, also load `econ-data-analysis/references/integration.md`.
 
 ---
 
-## The Load-Bearing Top Item
+## Minimum Net Diff
 
-Every round of drift-test creation, refactoring, and merge integration shares one top-level constraint that sits above all three checklists:
+- `[BLOCKING]` **Minimum net diff to the governing baseline.** Touch only what approved task objectives, codebase-coherence checklist items, handoff-doc coherence, documentation currency, logged user decisions, or supplied Sync impact context justify. No unrelated cleanup, broad reformatting, defensive edits, speculative abstractions, or helper extraction that is not required by the current task.
 
-- `[BLOCKING]` **Minimum net diff to merge base.** Cumulative refactor across all integration rounds touches only what drift-test preservation, convention fit, handoff-doc coherence, and documentation demand. No unrelated cleanup, no speculative abstractions, no "while I'm here" edits. Implementer runs `git diff <merge-base>..HEAD` before each commit and reviews the cumulative diff; reviewer computes the same diff as evidence.
+Use `git diff <BASE_HEAD_SHA>..HEAD` in normal integration-workflow after Sync, or the caller-provided range when a dispatch explicitly overrides the baseline. In standalone refactor work, use the caller's governing git range or touched-file diff.
 
-This item frames every checklist item below it — any hunk in the cumulative diff must be justifiable against one of the three disciplines' checklists. A hunk not tied to drift-test integrity, codebase integration, or merge quality is out of scope and must be reverted or re-justified. Enforced by the Implementer Self-Check below.
+Review the governing diff line by line. Any hunk without a current justification is out of scope; revert it or record the justification before return. A no-change diff still requires the Final Diff Self-Check trail below.
 
----
+## Project Doc Audit
 
-## Scope by Integration Status
+Integrate-step refactoring and integration review both cover project-level docs reachable from the diff.
 
-Refactor implementer and verify reviewer operate only on tasks whose `Integration status` is unset or `REVISE`. `APPROVED`-integration tasks are out of scope — do not walk their code, do not touch their output files except through legitimate merge resolution. The dispatch's `Task:` or `Tasks in scope:` field names the explicit in-scope list.
+For every file in the diff `<BASE_SHA>..<HEAD_SHA>`, walk up from its directory to the repo root and collect every `CLAUDE.md` / `AGENTS.md` / `README.md` encountered. Always also check the repo-root `README.md` and root `CLAUDE.md`.
 
-This mirrors the DAG cascade rule on `Review status:` and `Integration status:` — see `handoff-doc/references/plan-anatomy.md` (lines 178–179) for the cascade semantics. Without scoping, a second integration pass either redoes already-approved work or lets the reviewer flag already-APPROVED tasks, which violates the Minimum-net-diff top item above.
+For each doc in the set:
 
----
+- update stale claims contradicted by the diff;
+- add new patterns at the nearest appropriate level;
+- link rather than duplicate parent-level content;
+- create a missing `CLAUDE.md` + relative `AGENTS.md -> CLAUDE.md` pair for new module directories.
 
-## Reviewer Verdict Protocol
+Leave docs above the affected area alone unless they are stale.
 
-Every reviewer walks top-to-bottom through the Minimum-net-diff top item plus every discipline's checklist that the task touches. **Never halt on a failure** — one comprehensive pass every time; halting early forces a full re-review on the next pass, and reviewer dispatches are costly.
+## Sync Impact Context
 
-Two verdicts:
+When PLAN.md task blocks contain `**Sync impact:**`, use those fields as evidence for why a hunk already exists in the governing diff. Follow the referenced Sync Map cluster only when needed to evaluate that hunk.
 
-- **APPROVE** — no `[BLOCKING]` findings.
-- **REVISE** — at least one `[BLOCKING]` finding.
+Sync impact justifies existing hunks only when it is already present; it does not create new refactor targets or excuse unrelated codebase changes.
 
-**Handling dependent findings.** When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first (e.g., "couldn't fully assess the refactor until the drift tests are passing"), say so in plain prose alongside the finding. No separate verdict, no formal tag.
+## Final Diff Self-Check
 
-**Re-review after REVISE.** Implementer fixes all `[BLOCKING]` findings and re-dispatches. Reviewer then (1) verifies each fix is correct, and (2) re-checks any finding the first pass annotated as depending on an upstream fix. Everything else is accepted from the first pass — no third full walk. APPROVE once all `[BLOCKING]` findings are resolved.
+Implementers run this immediately before every return or commit, including no-change cases:
 
----
+1. **Recompute the governing diff.** In integration-workflow after Sync, use `git diff <BASE_HEAD_SHA>..HEAD`. In standalone refactor work, use the caller-provided git range or touched-file diff.
+2. **Leave a compact trail.** In the assigned PLAN.md task block when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without PLAN.md, put the same line in the status return.
+3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
+4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `Integration status: APPROVED`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
+5. **Prune or record.** Any hunk without a current justification is out of scope. Revert it, or record the underlying need where the reviewer can verify it.
+6. **Respect the dispatch scope.** Refactor implementer and integration reviewer operate only on tasks whose `Integration status` is unset or `REVISE` and tasks explicitly reopened by accepted review findings.
 
-## Implementer Self-Check (Before Every Commit)
+The integration reviewer recomputes the same governing diff and compares it with the self-check trail. A missing or stale trail is `[BLOCKING]`, including when no code changed.
 
-The Minimum-net-diff top item is enforced by a concrete pre-commit procedure. Run it before every commit on the integration branch:
+## Checklist
 
-1. **Compute the cumulative diff.** `git diff <merge-base>..HEAD` where `<merge-base>` is the merge base the integration is targeting (e.g., `$(git merge-base HEAD main)` or whatever the workflow specifies).
-2. **Review every hunk** against the loaded references' checklists. For each hunk, ask: *which `[BLOCKING]` or `[ADVISORY]` item justifies this change?* A hunk may be tied to drift-test preservation, codebase-convention fit, handoff-doc coherence, documentation currency, or an explicit item in the integration map.
-3. **Any hunk without a justification is out of scope.** Revert it, OR re-justify it by adding the underlying need to the integration map (and the commit message) so the reviewer can check the same evidence.
-4. **Stage only files you touched this turn** (per `superRA:using-superRA` §Commit Hygiene); `git diff --cached` before `git commit`.
+Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` items may be flagged as MINOR.
 
-The verify reviewer runs the same `git diff <merge-base>..HEAD` as evidence and walks each hunk through the same reference checklists. One source of truth, two perspectives.
+**Code integration:**
 
----
+- `[BLOCKING]` **Final Diff Self-Check present and fresh:** The trail names the governing command/range, records no-change outcomes or surviving-change classes, and gives file/hunk justification for suspicious cases.
+- `[BLOCKING]` **Governing-diff pruning performed line by line:** Every surviving hunk ties to an approved task objective, supplied Sync impact context, logged user decision, or checklist requirement; unrelated cleanup, formatting churn, and stale branch-side restorations are removed.
+- `[BLOCKING]` **Base-current deletions / relocations honored by default:** Restorations exist only when an approved task objective, supplied Sync impact context, logged user decision, or checklist requirement requires them.
+- `[BLOCKING]` **Naming consistency:** variable names, function names, and file names follow codebase conventions.
+- `[BLOCKING]` **Utility usage:** existing utility functions are used where appropriate instead of hand-rolled equivalents.
+- `[BLOCKING]` **No debug artifacts:** no leftover debug prints, commented-out experiments, or temporary variables.
+- `[BLOCKING]` **Minimal existing-file changes:** modifications outside the analysis scope are minimal and justified.
+- `[ADVISORY]` **Code simplification:** redundant code removed and repeated patterns consolidated only where the task or codebase-coherence review demanded the touch.
+- `[ADVISORY]` **PR-friendly diffs:** avoid unnecessary reformatting that obscures substantive changes.
 
-## Dispatch Convention
+**Handling inconsistencies:**
 
-Dispatches follow the canonical template in `superRA:agent-orchestration` §Dispatch Templates. The Skill-Load Manifest (`superRA:using-superRA`) names this skill and its reference files on the `drift-test`, `integration`, and `merge` rows — the dispatch prompt does not restate `Skills:` or reference lines. The agent loads this skill, receives the base directory, reads the manifest-named reference, and walks the gated checklist in that reference alongside the domain skill (for data analysis: `superRA:econ-data-analysis`).
+- `[BLOCKING]` **Methodological questions escalated, not resolved.** Different control variable sets, variable definitions, and sample filters are research decisions.
+- `[ADVISORY]` **Clear convention exists:** follow it. **Ambiguous or conflicting conventions:** use judgment and document the choice.
 
-Some tasks cross stages (a refactor during a merge; a drift-test review that flags a refactor-caused sign-flip). Load every reference whose stage your task touches — the checklist sections compose.
+**PR quality:**
 
----
+- `[BLOCKING]` **Focused diff:** changes are limited to analysis scope.
+- `[BLOCKING]` **Self-contained:** the analysis can be understood from the code and documentation.
+- `[ADVISORY]` **Clean commits:** commit history is logical and messages are descriptive.
 
-## Integration
+**Documentation currency:**
 
-**Used by workflow skills:**
-- **`superRA:integration-workflow`** — Dispatches drift-test creation and review (`references/drift-test-quality.md`) across Phase A; the Phase B recon, unified-implementer, and verify-reviewer dispatches (`references/codebase-integration.md`, `references/merge-quality.md`) for the iterative sync+refactor loop; and Phase D pipeline verification — the Phase D→B re-entry trigger on main advancement then runs the Phase B drift-test + verify-review dispatches (`references/codebase-integration.md`) again.
-- **`superRA:semantic-merge`** — Dispatches merge proposer (`references/merge-quality.md`) and merge reviewer (`references/merge-quality.md`) for tier classification and conflict resolution.
+- `[BLOCKING]` Module `CLAUDE.md` / `AGENTS.md` / `README.md` files do not reference files, functions, outputs, or methodology that no longer exist or have been superseded.
+- `[BLOCKING]` Every output file mentioned in documentation is produced by the current code.
+- `[BLOCKING]` Dates and version claims reflect the current commit.
 
-**Auto-loaded alongside:**
-- **`superRA:econ-data-analysis`** — Data discipline (loaded by `implementer` / `reviewer` agents whenever the stage involves analysis code, per the `superRA:using-superRA` §Skill-Load Manifest); the `implementation` row also loads `econ-data-analysis/references/notebook-format.md` for notebook formatting.
+**Project Doc Audit:**
+
+- `[BLOCKING]` The walk-up audit above was executed for every file in the governing diff; stale claims were updated, new patterns were added at the correct level, parent-level content was not duplicated, missing module guidance pairs were created for new module directories, and docs above the affected area were left alone unless stale.

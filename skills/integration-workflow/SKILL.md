@@ -1,465 +1,373 @@
 ---
 name: integration-workflow
-description: Use when an analysis is code-complete and reproducibility-verified and the user has chosen to merge back or open a PR; when you need drift tests to guard key results before they touch main; when the analysis branch needs to be brought up to date with main and refactored to fit codebase conventions (a single unified sync + refactor pass targeting one minimum-net-diff state); when the Stage 1 dev-log RESULTS.md still needs to be matured into its permanent, fact-checked, co-located form; when PLAN.md needs final disposition; when the actual local merge or PR push + worktree cleanup still needs to happen. Triggers include "prepare this for merge", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "get this ready to PR", "merge this back", "open the PR", "finish this analysis", or the transition from `execution-workflow`'s completion menu (options 1 or 2). Sits at the INTEGRATE phase — the final phase of the superRA workflow, covering drift tests through PR/merge.
+description: Requires `superRA:using-superra` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need protection before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when RESULTS.md needs to mature into its permanent record; when PLAN.md needs final disposition; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "protect key results", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "open the PR", or the transition from `implementation-workflow`'s completion menu.
 ---
 
 # Integration Workflow
 
-Workflow skill for the **INTEGRATE** phase of the superRA workflow. Owns the full finishing sequence that takes a reproducibility-verified analysis branch to a merged state on main: drift-test creation (Phase A), unified sync-with-main + refactor (Phase B, iterative), documentation maturation + PLAN.md disposition (Phase C), and final local merge or PR push + cleanup (Phase D).
+**First, load `superRA:using-superra` if not already loaded.**
 
-Assumes execution-workflow has already verified reproducibility and the user has chosen Option 1 (merge locally) or Option 2 (push + PR). If you find yourself running reproducibility checks or presenting the 4-option menu, something is wrong: that work belongs in execution-workflow.
+Workflow skill for the **INTEGRATE** phase of the superRA workflow. It takes a reproducibility-verified analysis branch through five steps:
 
-**Core principle.** Tests guard results. A single unified diff against the merge base — produced by one two-commit sync+refactor pass per round — carries both the main update and every codebase-fit change; minimum-net-diff is load-bearing (see `superRA:refactor-and-integrate`). Nothing advances without reviewer APPROVE at every gate (drift-test review, verify review, doc review). Non-trivial merges with main use `superRA:semantic-merge` in delegated mode; Tier 1 clean merges take the fast-forward shortcut (Phase B Step 2).
+```
+Protect   -> protect key results (default: drift tests)
+Sync      -> bring the branch onto the current base via semantic-merge
+Integrate -> refactor with Sync context and pass integration review
+Document  -> mature RESULTS.md and dispose of PLAN.md
+Finish    -> final freshness check, PR or fast-forward, and cleanup
+
+Any step -> planning-workflow §User Feedback and Changing Plans
+           when scope, methodology, task structure, or APPROVED status changes materially
+```
 
 **Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
 
-## Phase Map
+## Stop Points
 
-```
-Phase A — Drift Test Creation
-   ↓
-Phase B — Integrate (sync + refactor, iterative)
-   ↓               ↑  (re-enter B when main moves again, or when
-Phase C — Docs  ───┘   verify reviewer triggers a new round)
-   ↓               ↑
-Phase D — Final merge / PR / cleanup
-                   ↑
-         Anywhere ─┴─→  `planning-workflow §Changing Plans`
-                        (substantive restructure: task add/remove/combine,
-                         DAG flip, APPROVED invalidation; orchestrator
-                         proposes, researcher decides)
-```
+The main agent's Workflow Frontier Resolver chooses where to enter this workflow. Once entered, run the selected step's local gates exactly; do not redo task-local approvals outside the affected frontier simply because a rollup milestone was unchecked.
 
-**Re-entry is the normal case.** `B → A` when a new task is added mid-integration. `B → B` when main advances and needs another sync. `C → B` when doc-reviewer surfaces a code issue. `D → B` when the semantic-merge in Phase D reveals main moved again. Any phase can escalate to `planning-workflow §Changing Plans`.
+Legitimate stop points (log every answer per `superRA:handoff-doc` §User Decisions Log **before** acting):
 
-**Autonomy.** Between stop points, run on your own power — do not check in after each phase, do not re-confirm a reviewer's APPROVE. Legitimate stop points:
-
-- Phase A Step 2 — drift-test candidate confirmation
-- Phase B — batched research-meaningful decisions surfaced by the recon reviewer (see Phase B Step 2b)
-- Phase B / Phase D — meaningful drift after refactor or post-merge (see `superRA:refactor-and-integrate` `references/drift-test-quality.md`)
-- Phase C Step 1 — Stage 2 RESULTS.md relocation target when project guidance is silent
-- Phase C Step 4 — PLAN.md disposition
-
-See `superRA:using-superRA` §Universal Principles (#4) for the full autonomy contract, and `superRA:handoff-doc` §User Decisions Log for how every answer must land in PLAN.md before the workflow acts on it.
+- **Protect:** key-result protection confirmation.
+- **Sync:** target base confirmation when no prior decision records it; intent-changing conflicts surfaced by `semantic-merge`.
+- **Integrate:** meaningful drift after sync or refactor; user-owned choices surfaced by the integration reviewer.
+- **Document:** RESULTS.md permanent location when project guidance is silent; PLAN.md disposition.
+- **Finish:** hard blockers only, such as target base advancing again after Integrate.
 
 ## Dispatch Convention
 
-Every dispatch in this skill uses the canonical template in `superRA:agent-orchestration` §Dispatch Templates — required fields first, `Additionally:` anchor last (strictly additive steering only). The Skill-Load Manifest in `superRA:using-superRA` is the single source of truth for what each `Stage:` loads — dispatches do not restate skill/reference loads, do not paraphrase PLAN.md, and do not repeat checklist items the agent already reads. REVISE adjudication follows `superRA:agent-orchestration` §Handling Reviewer Feedback.
+**Load `superRA:agent-orchestration` before writing any dispatch prompt.** Task-scoped dispatches use the Stage values in `superRA:using-superra` §Skill-Load Manifest; do not restate load lists in prompts.
 
-The checklist discipline for every implementer self-check and every reviewer walk in this workflow lives in `superRA:refactor-and-integrate` (principles in body; `[BLOCKING]` / `[ADVISORY]` items in the stage-scoped references).
+Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the relevant `semantic-merge` mode reference.
 
-## Phase A — Drift Test Creation
+## Protect
 
-Drift tests guard key results from unintended changes during Phase B refactoring, Phase D semantic-merges, and any future modification. They are the safety net that makes everything downstream safe.
+Result protection guards key results during Sync, Integrate, Finish, and future work. Drift tests are the current/default protection mechanism. For the writing vertical, "key results" are the manuscript artifacts; protection is satisfied by document-build success plus outline stability across the merged state — see `skills/writing/references/integration.md`.
 
-**Always run the full drift-test suite on every integration pass**, regardless of re-entry scope. Authoring new drift tests is scoped to tasks with `**Integration status:** ≠ APPROVED` (plus orchestrator-declared related tasks per `planning-workflow §Changing Plans`); running the suite is not.
-
-### Writing-vertical branch
-
-**For writing-only tasks (no numerical results produced), Phase A's drift-test gate is replaced by `document build + outline-stability check`.** Extract the document outline (section / subsection headings) from the base branch and the integrating branch; compare; any unauthorized structural changes are flagged per `writing/references/integration.md` §Gate 2 (Outline stability). Build the document on the integrating branch and confirm it compiles clean per `writing/references/refactor-and-compile.md` §Compile. No `[BLOCKING]` drift tests are authored. If the writing task also produced numbers (e.g., a methodology revision that re-ran analysis and pulled new coefficients into the prose), drift tests still apply for those numbers per the data-analysis Phase A flow. The full pre-merge writing checklist (consistency dimensions, voice preservation, scope audit) runs in Phase B via `writing/references/integration.md`.
+**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `**Integration status:**` unset or not `APPROVED` plus orchestrator-declared related tasks from `planning-workflow §User Feedback and Changing Plans`; running the suite is not scoped.
 
 ### Steps
 
-1. **Extract key results from RESULTS.md.** Economic reasoning identifies main findings — not every intermediate number.
-
-2. **Confirm coverage with the researcher.** Legitimate stop point. Use `AskUserQuestion` (plain text if unavailable):
-   ```
-   These results seem like the key findings to protect with drift tests:
+1. **Extract key results from RESULTS.md.** Protect main findings, not every intermediate number.
+2. **Confirm coverage with the researcher.** Stop point:
+   ```text
+   These results seem like the key findings to protect:
    - [result 1: description and value]
    - [result 2: description and value]
 
    Which should be protected? Any to add or remove?
    ```
-   Log per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching.
+3. **Dispatch protection-creator.** `Stage: protection`, canonical implementer template.
+4. **Dispatch protection-reviewer.** `Stage: protection`, canonical reviewer template. Iterate REVISE -> fix -> narrow re-review until APPROVE.
+5. **Run tests on the current branch.** If new tests fail on existing code, fix the tests.
+6. **Commit tests and handoff docs.**
+7. **Flip `Drift tests created`** in PLAN.md §Workflow Status once all confirmed key results are protected and the full drift-test suite passes.
 
-3. **Dispatch test-creator.** Stage `drift-test`, canonical shape.
+## Sync
 
-4. **Dispatch test-reviewer.** Stage `drift-test`, canonical shape. Iterate REVISE → fix → re-review until APPROVE (narrow re-review per reviewer protocol).
+Sync brings the analysis branch onto the current base before refactor starts. It is serialized: one generic sync author followed by one generic sync reviewer, no parallelization.
 
-5. **Run tests — green baseline.** All drift tests pass on current code. If they fail on existing code, the tests are wrong — fix them.
+### Step 1: Resolve the target base
 
-6. **Commit test files.**
-   ```bash
-   git add tests/
-   git commit -m "add drift tests for key analysis results"
-   ```
+Resolve and record a candidate base ref from prior `## Decisions` or git. This is a branch/ref name, not a merge-base SHA:
 
-7. **Flip the `Drift tests created` milestone** in `PLAN.md §Workflow Status` once every task has `**Integration status:** APPROVED` for drift-test coverage. Commit the doc edit before entering Phase B.
-
-## Phase B — Integrate (Sync + Refactor, Iterative)
-
-**Single unified pass targeting one final state.** See `superRA:refactor-and-integrate` `references/merge-quality.md` for the two-commit structure (Commit 1 mechanical merge; Commit 2 unified integration) and why a single cumulative diff is load-bearing.
-
-**Re-enterable.** If main advances again before Phase D, or if a later phase surfaces a code issue, loop back to Phase B Step 1 and run another unified pass.
-
-**Plan-change trigger.** If the recon reviewer (Step 1) or verify reviewer (Step 4) surfaces a substantive restructure finding — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation — escalate via `planning-workflow §Changing Plans` (orchestrator authors the restructure proposal; researcher decides) before continuing.
-
-### Internal Structure — Recon-Driven, Two Shortcut Axes
-
-```
-1. Recon reviewer  →  per-task integration review-notes in PLAN.md + Tier classification
-2. Orchestrator    →  flip Integration status; evaluate shortcut axes
-3. Batched AskUserQuestion  →  collect research-meaningful decisions (when needed)
-4. Unified implementer  →  two commits: (1) mechanical merge, (2) unified refactor
-5. Verify reviewer  →  cumulative diff across in-scope tasks only
+```bash
+if git rev-parse --verify --quiet origin/main >/dev/null; then
+  BASE_REF=origin/main
+elif git rev-parse --verify --quiet origin/master >/dev/null; then
+  BASE_REF=origin/master
+else
+  BASE_REF=
+fi
 ```
 
-Two **independent** shortcut axes govern Phase B path length:
+If no prior decision records the base, ask:
 
-- **Tier axis** (from recon's `semantic-merge` trial-merge) gates the **merge path**. Tier 1 → fast-forward only; follow-ups do NOT load `semantic-merge`. Tier 2/3 → follow-ups load `semantic-merge` via the canonical `Skills:` dispatch field.
-- **Annotation axis** (count of tasks carrying new integration review-notes) gates the **refactor path**. Zero annotations → skip Steps 2b/3/4 entirely. Non-zero → dispatch the unified implementer + verify reviewer scoped to the annotated task list.
-
-**Combined shortcuts:**
-- Tier 1 + zero annotations → Phase B = `git merge --ff-only` only; terminates.
-- Tier 1 + annotations → fast-forward + refactor-only implementer + verify reviewer (no `semantic-merge` load on follow-ups).
-- Tier 2/3 regardless of annotations → full flow with `semantic-merge` loaded on follow-ups.
-
-### Step 1: Dispatch the recon reviewer
-
+```text
+This integration will sync the analysis branch against <base-ref>.
+Is that correct, or did it split from a release branch, co-authored track,
+or sibling analysis branch?
 ```
+
+Log the confirmed `BASE_REF` before fetching, computing anchors, or dispatching.
+
+### Step 2: Compute sync anchors
+
+Fetch the confirmed base when it is a remote-tracking ref and record two anchors from that same ref:
+
+```bash
+REMOTE=${BASE_REF%%/*}
+REMOTE_BRANCH=${BASE_REF#*/}
+if git remote get-url "$REMOTE" >/dev/null 2>&1; then
+  git fetch "$REMOTE" "$REMOTE_BRANCH:refs/remotes/$REMOTE/$REMOTE_BRANCH"
+fi
+PRE_SYNC_BASE_SHA=$(git merge-base HEAD "$BASE_REF")
+BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
+```
+
+- `PRE_SYNC_BASE_SHA` is evidence for incoming intent: `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
+- `BASE_HEAD_SHA` is the post-sync governing baseline for Integrate: `BASE_HEAD_SHA..HEAD`.
+
+### Step 3: Dispatch the sync author when needed
+
+If `git merge-base --is-ancestor "$BASE_HEAD_SHA" HEAD` succeeds, the branch is already synced. Record a no-op in the workflow notes if useful and proceed to Integrate.
+
+Otherwise dispatch one generic sync author:
+
+```text
+Agent(generic):
+  Stage: sync
+  Role: sync author
+  References:
+    - semantic-merge/references/workflow-sync-author.md
+
+  Task: Sync this analysis branch with <base-ref>
+  Base branch: <base-ref>
+  PRE_SYNC_BASE_SHA: <PRE_SYNC_BASE_SHA>
+  BASE_HEAD_SHA: <BASE_HEAD_SHA>
+  Incoming range: <PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>
+
+  Use semantic-merge workflow sync author mode. Land the merge commit plus
+  any propagation commits needed to reach semantic coherence — `SKILL.md
+  §Semantic Coherence Checklist §Scope boundary` is the stopping rule. Write branch-level PLAN.md `## Sync
+  Map` only when there is material overlap, a conflict, a user decision,
+  sync-review carryover, or post-sync context. Add compact task-local
+  `**Sync impact:**` annotations to affected task blocks. Defer codebase
+  coherence — convention fit, utility reuse, PR-friendly diffs, Project Doc
+  Audit walk-up, minimum net diff — to `refactor-and-integrate` via Integrate.
+  Return the full sync commit chain, Sync Map status, task-local Sync impact
+  annotations, checks run, and codebase-review context recorded.
+```
+
+If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision is required, the orchestrator asks the user, logs the decision, commits the log entry, and re-dispatches the sync author with the decision context.
+
+### Step 4: Dispatch the sync reviewer
+
+Before Integrate begins, dispatch one generic sync reviewer:
+
+```text
+Agent(generic):
+  Stage: sync
+  Role: sync reviewer
+  References:
+    - semantic-merge/references/workflow-sync-reviewer.md
+
+  Task: Review the semantic sync with <base-ref>
+  Base branch: <base-ref>
+  PRE_SYNC_BASE_SHA: <PRE_SYNC_BASE_SHA>
+  BASE_HEAD_SHA: <BASE_HEAD_SHA>
+  Incoming range: <PRE_SYNC_BASE_SHA>..<BASE_HEAD_SHA>
+  Sync commits: <MERGE_COMMIT_SHA>[, <PROPAGATION_OR_DOC_SHAS>...]
+
+  Use semantic-merge workflow sync reviewer mode. Verify anchors, incoming
+  intent, current-branch intent, conflict resolution, user-decision logging,
+  Sync Map completeness, task-local Sync impact coverage, and scope boundary.
+  Record sync-review status and notes in PLAN.md `## Sync Map` when a map
+  exists or when review finds a material issue. Return APPROVE or REVISE.
+```
+
+On REVISE, adjudicate sync-review findings per `superRA:agent-orchestration` §Handling Reviewer Feedback, re-dispatch the sync author for accepted items, then re-dispatch the sync reviewer. Integrate starts only after sync review APPROVES.
+
+## Integrate
+
+Integrate is the post-sync quality gate. It uses task-local `**Sync impact:**` annotations and referenced `## Sync Map` clusters as context for the approved post-sync diff, fits the code to the host project, audits project docs, and verifies the surviving diff against the current base.
+
+**Governing diff:** `git diff BASE_HEAD_SHA..HEAD`. Do not use the old merge base for minimum-net-diff review after Sync.
+
+### Step 1: Run the full drift-test suite
+
+Run the full suite after Sync and before refactor. Failing drift tests block Integrate until classified per `result-protection/references/drift-test-quality.md`.
+
+### Step 2: Dispatch the integration reviewer
+
+```text
 Agent(subagent_type: "superRA:reviewer"):
   Stage: integration
-  Task: Phase B recon — per-task integration review + Tier classification
-  Git range: <merge-base>..HEAD   (analysis branch vs target base branch tip)
-  Skills: superRA:semantic-merge
+  Task: Post-sync integration review
+  Git range: <BASE_HEAD_SHA>..HEAD
+  BASE_HEAD_SHA: <BASE_HEAD_SHA>
+  Sync context: task-local `**Sync impact:**` fields plus PLAN.md ## Sync Map, if present
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    recon pass — do not refactor. Run a trial `semantic-merge` against
-    the base branch to produce a Tier classification (1 / 2 / 3); log
-    the Tier as a one-line entry under §Decisions for this integration
-    pass. For every APPROVED-integration task whose outputs need
-    codebase-fit refactor, drift-test update, handoff-doc coherence
-    fix, or merge-induced semantic adaptation, append a per-task
-    integration review-notes blockquote with [BLOCKING] / [ADVISORY]
-    items. Tasks needing no changes get no annotation.
+  Additionally: read task-local Sync impact annotations and referenced Sync Map clusters as context,
+    then review `git diff <BASE_HEAD_SHA>..HEAD`.
+    For every touched or Sync-impact-affected task, either set
+    `Integration status: APPROVED` or write task-local review notes and
+    set `Integration status: REVISE`. Findings should cover minimum
+    surviving branch delta, codebase fit, project-doc audit, drift-test
+    implications, and handoff-doc coherence. Do not recreate incoming-intent
+    research or re-review semantic coherence already approved by sync review.
 ```
 
-The recon reviewer follows the standard reviewer protocol end-to-end — the distribution of findings into per-task PLAN.md blockquotes is the same mechanism every reviewer uses. The trial-merge happens in a scratch ref that the recon pass does not push; only the Tier classification and the annotations persist.
+### Step 3: Orchestrator adjudication
 
-### Step 2: Orchestrator — flip statuses, evaluate shortcuts
+Read the task-local integration notes. Classify reviewer findings per `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
-After recon commits, the orchestrator reads PLAN.md:
+- Batch all user-owned questions into one stop point.
+- Route substantive plan restructures through `planning-workflow §User Feedback and Changing Plans`.
+- Log user decisions before dispatching fixes.
 
-1. For each task carrying a new integration review-notes blockquote → flip `Integration status: REVISE`. Tasks without annotations stay `APPROVED`. Commit the flips atomically with any §Decisions log additions.
-2. Evaluate the two shortcut axes (Tier from §Decisions log; annotation count from the task blocks):
-   - **Tier 1 + zero annotations** → execute `git merge --ff-only <base-branch>` on the analysis branch; Phase B terminates; proceed to Phase C.
-   - **Tier 1 + annotations** → execute `git merge --ff-only <base-branch>` as Commit 1; skip to Step 3 (refactor-only dispatch, no `Skills: superRA:semantic-merge` on follow-ups).
-   - **Tier 2/3** → proceed to Step 2b, then Step 3 with `Skills: superRA:semantic-merge` on the implementer.
+### Step 4: Refactor loop
 
-### Step 2b: Batched user decisions
+Dispatch implementer(s) for accepted `Integration status: REVISE` items:
 
-Collect every research-meaningful item from recon's per-task blockquotes into a single `AskUserQuestion` call (plain text if unavailable) — one batched stop point rather than interrupting mid-implementation. Include the merge-base target and the Tier classification so the researcher sees the scope at once. Log each answer per `superRA:handoff-doc` §User Decisions Log; commit the PLAN.md edit **before** dispatching the implementer.
-
-**Orchestrator split safety-valve.** If the in-scope task list (tasks flipped to `REVISE`) is large enough that the implementer's projected context exceeds the ~150k threshold in `superRA:agent-orchestration` §Workload Balancing, split into sibling implementers on parallel worktrees per §Concurrent Writers Require Worktree Isolation. Each sibling owns a disjoint slice of the in-scope list; the orchestrator harvests and the verify reviewer walks the combined diff.
-
-### Step 3: Dispatch the unified implementer (two-commit)
-
-```
+```text
 Agent(subagent_type: "superRA:implementer"):
   Stage: integration
-  Task: Phase B unified sync + refactor (two-commit)
-  Tasks in scope: <list of tasks with Integration status: REVISE>
-  Skills: superRA:semantic-merge        # omit when Tier 1
+  Task: Fix integration review items for <task list>
+  Tasks in scope: <tasks with Integration status: REVISE>
+  BASE_HEAD_SHA: <BASE_HEAD_SHA>
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    two-commit structure — Commit 1 is the mechanical merge
-    (`semantic-merge` delegated mode if Tier 2/3; `git merge --ff-only`
-    if Tier 1), Commit 2 is the unified refactor across the in-scope
-    task list. Refuse to refactor code belonging to any task not listed
-    in `Tasks in scope:` — those are APPROVED-integration and out of
-    scope per `refactor-and-integrate` §Scope by Integration Status.
-    <prior-round adjudication notes if re-dispatching>.
+  Additionally: read task-local `**Sync impact:**` and referenced Sync Map clusters as context,
+    address accepted review findings, and run the minimum-net-diff self-check against
+    `git diff <BASE_HEAD_SHA>..HEAD` before each commit. Do not touch
+    tasks outside `Tasks in scope` except where required by an accepted reviewer finding.
 ```
 
-**Between the two commits — drift tests.**
-- **Pass after Commit 1** → proceed to Commit 2.
-- **Fail after Commit 1** → drift from main. Follow `superRA:refactor-and-integrate` `references/drift-test-quality.md` for the adjudication protocol (minor vs meaningful); meaningful drift is a legitimate stop point.
+Re-dispatch the reviewer for narrow re-review plus the branch-wide pruning sweep over `BASE_HEAD_SHA..HEAD`. Iterate until all in-scope tasks are `Integration status: APPROVED` and every surviving hunk is justified by approved objectives, approved semantic-sync context, logged user decisions, or project convention fit.
 
-**After Commit 2 — drift tests again.**
-- **Pass** → return control for Step 4 review.
-- **Fail** → same adjudication protocol.
+### Step 5: Close Integrate
 
-### Step 4: Dispatch the verify reviewer
+Run the full drift-test suite again. When it passes and integration review is APPROVED:
 
-```
-Agent(subagent_type: "superRA:reviewer"):
-  Stage: integration
-  Task: Phase B verify review (unified sync + refactor)
-  Git range: <merge-base>..HEAD   (post-implementer cumulative diff)
-  Tasks in scope: <same list passed to Step 3>
+- remove temporary `## Sync Map` from PLAN.md, if present
+- remove temporary task-local `**Sync impact:**` fields unless a lasting task assumption still belongs in the task block
+- flip `Integrated` in PLAN.md §Workflow Status
+- commit the closeout doc edit
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    walk the cumulative diff restricted to the in-scope task list;
-    refuse to walk APPROVED-integration tasks not in scope per
-    `refactor-and-integrate` §Scope by Integration Status. Raise any
-    out-of-scope hunk as a [BLOCKING] finding against Minimum-net-diff.
-    <prior-round adjudication notes if re-dispatching>.
-```
+## Document
 
-Orchestrator split safety-valve applies here too when the in-scope list is large — sibling reviewers on disjoint slices, orchestrator aggregates verdicts.
+Document matures RESULTS.md from live dev log to permanent record and resolves PLAN.md disposition.
 
-- **APPROVE** → flip the in-scope tasks' `Integration status: APPROVED`. If every task is now APPROVED, flip the `Refactored` milestone in PLAN.md §Workflow Status and proceed to Phase C.
-- **REVISE** → adjudicate per `superRA:agent-orchestration` §Handling Reviewer Feedback. For accepted findings, re-dispatch the implementer (narrow scope — cited fixes plus dependent findings), then re-dispatch this reviewer. Iterate until APPROVE.
+### Step 1: Resolve RESULTS_DIR
 
-If Phase C or D later triggers a new sync+refactor round, uncheck `Refactored` on entry and re-check on the next verify-reviewer APPROVE.
+The matured RESULTS.md lands in the analysis's permanent code folder per project guidance. Read CLAUDE.md, AGENTS.md, and README.md. If guidance is silent, ask:
 
-## Phase C — Documentation Finalization + PLAN.md Disposition
-
-After Phase B APPROVES the unified diff, `RESULTS.md` still needs to mature from dev log to permanent record and `PLAN.md` still needs disposition. This phase gates the RESULTS.md maturation behind a **single implementer–reviewer pair** (doc-writer + doc-reviewer); the orchestrator handles the user-facing decisions (relocation target, PLAN.md disposition) on either side of the pair.
-
-Format discipline for sub-part A (maturation) lives entirely in `superRA:report-in-markdown`. This phase orchestrates — it does not duplicate the rules.
-
-### Step 1: Resolve `RESULTS_DIR` (orchestrator preamble)
-
-The matured `RESULTS.md` lands in the analysis's permanent code folder, **per project guidance**. Read `CLAUDE.md`, `AGENTS.md`, or the project README for the convention. If none exists, legitimate stop point — ask via `AskUserQuestion` (plain text if unavailable):
-
-```
-Stage 2 RESULTS.md needs a permanent location in this project. The matured
-file will be co-located with the analysis code so it travels with it.
+```text
+RESULTS.md needs a permanent location in this project. The matured file
+will be co-located with the analysis code so it travels with it.
 Where should it land?
 
-Suggested: <best guess from the analysis code's location, e.g. analyses/<name>/>
+Suggested: <best guess from the analysis code's location>
 ```
 
-Log per `superRA:handoff-doc` §User Decisions Log **before** dispatching the doc-writer. Define `RESULTS_DIR` = resolved folder; `RESULTS_ATTACHMENTS_DIR = ${RESULTS_DIR}/attachments`. Pass both as dispatch parameters.
+Log the answer before dispatching the doc-writer.
 
-### Step 2: Dispatch the doc-writer
+### Step 2: Dispatch doc-writer
 
-```
+```text
 Agent(subagent_type: "superRA:implementer"):
   Stage: documentation
-  Task: Task N in PLAN.md — Stage 2 RESULTS.md maturation
+  Task: Mature RESULTS.md into permanent record
   RESULTS_DIR: <resolved permanent folder>
   RESULTS_ATTACHMENTS_DIR: ${RESULTS_DIR}/attachments
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    mature RESULTS.md per `final-form.md` §The consolidation pass —
-    four ordered commits (fact-check → restructure → materialize
-    figures → relocate). Land each commit separately so a session
-    interruption is recoverable. In your status return, list which
-    sub-commits landed.
-    <prior-round doc-reviewer feedback if re-dispatching>.
+  Additionally: mature RESULTS.md per `report-in-markdown/references/final-form.md`:
+    fact-check, restructure, materialize figures, and relocate. Land
+    recoverable commits and report which sub-commits landed.
 ```
 
-The doc-writer always re-runs the whole matured doc on every integration pass; the doc-reviewer reviews the diff from the last APPROVED state plus any section a newly-reworked task touches. Per-commit validation and recovery rules live in `superRA:report-in-markdown` `final-form.md`.
+### Step 3: Dispatch doc-reviewer
 
-### Step 3: Dispatch the doc-reviewer
-
-```
+```text
 Agent(subagent_type: "superRA:reviewer"):
   Stage: documentation
-  Task: Task N in PLAN.md — review of matured Stage 2 RESULTS.md
+  Task: Review matured RESULTS.md
   Git range: <BASE_SHA>..<HEAD_SHA>
   RESULTS_DIR: <resolved permanent folder>
 
-  Follow the standard stage-relevant workflow and load
-    relevant skills and documents to proceed. Additionally,
-    <prior-round adjudication notes if re-dispatching>.
+  Additionally: <prior-round adjudication notes if re-dispatching>
 ```
 
-Iterate REVISE → fix → narrow re-review until APPROVE. If a reviewer finding traces back to the analysis code (not the doc), that is a Phase B trigger — re-enter Phase B.
+Iterate REVISE -> fix -> narrow re-review until APPROVE. If a documentation finding traces to analysis code, re-enter Integrate.
 
-**On APPROVE:** flip the `Docs finalized` milestone in `PLAN.md §Workflow Status` (rollup: every task `**Integration status:** APPROVED` and doc-reviewer APPROVED) and commit the doc edit before Step 4. The box flips here, not after disposition — by Step 4 PLAN.md may be moved or removed.
+On APPROVE, flip `Docs finalized` in PLAN.md §Workflow Status and commit before PLAN.md disposition.
 
-### Step 4: PLAN.md disposition (orchestrator)
+### Step 4: PLAN.md disposition
 
-Legitimate stop point. Orchestrator-handled directly — not delegated, because disposition is a user-facing decision.
+Ask the researcher:
 
-By this point `RESULTS.md` has graduated to `${RESULTS_DIR}` and project docs are in sync (audited during Phase B per `superRA:refactor-and-integrate` `references/codebase-integration.md` §Project Doc Audit). `PLAN.md` and the working `results_attachments/` folder are the last Stage 1 scaffolds at the worktree root.
-
-Ask via `AskUserQuestion` (plain text if unavailable). Default suggestion is Option 1:
-
-```
+```text
 PLAN.md is still at the worktree root and needs disposition. RESULTS.md
 has already been matured and committed at ${RESULTS_DIR}, and project
 docs are up to date. Options:
 
 1. Move PLAN.md (and results_attachments/) alongside the matured
-   RESULTS.md at ${RESULTS_DIR} — keeps the prescriptive history with
-   the analysis code (recommended).
+   RESULTS.md at ${RESULTS_DIR}.
 2. Consolidate any plan context into existing project documentation,
    then delete PLAN.md and results_attachments/.
-3. Delete PLAN.md and results_attachments/ — git history preserves
-   them on this branch.
+3. Delete PLAN.md and results_attachments/; git history preserves them
+   on this branch.
 
 Which option?
 ```
 
-Log per `superRA:handoff-doc` §User Decisions Log **before** executing. Include the log entry in the same commit that moves or removes the files.
+Log the answer before moving or removing files. Include the log in the same commit as the disposition.
 
-**Option 1 (Move):**
-```bash
-git mv PLAN.md ${RESULTS_DIR}/
-git mv results_attachments/ ${RESULTS_DIR}/source_attachments/ 2>/dev/null
-git commit -m "move analysis plan to ${RESULTS_DIR}"
-```
-The `results_attachments/` folder is renamed `source_attachments/` to avoid colliding with the matured RESULTS.md's `attachments/` folder. Skip the rename if there are no figures.
+## Finish
 
-**Option 2 (Consolidate):**
-- Identify which existing project docs should pick up plan context (data inventory, methodology rationale).
-- Merge into existing docs (researcher-guided).
-- Remove originals:
+Finish executes the user's completion choice from `implementation-workflow`.
+
+### Step 1: Freshness check
+
+Fetch the recorded `BASE_REF` when it is a remote-tracking ref and check whether it advanced since Integrate:
+
 ```bash
-git rm PLAN.md
-rm -rf results_attachments/
-git add -A results_attachments/ 2>/dev/null
-git commit -m "consolidate analysis plan context into project docs"
+REMOTE=${BASE_REF%%/*}
+REMOTE_BRANCH=${BASE_REF#*/}
+if git remote get-url "$REMOTE" >/dev/null 2>&1; then
+  git fetch "$REMOTE" "$REMOTE_BRANCH:refs/remotes/$REMOTE/$REMOTE_BRANCH"
+fi
+CURRENT_BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 ```
 
-**Option 3 (Delete):**
+If `CURRENT_BASE_HEAD_SHA` differs from the recorded `BASE_HEAD_SHA`, re-enter Sync before publishing or landing the work.
+
+### Step 2: Mark final action in PLAN.md if present
+
+If PLAN.md still exists after disposition, flip the final workflow checkbox in the same commit that performs the final action. Skip if PLAN.md was consolidated or removed.
+
+### Step 3: Publish or land
+
+For a PR:
+
 ```bash
-git rm PLAN.md
-rm -rf results_attachments/
-git add -A results_attachments/ 2>/dev/null
-git commit -m "remove analysis plan (preserved in branch history)"
+git push -u origin <analysis-branch>
+gh pr create --title "<title>" --body "<summary, data, reproducibility, quality gates>"
 ```
 
-## Phase D — Final Merge / PR / Cleanup
-
-After Phase C completes, execute the user's choice from execution-workflow Step 4. If main has advanced since Phase B, loop back to Phase B first — a fresh sync must precede the merge or push.
-
-### Step 1: Pre-merge check — is another Phase B round needed?
-
-Fetch the target base branch and check whether it has advanced since the last Phase B APPROVE:
-```bash
-git fetch origin <base-branch>
-git log --oneline <merge-base>..origin/<base-branch>
-```
-If any commits are listed, **re-enter Phase B** for another unified sync+refactor pass. Once Phase B returns APPROVE and main has not advanced again, proceed.
-
-### Step 2: Flip the `Merged` milestone (if PLAN.md still present)
-
-If `PLAN.md` is still at its disposition location (Option 1 from Phase C), check the `Merged` box in §Workflow Status on the analysis branch and commit. The flip records that this workflow has executed its merge action. Skip if PLAN.md was consolidated/deleted (Options 2/3) — the merged commit history is the record.
-
-### Step 3a — Option 1: Merge locally
+For a local fast-forward into the base:
 
 ```bash
 git checkout <base-branch>
 git pull
-git merge <analysis-branch>  # should be fast-forward after Phase B
+git merge --ff-only <analysis-branch>
 ```
 
-Verify the pipeline still runs on the merged result:
-```bash
-bash run_all.sh  # or: julia pipeline.jl
-```
-If it fails, stop and investigate — something moved between Phase B APPROVE and now.
+Run the project pipeline or targeted verification on the final tree. If it fails, investigate before cleanup.
 
-**Writing-vertical branch.** For writing-only tasks, post-merge verification is **document build + outline-stability check** in place of the analysis pipeline — compile the document on the merged state and confirm no outline regressions vs the pre-merge state (per `writing/references/integration.md` Gates 1–2). If the writing task also produced numbers, run the analysis pipeline + drift tests *in addition* to the build + outline check. Pure writing tasks that do not touch `run_all.sh` / `pipeline.jl` do not require those to run.
+### Step 4: Cleanup
 
-### Step 3b — Option 2: Push and open PR
+If the analysis used a worktree, remove it per `superRA:agent-orchestration/references/worktree-harness-fallback.md`. Seeded non-git data disappears with the worktree; see `superRA:worktree-data-sync` for data teardown.
 
-```bash
-git push -u origin <analysis-branch>
-
-gh pr create --title "<title>" --body "$(cat <<'EOF'
-## Analysis Summary
-<2-3 bullets of what was analyzed and key findings>
-
-## Data
-<Key datasets used, sample period, observation counts>
-
-## Reproducibility
-- Pipeline file: `run_all.sh` (or equivalent)
-- All outputs generated from committed code
-- Report: `<path-to-report>`
-
-## Pre-Merge Quality
-- Drift tests: included in `tests/` (guard key results); passed on merged state
-- Code refactored for codebase integration
-- Integration review: passed pre-merge (Phase B verify reviewer APPROVE)
-
-## Review Checklist
-- [ ] Pipeline runs end-to-end
-- [ ] Drift tests pass on merged state
-- [ ] Data descriptions present before all analysis operations
-- [ ] Row counts logged for all sample-changing operations
-EOF
-)"
-```
-
-### Step 4: Cleanup worktree
-
-If the analysis was done in a git worktree, remove it per `superRA:agent-orchestration/references/worktree-harness-fallback.md` §Remove (harness tool preferred; `git worktree remove <path>` + `git branch -D <branch>` otherwise). Seeded non-git data inside the worktree disappears with the directory — see `superRA:worktree-data-sync` §Data Teardown. Skip if no worktree.
-
-Report what was merged/pushed and what was cleaned up.
+Report what was published or landed and what was cleaned up.
 
 ## When to Lighten
 
-**Standalone analysis (no existing codebase to integrate with):**
-- Phase A: Always run.
-- Phase B: Recon reviewer typically leaves zero annotations and reports Tier 1; the Tier 1 + zero-annotations shortcut then collapses Phase B to a single fast-forward merge (or, on a true greenfield branch with no base yet, Phase B is a no-op until a base exists).
-
-**Small changes (single-file analysis, few results):**
-- Phase A: Still run, fewer tests.
-- Phase B: Verify reviewer may APPROVE immediately.
-
-## Agent Loads
-
-See `superRA:using-superRA` §Skill-Load Manifest — the single source of truth for what every dispatched implementer / reviewer loads per Stage. This workflow runs the `drift-test`, `integration`, and `documentation` rows. The Phase B implementer runs `Stage: integration` and conditionally loads `superRA:semantic-merge` via the `Skills:` dispatch field on Tier 2/3 — not a separate Stage.
-
-Phase C Step 2 (mature RESULTS.md) is performed by the dispatched doc-writer subagent — an implementer-reviewer pair gates RESULTS.md maturation per workflow principle P1. Step 4 (PLAN.md disposition) and Phase D Step 2 (milestone flip) stay with the orchestrator because they are user-facing decisions, not RA-implementable tasks. Project-level doc audit is covered by the Phase B verify reviewer per `codebase-integration.md` §Project Doc Audit — not by Phase C.
+- **Standalone analysis:** Protect still runs. Sync may be a no-op. Integrate often collapses to a short reviewer pass.
+- **Small changes:** Keep the same five steps, but dispatch fewer agents and keep Sync Map absent when there is no material sync context.
+- **Writing-vertical tasks:** Most writing work uses the four standalone modes documented in `skills/writing/references/workflow.md` (direct-edit / pure-review / review-edit-loop) and does not enter this workflow. Only mode (d) full-workflow (whole-section drafts, whole-paper revisions) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
 
 ## Red Flags
 
 **Never:**
-- Skip Phase A — drift tests are the safety net for everything downstream
-- Run Phase B as two separate rounds (sync-only, then refactor-only) — that produces two diffs against the merge base and violates minimum-net-diff; always one unified two-commit pass
-- Skip the recon reviewer and dispatch the implementer blind — the per-task integration annotations, the Tier classification, and the user-decision batch all come from recon
-- Interrupt the implementer mid-run with user questions — batch every research-meaningful decision at Phase B Step 2b
-- Invoke semantic-merge in its default (standalone) mode inside Phase B — delegated mode is load-bearing when semantic-merge runs at all (Tier 2/3); Phase B owns the post-merge drift tests and verify review
-- Refactor APPROVED-integration tasks not named in `Tasks in scope:` — those are out of scope per `refactor-and-integrate` §Scope by Integration Status
-- Strip domain-discipline artifacts during refactoring — see the `integration` row of the Skill-Load Manifest (plus the conditional `superRA:semantic-merge` Skills-load on Tier 2/3)
-- Judge the researcher's methodology — challenges to methodology escalate (RA framing, `using-superRA` §Universal Principles)
-- Advance to Phase C before the verify reviewer APPROVES the unified diff
-- Advance to Phase D without a freshness check on the base branch — if main advanced, re-enter Phase B
-- Hand off Phase C Step 4 (PLAN.md disposition) to a subagent — it is a researcher-owned decision
-- Inline Phase C's fact-check checklist or frontmatter spec — it lives in `superRA:report-in-markdown`'s `final-form.md` and `baseline-io.md`
-- Cleanup the worktree before the merge or push has actually completed
+- Refactor before Sync when the base has advanced.
+- Use `PRE_SYNC_BASE_SHA` as the post-sync minimum-net-diff baseline.
+- Skip the integration reviewer after Sync.
+- Leave `## Sync Map` in PLAN.md after Integrate closes.
+- Enter Finish without checking whether the base advanced again.
 
 **Always:**
-- Confirm key-result coverage with the researcher before creating tests, logged per `superRA:handoff-doc` §User Decisions Log
-- Run the recon reviewer first in every Phase B round — per-task annotations + Tier classification drive every downstream decision
-- Evaluate the two shortcut axes (Tier + annotation count) before dispatching any follow-up agent; load `semantic-merge` on follow-ups only when Tier 2/3
-- Batch user decisions at Phase B Step 2b — one stop, not N interruptions
-- Use `superRA:semantic-merge` in delegated mode for the Phase B Commit 1 when Tier 2/3, and for any Phase D re-sync that is itself non-trivial
-- Run drift tests between Commit 1 and Commit 2 when the implementer ran the two-commit structure, and again after Commit 2
-- Run the Implementer Self-Check (`git diff <merge-base>..HEAD`) before every Phase B commit
-- Re-submit to the verify reviewer after every Phase B implementer round
-- Keep and re-validate drift tests through refactoring; author new tests only for tasks with `**Integration status:** ≠ APPROVED`, but run the full suite on every integration pass
-- Dispatch the Phase C doc-writer with `superRA:report-in-markdown` (full mode); dispatch the doc-reviewer afterward; iterate to APPROVE
-- Resolve `RESULTS_DIR` before dispatching the doc-writer — project guidance or `AskUserQuestion`, logged in PLAN.md `## Decisions`
-- Commit at each phase boundary and after each Phase C sub-step (Step 2 sub-commits and Step 4 disposition each land separately)
-- Re-enter Phase B if main advances between Phase B APPROVE and Phase D merge
-
-**Drift-test integrity** is governed by the cross-cutting rules in `superRA:refactor-and-integrate` `references/drift-test-quality.md` — failing tests must be adjudicated, not silently re-expected; tolerance bumps require justification; test removal during refactoring is forbidden. **Merge quality** is governed by `references/merge-quality.md` — Tier 3 conflicts escalate; mechanical/intent commits stay separate. **Codebase integration + minimum net diff** is governed by `references/codebase-integration.md` and the body of `refactor-and-integrate` (Minimum-net-diff top item + Implementer Self-Check).
-
-## Integration
-
-**Called by:**
-- **superRA:execution-workflow** Step 4 — when the user chooses Option 1 (merge) or Option 2 (PR) after reproducibility has been verified
-
-**Invokes:**
-- **superRA:semantic-merge** — REQUIRED for Phase B Commit 1 on Tier 2/3 (Tier 1 uses `git merge --ff-only`; see Phase B Step 2) and any Phase D pre-merge re-sync (delegated mode)
-- **superRA:refactor-and-integrate** — loaded by every dispatched implementer and reviewer in Phases A, B, and D; principles in body, `[BLOCKING]` / `[ADVISORY]` items in stage-scoped references
-- **superRA:report-in-markdown** — loaded by the Phase C doc-writer (full mode) and doc-reviewer
-- **superRA:handoff-doc** — loaded on demand for User Decisions Log format and PLAN.md anatomy
-
-**Escalates to:**
-- **superRA:planning-workflow §Changing Plans** — substantive restructure findings (task add/remove/combine, DAG edge flip, APPROVED status invalidation) surfaced in any phase; orchestrator authors the proposal, researcher decides
-
-**Pairs with:**
-- **superRA:agent-orchestration** — `references/worktree-harness-fallback.md` §Remove for worktree removal; §Handling Reviewer Feedback for REVISE adjudication; §Concurrent Writers for the Phase B split safety-valve
-- **superRA:worktree-data-sync** — §Data Teardown clarifies that seeded non-git data disappears with the worktree directory
-
-**Requires:**
-- **RESULTS.md** (Stage 1 dev log) — source of key results for drift tests; matured into Stage 2 form at Phase C
-- **Committed analysis code** — must be committed before drift tests are created
-- **Reproducibility already verified** by execution-workflow Step 3
-
-**Subagents use:**
-- The active domain skill (for data analysis: `superRA:econ-data-analysis`) — domain discipline loaded at dispatch-time per `superRA:using-superRA` §Skill-Load Manifest
+- Run the full drift-test suite on every integration pass (new drift tests scoped to tasks not yet `Integration status: APPROVED`; running the suite is not scoped).
+- Use semantic-merge for intent-aware branch syncs.
+- Keep Sync serialized and refactor parallelizable only after Sync lands.
+- Log user decisions before acting.

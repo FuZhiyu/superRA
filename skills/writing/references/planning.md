@@ -52,7 +52,7 @@ Two orthogonal decisions: does this task need a `PLAN.md`? Does it need a `RESUL
 
 ### Rationale
 
-- **Handoff-doc discipline is non-negotiable for multi-session work** (`superRA:using-superRA` §Universal Principles #2). Drafting a section is multi-session; losing continuity costs days.
+- **Handoff-doc discipline is non-negotiable for multi-session work** (`superRA:handoff-doc` carries the discipline). Drafting a section is multi-session; losing continuity costs days.
 - **Handoff-doc discipline is bureaucratic overhead for trivial work.** A typo fix doesn't need a plan; the diff + commit message is the record.
 - **The middle cases are judgment calls.** Err on the side of `PLAN.md` if (a) the findings need to survive to a later dispatch, (b) the researcher will want to see a written summary, (c) the work is longer than one session can reasonably contain.
 
