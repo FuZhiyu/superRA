@@ -5,15 +5,6 @@ modeling. `planning-workflow` invokes this reference after Phase 1
 (scope check) to apply domain-specific discipline before tasks are
 drafted.
 
-This reference carries two planning-only concerns that would otherwise
-bloat the main `theory-modeling` skill body:
-
-1. **Model Inventory / Assumption Map - the hard gate that blocks task drafting until the model objects and assumptions are surfaced and approved.**
-2. **Verification Plan - the planning-time decision about which symbolic, limiting-case, and simple numerical checks will establish trust in the results.**
-
-Both happen once, at planning time, and then live in `PLAN.md` as
-sections the rest of the workflow references.
-
 ---
 
 ## Model Inventory / Assumption Map (Hard Gate)
@@ -94,30 +85,13 @@ leave the column as "conventional" and skip further justification.
 | ... | ... | ... | ... |
 ```
 
-### Principles
+### Principles (non-default constraints)
 
-- **Expose hidden assumptions early** - if a derivation will need positivity, interiority, monotonicity, or boundedness, state that in the map before tasks are drafted.
-- **Prefer interpretable notation** - a reviewer should know what a symbol is without chasing aliases. Conventional symbols are fine; arbitrary placeholders are not.
-- **Notation Conventions is canonical and user-gated, not implementer-editable** - the planner seeds the table with the symbols agreed at planning time. During implementation, new symbols are logged to the per-task **Notation & Assumptions Ledger** in `RESULTS.md` (see `SKILL.md` §Documentation and handoff). Promotion from the per-task ledger to the canonical Notation Conventions table requires explicit user confirmation. The table is the authoritative cross-task index; the ledger is the working per-task record.
-- **Keep assumptions on primitives** - "assume `c > 0`" is weaker than naming the primitive restrictions that imply positive consumption. Prefer the latter.
-- **Interpretability is blocking; prefer synthesis** - every assumption must carry a plain-language interpretation a researcher can defend at planning time, and when multiple scattered weak restrictions can be replaced by a single stronger interpretable primitive, prefer the synthesis. See `skills/theory-modeling/SKILL.md` §Assumptions for the full checklist; do not restate it here.
-- **Plan verification up front** - do not leave numerical or special-case checks as an afterthought.
+- **Notation Conventions is canonical and user-gated, not implementer-editable** - the planner seeds the table with the symbols agreed at planning time. During implementation, new symbols are logged to the per-task **Notation & Assumptions Ledger** in `RESULTS.md` (see `SKILL.md` §Documentation and handoff). Promotion from the per-task ledger to the canonical Notation Conventions table requires explicit user confirmation.
+- **Interpretability is blocking; prefer synthesis** - every assumption must carry a plain-language interpretation a researcher can defend at planning time, and when multiple scattered weak restrictions can be replaced by a single stronger interpretable primitive, prefer the synthesis. See `skills/theory-modeling/SKILL.md` §Assumptions for the full checklist.
 - **Escalate methodology choices** - if the "right" utility form, equilibrium concept, or normalization depends on research intent, ask the researcher rather than choosing unilaterally.
 
-### Common mistakes
-
-- **Skipping the inventory because the model is "standard."** Standard models still hide timing, normalization, and branch-choice assumptions.
-- **Drafting tasks while notation is unsettled.** Task steps written against unstable notation are usually rewritten from scratch.
-- **Treating verification as implementation detail.** The plan must already say how trust will be established.
-- **"Notation interpretation TBD."** A symbol without a stated intuition at planning time becomes a symbol nobody owns at implementation time.
-- **"Assumption interpretation later."** Assumption interpretations drafted after the algebra has been written are usually post-hoc rationalizations of whatever the derivation happened to need.
-- **"Scattered weak assumptions that could be synthesized."** A list of narrowly-scoped technical restrictions is harder to defend than a single stronger primitive with a clean economic reading; synthesize at planning time rather than after implementation.
-
-### Red Flags - Hard Gate Protection
-
-The Model Inventory / Assumption Map gate applies to every
-theory/modeling plan regardless of perceived simplicity. The following
-loopholes are closed:
+### Red Flags
 
 **Never:**
 - Proceed to task drafting on the basis of a verbal description only. The inventory must be written into `PLAN.md`.

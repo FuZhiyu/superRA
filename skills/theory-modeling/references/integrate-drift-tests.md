@@ -2,35 +2,9 @@
 
 Load at the **INTEGRATE phase** when preparing drift tests that guard a
 theory/modeling project's key results before merge.
-`integration-workflow` Phase A invokes this reference alongside the
-quality checklist.
-
-This reference answers the theory/modeling-specific questions:
-
-1. **What should a drift test for this project actually protect?**
-2. **What are the conventions for symbolic and numerical tolerances?**
-3. **How do I pull candidate invariants out of `RESULTS.md`?**
-
-For the implementation-level quality checklist (coverage,
-independence, clarity, robustness, test format, cross-cutting
-integrity Red Flags), load
-`result-protection/references/drift-test-quality.md`. This file
-and that checklist are both read at drift-test creation and review.
-
----
-
-## Why Drift Tests Are Part of Theory-Modeling Discipline
-
-Model results drift silently too. A refactor can switch a branch of a
-closed-form solution, strengthen an unstated parameter restriction,
-change a normalization, or move a numerical baseline away from the case
-the derivation was claiming to illustrate. Most of these failures still
-"look right" in prose. Drift tests catch them.
-
-The Iron Law protects the derivation from unnamed objects and unstated
-assumptions during implementation. Drift tests protect the finalized
-model from hidden algebraic, numerical, and normalization changes after
-implementation is complete. They are the integration-phase analogue.
+`integration-workflow` Phase A invokes this reference alongside
+`result-protection/references/drift-test-quality.md` (generic test
+quality checklist + cross-cutting integrity Red Flags).
 
 ---
 
@@ -109,11 +83,6 @@ than a tolerance issue.
 
 ---
 
-## Cross-Cutting Integrity Rules
+## Cross-cutting integrity Red Flags
 
-The Red Flags that protect drift-test integrity during creation,
-refactor, merge, and semantic-merge live in
-`result-protection/references/drift-test-quality.md`
-`# Cross-cutting Red Flags - drift test integrity`. They apply wherever
-drift tests are in play. Do not restate them here; load that section and
-follow it.
+See `result-protection/references/drift-test-quality.md` §Cross-cutting Red Flags — drift test integrity.

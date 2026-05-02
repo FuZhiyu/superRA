@@ -30,10 +30,10 @@ phase. Load per stage; do not load them all at every dispatch:
 |---|---|
 | `references/planning.md` | PLAN phase - covers the **Model Inventory / Assumption Map hard gate** and the **Verification Plan**. Loaded by `planning-workflow` when the work is theory/modeling. |
 | `references/integrate-drift-tests.md` | `drift-test` stage - identifies modeling results worth protecting, sets symbolic and numerical tolerance conventions, and catalogs theory-modeling failure modes drift tests catch. Loaded by `integration-workflow` Phase A. |
-| `references/integration.md` | `integration` stage - modeling-specific refactor-integrity gates (notation consistency, assumption-map preservation, derivation discipline preserved through refactoring, verification pass-through), plus task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline). |
+| `references/integration.md` | `integration` stage - readability layer for reader-ready output: ex-post structural rewriting (objective-first), per-step local obviousness, cross-document coherence, prose-to-math precision, rendering legibility, and refactor-survival of correctness artifacts. |
 | `references/objective-first.md` | `integration` stage - worked bad/good walkthrough and identification-training drills for objective-first structural rewriting; loaded on demand from `references/integration.md` Section A. |
-| `references/audience-discipline-modeling.md` | `integration` stage - reader-perspective discipline for modeling work; loaded on demand from `references/integration.md` Section C. |
-| `references/audience-discipline-writing.md` | `integration` stage - reader-perspective discipline for the writing layer; loaded on demand from `references/integration.md` Section C. |
+
+The four gates below are the creation-time correctness floor — walk at every implementation dispatch, including rough exploratory work. `references/integration.md` is the readability layer — load when the document needs to be polished for a human reader.
 
 ## The Iron Law
 
@@ -50,15 +50,11 @@ only as a math restriction with no economic reading, or a derivation
 step is invoked mechanically with no reason, back up and write the
 missing meaning, interpretation, or reason first.
 
-**No exceptions:**
-- Do not introduce a symbol without a stated meaning or intuition.
-- Do not state an assumption only as a math restriction without a plain-language interpretation a researcher can defend.
-- Do not hide a key restriction in "assume interior solution" after the algebra is already written.
-- Do not invoke a derivation rule (envelope theorem, market clearing, linearization) without a one-sentence reason for using it here.
-- Do not rename objects mid-derivation without mapping the notation.
-- Do not move a restriction from primitives to an endogenous variable just because the latter is shorter to write.
-- Do not rely on memory of a previous draft or paper note.
-- Back up means back up.
+**Non-default constraints** (the gates enforce the principle line by line; these catch traps the gates don't):
+
+- Restrictions live on primitives. Do not silently move one onto an endogenous variable because the latter is shorter to write.
+- Notation is fixed. Do not rename objects mid-derivation without an explicit old-to-new mapping.
+- Restrictions are stated up front. Do not back-fill a key restriction (e.g., "assume interior solution") after the algebra is already written.
 
 ---
 
@@ -72,48 +68,52 @@ producing it. The gates are **concurrent, not sequential** — every
 modeling step exercises all four. Documentation is built into the
 artifact definitions, not handled as a separate phase.
 
-This section is both **teaching content** and the **shared checklist**.
-The implementer walks it before returning DONE; the reviewer walks the
-same items as verification.
+`[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items the
+reviewer MAY flag as MINOR. Verdict adjudication follows the standard
+reviewer protocol in `agent-orchestration`.
 
-- `[BLOCKING]` — must fix to earn APPROVE. Encodes the Iron Law,
-  artifact discipline, and other required items.
-- `[ADVISORY]` — best practice. The reviewer MAY flag as MINOR; does
-  not block APPROVE.
+### Falsification tests (per ledger entry in Gates 1 and 2)
 
-### Reviewer verdict protocol
+Both tests are diagnostic moves the reviewer runs against a slot they
+suspect is not pulling its weight. The point is to detect text that
+*looks* like a justification but would survive any small change to the
+object it claims to justify.
 
-**For each gate, verify the artifact exists, then walk the checklist
-against it. Walk top to bottom every time; never halt on a failure.**
-One comprehensive pass per review — halting early forces a full
-re-review on the next pass, and reviewer dispatches are costly.
+- **Substitution test.** Read the entry's "What the name carries" /
+  "What this assumption carries" slot, then mentally replace the symbol
+  (or assumption) with a hypothetical sibling — a different symbol
+  $\mathbf{z}_q$ from the same proof, or a different assumption on the
+  same primitive. **Re-read the slot under the swap.** If the slot is
+  still true for the substituted object, the slot is generic and pins
+  nothing down → BLOCKING. The slot must contain something that would
+  be *false* of any other object — a specific sign meaning, a specific
+  structural role, a named scalar cited at a specific site.
 
-Two verdicts:
+  *Worked example.* Slot: "plays a role in the proof of Lemma 3.1."
+  Swap in $\mathbf{z}_q$: "[$\mathbf{z}_q$] plays a role in the proof of
+  Lemma 3.1" — still true if $\mathbf{z}_q$ also appears in the proof.
+  Vacuous → BLOCKING. Contrast with: "sign-bearing scalar — positive
+  iff the comparative static of price w.r.t. dividend $k$ is positive,
+  cited at eq. (12)." Swap in $\mathbf{z}_q$: the claim is false unless
+  $\mathbf{z}_q$ happens to carry the same sign meaning at the same
+  site. Specific → passes.
 
-- **APPROVE** — no `[BLOCKING]` findings.
-- **REVISE** — at least one `[BLOCKING]` finding.
+- **Proof-deletion test (Meaning slot).** Cover up the surrounding
+  proof and re-read only the Meaning slot. **Can the slot still tell a
+  reader what the object is** — its type, its denotation in
+  already-introduced terms, and how it is constructed? If the slot
+  evaporates without the proof to lean on, it was telling the reader
+  what the symbol is *used for*, not what it *is* → BLOCKING.
 
-**Falsification tests, applied per ledger entry in Gates 1 and 2:**
-
-- **Substitution test.** Mentally substitute a hypothetical extra
-  symbol (or assumption) into the entry's "What the name carries" /
-  "What this assumption carries" slot. If the slot still reads as
-  true, the justification is structurally vacuous → BLOCKING. The
-  slot must contain content specific to *this* object that would be
-  false of a different one.
-- **Proof-deletion test (Meaning slot).** Mentally delete the
-  surrounding proof. Does the Meaning slot still let the reader
-  reconstruct the object? If no, the slot was a usage description
-  ("used to verify X"), not a meaning → BLOCKING.
-
-**Handling dependent findings.** When a later finding depends on an
-earlier `[BLOCKING]` item being fixed first, say so in plain prose
-alongside the finding.
-
-**Re-review after REVISE.** Implementer fixes all `[BLOCKING]` findings
-and re-dispatches. The reviewer then (1) verifies each fix, and
-(2) re-checks any finding that depended on an upstream fix. Everything
-else is accepted from the first pass.
+  *Worked example.* Slot: "used to verify $h_k = m_D \beta_{E,k}$."
+  Delete the surrounding proof; there is no $h_k = m_D \beta_{E,k}$
+  visible anywhere, so the slot has nothing left to say. Usage, not
+  meaning → BLOCKING. Contrast with: "column-$k$ object of the loading
+  matrix $H \in \mathbb{R}^{N\times K}$, with
+  $\mathbf{c}_k := H^\top e_k$." Delete the proof; the slot still
+  carries the type ($K$-vector), the parent object ($H$), and the
+  construction ($H^\top e_k$). The reader can rebuild the object from
+  the slot alone → passes.
 
 ### Gate 1 — Objects & Notation
 
@@ -165,9 +165,8 @@ Why this name and not that one:
    symbols, e.g. $\mathbf{c}_k := H^\top e_k$. The construction of
    the symbol, not a step that uses it later.
 
-Test: mentally delete the surrounding proof. Would the Meaning slot
-still let a reader reconstruct the object? If no, the slot is a usage
-description, not a meaning.
+The Proof-deletion test in §Falsification tests is the diagnostic move
+for whether the slot satisfies this recipe.
 
 **Anti-patterns for Meaning:**
 
@@ -247,8 +246,8 @@ the technical rule and a reason for invoking it here.
 
 - `[BLOCKING]` The active solution concept is named before derivation starts: planner problem, competitive equilibrium, recursive equilibrium, steady state, fixed point, or other relevant concept.
 - `[BLOCKING]` Top-level proof goal stated in one sentence before the first displayed equation. Derivations whose first move is algebra without a stated target are REVISE. (Full reader-facing recursive signposting — sub-arguments at every level, transition prose — lives in `references/integration.md` Section A as ex-post rewriting discipline.)
-- `[BLOCKING]` When a derivation step depends on a previously established equation, lemma, or proposition, the dependency is cited by name or equation number. Asserted equations with no path to a named source are REVISE. (Cite-with-operative-form-recall for distant sources is owned by `references/integration.md` Section B.)
-- `[BLOCKING]` One logical algebraic move per displayed step. Do not collapse multiple substitutions, cancellations, and sign changes into "therefore".
+- `[BLOCKING]` When a derivation step depends on a previously established equation, lemma, or proposition, the dependency is cited by name or equation number. Asserted equations with no path to a named source are REVISE. (Cite-with-operative-form-recall for distant sources is owned by `references/integration.md` Section B. Prose-level precision — math symbol vs. English description, equation reference vs. positional pointer — is also owned by Section B as a readability rule.)
+- `[BLOCKING]` One logical algebraic move per displayed step. Do not collapse multiple substitutions, cancellations, and sign changes into "therefore". (Section B's half-page mask test is the integration-stage detection layer.)
 - `[BLOCKING]` Each non-obvious step states the rule being used: substitute a constraint, differentiate with respect to a variable, apply the envelope theorem, impose market clearing, linearize around a point, or similar.
 - `[BLOCKING]` Each non-trivial step carries both the technical rule (envelope theorem, market clearing, ...) and a one-sentence reason for invoking it; mechanical rule-labels without a reason are REVISE.
 - `[BLOCKING]` When a result depends on case splits or domains (interior vs corner, positive vs negative branch, existence/uniqueness conditions), the active case is stated and excluded cases are either checked or explicitly deferred.
@@ -256,7 +255,6 @@ the technical rule and a reason for invoking it here.
 - `[BLOCKING]` Reused symbols keep the same meaning throughout the task. If notation changes, old and new notation are mapped explicitly.
 - `[BLOCKING]` Claims of existence, uniqueness, monotonicity, or concavity are supported by a stated argument, not asserted by inspection.
 - `[BLOCKING]` New equations, named statements (lemmas, propositions, definitions, corollaries), and derivation steps are checked under the same necessity lens as ledger entries: if removal leaves the reasoning intact, remove it. Equations and named statements do not require individual ledger entries (per-equation cost too high) — the one-move-per-step and reason-per-move items above are how the lens is enforced in practice.
-- `[ADVISORY]` Keep displayed equations short enough to audit; break long chains into aligned steps rather than dense one-line algebra.
 
 ### Gate 4 — Verification & Rendering
 
@@ -278,7 +276,6 @@ that ships in `RESULTS.md`.
 - `[BLOCKING]` Special and limiting cases are interpreted economically, not just numerically confirmed (e.g., "at $\beta \to 0$ the policy reduces to the myopic rule, which matches the one-period benchmark").
 - `[BLOCKING]` Results are checked back against the assumption map. If a step quietly needs a stronger sign, domain, or regularity restriction than the current map states, update the assumption map before using the result.
 - `[BLOCKING]` When code, CAS output, or a solver is used, the human-readable result matches the computed object exactly. No manual transcription drift.
-- `[BLOCKING]` If an expression is rendered for a human reader, markdown and LaTeX are unambiguous: subscripts, superscripts, fractions, summation limits, and align environments read cleanly.
 - `[ADVISORY]` For numerically delicate objects, verify more than one parameter set or a small perturbation around the baseline.
 
 ### Implementation standards
@@ -297,44 +294,25 @@ beyond the per-symbol / per-assumption ledgers.
 - `[BLOCKING]` `RESULTS.md` is updated in place for this task's section. The doc is the record — findings live there before they appear in any status report.
 - `[BLOCKING]` `PLAN.md`'s Notation Conventions table is **canonical and user-gated**. Implementers do NOT inline-edit it during implementation. A symbol is promoted from the RESULTS.md ledger to the Notation Conventions table only when the user confirms it should become a canonical project-wide symbol; until then the ledger entry is the source of truth for that task.
 - `[BLOCKING]` Definitions, assumptions, and the reason for major derivation choices are written alongside the math or code, not left only in chat.
-- `[BLOCKING]` When a task section includes equations, tables, or figures for human reading, use `superRA:report-in-markdown`; do not invent a separate rendering utility.
+- `[BLOCKING]` Route human-readable equations, tables, and figures through `superRA:report-in-markdown`.
 - `[BLOCKING]` Rendered math, prose, and any supporting code use consistent notation for the same object.
 - `[BLOCKING]` No dangling TODO / placeholder / `XXX` strings ship.
 
-### Stage-scoped discipline (not walked at every implementation dispatch)
-
-- **`drift-test` stage** - `references/integrate-drift-tests.md` carries the modeling-specific guidance for symbolic identities, comparative statics, and simple numerical invariants that should be protected before merge.
-- **`integration` stage** - `references/integration.md` carries the full integration-stage checklist (notation consistency, assumption-map preservation, verification checks surviving refactors, rendering utility reuse) with its own `[BLOCKING]` / `[ADVISORY]` markers and two-verdict protocol.
-- **End-of-workflow completion verification** - `superRA:implementation-workflow` Step 3 carries the reproducibility gate. Walked by the orchestrator, not by dispatched subagents.
-
 ## Common Rationalizations
 
-LLM-specific excuses that usually precede broken derivations or hidden
-assumptions. When you catch yourself forming one of these, stop and make
-the definitions or assumptions explicit.
+LLM-specific excuses that the gate checklists alone do not catch — each
+row names a behavior pattern, not a restatement of an existing
+`[BLOCKING]` item.
 
 | Excuse | Reality |
 |---|---|
-| "The notation is obvious from context." | If it is not named, the reviewer cannot audit it. |
-| "I can clean up assumptions after the algebra." | Late assumptions are usually post-hoc patches for a broken step. |
-| "A/B/C is temporary; I will rename it later." | Temporary placeholder notation spreads and becomes the model. |
-| "The numerical check is only illustrative." | Even toy checks need explicit parameters and a stated pass condition. |
-| "The CAS says it simplifies to zero." | You still need to say what was checked and under which assumptions. |
-| "I'll update the Notation Conventions table after the derivation is clean." | The Notation Conventions table is user-gated and canonical; log new symbols to the per-task RESULTS.md ledger instead, and let the user confirm any promotion. |
-| "It's defined locally and used in the algebra, so it's fine." | Local definition is necessary, not sufficient. If an existing upstream symbol names the same object, the local one hides the connection and adds reader load. |
+| "A/B/C is temporary; I will rename it later." | Placeholder notation spreads. Whatever the proof gets written under becomes the model. |
+| "The numerical check is only illustrative." | "Illustrative" is the dodge. Even toy checks need explicit parameters and a stated pass condition. |
+| "The CAS says it simplifies to zero." | The CAS output is not the verification. State what was checked, under which assumptions, and what the pass condition was. |
+| "I'll update the Notation Conventions table after the derivation is clean." | The table is user-gated, not implementer-editable. Log new symbols to the per-task RESULTS.md ledger and let the user confirm promotion. |
 | "It came from the derivation note, so it's already vetted." | Inherited notation is on trial again in the new proof. Legacy legitimacy does not beat a cleaner upstream name available right now. |
-| "It only abbreviates this one expression." | One-time shorthand adds a symbol the reader must memorize for one line. Expand inline or fold into an existing name. |
-| "It's a local proof-only object." | Locality is scope, not content. Each symbol still walks the ledger procedure on its own; "proof-only" does not discharge necessity or non-duplication. Cluster framings ("these are local proof-only objects") dodge per-symbol scrutiny by reframing the unit of evaluation — one entry per object, no exceptions. |
-| "Each is used in the proof step that uses it." | Restatement of the gate, not evidence. Walk the slots: cite reuse sites by ref, or fill "What the name carries" with concrete interpretive payload (sign, structural role, named scalar cited at site X). A justification that would still read as true for a hypothetical extra symbol is vacuous. |
-| "The meaning is clear from how it's used." | Usage is not meaning. Mentally delete the surrounding proof; if the Meaning slot becomes vacuous, it was a usage description, not a meaning. Apply the type / denotation / origin recipe instead. |
-| "The intuition is obvious." | If the intuition is not written, the reader is reconstructing it from algebra - which is exactly what the Iron Law rules out. |
-| "I'll add interpretation after the algebra is clean." | Post-hoc interpretation is where hidden assumptions hide; the interpretation must be defensible at the moment the assumption is stated. |
-| "Weaker assumptions are always safer." | Scattered weak technical restrictions are harder to defend than one stronger primitive with a clean economic reading; prefer the synthesis when it is available. |
-| "This assumption is technical, not economic." | A technical restriction with no economic reading is a bet the restriction does not bite; if it does not bite, drop it, and if it does, name the economics. |
+| "These are local proof-only objects." | Cluster framings dodge per-symbol scrutiny by reframing the unit of evaluation. Each symbol still walks Gate 1 on its own — one entry per object, no exceptions. |
 
-## Key References
+## See also
 
-- `references/planning.md` - planning hard gate: Model Inventory / Assumption Map plus Verification Plan
-- `references/integrate-drift-tests.md` - drift-test guidance for symbolic and numerical invariants
-- `references/integration.md` - integration-stage checklist for modeling work
-- `superRA:report-in-markdown` - format discipline for equations, tables, figures, and LaTeX in markdown
+- `superRA:report-in-markdown` — format discipline for equations, tables, figures, and LaTeX in markdown.
