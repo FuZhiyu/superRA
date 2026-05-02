@@ -162,8 +162,18 @@ Walked at planning time (2026-04-19); refreshed lightly at this redesign (2026-0
 ## Task 1: Rewrite `SKILL.md` + author three mode files
 
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** REVISE
 **Integration status:**
+
+> **Review notes (2026-05-02):**
+>
+> 1. **MAJOR — `polish.md:5-7` §Sentence vs structural scope fails the necessity gate.** Pure restatement of `SKILL.md:27` ("Loading the listed reference is the authority grant — if `structure.md` is not loaded, structural edits are out of scope by construction"); the Edit-vs-propose-vs-ask matrix row at `polish.md:42` operationalizes the same rule a second time. Without these three lines, behavior is unchanged: SKILL.md is loaded before polish.md, the agent already has the rule, and the matrix already governs the decision. This is the implementer's own self-suspected DRY case — adjudication confirms the suspicion. **Fix:** delete the §Sentence vs structural scope subsection (header + body, lines 5–7).
+>
+> 2. **MAJOR — `polish.md:9-11` §Inline-directive convention fails the necessity gate.** Sentence 1 is a bare pointer ("The convention is stated in `SKILL.md §Before you start`"); sentences 2–3 paraphrase that convention back to an agent that just read SKILL.md; sentence 4 ("this **inverts** the older 'TODOs are sacred' rule") is contributor history about a `collaboration.md` file Task 3 deletes — future readers will not have context for the inversion. The convention is already operationalized in §Input shape A at lines 19–21 ("Inline `TODO`s and crude phrasing in the diff are part of the work — clean them up. If the diff includes a `DO NOT EDIT` block or fences, leave that range alone."). The implementer flagged this case; adjudication confirms. **Fix:** delete the §Inline-directive convention subsection (header + body, lines 9–11). If a polish-specific note about TODO-as-task is genuinely behavior-shaping beyond what §Input shape A states, fold the one load-bearing sentence into §Input shape A rather than reinstating a free-standing subsection.
+>
+> 3. **MINOR — `polish.md:22` "Commit only when the request says to commit ..." restates workflow-skill territory.** Per Decision Q4 (2026-05-02 redesign), commit-handoff conventions belong to the workflow skills. The clause "a polish in workflow mode hands the staged diff back for the orchestrator to commit" is exactly the kind of "what you will receive from the workflow" description the necessity gate flags. The behavior-shaping kernel ("commit only when requested") is real but is also default agent behavior. **Fix:** either delete the line entirely, or shorten to a single load-bearing rule if one survives the gate after the §Sentence-vs-structural and §Inline-directive cuts above are made (re-check after items 1–2 land).
+
+
 
 **Files:**
 - `skills/writing/SKILL.md` — full rewrite (replaces the existing 171-line Iron-Law-and-Disciplines body).
