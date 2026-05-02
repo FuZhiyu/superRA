@@ -97,6 +97,8 @@ available.
 3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + PLAN.md (`IMPLEMENTED`) + RESULTS.md. **Dispatch the reviewer (one comprehensive pass).** The reviewer walks the active domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task, and returns APPROVE or REVISE. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
 4. **Once APPROVE:** the reviewer has committed `APPROVED` to PLAN.md. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If findings change upcoming tasks, update future task descriptions in PLAN.md and commit. Proceed to next task.
 
+When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, the orchestrator may dispatch `Stage: integration` against that single task before advancing. This uses existing stage flexibility — no new mechanism.
+
 **In direct mode:** Steps 1–2 are done by the main agent directly (follow `superRA:using-superra` §Execution Modes). Steps 3–4 are unchanged — still dispatch reviewer subagents unless overridden by the user.
 
 
@@ -131,6 +133,8 @@ If any check fails: fix it before proceeding. Do not present completion options 
 **Once all five checks pass:** check the `Execution complete` box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md) and commit the box-flip before presenting the Step 4 completion menu.
 
 ### Step 4: Present Completion Options
+
+**Domain pre-step (theory-modeling only): notation/assumption promotion.** Before presenting the completion menu, when the active domain is theory-modeling, scan each task's `RESULTS.md` Notation & Assumptions Ledger and collect every entry whose symbol or assumption is not yet in `PLAN.md`'s Notation Conventions table. If any candidates exist, surface them via `AskUserQuestion` with a per-candidate Promote / Keep-in-ledger / Remove choice. Apply the researcher's answers: promotions are inline-edited into the canonical table atomically with a `## Decisions` log entry recording the promoted symbols; keep-in-ledger candidates stay where they are; remove decisions delete both the ledger entry and any in-text use (re-dispatch the implementer if code changes are needed). Skip this pre-step entirely when the domain is not theory-modeling or when every ledger says "None." The semantics of the necessity gate, the ledger schema, and the canonical-vs-ledger split are owned by `theory-modeling/SKILL.md` §Documentation and handoff — do not restate them here.
 
 **Present the 4 completion options via `AskUserQuestion` when available** (plain-text fallback otherwise). Each option gets a short description.
 
