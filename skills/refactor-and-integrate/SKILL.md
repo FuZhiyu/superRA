@@ -13,7 +13,7 @@ Techniques:
 2. **Governing-diff pruning** — minimize the surviving diff against the caller's baseline or range.
 3. **Sync impact as evidence** — when task-local Sync impact exists, use it to justify existing post-sync hunks; it does not create new refactor targets.
 
-For data-analysis integration, also load `econ-data-analysis/references/integration.md`.
+The active domain skill's stage-load table routes any domain-specific integration reference at the `integration` stage; load it per that table.
 
 ---
 
@@ -77,7 +77,7 @@ Walk every item. `[BLOCKING]` items must be satisfied for APPROVE; `[ADVISORY]` 
 
 **Handling inconsistencies:**
 
-- `[BLOCKING]` **Methodological questions escalated, not resolved.** Different control variable sets, variable definitions, and sample filters are research decisions.
+- `[BLOCKING]` **Methodological questions escalated, not resolved.** Different control variable sets, variable definitions, sample filters, equilibrium concepts, or normalization choices are research decisions.
 - `[ADVISORY]` **Clear convention exists:** follow it. **Ambiguous or conflicting conventions:** use judgment and document the choice.
 
 **PR quality:**

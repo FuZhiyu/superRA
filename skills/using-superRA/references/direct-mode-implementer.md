@@ -44,7 +44,7 @@ Then check:
 - Are outputs saved where specified?
 
 **Reproducibility:**
-- Is the script in notebook-compatible format?
+- If the task uses scripts, notebooks, or rendered notes, do they follow the domain/project format convention?
 - Can someone re-run this and get the same results?
 - Are file paths correct and relative?
 
@@ -144,12 +144,12 @@ Before staging your commit, verify:
 ## Escalation
 
 **STOP and report with BLOCKED or NEEDS_CONTEXT when:**
-- Data doesn't match expectations from the plan
-- Merge produces unexpected row count changes
-- Variables have implausible magnitudes
-- You need context about upstream data processing
-- You're unsure whether a data decision is correct
-- Data quality is too poor to proceed
+- Inputs, assumptions, or verification results don't match expectations from the plan
+- A merge, filter, derivation step, or solver output produces an unexpected scope or logic change
+- Variables, parameters, or residuals have implausible magnitudes
+- You need context about upstream processing, notation, or modeling choices
+- You're unsure whether a domain decision is correct
+- Input quality or model consistency is too poor to proceed
 - Task requires methodology decisions (the researcher decides)
 
 **Ask for clarification rather than guessing.**
