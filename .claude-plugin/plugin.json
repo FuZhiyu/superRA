@@ -1,7 +1,7 @@
 {
   "name": "superRA",
   "description": "Disciplined AI Research Assistant for economists: plan-implement-integrate workflow with implementer–reviewer pair, data-analysis discipline, and drift-test-verified integration.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "author": {
     "name": "Julie Zhiyu Fu"
   },

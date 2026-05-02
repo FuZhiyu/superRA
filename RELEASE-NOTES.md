@@ -1,5 +1,20 @@
 # superRA Release Notes
 
+## [0.1.3] - 2026-05-02
+
+### Added
+
+- **Theory-modeling skill (alpha).** New domain vertical at `skills/theory-modeling/` for rigorous mathematical-modeling work: derivations, equilibrium setup, symbolic manipulation, proofs, comparative statics, and simple numerical verification. Composes with the existing PLAN → IMPLEMENT → INTEGRATE workflow without changes to workflow skills.
+  - **Iron Law:** every symbol has a meaning, every assumption has a plain-language interpretation, every non-trivial derivation move has a one-sentence reason.
+  - **Four-gate checklist** (Objects & Notation / Assumptions / Derivations / Verification & Rendering) walked at every implementation dispatch as the creation-time correctness floor. Gates 1 and 2 carry per-symbol and per-assumption ledger entries with explicit slot templates; falsification tests (Substitution test, Proof-deletion test) detect generic justifications.
+  - **Stage-scoped references:** `references/planning.md` (Model Inventory / Assumption Map hard gate + Verification Plan), `references/integration.md` (readability layer for reader-ready output — objective-first rewriting, half-page mask test for local obviousness, cross-document coherence, refactor-survival), `references/integrate-drift-tests.md` (drift tests for symbolic identities and numerical baselines), `references/objective-first.md` (worked example + identification drills).
+  - **Split:** `SKILL.md` is the creation-time correctness floor (load at every implementation dispatch); `references/integration.md` is the readability layer (load when polishing for a human reader).
+  - **`skills/theory-modeling/CLAUDE.md`** records the high-level design choices for future contributors.
+
+### Changed
+
+- Routing surfaces (`skills/CATEGORIES.md`, `README.md`, `using-superra` skill inventory) updated to expose the new vertical.
+
 ## [0.1.2] - 2026-04-24
 
 Includes merged PRs since `0.1.1`: #18 `[codex] tighten Phase B upstream-intent contract`, #19 `[codex] clarify Codex superRA orchestration instructions`, #20 `[codex] generate direct-mode role refs from canonical agents`, #21 `Teach-the-protocol: resolver redesign + over-prescription audit + gated principle`, #22 `planning-workflow: include header fields in change-plan protocol`, plus this release branch.
