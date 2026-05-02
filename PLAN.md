@@ -359,7 +359,7 @@ Verify the convention is stated identically across the three files (format spec)
 ## Task 5: Dogfood — three-mode verification
 
 **Depends on:** Tasks 1, 2, 3, 4
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:**
 
 **Files:** RESULTS.md Task 4 entry. No skill / reference edits expected unless the dogfood surfaces a bug; in that case adjustments are committed separately with a message naming the dogfood observation that prompted the fix.
