@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Writing skill redesign.** `skills/writing/` reorganized around three working modes (Review / Polish / Draft) instead of superRA workflow phases, replacing the cloned Iron Law / Three Concurrent Disciplines framing with a single principle (Preserve substance, polish prose); load configuration is now the authority grant (light vs deep polish differ only by whether `structure.md` loads), inline directives default to TODO-as-task / DO-NOT-EDIT-as-hands-off, an intent-comment discipline (`% intent: …`) keeps paragraph purpose in-file across sessions, and reviewer-dispatch invariants now live in workflow skills only. Design rationale captured in `skills/writing/CLAUDE.md`.
 - **Theory-modeling skill (alpha).** New domain vertical at `skills/theory-modeling/` for rigorous mathematical-modeling work: derivations, equilibrium setup, symbolic manipulation, proofs, comparative statics, and simple numerical verification. Composes with the existing PLAN → IMPLEMENT → INTEGRATE workflow without changes to workflow skills.
   - **Iron Law:** every symbol has a meaning, every assumption has a plain-language interpretation, every non-trivial derivation move has a one-sentence reason.
   - **Four-gate checklist** (Objects & Notation / Assumptions / Derivations / Verification & Rendering) walked at every implementation dispatch as the creation-time correctness floor. Gates 1 and 2 carry per-symbol and per-assumption ledger entries with explicit slot templates; falsification tests (Substitution test, Proof-deletion test) detect generic justifications.
