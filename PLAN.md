@@ -48,7 +48,7 @@
 
 - [x] **Plan approved** — researcher signed off on this redesign plan (2026-05-02)
 - [x] **Execution complete** — all tasks `APPROVED` (2026-05-02)
-- [ ] **Drift tests created** — N/A for skill authoring; substitute satisfied by Task 5 dogfood (Task 4 was the intent-comment task; Task 5 is the dogfood)
+- [x] **Drift tests created** — N/A for skill authoring; substitute satisfied by Task 5 dogfood (2026-05-02)
 - [ ] **Integrated** — integration reviewer `APPROVED` on the redesign cumulative diff
 - [ ] **Docs finalized** — RESULTS.md matured; routing surfaces (using-superRA / CATEGORIES / README) consistent with the new mode taxonomy
 - [ ] **Finished** — branch landed locally, PR opened, or requested cleanup completed
@@ -93,6 +93,9 @@
 > 4. **Reviewer-dispatch enforcement leaves this skill.** Workflow skills (`implementation-workflow` etc.) own that invariant when a workflow is in play; standalone invocations terminate at edit + commit.
 > 5. **Frontmatter trigger phrases reorganized by mode.**
 > **Workflow Status impact:** This decision invalidates the prior plan's Tasks 1–8 (their outputs — SKILL.md, references — are being restructured). All `Workflow Status` rollups except this Plan-approved entry remain unchecked. The Sync Map below was for the prior 2026-05-02 main re-sync and is independent of this redesign; it stays until Integrate closeout.
+
+> **User decision (2026-05-02, completion disposition):** Proceed with integration via `superRA:integration-workflow` (Protect / Sync / Integrate / Document / Finish). The branch is 215 commits ahead of `origin/domain/writing-skills` and main has likely advanced since the 2026-05-02 sync — Sync will refresh against current main before Integrate.
+> **Question asked:** Step 4 completion menu — Proceed with integration / Change the plan / Keep as-is / Discard.
 
 ---
 
