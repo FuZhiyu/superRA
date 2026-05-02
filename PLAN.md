@@ -275,7 +275,7 @@ Verify each rewritten header passes the §Teach the Protocol gate. Verify no sur
 - The three deprecated reference files removed (`git rm`).
 - Routing rows for `writing` updated to reflect the new mode taxonomy (one-liner edit per row — the row's existence and correct skill-name is established already).
 
-- [ ] **Step 1: Verify content extraction is complete**
+- [ ] **Step 1: Verify content extraction is complete + sweep doctrinal residue**
 
 ```bash
 # All references to the deprecated files inside the writing skill must be gone:
@@ -283,9 +283,15 @@ grep -rn 'references/workflow\.md\|references/planning\.md\|references/collabora
 
 # All references to the deprecated files anywhere in the repo:
 grep -rn 'writing/references/\(workflow\|planning\|collaboration\)' .
+
+# Doctrinal residue from the prior Iron Law / Three Concurrent Disciplines framing
+# (Task 2 left these alone because content was scoped as unchanged; Task 3 fixes them):
+grep -rn 'Iron Law\|Three Concurrent Disciplines\|Preserve.Improve.Verify\|§Preserve\|§Improve\|§Verify' skills/writing/
 ```
 
-If any matches survive, the implementer must trace each one and resolve before deletion: either the new mode files / SKILL.md should carry the absorbed content (back to Task 1), or the cross-reference is stale (fix it in place).
+For the doctrinal-residue grep, expected hits per the Task 2 implementer's flag: `consistency/argument-logic.md`, `consistency/citations.md`, `consistency/math.md`, `consistency/terminology.md`. Rewrite each in place to invoke the new principle ("Preserve substance, polish prose" — `SKILL.md`) instead. Substance of the rule the citation invokes is unchanged; only the principle name changes.
+
+If any matches in the first two greps survive, the implementer must trace each one and resolve before deletion: either the new mode files / SKILL.md should carry the absorbed content (back to Task 1), or the cross-reference is stale (fix it in place).
 
 - [ ] **Step 2: Delete the deprecated reference files**
 
@@ -303,7 +309,7 @@ git rm skills/writing/references/collaboration.md
 
 - [ ] **Step 4: Self-review + commit**
 
-Re-run the grep checks from Step 1 on the post-edit state — both must return empty (or only return matches inside the test files / archived docs that legitimately reference the historical structure). Update `RESULTS.md` Task 3. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: writing — retire workflow/planning/collaboration refs + routing-row refresh`.
+Re-run all three grep checks from Step 1 on the post-edit state — the first two must return empty (or only return matches inside test files / archived docs / `docs/plans/` that legitimately reference the historical structure); the third (doctrinal residue) must return empty inside `skills/writing/` proper. Update `RESULTS.md` Task 3. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: writing — retire workflow/planning/collaboration refs + Iron Law residue sweep + routing-row refresh`.
 
 ---
 
