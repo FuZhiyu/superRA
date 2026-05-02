@@ -45,7 +45,29 @@ The 2026-04-19 → 2026-05-02 build of `skills/writing/` (Iron Law, Three Concur
 
 ## Task 2: Lighten knowledge files and trim `integration.md`
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Files renamed (`git mv`):**
+- `style-checklist.md` → `style.md` (was 166 lines, now 156). Severity tags `[ADVISORY]` dropped on every heuristic in the Gated Checklist (sentence-level + paragraph-level). The single `[BLOCKING]` survivor is the handoff "every applied rule traceable to a real problem" item — that one shapes behavior. Header rewritten to point at modes ("Load when Polish or Draft mode applies sentence-level rules"); `IMPLEMENT phase` framing dropped; "Walked in addition to SKILL.md §Three Concurrent Disciplines" cross-reference dropped; `## Reviewer verdict protocol` block dropped. Iron Law mention in the §How-To preamble rewritten to point at `SKILL.md §Preserve substance, polish prose`.
+- `structure-checklist.md` → `structure.md` (was 143 lines, now 133). Same treatment: severity tags dropped on heuristic items; the `[BLOCKING]` handoff item ("structural change documented") survives; header rewritten ("Load when Draft mode runs, or when Polish mode is authorized to restructure — loading this file is the authority grant"); cross-reference and verdict-protocol blocks dropped; Iron Law mention rewritten.
+
+**Files header-rewritten (substance unchanged):**
+- `refactor-and-compile.md` (158 lines, was 166). Header rewritten to point at modes; `Three Concurrent Disciplines §Verify` cross-references replaced (one with the cross-references consistency file; the trailing "Walked in addition to ..." block deleted with one line folded back into the Compile checklist as the build-runs-clean BLOCKING item). Verdict-protocol block dropped. The §Refactor Iron-Law mention rewritten to `SKILL.md §Preserve substance, polish prose`. Severity tags on operationally meaningful items (preview matches, word-boundary, build-after) preserved per the plan ("substance unchanged").
+- All 8 × `consistency/*.md`. Headers rewritten from "Load when a task involves..." to "Load when Review or Polish mode targets..." with the severity-marker note reframed as "shape reviewer output" instead of "fix to earn APPROVE" (the verdict ritual is workflow-owned). Severity-grading content from the dropped verdict-protocol blocks (math: "issues are almost always MAJOR/CRITICAL"; argument-logic: "main causal claims are CRITICAL/MAJOR"; code-paper: "main-spec mismatches are CRITICAL") folded into the headers — that content is behavior-shaping. The `## Reviewer verdict protocol` H2 dropped from all 8; the `## Output format` H2 preserved (load-bearing for reviewer output). `terminology.md` lost its stale `workflow.md §Mode (b)` cross-reference.
+- `argument-logic.md` line 80 had a stale path `style-checklist.md` from the rename — updated in place to `style.md`. Iron-Law body mentions in `argument-logic.md`, `citations.md`, `math.md`, `terminology.md` (§Scope and Gated-Checklist prose) left untouched — the plan scopes consistency-file content as unchanged. **They now point at a section that no longer exists in `SKILL.md`; flagged below for Task 3 stale-reference sweep.**
+
+**File trimmed:**
+- `integration.md` (was 119 lines, now 42). Dropped: redundant Gates 3 (cross-reference integrity — restated of `consistency/cross-references.md`) and Gate 4 (per-dimension consistency reviewers — restated of `review.md` parallel-dispatch pattern); the data-analysis-touching section's prose detail (replaced with one-line pointer); the verdict-protocol block; the stale `workflow.md §Mode (b)` and `collaboration.md §What "voice preservation" means in practice` cross-references. Kept: build-on-merged-state (Gate 1), outline stability (Gate 2 here), voice-preserved three-hunk sample (Gate 3 here, was Gate 5), scope-respected hunk-trace (Gate 4 here, was Gate 6), data-analysis-touching pointer.
+
+**Necessity-gate audit:**
+- The reframed severity-marker headers (`Severity markers shape reviewer output: ...`) are behavior-shaping (tells the reviewer which markers go in the Output-format block); kept.
+- The plan's "Walked in addition to" boilerplate was wrapper text pointing at SKILL.md content the reviewer no longer walks; deletion was unambiguous.
+- The "walk top to bottom, never halt" verdict ritual is workflow-owned; deletion was unambiguous.
+
+**Stale-reference flags for Task 3 / orchestrator:**
+- `consistency/argument-logic.md:11`, `consistency/argument-logic.md:96`, `consistency/citations.md:78`, `consistency/math.md:11`, `consistency/math.md:83`, `consistency/terminology.md:32`, `consistency/terminology.md:67` — body prose mentions "Iron Law (main SKILL.md)" or "Iron Law §Scope". The new SKILL.md does not carry an Iron Law section (replaced by §Preserve substance, polish prose). The plan scopes consistency-file content as unchanged, so these were not rewritten in this task. They are stale-but-substantively-fine — the principle they invoke still holds, just under a different name. Recommend Task 3 sweep them as part of the broader stale-reference sweep, or leave for the orchestrator to adjudicate.
+
+**Knowledge files NOT touched in this task:** None — all in-scope files are now lightened. Task 3 owns the deletion of `workflow.md`, `planning.md`, `collaboration.md` and the routing-row updates.
 
 ## Task 3: Retire deprecated references and update routing
 

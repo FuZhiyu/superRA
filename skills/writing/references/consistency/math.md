@@ -1,6 +1,6 @@
 # Consistency: Math (derivations, proofs, statistical specifications)
 
-> Load when a task involves checking **mathematical correctness** — derivation steps, proof integrity, statistical/econometric model specification, notation stability across sections. One of eight `consistency/*.md` dimensions. Severity: `[BLOCKING]` must fix to earn APPROVE; `[ADVISORY]` flaggable as MINOR.
+> Load when Review or Polish mode targets **mathematical correctness** — derivation steps, proof integrity, statistical/econometric model specification, notation stability across sections. One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR. Mathematical issues are almost always `MAJOR` or `CRITICAL` — a sign error in a main identifying equation is APPROVE-blocking; a notation drift in an appendix lemma may be `MINOR`.
 
 Source dimensions harvested from `draft-reviewer:mathematical-reviewer` (derivations and proofs, notation consistency, statistical specifications, common errors catalog).
 
@@ -88,10 +88,6 @@ For each proof:
 - `[ADVISORY]` **Numerical sanity checks run on at least one key derivation** — concrete values plugged in.
 - `[ADVISORY]` **Matrix-dimension / vector-dimension annotations attached** in handoff for any dimension-sensitive step.
 - `[ADVISORY]` **Boundary / edge cases discussed** where the result depends on them.
-
-## Reviewer verdict protocol
-
-Walk top to bottom, never halt, return APPROVE / REVISE. Mathematical issues are almost always `MAJOR` or `CRITICAL` — a sign error in a main identifying equation is an APPROVE-blocker; a notation drift in an appendix lemma may be `MINOR`.
 
 ## Output format
 

@@ -1,6 +1,6 @@
 # Consistency: Argument Logic
 
-> Load when a task involves checking **logical structure and evidence support** — claim-evidence mapping, causal-inference validity, alternative-explanations coverage, overclaiming / underclaiming, hedging calibration. One of eight `consistency/*.md` dimensions. Severity: `[BLOCKING]` must fix to earn APPROVE; `[ADVISORY]` flaggable as MINOR.
+> Load when Review or Polish mode targets **logical structure and evidence support** — claim-evidence mapping, causal-inference validity, alternative-explanations coverage, overclaiming / underclaiming, hedging calibration. One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR. Issues touching **main causal claims** are `CRITICAL` / `MAJOR`; issues on supporting or secondary claims may be `MINOR`.
 
 Source dimensions harvested from `draft-reviewer:argument-logic-reviewer` (logical flow, claim-evidence, causal-inference, alternative explanations, overclaiming / underclaiming, post-hoc reasoning).
 
@@ -77,7 +77,7 @@ The paper should address the plausible ones explicitly, not just list "we cannot
 
 ### Hedging calibration
 
-One hedge per claim; no stacking. See `writing/references/style-checklist.md` §Single-hedge-per-claim. Reviewer perspective: read each headline claim and ask "is the hedge level proportional to the evidence strength?".
+One hedge per claim; no stacking. See `writing/references/style.md` §Single-hedge-per-claim. Reviewer perspective: read each headline claim and ask "is the hedge level proportional to the evidence strength?".
 
 ### Logical gaps and circular reasoning
 
@@ -98,10 +98,6 @@ One hedge per claim; no stacking. See `writing/references/style-checklist.md` §
 - `[ADVISORY]` **Underclaiming flagged** — findings that are stronger than the paper admits.
 - `[ADVISORY]` **Hedging calibrated** — no stacked hedges; one hedge per claim proportional to evidence strength.
 - `[ADVISORY]` **Circular reasoning / post-hoc / false-dichotomy patterns** flagged if present.
-
-## Reviewer verdict protocol
-
-Walk top to bottom, never halt, return APPROVE / REVISE. Argument-logic issues touching **main causal claims** are `CRITICAL` / `MAJOR`; issues on supporting or secondary claims may be `MINOR`.
 
 ## Output format
 

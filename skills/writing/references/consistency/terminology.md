@@ -1,6 +1,6 @@
 # Consistency: Terminology
 
-> Load when a task involves checking or refactoring **terminology** — the words used to name concepts, variables, groups, and defined terms. One of eight `consistency/*.md` dimensions; dispatch one reviewer per file for a multi-dimensional sweep (see `writing/references/workflow.md` §Mode (b)). Severity markers: `[BLOCKING]` must fix to earn APPROVE; `[ADVISORY]` is flaggable as MINOR.
+> Load when Review or Polish mode targets **terminology** — the words used to name concepts, variables, groups, and defined terms. One of eight `consistency/*.md` dimensions; multi-dimensional sweeps dispatch one reviewer per file in parallel. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR.
 
 Source dimensions harvested from `draft-reviewer:writing-clarity-reviewer` (terminology index) and Chaubey p. 76, p. 157 (consistent key words; don't use interchangeable terms for the same identity).
 
@@ -69,10 +69,6 @@ If the paper has a glossary, every glossary term should be: (a) used in the pape
 - `[ADVISORY]` **Terminology index attached to handoff.** Even a short one (key terms + canonical forms + observed variants) makes follow-up review faster.
 - `[ADVISORY]` **Glossary audit** performed if a glossary exists — orphan and unglossed-but-critical terms reported.
 - `[ADVISORY]` **Undefined technical terms flagged** when the audience is broader than pure specialists.
-
-## Reviewer verdict protocol
-
-Walk this file top to bottom; never halt on a failure; return APPROVE / REVISE. Dependent findings noted in prose. Re-review after REVISE is narrow.
 
 ## Output format
 

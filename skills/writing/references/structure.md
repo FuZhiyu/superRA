@@ -1,10 +1,10 @@
-# Structure Checklist — Pyramid Principle + Section Anatomy
+# Structure — Pyramid Principle + Section Anatomy
 
-> Load at the **IMPLEMENT phase** when the task drafts, restructures, or reviews the structure of a section or paper (methods section draft, intro revision, pre-submission structure check). The implementer walks §Gated Checklist as pre-handoff self-check; the reviewer walks the same items as verification.
+> Load when Draft mode runs, or when Polish mode is authorized to restructure (per the Mode routing table in `SKILL.md`). Loading this file is the authority grant for structural edits.
 
 Sources: Minto, B., *The Pyramid Principle* (governing idea, MECE, horizontal/vertical logic, SCQ / SCQA framing). Chaubey, V. (2018), *The Little Book on Research Writing* (RAP = Research question + Answer + Positioning, three-layer building: argument → outline → paragraphs, two-part introduction). Little Red Schoolhouse plan summaries (LRS 5, 6, Arg 1–3 — pending source verification; PDFs were unavailable at drafting time). Supporting: Brandeis, CGDev, IZA DP15057, Bellemare, Conversable Economist guidance on economics-paper structure.
 
-The rules below describe how a well-structured research paper reads to its audience. Per the Iron Law (main SKILL.md), structural changes beyond the requested scope are *proposed*, not performed unilaterally.
+The rules below describe how a well-structured research paper reads to its audience. Structural changes beyond the requested scope are *proposed*, not performed unilaterally (`SKILL.md §Preserve substance, polish prose`).
 
 ## How-To
 
@@ -92,51 +92,42 @@ Miller's 7±2 rule (Chaubey p. 20): a reader holds about 7 items in working memo
 
 ## Gated Checklist
 
-> **Walked in addition to `skills/writing/SKILL.md` §Three Concurrent Disciplines — SKILL.md's scope / voice / compile / cross-reference items are not repeated here. The structural-authorization gate lives in SKILL.md §Preserve and §Implementation standards.**
-
-Walked top to bottom when the task drafts, restructures, or reviews structure. Severity markers apply:
-
-- `[BLOCKING]` — fix to earn APPROVE. Anchors correctness of structural operations.
-- `[ADVISORY]` — best-practice heuristic. Reviewer MAY flag as MINOR. Does not block APPROVE.
+Walked top to bottom when the task drafts, restructures, or reviews structure. The rules are heuristics — apply them where they fix a real problem in the section being edited.
 
 ### Governing idea + MECE
 
-- `[ADVISORY]` Each section has a single governing idea expressible in one sentence.
-- `[ADVISORY]` Supporting paragraphs inside a section are MECE — no paragraph is a restatement of another; none obviously missing.
-- `[ADVISORY]` Supporting paragraphs are parallel in type (horizontal logic) — all causes, all pieces of evidence, all counterarguments, etc.
-- `[ADVISORY]` Each level answers the question raised above it (vertical logic).
+- Each section has a single governing idea expressible in one sentence.
+- Supporting paragraphs inside a section are MECE — no paragraph is a restatement of another; none obviously missing.
+- Supporting paragraphs are parallel in type (horizontal logic) — all causes, all pieces of evidence, all counterarguments, etc.
+- Each level answers the question raised above it (vertical logic).
 
 ### Introductions
 
-- `[ADVISORY]` SCQ (Situation–Complication–Question) framing present and ordered correctly.
-- `[ADVISORY]` Part 1 provokes curiosity without resorting to "the importance of X" platitudes (Chaubey p. 110).
-- `[ADVISORY]` Part 2 previews the paper's finding explicitly — no mystery-novel opener.
-- `[ADVISORY]` RAP (Research question / Answer / Positioning) statable from the intro alone (Chaubey p. 34).
-- `[ADVISORY]` Intro ends with a roadmap paragraph listing the sections that follow.
+- SCQ (Situation–Complication–Question) framing present and ordered correctly.
+- Part 1 provokes curiosity without resorting to "the importance of X" platitudes (Chaubey p. 110).
+- Part 2 previews the paper's finding explicitly — no mystery-novel opener.
+- RAP (Research question / Answer / Positioning) statable from the intro alone (Chaubey p. 34).
+- Intro ends with a roadmap paragraph listing the sections that follow.
 
 ### Section anatomy
 
-- `[ADVISORY]` Methods / Data section orders content as the reader would apply it: sources → sample → specification → identification → controls → SEs.
-- `[ADVISORY]` Results section leads with the main specification; robustness follows; main finding is not buried behind robustness tables.
-- `[ADVISORY]` Conclusion restates the research question + answer; lists limitations; does not introduce new findings.
-- `[ADVISORY]` Abstract: RAP in 150–200 words, with magnitude for A.
+- Methods / Data section orders content as the reader would apply it: sources → sample → specification → identification → controls → SEs.
+- Results section leads with the main specification; robustness follows; main finding is not buried behind robustness tables.
+- Conclusion restates the research question + answer; lists limitations; does not introduce new findings.
+- Abstract: RAP in 150–200 words, with magnitude for A.
 
 ### Headings, titles, navigation
 
-- `[ADVISORY]` Title states the finding where possible (or identifies the paper as survey / methodology).
-- `[ADVISORY]` Section headings are reader-facing (takeaway-style), not writer-facing (filing-label-style) (Chaubey p. 71).
-- `[ADVISORY]` Subheadings add specifics to the section heading's key words, not synonyms (Chaubey p. 76).
-- `[ADVISORY]` No flat list of >7 top-level points inside a section (Miller 7±2, Chaubey p. 20).
+- Title states the finding where possible (or identifies the paper as survey / methodology).
+- Section headings are reader-facing (takeaway-style), not writer-facing (filing-label-style) (Chaubey p. 71).
+- Subheadings add specifics to the section heading's key words, not synonyms (Chaubey p. 76).
+- No flat list of >7 top-level points inside a section (Miller 7±2, Chaubey p. 20).
 
 ### First-sentence storyline (Chaubey p. 128)
 
-- `[ADVISORY]` Extracting the first sentence of every paragraph in the section produces a coherent storyline.
+- Extracting the first sentence of every paragraph in the section produces a coherent storyline.
 
 ### Handoff
 
-- `[BLOCKING]` Any structural change was documented in the handoff (chat / `PLAN.md` / review notes) so the researcher can verify it matches what was requested.
-- `[ADVISORY]` Any structural concerns noticed but *not* acted on (because out of scope) were flagged for the researcher.
-
-## Reviewer verdict protocol
-
-Same as `writing/SKILL.md` §Three Concurrent Disciplines: **walk this file top to bottom, never halt on a failure, return APPROVE / REVISE.** Dependent findings noted in prose. Re-review after REVISE is narrow.
+- `[BLOCKING]` Any structural change was documented in the handoff (chat / `PLAN.md` / review notes) so the author can verify it matches what was requested.
+- Any structural concerns noticed but *not* acted on (because out of scope) were flagged for the author.

@@ -1,6 +1,6 @@
 # Consistency: Notation
 
-> Load when a task involves checking or refactoring **mathematical notation** — symbols, subscripts, superscripts, typographic conventions. One of eight `consistency/*.md` dimensions; dispatch one reviewer per file for a multi-dimensional sweep. Severity: `[BLOCKING]` must fix to earn APPROVE; `[ADVISORY]` flaggable as MINOR.
+> Load when Review or Polish mode targets **mathematical notation** — symbols, subscripts, superscripts, typographic conventions. One of eight `consistency/*.md` dimensions; multi-dimensional sweeps dispatch one reviewer per file in parallel. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR.
 
 Source dimensions harvested from `draft-reviewer:mathematical-reviewer` (notation consistency section) and LRS / Chaubey conventions on symbol discipline.
 
@@ -63,10 +63,6 @@ Flag every symbol that fails the stability test below.
 - `[ADVISORY]` **Notation index attached to handoff** (short one — symbol, definition, dimensions, convention).
 - `[ADVISORY]` **Abbreviations defined on first use** unless convention-standard for the audience.
 - `[ADVISORY]` **Code / variable names in text match variable names in equations** (soft consistency with `consistency/terminology.md`).
-
-## Reviewer verdict protocol
-
-Walk top to bottom, never halt, return APPROVE / REVISE.
 
 ## Output format
 

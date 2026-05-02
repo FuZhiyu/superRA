@@ -1,6 +1,6 @@
 # Consistency: Code–Paper Alignment
 
-> Load **only when the paper wraps an empirical code project** — methodology described in the paper must match the code that produced the results. One of eight `consistency/*.md` dimensions. Severity: `[BLOCKING]` must fix to earn APPROVE; `[ADVISORY]` flaggable as MINOR.
+> Load when Review or Polish mode targets a paper that wraps an empirical code project — methodology described in the paper must match the code that produced the results. One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR. Main-specification mismatches are `CRITICAL`; variable-definition drift is usually `MAJOR`; secondary-spec differences are typically `MINOR`.
 
 Source dimensions harvested from `draft-reviewer:code-paper-consistency` (methodology match, variable definitions, sample construction, results reproducibility).
 
@@ -89,10 +89,6 @@ Where possible:
 - `[ADVISORY]` **Secondary specifications** (robustness tables) also match.
 - `[ADVISORY]` **Code and paper version-dates** compared; flag any large gap.
 - `[ADVISORY]` **Undocumented code filters flagged** — a filter in the code that is not mentioned in the paper.
-
-## Reviewer verdict protocol
-
-Walk top to bottom, never halt, return APPROVE / REVISE. Main-specification mismatches are `CRITICAL`; variable-definition drift is usually `MAJOR`; secondary-spec differences are typically `MINOR`.
 
 ## Output format
 

@@ -1,6 +1,6 @@
 # Consistency: Numerical (numbers, figures, tables)
 
-> Load when a task involves checking **quantitative content** — numbers in text matching numbers in tables, figure/caption/text alignment, table caption accuracy, units and sign conventions. One of eight `consistency/*.md` dimensions. Severity: `[BLOCKING]` must fix to earn APPROVE; `[ADVISORY]` flaggable as MINOR.
+> Load when Review or Polish mode targets **quantitative content** — numbers in text matching numbers in tables, figure/caption/text alignment, table caption accuracy, units and sign conventions. One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR.
 
 Source dimensions harvested from `draft-reviewer:consistency-checker` (numerical consistency, table/figure verification) plus the folded figure/table/caption dimension (per user decision 2026-04-19 — no separate `figure-table-checklist.md`).
 
@@ -96,10 +96,6 @@ Always distinguish `pp` and `%`.
 - `[BLOCKING]` **Magnitude claims ("doubled", "grew by X%") verified arithmetically.**
 - `[ADVISORY]` **Rounding convention stated (or inferrable) and applied consistently.**
 - `[ADVISORY]` **SE / CI notation convention stable across tables** (parens for SEs, brackets for CIs, or equivalent).
-
-## Reviewer verdict protocol
-
-Walk top to bottom, never halt, return APPROVE / REVISE.
 
 ## Output format
 

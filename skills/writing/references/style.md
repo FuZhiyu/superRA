@@ -1,10 +1,10 @@
-# Style Checklist — Sentence + Paragraph Rules
+# Style — Sentence + Paragraph Rules
 
-> Load at the **IMPLEMENT phase** when edits touch sentence-level prose (polish, proofread, tighten, sentence-level clarity pass). The implementer walks §Gated Checklist as pre-handoff self-check; the reviewer walks the same items as verification. Severity markers: `[BLOCKING]` must be fixed to earn APPROVE; `[ADVISORY]` is flaggable as MINOR and does not block APPROVE.
+> Load when Polish or Draft mode applies sentence-level rules (polish, proofread, tighten, sentence-level clarity pass; draft self-check).
 
 Sources: Little Red Schoolhouse (UChicago ENGL 13000/33000) — actions/nominalization (LRS 1-1a), information flow (LRS 3-4). Chaubey, *The Little Book on Research Writing* (2018) — reader-model, paragraph construction, key-idea-first.
 
-The rules below are **heuristics the writer applies in service of the reader**, not mechanical must-rewrite mandates. Every rule has cases where it should NOT fire — those are called out explicitly. Per the Iron Law (main SKILL.md), meaning and voice are sovereign; rules apply inside the scope of the request and where they actually improve readability.
+The rules below are **heuristics the writer applies in service of the reader**, not mechanical must-rewrite mandates. Every rule has cases where it should NOT fire — those are called out explicitly. Apply rules only inside the scope of the request and only where they fix a real readability problem (substance and intent are sovereign per `SKILL.md §Preserve substance, polish prose`).
 
 ## How-To
 
@@ -129,37 +129,28 @@ Ambiguous pronouns — `this`, `it`, `that`, `these`, `those` — without a clea
 
 ## Gated Checklist
 
-> **Walked in addition to `skills/writing/SKILL.md` §Three Concurrent Disciplines — SKILL.md's scope / voice / compile / cross-reference items are not repeated here.**
-
-Walked top to bottom for every sentence-level edit. Severity markers apply:
-
-- `[BLOCKING]` — fix to earn APPROVE. Anchors the Iron Law (Preserve side) and correctness.
-- `[ADVISORY]` — best-practice heuristic. Reviewer MAY flag as MINOR. Does not block APPROVE.
+Walked top to bottom for every sentence-level edit. The rules are heuristics, not verdict-determining items — apply them where they fix a real problem in the text being edited.
 
 ### Sentence-level rules
 
-- `[ADVISORY]` Crucial actions carried by verbs (LRS 1-1a). Exceptions acknowledged where daisy-chain / after-strong-verb / term-of-art applies.
-- `[ADVISORY]` Old → new information flow inside paragraphs (LRS 3-4). First-sentence link test passes for any paragraphs affected.
-- `[ADVISORY]` Hedging calibrated. No stacked hedges (`may possibly`, `could tentatively`, `somewhat perhaps`).
-- `[ADVISORY]` Active voice where agent matters; passive voice justified by context when used.
-- `[ADVISORY]` Parallel structure in lists, comparisons, and headings.
-- `[ADVISORY]` Noun clusters of 3+ modifying nouns broken up.
-- `[ADVISORY]` Sentences over ~40 words split unless the length is deliberate.
-- `[ADVISORY]` No dangling modifiers.
-- `[ADVISORY]` Ambiguous pronouns (`this`, `it`) given an explicit antecedent noun.
+- Crucial actions carried by verbs (LRS 1-1a). Exceptions acknowledged where daisy-chain / after-strong-verb / term-of-art applies.
+- Old → new information flow inside paragraphs (LRS 3-4). First-sentence link test passes for any paragraphs affected.
+- Hedging calibrated. No stacked hedges (`may possibly`, `could tentatively`, `somewhat perhaps`).
+- Active voice where agent matters; passive voice justified by context when used.
+- Parallel structure in lists, comparisons, and headings.
+- Noun clusters of 3+ modifying nouns broken up.
+- Sentences over ~40 words split unless the length is deliberate.
+- No dangling modifiers.
+- Ambiguous pronouns (`this`, `it`) given an explicit antecedent noun.
 
 ### Paragraph-level rules
 
-- `[ADVISORY]` Each paragraph's first sentence carries the main message (Chaubey p. 137).
-- `[ADVISORY]` One idea per paragraph; paragraphs that bury the idea at the bottom are re-ordered (Chaubey p. 160).
-- `[ADVISORY]` Transitions placed near paragraph start.
-- `[ADVISORY]` First-sentence link test: first sentences of consecutive paragraphs form a coherent storyline (Chaubey p. 128).
+- Each paragraph's first sentence carries the main message (Chaubey p. 137).
+- One idea per paragraph; paragraphs that bury the idea at the bottom are re-ordered (Chaubey p. 160).
+- Transitions placed near paragraph start.
+- First-sentence link test: first sentences of consecutive paragraphs form a coherent storyline (Chaubey p. 128).
 
 ### Handoff
 
-- `[BLOCKING]` Every `[ADVISORY]` rule that was applied is traceable to a specific problem in the source text (no over-application).
-- `[ADVISORY]` Edits that touched more than diction (i.e., changed sentence structure) noted in handoff so reviewer can confirm voice preservation.
-
-## Reviewer verdict protocol
-
-Same as `writing/SKILL.md` §Three Concurrent Disciplines: **walk this file top to bottom, never halt on a failure, return APPROVE / REVISE.** Dependent findings noted in prose. Re-review after REVISE is narrow — verify cited fixes + any finding flagged as depending on an upstream fix.
+- `[BLOCKING]` Every applied rule is traceable to a specific problem in the source text (no over-application).
+- Edits that touched more than diction (i.e., changed sentence structure) noted in handoff so the author can confirm voice preservation.

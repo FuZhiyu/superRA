@@ -1,6 +1,6 @@
 # Consistency: Cross-References
 
-> Load when a task involves checking **cross-references** — `\ref`, `\eqref`, `\cite`, `\label`, figure/table/section numbering, "see above" and "as shown below". One of eight `consistency/*.md` dimensions. Severity: `[BLOCKING]` must fix to earn APPROVE; `[ADVISORY]` flaggable as MINOR.
+> Load when Review or Polish mode targets **cross-references** — `\ref`, `\eqref`, `\cite`, `\label`, figure/table/section numbering, "see above" and "as shown below". One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR.
 
 Source dimensions harvested from `draft-reviewer:consistency-checker` (cross-reference section) and `draft-reviewer:proofreader` (LaTeX-specific issues).
 
@@ -67,10 +67,6 @@ Sample-check a handful of figures and tables: does `grep` for `Table N` in the t
 - `[ADVISORY]` **Orphan labels reported** (labels defined but never cited).
 - `[ADVISORY]` **Numbering spot-checked** — sample of 3 figures / tables chosen at random, numbers in text match numbers in captions.
 - `[ADVISORY]` **Build log free of `undefined references` warnings** (or remaining warnings triaged with explanation).
-
-## Reviewer verdict protocol
-
-Walk top to bottom, never halt, return APPROVE / REVISE.
 
 ## Output format
 

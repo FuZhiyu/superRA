@@ -206,7 +206,7 @@ Walk every line of the four new files through the `/CLAUDE.md` necessity test. D
 ## Task 2: Lighten knowledge files and trim `integration.md`
 
 **Depends on:** *(none — can run in parallel with Task 1)*
-**Review status:**
+**Review status:** IMPLEMENTED
 **Integration status:**
 
 **Files:**
@@ -226,7 +226,7 @@ Walk every line of the four new files through the `/CLAUDE.md` necessity test. D
 - `refactor-and-compile.md` — drop the cross-reference to `SKILL.md §Three Concurrent Disciplines §Verify`; rewrite header to point at modes; substance unchanged.
 - `integration.md` — heavy trim. Most of the existing six gates are restatements of mode-level discipline (build clean, consistency dimensions pass, scope respected). Keep only the items that are specific to *integration* of writing (full-document build on the merged state, outline-stability check, voice-preserved sample, scope-tracing). One-line "load when" header pointing at `integration-workflow` riding a writing branch. Target ≤80 lines (down from 119).
 
-- [ ] **Step 1: Rename style-checklist.md → style.md and structure-checklist.md → structure.md (git mv)**
+- [x] **Step 1: Rename style-checklist.md → style.md and structure-checklist.md → structure.md (git mv)**
 
 ```bash
 cd skills/writing/references
@@ -236,19 +236,19 @@ git mv structure-checklist.md structure.md
 
 The bare-`git mv` is the rename atom; commit after Step 5 with the body edits in the same commit so reviewers see the move + edits together.
 
-- [ ] **Step 2: Rewrite headers in `style.md`, `structure.md`, `refactor-and-compile.md`, 8 × `consistency/*.md`**
+- [x] **Step 2: Rewrite headers in `style.md`, `structure.md`, `refactor-and-compile.md`, 8 × `consistency/*.md`**
 
 For each file, the top section (typically the first 5–10 lines) is rewritten to: a one-line "Load when …" sentence pointing at modes, the source-citation paragraph (kept), and one-line statement of severity-marker convention if the file uses one. **Drop:** "Load at the IMPLEMENT phase…" framing; "Walked in addition to `skills/writing/SKILL.md` §Three Concurrent Disciplines …" cross-references; the per-file `## Reviewer verdict protocol` block at the end of each file.
 
-- [ ] **Step 3: Drop `[BLOCKING]/[ADVISORY]` severity tagging on heuristic rules in `style.md` and `structure.md`**
+- [x] **Step 3: Drop `[BLOCKING]/[ADVISORY]` severity tagging on heuristic rules in `style.md` and `structure.md`**
 
 Style and structure rules are heuristics with explicit "Do NOT apply when …" exceptions. Tagging them as verdict-determining is the doctrinal residue. The Gated Checklist sections become an unbulleted-or-bulleted list of rule names with the same prose, no severity prefix. (The `[BLOCKING]` tag at the bottom of `style.md` on the "every applied rule traceable to a real problem" handoff item stays — that *is* a behavior-shaping rule.)
 
-- [ ] **Step 4: Trim `integration.md`**
+- [x] **Step 4: Trim `integration.md`**
 
 Drop redundant gates that restate mode-level discipline. Keep gates specific to integration: full-document build on the merged state; outline stability across the diff; voice-preserved sample (the three-hunk check stays); scope-respected hunk-trace. Drop the data-analysis-touching note's prose detail (one sentence pointer to `econ-data-analysis/references/integration.md` is enough). Target ≤80 lines.
 
-- [ ] **Step 5: Self-review + commit**
+- [x] **Step 5: Self-review + commit**
 
 Verify each rewritten header passes the §Teach the Protocol gate. Verify no surviving cross-reference points at `§Three Concurrent Disciplines` or `Walked in addition to SKILL.md §Three …`. Update `RESULTS.md` Task 2. Mark steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit atomically: `skill: writing knowledge-file lightening + integration.md trim`.
 

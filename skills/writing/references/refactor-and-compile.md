@@ -1,10 +1,10 @@
 # Refactor-and-Compile — Safe find-replace + build gate
 
-> Load at the **IMPLEMENT phase** whenever edits are made — every batch of edits ends with a build. Also loaded for any terminology / notation / variable-name refactor, and for fixing compile failures. Severity markers: `[BLOCKING]` must fix to earn APPROVE; `[ADVISORY]` flaggable as MINOR.
+> Load when Polish, Draft, or Review mode performs (or verifies) a find-replace across a document, and for the post-edit build that ends every batch of edits. Severity markers: `[BLOCKING]` must fix; `[ADVISORY]` flaggable as MINOR.
 
 This reference has two sections:
 
-- **§Refactor** — context-aware find-replace across a document (rename a variable, change a term of art, update a convention). Per the Iron Law (main SKILL.md), every refactor must respect authorial intent and scope.
+- **§Refactor** — context-aware find-replace across a document (rename a variable, change a term of art, update a convention). Every refactor stays inside the requested scope and preserves substance and intent (`SKILL.md §Preserve substance, polish prose`).
 - **§Compile** — build commands per engine (LaTeX, Quarto, Pandoc, Markdown), warning triage heuristics, and error-escalation rules.
 
 ---
@@ -115,7 +115,7 @@ After any build, read the log:
 
 1. **Errors.** Halt the build. Must be fixed before handoff.
 2. **Warnings.** Classified below. Triage each.
-3. **`??` in output.** Unresolved cross-references — treat as errors for Verify purposes (`writing/SKILL.md` §Three Concurrent Disciplines).
+3. **`??` in output.** Unresolved cross-references — treat as errors (see `writing/references/consistency/cross-references.md`).
 
 ### Warning triage heuristics
 
@@ -151,15 +151,8 @@ For non-trivial edits, include in the handoff:
 
 ### Compile Gated Checklist
 
-> **Walked in addition to `skills/writing/SKILL.md` §Three Concurrent Disciplines §Verify — SKILL.md already owns "document builds", "no new unresolved cross-references", and "no new undefined citations" as BLOCKING items. This section adds compile-specific operational items (triage rationale, handoff shape).**
-
 - `[BLOCKING]` Build command used is stated in handoff.
-- `[BLOCKING]` No new `File not found` errors introduced by the edit (missing figure / `\input` / package — compile-specific beyond cross-ref / citation).
+- `[BLOCKING]` Build runs to completion with no errors (no unresolved `??` references, no undefined citations, no `File not found`).
+- `[BLOCKING]` No new `File not found` errors introduced by the edit (missing figure / `\input` / package).
 - `[ADVISORY]` Build warnings enumerated in handoff (new vs pre-existing).
 - `[ADVISORY]` Each new warning has a ≤1-line triage rationale.
-
----
-
-## Reviewer verdict protocol
-
-Walk §Refactor (if the task performed a refactor) and §Compile top to bottom; never halt on a failure; return APPROVE / REVISE.

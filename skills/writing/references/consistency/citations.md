@@ -1,6 +1,6 @@
 # Consistency: Citations
 
-> Load when a task involves checking **citations** — completeness, reference-bibliography matching, format consistency, citation quality. One of eight `consistency/*.md` dimensions. Severity: `[BLOCKING]` must fix to earn APPROVE; `[ADVISORY]` flaggable as MINOR.
+> Load when Review or Polish mode targets **citations** — completeness, reference-bibliography matching, format consistency, citation quality. One of eight `consistency/*.md` dimensions. Severity markers shape reviewer output: `[BLOCKING]` items must be reported; `[ADVISORY]` items are flaggable as MINOR.
 
 Source dimensions harvested from `draft-reviewer:citation-checker` (completeness, orphan-citation scan, format consistency, quality).
 
@@ -83,10 +83,6 @@ For each citation:
 - `[ADVISORY]` **Format consistency.** One in-text style; one bibliography style; "et al." threshold consistent; DOI handling consistent.
 - `[ADVISORY]` **Currency.** Cited working papers still current (not superseded by published versions).
 - `[ADVISORY]` **Self-citation proportion not flagged by the researcher as a concern.**
-
-## Reviewer verdict protocol
-
-Walk top to bottom, never halt, return APPROVE / REVISE.
 
 ## Output format
 
