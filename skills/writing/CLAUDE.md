@@ -28,7 +28,7 @@ The default is **inverted from the prior build**. Inline `TODO`, `% TODO:`, `\to
 
 ## Intent comments live in the file, not the conversation
 
-When editing `.tex` / `.md` / `.qmd`, agents record paragraph and section purpose as inline comments (`% intent: …` for `.tex`, `<!-- intent: … -->` for `.md` / `.qmd`) on the line immediately above the paragraph. **Draft mode writes the intent first** as the drafting brief, and the comment ships with the prose; **polish mode preserves pre-existing intent comments verbatim** (they outrank current wording on conflict — wording is exactly what is being polished) and **may add `% intent (inferred): …` with the explicit hedge** when the paragraph has no comment. The `(inferred)` qualifier persists across sessions: the agent does not drop it itself, on later passes, or because the prose now matches the inference; only the author ratifies (deletes the qualifier or rewrites the line). **Review mode** uses intent comments as the yardstick — drift between stated intent and prose is a finding.
+When editing `.tex` / `.md` / `.qmd`, agents record paragraph and section purpose as inline comments (`% intent: …` for `.tex`, `<!-- intent: … -->` for `.md` / `.qmd`) on the line immediately above the paragraph. **Draft mode writes the intent first** as the drafting brief, and the comment ships with the prose; **polish mode preserves pre-existing intent comments verbatim** (they guide the polish; on conflict between text and intent the text wins, since the author may have rewritten without updating the comment — ask, or update the intent to match the text and flag) and **may add `% intent (inferred): …` with the explicit hedge** when the paragraph has no comment. The `(inferred)` qualifier persists across sessions: the agent does not drop it itself, on later passes, or because the prose now matches the inference; only the author ratifies (deletes the qualifier or rewrites the line). **Review mode** uses intent comments as the yardstick — drift between stated intent and prose is a finding.
 
 The convention lives in the source file rather than in the conversation because writing tasks span sessions and context windows. A fresh agent reading the `.tex` next month has only the file; without the comment it cannot tell what the paragraph is *trying* to do, only what it currently says, and drifts toward mechanically-correct prose that misses the intent.
 
@@ -59,3 +59,10 @@ References load **only when the mode that needs them runs**. `review.md`, `polis
 ## History
 
 The skill was first built across eight tasks on the `domain/writing-skills` branch (2026-04-19 → 2026-05-02), then redesigned across five tasks on the same branch (2026-05-02). The first build's per-phase routing and Iron-Law-and-Disciplines framing came from cloning `econ-data-analysis`; the redesign replaced both with mode-based routing and the Preserve-substance-polish-prose principle. The `TODO`-as-task default, the load-as-authority-grant rule, the intent-comment discipline, and the reviewer-dispatch-leaves-this-skill decision all emerged from concrete user feedback during planning; if a future change triggers the instinct to reverse any of them, re-read the §Decisions entries on the original `PLAN.md` (preserved in git history on this branch).
+
+
+## Sources
+
+- Chaubey, V. (2018), *The Little Book on Research Writing* (BulletBooks).
+- Minto, B. *The Pyramid Principle* — governing idea, MECE, SCQ.
+- Little Red Schoolhouse (UChicago ENGL 13000/33000) — actions-in-verbs, character, cohesion, information flow, argument structure.

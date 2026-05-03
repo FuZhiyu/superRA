@@ -47,9 +47,3 @@ Loading the listed reference is the authority grant — if `structure.md` is not
 ## Coupling to superRA workflows
 
 Most writing work is standalone — terminate at edit + commit, or at findings + commit. Larger work (whole-section drafts, whole-paper revisions, R&R passes) routes through `planning-workflow` → `implementation-workflow` → `integration-workflow`; the reviewer-dispatch invariant and the parallel-dispatch pattern for consistency reviews are owned by those workflow skills, not by this skill.
-
-## Sources
-
-- Chaubey, V. (2018), *The Little Book on Research Writing* (BulletBooks).
-- Minto, B. *The Pyramid Principle* — governing idea, MECE, SCQ.
-- Little Red Schoolhouse (UChicago ENGL 13000/33000) — actions-in-verbs, character, cohesion, information flow, argument structure.

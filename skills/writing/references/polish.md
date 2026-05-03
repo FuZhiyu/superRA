@@ -43,7 +43,7 @@ Author intent for a paragraph is recorded as a comment on the line immediately a
 
 The comment captures *what the paragraph is trying to do for the reader* — the argument it advances, the question it answers, the position it stakes — not what it currently says.
 
-**Pre-existing intent comments are the preservation target.** They outrank the paragraph's current wording (the wording is exactly what's being polished). If the polished prose would no longer fulfill the stated intent, the prose is wrong, not the intent.
+**Pre-existing intent comments guide the polish.** Read them before editing — they say what the paragraph is trying to do for the reader, which the current wording (under polish) may obscure. **If text and intent conflict, the text wins** — the author may have rewritten the paragraph with updated intent and not yet updated the comment. Ask the author whether to align the intent to the new text or rework the text toward the older intent; if asking is impractical, prefer updating the intent to match the text and flag the change. Priority chain: **user's current request > current text > intent comment > agent's own judgment**.
 
 **Absent intent comments may be added — must be hedged.** When polishing a paragraph that has no intent comment, the agent may add one inferred from the prose, and **must** mark it with the `(inferred)` qualifier:
 
