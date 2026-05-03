@@ -29,7 +29,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on the plan
-- [ ] **Execution complete** — Tasks 1–7 APPROVED
+- [x] **Execution complete** — Tasks 1–6 APPROVED; Tasks 7–8 deferred per §Decisions (2026-05-02)
 - [x] **Drift tests created** — N/A (no analysis results to protect; contributor work on skill text)
 - [ ] **Integrated**
 - [x] **Docs finalized** — N/A (no RESULTS.md to mature into permanent record; CLAUDE.md design notes land in Task 6)
@@ -56,6 +56,14 @@ Walked at planning time (2026-05-02). Re-walk on-demand only.
 - `skills/{econ-data-analysis,theory-modeling,planning-workflow,implementation-workflow,integration-workflow,agent-orchestration,handoff-doc,result-protection,refactor-and-integrate,report-in-markdown,semantic-merge,worktree-data-sync,codex-superra-setup,using-superRA}/` — out-of-scope; this is writing-skill contributor work.
 - `agents/` — agent role specs unchanged.
 - `.codex/` — generated; touched only by `sync_codex_agents.py`.
+
+---
+
+## Decisions
+
+> **User decision (2026-05-02):** Run through integration-workflow now; defer Task 7 (real-paper validation) and Task 8 (retire draft-reviewer) until the user personally validates against a paper draft.
+> **Question asked:** With Tasks 1–6 APPROVED, validate now / skip-and-PR / defer?
+> **Rationale:** *(none given)*.
 
 ---
 
@@ -236,7 +244,7 @@ Commit message: `skill: writing — SKILL.md routing + CLAUDE.md design notes fo
 
 ### Task 7: Real-paper validation
 **Depends on:** Task 1, Task 2, Task 3, Task 4, Task 5, Task 6
-**Review status:** *(set during execution)*
+**Review status:** DEFERRED — per §Decisions (2026-05-02), user runs validation against a paper of their choice in a later session; this task does not block integration of Tasks 1–6.
 
 **Script:** N/A — manual orchestrated validation pass
 **Input:** A research draft of the user's choosing
@@ -276,7 +284,7 @@ Commit message: `validation: writing — multi-agent review protocol round-tripp
 
 ### Task 8: Retire `draft-reviewer` (downstream of Task 7)
 **Depends on:** Task 7
-**Review status:** *(set during execution)*
+**Review status:** DEFERRED — gated on Task 7; user retires the marketplace entry after personally validating parity.
 
 **Script:** `~/Dropbox/app_settings/dotfiles/agents/.agents/plugins/marketplace.json` (out of repo)
 **Input:** Task 7 validation note confirming substance parity
