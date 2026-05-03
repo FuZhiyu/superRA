@@ -107,4 +107,5 @@ Expected: <value from source>
 Observed: <value in prose>
 Issue: <one-line>
 Recommendation: <specific fix>
+Auto-fixable: Yes / No
 ```

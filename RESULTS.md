@@ -41,7 +41,11 @@ Added a §Thoroughness section (5 body lines + a closing line) after §Workflow 
 
 ## Task 3: Auto-fixable flag in 8 `consistency/*.md` output formats
 
-**Status:** Not started
+**Status:** Implemented.
+
+Added `Auto-fixable: Yes / No` as the last field inside the Output format fenced block in all 8 consistency reference files (argument-logic, citations, code-paper, cross-references, math, notation, numerical, terminology). Each addition is a single line placed immediately after the existing `Recommendation:` line and before the closing code fence — no other changes.
+
+**Net additions:** 8 lines, one per file.
 
 ## Task 4: Substance gaps — `style.md` + `consistency/terminology.md`
 

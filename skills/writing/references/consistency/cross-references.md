@@ -79,4 +79,5 @@ Details:
   - Referenced target's actual content: <summary>
   - Prose claim at citing location: "<quoted>"
 Recommendation: <specific fix>
+Auto-fixable: Yes / No
 ```

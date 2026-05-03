@@ -123,13 +123,13 @@ Commit message: `skill: writing — review.md: thoroughness slider + long-form-r
 
 ### Task 3: Auto-fixable flag in 8 `consistency/*.md` output formats
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Script:** `skills/writing/references/consistency/{terminology,notation,cross-references,citations,numerical,math,argument-logic,code-paper}.md`
 **Input:** existing 8 files
 **Output:** all 8 files with `Auto-fixable: Yes / No` line in their Output format block
 
-- [ ] **Step 1: Add `Auto-fixable: Yes / No` line to each file's Output format block**
+- [x] **Step 1: Add `Auto-fixable: Yes / No` line to each file's Output format block**
 
 For each of the 8 files, locate the `## Output format` section (typically a fenced code block with `Location:`, `Recommendation:`, etc.) and add one line as the last field:
 
@@ -139,7 +139,7 @@ Auto-fixable: Yes / No
 
 Mechanical addition. Eight files, eight one-line additions, no other changes.
 
-- [ ] **Step 2: Update PLAN.md, update RESULTS.md, commit atomically**
+- [x] **Step 2: Update PLAN.md, update RESULTS.md, commit atomically**
 
 Commit message: `skill: writing — consistency/*.md: auto-fixable flag in output formats`.
 
