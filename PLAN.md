@@ -176,7 +176,7 @@ Commit message: `skill: writing — close clarity heuristic + definition-audit g
 
 ### Task 5: LaTeX-rendering coverage in `refactor-and-compile.md`
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** `skills/writing/references/refactor-and-compile.md`
 **Input:** existing file
