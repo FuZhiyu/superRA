@@ -206,7 +206,7 @@ Commit message: `skill: writing — refactor-and-compile.md: LaTeX-rendering haz
 
 ### Task 6: Routing surfaces — `SKILL.md` knowledge-files row + `CLAUDE.md` design notes
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`
 **Input:** Task 1 output
