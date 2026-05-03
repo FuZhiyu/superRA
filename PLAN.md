@@ -147,7 +147,21 @@ Commit message: `skill: writing — consistency/*.md: auto-fixable flag in outpu
 
 ### Task 4: Substance gaps — `style.md` + `consistency/terminology.md`
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** REVISE
+
+> **Review notes (2026-05-02):**
+>
+> 1. **MAJOR — DRY violation, terminology.md:64.** Final sentence "The reviewer flags drift; the canonical form is the author's call." restates a constraint already carried twice in the same file: (a) line 32 in §Check for the four patterns / Same concept, different names: *"Recommend a single canonical form per entity; do not silently rewrite unless the request authorizes it (`SKILL.md §Preserve substance, polish prose`)"*, and (b) the `[BLOCKING]` "No silent cross-scope rewrites" gate at line 71. The implementer's Step 3 defense ("the only behavior-shaping cue specific to definitional review") does not survive inspection — the constraint is identical in scope and force, and the SKILL.md §Preserve substance principle covers the general case once for all knowledge files. Delete the sentence; the rest of the audit is fine without it.
+>
+> 2. **MAJOR — Necessity violation, style.md:132.** The cross-pointer tail "Complements §Sentence-length guidance: length is the rough cue, lost subject-verb tracking is the precise one" is meta-commentary about the relationship between two adjacent rules in the same file. An agent reading the file in order encounters §Sentence-length guidance at line 97 (which already names "nested clauses and multiple subjects lose the reader") and then §Clarity heuristics at line 130 — the relationship between rough length cue and precise clause/S-V cue is visible from the rules themselves. The cross-pointer is the "wrapper instructions around authoritative content" anti-pattern called out in repo `CLAUDE.md` §Teach the Protocol: it shapes what the agent *understands* but not what it *does*, and it doubles the maintenance surface (any future edit to either rule must keep the cross-pointer's framing in sync). Delete the second sentence of the Nested-clause bullet (keep "consider splitting at the clause boundary that carries the most logical weight."). The Nested-clause detection cue itself (3+ embedded clauses, lost S-V tracking) is a genuine delta from the word-count rule and stays.
+>
+> 3. **MINOR — soft DRY edge, terminology.md:64 "explicit" axis.** Of the four quality axes (explicit / precise / consistent with field norms / prose-math aligned), the "explicit" axis shades into the existing four-patterns block pattern 4 ("Undefined term") and the §Check for the four patterns — Undefined term subsection at line 38. As written ("stated, not assumed the reader supplies it") it can be read either as the same absence-of-definition check or as a quality check on hand-wavy partial definitions; the boundary is fuzzy. Acceptable as-is if you read it as the quality reading, but consider a one-word tightening (e.g., "stated rather than implied" or "stated outright, not gestured at") so a downstream agent does not collapse it back into the absence check. Not blocking.
+>
+> Things confirmed clean (do not need to refute):
+> - **Vague-quantifiers heuristic** (style.md:134) is wholly new — no overlap with §Precision of reference (pronouns) or §Sentence-length guidance. Carve-out matches the file's existing "Do NOT" pattern. Keep.
+> - **Nested-clause detection cue** (3+ embedded clauses, lost S-V tracking) at style.md:132 is a genuine delta from the word-count rule. Keep the rule itself.
+> - **Precise / consistent-with-field-norms / prose-math alignment** axes at terminology.md:64 are not covered anywhere in the existing file. Keep.
+> - **Heuristic framing**: both additions use "consider"/"should be"/"flag the mismatch" without `[BLOCKING]` markers, no Gated Checklist entries added. Compatible with `SKILL.md §These rules are additive`.
 
 **Script:** `skills/writing/references/style.md`, `skills/writing/references/consistency/terminology.md`
 **Input:** existing files
