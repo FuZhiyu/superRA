@@ -17,7 +17,7 @@ Each drafted paragraph ships with an intent comment on the line immediately abov
 - `.tex` → `% intent: <one-sentence purpose>`
 - `.md` / `.qmd` → `<!-- intent: <one-sentence purpose> -->`
 
-Write the intent first as the drafting brief, then write prose that fulfills it. The comment ships with the prose — it is part of the draft, not scaffolding. Authored (not inferred) intent in draft mode does **not** carry the `(inferred)` qualifier; later polish passes treat it as the preservation target.
+Write the intent first as the drafting brief — distilled from the user's request — then write prose that fulfills it. The comment ships with the prose; it is part of the draft, not scaffolding.
 
 Example (LaTeX):
 

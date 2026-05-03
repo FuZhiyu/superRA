@@ -45,19 +45,7 @@ The comment captures *what the paragraph is trying to do for the reader* — the
 
 **Pre-existing intent comments guide the polish.** Read them before editing — they say what the paragraph is trying to do for the reader, which the current wording (under polish) may obscure. **If text and intent conflict, the text wins** — the author may have rewritten the paragraph with updated intent and not yet updated the comment. Ask the author whether to align the intent to the new text or rework the text toward the older intent; if asking is impractical, prefer updating the intent to match the text and flag the change. Priority chain: **user's current request > current text > intent comment > agent's own judgment**.
 
-**Absent intent comments may be added — must be hedged.** When polishing a paragraph that has no intent comment, the agent may add one inferred from the prose, and **must** mark it with the `(inferred)` qualifier:
-
-- `% intent (inferred): <one-sentence purpose>`
-- `<!-- intent (inferred): <one-sentence purpose> -->`
-
-Never add a bare `intent:` line — the hedge signals to the author that the comment is the agent's reading, not their statement. The `(inferred)` qualifier persists across sessions until the author ratifies it; ratification is the author deleting `(inferred)` (or rewriting the line). Do not drop the qualifier yourself, do not drop it on a later polish pass, and do not drop it because the prose has been edited to match the inference.
-
-Example (LaTeX):
-
-```
-% intent (inferred): motivate the regression specification by ruling out the obvious confounder.
-The natural concern is that ...
-```
+**Do not invent intent comments.** Intent comes from the author — pre-existing in the file, or stated in the request that triggered this polish. A paragraph without an intent comment stays without one; never guess the purpose from the prose and add a comment. If the polish surfaces an ambiguity that an intent comment would resolve, ask the author and write the comment from their answer; the comment then carries no hedge because the intent is the author's, just newly recorded.
 
 ## Minimal-edit discipline
 

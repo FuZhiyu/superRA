@@ -21,7 +21,7 @@ Three working modes — **Review**, **Polish**, **Draft** — share a knowledge 
 1. **Classify the request into a mode** before reading the file — the mode determines what to load (see Mode routing).
 2. **Inspect in-flight author work** with `git status` / `git diff` before editing; an unstaged diff often *is* the polish target.
 3. **Inline-directive convention.** `TODO`, `% TODO:`, `\todo{...}`, `[fill in]`, `??`, `XXX`, and crude or placeholder phrasing in the author's draft are **work assigned to the agent** — clean them up inside scope. The author signals leave-alone with an explicit `DO NOT EDIT` (or equivalent hands-off marker) on the line or block; lines so marked are off-limits even within scope.
-4. **Intent comments.** Paragraphs in `.tex` / `.md` / `.qmd` carry their purpose as a comment on the line above (`% intent: …` / `<!-- intent: … -->`). Polish mode preserves them and may add `(inferred)`-hedged ones for paragraphs without; draft mode writes them first. Full convention in `polish.md §Intent comments` and `draft.md §Intent comments`.
+4. **Intent comments.** Paragraphs in `.tex` / `.md` / `.qmd` carry their purpose as a comment on the line above (`% intent: …` / `<!-- intent: … -->`). Draft mode writes them first from the user's request; polish mode preserves them but never invents them — intent comes from the author, not from agent inference. Full convention in `polish.md §Intent comments` and `draft.md §Intent comments`.
 
 ## Mode routing
 
