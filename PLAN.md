@@ -97,7 +97,7 @@ Commit message: `skill: writing — add long-form-review.md (multi-agent review 
 
 ### Task 2: Thoroughness slider + cross-pointer in `review.md`
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** `skills/writing/references/review.md`
 **Input:** Task 1 output (`long-form-review.md`)
