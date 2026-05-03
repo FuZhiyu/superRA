@@ -8,6 +8,10 @@ user-invocable: true
 
 Three working modes — **Review**, **Polish**, **Draft** — share a knowledge base (style, structure, eight consistency dimensions, refactor-and-compile) and one principle.
 
+## These rules are additive
+
+You already know how to write, proofread, replace awkward wording, fix grammar and typos, and calibrate tone to context. This skill does not retrain that — it adds the discipline academic writing on shared author drafts needs: what counts as substance vs prose, how to read the author's in-flight signals (TODOs, DO NOT EDIT, intent comments), the eight consistency dimensions, when to ask vs propose vs perform. Apply both. The rules below constrain or redirect edits where they apply; everywhere else, polish, proofread, and adjust as you normally would. **Silence on a concern is not permission to ignore it** — anything not named here is your call, made with your general writing competence.
+
 ## Preserve substance, polish prose
 
 **Preserve** — the argument, the logic, the section/paragraph structure, the technical claims, the author's intent, the tone. These are sovereign; if a contemplated edit would change any of them, stop and ask.
