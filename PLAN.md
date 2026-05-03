@@ -123,7 +123,7 @@ Commit message: `skill: writing — review.md: thoroughness slider + long-form-r
 
 ### Task 3: Auto-fixable flag in 8 `consistency/*.md` output formats
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** `skills/writing/references/consistency/{terminology,notation,cross-references,citations,numerical,math,argument-logic,code-paper}.md`
 **Input:** existing 8 files
