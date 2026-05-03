@@ -97,29 +97,25 @@ Commit message: `skill: writing — add long-form-review.md (multi-agent review 
 
 ### Task 2: Thoroughness slider + cross-pointer in `review.md`
 **Depends on:** Task 1
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Script:** `skills/writing/references/review.md`
 **Input:** Task 1 output (`long-form-review.md`)
 **Output:** Edited `skills/writing/references/review.md`
 
-- [ ] **Step 1: Add §Thoroughness section after §Workflow**
+- [x] **Step 1: Add §Thoroughness section after §Workflow**
 
-Three modes:
+Three modes (Quick / Standard / Deep), pointer-only at `long-form-review.md` for protocol mechanics. Deep tagged "for pre-submission / R&R rounds" with the multi-perspective dispatch rule explicitly owned by `long-form-review.md` (not restated). Standard cross-references the existing §Multi-dimensional consistency reviews section to avoid restating the parallel-per-dimension mechanism. Closing line tells the agent to infer thoroughness from scope and use `AskUserQuestion` only when ambiguous, so the default is silent inference rather than a user round-trip.
 
-- **Quick** — single reviewer, one pass. Default for short paragraph- or section-scope reviews.
-- **Standard** (default for full-section / multi-dim scopes) — one reviewer per dimension, in parallel. When N > 1, follow `long-form-review.md` for the shared-doc protocol.
-- **Deep** — multi-perspective per dimension (3 reviewers per dim with stance + ordering variation). For pre-submission / R&R rounds. Loads `long-form-review.md`.
+- [x] **Step 2: Extend §Multi-dimensional consistency reviews paragraph**
 
-Closing line: agent infers from request scope; asks via `AskUserQuestion` only when ambiguous. (One paragraph + bullet list, ~10 lines.)
+Appended one sentence: "When N > 1, load `long-form-review.md` for the shared review-doc protocol." Pointer-only — header-indices content stays owned by `long-form-review.md` per the DRY/Necessity gate, not paraphrased here.
 
-- [ ] **Step 2: Extend §Multi-dimensional consistency reviews paragraph**
+- [x] **Step 3: Self-apply DRY + Necessity tests on the additions**
 
-Append one sentence: "When dispatching N > 1 reviewers, follow the shared review-doc protocol in `long-form-review.md` so each reviewer reads pre-built notation / terminology / cross-reference indices instead of cold-reading the manuscript."
+Walked every added line. KEEP rationale per line: header is the new section, Quick/Standard/Deep entries are the new axis-to-behavior mapping (Standard uses same-file pointer, Deep uses cross-file pointer), closing line tells the agent that thoroughness inference is silent by default. The PLAN draft's "3 reviewers per dim with stance + ordering variation" qualifier on Deep was deleted as a restatement of the rule owned by `long-form-review.md`. The PLAN draft's "so each reviewer reads pre-built notation / terminology / cross-reference indices" tail on the cross-pointer was deleted as a restatement of `long-form-review.md`'s header-indices content.
 
-- [ ] **Step 3: Self-apply DRY + Necessity tests on the additions**
-
-- [ ] **Step 4: Update PLAN.md, update RESULTS.md, commit atomically**
+- [x] **Step 4: Update PLAN.md, update RESULTS.md, commit atomically**
 
 Commit message: `skill: writing — review.md: thoroughness slider + long-form-review pointer`.
 

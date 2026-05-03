@@ -27,7 +27,17 @@ Authored `skills/writing/references/long-form-review.md` (33 body lines, under t
 
 ## Task 2: Thoroughness slider + cross-pointer in `review.md`
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+Added a §Thoroughness section (5 body lines + a closing line) after §Workflow in `skills/writing/references/review.md`, and appended a one-sentence cross-pointer to the existing §Multi-dimensional consistency reviews paragraph. `long-form-review.md` is loaded only on the Deep entry and on the N > 1 condition; Quick stays purely in `review.md`.
+
+**Pointer-only discipline** (DRY/Necessity gate applied line-by-line):
+
+- Deep mode says only "Loads `long-form-review.md`, which owns the multi-perspective dispatch rule" — no stance / ordering / 3-reviewer detail restated. The PLAN draft's "(3 reviewers per dim with stance + ordering variation)" qualifier was deleted.
+- The N > 1 cross-pointer says only "load `long-form-review.md` for the shared review-doc protocol" — no header-indices content restated. The PLAN draft's "so each reviewer reads pre-built notation / terminology / cross-reference indices" tail was deleted.
+- Standard mode references the existing same-file §Multi-dimensional consistency reviews section instead of restating the one-reviewer-per-dimension mechanism.
+
+**Net additions:** 7 lines (5 thoroughness items + closing inference line + the trailing sentence on the multi-dim paragraph).
 
 ## Task 3: Auto-fixable flag in 8 `consistency/*.md` output formats
 
