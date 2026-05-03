@@ -70,6 +70,7 @@ Walked at planning time (2026-05-02). Re-walk on-demand only.
 ### Task 1: Author `long-form-review.md`
 **Depends on:** *(none)*
 **Review status:** APPROVED
+**Integration status:** APPROVED
 
 **Script:** `skills/writing/references/long-form-review.md` (new file)
 **Input:** `skills/writing/references/review.md` (for trigger context); `skills/writing/CLAUDE.md` §Reviewer-dispatch invariants leave this skill (for the standalone-vs-workflow rule); `superRA:handoff-doc references/plan-anatomy.md` and `references/results-anatomy.md` (for what NOT to restate); `superRA:agent-orchestration` (for what NOT to restate)
@@ -106,6 +107,7 @@ Commit message: `skill: writing — add long-form-review.md (multi-agent review 
 ### Task 2: Thoroughness slider + cross-pointer in `review.md`
 **Depends on:** Task 1
 **Review status:** APPROVED
+**Integration status:** APPROVED
 
 **Script:** `skills/writing/references/review.md`
 **Input:** Task 1 output (`long-form-review.md`)
@@ -132,6 +134,7 @@ Commit message: `skill: writing — review.md: thoroughness slider + long-form-r
 ### Task 3: Auto-fixable flag in 8 `consistency/*.md` output formats
 **Depends on:** *(none)*
 **Review status:** APPROVED
+**Integration status:** APPROVED
 
 **Script:** `skills/writing/references/consistency/{terminology,notation,cross-references,citations,numerical,math,argument-logic,code-paper}.md`
 **Input:** existing 8 files
@@ -156,6 +159,7 @@ Commit message: `skill: writing — consistency/*.md: auto-fixable flag in outpu
 ### Task 4: Substance gaps — `style.md` + `consistency/terminology.md`
 **Depends on:** *(none)*
 **Review status:** APPROVED
+**Integration status:** APPROVED
 
 **Script:** `skills/writing/references/style.md`, `skills/writing/references/consistency/terminology.md`
 **Input:** existing files
@@ -185,6 +189,7 @@ Commit message: `skill: writing — close clarity heuristic + definition-audit g
 ### Task 5: LaTeX-rendering coverage in `refactor-and-compile.md`
 **Depends on:** *(none)*
 **Review status:** APPROVED
+**Integration status:** APPROVED
 
 **Script:** `skills/writing/references/refactor-and-compile.md`
 **Input:** existing file
@@ -215,6 +220,7 @@ Commit message: `skill: writing — refactor-and-compile.md: LaTeX-rendering haz
 ### Task 6: Routing surfaces — `SKILL.md` knowledge-files row + `CLAUDE.md` design notes
 **Depends on:** Task 1
 **Review status:** APPROVED
+**Integration status:** APPROVED
 
 **Script:** `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`
 **Input:** Task 1 output
