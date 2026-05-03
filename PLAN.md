@@ -65,6 +65,10 @@ Walked at planning time (2026-05-02). Re-walk on-demand only.
 > **Question asked:** With Tasks 1–6 APPROVED, validate now / skip-and-PR / defer?
 > **Rationale:** *(none given)*.
 
+> **User decision (2026-05-02):** Consolidate any remaining design context into `skills/writing/CLAUDE.md`, then delete PLAN.md and RESULTS.md. Same path as PR #25.
+> **Question asked:** PLAN.md / RESULTS.md disposition before PR — delete / keep at root / move into skill folder?
+> **Rationale:** *(none given)*.
+
 ---
 
 ### Task 1: Author `long-form-review.md`
