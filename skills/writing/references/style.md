@@ -127,6 +127,12 @@ Ambiguous pronouns — `this`, `it`, `that`, `these`, `those` — without a clea
 
 **Do NOT replace `this` with a noun when** the paragraph's focus is the referent just named and the antecedent is singular and immediate — adding a noun clutters the prose.
 
+### Clarity heuristics
+
+**Nested-clause run-ons.** A sentence with 3+ embedded clauses, or one where you have to backtrack to recover the subject the main verb belongs to, is harder than it needs to be — consider splitting at the clause boundary that carries the most logical weight. Complements §Sentence-length guidance: length is the rough cue, lost subject-verb tracking is the precise one.
+
+**Vague quantifiers.** `various`, `some`, `several`, `a number of` almost always read as filler the reader cannot calibrate — consider quantifying (`three`, `roughly half`, `the four cases listed in Table 2`) or naming the set. Skip the rewrite when the vagueness is deliberate (the count genuinely does not matter, or naming would mislead).
+
 ## Gated Checklist
 
 Walked top to bottom for every sentence-level edit. The rules are heuristics, not verdict-determining items — apply them where they fix a real problem in the text being edited.

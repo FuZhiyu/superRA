@@ -147,28 +147,28 @@ Commit message: `skill: writing — consistency/*.md: auto-fixable flag in outpu
 
 ### Task 4: Substance gaps — `style.md` + `consistency/terminology.md`
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Script:** `skills/writing/references/style.md`, `skills/writing/references/consistency/terminology.md`
 **Input:** existing files
 **Output:** edited files
 
-- [ ] **Step 1: Add run-on / nested-clause / vague-modifier guidance to `style.md`**
+- [x] **Step 1: Add §Clarity heuristics subsection to `style.md`**
 
-In the sentence-level rules section, add a short paragraph (4–6 lines) covering:
+Inserted after §Precision of reference and before §Gated Checklist. Two heuristics, both phrased as "consider splitting" / "consider quantifying" (not blocking):
 
-- Run-on / nested-clause: flag sentences with 3+ embedded clauses or > 40 words that lose subject-verb tracking. Recommended fix: split.
-- Vague modifiers: flag "various", "some", "several", "a number of" — the prose almost always benefits from a count or scope.
+- **Nested-clause run-ons.** 3+ embedded clauses or lost subject-verb tracking → consider splitting. Carries an explicit "Complements §Sentence-length guidance: length is the rough cue, lost subject-verb tracking is the precise one" pointer to avoid drift with the existing >40-word rule.
+- **Vague quantifiers.** `various`, `some`, `several`, `a number of` → consider quantifying or naming the set. Carve-out for deliberate vagueness preserves the file's "Do NOT" exception pattern and matches `SKILL.md §These rules are additive` framing (heuristic, not gate). No Gated Checklist entry added.
 
-These are heuristics, additive to baseline agent writing competence. Phrase as "consider splitting" / "consider quantifying" — not blocking gates.
+- [x] **Step 2: Add §Definition-clarity audit to `consistency/terminology.md`**
 
-- [ ] **Step 2: Add §Definition-clarity audit to `consistency/terminology.md`**
+Inserted as a new How-To subsection after §Glossary audit. Audit asks for definitions to be explicit (not assumed), precise (not circular), consistent with field norms, and aligned across prose and math. Closes with "reviewer flags drift; canonical form is the author's call" — distinguishes flag-only review behavior from author-owned canonical-definition decision. No Gated Checklist entry added (heuristic audit, not blocking).
 
-Short subsection (4–6 lines): for each key term, the definition should be explicit (not assumed by the reader), precise (not circular — "X is defined as X-related"), consistent with field norms. Definitions stated in math but not in prose (or vice versa) are a flag. The reviewer flags drift; the author owns the canonical form.
+- [x] **Step 3: Self-apply DRY + Necessity tests on the additions**
 
-- [ ] **Step 3: Self-apply DRY + Necessity tests on the additions**
+`style.md`: nested-clause cue (3+ clauses, S-V tracking) is distinct from existing §Sentence-length rule (which is word-count framed); pointer added to make the relationship explicit. Vague-quantifiers rule is wholly new in the file. `terminology.md`: explicit/precise/field-norm/prose↔math axes are not covered by the existing four-patterns block (which checks absence-of-def and naming drift, not definition quality). Author-owns-canonical-form line is the only behavior-shaping cue specific to definitional review (vs naming review where canonical choice is often obvious). Per dispatch: no `[BLOCKING]` markers.
 
-- [ ] **Step 4: Update PLAN.md, update RESULTS.md, commit atomically**
+- [x] **Step 4: Update PLAN.md, update RESULTS.md, commit atomically**
 
 Commit message: `skill: writing — close clarity heuristic + definition-audit gaps`.
 

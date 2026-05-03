@@ -59,6 +59,10 @@ Pick one set and use it consistently. Flag mixed use.
 
 If the paper has a glossary, every glossary term should be: (a) used in the paper, (b) used with the glossary definition. Orphan glossary entries and unglossed-but-critical terms both worth flagging.
 
+### Definition-clarity audit
+
+For each key term, the definition should be **explicit** (stated, not assumed the reader supplies it), **precise** (not circular — "X is defined as X-related" or "the effect is the effect of treatment"), and **consistent with field norms** (a term used against the field's standing meaning needs an explicit override). When a term is defined in math but not in prose, or in prose but not aligned with the formal object it names, flag the mismatch. The reviewer flags drift; the canonical form is the author's call.
+
 ## Gated Checklist
 
 - `[BLOCKING]` **Same concept, different names flagged.** Every identified alias for a key entity is reported (file + line locations) even if not fixed.
