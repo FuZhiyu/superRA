@@ -176,31 +176,31 @@ Commit message: `skill: writing — close clarity heuristic + definition-audit g
 
 ### Task 5: LaTeX-rendering coverage in `refactor-and-compile.md`
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Script:** `skills/writing/references/refactor-and-compile.md`
 **Input:** existing file
-**Output:** verified or extended file
+**Output:** extended file with new §LaTeX-rendering hazards subsection
 
-- [ ] **Step 1: Read `refactor-and-compile.md`; verify LaTeX hazards coverage**
+- [x] **Step 1: Read `refactor-and-compile.md`; verify LaTeX hazards coverage**
 
-Hazards to verify present:
-- Unescaped `%`, `&`, `#`, `_` in text mode
-- Broken `??` cross-references
-- Missing bibliography entries
-- Overfull / underfull hbox warnings
-- Unclosed math-mode delimiters (unmatched `$`)
-- Equation numbering gaps
+Six hazards walked. Coverage at HEAD:
+- Unescaped `%`, `&`, `#`, `_` in text mode — **missing**
+- Broken `??` cross-references — covered (§Compile Reading build output bullet 3 + warning table `Reference(s) undefined`)
+- Missing bibliography entries — covered (warning table `Citation(s) undefined` + Pandoc `Could not find reference`)
+- Overfull / underfull hbox warnings — covered (warning table rows 1–3)
+- Unclosed math-mode delimiters (unmatched `$`) — **missing**
+- Equation numbering gaps — **missing**
 
-If all are covered, no edit needed — record verification in this task's RESULTS.md note.
+Added §LaTeX-rendering hazards subsection (3 bullets, after the warning triage table, before §Error-escalation rules) listing only the three missing items.
 
-If any are missing, add a §LaTeX-rendering hazards subsection (~10 lines) listing only the missing items, one short bullet per item.
+- [x] **Step 2: Self-apply DRY + Necessity tests on any addition**
 
-- [ ] **Step 2: Self-apply DRY + Necessity tests on any addition**
+Walked the four added lines (lead + 3 bullets). Each bullet names a failure mechanism the existing warning table does not surface: silent `%` truncation by a refactor, cascading errors from a missing `$/\)/\]` delimiter, and `??` produced by `\label` in starred env or after `\nonumber`. None duplicates a warning-table row, the §Refactor word-boundary discipline, or the existing `??` rule. The lead line scopes the subsection as a complement to the warning table — without it the relationship would be ambiguous.
 
-- [ ] **Step 3: Update PLAN.md, update RESULTS.md, commit atomically (only if edits were needed)**
+- [x] **Step 3: Update PLAN.md, update RESULTS.md, commit atomically**
 
-Commit message (if edited): `skill: writing — refactor-and-compile.md: LaTeX-rendering hazards`. If verified-only with no edit, the RESULTS.md note + PLAN.md status flip lands with the next task's commit (Task 6).
+Commit message: `skill: writing — refactor-and-compile.md: LaTeX-rendering hazards`.
 
 ---
 

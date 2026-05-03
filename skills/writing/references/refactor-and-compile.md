@@ -133,6 +133,14 @@ After any build, read the log:
 | Pandoc warning `[WARNING] Could not find reference for ...` | **Escalate** | Missing citation. `[BLOCKING]`. |
 | Pandoc `[WARNING] This document format requires nonempty ...` | Read and judge | Often a YAML metadata issue. |
 
+### LaTeX-rendering hazards
+
+Failure modes the warning table above does not name explicitly:
+
+- **Unescaped `%`, `&`, `#`, `_` in text mode.** A refactor that drops a literal `%` truncates the line at that point (LaTeX comment); literal `&`, `#`, `_` raise errors or shift alignment in tables. Escape as `\%`, `\&`, `\#`, `\_` outside math mode.
+- **Unclosed math-mode delimiters.** A missing `$`, `\)`, or `\]` cascades into many lines of misleading errors before LaTeX recovers. When the first error is "Missing $ inserted" or "Display math should end with $$", search for the unmatched delimiter near the cited line.
+- **Equation numbering gaps.** A `\label{eq:foo}` inside a starred environment (`equation*`, `align*`) or after `\nonumber` produces a `??` at every `\ref{eq:foo}` site — the label exists but has no number to print. Either remove the star/`\nonumber` or switch the reference to `\eqref` of a numbered sibling.
+
 ### Error-escalation rules
 
 - **Build errors introduced by the edit:** the edit is responsible. Fix before handoff.

@@ -59,7 +59,13 @@ Added `Auto-fixable: Yes / No` as the last field inside the Output format fenced
 
 ## Task 5: LaTeX-rendering coverage in `refactor-and-compile.md`
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+Verified the six PLAN-listed LaTeX-rendering hazards against `skills/writing/references/refactor-and-compile.md` at HEAD. Three were already covered by §Compile content: broken `??` cross-references (Reading build output bullet 3 + warning table `Reference(s) undefined`), missing bibliography entries (warning table `Citation(s) undefined` + Pandoc `Could not find reference`), and overfull / underfull hbox warnings (warning table rows 1–3). Three were missing: unescaped `%`, `&`, `#`, `_` in text mode; unclosed math-mode delimiters; and equation numbering gaps.
+
+Added §LaTeX-rendering hazards subsection (one lead line + 3 bullets) inside §Compile, between the warning triage table and §Error-escalation rules. Each bullet names a failure mechanism the warning table does not surface — silent `%` truncation by a refactor, the cascade pattern of an unclosed `$/\)/\]`, and a `\label` placed in a starred env or after `\nonumber` producing `??` at every `\ref` site — and points the agent at a fix. No restatement of the warning table, the §Refactor word-boundary discipline, or the existing `??` rule.
+
+**Net additions:** 7 lines (subsection header, blank, lead line, blank, 3 bullets) inside §Compile.
 
 ## Task 6: Routing surfaces — `SKILL.md` knowledge-files row + `CLAUDE.md` design notes
 
