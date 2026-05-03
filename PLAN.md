@@ -31,7 +31,7 @@
 - [x] **Plan approved** — researcher signed off on the plan
 - [x] **Execution complete** — Tasks 1–6 APPROVED; Tasks 7–8 deferred per §Decisions (2026-05-02)
 - [x] **Drift tests created** — N/A (no analysis results to protect; contributor work on skill text)
-- [ ] **Integrated**
+- [x] **Integrated** — Tasks 1–6 `**Integration status:** APPROVED`; Sync was a no-op (base unchanged)
 - [x] **Docs finalized** — N/A (no RESULTS.md to mature into permanent record; CLAUDE.md design notes land in Task 6)
 - [ ] **Finished** — PR opened or merged into main
 
