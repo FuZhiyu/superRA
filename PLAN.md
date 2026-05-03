@@ -61,13 +61,13 @@ Walked at planning time (2026-05-02). Re-walk on-demand only.
 
 ### Task 1: Author `long-form-review.md`
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Script:** `skills/writing/references/long-form-review.md` (new file)
 **Input:** `skills/writing/references/review.md` (for trigger context); `skills/writing/CLAUDE.md` §Reviewer-dispatch invariants leave this skill (for the standalone-vs-workflow rule); `superRA:handoff-doc references/plan-anatomy.md` and `references/results-anatomy.md` (for what NOT to restate); `superRA:agent-orchestration` (for what NOT to restate)
 **Output:** `skills/writing/references/long-form-review.md`, ~40 lines
 
-- [ ] **Step 1: Author the new reference**
+- [x] **Step 1: Author the new reference**
 
 Sections, in order:
 
@@ -85,11 +85,11 @@ Sections, in order:
 
 The reference does **not** restate plan-anatomy task-block format, dispatch-template fields, handoff-doc inline-edit rules, or `consistency/*.md` content. Pointer-only for those.
 
-- [ ] **Step 2: Self-apply DRY + Necessity tests line-by-line**
+- [x] **Step 2: Self-apply DRY + Necessity tests line-by-line**
 
 For every line: (a) is the information already in `handoff-doc/references/plan-anatomy.md`, `agent-orchestration` dispatch templates, `review.md`, or a `consistency/<dim>.md`? If yes, point and delete the restatement. (b) Would the agent's behavior be unstable without this line? If no, delete it.
 
-- [ ] **Step 3: Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED), update RESULTS.md, commit atomically**
+- [x] **Step 3: Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED), update RESULTS.md, commit atomically**
 
 Commit message: `skill: writing — add long-form-review.md (multi-agent review protocol)`. Includes the new file + PLAN.md + RESULTS.md updates.
 
