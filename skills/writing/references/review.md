@@ -22,7 +22,7 @@ The boundary between "findings report" and "plan" is fluid. If the requester say
 
 ## Intent comments as yardstick
 
-When `% intent: …` (`.tex`) or `<!-- intent: … -->` (`.md`/`.qmd`) comments sit above paragraphs, read them alongside the prose. **Drift between stated intent and prose is a finding** — the intent line is the author's commitment about what the paragraph achieves; prose that misses it is higher-leverage than a sentence-level style issue. Classify these under **argument** or **structure** depending on the gap.
+When `% intent: …` (`.tex`) or `<!-- intent: … -->` (`.md`/`.qmd`) comments sit above paragraphs, read them alongside the prose. **Drift between stated intent and prose is a finding worth flagging** — but flag, do not adjudicate; on a recent rewrite the prose may be the latest signal of intent and the comment may be stale (`polish.md §Intent comments` priority chain). Classify under **argument** or **structure** depending on the gap.
 
 ## No edits in this mode
 

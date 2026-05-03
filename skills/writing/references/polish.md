@@ -49,6 +49,6 @@ The comment captures *what the paragraph is trying to do for the reader* — the
 
 ## Minimal-edit discipline
 
-For each identified problem, apply the smallest edit that fixes it. A nominalization fix replaces one noun with one verb, not the whole sentence. Over-editing is the most common failure mode of polish mode — every word changed beyond the minimum is voice drift.
+For each identified problem, apply the smallest edit that fixes it. A nominalization fix replaces one noun with one verb, not the whole sentence. Over-editing is the most common failure mode of polish mode — every word changed beyond the minimum risks drifting past the requested scope and into the author's substance.
 
 After the edit batch, run the build (`refactor-and-compile.md` §Compile) and check that no cross-reference broke. A diff that doesn't compile is not a polished diff.
