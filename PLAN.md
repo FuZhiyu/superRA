@@ -61,7 +61,7 @@ Walked at planning time (2026-05-02). Re-walk on-demand only.
 
 ### Task 1: Author `long-form-review.md`
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 **Script:** `skills/writing/references/long-form-review.md` (new file)
 **Input:** `skills/writing/references/review.md` (for trigger context); `skills/writing/CLAUDE.md` §Reviewer-dispatch invariants leave this skill (for the standalone-vs-workflow rule); `superRA:handoff-doc references/plan-anatomy.md` and `references/results-anatomy.md` (for what NOT to restate); `superRA:agent-orchestration` (for what NOT to restate)
