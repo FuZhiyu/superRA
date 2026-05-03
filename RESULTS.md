@@ -51,11 +51,11 @@ Added `Auto-fixable: Yes / No` as the last field inside the Output format fenced
 
 **Status:** Implemented.
 
-`skills/writing/references/style.md`: added §Clarity heuristics subsection (between §Precision of reference and §Gated Checklist) with two heuristics — nested-clause run-ons (3+ embedded clauses or lost subject-verb tracking → consider splitting; explicitly complements the existing §Sentence-length guidance) and vague quantifiers (`various`, `some`, `several`, `a number of` → consider quantifying or naming the set; carve-out for deliberate vagueness). Phrased as "consider X" — additive to baseline writing competence per `SKILL.md §These rules are additive`, no Gated Checklist entry, no `[BLOCKING]` markers.
+`skills/writing/references/style.md`: added §Clarity heuristics subsection (between §Precision of reference and §Gated Checklist) with two heuristics — nested-clause run-ons (3+ embedded clauses or lost subject-verb tracking → consider splitting at the clause boundary that carries the most logical weight) and vague quantifiers (`various`, `some`, `several`, `a number of` → consider quantifying or naming the set; carve-out for deliberate vagueness). Phrased as "consider X" — additive to baseline writing competence per `SKILL.md §These rules are additive`, no Gated Checklist entry, no `[BLOCKING]` markers.
 
-`skills/writing/references/consistency/terminology.md`: added §Definition-clarity audit subsection (after §Glossary audit, inside How-To). Audits definitions for explicit (stated, not assumed), precise (not circular), field-norm-consistent, and prose↔math aligned; reviewer-flags-drift / author-owns-canonical-form discipline. No Gated Checklist entry — heuristic audit, not blocking.
+`skills/writing/references/consistency/terminology.md`: added §Definition-clarity audit subsection (after §Glossary audit, inside How-To). Audits definitions for explicit (stated, not assumed), precise (not circular), field-norm-consistent, and prose↔math aligned; closes on "flag the mismatch" — flag-only-vs-author-decision framing stays owned by `SKILL.md §Preserve substance` and the file's `[BLOCKING] No silent cross-scope rewrites` gate. No Gated Checklist entry — heuristic audit, not blocking.
 
-**Net additions:** 2 short subsections, 4 lines of prose each (excluding headers).
+**Net additions:** 2 short subsections, ~3 lines of prose each (excluding headers).
 
 ## Task 5: LaTeX-rendering coverage in `refactor-and-compile.md`
 

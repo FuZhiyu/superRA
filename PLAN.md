@@ -147,15 +147,18 @@ Commit message: `skill: writing — consistency/*.md: auto-fixable flag in outpu
 
 ### Task 4: Substance gaps — `style.md` + `consistency/terminology.md`
 **Depends on:** *(none)*
-**Review status:** REVISE
+**Review status:** IMPLEMENTED
 
 > **Review notes (2026-05-02):**
 >
 > 1. **MAJOR — DRY violation, terminology.md:64.** Final sentence "The reviewer flags drift; the canonical form is the author's call." restates a constraint already carried twice in the same file: (a) line 32 in §Check for the four patterns / Same concept, different names: *"Recommend a single canonical form per entity; do not silently rewrite unless the request authorizes it (`SKILL.md §Preserve substance, polish prose`)"*, and (b) the `[BLOCKING]` "No silent cross-scope rewrites" gate at line 71. The implementer's Step 3 defense ("the only behavior-shaping cue specific to definitional review") does not survive inspection — the constraint is identical in scope and force, and the SKILL.md §Preserve substance principle covers the general case once for all knowledge files. Delete the sentence; the rest of the audit is fine without it.
+>    → implemented: deleted the closing sentence; §Definition-clarity audit now ends at "flag the mismatch." (`skills/writing/references/consistency/terminology.md:64`)
 >
 > 2. **MAJOR — Necessity violation, style.md:132.** The cross-pointer tail "Complements §Sentence-length guidance: length is the rough cue, lost subject-verb tracking is the precise one" is meta-commentary about the relationship between two adjacent rules in the same file. An agent reading the file in order encounters §Sentence-length guidance at line 97 (which already names "nested clauses and multiple subjects lose the reader") and then §Clarity heuristics at line 130 — the relationship between rough length cue and precise clause/S-V cue is visible from the rules themselves. The cross-pointer is the "wrapper instructions around authoritative content" anti-pattern called out in repo `CLAUDE.md` §Teach the Protocol: it shapes what the agent *understands* but not what it *does*, and it doubles the maintenance surface (any future edit to either rule must keep the cross-pointer's framing in sync). Delete the second sentence of the Nested-clause bullet (keep "consider splitting at the clause boundary that carries the most logical weight."). The Nested-clause detection cue itself (3+ embedded clauses, lost S-V tracking) is a genuine delta from the word-count rule and stays.
+>    → implemented: deleted the cross-pointer tail; Nested-clause bullet now ends at "the most logical weight." (`skills/writing/references/style.md:132`)
 >
 > 3. **MINOR — soft DRY edge, terminology.md:64 "explicit" axis.** Of the four quality axes (explicit / precise / consistent with field norms / prose-math aligned), the "explicit" axis shades into the existing four-patterns block pattern 4 ("Undefined term") and the §Check for the four patterns — Undefined term subsection at line 38. As written ("stated, not assumed the reader supplies it") it can be read either as the same absence-of-definition check or as a quality check on hand-wavy partial definitions; the boundary is fuzzy. Acceptable as-is if you read it as the quality reading, but consider a one-word tightening (e.g., "stated rather than implied" or "stated outright, not gestured at") so a downstream agent does not collapse it back into the absence check. Not blocking.
+>    → orchestrator: rejected — accepting the soft edge per reviewer's "or accept as-is" framing; the four axes together (explicit/precise/field-norm/prose-math) are distinct from pattern-4 absence-check.
 >
 > Things confirmed clean (do not need to refute):
 > - **Vague-quantifiers heuristic** (style.md:134) is wholly new — no overlap with §Precision of reference (pronouns) or §Sentence-length guidance. Carve-out matches the file's existing "Do NOT" pattern. Keep.
@@ -171,16 +174,16 @@ Commit message: `skill: writing — consistency/*.md: auto-fixable flag in outpu
 
 Inserted after §Precision of reference and before §Gated Checklist. Two heuristics, both phrased as "consider splitting" / "consider quantifying" (not blocking):
 
-- **Nested-clause run-ons.** 3+ embedded clauses or lost subject-verb tracking → consider splitting. Carries an explicit "Complements §Sentence-length guidance: length is the rough cue, lost subject-verb tracking is the precise one" pointer to avoid drift with the existing >40-word rule.
+- **Nested-clause run-ons.** 3+ embedded clauses or lost subject-verb tracking → consider splitting at the clause boundary that carries the most logical weight. Distinct delta from the existing >40-word §Sentence-length rule (word-count vs S-V-tracking cues); no cross-pointer prose — the relationship is visible from the rules themselves.
 - **Vague quantifiers.** `various`, `some`, `several`, `a number of` → consider quantifying or naming the set. Carve-out for deliberate vagueness preserves the file's "Do NOT" exception pattern and matches `SKILL.md §These rules are additive` framing (heuristic, not gate). No Gated Checklist entry added.
 
 - [x] **Step 2: Add §Definition-clarity audit to `consistency/terminology.md`**
 
-Inserted as a new How-To subsection after §Glossary audit. Audit asks for definitions to be explicit (not assumed), precise (not circular), consistent with field norms, and aligned across prose and math. Closes with "reviewer flags drift; canonical form is the author's call" — distinguishes flag-only review behavior from author-owned canonical-definition decision. No Gated Checklist entry added (heuristic audit, not blocking).
+Inserted as a new How-To subsection after §Glossary audit. Audit asks for definitions to be explicit (not assumed), precise (not circular), consistent with field norms, and aligned across prose and math, ending with "flag the mismatch" on the prose↔math axis. The flag-only-vs-author-decision framing is owned once by `SKILL.md §Preserve substance, polish prose` and the file's `[BLOCKING] No silent cross-scope rewrites` gate; not restated here. No Gated Checklist entry added (heuristic audit, not blocking).
 
 - [x] **Step 3: Self-apply DRY + Necessity tests on the additions**
 
-`style.md`: nested-clause cue (3+ clauses, S-V tracking) is distinct from existing §Sentence-length rule (which is word-count framed); pointer added to make the relationship explicit. Vague-quantifiers rule is wholly new in the file. `terminology.md`: explicit/precise/field-norm/prose↔math axes are not covered by the existing four-patterns block (which checks absence-of-def and naming drift, not definition quality). Author-owns-canonical-form line is the only behavior-shaping cue specific to definitional review (vs naming review where canonical choice is often obvious). Per dispatch: no `[BLOCKING]` markers.
+`style.md`: nested-clause cue (3+ clauses, S-V tracking) is distinct from existing §Sentence-length rule (which is word-count framed); the relationship between the two is visible from the rules themselves — no cross-pointer prose (would be wrapper meta-commentary about adjacent rules in the same file, anti-pattern per repo `CLAUDE.md` §Teach the Protocol). Vague-quantifiers rule is wholly new in the file. `terminology.md`: explicit/precise/field-norm/prose↔math axes are not covered by the existing four-patterns block (which checks absence-of-def and naming drift, not definition quality). Flag-only-vs-author-decision framing is owned by `SKILL.md §Preserve substance` plus the file's `[BLOCKING] No silent cross-scope rewrites` gate — not restated in §Definition-clarity audit. Per dispatch: no `[BLOCKING]` markers.
 
 - [x] **Step 4: Update PLAN.md, update RESULTS.md, commit atomically**
 

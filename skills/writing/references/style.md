@@ -129,7 +129,7 @@ Ambiguous pronouns — `this`, `it`, `that`, `these`, `those` — without a clea
 
 ### Clarity heuristics
 
-**Nested-clause run-ons.** A sentence with 3+ embedded clauses, or one where you have to backtrack to recover the subject the main verb belongs to, is harder than it needs to be — consider splitting at the clause boundary that carries the most logical weight. Complements §Sentence-length guidance: length is the rough cue, lost subject-verb tracking is the precise one.
+**Nested-clause run-ons.** A sentence with 3+ embedded clauses, or one where you have to backtrack to recover the subject the main verb belongs to, is harder than it needs to be — consider splitting at the clause boundary that carries the most logical weight.
 
 **Vague quantifiers.** `various`, `some`, `several`, `a number of` almost always read as filler the reader cannot calibrate — consider quantifying (`three`, `roughly half`, `the four cases listed in Table 2`) or naming the set. Skip the rewrite when the vagueness is deliberate (the count genuinely does not matter, or naming would mislead).
 
