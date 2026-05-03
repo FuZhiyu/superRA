@@ -206,33 +206,29 @@ Commit message: `skill: writing — refactor-and-compile.md: LaTeX-rendering haz
 
 ### Task 6: Routing surfaces — `SKILL.md` knowledge-files row + `CLAUDE.md` design notes
 **Depends on:** Task 1
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Script:** `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`
 **Input:** Task 1 output
 **Output:** edited files
 
-- [ ] **Step 1: Add row to `SKILL.md` §Knowledge files table**
+- [x] **Step 1: Add row to `SKILL.md` §Knowledge files table**
 
-Add this row at the appropriate position in the Knowledge files table:
+Inserted between the `consistency/*.md` row and the `refactor-and-compile.md` row (natural position — `long-form-review.md` orchestrates over the consistency files):
 
 | `references/long-form-review.md` | Multi-dimensional review (N > 1 consistency dimensions), `deep` thoroughness, or full-paper / pre-submission scope. |
 
-- [ ] **Step 2: Add §Multi-agent review pattern subsection to `skills/writing/CLAUDE.md`**
+- [x] **Step 2: Add §Multi-agent review pattern subsection to `skills/writing/CLAUDE.md`**
 
-10–15 lines recording four design choices:
+Placed after §Reviewer-dispatch invariants leave this skill and before §Stage-scoped references — that ordering keeps the "what doesn't live here" / "what does live here" pair adjacent. 13 lines (H2 header, blank, lead paragraph, blank, four bullets) covering choices (a)–(d). Phrased as design rationale ("future contributors should not re-litigate"), not procedure.
 
-(a) The protocol lives in a separate reference because each `consistency/<dim>.md` already owns its substance — `long-form-review.md` is orchestration only (DRY).
+- [x] **Step 3: Self-apply DRY + Necessity tests on the additions**
 
-(b) The doc is named `REVIEW.md` not `PLAN.md` to avoid collision when a workflow's own PLAN.md is in play. The two coexist by name and lifecycle: PLAN.md spans the project; REVIEW.md is born for one review and dies after closeout.
+SKILL.md row: pointer-only — names the load conditions (mirrors `long-form-review.md §Trigger`); without it the file would not be loaded. Pass.
 
-(c) We did not add a `consistency/proofreading.md`. Mechanical proofreading (typos / grammar / punctuation) is baseline competence per `SKILL.md §These rules are additive`. LaTeX-rendering hazards live with the build step in `refactor-and-compile.md`.
+CLAUDE.md subsection: each bullet records a choice that would otherwise reopen — (a) why the reference is short, (b) why `REVIEW.md` not `PLAN.md` (collision rationale not visible from the reference itself), (c) deliberate omission of `consistency/proofreading.md`, (d) re-asserting the no-new-`Stage:` memory rule with the routing path named so a future contributor sees the resolution, not just the prohibition. Pass.
 
-(d) Stage value is `implementation` (no new Stage). Writing skill add-on already routes via the `using-superRA §Skill-Load Manifest` Domain add-ons table. Memory rule: do not add new `Stage:` values.
-
-- [ ] **Step 3: Self-apply DRY + Necessity tests on the additions**
-
-- [ ] **Step 4: Update PLAN.md, update RESULTS.md, commit atomically**
+- [x] **Step 4: Update PLAN.md, update RESULTS.md, commit atomically**
 
 Commit message: `skill: writing — SKILL.md routing + CLAUDE.md design notes for multi-agent review`.
 

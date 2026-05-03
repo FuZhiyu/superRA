@@ -45,6 +45,7 @@ Loading the listed reference is the authority grant — if `structure.md` is not
 | `references/style.md` | Sentence- or paragraph-level edits (every Polish, every Draft self-check). |
 | `references/structure.md` | Drafting a section, or polish that authorizes restructuring. |
 | `references/consistency/*.md` (8 dimensions: terminology, notation, cross-references, citations, numerical, math, argument-logic, code-paper) | Review or polish targets that one dimension. Multi-dimension reviews dispatch one reviewer per file in parallel. |
+| `references/long-form-review.md` | Multi-dimensional review (N > 1 consistency dimensions), `deep` thoroughness, or full-paper / pre-submission scope. |
 | `references/refactor-and-compile.md` | Find-replace across the document, build/compile any time edits are made. |
 | `references/integration.md` | The writing task is riding `integration-workflow`. |
 

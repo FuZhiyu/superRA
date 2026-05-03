@@ -40,6 +40,15 @@ Two design choices behind this. First, the convention lives in the source file r
 
 Standalone invocations of `writing` terminate at edit + commit (or at findings + commit, for review mode). The "reviewer dispatch is never skipped" invariant from the earlier `workflow.md` was removed: that invariant belongs to `implementation-workflow` and the other workflow skills, which own it for any writing task that rides the full pipeline. Keeping it inside `writing` would have forced every standalone polish to dispatch a reviewer, which is wrong for the dominant use case (small iterative edits with the main agent). Parallel-dispatch for multi-dimensional consistency reviews survives in `review.md` as a behavior the review-mode agent applies when scope is multi-dimensional — that is a within-skill technique, not a workflow invariant.
 
+## Multi-agent review pattern
+
+The orchestration protocol for multi-dimensional / deep / full-paper review lives in `references/long-form-review.md`. Four design choices that future contributors should not re-litigate:
+
+- **Orchestration-only reference.** The substance of every dimension already lives in its `consistency/<dim>.md`; `long-form-review.md` carries dispatch shape, the shared-doc convention, and the deep-mode multi-perspective rule, and points at the dimension files for everything else. If a candidate addition restates per-dimension judgment, it belongs in the dimension file, not here.
+- **Shared doc is `REVIEW.md`, not `PLAN.md`.** Naming the review artifact `PLAN.md` would collide with the workflow's own `PLAN.md` whenever the review rides one. The two coexist by name and lifecycle: `PLAN.md` spans the project; `REVIEW.md` is born for one review and dies at closeout (delete or archive). A future "just reuse PLAN.md" suggestion needs to solve the collision before it is reopened.
+- **No `consistency/proofreading.md`.** Mechanical proofreading (typos, grammar, punctuation) is baseline agent competence per `SKILL.md §These rules are additive` and does not need a dimension file. LaTeX-rendering hazards — the one mechanical concern that is not baseline — live with the build step in `refactor-and-compile.md` because that is where the binary fails.
+- **No new `Stage:` value.** Review-as-data dispatch reuses `Stage: implementation`; the writing skill add-on already routes via the `using-superRA §Skill-Load Manifest` Domain add-ons table. Adding a `Stage: review` would fork the manifest for one workflow that fits the existing slot — which is the recurring memory rule for this repo.
+
 ## Stage-scoped references
 
 References load **only when the mode that needs them runs**. `review.md`, `polish.md`, `draft.md` are mode files and load by mode. `style.md`, `structure.md`, `consistency/*.md`, `refactor-and-compile.md` are knowledge files and load when the mode that needs them runs. `integration.md` loads only when the writing task is riding `integration-workflow`. There is no "load at every dispatch" reference — the body of `SKILL.md` carries everything that must be in scope unconditionally.

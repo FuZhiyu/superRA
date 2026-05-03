@@ -69,7 +69,20 @@ Added §LaTeX-rendering hazards subsection (one lead line + 3 bullets) inside §
 
 ## Task 6: Routing surfaces — `SKILL.md` knowledge-files row + `CLAUDE.md` design notes
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+`skills/writing/SKILL.md`: added one row to §Knowledge files between `consistency/*.md` and `refactor-and-compile.md` — `references/long-form-review.md` with the load condition `Multi-dimensional review (N > 1 consistency dimensions), `deep` thoroughness, or full-paper / pre-submission scope.` Pointer-only; no protocol restatement.
+
+`skills/writing/CLAUDE.md`: added §Multi-agent review pattern (13 lines) between §Reviewer-dispatch invariants leave this skill and §Stage-scoped references. Records four design choices as rationale, not procedure:
+
+- (a) `long-form-review.md` is orchestration-only — per-dimension substance lives in `consistency/<dim>.md`.
+- (b) Shared doc is `REVIEW.md`, not `PLAN.md`, to avoid collision with a workflow's own `PLAN.md`; lifecycles coexist (project-spanning vs single-review).
+- (c) No `consistency/proofreading.md` — mechanical proofreading is baseline competence; LaTeX-rendering hazards live with the build step in `refactor-and-compile.md`.
+- (d) No new `Stage:` value — review-as-data dispatch reuses `Stage: implementation` and routes via the existing `using-superRA §Skill-Load Manifest` Domain add-ons row.
+
+**DRY + Necessity gate:** applied line-by-line to both additions. SKILL.md row mirrors `long-form-review.md §Trigger` only as far as needed to gate loading. CLAUDE.md bullets each pass the "would a future contributor re-litigate this without this entry?" test — bullet (d) is borderline DRY against the global memory rule but kept because the manifest routing path is the resolution and is not obvious from the prohibition alone.
+
+**Net additions:** 1 table row in SKILL.md; 13 lines (one §-block) in CLAUDE.md. Consistent with §Reviewer-dispatch invariants leave this skill — that section says standalone review terminates at edit + commit and parallel multi-dim dispatch is a within-skill technique; the new subsection names `long-form-review.md` as that within-skill technique and reaffirms `Stage: implementation` reuse.
 
 ## Task 7: Real-paper validation
 
