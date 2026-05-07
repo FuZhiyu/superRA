@@ -1,67 +1,78 @@
-# Fix-Tier Replacement Plan
+# Fix-Tier Vocabulary — Unified Design Across Review Output and Polish Triage
 
 > **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. This is a **skill-internals edit** — load `document-skills:skill-creator` for SKILL.md / reference-file edits per the repo CLAUDE.md (`When modifying superRA itself … treat the work as skill creation`). The active domain skill is `superRA:writing` (the skill being edited).
 
-**Objective:** Replace the binary `Auto-fixable: Yes / No` field in each `consistency/<dim>.md` output format with a 3-tier `Fix:` field that captures the supervision cost of applying a finding, and wire the new contract through `polish.md` shape C and `long-form-review.md` so review → polish handoff stays mechanical.
+**Objective:** Land a single coherent `Fix: mechanical | judgment | decision` vocabulary that captures the supervision cost of applying any prose finding, and use the same vocabulary at two call sites: (a) review-mode output — replacing the binary `Auto-fixable: Yes / No` field in each `consistency/<dim>.md` output block; (b) polish-mode internal triage — making "apply this in place vs surface to author" an explicit, named outcome so polish stops under-editing on substantive prose issues.
 
 **Methodology:**
-- Define the three tiers — `mechanical` / `judgment` / `decision` — once in `references/review.md` (the single home every consistency reviewer already loads); other files reference that section.
-- `mechanical` = one correct fix, no semantic call. `judgment` = one likely fix exists, agent picks using paper conventions. `decision` = needs author input.
-- Polish-mode shape C applies `mechanical` in a silent batch, applies `judgment` with one finding-line per item in the commit message, and surfaces `decision` items for the author.
+- Tier vocabulary defined once in `references/review.md §Fix tiers`. Tier definitions: `mechanical` = one correct fix, no semantic call; `judgment` = one likely fix exists, agent picks using paper-internal conventions; `decision` = right fix needs author input.
+- Review-mode call site: each `consistency/<dim>.md` finding stamps a `Fix:` line. Polish shape C applies tiered behavior on accepted findings (existing wiring, Task 1).
+- Polish-mode call site (Task 2): in shapes A and B, every diagnosed issue is implicitly tiered. `mechanical` and `judgment` apply as minimal edits; `decision` surfaces to the author (chat reply for standalone polish; existing handoff-doc convention when polish rides a workflow).
+- Symmetric framing in `polish.md §Minimal-edit discipline`: under-editing and over-editing are equal failure modes; the minimal-edit rule constrains the size of each fix, not the count of fixes.
 
 **Conventions:**
-- Tier vocabulary lives in `review.md §Output contract: Fix tiers` (single source).
+- Tier vocabulary lives in `review.md §Fix tiers` (single source).
 - Each `consistency/<dim>.md` output block uses the line `Fix: <tier>` with `<tier>` ∈ {mechanical, judgment, decision}.
-- `long-form-review.md` summary table uses `severity × fix-tier` counts (replacing `severity × auto-fixable`).
-- Field name is `Fix:` (not `Fix-tier:` or `Action:`) — short, unambiguous in the output block.
+- `long-form-review.md` summary table uses `severity × fix-tier` counts.
+- Field name is `Fix:` — short, unambiguous in the output block.
+- Polish-mode triage uses the same vocabulary; do not invent a parallel one.
 
 **Output:** Edits to:
-- `skills/writing/references/review.md` (add §Output contract: Fix tiers)
-- `skills/writing/references/polish.md` (extend §Input shape C with tier-based application policy)
+- `skills/writing/references/review.md` (define §Fix tiers; rename from §Output contract: Fix tiers; first paragraph names two call sites)
+- `skills/writing/references/polish.md` (extend shape C with tier-based application policy; add tier-based apply policy for shapes A/B; replace §Minimal-edit discipline framing)
 - `skills/writing/references/long-form-review.md` (replace `Auto-fixable` references; update summary-table description)
 - `skills/writing/references/consistency/{argument-logic,citations,code-paper,cross-references,math,notation,numerical,terminology}.md` — eight output blocks
-- `skills/writing/CLAUDE.md` (replace the auto-fixable bullet under §Multi-agent review pattern with a fix-tier rationale bullet)
+- `skills/writing/CLAUDE.md` (replace the auto-fixable bullet under §Multi-agent review pattern with a fix-tier rationale bullet that names both call sites; add design-note paragraph on under-editing failure mode)
+- `skills/writing/feedback_polish_under_editing.md` — delete after Task 2 absorbs its load-bearing content (git history preserves the original)
 
-**Expected Results:** A single coherent contract across reviewer output → orchestrator summary → polish handoff, replacing the binary that conflated supervision cost with auto-fixability.
+**Expected Results:** A single coherent vocabulary across reviewer output, orchestrator summary, polish-shape-C handoff, and polish-shape-A/B internal triage. Replaces the binary that conflated supervision cost with auto-fixability and leaves polish mode without a named surface-back path.
 
 **Sensitivity Analysis:** N/A (skill-prose change, no analytic results).
 
-**Pipeline:** N/A (single conceptual change; verification is a `grep -r "Auto-fixable"` returning zero hits and a manual read-through of the touched files).
+**Pipeline:** N/A (verification is a `grep` regression and a manual read-through of touched files; smoke-test on the failure-mode profile from the absorbed feedback file).
 
 ---
 
 ## Workflow Status
 
-- [x] **Plan approved** — researcher signed off (chose Option A — tiered action — over Option B in 2026-05-05 design discussion)
-- [ ] **Execution complete** — Task 1 `APPROVED`, no `Auto-fixable` strings remain
-- [ ] **Drift tests created** — N/A (skill-prose; the `grep` check is the regression test)
+- [x] **Plan approved** — researcher signed off on Task 1 (2026-05-05 design discussion); approved Task 2 unified-tier extension on 2026-05-06 after design-principle filter pass.
+- [ ] **Execution complete** — Task 1 + Task 2 `APPROVED`; no `Auto-fixable` strings remain; polish.md framing balanced.
+- [ ] **Drift tests created** — N/A (skill-prose; the `grep` checks in each task are the regression tests)
 - [ ] **Integrated** — integration reviewer `APPROVED`
-- [ ] **Docs finalized** — RESULTS.md matured, CLAUDE.md design note rewritten
+- [ ] **Docs finalized** — RESULTS.md matured, CLAUDE.md design notes rewritten
 - [ ] **Finished** — branch landed / PR opened per researcher's choice
 
 ---
 
 ## Project Conventions
 
-Walked at planning time (2026-05-05). Re-walk on-demand only.
+Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no new walks needed (Task 2 edits the same skill directory).
 
 ### Repo root
-- `/CLAUDE.md` (HEAD at 505a975): Contributor guidelines for editing superRA itself. Hard rule: "When modifying superRA itself — skills, hooks, agents, harness adapters, or internal docs — treat the work as skill creation." Also carries the DRY / Necessity gate, ownership-boundaries table, and the anti-pattern list (wrapper instructions, "what you will receive" descriptions, reminders of harness defaults).
+- `/CLAUDE.md` (HEAD at 505a975): Contributor guidelines for editing superRA itself. Hard rule: "When modifying superRA itself — skills, hooks, agents, harness adapters, or internal docs — treat the work as skill creation." Carries the DRY / Necessity gate, ownership-boundaries table, and the anti-pattern list (wrapper instructions, "what you will receive" descriptions, reminders of harness defaults). **Load-bearing for Task 2:** the design-principle filter that dropped 4 of 5 feedback suggestions is rooted here.
 - `/AGENTS.md`, `/AGENT.md`: aliases of `/CLAUDE.md` for Codex-facing contributors.
 - `/README.md`: user-facing overview of superRA — stays untouched by this change.
 
 ### Module-level docs walked
-- `skills/writing/CLAUDE.md` (HEAD at 505a975): Design notes for the writing skill. Records the eight load-bearing decisions including the §Multi-agent review pattern bullet on the auto-fixable flag — that bullet is rewritten by this plan.
+- `skills/writing/CLAUDE.md` (HEAD at 505a975): Design notes for the writing skill. Records §These rules are additive (agent already knows how to polish; skill adds discipline only — load-bearing for Task 2 design-principle filter), §Multi-agent review pattern (auto-fixable bullet rewritten by Task 1; extended by Task 2 for the polish-mode call site), and §What this skill deliberately does not carry (severity tagging on heuristic style/structure rules — Task 2 does NOT touch).
 
 ### Not walked (not reachable from the planned diff)
-- `skills/{econ-data-analysis,theory-modeling,planning-workflow,…}/` — the change is local to `skills/writing/`.
+- `skills/{econ-data-analysis,theory-modeling,planning-workflow,…}/` — both tasks are local to `skills/writing/`.
 - `agents/`, `hooks/`, `tests/`, `scripts/` — no role / harness / generator surface affected.
 
 ---
 
-### Task 1: Replace `Auto-fixable` flag with `Fix:` tier across the writing skill
+## User Decisions Log
+
+> **2026-05-05 — Tier vocabulary.** Researcher chose Option A (3-tier `Fix: mechanical | judgment | decision`) over Option B (kept binary). The binary forced a continuous supervision-cost axis into two buckets and pre-judged what polish would do. Applies to: Task 1.
+
+> **2026-05-06 — Unify under-editing fix into the same vocabulary.** Researcher pushed back on a first-pass plan that absorbed the full feedback file. Direction: filter feedback through the skill's own design principles (additive-rules framing; DRY/Necessity gate); keep generalizable changes only. Outcome: drop diagnose-first procedural step, gated-checklist intro reframe, cross-paragraph audit subsection, end-of-polish self-check, mode-specific tier examples; keep symmetric over/under-editing warning + decision-tier surfacing path for polish shapes A/B. Applies to: Task 2.
+
+---
+
+### Task 1: Replace `Auto-fixable` flag with `Fix:` tier across review-mode output (Commit A)
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED (Steps 1–3 done in working tree, uncommitted; Steps 4–6 pending)
 **Integration status:** *(set during integration)*
 
 **Script:** N/A (prose edits across 11 files)
@@ -73,66 +84,67 @@ Walked at planning time (2026-05-05). Re-walk on-demand only.
 - `skills/writing/CLAUDE.md`
 **Output:** Same files, edited in place.
 
-- [ ] **Step 1: Add §Output contract: Fix tiers to `review.md`**
+- [x] **Step 1: Add §Output contract: Fix tiers to `review.md`** — done in working tree (uncommitted). Renamed to `§Fix tiers` in Task 2 Step 1 to match unified vocabulary.
 
-  After §Workflow and before §Thoroughness, insert a new section that defines the three tiers and the producer-side rule (the reviewer picks the tier when writing each finding). Keep it tight — a short paragraph per tier plus a one-line "applies to every `consistency/<dim>.md` output block" pointer.
+- [x] **Step 2: In each `consistency/<dim>.md` output block, replace the Auto-fixable line** — done in working tree. All eight files now read `Fix: mechanical | judgment | decision   # see review.md §Output contract: Fix tiers`. The pointer text is updated to `§Fix tiers` in Task 2 Step 1.
 
-  ```markdown
-  ## Output contract: Fix tiers
-
-  Every consistency-dimension finding carries a `Fix:` line with one of three tiers, chosen by the reviewer when the finding is written. The tier captures the supervision a downstream apply pass needs — not whether the finding *can* be auto-fixed (anything can; the question is the cost of being wrong).
-
-  - **`mechanical`** — one correct fix exists and no semantic call is needed. Typo, missing definite article, missing `\hat` on an established estimate, undefined acronym on first use. Applied silently in batch.
-  - **`judgment`** — one likely fix exists but the agent must pick using paper-internal conventions. Terminology-variant collapse, choice between equally legal hedge phrasings, picking which Greek letter wins when the paper has not committed yet. Applied with one finding-line per item in the commit message so the author can audit.
-  - **`decision`** — the right fix needs author input. Cross-section claim that may or may not generalize, sign disagreement between prose and a table that could be either way, restructure suggestion. Surfaced for the author; not applied.
-
-  The tier replaces the earlier `Auto-fixable: Yes / No` flag. Each `consistency/<dim>.md` output block names this section as the source of legal values.
-  ```
-
-- [ ] **Step 2: In each `consistency/<dim>.md` output block, replace the Auto-fixable line**
-
-  Eight files: `argument-logic.md`, `citations.md`, `code-paper.md`, `cross-references.md`, `math.md`, `notation.md`, `numerical.md`, `terminology.md`. In every output-format code block, replace the line
-
-  ```
-  Auto-fixable: Yes / No
-  ```
-
-  with
-
-  ```
-  Fix: mechanical | judgment | decision   # see review.md §Output contract: Fix tiers
-  ```
-
-  No other text in those files changes. Verify with `grep -rn "Auto-fixable" skills/writing/` returning empty.
-
-- [ ] **Step 3: Extend `polish.md §Input shape C` with the tier-based application policy**
-
-  Currently shape C says "apply each accepted finding as a minimal edit". Add a short paragraph after that sentence that distinguishes the three tiers' apply behaviors:
-
-  ```markdown
-  Each accepted finding carries a `Fix:` tier (`review.md §Output contract: Fix tiers`); polish-shape-C apply behavior follows the tier:
-
-  - `mechanical` — apply silently; group into one batch commit per dimension.
-  - `judgment` — apply, but write one finding-line per item in the commit message naming the choice made.
-  - `decision` — surface for the author; do not apply.
-
-  An accepted-but-deferred `decision` item stays in the findings list with a note recording why it was not applied.
-  ```
+- [x] **Step 3: Extend `polish.md §Input shape C` with the tier-based application policy** — done in working tree.
 
 - [ ] **Step 4: Update `long-form-review.md` to reference the tier instead of the flag**
 
   Two edits:
   - In the third bullet under §Doc convention ("Final summary block at the top…"), replace `severity × auto-fixable counts table` with `severity × fix-tier counts table`, and replace `auto-fixable batch table sized for polish-mode shape C handoff` with `per-tier batch table (mechanical / judgment / decision) sized for polish-mode shape C handoff`.
-  - In the second bullet under §Doc convention ("Per-aspect blocks ARE task blocks…"), replace `including the new `Auto-fixable: Yes / No` line` with `including the `Fix:` tier line per `review.md §Output contract: Fix tiers``.
+  - In the second bullet under §Doc convention ("Per-aspect blocks ARE task blocks…"), replace `including the new \`Auto-fixable: Yes / No\` line` with `including the \`Fix:\` tier line per \`review.md §Fix tiers\``.
 
 - [ ] **Step 5: Update `CLAUDE.md §Multi-agent review pattern` bullet**
 
-  Replace the existing fifth bullet (the "Auto-fixable flag in every `consistency/<dim>.md` output format" bullet) with a bullet that records the tier rationale:
+  Replace the existing fifth bullet with a fix-tier rationale bullet that names **both** call sites — review output (this task) and polish-mode internal triage (Task 2). Load-bearing facts: (a) one vocabulary, two call sites; (b) defined once in `references/review.md §Fix tiers`; (c) the binary's failure mode (continuous axis forced into two buckets) is the load-bearing reason against re-compressing.
 
-  ```markdown
-  - **Fix-tier (`mechanical` / `judgment` / `decision`) in every `consistency/<dim>.md` output format.** Replaces an earlier binary `Auto-fixable: Yes / No` flag (2026-05-02 → 2026-05-05). The binary forced a continuous axis (supervision cost) into two buckets and pushed operational triage into the review output, which made the reviewer pre-judge what polish would do. The tier is honest about the spectrum and lets polish-mode shape C batch `mechanical`, log `judgment` per item, and surface `decision` to the author. Defined once in `references/review.md §Output contract: Fix tiers`; the eight `consistency/<dim>.md` output blocks reference that section. If a future contributor wants to compress the tiers back to a flag, the binary's failure mode is the load-bearing reason it was rejected — re-litigating requires a new failure mode, not a preference for terseness.
-  ```
+- [ ] **Step 6: Verify, update RESULTS.md, commit Commit A**
 
-- [ ] **Step 6: Verify, update RESULTS.md, commit**
+  Run `grep -rn "Auto-fixable\|auto-fixable" skills/writing/` — expect zero hits except the CLAUDE.md history bullet naming the prior flag. Read each touched file end-to-end. Update RESULTS.md Task 1. Mark all Task 1 steps `[x]`. Set `**Review status:** APPROVED`. Commit code + handoff docs atomically as Commit A.
 
-  Run `grep -rn "Auto-fixable\|auto-fixable" skills/writing/` — expect zero hits except inside the CLAUDE.md history bullet that names the prior flag (one occurrence is acceptable; flag for the orchestrator if more). Read each touched file end-to-end once. Update RESULTS.md Task 1 with the verification command output and a one-line summary. Mark all PLAN.md steps `[x]`, set `**Review status:** IMPLEMENTED`. Commit code + handoff docs atomically.
+---
+
+### Task 2: Wire fix-tier vocabulary into polish-mode internal triage (Commit B)
+**Depends on:** Task 1 (Step 1 renames the section; Steps 4–5 already finalize the references and the CLAUDE.md bullet that Task 2 extends)
+**Review status:** *(set during execution)*
+**Integration status:** *(set during integration)*
+
+**Script:** N/A (prose edits across 4 files + 1 deletion)
+**Input:**
+- `skills/writing/references/review.md`
+- `skills/writing/references/polish.md`
+- `skills/writing/CLAUDE.md`
+- `skills/writing/feedback_polish_under_editing.md` (to be deleted)
+**Output:** First three edited in place; feedback file deleted.
+
+- [ ] **Step 1: Rename `review.md §Output contract: Fix tiers` → `§Fix tiers`; first paragraph names two call sites.**
+
+  Two-sentence rewrite of the section's opening paragraph: review-mode findings stamp `Fix:` on each line of the `consistency/<dim>.md` output blocks; polish-mode internal triage classifies each diagnosed issue along the same axis to decide apply-vs-surface. Tier definitions kept verbatim — no added examples (mode-specific examples drop per design-principle filter; tier classification is situational, not type-bound). Update the cross-references in the eight `consistency/<dim>.md` output blocks and `polish.md §Input shape C` to point at `§Fix tiers`.
+
+- [ ] **Step 2: Replace `polish.md §Minimal-edit discipline` framing.**
+
+  Replace the line *"Over-editing is the most common failure mode of polish mode — every word changed beyond the minimum risks drifting past the requested scope and into the author's substance."* with a balanced two-failure-mode statement: over-editing drifts past scope; under-editing ships mechanical-only fixes on prose with substantive issues. **The minimal-edit rule constrains the size of each fix, not the number of fixes.** Three sentences max.
+
+- [ ] **Step 3: Add tier-based apply policy for polish shapes A and B.**
+
+  Currently shape C names the apply-vs-surface split via `Fix:` tiers. Shapes A and B do not. Add one short paragraph (placed after §Edit vs propose vs ask, before §Minimal-edit discipline): in shapes A/B, every diagnosed issue is implicitly tiered per `review.md §Fix tiers`. Apply `mechanical` and `judgment` tier issues as minimal edits; surface `decision`-tier issues to the author (chat reply for standalone polish; existing handoff-doc convention when the polish rides a workflow — do not restate). The §Edit-vs-propose-vs-ask matrix already handles meaning-changing edits ("Ask"); this paragraph names the surface path so that *not silently fixing* is a recognized outcome rather than under-editing.
+
+- [ ] **Step 4: `skills/writing/CLAUDE.md` design-note paragraph(s).**
+
+  Augment the §Multi-agent review pattern bullet rewritten in Task 1 Step 5 (or add a sibling §Polish-mode triage entry — implementer's choice depending on which placement reads more coherently in context):
+  - Records that fix tiers are a **shared apply-discipline vocabulary** across review output and polish internal triage. Future contributors proposing a separate polish-side vocabulary must argue why two beat one for the same axis.
+  - Records the under-editing failure mode and the framing-suppression cause (the prior `polish.md` line "Over-editing is the most common failure mode" was actively suppressing baseline diagnostic competence) as the rationale for Step 2. Future contributors tempted to put back a "watch out for over-editing" warning without naming the symmetric failure must re-read this entry.
+
+- [ ] **Step 5: Delete `skills/writing/feedback_polish_under_editing.md`.**
+
+  Load-bearing content absorbed into Steps 2 and 4; git history preserves the original. Cite the absorbing commit hash in the CLAUDE.md entry from Step 4 once Commit B lands so the trail is recoverable.
+
+- [ ] **Step 6: Verify, update RESULTS.md, commit Commit B.**
+
+  - `grep -rn "Auto-fixable\|auto-fixable" skills/writing/` returns zero hits except the CLAUDE.md history bullet.
+  - `grep -rn "Fix tiers\|Fix:" skills/writing/references/ skills/writing/CLAUDE.md` shows one definition site (`review.md`), references in `polish.md` (shape C + new shape-A/B paragraph), eight `consistency/<dim>.md` output blocks, one `long-form-review.md` reference, one `CLAUDE.md` design-note bullet.
+  - Read `polish.md` end-to-end as a fresh agent: confirm the framing is balanced (no "over-editing is the dominant failure mode" line), and the surface-to-author path for `decision`-tier issues is named for shapes A/B as well as shape C.
+  - Manual smoke test on the failure-mode profile from the (now-deleted) feedback file: recap-only topic sentence + nominalized opener + broken parallelism. Expectation: agent diagnoses, classifies per its own judgment, and surfaces decision-tier issues instead of skipping straight to typo fixes.
+  - Update RESULTS.md Task 2. Mark all Task 2 steps `[x]`. Set `**Review status:** APPROVED`. Commit code + handoff docs atomically as Commit B.
