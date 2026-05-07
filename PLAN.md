@@ -36,7 +36,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on Task 1 (2026-05-05 design discussion); approved Task 2 unified-tier extension on 2026-05-06 after design-principle filter pass.
-- [ ] **Execution complete** — Task 1 `APPROVED` (Commit A landed); Task 2 pending; polish.md framing fix in Task 2.
+- [x] **Execution complete** — Task 1 + Task 2 IMPLEMENTED (Commits A, B landed). No `Auto-fixable` strings remain (except 2 intentional history mentions); polish.md framing balanced; §Triage names the surface path for shapes A/B.
 - [ ] **Drift tests created** — N/A (skill-prose; the `grep` checks in each task are the regression tests)
 - [ ] **Integrated** — integration reviewer `APPROVED`
 - [ ] **Docs finalized** — RESULTS.md matured, CLAUDE.md design notes rewritten
@@ -99,44 +99,26 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 ---
 
 ### Task 2: Wire fix-tier vocabulary into polish-mode internal triage (Commit B)
-**Depends on:** Task 1 (Step 1 renames the section; Steps 4–5 already finalize the references and the CLAUDE.md bullet that Task 2 extends)
-**Review status:** *(set during execution)*
+**Depends on:** Task 1
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
-**Script:** N/A (prose edits across 4 files + 1 deletion)
+**Script:** N/A (prose edits across 3 files + 1 deletion)
 **Input:**
 - `skills/writing/references/review.md`
 - `skills/writing/references/polish.md`
 - `skills/writing/CLAUDE.md`
-- `skills/writing/feedback_polish_under_editing.md` (to be deleted)
+- `skills/writing/feedback_polish_under_editing.md` (deleted)
 **Output:** First three edited in place; feedback file deleted.
 
-- [ ] **Step 1: Rename `review.md §Output contract: Fix tiers` → `§Fix tiers`; first paragraph names two call sites.**
+- [x] **Step 1: First paragraph of `review.md §Fix tiers` names two call sites.** Review-mode findings stamp `Fix:` on each line of every `consistency/<dim>.md` output block; polish-mode internal triage classifies each diagnosed issue along the same axis (`polish.md §Triage`). Tier definitions kept verbatim — no added examples per the design-principle filter (tier classification is situational, not type-bound).
 
-  Two-sentence rewrite of the section's opening paragraph: review-mode findings stamp `Fix:` on each line of the `consistency/<dim>.md` output blocks; polish-mode internal triage classifies each diagnosed issue along the same axis to decide apply-vs-surface. Tier definitions kept verbatim — no added examples (mode-specific examples drop per design-principle filter; tier classification is situational, not type-bound). Update the cross-references in the eight `consistency/<dim>.md` output blocks and `polish.md §Input shape C` to point at `§Fix tiers`.
+- [x] **Step 2: Replaced `polish.md §Minimal-edit discipline` framing.** Over- and under-editing are equal failure modes; minimal-edit rule constrains the size of each fix, not the count. Adds a one-line pointer to `style.md §Gated Checklist` for diagnosis and `§Triage` for routing.
 
-- [ ] **Step 2: Replace `polish.md §Minimal-edit discipline` framing.**
+- [x] **Step 3: Added `polish.md §Triage`** between §Intent comments and §Minimal-edit discipline. Names the apply-in-place behavior for `mechanical` / `judgment` tiers and the surface-back path for `decision` tier (chat reply for standalone; handoff-doc when the polish rides a workflow). Also clarifies that the §Edit-vs-propose-vs-ask matrix routes meaning-changing edits to **Ask**; triage names the surface path for issues that diagnose cleanly but need author input on the *right answer*.
 
-  Replace the line *"Over-editing is the most common failure mode of polish mode — every word changed beyond the minimum risks drifting past the requested scope and into the author's substance."* with a balanced two-failure-mode statement: over-editing drifts past scope; under-editing ships mechanical-only fixes on prose with substantive issues. **The minimal-edit rule constrains the size of each fix, not the number of fixes.** Three sentences max.
+- [x] **Step 4: `skills/writing/CLAUDE.md` design-note edits.** Augmented the existing §Multi-agent review pattern fix-tier bullet with the second-call-site pointer; added a new §Polish-mode triage section that records the shared-vocabulary rationale and the under-editing failure mode + framing-suppression cause.
 
-- [ ] **Step 3: Add tier-based apply policy for polish shapes A and B.**
+- [x] **Step 5: Deleted `skills/writing/feedback_polish_under_editing.md`.** Recoverable via `git log --diff-filter=D -- skills/writing/feedback_polish_under_editing.md`. Recovery path cited in the CLAUDE.md §Polish-mode triage section.
 
-  Currently shape C names the apply-vs-surface split via `Fix:` tiers. Shapes A and B do not. Add one short paragraph (placed after §Edit vs propose vs ask, before §Minimal-edit discipline): in shapes A/B, every diagnosed issue is implicitly tiered per `review.md §Fix tiers`. Apply `mechanical` and `judgment` tier issues as minimal edits; surface `decision`-tier issues to the author (chat reply for standalone polish; existing handoff-doc convention when the polish rides a workflow — do not restate). The §Edit-vs-propose-vs-ask matrix already handles meaning-changing edits ("Ask"); this paragraph names the surface path so that *not silently fixing* is a recognized outcome rather than under-editing.
-
-- [ ] **Step 4: `skills/writing/CLAUDE.md` design-note paragraph(s).**
-
-  Augment the §Multi-agent review pattern bullet rewritten in Task 1 Step 5 (or add a sibling §Polish-mode triage entry — implementer's choice depending on which placement reads more coherently in context):
-  - Records that fix tiers are a **shared apply-discipline vocabulary** across review output and polish internal triage. Future contributors proposing a separate polish-side vocabulary must argue why two beat one for the same axis.
-  - Records the under-editing failure mode and the framing-suppression cause (the prior `polish.md` line "Over-editing is the most common failure mode" was actively suppressing baseline diagnostic competence) as the rationale for Step 2. Future contributors tempted to put back a "watch out for over-editing" warning without naming the symmetric failure must re-read this entry.
-
-- [ ] **Step 5: Delete `skills/writing/feedback_polish_under_editing.md`.**
-
-  Load-bearing content absorbed into Steps 2 and 4; git history preserves the original. Cite the absorbing commit hash in the CLAUDE.md entry from Step 4 once Commit B lands so the trail is recoverable.
-
-- [ ] **Step 6: Verify, update RESULTS.md, commit Commit B.**
-
-  - `grep -rn "Auto-fixable\|auto-fixable" skills/writing/` returns zero hits except the CLAUDE.md history bullet.
-  - `grep -rn "Fix tiers\|Fix:" skills/writing/references/ skills/writing/CLAUDE.md` shows one definition site (`review.md`), references in `polish.md` (shape C + new shape-A/B paragraph), eight `consistency/<dim>.md` output blocks, one `long-form-review.md` reference, one `CLAUDE.md` design-note bullet.
-  - Read `polish.md` end-to-end as a fresh agent: confirm the framing is balanced (no "over-editing is the dominant failure mode" line), and the surface-to-author path for `decision`-tier issues is named for shapes A/B as well as shape C.
-  - Manual smoke test on the failure-mode profile from the (now-deleted) feedback file: recap-only topic sentence + nominalized opener + broken parallelism. Expectation: agent diagnoses, classifies per its own judgment, and surfaces decision-tier issues instead of skipping straight to typo fixes.
-  - Update RESULTS.md Task 2. Mark all Task 2 steps `[x]`. Set `**Review status:** APPROVED`. Commit code + handoff docs atomically as Commit B.
+- [x] **Step 6: Verified.** `grep -rn "Auto-fixable\|auto-fixable" skills/writing/` returns 2 hits — both intentional history mentions naming the prior flag (`CLAUDE.md:51`, `review.md:21`). `grep -rn "§Fix tiers\|## Fix tiers\|§Triage\|## Triage" skills/writing/` shows one definition site (`review.md:13`), one polish.md shape C, one polish.md §Triage, one long-form-review.md, eight consistency files, two CLAUDE.md mentions. Manual end-to-end read of `polish.md` confirms: framing balanced, §Triage names the surface path for shapes A/B, §Minimal-edit discipline reframed as size-of-each-fix.

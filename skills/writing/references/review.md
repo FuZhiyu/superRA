@@ -12,7 +12,7 @@
 
 ## Fix tiers
 
-Every consistency-dimension finding carries a `Fix:` line with one of three tiers, chosen by the reviewer when the finding is written. The tier captures the supervision a downstream apply pass needs — not whether the finding *can* be auto-fixed (anything can; the question is the cost of being wrong).
+A shared apply-discipline vocabulary used at two call sites: review-mode findings stamp `Fix:` on each line of every `consistency/<dim>.md` output block; polish-mode internal triage classifies each diagnosed issue along the same axis to decide apply-vs-surface (`polish.md §Triage`). The tier captures the supervision a downstream apply pass needs — not whether the finding *can* be auto-fixed (anything can; the question is the cost of being wrong).
 
 - **`mechanical`** — one correct fix exists and no semantic call is needed. Typo, missing definite article, missing `\hat` on an established estimate, undefined acronym on first use. Applied silently in batch.
 - **`judgment`** — one likely fix exists but the agent must pick using paper-internal conventions. Terminology-variant collapse, choice between equally legal hedge phrasings, picking which Greek letter wins when the paper has not committed yet. Applied with one finding-line per item in the commit message so the author can audit.

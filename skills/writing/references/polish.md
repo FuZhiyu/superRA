@@ -55,8 +55,16 @@ The comment captures *what the paragraph is trying to do for the reader* — the
 
 **Do not invent intent comments.** Intent comes from the author — pre-existing in the file, or stated in the request that triggered this polish. A paragraph without an intent comment stays without one; never guess the purpose from the prose and add a comment. If the polish surfaces an ambiguity that an intent comment would resolve, ask the author and write the comment from their answer; the comment then carries no hedge because the intent is the author's, just newly recorded.
 
+## Triage
+
+In shapes A and B, every diagnosed issue is implicitly tiered per `review.md §Fix tiers`. Apply `mechanical` and `judgment` tier issues as minimal edits in place. **Surface `decision`-tier issues** to the author — chat reply for standalone polish; the existing handoff-doc convention (`superRA:handoff-doc`) when polish rides a workflow. Not silently fixing is a recognized outcome, not under-editing. The §Edit-vs-propose-vs-ask matrix already routes meaning-changing edits to **Ask**; triage names the surface path for issues that diagnose cleanly but need author input on the right answer (suspected redundancy with adjacent quoted material; weak topic sentence whose fix depends on the paragraph's intent; claim-evidence gap).
+
+In shape C, the findings list arrives pre-tiered; apply per the shape-C tier rules above.
+
 ## Minimal-edit discipline
 
-For each identified problem, apply the smallest edit that fixes it. A nominalization fix replaces one noun with one verb, not the whole sentence. Over-editing is the most common failure mode of polish mode — every word changed beyond the minimum risks drifting past the requested scope and into the author's substance.
+For each applied fix, use the smallest edit that resolves the issue. A nominalization fix replaces one noun with one verb, not the whole sentence.
+
+Over-editing and under-editing are equal failure modes. Over-editing changes more than the minimum and risks drifting past scope. Under-editing ships only mechanical fixes (typos, grammar) on prose with substantive issues — weak topic sentence, nominalized opener, broken parallelism — and leaves them as silent omissions. **The minimal-edit rule constrains the size of each fix, not the number of fixes.** Diagnose thoroughly per `style.md §Gated Checklist`; tier and route per §Triage; apply each fix minimally.
 
 After the edit batch, run the build (`refactor-and-compile.md` §Compile) and check that no cross-reference broke. A diff that doesn't compile is not a polished diff.

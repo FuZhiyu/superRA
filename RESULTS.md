@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-06 (Commit A landed; Task 2 pending)
-**Status:** In Progress
+**Last updated:** 2026-05-06 (Commits A and B landed)
+**Status:** Implementation complete; integration pending
 
 ---
 
@@ -27,17 +27,26 @@ Verification:
 
 ## Task 2: Wire fix-tier vocabulary into polish-mode internal triage (Commit B)
 
-**Status:** Not started.
+**Status:** APPROVED. Commit B landed.
+
+Final state across the touched files:
+- `skills/writing/references/review.md §Fix tiers` — first paragraph names two call sites (review output + polish-mode internal triage).
+- `skills/writing/references/polish.md` — new `§Triage` section (between §Intent comments and §Minimal-edit discipline) names the apply-vs-surface split for shapes A/B; §Minimal-edit discipline replaced with balanced two-failure-mode framing (the minimal-edit rule constrains size of each fix, not count of fixes).
+- `skills/writing/CLAUDE.md` — augmented §Multi-agent review pattern fix-tier bullet with second-call-site pointer; added new §Polish-mode triage section recording the shared-vocabulary rationale and the under-editing failure mode + framing-suppression cause.
+- `skills/writing/feedback_polish_under_editing.md` — deleted (recoverable via `git log --diff-filter=D -- skills/writing/feedback_polish_under_editing.md`).
 
 Design-principle filter results (recorded so future contributors can audit which feedback suggestions were absorbed and why):
 
 | Feedback suggestion | Verdict | Reason |
 |---|---|---|
-| Symmetric over/under-editing warning | Keep | `polish.md §Minimal-edit discipline` actively suppresses baseline diagnostic competence; removing the suppression is one line, behavior-shaping. |
+| Symmetric over/under-editing warning | Keep | `polish.md §Minimal-edit discipline` actively suppressed baseline diagnostic competence; removing the suppression is one line, behavior-shaping. |
 | "Diagnose first" procedural block | Drop | Re-narrates baseline (read before editing). Wrapper around what the agent already does. |
 | Reframe `style.md` gated-checklist intro | Drop | Not the failure cause; agent didn't fail to use the checklist because of its framing. |
 | Cross-paragraph audit subsection | Drop | Contingency tree — anti-pattern per repo `CLAUDE.md`. General principle is captured by removing framing suppression. |
 | End-of-polish self-check | Drop | Baseline competence; additive-rules framing already names it. |
 | Mode-specific tier examples (first-pass plan) | Drop | Tier classification is situational, not type-bound; abstract definitions in `review.md` work for both call sites. |
 
-Verification commands and results to be filled in after Commit B lands.
+Verification:
+- `grep -rn "Auto-fixable\|auto-fixable" skills/writing/` returns 2 hits, both intentional history mentions (`CLAUDE.md:51`, `review.md:21`).
+- `grep -rn "§Fix tiers\|## Fix tiers\|§Triage\|## Triage" skills/writing/` returns 14 hits: 1 definition site (`review.md`), 1 polish.md shape C, 1 polish.md §Triage, 1 long-form-review.md, 8 consistency files, 2 CLAUDE.md mentions.
+- Manual end-to-end read of `polish.md` confirms balanced framing and named surface path for shapes A/B.
