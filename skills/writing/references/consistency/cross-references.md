@@ -79,5 +79,5 @@ Details:
   - Referenced target's actual content: <summary>
   - Prose claim at citing location: "<quoted>"
 Recommendation: <specific fix>
-Auto-fixable: Yes / No
+Fix: mechanical | judgment | decision   # see review.md §Fix tiers
 ```

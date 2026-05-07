@@ -3,21 +3,25 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-06 (planning — Task 2 added, Task 1 partial)
+**Last updated:** 2026-05-06 (Commit A landed; Task 2 pending)
 **Status:** In Progress
 
 ---
 
 ## Task 1: Replace `Auto-fixable` flag with `Fix:` tier across review-mode output (Commit A)
 
-**Status:** In progress — Steps 1–3 done in working tree (uncommitted); Steps 4–6 pending.
+**Status:** APPROVED. Commit A landed.
 
-Working-tree state (verified by `git diff --stat`):
-- `skills/writing/references/review.md` — adds §Output contract: Fix tiers (renamed to §Fix tiers in Task 2 Step 1).
-- `skills/writing/references/polish.md` — adds tier-based apply policy in §Input shape C.
-- 8× `skills/writing/references/consistency/*.md` — `Auto-fixable: Yes / No` line replaced with `Fix: mechanical | judgment | decision   # see review.md §Output contract: Fix tiers` (pointer text updated to `§Fix tiers` in Task 2 Step 1).
+Final state across the touched files:
+- `skills/writing/references/review.md` — defines `## Fix tiers` (the single source of truth for the vocabulary). Three concrete consistency-dimension examples per tier; producer-side rule names the reviewer as the tier-picker.
+- `skills/writing/references/polish.md §Input shape C` — apply behavior follows the `Fix:` tier on accepted findings.
+- 8× `skills/writing/references/consistency/*.md` — output blocks carry `Fix: mechanical | judgment | decision   # see review.md §Fix tiers`.
+- `skills/writing/references/long-form-review.md` — REVIEW.md per-aspect-blocks pointer + final-summary tables use the tier vocabulary.
+- `skills/writing/CLAUDE.md §Multi-agent review pattern` — fifth bullet records the rationale and the binary's rejected failure mode.
 
-Verification commands and results to be filled in after Commit A lands.
+Verification:
+- `grep -rn "Auto-fixable\|auto-fixable" skills/writing/` returns 2 hits, both intentional history mentions naming the prior flag (`CLAUDE.md:51`, `review.md:21`).
+- `grep -rn "§Fix tiers\|## Fix tiers" skills/writing/` returns the expected 12 hits: 1 definition site (`review.md:13`), 1 polish.md shape C, 1 long-form-review.md, 8 consistency files, 1 CLAUDE.md bullet.
 
 ---
 

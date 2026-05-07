@@ -10,6 +10,16 @@
 4. **Classify each finding** into one of: **style** (sentence- or paragraph-level), **structure** (section ordering, missing topic sentence, buried governing idea), **consistency** (one of the eight dimensions — name it), or **argument** (the logic doesn't hold; a claim isn't supported; an unstated assumption is load-bearing). Argument findings are the highest-leverage and the easiest to miss — read for them deliberately.
 5. **Report.** Per finding: file + line, classification, one-line description, recommendation. Group by classification; within a class, order by severity if obvious, otherwise by file order.
 
+## Fix tiers
+
+Every consistency-dimension finding carries a `Fix:` line with one of three tiers, chosen by the reviewer when the finding is written. The tier captures the supervision a downstream apply pass needs — not whether the finding *can* be auto-fixed (anything can; the question is the cost of being wrong).
+
+- **`mechanical`** — one correct fix exists and no semantic call is needed. Typo, missing definite article, missing `\hat` on an established estimate, undefined acronym on first use. Applied silently in batch.
+- **`judgment`** — one likely fix exists but the agent must pick using paper-internal conventions. Terminology-variant collapse, choice between equally legal hedge phrasings, picking which Greek letter wins when the paper has not committed yet. Applied with one finding-line per item in the commit message so the author can audit.
+- **`decision`** — the right fix needs author input. Cross-section claim that may or may not generalize, sign disagreement between prose and a table that could be either way, restructure suggestion. Surfaced for the author; not applied.
+
+The tier replaces the earlier `Auto-fixable: Yes / No` flag. Each `consistency/<dim>.md` output block names this section as the source of legal values.
+
 ## Thoroughness
 
 - **Quick** — single reviewer, one pass. Default for short paragraph- or section-scope reviews.

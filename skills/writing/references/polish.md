@@ -20,6 +20,14 @@ The request names a file, section, or paragraph and asks for polish — no in-fl
 
 The request hands over a findings list (typically from Review mode) and asks to apply the accepted findings. The findings list **is** the scope — apply each accepted finding as a minimal edit; do not silently extend to nearby issues. If a finding is ambiguous or incorrect, raise it; do not silently reinterpret.
 
+Each accepted finding carries a `Fix:` tier (`review.md §Fix tiers`); polish-shape-C apply behavior follows the tier:
+
+- `mechanical` — apply silently; group into one batch commit per dimension.
+- `judgment` — apply, but write one finding-line per item in the commit message naming the choice made.
+- `decision` — surface for the author; do not apply.
+
+An accepted-but-deferred `decision` item stays in the findings list with a note recording why it was not applied.
+
 ## Edit vs propose vs ask
 
 For any contemplated edit, route it through this matrix:

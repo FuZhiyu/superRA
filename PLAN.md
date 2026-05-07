@@ -36,7 +36,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on Task 1 (2026-05-05 design discussion); approved Task 2 unified-tier extension on 2026-05-06 after design-principle filter pass.
-- [ ] **Execution complete** — Task 1 + Task 2 `APPROVED`; no `Auto-fixable` strings remain; polish.md framing balanced.
+- [ ] **Execution complete** — Task 1 `APPROVED` (Commit A landed); Task 2 pending; polish.md framing fix in Task 2.
 - [ ] **Drift tests created** — N/A (skill-prose; the `grep` checks in each task are the regression tests)
 - [ ] **Integrated** — integration reviewer `APPROVED`
 - [ ] **Docs finalized** — RESULTS.md matured, CLAUDE.md design notes rewritten
@@ -72,7 +72,7 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 
 ### Task 1: Replace `Auto-fixable` flag with `Fix:` tier across review-mode output (Commit A)
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED (Steps 1–3 done in working tree, uncommitted; Steps 4–6 pending)
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A (prose edits across 11 files)
@@ -84,25 +84,17 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 - `skills/writing/CLAUDE.md`
 **Output:** Same files, edited in place.
 
-- [x] **Step 1: Add §Output contract: Fix tiers to `review.md`** — done in working tree (uncommitted). Renamed to `§Fix tiers` in Task 2 Step 1 to match unified vocabulary.
+- [x] **Step 1: Add §Fix tiers to `review.md`.** Section defines the three tiers (`mechanical` / `judgment` / `decision`) with concrete consistency-dimension examples per tier and the producer-side rule (reviewer picks tier when writing each finding).
 
-- [x] **Step 2: In each `consistency/<dim>.md` output block, replace the Auto-fixable line** — done in working tree. All eight files now read `Fix: mechanical | judgment | decision   # see review.md §Output contract: Fix tiers`. The pointer text is updated to `§Fix tiers` in Task 2 Step 1.
+- [x] **Step 2: In each `consistency/<dim>.md` output block, replace the Auto-fixable line.** All eight files (`argument-logic`, `citations`, `code-paper`, `cross-references`, `math`, `notation`, `numerical`, `terminology`) now read `Fix: mechanical | judgment | decision   # see review.md §Fix tiers`.
 
-- [x] **Step 3: Extend `polish.md §Input shape C` with the tier-based application policy** — done in working tree.
+- [x] **Step 3: Extend `polish.md §Input shape C` with the tier-based application policy.** Mechanical applied silently in batch; judgment applied with one finding-line per item in commit message; decision surfaced for author.
 
-- [ ] **Step 4: Update `long-form-review.md` to reference the tier instead of the flag**
+- [x] **Step 4: Update `long-form-review.md` to reference the tier instead of the flag.** Per-aspect-blocks bullet points at `review.md §Fix tiers`; final-summary bullet uses `severity × fix-tier counts table` and `per-tier batch table (mechanical / judgment / decision)`.
 
-  Two edits:
-  - In the third bullet under §Doc convention ("Final summary block at the top…"), replace `severity × auto-fixable counts table` with `severity × fix-tier counts table`, and replace `auto-fixable batch table sized for polish-mode shape C handoff` with `per-tier batch table (mechanical / judgment / decision) sized for polish-mode shape C handoff`.
-  - In the second bullet under §Doc convention ("Per-aspect blocks ARE task blocks…"), replace `including the new \`Auto-fixable: Yes / No\` line` with `including the \`Fix:\` tier line per \`review.md §Fix tiers\``.
+- [x] **Step 5: Update `skills/writing/CLAUDE.md §Multi-agent review pattern` bullet.** Records: continuous supervision-cost axis vs binary; one definition site (`review.md §Fix tiers`); binary's failure mode is the load-bearing reason against re-compression.
 
-- [ ] **Step 5: Update `CLAUDE.md §Multi-agent review pattern` bullet**
-
-  Replace the existing fifth bullet with a fix-tier rationale bullet that names **both** call sites — review output (this task) and polish-mode internal triage (Task 2). Load-bearing facts: (a) one vocabulary, two call sites; (b) defined once in `references/review.md §Fix tiers`; (c) the binary's failure mode (continuous axis forced into two buckets) is the load-bearing reason against re-compressing.
-
-- [ ] **Step 6: Verify, update RESULTS.md, commit Commit A**
-
-  Run `grep -rn "Auto-fixable\|auto-fixable" skills/writing/` — expect zero hits except the CLAUDE.md history bullet naming the prior flag. Read each touched file end-to-end. Update RESULTS.md Task 1. Mark all Task 1 steps `[x]`. Set `**Review status:** APPROVED`. Commit code + handoff docs atomically as Commit A.
+- [x] **Step 6: Verify, update RESULTS.md, commit Commit A.** `grep` returns only the two intentional history mentions of the prior flag (in `CLAUDE.md` and `review.md` — both name the binary as the prior flag for traceability).
 
 ---
 

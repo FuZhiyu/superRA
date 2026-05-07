@@ -86,5 +86,5 @@ Locations:
   - file.tex:<line>: "<quoted phrase>"
 Issue: <what's inconsistent>
 Recommendation: <canonical form to use, or "escalate — researcher call">
-Auto-fixable: Yes / No
+Fix: mechanical | judgment | decision   # see review.md §Fix tiers
 ```

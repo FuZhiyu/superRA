@@ -74,5 +74,5 @@ Meanings observed:
   - eq. (15) / §5.2 p. 22: "discount rate"
 Issue: same symbol, two meanings
 Recommendation: rename one (e.g., \delta for discount rate per convention) or escalate
-Auto-fixable: Yes / No
+Fix: mechanical | judgment | decision   # see review.md §Fix tiers
 ```

@@ -102,5 +102,5 @@ Discrepancy: <one-line>
 Impact: <affects main result / affects robustness / affects presentation only>
 Resolution: <likely paper out of date / likely code out of date / researcher call>
 Recommendation: <specific — which to update, and how to verify>
-Auto-fixable: Yes / No
+Fix: mechanical | judgment | decision   # see review.md §Fix tiers
 ```
