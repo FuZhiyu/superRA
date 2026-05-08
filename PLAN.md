@@ -39,7 +39,7 @@
 - [x] **Execution complete** — Tasks 1 + 2 + 3 IMPLEMENTED (Commits A, B, C landed). Task 3 re-cut the vocabulary to `mechanical` / `conventional` / `authorial` and added the sequence/set/force test in `review.md §Fix tiers`.
 - [ ] **Drift tests created** — N/A (skill-prose; the `grep` checks in each task are the regression tests)
 - [x] **Integrated** — integration reviewer APPROVED Tasks 1, 2, 3 on 2026-05-08 (post-narrow-re-review at commit `5c917a4`). Sync was a no-op (PRE_SYNC_BASE_SHA == BASE_HEAD_SHA == 8c3db7d); no Sync Map written; no task-local Sync impact fields to remove.
-- [ ] **Docs finalized** — RESULTS.md matured, CLAUDE.md design notes rewritten
+- [x] **Docs finalized** — `skills/writing/CLAUDE.md` design notes already mature (Task 3 implementer added the 2026-05-08 parenthetical history note to §Multi-agent review pattern; §Polish-mode triage records the rationale). RESULTS.md and PLAN.md to be deleted per 2026-05-08 disposition decision.
 - [ ] **Finished** — branch landed / PR opened per researcher's choice
 
 ---
@@ -73,6 +73,10 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 > **User decision (2026-05-08):** Proceed with integration.
 > **Question asked:** Step 4 completion menu — integrate / change plan / keep as-is / discard.
 > **Rationale:** Task 3 APPROVED; Tasks 1 + 2 + 3 all landed; ready for integration-workflow.
+
+> **User decision (2026-05-08):** Delete PLAN.md + RESULTS.md (consolidate to CLAUDE.md, like 505a975).
+> **Question asked:** Doc disposition — delete-after-consolidation / keep-at-root / move-RESULTS-only.
+> **Rationale:** Matches the prior cycle's precedent; design rationale is already in `skills/writing/CLAUDE.md`; git history preserves PLAN.md / RESULTS.md on this branch.
 
 ---
 
