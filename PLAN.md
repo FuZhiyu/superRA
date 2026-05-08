@@ -79,7 +79,7 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 ### Task 1: Replace `Auto-fixable` flag with `Fix:` tier across review-mode output (Commit A)
 **Depends on:** *(none)*
 **Review status:** IMPLEMENTED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED — final state (post-Task-3 re-cut) verified: 8 consistency output blocks carry `Fix: mechanical | conventional | authorial   # see review.md §Fix tiers`; single definition site at `review.md §Fix tiers`; no stale `Auto-fixable` references outside the two intentional history mentions.
 
 **Script:** N/A (prose edits across 11 files)
 **Input:**
@@ -107,7 +107,7 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 ### Task 2: Wire fix-tier vocabulary into polish-mode internal triage (Commit B)
 **Depends on:** Task 1
 **Review status:** IMPLEMENTED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED — final state (post-Task-3 re-cut) verified: `polish.md §Triage` names the apply-vs-surface split for shapes A/B with the new tier names; `polish.md §Minimal-edit discipline` carries the symmetric over/under-editing framing; `CLAUDE.md §Polish-mode triage` records the rationale and recovery path for the deleted feedback file; `feedback_polish_under_editing.md` confirmed deleted from worktree.
 
 **Script:** N/A (prose edits across 3 files + 1 deletion)
 **Input:**
@@ -134,7 +134,15 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 ### Task 3: Re-cut tier vocabulary to `mechanical` / `conventional` / `authorial` and add the sequence/set/force test (Commit C)
 **Depends on:** Task 2
 **Review status:** APPROVED
-**Integration status:** *(set during integration)*
+**Integration status:** REVISE
+
+> **Integration review notes (2026-05-08, post-sync no-op):**
+>
+> Substantive review: PASS. `review.md §Fix tiers` is the single definition site (3 tier bullets + sequence/set/force test + 4 example pairs spanning the boundary + closing footnote naming the prior `judgment` / `decision` vocabulary). All 8 `consistency/<dim>.md` output blocks carry `Fix: mechanical | conventional | authorial   # see review.md §Fix tiers`. `polish.md §Input shape C` and `§Triage`, `long-form-review.md` final-summary table, and `skills/writing/CLAUDE.md` §Multi-agent review pattern + §Polish-mode triage all reference back to `review.md §Fix tiers` without restating the definition. DRY discipline holds. `grep -rn "judgment\|decision"` returns only intentional history mentions and unrelated English uses (verified line-by-line). Project Doc Audit walk-up (`skills/writing/CLAUDE.md` and repo-root `CLAUDE.md` / `AGENTS.md` / `AGENT.md` / `README.md` / `RELEASE-NOTES.md`) shows no orphan references to old tier names. Necessity test on the new sequence/set/force paragraph in `review.md`: each line shapes behavior the agent would not produce on its own (the abstract test name + 4 boundary-example pairs are required for an agent classifying borderline findings) — passes.
+>
+> 1. **MINOR — Final diff self-check trail missing.** Per `refactor-and-integrate` `[BLOCKING]`, every task block needs a `**Final diff self-check:** <governing range>; <surviving-change classes or no surviving hunks>; <suspicious-hunk justifications or none>` line, including no-change cases. The orchestrator dispatched integration review without a refactor implementer pass (sensible — no surviving cleanup needed). The trail still has to be written before close. For each of Tasks 1, 2, 3, add a `**Final diff self-check:** git diff 9bf9106^..HEAD; surviving hunks: tier-vocabulary edits in `review.md` / `polish.md` / `long-form-review.md` / 8× `consistency/<dim>.md` / `skills/writing/CLAUDE.md` (all in task scope), PLAN.md + RESULTS.md handoff edits; no suspicious hunks; no Sync impact (PRE_SYNC_BASE_SHA == BASE_HEAD_SHA == 8c3db7d).` line under the task header. Once added, this REVISE flips to APPROVED — no other findings.
+>
+> 2. **MINOR (advisory, not blocking) — Mild apply-behavior overlap between `review.md §Fix tiers` and `polish.md §Input shape C`.** Each tier bullet in `review.md` carries a one-clause apply-behavior summary ("Applied silently in batch", "Applied with one finding-line per item in the commit message", "Surfaced for the author; not applied"); the `polish.md §Input shape C` bullets restate the same with operational additions ("group into one batch commit per dimension", "naming the choice made", "do not apply"). Defensible — the polish-side bullets carry batching detail not in `review.md`, and the reviewer benefits from knowing what their tier choice triggers — but if compaction is desired in a future pass, `review.md`'s in-bullet apply-behavior clauses could collapse to one-line pointers at `polish.md §Input shape C` / `§Triage`. Not blocking.
 
 **Script:** N/A (prose edits across 12 files)
 **Input:**
