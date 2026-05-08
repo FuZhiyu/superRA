@@ -70,6 +70,10 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 
 > **2026-05-08 — Re-cut tier names and add the sequence/set/force test.** Researcher flagged that `judgment` vs `decision` was opaque — both involved "agent picks among options" and the line collapsed into "agent's confidence", which the prior design had set out to avoid. Decision: rename to `mechanical` / `conventional` / `authorial`, where `conventional` covers any meaning-preserving wording change (rewording, sentence-breaking, parallelism repair, awkward-phrasing fix — not only paper-convention-following), and `authorial` is reserved for changes that move the paragraph's sequence (idea order), set (propositions asserted), or force (claim strength / hedge level). The sequence/set/force test lands in `review.md §Fix tiers` as the rule that draws the conventional/authorial line. Consequences: some prior `judgment` cases shift to `authorial` (e.g., picking a Greek letter when no paper convention exists — surface, don't invent); some shift to `mechanical` (e.g., aesthetic-only "may vs might" with no paper pattern — apply silently, since meaning is preserved and the commit diff is sufficient audit). Applies to: Task 3 (new); supersedes the `judgment` / `decision` names from the 2026-05-05 entry.
 
+> **User decision (2026-05-08):** Proceed with integration.
+> **Question asked:** Step 4 completion menu — integrate / change plan / keep as-is / discard.
+> **Rationale:** Task 3 APPROVED; Tasks 1 + 2 + 3 all landed; ready for integration-workflow.
+
 ---
 
 ### Task 1: Replace `Auto-fixable` flag with `Fix:` tier across review-mode output (Commit A)
