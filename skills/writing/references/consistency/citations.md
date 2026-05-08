@@ -94,5 +94,5 @@ Text: "<quoted claim>"
 Bibliography entry: <entry or "NOT FOUND">
 Issue: <one-line>
 Recommendation: <suggest citation where known, or "researcher must supply">
-Fix: mechanical | judgment | decision   # see review.md §Fix tiers
+Fix: mechanical | conventional | authorial   # see review.md §Fix tiers
 ```

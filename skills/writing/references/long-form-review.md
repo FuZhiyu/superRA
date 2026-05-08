@@ -14,7 +14,7 @@ Three adaptations of that anatomy:
 
 - **Header indices live under `## Project Conventions`** — notation index (key symbols → meaning + first-use location), terminology index (key terms → definition + first-use), figures-and-tables index, cross-reference index. The orchestrator builds these once before dispatch so each parallel reviewer reads the indices instead of cold-reading the manuscript. Promote to a sibling `## Document Map` section when the indices outgrow Conventions.
 - **Per-aspect blocks ARE task blocks** per `plan-anatomy.md §Task Block Anatomy` — one block per dimension (or, in deep mode, per perspective), all `**Depends on:** *(none)*`. Reviewer findings land in the existing review-notes blockquote of the task block, each finding in its loaded `consistency/<dim>.md` output format including the `Fix:` tier line per `review.md §Fix tiers`.
-- **Final summary block at the top** of REVIEW.md: severity × fix-tier counts table, top-3 priorities, pointer to each per-aspect block, and a per-tier batch table (mechanical / judgment / decision) sized for polish-mode shape C handoff. Built by the orchestrator, optionally with one final-summary reviewer pass over the assembled doc.
+- **Final summary block at the top** of REVIEW.md: severity × fix-tier counts table, top-3 priorities, pointer to each per-aspect block, and a per-tier batch table (mechanical / conventional / authorial) sized for polish-mode shape C handoff. Built by the orchestrator, optionally with one final-summary reviewer pass over the assembled doc.
 
 `## Workflow Status` is **omitted** for standalone review-as-data; when this protocol rides a workflow, that workflow's PLAN.md owns the rollup.
 

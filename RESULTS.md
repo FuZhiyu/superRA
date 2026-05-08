@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-08 (Tasks 1 + 2 landed; Task 3 vocabulary re-cut planned)
-**Status:** Tasks 1 + 2 APPROVED; Task 3 not started (re-cut to mechanical / conventional / authorial + sequence/set/force test)
+**Last updated:** 2026-05-08 (Tasks 1 + 2 + 3 landed)
+**Status:** Tasks 1 + 2 APPROVED; Task 3 IMPLEMENTED (re-cut to mechanical / conventional / authorial + sequence/set/force test)
 
 ---
 
@@ -55,6 +55,16 @@ Verification:
 
 ## Task 3: Re-cut tier vocabulary to `mechanical` / `conventional` / `authorial` and add the sequence/set/force test (Commit C)
 
-**Status:** *(not started)*
+**Status:** IMPLEMENTED. Commit C staged.
 
-*To be filled in by the implementer after Commit C lands.*
+Final state across the touched files:
+- `skills/writing/references/review.md §Fix tiers` — three tier bullets rewritten to `mechanical` / `conventional` / `authorial`. New **Sequence/set/force test** paragraph carries the rule (sequence + set + force preserved → conventional; any one shifts → authorial) and the 6 worked examples across the boundary (sentence-break vs sentence-reorder; nominalization vs hedge strengthening; coordinate-merge vs subordination; topic-sentence move). Closing footnote names the prior `judgment` / `decision` vocabulary so commit messages before 2026-05-08 stay matchable. Framing line and `Auto-fixable` history mention preserved verbatim.
+- 8× `skills/writing/references/consistency/*.md` — output blocks now read `Fix: mechanical | conventional | authorial   # see review.md §Fix tiers`.
+- `skills/writing/references/polish.md` — §Input shape C bullets and accepted-deferred line use the new names; §Triage applies `mechanical` and `conventional` in place and surfaces `authorial`. Example list trimmed: redundant-quote suspicion dropped (it's conventional unless it changes the set); claim-evidence gap kept as canonical authorial example; weak topic-sentence rewrite kept and reframed as authorial because the rewrite moves sequence.
+- `skills/writing/references/long-form-review.md` — final-summary per-tier batch table enumeration updated to `(mechanical / conventional / authorial)`.
+- `skills/writing/CLAUDE.md` — §Multi-agent review pattern fix-tier bullet renamed throughout; load-bearing rationale (continuous supervision-cost axis vs binary; one definition site; binary's failure mode) preserved; new parenthetical history note records the 2026-05-08 re-cut and names the sequence/set/force test as the load-bearing reason against re-introducing the older names. §Polish-mode triage `decision`-tier mention renamed to `authorial`-tier; under-editing failure-mode and framing-suppression cause preserved verbatim.
+
+Verification:
+- `grep -rn "judgment\|decision" skills/writing/references/ skills/writing/CLAUDE.md` returns hits in three groups: (1) intentional history mentions of the prior tier names — `review.md:23` (closing footnote), `CLAUDE.md:51` (parenthetical history note); (2) unrelated English uses of "decision" / "judgment" outside the tier vocabulary — `integration.md` (workflow "user decision" / "task or decision"); `polish.md:54` ("agent's own judgment" priority chain); `CLAUDE.md:27` ("light vs deep polish is purely a load decision"); `CLAUDE.md:47` ("per-dimension judgment"); `CLAUDE.md:55` ("apply-vs-surface decision" — the act of deciding); `CLAUDE.md:83` ("reviewer-dispatch-leaves-this-skill decision"); `consistency/numerical.md:5` ("user decision 2026-04-19"). No tier-vocabulary uses of the old names remain.
+- `grep -rn "conventional\|authorial" skills/writing/` returns 16 hits in the expected locations: `review.md §Fix tiers` (definition + worked examples + footnote — 4 lines), 8 consistency files (one line each), `polish.md` (§Input shape C bullets + accepted-deferred + §Triage — 3 lines), `long-form-review.md` (1 line), `CLAUDE.md` (§Multi-agent review pattern bullet + §Polish-mode triage — 2 lines).
+- Manual end-to-end read of `review.md §Fix tiers` confirms the three tier bullets are non-overlapping, the sequence/set/force test reads cleanly, and the worked examples cover the boundary in both directions. `polish.md §Triage` tier names match the §Fix tiers definition. The eight consistency output blocks all carry the new legal-values line.

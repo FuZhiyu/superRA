@@ -107,5 +107,5 @@ Expected: <value from source>
 Observed: <value in prose>
 Issue: <one-line>
 Recommendation: <specific fix>
-Fix: mechanical | judgment | decision   # see review.md §Fix tiers
+Fix: mechanical | conventional | authorial   # see review.md §Fix tiers
 ```

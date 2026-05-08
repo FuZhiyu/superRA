@@ -99,5 +99,5 @@ Verification attempt: <symbolic / numerical / what was tried>
 Finding: <what does / does not check out>
 Downstream impact: <what depends on this step>
 Recommendation: <escalate to researcher / propose fix with specific formulation>
-Fix: mechanical | judgment | decision   # see review.md §Fix tiers
+Fix: mechanical | conventional | authorial   # see review.md §Fix tiers
 ```

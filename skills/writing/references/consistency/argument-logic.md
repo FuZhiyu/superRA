@@ -110,5 +110,5 @@ Current argument: <one-sentence summary>
 Problem: <logical gap / overclaim / missing alternative / circular>
 What would close it: <identification assumption / additional test / rewording / alternative addressed>
 Recommendation: <escalate to researcher — logical issues are author calls>
-Fix: mechanical | judgment | decision   # see review.md §Fix tiers
+Fix: mechanical | conventional | authorial   # see review.md §Fix tiers
 ```
