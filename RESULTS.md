@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-06 (Commits A and B landed)
-**Status:** Implementation complete; integration pending
+**Last updated:** 2026-05-08 (Tasks 1 + 2 landed; Task 3 vocabulary re-cut planned)
+**Status:** Tasks 1 + 2 APPROVED; Task 3 not started (re-cut to mechanical / conventional / authorial + sequence/set/force test)
 
 ---
 
@@ -50,3 +50,11 @@ Verification:
 - `grep -rn "Auto-fixable\|auto-fixable" skills/writing/` returns 2 hits, both intentional history mentions (`CLAUDE.md:51`, `review.md:21`).
 - `grep -rn "§Fix tiers\|## Fix tiers\|§Triage\|## Triage" skills/writing/` returns 14 hits: 1 definition site (`review.md`), 1 polish.md shape C, 1 polish.md §Triage, 1 long-form-review.md, 8 consistency files, 2 CLAUDE.md mentions.
 - Manual end-to-end read of `polish.md` confirms balanced framing and named surface path for shapes A/B.
+
+---
+
+## Task 3: Re-cut tier vocabulary to `mechanical` / `conventional` / `authorial` and add the sequence/set/force test (Commit C)
+
+**Status:** *(not started)*
+
+*To be filled in by the implementer after Commit C lands.*
