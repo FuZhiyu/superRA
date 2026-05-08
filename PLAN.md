@@ -129,7 +129,7 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 
 ### Task 3: Re-cut tier vocabulary to `mechanical` / `conventional` / `authorial` and add the sequence/set/force test (Commit C)
 **Depends on:** Task 2
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(set during integration)*
 
 **Script:** N/A (prose edits across 12 files)
