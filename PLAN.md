@@ -2,17 +2,17 @@
 
 > **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. This is a **skill-internals edit** — load `document-skills:skill-creator` for SKILL.md / reference-file edits per the repo CLAUDE.md (`When modifying superRA itself … treat the work as skill creation`). The active domain skill is `superRA:writing` (the skill being edited).
 
-**Objective:** Land a single coherent `Fix: mechanical | judgment | decision` vocabulary that captures the supervision cost of applying any prose finding, and use the same vocabulary at two call sites: (a) review-mode output — replacing the binary `Auto-fixable: Yes / No` field in each `consistency/<dim>.md` output block; (b) polish-mode internal triage — making "apply this in place vs surface to author" an explicit, named outcome so polish stops under-editing on substantive prose issues.
+**Objective:** Land a single coherent `Fix: mechanical | conventional | authorial` vocabulary that captures the supervision cost of applying any prose finding, and use the same vocabulary at two call sites: (a) review-mode output — replacing the binary `Auto-fixable: Yes / No` field in each `consistency/<dim>.md` output block; (b) polish-mode internal triage — making "apply this in place vs surface to author" an explicit, named outcome so polish stops under-editing on substantive prose issues.
 
 **Methodology:**
-- Tier vocabulary defined once in `references/review.md §Fix tiers`. Tier definitions: `mechanical` = one correct fix, no semantic call; `judgment` = one likely fix exists, agent picks using paper-internal conventions; `decision` = right fix needs author input.
+- Tier vocabulary defined once in `references/review.md §Fix tiers`. Tier definitions: `mechanical` = surface-only change (orthography, grammar, format), no meaning effect, applied silently; `conventional` = wording or phrasing change that preserves the paragraph's **sequence** (order of ideas), **set** (propositions asserted), and **force** (claim strength / hedge level), applied with a per-item finding-line in the commit message; `authorial` = changes any of sequence / set / force, or commits the author to a choice not yet made, surfaced for the author. The conventional/authorial dividing line is the **sequence-set-force test** carried in the same section.
 - Review-mode call site: each `consistency/<dim>.md` finding stamps a `Fix:` line. Polish shape C applies tiered behavior on accepted findings (existing wiring, Task 1).
 - Polish-mode call site (Task 2): in shapes A and B, every diagnosed issue is implicitly tiered. `mechanical` and `judgment` apply as minimal edits; `decision` surfaces to the author (chat reply for standalone polish; existing handoff-doc convention when polish rides a workflow).
 - Symmetric framing in `polish.md §Minimal-edit discipline`: under-editing and over-editing are equal failure modes; the minimal-edit rule constrains the size of each fix, not the count of fixes.
 
 **Conventions:**
 - Tier vocabulary lives in `review.md §Fix tiers` (single source).
-- Each `consistency/<dim>.md` output block uses the line `Fix: <tier>` with `<tier>` ∈ {mechanical, judgment, decision}.
+- Each `consistency/<dim>.md` output block uses the line `Fix: <tier>` with `<tier>` ∈ {mechanical, conventional, authorial}.
 - `long-form-review.md` summary table uses `severity × fix-tier` counts.
 - Field name is `Fix:` — short, unambiguous in the output block.
 - Polish-mode triage uses the same vocabulary; do not invent a parallel one.
@@ -35,8 +35,8 @@
 
 ## Workflow Status
 
-- [x] **Plan approved** — researcher signed off on Task 1 (2026-05-05 design discussion); approved Task 2 unified-tier extension on 2026-05-06 after design-principle filter pass.
-- [x] **Execution complete** — Task 1 + Task 2 IMPLEMENTED (Commits A, B landed). No `Auto-fixable` strings remain (except 2 intentional history mentions); polish.md framing balanced; §Triage names the surface path for shapes A/B.
+- [x] **Plan approved** — researcher signed off on Task 1 (2026-05-05 design discussion); approved Task 2 unified-tier extension on 2026-05-06 after design-principle filter pass; approved Task 3 vocabulary re-cut on 2026-05-08 after sequence/set/force test discussion.
+- [ ] **Execution complete** — Tasks 1 + 2 IMPLEMENTED (Commits A, B landed); Task 3 (re-cut + sequence/set/force test) not yet implemented. Rolled back 2026-05-08 because the §Fix tiers section no longer matches the agreed vocabulary.
 - [ ] **Drift tests created** — N/A (skill-prose; the `grep` checks in each task are the regression tests)
 - [ ] **Integrated** — integration reviewer `APPROVED`
 - [ ] **Docs finalized** — RESULTS.md matured, CLAUDE.md design notes rewritten
@@ -67,6 +67,8 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 > **2026-05-05 — Tier vocabulary.** Researcher chose Option A (3-tier `Fix: mechanical | judgment | decision`) over Option B (kept binary). The binary forced a continuous supervision-cost axis into two buckets and pre-judged what polish would do. Applies to: Task 1.
 
 > **2026-05-06 — Unify under-editing fix into the same vocabulary.** Researcher pushed back on a first-pass plan that absorbed the full feedback file. Direction: filter feedback through the skill's own design principles (additive-rules framing; DRY/Necessity gate); keep generalizable changes only. Outcome: drop diagnose-first procedural step, gated-checklist intro reframe, cross-paragraph audit subsection, end-of-polish self-check, mode-specific tier examples; keep symmetric over/under-editing warning + decision-tier surfacing path for polish shapes A/B. Applies to: Task 2.
+
+> **2026-05-08 — Re-cut tier names and add the sequence/set/force test.** Researcher flagged that `judgment` vs `decision` was opaque — both involved "agent picks among options" and the line collapsed into "agent's confidence", which the prior design had set out to avoid. Decision: rename to `mechanical` / `conventional` / `authorial`, where `conventional` covers any meaning-preserving wording change (rewording, sentence-breaking, parallelism repair, awkward-phrasing fix — not only paper-convention-following), and `authorial` is reserved for changes that move the paragraph's sequence (idea order), set (propositions asserted), or force (claim strength / hedge level). The sequence/set/force test lands in `review.md §Fix tiers` as the rule that draws the conventional/authorial line. Consequences: some prior `judgment` cases shift to `authorial` (e.g., picking a Greek letter when no paper convention exists — surface, don't invent); some shift to `mechanical` (e.g., aesthetic-only "may vs might" with no paper pattern — apply silently, since meaning is preserved and the commit diff is sufficient audit). Applies to: Task 3 (new); supersedes the `judgment` / `decision` names from the 2026-05-05 entry.
 
 ---
 
@@ -122,3 +124,48 @@ Walked at planning time (2026-05-05); re-confirmed 2026-05-06 for Task 2 — no 
 - [x] **Step 5: Deleted `skills/writing/feedback_polish_under_editing.md`.** Recoverable via `git log --diff-filter=D -- skills/writing/feedback_polish_under_editing.md`. Recovery path cited in the CLAUDE.md §Polish-mode triage section.
 
 - [x] **Step 6: Verified.** `grep -rn "Auto-fixable\|auto-fixable" skills/writing/` returns 2 hits — both intentional history mentions naming the prior flag (`CLAUDE.md:51`, `review.md:21`). `grep -rn "§Fix tiers\|## Fix tiers\|§Triage\|## Triage" skills/writing/` shows one definition site (`review.md:13`), one polish.md shape C, one polish.md §Triage, one long-form-review.md, eight consistency files, two CLAUDE.md mentions. Manual end-to-end read of `polish.md` confirms: framing balanced, §Triage names the surface path for shapes A/B, §Minimal-edit discipline reframed as size-of-each-fix.
+
+---
+
+### Task 3: Re-cut tier vocabulary to `mechanical` / `conventional` / `authorial` and add the sequence/set/force test (Commit C)
+**Depends on:** Task 2
+**Review status:** *(not started)*
+**Integration status:** *(set during integration)*
+
+**Script:** N/A (prose edits across 12 files)
+**Input:**
+- `skills/writing/references/review.md`
+- `skills/writing/references/polish.md`
+- `skills/writing/references/long-form-review.md`
+- `skills/writing/references/consistency/{argument-logic,citations,code-paper,cross-references,math,notation,numerical,terminology}.md`
+- `skills/writing/CLAUDE.md`
+
+**Output:** Same files, edited in place. The §Fix tiers section in `review.md` is rewritten with the new tier names and the sequence/set/force test; the eight consistency output blocks, `polish.md`, `long-form-review.md`, and `CLAUDE.md` are updated to use the new names.
+
+- [ ] **Step 1: Rewrite `review.md §Fix tiers` with the new names and the sequence/set/force test.** Replace the three tier bullets with:
+  - `mechanical` — surface-only change (orthography, grammar, format, missing article, undefined acronym on first use, missing `\hat` on an established estimate). The fix does not change meaning. Apply silently in batch.
+  - `conventional` — wording, phrasing, or sentence shape. Preserves the paragraph's **sequence** (order of ideas), **set** (propositions asserted), and **force** (claim strength / hedge level). Examples: de-nominalization, breaking a long sentence, repairing parallelism, removing redundant phrasing, terminology-variant collapse to the paper's established choice. Apply, with one finding-line per item in the commit message so the author can audit.
+  - `authorial` — changes sequence, set, or force; or commits the author to a choice not yet made (terminology pick when the paper has not committed; Greek letter pick when the parameter is undefined elsewhere; claim that may not generalize; sign disagreement between prose and table; topic sentence rewrite that moves the paragraph's argument). Surface to author; do not apply.
+
+  Add a one-paragraph **sequence/set/force test** as the rule that draws the conventional/authorial line: "If sequence + set + force are all preserved, the edit is `conventional` regardless of how aggressive the rewrite is. If any one shifts, it is `authorial`." Carry 4–6 worked examples across the boundary (sentence-break — conventional; sentence-reorder — authorial; nominalization fix — conventional; hedge strengthening — authorial; coordinate sentence merge — conventional, but subordinating one to the other — authorial; topic-sentence move — authorial). The closing sentence of §Fix tiers names the prior `judgment` / `decision` vocabulary as the prior names so readers chasing old commit messages can match the terms.
+
+- [ ] **Step 2: Update the legal-values comment line in each `consistency/<dim>.md` output block.** Eight files (`argument-logic`, `citations`, `code-paper`, `cross-references`, `math`, `notation`, `numerical`, `terminology`) — change `Fix: mechanical | judgment | decision   # see review.md §Fix tiers` to `Fix: mechanical | conventional | authorial   # see review.md §Fix tiers`.
+
+- [ ] **Step 3: Update `polish.md` to use the new tier names.**
+  - `§Input shape C` — the three apply-behavior bullets become: `mechanical` apply silently (batch commit per dimension); `conventional` apply with a per-item finding-line in the commit message; `authorial` surface for the author.
+  - `§Triage` — body and parenthetical examples updated. Apply `mechanical` and `conventional` tier issues as minimal edits in place; surface `authorial`-tier issues. Update the example list under "issues that diagnose cleanly but need author input" to drop the now-misclassified ones (a redundant-quote suspicion is conventional unless it changes the set; a weak topic sentence rewrite is authorial because it moves sequence) and keep the claim-evidence gap as the canonical authorial example.
+  - `§Minimal-edit discipline` — no tier-name reference; leave as is.
+
+- [ ] **Step 4: Update `long-form-review.md`.** Per-aspect-blocks bullet pointer at `review.md §Fix tiers` is unchanged in target; final-summary `severity × fix-tier counts table` and `per-tier batch table (mechanical / judgment / decision)` enumerations become `(mechanical / conventional / authorial)`. Any prose mentioning the tier names follows.
+
+- [ ] **Step 5: Update `skills/writing/CLAUDE.md`.**
+  - §Multi-agent review pattern fix-tier bullet — rename tiers throughout; preserve the load-bearing rationale (continuous supervision-cost axis vs binary; one definition site; binary's failure mode). Add a parenthetical history note: "tier names re-cut 2026-05-08 from the prior `judgment` / `decision` to `conventional` / `authorial` after the `judgment` vs `decision` line collapsed into agent confidence — the sequence/set/force test in `review.md §Fix tiers` is the load-bearing reason against re-introducing the older names."
+  - §Polish-mode triage — rename tiers throughout; preserve the under-editing failure-mode and framing-suppression cause.
+  - History prose elsewhere in the file — the prior `judgment` / `decision` strings stay only in the explicit history mention added above; everywhere else they update.
+
+- [ ] **Step 6: Verify and commit Commit C.** Run:
+  - `grep -rn "judgment\|decision" skills/writing/references/ skills/writing/CLAUDE.md` — expect only intentional history mentions (§Fix tiers closing sentence; CLAUDE.md §Multi-agent review pattern parenthetical). Each remaining hit is verified by reading the line.
+  - `grep -rn "conventional\|authorial" skills/writing/` — expect: `review.md §Fix tiers` (definition site + worked examples), eight `consistency/<dim>.md` files, `polish.md §Input shape C` and `§Triage`, `long-form-review.md`, `CLAUDE.md` two sections.
+  - Manual end-to-end read of `review.md §Fix tiers` confirms the sequence/set/force test reads cleanly and the worked examples cover the boundary; `polish.md §Triage` tier names match the §Fix tiers definition; the eight consistency output blocks all carry the new legal-values line.
+
+  Commit message: `skill: writing — re-cut fix-tier vocabulary to mechanical/conventional/authorial`. Body cites the 2026-05-08 decision log entry and the sequence/set/force test as the dividing rule.
