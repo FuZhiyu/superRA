@@ -32,7 +32,7 @@
 - [x] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
 - [x] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Protect) — *skipped per user decision 2026-05-11: skill prose is git-tracked; prose-drift safeguards add little over git history.*
 - [x] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync (`integration-workflow` Integrate)
-- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Document)
+- [x] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Document) — *matured into `skills/writing/CLAUDE.md §Audience awareness as an upstream audience-model discipline` in commit `dfe87bc`; PLAN.md / RESULTS.md slated for deletion in the next commit per user decision 2026-05-12.*
 - [ ] **Finished** — branch landed locally, PR opened, or requested cleanup completed (`integration-workflow` Finish)
 
 ---
@@ -62,6 +62,9 @@ Walked at planning time (2026-05-11). Re-walk on-demand only.
 
 > **User decision (2026-05-11):** Skip drift tests entirely; flip `Drift tests created` with a note that skill prose is git-tracked.
 > **Question asked:** Protect step — skip drift tests / lightweight presence test / presence + structural test. Work is skill prose, so prose-drift safeguards differ from paper or code drift tests.
+
+> **User decision (2026-05-12):** Consolidate matured documentation into `skills/writing/CLAUDE.md` (already done via the §Audience awareness as an upstream audience-model discipline history entry committed in `dfe87bc`); delete PLAN.md and RESULTS.md from the project root. Matches the prior plan run's pattern (commit `178c53d`).
+> **Question asked:** Document step doc disposition — consolidate to writing/CLAUDE.md and delete PLAN/RESULTS / keep at project root / relocate under skills/writing/.
 
 ---
 
