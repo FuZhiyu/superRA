@@ -28,7 +28,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — user approved the plan in plan mode on 2026-05-12; researcher decisions logged below
-- [ ] **Execution complete** — all tasks `APPROVED`, no reproducibility pipeline (skill-content work)
+- [x] **Execution complete** — all tasks `APPROVED`, no reproducibility pipeline (skill-content work)
 - [ ] **Drift tests created** — N/A; no quantitative result to protect (decision to be logged at Protect)
 - [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync
 - [ ] **Docs finalized** — RESULTS.md matured (or consolidated to CLAUDE.md per branch pattern), project docs audited, doc-reviewer `APPROVED`

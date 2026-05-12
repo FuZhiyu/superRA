@@ -3,14 +3,14 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-12 (planning)
-**Status:** In Progress
+**Last updated:** 2026-05-12 (Task 4 APPROVED — all tasks complete)
+**Status:** Completed
 
 ---
 
 ## Task 1: Author the new SKILL.md section
 
-**Status:** Implemented
+**Status:** Completed (Task 1 approved 2026-05-12)
 
 ### Outcome
 
@@ -24,7 +24,7 @@ New section "Project Conventions in the handoff doc / CLAUDE.md" inserted in `sk
 
 ## Task 2: Rework long-form-review.md §Doc convention
 
-**Status:** Implemented
+**Status:** Completed (Task 2 approved 2026-05-12)
 
 ### Outcome
 
@@ -36,7 +36,7 @@ New section "Project Conventions in the handoff doc / CLAUDE.md" inserted in `sk
 
 ## Task 3: One-line read instructions in draft.md and polish.md
 
-**Status:** Implemented
+**Status:** Completed (Task 3 approved 2026-05-12)
 
 ### Outcome
 
@@ -53,7 +53,7 @@ Two short additions land at the draft-mode and polish-mode call sites, wiring bo
 
 ## Task 4: Contributor entry in skills/writing/CLAUDE.md
 
-**Status:** Implemented
+**Status:** Completed (Task 4 approved 2026-05-12)
 
 ### Outcome
 
