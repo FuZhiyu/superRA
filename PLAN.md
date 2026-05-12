@@ -31,7 +31,7 @@
 - [x] **Execution complete** — all tasks `APPROVED`, no reproducibility pipeline (skill-content work)
 - [x] **Drift tests created** — N/A; no quantitative result to protect (Protect decision logged 2026-05-12)
 - [x] **Integrated** — integration reviewer `APPROVED` on `322588d..HEAD` after no-op Sync; all four tasks `Integration status: APPROVED`
-- [ ] **Docs finalized** — RESULTS.md matured (or consolidated to CLAUDE.md per branch pattern), project docs audited, doc-reviewer `APPROVED`
+- [x] **Docs finalized** — design rationale consolidated to `skills/writing/CLAUDE.md` via Task 4 (reviewed APPROVED); no separate doc-writer/doc-reviewer dispatch (writing-vertical lightening per integration-workflow §When to Lighten)
 - [ ] **Finished** — branch landed locally or PR opened
 
 ---
@@ -79,6 +79,9 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 
 > **User decision (2026-05-12):** Skip drift tests — no quantitative result to protect for skill-content edits; reviewer dispatch (per-task review + integration review) is the protection.
 > **Question asked:** Protect step — skip drift tests, add build/outline-stability check, or define some other protection?
+
+> **User decision (2026-05-12):** Delete PLAN.md + RESULTS.md at worktree root. Permanent design-rationale record already lives in `skills/writing/CLAUDE.md §Writing-side contribution to the ## Project Conventions slot` (Task 4, APPROVED). Git history preserves PLAN/RESULTS on this branch. Matches the branch pattern at commits 322588d / 178c53d.
+> **Question asked:** Document disposition — delete PLAN/RESULTS, move PLAN.md alongside the consolidated record, or keep at worktree root?
 
 ---
 
