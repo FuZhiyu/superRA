@@ -31,7 +31,7 @@
 - [x] **Plan approved** — researcher signed off on the required domain gate + plan (`planning-workflow` Phase 2)
 - [x] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
 - [x] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Protect) — *skipped per user decision 2026-05-11: skill prose is git-tracked; prose-drift safeguards add little over git history.*
-- [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync (`integration-workflow` Integrate)
+- [x] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync (`integration-workflow` Integrate)
 - [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Document)
 - [ ] **Finished** — branch landed locally, PR opened, or requested cleanup completed (`integration-workflow` Finish)
 
