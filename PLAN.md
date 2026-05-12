@@ -98,7 +98,7 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 
 ### Task 2: Rework long-form-review.md §Doc convention
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **File:** `skills/writing/references/long-form-review.md`
