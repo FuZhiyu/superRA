@@ -36,7 +36,20 @@ New section "Project Conventions in the handoff doc / CLAUDE.md" inserted in `sk
 
 ## Task 3: One-line read instructions in draft.md and polish.md
 
-**Status:** Not started
+**Status:** Implemented
+
+### Outcome
+
+Two short additions land at the draft-mode and polish-mode call sites, wiring both modes to read writing-side rows from `## Project Conventions` when a handoff doc is in play.
+
+- `skills/writing/references/draft.md` — the convention-read instruction is **folded into Workflow Step 1 ("Gather inputs")** rather than inserted as a new numbered step. The convention is an input to drafting, and folding avoids renumbering Steps 2-5 (a wider, non-surgical diff). The added sentence enforces the soft trigger at the draft call site: read the rows if they exist, populate them on the first draft pass against the paper if they're empty.
+- `skills/writing/references/polish.md` — the triage instruction is **inserted as a one-paragraph framing immediately under `## Input shapes`**, so it applies uniformly to shapes A (unstaged edits), B (named target), and C (review-findings list). The line redirects triage: convention divergences are findings (`mechanical` / `conventional` apply, `authorial` surface) rather than free authorial calls.
+
+### Notes
+
+**DRY / Necessity audit (Step 3 outcome).** Both lines pass. Necessity: without the draft.md line, draft mode would silently re-infer terminology / citation style / numerical formatting every session — the line is the call-site enforcement of the SKILL.md soft trigger. Without the polish.md line, polish would either ignore the convention rows or surface them inconsistently across the three input shapes — the line is the triage-time redirect. DRY: neither line enumerates the 7-row table or restates the lifecycle ladder; the `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md` pointer carries both. The framing phrase `writing-side rows` reuses SKILL.md's wording rather than re-coining a label. No lines deleted from either addition.
+
+**Placement choice (Step 1 / Step 2 outcome).** The PLAN.md spec said "near Build the outline first" for draft.md and "near the input-shape preambles" for polish.md. For draft.md, folding into the immediately preceding "Gather inputs" Step 1 was surgically smaller than inserting a new step (preserves the existing 5-step numbering) and conceptually equivalent — convention reading IS an input. For polish.md, placing one framing paragraph at the top of `## Input shapes` covered all three shapes with one line, rather than repeating the same instruction inside each shape's body or inside the §Triage section (which would have missed shape-C's pre-tiered findings list).
 
 ## Task 4: Contributor entry in skills/writing/CLAUDE.md
 

@@ -4,7 +4,7 @@
 
 ## Workflow
 
-1. **Gather inputs.** Notes, outline, results tables, prior section drafts the new prose must connect to, the surrounding sections in the document. If a critical input (e.g., the results table the section is supposed to describe) is missing, ask before drafting.
+1. **Gather inputs.** Notes, outline, results tables, prior section drafts the new prose must connect to, the surrounding sections in the document. If a critical input (e.g., the results table the section is supposed to describe) is missing, ask before drafting. If a handoff doc carrying `## Project Conventions` is in play, read its writing-side rows and align to them; if those rows are empty on the first draft pass against the paper, populate them before drafting (per `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`).
 2. **Build the outline first.** Per `structure.md` (Pyramid Principle): governing idea, MECE support, section-level anatomy appropriate to section type (intro / methods / results / conclusion). The outline is one level deeper than what will appear as headings — every paragraph has a stated purpose before it has prose.
 3. **Draft.** One paragraph at a time. Each paragraph carries a topic sentence at the front (or a deliberate exception; `style.md` §Paragraph-level rules names them). Old → new information flow within the paragraph. Cross-references and citations are placed as the prose is written, not retrofitted later.
 4. **Self-check** against `style.md` §Gated Checklist (sentence-level rules) and `structure.md` §Gated Checklist (section anatomy). The self-check is a real walk, not a rubber stamp; if a rule fires and the prose doesn't comply, fix it before handoff.

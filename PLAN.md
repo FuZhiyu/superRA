@@ -116,17 +116,17 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 
 ### Task 3: One-line read instructions in draft.md and polish.md
 **Depends on:** Task 1
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Files:** `skills/writing/references/draft.md`, `skills/writing/references/polish.md`
 **Input:** Current draft.md and polish.md, the new SKILL.md section from Task 1.
 **Output:** One short addition in each file pointing at the conventions section.
 
-- [ ] **Step 1: Add the draft.md instruction.** Near "Build the outline first" in `draft.md`, add: *"If a handoff doc with `## Project Conventions` is in play, read it before drafting; align terminology, abbreviations, citation format, voice/tense, and prose typography to it. If empty and this is the first draft pass against the paper, populate it before drafting (per `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`)."* — one line, no procedure prescription. Adjust wording to match draft.md's surrounding style.
-- [ ] **Step 2: Add the polish.md instruction.** Near the input-shape preambles in `polish.md`, add: *"If `## Project Conventions` is in play, treat its terminology, numerical-formatting, and cross-reference choices as the established choice during triage (per `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`)."* — one line.
-- [ ] **Step 3: DRY / Necessity check.** Confirm each line shapes behavior the agent wouldn't produce on its own and doesn't restate the SKILL.md section.
-- [ ] **Step 4: Commit.** Stage only `draft.md`, `polish.md`, plus PLAN.md / RESULTS.md updates. Atomic commit titled `skills: wire draft + polish to read Project Conventions header`.
+- [x] **Step 1: Add the draft.md instruction.** Folded into the existing Workflow Step 1 ("Gather inputs") rather than inserted as a new step — the convention read is an input to drafting, and folding avoids renumbering Steps 2-5. Added sentence: *"If a handoff doc carrying `## Project Conventions` is in play, read its writing-side rows and align to them; if those rows are empty on the first draft pass against the paper, populate them before drafting (per `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`)."* — pointer to SKILL.md replaces enumerating the 7 dimensions (DRY).
+- [x] **Step 2: Add the polish.md instruction.** Inserted as a one-paragraph framing right under the `## Input shapes` header so it applies to shapes A, B, and C uniformly: *"Across all three shapes: if `## Project Conventions` is in play in a handoff doc, treat its writing-side rows as the established choice during triage — divergences from them are findings to fix or surface, not free authorial calls (per `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`)."* — pointer-style; no row enumeration; reuses `writing-side rows` framing from SKILL.md.
+- [x] **Step 3: DRY / Necessity check.** Walked both lines. Both pass Necessity: the draft.md line is what makes draft-mode read `## Project Conventions` (without it agents re-infer terminology/citation style every session) and operationalizes the soft trigger at the draft call site; the polish.md line redirects triage to treat convention divergences as findings rather than authorial choices (without it polish would either ignore the rows or surface them inconsistently). Both pass DRY: no enumeration of the 7-row table, no restatement of the lifecycle ladder or scanning protocol — the SKILL.md pointer carries those. No lines deleted.
+- [x] **Step 4: Commit.** Stage only `draft.md`, `polish.md`, plus PLAN.md / RESULTS.md updates. Atomic commit titled `skills: wire draft + polish to read Project Conventions header`.
 
 ### Task 4: Contributor entry in skills/writing/CLAUDE.md
 **Depends on:** Task 1

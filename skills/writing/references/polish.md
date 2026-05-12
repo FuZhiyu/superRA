@@ -4,6 +4,8 @@
 
 ## Input shapes
 
+Across all three shapes: if `## Project Conventions` is in play in a handoff doc, treat its writing-side rows as the established choice during triage — divergences from them are findings to fix or surface, not free authorial calls (per `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`).
+
 ### A — Unstaged edits
 
 Author has been editing the file; `git status` shows it modified, `git diff` shows the in-flight changes. The polish target is the working tree (or, if the request specifies, only the diff hunks).
