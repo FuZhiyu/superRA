@@ -74,6 +74,9 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 > **User decision (2026-05-12):** Soft trigger — scan on first long-form review or first draft pass against a paper with no recorded conventions. No auto-scan on routine polish or single-dimension review.
 > **Question asked:** Fully adaptive (no trigger) or soft trigger?
 
+> **User decision (2026-05-12):** Proceed with integration.
+> **Question asked:** Step 4 completion menu — proceed with integration, change the plan, keep the branch as-is, or discard?
+
 ---
 
 ### Task 1: Author the new SKILL.md section
