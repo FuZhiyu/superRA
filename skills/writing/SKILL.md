@@ -33,6 +33,30 @@ Every document this skill touches has an audience that is distinct from the edit
 
 The line-level marker families and replacement patterns that operationalize this principle for sentence-level editing live in `references/style.md §Audience: write to the reader, not the conversation`. They are the safety net; the audience model is the primary discipline.
 
+## Project Conventions in the handoff doc / CLAUDE.md
+
+A paper's writing-side conventions are paper-specific choices among defensible alternatives — choices a fresh agent would get wrong if not written down. Recording them once prevents re-inference and silent re-decision every session.
+
+**Where they live (lifecycle ladder, ordered by permanence).** `REVIEW.md` (born for one review, dies at closeout) → `PLAN.md` (analysis-scoped) → `CLAUDE.md` (project-permanent). Writing-side conventions live in the `## Project Conventions` header of whichever handoff doc is in play for the current task; when no handoff doc is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability — same pattern as theory-modeling's per-task ledger → `PLAN.md` Notation Conventions promotion (`theory-modeling/SKILL.md §Documentation and handoff`).
+
+**What writing contributes (rows alongside data and modeling contributions).**
+
+| Convention | What's recorded | Acid test |
+|---|---|---|
+| Terminology | Canonical term per key concept where synonyms exist, with first-use location. | Fresh agent would pick a synonym. |
+| Abbreviations | Defined short forms, with the spell-out and first-use location. | Fresh agent would re-spell or pick a different acronym. |
+| Citation format | Narrative vs parenthetical (`\citet` vs `\citep`), "et al." threshold, multi-citation separator, e.g./i.e./cf. usage. | Fresh agent would guess between conventions. |
+| Numerical formatting | Rounding precision, SE/CI delimiter, units, percent-vs-pp convention. | Fresh agent would guess between conventions. |
+| Cross-reference phrasing | "Section 3" vs "§3" vs "Sec. 3"; "Table 1" vs "Tab. 1"; label prefixes (`fig:`, `tab:`, `eq:`). | Fresh agent would guess. |
+| Voice and tense | "We" vs passive; past for procedure, present for results, or the paper's chosen mix. | Mixing rules are paper-specific within venue defaults. |
+| Prose typography around notation | Bold/italic/hat conventions for vectors, estimates, random variables when they appear in prose; quote style; em-dash style. | Fresh agent would guess between conventions. |
+
+**Excluded:** math notation (symbol → meaning, equation numbering) is owned by `theory-modeling`'s Notation Conventions table — orthogonal row in the same `## Project Conventions` section; section/caption capitalization and page-layout macros are venue / template territory.
+
+**Soft trigger.** On the first long-form review or first draft pass against a paper with no recorded writing-side conventions, inventory them and record them in the relevant handoff doc / CLAUDE.md before substantive editing. Routine polish and single-dimension review do not auto-scan.
+
+**Scanning is unspecified.** Agents inventory using the detection language in `references/consistency/*.md` and `references/style.md`; there is no separate scan procedure.
+
 ## Before you start
 
 1. **Classify the request into a mode** before reading the file — the mode determines what to load (see Mode routing).

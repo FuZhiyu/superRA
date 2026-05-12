@@ -78,23 +78,23 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 
 ### Task 1: Author the new SKILL.md section
 **Depends on:** *(none)*
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **File:** `skills/writing/SKILL.md`
 **Input:** Current SKILL.md, the 7-row convention list in `/Users/zhiyufu/.claude/plans/i-think-that-s-a-curious-charm.md`, the lifecycle ladder and soft trigger from §Decisions above.
 **Output:** New section "Project Conventions in the handoff doc / CLAUDE.md" inserted after the §Audience section ("Write to the reader, not the conversation") and before §Before you start. The section is sibling to §Audience.
 
-- [ ] **Step 1: Author the new section.** Write the section. Required content, with no narrative filler:
+- [x] **Step 1: Author the new section.** Write the section. Required content, with no narrative filler:
   - One-paragraph opener: writing-side conventions are paper-specific choices among defensible alternatives (cite the acid test: would a fresh agent get it wrong if not written down?). Recording once prevents re-inference.
   - **Lifecycle ladder:** REVIEW.md (single review) → PLAN.md (analysis-scoped) → CLAUDE.md (project-permanent). Conventions live in *whichever* handoff doc is in play for the current task. When no handoff doc is in play, standalone invocations return the inventory as a conversation reply. Promote up the ladder when the user signals durability — same pattern as theory-modeling's per-task-ledger → PLAN.md Notation Conventions promotion at `theory-modeling/SKILL.md` §Documentation and handoff.
   - **7-row table** with columns "Convention | What's recorded | Acid test" — terminology, abbreviations, citation format, numerical formatting, cross-reference phrasing, voice and tense conventions, prose typography around notation. Use the row contents from the approved plan at `/Users/zhiyufu/.claude/plans/i-think-that-s-a-curious-charm.md §Updated convention list (7 rows)`.
   - **Excluded (one line):** math notation (owned by `theory-modeling` Notation Conventions table); section/caption capitalization and page-layout macros (venue / template territory).
   - **Soft trigger (one line):** "On the first long-form review or first draft pass against a paper with no recorded conventions, inventory the writing-side conventions and record them in the relevant handoff doc / CLAUDE.md before substantive editing. Routine polish and single-dimension review do not auto-scan."
   - **Closer (one line):** "Scanning is unspecified — agents inventory using `references/consistency/*.md` and `references/style.md`; there is no separate scan procedure."
-- [ ] **Step 2: DRY / Necessity self-check.** Walk the new section line by line against repo `CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action`. For every line, ask: (a) is the information already carried by another skill, reference, or handoff doc the agent reads? (DRY) — if yes, point, don't restate; (b) without this line, would the agent's behavior be unstable? (Necessity) — if no, delete. Delete or rewrite any line that fails either test. Record the audit outcome (lines kept, lines deleted, why) in RESULTS.md Task 1 §Notes.
-- [ ] **Step 3: Cross-file consistency.** Check the boundary line about math notation matches the phrasing used in `theory-modeling/SKILL.md §Documentation and handoff` and the `## Project Conventions` Notation Conventions row owned by theory-modeling. Verify the lifecycle ladder mention of "promotion up the chain" matches the theory-modeling per-task-ledger → PLAN.md promotion semantics. Verify the soft trigger condition aligns with the existing §Mode routing table (no mode change). Update SKILL.md or note discrepancies in RESULTS.md.
-- [ ] **Step 4: Commit.** Stage only `skills/writing/SKILL.md` plus PLAN.md / RESULTS.md updates. `git diff --cached` to confirm. Atomic commit titled `skills: add Project Conventions section to writing SKILL.md`.
+- [x] **Step 2: DRY / Necessity self-check.** Walk the new section line by line against repo `CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action`. For every line, ask: (a) is the information already carried by another skill, reference, or handoff doc the agent reads? (DRY) — if yes, point, don't restate; (b) without this line, would the agent's behavior be unstable? (Necessity) — if no, delete. Delete or rewrite any line that fails either test. Record the audit outcome (lines kept, lines deleted, why) in RESULTS.md Task 1 §Notes.
+- [x] **Step 3: Cross-file consistency.** Check the boundary line about math notation matches the phrasing used in `theory-modeling/SKILL.md §Documentation and handoff` and the `## Project Conventions` Notation Conventions row owned by theory-modeling. Verify the lifecycle ladder mention of "promotion up the chain" matches the theory-modeling per-task-ledger → PLAN.md promotion semantics. Verify the soft trigger condition aligns with the existing §Mode routing table (no mode change). Update SKILL.md or note discrepancies in RESULTS.md.
+- [x] **Step 4: Commit.** Stage only `skills/writing/SKILL.md` plus PLAN.md / RESULTS.md updates. `git diff --cached` to confirm. Atomic commit titled `skills: add Project Conventions section to writing SKILL.md`.
 
 ### Task 2: Rework long-form-review.md §Doc convention
 **Depends on:** Task 1
