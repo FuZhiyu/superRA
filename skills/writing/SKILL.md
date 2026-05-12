@@ -48,10 +48,10 @@ A paper's writing-side conventions are paper-specific choices among defensible a
 | Citation format | Narrative vs parenthetical (`\citet` vs `\citep`), "et al." threshold, multi-citation separator, e.g./i.e./cf. usage. | Fresh agent would guess between conventions. |
 | Numerical formatting | Rounding precision, SE/CI delimiter, units, percent-vs-pp convention. | Fresh agent would guess between conventions. |
 | Cross-reference phrasing | "Section 3" vs "§3" vs "Sec. 3"; "Table 1" vs "Tab. 1"; label prefixes (`fig:`, `tab:`, `eq:`). | Fresh agent would guess. |
-| Voice and tense | "We" vs passive; past for procedure, present for results, or the paper's chosen mix. | Mixing rules are paper-specific within venue defaults. |
+| Voice and tense | "We" vs passive; past for procedure, present for results, or the paper's chosen mix. | Fresh agent would mix conventions inconsistently across sections. |
 | Prose typography around notation | Bold/italic/hat conventions for vectors, estimates, random variables when they appear in prose; quote style; em-dash style. | Fresh agent would guess between conventions. |
 
-**Excluded:** math notation (symbol → meaning, equation numbering) is owned by `theory-modeling`'s Notation Conventions table — orthogonal row in the same `## Project Conventions` section; section/caption capitalization and page-layout macros are venue / template territory.
+**Excluded:** math notation (symbol → meaning, equation numbering) is owned by `theory-modeling`'s Notation Conventions table — a sibling subsection inside `## Project Conventions`; section/caption capitalization and page-layout macros are venue / template territory.
 
 **Soft trigger.** On the first long-form review or first draft pass against a paper with no recorded writing-side conventions, inventory them and record them in the relevant handoff doc / CLAUDE.md before substantive editing. Routine polish and single-dimension review do not auto-scan.
 
