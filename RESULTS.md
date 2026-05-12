@@ -24,7 +24,15 @@ New section "Project Conventions in the handoff doc / CLAUDE.md" inserted in `sk
 
 ## Task 2: Rework long-form-review.md §Doc convention
 
-**Status:** Not started
+**Status:** Implemented
+
+### Outcome
+
+`skills/writing/references/long-form-review.md §Doc convention` reworded in place. The opening sentence now qualifies REVIEW.md as the shared doc "for the standalone case" rather than the only home. The first of the three adaptation bullets is generalized: header indices live in the relevant handoff doc's `## Project Conventions` header per the lifecycle ladder in `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`, with a one-line decoder naming REVIEW.md (standalone), PLAN.md (workflow), CLAUDE.md (project-permanent). The four long-form-review-specific indices (notation, terminology, figures-and-tables, cross-reference) are kept and reframed as additive to the writing-side rows; the SKILL.md 7-row writing-side table is named as the master list. The orchestrator-builds-once-before-dispatch invariant and the promote-to-Document-Map sentence are preserved verbatim. §Dispatch convention and §Multi-perspective deep mode untouched.
+
+### Notes
+
+**DRY / Necessity audit (Step 2 outcome).** All lines in the new bullet kept; no deletions. Pointer-not-restate verified for both the SKILL.md 7-row table and the SKILL.md lifecycle ladder. The one-line parenthetical decoding the ladder (REVIEW.md / PLAN.md / CLAUDE.md) is the tolerable one-line echo per repo `CLAUDE.md §Teach the Protocol` — it spares an agent already loaded into long-form review from a redundant SKILL.md load to interpret the pointer. The four review-time indices (notation, terminology, figures-and-tables, cross-reference) are long-form-review's own orchestrator-built artifact and not duplicated in SKILL.md's writing-side 7-row table; they remain owned here. The orchestrator-builds-once invariant is behavior-shaping (its absence would yield N redundant index builds across parallel reviewers).
 
 ## Task 3: One-line read instructions in draft.md and polish.md
 

@@ -98,20 +98,21 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 
 ### Task 2: Rework long-form-review.md §Doc convention
 **Depends on:** Task 1
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **File:** `skills/writing/references/long-form-review.md`
-**Input:** Current `long-form-review.md` (especially lines 9–17), the new SKILL.md section from Task 1.
+**Input:** Current `long-form-review.md` (especially lines 9–17), the new SKILL.md §Project Conventions section (SKILL.md lines 36-58).
 **Output:** §Doc convention reworded so that the `## Project Conventions` header is the relevant *handoff doc's* header — REVIEW.md, PLAN.md, or CLAUDE.md per the ladder in `SKILL.md`. No "REVIEW.md only" framing.
 
-- [ ] **Step 1: Rework §Doc convention.** Edit lines 9–17 in place per the inline-edit rule. Concrete changes:
-  - Keep the opening sentence that REVIEW.md is the shared review document for the standalone case, and the lifecycle (born for one review, dies at closeout).
-  - Replace "Header indices live under `## Project Conventions`" with a generalized statement: writing-side conventions live in the relevant handoff doc's `## Project Conventions` header per the lifecycle ladder in `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`. The four index categories (notation, terminology, figures-and-tables, cross-reference) remain — point at the SKILL.md 7-row table as the master list.
-  - Keep the existing instruction that the orchestrator builds the indices once before dispatch so parallel reviewers read indices instead of cold-reading.
-  - No need to change §Dispatch convention or §Multi-perspective deep mode.
-- [ ] **Step 2: DRY / Necessity self-check on the diff.** Confirm the reworded section does not restate the 7-row table from SKILL.md; it points at it. Confirm it does not restate the lifecycle ladder; it points at it.
-- [ ] **Step 3: Commit.** Stage only `long-form-review.md` plus PLAN.md / RESULTS.md updates. Atomic commit titled `skills: generalize long-form-review §Doc convention to handoff-doc ladder`.
+- [x] **Step 1: Rework §Doc convention.** Edit the first bullet of "Three adaptations" in place per the inline-edit rule. Concrete changes landed:
+  - Opening sentence qualified to "for the standalone case" — REVIEW.md remains the standalone shared doc and the lifecycle (born for one review, dies at closeout) is preserved.
+  - First bullet generalized: indices now live in "the relevant handoff doc's `## Project Conventions` header" with a one-line decoder for the lifecycle ladder (REVIEW.md / PLAN.md / CLAUDE.md) pointing at `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`. The four long-form-review-specific indices (notation, terminology, figures-and-tables, cross-reference) are kept and described as additive to the writing-side rows; the SKILL.md 7-row table is named as the master list.
+  - Orchestrator-builds-indices-once-before-dispatch invariant preserved verbatim (now scoped to "the four review-time indices").
+  - Promote-to-Document-Map line preserved verbatim.
+  - §Dispatch convention and §Multi-perspective deep mode untouched.
+- [x] **Step 2: DRY / Necessity self-check on the diff.** Walked the new bullet line by line. Confirmed: the bullet points at the SKILL.md 7-row table, does not restate it; points at the SKILL.md lifecycle ladder with a one-line decoder, does not restate the promotion semantics or the soft trigger. The four review-time indices are long-form-review's own contribution (orchestrator-built, manuscript-derived) and not duplicated in SKILL.md. The orchestrator-builds-once invariant is behavior-shaping — without it parallel reviewers would re-build indices N times. All lines kept.
+- [x] **Step 3: Commit.** Stage only `long-form-review.md` plus PLAN.md / RESULTS.md updates. Atomic commit titled `skills: generalize long-form-review §Doc convention to handoff-doc ladder`.
 
 ### Task 3: One-line read instructions in draft.md and polish.md
 **Depends on:** Task 1
