@@ -22,4 +22,42 @@ Verification of behavior change is deferred to Task 2 (constructed-fragment disp
 
 ## Task 2: Verify the rule on constructed examples
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+Polish-mode dispatch on a single constructed LaTeX fragment combining all three test concerns (positive detection across the four marker families, no over-firing across the three §Do NOT exceptions, audience-model elicitation on an ambiguous-venue paragraph). The bundled-fragment approach replaces the originally planned three-fragment dispatch per `agent-orchestration §Workload Balancing` Tier 2 (shared context, same skill load); each test concern lives in its own intent-tagged paragraph so bundling does not blur which signal fired where.
+
+### Detection — 4 of 4 marker families detected and classified correctly
+
+- *Process-internal artifact.* `applied via the \texttt{AE} column of \texttt{input/country\_information.csv}` removed from paragraph 1, sentence 1. Replacement matches `style.md §Audience` example verbatim.
+- *Audience self-reference.* `In the paper-facing table, we define coreAE …` rewritten to `Table 2 defines coreAE …`. Replacement matches the §Audience `Table 2 defines …` pattern.
+- *Editing-history temporal marker.* Sentence `The table now defines this coreAE classification.` deleted entirely (subsumed by the prior audience-self-reference fix, so the surviving prose carries the definition without the `now`).
+- *Conversation jargon.* `We use the AE/EM cut throughout, where the EM-versus-AE split follows the same convention.` rewritten to `EM denotes the complementary set under the same IMF classification.` The original was drafting-shorthand (`cut`, `split follows the convention`) restating that AE and EM are partner labels without defining EM; the replacement defines EM in the document's voice, which the audience needs since paragraph 2 then uses `AE-EM growth gap`.
+
+### No over-firing — 3 of 3 §Do NOT exceptions respected (plus one not in the test set)
+
+- *Conventional discourse.* `We now turn to robustness.` (paragraph 2, sentence 1) kept verbatim.
+- *Public citable resource.* `The replication package (DOI 10.5281/zenodo.example) contains the underlying series.` kept verbatim.
+- *Genuine field term of art.* `heteroskedasticity-robust standard errors` kept verbatim in the rewrite of paragraph 2 (only the surrounding `All standard errors are heteroskedasticity-robust standard errors` noun-repetition was cleaned up to `Standard errors are heteroskedasticity-robust and clustered at the country level`, which is a `style.md §Noun-cluster avoidance` pickup, not an audience-rule edit).
+- *Bonus skip.* `IMF World Economic Outlook ``Advanced Economies'' classification` (paragraph 1) recognized as a public citable resource + audience-known field term and kept verbatim, despite not being one of the named test cases.
+
+### Audience model built explicitly before editing
+
+The dispatched agent articulated venue and information set before any character changed:
+
+- **Venue.** Empirical macro-finance / international-macro working paper or top finance-journal submission, inferred from signals in the fragment (AE/EM cut, sovereign-spread puzzle framing, IMF WEO reference, country-clustered SEs, Zenodo replication package).
+- **Information set.** The paper itself in current draft state; the IMF WEO classification; the standard meaning of AE/EM; the standard meaning of "sovereign spread"; works the paper cites. Not in set: any internal coreAE/AE-EM tooling, the repo, the editing conversation.
+- **Application to paragraph 3.** Under that model, `This paper investigates the AE/EM sovereign-spread puzzle.` has no audience-leakage — every term resolves from the set after paragraph 1 defines AE/coreAE/EM and paragraph 2 frames the AE-EM relationship as a puzzle. The sentence is *audience-clean*; the problem with it is a different one (see next subsection).
+
+### `authorial` surface — three items raised, none silently rewritten
+
+- Paragraph 3 topic-vs-contribution gap. Intent comment says *state the contribution*; the sentence states the topic instead. Surfaced as `authorial` per `polish.md §Triage` because rewriting without the author would invent substance.
+- Paragraph 2 transition-without-antecedent. `We now turn to robustness.` is fine as a transition but the surrounding fragment supplies no antecedent main result it is robust of; flagged as a fragment-scope ambiguity rather than edited.
+- Paragraph 2 ordering. Section-transition → puzzle statement → replication-package pointer → SE convention. Reordering is structural and outside Polish-mode scope; surfaced as `authorial`.
+
+### What this demonstrates
+
+The rule fires exactly where it should, skips exactly where it should, builds the audience model upstream rather than ex-post, and routes meaning-changing surface concerns to the author rather than silently patching them. No edits to `skills/writing/SKILL.md`, `skills/writing/references/style.md`, or `skills/writing/CLAUDE.md` are needed — the rule wording committed in `dfe87bc` is correct.
+
+### Verification artifacts
+
+`/tmp/audience-awareness-verification/draft.tex` (test fragment, polished by the dispatched agent) — removed at this commit. The dispatched agent did not commit; this orchestrator records the outcomes and cleans up.

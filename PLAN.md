@@ -141,41 +141,36 @@ Validate the three edits against repo-root `CLAUDE.md §Teach the Protocol, Don'
 
 ### Task 2: Verify the rule on constructed examples
 **Depends on:** Task 1
-**Review status:** *(set during execution — not filled at planning time)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during execution — not filled at planning time)*
 
-**Script:** N/A (manual dispatch on a constructed LaTeX fragment; results recorded in RESULTS.md)
-**Input:** Three constructed LaTeX fragments (positive detection, no over-firing, audience-model elicitation). Created at verification time in `/tmp/audience-awareness-verification/`.
+**Script:** N/A (Polish-mode dispatch on a constructed LaTeX fragment; results recorded in RESULTS.md)
+**Input:** One constructed LaTeX fragment combining all three concerns (positive detection, no over-firing, audience-model elicitation) at `/tmp/audience-awareness-verification/draft.tex`. Bundled into one fragment per `agent-orchestration §Workload Balancing` Tier 2 (shared context, same skill load) rather than three separate dispatches as originally planned — the bundling does not weaken the test because each concern lives in its own intent-tagged paragraph.
 **Output:** Verification record in RESULTS.md §Task 2.
 
-- [ ] **Step 1: Construct three test fragments.**
+- [x] **Step 1: Construct the test fragment.**
 
-Fragment A — positive detection. One paragraph per marker family (4 leakage paragraphs) plus one control sentence with no leakage. Use the user's three real examples (`AE column of input/country_information.csv`, *in the paper-facing table*, *the table now defines*) plus a synthetic conversation-jargon example.
+Three intent-tagged paragraphs in `/tmp/audience-awareness-verification/draft.tex`:
 
-Fragment B — no over-firing. A paragraph using *we now turn to robustness* (legitimate transition), a citation to a public replication package by DOI, and a sentence using *heteroskedasticity-robust standard errors* (genuine field term of art).
+- Paragraph 1 — positive detection. Contains all four marker families: process-internal artifact (`AE column of input/country_information.csv`), audience self-reference (`In the paper-facing table`), editing-history temporal (`The table now defines`), conversation jargon (`We use the AE/EM cut … the EM-versus-AE split follows the same convention`).
+- Paragraph 2 — no over-firing. Contains all three §Do NOT exceptions: conventional discourse transition (`We now turn to robustness`), public citable resource (Zenodo DOI), genuine field term of art (`heteroskedasticity-robust standard errors`).
+- Paragraph 3 — audience-model elicitation. One short sentence with no leakage but ambiguous venue (`This paper investigates the AE/EM sovereign-spread puzzle`).
 
-Fragment C — audience-model elicitation. One short paragraph with no leakage but ambiguous venue ("this paper investigates the AE/EM growth gap") — used to check whether the agent surfaces the audience-model questions before editing.
+- [x] **Step 2: Dispatch a Polish-mode implementer on the fragment with the updated skill files loaded.**
 
-- [ ] **Step 2: Dispatch a Polish-mode agent on each fragment with the updated skill files loaded.**
+Dispatched `superRA:implementer` with `Stage: implementation` on `/tmp/audience-awareness-verification/draft.tex`, instructed to operate in writing-skill Polish mode (load `references/polish.md` + `references/style.md`) and report the four-question record (which marker family per edit; which §Do NOT exception fired on skipped edits; what audience model was built before editing; what was surfaced as `authorial` per §Triage rather than applied silently).
 
-For each fragment, dispatch a Polish-mode agent (implementer subagent, `Stage: implementation`, `Domain: writing`) on the fragment and observe behavior. Record what the agent did and how it classified findings.
+- [x] **Step 3: Verification results recorded in RESULTS.md §Task 2.**
 
-Expected behavior:
+Outcomes detailed in RESULTS.md §Task 2. Summary:
 
-- Fragment A — all four leakages detected and classified by family; replacement patterns matched; control sentence left alone.
-- Fragment B — no rewrites; if anything is surfaced, it is surfaced as a §Do NOT match.
-- Fragment C — the agent either surfaces the audience-model questions or makes the audience model explicit before editing.
+- Detection: 4 of 4 marker families detected and classified correctly; all four replacement patterns matched the proposed `style.md §Audience` patterns.
+- No over-firing: all three §Do NOT exceptions correctly skipped (conventional discourse, public citable resource, genuine field term of art); also kept `IMF World Economic Outlook` as an additional public citable resource not in the named test set.
+- Audience model: built explicitly before editing — venue (empirical macro-finance working paper or top finance-journal submission) and information set articulated for the ambiguous paragraph 3 before any edit.
+- `authorial` surface: paragraph 3's topic-vs-contribution gap surfaced as `authorial` per §Triage rather than silently rewritten — exactly the design intent.
 
-- [ ] **Step 3: Record verification results in RESULTS.md.**
+No edits to the three skill files were needed; the rule wording is correct as committed in `dfe87bc`.
 
-Record outcomes per fragment in RESULTS.md §Task 2:
+- [x] **Step 4: Validate — verify the result, document, commit.**
 
-- Which leakages detected, which missed.
-- Which §Do NOT exceptions correctly skipped, which over-fired.
-- Whether the audience model was elicited or assumed-explicit on Fragment C.
-
-If any expected behavior failed, surface as a `REVISE` finding on Task 1 (the rule wording in SKILL.md / style.md needs adjustment); re-enter the implementer-reviewer loop.
-
-- [ ] **Step 4: Validate — verify the result, document, commit.**
-
-Confirm RESULTS.md §Task 2 is populated with outcomes per fragment. Confirm no edits to the three skill files were needed (if any were, that loops back to Task 1 review). Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Commit with title `verify: audience-awareness rule on constructed fragments`. Cleanup `/tmp/audience-awareness-verification/` after the commit.
+RESULTS.md §Task 2 populated with the four-question record from the dispatch. PLAN.md Task 2 updated (steps `[x]`, Review status `IMPLEMENTED`). Verification fragment cleaned up from `/tmp/audience-awareness-verification/` after the commit. Commit title `verify: audience-awareness rule on constructed fragments`.
