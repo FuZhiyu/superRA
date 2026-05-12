@@ -8,6 +8,30 @@ The rules below are **heuristics the writer applies in service of the reader**, 
 
 ## How-To
 
+### Audience: write to the reader, not the conversation
+
+**Principle.** Stated in `SKILL.md §Write to the reader, not the conversation`. Build the audience model and their information set before editing; treat the markers below as the safety net for lines where the upstream check did not catch a leak. Examples below use academic papers (the skill's primary case), but the marker families read on any audience-bound document.
+
+**Detection trick — four marker families.** For every line in scope, walk the families in order; if a line matches, classify by family and rewrite per the replacement pattern. Do not generalize from one marker to a paragraph-level rewrite — the rule is line-level.
+
+1. **Editing-history temporal markers.** `now`, `currently`, `at this point`, `previously`, `the new`, `the updated`, `the revised`, `as discussed`, `as we mentioned`. The audience has no "before"; the marker is relative to a timeline they do not share. (Exception: section transitions like *we now turn to …* are conventional discourse, not edit-history references — see §Do NOT.)
+2. **Audience self-references.** `paper-facing`, `internal table`, `for the paper`, `internally`, `behind the scenes`, `the version shown to readers`, `the public version`. Naming an audience implies a second audience; that distinction is internal to the editing process, not the document.
+3. **Process-internal artifacts.** Repo paths (`input/country_information.csv`), input-file column names (`the AE column`), branch names, script names, variable names that do not appear in the document, internal classification labels. The audience has no repo. Published replication packages are referenced in the data/code availability section by public identifier, not inline by file path.
+4. **Conversation jargon used as document vocabulary.** Working terms the author and agent have been using to communicate that are not defined in the document — project nicknames, draft-stage shorthand, glossary terms that live in chat or in a working doc but not in the manuscript / deck / README. Test against the audience's info set (`SKILL.md §Write to the reader, not the conversation`): if the term is not in the set and not defined at first use in the document, it is conversation vocabulary.
+
+**Replacement patterns.**
+
+- *Editing-history temporal marker.* Before: *The table now defines coreAE as …* → After: *Table 2 defines coreAE as …*
+- *Audience self-reference.* Before: *In the paper-facing table, we define …* → After: *Table 2 defines …*
+- *Process-internal artifact.* Before: *Throughout, AE refers to the IMF World Economic Outlook "Advanced Economies" classification, applied via the `AE` column of `input/country_information.csv`.* → After: *Throughout, AE refers to the IMF World Economic Outlook "Advanced Economies" classification.*
+- *Conversation jargon.* Either define the term once in the document's own voice at first use, or replace with the standard term the audience knows. If neither is appropriate (the term has no document-side equivalent and is not worth defining), the sentence is reaching outside the audience's set and the surrounding argument needs rewriting, not patching — surface as `authorial` per §Triage.
+
+**Do NOT rewrite when:**
+
+- The temporal cue is internal to the document's own narrative ("we now turn to robustness", "the next subsection extends this") — these are conventional discourse markers.
+- The artifact reference is to a public, citable resource that the document's data/code availability section points to. (Even then, the inline reference is the public identifier, not a local repo path.)
+- The term is a genuine field term of art the venue's audience knows, not conversation jargon. Test: would a typical reader / viewer / user at this venue recognize the term without the document defining it?
+
 ### Actions in verbs (LRS 1-1a)
 
 **Principle.** Express your most crucial actions as verbs, not as nominalized nouns. Sentences whose main actions live in nominalizations (`evaluation`, `development`, `understanding`, `measurement`) feel abstract, bureaucratic, and passive-ish even when grammatically active. Moving the action to a verb makes the sentence direct.
@@ -148,6 +172,7 @@ Walked top to bottom for every sentence-level edit. The rules are heuristics, no
 - Sentences over ~40 words split unless the length is deliberate.
 - No dangling modifiers.
 - Ambiguous pronouns (`this`, `it`) given an explicit antecedent noun.
+- Audience awareness: line scanned against the four marker families (editing-history temporal, audience self-reference, process-internal artifact, conversation jargon) per §Audience. Term-level check references the audience's information set per `SKILL.md §Write to the reader, not the conversation`.
 
 ### Paragraph-level rules
 

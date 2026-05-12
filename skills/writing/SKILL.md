@@ -20,6 +20,19 @@ You already know how to write, proofread, replace awkward wording, fix grammar a
 
 **Restructuring is out of scope** unless the request authorizes it (and `references/structure.md` is loaded — see Mode routing).
 
+## Write to the reader, not the conversation
+
+Every document this skill touches has an audience that is distinct from the editing conversation. The audience has access to the document itself, plus the background knowledge appropriate to the venue — a journal reader knows the field's standard methods, a slide-deck audience knows the talk's framing, a replication-package reader knows the paper. They have not seen the editing conversation, the codebase, prior drafts, the project's working vocabulary, or any artifact the author and the agent are using to coordinate. Anything that addresses a different audience, references the editing process, or names artifacts outside the audience's reach does not belong in the document. This holds for academic papers (the primary case for this skill) and for any other audience-bound document the skill polishes, drafts, or reviews — working-paper notes, slide decks, replication READMEs, referee responses.
+
+**Before any edit, build the audience model.** Two questions answered explicitly, in your head or in the conversation, before the first character changes:
+
+1. **Who is the audience?** Match the venue: a top-five finance journal reader, a working-paper reader on SSRN, a conference talk audience, the replication-package user, the editor reading a response letter. The venue fixes the conventions — tolerated jargon, expected formality, cite density, level of detail.
+2. **What is in the audience's information set?** Concretely: the document itself, in its current draft state; works the document cites (which the audience can look up); background knowledge appropriate to the venue. *Not* in the set: the editing conversation, the repo, the project's working vocabulary, prior drafts the audience has not seen, any classification or label that exists only in the author's or agent's working files.
+
+**Then write or edit against the set.** As each sentence is drafted or polished, check: every term used is either in the set or is defined in the document at first use; every reference (artifact, table, citation, section pointer) resolves from the set; every temporal cue is internal to the document's narrative ("we next turn to robustness"), not external to the editing process ("the table now defines"). A term that fails this check is conversation vocabulary, not document vocabulary — either define it in the document or replace it with the standard term the audience knows.
+
+The line-level marker families and replacement patterns that operationalize this principle for sentence-level editing live in `references/style.md §Audience: write to the reader, not the conversation`. They are the safety net; the audience model is the primary discipline.
+
 ## Before you start
 
 1. **Classify the request into a mode** before reading the file — the mode determines what to load (see Mode routing).

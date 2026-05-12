@@ -88,3 +88,11 @@ The skill was first built across eight tasks on the `domain/writing-skills` bran
 - Chaubey, V. (2018), *The Little Book on Research Writing* (BulletBooks).
 - Minto, B. *The Pyramid Principle* — governing idea, MECE, SCQ.
 - Little Red Schoolhouse (UChicago ENGL 13000/33000) — actions-in-verbs, character, cohesion, information flow, argument structure.
+
+## Audience awareness as an upstream audience-model discipline
+
+(2026-05-11.) `SKILL.md §Write to the reader, not the conversation` carries the principle and the upstream protocol — identify the audience, build their information set, check every term and reference against it before editing. The principle is in `SKILL.md` (not in a reference) because it is unconditional: every Review, Polish, and Draft task starts the same way, and `style.md` is not loaded by every Review scope. `style.md §Audience` carries the line-level marker families and replacement patterns; it is the safety net for sentence-scoped editing when the upstream check did not catch a leak. The split is the same pattern used for "Preserve substance, polish prose" (principle in SKILL.md, operational guidance in references).
+
+The rule is framed around "any audience-bound document," not solely the academic paper, even though academic papers are the skill's primary case. The deliberate generalization keeps the principle usable when the skill polishes a slide deck, a working-paper note, a replication-package README, or a referee response. Examples in both SKILL.md and `style.md §Audience` stay paper-flavored so the canonical case reads cleanly; the marker families themselves do not name the document type.
+
+Future contributors tempted to collapse the rule into a single location should re-check: collapsing into `style.md` would lose the Review-scope coverage that does not load style; collapsing into SKILL.md would force every Review agent to load the marker families even when style is not in scope. Future contributors tempted to re-narrow the rule to "academic paper" specifically should re-check which non-paper documents the writing skill is being invoked on; the breadth is intentional and cheap.

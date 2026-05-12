@@ -59,14 +59,14 @@ Walked at planning time (2026-05-11). Re-walk on-demand only.
 
 ### Task 1: Edit SKILL.md, style.md, and writing/CLAUDE.md for audience-awareness rule
 **Depends on:** *(none)*
-**Review status:** *(set during execution — not filled at planning time)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(set during execution — not filled at planning time)*
 
 **Script:** N/A (manual edits via `Edit` tool on three files)
 **Input:** `skills/writing/SKILL.md`, `skills/writing/references/style.md`, `skills/writing/CLAUDE.md` (current HEAD)
 **Output:** Same three files, modified; one atomic commit on branch `domain/writing-skills` titled `skills: add audience-awareness rule to writing skill`.
 
-- [ ] **Step 1: Edit `skills/writing/SKILL.md` — add `## Write to the reader, not the conversation` between `## Preserve substance, polish prose` and `## Before you start`.**
+- [x] **Step 1: Edit `skills/writing/SKILL.md` — add `## Write to the reader, not the conversation` between `## Preserve substance, polish prose` and `## Before you start`.**
 
 Insert verbatim (each paragraph one unwrapped line in the file):
 
@@ -85,7 +85,7 @@ Every document this skill touches has an audience that is distinct from the edit
 The line-level marker families and replacement patterns that operationalize this principle for sentence-level editing live in `references/style.md §Audience: write to the reader, not the conversation`. They are the safety net; the audience model is the primary discipline.
 ```
 
-- [ ] **Step 2: Edit `skills/writing/references/style.md` — insert new section as the first heuristic under §How-To, and append one bullet to §Gated Checklist Sentence-level rules.**
+- [x] **Step 2: Edit `skills/writing/references/style.md` — insert new section as the first heuristic under §How-To, and append one bullet to §Gated Checklist Sentence-level rules.**
 
 Insert as first heuristic under §How-To (before the existing `### Actions in verbs (LRS 1-1a)` section):
 
@@ -121,7 +121,7 @@ Append to §Gated Checklist Sentence-level rules (after the existing `- Ambiguou
 - Audience awareness: line scanned against the four marker families (editing-history temporal, audience self-reference, process-internal artifact, conversation jargon) per §Audience. Term-level check references the audience's information set per `SKILL.md §Write to the reader, not the conversation`.
 ```
 
-- [ ] **Step 3: Edit `skills/writing/CLAUDE.md` — append new history section `## Audience awareness as an upstream audience-model discipline` after the existing `## History` section.**
+- [x] **Step 3: Edit `skills/writing/CLAUDE.md` — append new history section `## Audience awareness as an upstream audience-model discipline` after the existing `## History` section.**
 
 Insert at end of file (each paragraph one unwrapped line):
 
@@ -135,7 +135,7 @@ The rule is framed around "any audience-bound document," not solely the academic
 Future contributors tempted to collapse the rule into a single location should re-check: collapsing into `style.md` would lose the Review-scope coverage that does not load style; collapsing into SKILL.md would force every Review agent to load the marker families even when style is not in scope. Future contributors tempted to re-narrow the rule to "academic paper" specifically should re-check which non-paper documents the writing skill is being invoked on; the breadth is intentional and cheap.
 ```
 
-- [ ] **Step 4: Validate — verify the result, document, commit.**
+- [x] **Step 4: Validate — verify the result, document, commit.**
 
 Validate the three edits against repo-root `CLAUDE.md §Teach the Protocol, Don't Prescribe Each Action` (DRY + Necessity). For each new line added, confirm it shapes behavior the agent would not already produce. Also confirm: no paraphrase of authoritative content (the four marker families are new content, not restatements); no "here is what you will receive" descriptions; no default-reminders. Run `git status` and `git diff --stat` — only the three target files modified, no others touched. Update PLAN.md (mark steps `[x]`, set Review status: IMPLEMENTED). Update RESULTS.md (record what landed, with paths and one-line summaries per file). Commit with title `skills: add audience-awareness rule to writing skill`, body explaining the conversation/document-boundary failure mode and the SKILL.md / style.md split. One atomic commit covering all three files + PLAN.md + RESULTS.md.
 
