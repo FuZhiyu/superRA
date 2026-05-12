@@ -68,13 +68,8 @@ Walked at planning time (2026-05-11). Re-walk on-demand only.
 ### Task 1: Edit SKILL.md, style.md, and writing/CLAUDE.md for audience-awareness rule
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 **Final diff self-check:** `git diff 8c3db7d..HEAD -- skills/writing/SKILL.md skills/writing/references/style.md skills/writing/CLAUDE.md`; three additive sections (SKILL.md `## Write to the reader, not the conversation`; style.md `### Audience: write to the reader, not the conversation` + one new bullet in §Gated Checklist Sentence-level rules; writing/CLAUDE.md `## Audience awareness as an upstream audience-model discipline`); suspicious-hunk class is `skills/*` instruction edits — every new line shapes behavior the agent would not produce by default (principle + upstream protocol in SKILL.md, four marker families + replacement patterns + §Do NOT exceptions in style.md, split-rationale in writing/CLAUDE.md history), no paraphrase of authoritative content elsewhere per repo-root CLAUDE.md §Teach the Protocol DRY+Necessity tests.
-
-> **Integration review (2026-05-11):**
->
-> 1. **BLOCKING — missing Final Diff Self-Check trail.** Per `refactor-and-integrate §Final Diff Self-Check`, every task block must carry a `**Final diff self-check:** <command/range>; <surviving-change classes>; <suspicious-hunk justifications or none>` line refreshed immediately before commit, including no-change cases ("A missing or stale trail is `[BLOCKING]`, including when no code changed"). Task 1's block has no such line. Add a `**Final diff self-check:**` line stating the governing range (`git diff 178c53d..HEAD -- skills/writing/SKILL.md skills/writing/references/style.md skills/writing/CLAUDE.md` or the equivalent for the audience-awareness work), summarizing surviving-change classes (additive sections in three skill files), and noting that no suspicious hunks exist. The audience-awareness scope happens to be additive skill-prose, which falls under the §Final Diff Self-Check "Justify suspicious hunks by file and line/hunk" rule for `skills/*` instruction edits — call it out explicitly with a one-line DRY/Necessity justification (e.g., "all three additive sections introduce non-default behavior per repo-root CLAUDE.md §Teach the Protocol; no paraphrase of authoritative content").
->    → implemented: added `**Final diff self-check:**` line directly under `**Integration status:**` in this task block. Governing range is `8c3db7d..HEAD` against the three skill files; surviving classes named; suspicious-hunk justification given as required for `skills/*` instruction edits.
 
 **Script:** N/A (manual edits via `Edit` tool on three files)
 **Input:** `skills/writing/SKILL.md`, `skills/writing/references/style.md`, `skills/writing/CLAUDE.md` (current HEAD)
@@ -156,13 +151,8 @@ Validate the three edits against repo-root `CLAUDE.md §Teach the Protocol, Don'
 ### Task 2: Verify the rule on constructed examples
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 **Final diff self-check:** `git diff 8c3db7d..HEAD -- PLAN.md RESULTS.md`; no surviving hunks in `skills/writing/**` for this task (verification only — no skill-file change required, exactly the design intent); surviving change classes are RESULTS.md §Task 2 verification record (positive detection / no-over-firing / audience-model elicitation / authorial-surface report) plus PLAN.md Task 2 step `[x]` flips, status transitions, and §Decisions log entries; no suspicious hunks (no `skills/*` instruction edits in this task's diff).
-
-> **Integration review (2026-05-11):**
->
-> 1. **BLOCKING — missing Final Diff Self-Check trail.** Per `refactor-and-integrate §Final Diff Self-Check`, every task block must carry a `**Final diff self-check:**` line refreshed before commit, including no-change cases. Task 2 is a verification-only task (no skill-file changes; only RESULTS.md content), but the trail is still required ("A missing or stale trail is `[BLOCKING]`, including when no code changed"). Add a `**Final diff self-check:**` line stating the governing range, recording no surviving hunks in `skills/writing/**` for this task and the RESULTS.md prose addition, with no suspicious hunks.
->    → implemented: added `**Final diff self-check:**` line directly under `**Integration status:**` in this task block. Governing range is `8c3db7d..HEAD` against PLAN.md and RESULTS.md only; no `skills/*` hunks (exactly the design intent — verification confirms the rule reads correctly without skill-file edits); no suspicious hunks.
 
 **Script:** N/A (Polish-mode dispatch on a constructed LaTeX fragment; results recorded in RESULTS.md)
 **Input:** One constructed LaTeX fragment combining all three concerns (positive detection, no over-firing, audience-model elicitation) at `/tmp/audience-awareness-verification/draft.tex`. Bundled into one fragment per `agent-orchestration §Workload Balancing` Tier 2 (shared context, same skill load) rather than three separate dispatches as originally planned — the bundling does not weaken the test because each concern lives in its own intent-tagged paragraph.
