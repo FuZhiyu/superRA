@@ -116,7 +116,7 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 
 ### Task 3: One-line read instructions in draft.md and polish.md
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Files:** `skills/writing/references/draft.md`, `skills/writing/references/polish.md`
