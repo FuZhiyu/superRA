@@ -30,7 +30,7 @@
 - [x] **Plan approved** — user approved the plan in plan mode on 2026-05-12; researcher decisions logged below
 - [x] **Execution complete** — all tasks `APPROVED`, no reproducibility pipeline (skill-content work)
 - [x] **Drift tests created** — N/A; no quantitative result to protect (Protect decision logged 2026-05-12)
-- [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync
+- [x] **Integrated** — integration reviewer `APPROVED` on `322588d..HEAD` after no-op Sync; all four tasks `Integration status: APPROVED`
 - [ ] **Docs finalized** — RESULTS.md matured (or consolidated to CLAUDE.md per branch pattern), project docs audited, doc-reviewer `APPROVED`
 - [ ] **Finished** — branch landed locally or PR opened
 
