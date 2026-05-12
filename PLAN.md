@@ -55,6 +55,11 @@ Walked at planning time (2026-05-11). Re-walk on-demand only.
 - `skills/writing/references/polish.md`, `draft.md`, `review.md`, `structure.md`, `integration.md`, `refactor-and-compile.md`, `long-form-review.md`, `consistency/*` — these reference `style.md §Gated Checklist` via existing pointers; the new bullet is picked up automatically by `Polish self-check`, `Draft self-check`, and Review's style-scoped walk. No edits needed.
 - `skills/*` for other domains, `agents/*`, `.codex/*`, `README.md`, harness adapters — out of scope.
 
+## Decisions
+
+> **User decision (2026-05-11):** Proceed with integration.
+> **Question asked:** Step 4 completion menu — proceed with integration / keep branch as-is / change the plan / discard. All tasks APPROVED and Execution complete flipped.
+
 ---
 
 ### Task 1: Edit SKILL.md, style.md, and writing/CLAUDE.md for audience-awareness rule
