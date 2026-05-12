@@ -85,7 +85,7 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 ### Task 1: Author the new SKILL.md section
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **File:** `skills/writing/SKILL.md`
 **Input:** Current SKILL.md, the 7-row convention list in `/Users/zhiyufu/.claude/plans/i-think-that-s-a-curious-charm.md`, the lifecycle ladder and soft trigger from §Decisions above.
@@ -105,7 +105,7 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 ### Task 2: Rework long-form-review.md §Doc convention
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **File:** `skills/writing/references/long-form-review.md`
 **Input:** Current `long-form-review.md` (especially lines 9–17), the new SKILL.md §Project Conventions section (SKILL.md lines 36-58).
@@ -123,7 +123,7 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 ### Task 3: One-line read instructions in draft.md and polish.md
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Files:** `skills/writing/references/draft.md`, `skills/writing/references/polish.md`
 **Input:** Current draft.md and polish.md, the new SKILL.md section from Task 1.
@@ -137,7 +137,11 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 ### Task 4: Contributor entry in skills/writing/CLAUDE.md
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** REVISE
+
+> **Integration review notes (2026-05-12):**
+>
+> 1. **[BLOCKING] Missing Final Diff Self-Check trail** — `refactor-and-integrate §Final Diff Self-Check` requires a `**Final diff self-check:** <command/range>; <surviving-change classes>; <suspicious hunk justifications or none>` line in the assigned PLAN.md task block before commit, including when no code changed. None of the four tasks in this cycle carry this trail; `grep "Final diff self-check" PLAN.md RESULTS.md` returns nothing. One consolidated trail under Task 4 covering the full `git diff 322588d..HEAD` is sufficient — the cycle's surviving hunks split cleanly across the four tasks with no overlap, so a single line naming the four hunk classes (SKILL.md §Project Conventions section / long-form-review §Doc convention bullet rework / draft.md Step 1 sentence + polish.md `## Input shapes` framing / writing/CLAUDE.md new dated entry) plus a no-suspicious-hunks note covers all four. Fix: add the trail line at the end of this task block, then re-dispatch.
 
 **File:** `skills/writing/CLAUDE.md`
 **Input:** Current `skills/writing/CLAUDE.md`, the four §Decisions entries above, the SKILL.md section from Task 1.
