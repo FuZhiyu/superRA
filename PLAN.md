@@ -30,7 +30,7 @@
 
 - [x] **Plan approved** — researcher signed off on the required domain gate + plan (`planning-workflow` Phase 2)
 - [x] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
-- [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Protect)
+- [x] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Protect) — *skipped per user decision 2026-05-11: skill prose is git-tracked; prose-drift safeguards add little over git history.*
 - [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync (`integration-workflow` Integrate)
 - [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Document)
 - [ ] **Finished** — branch landed locally, PR opened, or requested cleanup completed (`integration-workflow` Finish)
@@ -59,6 +59,9 @@ Walked at planning time (2026-05-11). Re-walk on-demand only.
 
 > **User decision (2026-05-11):** Proceed with integration.
 > **Question asked:** Step 4 completion menu — proceed with integration / keep branch as-is / change the plan / discard. All tasks APPROVED and Execution complete flipped.
+
+> **User decision (2026-05-11):** Skip drift tests entirely; flip `Drift tests created` with a note that skill prose is git-tracked.
+> **Question asked:** Protect step — skip drift tests / lightweight presence test / presence + structural test. Work is skill prose, so prose-drift safeguards differ from paper or code drift tests.
 
 ---
 
