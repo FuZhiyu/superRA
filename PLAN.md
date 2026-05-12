@@ -59,7 +59,7 @@ Walked at planning time (2026-05-11). Re-walk on-demand only.
 
 ### Task 1: Edit SKILL.md, style.md, and writing/CLAUDE.md for audience-awareness rule
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(set during execution — not filled at planning time)*
 
 **Script:** N/A (manual edits via `Edit` tool on three files)
