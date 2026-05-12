@@ -29,7 +29,7 @@
 
 - [x] **Plan approved** — user approved the plan in plan mode on 2026-05-12; researcher decisions logged below
 - [x] **Execution complete** — all tasks `APPROVED`, no reproducibility pipeline (skill-content work)
-- [ ] **Drift tests created** — N/A; no quantitative result to protect (decision to be logged at Protect)
+- [x] **Drift tests created** — N/A; no quantitative result to protect (Protect decision logged 2026-05-12)
 - [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync
 - [ ] **Docs finalized** — RESULTS.md matured (or consolidated to CLAUDE.md per branch pattern), project docs audited, doc-reviewer `APPROVED`
 - [ ] **Finished** — branch landed locally or PR opened
@@ -76,6 +76,9 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 
 > **User decision (2026-05-12):** Proceed with integration.
 > **Question asked:** Step 4 completion menu — proceed with integration, change the plan, keep the branch as-is, or discard?
+
+> **User decision (2026-05-12):** Skip drift tests — no quantitative result to protect for skill-content edits; reviewer dispatch (per-task review + integration review) is the protection.
+> **Question asked:** Protect step — skip drift tests, add build/outline-stability check, or define some other protection?
 
 ---
 
