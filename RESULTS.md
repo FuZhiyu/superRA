@@ -53,4 +53,14 @@ Two short additions land at the draft-mode and polish-mode call sites, wiring bo
 
 ## Task 4: Contributor entry in skills/writing/CLAUDE.md
 
-**Status:** Not started
+**Status:** Implemented
+
+### Outcome
+
+New section "Writing-side contribution to the `## Project Conventions` slot" appended to `skills/writing/CLAUDE.md` after the §Audience-awareness entry, following the existing dated-entry convention (`(2026-05-12.)`). Five short paragraphs cover: (1) the parallel to `econ-data-analysis`'s Data Inventory and `theory-modeling`'s Notation Conventions and the math-notation-vs-prose-typography boundary as orthogonal contributions; (2) the no-fourth-mode decision with its load-bearing reason — mode routing IS the authority grant per §Load configuration, and convention inventory has no mode-distinctive workflow; (3) the soft-trigger decision with the cost-asymmetry rationale (one-pass cost vs recurrent surprise-scan cost); (4) the permanence-ordered lifecycle ladder and its parallel to theory-modeling's per-task ledger → PLAN.md promotion; (5) the deliberate exclusions (detection logic, scanning procedure, math notation, capitalization, page-layout macros).
+
+### Notes
+
+**Step 2 (deleted-feedback trail) omitted.** No `skills/writing/feedback_*` file exists, and `git log --diff-filter=D` shows no deletion of any such file related to this work — the four §Decisions entries were elicited inline during planning, not via a feedback note. The omission matches the PLAN.md Step 2 conditional ("Verify no such file exists for this work; if not, omit this step").
+
+**DRY / Necessity audit (Step 3 outcome).** All five paragraphs kept; no deletions. Each paragraph carries design *rationale* (parallel-to-other-domains, no-mode-distinctive-workflow, cost-asymmetry, parallel promotion pattern, gap-vs-baseline-competence) rather than restating SKILL.md content; pointer style is used for the lifecycle ladder, boundary phrasing, and mode-routing decision. The boundary line and the lifecycle ladder appear in both SKILL.md (the rule) and the contributor entry (the *why*) — the duplication is the SKILL.md / CLAUDE.md split established by prior entries (Audience awareness, Preserve substance polish prose), not a DRY violation. Cross-file pointers verified: `theory-modeling/SKILL.md §Documentation and handoff` matches the Task 1 citation; `§Load configuration is the authority grant` is present at CLAUDE.md line 25.
