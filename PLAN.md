@@ -86,6 +86,7 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 **Depends on:** *(none)*
 **Review status:** APPROVED
 **Integration status:** APPROVED
+**Final diff self-check:** `git diff 322588d..HEAD -- skills/writing/SKILL.md`; one additive section (`## Project Conventions in the handoff doc / CLAUDE.md` — opener + lifecycle ladder + 7-row table + Excluded + Soft trigger + Scanning-is-unspecified closer); suspicious-hunk class is `skills/*` instruction edit — every new line shapes behavior the agent would not produce by default (acid-test framing, lifecycle ladder, 7-row table contents, boundary with theory-modeling, soft-trigger condition), no paraphrase of authoritative content elsewhere per repo-root `CLAUDE.md §Teach the Protocol` DRY+Necessity tests.
 
 **File:** `skills/writing/SKILL.md`
 **Input:** Current SKILL.md, the 7-row convention list in `/Users/zhiyufu/.claude/plans/i-think-that-s-a-curious-charm.md`, the lifecycle ladder and soft trigger from §Decisions above.
@@ -106,6 +107,7 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 **Depends on:** Task 1
 **Review status:** APPROVED
 **Integration status:** APPROVED
+**Final diff self-check:** `git diff 322588d..HEAD -- skills/writing/references/long-form-review.md`; one reworded section (§Doc convention opening sentence qualified to "the standalone case"; first bullet of "Three adaptations" generalized to "the relevant handoff doc's `## Project Conventions` header" with lifecycle-ladder decoder pointing at `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`; four review-time indices kept as additive to the 7-row writing-side master list; orchestrator-builds-once invariant preserved verbatim, now scoped to the four review-time indices); suspicious-hunk class is `skills/*` instruction edit — the rewording shapes behavior (long-form review no longer asserts REVIEW.md-only convention home) the agent would not produce by default, and the four review-time indices are long-form-review's own contribution not duplicated in SKILL.md.
 
 **File:** `skills/writing/references/long-form-review.md`
 **Input:** Current `long-form-review.md` (especially lines 9–17), the new SKILL.md §Project Conventions section (SKILL.md lines 36-58).
@@ -124,6 +126,7 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 **Depends on:** Task 1
 **Review status:** APPROVED
 **Integration status:** APPROVED
+**Final diff self-check:** `git diff 322588d..HEAD -- skills/writing/references/draft.md skills/writing/references/polish.md`; two pointer additions (draft.md Workflow Step 1 sentence appended — "if a handoff doc carrying `## Project Conventions` is in play, read its writing-side rows and align…"; polish.md one-paragraph framing under `## Input shapes` applied to all three shapes — "treat its writing-side rows as the established choice during triage, divergences are findings to fix or surface…"); suspicious-hunk class is `skills/*` instruction edits — each line operationalizes the soft trigger / triage rule at the call site (without them draft and polish would re-infer or ignore the rows), pointer-style with no row enumeration so no DRY violation against SKILL.md.
 
 **Files:** `skills/writing/references/draft.md`, `skills/writing/references/polish.md`
 **Input:** Current draft.md and polish.md, the new SKILL.md section from Task 1.
@@ -137,11 +140,13 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 ### Task 4: Contributor entry in skills/writing/CLAUDE.md
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
+**Final diff self-check:** `git diff 322588d..HEAD -- skills/writing/CLAUDE.md`; one additive contributor entry (`## Writing-side contribution to the `## Project Conventions` slot` — five paragraphs covering the parallel-to-other-domains framing and theory-modeling boundary, the no-fourth-mode decision with load-bearing rationale, the soft-trigger cost-asymmetry rationale, the permanence-ordered lifecycle ladder mirroring theory-modeling's promotion pattern, and the deliberate exclusions); suspicious-hunk class is `skills/*` instruction edit — each paragraph carries design rationale (no-fourth-mode reason, cost asymmetry, parallel-promotion pattern, exclusion boundary) that is not in SKILL.md per the established CLAUDE.md-as-rationale-store convention shared with the Audience-awareness and Preserve-substance entries above; pointer style used throughout, no DRY violation.
 
 > **Integration review notes (2026-05-12):**
 >
 > 1. **[BLOCKING] Missing Final Diff Self-Check trail** — `refactor-and-integrate §Final Diff Self-Check` requires a `**Final diff self-check:** <command/range>; <surviving-change classes>; <suspicious hunk justifications or none>` line in the assigned PLAN.md task block before commit, including when no code changed. None of the four tasks in this cycle carry this trail; `grep "Final diff self-check" PLAN.md RESULTS.md` returns nothing. One consolidated trail under Task 4 covering the full `git diff 322588d..HEAD` is sufficient — the cycle's surviving hunks split cleanly across the four tasks with no overlap, so a single line naming the four hunk classes (SKILL.md §Project Conventions section / long-form-review §Doc convention bullet rework / draft.md Step 1 sentence + polish.md `## Input shapes` framing / writing/CLAUDE.md new dated entry) plus a no-suspicious-hunks note covers all four. Fix: add the trail line at the end of this task block, then re-dispatch.
+>    → implemented: added a per-task `**Final diff self-check:**` line directly under `**Integration status:**` on each of Tasks 1-4 (not one consolidated trail at Task 4). The discipline at `refactor-and-integrate §Final Diff Self-Check` says "In the assigned PLAN.md task block when one exists, write or refresh `**Final diff self-check:** ...`" — one trail per task block. The prior cycle's commit `d7c03d2 integrate: add Final Diff Self-Check trails to Tasks 1 and 2` established the per-task pattern. Each trail names the task-scoped governing range, surviving-change classes for that task's files only, and the `skills/*` suspicious-hunk justification. Task 4 trail covers `skills/writing/CLAUDE.md` only.
 
 **File:** `skills/writing/CLAUDE.md`
 **Input:** Current `skills/writing/CLAUDE.md`, the four §Decisions entries above, the SKILL.md section from Task 1.
