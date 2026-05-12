@@ -29,7 +29,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on the required domain gate + plan (`planning-workflow` Phase 2)
-- [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
+- [x] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
 - [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Protect)
 - [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync (`integration-workflow` Integrate)
 - [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Document)

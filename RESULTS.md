@@ -3,14 +3,14 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-11 (planning)
-**Status:** In Progress
+**Last updated:** 2026-05-11 (Task 2, Step 4)
+**Status:** Completed
 
 ---
 
 ## Task 1: Edit SKILL.md, style.md, and writing/CLAUDE.md for audience-awareness rule
 
-**Status:** IMPLEMENTED
+**Status:** Completed (Task 1 approved 2026-05-11)
 
 Three files edited, one atomic commit. The conversation/document boundary discipline now reads as: SKILL.md teaches the principle and the upstream audience-model protocol (always loaded, every Review / Polish / Draft); style.md teaches the four line-level marker families and replacement patterns (loaded when Polish / Draft / style-scoped Review runs); CLAUDE.md records why the rule is split across the two files.
 
@@ -22,7 +22,7 @@ Verification of behavior change is deferred to Task 2 (constructed-fragment disp
 
 ## Task 2: Verify the rule on constructed examples
 
-**Status:** IMPLEMENTED
+**Status:** Completed (Task 2 approved 2026-05-11)
 
 Polish-mode dispatch on a single constructed LaTeX fragment combining all three test concerns (positive detection across the four marker families, no over-firing across the three §Do NOT exceptions, audience-model elicitation on an ambiguous-venue paragraph). The bundled-fragment approach replaces the originally planned three-fragment dispatch per `agent-orchestration §Workload Balancing` Tier 2 (shared context, same skill load); each test concern lives in its own intent-tagged paragraph so bundling does not blur which signal fired where.
 
