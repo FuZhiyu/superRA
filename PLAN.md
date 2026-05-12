@@ -78,7 +78,7 @@ Walked at planning time (2026-05-12). Re-walk on-demand only.
 
 ### Task 1: Author the new SKILL.md section
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **File:** `skills/writing/SKILL.md`
