@@ -100,69 +100,18 @@ Both edits are inline — no "Update:" / "Revised:" / "Previously" framing, no s
 **Input:** Current `writing/CLAUDE.md` (HEAD at 2b78713); design spec at `~/.claude/plans/currently-review-md-is-not-fancy-stream.md` §Files-to-change
 **Output:** CLAUDE.md with the prior "no rename" rule superseded in place and new design entries appended in the long-form-review section
 
-- [ ] **Step 1: Supersede the "REVIEW.md never renames to PLAN.md" rule in place**
+- [x] **Step 1: Supersede the "REVIEW.md never renames to PLAN.md" rule in place**
 
-```text
-The current entry under "Multi-agent review pattern" reads:
+Rewrote the "Shared doc is REVIEW.md, not PLAN.md" bullet in `## Multi-agent review pattern` in place. The collision concern is preserved as the load-bearing reason; the resolution (standalone-only rename, with workflow-embedded reviews staying in the workflow's own PLAN.md) replaces the old rule. Cross-link to `references/long-form-review.md §Standalone-only rename rule` and a future-contributor re-litigation guard added. No parallel old+new entry stacked.
 
-  "Shared doc is `REVIEW.md`, not `PLAN.md`. Naming the review artifact `PLAN.md`
-   would collide with the workflow's own `PLAN.md` whenever the review rides one.
-   The two coexist by name and lifecycle: `PLAN.md` spans the project; `REVIEW.md`
-   is born for one review and dies at closeout (delete or archive). A future
-   'just reuse PLAN.md' suggestion needs to solve the collision before it is
-   reopened."
+- [x] **Step 2: Append new design-decision entries**
 
-Rewrite this entry in place (do NOT stack a new entry alongside per
-`handoff-doc/SKILL.md §Inline-Edit Rule`) to reflect the new rule:
+Added `## Two-stage REVIEW.md → PLAN.md lifecycle` section after `## Multi-agent review pattern` and before `## Polish-mode triage`. Five paragraphs: (a) two-stage over one-stage (assembled-view constraint, two rejected alternatives); (b) per-finding user-feedback granularity (tier-directive failure mode); (c) task-granularity rule (1 authorial = 1 task; mechanical/conventional batch by issue class); (d) `## Findings` header section vs. inlining (duplication risk, traceability for rejected/deferred findings); (e) rename rule cross-link to the superseded bullet. Each paragraph follows existing CLAUDE.md style: decision, load-bearing reason, re-litigation bar.
 
-  REVIEW.md → PLAN.md rename at Stage 2 is the spec. Collision avoidance: rename
-  rule applies only to standalone reviews. When riding an existing workflow
-  PLAN.md, Stage 1 blocks live in that PLAN.md as temporary tasks; Stage 2
-  rewrites them inline within the same file. There is only ever one PLAN.md in
-  play — no collision possible.
+- [x] **Step 3: Self-check before commit**
 
-Preserve the load-bearing reason (collision concern) as the why-this-rule
-exists; the resolution (standalone-only rename) is what changed.
-```
-
-- [ ] **Step 2: Append new design-decision entries**
-
-```text
-Add a new "## Two-stage REVIEW.md → PLAN.md lifecycle" section under the
-long-form-review group recording the five load-bearing decisions per design
-spec §Files-to-change for writing/CLAUDE.md:
-
-  (a) Two-stage decision + rejected alternatives — one-stage with reviewers
-      pre-building tasks; paired review+polish tasks per dimension. Load-bearing
-      reason against re-litigating one-stage: cross-finding issue-class batching
-      needs the assembled view that only exists after parallel reviewers return.
-
-  (b) Per-finding user-feedback granularity decision — per-task tier directives
-      bolt per-item exceptions on awkwardly; authorial decisions need explicit
-      per-item authorization.
-
-  (c) Task-granularity rule — 1 authorial = 1 task; mechanical/conventional
-      batched by issue class (kind-of-fix, not manuscript geography).
-
-  (d) `## Findings` header section vs. inlining findings in each Stage-2 task
-      — avoid duplication; preserve traceability for rejected/deferred findings;
-      keep Stage-2 tasks lean.
-
-  (e) Stage-2 rename rule (cross-link to the superseded entry from Step 1).
-
-Each entry follows the existing CLAUDE.md style: short, names what was decided,
-why (load-bearing reason), and what future contributors must clear before
-re-litigating.
-```
-
-- [ ] **Step 3: Self-check before commit**
-
-```text
-Confirm the superseded entry is rewritten in place (no parallel old + new
-entries). Confirm no new entry restates content owned by long-form-review.md
-itself (CLAUDE.md is for design history, not behavior spec). Commit atomically
-with the Task 3 PLAN.md status flip.
-```
+Superseded entry is rewritten in place — no parallel entries, no strikethroughs. New section (a)–(e) records design history; no paragraph restates behavior already specified in `long-form-review.md` (that file carries the operative spec; CLAUDE.md carries the why). DRY/Necessity walk: every paragraph shapes what a contributor would propose after reading only `long-form-review.md`; none of the paragraphs restates spec behavior. Anti-pattern check: no wrapper instructions, no "here is what you will receive" text, no harness defaults.
+**Review status:** IMPLEMENTED
 
 > **Review notes (present only during active REVISE rounds):**
 
