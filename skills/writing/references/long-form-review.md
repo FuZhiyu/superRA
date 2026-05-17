@@ -12,7 +12,7 @@ Load when scope is multi-dimensional (>1 `consistency/<dim>.md`), thoroughness i
 
 **Stage 1 — Findings (file is `REVIEW.md` at the worktree root).** No per-dimension task blocks. Findings live in a top-level `## Findings` section organized as one subsection per dispatched dimension (`### Notation`, `### Terminology`, …; in deep mode, one subsection per perspective under the dimension). Reviewers dispatched in parallel write findings into their assigned subsection using the `consistency/<dim>.md` output format unchanged. Each finding carries a stable global F-ID (F1, F2, …) assigned by the reviewer at write time — next available, no reuse, no renumber. F-IDs survive the Stage-2 rewrite for commit-message audit even though Stage-2 tasks no longer index by them.
 
-Per-finding user verdict is recorded inline at the end of each finding, replacing the prior per-aspect feedback field:
+Per-finding user verdict is recorded inline at the end of each finding:
 
 ```
 **User (YYYY-MM-DD):** accept | defer | reject [— optional reason]
