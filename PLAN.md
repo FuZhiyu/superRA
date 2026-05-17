@@ -54,96 +54,19 @@ Walked at planning time (2026-05-16). Re-walk on-demand only.
 
 ### Task 1: Rewrite long-form-review.md for two-stage REVIEW.md → PLAN.md flow
 **Depends on:** *(none)*
-**Review status:** *(set during execution)*
+**Review status:** IMPLEMENTED
 
 **Script:** `skills/writing/references/long-form-review.md` (full rewrite of `## Doc convention` and `## Dispatch convention`; add new sections per design spec)
 **Input:** Current `long-form-review.md` (HEAD at 04844b1); design spec at `~/.claude/plans/currently-review-md-is-not-fancy-stream.md`
 **Output:** Rewritten `long-form-review.md` covering the full two-stage design
 
-- [ ] **Step 1: Rewrite the doc**
+- [x] **Step 1: Rewrite the doc**
 
-```text
-Sections to land (replacing or extending current content):
+All sections landed: two-stage lifecycle in `## Doc convention` (Stage 1 REVIEW.md, F-ID rule, `**User feedback:**` field, four-move Stage 1 → Stage 2 rewrite, standalone-only rename rule, Stage 2 PLAN.md behavior); `## Workflow Status` templates for both stages with N/A notes; Stage-2 task granularity rule; `## Implementer / reviewer interaction walk-through` tracing all roles; global F-ID rule (one rule covers all eight outputs). Existing material preserved: multi-perspective deep mode, no reviewer-of-reviewer, parallel-dispatch from agent-orchestration, final summary block.
 
-A. `## Doc convention` — rewrite for two-stage lifecycle:
-   - Stage 1: REVIEW.md at worktree root (standalone case). Per-aspect task blocks per
-     `handoff-doc/references/plan-anatomy.md §Task Block Anatomy`. Reviewers append
-     findings to review-notes blockquote in their assigned block, using
-     `consistency/<dim>.md` output format. Each finding gets a stable global F-ID
-     (F1, F2, ...) at write time.
-   - Per-aspect Stage-1 task blocks carry `**User feedback:**` field — per-finding
-     accept / defer / reject + optional reason. Populated by main agent / user after
-     reviewers return; granularity is per-finding.
-   - Stage 1 → Stage 2 rewrite (orchestrator action, one atomic commit):
-       1. `git mv REVIEW.md PLAN.md`
-       2. Hoist every finding into a new `## Findings` header section (flat numbered
-          index by F-ID, preserves `consistency/<dim>.md`-format entry + user verdict
-          per finding; survives until Closeout).
-       3. Delete per-aspect Stage-1 task blocks (content now lives in `## Findings`).
-       4. Write Stage-2 actionable task blocks per granularity rule; each carries
-          `**Sources:** F2, F5, F9` pointing into `## Findings`.
-   - Workflow-embedded case: when long-form review rides an existing workflow PLAN.md,
-     there is no separate REVIEW.md. Stage 1 blocks live in that PLAN.md as temporary
-     tasks; Stage 2 rewrite happens inline within the same file. Rename rule does not
-     apply.
+- [x] **Step 2: Self-check before commit**
 
-B. `## Workflow Status`:
-   - Stage 1 (in REVIEW.md): review-specific slim rollup — Reviewers dispatched /
-     Findings collected / User feedback recorded.
-   - Stage 2 (in PLAN.md, replaces the slim rollup at rename): standard PLAN.md
-     rollup from `plan-anatomy.md` (Plan approved / Execution complete / Drift tests
-     created / Integrated / Docs finalized / Finished). For review-driven polish
-     work, Drift tests created / Integrated / Docs finalized are N/A and auto-satisfied
-     at creation — note this in the box bodies.
-
-C. Stage-2 task-granularity rule:
-   - 1 authorial-accepted finding = 1 task (each authorial decision is its own work
-     item, may need its own author conversation).
-   - Mechanical and conventional accepted findings batch by issue class (one task per
-     coherent polish sweep that cuts across the manuscript, e.g., all typos / all
-     citation-format issues / all xref label cleanups / terminology-variant collapse
-     / nominalization cluster). Bucketing is by kind-of-fix, not manuscript geography.
-   - Final Verify task: build + cross-reference check.
-
-D. `## Implementer / reviewer interaction walk-through` — short section explicitly
-   tracing each dispatched role through both stages against canonical agent specs:
-   - Stage 1: parallel `superRA:reviewer` dispatch (per current spec — manuscript as
-     implicit implementer output). Reviewer writes findings + F-IDs, sets Review
-     status: IMPLEMENTED. No implementer in Stage 1.
-   - User feedback gate: main agent / user populates `**User feedback:**` per finding.
-   - Rewrite: orchestrator action (header edit, allowed by `plan-anatomy.md §Header
-     ownership`); flips Workflow Status box "Plan approved" after rename.
-   - Stage 2 implementer: standard `superRA:implementer` dispatch, Stage: implementation,
-     writing skill add-on. Reads task block + `**Sources:**` + `## Findings` (header
-     read covered by `implementer.md §Before You Start`), loads `polish.md` (mode
-     routing recognizes shape-C "apply review findings"), applies per tier, commits,
-     sets Review status: IMPLEMENTED.
-   - Stage 2 reviewer: standard `superRA:reviewer` against commit range. Canonical
-     REVISE / APPROVED protocol unchanged.
-   - Verify task: standard implementer runs build; standard reviewer APPROVES on green.
-   - Closeout: main agent archives / deletes PLAN.md per the lifecycle ladder.
-
-E. Global F-ID assignment rule for reviewers — add one rule line in long-form-review.md
-   covering all eight `consistency/<dim>.md` outputs (if one rule cannot cover all
-   eight, add a one-line note to each consistency file — confirm during implementation).
-
-F. Preserve existing material that is still valid:
-   - Multi-perspective deep-mode dispatch rule (one reviewer per per-perspective task
-     block, closeout merges perspectives).
-   - No reviewer-of-reviewer pass; optional final-summary reviewer over assembled doc.
-   - Parallel-dispatch + worktree-isolation steering inherited from agent-orchestration.
-
-G. Drop any sentence that violates DRY/Necessity per repo CLAUDE.md anti-pattern list
-   (wrapper instructions; "here is what you will receive"; default reminders; restated
-   manifest). Each new instruction line must shape behavior the agent would not produce
-   on its own.
-```
-
-- [ ] **Step 2: Self-check before commit**
-
-```text
-Walk the design spec section by section (`~/.claude/plans/currently-review-md-is-not-fancy-stream.md` §Design + §Implementer/reviewer interaction walk-through) and confirm every load-bearing element landed in the rewrite. Run the DRY/Necessity test on each new line; delete any line that fails. Commit atomically with the Task 1 PLAN.md status flip.
-```
+Walked design spec §Design + §Implementer/reviewer interaction walk-through section by section — all load-bearing elements confirmed present. Applied DRY/Necessity test; removed one wrapper sentence ("Each stage uses canonical agent protocols without adapter prose") that described the section rather than shaping behavior. One rule covers all eight `consistency/<dim>.md` outputs — no per-file edits needed.
 
 > **Review notes (present only during active REVISE rounds):**
 
