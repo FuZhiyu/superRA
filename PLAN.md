@@ -50,6 +50,11 @@ Walked at planning time (2026-05-16). Re-walk on-demand only.
 - `agents/implementer.md`, `agents/reviewer.md` — read in Phase 1 for protocol verification; no edit needed (the design intentionally requires no protocol change).
 - `skills/handoff-doc/references/plan-anatomy.md` — read for Stage-2 PLAN.md shape; no edit needed.
 
+## Decisions
+
+> **User decision (2026-05-16):** Proceed with integration.
+> **Question asked:** Step 4 completion menu — what to do with the verified work (4 tasks APPROVED, 18 commits on `domain/writing-skills`).
+
 ---
 
 ### Task 1: Rewrite long-form-review.md for two-stage REVIEW.md → PLAN.md flow
