@@ -3,14 +3,14 @@
 > Mirrors PLAN.md structure. Updated after each task with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-16 (Task 4)
-**Status:** In Progress — Tasks 1–4 IMPLEMENTED; awaiting review
+**Last updated:** 2026-05-16 (Execution complete)
+**Status:** Completed — Tasks 1–4 APPROVED
 
 ---
 
 ## Task 1: Rewrite long-form-review.md for two-stage REVIEW.md → PLAN.md flow
 
-**Status:** IMPLEMENTED
+**Status:** APPROVED (commit 304701b — REVISE fix at 4a53b5f, narrow re-review APPROVE at 304701b)
 
 **File edited:** `skills/writing/references/long-form-review.md` (full rewrite of `## Doc convention`, `## Dispatch convention`; new sections added)
 
@@ -26,7 +26,7 @@
 
 ## Task 2: Update polish.md §C and SKILL.md lifecycle ladder sentence
 
-**Status:** IMPLEMENTED
+**Status:** APPROVED (commit 2d21754 — first-pass APPROVE, no REVISE)
 
 **Files edited:**
 - `skills/writing/references/polish.md` — §C reframed: opening sentence generalized to "accepted-findings scope"; two paragraphs added distinguishing the long-form-review-pipeline case (Stage-2 task block, F-ID lookup from `## Findings`, no re-batching by implementer) from the standalone case (raw findings list, apply per finding); per-tier apply rules preserved unchanged via "In both cases" connector.
@@ -46,7 +46,7 @@
 
 ## Task 4: Verification sweep
 
-**Status:** IMPLEMENTED
+**Status:** APPROVED (commit 7ce5a33 — REVISE fix at fdb7c8f, narrow re-review APPROVE at 7ce5a33; finding #2 carried orchestrator-rejected annotation at 1eb3ac4)
 
 **Verification outcomes (all PASS, no straggler edits required):**
 

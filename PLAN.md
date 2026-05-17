@@ -21,7 +21,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher signed off on this plan
-- [ ] **Execution complete** — all tasks `APPROVED`, mock-dispatch trace clean
+- [x] **Execution complete** — all tasks `APPROVED`, mock-dispatch trace clean
 - [ ] **Drift tests created** — N/A for skill-design work (auto-satisfied at Protect)
 - [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync
 - [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED`
@@ -89,8 +89,6 @@ Added a clause after the three-rung ladder sentence noting that in the long-form
 - [x] **Step 3: Self-check before commit**
 
 Both edits are inline — no "Update:" / "Revised:" / "Previously" framing, no strikethroughs. DRY/Necessity walk: pipeline paragraph in `polish.md §C` shapes behavior the implementer could not produce from `long-form-review.md` alone (that file specs orchestrator task construction; this file specs implementer apply behavior); the standalone paragraph preserves pre-existing behavior unambiguously. SKILL.md clause is one sentence pointing at `long-form-review.md` for detail — no duplication of that file's content. No anti-patterns found (no wrapper instructions, no "here is what you will receive" descriptions, no harness-default reminders).
-
-> **Review notes (present only during active REVISE rounds):**
 
 
 ### Task 3: Update writing/CLAUDE.md contributor notes
