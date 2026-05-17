@@ -54,7 +54,7 @@ Walked 2026-05-16.
 ### Task 1: Rewrite `long-form-review.md` for the simpler design
 
 **Depends on:** *(none)*
-**Review status:**
+**Review status:** IMPLEMENTED
 
 The current `long-form-review.md` (read it as the authoritative source) specifies two stages of task blocks and a `## Findings` header section in Stage 2. Rewrite `## Doc convention` to:
 
@@ -79,10 +79,10 @@ The current `long-form-review.md` (read it as the authoritative source) specifie
 
 **Apply the DRY/Necessity tests line by line.** Every line must shape behavior the agent would not produce on its own. Walk the anti-patterns list in repo CLAUDE.md (wrapper instructions, "here is what you will receive" descriptions, default reminders, restating the Skill-Load Manifest); flag and drop violations.
 
-- [ ] **Step 1:** Read the current `skills/writing/references/long-form-review.md` end-to-end and the related anchors in `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`, and `skills/handoff-doc/references/plan-anatomy.md` (§Task Block Anatomy, §Header ownership).
-- [ ] **Step 2:** Rewrite `## Doc convention` per the spec above. Update §Dispatch convention, §Multi-perspective deep mode, §Final summary block, and §Trigger only where wording references the removed per-aspect task blocks or the removed `## Findings` header indirection.
-- [ ] **Step 3:** Walk the DRY/Necessity tests line by line. Drop any line that fails the necessity test (no behavior shaped) or the DRY test (already authoritative elsewhere).
-- [ ] **Step 4:** Commit.
+- [x] **Step 1:** Read the current `skills/writing/references/long-form-review.md` end-to-end and the related anchors in `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`, and `skills/handoff-doc/references/plan-anatomy.md` (§Task Block Anatomy, §Header ownership).
+- [x] **Step 2:** Rewrite `## Doc convention` per the spec above. Update §Dispatch convention, §Multi-perspective deep mode, §Final summary block, and §Trigger only where wording references the removed per-aspect task blocks or the removed `## Findings` header indirection.
+- [x] **Step 3:** Walk the DRY/Necessity tests line by line. Drop any line that fails the necessity test (no behavior shaped) or the DRY test (already authoritative elsewhere).
+- [x] **Step 4:** Commit.
 
 ### Task 2: Update `polish.md §C` to drop F-ID lookup
 
