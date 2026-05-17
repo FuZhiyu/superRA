@@ -61,11 +61,14 @@ Walked 2026-05-16.
 
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
+**Final diff self-check:** `git diff 43107e9..HEAD -- skills/writing/references/long-form-review.md`; surviving change class: full rewrite of `## Doc convention` (and related §Dispatch convention / §Multi-perspective deep mode / §Final summary block / §Trigger wording updates) for the single-set-of-tasks design per Task 1 objective; suspicious: `skills/*` instruction edits — justified by Task 1 objective (full rewrite per the design spec in this plan).
 
 > **Integration review notes (2026-05-17):**
 > 1. [BLOCKING] Missing `**Integration status:**` field on the task block. Per `handoff-doc/references/plan-anatomy.md §Task Block Anatomy`, every task block carries this field; the integration implementer must add it (`IMPLEMENTED` after the integrate commit) so the reviewer can flip it to `APPROVED`. (PLAN.md Task 1 header)
+>    → implemented: `**Integration status:** IMPLEMENTED` added to the Task 1 header in PLAN.md.
 > 2. [BLOCKING] Missing `**Final diff self-check:**` trail. Per `refactor-and-integrate §Final Diff Self-Check`, the trail is required even for no-change cases. Add a line of the form `**Final diff self-check:** git diff 43107e9..HEAD -- skills/writing/references/long-form-review.md; surviving change class: full rewrite of §Doc convention per Task 1 objective; no suspicious hunks.` (PLAN.md Task 1 block)
+>    → implemented: `**Final diff self-check:**` trail added immediately under `**Integration status:**` on the Task 1 block, scoped to `skills/writing/references/long-form-review.md` over `43107e9..HEAD` with the surviving-change class and `skills/*` suspicious-hunk justification.
 >
 > Substantive work is APPROVED — the rewrite matches the Task 1 objective, the four-move Stage-2 rewrite is correctly specified, the standalone-only rule and dispatch/deep-mode/final-summary sections are correctly updated, and the DRY/Necessity pass dropped only the one orienting sentence. The only fixes needed are the two scaffolding items above.
 
@@ -101,11 +104,14 @@ The current `long-form-review.md` (read it as the authoritative source) specifie
 
 **Depends on:** Task 1 (so the new Stage-2 task block shape is fixed before §C describes it)
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
+**Final diff self-check:** `git diff 43107e9..HEAD -- skills/writing/references/polish.md`; surviving change class: single-paragraph rewrite in §C per Task 2 objective (drops F-ID lookup; cites `**Findings absorbed:**`); suspicious: `skills/*` instruction edit — justified by Task 2 objective.
 
 > **Integration review notes (2026-05-17):**
 > 1. [BLOCKING] Missing `**Integration status:**` field on the task block. (PLAN.md Task 2 header)
+>    → implemented: `**Integration status:** IMPLEMENTED` added to the Task 2 header in PLAN.md.
 > 2. [BLOCKING] Missing `**Final diff self-check:**` trail. Suggested line: `**Final diff self-check:** git diff 43107e9..HEAD -- skills/writing/references/polish.md; surviving change class: single-paragraph rewrite in §C per Task 2 objective; no suspicious hunks.` (PLAN.md Task 2 block)
+>    → implemented: `**Final diff self-check:**` trail added immediately under `**Integration status:**` on the Task 2 block, scoped to `skills/writing/references/polish.md` over `43107e9..HEAD` with the surviving-change class and `skills/*` suspicious-hunk justification.
 >
 > Substantive work is APPROVED — single-paragraph §C rewrite drops F-ID lookup language, preserves the surrounding §C content (shape-C definition, standalone-shape-C paragraph, per-tier apply rules) verbatim, and the one-line echo of `**Findings absorbed:**` location avoids forcing a `long-form-review.md` load.
 
@@ -120,11 +126,14 @@ Rewrite to match the new design: the task block now carries findings inline unde
 
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
+**Final diff self-check:** `git diff 43107e9..HEAD -- skills/writing/CLAUDE.md` (Task 3 scope = `§Two-stage REVIEW.md → PLAN.md lifecycle` hunks only; the §Multi-agent review pattern line-48 hunk belongs to Task 4); surviving change classes: (a)/(b) light edits to drop `## Findings` header phrasing + (d) in-place reversal recording the rejected header-indirection alternative per Task 3 objective; suspicious: `skills/*` instruction edit — justified by Task 3 objective.
 
 > **Integration review notes (2026-05-17):**
 > 1. [BLOCKING] Missing `**Integration status:**` field on the task block. (PLAN.md Task 3 header)
+>    → implemented: `**Integration status:** IMPLEMENTED` added to the Task 3 header in PLAN.md.
 > 2. [BLOCKING] Missing `**Final diff self-check:**` trail. Suggested line: `**Final diff self-check:** git diff 43107e9..HEAD -- skills/writing/CLAUDE.md; surviving change classes: (a)/(b)/(d) rewrites in §Two-stage REVIEW.md → PLAN.md lifecycle per Task 3 objective + Task 4 Step-1 fix at line 48 of §Multi-agent review pattern; no suspicious hunks.` (PLAN.md Task 3 block) — note: the same file is also touched by Task 4 Step 1, so the self-check trail line on Task 3 should call out only the (a)/(b)/(d) hunks and the Task 4 trail should call out the line-48 hunk, to keep the per-task scoping clean.
+>    → implemented: `**Final diff self-check:**` trail added immediately under `**Integration status:**` on the Task 3 block; per-task scoping followed (Task 3 owns the §Two-stage lifecycle hunks; Task 4 owns the line-48 §Multi-agent review pattern hunk), with the surviving-change classes and `skills/*` suspicious-hunk justification recorded.
 >
 > Substantive work is APPROVED — (a), (c), (e) carry over correctly; (b) recorder-mechanism rewrite matches the new inline `**User:**` line; (d) is reversed in place per the inline-edit rule with the rejected alternative correctly recorded as design history; no stacked entries.
 
@@ -141,11 +150,14 @@ Apply the inline-edit rule from `superRA:handoff-doc` — rewrite the section in
 
 **Depends on:** Tasks 1, 2, 3
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
+**Final diff self-check:** `git diff 43107e9..HEAD -- skills/writing/CLAUDE.md` (Task 4 scope = the §Multi-agent review pattern line-48 stale-anchor fix only; the §Two-stage lifecycle hunks belong to Task 3) plus handoff-doc currency in `PLAN.md` (task status flips, integration review-notes blockquotes and `→ implemented:` annotations) and `RESULTS.md` (task sections); surviving change classes: stale rename-rule clause fix per Task 4 Step 1 + handoff-doc currency; suspicious: `skills/*` instruction edit — justified by Task 4 Step 1 (one-line fix surfaced by the verification grep).
 
 > **Integration review notes (2026-05-17):**
 > 1. [BLOCKING] Missing `**Integration status:**` field on the task block. (PLAN.md Task 4 header)
+>    → implemented: `**Integration status:** IMPLEMENTED` added to the Task 4 header in PLAN.md.
 > 2. [BLOCKING] Missing `**Final diff self-check:**` trail. Suggested line: `**Final diff self-check:** git diff 43107e9..HEAD -- skills/writing/CLAUDE.md (line 48 only) + PLAN.md + RESULTS.md; surviving change classes: stale-anchor fix in §Multi-agent review pattern per Task 4 Step 1 + handoff-doc currency (PLAN.md status flips and RESULTS.md task sections); no suspicious hunks.` Re-ran reviewer's independent grep at integration time — eleven hits, matches Task 4's classification exactly. (PLAN.md Task 4 block)
+>    → implemented: `**Final diff self-check:**` trail added immediately under `**Integration status:**` on the Task 4 block; per-task scoping followed (Task 4 owns only the §Multi-agent review pattern line-48 hunk in `skills/writing/CLAUDE.md` plus the PLAN.md / RESULTS.md handoff-doc currency), with surviving-change classes and the `skills/*` suspicious-hunk justification recorded.
 >
 > Substantive work is APPROVED — verification sweep is accurate; the one stale hit at writing/CLAUDE.md:48 was correctly identified and fixed; the end-to-end walk confirms canonical implementer/reviewer protocols apply at every step with no new wiring; no false negatives in the sweep (independent grep matches).
 
