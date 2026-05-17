@@ -20,9 +20,13 @@ The request names a file, section, or paragraph and asks for polish — no in-fl
 
 ### C — Review-findings list
 
-The request hands over a findings list (typically from Review mode) and asks to apply the accepted findings. The findings list **is** the scope — apply each accepted finding as a minimal edit; do not silently extend to nearby issues. If a finding is ambiguous or incorrect, raise it; do not silently reinterpret.
+The request hands over an accepted-findings scope and asks to apply it. The scope **is** the work — apply each accepted finding as a minimal edit; do not silently extend to nearby issues. If a finding is ambiguous or incorrect, raise it; do not silently reinterpret.
 
-Each accepted finding carries a `Fix:` tier (`review.md §Fix tiers`); polish-shape-C apply behavior follows the tier:
+**When polish rides the long-form-review pipeline**, shape-C input is a Stage-2 task block in PLAN.md (post-rename from REVIEW.md). The task block names a pre-batched sweep (e.g., "all typos", "all citation-format issues") and cites source findings by F-ID pointing into `## Findings`. Batching has already happened at Stage-2 task construction time — the implementer applies the batch the task block names, not re-batches inside the polish pass. Look up each cited F-ID in `## Findings` for the full finding text and its user-accepted verdict before editing.
+
+**When polish is standalone** (a free-floating findings list, not a Stage-2 task block), the implementer reads the raw list and applies per finding.
+
+In both cases, each accepted finding carries a `Fix:` tier (`review.md §Fix tiers`); polish-shape-C apply behavior follows the tier:
 
 - `mechanical` — apply silently; group into one batch commit per dimension.
 - `conventional` — apply, but write one finding-line per item in the commit message naming the choice made.

@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each task with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-16 (planning)
+**Last updated:** 2026-05-16 (Task 2)
 **Status:** In Progress
 
 ---
@@ -26,7 +26,13 @@
 
 ## Task 2: Update polish.md §C and SKILL.md lifecycle ladder sentence
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Files edited:**
+- `skills/writing/references/polish.md` — §C reframed: opening sentence generalized to "accepted-findings scope"; two paragraphs added distinguishing the long-form-review-pipeline case (Stage-2 task block, F-ID lookup from `## Findings`, no re-batching by implementer) from the standalone case (raw findings list, apply per finding); per-tier apply rules preserved unchanged via "In both cases" connector.
+- `skills/writing/SKILL.md` — lifecycle ladder sentence extended by one clause noting that the REVIEW.md → PLAN.md promotion is mechanical (literal `git mv` at the Stage-2 gate, standalone-only), with pointer to `long-form-review.md §Standalone-only rename rule`.
+
+**DRY/Necessity check:** Both new instruction blocks shape behavior the implementer could not produce from `long-form-review.md` alone (that file specs orchestrator task construction; `polish.md` specs implementer apply behavior). SKILL.md clause points rather than restates — no duplication. No anti-patterns found.
 
 ## Task 3: Update writing/CLAUDE.md contributor notes
 

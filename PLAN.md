@@ -76,45 +76,19 @@ Walked design spec §Design + §Implementer/reviewer interaction walk-through se
 **Script:** `skills/writing/references/polish.md` (light edit to §C); `skills/writing/SKILL.md` (one-sentence clarification in §Project Conventions in the handoff doc / CLAUDE.md)
 **Input:** Updated `long-form-review.md` from Task 1
 **Output:** Both files updated with minimal edits
+**Review status:** IMPLEMENTED
 
-- [ ] **Step 1: polish.md §C reframe**
+- [x] **Step 1: polish.md §C reframe**
 
-```text
-Current §C ("Review-findings list") describes shape-C input as a free-floating
-findings list. Reframe to acknowledge that when polish rides REVIEW.md, shape-C
-input is the Stage-2 task block in PLAN.md (post-rename), and the per-tier
-batching has already happened at Stage-2 task construction time — the implementer
-applies the batch the task block names, not re-batches inside the polish pass.
+Rewrote §C opening sentence and added two paragraphs: one for the long-form-review pipeline case (Stage-2 task block, F-ID lookup, no re-batching) and one for the standalone case (raw findings list, apply per finding). Per-tier apply rules (`mechanical` / `conventional` / `authorial`) unchanged; the `In both cases` connector preserves them for both paths.
 
-Keep the existing per-tier apply rules (mechanical / conventional / authorial)
-unchanged — they still describe how the implementer applies each item. Only the
-input-shape paragraph and the batching framing change.
-```
+- [x] **Step 2: SKILL.md lifecycle ladder one-sentence clarification**
 
-- [ ] **Step 2: SKILL.md lifecycle ladder one-sentence clarification**
+Added a clause after the three-rung ladder sentence noting that in the long-form-review pipeline the REVIEW.md → PLAN.md promotion is mechanical (a literal `git mv` at the Stage-2 gate, standalone-only), with a pointer to `long-form-review.md §Standalone-only rename rule` for the detail. Edit is one sentence, inline, no parallel old+new text.
 
-```text
-In `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`, the lifecycle
-ladder sentence reads:
+- [x] **Step 3: Self-check before commit**
 
-  "Where they live (lifecycle ladder, ordered by permanence). REVIEW.md (born for
-   one review, dies at closeout) → PLAN.md (analysis-scoped) → CLAUDE.md
-   (project-permanent)."
-
-Add one clause noting that the long-form-review pipeline literally promotes
-REVIEW.md → PLAN.md via `git mv` at the Stage-2 gate. The ladder mental model
-is unchanged; this clarifies that the promotion is mechanical, not just
-conceptual. Keep the edit to one sentence.
-```
-
-- [ ] **Step 3: Self-check before commit**
-
-```text
-Confirm both edits are inline (no "Update:" / "Revised:" framing per
-`handoff-doc/SKILL.md §Inline-Edit Rule`). Confirm no new instruction line in
-either file violates DRY/Necessity. Commit atomically with the Task 2 PLAN.md
-status flip.
-```
+Both edits are inline — no "Update:" / "Revised:" / "Previously" framing, no strikethroughs. DRY/Necessity walk: pipeline paragraph in `polish.md §C` shapes behavior the implementer could not produce from `long-form-review.md` alone (that file specs orchestrator task construction; this file specs implementer apply behavior); the standalone paragraph preserves pre-existing behavior unambiguously. SKILL.md clause is one sentence pointing at `long-form-review.md` for detail — no duplication of that file's content. No anti-patterns found (no wrapper instructions, no "here is what you will receive" descriptions, no harness-default reminders).
 
 > **Review notes (present only during active REVISE rounds):**
 
