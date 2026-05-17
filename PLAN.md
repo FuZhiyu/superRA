@@ -24,7 +24,7 @@
 - [x] **Execution complete** — all tasks `APPROVED`, mock-dispatch trace clean
 - [x] **Drift tests created** — N/A for skill-design work (auto-satisfied at Protect; user-confirmed 2026-05-16)
 - [x] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync (Sync was a no-op against origin/main at 8c3db7d; integration approved at 3758d38)
-- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED`
+- [x] **Docs finalized** — design entries landed in `skills/writing/CLAUDE.md` via Task 3; RESULTS.md content fully redundant against CLAUDE.md + git history (no port needed); project docs audited (integration review clean)
 - [ ] **Finished** — branch landed, PR opened, or requested cleanup completed
 
 ---
@@ -58,6 +58,10 @@ Walked at planning time (2026-05-16). Re-walk on-demand only.
 > **User decision (2026-05-16):** Skip Protect — no drift tests needed for skill-design work.
 > **Question asked:** Integration-workflow Protect step — should we add key-result protection (drift tests or custom mechanism)?
 > **Rationale:** No analysis results to drift-test; no manuscript build/outline to verify (this work edits skill files, not a paper). Task 4's DRY/Necessity walk + mock dispatch trace already validated the rewritten skill text.
+
+> **User decision (2026-05-16):** Consolidate + delete — port any non-redundant RESULTS.md content into `skills/writing/CLAUDE.md`, then delete PLAN.md and RESULTS.md.
+> **Question asked:** Document step PLAN.md / RESULTS.md disposition.
+> **Rationale:** Matches prior round's precedent (commit 3e4bf62). Substantive design entries already landed in `writing/CLAUDE.md` via Task 3. Git history preserves PLAN.md and RESULTS.md on this branch.
 
 ---
 
