@@ -23,7 +23,7 @@
 - [x] **Plan approved** — researcher signed off on this plan
 - [x] **Execution complete** — all tasks `APPROVED`, mock-dispatch trace clean
 - [x] **Drift tests created** — N/A for skill-design work (auto-satisfied at Protect; user-confirmed 2026-05-16)
-- [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync
+- [x] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync (Sync was a no-op against origin/main at 8c3db7d; integration approved at 3758d38)
 - [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED`
 - [ ] **Finished** — branch landed, PR opened, or requested cleanup completed
 
