@@ -22,7 +22,7 @@
 
 - [x] **Plan approved** — researcher signed off on this plan
 - [x] **Execution complete** — all tasks `APPROVED`, mock-dispatch trace clean
-- [ ] **Drift tests created** — N/A for skill-design work (auto-satisfied at Protect)
+- [x] **Drift tests created** — N/A for skill-design work (auto-satisfied at Protect; user-confirmed 2026-05-16)
 - [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync
 - [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED`
 - [ ] **Finished** — branch landed, PR opened, or requested cleanup completed
@@ -54,6 +54,10 @@ Walked at planning time (2026-05-16). Re-walk on-demand only.
 
 > **User decision (2026-05-16):** Proceed with integration.
 > **Question asked:** Step 4 completion menu — what to do with the verified work (4 tasks APPROVED, 18 commits on `domain/writing-skills`).
+
+> **User decision (2026-05-16):** Skip Protect — no drift tests needed for skill-design work.
+> **Question asked:** Integration-workflow Protect step — should we add key-result protection (drift tests or custom mechanism)?
+> **Rationale:** No analysis results to drift-test; no manuscript build/outline to verify (this work edits skill files, not a paper). Task 4's DRY/Necessity walk + mock dispatch trace already validated the rewritten skill text.
 
 ---
 
