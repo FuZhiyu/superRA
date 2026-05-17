@@ -49,6 +49,12 @@ Walked 2026-05-16.
 - [ ] Docs finalized — disposition logged
 - [ ] Finished
 
+## Decisions
+
+> **User decision (2026-05-17):** Proceed with integration.
+> **Question asked:** Completion menu after Execution complete — proceed to integration / change plan / keep as-is / discard?
+> **Rationale:** *(none provided)*
+
 ---
 
 ### Task 1: Rewrite `long-form-review.md` for the simpler design
