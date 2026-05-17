@@ -112,88 +112,33 @@ Added `## Two-stage REVIEW.md → PLAN.md lifecycle` section after `## Multi-age
 
 Superseded entry is rewritten in place — no parallel entries, no strikethroughs. New section (a)–(e) records design history; no paragraph restates behavior already specified in `long-form-review.md` (that file carries the operative spec; CLAUDE.md carries the why). DRY/Necessity walk: every paragraph shapes what a contributor would propose after reading only `long-form-review.md`; none of the paragraphs restates spec behavior. Anti-pattern check: no wrapper instructions, no "here is what you will receive" text, no harness defaults.
 **Review status:** APPROVED
+
+### Task 4: Verification sweep
 **Depends on:** Task 1, Task 2, Task 3
 
 **Script:** N/A (verification work — grep, walk, mock-trace)
 **Input:** All edited files from Tasks 1-3
-**Output:** Verification report inline in this task's review-notes blockquote; any straggler edits committed in this task
+**Output:** Verification outcomes in RESULTS.md Task 4 section; no straggler edits needed
+**Review status:** IMPLEMENTED
 
-- [ ] **Step 1: Cross-doc grep for stragglers**
+- [x] **Step 1: Cross-doc grep for stragglers**
 
-```bash
-grep -rn "REVIEW.md" skills/ agents/ docs/ README.md AGENTS.md AGENT.md CLAUDE.md
-```
+Ran `grep -rn "REVIEW.md" skills/ agents/ docs/ README.md AGENTS.md AGENT.md CLAUDE.md`. Ten matches across `skills/writing/CLAUDE.md`, `skills/writing/references/long-form-review.md`, and `skills/writing/references/polish.md`. No matches in `agents/`, `docs/`, `README.md`, `AGENTS.md`, `AGENT.md`, or `CLAUDE.md`. All ten mentions are consistent with the two-stage shape and the standalone-only rename rule — no straggler describing the old flat-findings shape or the old "REVIEW.md never renames" rule. PASS.
 
-```text
-For every match, confirm consistency with: (a) the two-stage shape; (b) the
-rename rule (REVIEW.md → PLAN.md at Stage 2 gate for standalone; no separate
-REVIEW.md when workflow-embedded). Flag and fix any straggler describing the
-old flat-findings shape or the old "REVIEW.md never renames" rule.
-```
+- [x] **Step 2: Skill-text DRY/Necessity walk on long-form-review.md**
 
-- [ ] **Step 2: Skill-text DRY/Necessity walk on long-form-review.md**
+Re-read `long-form-review.md` line by line against the four anti-pattern families (wrapper instructions, "here is what you will receive" descriptions, default reminders, restated Skill-Load Manifest). No violations found. Every instruction line shapes behavior an agent would not produce on its own: F-ID rule, `**User feedback:**` field and gate, four-move Stage-1 → Stage-2 rewrite, granularity rule, Workflow Status templates, review-time indices, dispatch adaptations (manuscript as implicit implementer output; no reviewer-of-reviewer), deep-mode multi-perspective pattern, final summary block. PASS.
 
-```text
-Re-read `long-form-review.md` line by line. For each new instruction line added
-in Task 1, ask: without this line, would the agent's behavior be unstable? If
-no, delete it. Walk the repo `CLAUDE.md §Anti-patterns to watch for` list
-(wrapper instructions, "here is what you will receive" descriptions, default
-reminders, restated Skill-Load Manifest) — drop any violation found.
-```
+- [x] **Step 3: Mock dispatch trace end-to-end**
 
-- [ ] **Step 3: Mock dispatch trace end-to-end**
+Traced all eight steps. At every step, agents read only what `using-superra §Skill-Load Manifest` + the role spec + REVIEW.md / PLAN.md specify — no extra wiring. Stage-2 implementer finds the F-ID lookup path via `## Findings` (specified in the four-move rewrite instruction) and apply behavior via `polish.md §C` pipeline case. No design failure found. PASS.
 
-```text
-Walk an imagined long-form review against the rewritten spec:
+- [x] **Step 4: Compose-with-planning-workflow check**
 
-  1. Orchestrator creates REVIEW.md with N per-aspect task blocks (one per
-     dimension in scope).
-  2. Orchestrator dispatches N parallel `superRA:reviewer` agents per
-     `long-form-review.md §Dispatch convention`. Each reviewer reads its task,
-     reviews the manuscript per its `consistency/<dim>.md` reference, writes
-     findings (with global F-IDs) into the review-notes blockquote, sets Review
-     status: IMPLEMENTED, commits.
-  3. Main agent prompts user with the assembled findings; user gives per-finding
-     accept / defer / reject. Main agent writes `**User feedback:**` per task,
-     commits. Workflow Status box "User feedback recorded" flips.
-  4. Orchestrator performs the four-move Stage-1 → Stage-2 rewrite in one atomic
-     commit: `git mv REVIEW.md PLAN.md`; hoist findings to `## Findings`; delete
-     per-aspect blocks; write Stage-2 task blocks per granularity rule. Flips
-     "Plan approved."
-  5. Orchestrator dispatches `superRA:implementer` for Stage-2 Task 2
-     (mechanical — all typos). Implementer reads PLAN.md task block, sees
-     `**Sources:** F2, F11, F19, F23`, looks them up in `## Findings`, loads
-     polish.md, applies the typo sweep, commits, sets Review status: IMPLEMENTED.
-  6. Orchestrator dispatches `superRA:reviewer` against the commit range. Reads
-     the task block, the cited Findings, and the diff; APPROVE.
-  7. Verify task runs build + xref check; APPROVED on green. Workflow Status box
-     "Execution complete" flips.
-  8. Main agent archives / deletes PLAN.md; flips "Finished."
+`long-form-review.md §Standalone-only rename rule` states the workflow-embedded case explicitly. `## Review-time indices` and `## Final summary block` both resolve to "(REVIEW.md standalone, the workflow's PLAN.md when riding one)" — consistent. Writing-side conventions ladder resolves to the workflow's PLAN.md when embedded; no separate REVIEW.md exists. PASS.
 
-At every step, confirm the agent reads only what `using-superra §Skill-Load
-Manifest` + the role spec + REVIEW.md / PLAN.md itself say, with no extra
-wiring needed. Any step that requires a special instruction not in the standard
-agent protocol is a design failure — flag and fix in Task 1 before completing
-Task 4.
-```
+- [x] **Step 5: Commit verification report**
 
-- [ ] **Step 4: Compose-with-planning-workflow check**
-
-```text
-Confirm REVIEW.md riding a workflow still composes: when long-form review is
-embedded in `planning-workflow → implementation-workflow → integration-workflow`,
-the writing-side conventions ladder still resolves to PLAN.md (not REVIEW.md),
-the workflow's own PLAN.md carries the rollup, and no separate REVIEW.md exists.
-The rename rule is standalone-only by construction. Confirm `long-form-review.md`
-states this explicitly.
-```
-
-- [ ] **Step 5: Commit verification report**
-
-```text
-Record the verification outcomes in this task's review-notes blockquote (one
-line per check: PASS / FAIL with file:line or "fixed in Task 4 Step N"). Set
-Review status: IMPLEMENTED and commit.
-```
+Verification outcomes recorded in RESULTS.md Task 4 section (all four checks PASS, no straggler edits). Missing `### Task 4:` heading restored in PLAN.md (structural straggler from prior dispatch — committed in this task per Additionally: directive).
 
 > **Review notes (present only during active REVISE rounds):**

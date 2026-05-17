@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each task with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-16 (Task 2)
-**Status:** In Progress
+**Last updated:** 2026-05-16 (Task 4)
+**Status:** In Progress — Tasks 1–4 IMPLEMENTED; awaiting review
 
 ---
 
@@ -36,8 +36,26 @@
 
 ## Task 3: Update writing/CLAUDE.md contributor notes
 
-**Status:** Not started
+**Status:** APPROVED (see git history — REVISE pass completed at commit 2d23184; final APPROVED at 2d24aca)
+
+**File edited:** `skills/writing/CLAUDE.md`
+
+**Key changes:**
+- Superseded the "Shared doc is REVIEW.md, not PLAN.md" bullet in `## Multi-agent review pattern` in place — collision concern preserved as the load-bearing reason; resolution (standalone-only rename, workflow-embedded stays in workflow's PLAN.md) replaces the old rule; cross-link to `long-form-review.md §Standalone-only rename rule` added.
+- Added `## Two-stage REVIEW.md → PLAN.md lifecycle` section with five design-decision paragraphs: (a) two-stage over one-stage (assembled-view constraint); (b) per-finding user-feedback granularity; (c) task-granularity rule (1 authorial = 1 task; mechanical/conventional batch by issue class); (d) `## Findings` header section vs. inlining; (e) rename rule cross-link.
 
 ## Task 4: Verification sweep
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+**Verification outcomes (all PASS, no straggler edits required):**
+
+- **Step 1 — Cross-doc grep:** Ten `REVIEW.md` mentions found across `skills/writing/CLAUDE.md` (3), `skills/writing/references/long-form-review.md` (5), `skills/writing/references/polish.md` (1). No matches in `agents/`, `docs/`, `README.md`, `AGENTS.md`, `AGENT.md`, or root `CLAUDE.md`. All mentions consistent with the two-stage shape and standalone-only rename rule. No straggler found. PASS.
+
+- **Step 2 — DRY/Necessity walk on long-form-review.md:** All instruction lines pass Necessity (each shapes behavior an agent would not produce on its own). No anti-pattern violations (no wrapper instructions, no "here is what you will receive" descriptions, no default reminders, no restated Skill-Load Manifest). PASS.
+
+- **Step 3 — Mock dispatch trace:** All eight steps traced. Agents at each step read only what `using-superra §Skill-Load Manifest` + the role spec + REVIEW.md / PLAN.md specify — no extra wiring or adapter prose needed. Stage-2 implementer's F-ID lookup path and apply behavior are specified in `long-form-review.md` (four-move rewrite instruction) and `polish.md §C` (pipeline case) respectively. PASS.
+
+- **Step 4 — Compose-with-planning-workflow:** `long-form-review.md §Standalone-only rename rule` states the workflow-embedded case explicitly. `## Review-time indices` and `## Final summary block` both correctly resolve to the workflow's PLAN.md when riding one. No separate REVIEW.md exists in the workflow-embedded case. Writing-side conventions ladder resolves to the workflow's PLAN.md. PASS.
+
+**Structural straggler fixed:** Missing `### Task 4:` heading restored in PLAN.md (the heading was elided in the prior commit, placing Task 4's `**Depends on:**` immediately after Task 3's `**Review status:** APPROVED` with no separator heading).
