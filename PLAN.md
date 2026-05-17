@@ -99,7 +99,7 @@ Rewrite to match the new design: the task block now carries findings inline unde
 ### Task 3: Rewrite `writing/CLAUDE.md §Two-stage REVIEW.md → PLAN.md lifecycle`
 
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 The current contributor-notes section carries five load-bearing decisions (a)–(e). Decisions (a), (b), (c), (e) survive with light edits (drop any wording that assumed the `## Findings` header). Decision (d) is **reversed** — the rejected-alternative direction (inlining findings) is now the chosen design. Rewrite (d) accordingly:
 
