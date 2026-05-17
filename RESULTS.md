@@ -26,7 +26,21 @@ Edited the single "When polish rides the long-form-review pipeline" paragraph in
 
 ## Task 3: Rewrite `writing/CLAUDE.md §Two-stage REVIEW.md → PLAN.md lifecycle`
 
-*(pending)*
+Rewrote the five-decision block (a)–(e) in `skills/writing/CLAUDE.md §Two-stage REVIEW.md → PLAN.md lifecycle` in place per the inline-edit rule. Decisions (a), (c), (e) carry over with light vocabulary touch-ups; (b) updates its recorder-mechanism phrasing; (d) is reversed.
+
+**(a) Two-stage over one-stage** — unchanged argument; vocabulary updated: the orchestrator now "writes the single set of Stage-2 task blocks once, drawing on every accepted finding" (was "writes Stage-2 task blocks once"). The "two-stage over one-stage" framing and the assembled-view rationale stand.
+
+**(b) Per-finding user-feedback granularity** — substituted "per-dimension or per-tier directives" for "per-task tier directives" (the prior example was a per-Stage-1-task directive that no longer exists). Recorder mechanism rewritten from "`**User feedback:**` field on each Stage-1 task block" to "inline `**User (YYYY-MM-DD):** accept | defer | reject` line at the end of each Stage-1 finding" to match the new Stage-1 shape.
+
+**(c) Stage-2 task granularity** — verbatim; no edits needed (the rule and rationale are independent of the `## Findings` header decision).
+
+**(d) Reversed.** New choice: inline accepted findings in each Stage-2 task under `**Findings absorbed:**`; consolidate rejected and deferred findings in `## Deferred & Rejected` at the bottom. Rejected alternative: `## Findings` header with `**Sources:** F-ID` indirection in Stage-2 tasks. Why rejected: the header indirection adds a lookup hop; the duplication concern that motivated it does not occur in practice — issue-class batching (decision (c)) means each accepted finding is absorbed by exactly one task. Rejected/deferred-visibility concern handled by `## Deferred & Rejected`. F-IDs survive into the inlined finding bodies for commit-message audit even though Stage-2 no longer indexes by them.
+
+**(e) Rename rule (standalone-only)** — verbatim; no edits.
+
+**DRY/Necessity pass:** every line in the rewritten (d) shapes behavior — names the chosen mechanism and its location markers (`**Findings absorbed:**`, `## Deferred & Rejected`), names the rejected alternative and the loss it incurs, dismisses the duplication concern by reference to decision (c), notes F-ID survival. No wrapper instructions, no default reminders, no Skill-Load Manifest restatement, no "here is what you will receive" descriptions.
+
+**Files touched:** `skills/writing/CLAUDE.md`.
 
 ## Task 4: Verification sweep
 

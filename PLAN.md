@@ -99,7 +99,7 @@ Rewrite to match the new design: the task block now carries findings inline unde
 ### Task 3: Rewrite `writing/CLAUDE.md §Two-stage REVIEW.md → PLAN.md lifecycle`
 
 **Depends on:** Task 1
-**Review status:**
+**Review status:** IMPLEMENTED
 
 The current contributor-notes section carries five load-bearing decisions (a)–(e). Decisions (a), (b), (c), (e) survive with light edits (drop any wording that assumed the `## Findings` header). Decision (d) is **reversed** — the rejected-alternative direction (inlining findings) is now the chosen design. Rewrite (d) accordingly:
 
@@ -107,8 +107,8 @@ The current contributor-notes section carries five load-bearing decisions (a)–
 
 Apply the inline-edit rule from `superRA:handoff-doc` — rewrite the section in place, do not stack a new entry alongside the old one.
 
-- [ ] **Step 1:** Edit `skills/writing/CLAUDE.md §Two-stage REVIEW.md → PLAN.md lifecycle`. Update (a) to reflect single-set-of-tasks vocabulary (the assembled-view argument still holds and still rejects the one-stage alternative). Lightly edit (b), (c), (e) to drop any phrasing that assumed the `## Findings` header. Reverse (d) per the spec above.
-- [ ] **Step 2:** Commit.
+- [x] **Step 1:** Edit `skills/writing/CLAUDE.md §Two-stage REVIEW.md → PLAN.md lifecycle`. Update (a) to reflect single-set-of-tasks vocabulary (the assembled-view argument still holds and still rejects the one-stage alternative). Lightly edit (b), (c), (e) to drop any phrasing that assumed the `## Findings` header. Reverse (d) per the spec above.
+- [x] **Step 2:** Commit.
 
 ### Task 4: Verification sweep
 
