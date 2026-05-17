@@ -45,7 +45,7 @@ Walked 2026-05-16.
 - [x] Plan approved
 - [x] Execution complete — every task APPROVED
 - [x] Drift tests created — N/A for skill-design work (auto-satisfied)
-- [ ] Integrated — every task `Integration status: APPROVED`
+- [x] Integrated — every task `Integration status: APPROVED`
 - [ ] Docs finalized — disposition logged
 - [ ] Finished
 
