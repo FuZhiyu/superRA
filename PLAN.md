@@ -54,7 +54,7 @@ Walked 2026-05-16.
 ### Task 1: Rewrite `long-form-review.md` for the simpler design
 
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 The current `long-form-review.md` (read it as the authoritative source) specifies two stages of task blocks and a `## Findings` header section in Stage 2. Rewrite `## Doc convention` to:
 
