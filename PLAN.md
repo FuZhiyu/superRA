@@ -113,7 +113,7 @@ Apply the inline-edit rule from `superRA:handoff-doc` — rewrite the section in
 ### Task 4: Verification sweep
 
 **Depends on:** Tasks 1, 2, 3
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 Sweep for stale references and confirm cross-doc coherence.
 
