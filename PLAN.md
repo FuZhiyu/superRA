@@ -64,7 +64,8 @@ Walked at planning time (2026-05-16). Re-walk on-demand only.
 ### Task 1: Rewrite long-form-review.md for two-stage REVIEW.md → PLAN.md flow
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
+**Final diff self-check:** `git diff ad13ef8..HEAD -- skills/writing/references/long-form-review.md`; surviving changes: full rewrite of `## Doc convention` for two-stage lifecycle (Stage 1 REVIEW.md, F-ID rule, `**User feedback:**` field, four-move Stage-1 → Stage-2 rewrite, standalone-only rename rule, Stage-2 PLAN.md behavior), new `## Stage-2 task granularity` section, new `## Workflow Status` templates for both stages, new `## Review-time indices` section, new `## Final summary block` section, minor `## Dispatch convention` wording tightening; suspicious: `skills/*` instruction edits — all justified by Task 1 objective (full rewrite per design spec at `~/.claude/plans/currently-review-md-is-not-fancy-stream.md`).
 
 **Script:** `skills/writing/references/long-form-review.md` (full rewrite of `## Doc convention` and `## Dispatch convention`; add new sections per design spec)
 **Input:** Current `long-form-review.md` (HEAD at 04844b1); design spec at `~/.claude/plans/currently-review-md-is-not-fancy-stream.md`
@@ -87,7 +88,8 @@ Walked design spec §Design + §Implementer/reviewer interaction walk-through se
 **Input:** Updated `long-form-review.md` from Task 1
 **Output:** Both files updated with minimal edits
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
+**Final diff self-check:** `git diff ad13ef8..HEAD -- skills/writing/references/polish.md skills/writing/SKILL.md`; surviving changes: `polish.md §C` opening sentence generalized + two new paragraphs distinguishing the long-form-review-pipeline case (Stage-2 task block, F-ID lookup, no re-batching) from the standalone case (raw findings list, apply per finding); `SKILL.md` lifecycle-ladder sentence extended by one clause noting the REVIEW.md → PLAN.md promotion is mechanical (standalone-only) with pointer to `long-form-review.md §Standalone-only rename rule`; suspicious: `skills/*` instruction edits — both justified by Task 2 objective.
 
 - [x] **Step 1: polish.md §C reframe**
 
@@ -108,7 +110,9 @@ Both edits are inline — no "Update:" / "Revised:" / "Previously" framing, no s
 **Script:** `skills/writing/CLAUDE.md` (supersede one prior entry in place; add new design-decision entries)
 **Input:** Current `writing/CLAUDE.md` (HEAD at 2b78713); design spec at `~/.claude/plans/currently-review-md-is-not-fancy-stream.md` §Files-to-change
 **Output:** CLAUDE.md with the prior "no rename" rule superseded in place and new design entries appended in the long-form-review section
-**Integration status:** REVISE
+**Review status:** APPROVED
+**Integration status:** IMPLEMENTED
+**Final diff self-check:** `git diff ad13ef8..HEAD -- skills/writing/CLAUDE.md`; surviving changes: superseded "Shared doc is REVIEW.md, not PLAN.md" bullet in `## Multi-agent review pattern` rewritten in place (collision concern preserved; standalone-only rename rule + cross-link replaces old rule); new `## Two-stage REVIEW.md → PLAN.md lifecycle` section with five design-decision paragraphs (a)–(e); suspicious: `skills/*` instruction edit — justified by Task 3 objective (supersession + new design-decision entries per design spec).
 
 - [x] **Step 1: Supersede the "REVIEW.md never renames to PLAN.md" rule in place**
 
@@ -121,7 +125,6 @@ Added `## Two-stage REVIEW.md → PLAN.md lifecycle` section after `## Multi-age
 - [x] **Step 3: Self-check before commit**
 
 Superseded entry is rewritten in place — no parallel entries, no strikethroughs. New section (a)–(e) records design history; no paragraph restates behavior already specified in `long-form-review.md` (that file carries the operative spec; CLAUDE.md carries the why). DRY/Necessity walk: every paragraph shapes what a contributor would propose after reading only `long-form-review.md`; none of the paragraphs restates spec behavior. Anti-pattern check: no wrapper instructions, no "here is what you will receive" text, no harness defaults.
-**Review status:** APPROVED
 
 ### Task 4: Verification sweep
 **Depends on:** Task 1, Task 2, Task 3
@@ -130,15 +133,18 @@ Superseded entry is rewritten in place — no parallel entries, no strikethrough
 **Input:** All edited files from Tasks 1-3
 **Output:** Verification outcomes in RESULTS.md Task 4 section; no straggler edits needed
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
+**Final diff self-check:** `git diff ad13ef8..HEAD -- <no source files>`; no surviving hunks for Task 4 (verification-only — no script file, no source edits in scope); PLAN.md/RESULTS.md handoff updates are accounted for under the governing diff's task-objective coverage; no suspicious hunks.
 
 > **Integration review notes (2026-05-16):**
 >
 > Round-wide findings; collected on Task 4 (the verification sweep) per the pattern established in the prior round's commit `a515fa5` because both items span all four tasks in this round (ad13ef8..HEAD).
 >
 > 1. **[BLOCKING] Missing `**Integration status:**` field on all four tasks.** The dispatch directive ("Set `**Integration status:**` per task for each of the 4 tasks in PLAN.md") and the `using-superra §Handoff Docs` / reviewer-role contract both require this slot on every task block at integration time. Pre-review, none of Tasks 1–4 carried the line. I have added `**Integration status:** REVISE` to each of the four task blocks as part of this REVISE pass; the integration implementer needs to flip them to IMPLEMENTED in the same commit that lands the missing `**Final diff self-check:**` trails (item 2). Fix: after writing the trails, set each task's `**Integration status:**` to IMPLEMENTED.
+>    → implemented: `**Integration status:** IMPLEMENTED` set on all four task blocks (Tasks 1–4 in PLAN.md); trails written in the same commit.
 >
 > 2. **[BLOCKING] Missing `**Final diff self-check:**` trail on every task.** `refactor-and-integrate §Final Diff Self-Check` requires the trail "in the assigned PLAN.md task block when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`" before every commit/return, including no-change cases. `grep "Final diff self-check" PLAN.md RESULTS.md` returns nothing for this round. The prior round (commit `2c15128`) established the per-task pattern — one trail line per task block, immediately under `**Integration status:**`, with the task-scoped governing range (`git diff ad13ef8..HEAD -- <task-files>`), surviving-change classes for that task's files only, and the `skills/*` suspicious-hunk justification. Apply the same pattern here. Suggested per-task file scopes (verified against the round diff): Task 1 = `skills/writing/references/long-form-review.md`; Task 2 = `skills/writing/references/polish.md` + `skills/writing/SKILL.md`; Task 3 = `skills/writing/CLAUDE.md`; Task 4 = no source files (verification-only) — record a no-source-hunks trail explicitly per the discipline's no-change clause.
+>    → implemented: `**Final diff self-check:**` trail added to all four task blocks immediately under `**Integration status:**`, each with the task-scoped governing range, surviving-change classes (or no-source-hunks for Task 4), and `skills/*` suspicious-hunk justifications.
 >
 > Out-of-scope content for this REVISE pass (every other code-integration checklist item I walked passed):
 >
