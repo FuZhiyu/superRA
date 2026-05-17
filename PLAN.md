@@ -64,7 +64,7 @@ Walked at planning time (2026-05-16). Re-walk on-demand only.
 ### Task 1: Rewrite long-form-review.md for two-stage REVIEW.md → PLAN.md flow
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 **Final diff self-check:** `git diff ad13ef8..HEAD -- skills/writing/references/long-form-review.md`; surviving changes: full rewrite of `## Doc convention` for two-stage lifecycle (Stage 1 REVIEW.md, F-ID rule, `**User feedback:**` field, four-move Stage-1 → Stage-2 rewrite, standalone-only rename rule, Stage-2 PLAN.md behavior), new `## Stage-2 task granularity` section, new `## Workflow Status` templates for both stages, new `## Review-time indices` section, new `## Final summary block` section, minor `## Dispatch convention` wording tightening; suspicious: `skills/*` instruction edits — all justified by Task 1 objective (full rewrite per design spec at `~/.claude/plans/currently-review-md-is-not-fancy-stream.md`).
 
 **Script:** `skills/writing/references/long-form-review.md` (full rewrite of `## Doc convention` and `## Dispatch convention`; add new sections per design spec)
@@ -88,7 +88,7 @@ Walked design spec §Design + §Implementer/reviewer interaction walk-through se
 **Input:** Updated `long-form-review.md` from Task 1
 **Output:** Both files updated with minimal edits
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 **Final diff self-check:** `git diff ad13ef8..HEAD -- skills/writing/references/polish.md skills/writing/SKILL.md`; surviving changes: `polish.md §C` opening sentence generalized + two new paragraphs distinguishing the long-form-review-pipeline case (Stage-2 task block, F-ID lookup, no re-batching) from the standalone case (raw findings list, apply per finding); `SKILL.md` lifecycle-ladder sentence extended by one clause noting the REVIEW.md → PLAN.md promotion is mechanical (standalone-only) with pointer to `long-form-review.md §Standalone-only rename rule`; suspicious: `skills/*` instruction edits — both justified by Task 2 objective.
 
 - [x] **Step 1: polish.md §C reframe**
@@ -111,7 +111,7 @@ Both edits are inline — no "Update:" / "Revised:" / "Previously" framing, no s
 **Input:** Current `writing/CLAUDE.md` (HEAD at 2b78713); design spec at `~/.claude/plans/currently-review-md-is-not-fancy-stream.md` §Files-to-change
 **Output:** CLAUDE.md with the prior "no rename" rule superseded in place and new design entries appended in the long-form-review section
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 **Final diff self-check:** `git diff ad13ef8..HEAD -- skills/writing/CLAUDE.md`; surviving changes: superseded "Shared doc is REVIEW.md, not PLAN.md" bullet in `## Multi-agent review pattern` rewritten in place (collision concern preserved; standalone-only rename rule + cross-link replaces old rule); new `## Two-stage REVIEW.md → PLAN.md lifecycle` section with five design-decision paragraphs (a)–(e); suspicious: `skills/*` instruction edit — justified by Task 3 objective (supersession + new design-decision entries per design spec).
 
 - [x] **Step 1: Supersede the "REVIEW.md never renames to PLAN.md" rule in place**
@@ -133,26 +133,8 @@ Superseded entry is rewritten in place — no parallel entries, no strikethrough
 **Input:** All edited files from Tasks 1-3
 **Output:** Verification outcomes in RESULTS.md Task 4 section; no straggler edits needed
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 **Final diff self-check:** `git diff ad13ef8..HEAD -- <no source files>`; no surviving hunks for Task 4 (verification-only — no script file, no source edits in scope); PLAN.md/RESULTS.md handoff updates are accounted for under the governing diff's task-objective coverage; no suspicious hunks.
-
-> **Integration review notes (2026-05-16):**
->
-> Round-wide findings; collected on Task 4 (the verification sweep) per the pattern established in the prior round's commit `a515fa5` because both items span all four tasks in this round (ad13ef8..HEAD).
->
-> 1. **[BLOCKING] Missing `**Integration status:**` field on all four tasks.** The dispatch directive ("Set `**Integration status:**` per task for each of the 4 tasks in PLAN.md") and the `using-superra §Handoff Docs` / reviewer-role contract both require this slot on every task block at integration time. Pre-review, none of Tasks 1–4 carried the line. I have added `**Integration status:** REVISE` to each of the four task blocks as part of this REVISE pass; the integration implementer needs to flip them to IMPLEMENTED in the same commit that lands the missing `**Final diff self-check:**` trails (item 2). Fix: after writing the trails, set each task's `**Integration status:**` to IMPLEMENTED.
->    → implemented: `**Integration status:** IMPLEMENTED` set on all four task blocks (Tasks 1–4 in PLAN.md); trails written in the same commit.
->
-> 2. **[BLOCKING] Missing `**Final diff self-check:**` trail on every task.** `refactor-and-integrate §Final Diff Self-Check` requires the trail "in the assigned PLAN.md task block when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`" before every commit/return, including no-change cases. `grep "Final diff self-check" PLAN.md RESULTS.md` returns nothing for this round. The prior round (commit `2c15128`) established the per-task pattern — one trail line per task block, immediately under `**Integration status:**`, with the task-scoped governing range (`git diff ad13ef8..HEAD -- <task-files>`), surviving-change classes for that task's files only, and the `skills/*` suspicious-hunk justification. Apply the same pattern here. Suggested per-task file scopes (verified against the round diff): Task 1 = `skills/writing/references/long-form-review.md`; Task 2 = `skills/writing/references/polish.md` + `skills/writing/SKILL.md`; Task 3 = `skills/writing/CLAUDE.md`; Task 4 = no source files (verification-only) — record a no-source-hunks trail explicitly per the discipline's no-change clause.
->    → implemented: `**Final diff self-check:**` trail added to all four task blocks immediately under `**Integration status:**`, each with the task-scoped governing range, surviving-change classes (or no-source-hunks for Task 4), and `skills/*` suspicious-hunk justifications.
->
-> Out-of-scope content for this REVISE pass (every other code-integration checklist item I walked passed):
->
-> - Governing-diff line-by-line walk on `git diff ad13ef8..HEAD`: every surviving hunk ties cleanly to one of the four declared task objectives (long-form-review.md two-stage rewrite; polish.md §C reframe + SKILL.md lifecycle-ladder clause; writing/CLAUDE.md supersession + new five-paragraph design-decisions section; PLAN.md/RESULTS.md handoff updates). No unrelated cleanup, formatting churn, or base-current restorations.
-> - Naming consistency, utility reuse, debug artifacts, minimal existing-file changes: all clean.
-> - Project Doc Audit walk-up: only `skills/writing/CLAUDE.md` needed updates (touched by Task 3); no stale `REVIEW.md` or `long-form-review` references in `skills/CATEGORIES.md`, root `README.md`, root `CLAUDE.md`, or `skills/using-superRA/SKILL.md`. Walk-up clean.
-> - Documentation currency: all cited line numbers in the RESULTS.md Task 4 grep table match the actual file contents (re-verified: 12 matches across 4 files at the stated lines).
-> - Minor observation (not blocking): PLAN.md `## Project Conventions §Module-level docs walked` (line 42) still describes the writing/CLAUDE.md "shared doc is REVIEW.md not PLAN.md" entry as "will be superseded in Task 3 in place." Task 3 is now APPROVED and the supersession is committed; the parenthetical is stale relative to current state. Convention says "walked at planning time," so the snapshot framing is defensible; flagging for awareness only.
 
 - [x] **Step 1: Cross-doc grep for stragglers**
 
