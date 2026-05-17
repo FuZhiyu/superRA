@@ -50,7 +50,7 @@
 
 **Verification outcomes (all PASS, no straggler edits required):**
 
-- **Step 1 — Cross-doc grep:** Ten `REVIEW.md` mentions found across `skills/writing/CLAUDE.md` (3), `skills/writing/references/long-form-review.md` (5), `skills/writing/references/polish.md` (1). No matches in `agents/`, `docs/`, `README.md`, `AGENTS.md`, `AGENT.md`, or root `CLAUDE.md`. All mentions consistent with the two-stage shape and standalone-only rename rule. No straggler found. PASS.
+- **Step 1 — Cross-doc grep:** Twelve `REVIEW.md` mentions found across four files: `skills/writing/SKILL.md` (1, line 40), `skills/writing/CLAUDE.md` (3, lines 48, 53, 122), `skills/writing/references/long-form-review.md` (7, lines 15, 26, 35, 45, 66, 73, 83), `skills/writing/references/polish.md` (1, line 25). No matches in `agents/`, `docs/`, `README.md`, `AGENTS.md`, `AGENT.md`, or root `CLAUDE.md`. The `SKILL.md:40` match is the lifecycle-ladder sentence naming the two-stage promotion and the standalone-only rename rule — consistent with the redesign. All twelve mentions consistent with the two-stage shape and standalone-only rename rule. No straggler found. PASS.
 
 - **Step 2 — DRY/Necessity walk on long-form-review.md:** All instruction lines pass Necessity (each shapes behavior an agent would not produce on its own). No anti-pattern violations (no wrapper instructions, no "here is what you will receive" descriptions, no default reminders, no restated Skill-Load Manifest). PASS.
 
