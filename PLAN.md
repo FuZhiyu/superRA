@@ -76,7 +76,7 @@ Walked design spec §Design + §Implementer/reviewer interaction walk-through se
 **Script:** `skills/writing/references/polish.md` (light edit to §C); `skills/writing/SKILL.md` (one-sentence clarification in §Project Conventions in the handoff doc / CLAUDE.md)
 **Input:** Updated `long-form-review.md` from Task 1
 **Output:** Both files updated with minimal edits
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 - [x] **Step 1: polish.md §C reframe**
 
