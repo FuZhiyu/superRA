@@ -87,14 +87,14 @@ The current `long-form-review.md` (read it as the authoritative source) specifie
 ### Task 2: Update `polish.md §C` to drop F-ID lookup
 
 **Depends on:** Task 1 (so the new Stage-2 task block shape is fixed before §C describes it)
-**Review status:**
+**Review status:** IMPLEMENTED
 
 The current §C says: "shape-C input is a Stage-2 task block in PLAN.md (post-rename from REVIEW.md). The task block names a pre-batched sweep ... and cites source findings by F-ID pointing into `## Findings`. ... Look up each cited F-ID in `## Findings` for the full finding text and its user-accepted verdict before editing."
 
 Rewrite to match the new design: the task block now carries findings inline under `**Findings absorbed:**`. The implementer reads the findings directly from the task block; no F-ID lookup is needed. The per-tier apply rules below the paragraph are unchanged.
 
-- [ ] **Step 1:** Edit `skills/writing/references/polish.md §C` to drop the F-ID lookup language. State that shape-C input is a Stage-2 task block whose `**Findings absorbed:**` subheading carries each accepted finding's body inline. Preserve the standalone-shape-C paragraph and the per-tier apply rules verbatim.
-- [ ] **Step 2:** Commit.
+- [x] **Step 1:** Edit `skills/writing/references/polish.md §C` to drop the F-ID lookup language. State that shape-C input is a Stage-2 task block whose `**Findings absorbed:**` subheading carries each accepted finding's body inline. Preserve the standalone-shape-C paragraph and the per-tier apply rules verbatim.
+- [x] **Step 2:** Commit.
 
 ### Task 3: Rewrite `writing/CLAUDE.md §Two-stage REVIEW.md → PLAN.md lifecycle`
 

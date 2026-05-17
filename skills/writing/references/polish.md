@@ -22,7 +22,7 @@ The request names a file, section, or paragraph and asks for polish — no in-fl
 
 The request hands over an accepted-findings scope and asks to apply it. The scope **is** the work — apply each accepted finding as a minimal edit; do not silently extend to nearby issues. If a finding is ambiguous or incorrect, raise it; do not silently reinterpret.
 
-**When polish rides the long-form-review pipeline**, shape-C input is a Stage-2 task block in PLAN.md (post-rename from REVIEW.md). The task block names a pre-batched sweep (e.g., "all typos", "all citation-format issues") and cites source findings by F-ID pointing into `## Findings`. Batching has already happened at Stage-2 task construction time — the implementer applies the batch the task block names, not re-batches inside the polish pass. Look up each cited F-ID in `## Findings` for the full finding text and its user-accepted verdict before editing.
+**When polish rides the long-form-review pipeline**, shape-C input is a Stage-2 task block in PLAN.md (post-rename from REVIEW.md). The task block names a pre-batched sweep (e.g., "all typos", "all citation-format issues") and carries each absorbed finding's body inline under a `**Findings absorbed:**` subheading (preserving the `consistency/<dim>.md`-format entry and the F-ID). Batching has already happened at Stage-2 task construction time — the implementer applies the batch the task block names, not re-batches inside the polish pass. Read the findings directly from the task block; no separate lookup is needed.
 
 **When polish is standalone** (a free-floating findings list, not a Stage-2 task block), the implementer reads the raw list and applies per finding.
 

@@ -18,7 +18,11 @@ Rewrote `## Doc convention` in `skills/writing/references/long-form-review.md` f
 
 ## Task 2: Update `polish.md §C` to drop F-ID lookup
 
-*(pending)*
+Edited the single "When polish rides the long-form-review pipeline" paragraph in `skills/writing/references/polish.md §C`. The paragraph now states that the Stage-2 task block carries each absorbed finding's body inline under a `**Findings absorbed:**` subheading (preserving the `consistency/<dim>.md`-format entry and the F-ID), and that the implementer reads findings directly from the task block — no separate `## Findings` lookup. The surrounding §C content is unchanged: shape-C definition sentence, standalone-shape-C paragraph, per-tier apply rules (`mechanical` / `conventional` / `authorial`), and the deferred-authorial note all stand verbatim.
+
+**DRY/Necessity pass:** the rewritten paragraph names a non-default location (the `**Findings absorbed:**` subheading) the implementer needs to find the findings in, and explicitly negates the prior lookup behavior the old wording established. The one-line echo of the absorbed-finding contents (dimension format + F-ID) avoids forcing implementers in shape C to load `long-form-review.md` just to know what is in that subheading.
+
+**Files touched:** `skills/writing/references/polish.md`.
 
 ## Task 3: Rewrite `writing/CLAUDE.md §Two-stage REVIEW.md → PLAN.md lifecycle`
 
