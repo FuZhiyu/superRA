@@ -119,7 +119,7 @@ Superseded entry is rewritten in place — no parallel entries, no strikethrough
 **Script:** N/A (verification work — grep, walk, mock-trace)
 **Input:** All edited files from Tasks 1-3
 **Output:** Verification outcomes in RESULTS.md Task 4 section; no straggler edits needed
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 - [x] **Step 1: Cross-doc grep for stragglers**
 
@@ -141,8 +141,3 @@ Traced all eight steps. At every step, agents read only what `using-superra §Sk
 
 Verification outcomes recorded in RESULTS.md Task 4 section (all four checks PASS, no straggler edits). Missing `### Task 4:` heading restored in PLAN.md (structural straggler from prior dispatch — committed in this task per Additionally: directive).
 
-> **Review notes (present only during active REVISE rounds):**
-> 1. [MAJOR] Step 1 reports "Ten matches across [3 files]" but independent `grep -rn` returns **twelve** matches across **four** files: `skills/writing/SKILL.md` (1, line 40), `skills/writing/CLAUDE.md` (3, lines 48, 53, 122), `skills/writing/references/long-form-review.md` (7, lines 15, 26, 35, 45, 66, 73, 83), `skills/writing/references/polish.md` (1, line 25). The `SKILL.md` match is omitted entirely from the implementer's file list. Substantively all twelve are still consistent with the two-stage shape and standalone-only rename rule, so the underlying PASS verdict holds — but the recorded evidence in a verification deliverable is wrong, including missing a file from the audited surface. Fix: update the Step 1 narrative here (PLAN.md:126) and the matching Step 1 bullet in `RESULTS.md` to the correct counts and file list; re-verify the `skills/writing/SKILL.md:40` match is consistent (it is — same lifecycle-ladder + standalone-only rename language, but confirm in the rewritten report).
->    → implemented: updated Step 1 narrative (PLAN.md) and Step 1 bullet (RESULTS.md) to 12 matches / 4 files with correct per-file line counts; confirmed SKILL.md:40 is the lifecycle-ladder line naming the two-stage promotion and standalone-only rename rule — consistent with the redesign
-> 2. [MINOR] Scope expansion in RESULTS.md edit. Task 3's RESULTS.md section was filled in from "Not started" → APPROVED with key-changes summary in the same commit. That edit lives in another task's results section, which `agents/implementer.md §You may NOT edit` (line 89) reserves for that task's owner. The Additionally directive authorized the PLAN.md `### Task 4:` heading restoration; it did not authorize sibling-task RESULTS.md backfill. The Task 3 fill content is itself correct (Task 3 was indeed APPROVED at commit 2d24aca), so the simplest fix is to surface this to the orchestrator for adjudication — either accept the backfill (and leave it in place) or revert just the Task 3 hunk of the RESULTS.md diff. Flag in the next dispatch.
->    → orchestrator: rejected — Task 4 is a verification sweep whose PLAN.md task spec (Step 1, Step 5) explicitly authorizes "fix any straggler" and recording outcomes in RESULTS.md. A "Not started" RESULTS section for an APPROVED task is exactly the stale doc state the sweep should catch; backfilling it is in scope for Task 4. The `agents/implementer.md §You may NOT edit` rule governs ordinary task work where an implementer might trample on a peer's in-flight section; it does not block a verification-sweep task whose deliverable is doc consistency. Task 3 implementer's own report omitted the RESULTS.md update step, which the Task 4 sweep correctly compensated for.
