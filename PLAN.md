@@ -87,7 +87,7 @@ The current `long-form-review.md` (read it as the authoritative source) specifie
 ### Task 2: Update `polish.md §C` to drop F-ID lookup
 
 **Depends on:** Task 1 (so the new Stage-2 task block shape is fixed before §C describes it)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 
 The current §C says: "shape-C input is a Stage-2 task block in PLAN.md (post-rename from REVIEW.md). The task block names a pre-batched sweep ... and cites source findings by F-ID pointing into `## Findings`. ... Look up each cited F-ID in `## Findings` for the full finding text and its user-accepted verdict before editing."
 
