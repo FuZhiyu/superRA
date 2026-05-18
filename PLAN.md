@@ -46,7 +46,7 @@ Walked 2026-05-16.
 - [x] Execution complete — every task APPROVED
 - [x] Drift tests created — N/A for skill-design work (auto-satisfied)
 - [x] Integrated — every task `Integration status: APPROVED`
-- [ ] Docs finalized — disposition logged
+- [x] Docs finalized — disposition logged
 - [ ] Finished
 
 ## Decisions
@@ -54,6 +54,10 @@ Walked 2026-05-16.
 > **User decision (2026-05-17):** Proceed with integration.
 > **Question asked:** Completion menu after Execution complete — proceed to integration / change plan / keep as-is / discard?
 > **Rationale:** *(none provided)*
+
+> **User decision (2026-05-17):** Consolidate + delete (matches prior round).
+> **Question asked:** PLAN.md + RESULTS.md disposition after Integrate closed?
+> **Rationale:** Round-2 design history already lives in `skills/writing/CLAUDE.md §Two-stage REVIEW.md → PLAN.md lifecycle` (Task 3) and §Multi-agent review pattern (Task 4). No matured RESULTS.md is needed; git history on this branch preserves PLAN.md and RESULTS.md.
 
 ---
 
