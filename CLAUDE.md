@@ -68,7 +68,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
 | Handoff-doc mechanics, templates, stale-content rules, User Decisions Log | `handoff-doc` |
-| Report formatting for figures, math, tables, and final-form markdown | `report-in-markdown` |
+| Markdown style guide rules — file-link citations plus figures, math, tables, and final-form markdown | `report-in-markdown` |
 | Harness-specific tool names and runtime differences | Adapter references under `skills/using-superRA/references/` |
 | Canonical role behavior | `agents/implementer.md` and `agents/reviewer.md` |
 
