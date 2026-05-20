@@ -30,7 +30,7 @@
 - [x] **Execution complete** — all 5 tasks `APPROVED`, `sync_codex_agents.py --check` returns clean (verified by Task 5 reviewer)
 - [ ] **Drift tests created** — n/a for skill-text edits (no numerical results to protect)
 - [x] **Integrated** — integration reviewer `APPROVED` after Sync
-- [ ] **Docs finalized** — RESULTS.md matured (likely minimal: this work *is* docs), project docs audited
+- [x] **Docs finalized** — RESULTS.md matured at `docs/plans/2026-05-20-markdown-style-guide-results.md`; project docs audited
 - [ ] **Finished** — branch landed locally or PR opened
 
 ---
