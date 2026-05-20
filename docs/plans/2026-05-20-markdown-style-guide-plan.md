@@ -31,7 +31,7 @@
 - [ ] **Drift tests created** — n/a for skill-text edits (no numerical results to protect)
 - [x] **Integrated** — integration reviewer `APPROVED` after Sync
 - [x] **Docs finalized** — RESULTS.md matured at `docs/plans/2026-05-20-markdown-style-guide-results.md`; project docs audited
-- [ ] **Finished** — branch landed locally or PR opened
+- [x] **Finished** — draft PR opened: https://github.com/FuZhiyu/superRA/pull/26
 
 ---
 
@@ -75,6 +75,10 @@ Walked at planning time (2026-04-27). Re-walk on-demand only.
 > **Convention applied (2026-05-20, no user prompt):** Move `PLAN.md` to `docs/plans/2026-05-20-markdown-style-guide-plan.md` beside the matured results record.
 > **Question asked:** The Document step required root `PLAN.md` disposition before Finish.
 > **Rationale:** This matches the established `docs/plans/<YYYY-MM-DD>-<slug>-{plan,results}.md` archive convention.
+
+> **Workflow result (2026-05-20):** Draft PR opened at https://github.com/FuZhiyu/superRA/pull/26.
+> **Question asked:** Finish action for the branch after documentation finalization.
+> **Rationale:** The user requested PR creation; the branch was pushed to `origin/markdown-style-guide` and opened against `main`.
 
 ---
 
