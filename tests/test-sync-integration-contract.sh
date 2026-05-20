@@ -291,6 +291,21 @@ assert_contains \
   "**Writing workflow:** Long-form review retrofit (PLAN-only; no RESULTS.md)"
 
 assert_absent \
+  "Planning workflow does not own writing PLAN-only retrofit marker" \
+  "Long-form review retrofit" \
+  "skills/planning-workflow/SKILL.md"
+
+assert_absent \
+  "Planning workflow does not own PLAN-only exception prose" \
+  "PLAN-only" \
+  "skills/planning-workflow/SKILL.md"
+
+assert_absent \
+  "Planning workflow does not own no-RESULTS exception prose" \
+  "no RESULTS.md" \
+  "skills/planning-workflow/SKILL.md"
+
+assert_absent \
   "Implementation workflow does not own writing PLAN-only retrofit" \
   "Long-form review retrofit" \
   "skills/implementation-workflow/SKILL.md"
