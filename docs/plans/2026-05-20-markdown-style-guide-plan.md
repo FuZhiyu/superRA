@@ -83,7 +83,7 @@ Walked at planning time (2026-04-27). Re-walk on-demand only.
 **Review status:** APPROVED
 **Integration status:** APPROVED
 
-**Final diff self-check:** `git diff 8c3db7db058539c5cde7e7ffdc360d8d936fe866..HEAD`; surviving-change classes are approved markdown-style-guide edits, sync context, and this Task 1 root contributor-doc ownership fix; suspicious hunk justified at [CLAUDE.md:71](CLAUDE.md#L71) by the accepted integration review item.
+**Final diff self-check:** `git diff 8c3db7db058539c5cde7e7ffdc360d8d936fe866..HEAD`; surviving-change classes are approved markdown-style-guide edits, sync context, and this Task 1 root contributor-doc ownership fix; suspicious hunk justified at [CLAUDE.md:71](../../CLAUDE.md#L71) by the accepted integration review item.
 
 **Script:** `skills/report-in-markdown/SKILL.md` (rewritten body), `skills/report-in-markdown/references/rich-content.md` (§File references extended)
 **Input:** Existing `SKILL.md` (~46 lines) and `rich-content.md` §File references (lines 88–97).

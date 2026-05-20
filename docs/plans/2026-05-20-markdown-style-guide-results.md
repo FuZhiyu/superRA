@@ -42,7 +42,7 @@ The branch was synced against `origin/main` at `8c3db7db058539c5cde7e7ffdc360d8d
 
 Integration review found one project-doc issue: root contributor guidance still described `report-in-markdown` only as report formatting. The ownership row in [../../CLAUDE.md](../../CLAUDE.md) now assigns `report-in-markdown` to markdown style guide rules, including file-link citations and report formatting.
 
-All five task blocks in [../../PLAN.md](../../PLAN.md) reached `Integration status: APPROVED`. Temporary Sync Map and task-local Sync impact fields were removed when Integrate closed.
+All five task blocks in [2026-05-20-markdown-style-guide-plan.md](./2026-05-20-markdown-style-guide-plan.md) reached `Integration status: APPROVED`. Temporary Sync Map and task-local Sync impact fields were removed when Integrate closed.
 
 ## Validation
 
