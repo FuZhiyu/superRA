@@ -93,12 +93,8 @@ Walked at planning time (2026-04-27). Re-walk on-demand only.
 ### Task 1: Re-scope `report-in-markdown` skill body and extend rich-content reference
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** IMPLEMENTED
+**Integration status:** APPROVED
 **Sync impact:** Cluster `M1` preserves incoming theory-modeling/project-doc updates while retaining this task's `report-in-markdown` scope change. Source: `PLAN.md ## Sync Map`.
-
-> **Integration review notes:**
-> 1. [MAJOR] Root contributor guidance still assigns `report-in-markdown` only to "Report formatting for figures, math, tables, and final-form markdown," but this task changes the skill into the always-loaded markdown style guide and file-link citation owner. Update the ownership table so project guidance matches the new skill boundary. ([CLAUDE.md:71](CLAUDE.md#L71))
->    → implemented: updated the ownership row to cover markdown style guide rules and file-link citations. ([CLAUDE.md:71](CLAUDE.md#L71))
 
 **Final diff self-check:** `git diff 8c3db7db058539c5cde7e7ffdc360d8d936fe866..HEAD`; surviving-change classes are approved markdown-style-guide edits, sync context, and this Task 1 root contributor-doc ownership fix; suspicious hunk justified at [CLAUDE.md:71](CLAUDE.md#L71) by the accepted integration review item.
 
@@ -174,7 +170,7 @@ Re-read both files end-to-end. Confirm:
 ### Task 2: Make `report-in-markdown` always-loaded in the Skill-Load Manifest
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED
 **Sync impact:** Cluster `M1` synthesized incoming theory-modeling Skill Inventory / domain-add-on manifest changes with this task's always-loaded `report-in-markdown` manifest wording. Source: `PLAN.md ## Sync Map`.
 
 **Script:** `skills/using-superRA/SKILL.md` (§Skill-Load Manifest)
@@ -201,7 +197,7 @@ Confirmed:
 ### Task 3: Update canonical examples and conditional-load text in agent files and handoff-doc references
 **Depends on:** Task 1 (must know the new citation form), Task 2 (must know the new always-loaded state)
 **Review status:** APPROVED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED
 **Sync impact:** Cluster `M1` synthesized incoming role-spec and plan-anatomy theory-modeling guidance with this task's markdown-link citation examples and reminders. Source: `PLAN.md ## Sync Map`.
 
 > **User decision (2026-04-27):** Add a one-line reminder in `agents/implementer.md` and `agents/reviewer.md` pointing at `report-in-markdown` for the file-link citation rule, even though the manifest update in Task 2 makes it always-loaded. Concise — a single line near the existing handoff/etiquette section in each file is enough.
@@ -262,7 +258,7 @@ Update PLAN.md, RESULTS.md Task 3, commit. Note: do NOT regenerate Codex artifac
 ### Task 4: Sweep for stale backtick-path citation samples across the repo
 **Depends on:** Task 1, Task 3
 **Review status:** APPROVED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED
 
 **Script:** repo-wide grep across `skills/`, `agents/`, plus a manual review of any hits.
 **Input:** Pattern: `(\`[A-Za-z0-9_/.-]+\.(py|md|sh|jl|R)[:#][0-9]` and similar — any backtick-wrapped path with a `:line` or `#L` suffix that should be a markdown link.
@@ -296,7 +292,7 @@ Re-ran the grep after rewrites; only the intentional anti-pattern example in `sk
 ### Task 5: Regenerate Codex named-agent artifacts and verify
 **Depends on:** Task 3, Task 4
 **Review status:** APPROVED
-**Integration status:** *(set during integration)*
+**Integration status:** APPROVED
 **Sync impact:** Cluster `M1` affected generated Codex named-agent and direct-mode role files; generated artifacts remain current after the merge. Source: `PLAN.md ## Sync Map`.
 
 **Script:** `python skills/codex-superra-setup/scripts/sync_codex_agents.py`
