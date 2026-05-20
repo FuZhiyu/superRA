@@ -37,7 +37,7 @@ The line-level marker families and replacement patterns that operationalize this
 
 A paper's writing-side conventions are paper-specific choices among defensible alternatives — choices a fresh agent would get wrong if not written down. Recording them once prevents re-inference and silent re-decision every session.
 
-**Where they live (lifecycle ladder, ordered by permanence).** `REVIEW.md` (born for one review, dies at closeout) → `PLAN.md` (analysis-scoped) → `CLAUDE.md` (project-permanent); in the long-form-review pipeline, the REVIEW.md → PLAN.md promotion is mechanical — a literal `git mv REVIEW.md PLAN.md` at the Stage-2 gate (standalone-only; see `long-form-review.md §Standalone-only rename rule`). Writing-side conventions live in the `## Project Conventions` header of whichever handoff doc is in play for the current task; when no handoff doc is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability — same pattern as theory-modeling's per-task ledger → `PLAN.md` Notation Conventions promotion (`theory-modeling/SKILL.md §Documentation and handoff`).
+**Where they live (lifecycle ladder, ordered by permanence).** `REVIEW.md` (born for one review, dies at closeout) → `PLAN.md` (analysis-scoped) → `CLAUDE.md` (project-permanent); in the long-form-review pipeline, standalone reviews become `PLAN.md` at the Stage 2 gate, while reviews riding an existing workflow rewrite that workflow's `PLAN.md` in place (see `long-form-review.md §Two-stage lifecycle`). Writing-side conventions live in the `## Project Conventions` header of whichever handoff doc is in play for the current task; when no handoff doc is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability — same pattern as theory-modeling's per-task ledger → `PLAN.md` Notation Conventions promotion (`theory-modeling/SKILL.md §Documentation and handoff`).
 
 **What writing contributes (rows alongside data and modeling contributions).**
 
@@ -53,7 +53,7 @@ A paper's writing-side conventions are paper-specific choices among defensible a
 
 **Excluded:** math notation (symbol → meaning, equation numbering) is owned by `theory-modeling`'s Notation Conventions table — a sibling subsection inside `## Project Conventions`; section/caption capitalization and page-layout macros are venue / template territory.
 
-**Soft trigger.** On the first long-form review or first draft pass against a paper with no recorded writing-side conventions, inventory them and record them in the relevant handoff doc / CLAUDE.md before substantive editing. Routine polish and single-dimension review do not auto-scan.
+**Soft trigger.** On the first long-form review or first draft pass against a paper with no recorded writing-side conventions, inventory them and record them in the relevant handoff doc / CLAUDE.md before substantive editing. Routine polish and single-lane review do not auto-scan.
 
 **Scanning is unspecified.** Agents inventory using the detection language in `references/consistency/*.md` and `references/style.md`; there is no separate scan procedure.
 
@@ -79,10 +79,10 @@ Loading the listed reference is the authority grant — if `structure.md` is not
 
 | File | Load when |
 |---|---|
-| `references/style.md` | Sentence- or paragraph-level edits (every Polish, every Draft self-check). |
-| `references/structure.md` | Drafting a section, or polish that authorizes restructuring. |
-| `references/consistency/*.md` (8 dimensions: terminology, notation, cross-references, citations, numerical, math, argument-logic, code-paper) | Review or polish targets that one dimension. Multi-dimension reviews dispatch one reviewer per file in parallel. |
-| `references/long-form-review.md` | Multi-dimensional review (N > 1 consistency dimensions), `deep` thoroughness, or full-paper / pre-submission scope. |
+| `references/style.md` | Sentence- or paragraph-level edits; language/style review; every Polish and Draft self-check. |
+| `references/structure.md` | Structure review, drafting a section, or polish that authorizes restructuring. |
+| `references/consistency/*.md` (8 dimensions: terminology, notation, cross-references, citations, numerical, math, argument-logic, code-paper) | Review or polish targets that consistency dimension. |
+| `references/long-form-review.md` | Multi-lane review (style/language, structure, or more than one consistency dimension), `deep` thoroughness, or full-paper / pre-submission scope. |
 | `references/refactor-and-compile.md` | Find-replace across the document, build/compile any time edits are made. |
 | `references/integration.md` | The writing task is riding `integration-workflow`. |
 

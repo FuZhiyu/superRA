@@ -4,8 +4,8 @@
 
 ## Workflow
 
-1. **Confirm scope.** Which file(s), which sections, which dimensions. A one-sentence scope from the requester is enough; if the request is ambiguous between (e.g.) "review for clarity" and "review for consistency", ask before reading.
-2. **Load the dimension files that match the scope** from `consistency/*.md`. For a clarity / structure review, load `style.md` and/or `structure.md` instead.
+1. **Confirm scope.** Which file(s), which sections, which review lanes. A one-sentence scope from the requester is enough; if the request is ambiguous between (e.g.) "review for clarity" and "review for consistency", ask before reading.
+2. **Load the review-lane files that match the scope**: `style.md` for language/style, `structure.md` for structure, and the relevant `consistency/*.md` files for consistency dimensions.
 3. **Read the target end-to-end before classifying findings.** A finding's severity often depends on whether the issue recurs or is local.
 4. **Classify each finding** into one of: **style** (sentence- or paragraph-level), **structure** (section ordering, missing topic sentence, buried governing idea), **consistency** (one of the eight dimensions — name it), or **argument** (the logic doesn't hold; a claim isn't supported; an unstated assumption is load-bearing). Argument findings are the highest-leverage and the easiest to miss — read for them deliberately.
 5. **Report.** Per finding: file + line, classification, one-line description, recommendation. Group by classification; within a class, order by severity if obvious, otherwise by file order.
@@ -25,14 +25,14 @@ The tier replaces the earlier `Auto-fixable: Yes / No` flag. The prior tier name
 ## Thoroughness
 
 - **Quick** — single reviewer, one pass. Default for short paragraph- or section-scope reviews.
-- **Standard** — one reviewer per dimension in parallel (per §Multi-dimensional consistency reviews). Default for full-section / multi-dim scopes.
+- **Standard** — one reviewer per review lane in parallel (per §Multi-lane reviews). Default for full-section / multi-lane scopes.
 - **Deep** — for pre-submission / R&R rounds. Loads `long-form-review.md`, which owns the multi-perspective dispatch rule.
 
 Infer thoroughness from scope; ask via `AskUserQuestion` only when ambiguous.
 
-## Multi-dimensional consistency reviews
+## Multi-lane reviews
 
-When the scope spans more than one consistency dimension (e.g., "check citations and cross-references and terminology"), dispatch **one reviewer per dimension in parallel** — each loaded with only its one `consistency/*.md` file. One generalist reviewer loaded with all eight produces shallower findings than N focused reviewers; the parallel pattern is also faster. When N > 1, load `long-form-review.md` for the shared review-doc protocol.
+When the scope spans more than one lane (language/style, structure, or any consistency dimension), dispatch **one reviewer per lane in parallel**. Each reviewer loads only the lane file(s) it needs: `style.md`, `structure.md`, or one `consistency/*.md` file. One generalist reviewer loaded with every lane produces shallower findings than focused reviewers; the parallel pattern is also faster. When N > 1, load `long-form-review.md` for the shared review-doc protocol.
 
 ## Review-as-planning
 
