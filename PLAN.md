@@ -20,7 +20,7 @@
 
 - [x] **Plan approved** — retroactive plan records the already-implemented user direction.
 - [x] **Execution complete** — Task 1 approved in review commit `e94bf1f`; verification passed.
-- [ ] **Drift tests created** — N/A for this skill-instruction edit unless integration later chooses a protection mechanism.
+- [x] **Drift tests created** — protected by contract/harness checks for skill behavior; no separate RESULTS.md exists for this retrofit.
 - [ ] **Integrated** — pending integration review if this branch proceeds to integration closeout.
 - [ ] **Docs finalized** — pending branch disposition.
 - [ ] **Finished** — pending final branch action.
@@ -46,6 +46,10 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
 > **User decision (2026-05-20):** Use PLAN.md only for this retroactive review; no RESULTS.md.
 > **Question asked:** How should the missing durable review surface be handled after the ad-hoc branch review?
 > **Rationale (if given):** The review finding can state there is no RESULTS.md; the serious fix is adding a writing planning reference and making long-form review interact with PLAN.md.
+
+> **User decision (2026-05-20):** Integrate against `origin/main`.
+> **Question asked:** Which base should the current branch be reviewed and integrated against?
+> **Rationale (if given):** The user requested review of the current branch against main.
 
 ---
 
@@ -79,3 +83,9 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
 - [x] **Step 5: Verify contract**
 
   Ran `bash tests/test-sync-integration-contract.sh`, `bash tests/check-harness-compatibility.sh`, and `git diff --check`; all passed before review dispatch.
+
+**Protection:** `bash tests/test-sync-integration-contract.sh`, `bash tests/check-harness-compatibility.sh`, and `git diff --check origin/main..HEAD` passed on 2026-05-20. These checks protect the writing retrofit behavior and generated-artifact contract for this skill-instruction branch.
+
+**Sync:** No-op against `origin/main`; `BASE_HEAD_SHA=8c3db7db058539c5cde7e7ffdc360d8d936fe866`, `PRE_SYNC_BASE_SHA=8c3db7db058539c5cde7e7ffdc360d8d936fe866`, and `origin/main` is already an ancestor of `HEAD`.
+
+**Final diff self-check:** `git diff origin/main..HEAD`; surviving-change classes are the approved writing-skill branch, writing reference docs, planning/using/integration workflow routing for the writing vertical, generated/packaging surfaces, and contract tests. Suspicious hunks are justified as skill-authoring behavior under the approved Task 1 objective plus the pre-existing branch objective to add the writing vertical.
