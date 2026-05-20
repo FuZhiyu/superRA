@@ -93,11 +93,14 @@ Walked at planning time (2026-04-27). Re-walk on-demand only.
 ### Task 1: Re-scope `report-in-markdown` skill body and extend rich-content reference
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** REVISE
+**Integration status:** IMPLEMENTED
 **Sync impact:** Cluster `M1` preserves incoming theory-modeling/project-doc updates while retaining this task's `report-in-markdown` scope change. Source: `PLAN.md ## Sync Map`.
 
 > **Integration review notes:**
 > 1. [MAJOR] Root contributor guidance still assigns `report-in-markdown` only to "Report formatting for figures, math, tables, and final-form markdown," but this task changes the skill into the always-loaded markdown style guide and file-link citation owner. Update the ownership table so project guidance matches the new skill boundary. ([CLAUDE.md:71](CLAUDE.md#L71))
+>    → implemented: updated the ownership row to cover markdown style guide rules and file-link citations. ([CLAUDE.md:71](CLAUDE.md#L71))
+
+**Final diff self-check:** `git diff 8c3db7db058539c5cde7e7ffdc360d8d936fe866..HEAD`; surviving-change classes are approved markdown-style-guide edits, sync context, and this Task 1 root contributor-doc ownership fix; suspicious hunk justified at [CLAUDE.md:71](CLAUDE.md#L71) by the accepted integration review item.
 
 **Script:** `skills/report-in-markdown/SKILL.md` (rewritten body), `skills/report-in-markdown/references/rich-content.md` (§File references extended)
 **Input:** Existing `SKILL.md` (~46 lines) and `rich-content.md` §File references (lines 88–97).
