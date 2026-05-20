@@ -47,7 +47,7 @@ Then check:
 - Are outputs saved where specified?
 
 **Reproducibility:**
-- Is the script in notebook-compatible format?
+- If the task uses scripts, notebooks, or rendered notes, do they follow the domain/project format convention?
 - Can someone re-run this and get the same results?
 - Are file paths correct and relative?
 
@@ -155,7 +155,7 @@ Report:
 - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
 - **Summary:** 1-2 sentences on what you implemented. Point at PLAN.md for step-level detail.
 - **Key findings:** Headline numbers or surprises only. Point at RESULTS.md Task N section for tables, figures, and full context.
-- **Concerns (if any):** Data quality issues, methodology questions, unexpected results. Bullet points.
+- **Concerns (if any):** Data quality issues, modeling/verification concerns, methodology questions, unexpected results. Bullet points.
 - **Doc edits (what changed since the previous dispatch):** List each file and the specific sections/fields you modified, describing the change. Example: `PLAN.md — Task 3: rewrote Step 2 (merge approach changed after data inspection), marked Steps 1-3 [x], set Review status: IMPLEMENTED, annotated review items 1 and 2 with → implemented markers. RESULTS.md — Task 3 section replaced with new findings and 2 figures.` Say "none" if you touched neither file.
 - **Worktree return (path B only):** branch name (`<current-branch>-agent/parallel/<slug>`) and HEAD SHA. Omit this field entirely on path A.
 
@@ -164,12 +164,12 @@ If the orchestrator needs more than this, they will read the docs directly.
 ## Escalation
 
 **STOP and report with BLOCKED or NEEDS_CONTEXT when:**
-- Data doesn't match expectations from the plan
-- Merge produces unexpected row count changes
-- Variables have implausible magnitudes
-- You need context about upstream data processing
-- You're unsure whether a data decision is correct
-- Data quality is too poor to proceed
+- Inputs, assumptions, or verification results don't match expectations from the plan
+- A merge, filter, derivation step, or solver output produces an unexpected scope or logic change
+- Variables, parameters, or residuals have implausible magnitudes
+- You need context about upstream processing, notation, or modeling choices
+- You're unsure whether a domain decision is correct
+- Input quality or model consistency is too poor to proceed
 - Task requires methodology decisions (the researcher decides)
 
 **Ask for clarification rather than guessing.**

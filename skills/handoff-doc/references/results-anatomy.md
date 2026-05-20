@@ -65,10 +65,18 @@ During execution, the implementer replaces its task's stub with the per-task sec
 ### Notes
 - [any caveat, data quirk, or decision the reader needs to interpret the results]
 
+### Notation & Assumptions Ledger
+*(theory-modeling tasks only — required by `theory-modeling/SKILL.md` §Documentation and handoff. Tasks introducing nothing record "None.")*
+
+- **`<symbol>`** — *meaning:* [plain English]; *earns its place:* [necessity rationale + what distinguishes it from the nearest existing symbol]; *near-duplicates considered:* [`<other>` rejected because ...] | *or:* —
+- **Assumption: [short label]** — *interpretation:* [plain English]; *earns its place:* [necessity rationale]; *near-duplicates considered:* [...] | *or:* —
+
 > **⚠️ Reviewer caveat (implementation):** [only present if the implementation reviewer left one; replaced on re-review; removed when APPROVED]
 ```
 
-Omit subsections that do not apply. Each task section reads as a single current-state summary after every update.
+Omit subsections that do not apply (other than the Notation & Assumptions Ledger for theory-modeling tasks, which is mandatory and records "None" when empty). Each task section reads as a single current-state summary after every update.
+
+The semantics of "earns its place" — the necessity + non-duplication two-test gate — and the user-gated promotion of ledger entries into `PLAN.md`'s Notation Conventions table are owned by `theory-modeling/SKILL.md` §Objects & Notation and §Documentation and handoff. This template defines the slot, not the gate.
 
 ## Figure embedding (Stage 1)
 

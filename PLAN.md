@@ -35,6 +35,30 @@
 
 ---
 
+## Sync Map
+
+**Base branch:** `origin/main`
+**Pre-sync merge base:** `886fda8b6a7862a0a4af8ec7d30fd53ffed6fea3`
+**Synced base head:** `8c3db7db058539c5cde7e7ffdc360d8d936fe866`
+**Incoming range:** `886fda8b6a7862a0a4af8ec7d30fd53ffed6fea3..8c3db7db058539c5cde7e7ffdc360d8d936fe866`
+**Sync commits:** pending merge commit
+**Sync review status:** IMPLEMENTED
+
+### Branch Summary
+
+**Incoming intent:** `origin/main` adds the theory-modeling vertical, updates plugin/package metadata for release 0.1.3, refreshes role specs and generated Codex artifacts, and tightens several workflow / handoff references around theory-modeling integration and direct-mode behavior.
+**Resolution thesis:** Preserve all incoming theory-modeling and release work while retaining this branch's markdown-link citation discipline. Overlapping role-spec, manifest, README/CATEGORIES, handoff-doc, and generated-agent files synthesize both intents; generated artifacts remain generated and checked with `sync_codex_agents.py --scope project --check`.
+
+### Sync Clusters
+
+> **Sync cluster `M1` (2026-05-20):** commits `886fda8..8c3db7d`; paths `README.md`, `skills/CATEGORIES.md`, `skills/using-superRA/SKILL.md`, `agents/*.md`, `skills/handoff-doc/references/plan-anatomy.md`, `skills/theory-modeling/references/integration.md`, `.codex/agents/*.toml`, `skills/using-superRA/references/direct-mode-*.md`.
+> **Incoming intent:** Add and surface the theory-modeling vertical, including integration-stage reference guidance, role-spec updates, and regenerated Codex/direct-mode artifacts.
+> **Sync resolution:** Synthesized incoming theory-modeling guidance with this branch's always-loaded `report-in-markdown` and markdown-link citation rule; converted incoming theory-modeling file-line citations to markdown links; preserved incoming generated-artifact updates and confirmed regenerated files are current.
+> **Integration context:** Re-run integration review against `8c3db7d..HEAD`; the pre-sync Task 1 `REVISE` finding on `CLAUDE.md` still needs an Integrate fix.
+> **User decision:** 2026-05-20 decision above: sync against `origin/main`.
+
+---
+
 ## Project Conventions
 
 Walked at planning time (2026-04-27). Re-walk on-demand only.
@@ -70,6 +94,7 @@ Walked at planning time (2026-04-27). Re-walk on-demand only.
 **Depends on:** *(none)*
 **Review status:** APPROVED
 **Integration status:** REVISE
+**Sync impact:** Cluster `M1` preserves incoming theory-modeling/project-doc updates while retaining this task's `report-in-markdown` scope change. Source: `PLAN.md ## Sync Map`.
 
 > **Integration review notes:**
 > 1. [MAJOR] Root contributor guidance still assigns `report-in-markdown` only to "Report formatting for figures, math, tables, and final-form markdown," but this task changes the skill into the always-loaded markdown style guide and file-link citation owner. Update the ownership table so project guidance matches the new skill boundary. ([CLAUDE.md:71](CLAUDE.md#L71))
@@ -147,6 +172,7 @@ Re-read both files end-to-end. Confirm:
 **Depends on:** *(none)*
 **Review status:** APPROVED
 **Integration status:** *(set during integration)*
+**Sync impact:** Cluster `M1` synthesized incoming theory-modeling Skill Inventory / domain-add-on manifest changes with this task's always-loaded `report-in-markdown` manifest wording. Source: `PLAN.md ## Sync Map`.
 
 **Script:** `skills/using-superRA/SKILL.md` (§Skill-Load Manifest)
 **Input:** Current manifest §Generic table (lines 79–89), with `report-in-markdown` only at `Stage: documentation`.
@@ -173,6 +199,7 @@ Confirmed:
 **Depends on:** Task 1 (must know the new citation form), Task 2 (must know the new always-loaded state)
 **Review status:** APPROVED
 **Integration status:** *(set during integration)*
+**Sync impact:** Cluster `M1` synthesized incoming role-spec and plan-anatomy theory-modeling guidance with this task's markdown-link citation examples and reminders. Source: `PLAN.md ## Sync Map`.
 
 > **User decision (2026-04-27):** Add a one-line reminder in `agents/implementer.md` and `agents/reviewer.md` pointing at `report-in-markdown` for the file-link citation rule, even though the manifest update in Task 2 makes it always-loaded. Concise — a single line near the existing handoff/etiquette section in each file is enough.
 > **Question asked:** During Task 1 REVISE round, the user asked whether to add a "highlight" sentence in the agent bodies that points at `report-in-markdown` when the agent is editing PLAN.md / RESULTS.md.
@@ -267,6 +294,7 @@ Re-ran the grep after rewrites; only the intentional anti-pattern example in `sk
 **Depends on:** Task 3, Task 4
 **Review status:** APPROVED
 **Integration status:** *(set during integration)*
+**Sync impact:** Cluster `M1` affected generated Codex named-agent and direct-mode role files; generated artifacts remain current after the merge. Source: `PLAN.md ## Sync Map`.
 
 **Script:** `python skills/codex-superra-setup/scripts/sync_codex_agents.py`
 **Input:** Updated `agents/implementer.md` and `agents/reviewer.md`.

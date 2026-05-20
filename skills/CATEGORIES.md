@@ -6,7 +6,7 @@ For the runtime-facing master map (universal principles, skill-discovery rules, 
 
 ## Workflow — domain-agnostic choreography
 
-Own the procedural shape of each phase: what agent to dispatch, in what sequence, with what handoff rules. Every workflow skill is domain-neutral — when a task is data analysis (the currently-implemented vertical), the workflow skill instructs the agent to load the matching domain skill. Adding a new vertical means adding a domain skill, not forking these.
+Own the procedural shape of each phase: what agent to dispatch, in what sequence, with what handoff rules. Every workflow skill is domain-neutral — when a task matches an implemented vertical such as data analysis or theory/modeling, the workflow skill instructs the agent to load the matching domain skill. Adding a new vertical means adding a domain skill, not forking these.
 
 | Skill | Phase | Role |
 |---|---|---|
@@ -17,15 +17,15 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 
 ## Domain — vertical-specific discipline
 
-Carry the domain-specific knowledge that workflow skills invoke when a task touches that domain. Organized by reference files split by stage so the right chunk loads at the right phase. Today's only vertical is data analysis; the architecture is designed to grow.
+Carry the domain-specific knowledge that workflow skills invoke when a task touches that domain. Organized by reference files split by stage so the right chunk loads at the right phase. The architecture is designed to grow by adding more verticals without forking the workflow skills.
 
 | Skill | Vertical | Flagship discipline |
 |---|---|---|
 | `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), three concurrent disciplines (describe-analyze-validate), diagnostics-for-validity philosophy, pitfall catalogs, common rationalizations. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `data-robustness-checklist.md`, `notebook-format.md` (+ `jupytext-guide.md` and `julia-quarto-guide.md` companions). |
+| `theory-modeling` | Theory / modeling | Four-gate intuition/interpretability discipline (Objects & Notation, Assumptions, Derivations, Verification & Rendering) at creation time, plus task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline) at integration time. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `objective-first.md`, `audience-discipline-modeling.md`, `audience-discipline-writing.md`. |
 
 ### Future verticals (roadmap — not yet implemented)
 
-- **Theory / modeling** — derivation discipline, notation consistency, proof checks
 - **Literature review** — citation integrity, claim-evidence mapping
 - **Simulation** — seed discipline, sensitivity to parameter grids, stochastic reproducibility
 - **Writing / paper drafting** — figure/table consistency, cross-reference integrity, narrative coherence
