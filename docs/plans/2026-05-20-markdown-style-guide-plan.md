@@ -68,6 +68,14 @@ Walked at planning time (2026-04-27). Re-walk on-demand only.
 > **Question asked:** The Document step needed a permanent `RESULTS.md` location; existing archived workflow records in this repo use `docs/plans/<YYYY-MM-DD>-<slug>-results.md`.
 > **Rationale:** This branch changes superRA workflow / skill documentation rather than analysis code co-located elsewhere, and `docs/plans/` is the established archive for completed superRA refactor handoff records.
 
+> **User decision (2026-05-20):** Create a PR for this branch.
+> **Question asked:** After Integrate and Document completed, the user asked to create a PR.
+> **Rationale:** Publish this integrated branch for review against `main`.
+
+> **Convention applied (2026-05-20, no user prompt):** Move `PLAN.md` to `docs/plans/2026-05-20-markdown-style-guide-plan.md` beside the matured results record.
+> **Question asked:** The Document step required root `PLAN.md` disposition before Finish.
+> **Rationale:** This matches the established `docs/plans/<YYYY-MM-DD>-<slug>-{plan,results}.md` archive convention.
+
 ---
 
 ### Task 1: Re-scope `report-in-markdown` skill body and extend rich-content reference
