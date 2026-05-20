@@ -1,12 +1,12 @@
 ---
 name: report-in-markdown
-description: Markdown style guide for any agent writing PLAN.md, RESULTS.md, status reports, or standalone markdown reports. Carries the always-applicable file-link citation rule plus a load map pointing to references for figures, LaTeX math, tables, and Stage 2 RESULTS.md final-form discipline.
+description: Markdown style guide for agents writing PLAN.md, RESULTS.md, status reports, or standalone markdown reports, with optional references for figures, LaTeX math, and tables.
 user-invocable: true
 ---
 
 # Report in Markdown
 
-The markdown style guide for any agent writing markdown. Always-applicable rules below; deeper format discipline (figures, LaTeX math, tables, Stage 2 final-form) lives in references and loads on demand per the load map.
+The markdown style guide for any agent writing markdown. Use the rule below for source-file citations; load references only when the output needs figures, LaTeX math, tables, or final-form `RESULTS.md` guidance.
 
 ## File-reference rule
 
@@ -14,11 +14,11 @@ Cite source files as **markdown links with line anchors**, not backtick-wrapped 
 
 | Use case | Form |
 |---|---|
-| Single line | `[file.py:42](file.py#L42)` |
-| Line range | `[file.py:40-50](file.py#L40-L50)` |
-| Whole file | `[file.py](file.py)` |
+| Single line | [file.py:42](file.py#L42) |
+| Line range | [file.py:40-50](file.py#L40-L50) |
+| Whole file | [file.py](file.py) |
 
-Resolve paths **relative to the markdown file's directory** (use `../` as needed). For files at the worktree root, the relative path equals the project-root path. Wrong/correct contrast and edge cases: `references/rich-content.md` §File references.
+Resolve paths **relative to the markdown file's directory** (use `../` as needed). For files at the worktree root, the relative path equals the project-root path.
 
 ## Load map
 
@@ -26,7 +26,7 @@ Resolve paths **relative to the markdown file's directory** (use `../` as needed
 |---|---|
 | Implementer / reviewer writing routine task-block citations only | nothing beyond this file |
 | Implementer writing a `RESULTS.md` task section with figures / math / tables | `rich-content.md` |
-| `integration-workflow` Document doc-writer subagent (maturing `RESULTS.md`) | `baseline-io.md` + `rich-content.md` + `final-form.md` |
+| `integration-workflow` Document doc-writer subagent | `baseline-io.md` + `rich-content.md` + `final-form.md` |
 | `integration-workflow` Document doc-reviewer subagent | `final-form.md` |
 | Standalone markdown report (any context) | `baseline-io.md` + `rich-content.md` |
 
@@ -35,5 +35,5 @@ The `attachments/` directory is a caller parameter; defaults and fallbacks are i
 ## References
 
 - `references/baseline-io.md` — frontmatter spec, filename convention, output-path resolution. Permanent artifacts only.
-- `references/rich-content.md` — figure handling (PDF→PNG, relative-path embedding), LaTeX math, markdown tables, full file-reference discipline.
-- `references/final-form.md` — Stage 2 `RESULTS.md` consolidation: fact-check checklist, task-indexed → reader-facing restructure, figure materialization, relocation.
+- `references/rich-content.md` — figure handling (PDF→PNG, relative-path embedding), LaTeX math, markdown tables.
+- `references/final-form.md` — final `RESULTS.md` consolidation: fact-check checklist, task-indexed → reader-facing restructure, figure materialization, relocation.
