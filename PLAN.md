@@ -19,7 +19,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — retroactive plan records the already-implemented user direction.
-- [ ] **Execution complete** — pending reviewer approval.
+- [x] **Execution complete** — Task 1 approved in review commit `e94bf1f`; verification passed.
 - [ ] **Drift tests created** — N/A for this skill-instruction edit unless integration later chooses a protection mechanism.
 - [ ] **Integrated** — pending integration review if this branch proceeds to integration closeout.
 - [ ] **Docs finalized** — pending branch disposition.
