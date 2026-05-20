@@ -56,7 +56,7 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
 ### Task 1: Writing Planning Reference and PLAN-Only Long-Form Review
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(unset)*
+**Integration status:** APPROVED
 
 **Files:** `skills/writing/references/planning.md`, `skills/writing/references/long-form-review.md`, `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`, `skills/writing/references/polish.md`, `skills/planning-workflow/SKILL.md`, `skills/CATEGORIES.md`, `tests/test-sync-integration-contract.sh`
 
