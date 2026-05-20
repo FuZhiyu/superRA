@@ -60,6 +60,10 @@ Walked at planning time (2026-04-27). Re-walk on-demand only.
 > **Question asked:** Which approach for teaching agents the markdown file-link format — examples-only, pointer + examples, examples + tiny rule line in agent bodies, slim always-loaded skill, or `using-superra` addition?
 > **Rationale:** Single source of truth; every agent writes markdown; the existing `report-in-markdown/SKILL.md` is already lightweight enough that always-loading it is acceptable.
 
+> **User decision (2026-05-20):** Sync this branch against `origin/main` before continuing integration.
+> **Question asked:** After integration review found the branch was not synced with current `origin/main`, the user asked to sync it.
+> **Rationale:** `origin/main` is the current integration base; syncing first prevents this branch from appearing to delete upstream theory-modeling work and generated artifacts.
+
 ---
 
 ### Task 1: Re-scope `report-in-markdown` skill body and extend rich-content reference
