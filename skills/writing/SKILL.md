@@ -37,7 +37,7 @@ The line-level marker families and replacement patterns that operationalize this
 
 A paper's writing-side conventions are paper-specific choices among defensible alternatives — choices a fresh agent would get wrong if not written down. Recording them once prevents re-inference and silent re-decision every session.
 
-**Where they live (lifecycle ladder, ordered by permanence).** `REVIEW.md` (born for one review, dies at closeout) → `PLAN.md` (analysis-scoped) → `CLAUDE.md` (project-permanent); in the long-form-review pipeline, standalone reviews become `PLAN.md` at the Stage 2 gate, while reviews riding an existing workflow rewrite that workflow's `PLAN.md` in place (see `long-form-review.md §Two-stage lifecycle`). Writing-side conventions live in the `## Project Conventions` header of whichever handoff doc is in play for the current task; when no handoff doc is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability — same pattern as theory-modeling's per-task ledger → `PLAN.md` Notation Conventions promotion (`theory-modeling/SKILL.md §Documentation and handoff`).
+**Where they live (lifecycle ladder, ordered by permanence).** `PLAN.md` (workflow-scoped) → `CLAUDE.md` (project-permanent). Long-form review retrofits a PLAN.md around the user's existing draft; reviewers then write findings as task-local review notes. Writing-side conventions live in the `## Project Conventions` header of whichever PLAN.md is in play; when no handoff doc is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability — same pattern as theory-modeling's per-task ledger → `PLAN.md` Notation Conventions promotion (`theory-modeling/SKILL.md §Documentation and handoff`).
 
 **What writing contributes (rows alongside data and modeling contributions).**
 
@@ -82,10 +82,11 @@ Loading the listed reference is the authority grant — if `structure.md` is not
 | `references/style.md` | Sentence- or paragraph-level edits; language/style review; every Polish and Draft self-check. |
 | `references/structure.md` | Structure review, drafting a section, or polish that authorizes restructuring. |
 | `references/consistency/*.md` (8 dimensions: terminology, notation, cross-references, citations, numerical, math, argument-logic, code-paper) | Review or polish targets that consistency dimension. |
+| `references/planning.md` | PLAN phase for large writing work; defines the writing header and PLAN-only long-form review retrofit. |
 | `references/long-form-review.md` | Multi-lane review (style/language, structure, or more than one consistency dimension), `deep` thoroughness, or full-paper / pre-submission scope. |
 | `references/refactor-and-compile.md` | Find-replace across the document, build/compile any time edits are made. |
 | `references/integration.md` | The writing task is riding `integration-workflow`. |
 
 ## Coupling to superRA workflows
 
-Most writing work is standalone — terminate at edit + commit, or at findings + commit. Larger work (whole-section drafts, whole-paper revisions, R&R passes) routes through `planning-workflow` → `implementation-workflow` → `integration-workflow`; the reviewer-dispatch invariant and the parallel-dispatch pattern for consistency reviews are owned by those workflow skills, not by this skill.
+Most writing work is standalone — terminate at edit + commit, or at findings + commit. Larger work routes through `planning-workflow` with `references/planning.md`. Whole-section drafts, whole-paper revisions, and R&R passes continue through the full workflow. Long-form review retrofit uses PLAN.md only: the draft already exists, reviewers inspect it through `implementation-workflow`, and findings live in PLAN.md review notes rather than RESULTS.md.

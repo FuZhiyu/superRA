@@ -22,13 +22,13 @@ The request names a file, section, or paragraph and asks for polish — no in-fl
 
 The request hands over an accepted-findings scope and asks to apply it. The scope **is** the work — apply each accepted finding as a minimal edit; do not silently extend to nearby issues. If a finding is ambiguous or incorrect, raise it; do not silently reinterpret.
 
-**When polish rides the long-form-review pipeline**, shape-C input is a Stage 2 task block in `PLAN.md` (from either a standalone `REVIEW.md` rename or an existing workflow `PLAN.md` rewrite). The task block names a pre-batched sweep (e.g., "all typos", "all citation-format issues") and carries each absorbed finding's body inline under a `**Findings absorbed:**` subheading, preserving the original finding format and F-ID. Batching has already happened at Stage 2 task construction time — the implementer applies the batch the task block names, not re-batches inside the polish pass. Read the findings directly from the task block; no separate lookup is needed.
+**When polish follows long-form review**, shape-C input is accepted PLAN.md review notes. The polish task names a bounded sweep (e.g., "all typos", "all citation-format issues") and points to the task-local review items it applies. Batching has already happened before the polish pass — the implementer applies the batch the task names, not re-batches inside polish. Read the findings directly from PLAN.md; no separate lookup is needed.
 
-**When polish is standalone** (a free-floating findings list, not a Stage-2 task block), the implementer reads the raw list and applies per finding.
+**When polish is standalone** (a free-floating findings list, not a PLAN.md task block), the implementer reads the raw list and applies per finding.
 
 In both cases, each accepted finding carries a `Fix:` tier (`review.md §Fix tiers`); polish-shape-C apply behavior follows the tier:
 
-- `mechanical` — apply silently; group according to the Stage 2 task's issue-class batch.
+- `mechanical` — apply silently; group according to the task's issue-class batch.
 - `conventional` — apply, but write one finding-line per item in the commit message naming the choice made.
 - `authorial` — surface for the author; do not apply.
 

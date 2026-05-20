@@ -30,7 +30,7 @@ Writing rules are additive to baseline writing competence. Add only constraints 
 - Explicit `DO NOT EDIT` or equivalent hands-off markers are off-limits.
 - Intent comments live in source files (`% intent: ...` or `<!-- intent: ... -->`): Draft writes them from the user's brief; Polish preserves existing comments and does not invent new author intent; Review can use them as a yardstick.
 - Audience discipline is unconditional: document prose is written for the document's reader, not for the editing conversation or repository context.
-- Writing-side project conventions live in the active `## Project Conventions` surface: `REVIEW.md` for one review, `PLAN.md` for analysis-scoped work, and project `CLAUDE.md` for durable project rules.
+- Writing-side project conventions live in the active `## Project Conventions` surface: `PLAN.md` for workflow-scoped work and project `CLAUDE.md` for durable project rules.
 
 ## Reference ownership
 
@@ -41,7 +41,7 @@ Writing rules are additive to baseline writing competence. Add only constraints 
 - `references/style.md` owns sentence- and paragraph-level style heuristics.
 - `references/structure.md` owns structure-level heuristics and is loaded only when drafting or authorized restructuring is in scope.
 - `references/consistency/*.md` owns dimension-specific review checks and output details.
-- `references/long-form-review.md` owns multi-lane review orchestration, `REVIEW.md` lifecycle, Stage-2 task construction, and review-time indices.
+- `references/long-form-review.md` owns multi-lane review orchestration, PLAN-only review retrofit, and review-time indices.
 - `references/refactor-and-compile.md` owns document-wide prose refactors and build/compile discipline.
 - `references/integration.md` owns behavior specific to writing work riding `integration-workflow`.
 
