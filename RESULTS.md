@@ -3,14 +3,14 @@
 > Mirrors PLAN.md structure. Updated after each task with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-04-27 (Execution complete)
-**Status:** Execution complete — all 5 tasks APPROVED, awaiting researcher disposition (PR / integrate / keep / discard)
+**Last updated:** 2026-05-20 (Integrate complete)
+**Status:** Integrate complete — all 5 tasks APPROVED at execution and integration review; documentation finalization in progress.
 
 ---
 
 ## Task 1: Re-scope `report-in-markdown` skill body and extend rich-content reference
 
-**Status:** IMPLEMENTED — REVISE round 1 fixes applied, pending re-review
+**Status:** APPROVED
 
 ### Key Findings
 - `skills/report-in-markdown/SKILL.md` rewritten: frontmatter description updated to "Markdown style guide for any agent writing PLAN.md, RESULTS.md, status reports, or standalone markdown reports." Body trimmed to 39 lines (frontmatter + body). Opener softened in REVISE round 1 from "Every agent loads this skill" (factually false until Task 2 ships the manifest update) to "The markdown style guide for any agent writing markdown" (true regardless of Task 2). The DRY-flagged orientation paragraph dropped; its load-bearing hint folded into the opener as a clause. New §File-reference rule introduces the `[file.py:42](file.py#L42)` form with single-line, range, and whole-file variants. Load map preserved.
@@ -23,7 +23,7 @@
 
 ## Task 2: Make `report-in-markdown` always-loaded in the Skill-Load Manifest
 
-**Status:** IMPLEMENTED — REVISE round 1 fix applied, pending re-review
+**Status:** APPROVED
 
 ### Key Findings
 - `skills/using-superRA/SKILL.md` §Skill-Load Manifest explanatory paragraph rewritten: now names `superRA:using-superra` **and** `superRA:report-in-markdown` as the two skills every agent loads, with a one-sentence rationale ("every agent writes markdown") and a pointer to where the citation rule lives ("its body carries the always-applicable file-link citation rule, with deeper format discipline in references loaded on demand").
@@ -37,7 +37,7 @@
 
 ## Task 3: Update canonical examples and conditional-load text in agent files and handoff-doc references
 
-**Status:** IMPLEMENTED — pending review
+**Status:** APPROVED
 
 ### Key Findings
 - `agents/implementer.md` updated in three places: (1) §Editing Etiquette gained a one-line "Cite source files as markdown links per `report-in-markdown` §File-reference rule" reminder; (2) lines 113–120 example blockquote rewritten so review items and `→ implemented:` annotations use markdown-link citations like `([Code/03.py:42](Code/03.py#L42))`; (3) line 128 conditional-load sentence reworded — `report-in-markdown` is now always loaded so the sentence only points at the heavier `rich-content.md` reference, not the parent skill.
@@ -50,7 +50,7 @@
 
 ## Task 4: Sweep for stale backtick-path citation samples across the repo
 
-**Status:** IMPLEMENTED — pending review
+**Status:** APPROVED
 
 ### Key Findings
 Sweep ran two grep patterns:
@@ -71,7 +71,7 @@ Triage of hits and actions taken:
 
 ## Task 5: Regenerate Codex named-agent artifacts and verify
 
-**Status:** IMPLEMENTED — pending review
+**Status:** APPROVED
 
 ### Key Findings
 - Regeneration command: `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --force`. Wrote four files (two `.codex/agents/*.toml` named-agent specs, two `skills/using-superRA/references/direct-mode-*.md` direct-mode references).

@@ -64,6 +64,10 @@ Walked at planning time (2026-04-27). Re-walk on-demand only.
 > **Question asked:** After integration review found the branch was not synced with current `origin/main`, the user asked to sync it.
 > **Rationale:** `origin/main` is the current integration base; syncing first prevents this branch from appearing to delete upstream theory-modeling work and generated artifacts.
 
+> **Convention applied (2026-05-20, no user prompt):** Mature the permanent results record under `docs/plans/` as `2026-05-20-markdown-style-guide-results.md`.
+> **Question asked:** The Document step needed a permanent `RESULTS.md` location; existing archived workflow records in this repo use `docs/plans/<YYYY-MM-DD>-<slug>-results.md`.
+> **Rationale:** This branch changes superRA workflow / skill documentation rather than analysis code co-located elsewhere, and `docs/plans/` is the established archive for completed superRA refactor handoff records.
+
 ---
 
 ### Task 1: Re-scope `report-in-markdown` skill body and extend rich-content reference
