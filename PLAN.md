@@ -51,8 +51,12 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
 
 ### Task 1: Writing Planning Reference and PLAN-Only Long-Form Review
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** REVISE
 **Integration status:** *(unset)*
+
+> **Review notes:**
+> 1. **MAJOR** — `skills/planning-workflow/SKILL.md:12`, `skills/planning-workflow/SKILL.md:19`, `skills/planning-workflow/SKILL.md:105`, and `skills/planning-workflow/SKILL.md:191`: `planning-workflow` now directly names and explains the writing long-form review PLAN-only / no-`RESULTS.md` exception. That violates the task decision and root DRY/Necessity gate: `planning-workflow` should route large writing work to `skills/writing/references/planning.md`, while the exception itself is owned by writing skill/reference surfaces only. Fix by removing the writing-specific exception prose from `planning-workflow`; if the workflow needs an extension point, phrase it generically as obeying the active domain planning reference rather than restating this writing exception.
+> 2. **MAJOR** — `tests/test-sync-integration-contract.sh:278`: the new contract tests assert that `planning-workflow` routes to the writing planning reference and that `implementation-workflow` does not name the retrofit, but they do not fail when `planning-workflow` itself carries the PLAN-only / no-`RESULTS.md` exception. This allowed finding 1 to pass the test suite. Add a contract guard that prevents `skills/planning-workflow/SKILL.md` from owning the writing-specific PLAN-only / no-`RESULTS.md` exception, while still allowing the generic route to the writing planning reference.
 
 **Files:** `skills/writing/references/planning.md`, `skills/writing/references/long-form-review.md`, `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`, `skills/writing/references/polish.md`, `skills/planning-workflow/SKILL.md`, `skills/CATEGORIES.md`, `tests/test-sync-integration-contract.sh`
 
