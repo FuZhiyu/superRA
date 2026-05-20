@@ -21,7 +21,7 @@
 - [x] **Plan approved** — retroactive plan records the already-implemented user direction.
 - [x] **Execution complete** — Task 1 approved in review commit `e94bf1f`; verification passed.
 - [x] **Drift tests created** — protected by contract/harness checks for skill behavior; no separate RESULTS.md exists for this retrofit.
-- [ ] **Integrated** — pending integration review if this branch proceeds to integration closeout.
+- [x] **Integrated** — Task 1 integration review approved in `069c543`; post-review verification passed.
 - [ ] **Docs finalized** — pending branch disposition.
 - [ ] **Finished** — pending final branch action.
 
