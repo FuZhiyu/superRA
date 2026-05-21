@@ -404,7 +404,7 @@ git commit -m "feat(skill): research-project-setup SKILL.md + feature catalog + 
 ### Task 4: Update superRA inventory surfaces
 
 **Depends on:** Task 3 (skill body must exist so descriptions match)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** N/A — markdown edits to three inventory files.
