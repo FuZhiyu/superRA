@@ -17,18 +17,18 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 
 ## Domain — vertical-specific discipline
 
-Carry the domain-specific knowledge that workflow skills invoke when a task touches that domain. Organized by reference files split by stage so the right chunk loads at the right phase. The architecture is designed to grow by adding more verticals without forking the workflow skills.
+Carry the domain-specific knowledge that workflow skills invoke when a task touches that domain. Organized by reference files split by stage so the right chunk loads at the right phase. Currently implemented: data analysis, theory/modeling, and writing. The architecture is designed to grow by adding more verticals without forking the workflow skills.
 
 | Skill | Vertical | Flagship discipline |
 |---|---|---|
 | `econ-data-analysis` | Data analysis | Iron Law (no transformation without prior description), three concurrent disciplines (describe-analyze-validate), diagnostics-for-validity philosophy, pitfall catalogs, common rationalizations. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `data-robustness-checklist.md`, `notebook-format.md` (+ `jupytext-guide.md` and `julia-quarto-guide.md` companions). |
 | `theory-modeling` | Theory / modeling | Four-gate intuition/interpretability discipline (Objects & Notation, Assumptions, Derivations, Verification & Rendering) at creation time, plus task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline) at integration time. Stage-scoped references: `planning.md`, `integrate-drift-tests.md`, `integration.md`, `objective-first.md`, `audience-discipline-modeling.md`, `audience-discipline-writing.md`. |
+| `writing` | Writing / paper drafting | Three working modes — Review / Polish / Draft — over a single principle (preserve substance, polish prose) and parallel-dispatched per-dimension consistency reviewers. Mode references: `planning.md`, `review.md`, `polish.md`, `draft.md`. Knowledge files: `style.md`, `structure.md`, `consistency/*.md` (8 dimension files), `long-form-review.md`, `refactor-and-compile.md`, `integration.md`. |
 
 ### Future verticals (roadmap — not yet implemented)
 
 - **Literature review** — citation integrity, claim-evidence mapping
 - **Simulation** — seed discipline, sensitivity to parameter grids, stochastic reproducibility
-- **Writing / paper drafting** — figure/table consistency, cross-reference integrity, narrative coherence
 
 Each future vertical plugs into the same workflow scaffolding — implementer + reviewer pair, handoff docs, autonomous-with-human-in-loop, semantic merges.
 
