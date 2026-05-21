@@ -32,9 +32,9 @@ if ! printf '%s' "$last_assistant_message" | grep -q '<proposed_plan>'; then
   exit 0
 fi
 
-message="<IMPORTANT>You just completed a Codex plan-mode turn with a proposed plan. Before taking implementation actions, materialize the approved plan into committed PLAN.md + RESULTS.md at the project root using superRA:planning-workflow and superRA:handoff-doc. If PLAN.md and RESULTS.md already exist and are committed, this reminder is satisfied.</IMPORTANT>"
+message="You just completed a Codex plan-mode turn with a proposed plan. Before taking implementation actions, materialize the approved plan into committed PLAN.md + RESULTS.md at the project root using superRA:planning-workflow and superRA:handoff-doc. If PLAN.md and RESULTS.md already exist and are committed, this reminder is satisfied."
 message_json=$(printf '%s' "$message" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
 
-printf '{"continue":true,"systemMessage":%s}\n' "$message_json"
+printf '{"decision":"block","reason":%s}\n' "$message_json"
 
 exit 0

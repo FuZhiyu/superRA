@@ -67,6 +67,8 @@ ls ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.tom
 
 For hooks, run `/hooks` in Codex after installing the plugin. When plugin hooks
 are enabled, Codex should list superRA hooks from `hooks/hooks-codex.json`.
+The Codex hook list should include `autoload-superra`, `merge-guard`, and
+`codex-plan-stop`.
 
 If the agents exist but Codex still cannot spawn them, restart Codex or start a fresh session.
 
@@ -78,9 +80,11 @@ uses reliable Codex-native events:
 | Hook | Codex event | Notes |
 |------|-------------|-------|
 | `autoload-superra` | `UserPromptSubmit` | Injects a reminder to load `superRA:using-superra` on superRA prompts. |
-| `merge-guard` | `PreToolUse` on `Bash` | Reminds agents to use `superRA:semantic-merge` before bare merge/rebase/cherry-pick commands. |
-| `ask-user-question-logger` | `PostToolUse` on `request_user_input` | Reminds agents to log researcher decisions in `PLAN.md`. |
-| `codex-plan-stop` | `Stop` in plan mode | Replaces Claude Code's `ExitPlanMode` hook with a plan-mode stop reminder. |
+| `merge-guard` | `PreToolUse` on `Bash` | Reminds agents to use `superRA:semantic-merge` before bare merge/rebase/cherry-pick commands. Codex shell interception is incomplete, so this is advisory coverage. |
+| `codex-plan-stop` | `Stop` in plan mode | Replaces Claude Code's `ExitPlanMode` hook with a continuation prompt. |
 
 Claude-only `Skill` gates are not installed in Codex because Codex does not
-document skill loads as a `PreToolUse` surface.
+document skill loads as a `PreToolUse` surface. `ask-user-question-logger`
+also remains Claude-only in plugin packaging for now; the script accepts Codex
+`request_user_input` payloads, but Codex does not currently document that tool
+as a `PostToolUse` hook surface.

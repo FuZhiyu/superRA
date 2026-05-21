@@ -21,17 +21,6 @@
         ]
       }
     ],
-    "PostToolUse": [
-      {
-        "matcher": "AskUserQuestion|request_user_input|functions\\.request_user_input",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" ask-user-question-logger"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [

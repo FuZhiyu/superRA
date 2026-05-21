@@ -100,15 +100,16 @@ case_request_user_input_silent_other_tool() {
 
 case_plan_stop_reminder() {
   local name="codex plan Stop emits materialization reminder"
-  local input out msg
+  local input out decision reason
   input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"<proposed_plan>plan</proposed_plan>"}))')
   out=$(run_hook codex-plan-stop "$input")
   assert_json "$name" "$out" || return
-  msg=$(printf '%s' "$out" | json_get 'print(d.get("systemMessage", ""))')
-  if printf '%s' "$msg" | grep -Fq 'PLAN.md + RESULTS.md'; then
+  decision=$(printf '%s' "$out" | json_get 'print(d.get("decision", ""))')
+  reason=$(printf '%s' "$out" | json_get 'print(d.get("reason", ""))')
+  if [ "$decision" = "block" ] && printf '%s' "$reason" | grep -Fq 'PLAN.md + RESULTS.md'; then
     record_pass "$name"
   else
-    record_fail "$name" "missing plan materialization reminder: $msg"
+    record_fail "$name" "missing Stop continuation decision/reason: $out"
   fi
 }
 

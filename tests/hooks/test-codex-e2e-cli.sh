@@ -2,9 +2,9 @@
 # Optional Codex CLI smoke test for hook runtime wiring.
 #
 # This is intentionally not part of default test runs: it requires a logged-in
-# Codex CLI and spends model turns. It installs project-local hooks in a temp
-# repo using the in-tree superRA scripts, then checks Codex JSONL for hook
-# responses.
+# Codex CLI and spends model turns. It installs project-local hooks matching
+# hooks/hooks-codex.json in a temp repo using the in-tree superRA scripts, then
+# checks Codex JSONL for hook responses.
 #
 # Run from repo root:
 #   bash tests/hooks/test-codex-e2e-cli.sh

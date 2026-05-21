@@ -52,10 +52,10 @@ hooks = json.loads(Path("hooks/hooks-codex.json").read_text(encoding="utf-8"))
 events = hooks["hooks"]
 assert "UserPromptSubmit" in events, "Codex hooks must include UserPromptSubmit"
 assert "PreToolUse" in events, "Codex hooks must include PreToolUse"
-assert "PostToolUse" in events, "Codex hooks must include PostToolUse"
 assert "Stop" in events, "Codex hooks must include Stop"
 assert any("merge-guard" in h["command"] for group in events["PreToolUse"] for h in group["hooks"]), "Codex PreToolUse must wire merge-guard"
 assert any("codex-plan-stop" in h["command"] for group in events["Stop"] for h in group["hooks"]), "Codex Stop must wire codex-plan-stop"
+assert "PostToolUse" not in events, "Codex hooks must not claim unverified request_user_input PostToolUse support"
 PY
 
 section "Shared harness adapters"

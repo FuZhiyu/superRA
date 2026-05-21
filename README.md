@@ -101,8 +101,8 @@ bundle through `/hooks`.
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
-| **merge-guard** | Before any `git merge` / `git rebase` / `git cherry-pick` | Remind to use the `semantic-merge` skill. |
-| **ask-user-question-logger** | After `AskUserQuestion` / Codex `request_user_input` | Remind to log the decision in `PLAN.md` before acting on it. |
+| **merge-guard** | Claude Code Bash hook; Codex `PreToolUse` on `Bash` | Remind to use the `semantic-merge` skill before bare merge/rebase/cherry-pick commands. Codex shell interception is not complete, so this is a reminder surface, not an enforcement boundary. |
+| **ask-user-question-logger** | Claude Code `AskUserQuestion` | Remind to log the decision in `PLAN.md` before acting on it. The script accepts Codex `request_user_input` payloads for future/manual wiring, but the Codex plugin does not install it until Codex documents that tool as a `PostToolUse` surface. |
 | **exit-plan-mode** | Claude Code `ExitPlanMode` | Remind to materialize the plan into `PLAN.md` + `RESULTS.md` before implementing. |
 | **codex-plan-stop** | Codex `Stop` while in plan mode after a `<proposed_plan>` | Codex equivalent of the plan-materialization reminder. |
 | **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Inject a reminder to load `superRA:using-superRA` if the master skill has not yet loaded this session. |
@@ -210,7 +210,7 @@ Codex should cache the plugin after install under `~/.codex/plugins/cache/...`.
 - **Remote marketplace install:** update the marketplace and plugin from Codex, then restart if the UI has not refreshed yet.
 - **Manual local-clone install:** Codex tracks the directory named in your personal marketplace entry. Update that clone, then restart Codex so it reloads the plugin files. For the example above, that usually means `git -C ~/.codex/plugins/superra pull`.
 - **Agent updates:** rerun `codex-superra-setup` after updating if you want to refresh the generated custom agents. This is required whenever [`agents/implementer.md`](./agents/implementer.md) or [`agents/reviewer.md`](./agents/reviewer.md) changes.
-- **Verification:** the global install should create `~/.codex/agents/superra_implementer.toml` and `~/.codex/agents/superra_reviewer.toml`; `/hooks` should list the superRA plugin hooks when plugin hooks are enabled.
+- **Verification:** the global install should create `~/.codex/agents/superra_implementer.toml` and `~/.codex/agents/superra_reviewer.toml`; `/hooks` should list the superRA plugin hooks when plugin hooks are enabled. The Codex hook list should include `autoload-superra`, `merge-guard`, and `codex-plan-stop`.
 
 For more detail, see the official [Codex plugin docs](https://developers.openai.com/codex/plugins/build) and [`docs/README.codex.md`](./docs/README.codex.md).
 

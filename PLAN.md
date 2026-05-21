@@ -6,7 +6,7 @@
 
 **Methodology:** Add a Codex-specific hook manifest and only install hooks backed by documented Codex event surfaces. Keep Claude-only `Skill` gates out of the Codex hook manifest. Use a Codex `Stop` hook in plan mode as the replacement for Claude Code's `ExitPlanMode` hook.
 
-**Output:** Updated Codex plugin manifest, Codex hook manifest, Codex plan-stop hook, shared hook script adjustments, documentation updates, and focused hook/harness tests.
+**Output:** Updated Codex plugin manifest, Codex hook manifest, Codex plan-stop hook, shared hook script adjustments, version bump, documentation updates, and focused hook/harness tests.
 
 **Expected Results / Hypotheses:** Codex users can enable/trust the superRA plugin hooks and receive autoload, merge-guard, decision-log, and plan-materialization reminders through Codex-native events.
 
@@ -22,7 +22,7 @@
 - [x] **Execution complete** - Task 1 implemented and reviewed; targeted verification re-run.
 - [ ] **Drift tests created** - Not applicable for plugin hook packaging; targeted hook regression tests substitute for drift tests.
 - [ ] **Integrated** - Not requested in this retroactive run.
-- [ ] **Docs finalized** - README and Codex docs updated for the hook support shipped here.
+- [x] **Docs finalized** - README and Codex docs updated for the hook support shipped here.
 - [ ] **Finished** - Not requested in this retroactive run.
 
 ---
@@ -59,7 +59,7 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 
 **Script:** Hook scripts under `hooks/`; test scripts under `tests/hooks/`; packaging in [.codex-plugin/plugin.json](.codex-plugin/plugin.json).
 **Input:** Existing Claude hook scripts/config, Codex hook documentation, current superRA Codex plugin manifest.
-**Output:** [hooks/hooks-codex.json](hooks/hooks-codex.json), [hooks/codex-plan-stop](hooks/codex-plan-stop), shared hook updates, docs, and tests.
+**Output:** [hooks/hooks-codex.json](hooks/hooks-codex.json), [hooks/codex-plan-stop](hooks/codex-plan-stop), shared hook updates, version bump, docs, and tests.
 
 - [x] **Step 1: Package Codex hooks explicitly**
 
@@ -67,7 +67,7 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 
 - [x] **Step 2: Map only reliable Codex events**
 
-  Wire `UserPromptSubmit` to `autoload-superra`, `PreToolUse`/`Bash` to `merge-guard`, `PostToolUse`/`request_user_input` to `ask-user-question-logger`, and `Stop` to `codex-plan-stop`. Leave Claude-only `Skill` gates out of the Codex manifest.
+  Wire `UserPromptSubmit` to `autoload-superra`, `PreToolUse`/`Bash` to `merge-guard`, and `Stop` to `codex-plan-stop`. Leave Claude-only `Skill` gates and unverified `request_user_input` PostToolUse wiring out of the Codex manifest.
 
 - [x] **Step 3: Adapt shared scripts for Codex**
 
@@ -75,7 +75,7 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 
 - [x] **Step 4: Add Codex plan-mode replacement**
 
-  Add [hooks/codex-plan-stop](hooks/codex-plan-stop), a Codex `Stop` hook that emits a plan-materialization reminder only when `permission_mode` is `plan` and the last assistant message contains `<proposed_plan>`.
+  Add [hooks/codex-plan-stop](hooks/codex-plan-stop), a Codex `Stop` hook that emits a continuation prompt only when `permission_mode` is `plan` and the last assistant message contains `<proposed_plan>`.
 
 - [x] **Step 5: Update docs and compatibility checks**
 
