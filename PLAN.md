@@ -340,7 +340,7 @@ git commit -m "feat(skill): wire create_project.sh to new paths + share-path san
 ### Task 3: Write `SKILL.md` + reference files
 
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** N/A — markdown authoring.
