@@ -445,14 +445,16 @@ git commit -m "docs: register research-project-setup in inventory surfaces"
 ### Task 5: End-to-end verification
 
 **Depends on:** Task 2, Task 3, Task 4
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED (partial — manual steps pending)
 **Integration status:** *(not started)*
 
 **Script:** Manual verification + small shell assertions.
 **Input:** The completed skill from Tasks 1–4.
 **Output:** A short verification log written into `RESULTS.md` Task 5 section.
 
-- [ ] **Step 1: Standalone scaffolder with arbitrary share path**
+Steps 1, 2, 6, 8 are automated and executed in this task. Steps 3, 4, 5, 7 require a fresh Claude Code / Codex session in a different working directory and must be run by the researcher — concrete commands are listed in [RESULTS.md](RESULTS.md) Task 5 section.
+
+- [x] **Step 1: Standalone scaffolder with arbitrary share path**
 
 ```bash
 rm -rf /tmp/TestProj /tmp/TestShareDropbox
@@ -477,7 +479,7 @@ grep -F '"superRA@superRA"' /tmp/TestProj/.claude/settings.json
 grep -F 'plugins."superra@superra"' /tmp/TestProj/.codex/config.toml
 ```
 
-- [ ] **Step 2: Opt-out flags strip declarations**
+- [x] **Step 2: Opt-out flags strip declarations**
 
 ```bash
 rm -rf /tmp/TestProjNoSR /tmp/TestProjNoSR-Share
@@ -504,7 +506,7 @@ Manual: in the project produced by Step 4, say "add Overleaf sync to this projec
 - Agent invokes the skill (mode = retrofit).
 - Applies the Overleaf playbook (copies `overleaf-sync` from `skills/research-project-setup/template/overleaf-sync`, updates `.gitignore`, commits).
 
-- [ ] **Step 6: superRA-internal regression — codex agent sync still works**
+- [x] **Step 6: superRA-internal regression — codex agent sync still works**
 
 ```bash
 python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check
@@ -515,7 +517,7 @@ echo "exit=$?"
 
 Open Claude Code in any directory with superRA installed; type a trigger phrase ("create a new research project"). Confirm the skill is surfaced by the harness.
 
-- [ ] **Step 8: Cleanup + RESULTS.md**
+- [x] **Step 8: Cleanup + RESULTS.md**
 
 ```bash
 rm -rf /tmp/TestProj /tmp/TestShareDropbox /tmp/TestProjNoSR /tmp/TestProjNoSR-Share

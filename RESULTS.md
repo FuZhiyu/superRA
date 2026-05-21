@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-21 (Task 4 implemented)
+**Last updated:** 2026-05-21 (Task 5 partially implemented — automated steps passed; manual steps pending researcher action)
 **Status:** In Progress
 
 ---
@@ -115,7 +115,107 @@ Registered `research-project-setup` in the three inventory surfaces with one-lin
 
 ## Task 5: End-to-end verification
 
-**Status:** Not started
+**Status:** IMPLEMENTED (partial — automated steps passed; Steps 3, 4, 5, 7 require a fresh Claude Code / Codex session in a different working directory and must be run by the researcher).
+
+### Step 1: Standalone scaffolder with arbitrary share path — PASS
+
+Ran `bash skills/research-project-setup/scripts/create_project.sh /tmp/TestProj --share-path /tmp/TestShareDropbox --with-overleaf --with-ci`. Scaffolder completed (one upstream package failure during `uv sync` — `zotero-mcp` upstream rename, the script catches and skips per design; not caused by this PR).
+
+Assertions (each command + the matching matched line):
+
+- `find /tmp/TestProj -maxdepth 2 -type d` produced `Code/`, `Paper/Figures`, `Paper/Tables`, `Slides`, `.claude/`, `.codex/`, `.github/workflows/` — full expected tree.
+- `test -L /tmp/TestProj/Data && [ "$(readlink Data)" = "/tmp/TestShareDropbox/Data" ]` → ok (target matches).
+- `test -L /tmp/TestProj/Notes` → ok; target `/tmp/TestShareDropbox/Notes`.
+- `test -L /tmp/TestProj/Output` → ok; target `/tmp/TestShareDropbox/Output`.
+- `test -d /tmp/TestProj/Paper/Figures` → ok.
+- `test -d /tmp/TestProj/.github/workflows` → ok.
+- `test -x /tmp/TestProj/overleaf-sync` → ok.
+- `cat /tmp/TestProj/.claude/settings.local.json` printed the expected JSON with `permissions.additionalDirectories` containing exactly four entries — `/tmp/TestShareDropbox`, `/tmp/TestShareDropbox/Data`, `/tmp/TestShareDropbox/Notes`, `/tmp/TestShareDropbox/Output`.
+- `grep -F '/tmp/TestShareDropbox' /tmp/TestProj/.claude/settings.local.json` → lines 4–7 matched.
+- `grep -F '/tmp/TestShareDropbox' /tmp/TestProj/.codex/config.toml` → lines 18–21 matched inside `[sandbox_workspace_write].writable_roots`.
+- `grep -xF '.claude/settings.local.json' /tmp/TestProj/.gitignore` → matched line 93.
+- `grep -F '"superRA@superRA"' /tmp/TestProj/.claude/settings.json` → matched line 59 (`"superRA@superRA": true`).
+- `grep -F 'plugins."superra@superra"' /tmp/TestProj/.codex/config.toml` → matched line 34 (`[plugins."superra@superra"]`).
+
+**Minor cosmetic observation (Task 2 territory, not a blocker for Task 5):** the Codex registration helper appends the new entries on the same line as the last pre-existing entry — `/tmp/TestProj/.codex/config.toml` line 18 reads `"~/.local/share/uv",    "/tmp/TestShareDropbox",` instead of placing the first new entry on its own line. The TOML is syntactically valid and parses identically, but the layout is uneven. If this matters cosmetically, the fix is to add a leading newline in the helper's `additions` join (`'\n' + '\n'.join(additions)`); flagged here so the integration pass can decide.
+
+### Step 2: Opt-out flags strip declarations — PASS
+
+Ran `bash skills/research-project-setup/scripts/create_project.sh /tmp/TestProjNoSR --no-superra --no-codex`.
+
+- `grep -F '"superRA@superRA"' /tmp/TestProjNoSR/.claude/settings.json` → exit 1, no match (printed `ok — superRA not declared`). The settings.json still exists (carries unrelated default permissions), but no superRA enrollment line is present.
+- `test ! -d /tmp/TestProjNoSR/.codex` → ok, `.codex/` directory not present (`ls -la /tmp/TestProjNoSR/` confirms — no `.codex` entry; only `.claude`, `.git`, `.gitignore`, `.mcp.json`, `.share-path`, `.venv`).
+
+### Step 3: Open scaffolded project in Claude Code, write into share folder without prompt — PENDING (researcher)
+
+Requires a fresh Claude Code session opened in the scaffolded project directory. Concrete reproduction for the researcher:
+
+```bash
+rm -rf /tmp/TestProj /tmp/TestShareDropbox && mkdir -p /tmp/TestShareDropbox
+bash /Users/zhiyufu/package_dev/superRA-project-template/skills/research-project-setup/scripts/create_project.sh \
+    /tmp/TestProj --share-path /tmp/TestShareDropbox --with-overleaf --with-ci
+# Then open a fresh Claude Code session with cwd=/tmp/TestProj and ask:
+#   "touch a file at Notes/test.txt and stage it"
+# PASS = no permissions prompt for writing into the share folder; the file is created.
+# FAIL = a permission prompt appears for /tmp/TestShareDropbox/Notes/test.txt.
+```
+
+If FAIL: the share-path registration in `.claude/settings.local.json` is not being honored — re-inspect Task 2 Step 2 helper and Claude's `additionalDirectories` semantics.
+
+### Step 4: Agent fresh-setup path — PENDING (researcher)
+
+Requires a fresh Claude Code or Codex session in an empty directory.
+
+```bash
+mkdir -p /tmp/AgentFreshSetup && cd /tmp/AgentFreshSetup
+# Open Claude Code or Codex with cwd here. Then ask:
+#   "create a new research project named VerifyFoo"
+```
+
+Expected:
+- Agent invokes `research-project-setup` skill (mode = fresh-setup).
+- Asks the four-checkbox opt-in question (superRA Claude plugin / Codex / Overleaf / CI) exactly once.
+- Runs `create_project.sh` with the resulting flags.
+- Writes `<share-path>/Notes/setup_decisions.md` with a three-line user-decision blockquote.
+
+### Step 5: Agent retrofit path — PENDING (researcher)
+
+In the project produced by Step 4 (or any existing scaffolded project), open a fresh agent session there and ask:
+
+```
+add Overleaf sync to this project
+```
+
+Expected:
+- Agent invokes `research-project-setup` skill (mode = retrofit).
+- Applies the Overleaf playbook from [skills/research-project-setup/references/retrofit-playbooks.md](skills/research-project-setup/references/retrofit-playbooks.md) — copies `overleaf-sync` from `skills/research-project-setup/template/overleaf-sync`, updates `.gitignore`, commits a single feature-scoped commit.
+
+### Step 6: superRA-internal regression — PASS
+
+Ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check`.
+
+Output:
+```
+All generated agent files are up to date in /Users/zhiyufu/package_dev/superRA-project-template/.codex/agents
+All generated direct-mode role references are up to date
+```
+Exit code: `0`. Confirms the existing codex-superra-setup tooling still functions and the newly-added skill did not perturb the generated agent files.
+
+### Step 7: Inventory discoverability — PENDING (researcher)
+
+Requires a fresh Claude Code session (any directory) with superRA installed. Type a trigger phrase such as:
+
+```
+create a new research project
+```
+
+Expected: the harness surfaces `research-project-setup` in its skill auto-trigger or skill list. Inspect via `/skills` or by triggering an invocation.
+
+### Step 8: Cleanup — DONE
+
+`rm -rf /tmp/TestProj /tmp/TestShareDropbox /tmp/TestProjNoSR /tmp/TestProjNoSR-Share` executed; `ls /tmp/ | grep -E '(TestProj|TestShare)'` returns no matches.
+
+**Note for researcher:** when running Steps 3–5 / 7 later, re-clean these paths afterward; Step 4 will create a `VerifyFoo` project that should be moved or deleted post-verification.
 
 ## Task 6: Deprecate the standalone `ResearchProjectTemplate` repo
 
