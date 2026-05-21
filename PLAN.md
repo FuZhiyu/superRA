@@ -53,10 +53,33 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
 
 ---
 
+## Sync Map
+
+**Base branch:** `origin/main`
+**Pre-sync merge base:** `8c3db7db058539c5cde7e7ffdc360d8d936fe866`
+**Synced base head:** `15755310cf4c32e91a67e1bd79989c57f1406b26`
+**Incoming range:** `8c3db7db058539c5cde7e7ffdc360d8d936fe866..15755310cf4c32e91a67e1bd79989c57f1406b26`
+**Sync commits:** `PENDING_MERGE_COMMIT`, `PENDING_SHA_UPDATE`
+**Sync review status:** `IMPLEMENTED`
+
+### Branch Summary
+
+**Incoming intent:** `origin/main` makes `report-in-markdown` the always-loaded markdown style guide, adds markdown-link citation rules to canonical agent and handoff examples, regenerates Codex agent artifacts, and archives the completed markdown-style-guide plan/results.
+**Resolution thesis:** Keep incoming markdown-style-guide behavior on generic/shared surfaces while preserving the branch's writing vertical. The sync is additive: branch-owned writing planning and PLAN-only long-form review remain the task intent, and incoming file-citation/report-in-markdown ownership becomes the base convention those writing changes now sit on top of.
+
+### Sync Clusters
+
+> **Sync cluster `RIM-2026-05-20` (2026-05-20):** commits `1575531`; paths `CLAUDE.md`, `README.md`, `agents/*`, `.codex/agents/*`, `skills/CATEGORIES.md`, `skills/agent-orchestration/SKILL.md`, `skills/handoff-doc/*`, `skills/report-in-markdown/*`, `skills/theory-modeling/references/integration.md`, `skills/using-superRA/*`, `docs/plans/2026-05-20-markdown-style-guide-*`; affects Tasks `1`.
+> **Incoming intent:** Make `report-in-markdown` the markdown style guide for all agents, teach markdown-link source citations across canonical examples, and preserve generated Codex artifacts from the regenerated agent specs.
+> **Sync resolution:** Accepted the incoming markdown-style-guide updates on shared utilities, role specs, generated direct-mode/Codex artifacts, and archived markdown-style-guide docs; preserved the branch's writing vertical, writing planning reference, PLAN-only long-form review retrofit, and related contract test.
+> **Integration context:** Later codebase review should evaluate the writing vertical against the new always-loaded `report-in-markdown` base convention; no broader convention-fit refactor is performed in Sync.
+> **User decision:** None.
+
 ### Task 1: Writing Planning Reference and PLAN-Only Long-Form Review
 **Depends on:** *(none)*
 **Review status:** APPROVED
 **Integration status:** APPROVED
+**Sync impact:** Cluster `RIM-2026-05-20` explains the incoming markdown-style-guide base change that overlaps Task 1's writing-skill routing and shared instruction surfaces. Source: `PLAN.md ## Sync Map`.
 
 **Files:** `skills/writing/references/planning.md`, `skills/writing/references/long-form-review.md`, `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`, `skills/writing/references/polish.md`, `skills/planning-workflow/SKILL.md`, `skills/CATEGORIES.md`, `tests/test-sync-integration-contract.sh`
 
@@ -85,7 +108,5 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
   Ran `bash tests/test-sync-integration-contract.sh`, `bash tests/check-harness-compatibility.sh`, and `git diff --check`; all passed before review dispatch.
 
 **Protection:** `bash tests/test-sync-integration-contract.sh`, `bash tests/check-harness-compatibility.sh`, and `git diff --check origin/main..HEAD` passed on 2026-05-20. These checks protect the writing retrofit behavior and generated-artifact contract for this skill-instruction branch.
-
-**Sync:** No-op against `origin/main`; `BASE_HEAD_SHA=8c3db7db058539c5cde7e7ffdc360d8d936fe866`, `PRE_SYNC_BASE_SHA=8c3db7db058539c5cde7e7ffdc360d8d936fe866`, and `origin/main` is already an ancestor of `HEAD`.
 
 **Final diff self-check:** `git diff origin/main..HEAD`; surviving-change classes are the approved writing-skill branch, writing reference docs, planning/using/integration workflow routing for the writing vertical, generated/packaging surfaces, and contract tests. Suspicious hunks are justified as skill-authoring behavior under the approved Task 1 objective plus the pre-existing branch objective to add the writing vertical.
