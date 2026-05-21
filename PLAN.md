@@ -22,7 +22,7 @@
 - [x] **Execution complete** — Task 1 approved in review commit `e94bf1f`; verification passed.
 - [x] **Drift tests created** — protected by contract/harness checks for skill behavior; no separate RESULTS.md exists for this retrofit.
 - [x] **Integrated** — Task 1 integration review approved in `069c543`; post-review verification passed.
-- [ ] **Docs finalized** — pending branch disposition.
+- [x] **Docs finalized** — PLAN.md is the durable retrofit record; no RESULTS.md is created for this writing-review retrofit.
 - [ ] **Finished** — pending final branch action.
 
 ---
