@@ -94,7 +94,7 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 ### Task 1: Scaffold skill directory + move templates
 
 **Depends on:** *(none)*
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** N/A (file moves + directory creation; no analysis code).
