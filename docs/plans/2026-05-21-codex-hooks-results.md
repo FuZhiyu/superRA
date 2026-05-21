@@ -10,8 +10,8 @@ permalink: "docs/plans/2026-05-21-codex-hooks-results"
 
 Companion plan: [2026-05-21-codex-hooks-plan.md](./2026-05-21-codex-hooks-plan.md).
 
-**Last updated:** 2026-05-21 (integrated)
-**Status:** Completed; PR creation pending
+**Last updated:** 2026-05-21 (PR opened)
+**Status:** Completed; draft PR opened at https://github.com/FuZhiyu/superRA/pull/27
 
 ---
 

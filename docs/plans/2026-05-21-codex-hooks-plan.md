@@ -23,7 +23,7 @@
 - [x] **Drift tests created** - Not applicable for plugin hook packaging; targeted hook regression tests substitute for drift tests.
 - [x] **Integrated** - Task 1 passed post-sync integration review against `origin/main`.
 - [x] **Docs finalized** - README, Codex docs, and archived plan/results records updated for the hook support shipped here.
-- [ ] **Finished** - PR creation pending.
+- [x] **Finished** - Draft PR opened: https://github.com/FuZhiyu/superRA/pull/27
 
 ---
 
@@ -59,6 +59,10 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 > **Convention applied (2026-05-21, no user prompt):** Archive the handoff records under `docs/plans/` as `2026-05-21-codex-hooks-plan.md` and `2026-05-21-codex-hooks-results.md`.
 > **Question asked:** The Document step needed disposition for root `PLAN.md` and `RESULTS.md`.
 > **Rationale:** This repo already stores completed superRA workflow records under `docs/plans/<YYYY-MM-DD>-<slug>-{plan,results}.md`, and this branch changes plugin packaging rather than analysis code co-located elsewhere.
+
+> **Workflow result (2026-05-21):** Draft PR opened at https://github.com/FuZhiyu/superRA/pull/27.
+> **Question asked:** Finish action for the branch after integration approval.
+> **Rationale:** The user requested PR creation; the branch was pushed to `origin/codex/codex-hooks` and opened against `main`.
 
 ---
 
