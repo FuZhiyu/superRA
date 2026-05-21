@@ -21,8 +21,8 @@
 - [x] **Plan approved** — retroactive plan records the already-implemented user direction.
 - [x] **Execution complete** — Task 1 approved in review commit `e94bf1f`; verification passed.
 - [x] **Drift tests created** — protected by contract/harness checks for skill behavior; no separate RESULTS.md exists for this retrofit.
-- [ ] **Integrated** — pending post-sync integration review against `origin/main` at `15755310cf4c32e91a67e1bd79989c57f1406b26`.
-- [ ] **Docs finalized** — pending Sync Map cleanup after post-sync integration review; no RESULTS.md is created for this writing-review retrofit.
+- [x] **Integrated** — Task 1 post-sync integration review approved in `cbcf54d`; closeout verification passed.
+- [x] **Docs finalized** — temporary Sync Map/Sync impact removed after approval; PLAN.md is the durable retrofit record and no RESULTS.md is created.
 - [ ] **Finished** — pending final branch action.
 
 ---
@@ -53,33 +53,10 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
 
 ---
 
-## Sync Map
-
-**Base branch:** `origin/main`
-**Pre-sync merge base:** `8c3db7db058539c5cde7e7ffdc360d8d936fe866`
-**Synced base head:** `15755310cf4c32e91a67e1bd79989c57f1406b26`
-**Incoming range:** `8c3db7db058539c5cde7e7ffdc360d8d936fe866..15755310cf4c32e91a67e1bd79989c57f1406b26`
-**Sync commits:** `78c12669c7f38dd3b6ed192357a0bb5952f9fdd1`, `6b99803fcd73d0c1e4ca67b92c5fb9f5f3d1a1aa`
-**Sync review status:** `APPROVED`
-
-### Branch Summary
-
-**Incoming intent:** `origin/main` makes `report-in-markdown` the always-loaded markdown style guide, adds markdown-link citation rules to canonical agent and handoff examples, regenerates Codex agent artifacts, and archives the completed markdown-style-guide plan/results.
-**Resolution thesis:** Keep incoming markdown-style-guide behavior on generic/shared surfaces while preserving the branch's writing vertical. The sync is additive: branch-owned writing planning and PLAN-only long-form review remain the task intent, and incoming file-citation/report-in-markdown ownership becomes the base convention those writing changes now sit on top of.
-
-### Sync Clusters
-
-> **Sync cluster `RIM-2026-05-20` (2026-05-20):** commits `1575531`; paths `CLAUDE.md`, `README.md`, `agents/*`, `.codex/agents/*`, `skills/CATEGORIES.md`, `skills/agent-orchestration/SKILL.md`, `skills/handoff-doc/*`, `skills/report-in-markdown/*`, `skills/theory-modeling/references/integration.md`, `skills/using-superRA/*`, `docs/plans/2026-05-20-markdown-style-guide-*`; affects Tasks `1`.
-> **Incoming intent:** Make `report-in-markdown` the markdown style guide for all agents, teach markdown-link source citations across canonical examples, and preserve generated Codex artifacts from the regenerated agent specs.
-> **Sync resolution:** Accepted the incoming markdown-style-guide updates on shared utilities, role specs, generated direct-mode/Codex artifacts, and archived markdown-style-guide docs; preserved the branch's writing vertical, writing planning reference, PLAN-only long-form review retrofit, and related contract test.
-> **Integration context:** Later codebase review should evaluate the writing vertical against the new always-loaded `report-in-markdown` base convention; no broader convention-fit refactor is performed in Sync.
-> **User decision:** None.
-
 ### Task 1: Writing Planning Reference and PLAN-Only Long-Form Review
 **Depends on:** *(none)*
 **Review status:** APPROVED
 **Integration status:** APPROVED
-**Sync impact:** Cluster `RIM-2026-05-20` explains the incoming markdown-style-guide base change that overlaps Task 1's writing-skill routing and shared instruction surfaces. Source: `PLAN.md ## Sync Map`.
 
 **Files:** `skills/writing/references/planning.md`, `skills/writing/references/long-form-review.md`, `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`, `skills/writing/references/polish.md`, `skills/planning-workflow/SKILL.md`, `skills/CATEGORIES.md`, `tests/test-sync-integration-contract.sh`
 
