@@ -61,9 +61,12 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 ### Task 1: Add Codex hook support
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** REVISE
 **Sync status:** No-op against `origin/main`; `BASE_HEAD_SHA=08b68c85dd49c414e6c5811aa21c764c50b1988b` is already an ancestor of `HEAD`.
 **Final diff self-check:** `git diff 08b68c85dd49c414e6c5811aa21c764c50b1988b..HEAD`; surviving change classes are Codex hook packaging, hook script behavior, docs, tests, version bump, and handoff docs. Suspicious hunks: version-managed manifest changes are justified by the public Codex plugin hook surface; no unrelated hunks.
+
+> **Integration review notes:**
+> 1. **MAJOR** [PLAN.md:11](PLAN.md#L11) still claims Codex users receive a `decision-log` reminder "through Codex-native events," but the actual Codex manifest installs only `UserPromptSubmit`, `PreToolUse`/`Bash`, and `Stop` hooks in [hooks/hooks-codex.json:3-29](hooks/hooks-codex.json#L3-L29), while the public docs correctly say `ask-user-question-logger` remains Claude-only in plugin packaging until Codex documents `request_user_input` as a `PostToolUse` surface ([README.md:105](README.md#L105), [docs/README.codex.md:86-90](docs/README.codex.md#L86-L90)). This is a handoff-doc coherence failure for the integration record: either revise the PLAN expected-result statement to match the approved scope, or add/document a real installed Codex decision-log hook surface and corresponding tests.
 
 **Script:** Hook scripts under `hooks/`; test scripts under `tests/hooks/`; packaging in [.codex-plugin/plugin.json](.codex-plugin/plugin.json).
 **Input:** Existing Claude hook scripts/config, Codex hook documentation, current superRA Codex plugin manifest.
