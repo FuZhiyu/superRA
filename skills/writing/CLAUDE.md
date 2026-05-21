@@ -53,6 +53,8 @@ Standalone writing invocations terminate at edit plus commit, or findings plus c
 
 Multi-lane review may dispatch one reviewer per lane, but the dispatch mechanics belong to `agent-orchestration`; `writing` supplies the lane files and the long-form-review reference.
 
+The PLAN-only long-form review retrofit (`references/long-form-review.md` + `references/planning.md`) is writing-owned: `planning-workflow` routes large writing work to the writing planning reference, and `implementation-workflow` carries no PLAN-only-exception prose. Contract tests in `tests/test-sync-integration-contract.sh` enforce this — do not move the exception into the workflow skills.
+
 ## Extension rules
 
 - Add sentence-level rules to `references/style.md`.
