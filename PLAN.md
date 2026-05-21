@@ -78,8 +78,11 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
 ### Task 1: Writing Planning Reference and PLAN-Only Long-Form Review
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(unset)*
+**Integration status:** REVISE
 **Sync impact:** Cluster `RIM-2026-05-20` explains the incoming markdown-style-guide base change that overlaps Task 1's writing-skill routing and shared instruction surfaces. Source: `PLAN.md ## Sync Map`.
+
+> **Review notes (integration):**
+> 1. **[BLOCKING] MAJOR** — [skills/writing/references/consistency/citations.md:92](skills/writing/references/consistency/citations.md#L92), [skills/writing/references/consistency/cross-references.md:75](skills/writing/references/consistency/cross-references.md#L75), [skills/writing/references/consistency/numerical.md:104](skills/writing/references/consistency/numerical.md#L104), [skills/writing/references/consistency/terminology.md:85](skills/writing/references/consistency/terminology.md#L85), and [skills/writing/references/consistency/code-paper.md:98](skills/writing/references/consistency/code-paper.md#L98) still teach writing reviewers to report source locations as raw `file.tex:<line>` / `file.ext:<line range>` fields. That conflicts with the synced-base convention that `report-in-markdown` is always loaded and owns source-file citation style: [skills/report-in-markdown/SKILL.md:13](skills/report-in-markdown/SKILL.md#L13) requires markdown links with line anchors. Fix the writing output templates and nearby review guidance, including [skills/writing/references/review.md:11](skills/writing/references/review.md#L11), so they either use markdown-link citation examples or explicitly defer source-file citation formatting to `report-in-markdown`; do not create a writing-owned competing citation style.
 
 **Files:** `skills/writing/references/planning.md`, `skills/writing/references/long-form-review.md`, `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`, `skills/writing/references/polish.md`, `skills/planning-workflow/SKILL.md`, `skills/CATEGORIES.md`, `tests/test-sync-integration-contract.sh`
 
