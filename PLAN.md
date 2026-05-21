@@ -20,7 +20,7 @@
 
 - [x] **Plan approved** - researcher asked to run the superRA workflow retroactively after the implementation was completed.
 - [x] **Execution complete** - Task 1 implemented and reviewed; targeted verification re-run.
-- [ ] **Drift tests created** - Not applicable for plugin hook packaging; targeted hook regression tests substitute for drift tests.
+- [x] **Drift tests created** - Not applicable for plugin hook packaging; targeted hook regression tests substitute for drift tests.
 - [ ] **Integrated** - Not requested in this retroactive run.
 - [x] **Docs finalized** - README and Codex docs updated for the hook support shipped here.
 - [ ] **Finished** - Not requested in this retroactive run.
@@ -62,6 +62,8 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 **Depends on:** *(none)*
 **Review status:** APPROVED
 **Integration status:** *(not started)*
+**Sync status:** No-op against `origin/main`; `BASE_HEAD_SHA=08b68c85dd49c414e6c5811aa21c764c50b1988b` is already an ancestor of `HEAD`.
+**Final diff self-check:** `git diff 08b68c85dd49c414e6c5811aa21c764c50b1988b..HEAD`; surviving change classes are Codex hook packaging, hook script behavior, docs, tests, version bump, and handoff docs. Suspicious hunks: version-managed manifest changes are justified by the public Codex plugin hook surface; no unrelated hunks.
 
 **Script:** Hook scripts under `hooks/`; test scripts under `tests/hooks/`; packaging in [.codex-plugin/plugin.json](.codex-plugin/plugin.json).
 **Input:** Existing Claude hook scripts/config, Codex hook documentation, current superRA Codex plugin manifest.
