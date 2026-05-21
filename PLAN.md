@@ -21,8 +21,8 @@
 - [x] **Plan approved** — retroactive plan records the already-implemented user direction.
 - [x] **Execution complete** — Task 1 approved in review commit `e94bf1f`; verification passed.
 - [x] **Drift tests created** — protected by contract/harness checks for skill behavior; no separate RESULTS.md exists for this retrofit.
-- [x] **Integrated** — Task 1 integration review approved in `069c543`; post-review verification passed.
-- [x] **Docs finalized** — PLAN.md is the durable retrofit record; no RESULTS.md is created for this writing-review retrofit.
+- [ ] **Integrated** — pending post-sync integration review against `origin/main` at `15755310cf4c32e91a67e1bd79989c57f1406b26`.
+- [ ] **Docs finalized** — pending Sync Map cleanup after post-sync integration review; no RESULTS.md is created for this writing-review retrofit.
 - [ ] **Finished** — pending final branch action.
 
 ---
@@ -78,7 +78,7 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
 ### Task 1: Writing Planning Reference and PLAN-Only Long-Form Review
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** APPROVED
+**Integration status:** *(unset)*
 **Sync impact:** Cluster `RIM-2026-05-20` explains the incoming markdown-style-guide base change that overlaps Task 1's writing-skill routing and shared instruction surfaces. Source: `PLAN.md ## Sync Map`.
 
 **Files:** `skills/writing/references/planning.md`, `skills/writing/references/long-form-review.md`, `skills/writing/SKILL.md`, `skills/writing/CLAUDE.md`, `skills/writing/references/polish.md`, `skills/planning-workflow/SKILL.md`, `skills/CATEGORIES.md`, `tests/test-sync-integration-contract.sh`
