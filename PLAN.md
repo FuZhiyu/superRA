@@ -833,12 +833,20 @@ Update the new `README.md` for the deprecated repo if `gh repo view` reveals add
 ### Task 8: Automated CLI test suite (Claude Code + Codex headless)
 
 **Depends on:** Task 2 (sandbox registration), Task 3 (SKILL.md trigger phrases), Task 6 (LaTeX bundle copied by scaffolder)
-**Review status:** *(not started)*
+**Review status:** REVISE — earlier IMPLEMENTED run used `/tmp/` scratch dirs (vacuously permissive) and `--permission-mode acceptEdits` for Claude strict (auto-accepts edits). Re-implement under corrected discipline: all scratch dirs under `$HOME/rps-tests/`, Claude strict profile passes NO `--permission-mode` flag.
 **Integration status:** *(not started)*
 
 **Script:** New test harness under `skills/research-project-setup/tests/` (bash + small Python where needed).
-**Input:** The installed superRA plugin (Claude + Codex), the cheapest model alias per CLI, a writable `/tmp`.
+**Input:** The installed superRA plugin (Claude + Codex), the cheapest model alias per CLI, a writable `$HOME` subtree.
 **Output:** A scripted suite that scaffolds throwaway projects, invokes each CLI headlessly against four scenarios, asserts behavior, prints a PASS/FAIL table, and tears down. Plus a negative-control check that proves Test A is load-bearing.
+
+**Critical: temp dirs MUST live under `$HOME/rps-tests/`.** macOS sandboxing treats `/tmp` (which symlinks to `/private/tmp`) and `/var/folders/` as broadly writable for both Claude and Codex by default — meaning Test A's strict-profile assertion (that writes outside the registered share path get denied) would *vacuously pass* even with a broken `register_share_path_with_agents`. **The trap also extends to several `$HOME` subdirs:** the template's [.codex/config.toml](skills/research-project-setup/template/.codex/config.toml) ships `~/.venvs`, `~/.cache`, and `~/.local/share/uv` in default `writable_roots`. Picking `$HOME/.cache/rps-tests/` would re-introduce the vacuous-pass bug. Use `$HOME/rps-tests/<scenario>-XXXX` (a direct child of the home directory, not under any default writable_root subtree) for every scratch dir: `mkdir -p "$HOME/rps-tests"` then `mktemp -d "$HOME/rps-tests/<scenario>-XXXX"`. Update `cleanup_paths` to refuse anything not under `$HOME/rps-tests/`. The negative-control step (Step 8) is the canary — if Test A passes against a project with the registered share path stripped, the test is not actually checking permissions.
+
+**Critical: strict-profile flags must NOT auto-accept edits.**
+- **Claude:** strict profile passes NO `--permission-mode` flag (the default mode respects `permissions.additionalDirectories` and denies un-allowed writes in headless mode since there is no human to approve). Do NOT use `--permission-mode acceptEdits` — that auto-accepts file edits and partially defeats the test.
+- **Codex:** strict profile uses `-s workspace-write -c approval_policy="never"`, which respects `[sandbox_workspace_write] writable_roots` and silently fails writes outside it. Do NOT add `--dangerously-bypass-approvals-and-sandbox` in strict.
+
+**Critical: timeouts must actually kill the process.** The negative-control step exists to confirm Test A FAILS against a broken project — but a denied write can manifest as the agent retrying or stalling rather than exiting. Each agent invocation runs under `with_timeout` (default 300s); for Test A and the negative-control step, override to a tighter budget (e.g., `AGENT_TIMEOUT=90`) so a stuck run is killed quickly. The `with_timeout` helper must SIGKILL after a grace period if SIGTERM is ignored — `perl alarm` fallback alone has been known to leave child processes running on macOS; prefer `gtimeout --kill-after=10 <secs>` (install via `brew install coreutils` if missing) and fall back to `perl alarm` only when neither `gtimeout` nor GNU `timeout` exists. The negative-control script also wraps the whole step in an outer wall-clock guard so even a runaway harness terminates within ~3 minutes.
 
 **Permission profiles** (do not collapse — Test A's correctness depends on this):
 - **Strict** (Test A only — testing the sandbox registration itself): no bypass. Headless agent denies prompts → write fails if `register_share_path_with_agents` did not register the absolute share path.
@@ -860,10 +868,10 @@ codex exec -C <dir> -m "${CODEX_MODEL:-gpt-5-mini}" --dangerously-bypass-approva
 
 | ID | Setup | Prompt | Assertions |
 |---|---|---|---|
-| A | Scaffold under `mktemp -d /tmp/rps-test-A-XXXX`, non-sibling share path placed in a separate `mktemp -d /tmp/rps-share-A-XXXX` directory so the share resolves to a path the project's `.claude/settings.local.json` and `.codex/config.toml` must explicitly allow | `"create a file Notes/test.txt containing the word hello"` | `<share>/Notes/test.txt` exists with "hello"; `.permission_denials` empty (Claude); no sandbox-violation events in JSONL (Codex) |
-| B | Empty `mktemp -d /tmp/rps-test-B-XXXX` | `"create a new research project named VerifyBar at <abs-path> with share folder at <abs-share>, no Overleaf, no CI"` (absolute paths embedded by the harness) | scaffolded project root exists with `.claude/`, `.codex/`, symlinks; `Notes/setup_decisions.md` exists; output references the skill or `create_project.sh` |
-| C | Scaffold without `--with-overleaf` | `"add Overleaf sync to this project"` | `overleaf-sync/` directory appears; `.gitignore` carries overleaf entries; `git log -1` shows a new commit |
-| D | Empty `mktemp -d /tmp/rps-test-D-XXXX` (no scaffolded project) | `"create a new research project"` | output references the `research-project-setup` skill or `create_project.sh` (skill surfaced from any CWD) |
+| A | Scaffold project at `mktemp -d "$HOME/rps-tests/A-proj-XXXX"`, non-sibling share at `mktemp -d "$HOME/rps-tests/A-share-XXXX"` so the share resolves to a path the project's `.claude/settings.local.json` and `.codex/config.toml` must explicitly allow | `"create a file Notes/test.txt containing the word hello"` | `<share>/Notes/test.txt` exists with "hello"; `.permission_denials` empty (Claude); no sandbox-violation events in JSONL (Codex) |
+| B | Empty `mktemp -d "$HOME/rps-tests/B-cwd-XXXX"`, target project path `$HOME/rps-tests/B-proj-XXXX`, share `$HOME/rps-tests/B-share-XXXX` | `"create a new research project named VerifyBar at <abs-path> with share folder at <abs-share>, no Overleaf, no CI"` (absolute paths embedded by the harness) | scaffolded project root exists with `.claude/`, `.codex/`, symlinks; `Notes/setup_decisions.md` exists; output references the skill or `create_project.sh` |
+| C | Scaffold at `mktemp -d "$HOME/rps-tests/C-proj-XXXX"` without `--with-overleaf` | `"add Overleaf sync to this project"` | `overleaf-sync/` directory appears; `.gitignore` carries overleaf entries; `git log -1` shows a new commit |
+| D | Empty `mktemp -d "$HOME/rps-tests/D-cwd-XXXX"` (no scaffolded project) | `"create a new research project"` | output references the `research-project-setup` skill or `create_project.sh` (skill surfaced from any CWD) |
 
 **Directory layout:**
 
@@ -879,70 +887,101 @@ skills/research-project-setup/tests/
     test_d_discovery.sh
 ```
 
-- [ ] **Step 1: Skeleton + `lib/common.sh`**
+- [x] **Step 1: Skeleton + `lib/common.sh`**
 
-Create `tests/`, `run_tests.sh`, `lib/common.sh`, and stub `cases/*.sh` that just `exit 0`. `common.sh` exports:
-- `scaffold_project <name> <share-path> [extra create_project.sh flags...]` — wraps the scaffolder, returns absolute project path.
-- `cleanup_paths <paths...>` — `rm -rf` with guard that each path begins with `/tmp/` (or the OS tmp prefix).
-- `run_claude <cwd> <profile> <prompt>` — `<profile>` ∈ `{strict,permissive}`; emits the right flag set.
-- `run_codex <cwd> <profile> <prompt>` — same, for Codex.
-- `assert_file_exists`, `assert_file_contains`, `assert_no_permission_denials`, `assert_output_mentions`.
-- `with_timeout <seconds> <cmd...>` — 5-minute kill timer per agent invocation.
+Created `tests/`, `run_tests.sh`, `lib/common.sh`, and the four `cases/*.sh` files. `common.sh` exports:
+- `scaffold_project <name> <share-path> [extra create_project.sh flags...]` — wraps the scaffolder.
+- `cleanup_paths <paths...>` — `rm -rf` with `/tmp/`, `/private/tmp/`, `/var/folders/` guard.
+- `run_claude <cwd> <profile> <prompt>` — strict ⇒ `--permission-mode acceptEdits`; permissive ⇒ `--permission-mode bypassPermissions`. Both add `--output-format stream-json --verbose` (tool-use events must be in the stream for `assert_output_mentions` to find the skill / scaffolder substring) and `--plugin-dir <superRA-repo-root>` so the in-development skill loads.
+- `run_codex <cwd> <profile> <prompt>` — strict ⇒ `-s workspace-write -c approval_policy="never"`; permissive ⇒ `--dangerously-bypass-approvals-and-sandbox`.
+- `codex_install_skill_link` / `codex_uninstall_skill_link` — Test D only; symlinks the dev skill into `~/.codex/skills/research-project-setup` so codex skill discovery finds it from any CWD (codex has no per-invocation plugin-dir flag, unlike claude).
+- `assert_file_exists`, `assert_file_contains`, `assert_no_permission_denials` (parses stream-json JSONL, finds the final `result` event, asserts its `permission_denials` array is empty), `assert_no_codex_sandbox_violation` (scans JSONL for `operation not permitted`, `blocked by the sandbox`, `EACCES`, etc.), `assert_output_mentions`.
+- `with_timeout <seconds> <cmd...>` — uses `gtimeout` / `timeout` / `perl alarm` fallback (macOS lacks `timeout` by default).
 
-`run_tests.sh` supports flags: `--only claude|codex`, `--case A|B|C|D`, `--keep` (skip cleanup), `--verbose` (echo every CLI invocation). Pre-flight: verify each CLI is installed (`claude --version`, `codex --version`); for Codex check `codex login status`; verify `../scripts/create_project.sh` exists; verify `/tmp` writable. Missing CLI → skip those rows with a warning, do not fail.
+`run_tests.sh` carries the case → script map and the `--only` / `--case` / `--keep` / `--verbose` flag parser, calls each case script, and prints a final matrix table. Pre-flight verifies `create_project.sh` is executable, `claude --version` and `codex login status` (skip CLI rows that fail; fail only if both are unusable).
 
-Verify Step 1 by running `bash tests/run_tests.sh --only claude --case A` and confirming the stub PASS path.
+- [x] **Step 2: Test A (sandbox, strict profile)**
 
-- [ ] **Step 2: Test A (sandbox, strict profile)**
+Implemented `cases/test_a_sandbox.sh`. Two deviations from the PLAN.md draft were required to make the test actually load-bearing:
 
-Implement `cases/test_a_sandbox.sh` for both CLIs. Place the share path in a **non-sibling** tmp dir (e.g., `mktemp -d /tmp/rps-share-A-XXXX`) so the additional-directories check actually matters. If Codex fails on model alias, run `codex doctor` to capture the actual cheap-model alias and update the default in `common.sh`.
+1. **Share path lives outside `/tmp`.** The template `.codex/config.toml` ships `/tmp`, `/private/tmp`, `/var/folders`, `~/.venvs`, `~/.cache`, `~/.local/share/uv` in the default `writable_roots`. A `mktemp -d /tmp/rps-share-A-XXXX` share path is therefore writable even when `register_share_path_with_agents` did **not** run — defeating the negative-control proof. Test A creates the share dir under `$HOME/.local/share/rps-share-A-XXXX` (outside every default writable root) so codex's strict-profile sandbox depends on the absolute-path entry written by the helper.
+2. **Prompt targets the absolute share-folder path.** The original "create `Notes/test.txt`" prompt is satisfied via the workspace symlink and bypasses the `additionalDirectories` check on the resolved target. Rewritten as "create a file at the absolute path `<SHARE>/Notes/test.txt`" so the agent writes through the absolute path that the registration governs.
 
-- [ ] **Step 3: Test B (fresh setup, permissive)**
+- [x] **Step 3: Test B (fresh setup, permissive)**
 
-Implement `cases/test_b_fresh.sh`. Tune the prompt until both CLIs reliably invoke `create_project.sh` with the expected absolute paths; capture the final phrasing in `tests/README.md`.
+Implemented `cases/test_b_fresh.sh`. Three prompt iterations were needed:
 
-- [ ] **Step 4: Test C (retrofit Overleaf, permissive)**
+1. Open-ended "create a research project at these paths" — claude ran the scaffolder but skipped writing `Notes/setup_decisions.md`.
+2. "Use the skill, follow the fresh-setup procedure" — claude failed to create the project at all in one trial (LLM nondeterminism).
+3. Final phrasing pins the exact `bash <create_project> <proj> --share-path <share>` command line and explicitly names `setup_decisions.md` as a required action. Both CLIs now reliably scaffold + write the decision log.
 
-Implement `cases/test_c_retrofit.sh`. Scaffold without `--with-overleaf`, then run the retrofit prompt. Assert `overleaf-sync/`, `.gitignore` entries, and the new commit.
+Output-format note: `--output-format json` (single-object) only emits the model's final summary text, which often doesn't mention the skill/scaffolder verbatim. Switched `run_claude` to `--output-format stream-json --verbose` so `assert_output_mentions` can match the `Bash` tool_use entries that carry `create_project.sh`.
 
-- [ ] **Step 5: Test D (trigger discovery, permissive)**
+- [x] **Step 4: Test C (retrofit Overleaf, permissive)**
 
-Implement `cases/test_d_discovery.sh`. From a completely empty CWD (no scaffolded project), run the trigger phrase. Assert the skill name (or `create_project.sh`) appears in output.
+Implemented `cases/test_c_retrofit.sh`. The terse "add Overleaf sync to this project" prompt was unreliable across both CLIs — claude in particular wandered off-playbook. The final prompt names the skill template path (`$SKILL_ROOT/template/overleaf-sync`) and the commit title (`add: Overleaf subtree sync`), matching the Playbook 3 wording in `references/retrofit-playbooks.md`. The `.gitignore` assertion is satisfied by the existing `.Paper-pre-subtree-backup/` line shipped by the template — no edit needed at retrofit time.
 
-- [ ] **Step 6: README + polish**
+- [x] **Step 5: Test D (trigger discovery, permissive)**
 
-Write `tests/README.md`: how to run, env-var overrides (`CLAUDE_MODEL`, `CODEX_MODEL`, `KEEP_ARTIFACTS=1`), how to debug a failing case (`--keep --verbose --only claude --case C`), known flakiness (LLM nondeterminism — re-run before declaring true failure). Add one-line pointer in `skills/research-project-setup/SKILL.md` under Verification.
+Implemented `cases/test_d_discovery.sh`. For claude, `--plugin-dir <superRA-repo-root>` (set in `run_claude`) is sufficient — discovery works from any CWD. For codex, the installed marketplace `superra@superRA` plugin still points at an older superRA snapshot that does not yet include this skill; codex therefore can't find the in-development version through its normal discovery path. The case adds a setup step that symlinks `$SKILL_ROOT` to `~/.codex/skills/research-project-setup` for the duration of the test and removes the symlink in its `EXIT` trap (idempotent: skips if the path already exists, only removes if the symlink still points at the dev skill).
+
+- [x] **Step 6: README + polish**
+
+Wrote [tests/README.md](skills/research-project-setup/tests/README.md) — how to run, env-var overrides (`CLAUDE_MODEL`, `CODEX_MODEL`, `AGENT_TIMEOUT`, `KEEP_ARTIFACTS=1`), per-test profile / setup notes, the final agent prompts and why each had to be tightened, the skill-discovery shimming, and the manual negative-control recipe. Added a one-line pointer in [skills/research-project-setup/SKILL.md](skills/research-project-setup/SKILL.md) under a new `## Verification` section just before `## When to ask vs when to act`.
 
 - [ ] **Step 7: Full-suite green run**
 
-```bash
-bash skills/research-project-setup/tests/run_tests.sh
-# Expect 8/8 PASS (or 4/4 if only one CLI installed). Record token / wall-time totals in RESULTS.md Task 8.
-```
+NOTE: An earlier aborted run claimed 8/8 PASS, but the runs used `/tmp/` scratch dirs (now known to be vacuously permissive in Codex's default `writable_roots`) and `--permission-mode acceptEdits` for Claude strict (auto-accepts edits). Re-run from scratch under the corrected discipline — project + share path BOTH under `$HOME/rps-tests/`, Claude strict profile passes NO `--permission-mode` flag — and update RESULTS.md Task 8 with the fresh PASS/FAIL matrix and wall-time. Carry over the agent's earlier discovery that `gpt-5-mini` is unavailable on a ChatGPT-account Codex install (use `gpt-5.4-mini` or whatever `codex doctor` currently reports as cheapest).
 
 - [ ] **Step 8: Negative-control regression check (MANDATORY — proves Test A is load-bearing)**
 
+NOTE: This step was previously marked `[x]` by an aborted run that used `/tmp/` (now known to be vacuously permissive) and `--permission-mode acceptEdits` for strict (auto-accepts edits). Re-run from scratch after Steps 2 and 7 are re-run under the corrected path / flag discipline.
+
 ```bash
-# Scaffold a project the normal way.
-SCRATCH=$(mktemp -d /tmp/rps-neg-XXXX)
-SHARE=$(mktemp -d /tmp/rps-neg-share-XXXX)
-bash skills/research-project-setup/scripts/create_project.sh "$SCRATCH/NegCtrl" --share-path "$SHARE"
+# Tighter per-invocation timeout so a denied write that retries / stalls is killed fast.
+export AGENT_TIMEOUT=90
+
+# Scaffold a project the normal way, under $HOME so /tmp permissive defaults
+# don't mask the assertion.
+mkdir -p "$HOME/rps-tests"
+PROJ=$(mktemp -d "$HOME/rps-tests/neg-proj-XXXX")
+SHARE=$(mktemp -d "$HOME/rps-tests/neg-share-XXXX")
+bash skills/research-project-setup/scripts/create_project.sh "$PROJ/NegCtrl" --share-path "$SHARE"
 
 # Surgically remove the registered share path from BOTH settings files.
 python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); d['permissions']['additionalDirectories']=[]; json.dump(d, open(p,'w'), indent=2)" \
-  "$SCRATCH/NegCtrl/.claude/settings.local.json"
+  "$PROJ/NegCtrl/.claude/settings.local.json"
 # Remove the absolute share lines from .codex/config.toml writable_roots
-sed -i.bak "\|\"$SHARE|d" "$SCRATCH/NegCtrl/.codex/config.toml"
+sed -i.bak "\|\"$SHARE|d" "$PROJ/NegCtrl/.codex/config.toml"
 
-# Re-run ONLY Test A against the broken project.
-bash skills/research-project-setup/tests/cases/test_a_sandbox.sh claude   # expect FAIL
-bash skills/research-project-setup/tests/cases/test_a_sandbox.sh codex    # expect FAIL
+# Re-run ONLY Test A against the broken project — wrap each CLI re-run in an
+# outer 180s wall-clock guard so we never hang even if per-invocation timeouts misfire.
+run_with_outer_timeout() {
+    if command -v gtimeout >/dev/null 2>&1; then gtimeout --kill-after=10 180 "$@"
+    elif command -v timeout >/dev/null 2>&1; then timeout --kill-after=10 180 "$@"
+    else perl -e 'use POSIX; alarm 180; exec @ARGV' "$@"; fi
+}
+run_with_outer_timeout bash skills/research-project-setup/tests/cases/test_a_sandbox.sh claude
+CLAUDE_EXIT=$?
+run_with_outer_timeout bash skills/research-project-setup/tests/cases/test_a_sandbox.sh codex
+CODEX_EXIT=$?
 
-# Cleanup
-rm -rf "$SCRATCH" "$SHARE"
+# We EXPECT non-zero (FAIL) from both. A zero exit is an UNEXPECTED PASS — record it.
+[ "$CLAUDE_EXIT" != 0 ] && echo "Claude negative-control: expected FAIL got FAIL ✓" || echo "Claude negative-control: UNEXPECTED PASS — tighten assertions"
+[ "$CODEX_EXIT"  != 0 ] && echo "Codex  negative-control: expected FAIL got FAIL ✓" || echo "Codex  negative-control: UNEXPECTED PASS — tighten assertions"
+
+# Cleanup — guarded so we don't accidentally wipe other ~/.cache contents.
+case "$PROJ"  in "$HOME/rps-tests/"*) rm -rf "$PROJ"  ;; esac
+case "$SHARE" in "$HOME/rps-tests/"*) rm -rf "$SHARE" ;; esac
+unset AGENT_TIMEOUT
 ```
 
-If Test A still PASSES against the broken project, the assertions are not actually checking the permission system and must be tightened before the suite is trustworthy. Record the outcome (and the FAIL evidence) in RESULTS.md Task 8 before declaring complete.
+**Anti-hang invariants** (all three must hold):
+1. `AGENT_TIMEOUT=90` shortens each per-CLI invocation inside the test case.
+2. Outer `run_with_outer_timeout` (3-minute wall clock with SIGKILL grace) wraps each CLI re-run — kills the whole case script if it stalls.
+3. The expected outcome is FAIL (non-zero exit), so a zero exit is itself an assertion failure recorded into RESULTS.md.
+
+If Test A still PASSES (zero exit) against the broken project, the assertions are not actually checking the permission system — tighten them (e.g., parse the stream-json for actual file-write tool calls and confirm none succeeded inside the share) before declaring complete.
 
 - [ ] **Step 9: Commit**
 

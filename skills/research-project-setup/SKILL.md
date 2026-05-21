@@ -79,6 +79,10 @@ After scaffold or retrofit, the agent may edit any of the created files directly
 
 ---
 
+## Verification
+
+Headless end-to-end tests live in `tests/`. Run `bash tests/run_tests.sh` to exercise the four scenarios (sandbox write, fresh setup, retrofit, trigger discovery) across both Claude Code and Codex CLI. See `tests/README.md` for flags, env overrides, and the negative-control check that proves the sandbox-registration helper is load-bearing.
+
 ## When to ask vs when to act
 
 - **Always confirm** before destructive operations: directory restructure, file deletions, force-rewrite of existing configs.
