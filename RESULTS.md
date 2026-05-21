@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-21 (Task 3 implemented)
+**Last updated:** 2026-05-21 (Task 4 implemented)
 **Status:** In Progress
 
 ---
@@ -96,7 +96,22 @@ Authored the three markdown files for the new skill — [SKILL.md](skills/resear
 
 ## Task 4: Update superRA inventory surfaces
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+Registered `research-project-setup` in the three inventory surfaces with one-liners derived from [skills/research-project-setup/SKILL.md](skills/research-project-setup/SKILL.md) (the authoritative source written in Task 3). The skill does not participate in the Skill-Load Manifest (no workflow Stage); confirmed in [skills/using-superRA/SKILL.md](skills/using-superRA/SKILL.md) — the Skill-Load Manifest tables were left untouched.
+
+**Rows added:**
+- [skills/CATEGORIES.md:45](skills/CATEGORIES.md#L45) — Utility table, inserted between `report-in-markdown` and `semantic-merge` (alphabetic). Long-form one-liner covering scaffolder + skeleton + six playbooks + standalone-invokable note.
+- [README.md:86](README.md#L86) — Utility-skill table, inserted between `refactor-and-integrate` and `semantic-merge` (alphabetic for this table's existing ordering). Consistent wording with CATEGORIES.md.
+- [skills/using-superRA/SKILL.md:61](skills/using-superRA/SKILL.md#L61) — Skill Inventory, Utility section, inserted between `refactor-and-integrate` and `report-in-markdown`. Tight one-line summary (this table's column width is narrow).
+
+**Intro feature list extended:**
+- [README.md:8](README.md#L8) — added a fourth axis to the top-of-README feature list: "Interactive project scaffolding + feature retrofit", listing the six playbooks. Sits below the existing workflow / domain-skills / utility-skills items.
+
+**Verification:**
+- `grep -n "research-project-setup" skills/CATEGORIES.md README.md skills/using-superRA/SKILL.md` returns one row per file (no duplicates).
+- Alphabetic placement holds in each table (`report-in-markdown` < `research-project-setup` < `semantic-merge`).
+- Skill-Load Manifest tables (`Generic` + `Domain add-ons` in `using-superRA/SKILL.md`) were not modified — the skill is user-trigger-invoked, not Stage-driven, per the plan.
 
 ## Task 5: End-to-end verification
 

@@ -404,14 +404,14 @@ git commit -m "feat(skill): research-project-setup SKILL.md + feature catalog + 
 ### Task 4: Update superRA inventory surfaces
 
 **Depends on:** Task 3 (skill body must exist so descriptions match)
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** N/A — markdown edits to three inventory files.
 **Input:** Existing `skills/CATEGORIES.md`, `README.md`, `skills/using-superRA/SKILL.md`.
 **Output:** Same three files with a new row for `research-project-setup`.
 
-- [ ] **Step 1: Add Utility-table row in `skills/CATEGORIES.md`**
+- [x] **Step 1: Add Utility-table row in `skills/CATEGORIES.md`**
 
 `Edit` the file; insert a new row in the Utility table (between `report-in-markdown` and `semantic-merge` alphabetically):
 
@@ -419,11 +419,11 @@ git commit -m "feat(skill): research-project-setup SKILL.md + feature catalog + 
 | `research-project-setup` | Interactive scaffolder + retrofit playbooks for academic research projects. Owns `create_project.sh`, the canonical project skeleton (`template/` + `template-share/`), and the six feature playbooks (superRA Claude plugin, Codex superRA plugin + named agents, Overleaf sync, GitHub Actions CI, Figures/Tables restructure, decoupled `.share-path`). Invokable standalone — no workflow Stage. |
 ```
 
-- [ ] **Step 2: Add row to the Utility table in `/README.md`**
+- [x] **Step 2: Add row to the Utility table in `/README.md`**
 
 Insert in the Utility-skill table (alphabetic position). Use one-line summary consistent with the CATEGORIES.md row. Also extend the intro feature list at the top of the README to mention "interactive project scaffolding + feature retrofit" as a third axis.
 
-- [ ] **Step 3: Add row to the Skill Inventory in `skills/using-superRA/SKILL.md`**
+- [x] **Step 3: Add row to the Skill Inventory in `skills/using-superRA/SKILL.md`**
 
 Add to the Utility section of the Skill Inventory table:
 
@@ -433,7 +433,7 @@ Add to the Utility section of the Skill Inventory table:
 
 Confirm no row needs adding in the Skill-Load Manifest — this skill is invoked by user trigger phrases, not by workflow Stage, so it does not appear in the Stage → required-skills table.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/CATEGORIES.md README.md skills/using-superRA/SKILL.md
