@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-21 (Task 2 implemented)
+**Last updated:** 2026-05-21 (Task 3 implemented)
 **Status:** In Progress
 
 ---
@@ -67,7 +67,32 @@ Rewired [scripts/create_project.sh](skills/research-project-setup/scripts/create
 
 ## Task 3: Write `SKILL.md` + reference files
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+Authored the three markdown files for the new skill — [SKILL.md](skills/research-project-setup/SKILL.md), [references/feature-catalog.md](skills/research-project-setup/references/feature-catalog.md), [references/retrofit-playbooks.md](skills/research-project-setup/references/retrofit-playbooks.md) — following the `codex-superra-setup` shape (lean SKILL.md + on-demand references) and applying the `/CLAUDE.md` §"Teach the Protocol, Don't Prescribe Each Action" DRY + Necessity tests on every line.
+
+**SKILL.md (87 lines):**
+- Trigger-phrase frontmatter — verbatim from the PLAN.md Task 3 Step 1 spec.
+- Body sections: what-the-skill-does paragraph, contributor symlink note (per Task 1 reviewer nuance — `template/{Data,Notes,Output}` are gitignored, materialized by `create_project.sh` at scaffold time), mode detection, fresh-setup procedure (4 sub-steps: collect → run → decision log → flag-dependent next steps), retrofit procedure (one-paragraph routing + 6-item playbook list, body in `retrofit-playbooks.md`), agent self-modification, when-to-ask vs when-to-act.
+- Under the ~100–120-line target — the planning spec was nominal, not a floor; the DRY discipline left the body at 87 lines without dropping any required content. Verified by reading each section against the Step 1 spec checklist.
+- Avoided wrapper-around-authoritative-content anti-patterns: no "if the user picked X, do Y" recap of the catalog (the catalog itself is loaded on demand); no restatement of the `AskUserQuestion` contract; no preview of what the dispatch will see.
+
+**feature-catalog.md (51 lines):**
+- One section per opt-in component, four required sub-fields (What it is / Default / Flag / Wiring after install).
+- Four scaffold-time toggles (superRA Claude plugin, superRA Codex plugin, Overleaf, CI) + two retrofit-only entries (Figures/Tables restructure, decoupled `.share-path`) for the catalog's "what's available?" use case. Retrofit-only entries note `Default — N/A` and `Flag — N/A` with a pointer to the matching playbook.
+
+**retrofit-playbooks.md (111 lines):**
+- All six playbooks moved from the source `SKILL.md` (Lines 84–170 of `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/.claude/skills/research-project-setup/SKILL.md`).
+- Path rewrites: `$TEMPLATE_DIR/ProjectExample/...` → `$SKILL_DIR/template/...` (with `$SKILL_DIR` defined as "the active superRA install's `skills/research-project-setup/`" at the file head).
+- "Where this skill ships" source-side section dropped entirely (superseded by the new install-via-superRA model).
+- Playbook 6 (decoupled `.share-path`) extended per Task 3 Step 3 spec: added Step 6 — register the new absolute `$SHARE_PATH` with both `.claude/settings.local.json` (`permissions.additionalDirectories`) and `.codex/config.toml` (`[sandbox_workspace_write].writable_roots`), mirroring `create_project.sh`'s `register_share_path_with_agents` helper.
+- Playbook 5 (Figures/Tables restructure) — fixed the LaTeX-path bullet that was nonsensical in the source (`\includegraphics{Figures/...}` → `\includegraphics{Figures/...}`, a no-op) by rewriting it as a concrete inside-`Paper/` vs outside-`Paper/` distinction. Behavior-shaping correction, not a scope change.
+
+**Verification:**
+- `wc -l` on all three files: 87 / 51 / 111.
+- Walked the SKILL.md DRY check against `/CLAUDE.md` §anti-patterns list — no wrapper instructions, no harness-default reminders, no restatement of the Skill-Load Manifest or the `AskUserQuestion` shape.
+- Cross-checked SKILL.md trigger-phrase list against the PLAN.md Step 1 spec — verbatim.
+- Cross-checked retrofit-playbooks.md feature list against PLAN.md Step 3 list — six playbooks, in the listed order.
 
 ## Task 4: Update superRA inventory surfaces
 

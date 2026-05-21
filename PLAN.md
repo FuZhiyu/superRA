@@ -340,14 +340,14 @@ git commit -m "feat(skill): wire create_project.sh to new paths + share-path san
 ### Task 3: Write `SKILL.md` + reference files
 
 **Depends on:** Task 1
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** N/A — markdown authoring.
 **Input:** Existing `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/.claude/skills/research-project-setup/SKILL.md` (source content for the move).
 **Output:** `skills/research-project-setup/SKILL.md`, `skills/research-project-setup/references/feature-catalog.md`, `skills/research-project-setup/references/retrofit-playbooks.md`.
 
-- [ ] **Step 1: Author `SKILL.md`**
+- [x] **Step 1: Author `SKILL.md`**
 
 Frontmatter `description` must include trigger phrases (verbatim list):
 
@@ -366,7 +366,7 @@ Body structure (target ~100–120 lines):
 
 Write directly with `Write` after authoring the content in-head.
 
-- [ ] **Step 2: Author `references/feature-catalog.md`**
+- [x] **Step 2: Author `references/feature-catalog.md`**
 
 One section per opt-in feature, each with:
 - **What it is** — 1–2 sentence description
@@ -376,7 +376,7 @@ One section per opt-in feature, each with:
 
 Features at launch (six total — four opt-ins plus the two retrofit-only ones for reference): superRA Claude plugin (ON), superRA Codex plugin + named agents (ON), Overleaf sync (OFF), GitHub Actions CI (OFF). Plus reference sections for the retrofit-only playbooks (Figures/Tables restructure; decoupled `.share-path`).
 
-- [ ] **Step 3: Author `references/retrofit-playbooks.md`**
+- [x] **Step 3: Author `references/retrofit-playbooks.md`**
 
 Move the six playbooks from the source `SKILL.md` verbatim, updating paths:
 - `$TEMPLATE_DIR/ProjectExample/...` → `$SKILL_DIR/template/...` (where `$SKILL_DIR` is `skills/research-project-setup/` of the active superRA install).
@@ -390,7 +390,7 @@ Playbooks:
 5. Restructure Figures/Tables under `Paper/` (pre-v2 migration, destructive — confirm first)
 6. Switch from sibling-Share to decoupled `.share-path` — **extended** to also rewrite `.claude/settings.local.json` and `.codex/config.toml` for the new absolute share path (mirroring the new logic in `create_project.sh` Task 2 Step 2).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add skills/research-project-setup/SKILL.md \
