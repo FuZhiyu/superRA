@@ -5,7 +5,7 @@
 # Flags:
 #   --only claude|codex   Run only one CLI's rows.
 #   --case A|B|C|D        Run only one scenario.
-#   --keep                Skip cleanup of /tmp artifacts.
+#   --keep                Skip cleanup of $HOME/rps-tests/ artifacts.
 #   --verbose             Echo every CLI invocation.
 #
 # Env overrides:

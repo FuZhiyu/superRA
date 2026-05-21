@@ -14,12 +14,15 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CLI="${1:-claude}"
 
-WORK=$(mktemp -d /tmp/rps-test-B-XXXX)
-PROJ_DIR="$WORK/VerifyBar"
-SHARE="$WORK/VerifyBar-Share"
-_register_cleanup "$WORK"
+mkdir -p "$HOME/rps-tests"
+WORK=$(mktemp -d "$HOME/rps-tests/B-cwd-XXXX")
+PROJ_PARENT=$(mktemp -d "$HOME/rps-tests/B-proj-XXXX")
+PROJ_DIR="$PROJ_PARENT/VerifyBar"
+SHARE_PARENT=$(mktemp -d "$HOME/rps-tests/B-share-XXXX")
+SHARE="$SHARE_PARENT/VerifyBar-Share"
+_register_cleanup "$WORK" "$PROJ_PARENT" "$SHARE_PARENT"
 
-trap 'cleanup_paths "$WORK"' EXIT
+trap 'cleanup_paths "$WORK" "$PROJ_PARENT" "$SHARE_PARENT"' EXIT
 
 PROMPT="Use the research-project-setup skill to create a new research project named VerifyBar.
 

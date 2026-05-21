@@ -18,27 +18,19 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CLI="${1:-claude}"
 
-PROJ=$(mktemp -d /tmp/rps-test-A-XXXX)
+# Both project root and share path MUST live under $HOME/rps-tests/ — that
+# tree sits outside the template's default writable_roots (/tmp,
+# /private/tmp, /var/folders, ~/.venvs, ~/.cache, ~/.local/share/uv — see
+# template/.codex/config.toml). Anywhere else and the codex strict-profile
+# assertion vacuously passes whether or not register_share_path_with_agents
+# ran, defeating the point of Test A.
+mkdir -p "$HOME/rps-tests"
+PROJ=$(mktemp -d "$HOME/rps-tests/A-proj-XXXX")
 PROJ_DIR="$PROJ/Proj"
-# The share path MUST sit outside both the project root and Codex's default
-# writable_roots (/tmp, /private/tmp, /var/folders, ~/.venvs, ~/.cache,
-# ~/.local/share/uv — see template/.codex/config.toml). Otherwise the codex
-# strict-profile assertion passes whether or not register_share_path_with_agents
-# ran, defeating the point of Test A. ~/.local/share/rps-share-A-* is outside
-# the default writable_roots so the registration becomes load-bearing.
-mkdir -p "$HOME/.local/share"
-SHARE=$(mktemp -d "$HOME/.local/share/rps-share-A-XXXX")
+SHARE=$(mktemp -d "$HOME/rps-tests/A-share-XXXX")
 _register_cleanup "$PROJ" "$SHARE"
 
-# Custom cleanup since SHARE is outside /tmp.
-_test_a_cleanup() {
-    [ "${KEEP_ARTIFACTS:-0}" = "1" ] && return 0
-    rm -rf "$PROJ"
-    case "$SHARE" in
-        "$HOME/.local/share/rps-share-A-"*) rm -rf "$SHARE" ;;
-    esac
-}
-trap _test_a_cleanup EXIT
+trap 'cleanup_paths "$PROJ" "$SHARE"' EXIT
 
 scaffold_project "$PROJ_DIR" "$SHARE" >/dev/null || exit 1
 

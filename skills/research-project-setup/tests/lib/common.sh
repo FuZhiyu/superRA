@@ -58,15 +58,19 @@ scaffold_project() {
     echo "$proj"
 }
 
-# cleanup_paths <paths...> — rm -rf with guard that each path begins with /tmp/
-# (or /private/tmp/ on macOS, which symlinks to /tmp).
+# cleanup_paths <paths...> — rm -rf with guard that each path lives under
+# $HOME/rps-tests/. Anything else is refused (loud failure) so a mistake in
+# a case script can't wipe unrelated state. The narrow allowlist also matches
+# the path discipline that keeps Test A load-bearing: scratch dirs MUST live
+# outside the template's default writable_roots (which include /tmp,
+# /private/tmp, /var/folders, ~/.venvs, ~/.cache, ~/.local/share/uv).
 cleanup_paths() {
     [ "${KEEP_ARTIFACTS:-0}" = "1" ] && { log_info "KEEP_ARTIFACTS=1 — leaving $*"; return 0; }
     local p
     for p in "$@"; do
         case "$p" in
-            /tmp/*|/private/tmp/*|/var/folders/*) rm -rf "$p" ;;
-            *) log_fail "refusing to rm -rf outside /tmp: $p" ;;
+            "$HOME/rps-tests/"*) rm -rf "$p" ;;
+            *) log_fail "refusing to rm -rf outside \$HOME/rps-tests/: $p" ;;
         esac
     done
 }
@@ -77,14 +81,24 @@ cleanup_paths() {
 # run_claude <cwd> <profile> <prompt>
 #   profile = strict | permissive
 #   strict     -> --permission-mode acceptEdits
-#                 (auto-accepts file edits within the workspace + registered
-#                  additionalDirectories; writes outside those still prompt
-#                  and, since no human is present in headless mode, those
-#                  prompts are recorded as permission_denials. This is the
-#                  load-bearing check: if register_share_path_with_agents
-#                  failed to append the absolute share path, writes into
-#                  the share folder land outside the workspace and are
-#                  denied.)
+#                 Empirically the ONLY headless mode that makes
+#                 permissions.additionalDirectories load-bearing for Write:
+#                   - default / auto / dontAsk: Write to ANY path outside the
+#                     workspace is recorded as a permission_denial in headless
+#                     mode (even when the path is in additionalDirectories or
+#                     additionalDirectories carries an explicit Write(...) allow
+#                     rule). The default mode silently denies headless because
+#                     there is no human to approve a tool-use prompt.
+#                   - acceptEdits: writes INSIDE workspace+additionalDirectories
+#                     succeed; writes OUTSIDE that set are still recorded as
+#                     permission_denials. So if register_share_path_with_agents
+#                     did not register the absolute share path, the write to
+#                     <share>/Notes/test.txt is denied — verified against a
+#                     surgically-broken project (denials > 0).
+#                   - bypassPermissions: would accept everything and defeat the test.
+#                 See RESULTS.md Task 8 for the empirical sweep that produced
+#                 this choice; the PLAN.md draft assumed default mode honored
+#                 additionalDirectories in headless, which it does not.
 #   permissive -> --permission-mode bypassPermissions; use for Tests B/C/D
 #   Emits JSON on stdout; non-zero exit on CLI failure.
 #
@@ -116,6 +130,8 @@ run_claude() {
     if [ "$profile" = "permissive" ]; then
         args+=(--permission-mode bypassPermissions)
     else
+        # strict: acceptEdits is the only headless mode that makes
+        # additionalDirectories load-bearing (see comment block above).
         args+=(--permission-mode acceptEdits)
     fi
     log_verbose "claude (cwd=$cwd profile=$profile): ${args[*]}"

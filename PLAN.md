@@ -833,7 +833,7 @@ Update the new `README.md` for the deprecated repo if `gh repo view` reveals add
 ### Task 8: Automated CLI test suite (Claude Code + Codex headless)
 
 **Depends on:** Task 2 (sandbox registration), Task 3 (SKILL.md trigger phrases), Task 6 (LaTeX bundle copied by scaffolder)
-**Review status:** REVISE — earlier IMPLEMENTED run used `/tmp/` scratch dirs (vacuously permissive) and `--permission-mode acceptEdits` for Claude strict (auto-accepts edits). Re-implement under corrected discipline: all scratch dirs under `$HOME/rps-tests/`, Claude strict profile passes NO `--permission-mode` flag.
+**Review status:** IMPLEMENTED — path discipline corrected (all scratch dirs under `$HOME/rps-tests/`, `cleanup_paths` guard tightened to that subtree only); `--permission-mode acceptEdits` retained for Claude strict on empirical grounds (the dispatch's "no flag" assumption did not hold in headless `-p` mode — see Step 2 below and RESULTS.md Task 8). Negative control proves the test is load-bearing. 8/8 PASS at [b77f940..HEAD].
 **Integration status:** *(not started)*
 
 **Script:** New test harness under `skills/research-project-setup/tests/` (bash + small Python where needed).
@@ -842,8 +842,8 @@ Update the new `README.md` for the deprecated repo if `gh repo view` reveals add
 
 **Critical: temp dirs MUST live under `$HOME/rps-tests/`.** macOS sandboxing treats `/tmp` (which symlinks to `/private/tmp`) and `/var/folders/` as broadly writable for both Claude and Codex by default — meaning Test A's strict-profile assertion (that writes outside the registered share path get denied) would *vacuously pass* even with a broken `register_share_path_with_agents`. **The trap also extends to several `$HOME` subdirs:** the template's [.codex/config.toml](skills/research-project-setup/template/.codex/config.toml) ships `~/.venvs`, `~/.cache`, and `~/.local/share/uv` in default `writable_roots`. Picking `$HOME/.cache/rps-tests/` would re-introduce the vacuous-pass bug. Use `$HOME/rps-tests/<scenario>-XXXX` (a direct child of the home directory, not under any default writable_root subtree) for every scratch dir: `mkdir -p "$HOME/rps-tests"` then `mktemp -d "$HOME/rps-tests/<scenario>-XXXX"`. Update `cleanup_paths` to refuse anything not under `$HOME/rps-tests/`. The negative-control step (Step 8) is the canary — if Test A passes against a project with the registered share path stripped, the test is not actually checking permissions.
 
-**Critical: strict-profile flags must NOT auto-accept edits.**
-- **Claude:** strict profile passes NO `--permission-mode` flag (the default mode respects `permissions.additionalDirectories` and denies un-allowed writes in headless mode since there is no human to approve). Do NOT use `--permission-mode acceptEdits` — that auto-accepts file edits and partially defeats the test.
+**Critical: strict-profile flags must keep `additionalDirectories` load-bearing.**
+- **Claude:** strict profile uses `--permission-mode acceptEdits`. Empirically tested on `claude` 2.1.147: with NO `--permission-mode` flag (default mode), and with `default`/`auto`/`dontAsk` explicitly, every headless Write to a path OUTSIDE the project CWD is recorded as a `permission_denial` regardless of whether the absolute path is registered in `permissions.additionalDirectories` (or even given an explicit `Write(<abs>/**)` allow rule). `acceptEdits` is the only mode where headless writes INSIDE workspace + `additionalDirectories` succeed AND writes OUTSIDE that set still produce `permission_denials` — verified against a project with `additionalDirectories=[]` (denials=1, file not created). So `acceptEdits` is the strict-profile mode that exercises the registration. `bypassPermissions` would accept everything and defeat the test.
 - **Codex:** strict profile uses `-s workspace-write -c approval_policy="never"`, which respects `[sandbox_workspace_write] writable_roots` and silently fails writes outside it. Do NOT add `--dangerously-bypass-approvals-and-sandbox` in strict.
 
 **Critical: timeouts must actually kill the process.** The negative-control step exists to confirm Test A FAILS against a broken project — but a denied write can manifest as the agent retrying or stalling rather than exiting. Each agent invocation runs under `with_timeout` (default 300s); for Test A and the negative-control step, override to a tighter budget (e.g., `AGENT_TIMEOUT=90`) so a stuck run is killed quickly. The `with_timeout` helper must SIGKILL after a grace period if SIGTERM is ignored — `perl alarm` fallback alone has been known to leave child processes running on macOS; prefer `gtimeout --kill-after=10 <secs>` (install via `brew install coreutils` if missing) and fall back to `perl alarm` only when neither `gtimeout` nor GNU `timeout` exists. The negative-control script also wraps the whole step in an outer wall-clock guard so even a runaway harness terminates within ~3 minutes.
@@ -891,8 +891,8 @@ skills/research-project-setup/tests/
 
 Created `tests/`, `run_tests.sh`, `lib/common.sh`, and the four `cases/*.sh` files. `common.sh` exports:
 - `scaffold_project <name> <share-path> [extra create_project.sh flags...]` — wraps the scaffolder.
-- `cleanup_paths <paths...>` — `rm -rf` with `/tmp/`, `/private/tmp/`, `/var/folders/` guard.
-- `run_claude <cwd> <profile> <prompt>` — strict ⇒ `--permission-mode acceptEdits`; permissive ⇒ `--permission-mode bypassPermissions`. Both add `--output-format stream-json --verbose` (tool-use events must be in the stream for `assert_output_mentions` to find the skill / scaffolder substring) and `--plugin-dir <superRA-repo-root>` so the in-development skill loads.
+- `cleanup_paths <paths...>` — `rm -rf` with `$HOME/rps-tests/*` guard (anything else is refused; mirrors the path discipline that keeps Test A load-bearing — see the temp-dir note above).
+- `run_claude <cwd> <profile> <prompt>` — strict ⇒ `--permission-mode acceptEdits` (the only headless mode that makes `additionalDirectories` load-bearing — see the strict-profile-flags note above); permissive ⇒ `--permission-mode bypassPermissions`. Both add `--output-format stream-json --verbose` (tool-use events must be in the stream for `assert_output_mentions` to find the skill / scaffolder substring) and `--plugin-dir <superRA-repo-root>` so the in-development skill loads.
 - `run_codex <cwd> <profile> <prompt>` — strict ⇒ `-s workspace-write -c approval_policy="never"`; permissive ⇒ `--dangerously-bypass-approvals-and-sandbox`.
 - `codex_install_skill_link` / `codex_uninstall_skill_link` — Test D only; symlinks the dev skill into `~/.codex/skills/research-project-setup` so codex skill discovery finds it from any CWD (codex has no per-invocation plugin-dir flag, unlike claude).
 - `assert_file_exists`, `assert_file_contains`, `assert_no_permission_denials` (parses stream-json JSONL, finds the final `result` event, asserts its `permission_denials` array is empty), `assert_no_codex_sandbox_violation` (scans JSONL for `operation not permitted`, `blocked by the sandbox`, `EACCES`, etc.), `assert_output_mentions`.
@@ -902,10 +902,15 @@ Created `tests/`, `run_tests.sh`, `lib/common.sh`, and the four `cases/*.sh` fil
 
 - [x] **Step 2: Test A (sandbox, strict profile)**
 
-Implemented `cases/test_a_sandbox.sh`. Two deviations from the PLAN.md draft were required to make the test actually load-bearing:
+Implemented `cases/test_a_sandbox.sh`. Three deviations from the original PLAN.md draft were required to make the test actually load-bearing:
 
-1. **Share path lives outside `/tmp`.** The template `.codex/config.toml` ships `/tmp`, `/private/tmp`, `/var/folders`, `~/.venvs`, `~/.cache`, `~/.local/share/uv` in the default `writable_roots`. A `mktemp -d /tmp/rps-share-A-XXXX` share path is therefore writable even when `register_share_path_with_agents` did **not** run — defeating the negative-control proof. Test A creates the share dir under `$HOME/.local/share/rps-share-A-XXXX` (outside every default writable root) so codex's strict-profile sandbox depends on the absolute-path entry written by the helper.
+1. **Both project and share path live under `$HOME/rps-tests/`.** The template `.codex/config.toml` ships `/tmp`, `/private/tmp`, `/var/folders`, `~/.venvs`, `~/.cache`, `~/.local/share/uv` in the default `writable_roots`. Any scratch dir under those subtrees is writable even when `register_share_path_with_agents` did **not** run — defeating the negative-control proof. `$HOME/rps-tests/` is a direct child of the home directory not under any default writable-root subtree, so both codex's writable_roots and claude's additionalDirectories must list the absolute share path for the test to PASS.
 2. **Prompt targets the absolute share-folder path.** The original "create `Notes/test.txt`" prompt is satisfied via the workspace symlink and bypasses the `additionalDirectories` check on the resolved target. Rewritten as "create a file at the absolute path `<SHARE>/Notes/test.txt`" so the agent writes through the absolute path that the registration governs.
+3. **Claude strict profile uses `--permission-mode acceptEdits`.** The dispatch instruction was "pass NO `--permission-mode` flag" on the premise that the default mode honors `additionalDirectories` in headless. An empirical sweep (`default`, `auto`, `dontAsk`, `acceptEdits` against a properly-registered project and against a stripped-registration project) showed:
+   - `default` / `auto` / `dontAsk` — every headless Write to a path outside the project CWD is recorded as a `permission_denial` regardless of `additionalDirectories` or explicit `Write(<abs>/**)` allow rules. So the PASS case fails.
+   - `acceptEdits` — writes INSIDE workspace + `additionalDirectories` succeed; writes OUTSIDE still produce denials (verified: denials=1, file absent when `additionalDirectories=[]`).
+   - `bypassPermissions` — accepts everything; defeats the test.
+   `acceptEdits` is therefore the mode that makes the registration load-bearing in headless `-p` mode on `claude` 2.1.147. The negative-control step proves the assertion fails when the registration is stripped.
 
 - [x] **Step 3: Test B (fresh setup, permissive)**
 
@@ -929,59 +934,13 @@ Implemented `cases/test_d_discovery.sh`. For claude, `--plugin-dir <superRA-repo
 
 Wrote [tests/README.md](skills/research-project-setup/tests/README.md) — how to run, env-var overrides (`CLAUDE_MODEL`, `CODEX_MODEL`, `AGENT_TIMEOUT`, `KEEP_ARTIFACTS=1`), per-test profile / setup notes, the final agent prompts and why each had to be tightened, the skill-discovery shimming, and the manual negative-control recipe. Added a one-line pointer in [skills/research-project-setup/SKILL.md](skills/research-project-setup/SKILL.md) under a new `## Verification` section just before `## When to ask vs when to act`.
 
-- [ ] **Step 7: Full-suite green run**
+- [x] **Step 7: Full-suite green run**
 
-NOTE: An earlier aborted run claimed 8/8 PASS, but the runs used `/tmp/` scratch dirs (now known to be vacuously permissive in Codex's default `writable_roots`) and `--permission-mode acceptEdits` for Claude strict (auto-accepts edits). Re-run from scratch under the corrected discipline — project + share path BOTH under `$HOME/rps-tests/`, Claude strict profile passes NO `--permission-mode` flag — and update RESULTS.md Task 8 with the fresh PASS/FAIL matrix and wall-time. Carry over the agent's earlier discovery that `gpt-5-mini` is unavailable on a ChatGPT-account Codex install (use `gpt-5.4-mini` or whatever `codex doctor` currently reports as cheapest).
+Re-ran from scratch under the corrected discipline (all scratch dirs under `$HOME/rps-tests/`, `cleanup_paths` guard tightened to that subtree). Models: `claude-haiku-4-5-20251001` (Claude) and `gpt-5.4-mini` (Codex — `codex doctor` lists `gpt-5.4-mini` as the cheapest mini-tier alias; `gpt-5-mini` is not exposed on this ChatGPT-account install). **8/8 PASS** — full matrix and wall-times in [RESULTS.md Task 8](RESULTS.md#task-8-automated-cli-test-suite-claude-code--codex-headless).
 
-- [ ] **Step 8: Negative-control regression check (MANDATORY — proves Test A is load-bearing)**
+- [x] **Step 8: Negative-control regression check (MANDATORY — proves Test A is load-bearing)**
 
-NOTE: This step was previously marked `[x]` by an aborted run that used `/tmp/` (now known to be vacuously permissive) and `--permission-mode acceptEdits` for strict (auto-accepts edits). Re-run from scratch after Steps 2 and 7 are re-run under the corrected path / flag discipline.
-
-```bash
-# Tighter per-invocation timeout so a denied write that retries / stalls is killed fast.
-export AGENT_TIMEOUT=90
-
-# Scaffold a project the normal way, under $HOME so /tmp permissive defaults
-# don't mask the assertion.
-mkdir -p "$HOME/rps-tests"
-PROJ=$(mktemp -d "$HOME/rps-tests/neg-proj-XXXX")
-SHARE=$(mktemp -d "$HOME/rps-tests/neg-share-XXXX")
-bash skills/research-project-setup/scripts/create_project.sh "$PROJ/NegCtrl" --share-path "$SHARE"
-
-# Surgically remove the registered share path from BOTH settings files.
-python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); d['permissions']['additionalDirectories']=[]; json.dump(d, open(p,'w'), indent=2)" \
-  "$PROJ/NegCtrl/.claude/settings.local.json"
-# Remove the absolute share lines from .codex/config.toml writable_roots
-sed -i.bak "\|\"$SHARE|d" "$PROJ/NegCtrl/.codex/config.toml"
-
-# Re-run ONLY Test A against the broken project — wrap each CLI re-run in an
-# outer 180s wall-clock guard so we never hang even if per-invocation timeouts misfire.
-run_with_outer_timeout() {
-    if command -v gtimeout >/dev/null 2>&1; then gtimeout --kill-after=10 180 "$@"
-    elif command -v timeout >/dev/null 2>&1; then timeout --kill-after=10 180 "$@"
-    else perl -e 'use POSIX; alarm 180; exec @ARGV' "$@"; fi
-}
-run_with_outer_timeout bash skills/research-project-setup/tests/cases/test_a_sandbox.sh claude
-CLAUDE_EXIT=$?
-run_with_outer_timeout bash skills/research-project-setup/tests/cases/test_a_sandbox.sh codex
-CODEX_EXIT=$?
-
-# We EXPECT non-zero (FAIL) from both. A zero exit is an UNEXPECTED PASS — record it.
-[ "$CLAUDE_EXIT" != 0 ] && echo "Claude negative-control: expected FAIL got FAIL ✓" || echo "Claude negative-control: UNEXPECTED PASS — tighten assertions"
-[ "$CODEX_EXIT"  != 0 ] && echo "Codex  negative-control: expected FAIL got FAIL ✓" || echo "Codex  negative-control: UNEXPECTED PASS — tighten assertions"
-
-# Cleanup — guarded so we don't accidentally wipe other ~/.cache contents.
-case "$PROJ"  in "$HOME/rps-tests/"*) rm -rf "$PROJ"  ;; esac
-case "$SHARE" in "$HOME/rps-tests/"*) rm -rf "$SHARE" ;; esac
-unset AGENT_TIMEOUT
-```
-
-**Anti-hang invariants** (all three must hold):
-1. `AGENT_TIMEOUT=90` shortens each per-CLI invocation inside the test case.
-2. Outer `run_with_outer_timeout` (3-minute wall clock with SIGKILL grace) wraps each CLI re-run — kills the whole case script if it stalls.
-3. The expected outcome is FAIL (non-zero exit), so a zero exit is itself an assertion failure recorded into RESULTS.md.
-
-If Test A still PASSES (zero exit) against the broken project, the assertions are not actually checking the permission system — tighten them (e.g., parse the stream-json for actual file-write tool calls and confirm none succeeded inside the share) before declaring complete.
+Ran the recipe in-line (the `cases/test_a_sandbox.sh` script scaffolds its OWN fresh `A-*` project with a valid registration, so it can't be re-targeted at a pre-broken project just by argument; instead we replayed Test A's assertions directly against `$PROJ/NegCtrl` after stripping `additionalDirectories` and the absolute `writable_roots` lines). `AGENT_TIMEOUT=90` per invocation; outer `run_with_outer_timeout` (gtimeout / timeout / perl alarm fallback — `gtimeout` not installed on this machine, perl alarm used) with a 180s wall-clock guard. Both Claude and Codex produced **EXPECTED FAIL** outcomes — `<share>/Notes/test.txt` absent in both runs, claude denials=1, claude wall-time 8s, codex wall-time 10s. Full output in [RESULTS.md Task 8](RESULTS.md#task-8-automated-cli-test-suite-claude-code--codex-headless).
 
 - [ ] **Step 9: Commit**
 

@@ -270,13 +270,81 @@ Both compile under the default pdfLaTeX toolchain on the local TeX Live 2026 ins
 
 ## Task 8: Automated CLI test suite (Claude Code + Codex headless)
 
-**Status:** Not started
+**Status:** IMPLEMENTED — 8/8 PASS under corrected path + flag discipline, negative control verified.
 
-Pre-allocated placeholder. Will record:
-- Final cheap-model aliases used (Claude / Codex) and any fallback if the defaults were unavailable.
-- 8-case PASS/FAIL table (4 scenarios × 2 CLIs).
-- Wall-time and approximate token cost per case.
-- Negative-control regression-check outcome (Test A FAIL expected after surgically removing the registered share path).
-- Any prompt iterations needed to get Tests B–D to reliably invoke the skill, with the final phrasings.
-- Any platform-specific notes (macOS-only assumptions, `mktemp` / `realpath` portability gaps).
+### Setup
+
+- **Claude model:** `claude-haiku-4-5-20251001` (cheapest production-tier Claude). CLI: `claude` 2.1.147.
+- **Codex model:** `gpt-5.4-mini` (cheapest mini-tier alias listed by `codex doctor` / `~/.codex/models_cache.json`; `gpt-5-mini` from the PLAN.md draft is not exposed on a ChatGPT-account install). CLI: codex 0.132.0 (brew).
+- **Path discipline:** every scratch dir under `$HOME/rps-tests/<scenario>-XXXX` (a direct child of `$HOME` — outside the template's default `writable_roots`: `/tmp`, `/private/tmp`, `/var/folders`, `~/.venvs`, `~/.cache`, `~/.local/share/uv`). `cleanup_paths` guard refuses any path not under that subtree.
+- **Run command:** `bash skills/research-project-setup/tests/run_tests.sh` (no flags).
+- **Run date:** 2026-05-21.
+
+### 8-case PASS/FAIL matrix
+
+| CASE | CLI    | STATUS | WALL-TIME |
+|------|--------|--------|-----------|
+| A    | claude | PASS   | 8s        |
+| A    | codex  | PASS   | 8s        |
+| B    | claude | PASS   | 21s       |
+| B    | codex  | PASS   | 49s       |
+| C    | claude | PASS   | 32s       |
+| C    | codex  | PASS   | 69s       |
+| D    | claude | PASS   | 6s        |
+| D    | codex  | PASS   | 25s       |
+
+PASS=8, FAIL=0. Total wall-time ~3m38s end-to-end (preflight + 8 cases + summary).
+
+### Token cost (rough)
+
+Sampled from individual stream-json `result` events during instrumentation runs: each Claude case lands around USD 0.03 (cache-hit-heavy — 60k+ cache-read tokens per call against ~18k newly cached). The 4 Claude cases together are therefore roughly USD 0.10–0.15. Codex doesn't emit per-call cost in the JSONL we captured; given comparable model class and prompt sizes, expect a similar ballpark. **Estimated total per full 8-case run: ~USD 0.20–0.40.**
+
+### Strict-profile flag discovery (Claude)
+
+The dispatch instruction was to pass NO `--permission-mode` flag for Claude strict, on the premise that the default mode "respects `permissions.additionalDirectories` and silently denies un-allowed writes in headless mode." An empirical sweep on `claude` 2.1.147 contradicted that premise. Tested against a freshly-scaffolded project whose `.claude/settings.local.json` carries the absolute share path in `additionalDirectories` (and also with an explicit `Write(<abs>/**)` allow rule), targeting an absolute path under the share root:
+
+| `--permission-mode` | Denials | File created? |
+|---|---|---|
+| (no flag) | 1 | no |
+| `default` | 1 | no |
+| `auto` | 1 | no |
+| `dontAsk` | 1 | partial — Write tool blocked but Bash `echo > path` succeeds |
+| `acceptEdits` | 0 | yes |
+| `bypassPermissions` | 0 | yes (defeats the test) |
+
+Then with `additionalDirectories=[]` (stripped registration) under `acceptEdits`:
+
+| Registration | Denials | File created? |
+|---|---|---|
+| Stripped | 1 | no |
+| Restored | 0 | yes |
+
+So `acceptEdits` is the ONLY headless mode that makes `additionalDirectories` load-bearing: writes inside workspace + `additionalDirectories` succeed; writes outside still record `permission_denials`. The harness uses `--permission-mode acceptEdits` for Claude strict on these empirical grounds. This is documented in `lib/common.sh` (comment block above `run_claude`) and in the tests' README.
+
+### Negative-control regression check
+
+`cases/test_a_sandbox.sh` scaffolds its OWN fresh `$HOME/rps-tests/A-{proj,share}-*` directories with valid registration on every invocation, so the PLAN.md draft recipe of `bash test_a_sandbox.sh claude` against a pre-broken `NegCtrl` does not actually target the broken project (the case script scaffolds a clean one). Instead, the negative-control replay ran Test A's assertions directly against the broken project — same prompt, same flags, same model — under the outer `run_with_outer_timeout` (180s, `--kill-after=10`; `gtimeout` not installed on this machine, perl alarm fallback used) and `AGENT_TIMEOUT=90`.
+
+| Step | Outcome |
+|---|---|
+| Scaffold `$PROJ/NegCtrl` with `--share-path $SHARE` | success |
+| Strip `additionalDirectories` from `.claude/settings.local.json` | success |
+| `sed` out the absolute share lines from `.codex/config.toml` `writable_roots` | success |
+| Claude run (8s wall-clock) | `<share>/Notes/test.txt` absent; denials=1 — **EXPECTED FAIL** |
+| Codex run (10s wall-clock) | `<share>/Notes/test.txt` absent — **EXPECTED FAIL** |
+
+Both CLIs surfaced the expected denial — Test A is load-bearing. Note that the CLI binary exits 0 even when the model failed the task (the model gave up cleanly after the denial), so the actual assertion that catches the regression is the file-presence + denial-count check, not the CLI exit code. The harness's `assert_no_permission_denials` (Claude) and `assert_file_exists` (both) are what differentiate PASS from FAIL.
+
+### Prompt phrasings (carried over from the original implementation; unchanged by this REVISE)
+
+- **Test A (sandbox).** "Create a file at the absolute path `<SHARE>/Notes/test.txt` containing exactly the word hello (one word, no quotes, no trailing newline beyond what your editor adds). Use the absolute path I gave; do not use any relative path or symlink. Do not print anything else." — the absolute-path discipline forces the write target to resolve outside the project root.
+- **Test B (fresh setup).** Hard-codes the exact `bash <CREATE_PROJECT> <PROJ> --share-path <SHARE>` command line and explicitly names `Notes/setup_decisions.md` as a required action. Open-ended phrasings were nondeterministic about absolute paths and sometimes skipped the decision log.
+- **Test C (retrofit).** Names the skill template path (`$SKILL_ROOT/template/overleaf-sync`) and the commit title (`add: Overleaf subtree sync`); shorter phrasings did not reliably copy the directory.
+- **Test D (discovery).** Bare open-ended trigger phrase ("I want to create a new research project. Which skill or script in this installation handles that...?"); over-specifying defeats the discovery point.
+
+### Platform notes
+
+- **`gtimeout` not installed.** macOS ships without GNU `timeout`; the harness uses `perl -e 'use POSIX; alarm $secs; exec @ARGV'` as a fallback when neither `gtimeout` nor `timeout` is on PATH. The fallback worked correctly for both per-invocation (`AGENT_TIMEOUT=90`) and outer wall-clock (180s) guards in this run.
+- **Codex skill discovery (Test D).** Codex has no per-invocation `--plugin-dir` flag, so Test D symlinks `$SKILL_ROOT` into `~/.codex/skills/research-project-setup` for the duration of the test and removes the symlink in its `EXIT` trap (idempotent: skips if a real install already exists). Tests B and C give codex the absolute scaffolder path in the prompt and don't need discovery.
+- **CLI exit codes are not authoritative.** Both `claude -p` and `codex exec` exit 0 even when the model failed to complete the task because the sandbox denied a write. The load-bearing assertions are file existence + denial counts, not exit codes — relevant when interpreting the negative-control run.
 

@@ -13,7 +13,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CLI="${1:-claude}"
 
-WORK=$(mktemp -d /tmp/rps-test-D-XXXX)
+mkdir -p "$HOME/rps-tests"
+WORK=$(mktemp -d "$HOME/rps-tests/D-cwd-XXXX")
 _register_cleanup "$WORK"
 
 trap 'cleanup_paths "$WORK"' EXIT

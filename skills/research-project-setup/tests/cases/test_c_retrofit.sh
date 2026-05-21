@@ -13,12 +13,14 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 CLI="${1:-claude}"
 
-WORK=$(mktemp -d /tmp/rps-test-C-XXXX)
+mkdir -p "$HOME/rps-tests"
+WORK=$(mktemp -d "$HOME/rps-tests/C-proj-XXXX")
 PROJ_DIR="$WORK/RetroFooProj"
-SHARE="$WORK/RetroFoo-Share"
-_register_cleanup "$WORK"
+SHARE_PARENT=$(mktemp -d "$HOME/rps-tests/C-share-XXXX")
+SHARE="$SHARE_PARENT/RetroFoo-Share"
+_register_cleanup "$WORK" "$SHARE_PARENT"
 
-trap 'cleanup_paths "$WORK"' EXIT
+trap 'cleanup_paths "$WORK" "$SHARE_PARENT"' EXIT
 
 scaffold_project "$PROJ_DIR" "$SHARE" >/dev/null || exit 1
 
