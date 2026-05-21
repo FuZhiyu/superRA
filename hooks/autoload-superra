@@ -61,7 +61,11 @@ if [ -n "$transcript_path" ] && [ -f "$transcript_path" ] \
   exit 0
 fi
 
-context='<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load the master skill by invoking Skill(skill="superRA:using-superRA"). It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>'
+if [ -n "${PLUGIN_ROOT:-}" ]; then
+  context='<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load `superRA:using-superra`. It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>'
+else
+  context='<IMPORTANT>The user has invoked a superRA workflow term. Before responding, load the master skill by invoking Skill(skill="superRA:using-superRA"). It carries the Skill-Load Manifest, handoff-doc pointer, code-change defaults, and commit hygiene that every superRA task depends on. Skip this only if the skill is already loaded in this session.</IMPORTANT>'
+fi
 
 # JSON-escape the reminder text so inner double quotes / backslashes do
 # not invalidate the payload. `python3 -m json.dumps` emits the string

@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Codex Stop hook: after a plan-mode turn emits a proposed plan, remind the
+# agent that implementation still requires PLAN.md + RESULTS.md materialization.
+
+set -euo pipefail
+
+input=$(cat)
+
+parsed=$(echo "$input" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("\t\t")
+    sys.exit(0)
+event = d.get("hook_event_name", "") or ""
+permission_mode = d.get("permission_mode", "") or ""
+last = d.get("last_assistant_message", "") or ""
+last = last.replace("\t", " ").replace("\n", " ").replace("\r", " ")
+print(event + "\t" + permission_mode + "\t" + last)
+' 2>/dev/null || printf '\t\t')
+
+IFS=$'\t' read -r event permission_mode last_assistant_message <<<"$parsed"
+
+if [ "$event" != "Stop" ] || [ "$permission_mode" != "plan" ]; then
+  printf '{}\n'
+  exit 0
+fi
+
+if ! printf '%s' "$last_assistant_message" | grep -q '<proposed_plan>'; then
+  printf '{}\n'
+  exit 0
+fi
+
+message="<IMPORTANT>You just completed a Codex plan-mode turn with a proposed plan. Before taking implementation actions, materialize the approved plan into committed PLAN.md + RESULTS.md at the project root using superRA:planning-workflow and superRA:handoff-doc. If PLAN.md and RESULTS.md already exist and are committed, this reminder is satisfied.</IMPORTANT>"
+message_json=$(printf '%s' "$message" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+printf '{"continue":true,"systemMessage":%s}\n' "$message_json"
+
+exit 0
