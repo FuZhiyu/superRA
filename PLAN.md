@@ -59,7 +59,7 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
 **Pre-sync merge base:** `8c3db7db058539c5cde7e7ffdc360d8d936fe866`
 **Synced base head:** `15755310cf4c32e91a67e1bd79989c57f1406b26`
 **Incoming range:** `8c3db7db058539c5cde7e7ffdc360d8d936fe866..15755310cf4c32e91a67e1bd79989c57f1406b26`
-**Sync commits:** `PENDING_MERGE_COMMIT`, `PENDING_SHA_UPDATE`
+**Sync commits:** `78c12669c7f38dd3b6ed192357a0bb5952f9fdd1`
 **Sync review status:** `IMPLEMENTED`
 
 ### Branch Summary
@@ -107,6 +107,6 @@ Walked at planning time (2026-05-20). Re-walk on-demand only.
 
   Ran `bash tests/test-sync-integration-contract.sh`, `bash tests/check-harness-compatibility.sh`, and `git diff --check`; all passed before review dispatch.
 
-**Protection:** `bash tests/test-sync-integration-contract.sh`, `bash tests/check-harness-compatibility.sh`, and `git diff --check origin/main..HEAD` passed on 2026-05-20. These checks protect the writing retrofit behavior and generated-artifact contract for this skill-instruction branch.
+**Protection:** `bash tests/test-sync-integration-contract.sh`, `bash tests/check-harness-compatibility.sh`, generated-agent check, conflict-marker sweep, and `git diff --check` passed after the 2026-05-20 `origin/main` sync. These checks protect the writing retrofit behavior and generated-artifact contract for this skill-instruction branch.
 
 **Final diff self-check:** `git diff origin/main..HEAD`; surviving-change classes are the approved writing-skill branch, writing reference docs, planning/using/integration workflow routing for the writing vertical, generated/packaging surfaces, and contract tests. Suspicious hunks are justified as skill-authoring behavior under the approved Task 1 objective plus the pre-existing branch objective to add the writing vertical.
