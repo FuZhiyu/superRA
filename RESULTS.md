@@ -3,7 +3,7 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-21 (Task 1 implemented)
+**Last updated:** 2026-05-21 (Task 2 implemented)
 **Status:** In Progress
 
 ---
@@ -39,7 +39,31 @@ Scaffolded `skills/research-project-setup/` with the four subdirectories (`scrip
 
 ## Task 2: Update `create_project.sh` paths and add share-path sandbox registration
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+Rewired [scripts/create_project.sh](skills/research-project-setup/scripts/create_project.sh) to read from the in-skill `template/` + `template-share/` siblings (instead of the old `$SCRIPT_DIR/ProjectExample/...` and `$SCRIPT_DIR/{CLAUDE,README}-template.md` paths), and added a `register_share_path_with_agents` helper that registers the absolute share-folder path with both Claude (`.claude/settings.local.json` → `permissions.additionalDirectories`) and Codex (`.codex/config.toml` → `[sandbox_workspace_write].writable_roots`). The same helper is mirrored verbatim into [template/setup_mac.sh](skills/research-project-setup/template/setup_mac.sh) for coauthor machines.
+
+**Path constants rewritten** (11 sites in `create_project.sh`):
+- `Notes/.env` source → `../template-share/Notes/.env`.
+- `pyproject.toml`, `setup_mac.sh`, `.claude/`, `.codex/`, `.mcp.json`, `.gitignore`, `overleaf-sync`, `.github/` → `../template/{...}`.
+- `CLAUDE-template.md`, `README-template.md` → `../template/CLAUDE.md`, `../template/README.md`.
+
+**Registration helper placement:**
+- `create_project.sh`: helper defined and called right after `.gitignore` is copied, before `./setup_mac.sh` runs — so the per-machine settings exist before the setup invocation.
+- `setup_mac.sh`: helper defined and called right after the `Data`/`Notes`/`Output` symlinks are recreated (post-`$SHARE_PATH` resolution), before the superRA Codex agents block — coauthors get the same registration on first setup.
+
+**Smoke test (`/tmp/SmokeProj` with `--share-path /tmp/SmokeShare --with-overleaf --with-ci`):**
+- `Code/`, share `Data/`, `Notes` symlink and target all verified.
+- `.claude/settings.local.json` contains `additionalDirectories = ["/tmp/SmokeShare", "/tmp/SmokeShare/Data", "/tmp/SmokeShare/Notes", "/tmp/SmokeShare/Output"]`.
+- `.codex/config.toml` `writable_roots` block now contains the four absolute paths alongside the existing relative entries.
+- `.gitignore` lists `.claude/settings.local.json` (Step 4 confirmed it was already present at [template/.gitignore:93](skills/research-project-setup/template/.gitignore#L93); no edit needed).
+- Idempotency: re-running the helper a second time produced no duplicate entries — still exactly 4 `/tmp/SmokeShare` lines in each file.
+
+**Step 4 outcome:** `template/.gitignore` already had `.claude/settings.local.json` on line 93 from the Task 1 move — no change required.
+
+**Caveats:**
+- The TOML rewrite in the helper uses a regex against `[sandbox_workspace_write] ... writable_roots = [ ... ]`. If the bundled `template/.codex/config.toml` is ever restructured (e.g., the writable_roots array is split across multiple TOML blocks or rewritten as TOML 1.1 inline tables), the regex would silently no-op. Acceptable for the current single-block layout; flagged here for future maintenance.
+- The smoke test exercised the standalone CLI path. The agent-driven path (Task 5 Step 4) and the manual "open scaffolded project in Claude Code, no permission prompt" check (Task 5 Step 3) still need to run as part of end-to-end verification.
 
 ## Task 3: Write `SKILL.md` + reference files
 

@@ -108,8 +108,8 @@ echo "  Flags: superRA=$([ "$NO_SUPERRA" = "true" ] && echo off || echo on), cod
 mkdir -p "$SHARE_PATH"/{Notes,Data,Output}
 
 # Copy .env to Notes/ in the share folder
-if [ -f "$SCRIPT_DIR/ProjectExample/Notes/.env" ]; then
-    cp "$SCRIPT_DIR/ProjectExample/Notes/.env" "$SHARE_PATH/Notes/.env"
+if [ -f "$SCRIPT_DIR/../template-share/Notes/.env" ]; then
+    cp "$SCRIPT_DIR/../template-share/Notes/.env" "$SHARE_PATH/Notes/.env"
     sed -i '' "s/ProjectExample/$PROJECT_NAME/g" "$SHARE_PATH/Notes/.env"
 fi
 
@@ -126,38 +126,38 @@ echo "$SHARE_PATH" > .share-path
 
 # Create Python pyproject.toml from template
 echo "Creating Python environment..."
-if [ -f "$SCRIPT_DIR/ProjectExample/pyproject.toml" ]; then
-    cp "$SCRIPT_DIR/ProjectExample/pyproject.toml" pyproject.toml
+if [ -f "$SCRIPT_DIR/../template/pyproject.toml" ]; then
+    cp "$SCRIPT_DIR/../template/pyproject.toml" pyproject.toml
     sed -i '' "s/projectexample/$(echo $PROJECT_NAME | tr '[:upper:]' '[:lower:]' | tr ' ' '-')/g" pyproject.toml
     sed -i '' "s/ProjectExample/$PROJECT_NAME/g" pyproject.toml
 fi
 
 # Create setup_mac.sh from template
 echo "Creating setup script..."
-if [ -f "$SCRIPT_DIR/ProjectExample/setup_mac.sh" ]; then
-    cp "$SCRIPT_DIR/ProjectExample/setup_mac.sh" setup_mac.sh
+if [ -f "$SCRIPT_DIR/../template/setup_mac.sh" ]; then
+    cp "$SCRIPT_DIR/../template/setup_mac.sh" setup_mac.sh
     sed -i '' "s/ProjectExample/$PROJECT_NAME/g" setup_mac.sh
     chmod +x setup_mac.sh
 fi
 
 # Create README from template
 echo "Creating README..."
-if [ -f "$SCRIPT_DIR/README-template.md" ]; then
-    cp "$SCRIPT_DIR/README-template.md" README.md
+if [ -f "$SCRIPT_DIR/../template/README.md" ]; then
+    cp "$SCRIPT_DIR/../template/README.md" README.md
     sed -i '' "s/ProjectExample/$PROJECT_NAME/g" README.md
 fi
 
 # Create CLAUDE.md from template
 echo "Creating CLAUDE.md..."
-if [ -f "$SCRIPT_DIR/CLAUDE-template.md" ]; then
-    cp "$SCRIPT_DIR/CLAUDE-template.md" CLAUDE.md
+if [ -f "$SCRIPT_DIR/../template/CLAUDE.md" ]; then
+    cp "$SCRIPT_DIR/../template/CLAUDE.md" CLAUDE.md
     sed -i '' "s/ProjectExample/$PROJECT_NAME/g" CLAUDE.md
 fi
 
 # Copy .claude folder
 echo "Copying .claude configuration..."
-if [ -d "$SCRIPT_DIR/ProjectExample/.claude" ]; then
-    cp -r "$SCRIPT_DIR/ProjectExample/.claude" .claude
+if [ -d "$SCRIPT_DIR/../template/.claude" ]; then
+    cp -r "$SCRIPT_DIR/../template/.claude" .claude
     find .claude -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" -o -name "*.sh" \) \
         -exec sed -i '' "s/ProjectExample/$PROJECT_NAME/g" {} \;
 fi
@@ -175,9 +175,9 @@ PY
 fi
 
 # Copy .codex/ unless --no-codex
-if [ "$NO_CODEX" != "true" ] && [ -d "$SCRIPT_DIR/ProjectExample/.codex" ]; then
+if [ "$NO_CODEX" != "true" ] && [ -d "$SCRIPT_DIR/../template/.codex" ]; then
     echo "Copying .codex configuration..."
-    cp -r "$SCRIPT_DIR/ProjectExample/.codex" .codex
+    cp -r "$SCRIPT_DIR/../template/.codex" .codex
     find .codex -type f \( -name "*.md" -o -name "*.json" -o -name "*.toml" \) \
         -exec sed -i '' "s/ProjectExample/$PROJECT_NAME/g" {} \;
     # Strip superRA plugin from .codex/config.toml if --no-superra
@@ -204,21 +204,21 @@ fi
 [ -f CLAUDE.md ] && ln -sfn CLAUDE.md AGENTS.md
 
 # Copy .mcp.json
-if [ -f "$SCRIPT_DIR/ProjectExample/.mcp.json" ]; then
-    cp "$SCRIPT_DIR/ProjectExample/.mcp.json" .mcp.json
+if [ -f "$SCRIPT_DIR/../template/.mcp.json" ]; then
+    cp "$SCRIPT_DIR/../template/.mcp.json" .mcp.json
     sed -i '' "s/ProjectExample/$PROJECT_NAME/g" .mcp.json
 fi
 
 # Optional: Overleaf sync script
-if [ "$WITH_OVERLEAF" = "true" ] && [ -f "$SCRIPT_DIR/ProjectExample/overleaf-sync" ]; then
-    cp "$SCRIPT_DIR/ProjectExample/overleaf-sync" overleaf-sync
+if [ "$WITH_OVERLEAF" = "true" ] && [ -f "$SCRIPT_DIR/../template/overleaf-sync" ]; then
+    cp "$SCRIPT_DIR/../template/overleaf-sync" overleaf-sync
     chmod +x overleaf-sync
     echo "Copied overleaf-sync. Wire it up with: git remote add overleaf <Overleaf-git-URL>"
 fi
 
 # Optional: GitHub Actions CI workflows
-if [ "$WITH_CI" = "true" ] && [ -d "$SCRIPT_DIR/ProjectExample/.github" ]; then
-    cp -r "$SCRIPT_DIR/ProjectExample/.github" .github
+if [ "$WITH_CI" = "true" ] && [ -d "$SCRIPT_DIR/../template/.github" ]; then
+    cp -r "$SCRIPT_DIR/../template/.github" .github
     echo "Copied .github/workflows/. Configure repo variables (PAPER_DIR, PAPER_TEX, PAPER_TARGET_REPO) on GitHub as needed."
 fi
 
@@ -236,9 +236,74 @@ echo "Initializing git repository..."
 git init
 
 # Create .gitignore from template
-if [ -f "$SCRIPT_DIR/ProjectExample/.gitignore" ]; then
-    cp "$SCRIPT_DIR/ProjectExample/.gitignore" .gitignore
+if [ -f "$SCRIPT_DIR/../template/.gitignore" ]; then
+    cp "$SCRIPT_DIR/../template/.gitignore" .gitignore
 fi
+
+# Register the absolute share-folder path with Claude and Codex sandboxes so
+# the agents can write into Data/Notes/Output regardless of where the share
+# folder physically lives. settings.local.json is per-machine and gitignored.
+register_share_path_with_agents() {
+    local share_abs="$1"
+    # Claude: .claude/settings.local.json — merge into additionalDirectories.
+    mkdir -p .claude
+    if [ -f .claude/settings.local.json ]; then
+        python3 - "$share_abs" <<'PY'
+import json, sys
+share = sys.argv[1]
+p = '.claude/settings.local.json'
+with open(p) as f: cfg = json.load(f)
+perms = cfg.setdefault('permissions', {})
+dirs = perms.setdefault('additionalDirectories', [])
+for d in (share, f"{share}/Data", f"{share}/Notes", f"{share}/Output"):
+    if d not in dirs:
+        dirs.append(d)
+with open(p, 'w') as f: json.dump(cfg, f, indent=2)
+PY
+    else
+        python3 - "$share_abs" <<'PY'
+import json, sys
+share = sys.argv[1]
+cfg = {
+    "permissions": {
+        "additionalDirectories": [share, f"{share}/Data", f"{share}/Notes", f"{share}/Output"]
+    }
+}
+with open('.claude/settings.local.json', 'w') as f: json.dump(cfg, f, indent=2)
+PY
+    fi
+
+    # Codex: .codex/config.toml — append the absolute paths to writable_roots
+    # alongside the existing relative ./Data /Notes /Output entries.
+    if [ -f .codex/config.toml ]; then
+        python3 - "$share_abs" <<'PY'
+import re, sys
+share = sys.argv[1]
+p = '.codex/config.toml'
+with open(p) as f: txt = f.read()
+# Locate [sandbox_workspace_write] writable_roots = [ ... ] and inject the
+# absolute paths just before the closing bracket if not already present.
+m = re.search(r'(\[sandbox_workspace_write\][^\[]*writable_roots\s*=\s*\[)([^\]]*)(\])', txt, flags=re.DOTALL)
+if m:
+    body = m.group(2)
+    additions = []
+    for d in (share, f"{share}/Data", f"{share}/Notes", f"{share}/Output"):
+        if d not in body:
+            additions.append(f'    "{d}",')
+    if additions:
+        new_body = body.rstrip() + ('\n' if not body.endswith('\n') else '') + '\n'.join(additions) + '\n'
+        txt = txt[:m.start(2)] + new_body + txt[m.end(2):]
+        with open(p, 'w') as f: f.write(txt)
+PY
+    fi
+
+    # Ensure .claude/settings.local.json is gitignored (per-machine, never committed).
+    if ! grep -qxF '.claude/settings.local.json' .gitignore 2>/dev/null; then
+        echo '.claude/settings.local.json' >> .gitignore
+    fi
+}
+
+register_share_path_with_agents "$SHARE_PATH"
 
 # Automatically run setup
 echo ""

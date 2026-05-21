@@ -67,6 +67,71 @@ for sub in Data Notes Output; do
     echo "  $sub -> $SHARE_PATH/$sub"
 done
 
+# Register the absolute share-folder path with Claude and Codex sandboxes so
+# the agents can write into Data/Notes/Output regardless of where the share
+# folder physically lives. settings.local.json is per-machine and gitignored.
+register_share_path_with_agents() {
+    local share_abs="$1"
+    # Claude: .claude/settings.local.json — merge into additionalDirectories.
+    mkdir -p .claude
+    if [ -f .claude/settings.local.json ]; then
+        python3 - "$share_abs" <<'PY'
+import json, sys
+share = sys.argv[1]
+p = '.claude/settings.local.json'
+with open(p) as f: cfg = json.load(f)
+perms = cfg.setdefault('permissions', {})
+dirs = perms.setdefault('additionalDirectories', [])
+for d in (share, f"{share}/Data", f"{share}/Notes", f"{share}/Output"):
+    if d not in dirs:
+        dirs.append(d)
+with open(p, 'w') as f: json.dump(cfg, f, indent=2)
+PY
+    else
+        python3 - "$share_abs" <<'PY'
+import json, sys
+share = sys.argv[1]
+cfg = {
+    "permissions": {
+        "additionalDirectories": [share, f"{share}/Data", f"{share}/Notes", f"{share}/Output"]
+    }
+}
+with open('.claude/settings.local.json', 'w') as f: json.dump(cfg, f, indent=2)
+PY
+    fi
+
+    # Codex: .codex/config.toml — append the absolute paths to writable_roots
+    # alongside the existing relative ./Data /Notes /Output entries.
+    if [ -f .codex/config.toml ]; then
+        python3 - "$share_abs" <<'PY'
+import re, sys
+share = sys.argv[1]
+p = '.codex/config.toml'
+with open(p) as f: txt = f.read()
+# Locate [sandbox_workspace_write] writable_roots = [ ... ] and inject the
+# absolute paths just before the closing bracket if not already present.
+m = re.search(r'(\[sandbox_workspace_write\][^\[]*writable_roots\s*=\s*\[)([^\]]*)(\])', txt, flags=re.DOTALL)
+if m:
+    body = m.group(2)
+    additions = []
+    for d in (share, f"{share}/Data", f"{share}/Notes", f"{share}/Output"):
+        if d not in body:
+            additions.append(f'    "{d}",')
+    if additions:
+        new_body = body.rstrip() + ('\n' if not body.endswith('\n') else '') + '\n'.join(additions) + '\n'
+        txt = txt[:m.start(2)] + new_body + txt[m.end(2):]
+        with open(p, 'w') as f: f.write(txt)
+PY
+    fi
+
+    # Ensure .claude/settings.local.json is gitignored (per-machine, never committed).
+    if ! grep -qxF '.claude/settings.local.json' .gitignore 2>/dev/null; then
+        echo '.claude/settings.local.json' >> .gitignore
+    fi
+}
+
+register_share_path_with_agents "$SHARE_PATH"
+
 # --- superRA Codex agents (project scope) ---
 # The upstream sync_codex_agents.py writes into <repo-root>/.codex/agents/, where
 # repo-root is *superRA's* own clone (it carries the source specs). To make the

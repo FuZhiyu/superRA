@@ -185,14 +185,14 @@ git commit -m "feat(skill): scaffold research-project-setup with bundled templat
 ### Task 2: Update `create_project.sh` paths and add share-path sandbox registration
 
 **Depends on:** Task 1
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** `skills/research-project-setup/scripts/create_project.sh` (and the bundled `template/setup_mac.sh` for the coauthor side).
 **Input:** The copied `create_project.sh` from Task 1.
 **Output:** Updated script that (a) reads templates from the new in-skill paths and (b) writes the absolute share-folder path into `.claude/settings.local.json` and `.codex/config.toml` for arbitrary share paths.
 
-- [ ] **Step 1: Rewrite path constants**
+- [x] **Step 1: Rewrite path constants**
 
 Map (`$SCRIPT_DIR` is the script's own dir, now `skills/research-project-setup/scripts/`; `template/` and `template-share/` are siblings of `scripts/` under the skill root):
 
@@ -212,7 +212,7 @@ Map (`$SCRIPT_DIR` is the script's own dir, now `skills/research-project-setup/s
 
 Use `Edit` to apply each substitution in `skills/research-project-setup/scripts/create_project.sh`. After the edits, smoke-test it (Step 5).
 
-- [ ] **Step 2: Add share-path sandbox registration to `create_project.sh`**
+- [x] **Step 2: Add share-path sandbox registration to `create_project.sh`**
 
 After `SHARE_PATH` is resolved to absolute and after `.claude/settings.json` + `.codex/config.toml` are copied/patched, append a new section:
 
@@ -285,7 +285,7 @@ register_share_path_with_agents "$SHARE_PATH"
 
 Place this call near the end of `create_project.sh`, *after* the `.claude/` and `.codex/` copies but *before* the final `setup_mac.sh` invocation (so the per-machine settings exist before `setup_mac.sh` runs — `setup_mac.sh` will run the same function on coauthor machines).
 
-- [ ] **Step 3: Mirror the registration into `template/setup_mac.sh` for coauthor machines**
+- [x] **Step 3: Mirror the registration into `template/setup_mac.sh` for coauthor machines**
 
 `setup_mac.sh` runs after a coauthor clones the repo on a new machine; their `$SHARE_PATH` comes from `.share-path`. The same function lives there:
 
@@ -297,7 +297,7 @@ register_share_path_with_agents "$SHARE_PATH"   # same function body, copy verba
 
 `Edit` `skills/research-project-setup/template/setup_mac.sh` to insert the same function definition and call.
 
-- [ ] **Step 4: Confirm `template/.gitignore` already lists `.claude/settings.local.json`** (idempotency check)
+- [x] **Step 4: Confirm `template/.gitignore` already lists `.claude/settings.local.json`** (idempotency check)
 
 ```bash
 grep -nF '.claude/settings.local.json' skills/research-project-setup/template/.gitignore || echo "not yet listed — add it"
@@ -305,7 +305,7 @@ grep -nF '.claude/settings.local.json' skills/research-project-setup/template/.g
 
 Add the entry if absent so freshly-scaffolded projects start with the right gitignore line.
 
-- [ ] **Step 5: Smoke-test the scaffolder against /tmp**
+- [x] **Step 5: Smoke-test the scaffolder against /tmp**
 
 ```bash
 rm -rf /tmp/SmokeProj /tmp/SmokeProj-Share /tmp/SmokeShare
@@ -326,7 +326,7 @@ test "$(grep -c "/tmp/SmokeShare\"" /tmp/SmokeProj/.codex/config.toml)" -le 4 &&
 rm -rf /tmp/SmokeProj /tmp/SmokeShare
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/research-project-setup/scripts/create_project.sh \
