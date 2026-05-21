@@ -445,7 +445,7 @@ git commit -m "docs: register research-project-setup in inventory surfaces"
 ### Task 5: End-to-end verification
 
 **Depends on:** Task 2, Task 3, Task 4
-**Review status:** IMPLEMENTED (partial — manual steps pending)
+**Review status:** APPROVED (partial — Steps 3, 4, 5, 7 remain researcher-gated for integration phase)
 **Integration status:** *(not started)*
 
 **Script:** Manual verification + small shell assertions.
