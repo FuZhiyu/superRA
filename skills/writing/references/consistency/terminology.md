@@ -65,7 +65,7 @@ For each key term, the definition should be **explicit** (stated, not assumed th
 
 ## Gated Checklist
 
-- `[BLOCKING]` **Same concept, different names flagged.** Every identified alias for a key entity is reported (file + line locations) even if not fixed.
+- `[BLOCKING]` **Same concept, different names flagged.** Every identified alias for a key entity is reported with source locations even if not fixed.
 - `[BLOCKING]` **Different concepts, same name flagged.** Any word doing double duty on a key argument is reported with both usages cited.
 - `[BLOCKING]` **Term drift across sections flagged.** Any mid-paper rename of a key concept is reported with earlier and later locations.
 - `[BLOCKING]` **No silent cross-scope rewrites.** For consistency-*check* tasks, mismatches are reported, not rewritten beyond scope (`SKILL.md §Preserve substance, polish prose`).
@@ -82,8 +82,8 @@ For each finding, report:
 [SEVERITY] Terminology: <one-line title>
 Term(s): "<observed variant 1>" / "<observed variant 2>"
 Locations:
-  - file.tex:<line>: "<quoted phrase>"
-  - file.tex:<line>: "<quoted phrase>"
+  - [file.tex:42](file.tex#L42): "<quoted phrase>"
+  - [file.tex:87](file.tex#L87): "<quoted phrase>"
 Issue: <what's inconsistent>
 Recommendation: <canonical form to use, or "escalate — researcher call">
 Fix: mechanical | conventional | authorial   # see review.md §Fix tiers

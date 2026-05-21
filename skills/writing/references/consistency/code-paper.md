@@ -95,7 +95,7 @@ Where possible:
 ```
 [SEVERITY] Code-Paper: <one-line title>
 Paper location: §N.M / Table K / eq. (L)
-Code location: file.ext:<line range>
+Code location: [file.ext:40-50](file.ext#L40-L50)
 Paper description: "<quoted from paper>"
 Code implementation: <short summary>
 Discrepancy: <one-line>

@@ -101,7 +101,7 @@ Always distinguish `pp` and `%`.
 
 ```
 [SEVERITY] Numerical: <one-line title>
-Claim: "<quoted prose>" at file.tex:<line>
+Claim: "<quoted prose>" at [file.tex:42](file.tex#L42)
 Source: <Table/Figure/equation reference>
 Expected: <value from source>
 Observed: <value in prose>

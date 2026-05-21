@@ -89,6 +89,11 @@ assert_absent_regex \
   "Phase B|PhaseB|phase-b|phase b" \
   skills/*/SKILL.md skills/*/references/*.md agents/*.md README.md CLAUDE.md .codex/agents/*.toml
 
+assert_absent_regex \
+  "Writing templates defer source citations to markdown-link rule" \
+  "file\\.(tex|ext):<line" \
+  skills/writing/references/*.md skills/writing/references/consistency/*.md
+
 assert_contains \
   "Skill manifest routes Sync to semantic merge" \
   "skills/using-superRA/SKILL.md" \

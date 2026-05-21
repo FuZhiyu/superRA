@@ -89,7 +89,7 @@ For each citation:
 ```
 [SEVERITY] Citation: <one-line title>
 Type: <uncited-claim / orphan-citation / orphan-reference / format / author-year-mismatch>
-Location: file.tex:<line>
+Location: [file.tex:42](file.tex#L42)
 Text: "<quoted claim>"
 Bibliography entry: <entry or "NOT FOUND">
 Issue: <one-line>

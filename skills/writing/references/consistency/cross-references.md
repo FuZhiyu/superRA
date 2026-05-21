@@ -72,7 +72,7 @@ Sample-check a handful of figures and tables: does `grep` for `Table N` in the t
 
 ```
 [SEVERITY] Cross-Reference: <one-line title>
-Reference: `\ref{tab:main}` at file.tex:<line>
+Reference: `\ref{tab:main}` at [file.tex:42](file.tex#L42)
 Issue: <undefined / wrong-target / phantom / orphan-label / numbering-mismatch>
 Details:
   - Label `tab:main` defined at: <location or "not found">
