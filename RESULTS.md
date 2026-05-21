@@ -217,6 +217,10 @@ Expected: the harness surfaces `research-project-setup` in its skill auto-trigge
 
 **Note for researcher:** when running Steps 3–5 / 7 later, re-clean these paths afterward; Step 4 will create a `VerifyFoo` project that should be moved or deleted post-verification.
 
-## Task 6: Deprecate the standalone `ResearchProjectTemplate` repo
+## Task 6: Bundle LaTeX templates (manuscript + slides + references.bib)
+
+**Status:** Not started
+
+## Task 7: Deprecate the standalone `ResearchProjectTemplate` repo
 
 **Status:** Not started

@@ -15,6 +15,7 @@
 - `skills/research-project-setup/template-share/` (share-side skeleton)
 - `skills/research-project-setup/references/feature-catalog.md`
 - `skills/research-project-setup/references/retrofit-playbooks.md`
+- Bundled LaTeX templates: `skills/research-project-setup/template/Paper/manuscript.tex`, `skills/research-project-setup/template/Slides/slides.tex`, `skills/research-project-setup/template/references.bib`
 - Updated `skills/CATEGORIES.md`, `README.md`, `skills/using-superRA/SKILL.md`
 - Deprecation commit in the separate `ResearchProjectTemplate` repo (deferred, separate repo, separate commit)
 
@@ -88,6 +89,10 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 > **User decision (2026-05-21):** `create_project.sh` (and `setup_mac.sh`) must register the absolute share-folder path in `.claude/settings.local.json` (`additionalDirectories`) and in `.codex/config.toml` (`[sandbox_workspace_write] writable_roots`) when the user supplies a non-default share path, so the agents have permission to write into `Data/`/`Notes/`/`Output/` (whose symlink targets sit outside the project root).
 > **Question asked:** When the share path is arbitrary, should the scaffolder also register it with Claude / Codex sandboxes?
 > **Rationale:** Permissions are enforced against resolved absolute paths, not symlink names — without this, scaffolded projects with non-sibling share folders trigger permission prompts on every write into the share folder.
+
+> **User decision (2026-05-21):** Bundle LaTeX templates in the scaffolded project skeleton by default (not opt-in): `template/Paper/manuscript.tex` (article-class manuscript), `template/Slides/slides.tex` (beamer / metropolis theme), and `template/references.bib` at the project root. Mirror the IntermediaryDemand setup (`~/Dropbox/research_projects/IntermediaryDemand/Paper/Draft/intermediary_demand_draft.tex` and `Paper/Slides/LSE_slides/LSE_24032026.tex`) — 12pt article + geometry 1in margins + biblatex (biber, authoryear, natbib=true) + booktabs / multirow / makecell / subcaption / hyperref / tikz / pgfplots + math operator macros (`\argmax`, `\argmin`, `\diag`, `\Var`, `\Cov`, `\Corr`, `\sgn`) + colored author-note macros (`\NOTEA`/`\NOTEB`/`\NOTEC` as generic placeholders for the IntermediaryDemand `\NOTEZ`/`\NOTEJ`/`\NOTEM` pattern); slides use beamer + metropolis with progressbar/smallcaps/fraction numbering. Bib lives at project root, shared across paper and slides (`\addbibresource{../references.bib}` from Paper/, from Slides/). Adds new Task 6; renumbers the existing ResearchProjectTemplate deprecation to Task 7.
+> **Question asked:** Add a LaTeX template to the bundled skeleton? If so, what shape?
+> **Rationale:** Every project the scaffolder creates needs LaTeX scaffolding eventually; bundling it removes friction. IntermediaryDemand carries the user's preferred preamble and structure, so mirror that rather than invent a new one.
 
 ---
 
@@ -528,9 +533,240 @@ Update `RESULTS.md` Task 5 section with the verification outcomes (pass/fail per
 
 ---
 
-### Task 6: Deprecate the standalone `ResearchProjectTemplate` repo
+### Task 6: Bundle LaTeX templates (manuscript + slides + references.bib)
 
-**Depends on:** Task 5 (verified-working superRA-side skill)
+**Depends on:** Task 1 (skill directory exists with `template/Paper/` and `template/Slides/` stubs)
+**Review status:** *(not started)*
+**Integration status:** *(not started)*
+
+**Script:** N/A — markdown / LaTeX authoring + file additions inside `skills/research-project-setup/template/`.
+**Input:** Reference sources — `~/Dropbox/research_projects/IntermediaryDemand/Paper/Draft/intermediary_demand_draft.tex` (manuscript preamble + structure) and `~/Dropbox/research_projects/IntermediaryDemand/Paper/Slides/LSE_slides/LSE_24032026.tex` (slides preamble + theme).
+**Output:** Three new files committed inside `skills/research-project-setup/template/`:
+- `template/Paper/manuscript.tex`
+- `template/Slides/slides.tex`
+- `template/references.bib`
+
+Plus one updated file:
+- `skills/research-project-setup/SKILL.md` — one-line mention under "what gets scaffolded" so the agent can explain bundled LaTeX templates.
+
+The `Paper/.gitkeep`, `Paper/Figures/.gitkeep`, `Paper/Tables/.gitkeep`, `Slides/.gitkeep` files stay (the `Figures/` and `Tables/` directories remain ready for compiled output regardless of which `.tex` is the primary).
+
+- [ ] **Step 1: Author `template/Paper/manuscript.tex`**
+
+Generic article-class manuscript adapted from the IntermediaryDemand source. Title and author substituted via the existing `sed s/ProjectExample/$PROJECT_NAME/g` pass at scaffold time (so the title placeholder must contain the literal string `ProjectExample`).
+
+Content shape (write directly with `Write`):
+
+```latex
+\documentclass[12pt]{article}
+\usepackage{setspace}
+\usepackage[left=1in, right=1in, top=1.1in, bottom=1.1in]{geometry}
+\usepackage{color}
+\usepackage{amsmath,amssymb}
+\usepackage[backend=biber,style=authoryear,natbib=true]{biblatex}
+\addbibresource{../references.bib}
+\usepackage[title]{appendix}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{placeins}
+\usepackage{float}
+\usepackage[normalem]{ulem}
+\usepackage{amsthm}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+
+% Math operator shortcuts
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Corr}{Corr}
+
+% Colored author-note macros — rename to your coauthors' initials
+\newcommand{\NOTEA}[1]{\textsf{\color{blue}[\textbf{A's note:} #1]}}
+\newcommand{\NOTEB}[1]{\textsf{\color{red}[\textbf{B's note:} #1]}}
+\newcommand{\NOTEC}[1]{\textsf{\color{green}[\textbf{C's note:} #1]}}
+
+\title{ProjectExample}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+TODO: abstract.
+\end{abstract}
+
+\section{Introduction}
+TODO.
+
+\section{Model / Data}
+TODO. Example figure inclusion: \texttt{\textbackslash includegraphics\{Figures/example.pdf\}}. Example table inclusion: \texttt{\textbackslash input\{Tables/example.tex\}}.
+
+\section{Results}
+TODO.
+
+\section{Conclusion}
+TODO.
+
+\printbibliography
+
+\appendix
+\section{Appendix}
+TODO.
+
+\end{document}
+```
+
+- [ ] **Step 2: Author `template/Slides/slides.tex`**
+
+Beamer with the metropolis theme, mirroring the IntermediaryDemand slides preamble. The `\title` line carries the `ProjectExample` placeholder for sed substitution.
+
+```latex
+\documentclass[11pt,english,aspectratio=169]{beamer}
+\usetheme[progressbar=frametitle]{metropolis}
+\usepackage{appendixnumberbeamer}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[backend=biber, style=authoryear]{biblatex}
+\addbibresource{../references.bib}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{ragged2e}
+\usepackage{multirow}
+\usepackage{tikz}
+\usepackage{bm}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+
+% Math operator shortcuts (mirror manuscript.tex)
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Corr}{Corr}
+
+\metroset{titleformat=smallcaps, numbering=fraction}
+\setbeamersize{text margin left=0.5cm, text margin right=0.5cm}
+\setbeamercolor{block body}{fg=black, bg=blue!10}
+
+\title{ProjectExample}
+\subtitle{Subtitle}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Motivation}
+    TODO.
+\end{frame}
+
+\begin{frame}{Main Result}
+    TODO.
+\end{frame}
+
+\begin{frame}{Conclusion}
+    TODO.
+\end{frame}
+
+\appendix
+
+\begin{frame}[allowframebreaks]{References}
+    \printbibliography
+\end{frame}
+
+\end{document}
+```
+
+- [ ] **Step 3: Add `template/references.bib`**
+
+Empty `.bib` stub at project root (so both `Paper/` and `Slides/` resolve `\addbibresource{../references.bib}` to the same file). Include a placeholder comment + a single commented-out example entry so authors see the expected format:
+
+```bibtex
+% Project bibliography. Shared by Paper/manuscript.tex and Slides/slides.tex
+% via \addbibresource{../references.bib}.
+%
+% Example entry (uncomment and edit, or replace):
+%
+% @article{example2026,
+%   author  = {Author, A. and Author, B.},
+%   title   = {An example title},
+%   journal = {Journal of Examples},
+%   year    = {2026},
+%   volume  = {1},
+%   number  = {1},
+%   pages   = {1--10},
+% }
+```
+
+- [ ] **Step 4: Update `skills/research-project-setup/SKILL.md`**
+
+Add one sentence under the "what gets scaffolded" / fresh-setup description so the agent can explain bundled LaTeX templates when asked. Concretely: in the section that lists what `create_project.sh` produces, append a line like:
+
+> Bundled LaTeX scaffolding: `Paper/manuscript.tex` (article class + biblatex + standard math/figure packages), `Slides/slides.tex` (beamer + metropolis theme), and `references.bib` at the project root.
+
+Use `Edit` to find the right insertion point — the section that enumerates the scaffolded output. Keep the addition under the DRY + Necessity discipline: one factual line, no wrapper instructions.
+
+- [ ] **Step 5: Verify scaffold rendering + LaTeX compile**
+
+```bash
+# Re-run the smoke test under /tmp to confirm the new files land in a scaffolded project.
+rm -rf /tmp/LatexProj /tmp/LatexProj-Share
+bash skills/research-project-setup/scripts/create_project.sh /tmp/LatexProj
+# Assertions
+test -f /tmp/LatexProj/Paper/manuscript.tex && echo "manuscript present"
+test -f /tmp/LatexProj/Slides/slides.tex && echo "slides present"
+test -f /tmp/LatexProj/references.bib && echo "bib present"
+grep -F "\\title{LatexProj}" /tmp/LatexProj/Paper/manuscript.tex && echo "title sed'd"
+grep -F "\\title{LatexProj}" /tmp/LatexProj/Slides/slides.tex && echo "slides title sed'd"
+
+# Compile (soft — skip on failure with a note rather than fail the task)
+if command -v latexmk >/dev/null 2>&1; then
+    (cd /tmp/LatexProj/Paper && latexmk -pdf -interaction=nonstopmode manuscript.tex) \
+        && echo "manuscript compiled" \
+        || echo "manuscript compile failed — record in RESULTS.md; the user will fix interactively if needed"
+    (cd /tmp/LatexProj/Slides && latexmk -pdf -interaction=nonstopmode slides.tex) \
+        && echo "slides compiled" \
+        || echo "slides compile failed — record in RESULTS.md (metropolis theme + LuaLaTeX/XeLaTeX may be required)"
+else
+    echo "latexmk not installed — skip compile verification"
+fi
+rm -rf /tmp/LatexProj /tmp/LatexProj-Share
+```
+
+If `latexmk` is not available or compilation fails on the metropolis theme (which expects LuaLaTeX/XeLaTeX-compatible fonts and may need additional CTAN packages), record the outcome in RESULTS.md and treat it as a known precondition rather than a blocking issue — the templates are textual scaffolding intended for the user's own LaTeX toolchain, not a portable build.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add skills/research-project-setup/template/Paper/manuscript.tex \
+        skills/research-project-setup/template/Slides/slides.tex \
+        skills/research-project-setup/template/references.bib \
+        skills/research-project-setup/SKILL.md \
+        PLAN.md RESULTS.md
+git commit -m "feat(skill): bundle LaTeX templates (manuscript + slides + refs.bib) in scaffolded skeleton"
+```
+
+---
+
+### Task 7: Deprecate the standalone `ResearchProjectTemplate` repo
+
+**Depends on:** Task 5 (verified-working superRA-side skill) and Task 6 (LaTeX bundle)
 **Review status:** *(not started)*
 **Integration status:** *(not started)*
 
