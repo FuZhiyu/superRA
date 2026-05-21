@@ -267,3 +267,16 @@ Both compile under the default pdfLaTeX toolchain on the local TeX Live 2026 ins
 ## Task 7: Deprecate the standalone `ResearchProjectTemplate` repo
 
 **Status:** Not started
+
+## Task 8: Automated CLI test suite (Claude Code + Codex headless)
+
+**Status:** Not started
+
+Pre-allocated placeholder. Will record:
+- Final cheap-model aliases used (Claude / Codex) and any fallback if the defaults were unavailable.
+- 8-case PASS/FAIL table (4 scenarios × 2 CLIs).
+- Wall-time and approximate token cost per case.
+- Negative-control regression-check outcome (Test A FAIL expected after surgically removing the registered share path).
+- Any prompt iterations needed to get Tests B–D to reliably invoke the skill, with the final phrasings.
+- Any platform-specific notes (macOS-only assumptions, `mktemp` / `realpath` portability gaps).
+

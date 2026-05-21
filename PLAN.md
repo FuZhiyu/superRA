@@ -98,6 +98,10 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 > **Question asked:** Step 4 completion menu — proceed with integration now, or run manual verification steps first?
 > **Rationale:** User-defined workflow milestone; researcher wants concrete validation in a fresh harness session before the branch enters integration.
 
+> **User decision (2026-05-21):** Replace Task 5's deferred manual verification (Steps 3, 4, 5, 7) with an automated CLI-driven test suite (new Task 8) exercising both Claude Code CLI and Codex CLI in headless mode. Use the cheapest model per CLI (Claude `claude-haiku-4-5-20251001`; Codex `gpt-5-mini` or equivalent). Test A (sandbox write to share folder) uses a **strict permission profile** (no bypass) so it actually exercises `register_share_path_with_agents` — Tests B/C/D use a permissive bypass profile since they test skill routing, not permissions. A mandatory negative-control step in Task 8's verification breaks the registered share path and confirms Test A then *fails*, proving the assertion is load-bearing. Task 5's manual Steps 3, 4, 5, 7 are superseded by Task 8 coverage.
+> **Question asked:** Convert deferred manual verification into automated CLI tests for both Claude and Codex, using the cheapest model?
+> **Rationale:** Manual verification is slow, easy to skip, and not reproducible. Both CLIs must be exercised because `create_project.sh` writes both `.claude/settings.local.json` and `.codex/config.toml`; either could silently regress. A scripted suite makes future skill changes safe.
+
 ---
 
 ### Task 1: Scaffold skill directory + move templates
@@ -454,14 +458,14 @@ git commit -m "docs: register research-project-setup in inventory surfaces"
 ### Task 5: End-to-end verification
 
 **Depends on:** Task 2, Task 3, Task 4
-**Review status:** APPROVED (partial — Steps 3, 4, 5, 7 remain researcher-gated for integration phase)
+**Review status:** APPROVED (Steps 1, 2, 6, 8 automated and passed; Steps 3, 4, 5, 7 SUPERSEDED by Task 8's automated CLI test suite — see §Decisions 2026-05-21)
 **Integration status:** *(not started)*
 
 **Script:** Manual verification + small shell assertions.
 **Input:** The completed skill from Tasks 1–4.
 **Output:** A short verification log written into `RESULTS.md` Task 5 section.
 
-Steps 1, 2, 6, 8 are automated and executed in this task. Steps 3, 4, 5, 7 require a fresh Claude Code / Codex session in a different working directory and must be run by the researcher — concrete commands are listed in [RESULTS.md](RESULTS.md) Task 5 section.
+Steps 1, 2, 6, 8 are automated and executed in this task. Steps 3, 4, 5, 7 are SUPERSEDED by Task 8 — left as `- [ ]` for traceability but covered by automated test cases A–D.
 
 - [x] **Step 1: Standalone scaffolder with arbitrary share path**
 
@@ -823,5 +827,130 @@ gh api repos/FuZhiyu/ResearchProjectTemplate --jq '.description, .pushed_at'
 ```
 
 Update the new `README.md` for the deprecated repo if `gh repo view` reveals additional surface (e.g., repo description, topics) that should reflect deprecation. Optionally edit the GitHub repo description through `gh repo edit FuZhiyu/ResearchProjectTemplate --description "Deprecated — moved into FuZhiyu/superRA"`.
+
+---
+
+### Task 8: Automated CLI test suite (Claude Code + Codex headless)
+
+**Depends on:** Task 2 (sandbox registration), Task 3 (SKILL.md trigger phrases), Task 6 (LaTeX bundle copied by scaffolder)
+**Review status:** *(not started)*
+**Integration status:** *(not started)*
+
+**Script:** New test harness under `skills/research-project-setup/tests/` (bash + small Python where needed).
+**Input:** The installed superRA plugin (Claude + Codex), the cheapest model alias per CLI, a writable `/tmp`.
+**Output:** A scripted suite that scaffolds throwaway projects, invokes each CLI headlessly against four scenarios, asserts behavior, prints a PASS/FAIL table, and tears down. Plus a negative-control check that proves Test A is load-bearing.
+
+**Permission profiles** (do not collapse — Test A's correctness depends on this):
+- **Strict** (Test A only — testing the sandbox registration itself): no bypass. Headless agent denies prompts → write fails if `register_share_path_with_agents` did not register the absolute share path.
+- **Permissive** (Tests B/C/D — testing skill routing, not permissions): bypass enabled so legitimate prompts unrelated to the regression do not stall the run.
+
+Claude command shapes (strict / permissive):
+```bash
+claude -p "<prompt>" --model "${CLAUDE_MODEL:-claude-haiku-4-5-20251001}" --output-format json
+claude -p "<prompt>" --model "${CLAUDE_MODEL:-claude-haiku-4-5-20251001}" --permission-mode bypassPermissions --output-format json
+```
+
+Codex command shapes (strict / permissive):
+```bash
+codex exec -C <dir> -m "${CODEX_MODEL:-gpt-5-mini}" -s workspace-write -a never --skip-git-repo-check --json "<prompt>"
+codex exec -C <dir> -m "${CODEX_MODEL:-gpt-5-mini}" --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check --json "<prompt>"
+```
+
+**Test matrix (4 scenarios × 2 CLIs = 8 cases):**
+
+| ID | Setup | Prompt | Assertions |
+|---|---|---|---|
+| A | Scaffold under `mktemp -d /tmp/rps-test-A-XXXX`, non-sibling share path placed in a separate `mktemp -d /tmp/rps-share-A-XXXX` directory so the share resolves to a path the project's `.claude/settings.local.json` and `.codex/config.toml` must explicitly allow | `"create a file Notes/test.txt containing the word hello"` | `<share>/Notes/test.txt` exists with "hello"; `.permission_denials` empty (Claude); no sandbox-violation events in JSONL (Codex) |
+| B | Empty `mktemp -d /tmp/rps-test-B-XXXX` | `"create a new research project named VerifyBar at <abs-path> with share folder at <abs-share>, no Overleaf, no CI"` (absolute paths embedded by the harness) | scaffolded project root exists with `.claude/`, `.codex/`, symlinks; `Notes/setup_decisions.md` exists; output references the skill or `create_project.sh` |
+| C | Scaffold without `--with-overleaf` | `"add Overleaf sync to this project"` | `overleaf-sync/` directory appears; `.gitignore` carries overleaf entries; `git log -1` shows a new commit |
+| D | Empty `mktemp -d /tmp/rps-test-D-XXXX` (no scaffolded project) | `"create a new research project"` | output references the `research-project-setup` skill or `create_project.sh` (skill surfaced from any CWD) |
+
+**Directory layout:**
+
+```
+skills/research-project-setup/tests/
+  README.md
+  run_tests.sh
+  lib/common.sh
+  cases/
+    test_a_sandbox.sh
+    test_b_fresh.sh
+    test_c_retrofit.sh
+    test_d_discovery.sh
+```
+
+- [ ] **Step 1: Skeleton + `lib/common.sh`**
+
+Create `tests/`, `run_tests.sh`, `lib/common.sh`, and stub `cases/*.sh` that just `exit 0`. `common.sh` exports:
+- `scaffold_project <name> <share-path> [extra create_project.sh flags...]` — wraps the scaffolder, returns absolute project path.
+- `cleanup_paths <paths...>` — `rm -rf` with guard that each path begins with `/tmp/` (or the OS tmp prefix).
+- `run_claude <cwd> <profile> <prompt>` — `<profile>` ∈ `{strict,permissive}`; emits the right flag set.
+- `run_codex <cwd> <profile> <prompt>` — same, for Codex.
+- `assert_file_exists`, `assert_file_contains`, `assert_no_permission_denials`, `assert_output_mentions`.
+- `with_timeout <seconds> <cmd...>` — 5-minute kill timer per agent invocation.
+
+`run_tests.sh` supports flags: `--only claude|codex`, `--case A|B|C|D`, `--keep` (skip cleanup), `--verbose` (echo every CLI invocation). Pre-flight: verify each CLI is installed (`claude --version`, `codex --version`); for Codex check `codex login status`; verify `../scripts/create_project.sh` exists; verify `/tmp` writable. Missing CLI → skip those rows with a warning, do not fail.
+
+Verify Step 1 by running `bash tests/run_tests.sh --only claude --case A` and confirming the stub PASS path.
+
+- [ ] **Step 2: Test A (sandbox, strict profile)**
+
+Implement `cases/test_a_sandbox.sh` for both CLIs. Place the share path in a **non-sibling** tmp dir (e.g., `mktemp -d /tmp/rps-share-A-XXXX`) so the additional-directories check actually matters. If Codex fails on model alias, run `codex doctor` to capture the actual cheap-model alias and update the default in `common.sh`.
+
+- [ ] **Step 3: Test B (fresh setup, permissive)**
+
+Implement `cases/test_b_fresh.sh`. Tune the prompt until both CLIs reliably invoke `create_project.sh` with the expected absolute paths; capture the final phrasing in `tests/README.md`.
+
+- [ ] **Step 4: Test C (retrofit Overleaf, permissive)**
+
+Implement `cases/test_c_retrofit.sh`. Scaffold without `--with-overleaf`, then run the retrofit prompt. Assert `overleaf-sync/`, `.gitignore` entries, and the new commit.
+
+- [ ] **Step 5: Test D (trigger discovery, permissive)**
+
+Implement `cases/test_d_discovery.sh`. From a completely empty CWD (no scaffolded project), run the trigger phrase. Assert the skill name (or `create_project.sh`) appears in output.
+
+- [ ] **Step 6: README + polish**
+
+Write `tests/README.md`: how to run, env-var overrides (`CLAUDE_MODEL`, `CODEX_MODEL`, `KEEP_ARTIFACTS=1`), how to debug a failing case (`--keep --verbose --only claude --case C`), known flakiness (LLM nondeterminism — re-run before declaring true failure). Add one-line pointer in `skills/research-project-setup/SKILL.md` under Verification.
+
+- [ ] **Step 7: Full-suite green run**
+
+```bash
+bash skills/research-project-setup/tests/run_tests.sh
+# Expect 8/8 PASS (or 4/4 if only one CLI installed). Record token / wall-time totals in RESULTS.md Task 8.
+```
+
+- [ ] **Step 8: Negative-control regression check (MANDATORY — proves Test A is load-bearing)**
+
+```bash
+# Scaffold a project the normal way.
+SCRATCH=$(mktemp -d /tmp/rps-neg-XXXX)
+SHARE=$(mktemp -d /tmp/rps-neg-share-XXXX)
+bash skills/research-project-setup/scripts/create_project.sh "$SCRATCH/NegCtrl" --share-path "$SHARE"
+
+# Surgically remove the registered share path from BOTH settings files.
+python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); d['permissions']['additionalDirectories']=[]; json.dump(d, open(p,'w'), indent=2)" \
+  "$SCRATCH/NegCtrl/.claude/settings.local.json"
+# Remove the absolute share lines from .codex/config.toml writable_roots
+sed -i.bak "\|\"$SHARE|d" "$SCRATCH/NegCtrl/.codex/config.toml"
+
+# Re-run ONLY Test A against the broken project.
+bash skills/research-project-setup/tests/cases/test_a_sandbox.sh claude   # expect FAIL
+bash skills/research-project-setup/tests/cases/test_a_sandbox.sh codex    # expect FAIL
+
+# Cleanup
+rm -rf "$SCRATCH" "$SHARE"
+```
+
+If Test A still PASSES against the broken project, the assertions are not actually checking the permission system and must be tightened before the suite is trustworthy. Record the outcome (and the FAIL evidence) in RESULTS.md Task 8 before declaring complete.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add skills/research-project-setup/tests/ \
+        skills/research-project-setup/SKILL.md \
+        PLAN.md RESULTS.md
+git commit -m "test(skill): automated CLI suite for research-project-setup (Claude + Codex headless)"
+```
 
 ---
