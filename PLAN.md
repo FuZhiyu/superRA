@@ -185,7 +185,7 @@ git commit -m "feat(skill): scaffold research-project-setup with bundled templat
 ### Task 2: Update `create_project.sh` paths and add share-path sandbox registration
 
 **Depends on:** Task 1
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** `skills/research-project-setup/scripts/create_project.sh` (and the bundled `template/setup_mac.sh` for the coauthor side).
