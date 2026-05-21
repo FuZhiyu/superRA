@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" autoload-superra"
+            "command": "\"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" autoload-superra"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" merge-guard"
+            "command": "\"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" merge-guard"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${PLUGIN_ROOT}/hooks/run-hook.cmd\" codex-plan-stop"
+            "command": "\"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" codex-plan-stop"
           }
         ]
       }
