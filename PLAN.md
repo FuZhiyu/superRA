@@ -536,7 +536,7 @@ Update `RESULTS.md` Task 5 section with the verification outcomes (pass/fail per
 ### Task 6: Bundle LaTeX templates (manuscript + slides + references.bib)
 
 **Depends on:** Task 1 (skill directory exists with `template/Paper/` and `template/Slides/` stubs)
-**Review status:** IMPLEMENTED
+**Review status:** APPROVED
 **Integration status:** *(not started)*
 
 **Script:** N/A — markdown / LaTeX authoring + file additions inside `skills/research-project-setup/template/`.
