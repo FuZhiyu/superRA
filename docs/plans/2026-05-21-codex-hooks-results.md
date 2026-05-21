@@ -23,13 +23,13 @@ Companion plan: [2026-05-21-codex-hooks-plan.md](./2026-05-21-codex-hooks-plan.m
 - Codex hook packaging now uses an explicit manifest entry in [.codex-plugin/plugin.json](../../.codex-plugin/plugin.json), pointing to [hooks/hooks-codex.json](../../hooks/hooks-codex.json).
 - Codex receives only hooks backed by documented Codex event surfaces: `UserPromptSubmit`, `PreToolUse` on `Bash`, and `Stop` in plan mode.
 - Claude-only workflow-skill gates remain out of [hooks/hooks-codex.json](../../hooks/hooks-codex.json), avoiding a fragile dependency on undocumented Codex skill-load hook events.
-- [hooks/codex-plan-stop](../../hooks/codex-plan-stop) replaces the Claude `ExitPlanMode` reminder with a Codex plan-mode `Stop` continuation prompt that fires only after `<proposed_plan>`.
+- [hooks/codex-plan-stop](../../hooks/codex-plan-stop) replaces the Claude `ExitPlanMode` reminder with a Codex plan-mode `Stop` continuation prompt that fires only after an anchored proposed-plan marker or heading, while staying silent for ordinary plan-mode outputs.
 - The public plugin version was bumped to `0.1.4` with [scripts/bump-version.sh](../../scripts/bump-version.sh).
 
 ### Verification
 - `python3 -m json.tool .codex-plugin/plugin.json` passed.
 - `python3 -m json.tool hooks/hooks-codex.json` passed.
-- `bash tests/hooks/test-codex-hooks.sh` passed 7/7.
+- `bash tests/hooks/test-codex-hooks.sh` passed 15/15.
 - `bash tests/hooks/test-autoload-superra.sh` passed 16/16.
 - `bash tests/hooks/test-ensure-using-superra.sh` passed 16/16.
 - `bash tests/hooks/test-ensure-agent-orchestration.sh` passed 16/16.
@@ -39,8 +39,8 @@ Companion plan: [2026-05-21-codex-hooks-plan.md](./2026-05-21-codex-hooks-plan.m
 - `tests/hooks/test-codex-e2e-cli.sh` was added but not run because it is intentionally opt-in and uses live Codex auth/model turns.
 
 ### Review
-- Two parallel reviewer agents re-reviewed the fix pass and returned APPROVE. No `[BLOCKING]` findings remain.
-- Integration review approved the final branch diff against `origin/main` after the PLAN expected-results record was corrected to exclude Codex decision-log hook coverage.
+- Hook-behavior reviewers found and verified fixes for two Codex Stop-hook false-positive classes: plan mode alone was too broad, and unanchored "proposed plan" / quoted marker text could block non-plan outputs.
+- Integration review re-entered after commit `abba9ea`, requested stale-doc refreshes for the final diff self-check and verification record, then approved the refreshed branch diff after commit `cbe3feb`.
 - The handoff records were archived under `docs/plans/` following the repository convention for completed superRA workflow records.
 
 ### Notes
