@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 # PostToolUse hook: fires after ExitPlanMode returns.
-# Reminds the agent that exiting plan mode is not the end of the
-# planning phase — the plan still needs to be materialized into
-# PLAN.md + RESULTS.md (and, for domains with a planning hard gate,
-# that gate must be satisfied) before any implementation work
-# begins. Enforces workflow principle #2 (handoff docs are the
-# auditable record) for sessions that enter through CLI plan mode
-# instead of through planning-workflow from scratch.
+# Offers a reminder to write durable PLAN.md + RESULTS.md handoff docs when a
+# plan-mode result will guide implementation or another session.
 # Does NOT block — discipline system handles enforcement.
 
 set -euo pipefail
@@ -27,7 +22,7 @@ if [ "$tool_name" != "ExitPlanMode" ]; then
   exit 0
 fi
 
-context="<IMPORTANT>You just exited plan mode. The approved plan lives in the plan file only — it is NOT yet a handoff doc. Before taking any implementation action (no code edits, no task dispatch), materialize the plan into committed PLAN.md + RESULTS.md at the project root using superRA:planning-workflow and superRA:handoff-doc. For data-analysis work, satisfy the Data Inventory hard gate in superRA:econ-data-analysis/references/planning.md first. For theory/modeling work, satisfy the Model Inventory / Assumption Map hard gate in superRA:theory-modeling/references/planning.md first. Commit both files atomically before Step 1 of implementation-workflow. If PLAN.md and RESULTS.md already exist and are committed, this reminder is satisfied; proceed. See CLAUDE.md workflow principle #2 (handoff docs are the auditable record) and implementation-workflow Step 0b (handoff-doc existence check) for the full discipline.</IMPORTANT>"
+context="<IMPORTANT>You just exited plan mode. If this plan will guide implementation, review, or handoff to another agent/session, consider writing it into PLAN.md + RESULTS.md at the project root using superRA:planning-workflow and superRA:handoff-doc before relying on it. If those files already exist and reflect the current plan, this reminder is satisfied.</IMPORTANT>"
 
 if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then
   printf '{"additional_context":"%s"}\n' "$context"

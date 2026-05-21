@@ -81,6 +81,14 @@ run_codex_manifest_hook() {
   esac
 }
 
+run_codex_manifest_hook_no_root() {
+  local hook="$1"
+  local input="$2"
+  local command
+  command=$(codex_manifest_command "$hook")
+  env -i PATH="$SPARSE_BIN" /bin/sh -c "$command" <<<"$input"
+}
+
 assert_json() {
   local name="$1"
   local out="$2"
@@ -148,6 +156,20 @@ case_codex_manifest_claude_root_fallback() {
   fi
 }
 
+case_codex_manifest_plan_stop_execution() {
+  local name="Codex manifest command executes plan Stop hook"
+  local input out reason
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"# Proposed Plan\n\n## Summary\n\nDo the work."}))')
+  out=$(run_codex_manifest_hook codex-plan-stop "$input" plugin)
+  assert_json "$name" "$out" || return
+  reason=$(printf '%s' "$out" | json_get 'print(d.get("reason", ""))')
+  if printf '%s' "$reason" | grep -Fq 'PLAN.md + RESULTS.md'; then
+    record_pass "$name"
+  else
+    record_fail "$name" "missing Stop reminder through manifest command: $out"
+  fi
+}
+
 case_request_user_input_logger() {
   local name="decision logger accepts request_user_input"
   local input out context
@@ -155,10 +177,23 @@ case_request_user_input_logger() {
   out=$(run_hook ask-user-question-logger "$input")
   assert_json "$name" "$out" || return
   context=$(printf '%s' "$out" | json_get 'print(d.get("hookSpecificOutput", {}).get("additionalContext", d.get("additionalContext", "")))')
-  if printf '%s' "$context" | grep -Fq 'User decision'; then
+  if printf '%s' "$context" | grep -Fq 'consider recording it in PLAN.md'; then
     record_pass "$name"
   else
     record_fail "$name" "missing decision-log reminder: $context"
+  fi
+}
+
+case_codex_manifest_missing_root_fails_open() {
+  local name="Codex manifest command fails open without plugin root"
+  local input out
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"UserPromptSubmit","prompt":"use superRA here"}))')
+  out=$(run_codex_manifest_hook_no_root autoload-superra "$input")
+  assert_json "$name" "$out" || return
+  if [ "$out" = "{}" ]; then
+    record_pass "$name"
+  else
+    record_fail "$name" "expected {}, got $out"
   fi
 }
 
@@ -178,7 +213,7 @@ case_request_user_input_silent_other_tool() {
 case_plan_stop_reminder() {
   local name="codex plan Stop emits materialization reminder"
   local input out decision reason
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"<proposed_plan>plan</proposed_plan>"}))')
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"# Proposed Plan\n\n## Summary\n\nDo the work."}))')
   out=$(run_hook codex-plan-stop "$input")
   assert_json "$name" "$out" || return
   decision=$(printf '%s' "$out" | json_get 'print(d.get("decision", ""))')
@@ -190,10 +225,36 @@ case_plan_stop_reminder() {
   fi
 }
 
-case_plan_stop_silent_nonplan() {
-  local name="codex plan Stop silent outside plan mode"
+case_plan_stop_accepts_proposed_plan_tag() {
+  local name="codex plan Stop accepts proposed_plan tag"
   local input out
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"default","last_assistant_message":"<proposed_plan>plan</proposed_plan>"}))')
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"<proposed_plan>plan</proposed_plan>"}))')
+  out=$(run_hook codex-plan-stop "$input")
+  assert_json "$name" "$out" || return
+  if printf '%s' "$out" | grep -Fq 'PLAN.md + RESULTS.md'; then
+    record_pass "$name"
+  else
+    record_fail "$name" "missing proposed_plan reminder: $out"
+  fi
+}
+
+case_plan_stop_silent_for_quoted_tag_outside_plan_mode() {
+  local name="codex plan Stop silent for quoted tag outside plan mode"
+  local input out
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"default","last_assistant_message":"The literal <proposed_plan> marker appears in this review."}))')
+  out=$(run_hook codex-plan-stop "$input")
+  assert_json "$name" "$out" || return
+  if [ "$out" = "{}" ]; then
+    record_pass "$name"
+  else
+    record_fail "$name" "expected {}, got $out"
+  fi
+}
+
+case_plan_stop_silent_when_already_continued() {
+  local name="codex plan Stop silent during Stop-hook continuation"
+  local input out
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","stop_hook_active":True,"last_assistant_message":"# Proposed Plan"}))')
   out=$(run_hook codex-plan-stop "$input")
   assert_json "$name" "$out" || return
   if [ "$out" = "{}" ]; then
@@ -204,9 +265,35 @@ case_plan_stop_silent_nonplan() {
 }
 
 case_plan_stop_silent_without_plan() {
-  local name="codex plan Stop silent without proposed_plan"
+  local name="codex plan Stop silent outside plan mode without proposed_plan"
   local input out
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"ordinary message"}))')
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"default","last_assistant_message":"ordinary message"}))')
+  out=$(run_hook codex-plan-stop "$input")
+  assert_json "$name" "$out" || return
+  if [ "$out" = "{}" ]; then
+    record_pass "$name"
+  else
+    record_fail "$name" "expected {}, got $out"
+  fi
+}
+
+case_plan_stop_silent_for_non_plan_output_in_plan_mode() {
+  local name="codex plan Stop silent for non-plan output in plan mode"
+  local input out
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"Verdict: APPROVE\n\nNo critical findings. PLAN.md was not changed."}))')
+  out=$(run_hook codex-plan-stop "$input")
+  assert_json "$name" "$out" || return
+  if [ "$out" = "{}" ]; then
+    record_pass "$name"
+  else
+    record_fail "$name" "expected {}, got $out"
+  fi
+}
+
+case_plan_stop_silent_for_negated_proposed_plan_phrase() {
+  local name="codex plan Stop silent for negated proposed-plan phrase"
+  local input out
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"This is not a proposed plan; it is a code review verdict."}))')
   out=$(run_hook codex-plan-stop "$input")
   assert_json "$name" "$out" || return
   if [ "$out" = "{}" ]; then
@@ -220,11 +307,17 @@ case_autoload_codex_wording
 case_merge_guard_codex_bash
 case_codex_manifest_sparse_path
 case_codex_manifest_claude_root_fallback
+case_codex_manifest_plan_stop_execution
+case_codex_manifest_missing_root_fails_open
 case_request_user_input_logger
 case_request_user_input_silent_other_tool
 case_plan_stop_reminder
-case_plan_stop_silent_nonplan
+case_plan_stop_accepts_proposed_plan_tag
+case_plan_stop_silent_for_quoted_tag_outside_plan_mode
+case_plan_stop_silent_when_already_continued
 case_plan_stop_silent_without_plan
+case_plan_stop_silent_for_non_plan_output_in_plan_mode
+case_plan_stop_silent_for_negated_proposed_plan_phrase
 
 echo
 echo "Passed: $pass    Failed: $fail"

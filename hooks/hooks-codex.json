@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" autoload-superra"
+            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" autoload-superra; else printf '{}\\n'; fi"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" merge-guard"
+            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" merge-guard; else printf '{}\\n'; fi"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${PLUGIN_ROOT:-$CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" codex-plan-stop"
+            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" codex-plan-stop; else printf '{}\\n'; fi"
           }
         ]
       }
