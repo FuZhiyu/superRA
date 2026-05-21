@@ -50,6 +50,12 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 > **User decision (2026-05-21):** Run the superRA workflow retroactively over the current Codex-hook implementation.
 > **Question asked:** User said "run it" after confirming the first implementation did not fully follow the superRA workflow.
 
+> **User decision (2026-05-21):** Use `origin/main` as the integration base.
+> **Question asked:** Confirm the integration base for this run.
+
+> **User decision (2026-05-21):** Finish by opening a PR branch rather than pushing `main` directly.
+> **Question asked:** After integration review passes, what final action should I prepare for?
+
 ---
 
 ### Task 1: Add Codex hook support
