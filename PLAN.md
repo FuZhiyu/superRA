@@ -94,14 +94,14 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 ### Task 1: Scaffold skill directory + move templates
 
 **Depends on:** *(none)*
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** N/A (file moves + directory creation; no analysis code).
 **Input:** `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/{ProjectExample,ProjectExample-Share,create_project.sh,CLAUDE-template.md,README-template.md}`
 **Output:** `skills/research-project-setup/{scripts/,template/,template-share/,references/}` populated.
 
-- [ ] **Step 1: Create the skill directory tree and confirm absence**
+- [x] **Step 1: Create the skill directory tree and confirm absence**
 
 ```bash
 cd /Users/zhiyufu/package_dev/superRA-project-template
@@ -109,7 +109,7 @@ mkdir -p skills/research-project-setup/{scripts,template,template-share,referenc
 ls -la skills/research-project-setup/
 ```
 
-- [ ] **Step 2: Copy `ProjectExample/` → `template/` preserving symlinks**
+- [x] **Step 2: Copy `ProjectExample/` → `template/` preserving symlinks**
 
 The internal `Data`, `Notes`, `Output` symlinks (`-> ../ProjectExample-Share/{Data,Notes,Output}`) must survive the move. After copying, retarget them at the new sibling `template-share/` so they resolve inside the skill directory.
 
@@ -126,7 +126,7 @@ for sub in Data Notes Output; do readlink "$DST/$sub"; done
 ls -la "$DST/" | grep -E '^l'
 ```
 
-- [ ] **Step 3: Copy `ProjectExample-Share/` → `template-share/`**
+- [x] **Step 3: Copy `ProjectExample-Share/` → `template-share/`**
 
 ```bash
 SRC=/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate
@@ -136,7 +136,7 @@ find "$DST" -mindepth 1 | sort
 # Confirm: Data/.gitkeep, Notes/.gitkeep, Notes/.env, Output/.gitkeep
 ```
 
-- [ ] **Step 4: Fold `*-template.md` unique lines into `template/CLAUDE.md` and `template/README.md`**
+- [x] **Step 4: Fold `*-template.md` unique lines into `template/CLAUDE.md` and `template/README.md`**
 
 Diff snapshot at planning time (Step 4 of approved plan): `CLAUDE-template.md` lacks the "For Codex Only" example-specific block and one share-folder paragraph at line 28–29; `README-template.md` has slightly leaner share-folder prose at lines 3–28. Keep the **template-style** (generic) wording where the variants differ. Concretely:
 
@@ -153,7 +153,7 @@ Decisions for the fold:
 - **CLAUDE.md**: Drop the "For Codex Only" section (it lists ProjectExample-specific skills which are example-only context). Keep the share-folder paragraph from the ProjectExample copy (more informative).
 - **README.md**: Use the generic phrasing from the template variant where it diverges (it is the rendered-into-a-new-project wording, which is what we want).
 
-- [ ] **Step 5: Copy `create_project.sh` → `scripts/create_project.sh` (paths edited in Task 2)**
+- [x] **Step 5: Copy `create_project.sh` → `scripts/create_project.sh` (paths edited in Task 2)**
 
 ```bash
 SRC=/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate
@@ -163,7 +163,7 @@ chmod +x "$DST"
 head -20 "$DST"
 ```
 
-- [ ] **Step 6: Verify, stage, and commit**
+- [x] **Step 6: Verify, stage, and commit**
 
 ```bash
 # Verify all the moved content is in place and symlinks resolve.

@@ -1,0 +1,142 @@
+name: Publish paper PDF
+
+# On push to `release` (or manual dispatch), compile the manuscript with
+# LuaLaTeX + Biber, tag a version, and optionally push the PDF to a separate
+# public repo (set via PAPER_TARGET_REPO).
+#
+# Per-project customization (one-time):
+#   1. Repo variable PAPER_DIR (default: Paper) — directory containing the root .tex file.
+#   2. Repo variable PAPER_TEX (default: auto-detected; first .tex under PAPER_DIR
+#      containing \begin{document}) — the root file.
+#   3. Repo variable PAPER_TARGET_REPO (default: empty) — "owner/name" of a separate
+#      public repo to receive the compiled PDF. Leave empty to skip the publish step.
+#   4. Repo secret PAPER_PAT — personal access token with write access to
+#      PAPER_TARGET_REPO. Required only if PAPER_TARGET_REPO is set.
+#
+# Ported from /Users/zhiyufu/Dropbox/research_projects/IntermediaryDemand/.github/workflows/publish-paper.yml.
+
+on:
+  push:
+    branches: [release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v2.0). Leave empty to auto-increment minor.'
+        required: false
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      PAPER_DIR: ${{ vars.PAPER_DIR || 'Paper' }}
+      PAPER_TARGET_REPO: ${{ vars.PAPER_TARGET_REPO }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for tag detection
+
+      - name: Install TeX Live
+        uses: zauguin/install-texlive@v3
+        with:
+          packages: |
+            scheme-basic
+            latexmk
+            biber
+            biblatex
+            biblatex-apa
+            collection-fontsrecommended
+            collection-luatex
+            collection-latexrecommended
+            collection-bibtexextra
+            texfindpkg
+
+      - name: Resolve root TeX file
+        id: root
+        run: |
+          ROOT="${{ vars.PAPER_TEX }}"
+          if [ -z "$ROOT" ]; then
+            # Auto-detect: first .tex under PAPER_DIR containing \begin{document}
+            ROOT=$(grep -rl '\\begin{document}' "$PAPER_DIR" --include='*.tex' | head -n1)
+          fi
+          if [ -z "$ROOT" ] || [ ! -f "$ROOT" ]; then
+            echo "::error::No root TeX file found. Set repo variable PAPER_TEX or place a \\begin{document} file under $PAPER_DIR/"
+            exit 1
+          fi
+          BASENAME=$(basename "$ROOT" .tex)
+          DIRNAME=$(dirname "$ROOT")
+          echo "root=$ROOT"        >> "$GITHUB_OUTPUT"
+          echo "dir=$DIRNAME"      >> "$GITHUB_OUTPUT"
+          echo "basename=$BASENAME" >> "$GITHUB_OUTPUT"
+          echo "Resolved: $ROOT (dir=$DIRNAME, base=$BASENAME)"
+
+      - name: Install missing packages dynamically
+        run: |
+          for f in "${{ steps.root.outputs.dir }}"/*.tex; do
+            [ -f "$f" ] || continue
+            grep -oP '\\usepackage(\[.*?\])?\{\K[^}]+' "$f" 2>/dev/null | \
+              tr ',' '\n' | while read pkg; do
+                [ -n "$pkg" ] || continue
+                texfindpkg install "$pkg.sty" 2>/dev/null || true
+              done
+          done
+
+      - name: Compile manuscript
+        working-directory: ${{ steps.root.outputs.dir }}
+        env:
+          BIBINPUTS: ".:${{ github.workspace }}:"
+          TEXINPUTS: ".:${{ github.workspace }}:"
+        run: |
+          latexmk -f -pdf -lualatex -interaction=nonstopmode "${{ steps.root.outputs.basename }}.tex"
+
+      - name: Determine version tag
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          else
+            LATEST=$(git tag -l 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+$' | head -n1)
+            if [ -z "$LATEST" ]; then
+              TAG="v1.0"
+            else
+              MAJOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f1)
+              MINOR=$(echo "$LATEST" | sed 's/^v//' | cut -d. -f2)
+              MINOR=$((MINOR + 1))
+              TAG="v${MAJOR}.${MINOR}"
+            fi
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Version: $TAG"
+
+      - name: Create version tag
+        run: |
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Upload PDF as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.root.outputs.basename }}-${{ steps.version.outputs.tag }}
+          path: ${{ steps.root.outputs.dir }}/${{ steps.root.outputs.basename }}.pdf
+
+      - name: Push PDF to public repo
+        if: env.PAPER_TARGET_REPO != ''
+        env:
+          PAPER_PAT: ${{ secrets.PAPER_PAT }}
+          PDF_PATH: ${{ steps.root.outputs.dir }}/${{ steps.root.outputs.basename }}.pdf
+          PDF_NAME: ${{ steps.root.outputs.basename }}.pdf
+        run: |
+          if [ -z "$PAPER_PAT" ]; then
+            echo "::error::PAPER_TARGET_REPO is set but PAPER_PAT secret is missing"
+            exit 1
+          fi
+          git clone "https://x-access-token:${PAPER_PAT}@github.com/${PAPER_TARGET_REPO}.git" _public
+          cp "$PDF_PATH" "_public/$PDF_NAME"
+          cd _public
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$PDF_NAME"
+          git diff --cached --quiet || git commit -m "Update paper PDF (${{ steps.version.outputs.tag }})"
+          git push
