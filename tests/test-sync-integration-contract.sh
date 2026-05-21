@@ -89,6 +89,11 @@ assert_absent_regex \
   "Phase B|PhaseB|phase-b|phase b" \
   skills/*/SKILL.md skills/*/references/*.md agents/*.md README.md CLAUDE.md .codex/agents/*.toml
 
+assert_absent_regex \
+  "Writing templates defer source citations to markdown-link rule" \
+  "file\\.(tex|ext):<line" \
+  skills/writing/references/*.md skills/writing/references/consistency/*.md
+
 assert_contains \
   "Skill manifest routes Sync to semantic merge" \
   "skills/using-superRA/SKILL.md" \
@@ -274,6 +279,61 @@ assert_contains \
   "Contributor gate applies no-overprescription line by line" \
   "CLAUDE.md" \
   "self-applies both tests below line by line"
+
+assert_contains \
+  "Planning workflow routes writing to planning reference" \
+  "skills/planning-workflow/SKILL.md" \
+  'load `skills/writing/references/planning.md`'
+
+assert_contains \
+  "Writing skill exposes planning reference" \
+  "skills/writing/SKILL.md" \
+  '`references/planning.md` | PLAN phase for large writing work'
+
+assert_contains \
+  "Writing planning reference declares PLAN-only retrofit marker" \
+  "skills/writing/references/planning.md" \
+  "**Writing workflow:** Long-form review retrofit (PLAN-only; no RESULTS.md)"
+
+assert_absent \
+  "Planning workflow does not own writing PLAN-only retrofit marker" \
+  "Long-form review retrofit" \
+  "skills/planning-workflow/SKILL.md"
+
+assert_absent \
+  "Planning workflow does not own PLAN-only exception prose" \
+  "PLAN-only" \
+  "skills/planning-workflow/SKILL.md"
+
+assert_absent \
+  "Planning workflow does not own no-RESULTS exception prose" \
+  "no RESULTS.md" \
+  "skills/planning-workflow/SKILL.md"
+
+assert_absent \
+  "Implementation workflow does not own writing PLAN-only retrofit" \
+  "Long-form review retrofit" \
+  "skills/implementation-workflow/SKILL.md"
+
+assert_absent \
+  "Long-form review no longer names REVIEW.md" \
+  "REVIEW.md" \
+  "skills/writing/references/long-form-review.md"
+
+assert_absent \
+  "Long-form review no longer has staged lifecycle labels" \
+  "Stage 1" \
+  "skills/writing/references/long-form-review.md"
+
+assert_absent \
+  "Long-form review no longer has Stage 2 label" \
+  "Stage 2" \
+  "skills/writing/references/long-form-review.md"
+
+assert_absent \
+  "Long-form review no longer uses shared Findings section" \
+  "## Findings" \
+  "skills/writing/references/long-form-review.md"
 
 echo
 echo "Passed: $pass    Failed: $fail"

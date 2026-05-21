@@ -16,7 +16,7 @@ Write comprehensive plans for a reader skilled at the craft but with zero contex
 **Announce at start:** "I'm using the planning-workflow skill to create the project plan."
 
 **Save plan to:** `PLAN.md` at the project root (if in a worktree, the worktree root; otherwise, the project root or user-specified location)
-- Create `RESULTS.md` alongside (see Living Plan and Results Docs section below)
+- Create `RESULTS.md` alongside (see Living Plan and Results Docs section below), unless the active domain planning reference declares a different durable record.
 - (User preferences for plan location override this default)
 
 Commit the plan before proceeding to execution.
@@ -31,8 +31,11 @@ Identify the domain of the work and load the matching domain skill's planning re
 |---|---|---|
 | Data analysis | task involves loading, cleaning, merging, transforming, modeling, or visualizing data | `superRA:econ-data-analysis` |
 | Theory / modeling | task involves deriving or analyzing a mathematical model, equilibrium conditions, comparative statics, proofs, symbolic manipulation, or model notes | `superRA:theory-modeling` |
+| Writing | task involves editing, polishing, proofreading, consistency-checking, refactoring wording, or drafting technical sections of an academic paper or manuscript | `superRA:writing` |
 
-**Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy its planning hard gate before returning to Phase 2.** The researcher must approve the domain skill's planning-stage inventory artifact (e.g., Data Inventory, Model Inventory / Assumption Map) before any task structure is drafted.
+**Stop here, load the matching domain skill, follow its planning-stage reference per its own stage-load table, and satisfy its planning hard gate before returning to Phase 2.** The researcher must approve the domain skill's planning-stage inventory artifact (e.g., Data Inventory, Model Inventory / Assumption Map, or Writing Plan Header) before any task structure is drafted.
+
+If the task is writing: load `skills/writing/references/planning.md`. Large writing work continues into Phase 2 under that reference.
 
 If the task is in a domain without an implemented vertical yet: proceed to Phase 2, but flag the gap to the researcher so they know superRA's domain coverage is not complete for this work.
 
@@ -99,7 +102,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 **Editing discipline and anatomy templates** live in `superRA:handoff-doc` (load it when authoring `PLAN.md` / `RESULTS.md` from scratch). Role ownership and review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the stub anatomy in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Document it matures into a permanent record.
+**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the stub anatomy in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Document it matures into a permanent record. Follow the active domain planning reference when it declares a different durable record.
 
 ### PLAN.md Is the Task Tracker
 
@@ -185,7 +188,7 @@ After writing the complete plan:
 
 **4. Validation coverage:** Does every transformative step have a corresponding validation step? (For data: every merge, filter, and variable construction.)
 
-**5. Plan serves as handoff:** If you stopped here and a new agent read only this plan and `RESULTS.md`, could they continue? Is there enough context?
+**5. Plan serves as handoff:** If you stopped here and a new agent read the required handoff docs declared for this work, could they continue? Is there enough context?
 
 **6. Sensitivity / robustness / verification coverage (where applicable):** Does the plan cover the active domain skill's verification / robustness requirements (e.g., sensitivity analysis tasks for data work, or derivation / proof / numerical-check planning for theory work)?
 
