@@ -1,0 +1,58 @@
+\documentclass[11pt,english,aspectratio=169]{beamer}
+\usetheme[progressbar=frametitle]{metropolis}
+\usepackage{appendixnumberbeamer}
+\usepackage{mathtools}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[backend=biber, style=authoryear]{biblatex}
+\addbibresource{../references.bib}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{ragged2e}
+\usepackage{multirow}
+\usepackage{tikz}
+\usepackage{bm}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+
+% Math operator shortcuts (mirror manuscript.tex)
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Corr}{Corr}
+
+\metroset{titleformat=smallcaps, numbering=fraction}
+\setbeamersize{text margin left=0.5cm, text margin right=0.5cm}
+\setbeamercolor{block body}{fg=black, bg=blue!10}
+
+\title{ProjectExample}
+\subtitle{Subtitle}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Motivation}
+    TODO.
+\end{frame}
+
+\begin{frame}{Main Result}
+    TODO.
+\end{frame}
+
+\begin{frame}{Conclusion}
+    TODO.
+\end{frame}
+
+\appendix
+
+\begin{frame}[allowframebreaks]{References}
+    \printbibliography
+\end{frame}
+
+\end{document}

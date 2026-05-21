@@ -121,6 +121,19 @@ echo "Creating code project directories..."
 mkdir -p Code Paper/Figures Paper/Tables Slides
 touch Paper/Figures/.gitkeep Paper/Tables/.gitkeep
 
+# Copy bundled LaTeX templates (manuscript + slides + shared bib)
+if [ -f "$SCRIPT_DIR/../template/Paper/manuscript.tex" ]; then
+    cp "$SCRIPT_DIR/../template/Paper/manuscript.tex" Paper/manuscript.tex
+    sed -i '' "s/ProjectExample/$PROJECT_NAME/g" Paper/manuscript.tex
+fi
+if [ -f "$SCRIPT_DIR/../template/Slides/slides.tex" ]; then
+    cp "$SCRIPT_DIR/../template/Slides/slides.tex" Slides/slides.tex
+    sed -i '' "s/ProjectExample/$PROJECT_NAME/g" Slides/slides.tex
+fi
+if [ -f "$SCRIPT_DIR/../template/references.bib" ]; then
+    cp "$SCRIPT_DIR/../template/references.bib" references.bib
+fi
+
 # Record share path (per-machine, gitignored)
 echo "$SHARE_PATH" > .share-path
 

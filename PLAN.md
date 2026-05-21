@@ -536,7 +536,7 @@ Update `RESULTS.md` Task 5 section with the verification outcomes (pass/fail per
 ### Task 6: Bundle LaTeX templates (manuscript + slides + references.bib)
 
 **Depends on:** Task 1 (skill directory exists with `template/Paper/` and `template/Slides/` stubs)
-**Review status:** *(not started)*
+**Review status:** IMPLEMENTED
 **Integration status:** *(not started)*
 
 **Script:** N/A — markdown / LaTeX authoring + file additions inside `skills/research-project-setup/template/`.
@@ -551,9 +551,9 @@ Plus one updated file:
 
 The `Paper/.gitkeep`, `Paper/Figures/.gitkeep`, `Paper/Tables/.gitkeep`, `Slides/.gitkeep` files stay (the `Figures/` and `Tables/` directories remain ready for compiled output regardless of which `.tex` is the primary).
 
-- [ ] **Step 1: Author `template/Paper/manuscript.tex`**
+- [x] **Step 1: Author `template/Paper/manuscript.tex`**
 
-Generic article-class manuscript adapted from the IntermediaryDemand source. Title and author substituted via the existing `sed s/ProjectExample/$PROJECT_NAME/g` pass at scaffold time (so the title placeholder must contain the literal string `ProjectExample`).
+Generic article-class manuscript adapted from the IntermediaryDemand source. Title and author substituted via the existing `sed s/ProjectExample/$PROJECT_NAME/g` pass at scaffold time (so the title placeholder must contain the literal string `ProjectExample`). Beyond the PLAN.md preamble: added `\usepackage{comment}` (utility, portable) and the standard theorem environments (`theorem`, `proposition`, `lemma`, `corollary`, `definition`, `assumption`) since the source manuscript clearly relies on them and they are generic for any econ paper.
 
 Content shape (write directly with `Write`):
 
@@ -628,7 +628,7 @@ TODO.
 \end{document}
 ```
 
-- [ ] **Step 2: Author `template/Slides/slides.tex`**
+- [x] **Step 2: Author `template/Slides/slides.tex`**
 
 Beamer with the metropolis theme, mirroring the IntermediaryDemand slides preamble. The `\title` line carries the `ProjectExample` placeholder for sed substitution.
 
@@ -693,7 +693,7 @@ Beamer with the metropolis theme, mirroring the IntermediaryDemand slides preamb
 \end{document}
 ```
 
-- [ ] **Step 3: Add `template/references.bib`**
+- [x] **Step 3: Add `template/references.bib`**
 
 Empty `.bib` stub at project root (so both `Paper/` and `Slides/` resolve `\addbibresource{../references.bib}` to the same file). Include a placeholder comment + a single commented-out example entry so authors see the expected format:
 
@@ -714,15 +714,11 @@ Empty `.bib` stub at project root (so both `Paper/` and `Slides/` resolve `\addb
 % }
 ```
 
-- [ ] **Step 4: Update `skills/research-project-setup/SKILL.md`**
+- [x] **Step 4: Update `skills/research-project-setup/SKILL.md` and wire the scaffolder**
 
-Add one sentence under the "what gets scaffolded" / fresh-setup description so the agent can explain bundled LaTeX templates when asked. Concretely: in the section that lists what `create_project.sh` produces, append a line like:
+Added one sentence to `SKILL.md` describing the bundled LaTeX scaffolding, right after the "skill bundles three things" paragraph. Also extended `scripts/create_project.sh` to copy the three new files into a scaffolded project (under `mkdir -p Code Paper/...`): `Paper/manuscript.tex` and `Slides/slides.tex` are copied with the `s/ProjectExample/$PROJECT_NAME/g` substitution; `references.bib` is copied verbatim (comments only). This scaffolder wiring is implied by Step 5's assertions (`test -f Paper/manuscript.tex`, etc.) and was not explicit in PLAN.md.
 
-> Bundled LaTeX scaffolding: `Paper/manuscript.tex` (article class + biblatex + standard math/figure packages), `Slides/slides.tex` (beamer + metropolis theme), and `references.bib` at the project root.
-
-Use `Edit` to find the right insertion point — the section that enumerates the scaffolded output. Keep the addition under the DRY + Necessity discipline: one factual line, no wrapper instructions.
-
-- [ ] **Step 5: Verify scaffold rendering + LaTeX compile**
+- [x] **Step 5: Verify scaffold rendering + LaTeX compile**
 
 ```bash
 # Re-run the smoke test under /tmp to confirm the new files land in a scaffolded project.
@@ -751,13 +747,14 @@ rm -rf /tmp/LatexProj /tmp/LatexProj-Share
 
 If `latexmk` is not available or compilation fails on the metropolis theme (which expects LuaLaTeX/XeLaTeX-compatible fonts and may need additional CTAN packages), record the outcome in RESULTS.md and treat it as a known precondition rather than a blocking issue — the templates are textual scaffolding intended for the user's own LaTeX toolchain, not a portable build.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add skills/research-project-setup/template/Paper/manuscript.tex \
         skills/research-project-setup/template/Slides/slides.tex \
         skills/research-project-setup/template/references.bib \
         skills/research-project-setup/SKILL.md \
+        skills/research-project-setup/scripts/create_project.sh \
         PLAN.md RESULTS.md
 git commit -m "feat(skill): bundle LaTeX templates (manuscript + slides + refs.bib) in scaffolded skeleton"
 ```

@@ -219,7 +219,50 @@ Expected: the harness surfaces `research-project-setup` in its skill auto-trigge
 
 ## Task 6: Bundle LaTeX templates (manuscript + slides + references.bib)
 
-**Status:** Not started
+**Status:** IMPLEMENTED
+
+### Files added
+
+- [skills/research-project-setup/template/Paper/manuscript.tex](skills/research-project-setup/template/Paper/manuscript.tex) — article-class manuscript stub. Preamble mirrors the IntermediaryDemand source for the portable, generic subset: 12pt article + geometry 1in margins + biblatex (biber, authoryear, natbib=true) + standard math (`amsmath`, `amssymb`, `amsthm`), figure (`graphicx`, `caption`, `subcaption`, `placeins`, `float`), table (`booktabs`, `multirow`, `makecell`), tikz/pgfplots, and hyperref. Operator macros `\argmax \argmin \diag \sgn \Var \Cov \Corr`. Generic colored note macros `\NOTEA \NOTEB \NOTEC` (placeholders for coauthor initials). Title placeholder `\title{ProjectExample}` is rewritten by the scaffolder.
+- [skills/research-project-setup/template/Slides/slides.tex](skills/research-project-setup/template/Slides/slides.tex) — beamer + metropolis theme stub. Mirrors the LSE slides preamble: 16:9 aspect ratio, progressbar frame title, `\metroset{titleformat=smallcaps, numbering=fraction}`, mirrored math operators, shared bib via `\addbibresource{../references.bib}`, three TODO frames + `[allowframebreaks]` references frame in `\appendix`.
+- [skills/research-project-setup/template/references.bib](skills/research-project-setup/template/references.bib) — empty bib at project root, shared by both `Paper/` and `Slides/` via `\addbibresource{../references.bib}`. Carries a commented-out example article entry so authors see the expected format.
+
+### Files updated
+
+- [skills/research-project-setup/SKILL.md](skills/research-project-setup/SKILL.md) — added one sentence after the "skill bundles three things" paragraph describing the bundled LaTeX scaffolding and the `\title{ProjectExample}` sed substitution.
+- [skills/research-project-setup/scripts/create_project.sh](skills/research-project-setup/scripts/create_project.sh) — added a 12-line block after `mkdir -p Code Paper/...` that copies the three new template files into the scaffolded project, applying the `sed s/ProjectExample/$PROJECT_NAME/g` substitution to the two `.tex` files. This wiring is implicit in PLAN.md Step 5 (the smoke-test assertions check for these files at the scaffolded paths) but was not enumerated as an explicit step.
+
+### Additions beyond the PLAN.md preamble
+
+The dispatch steering allowed adding packages the user clearly relies on that are portable to a generic template. The implementation added:
+
+- `\usepackage{comment}` — utility for block comments; present in source.
+- Standard theorem environments (`\newtheorem{theorem}{Theorem}` plus `proposition`, `lemma`, `corollary`, `definition`, `assumption`) — heavily relied upon in the source manuscript and effectively universal for econ papers.
+
+Items in the source that were intentionally NOT included (per dispatch steering or for portability): `\NOTEZ`/`\NOTEJ`/`\NOTEM` (replaced by generic `\NOTEA`/`\NOTEB`/`\NOTEC`), `\jane`/`\manav`/`\zhiyu` colored-text macros, `output-myclipboard.cpy` clipboard package, `xr` cross-doc package, `\definecolor{...}` block (project-specific palette), `\usepackage{epsf}` (legacy), `\usepackage{alphabeta}` / `blkarray` / `dsfont` / `soul` / `mathrsfs` (used only in IntermediaryDemand-specific contexts), and the IntermediaryDemand-specific tikz library imports beyond pgfplots defaults.
+
+### Verification
+
+Smoke test (PLAN.md Step 5) executed against `/tmp/LatexProj`:
+
+| Assertion | Result |
+| --- | --- |
+| `Paper/manuscript.tex` present in scaffolded project | pass |
+| `Slides/slides.tex` present | pass |
+| `references.bib` present at project root | pass |
+| `\title{LatexProj}` in `Paper/manuscript.tex` (sed substitution worked) | pass |
+| `\title{LatexProj}` in `Slides/slides.tex` | pass |
+
+LaTeX compile (soft check):
+
+| Document | Toolchain | Result |
+| --- | --- | --- |
+| `Paper/manuscript.tex` | `latexmk -pdf -interaction=nonstopmode` (pdfLaTeX + biber) | compiled cleanly to a 1-page PDF (75 KB); bibliography pass via biber |
+| `Slides/slides.tex` | same | compiled cleanly to a 5-page PDF (43 KB); bibliography pass via biber |
+
+Both compile under the default pdfLaTeX toolchain on the local TeX Live 2026 install. The metropolis beamer theme often requires LuaLaTeX/XeLaTeX in other environments — the soft-check note in PLAN.md Step 5 still applies to coauthors with different LaTeX installs.
+
+`/tmp/LatexProj` and `/tmp/LatexProj-Share` cleaned after verification.
 
 ## Task 7: Deprecate the standalone `ResearchProjectTemplate` repo
 

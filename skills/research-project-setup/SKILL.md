@@ -9,6 +9,8 @@ Scaffold a new academic research project from the bundled `template/` + `templat
 
 The skill bundles three things: `scripts/create_project.sh` (the scaffolder), `template/` (Git-side skeleton, with internal `Data`/`Notes`/`Output` symlinks pointing at `../template-share/`), and `template-share/` (share-side skeleton). The two-folder layout mirrors the design `create_project.sh` provisions on disk. Inside this skill, refer to the skill root as `$SKILL_DIR`.
 
+The Git skeleton also ships bundled LaTeX scaffolding: `Paper/manuscript.tex` (article class + biblatex + standard math/figure packages), `Slides/slides.tex` (beamer + metropolis theme), and `references.bib` at the project root shared by both. The `ProjectExample` placeholder in `\title{...}` is rewritten to the user's project name by the scaffolder.
+
 **Symlink note for contributors.** The three internal symlinks under `template/` (`Data`, `Notes`, `Output`) are intentionally gitignored — a fresh `git clone` of superRA will not have them on disk. They are materialized by `create_project.sh` at scaffold time from the resolved `$SHARE_PATH`. The `template/` checkout exists to document the design and ship file content; the symlinks themselves are a scaffold-time artifact.
 
 ## Mode detection (always do first)
