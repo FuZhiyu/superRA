@@ -23,7 +23,7 @@
 - [x] **Drift tests created** — protected by contract/harness checks for skill behavior; no separate RESULTS.md exists for this retrofit.
 - [x] **Integrated** — Task 1 post-sync integration review approved in `cbcf54d`; closeout verification passed.
 - [x] **Docs finalized** — temporary Sync Map/Sync impact removed after approval; PLAN.md is the durable retrofit record and no RESULTS.md is created.
-- [ ] **Finished** — pending final branch action.
+- [x] **Finished** — freshness check passed against `origin/main` at `15755310cf4c32e91a67e1bd79989c57f1406b26`; branch pushed.
 
 ---
 
