@@ -94,6 +94,10 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 > **Question asked:** Add a LaTeX template to the bundled skeleton? If so, what shape?
 > **Rationale:** Every project the scaffolder creates needs LaTeX scaffolding eventually; bundling it removes friction. IntermediaryDemand carries the user's preferred preamble and structure, so mirror that rather than invent a new one.
 
+> **User decision (2026-05-21):** Run Task 5's deferred manual steps (3, 4, 5, 7) before entering integration-workflow. After they pass, flip Task 5 to full APPROVED and check `Execution complete`, then proceed with integration. Task 7 (ResearchProjectTemplate deprecation) still happens after the superRA-side PR lands.
+> **Question asked:** Step 4 completion menu — proceed with integration now, or run manual verification steps first?
+> **Rationale:** User-defined workflow milestone; researcher wants concrete validation in a fresh harness session before the branch enters integration.
+
 ---
 
 ### Task 1: Scaffold skill directory + move templates
