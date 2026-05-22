@@ -159,7 +159,7 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** N/A (file moves + directory creation; no analysis code).
 **Input:** `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/{ProjectExample,ProjectExample-Share,create_project.sh,CLAUDE-template.md,README-template.md}`
@@ -250,7 +250,7 @@ git commit -m "feat(skill): scaffold research-project-setup with bundled templat
 
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** `skills/research-project-setup/scripts/create_project.sh` (and the bundled `template/setup_mac.sh` for the coauthor side).
 **Input:** The copied `create_project.sh` from Task 1.
@@ -405,7 +405,7 @@ git commit -m "feat(skill): wire create_project.sh to new paths + share-path san
 
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** N/A — markdown authoring.
 **Input:** Existing `/Users/zhiyufu/Dropbox/package_dev/ResearchProjectTemplate/.claude/skills/research-project-setup/SKILL.md` (source content for the move).
@@ -469,7 +469,7 @@ git commit -m "feat(skill): research-project-setup SKILL.md + feature catalog + 
 
 **Depends on:** Task 3 (skill body must exist so descriptions match)
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** N/A — markdown edits to three inventory files.
 **Input:** Existing `skills/CATEGORIES.md`, `README.md`, `skills/using-superRA/SKILL.md`.
@@ -510,7 +510,12 @@ git commit -m "docs: register research-project-setup in inventory surfaces"
 
 **Depends on:** Task 2, Task 3, Task 4
 **Review status:** APPROVED (Steps 1, 2, 6, 8 automated and passed; Steps 3, 4, 5, 7 SUPERSEDED by Task 8's automated CLI test suite — see §Decisions 2026-05-21)
-**Integration status:** *(not started)*
+**Integration status:** REVISE
+
+> **Integration review notes (2026-05-21):**
+>
+> 1. **MAJOR — RESULTS.md "Last updated" stamp is stale.** [RESULTS.md:6](RESULTS.md#L6) reads `2026-05-21 (Task 5 partially implemented — automated steps passed; manual steps pending researcher action)` and `**Status:** In Progress`. PLAN.md `## Workflow Status` is now `Execution complete` with Tasks 1–6 and 8 APPROVED, and §Decisions (2026-05-21) records that Task 5's manual Steps 3, 4, 5, 7 were superseded by Task 8's automated CLI suite. The "Last updated" line contradicts the current state. Refresh the stamp (e.g., `2026-05-21 (Tasks 1–6 and 8 APPROVED; Task 5's manual steps superseded by Task 8 — 8/8 PASS + load-bearing negative control; Task 7 deferred)`) and flip `**Status:**` to reflect that execution is complete and the branch is in integration. `[BLOCKING] Documentation currency — Dates and version claims reflect the current commit.`
+> 2. **MAJOR — RESULTS.md Task 5 body still says manual steps are PENDING.** [RESULTS.md:149-218](RESULTS.md#L149-L218) carries Step 3 / Step 4 / Step 5 / Step 7 as `PENDING (researcher)` with manual reproduction recipes. Per §Decisions (2026-05-21) these steps were SUPERSEDED by Task 8's automated CLI suite (Tests A–D, 8/8 PASS at commit `25c5a83` with load-bearing negative control), and the PLAN.md Task 5 review-status line already records the supersession. Rewrite the RESULTS.md Task 5 Step 3/4/5/7 sections in place (per `superRA:handoff-doc` — inline-edit, no "Update:" stack) to point at the Task 8 coverage (the matching Test A / B / C / D row in the Task 8 §RESULTS.md matrix) instead of leaving the original manual recipes as the active record. `[BLOCKING] Documentation currency — Module docs do not reference outputs or methodology that have been superseded.`
 
 **Script:** Manual verification + small shell assertions.
 **Input:** The completed skill from Tasks 1–4.
@@ -596,7 +601,7 @@ Update `RESULTS.md` Task 5 section with the verification outcomes (pass/fail per
 
 **Depends on:** Task 1 (skill directory exists with `template/Paper/` and `template/Slides/` stubs)
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** N/A — markdown / LaTeX authoring + file additions inside `skills/research-project-setup/template/`.
 **Input:** Reference sources — `~/Dropbox/research_projects/IntermediaryDemand/Paper/Draft/intermediary_demand_draft.tex` (manuscript preamble + structure) and `~/Dropbox/research_projects/IntermediaryDemand/Paper/Slides/LSE_slides/LSE_24032026.tex` (slides preamble + theme).
@@ -885,7 +890,7 @@ Update the new `README.md` for the deprecated repo if `gh repo view` reveals add
 
 **Depends on:** Task 2 (sandbox registration), Task 3 (SKILL.md trigger phrases), Task 6 (LaTeX bundle copied by scaffolder)
 **Review status:** APPROVED
-**Integration status:** *(not started)*
+**Integration status:** APPROVED
 
 **Script:** New test harness under `skills/research-project-setup/tests/` (bash + small Python where needed).
 **Input:** The installed superRA plugin (Claude + Codex), the cheapest model alias per CLI, a writable `$HOME` subtree.
