@@ -18,7 +18,7 @@
   "interface": {
     "displayName": "superRA",
     "shortDescription": "Disciplined research-assistant workflows for Codex.",
-    "longDescription": "superRA adds plan, execution, review, integration, merge discipline, and Codex lifecycle hook reminders for research-oriented coding workflows. Install the shared skills from the superRA marketplace entry, then run codex-superra-setup to install the named Codex agents.",
+    "longDescription": "superRA adds plan, execution, review, integration, and merge discipline plus Codex lifecycle hook reminders for research-oriented coding workflows. Install the shared skills from the superRA marketplace entry, then run codex-superra-setup to install the named Codex agents.",
     "developerName": "Zhiyu Fu",
     "category": "Productivity",
     "capabilities": [

@@ -4,7 +4,7 @@ Loaded by the orchestrator when it needs to **create**, **enter**, or **remove**
 
 ## Prefer Harness Tools
 
-If the harness exposes worktree-management tools (e.g., `EnterWorktree`, `ExitWorktree`, `CreateWorktree`, IDE-integrated worktree panels), use them. They handle cwd tracking, environment activation, and teardown more cleanly than raw git. Check the available tool list before falling through to the raw-git path.
+Use harness worktree tools only when the orchestrator can choose the worktree path from §Placement. Hidden harness scratch locations are not superRA worktrees. If no path-controlled worktree tool exists, use raw git.
 
 ## Raw-Git Fallback
 
@@ -44,8 +44,8 @@ git branch -D <branch-name>                # only after merge or explicit discar
 Priority order when choosing where to put the worktree:
 
 1. **Project-level override.** Grep the repo-root `CLAUDE.md` / `AGENTS.md` for a `worktree` directive (`grep -i "worktree.*director" CLAUDE.md`). If a path is specified, use it.
-2. **Existing convention.** If `./.worktrees/` or `./worktrees/` already exists at the repo root, reuse it.
-3. **Default.** `./.worktrees/<branch-name>` at the repo root.
+2. **Default for ephemeral parallel worktrees.** Use `${TMPDIR:-/tmp}/superRA-worktrees/<repo-name>/<branch-name>`.
+3. **Existing project convention.** Reuse `./.worktrees/` or `./worktrees/` only when the project-level directive names it.
 
 Before first use of a project-local directory (`.worktrees/`, `worktrees/`), verify it is gitignored:
 
@@ -68,7 +68,8 @@ Global-location worktrees (e.g., `~/.config/superpowers/worktrees/<project>/`) n
 One parallel slot's full lifecycle (create → seed → dispatch → merge → cleanup):
 
 ```bash
-WT=".worktrees/${BR}-agent/parallel/$SLUG"
+WT="${TMPDIR:-/tmp}/superRA-worktrees/$(basename "$(git rev-parse --show-toplevel)")/${BR}-agent/parallel/$SLUG"
+mkdir -p "$(dirname "$WT")"
 git worktree add "$WT" -b "${BR}-agent/parallel/$SLUG" "$BR"
 python3 skills/worktree-data-sync/scripts/sync_worktree_data.py \
   --from "$(pwd)" --to "$WT" --mode seed --seed-sync-mode force-symlink
