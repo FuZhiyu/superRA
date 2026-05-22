@@ -111,6 +111,10 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 > **Question asked:** N/A — surfaced empirically during implementation, not by question.
 > **Rationale:** Without recording this in §Decisions, the next agent that re-reads the original dispatch will see "no flag" and treat the empirically-verified `acceptEdits` choice as a deviation to be corrected — re-introducing a vacuous Test A.
 
+> **User decision (2026-05-21):** Proceed with integration. All in-scope tasks (1–6, 8) APPROVED; Task 8 verified 8/8 PASS with load-bearing negative control. Dispatch `superRA:integration-workflow` (Protect → Sync → Integrate → Document → Finish). Task 7 (deprecate standalone `ResearchProjectTemplate` repo) remains deferred to after this superRA-side PR lands.
+> **Question asked:** Step 4 completion menu — proceed with integration, change the plan, keep as-is, or discard?
+> **Rationale:** User-chosen workflow milestone after Task 8 approval.
+
 ---
 
 ### Task 1: Scaffold skill directory + move templates
