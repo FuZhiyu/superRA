@@ -119,6 +119,10 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 > **Question asked:** How should Protect be satisfied — test suite is the protection, re-run now, or add additional protection?
 > **Rationale:** Task 8 already exercises every invariant Protect would cover for skill-authoring work (sandbox registration end-to-end via both CLIs, skill discoverability, retrofit playbook application). Re-running burns budget without adding signal because no code-bearing commits have landed since the suite passed.
 
+> **Sync target base (2026-05-21):** `origin/main`. Branch `superRA-project-template` was cut off main and is destined to land back into main via PR. Recorded merge-base `08b68c85`; current `origin/main` HEAD `d861089` ("[codex] add Codex plugin hooks (#27)"). The single incoming commit touches `hooks/`, `package.json`, `skills/using-superRA/references/codex-instructions.md`, `skills/agent-orchestration/references/worktree-harness-fallback.md`, and adds `tests/hooks/*`; no overlap expected with this branch's `skills/research-project-setup/` and `skills/research-project-setup/tests/` work.
+> **Question asked:** N/A — default `origin/main` is the only candidate; no prior decision needed alternatives.
+> **Rationale:** Standard PR target for superRA contributor work.
+
 ---
 
 ### Task 1: Scaffold skill directory + move templates
