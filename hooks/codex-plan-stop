@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Codex Stop hook: after a plan-mode turn stops, remind the agent to create
+# PLAN.md + RESULTS.md when the plan will guide future work.
+
+set -euo pipefail
+
+input=$(cat)
+
+parsed=$(echo "$input" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("\t\t")
+    sys.exit(0)
+event = d.get("hook_event_name", "") or ""
+permission_mode = d.get("permission_mode", "") or ""
+stop_hook_active = "1" if d.get("stop_hook_active") else "0"
+last = d.get("last_assistant_message", "") or ""
+last = last.replace("\t", " ").replace("\n", " ").replace("\r", " ")
+print(event + "\t" + permission_mode + "\t" + stop_hook_active + "\t" + last)
+' 2>/dev/null || printf '\t\t\t')
+
+IFS=$'\t' read -r event permission_mode stop_hook_active last_assistant_message <<<"$parsed"
+
+if [ "$event" != "Stop" ]; then
+  printf '{}\n'
+  exit 0
+fi
+
+if [ "$stop_hook_active" = "1" ]; then
+  printf '{}\n'
+  exit 0
+fi
+
+has_plan_marker=0
+if [ "$permission_mode" = "plan" ] && printf '%s' "$last_assistant_message" | grep -Eiq '^[[:space:]]*<proposed_plan>'; then
+  has_plan_marker=1
+elif [ "$permission_mode" = "plan" ] && printf '%s' "$last_assistant_message" | grep -Eiq '^[[:space:]#*_-]*proposed[[:space:]]+plan([[:space:]:#*_-]|$)'; then
+  has_plan_marker=1
+fi
+
+if [ "$has_plan_marker" != "1" ]; then
+  printf '{}\n'
+  exit 0
+fi
+
+message="You just completed a Codex plan-mode turn with a proposed plan. If this plan will guide implementation, review, or handoff to another agent/session, consider writing it into PLAN.md + RESULTS.md at the project root using superRA:planning-workflow and superRA:handoff-doc before relying on it. If those files already exist and reflect the current plan, this reminder is satisfied."
+message_json=$(printf '%s' "$message" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+printf '{"decision":"block","reason":%s}\n' "$message_json"
+
+exit 0

@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# PostToolUse hook: fires after AskUserQuestion returns an answer.
-# Injects a reminder to log the user's decision into PLAN.md before
-# taking any other action, per CLAUDE.md workflow principle #4
-# ("autonomous with human in the loop") and the handoff-doc
-# User Decisions Log format.
+# PostToolUse hook: fires after AskUserQuestion/request_user_input returns an answer.
+# Offers a reminder to record important user decisions in PLAN.md.
 # Does NOT block — the discipline system handles enforcement.
 
 set -euo pipefail
@@ -11,7 +8,7 @@ set -euo pipefail
 # Read tool input from stdin
 input=$(cat)
 
-# Fast path: only fire on AskUserQuestion. The matcher in hooks.json
+# Fast path: only fire on AskUserQuestion or Codex request_user_input. The matcher in hooks.json
 # should already scope us, but we double-check here so this hook is
 # cheap and safe even if registered loosely.
 tool_name=$(echo "$input" | python3 -c "
@@ -23,12 +20,16 @@ except Exception:
     print('')
 " 2>/dev/null || echo "")
 
-if [ "$tool_name" != "AskUserQuestion" ]; then
-  printf '{}\n'
-  exit 0
-fi
+case "$tool_name" in
+  AskUserQuestion|request_user_input|functions.request_user_input)
+    ;;
+  *)
+    printf '{}\n'
+    exit 0
+    ;;
+esac
 
-context="<IMPORTANT>You just received a user decision via AskUserQuestion. Before taking any other action (no code edits, no further tool calls that act on the answer), open PLAN.md and log the decision as a dated blockquote: task-scoped decisions go inside the relevant task block under **Review status:**, cross-task decisions go in a top-level ## Decisions section after the header. Format: three lines — **User decision (YYYY-MM-DD):** <answer>, **Question asked:** <short restatement>, **Rationale:** <only if the user gave one>. Commit PLAN.md atomically with the work the decision unblocks. See superRA:handoff-doc §User Decisions Log for the full format and the distinction from the reviewer-feedback adjudication blockquote.</IMPORTANT>"
+context="<IMPORTANT>You just received an answer from the user. If it affects scope, methodology, task status, or later reproducibility, consider recording it in PLAN.md before relying on it. See superRA:handoff-doc §User Decisions Log for the suggested format.</IMPORTANT>"
 
 # Platform-appropriate output format (matches merge-guard / session-start pattern)
 if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then

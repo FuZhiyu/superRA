@@ -41,6 +41,14 @@ Codex's generic default caution about spawning agents.
 - Shut down a warm agent only when its task is complete, the scope has
   materially changed, or the agent is clearly stuck and no longer useful.
 
+## Codex Worktree Ownership
+
+Codex may run spawned agents in internal scratch workspaces. Do not use
+`.codex/worktrees` or any Codex-internal path as a superRA worktree.
+For parallel dispatch, the orchestrator creates the git worktree at the
+`agent-orchestration` placement path, passes its absolute path in
+`Worktree:`, and the agent enters that path before editing.
+
 ## Named Agent Setup
 
 Codex supports custom named agents through `.codex/agents/` and `~/.codex/agents/`. superRA uses that documented path rather than prompt-wrapping built-in workers.

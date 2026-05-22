@@ -1,0 +1,35 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" autoload-superra; else printf '{}\\n'; fi"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" merge-guard; else printf '{}\\n'; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" codex-plan-stop; else printf '{}\\n'; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

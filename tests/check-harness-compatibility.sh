@@ -40,11 +40,22 @@ entry = market["plugins"][0]
 
 assert plugin["name"] == "superra", plugin["name"]
 assert plugin["skills"] == "./skills/", plugin["skills"]
+assert plugin["hooks"] == "./hooks/hooks-codex.json", plugin["hooks"]
 assert "skills" in plugin["interface"]["capabilities"], plugin["interface"]["capabilities"]
+assert "hooks" in plugin["interface"]["capabilities"], plugin["interface"]["capabilities"]
 assert entry["name"] == plugin["name"], (entry["name"], plugin["name"])
 assert entry["source"]["source"] == "url", entry["source"]
 assert entry["source"]["url"] == "https://github.com/FuZhiyu/superRA.git", entry["source"]["url"]
 assert entry["source"]["ref"] == "main", entry["source"]["ref"]
+
+hooks = json.loads(Path("hooks/hooks-codex.json").read_text(encoding="utf-8"))
+events = hooks["hooks"]
+assert "UserPromptSubmit" in events, "Codex hooks must include UserPromptSubmit"
+assert "PreToolUse" in events, "Codex hooks must include PreToolUse"
+assert "Stop" in events, "Codex hooks must include Stop"
+assert any("merge-guard" in h["command"] for group in events["PreToolUse"] for h in group["hooks"]), "Codex PreToolUse must wire merge-guard"
+assert any("codex-plan-stop" in h["command"] for group in events["Stop"] for h in group["hooks"]), "Codex Stop must wire codex-plan-stop"
+assert "PostToolUse" not in events, "Codex hooks must not claim unverified request_user_input PostToolUse support"
 PY
 
 section "Shared harness adapters"

@@ -39,8 +39,31 @@ REM (plugin still works, just without SessionStart context injection)
 exit /b 0
 CMDBLOCK
 
-# Unix: run the named script directly
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCRIPT_NAME="$1"
+# Unix: run the named script through bash. Hook runners may provide a sparse
+# PATH, so avoid depending on dirname(1) or bash being discoverable by name.
+case "$0" in
+    */*) SCRIPT_DIR=${0%/*} ;;
+    *) SCRIPT_DIR=. ;;
+esac
+SCRIPT_DIR="$(cd "$SCRIPT_DIR" && pwd)"
+SCRIPT_NAME="${1:-}"
+if [ -z "$SCRIPT_NAME" ]; then
+    echo "run-hook.cmd: missing script name" >&2
+    exit 1
+fi
 shift
-exec bash "${SCRIPT_DIR}/${SCRIPT_NAME}" "$@"
+
+if command -v bash >/dev/null 2>&1; then
+    BASH_BIN="$(command -v bash)"
+elif [ -x /bin/bash ]; then
+    BASH_BIN=/bin/bash
+elif [ -x /usr/bin/bash ]; then
+    BASH_BIN=/usr/bin/bash
+elif [ -x /usr/local/bin/bash ]; then
+    BASH_BIN=/usr/local/bin/bash
+else
+    printf '{}\n'
+    exit 0
+fi
+
+exec "$BASH_BIN" "${SCRIPT_DIR}/${SCRIPT_NAME}" "$@"
