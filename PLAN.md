@@ -510,12 +510,14 @@ git commit -m "docs: register research-project-setup in inventory surfaces"
 
 **Depends on:** Task 2, Task 3, Task 4
 **Review status:** APPROVED (Steps 1, 2, 6, 8 automated and passed; Steps 3, 4, 5, 7 SUPERSEDED by Task 8's automated CLI test suite — see §Decisions 2026-05-21)
-**Integration status:** REVISE
+**Integration status:** APPROVED
 
 > **Integration review notes (2026-05-21):**
 >
 > 1. **MAJOR — RESULTS.md "Last updated" stamp is stale.** [RESULTS.md:6](RESULTS.md#L6) reads `2026-05-21 (Task 5 partially implemented — automated steps passed; manual steps pending researcher action)` and `**Status:** In Progress`. PLAN.md `## Workflow Status` is now `Execution complete` with Tasks 1–6 and 8 APPROVED, and §Decisions (2026-05-21) records that Task 5's manual Steps 3, 4, 5, 7 were superseded by Task 8's automated CLI suite. The "Last updated" line contradicts the current state. Refresh the stamp (e.g., `2026-05-21 (Tasks 1–6 and 8 APPROVED; Task 5's manual steps superseded by Task 8 — 8/8 PASS + load-bearing negative control; Task 7 deferred)`) and flip `**Status:**` to reflect that execution is complete and the branch is in integration. `[BLOCKING] Documentation currency — Dates and version claims reflect the current commit.`
+>    → implemented: rewrote [RESULTS.md:6-7](RESULTS.md#L6-L7) — `Last updated` now reads `2026-05-21 (Tasks 1–6 and 8 APPROVED; Task 5's manual steps superseded by Task 8 — 8/8 PASS + load-bearing negative control; Task 7 deferred to post-PR)` and `Status: In Progress (integration phase — Task 5 doc currency under final review)`.
 > 2. **MAJOR — RESULTS.md Task 5 body still says manual steps are PENDING.** [RESULTS.md:149-218](RESULTS.md#L149-L218) carries Step 3 / Step 4 / Step 5 / Step 7 as `PENDING (researcher)` with manual reproduction recipes. Per §Decisions (2026-05-21) these steps were SUPERSEDED by Task 8's automated CLI suite (Tests A–D, 8/8 PASS at commit `25c5a83` with load-bearing negative control), and the PLAN.md Task 5 review-status line already records the supersession. Rewrite the RESULTS.md Task 5 Step 3/4/5/7 sections in place (per `superRA:handoff-doc` — inline-edit, no "Update:" stack) to point at the Task 8 coverage (the matching Test A / B / C / D row in the Task 8 §RESULTS.md matrix) instead of leaving the original manual recipes as the active record. `[BLOCKING] Documentation currency — Module docs do not reference outputs or methodology that have been superseded.`
+>    → implemented: replaced [RESULTS.md Step 3/4/5/7](RESULTS.md#L149) in place — each now reads `SUPERSEDED by Task 8 Test {A,B,C,D} (PASS)` with the matching test description, assertions, and wall-time outcome linking to the Task 8 matrix. Top-line Task 5 `Status:` line also refreshed to record the supersession. No "Update:" framing or strikethroughs.
 
 **Script:** Manual verification + small shell assertions.
 **Input:** The completed skill from Tasks 1–4.
@@ -1006,5 +1008,29 @@ git add skills/research-project-setup/tests/ \
         PLAN.md RESULTS.md
 git commit -m "test(skill): automated CLI suite for research-project-setup (Claude + Codex headless)"
 ```
+
+---
+
+## Final Diff Self-Check
+
+**Governing range:** `git diff d86108913ff2f627106f2aa76403e63fadc25e97..HEAD` (synced-base head → current branch HEAD).
+
+**Surviving net contribution against `origin/main`:** entirely confined to the planned scope —
+- `skills/research-project-setup/**` (new skill: SKILL.md + references + scripts/create_project.sh + template/ + template-share/ + tests/);
+- `README.md` (one Utility-table row + one intro feature-list bullet for the new skill);
+- `skills/CATEGORIES.md` (one Utility-table row for the new skill);
+- `skills/using-superRA/SKILL.md` (one Utility row in the Skill Inventory);
+- `PLAN.md`, `RESULTS.md` (this branch's handoff docs);
+- `.gitignore` (whitelist negation pair so `template/.claude/{settings.json,agents,skills}` are tracked despite the root-level `.claude/` ignore).
+
+No `hooks/`, `tests/hooks/`, `.codex-plugin/plugin.json`, or `docs/plans/2026-05-21-codex-hooks-*.md` hunks survive against `origin/main` — the Codex-hooks work was a strict-superset upstream merge during Sync (cluster `codex-hooks-supersede`, §Sync Map).
+
+**Attestation (Integrate phase, no-code-change posture):**
+- No refactor was required. The new skill lives in an empty top-level namespace (`skills/research-project-setup/`) with no convention-fit refactor opportunities against neighboring skills.
+- No utility duplication identified. The scaffolder (`create_project.sh`) and template skeleton are new surfaces; no existing superRA utility provides overlapping behavior.
+- Test suite re-ran 8/8 PASS at HEAD post-sync (Task 8 matrix re-verified after the `origin/main` merge; identical to the pre-sync 8/8 PASS at commit `25c5a83`).
+- Orchestrator accepts absence of an integrate-implementer pass given the no-code-change posture: only doc edits (this REVISE round's RESULTS.md doc-currency fix + this self-check trail) land in the Integrate phase.
+
+**Suspicious-hunk justifications:** none. The `.gitignore` whitelist hunk is documented in [RESULTS.md Task 1](RESULTS.md#task-1-scaffold-skill-directory--move-templates) (without it, `template/.claude/settings.json` would be silently swept by the root `.claude/` ignore and Task 5 Step 1's `grep '"superRA@superRA"'` would fail). All other hunks are task-objective hunks.
 
 ---

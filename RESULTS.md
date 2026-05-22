@@ -3,8 +3,8 @@
 > Mirrors PLAN.md structure. Updated after each step with key findings.
 > New agents: read PLAN.md for what to do, RESULTS.md for what was found.
 
-**Last updated:** 2026-05-21 (Task 5 partially implemented — automated steps passed; manual steps pending researcher action)
-**Status:** In Progress
+**Last updated:** 2026-05-21 (Tasks 1–6 and 8 APPROVED; Task 5's manual steps superseded by Task 8 — 8/8 PASS + load-bearing negative control; Task 7 deferred to post-PR)
+**Status:** In Progress (integration phase — Task 5 doc currency under final review)
 
 ---
 
@@ -115,7 +115,7 @@ Registered `research-project-setup` in the three inventory surfaces with one-lin
 
 ## Task 5: End-to-end verification
 
-**Status:** IMPLEMENTED (partial — automated steps passed; Steps 3, 4, 5, 7 require a fresh Claude Code / Codex session in a different working directory and must be run by the researcher).
+**Status:** IMPLEMENTED — Steps 1, 2, 6, 8 executed and passed in this task; Steps 3, 4, 5, 7 SUPERSEDED by Task 8's automated CLI test suite (Tests A–D, 8/8 PASS at commit `25c5a83` with load-bearing negative control; re-run 8/8 PASS at HEAD after sync). See PLAN.md §Decisions (2026-05-21) for the supersession decision and the Task 8 §8-case PASS/FAIL matrix below for the carrying evidence.
 
 ### Step 1: Standalone scaffolder with arbitrary share path — PASS
 
@@ -146,49 +146,17 @@ Ran `bash skills/research-project-setup/scripts/create_project.sh /tmp/TestProjN
 - `grep -F '"superRA@superRA"' /tmp/TestProjNoSR/.claude/settings.json` → exit 1, no match (printed `ok — superRA not declared`). The settings.json still exists (carries unrelated default permissions), but no superRA enrollment line is present.
 - `test ! -d /tmp/TestProjNoSR/.codex` → ok, `.codex/` directory not present (`ls -la /tmp/TestProjNoSR/` confirms — no `.codex` entry; only `.claude`, `.git`, `.gitignore`, `.mcp.json`, `.share-path`, `.venv`).
 
-### Step 3: Open scaffolded project in Claude Code, write into share folder without prompt — PENDING (researcher)
+### Step 3: Sandbox write through registered share path — SUPERSEDED by Task 8 Test A (PASS)
 
-Requires a fresh Claude Code session opened in the scaffolded project directory. Concrete reproduction for the researcher:
+Covered by Task 8's [Test A (sandbox, strict profile)](#task-8-automated-cli-test-suite-claude-code--codex-headless) under both Claude (`--permission-mode acceptEdits`) and Codex (`-s workspace-write -c approval_policy="never"`). Test A scaffolds a fresh project + non-sibling share under `$HOME/rps-tests/`, prompts the agent to write through the absolute share-folder path, and asserts both the file is created AND no `permission_denial` / sandbox violation is recorded. **Outcome: PASS for both CLIs** (A/claude 9s, A/codex 8s in the 8-case matrix below). The load-bearing assertion is verified by [`cases/test_a_negative_control.sh`](skills/research-project-setup/tests/cases/test_a_negative_control.sh), which strips `additionalDirectories` and the absolute `writable_roots` entries from a freshly-scaffolded project and confirms the same prompt then **fails** on both CLIs (`expected FAIL got FAIL ✓`). See PLAN.md §Decisions (2026-05-21) for the manual → automated supersession decision.
 
-```bash
-rm -rf /tmp/TestProj /tmp/TestShareDropbox && mkdir -p /tmp/TestShareDropbox
-bash /Users/zhiyufu/package_dev/superRA-project-template/skills/research-project-setup/scripts/create_project.sh \
-    /tmp/TestProj --share-path /tmp/TestShareDropbox --with-overleaf --with-ci
-# Then open a fresh Claude Code session with cwd=/tmp/TestProj and ask:
-#   "touch a file at Notes/test.txt and stage it"
-# PASS = no permissions prompt for writing into the share folder; the file is created.
-# FAIL = a permission prompt appears for /tmp/TestShareDropbox/Notes/test.txt.
-```
+### Step 4: Agent fresh-setup path — SUPERSEDED by Task 8 Test B (PASS)
 
-If FAIL: the share-path registration in `.claude/settings.local.json` is not being honored — re-inspect Task 2 Step 2 helper and Claude's `additionalDirectories` semantics.
+Covered by Task 8's [Test B (fresh setup, permissive)](#task-8-automated-cli-test-suite-claude-code--codex-headless). Test B drops the agent into an empty `$HOME/rps-tests/B-cwd-XXXX/` and asks it to create a new research project at an absolute path with a non-sibling share folder. Assertions: the scaffolded project root exists with `.claude/`, `.codex/`, and the `Data`/`Notes`/`Output` symlinks; `Notes/setup_decisions.md` is written; the model's tool-use stream references the skill or `create_project.sh`. **Outcome: PASS for both CLIs** (B/claude 31s, B/codex 30s).
 
-### Step 4: Agent fresh-setup path — PENDING (researcher)
+### Step 5: Agent retrofit path — SUPERSEDED by Task 8 Test C (PASS)
 
-Requires a fresh Claude Code or Codex session in an empty directory.
-
-```bash
-mkdir -p /tmp/AgentFreshSetup && cd /tmp/AgentFreshSetup
-# Open Claude Code or Codex with cwd here. Then ask:
-#   "create a new research project named VerifyFoo"
-```
-
-Expected:
-- Agent invokes `research-project-setup` skill (mode = fresh-setup).
-- Asks the four-checkbox opt-in question (superRA Claude plugin / Codex / Overleaf / CI) exactly once.
-- Runs `create_project.sh` with the resulting flags.
-- Writes `<share-path>/Notes/setup_decisions.md` with a three-line user-decision blockquote.
-
-### Step 5: Agent retrofit path — PENDING (researcher)
-
-In the project produced by Step 4 (or any existing scaffolded project), open a fresh agent session there and ask:
-
-```
-add Overleaf sync to this project
-```
-
-Expected:
-- Agent invokes `research-project-setup` skill (mode = retrofit).
-- Applies the Overleaf playbook from [skills/research-project-setup/references/retrofit-playbooks.md](skills/research-project-setup/references/retrofit-playbooks.md) — copies `overleaf-sync` from `skills/research-project-setup/template/overleaf-sync`, updates `.gitignore`, commits a single feature-scoped commit.
+Covered by Task 8's [Test C (retrofit Overleaf, permissive)](#task-8-automated-cli-test-suite-claude-code--codex-headless). Test C scaffolds a project without `--with-overleaf` and asks the agent to add Overleaf sync. Assertions: `overleaf-sync/` directory appears, `.gitignore` carries the matching entries, and `git log -1` shows a new feature-scoped commit. The prompt names the skill template path (`$SKILL_ROOT/template/overleaf-sync`) and the canonical commit title from [retrofit-playbooks.md](skills/research-project-setup/references/retrofit-playbooks.md) Playbook 3. **Outcome: PASS for both CLIs** (C/claude 23s, C/codex 73s).
 
 ### Step 6: superRA-internal regression — PASS
 
@@ -201,21 +169,13 @@ All generated direct-mode role references are up to date
 ```
 Exit code: `0`. Confirms the existing codex-superra-setup tooling still functions and the newly-added skill did not perturb the generated agent files.
 
-### Step 7: Inventory discoverability — PENDING (researcher)
+### Step 7: Inventory discoverability — SUPERSEDED by Task 8 Test D (PASS)
 
-Requires a fresh Claude Code session (any directory) with superRA installed. Type a trigger phrase such as:
-
-```
-create a new research project
-```
-
-Expected: the harness surfaces `research-project-setup` in its skill auto-trigger or skill list. Inspect via `/skills` or by triggering an invocation.
+Covered by Task 8's [Test D (trigger discovery, permissive)](#task-8-automated-cli-test-suite-claude-code--codex-headless). Test D drops the agent into an empty `$HOME/rps-tests/D-cwd-XXXX/` (no scaffolded project) and asks the open-ended trigger "I want to create a new research project. Which skill or script…?" — the harness must surface `research-project-setup` from any CWD. For Claude this works via `--plugin-dir <superRA-repo-root>` set in `run_claude`; for Codex the case symlinks `$SKILL_ROOT` into `~/.codex/skills/research-project-setup` for the duration of the test (Codex has no per-invocation plugin-dir flag). Assertion: the output references the `research-project-setup` skill or `create_project.sh`. **Outcome: PASS for both CLIs** (D/claude 7s, D/codex 22s).
 
 ### Step 8: Cleanup — DONE
 
-`rm -rf /tmp/TestProj /tmp/TestShareDropbox /tmp/TestProjNoSR /tmp/TestProjNoSR-Share` executed; `ls /tmp/ | grep -E '(TestProj|TestShare)'` returns no matches.
-
-**Note for researcher:** when running Steps 3–5 / 7 later, re-clean these paths afterward; Step 4 will create a `VerifyFoo` project that should be moved or deleted post-verification.
+`rm -rf /tmp/TestProj /tmp/TestShareDropbox /tmp/TestProjNoSR /tmp/TestProjNoSR-Share` executed; `ls /tmp/ | grep -E '(TestProj|TestShare)'` returns no matches. Task 8's test cases self-clean their `$HOME/rps-tests/*` scratch directories on each run (guarded by `cleanup_paths`), so no manual cleanup is required for the superseded steps.
 
 ## Task 6: Bundle LaTeX templates (manuscript + slides + references.bib)
 
