@@ -123,6 +123,10 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 > **Question asked:** N/A — default `origin/main` is the only candidate; no prior decision needed alternatives.
 > **Rationale:** Standard PR target for superRA contributor work.
 
+> **User decision (2026-05-21):** Open the PR before maturing handoff docs. Skip the Document step (RESULTS.md relocation, PLAN.md disposition) and go directly to Finish — push the branch and open a PR against `origin/main`. The handoff docs live at the worktree root for now; permanent disposition can happen post-PR or as a follow-up commit.
+> **Question asked:** Where should matured RESULTS.md live? (User interrupted with "create a PR first" before answering.)
+> **Rationale:** User-driven workflow ordering — get the PR up for review now; doc maturation is a doc-only follow-up that doesn't block review.
+
 ---
 
 ### Task 1: Scaffold skill directory + move templates
