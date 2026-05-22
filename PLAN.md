@@ -34,7 +34,7 @@
 
 - [x] **Plan approved** — researcher approved via ExitPlanMode on 2026-05-21.
 - [x] **Execution complete** — Tasks 1–6 and 8 all `APPROVED`; Task 5's manual steps superseded by Task 8's automated CLI suite (8/8 PASS + load-bearing negative control). Task 7 (deprecate standalone `ResearchProjectTemplate` repo) intentionally deferred to after the superRA-side PR lands.
-- [ ] **Drift tests created** — N/A for skill-authoring work; no key empirical results to lock. Mark satisfied at integration time with a one-line decision note if no drift tests are added.
+- [x] **Drift tests created** — Task 8's automated CLI test suite (`skills/research-project-setup/tests/`) serves as the protection mechanism. 8/8 PASS at `25c5a83` with load-bearing negative-control script (`test_a_negative_control.sh`); only doc-only commits since. See §Decisions 2026-05-21 (Protect satisfaction).
 - [ ] **Integrated** — branch synced with `main` and integration review `APPROVED`.
 - [ ] **Docs finalized** — RESULTS.md matured, inventory surfaces audited.
 - [ ] **Finished** — branch landed or PR opened; standalone `ResearchProjectTemplate` deprecation commit pushed.
@@ -114,6 +114,10 @@ Walked at planning time (2026-05-21). Re-walk on-demand only.
 > **User decision (2026-05-21):** Proceed with integration. All in-scope tasks (1–6, 8) APPROVED; Task 8 verified 8/8 PASS with load-bearing negative control. Dispatch `superRA:integration-workflow` (Protect → Sync → Integrate → Document → Finish). Task 7 (deprecate standalone `ResearchProjectTemplate` repo) remains deferred to after this superRA-side PR lands.
 > **Question asked:** Step 4 completion menu — proceed with integration, change the plan, keep as-is, or discard?
 > **Rationale:** User-chosen workflow milestone after Task 8 approval.
+
+> **User decision (2026-05-21):** Task 8's automated CLI test suite is the protection mechanism for this skill-authoring branch. Treat the 8/8 PASS run at commit `25c5a83` as the current protected state — only doc-only commits (`45e595d`, `50640fe`, `f68e358`) have landed since, so the suite's PASS still applies without re-running. Flip `Drift tests created` in §Workflow Status and proceed to Sync.
+> **Question asked:** How should Protect be satisfied — test suite is the protection, re-run now, or add additional protection?
+> **Rationale:** Task 8 already exercises every invariant Protect would cover for skill-authoring work (sandbox registration end-to-end via both CLIs, skill discoverability, retrofit playbook application). Re-running burns budget without adding signal because no code-bearing commits have landed since the suite passed.
 
 ---
 
