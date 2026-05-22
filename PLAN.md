@@ -33,7 +33,7 @@
 ## Workflow Status
 
 - [x] **Plan approved** — researcher approved via ExitPlanMode on 2026-05-21.
-- [ ] **Execution complete** — all tasks `APPROVED`, end-to-end verification passes.
+- [x] **Execution complete** — Tasks 1–6 and 8 all `APPROVED`; Task 5's manual steps superseded by Task 8's automated CLI suite (8/8 PASS + load-bearing negative control). Task 7 (deprecate standalone `ResearchProjectTemplate` repo) intentionally deferred to after the superRA-side PR lands.
 - [ ] **Drift tests created** — N/A for skill-authoring work; no key empirical results to lock. Mark satisfied at integration time with a one-line decision note if no drift tests are added.
 - [ ] **Integrated** — branch synced with `main` and integration review `APPROVED`.
 - [ ] **Docs finalized** — RESULTS.md matured, inventory surfaces audited.
