@@ -153,17 +153,34 @@ run_codex() {
 }
 
 # with_timeout <seconds> <cmd...>
-# Portable timeout (macOS lacks GNU `timeout` by default). Falls back to
-# `gtimeout` if installed; otherwise uses a perl alarm.
+# Portable timeout with a hard SIGKILL guarantee.
+#   - GNU coreutils: gtimeout/timeout --kill-after=10 — SIGTERM at <secs>, SIGKILL 10s later.
+#   - Pure-bash fallback (macOS without coreutils): run the child in its own
+#     process group, SIGTERM the whole group at <secs>, SIGKILL the group
+#     10s later. This kills subprocess trees and children that ignore
+#     SIGTERM (the perl-alarm fallback we replaced did not).
 with_timeout() {
     local secs="$1"; shift
     if command -v gtimeout >/dev/null 2>&1; then
-        gtimeout "$secs" "$@"
-    elif command -v timeout >/dev/null 2>&1; then
-        timeout "$secs" "$@"
-    else
-        perl -e 'use POSIX; alarm shift; exec @ARGV' "$secs" "$@"
+        gtimeout --kill-after=10 "$secs" "$@"; return $?
     fi
+    if command -v timeout >/dev/null 2>&1; then
+        timeout --kill-after=10 "$secs" "$@"; return $?
+    fi
+    set -m
+    ( "$@" ) &
+    local pid=$!
+    # Watcher redirects to /dev/null so its `sleep` child doesn't hold the
+    # parent's command-substitution pipe open after the main child exits.
+    ( sleep "$secs" && kill -TERM -"$pid" 2>/dev/null && sleep 10 && kill -KILL -"$pid" 2>/dev/null ) >/dev/null 2>&1 &
+    local watcher=$!
+    wait "$pid"; local rc=$?
+    # Kill the watcher's whole process group (it's its own group leader under
+    # set -m) so the inner `sleep` is reaped — otherwise an orphan sleep keeps
+    # the function returning but lets the surrounding $(...) capture hang.
+    kill -TERM -"$watcher" 2>/dev/null
+    wait "$watcher" 2>/dev/null
+    return $rc
 }
 
 # ---------------------------------------------------------------------------

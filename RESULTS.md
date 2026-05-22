@@ -270,7 +270,7 @@ Both compile under the default pdfLaTeX toolchain on the local TeX Live 2026 ins
 
 ## Task 8: Automated CLI test suite (Claude Code + Codex headless)
 
-**Status:** IMPLEMENTED — 8/8 PASS under corrected path + flag discipline, negative control verified.
+**Status:** IMPLEMENTED — 8/8 PASS under corrected path + flag discipline, negative control verified via dedicated runnable script, `with_timeout` hardened with hard SIGKILL grace.
 
 ### Setup
 
@@ -284,16 +284,16 @@ Both compile under the default pdfLaTeX toolchain on the local TeX Live 2026 ins
 
 | CASE | CLI    | STATUS | WALL-TIME |
 |------|--------|--------|-----------|
-| A    | claude | PASS   | 8s        |
+| A    | claude | PASS   | 9s        |
 | A    | codex  | PASS   | 8s        |
-| B    | claude | PASS   | 21s       |
-| B    | codex  | PASS   | 49s       |
-| C    | claude | PASS   | 32s       |
-| C    | codex  | PASS   | 69s       |
-| D    | claude | PASS   | 6s        |
-| D    | codex  | PASS   | 25s       |
+| B    | claude | PASS   | 31s       |
+| B    | codex  | PASS   | 30s       |
+| C    | claude | PASS   | 23s       |
+| C    | codex  | PASS   | 73s       |
+| D    | claude | PASS   | 7s        |
+| D    | codex  | PASS   | 22s       |
 
-PASS=8, FAIL=0. Total wall-time ~3m38s end-to-end (preflight + 8 cases + summary).
+PASS=8, FAIL=0. Total wall-time 203s end-to-end. Re-run after this REVISE pass with the hardened `with_timeout` confirmed all 8 cases still PASS at parity with the earlier matrix.
 
 ### Token cost (rough)
 
@@ -323,17 +323,19 @@ So `acceptEdits` is the ONLY headless mode that makes `additionalDirectories` lo
 
 ### Negative-control regression check
 
-`cases/test_a_sandbox.sh` scaffolds its OWN fresh `$HOME/rps-tests/A-{proj,share}-*` directories with valid registration on every invocation, so the PLAN.md draft recipe of `bash test_a_sandbox.sh claude` against a pre-broken `NegCtrl` does not actually target the broken project (the case script scaffolds a clean one). Instead, the negative-control replay ran Test A's assertions directly against the broken project — same prompt, same flags, same model — under the outer `run_with_outer_timeout` (180s, `--kill-after=10`; `gtimeout` not installed on this machine, perl alarm fallback used) and `AGENT_TIMEOUT=90`.
+`cases/test_a_sandbox.sh` scaffolds its OWN fresh `$HOME/rps-tests/A-{proj,share}-*` directories with valid registration on every invocation, so it cannot be re-targeted at a pre-broken project. The canonical negative control is now a dedicated runnable script — [`cases/test_a_negative_control.sh`](skills/research-project-setup/tests/cases/test_a_negative_control.sh) — which scaffolds → strips the registration on both sides → replays Test A's prompt + assertions against the broken project under the strict profile. Invocation: `bash skills/research-project-setup/tests/cases/test_a_negative_control.sh both` (or `claude` / `codex` for a single CLI).
+
+Run on 2026-05-21 (`AGENT_TIMEOUT=90`, models `claude-haiku-4-5-20251001` + `gpt-5.4-mini`):
 
 | Step | Outcome |
 |---|---|
-| Scaffold `$PROJ/NegCtrl` with `--share-path $SHARE` | success |
+| Scaffold `$PROJ/NegCtrl` with `--share-path $SHARE` under `$HOME/rps-tests/` | success |
 | Strip `additionalDirectories` from `.claude/settings.local.json` | success |
-| `sed` out the absolute share lines from `.codex/config.toml` `writable_roots` | success |
-| Claude run (8s wall-clock) | `<share>/Notes/test.txt` absent; denials=1 — **EXPECTED FAIL** |
-| Codex run (10s wall-clock) | `<share>/Notes/test.txt` absent — **EXPECTED FAIL** |
+| Remove absolute share-path entries from `.codex/config.toml` `writable_roots` | success |
+| Claude run (10s wall-clock) | `<share>/Notes/test.txt` absent; denials=1 — `expected FAIL got FAIL ✓` |
+| Codex run (20s wall-clock) | `<share>/Notes/test.txt` absent — `expected FAIL got FAIL ✓` |
 
-Both CLIs surfaced the expected denial — Test A is load-bearing. Note that the CLI binary exits 0 even when the model failed the task (the model gave up cleanly after the denial), so the actual assertion that catches the regression is the file-presence + denial-count check, not the CLI exit code. The harness's `assert_no_permission_denials` (Claude) and `assert_file_exists` (both) are what differentiate PASS from FAIL.
+Both CLIs surfaced the expected-FAIL signature — Test A's assertions are load-bearing. The CLI binary exits 0 even when the model failed the task (the model gives up cleanly after the denial), so the load-bearing signal is the file-presence + denial-count check, not the CLI exit code. Codex sometimes silently declines the write without emitting a recognizable sandbox-violation marker, so its required signal is `file absent`; the sandbox-violation check is supplementary. The script reports `UNEXPECTED PASS` (and exits 1) if a future regression makes the registration strip non-load-bearing on either CLI.
 
 ### Prompt phrasings (carried over from the original implementation; unchanged by this REVISE)
 
@@ -344,7 +346,7 @@ Both CLIs surfaced the expected denial — Test A is load-bearing. Note that the
 
 ### Platform notes
 
-- **`gtimeout` not installed.** macOS ships without GNU `timeout`; the harness uses `perl -e 'use POSIX; alarm $secs; exec @ARGV'` as a fallback when neither `gtimeout` nor `timeout` is on PATH. The fallback worked correctly for both per-invocation (`AGENT_TIMEOUT=90`) and outer wall-clock (180s) guards in this run.
+- **`gtimeout` not installed; `with_timeout` hardened.** macOS ships without GNU `timeout`. The prior fallback (`perl -e 'use POSIX; alarm $secs; exec @ARGV'`) sent a single SIGALRM with no SIGKILL grace, so a child that ignores SIGALRM — verified locally with `$SIG{ALRM}='IGNORE'` — would survive the alarm and stall the test. Replaced with a pure-bash setpgid + process-group-kill watchdog ([tests/lib/common.sh:155-184](skills/research-project-setup/tests/lib/common.sh#L155-L184)): the child runs in its own process group under `set -m`; a backgrounded watcher sends `kill -TERM -$pgid` at `<secs>` and `kill -KILL -$pgid` 10s later. The watcher's stdout is redirected to `/dev/null` and the watcher's process group is itself killed after the child exits so its inner `sleep` doesn't hold the parent's command-substitution pipe open. Verified: child that traps and ignores SIGTERM is reaped at ~12s (5s alarm + 10s grace); subprocess trees are killed; no orphan `sleep` processes left behind; command-substitution captures (`OUT=$(run_claude ...)`) return promptly. Full 8-case suite re-ran in 203s after the change with all matrix timings at parity (A: 9s/8s, B: 31s/30s, C: 23s/73s, D: 7s/22s).
 - **Codex skill discovery (Test D).** Codex has no per-invocation `--plugin-dir` flag, so Test D symlinks `$SKILL_ROOT` into `~/.codex/skills/research-project-setup` for the duration of the test and removes the symlink in its `EXIT` trap (idempotent: skips if a real install already exists). Tests B and C give codex the absolute scaffolder path in the prompt and don't need discovery.
 - **CLI exit codes are not authoritative.** Both `claude -p` and `codex exec` exit 0 even when the model failed to complete the task because the sandbox denied a write. The load-bearing assertions are file existence + denial counts, not exit codes — relevant when interpreting the negative-control run.
 

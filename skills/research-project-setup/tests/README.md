@@ -111,43 +111,43 @@ the gist:
 ## Negative-control regression check
 
 Test A's strict assertions are only useful if they actually fail when
-`register_share_path_with_agents` doesn't run. To prove they do:
+`register_share_path_with_agents` doesn't run. The runnable canonical
+form is `cases/test_a_negative_control.sh`:
 
 ```bash
-# Tighter per-invocation timeout so a denied write that retries/stalls is
-# killed quickly.
-export AGENT_TIMEOUT=90
-
-# 1. Scaffold normally — both paths under $HOME/rps-tests/ so the share
-#    sits outside default writable_roots.
-mkdir -p "$HOME/rps-tests"
-PROJ=$(mktemp -d "$HOME/rps-tests/neg-proj-XXXX")
-SHARE=$(mktemp -d "$HOME/rps-tests/neg-share-XXXX")
-bash skills/research-project-setup/scripts/create_project.sh "$PROJ/NegCtrl" --share-path "$SHARE"
-
-# 2. Surgically remove the registered share path from BOTH settings files.
-python3 -c "import json,sys; p=sys.argv[1]; d=json.load(open(p)); d['permissions']['additionalDirectories']=[]; json.dump(d, open(p,'w'), indent=2)" \
-  "$PROJ/NegCtrl/.claude/settings.local.json"
-sed -i.bak "\|\"$SHARE|d" "$PROJ/NegCtrl/.codex/config.toml"
-
-# 3. Re-run Test A against the broken project — wrap each CLI re-run in an
-#    outer 180s wall-clock guard so we never hang.
-run_with_outer_timeout() {
-    if command -v gtimeout >/dev/null 2>&1; then gtimeout --kill-after=10 180 "$@"
-    elif command -v timeout >/dev/null 2>&1; then timeout --kill-after=10 180 "$@"
-    else perl -e 'use POSIX; alarm 180; exec @ARGV' "$@"; fi
-}
-run_with_outer_timeout bash skills/research-project-setup/tests/cases/test_a_sandbox.sh claude
-# Expect non-zero exit (FAIL). A zero exit is an UNEXPECTED PASS.
-run_with_outer_timeout bash skills/research-project-setup/tests/cases/test_a_sandbox.sh codex
-
-# 4. Guarded cleanup.
-case "$PROJ"  in "$HOME/rps-tests/"*) rm -rf "$PROJ"  ;; esac
-case "$SHARE" in "$HOME/rps-tests/"*) rm -rf "$SHARE" ;; esac
-unset AGENT_TIMEOUT
+bash skills/research-project-setup/tests/cases/test_a_negative_control.sh both
+# Or single-CLI:
+bash skills/research-project-setup/tests/cases/test_a_negative_control.sh claude
+bash skills/research-project-setup/tests/cases/test_a_negative_control.sh codex
 ```
 
-See RESULTS.md Task 8 for the run that proved this.
+What the script does end-to-end:
+
+1. Scaffolds a fresh project + share at `$HOME/rps-tests/neg-{proj,share}-*`
+   (outside the template's default `writable_roots`).
+2. Surgically strips `permissions.additionalDirectories` from
+   `.claude/settings.local.json` and removes every `writable_roots` entry
+   beginning with the absolute share path from `.codex/config.toml`.
+3. Replays Test A's exact prompt and assertions against the broken
+   project under the strict profile (`AGENT_TIMEOUT=90` per invocation —
+   `with_timeout`'s SIGKILL grace from `lib/common.sh` keeps a retrying
+   agent from hanging).
+4. EXPECTS the write to FAIL: `<share>/Notes/test.txt` absent on both
+   CLIs, plus a `permission_denial` recorded for claude. Reports
+   `"expected FAIL got FAIL ✓"` per CLI; `UNEXPECTED PASS` is a hard
+   failure that means the registration strip didn't actually disable
+   the write (i.e., Test A's positive assertion is not load-bearing).
+5. Cleanup is guarded by `case "$path" in "$HOME/rps-tests/"*) ...`.
+
+Why this is a dedicated script and not `bash test_a_sandbox.sh ...` with
+a pre-broken project: `test_a_sandbox.sh` scaffolds its OWN fresh
+`A-{proj,share}-*` via `mktemp -d` on every invocation and ignores any
+external pre-broken directory, so re-targeting it via argument or env
+var does not exercise the broken project. `test_a_negative_control.sh`
+inlines the prompt + assertions directly against the broken project so
+the inversion is real.
+
+See RESULTS.md Task 8 §Negative-control for the run that proved this.
 
 ## Debugging a flaky case
 
@@ -171,9 +171,10 @@ is real. Investigate the case script + agent prompt, not the harness.
 tests/
   README.md            this file
   run_tests.sh         runner — flags + matrix loop
-  lib/common.sh        shared helpers (scaffold/cleanup/run/assert)
+  lib/common.sh        shared helpers (scaffold/cleanup/run/assert/with_timeout)
   cases/
     test_a_sandbox.sh
+    test_a_negative_control.sh   # standalone — proves Test A is load-bearing
     test_b_fresh.sh
     test_c_retrofit.sh
     test_d_discovery.sh
