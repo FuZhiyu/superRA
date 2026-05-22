@@ -47,7 +47,7 @@
 **Pre-sync merge base:** `08b68c85dd49c414e6c5811aa21c764c50b1988b`
 **Synced base head:** `d86108913ff2f627106f2aa76403e63fadc25e97`
 **Incoming range:** `08b68c85..d861089`
-**Sync commits:** _to be filled at merge commit_
+**Sync commits:** `e739f2c`
 **Sync review status:** `IMPLEMENTED`
 
 ### Branch Summary
