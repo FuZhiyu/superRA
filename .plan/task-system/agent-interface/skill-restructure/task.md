@@ -1,7 +1,7 @@
 ---
 title: "Progressive Skill Revelation"
 status: implemented
-review_status: ~
+review_status: approved
 integration_status: ~
 depends_on:  []
 tags: []
@@ -75,3 +75,7 @@ Restructured into three tiers:
 Also updated:
 - `skills/CATEGORIES.md` — updated task-system description to reflect role as primary handoff mechanism and reference structure.
 - `README.md` — updated task-system entry in utility skills table to describe the three-tier structure.
+
+## Review Notes
+
+No blocking findings. Three-tier split is clean and well-targeted. SKILL.md (Tier 1) covers consumer needs: core concepts, reading, editing, ownership, format, command surface. `references/planning.md` (Tier 2) covers planner discipline. `references/internals.md` (Tier 3) accurately documents the data layer including new functions. CATEGORIES.md and README.md entries updated consistently.
