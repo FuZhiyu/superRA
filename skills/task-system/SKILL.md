@@ -12,22 +12,17 @@ user-invocable: true
 
 # Task System
 
-A directory-tree task system where the filesystem hierarchy is the task hierarchy. Each task is a self-contained `task.md` file (plan + results unified), and a generated HTML dashboard provides visualization with tree, DAG, and kanban views.
+A directory-tree task system where the filesystem hierarchy is the task hierarchy. Each task is a self-contained `task.md` file with planner-owned and implementer-owned sections, and a generated HTML dashboard provides visualization with tree, DAG, and kanban views.
 
 ## Core Concepts
 
-### Tasks are objectives. Steps are procedures.
-
-- A **task** (`task.md`) states an objective — *what* to achieve. It has its own review cycle, status, dependencies, and results.
-- A **step** (checkbox inside a task) states a procedure — *how* to achieve the objective.
-
-Only **leaf tasks** have steps. Branch tasks (with subdirectories) have no steps — their subtask tree is the decomposition.
-
-**Decomposition rule:** Decompose into subtasks when the objective breaks into sub-objectives (each independently reviewable). Decompose into steps when it breaks into procedures.
-
-### Dependencies are siblings-only
-
-`depends_on` values are sibling directory names within the same parent. A parent task's status rolls up from its children — it is `approved` only when all children are `approved`. Cross-branch dependencies are expressed at the parent level.
+- Everything is a **task**. A leaf task is a directory with `task.md` but no subdirectories containing `task.md`.
+- **`## Objective`** is planner-owned: the goal, methodology, and conventions for this task. One flat section, no subsections.
+- **`## Results`** is implementer-owned: key findings, notes. Present at every level — branch tasks summarize their children's results at a higher level of abstraction.
+- The **filesystem hierarchy is the task hierarchy**. `walk_plan()` discovers children by scanning subdirectories.
+- **Numeric prefix** on directory names (`01-load`, `02-merge`) controls display order. The DAG via `depends_on` controls execution order. These are independent.
+- **Dependencies are sibling-only.** `depends_on` values are sibling directory names within the same parent.
+- **Parent task status rolls up** from children automatically — a parent is `approved` only when all children are `approved`.
 
 ## Directory Structure
 
@@ -36,9 +31,9 @@ Only **leaf tasks** have steps. Branch tasks (with subdirectories) have no steps
   task.md                    # root task (project objective, methodology, conventions)
   dashboard.html             # generated HTML visualization
   01-data-preparation/
-    task.md                  # branch task (no steps, has subtasks)
+    task.md                  # branch task (has subtasks)
     01-load-raw-data/
-      task.md                # leaf task (has steps, no subdirectories)
+      task.md                # leaf task (no subdirectories)
       attachments/
     02-merge/
       task.md
@@ -55,7 +50,9 @@ All scripts are in `<skill-dir>/scripts/`. `<skill-dir>` is the directory contai
 ```bash
 python3 <skill-dir>/scripts/task_create.py \
   --plan-root .plan --path 01-data/03-filter \
-  --title "Filter Sample" --depends-on 02-merge
+  --title "Filter Sample" \
+  --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
+  --depends-on 02-merge
 ```
 
 ### Update task status
@@ -118,8 +115,10 @@ python3 <skill-dir>/scripts/plan_migrate.py \
 
 ```bash
 python3 <skill-dir>/scripts/plan_dashboard.py --plan-root .plan
-# Opens .plan/dashboard.html — single-file, opens locally (requires internet for full rendering)
+# Writes .plan/dashboard.html — single-file, opens locally (requires internet for full rendering)
 ```
+
+The dashboard is automatically regenerated after every mutation command (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`). Manual generation is only needed for the initial dashboard or after `plan_migrate`.
 
 ## Task File Format
 
@@ -139,20 +138,19 @@ created: 2026-05-24
 updated: 2026-05-24
 ---
 
-# Merge with Fund Characteristics
+## Objective
 
-## Steps
-- [ ] Step 1: Describe inputs
-- [ ] Step 2: Left join
-- [ ] Step 3: Validate
+Left join holdings with fund characteristics on fund_id x date.
+Use CRSP-style merge conventions. Validate row counts post-merge.
 
 ## Results
-### Key Findings
-- (populated during execution)
 
-## Decisions
-> (task-scoped user decisions)
+### Key Findings
+- Merge preserved all 4.7M rows
+
+### Notes
+- Used fuzzy date matching for quarterly vs monthly frequency mismatch
 
 ## Review Notes
-> (present only during active REVISE rounds, removed on APPROVED)
+> [MAJOR] Inner join used instead of left join
 ```
