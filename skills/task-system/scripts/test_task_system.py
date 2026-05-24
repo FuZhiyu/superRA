@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -13,6 +15,7 @@ SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import _task_io
+from _task_io import parse_body_sections
 import plan_dashboard
 import plan_migrate
 import task_add_result
@@ -21,6 +24,45 @@ import task_link
 import task_query
 import task_rename
 import task_update
+
+
+# --- Helpers ---
+
+
+def _write_task_md(path: Path, title: str, status: str, **kwargs):
+    """Write a v2-format task.md file.
+
+    kwargs: review_status, integration_status, depends_on, tags,
+            objective, results, created, updated.
+    """
+    review_status = kwargs.get("review_status", "~")
+    integration_status = kwargs.get("integration_status", "~")
+    depends_on = kwargs.get("depends_on", [])
+    tags = kwargs.get("tags", [])
+    objective = kwargs.get("objective", "")
+    results = kwargs.get("results", "")
+    created = kwargs.get("created", "2026-01-01")
+    updated = kwargs.get("updated", "2026-01-01")
+
+    if depends_on:
+        deps_yaml = "\n" + "".join(f"  - {d}\n" for d in depends_on)
+    else:
+        deps_yaml = " []"
+    if tags:
+        tags_yaml = "[" + ", ".join(tags) + "]"
+    else:
+        tags_yaml = "[]"
+
+    body = f"## Objective\n\n{objective}\n"
+    if results:
+        body += f"\n## Results\n\n{results}\n"
+
+    content = (
+        f'---\ntitle: "{title}"\nstatus: {status}\nreview_status: {review_status}\n'
+        f"integration_status: {integration_status}\ndepends_on:{deps_yaml}\n"
+        f"tags: {tags_yaml}\ncreated: {created}\nupdated: {updated}\n---\n\n{body}"
+    )
+    path.write_text(content, encoding="utf-8")
 
 
 # --- Fixtures ---
@@ -32,42 +74,27 @@ def plan_root(tmp_path):
     root = tmp_path / ".plan"
     root.mkdir()
 
-    (root / "task.md").write_text(
-        '---\ntitle: "Test Project"\nstatus: not-started\nreview_status: ~\n'
-        "integration_status: ~\ndepends_on: []\ntags: []\ncreated: 2026-01-01\n"
-        "updated: 2026-01-01\n---\n\n# Test Project\n\nA test plan.\n",
-        encoding="utf-8",
-    )
+    _write_task_md(root / "task.md", "Test Project", "not-started",
+                   objective="A test plan.")
 
     d1 = root / "01-first"
     d1.mkdir()
-    (d1 / "task.md").write_text(
-        '---\ntitle: "First Task"\nstatus: approved\nreview_status: approved\n'
-        "integration_status: ~\ndepends_on: []\ntags: [data]\ncreated: 2026-01-01\n"
-        "updated: 2026-01-01\n---\n\n# First Task\n\n## Steps\n\n- [x] Step 1\n\n"
-        "## Results\n\n### Key Findings\n- Found 100 rows\n",
-        encoding="utf-8",
-    )
+    _write_task_md(d1 / "task.md", "First Task", "approved",
+                   review_status="approved", tags=["data"],
+                   objective="Complete step 1.",
+                   results="### Key Findings\n- Found 100 rows")
 
     d2 = root / "02-second"
     d2.mkdir()
-    (d2 / "task.md").write_text(
-        '---\ntitle: "Second Task"\nstatus: not-started\nreview_status: ~\n'
-        "integration_status: ~\ndepends_on:\n  - 01-first\ntags: [analysis]\n"
-        "created: 2026-01-01\nupdated: 2026-01-01\n---\n\n# Second Task\n\n"
-        "## Steps\n\n- [ ] Step 1\n- [ ] Step 2\n",
-        encoding="utf-8",
-    )
+    _write_task_md(d2 / "task.md", "Second Task", "not-started",
+                   depends_on=["01-first"], tags=["analysis"],
+                   objective="Complete step 1 and step 2.")
 
     d3 = root / "03-third"
     d3.mkdir()
-    (d3 / "task.md").write_text(
-        '---\ntitle: "Third Task"\nstatus: not-started\nreview_status: ~\n'
-        "integration_status: ~\ndepends_on:\n  - 02-second\ntags: []\n"
-        "created: 2026-01-01\nupdated: 2026-01-01\n---\n\n# Third Task\n\n"
-        "## Steps\n\n- [ ] Step 1\n",
-        encoding="utf-8",
-    )
+    _write_task_md(d3 / "task.md", "Third Task", "not-started",
+                   depends_on=["02-second"],
+                   objective="Complete step 1.")
 
     return root
 
@@ -78,50 +105,31 @@ def plan_with_branches(tmp_path):
     root = tmp_path / ".plan"
     root.mkdir()
 
-    (root / "task.md").write_text(
-        '---\ntitle: "Branch Project"\nstatus: not-started\nreview_status: ~\n'
-        "integration_status: ~\ndepends_on: []\ntags: []\ncreated: 2026-01-01\n"
-        "updated: 2026-01-01\n---\n\n# Branch Project\n",
-        encoding="utf-8",
-    )
+    _write_task_md(root / "task.md", "Branch Project", "not-started",
+                   objective="Branch project overview.")
 
     parent = root / "01-data-prep"
     parent.mkdir()
-    (parent / "task.md").write_text(
-        '---\ntitle: "Data Preparation"\nstatus: not-started\nreview_status: ~\n'
-        "integration_status: ~\ndepends_on: []\ntags: []\ncreated: 2026-01-01\n"
-        "updated: 2026-01-01\n---\n\n# Data Preparation\n\nPrepare all datasets.\n",
-        encoding="utf-8",
-    )
+    _write_task_md(parent / "task.md", "Data Preparation", "not-started",
+                   objective="Prepare all datasets.")
 
     child1 = parent / "01-load"
     child1.mkdir()
-    (child1 / "task.md").write_text(
-        '---\ntitle: "Load Data"\nstatus: approved\nreview_status: approved\n'
-        "integration_status: ~\ndepends_on: []\ntags: []\ncreated: 2026-01-01\n"
-        "updated: 2026-01-01\n---\n\n# Load Data\n\n## Steps\n\n- [x] Read parquet\n",
-        encoding="utf-8",
-    )
+    _write_task_md(child1 / "task.md", "Load Data", "approved",
+                   review_status="approved",
+                   objective="Read parquet files.")
 
     child2 = parent / "02-merge"
     child2.mkdir()
-    (child2 / "task.md").write_text(
-        '---\ntitle: "Merge Data"\nstatus: not-started\nreview_status: ~\n'
-        "integration_status: ~\ndepends_on:\n  - 01-load\ntags: []\n"
-        "created: 2026-01-01\nupdated: 2026-01-01\n---\n\n# Merge Data\n\n"
-        "## Steps\n\n- [ ] Left join\n",
-        encoding="utf-8",
-    )
+    _write_task_md(child2 / "task.md", "Merge Data", "not-started",
+                   depends_on=["01-load"],
+                   objective="Left join datasets.")
 
     est = root / "02-estimation"
     est.mkdir()
-    (est / "task.md").write_text(
-        '---\ntitle: "Estimation"\nstatus: not-started\nreview_status: ~\n'
-        "integration_status: ~\ndepends_on:\n  - 01-data-prep\ntags: []\n"
-        "created: 2026-01-01\nupdated: 2026-01-01\n---\n\n# Estimation\n\n"
-        "## Steps\n\n- [ ] Run model\n",
-        encoding="utf-8",
-    )
+    _write_task_md(est / "task.md", "Estimation", "not-started",
+                   depends_on=["01-data-prep"],
+                   objective="Run model.")
 
     return root
 
@@ -218,20 +226,12 @@ class TestComputeFrontier:
     def test_no_deps_all_frontier(self, tmp_path):
         root_dir = tmp_path / ".plan"
         root_dir.mkdir()
-        (root_dir / "task.md").write_text(
-            '---\ntitle: "Test"\nstatus: not-started\nreview_status: ~\n'
-            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# Test\n",
-            encoding="utf-8",
-        )
+        _write_task_md(root_dir / "task.md", "Test", "not-started")
         for name in ["01-a", "02-b", "03-c"]:
             d = root_dir / name
             d.mkdir()
-            (d / "task.md").write_text(
-                f'---\ntitle: "{name}"\nstatus: not-started\nreview_status: ~\n'
-                "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n"
-                f"# {name}\n\n## Steps\n\n- [ ] Do it\n",
-                encoding="utf-8",
-            )
+            _write_task_md(d / "task.md", name, "not-started",
+                           objective="Do it.")
         root = _task_io.walk_plan(root_dir)
         frontier = _task_io.compute_frontier(root)
         assert len(frontier) == 3
@@ -265,11 +265,7 @@ class TestComputeFrontier:
         """
         root_dir = tmp_path / ".plan"
         root_dir.mkdir()
-        (root_dir / "task.md").write_text(
-            '---\ntitle: "Diamond"\nstatus: not-started\nreview_status: ~\n'
-            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# Diamond\n",
-            encoding="utf-8",
-        )
+        _write_task_md(root_dir / "task.md", "Diamond", "not-started")
         for name, status, deps in [
             ("01-D", "approved", []),
             ("02-B", "not-started", ["01-D"]),
@@ -278,16 +274,8 @@ class TestComputeFrontier:
         ]:
             d = root_dir / name
             d.mkdir()
-            deps_yaml = (
-                "depends_on: []\n" if not deps
-                else "depends_on:\n" + "".join(f"  - {dep}\n" for dep in deps)
-            )
-            (d / "task.md").write_text(
-                f'---\ntitle: "{name}"\nstatus: {status}\nreview_status: ~\n'
-                f"integration_status: ~\n{deps_yaml}tags: []\n---\n\n"
-                f"# {name}\n\n## Steps\n\n- [ ] Do it\n",
-                encoding="utf-8",
-            )
+            _write_task_md(d / "task.md", name, status,
+                           depends_on=deps, objective="Do it.")
         root = _task_io.walk_plan(root_dir)
         frontier = _task_io.compute_frontier(root)
         paths = [t.path for t in frontier]
@@ -304,52 +292,29 @@ class TestComputeFrontier:
         """
         root_dir = tmp_path / ".plan"
         root_dir.mkdir()
-        (root_dir / "task.md").write_text(
-            '---\ntitle: "Root"\nstatus: not-started\nreview_status: ~\n'
-            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# Root\n",
-            encoding="utf-8",
-        )
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
         # Level 1: two branch tasks, L1-b depends on L1-a
         l1a = root_dir / "01-L1a"
         l1a.mkdir()
-        (l1a / "task.md").write_text(
-            '---\ntitle: "L1-a"\nstatus: not-started\nreview_status: ~\n'
-            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# L1-a\n",
-            encoding="utf-8",
-        )
+        _write_task_md(l1a / "task.md", "L1-a", "not-started")
         l1b = root_dir / "02-L1b"
         l1b.mkdir()
-        (l1b / "task.md").write_text(
-            '---\ntitle: "L1-b"\nstatus: not-started\nreview_status: ~\n'
-            "integration_status: ~\ndepends_on:\n  - 01-L1a\ntags: []\n---\n\n# L1-b\n",
-            encoding="utf-8",
-        )
+        _write_task_md(l1b / "task.md", "L1-b", "not-started",
+                       depends_on=["01-L1a"])
         # Level 2 under L1-a: one sub-branch
         l2 = l1a / "01-L2"
         l2.mkdir()
-        (l2 / "task.md").write_text(
-            '---\ntitle: "L2"\nstatus: not-started\nreview_status: ~\n'
-            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# L2\n",
-            encoding="utf-8",
-        )
+        _write_task_md(l2 / "task.md", "L2", "not-started")
         # Level 3 (leaf) under L2
         leaf = l2 / "01-leaf"
         leaf.mkdir()
-        (leaf / "task.md").write_text(
-            '---\ntitle: "Deep Leaf"\nstatus: not-started\nreview_status: ~\n'
-            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n"
-            "# Deep Leaf\n\n## Steps\n\n- [ ] Do it\n",
-            encoding="utf-8",
-        )
+        _write_task_md(leaf / "task.md", "Deep Leaf", "not-started",
+                       objective="Do it.")
         # Level 2 under L1-b: a leaf that should be blocked
         l1b_leaf = l1b / "01-blocked-leaf"
         l1b_leaf.mkdir()
-        (l1b_leaf / "task.md").write_text(
-            '---\ntitle: "Blocked Leaf"\nstatus: not-started\nreview_status: ~\n'
-            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n"
-            "# Blocked Leaf\n\n## Steps\n\n- [ ] Do it\n",
-            encoding="utf-8",
-        )
+        _write_task_md(l1b_leaf / "task.md", "Blocked Leaf", "not-started",
+                       objective="Do it.")
 
         root = _task_io.walk_plan(root_dir)
         frontier = _task_io.compute_frontier(root)
@@ -374,11 +339,7 @@ class TestComputeFrontier:
         """
         root_dir = tmp_path / ".plan"
         root_dir.mkdir()
-        (root_dir / "task.md").write_text(
-            '---\ntitle: "Empty"\nstatus: not-started\nreview_status: ~\n'
-            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# Empty\n",
-            encoding="utf-8",
-        )
+        _write_task_md(root_dir / "task.md", "Empty", "not-started")
         root = _task_io.walk_plan(root_dir)
         frontier = _task_io.compute_frontier(root)
         # Root with no children is itself a leaf and is on the frontier
@@ -456,6 +417,11 @@ class TestTaskCreate:
         )
         task_md = plan_root / "04-new-task" / "task.md"
         assert task_md.exists()
+        content = task_md.read_text(encoding="utf-8")
+        assert "## Objective" in content
+        assert "## Steps" not in content
+        assert "# New Task\n" not in content  # no title heading in v2
+        assert "A new objective." in content
         task = _task_io.parse_task(task_md)
         assert task.title == "New Task"
         assert task.status == "not-started"
@@ -613,6 +579,12 @@ class TestTaskQuery:
         assert data["title"] == "Test Project"
         assert len(data["children"]) == 3
         assert data["children"][0]["is_leaf"] is True
+        # Verify v2 fields are present in JSON output
+        for key in ("objective", "results", "decisions", "review_notes"):
+            assert key in data, f"Missing key {key!r} in tree_to_json output"
+        first_child = data["children"][0]
+        assert "Complete step 1." in first_child["objective"]
+        assert "Found 100 rows" in first_child["results"]
 
     def test_render_dag(self, plan_root):
         root = _task_io.walk_plan(plan_root)
@@ -691,6 +663,10 @@ class TestPlanMigrate:
         assert t1.input == ["Data/raw.csv"]
         assert t1.output == ["Data/clean.parquet"]
         assert "1000 rows loaded" in t1.body
+        # Migration should produce v2 format
+        content = (output / "01-load-data" / "task.md").read_text(encoding="utf-8")
+        assert "## Objective" in content
+        assert "## Steps" not in content
 
         t2 = _task_io.parse_task(output / "02-analyze" / "task.md")
         assert "01-load-data" in t2.depends_on
@@ -710,3 +686,128 @@ class TestDashboard:
         assert "Test Project" in html
         assert "First Task" in html
         assert "mermaid" in html
+
+
+# --- parse_body_sections tests ---
+
+
+class TestParseBodySections:
+    def test_all_sections(self):
+        body = (
+            "## Objective\n\nDo the thing.\n\n"
+            "## Results\n\n### Key Findings\n- Found it\n\n"
+            "## Decisions\n\n> Use method A\n\n"
+            "## Review Notes\n\n> [MAJOR] Fix this\n"
+        )
+        sections = parse_body_sections(body)
+        assert "Objective" in sections
+        assert "Do the thing." in sections["Objective"]
+        assert "Results" in sections
+        assert "Decisions" in sections
+        assert "Review Notes" in sections
+
+    def test_objective_only(self):
+        body = "## Objective\n\nJust the objective.\n"
+        sections = parse_body_sections(body)
+        assert len(sections) == 1
+        assert "Objective" in sections
+
+    def test_empty_body(self):
+        sections = parse_body_sections("")
+        assert sections == {}
+
+    def test_unknown_sections_preserved(self):
+        body = "## Custom Section\n\nContent here.\n"
+        sections = parse_body_sections(body)
+        assert "Custom Section" in sections
+
+
+# --- Auto-rebuild tests ---
+
+
+class TestAutoRebuild:
+    def setup_method(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.plan_root = Path(self.tmpdir) / ".plan"
+        self.plan_root.mkdir()
+        # Create root task.md
+        _write_task_md(self.plan_root / "task.md", "Root", "not-started")
+        # Create initial dashboard
+        plan_dashboard.generate_dashboard(self.plan_root)
+        self.dashboard = self.plan_root / "dashboard.html"
+        assert self.dashboard.exists()
+        self.initial_content = self.dashboard.read_text()
+
+    def teardown_method(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_create_triggers_rebuild(self):
+        task_create.create_task(self.plan_root, "01-first", "First Task")
+        new_content = self.dashboard.read_text()
+        assert "First Task" in new_content
+        assert new_content != self.initial_content
+
+    def test_update_triggers_rebuild(self):
+        task_create.create_task(self.plan_root, "01-first", "First Task")
+        content_after_create = self.dashboard.read_text()
+        task_update.update_task(self.plan_root, "01-first", status="in-progress")
+        content_after_update = self.dashboard.read_text()
+        assert content_after_update != content_after_create
+
+
+# --- v1-to-v2 upgrade tests ---
+
+
+class TestMigrateV2:
+    def setup_method(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.plan_root = Path(self.tmpdir) / ".plan"
+        self.plan_root.mkdir()
+
+    def teardown_method(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_upgrade_steps_to_objective(self):
+        # Write a v1-format task.md with ## Steps and checkboxes
+        task_dir = self.plan_root / "01-task"
+        task_dir.mkdir()
+        v1_content = (
+            '---\ntitle: "Test Task"\nstatus: not-started\nreview_status: ~\n'
+            "integration_status: ~\ndepends_on: []\ntags: []\n"
+            "created: 2026-01-01\nupdated: 2026-01-01\n---\n\n"
+            "# Test Task\n\n## Steps\n\n"
+            "- [ ] Step 1: Do first thing\n"
+            "- [x] Step 2: Do second thing\n\n"
+            "## Results\n\n### Key Findings\n- Found something\n"
+        )
+        (task_dir / "task.md").write_text(v1_content)
+        # Also write root task.md
+        _write_task_md(self.plan_root / "task.md", "Root", "not-started")
+
+        modified = plan_migrate.upgrade_v1_to_v2(self.plan_root)
+
+        assert len(modified) == 1  # only the v1 file, not root
+        content = (task_dir / "task.md").read_text()
+        assert "## Objective" in content
+        assert "## Steps" not in content
+        assert "# Test Task" not in content  # title heading removed
+        assert "- [ ]" not in content  # checkboxes stripped
+        assert "- [x]" not in content
+        assert "Step 1: Do first thing" in content  # text preserved
+        assert "## Results" in content  # results preserved
+
+    def test_idempotent(self):
+        task_dir = self.plan_root / "01-task"
+        task_dir.mkdir()
+        v2_content = (
+            '---\ntitle: "Test Task"\nstatus: not-started\nreview_status: ~\n'
+            "integration_status: ~\ndepends_on: []\ntags: []\n"
+            "created: 2026-01-01\nupdated: 2026-01-01\n---\n\n"
+            "## Objective\n\nAlready in v2 format.\n\n"
+            "## Results\n\n"
+        )
+        (task_dir / "task.md").write_text(v2_content)
+        _write_task_md(self.plan_root / "task.md", "Root", "not-started")
+
+        modified = plan_migrate.upgrade_v1_to_v2(self.plan_root)
+        assert len(modified) == 0  # nothing changed

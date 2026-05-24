@@ -41,6 +41,8 @@ class Task:
     body: str = ""
     objective: str = ""
     results: str = ""
+    decisions: str = ""
+    review_notes: str = ""
     children: list[Task] = field(default_factory=list)
 
     @property
@@ -254,6 +256,8 @@ def parse_task(task_md_path: Path) -> Task:
         body=body,
         objective=sections.get("Objective", ""),
         results=sections.get("Results", ""),
+        decisions=sections.get("Decisions", ""),
+        review_notes=sections.get("Review Notes", ""),
     )
 
 
