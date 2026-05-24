@@ -1,6 +1,6 @@
 ---
 title: "Hook + CLI Tests"
-status: not-started
+status: implemented
 review_status: ~
 integration_status: ~
 depends_on: 
@@ -49,3 +49,14 @@ Add tests for new functionality to `skills/task-system/scripts/test_task_system.
 
 ## Results
 
+Added 39 tests across 6 new test classes to [`test_task_system.py`](skills/task-system/scripts/test_task_system.py). Total suite: 92 tests, all passing.
+
+**New test classes:**
+
+- `TestValidateFrontmatter` (6 tests) — bad enum values, wrong types for depends_on/tags, empty title
+- `TestValidateDependencies` (4 tests) — valid deps, missing sibling ref, nonexistent dep, no deps
+- `TestDetectCycles` (4 tests) — no cycle, simple 2-node cycle, 3-node cycle with `->` description, independent tasks
+- `TestValidatePlan` (4 tests) — valid plan, missing dep warning, path prefix on warnings, cycle warning
+- `TestTopologicalSort` (4 tests) — dep order, alphabetical tiebreaker, diamond, missing dep fallback
+- `TestTaskRead` (10 tests) — ancestor chain, root task, `--no-ancestors`, JSON keys/ancestors list, sibling dep status, autodetect plan root, nested ancestor chain
+- `TestTaskHook` (7 tests) — ignores non-task.md, ignores non-Edit/Write, exits 0 on valid/invalid task.md, warnings to stderr, empty stdin, file outside `.plan/`
