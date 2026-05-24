@@ -1,6 +1,6 @@
 ---
 name: integration-workflow
-description: Requires `superRA:using-superra` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need protection before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when RESULTS.md needs to mature into its permanent record; when PLAN.md needs final disposition; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "protect key results", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "open the PR", or the transition from `implementation-workflow`'s completion menu.
+description: Requires `superRA:using-superra` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need protection before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when task results need maturation into reader-facing permanent records; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "protect key results", "write drift tests for the key results", "sync with main and refactor", "mature the results", "update project docs for this analysis", "open the PR", or the transition from `implementation-workflow`'s completion menu.
 ---
 
 # Integration Workflow
@@ -13,7 +13,7 @@ Workflow skill for the **INTEGRATE** phase of the superRA workflow. It takes a r
 Protect   -> protect key results (default: drift tests)
 Sync      -> bring the branch onto the current base via semantic-merge
 Integrate -> refactor with Sync context and pass integration review
-Document  -> mature RESULTS.md and dispose of PLAN.md
+Document  -> mature task.md ## Results sections for reader-facing clarity
 Finish    -> final freshness check, PR or fast-forward, and cleanup
 
 Any step -> planning-workflow §User Feedback and Changing Plans
@@ -31,7 +31,7 @@ Legitimate stop points (log every answer per `task-system/references/planning.md
 - **Protect:** key-result protection confirmation.
 - **Sync:** target base confirmation when no prior decision records it; intent-changing conflicts surfaced by `semantic-merge`.
 - **Integrate:** meaningful drift after sync or refactor; user-owned choices surfaced by the integration reviewer.
-- **Document:** RESULTS.md permanent location when project guidance is silent; PLAN.md disposition.
+- **Document:** maturation scope when project guidance is silent.
 - **Finish:** hard blockers only, such as target base advancing again after Integrate.
 
 ## Dispatch Convention
@@ -44,24 +44,24 @@ Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the 
 
 Result protection guards key results during Sync, Integrate, Finish, and future work. Drift tests are the current/default protection mechanism. For the writing vertical, "key results" are the manuscript artifacts; protection is satisfied by document-build success plus outline stability across the merged state — see `skills/writing/references/integration.md`.
 
-**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `**Integration status:**` unset or not `APPROVED` plus orchestrator-declared related tasks from `planning-workflow §User Feedback and Changing Plans`; running the suite is not scoped.
+**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `integration_status:` unset or not `approved` plus orchestrator-declared related tasks from `planning-workflow §User Feedback and Changing Plans`; running the suite is not scoped.
 
 ### Steps
 
-1. **Extract key results from RESULTS.md.** Protect main findings, not every intermediate number.
+1. **Extract key results from task.md `## Results` sections.** Walk the `.plan/` tree (`task_query.py --tree`) and identify main findings across tasks. Protect main findings, not every intermediate number. Reference tasks by path (e.g., `data-preparation/merge`).
 2. **Confirm coverage with the researcher.** Stop point:
    ```text
    These results seem like the key findings to protect:
-   - [result 1: description and value]
-   - [result 2: description and value]
+   - [result 1: description and value] (from task-path/subtask)
+   - [result 2: description and value] (from task-path/subtask)
 
    Which should be protected? Any to add or remove?
    ```
-3. **Dispatch protection-creator.** `Stage: protection`, canonical implementer template.
+3. **Dispatch protection-creator.** `Stage: protection`, canonical implementer template. Drift tests reference task paths, not task numbers.
 4. **Dispatch protection-reviewer.** `Stage: protection`, canonical reviewer template. Iterate REVISE -> fix -> narrow re-review until APPROVE.
 5. **Run tests on the current branch.** If new tests fail on existing code, fix the tests.
-6. **Commit tests and handoff docs.**
-7. **Flip `Drift tests created`** in PLAN.md §Workflow Status once all confirmed key results are protected and the full drift-test suite passes.
+6. **Commit tests and task.md updates.**
+7. **Flip `Drift tests created`** in root task.md §Workflow Status once all confirmed key results are protected and the full drift-test suite passes.
 
 ## Sync
 
@@ -89,7 +89,7 @@ Is that correct, or did it split from a release branch, co-authored track,
 or sibling analysis branch?
 ```
 
-Log the confirmed `BASE_REF` before fetching, computing anchors, or dispatching.
+Log the confirmed `BASE_REF` in root task.md `## Decisions` before fetching, computing anchors, or dispatching.
 
 ### Step 2: Compute sync anchors
 
@@ -129,17 +129,18 @@ Agent(generic):
 
   Use semantic-merge workflow sync author mode. Land the merge commit plus
   any propagation commits needed to reach semantic coherence — `SKILL.md
-  §Semantic Coherence Checklist §Scope boundary` is the stopping rule. Write branch-level PLAN.md `## Sync
-  Map` only when there is material overlap, a conflict, a user decision,
-  sync-review carryover, or post-sync context. Add compact task-local
-  `**Sync impact:**` annotations to affected task blocks. Defer codebase
-  coherence — convention fit, utility reuse, PR-friendly diffs, Project Doc
-  Audit walk-up, minimum net diff — to `refactor-and-integrate` via Integrate.
-  Return the full sync commit chain, Sync Map status, task-local Sync impact
-  annotations, checks run, and codebase-review context recorded.
+  §Semantic Coherence Checklist §Scope boundary` is the stopping rule. Write
+  `## Sync Map` section in root task.md (.plan/task.md) only when there is
+  material overlap, a conflict, a user decision, sync-review carryover, or
+  post-sync context. Add task-local `## Sync Impact` sections to affected
+  task.md files. Defer codebase coherence — convention fit, utility reuse,
+  PR-friendly diffs, Project Doc Audit walk-up, minimum net diff — to
+  `refactor-and-integrate` via Integrate. Return the full sync commit chain,
+  Sync Map status, task-local Sync Impact annotations, checks run, and
+  codebase-review context recorded.
 ```
 
-If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision is required, the orchestrator asks the user, logs the decision, commits the log entry, and re-dispatches the sync author with the decision context.
+If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision is required, the orchestrator asks the user, logs the decision in root task.md `## Decisions`, commits the log entry, and re-dispatches the sync author with the decision context.
 
 ### Step 4: Dispatch the sync reviewer
 
@@ -161,16 +162,17 @@ Agent(generic):
 
   Use semantic-merge workflow sync reviewer mode. Verify anchors, incoming
   intent, current-branch intent, conflict resolution, user-decision logging,
-  Sync Map completeness, task-local Sync impact coverage, and scope boundary.
-  Record sync-review status and notes in PLAN.md `## Sync Map` when a map
-  exists or when review finds a material issue. Return APPROVE or REVISE.
+  Sync Map completeness (root task.md `## Sync Map`), task-local `## Sync
+  Impact` coverage, and scope boundary. Record sync-review status and notes
+  in root task.md `## Sync Map` when a map exists or when review finds a
+  material issue. Return APPROVE or REVISE.
 ```
 
 On REVISE, adjudicate sync-review findings per `superRA:agent-orchestration` §Handling Reviewer Feedback, re-dispatch the sync author for accepted items, then re-dispatch the sync reviewer. Integrate starts only after sync review APPROVES.
 
 ## Integrate
 
-Integrate is the post-sync quality gate. It uses task-local `**Sync impact:**` annotations and referenced `## Sync Map` clusters as context for the approved post-sync diff, fits the code to the host project, audits project docs, and verifies the surviving diff against the current base.
+Integrate is the post-sync quality gate. It uses task-local `## Sync Impact` sections and root task.md `## Sync Map` clusters as context for the approved post-sync diff, fits the code to the host project, audits project docs, and verifies the surviving diff against the current base.
 
 **Governing diff:** `git diff BASE_HEAD_SHA..HEAD`. Do not use the old merge base for minimum-net-diff review after Sync.
 
@@ -186,84 +188,89 @@ Agent(subagent_type: "superRA:reviewer"):
   Task: Post-sync integration review
   Git range: <BASE_HEAD_SHA>..HEAD
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
-  Sync context: task-local `**Sync impact:**` fields plus PLAN.md ## Sync Map, if present
+  Sync context: task-local `## Sync Impact` sections plus root task.md `## Sync Map`, if present
 
-  Additionally: read task-local Sync impact annotations and referenced Sync Map clusters as context,
-    then review `git diff <BASE_HEAD_SHA>..HEAD`.
+  Additionally: read task-local `## Sync Impact` sections and referenced Sync Map clusters
+    (root task.md) as context, then review `git diff <BASE_HEAD_SHA>..HEAD`.
     For every touched or Sync-impact-affected task, either set
-    `Integration status: APPROVED` or write task-local review notes and
-    set `Integration status: REVISE`. Findings should cover minimum
-    surviving branch delta, codebase fit, project-doc audit, drift-test
-    implications, and task-file coherence. Do not recreate incoming-intent
-    research or re-review semantic coherence already approved by sync review.
+    `integration_status: approved` in its frontmatter or write review notes in
+    `## Review Notes` and set `integration_status: revise`. Findings should
+    cover minimum surviving branch delta, codebase fit, project-doc audit,
+    drift-test implications, and task-file coherence. Do not recreate
+    incoming-intent research or re-review semantic coherence already approved
+    by sync review.
 ```
 
 ### Step 3: Orchestrator adjudication
 
-Read the task-local integration notes. Classify reviewer findings per `superRA:agent-orchestration` §Handling Reviewer Feedback.
+Read the task-local `## Review Notes` sections for tasks with `integration_status: revise`. Classify reviewer findings per `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
 - Batch all user-owned questions into one stop point.
 - Route substantive plan restructures through `planning-workflow §User Feedback and Changing Plans`.
-- Log user decisions before dispatching fixes.
+- Log user decisions in root task.md `## Decisions` before dispatching fixes.
 
 ### Step 4: Refactor loop
 
-Dispatch implementer(s) for accepted `Integration status: REVISE` items:
+Dispatch implementer(s) for accepted `integration_status: revise` items:
 
 ```text
 Agent(subagent_type: "superRA:implementer"):
   Stage: integration
-  Task: Fix integration review items for <task list>
-  Tasks in scope: <tasks with Integration status: REVISE>
+  Task: Fix integration review items for <task-path-list>
+  Tasks in scope: <task paths with integration_status: revise>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
 
-  Additionally: read task-local `**Sync impact:**` and referenced Sync Map clusters as context,
-    address accepted review findings, and run the minimum-net-diff self-check against
-    `git diff <BASE_HEAD_SHA>..HEAD` before each commit. Do not touch
-    tasks outside `Tasks in scope` except where required by an accepted reviewer finding.
+  Additionally: read task-local `## Sync Impact` sections and referenced Sync Map clusters
+    (root task.md) as context, address accepted review findings, and run the minimum-net-diff
+    self-check against `git diff <BASE_HEAD_SHA>..HEAD` before each commit. Commit code + task.md
+    atomically. Do not touch tasks outside `Tasks in scope` except where required by an accepted
+    reviewer finding.
 ```
 
-Re-dispatch the reviewer for narrow re-review plus the branch-wide pruning sweep over `BASE_HEAD_SHA..HEAD`. Iterate until all in-scope tasks are `Integration status: APPROVED` and every surviving hunk is justified by approved objectives, approved semantic-sync context, logged user decisions, or project convention fit.
+Re-dispatch the reviewer for narrow re-review plus the branch-wide pruning sweep over `BASE_HEAD_SHA..HEAD`. Iterate until all in-scope tasks have `integration_status: approved` and every surviving hunk is justified by approved objectives, approved semantic-sync context, logged user decisions, or project convention fit.
 
 ### Step 5: Close Integrate
 
 Run the full drift-test suite again. When it passes and integration review is APPROVED:
 
-- remove temporary `## Sync Map` from PLAN.md, if present
-- remove temporary task-local `**Sync impact:**` fields unless a lasting task assumption still belongs in the task block
-- flip `Integrated` in PLAN.md §Workflow Status
+- remove temporary `## Sync Map` from root task.md, if present
+- remove temporary task-local `## Sync Impact` sections unless a lasting task assumption still belongs in the task.md
+- flip `Integrated` in root task.md §Workflow Status
 - commit the closeout doc edit
 
 ## Document
 
-Document matures RESULTS.md from live dev log to permanent record and resolves PLAN.md disposition.
+Document matures task.md `## Results` sections from live dev log to reader-facing permanent record (Stage 2 maturation per `task-system/references/planning.md` §Results Shape).
 
-### Step 1: Resolve RESULTS_DIR
+### Step 1: Identify maturation scope
 
-The matured RESULTS.md lands in the analysis's permanent code folder per project guidance. Read CLAUDE.md, AGENTS.md, and README.md. If guidance is silent, ask:
+Walk the `.plan/` tree and identify tasks whose `## Results` sections need maturation — those with substantive findings that would benefit from restructuring, polish, or figure materialization. Trivial results (e.g., "renamed variable, no findings") need no maturation. If project guidance is silent on maturation scope, ask:
 
 ```text
-RESULTS.md needs a permanent location in this project. The matured file
-will be co-located with the analysis code so it travels with it.
-Where should it land?
+These tasks have substantive results that could benefit from maturation
+(restructuring for reader-facing clarity):
+- [task-path-1: one-line summary]
+- [task-path-2: one-line summary]
 
-Suggested: <best guess from the analysis code's location>
+Should I mature all of them, or only a subset?
 ```
 
-Log the answer before dispatching the doc-writer.
+Log the answer in root task.md `## Decisions` before dispatching.
 
 ### Step 2: Dispatch doc-writer
 
 ```text
 Agent(subagent_type: "superRA:implementer"):
   Stage: documentation
-  Task: Mature RESULTS.md into permanent record
-  RESULTS_DIR: <resolved permanent folder>
-  RESULTS_ATTACHMENTS_DIR: ${RESULTS_DIR}/attachments
+  Task: Mature results for reader-facing clarity
+  Tasks in scope: <task paths whose results need maturation>
 
-  Additionally: mature RESULTS.md per `report-in-markdown/references/final-form.md`:
-    fact-check, restructure, materialize figures, and relocate. Land
-    recoverable commits and report which sub-commits landed.
+  Additionally: mature each task's `## Results` section per
+    `report-in-markdown/references/final-form.md`: fact-check against code
+    outputs, restructure for reader clarity, materialize figures, ensure
+    notation consistency across tasks. Edit each task.md in place. Land
+    recoverable commits (one per task or logical group) and report which
+    sub-commits landed.
 ```
 
 ### Step 3: Dispatch doc-reviewer
@@ -271,41 +278,20 @@ Agent(subagent_type: "superRA:implementer"):
 ```text
 Agent(subagent_type: "superRA:reviewer"):
   Stage: documentation
-  Task: Review matured RESULTS.md
+  Task: Review matured results
   Git range: <BASE_SHA>..<HEAD_SHA>
-  RESULTS_DIR: <resolved permanent folder>
+  Tasks in scope: <same task paths>
 
   Additionally: <prior-round adjudication notes if re-dispatching>
 ```
 
 Iterate REVISE -> fix -> narrow re-review until APPROVE. If a documentation finding traces to analysis code, re-enter Integrate.
 
-On APPROVE, flip `Docs finalized` in PLAN.md §Workflow Status and commit before PLAN.md disposition.
-
-### Step 4: PLAN.md disposition
-
-Ask the researcher:
-
-```text
-PLAN.md is still at the worktree root and needs disposition. RESULTS.md
-has already been matured and committed at ${RESULTS_DIR}, and project
-docs are up to date. Options:
-
-1. Move PLAN.md (and results_attachments/) alongside the matured
-   RESULTS.md at ${RESULTS_DIR}.
-2. Consolidate any plan context into existing project documentation,
-   then delete PLAN.md and results_attachments/.
-3. Delete PLAN.md and results_attachments/; git history preserves them
-   on this branch.
-
-Which option?
-```
-
-Log the answer before moving or removing files. Include the log in the same commit as the disposition.
+On APPROVE, flip `Docs finalized` in root task.md §Workflow Status and commit.
 
 ## Finish
 
-Finish executes the user's completion choice from `implementation-workflow`.
+Finish executes the user's completion choice from `implementation-workflow`. The `.plan/` directory is committed as-is — it is part of the permanent branch record.
 
 ### Step 1: Freshness check
 
@@ -322,9 +308,9 @@ CURRENT_BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")
 
 If `CURRENT_BASE_HEAD_SHA` differs from the recorded `BASE_HEAD_SHA`, re-enter Sync before publishing or landing the work.
 
-### Step 2: Mark final action in PLAN.md if present
+### Step 2: Mark final action
 
-If PLAN.md still exists after disposition, flip the final workflow checkbox in the same commit that performs the final action. Skip if PLAN.md was consolidated or removed.
+Flip the final workflow checkbox in root task.md §Workflow Status in the same commit that performs the final action.
 
 ### Step 3: Publish or land
 
@@ -354,7 +340,7 @@ Report what was published or landed and what was cleaned up.
 ## When to Lighten
 
 - **Standalone analysis:** Protect still runs. Sync may be a no-op. Integrate often collapses to a short reviewer pass.
-- **Small changes:** Keep the same five steps, but dispatch fewer agents and keep Sync Map absent when there is no material sync context.
+- **Small changes:** Keep the same five steps, but dispatch fewer agents and keep `## Sync Map` absent from root task.md when there is no material sync context.
 - **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
 
 ## Red Flags
@@ -363,11 +349,11 @@ Report what was published or landed and what was cleaned up.
 - Refactor before Sync when the base has advanced.
 - Use `PRE_SYNC_BASE_SHA` as the post-sync minimum-net-diff baseline.
 - Skip the integration reviewer after Sync.
-- Leave `## Sync Map` in PLAN.md after Integrate closes.
+- Leave `## Sync Map` in root task.md after Integrate closes.
 - Enter Finish without checking whether the base advanced again.
 
 **Always:**
-- Run the full drift-test suite on every integration pass (new drift tests scoped to tasks not yet `Integration status: APPROVED`; running the suite is not scoped).
+- Run the full drift-test suite on every integration pass (new drift tests scoped to tasks not yet `integration_status: approved`; running the suite is not scoped).
 - Use semantic-merge for intent-aware branch syncs.
 - Keep Sync serialized and refactor parallelizable only after Sync lands.
-- Log user decisions before acting.
+- Log user decisions in task.md `## Decisions` before acting.

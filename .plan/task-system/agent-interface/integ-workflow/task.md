@@ -1,7 +1,7 @@
 ---
 title: ".plan/-Native Integration"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: 
   - agent-protocols
@@ -26,4 +26,14 @@ Update `skills/integration-workflow/SKILL.md` for `.plan/`.
 
 
 ## Results
+
+Updated `skills/integration-workflow/SKILL.md` for `.plan/`-native operation across all five phases:
+
+- **Frontmatter description:** removed RESULTS.md/PLAN.md references; updated triggers
+- **Protect:** key-result extraction walks `.plan/` tree via `task_query.py --tree`; drift tests reference task paths (e.g., `data-preparation/merge`); workflow status flipped in root task.md
+- **Sync:** `## Sync Map` lives in root task.md (`.plan/task.md`); task-local sync impact in affected task's `## Sync Impact` body section; decision logging in root task.md `## Decisions`
+- **Integrate:** `integration_status:` frontmatter field (lowercase enum values); integration reviewer edits frontmatter directly; review notes in task's `## Review Notes`; refactor commits code + task.md atomically; closeout removes temporary `## Sync Map` and `## Sync Impact` sections
+- **Document:** rewritten from RESULTS.md maturation + PLAN.md disposition to in-place maturation of task.md `## Results` sections (Stage 2 per `task-system/references/planning.md` §Results Shape); no file relocation or disposition step
+- **Finish:** `.plan/` committed as-is; workflow status in root task.md; removed conditional "if PLAN.md still exists" logic
+- **Red Flags / When to Lighten:** updated references from `PLAN.md ## Sync Map` to `root task.md ## Sync Map`, from `Integration status: APPROVED` to `integration_status: approved`
 
