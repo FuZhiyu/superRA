@@ -1,6 +1,6 @@
 ---
 title: "Update Handoff-Doc Skill"
-status: not-started
+status: implemented
 review_status: ~
 integration_status: ~
 depends_on: 
@@ -60,3 +60,18 @@ Simplify or merge into plan-anatomy — results now live in task.md `## Results`
 
 ## Results
 
+Rewrote all three files in `skills/handoff-doc/` for `.plan/`-native operation:
+
+**SKILL.md** — Reframed from "PLAN.md / RESULTS.md" to ".plan/ task hierarchy" throughout. Four principles preserved with Principle 3 updated from "Task-block structure" to "Task hierarchy structure". References updated to point at new content. User Decisions Log now references task.md instead of PLAN.md. `## Conventions` replaces `## Project Conventions`.
+
+**references/plan-anatomy.md** — Major rewrite:
+- Root task.md anatomy: `## Objective`, `## Conventions`, `## Workflow Status`, `## Decisions`, `## Sync Map`
+- Task.md anatomy: frontmatter fields + flexible `## Heading` body sections with recommended defaults (`## Objective`, `## Results`, `## Decisions`, `## Review Notes`)
+- Removed: step-checkbox anatomy, monolithic `### Task N:` task-block anatomy, `PLAN.md` header template
+- Kept: ownership rules (planner vs implementer vs reviewer), field-by-field notes adapted for frontmatter, User Decisions Log spec, Sync Map lifecycle, Conventions section discipline
+
+**references/results-anatomy.md** — Simplified from RESULTS.md file anatomy to task.md `## Results` section anatomy:
+- Stage 1: results in task.md during implementation (no pre-allocation needed)
+- Stage 2: maturation in the same `## Results` sections during integration
+- Removed: separate file header, pre-allocated task stubs, status tracking per section
+- Kept: per-task results shape, reviewer caveats, figure embedding, Stage 2 transition pointer
