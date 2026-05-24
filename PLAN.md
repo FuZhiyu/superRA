@@ -208,7 +208,7 @@ Insertion points:
 
 ### Task 4: Dashboard Rewrite
 **Depends on:** Task 1, Task 2
-**Review status:**
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** `skills/task-system/scripts/plan_dashboard.py`
