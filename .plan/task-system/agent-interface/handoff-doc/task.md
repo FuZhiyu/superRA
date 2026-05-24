@@ -1,6 +1,6 @@
 ---
 title: "Deprecate Handoff-Doc Skill"
-status: implemented
+status: approved
 review_status: revise
 integration_status: ~
 depends_on: 
