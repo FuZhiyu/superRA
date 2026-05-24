@@ -1,7 +1,7 @@
 ---
 title: ".plan/-Native Planning"
 status: implemented
-review_status: revise
+review_status: approved
 integration_status: ~
 depends_on: 
   - agent-protocols
@@ -75,6 +75,5 @@ Updated `skills/planning-workflow/SKILL.md` for `.plan/`-native output:
 
 ## Review Notes
 
-> 1. [MAJOR] §Retroactive Plan Creation step 2 ([SKILL.md:120](../../skills/planning-workflow/SKILL.md#L120)) instructs: "Create `.plan/` structure with `task_create.py` — one task per logical unit of work done, with `--status implemented`". The `task_create.py` script does not accept a `--status` argument ([task_create.py:37-44](../../skills/task-system/scripts/task_create.py#L37-L44)) — it hard-codes `status: not-started`. An agent following this literally will get a CLI error. Fix: either (a) add `--status` to `task_create.py`, or (b) rewrite this line to say "create with `task_create.py`, then set status via `task_update.py --status implemented`" (which does support `--status`), or (c) say "or mkdir + write task.md directly with `status: implemented`".
-> 2. [MINOR] Line 167 says "prior APPROVED status invalidation" — inconsistent with the rest of the file which uses lowercase `approved` for frontmatter values. Should read "prior `approved` status invalidation" for consistency.
+> 1. [MINOR] [SKILL.md:167](../../skills/planning-workflow/SKILL.md#L167) says "prior APPROVED status invalidation" — inconsistent with the rest of the file which uses lowercase `approved` for frontmatter values. Should read "prior `approved` status invalidation" for consistency.
 
