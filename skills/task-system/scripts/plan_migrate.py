@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import today_str
+from _task_io import parse_frontmatter, serialize_frontmatter, today_str
 
 
 TASK_BLOCK_RE = re.compile(
@@ -34,11 +34,18 @@ FIELD_RE = {
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Migrate PLAN.md + RESULTS.md into a .plan/ directory tree."
+        description="Migrate PLAN.md + RESULTS.md into a .plan/ directory tree, "
+        "or upgrade existing v1 task files to v2 format."
     )
-    parser.add_argument("--plan-md", required=True, help="Path to PLAN.md")
-    parser.add_argument("--results-md", default="", help="Path to RESULTS.md (optional)")
-    parser.add_argument("--output", required=True, help="Output directory (e.g., .plan)")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--plan-md", help="Path to PLAN.md (v1 migration)")
+    group.add_argument(
+        "--upgrade", action="store_true", default=False,
+        help="Upgrade existing .plan/ task files from v1 to v2 format",
+    )
+    parser.add_argument("--results-md", default="", help="Path to RESULTS.md (optional, for --plan-md)")
+    parser.add_argument("--output", default="", help="Output directory (for --plan-md, e.g., .plan)")
+    parser.add_argument("--plan-root", default="", help="Plan root directory (for --upgrade)")
     return parser.parse_args(argv)
 
 
@@ -202,6 +209,11 @@ def _normalize_review_status(raw: str) -> str:
     return "~"
 
 
+def _strip_checkboxes(text: str) -> str:
+    """Strip checkbox syntax from step text, converting to plain bullets."""
+    return re.sub(r"^- \[[x ]\] ", "- ", text, flags=re.MULTILINE)
+
+
 def _build_task_md(
     title: str,
     status: str,
@@ -246,10 +258,12 @@ def _build_task_md(
         "---",
     ])
 
-    sections = ["\n".join(fm_lines), "", f"# {title}", ""]
+    # No # Title heading (redundant with frontmatter title)
+    sections = ["\n".join(fm_lines), ""]
 
     if steps_body:
-        sections.extend(["## Steps", "", steps_body, ""])
+        objective_body = _strip_checkboxes(steps_body)
+        sections.extend(["## Objective", "", objective_body, ""])
 
     if results_body:
         sections.extend(["## Results", "", results_body, ""])
@@ -344,14 +358,99 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
     print(f"\nMigrated {len(task_blocks)} tasks to {output_dir}")
 
 
+def _upgrade_task_body(body: str) -> tuple[str, bool]:
+    """Upgrade a single task body from v1 to v2 format.
+
+    Returns (new_body, changed) where changed indicates whether any
+    modifications were made.
+    """
+    changed = False
+    lines = body.split("\n")
+
+    # Remove leading # Title heading (redundant with frontmatter title)
+    new_lines: list[str] = []
+    skip_blank_after_title = False
+    for i, line in enumerate(lines):
+        if i == 0 and line == "":
+            # Leading blank line before potential title — keep it for now
+            new_lines.append(line)
+            continue
+        if not changed and skip_blank_after_title and line == "":
+            # Skip one blank line after removed title
+            skip_blank_after_title = False
+            continue
+        if re.match(r"^# .+$", line) and not changed:
+            # Only remove the first # heading (the title)
+            # Check it's at the start of the body (after optional blank lines)
+            preceding = "\n".join(new_lines).strip()
+            if preceding == "":
+                # This is the leading title heading — remove it
+                changed = True
+                skip_blank_after_title = True
+                # Also remove any preceding blank lines we already added
+                while new_lines and new_lines[-1] == "":
+                    new_lines.pop()
+                continue
+        skip_blank_after_title = False
+        new_lines.append(line)
+
+    body = "\n".join(new_lines)
+
+    # Rename ## Steps to ## Objective and strip checkbox prefixes
+    if re.search(r"^## Steps\s*$", body, re.MULTILINE):
+        body = re.sub(r"^## Steps\s*$", "## Objective", body, flags=re.MULTILINE)
+        body = _strip_checkboxes(body)
+        changed = True
+
+    return body, changed
+
+
+def upgrade_v1_to_v2(plan_root: Path) -> list[Path]:
+    """Walk a .plan/ directory and upgrade all v1 task files to v2 format.
+
+    Returns the list of files that were modified.
+    """
+    modified: list[Path] = []
+
+    for task_md in sorted(plan_root.rglob("task.md")):
+        text = task_md.read_text(encoding="utf-8")
+        fm, body = parse_frontmatter(text)
+
+        new_body, changed = _upgrade_task_body(body)
+
+        if changed:
+            fm_text = serialize_frontmatter(fm)
+            content = f"---\n{fm_text}---\n{new_body}"
+            task_md.write_text(content, encoding="utf-8")
+            modified.append(task_md)
+            print(f"Upgraded {task_md}")
+
+    if not modified:
+        print("All task files are already in v2 format.")
+    else:
+        print(f"\nUpgraded {len(modified)} file(s).")
+
+    return modified
+
+
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    results_path = Path(args.results_md) if args.results_md else None
-    try:
-        migrate(Path(args.plan_md), results_path, Path(args.output))
-    except ValueError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        sys.exit(1)
+
+    if args.upgrade:
+        if not args.plan_root:
+            print("Error: --plan-root is required with --upgrade", file=sys.stderr)
+            sys.exit(1)
+        upgrade_v1_to_v2(Path(args.plan_root))
+    else:
+        if not args.output:
+            print("Error: --output is required with --plan-md", file=sys.stderr)
+            sys.exit(1)
+        results_path = Path(args.results_md) if args.results_md else None
+        try:
+            migrate(Path(args.plan_md), results_path, Path(args.output))
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
 
 
 if __name__ == "__main__":
