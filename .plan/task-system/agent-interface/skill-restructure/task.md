@@ -1,6 +1,6 @@
 ---
 title: "Progressive Skill Revelation"
-status: not-started
+status: implemented
 review_status: ~
 integration_status: ~
 depends_on:  []
@@ -36,7 +36,7 @@ What orchestrators and planners need:
   - Include: goal, relevant conventions (naming, paths, units, variable definitions), constraints (what NOT to do), input/output expectations, validation criteria
   - Include enough context that an implementer with zero project context can work independently after reading the ancestor chain
   - Necessary steps that need tracking → create as subtasks
-  - Suggestive approaches → state as suggestions in prose, e.g. "Consider using a left join on fund_id × date"
+  - Suggestive approaches → state as suggestions in prose, e.g. "Consider using a left join on fund_id x date"
   - Do NOT prescribe implementation steps — that's the implementer's job
   - DO prescribe validation criteria — what must be true for the task to be complete
 
@@ -67,3 +67,11 @@ Move from current SKILL.md:
 
 ## Results
 
+Restructured into three tiers:
+- **SKILL.md** (Tier 1): consumer-facing — core concepts, how to read/edit tasks, ownership model, task file format, full command surface. Reduced from mixed-audience monolith to focused implementer/reviewer reference.
+- **references/planning.md** (Tier 2): planner-facing — objective writing guide, task splitting heuristics, root task anatomy, retroactive plan creation, hierarchy management commands.
+- **references/internals.md** (Tier 3): contributor-facing — `_task_io.py` data layer (Task dataclass, all functions), hook architecture and integration points, migration details, dashboard generation, script inventory.
+
+Also updated:
+- `skills/CATEGORIES.md` — updated task-system description to reflect role as primary handoff mechanism and reference structure.
+- `README.md` — updated task-system entry in utility skills table to describe the three-tier structure.
