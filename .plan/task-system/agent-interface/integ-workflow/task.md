@@ -1,7 +1,7 @@
 ---
 title: ".plan/-Native Integration"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on: 
   - agent-protocols
