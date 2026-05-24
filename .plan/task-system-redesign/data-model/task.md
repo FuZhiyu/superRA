@@ -21,4 +21,3 @@ Add `parse_body_sections()` helper that splits task body on `## ` headers into `
 - Four new fields added to `Task` dataclass: `objective`, `results`, `decisions`, `review_notes`
 - Fields are read-only views derived from `body` — `write_task()` writes `body` directly, no serialization leakage
 - Edge cases verified: empty body, no sections, duplicate names (last-wins), preamble before first header (preserved in `body`)
-- All 53 tests pass including `TestParseBodySections` (4 tests)

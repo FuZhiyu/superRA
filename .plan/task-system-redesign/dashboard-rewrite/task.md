@@ -4,8 +4,8 @@ status: approved
 review_status: approved
 integration_status: ~
 depends_on:
-  - 01-data-model
-  - 02-cli-format
+  - data-model
+  - cli-format
 tags: []
 script: skills/task-system/scripts/plan_dashboard.py
 created: 2026-05-23
@@ -21,9 +21,8 @@ Complete rewrite of `DASHBOARD_HTML` in `plan_dashboard.py`. Replace sidebar/det
 ### Key Findings
 - 1014-line HTML template (up from 469), single-page recursive design
 - Typography: Source Serif 4 (display) + IBM Plex Mono (body/data) via Google Fonts CDN
-- Warm parchment/ink palette (#faf9f7 light, #1c1b19 dark) with muted status tints
+- Warm parchment/ink palette with muted status tints
 - Progressive disclosure: 3 levels — title row → children + section toggles → rendered markdown
 - Tree connector lines via `border-left`, CSS transitions for expand/collapse
 - DAG (Mermaid) and Kanban views preserved as alternate views
-- XSS: JSON escaping, textContent for DOM, `html: false` on markdown-it (fixed in review)
-- `generate_dashboard()` Python function unchanged — only the HTML template changed
+- XSS: JSON escaping, textContent for DOM, `html: false` on markdown-it

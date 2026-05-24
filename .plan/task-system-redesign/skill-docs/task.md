@@ -4,8 +4,8 @@ status: approved
 review_status: approved
 integration_status: ~
 depends_on:
-  - 01-data-model
-  - 02-cli-format
+  - data-model
+  - cli-format
 tags: []
 created: 2026-05-23
 updated: 2026-05-24
@@ -18,9 +18,6 @@ Rewrite SKILL.md core concepts: remove task/step distinction, document `## Objec
 ## Results
 
 ### Key Findings
-- Core concepts rewritten: 7 bullet points replacing the old task/step decomposition rule
-- Directory structure comments updated (removed "has steps" / "no steps" annotations)
-- `task_create` example shows `--objective` flag
-- Format example shows populated `## Objective` and `## Results` (not empty checkboxes)
-- Auto-rebuild documented under dashboard command
-- `--upgrade` command surface added
+- Core concepts rewritten: 7 bullet points replacing old task/step decomposition rule
+- Format example shows populated `## Objective` and `## Results`
+- Auto-rebuild and `--upgrade` documented in command surface
