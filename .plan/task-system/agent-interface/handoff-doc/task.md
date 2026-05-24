@@ -1,7 +1,7 @@
 ---
 title: "Update Handoff-Doc Skill"
 status: implemented
-review_status: ~
+review_status: revise
 integration_status: ~
 depends_on: 
   - skill-restructure
@@ -75,3 +75,7 @@ Rewrote all three files in `skills/handoff-doc/` for `.plan/`-native operation:
 - Stage 2: maturation in the same `## Results` sections during integration
 - Removed: separate file header, pre-allocated task stubs, status tracking per section
 - Kept: per-task results shape, reviewer caveats, figure embedding, Stage 2 transition pointer
+
+## Review Notes
+
+> 1. [MAJOR] [`skills/handoff-doc/references/results-anatomy.md:46-53`](../../../../../../skills/handoff-doc/references/results-anatomy.md#L46-L53) documents reviewer caveats at the bottom of `## Results`, but the companion `agents/reviewer.md` rewrite (in sibling task `agent-protocols`) explicitly prohibits the reviewer from touching `## Results`. The two files are now in conflict. This must be resolved consistently — see agent-protocols review item 2 for the proposed fix options. The resolution choice determines whether results-anatomy.md keeps or drops its §Reviewer Caveats section.
