@@ -39,6 +39,8 @@ class Task:
     created: str = ""
     updated: str = ""
     body: str = ""
+    objective: str = ""
+    results: str = ""
     children: list[Task] = field(default_factory=list)
 
     @property
@@ -130,6 +132,25 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
     return fm, body
 
 
+def parse_body_sections(body: str) -> dict[str, str]:
+    """Split a task body on ``## `` headers into {section_name: content} pairs."""
+    sections: dict[str, str] = {}
+    current_name: str | None = None
+    current_lines: list[str] = []
+    for line in body.split("\n"):
+        m = re.match(r"^## (.+)$", line)
+        if m:
+            if current_name is not None:
+                sections[current_name] = "\n".join(current_lines)
+            current_name = m.group(1)
+            current_lines = []
+        elif current_name is not None:
+            current_lines.append(line)
+    if current_name is not None:
+        sections[current_name] = "\n".join(current_lines)
+    return sections
+
+
 def _quote_yaml_scalar(key: str, value: str) -> str:
     """Quote a YAML scalar value if needed for safe serialization."""
     if key == "title":
@@ -214,6 +235,8 @@ def parse_task(task_md_path: Path) -> Task:
             f"Valid values: {VALID_INTEGRATION_STATUSES}"
         )
 
+    sections = parse_body_sections(body)
+
     return Task(
         path=path,
         dir_path=task_md_path.parent,
@@ -229,6 +252,8 @@ def parse_task(task_md_path: Path) -> Task:
         created=str(fm.get("created", "")),
         updated=str(fm.get("updated", "")),
         body=body,
+        objective=sections.get("Objective", ""),
+        results=sections.get("Results", ""),
     )
 
 
