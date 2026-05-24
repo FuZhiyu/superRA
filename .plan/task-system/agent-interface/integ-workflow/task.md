@@ -1,6 +1,6 @@
 ---
 title: ".plan/-Native Integration"
-status: implemented
+status: approved
 review_status: approved
 integration_status: ~
 depends_on: 

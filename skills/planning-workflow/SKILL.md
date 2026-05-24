@@ -118,8 +118,8 @@ For the canonical task structure — root task.md anatomy, per-task anatomy, and
 When documenting existing exploratory work into `.plan/`:
 
 1. Survey existing code, outputs, and notebooks
-2. Create `.plan/` structure with `task_create.py` — one task per logical unit of work done, with `--status implemented`
-3. Edit each `task.md` to fill body sections with what was done (`## Objective`: what was the goal) and found (`## Results`: what was discovered)
+2. Create `.plan/` structure with `task_create.py` — one task per logical unit of work done
+3. Edit each `task.md`: set `status: implemented` in frontmatter, fill body sections with what was done (`## Objective`: what was the goal) and found (`## Results`: what was discovered)
 4. Hooks validate + rebuild dashboard. The plan is now a retroactive record that can drive review, integration, and future work
 
 See `task-system/references/planning.md` §Retroactive Plan Creation for the full workflow.
