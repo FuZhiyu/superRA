@@ -81,6 +81,11 @@ def update_task(
         task.updated = today_str()
         write_task(task)
         print(f"Updated {task_md}")
+        try:
+            from plan_dashboard import generate_dashboard
+            generate_dashboard(plan_root)
+        except Exception:
+            pass
     else:
         print("No changes.")
 

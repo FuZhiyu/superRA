@@ -101,6 +101,11 @@ def create_task(
     task_md.write_text(content, encoding="utf-8")
 
     print(f"Created {task_md}")
+    try:
+        from plan_dashboard import generate_dashboard
+        generate_dashboard(plan_root)
+    except Exception:
+        pass
     return task_dir
 
 

@@ -62,6 +62,12 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
         write_task(task)
         print(f"  Updated depends_on in {sibling_dir.name}")
 
+    try:
+        from plan_dashboard import generate_dashboard
+        generate_dashboard(plan_root)
+    except Exception:
+        pass
+
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)

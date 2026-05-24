@@ -96,6 +96,11 @@ def add_result(
     task.updated = today_str()
     write_task(task)
     print(f"Updated results in {task_md}")
+    try:
+        from plan_dashboard import generate_dashboard
+        generate_dashboard(plan_root)
+    except Exception:
+        pass
 
 
 def main(argv: list[str] | None = None) -> None:
