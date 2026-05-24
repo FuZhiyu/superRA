@@ -180,7 +180,7 @@ Import `parse_body_sections` from `_task_io`.
 
 ### Task 3: Auto-Rebuild Dashboard
 **Depends on:** Task 1
-**Review status:**
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** `skills/task-system/scripts/task_create.py`, `skills/task-system/scripts/task_update.py`, `skills/task-system/scripts/task_add_result.py`, `skills/task-system/scripts/task_link.py`, `skills/task-system/scripts/task_rename.py`
