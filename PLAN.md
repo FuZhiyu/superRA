@@ -61,7 +61,7 @@ Walked at planning time (2026-05-23). Re-walk on-demand only.
 
 ### Task 1: Data Model — Body Section Parsing
 **Depends on:** *(none)*
-**Review status:**
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** `skills/task-system/scripts/_task_io.py`
