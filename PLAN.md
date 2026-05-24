@@ -1,30 +1,31 @@
-# Task System Redesign — Plan
+# Task System Skill — Plan
 
 > **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use `superRA:skill-creator` when editing any `skills/*/SKILL.md`.
 
-**Objective:** Redesign the task-system skill to eliminate the task/step distinction (everything is a task), add structured planner/implementer ownership via `## Objective` (planner-owned) and `## Results` (implementer-owned, recursive at every tree level), auto-rebuild the dashboard after CLI mutations, and rewrite the dashboard UI as a single-page recursive expand/collapse interface using the `frontend-design` skill.
+**Objective:** Add a `task-system` skill to superRA that replaces flat PLAN.md/RESULTS.md task tracking with a filesystem-based hierarchy where each task is a self-contained `task.md` with planner-owned `## Objective` and implementer-owned `## Results` (recursive at every level), and a generated HTML dashboard provides human-friendly visualization.
 
-**Methodology:** Modify the existing `skills/task-system/scripts/` codebase in place. Phase 1 changes the data model and task file format. Phase 2 adds auto-rebuild hooks to all mutation scripts. Phase 3 rewrites the dashboard HTML. Phase 4 migrates the existing `.plan/` tree to the new format. Phase 5 updates tests. The existing test suite (`test_task_system.py`) provides regression coverage throughout.
+**Methodology:** Build as a standalone skill (`skills/task-system/`) with Python CLI scripts for task CRUD, frontier computation, migration, and dashboard generation. Defer workflow integration to a follow-up PR.
 
 **Conventions:**
 - Scripts follow existing `skills/*/scripts/` patterns: stdlib-only Python, argparse CLI, `from __future__ import annotations`, type-annotated functions
 - Task file body sections: `## Objective` (planner-owned), `## Results` (implementer-owned), `## Decisions`, `## Review Notes`
-- No more `## Steps` or checkbox procedures — leaf tasks are directories without subdirectories
+- Everything is a task — leaf tasks are directories without subdirectories
+- Dependencies are sibling-only; parent status rolls up from children automatically
 - Auto-rebuild is best-effort (try/except, never blocks the primary mutation)
 - Dashboard uses Google Fonts CDN for typography, Mermaid.js CDN for DAG, markdown-it CDN for rendering
 
 **Output:**
-- `skills/task-system/scripts/_task_io.py` — updated with `parse_body_sections()`, `objective`/`results` fields on `Task`
-- `skills/task-system/scripts/task_create.py` — updated template (`## Objective` / `## Results`), `--objective` arg, auto-rebuild
-- `skills/task-system/scripts/task_update.py` — auto-rebuild hook
-- `skills/task-system/scripts/task_add_result.py` — auto-rebuild hook
-- `skills/task-system/scripts/task_link.py` — auto-rebuild hook
-- `skills/task-system/scripts/task_rename.py` — auto-rebuild hook
-- `skills/task-system/scripts/task_query.py` — `tree_to_json()` includes `objective`, `results`, `decisions`, `review_notes`
-- `skills/task-system/scripts/plan_dashboard.py` — complete HTML rewrite (single-page, recursive expand/collapse)
-- `skills/task-system/scripts/plan_migrate.py` — `--upgrade` flag for v1-to-v2 format migration
-- `skills/task-system/scripts/test_task_system.py` — updated fixtures, new test classes
-- `skills/task-system/SKILL.md` — rewritten core concepts, updated format example
+- `skills/task-system/SKILL.md` — skill definition + usage docs
+- `skills/task-system/scripts/_task_io.py` — shared internals (parse, write, walk, frontier, rollup, body section parsing)
+- `skills/task-system/scripts/task_create.py` — create task directory + task.md (with auto-rebuild)
+- `skills/task-system/scripts/task_update.py` — update frontmatter fields (with auto-rebuild)
+- `skills/task-system/scripts/task_query.py` — tree, frontier, DAG queries, structured JSON output
+- `skills/task-system/scripts/task_add_result.py` — append results (with auto-rebuild)
+- `skills/task-system/scripts/task_link.py` — add/remove dependency edges (with auto-rebuild)
+- `skills/task-system/scripts/task_rename.py` — rename with sibling cascade (with auto-rebuild)
+- `skills/task-system/scripts/plan_migrate.py` — PLAN.md migration + `--upgrade` for v1→v2
+- `skills/task-system/scripts/plan_dashboard.py` — single-page recursive expand/collapse HTML dashboard
+- `skills/task-system/scripts/test_task_system.py` — 53 tests
 
 **Pipeline:** `~/.venv/bin/python -m pytest skills/task-system/scripts/test_task_system.py -v`
 
@@ -32,7 +33,7 @@
 
 ## Workflow Status
 
-- [ ] **Plan approved**
+- [x] **Plan approved**
 - [ ] **Execution complete**
 - [ ] **Drift tests created**
 - [ ] **Integrated**
@@ -51,7 +52,6 @@ Walked at planning time (2026-05-23). Re-walk on-demand only.
 
 ### Module-level docs walked
 - `skills/CATEGORIES.md` (HEAD at dd7ad7d): Skill category tables mirroring README, with one-line descriptions per skill. `task-system` listed under Utility with "DAG rendering" in description.
-- `skills/task-system/SKILL.md` (HEAD at dd7ad7d): Current skill definition with task/step distinction, `## Steps` format, command surface. This file will be rewritten.
 - `skills/using-superRA/SKILL.md` (HEAD at dd7ad7d): Skill inventory includes `task-system` row.
 
 ### Not walked (not reachable from the planned diff)
@@ -59,301 +59,76 @@ Walked at planning time (2026-05-23). Re-walk on-demand only.
 
 ---
 
-### Task 1: Data Model — Body Section Parsing
+### Task 1: Core Data Layer
 **Depends on:** *(none)*
 **Review status:** APPROVED
-**Integration status:**
 
 **Script:** `skills/task-system/scripts/_task_io.py`
 
-- [ ] **Step 1: Add `parse_body_sections()` helper**
-
-Add a function that splits a task body on `## ` headers into `{section_name: content}` pairs. Content includes everything after the header line up to the next `## ` or end of string. Returns `dict[str, str]`.
-
-```python
-def parse_body_sections(body: str) -> dict[str, str]:
-    sections: dict[str, str] = {}
-    current_name: str | None = None
-    current_lines: list[str] = []
-    for line in body.split("\n"):
-        m = re.match(r"^## (.+)$", line)
-        if m:
-            if current_name is not None:
-                sections[current_name] = "\n".join(current_lines)
-            current_name = m.group(1)
-            current_lines = []
-        elif current_name is not None:
-            current_lines.append(line)
-    if current_name is not None:
-        sections[current_name] = "\n".join(current_lines)
-    return sections
-```
-
-- [ ] **Step 2: Add `objective` and `results` fields to `Task` dataclass**
-
-Add two new `str` fields after `body`:
-
-```python
-@dataclass
-class Task:
-    # ... existing fields ...
-    body: str = ""
-    objective: str = ""
-    results: str = ""
-    children: list[Task] = field(default_factory=list)
-```
-
-- [ ] **Step 3: Update `parse_task()` to populate new fields**
-
-After parsing body, call `parse_body_sections(body)` and populate:
-
-```python
-    sections = parse_body_sections(body)
-    # in the Task constructor:
-    objective=sections.get("Objective", ""),
-    results=sections.get("Results", ""),
-```
+Build `_task_io.py`: `Task` dataclass (path, title, status, review/integration status, depends_on, tags, script, input, output, timestamps, body, children + computed properties). YAML frontmatter parser (stdlib-only). Serializer with canonical field order. Tree walker (`walk_plan`). Frontier computation (`compute_frontier`). Status rollup (`compute_status`). Body section parsing (`parse_body_sections`) populating `objective`, `results`, `decisions`, `review_notes` fields.
 
 ---
 
-### Task 2: CLI Format Changes
+### Task 2: CLI Scripts
 **Depends on:** Task 1
-**Review status:**
-**Integration status:**
+**Review status:** APPROVED
 
-**Script:** `skills/task-system/scripts/task_create.py`, `skills/task-system/scripts/task_query.py`
+**Scripts:** `task_create.py`, `task_update.py`, `task_add_result.py`, `task_link.py`, `task_rename.py`, `task_query.py`
 
-- [ ] **Step 1: Update `TASK_TEMPLATE` in `task_create.py`**
-
-Replace the current template. Drop the `# {title}` heading (redundant with frontmatter). Replace `{description}` with `## Objective` / `## Results` sections:
-
-```python
-TASK_TEMPLATE = """\
----
-title: "{title}"
-status: not-started
-review_status: ~
-integration_status: ~
-depends_on: {depends_on}
-tags: []
-{script_line}{input_line}{output_line}created: {today}
-updated: {today}
----
-
-## Objective
-
-{objective}
-
-## Results
-
-"""
-```
-
-- [ ] **Step 2: Rename `--description` arg to `--objective`**
-
-In `parse_args()`: rename `--description` to `--objective`.
-In `create_task()`: rename `description` parameter to `objective`.
-In `main()`: pass `args.objective` instead of `args.description`.
-In `TASK_TEMPLATE`: `{objective}` instead of `{description}`.
-
-- [ ] **Step 3: Update `tree_to_json()` in `task_query.py`**
-
-Add parsed body sections to the JSON output so the dashboard can render them individually:
-
-```python
-def tree_to_json(task: Task) -> dict:
-    sections = parse_body_sections(task.body)
-    return {
-        # ... existing fields ...,
-        "objective": sections.get("Objective", ""),
-        "results": sections.get("Results", ""),
-        "decisions": sections.get("Decisions", ""),
-        "review_notes": sections.get("Review Notes", ""),
-        "body": task.body,
-        "children": [tree_to_json(c) for c in task.children],
-    }
-```
-
-Import `parse_body_sections` from `_task_io`.
+Build 6 CLI scripts: `task_create.py` (template with `## Objective` / `## Results`, `--objective` arg), `task_update.py` (frontmatter updates with enum validation), `task_add_result.py` (append findings/figures/notes), `task_link.py` (add/remove sibling deps with cycle detection), `task_rename.py` (rename with sibling cascade), `task_query.py` (tree/frontier/DAG queries, `tree_to_json()` with structured section fields).
 
 ---
 
 ### Task 3: Auto-Rebuild Dashboard
 **Depends on:** Task 1
 **Review status:** APPROVED
-**Integration status:**
 
-**Script:** `skills/task-system/scripts/task_create.py`, `skills/task-system/scripts/task_update.py`, `skills/task-system/scripts/task_add_result.py`, `skills/task-system/scripts/task_link.py`, `skills/task-system/scripts/task_rename.py`
+**Scripts:** `task_create.py`, `task_update.py`, `task_add_result.py`, `task_link.py`, `task_rename.py`
 
-- [ ] **Step 1: Add auto-rebuild to all five mutation scripts**
-
-At the end of each mutation function, after the primary write succeeds, add:
-
-```python
-try:
-    from plan_dashboard import generate_dashboard
-    generate_dashboard(plan_root)
-except Exception:
-    pass
-```
-
-Insertion points:
-- `task_create.py`: after line 103 (`print(f"Created {task_md}")`)
-- `task_update.py`: inside the `if changed:` block, after line 83 (`print(f"Updated {task_md}")`)
-- `task_add_result.py`: after line 98 (`print(f"Updated results in {task_md}")`)
-- `task_link.py`: after line 67 (`print(f"Removed dependency...")`) and after line 91 (`print(f"Added dependency...")`)
-- `task_rename.py`: after the sibling update loop ends (line 63)
+Add lazy-import `generate_dashboard(plan_root)` call wrapped in `try/except Exception: pass` at the end of every mutating CLI function. Best-effort — never blocks the primary mutation. 7 call sites across 5 scripts.
 
 ---
 
-### Task 4: Dashboard Rewrite
+### Task 4: Dashboard
 **Depends on:** Task 1, Task 2
 **Review status:** APPROVED
-**Integration status:**
 
 **Script:** `skills/task-system/scripts/plan_dashboard.py`
 
-- [ ] **Step 1: Design dashboard architecture**
-
-Single-page recursive expand/collapse. No sidebar/detail split. All tasks visible on one scrollable page with progressive disclosure:
-- **Level 0 (always visible)**: Task title/slug + status badge + progress count (branch tasks)
-- **Level 1 (expand task)**: Shows children (branch) and section toggles (Objective, Results, etc.)
-- **Level 2 (expand section)**: Rendered markdown content
-
-Each task node and each section within a node is independently expandable.
-
-- [ ] **Step 2: Implement recursive `renderTaskNode()` JS function**
-
-```javascript
-function renderTaskNode(task, depth) {
-  // Create container with data-depth for CSS indentation
-  // Header row: toggle-icon, title, status-badge, progress
-  // Collapsible body:
-  //   - If has children: recursively render each child
-  //   - Expandable <details> for Objective, Results, Decisions, Review Notes, Metadata
-  // Click header to toggle body visibility
-}
-```
-
-- [ ] **Step 3: Write complete HTML/CSS/JS template**
-
-Use `frontend-design` skill for visual design. Requirements:
-- Distinctive font pair via Google Fonts CDN (not system fonts)
-- Muted professional palette with subtle status tint backgrounds
-- Tree connector lines (left-border) that trace hierarchy
-- Smooth expand/collapse transitions
-- Dense information display (work dashboard, not marketing)
-- Summary progress bar in header
-- Dark/light mode via CSS custom properties
-- Status filter dropdown
-- Search box (filters by title/path)
-- View toggle: Tree (default), DAG, Kanban
-
-- [ ] **Step 4: Replace `DASHBOARD_HTML` constant**
-
-Replace the entire `DASHBOARD_HTML` string in `plan_dashboard.py` with the new template. Keep the `__TASK_DATA_JSON__` placeholder pattern. Keep the `generate_dashboard()` function signature unchanged.
+Build `plan_dashboard.py`: generate self-contained HTML dashboard from `.plan/` tree. Single-page recursive expand/collapse where all tasks are visible at once with progressive disclosure (3 levels: title row → children + section toggles → rendered markdown). Source Serif 4 + IBM Plex Mono typography, warm parchment/ink palette, tree connector lines, CSS transitions, dark/light mode. Tree, DAG (Mermaid), and Kanban views.
 
 ---
 
-### Task 5: V1-to-V2 Migration
+### Task 5: Migration
 **Depends on:** Task 1
 **Review status:** REVISE
-**Integration status:**
-
-> **Review notes:**
->
-> 1. **MAJOR** — [plan_migrate.py:400-402](skills/task-system/scripts/plan_migrate.py#L400-L402): `_upgrade_task_body()` applies `_strip_checkboxes()` to the **entire body** after detecting `## Steps`, not just the Steps section. Checkboxes in `## Results`, `## Review Notes`, or other sections are incorrectly stripped. Scope the stripping to only the text between `## Steps` and the next `## ` heading. (In `_build_task_md()` at line 265 this is already correct — stripping is applied only to `steps_body`.)
->
-> 2. **MINOR** — [plan_migrate.py:214](skills/task-system/scripts/plan_migrate.py#L214): `_strip_checkboxes()` regex `r"^- \[[x ]\] "` does not match uppercase `[X]`. Many markdown editors produce `- [X]`. Fix: change character class to `[xX ]`. Same issue in `_compute_status_from_steps()` at [line 192](skills/task-system/scripts/plan_migrate.py#L192) where uppercase-checked boxes are miscounted.
->
-> 3. **MINOR** — [plan_migrate.py:400-401](skills/task-system/scripts/plan_migrate.py#L400-L401): The regex `r'^## Steps\s*$'` substitution consumes the heading's trailing newline, causing the blank line after `## Objective` to be lost. Result is `## Objective\n- content` instead of `## Objective\n\n- content` (which is what `_build_task_md()` produces). Fix: use `r'^## Steps[ \t]*$'` to avoid matching newlines, or add a blank line in the replacement string.
 
 **Script:** `skills/task-system/scripts/plan_migrate.py`
 
-- [ ] **Step 1: Update `_build_task_md()` for new format**
+Build `plan_migrate.py`: parse PLAN.md task blocks + RESULTS.md sections, generate `.plan/` tree with slugified directories, infer status from checkboxes. Emit `## Objective` (not `## Steps`). Add `--upgrade` flag for in-place v1→v2 migration. Idempotent.
 
-Change the body template to emit `## Objective` instead of `## Steps`. Strip checkbox syntax (`- [ ] `, `- [x] `) from migrated step text and place it as prose under `## Objective`.
-
-- [ ] **Step 2: Add `--upgrade` flag for in-place v1-to-v2 migration**
-
-Add a new code path that walks an existing `.plan/` tree and for each `task.md`:
-1. Parse frontmatter and body
-2. If body contains `## Steps`: rename to `## Objective`, strip checkbox prefixes
-3. If body starts with `# ` title heading: remove it (redundant with frontmatter `title`)
-4. Write back
-5. Idempotent — no-op on files already in v2 format
-
-```bash
-python3 plan_migrate.py --upgrade --plan-root .plan
-```
-
-- [ ] **Step 3: Run migration on project's `.plan/` directory**
-
-Execute `--upgrade` on the existing `.plan/` tree. Verify all 7 `task.md` files have `## Objective` not `## Steps`, and no `# Title` headings.
+> **Review notes:**
+> 1. [MAJOR] `_upgrade_task_body()` stripped checkboxes from entire body, not just `## Steps` section
+>    → implemented: scoped stripping to Steps section only
+> 2. [MINOR] Uppercase `[X]` not handled
+>    → implemented: character class changed to `[xX]`
+> 3. [MINOR] Blank line after `## Objective` lost during `--upgrade`
+>    → implemented: fixed via section-boundary rewrite
 
 ---
 
-### Task 6: SKILL.md + Inventory Updates
+### Task 6: Skill Definition + Inventory
 **Depends on:** Task 1, Task 2, Task 4
 **Review status:** APPROVED
-**Integration status:**
 
-- [ ] **Step 1: Rewrite `SKILL.md` core concepts**
-
-Remove "Tasks are objectives. Steps are procedures." Replace with:
-- Everything is a task. Leaf tasks have no subdirectories.
-- `## Objective` is planner-owned: goal, methodology, conventions.
-- `## Results` is implementer-owned: findings, notes. Present at every level (recursive).
-- Filesystem is the single source of truth for hierarchy.
-- Numeric prefix on directory names controls display order. DAG (`depends_on`) controls execution order.
-
-- [ ] **Step 2: Update task file format example**
-
-Replace `## Steps` with `## Objective` in the format template. Remove checkbox examples. Show the new format with `## Objective` and `## Results`.
-
-- [ ] **Step 3: Document auto-rebuild**
-
-Add note: "The dashboard is automatically regenerated after every mutation command (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`)."
+Write `SKILL.md` with core concepts (everything is a task, `## Objective` planner-owned, `## Results` implementer-owned recursive, filesystem hierarchy, sibling-only deps, status rollup), directory structure, full command surface with examples including `--upgrade`, task file format template, auto-rebuild note. Update `CATEGORIES.md` and `README.md` skill inventory.
 
 ---
 
-### Task 7: Test Suite Updates
+### Task 7: Test Suite
 **Depends on:** Task 1, Task 2, Task 3, Task 4, Task 5
 **Review status:** APPROVED
-**Integration status:**
 
 **Script:** `skills/task-system/scripts/test_task_system.py`
 
-- [ ] **Step 1: Update all fixture `task.md` content**
-
-Replace `## Steps\n\n- [ ] Step 1\n` with `## Objective\n\n<objective text>\n\n## Results\n` in all `_write_task_md()` calls and inline task.md content strings throughout the test file.
-
-- [ ] **Step 2: Add `TestParseBodySections` test class**
-
-Test `parse_body_sections()`:
-- Body with all sections (Objective, Results, Decisions, Review Notes)
-- Body with only Objective
-- Empty body (returns empty dict)
-- Body with unknown/extra sections (preserved in dict)
-
-- [ ] **Step 3: Update existing tests for new format**
-
-- `TestTaskCreate.test_create_basic`: verify template contains `## Objective`, `--objective` arg works
-- `TestTaskQuery.test_tree_to_json`: verify JSON includes `objective`, `results` fields
-- `TestPlanMigrate.test_migrate_basic`: update expected output format
-- `TestDashboard.test_generate_dashboard`: update assertions for new HTML template
-
-- [ ] **Step 4: Add `TestAutoRebuild` test class**
-
-Verify that mutation operations trigger dashboard regeneration:
-- Create a task with an existing `dashboard.html` → file is updated
-- Update task status → `dashboard.html` reflects change
-- Verify the embedded JSON in the dashboard contains the latest data
-
-- [ ] **Step 5: Add `TestMigrateV2` test class**
-
-Test the `--upgrade` migration path:
-- `## Steps` with checkboxes → `## Objective` with stripped text
-- `# Title` heading → removed
-- Idempotent: running on v2 file produces identical output
-- `## Results` section preserved unchanged
+Build `test_task_system.py`: fixtures for flat and nested plan trees (v2 format), tests for frontmatter parsing, task CRUD, tree walking, status rollup, frontier computation, migration, dashboard generation, body section parsing (`TestParseBodySections`), auto-rebuild (`TestAutoRebuild`), and v1→v2 migration idempotency (`TestMigrateV2`). 53 tests total.
