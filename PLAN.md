@@ -287,7 +287,7 @@ Execute `--upgrade` on the existing `.plan/` tree. Verify all 7 `task.md` files 
 
 ### Task 6: SKILL.md + Inventory Updates
 **Depends on:** Task 1, Task 2, Task 4
-**Review status:**
+**Review status:** APPROVED
 **Integration status:**
 
 - [ ] **Step 1: Rewrite `SKILL.md` core concepts**
@@ -311,7 +311,7 @@ Add note: "The dashboard is automatically regenerated after every mutation comma
 
 ### Task 7: Test Suite Updates
 **Depends on:** Task 1, Task 2, Task 3, Task 4, Task 5
-**Review status:**
+**Review status:** APPROVED
 **Integration status:**
 
 **Script:** `skills/task-system/scripts/test_task_system.py`
