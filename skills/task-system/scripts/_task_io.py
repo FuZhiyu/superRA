@@ -7,6 +7,7 @@ and status rollup for the directory-tree task system.
 
 from __future__ import annotations
 
+import heapq
 import re
 import warnings
 from dataclasses import dataclass, field
@@ -328,7 +329,7 @@ def walk_plan(plan_root: Path) -> Task:
 
 
 def _topological_sort(tasks: list[Task]) -> list[Task]:
-    """Sort tasks topologically using their depends_on field (DFS-based Kahn's algorithm).
+    """Sort tasks topologically using Kahn's algorithm on depends_on edges.
 
     Tasks with no dependencies come first; dependents come after their
     dependencies. Ties are broken alphabetically by slug.
@@ -337,7 +338,6 @@ def _topological_sort(tasks: list[Task]) -> list[Task]:
     """
     slug_to_task: dict[str, Task] = {t.slug: t for t in tasks}
 
-    # Build adjacency: slug -> set of slugs it depends on (that exist in this group)
     in_degree: dict[str, int] = {t.slug: 0 for t in tasks}
     dependents: dict[str, list[str]] = {t.slug: [] for t in tasks}
 
@@ -347,8 +347,7 @@ def _topological_sort(tasks: list[Task]) -> list[Task]:
                 in_degree[task.slug] += 1
                 dependents[dep].append(task.slug)
 
-    # Kahn's algorithm with alphabetical tie-breaking
-    import heapq
+    ready: list[str] = []
     ready: list[str] = []
     for slug, deg in in_degree.items():
         if deg == 0:
