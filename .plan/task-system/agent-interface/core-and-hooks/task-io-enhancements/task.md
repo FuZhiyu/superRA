@@ -1,6 +1,6 @@
 ---
 title: "Core Library Enhancements"
-status: not-started
+status: implemented
 review_status: ~
 integration_status: ~
 depends_on:  []
@@ -39,3 +39,13 @@ Called by both the PostToolUse hook and diagnostic CLI:
 
 ## Results
 
+Added five functions to `skills/task-system/scripts/_task_io.py`:
+
+1. **`_topological_sort(tasks)`** — Kahn's algorithm with `heapq` for alphabetical tie-breaking; falls back to alphabetical order if cycles prevent full sort.
+2. **`_walk_children()`** — Replaced `sorted(subdirs)` alphabetical ordering with a call to `_topological_sort()` on the parsed child tasks so `depends_on` drives sibling ordering.
+3. **`validate_frontmatter(task)`** — Checks `status`, `review_status`, `integration_status` against their enum sets, and checks `depends_on`/`tags` are list-of-strings, and `title` is non-empty.
+4. **`validate_dependencies(task, siblings)`** — Checks each `depends_on` entry is a known sibling name.
+5. **`detect_cycles(tasks)`** — DFS-based cycle detection among a sibling group.
+6. **`validate_plan(plan_root)`** — Walks the entire plan tree, runs all three validations at each level, returns prefixed warning strings.
+
+All 53 existing tests pass.

@@ -327,18 +327,66 @@ def walk_plan(plan_root: Path) -> Task:
     return root
 
 
+def _topological_sort(tasks: list[Task]) -> list[Task]:
+    """Sort tasks topologically using their depends_on field (DFS-based Kahn's algorithm).
+
+    Tasks with no dependencies come first; dependents come after their
+    dependencies. Ties are broken alphabetically by slug.
+    If a cycle is detected or a dependency is missing, falls back to
+    alphabetical order for the affected tasks.
+    """
+    slug_to_task: dict[str, Task] = {t.slug: t for t in tasks}
+
+    # Build adjacency: slug -> set of slugs it depends on (that exist in this group)
+    in_degree: dict[str, int] = {t.slug: 0 for t in tasks}
+    dependents: dict[str, list[str]] = {t.slug: [] for t in tasks}
+
+    for task in tasks:
+        for dep in task.depends_on:
+            if dep in slug_to_task:
+                in_degree[task.slug] += 1
+                dependents[dep].append(task.slug)
+
+    # Kahn's algorithm with alphabetical tie-breaking
+    import heapq
+    ready: list[str] = []
+    for slug, deg in in_degree.items():
+        if deg == 0:
+            heapq.heappush(ready, slug)
+
+    result: list[Task] = []
+    while ready:
+        slug = heapq.heappop(ready)
+        result.append(slug_to_task[slug])
+        for dependent_slug in sorted(dependents[slug]):
+            in_degree[dependent_slug] -= 1
+            if in_degree[dependent_slug] == 0:
+                heapq.heappush(ready, dependent_slug)
+
+    # If cycle detected, append remaining tasks alphabetically
+    if len(result) < len(tasks):
+        remaining = sorted(
+            [t for t in tasks if t.slug not in {r.slug for r in result}],
+            key=lambda t: t.slug,
+        )
+        result.extend(remaining)
+
+    return result
+
+
 def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
-    """Find and parse child task directories, sorted by name."""
-    children = []
+    """Find and parse child task directories, sorted topologically by depends_on."""
     subdirs = sorted(
         [d for d in directory.iterdir() if d.is_dir() and (d / "task.md").exists()],
         key=lambda d: d.name,
     )
+    parsed: list[Task] = []
     for subdir in subdirs:
         child = parse_task(subdir / "task.md")
         child.children = _walk_children(subdir, plan_root)
-        children.append(child)
-    return children
+        parsed.append(child)
+
+    return _topological_sort(parsed)
 
 
 def resolve_path(plan_root: Path, task_path: str) -> Path:
@@ -442,3 +490,156 @@ def _collect_all(task: Task, result: list[Task]) -> None:
 
 def today_str() -> str:
     return date.today().isoformat()
+
+
+# ---------------------------------------------------------------------------
+# Validation functions
+# ---------------------------------------------------------------------------
+
+
+def validate_frontmatter(task: Task) -> list[str]:
+    """Validate frontmatter fields of a Task.
+
+    Returns a list of warning strings for any violations.
+    """
+    warnings_out: list[str] = []
+
+    if task.status not in VALID_STATUSES:
+        warnings_out.append(
+            f"invalid status {task.status!r}; expected one of {VALID_STATUSES}"
+        )
+    if task.review_status not in VALID_REVIEW_STATUSES:
+        warnings_out.append(
+            f"invalid review_status {task.review_status!r}; expected one of {VALID_REVIEW_STATUSES}"
+        )
+    if task.integration_status not in VALID_INTEGRATION_STATUSES:
+        warnings_out.append(
+            f"invalid integration_status {task.integration_status!r}; expected one of {VALID_INTEGRATION_STATUSES}"
+        )
+    if not isinstance(task.depends_on, list) or not all(
+        isinstance(v, str) for v in task.depends_on
+    ):
+        warnings_out.append("depends_on must be a list of strings")
+    if not isinstance(task.tags, list) or not all(
+        isinstance(v, str) for v in task.tags
+    ):
+        warnings_out.append("tags must be a list of strings")
+    if not task.title or not task.title.strip():
+        warnings_out.append("title must be a non-empty string")
+
+    return warnings_out
+
+
+def validate_dependencies(task: Task, siblings: list[str]) -> list[str]:
+    """Check that all depends_on entries reference existing sibling directory names.
+
+    siblings: list of sibling directory names at the same level as task.
+    Returns a list of warning strings for missing references.
+    """
+    sibling_set = set(siblings)
+    warnings_out: list[str] = []
+    for dep in task.depends_on:
+        if dep not in sibling_set:
+            warnings_out.append(
+                f"depends_on {dep!r} does not match any sibling task"
+            )
+    return warnings_out
+
+
+def detect_cycles(tasks: list[Task]) -> list[str]:
+    """Detect circular dependencies among a list of sibling Tasks using DFS.
+
+    Returns a list of cycle description strings.
+    """
+    slug_to_deps: dict[str, list[str]] = {}
+    slug_set = {t.slug for t in tasks}
+    for t in tasks:
+        # Only include deps that exist within this sibling group
+        slug_to_deps[t.slug] = [d for d in t.depends_on if d in slug_set]
+
+    warnings_out: list[str] = []
+    # DFS state: WHITE=0 (unvisited), GRAY=1 (in stack), BLACK=2 (done)
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color: dict[str, int] = {slug: WHITE for slug in slug_to_deps}
+    stack: list[str] = []
+
+    def dfs(node: str) -> bool:
+        """Return True if a cycle was found from node."""
+        color[node] = GRAY
+        stack.append(node)
+        for neighbor in slug_to_deps.get(node, []):
+            if color[neighbor] == GRAY:
+                # Found a cycle — extract the cycle portion from the stack
+                cycle_start = stack.index(neighbor)
+                cycle = stack[cycle_start:] + [neighbor]
+                warnings_out.append("cycle detected: " + " -> ".join(cycle))
+                stack.pop()
+                color[node] = BLACK
+                return True
+            if color[neighbor] == WHITE:
+                if dfs(neighbor):
+                    stack.pop()
+                    color[node] = BLACK
+                    return True
+        stack.pop()
+        color[node] = BLACK
+        return False
+
+    for slug in sorted(slug_to_deps):
+        if color[slug] == WHITE:
+            dfs(slug)
+
+    return warnings_out
+
+
+def validate_plan(plan_root: Path) -> list[str]:
+    """Walk the entire plan tree and run all validations at each level.
+
+    Returns aggregated list of warning strings, each prefixed with the task path.
+    """
+    warnings_out: list[str] = []
+
+    def _validate_level(directory: Path) -> None:
+        subdirs = [
+            d for d in directory.iterdir()
+            if d.is_dir() and (d / "task.md").exists()
+        ]
+
+        tasks_at_level: list[Task] = []
+        for subdir in subdirs:
+            try:
+                task = parse_task(subdir / "task.md")
+            except Exception as exc:
+                warnings_out.append(f"{subdir.name}: parse error: {exc}")
+                continue
+            tasks_at_level.append(task)
+
+        sibling_names = [t.slug for t in tasks_at_level]
+
+        for task in tasks_at_level:
+            prefix = task.path if task.path else task.slug
+
+            for w in validate_frontmatter(task):
+                warnings_out.append(f"{prefix}: {w}")
+
+            for w in validate_dependencies(task, sibling_names):
+                warnings_out.append(f"{prefix}: {w}")
+
+        for w in detect_cycles(tasks_at_level):
+            warnings_out.append(f"{directory.name}: {w}")
+
+        for subdir in subdirs:
+            _validate_level(subdir)
+
+    # Validate root task if present
+    root_task_md = plan_root / "task.md"
+    if root_task_md.exists():
+        try:
+            root_task = parse_task(root_task_md)
+            for w in validate_frontmatter(root_task):
+                warnings_out.append(f"(root): {w}")
+        except Exception as exc:
+            warnings_out.append(f"(root): parse error: {exc}")
+
+    _validate_level(plan_root)
+    return warnings_out
