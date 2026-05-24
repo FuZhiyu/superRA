@@ -20,8 +20,10 @@ import plan_dashboard
 import plan_migrate
 import task_add_result
 import task_create
+import task_hook
 import task_link
 import task_query
+import task_read
 import task_rename
 import task_update
 
@@ -811,3 +813,415 @@ class TestMigrateV2:
 
         modified = plan_migrate.upgrade_v1_to_v2(self.plan_root)
         assert len(modified) == 0  # nothing changed
+
+
+# --- Validation function tests ---
+
+
+class TestValidateFrontmatter:
+    def test_valid_task_no_warnings(self, plan_root):
+        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
+        warnings = _task_io.validate_frontmatter(task)
+        assert warnings == []
+
+    def test_bad_status_value(self, plan_root):
+        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        task.status = "done"  # invalid enum value
+        warnings = _task_io.validate_frontmatter(task)
+        assert any("invalid status" in w for w in warnings)
+        assert any("done" in w for w in warnings)
+
+    def test_bad_review_status_value(self, plan_root):
+        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
+        task.review_status = "complete"  # invalid
+        warnings = _task_io.validate_frontmatter(task)
+        assert any("invalid review_status" in w for w in warnings)
+
+    def test_depends_on_not_list(self, plan_root):
+        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        task.depends_on = "01-first"  # string instead of list
+        warnings = _task_io.validate_frontmatter(task)
+        assert any("depends_on" in w for w in warnings)
+
+    def test_empty_title_warning(self, plan_root):
+        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
+        task.title = ""
+        warnings = _task_io.validate_frontmatter(task)
+        assert any("title" in w for w in warnings)
+
+    def test_tags_not_list(self, plan_root):
+        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
+        task.tags = "data"  # string instead of list
+        warnings = _task_io.validate_frontmatter(task)
+        assert any("tags" in w for w in warnings)
+
+
+class TestValidateDependencies:
+    def test_valid_dep_no_warnings(self, plan_root):
+        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        warnings = _task_io.validate_dependencies(task, ["01-first", "02-second", "03-third"])
+        assert warnings == []
+
+    def test_missing_sibling_ref(self, plan_root):
+        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        # Pass siblings that don't include 01-first
+        warnings = _task_io.validate_dependencies(task, ["02-second", "03-third"])
+        assert len(warnings) == 1
+        assert "01-first" in warnings[0]
+        assert "does not match" in warnings[0]
+
+    def test_nonexistent_dep(self, plan_root):
+        task = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        task.depends_on = ["nonexistent"]
+        warnings = _task_io.validate_dependencies(task, ["01-first", "02-second"])
+        assert any("nonexistent" in w for w in warnings)
+
+    def test_no_deps_no_warnings(self, plan_root):
+        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
+        assert task.depends_on == []
+        warnings = _task_io.validate_dependencies(task, ["01-first"])
+        assert warnings == []
+
+
+class TestDetectCycles:
+    def _make_tasks(self, tmp_path, specs):
+        """Create tasks from (slug, deps) specs. Returns list of Task objects."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir(exist_ok=True)
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        for slug, deps in specs:
+            d = root_dir / slug
+            d.mkdir(exist_ok=True)
+            _write_task_md(d / "task.md", slug, "not-started", depends_on=deps)
+        tasks = []
+        for slug, _deps in specs:
+            tasks.append(_task_io.parse_task(root_dir / slug / "task.md"))
+        return tasks
+
+    def test_no_cycle(self, tmp_path):
+        tasks = self._make_tasks(tmp_path, [
+            ("01-a", []),
+            ("02-b", ["01-a"]),
+            ("03-c", ["02-b"]),
+        ])
+        warnings = _task_io.detect_cycles(tasks)
+        assert warnings == []
+
+    def test_simple_cycle(self, tmp_path):
+        tasks = self._make_tasks(tmp_path, [
+            ("01-a", ["02-b"]),
+            ("02-b", ["01-a"]),
+        ])
+        warnings = _task_io.detect_cycles(tasks)
+        assert len(warnings) >= 1
+        assert any("cycle" in w.lower() for w in warnings)
+
+    def test_three_node_cycle(self, tmp_path):
+        tasks = self._make_tasks(tmp_path, [
+            ("01-a", ["03-c"]),
+            ("02-b", ["01-a"]),
+            ("03-c", ["02-b"]),
+        ])
+        warnings = _task_io.detect_cycles(tasks)
+        assert any("cycle" in w.lower() for w in warnings)
+        # Cycle description should mention the nodes involved
+        cycle_msg = warnings[0]
+        assert "->" in cycle_msg
+
+    def test_independent_tasks_no_cycle(self, tmp_path):
+        tasks = self._make_tasks(tmp_path, [
+            ("01-a", []),
+            ("02-b", []),
+            ("03-c", []),
+        ])
+        warnings = _task_io.detect_cycles(tasks)
+        assert warnings == []
+
+
+class TestValidatePlan:
+    def test_valid_plan_no_warnings(self, plan_root):
+        warnings = _task_io.validate_plan(plan_root)
+        assert warnings == []
+
+    def test_missing_dep_produces_warning(self, plan_root):
+        # Add a task with a depends_on pointing to a nonexistent sibling
+        bad_dir = plan_root / "04-bad"
+        bad_dir.mkdir()
+        _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
+                       depends_on=["99-nonexistent"])
+        warnings = _task_io.validate_plan(plan_root)
+        assert any("nonexistent" in w for w in warnings)
+
+    def test_warnings_prefixed_with_task_path(self, plan_root):
+        bad_dir = plan_root / "04-bad"
+        bad_dir.mkdir()
+        _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
+                       depends_on=["99-nonexistent"])
+        warnings = _task_io.validate_plan(plan_root)
+        # Each warning should be prefixed with the task path
+        assert any(w.startswith("04-bad:") for w in warnings)
+
+    def test_cycle_produces_warning(self, tmp_path):
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-a"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "A", "not-started", depends_on=["02-b"])
+        d2 = root_dir / "02-b"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "B", "not-started", depends_on=["01-a"])
+        warnings = _task_io.validate_plan(root_dir)
+        assert any("cycle" in w.lower() for w in warnings)
+
+
+# --- Topological sort tests ---
+
+
+class TestTopologicalSort:
+    def _make_plan(self, tmp_path, specs):
+        """Create plan from list of (slug, title, deps) specs."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        for slug, title, deps in specs:
+            d = root_dir / slug
+            d.mkdir()
+            _write_task_md(d / "task.md", title, "not-started", depends_on=deps)
+        return root_dir
+
+    def test_dep_order_b_after_a(self, tmp_path):
+        """If B depends on A, order must be A then B (not alphabetical B before A)."""
+        root_dir = self._make_plan(tmp_path, [
+            ("02-b", "B Task", ["01-a"]),
+            ("01-a", "A Task", []),
+        ])
+        root = _task_io.walk_plan(root_dir)
+        slugs = [c.slug for c in root.children]
+        assert slugs.index("01-a") < slugs.index("02-b")
+
+    def test_independent_tasks_alphabetical(self, tmp_path):
+        """Independent tasks sorted alphabetically by slug (tiebreaker)."""
+        root_dir = self._make_plan(tmp_path, [
+            ("03-c", "C", []),
+            ("01-a", "A", []),
+            ("02-b", "B", []),
+        ])
+        root = _task_io.walk_plan(root_dir)
+        slugs = [c.slug for c in root.children]
+        assert slugs == ["01-a", "02-b", "03-c"]
+
+    def test_diamond_order(self, tmp_path):
+        """Diamond: A and B independent, C depends on both A and B. Order: A, B, C."""
+        root_dir = self._make_plan(tmp_path, [
+            ("01-a", "A", []),
+            ("02-b", "B", []),
+            ("03-c", "C", ["01-a", "02-b"]),
+        ])
+        root = _task_io.walk_plan(root_dir)
+        slugs = [c.slug for c in root.children]
+        assert slugs.index("01-a") < slugs.index("03-c")
+        assert slugs.index("02-b") < slugs.index("03-c")
+        # A and B are independent, so alphabetical tiebreaker applies
+        assert slugs.index("01-a") < slugs.index("02-b")
+
+    def test_missing_dep_falls_back_to_alphabetical(self, tmp_path):
+        """Missing dep slug: warn and fall back to alphabetical for that task."""
+        root_dir = self._make_plan(tmp_path, [
+            ("02-b", "B", ["99-missing"]),
+            ("01-a", "A", []),
+        ])
+        root = _task_io.walk_plan(root_dir)
+        slugs = [c.slug for c in root.children]
+        # Both tasks must appear; exact order may vary but no crash
+        assert "01-a" in slugs
+        assert "02-b" in slugs
+
+
+# --- task_read tests ---
+
+
+class TestTaskRead:
+    def test_leaf_with_ancestor_context(self, plan_root):
+        """read task at 02-second — output contains ancestor chain and task header."""
+        ancestors = task_read._collect_ancestors(plan_root, "02-second")
+        assert len(ancestors) == 1  # root only
+        assert ancestors[0].is_root
+
+    def test_root_task_no_ancestors(self, plan_root):
+        """Root task has no ancestors."""
+        ancestors = task_read._collect_ancestors(plan_root, "")
+        assert ancestors == []
+
+    def test_no_ancestors_flag(self, plan_root):
+        """render_human with show_ancestors=False omits the ancestor section."""
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        output = task_read.render_human(
+            ancestors=[],
+            target_task=target,
+            dep_pairs=dep_pairs,
+            show_ancestors=False,
+        )
+        assert "Ancestor Context" not in output
+        assert "Second Task" in output
+
+    def test_json_output_keys(self, plan_root):
+        """render_json returns valid JSON with ancestors, task, dependencies keys."""
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        ancestors = task_read._collect_ancestors(plan_root, target.path)
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        json_str = task_read.render_json(ancestors, target, dep_pairs)
+        data = json.loads(json_str)
+        assert "ancestors" in data
+        assert "task" in data
+        assert "dependencies" in data
+
+    def test_json_ancestors_list(self, plan_root):
+        """ancestors in JSON output is a list of dicts with path/title fields."""
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        ancestors = task_read._collect_ancestors(plan_root, target.path)
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        data = json.loads(task_read.render_json(ancestors, target, dep_pairs))
+        assert isinstance(data["ancestors"], list)
+        assert all("path" in a and "title" in a for a in data["ancestors"])
+
+    def test_sibling_dep_status_shown(self, plan_root):
+        """Sibling dependency status + title appear in human output."""
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        output = task_read.render_human([], target, dep_pairs, show_ancestors=False)
+        # 01-first is approved; its status and title should appear
+        assert "01-first" in output
+        assert "approved" in output
+
+    def test_autodetect_plan_root(self, plan_root):
+        """Auto-detect plan root from a subdirectory inside the plan."""
+        detected = task_read._autodetect_plan_root(plan_root / "01-first")
+        assert detected == plan_root
+
+    def test_autodetect_returns_none_outside_plan(self, tmp_path):
+        """Returns None when called from a directory with no task.md ancestry."""
+        detected = task_read._autodetect_plan_root(tmp_path)
+        assert detected is None
+
+    def test_no_ancestors_in_json(self, plan_root):
+        """--no-ancestors: JSON ancestors list is empty."""
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        data = json.loads(
+            task_read.render_json([], target, dep_pairs, show_ancestors=False)
+        )
+        assert data["ancestors"] == []
+
+    def test_nested_ancestor_chain(self, plan_with_branches):
+        """Two-level deep task has both root and immediate parent as ancestors."""
+        ancestors = task_read._collect_ancestors(
+            plan_with_branches, "01-data-prep/02-merge"
+        )
+        paths = [a.path for a in ancestors]
+        # root (path="") and 01-data-prep should be in ancestors
+        assert "" in paths
+        assert "01-data-prep" in paths
+
+
+# --- task_hook tests ---
+
+
+class TestTaskHook:
+    def _run_hook(self, payload: dict) -> int:
+        """Run task_hook.main() with the given payload via stdin, return exit code."""
+        import io
+        import subprocess
+        hook_path = SCRIPTS_DIR / "task_hook.py"
+        result = subprocess.run(
+            [sys.executable, str(hook_path)],
+            input=json.dumps(payload),
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode, result.stderr
+
+    def test_ignores_non_task_md(self, plan_root):
+        """Hook exits 0 immediately for non-task.md files."""
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(plan_root / "01-first" / "README.md")},
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
+
+    def test_ignores_non_edit_write_tools(self, plan_root):
+        """Hook exits 0 immediately for tools other than Edit/Write."""
+        payload = {
+            "tool_name": "Read",
+            "tool_input": {"file_path": str(plan_root / "01-first" / "task.md")},
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
+
+    def test_exits_zero_on_valid_task_md(self, plan_root):
+        """Hook exits 0 when processing a valid task.md."""
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(plan_root / "01-first" / "task.md")},
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
+
+    def test_exits_zero_on_validation_failure(self, plan_root):
+        """Hook exits 0 even when validation fails (non-blocking)."""
+        # Create a task with a bad dep so validation produces warnings
+        bad_dir = plan_root / "04-bad"
+        bad_dir.mkdir()
+        _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
+                       depends_on=["99-nonexistent"])
+        payload = {
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(bad_dir / "task.md")},
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
+
+    def test_outputs_warnings_to_stderr(self, plan_root):
+        """Hook emits validation warnings to stderr for the agent to see."""
+        bad_dir = plan_root / "04-bad"
+        bad_dir.mkdir()
+        _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
+                       depends_on=["99-nonexistent"])
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(bad_dir / "task.md")},
+        }
+        code, stderr = self._run_hook(payload)
+        assert code == 0
+        assert "WARNING" in stderr or "warning" in stderr.lower()
+
+    def test_empty_stdin_exits_zero(self):
+        """Hook exits 0 on empty or invalid stdin (resilient to harness edge cases)."""
+        import subprocess
+        hook_path = SCRIPTS_DIR / "task_hook.py"
+        result = subprocess.run(
+            [sys.executable, str(hook_path)],
+            input="",
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
+
+    def test_file_not_in_plan_directory_exits_zero(self, tmp_path):
+        """Hook exits 0 for task.md files not inside a .plan/ directory."""
+        # Create a task.md somewhere outside of .plan/
+        other_task = tmp_path / "task.md"
+        other_task.write_text("## Objective\n\nSome task.\n")
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(other_task)},
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
