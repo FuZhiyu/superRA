@@ -69,7 +69,7 @@ Ask the user before resolving — with intent and consequences, not raw diff chu
 - task structure in `PLAN.md` would change (routed through `planning-workflow §User Feedback and Changing Plans`),
 - drift-test or result-level expectations would move because outputs meaningfully changed.
 
-Log every answer per `handoff-doc` §User Decisions Log before committing the resolution. When `PLAN.md` is absent, record the decision in the standalone merge record and the sync commit body.
+Log every answer per `task-system/references/planning.md` §User Decisions Log before committing the resolution. When `PLAN.md` is absent, record the decision in the standalone merge record and the sync commit body.
 
 ### 5. Resolve and land
 
@@ -115,7 +115,7 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 
 **Intent integrity:**
 
-- `[BLOCKING]` Intent-changing choices were escalated, logged per `handoff-doc §User Decisions Log`, and implemented as stated.
+- `[BLOCKING]` Intent-changing choices were escalated, logged per `task-system/references/planning.md` §User Decisions Log, and implemented as stated.
 - `[BLOCKING]` Data-discipline artifacts and drift tests were preserved.
 - `[BLOCKING]` Meaningful result changes were not silently accepted or re-expected.
 
@@ -124,7 +124,7 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 - `[BLOCKING]` PLAN.md and RESULTS.md remain coherent after the sync when present.
 - `[BLOCKING]` Task-structure changes were routed through `planning-workflow §User Feedback and Changing Plans` before adaptation proceeded.
 - `[BLOCKING]` Affected task blocks have task-local `**Sync impact:**` annotations when workflow Sync leaves task-specific context needed to understand the post-sync diff.
-- `[ADVISORY]` Routine handoff-doc conflict resolutions are summarized in the Sync Map.
+- `[ADVISORY]` Routine task-file conflict resolutions are summarized in the Sync Map.
 
 **Verification:**
 

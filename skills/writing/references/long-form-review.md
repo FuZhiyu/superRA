@@ -23,7 +23,7 @@ The PLAN.md header must carry the writing planning rows from `planning.md`, incl
 **RESULTS.md:** intentionally absent; review findings live in PLAN.md review notes
 ```
 
-Task blocks follow `handoff-doc`'s standard task-block anatomy, with one task per review lane or deep-review perspective. Each task names the target file/section and the lane reference to load.
+Task blocks follow the standard task-block anatomy (see `task-system/references/planning.md`), with one task per review lane or deep-review perspective. Each task names the target file/section and the lane reference to load.
 
 ## Task Granularity
 

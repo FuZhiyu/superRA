@@ -33,7 +33,7 @@ Default mode dispatches a fresh subagent per task. Each task gets one comprehens
 
 ### Step 0: Branch Check
 
-Before any handoff-doc check, dispatch, or commit, check if on a default branch:
+Before any plan-file check, dispatch, or commit, check if on a default branch:
 
 ```bash
 git branch --show-current
@@ -72,7 +72,7 @@ If the docs exist, are tracked, and the worktree is clean, proceed to Step 1.
 1. Read `PLAN.md` and `RESULTS.md`.
 2. **Resolve entry.** If the main agent has not already done so, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver. Continue here only when the resolver selects implementation, review, reproducibility verification, or the Step 4 completion disposition; otherwise follow the resolver's selected owner. If all selected tasks are already `APPROVED`, skip task dispatch and start at Step 3 / Step 4 so approved work is verified and disposition-logged before integration.
 3. **Load the active domain skill(s) following the manifest.** Also load any task-specific helper skills named in PLAN.md's header.
-4. **Read PLAN.md's `## Project Conventions` section** (anatomy: `handoff-doc/references/plan-anatomy.md` §Project Conventions). If the section is missing, empty, or stale, walk and populate it now — commit before dispatching subagents.
+4. **Read PLAN.md's `## Project Conventions` section** (anatomy: `task-system/references/planning.md` §Conventions Section). If the section is missing, empty, or stale, walk and populate it now — commit before dispatching subagents.
 5. Review PLAN.md critically — identify any questions or concerns:
    - Are data sources / inputs available and accessible?
    - Are the steps in the right order?
@@ -130,7 +130,7 @@ After every task is APPROVED, verify the work end-to-end before presenting compl
 
 If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
 
-**Once all five checks pass:** check the `Execution complete` box in `PLAN.md` §Workflow Status (see `superRA:handoff-doc` references/plan-anatomy.md) and commit the box-flip before presenting the Step 4 completion menu.
+**Once all five checks pass:** check the `Execution complete` box in `PLAN.md` §Workflow Status and commit the box-flip before presenting the Step 4 completion menu.
 
 ### Step 4: Present Completion Options
 
@@ -149,7 +149,7 @@ What would you like to do?
 4. Discard this work
 ```
 
-Log the researcher's answer per `handoff-doc` §User Decisions Log — top-level `## Decisions` section, before executing the choice, included in the first commit of whatever workflow the option dispatches to.
+Log the researcher's answer per `task-system/references/planning.md` §User Decisions Log — top-level `## Decisions` section, before executing the choice, included in the first commit of whatever workflow the option dispatches to.
 
 **Execute the user's choice:**
 
@@ -172,7 +172,7 @@ The autonomy contract is in `superRA:using-superra/references/main-agent.md` (ma
 - **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
 - **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `planning-workflow §User Feedback and Changing Plans`; after the plan edit commit, run the Workflow Frontier Resolver. Pause class (2) in the autonomy contract.
 
-Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log per `handoff-doc` §User Decisions Log **before** acting on it.
+Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log per `task-system/references/planning.md` §User Decisions Log **before** acting on it.
 
 ## Agent Loads
 

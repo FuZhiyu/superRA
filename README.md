@@ -78,7 +78,6 @@ Utility skills are domain-neutral tools callable by workflow skills, agents, or 
 
 | Skill | What + when to use |
 |-------|--------------------|
-| **handoff-doc** | Teaches agents how to create a handoff document. Editing discipline for `PLAN.md` / `RESULTS.md` — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, full task-block anatomy templates. Use when creating a handoff doc from scratch, maturing `RESULTS.md` into its permanent form, or when the compact etiquette baked into the agent files is not enough. |
 | **report-in-markdown** | Markdown style guide for any agent writing markdown, with on-demand references for figures, LaTeX math, and tables. |
 | **result-protection** | Tools for protecting key research results from unintended changes. Drift/regression tests are the current/default mechanism. Use during Protect or whenever key-result expectations need guarded review. |
 | **refactor-and-integrate** | Tools for **codebase coherence** — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host, and supplied Sync impact as justification evidence. Shared by implementer and reviewer. Use during Integrate, or standalone for any refactor that needs consistent quality gates. |

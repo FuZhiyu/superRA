@@ -24,7 +24,7 @@ In direct mode there is no dispatch prompt. Review scope comes from the task blo
 3. **Read `PLAN.md`'s `## Project Conventions` section** as the review standard for codebase-fit findings — code that ignores a documented convention is a MAJOR integration-review finding. If the section is missing, empty, stale, or does not cover a convention you need, walk on-demand starting from every touched directory and flag the omission in your status return.
 4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
-The handoff-doc editing discipline you will need when writing the review blockquote lives in §Handoff below; read it when you are ready to update `PLAN.md`.
+The editing discipline you will need when writing the review blockquote lives in §Handoff below; read it when you are ready to update `PLAN.md`.
 
 ## Review Protocol
 
@@ -86,7 +86,7 @@ When the review assigns a PLAN.md task block, write feedback in that block's **r
 
 ### Editing Etiquette
 
-Compact etiquette below; full discipline in `superRA:handoff-doc`. Load it on demand if anything below is unclear.
+Compact etiquette below; full discipline in `task-system/references/planning.md`. Load `superRA:task-system` on demand if anything below is unclear.
 
 **The handoff doc always reflects the latest state, not a log.** The doc itself is for the current intended implementation and current findings only.
 
@@ -111,7 +111,7 @@ If the doc's structure is unclear, flag it in your status return rather than inv
 
 - Any step, step code, or task objective — even if you believe it is wrong. Raise the issue as a review item in your blockquote and let the orchestrator decide whether to rewrite the step.
 - Any other task's content.
-- **The PLAN.md header**, including the `## Workflow Status` checklist and the `## Decisions` log. These are orchestrator-owned (see `superRA:handoff-doc` references/plan-anatomy.md §Header ownership). If your review surfaces a project-level concern that belongs in those sections, raise it in your status report; do not edit the header yourself.
+- **The PLAN.md header**, including the `## Workflow Status` checklist and the `## Decisions` log. These are orchestrator-owned (see `task-system/references/planning.md` §Root task.md Anatomy). If your review surfaces a project-level concern that belongs in those sections, raise it in your status report; do not edit the header yourself.
 - **Rewrite** the prose of an implementer's `→ implemented: ...` annotation or an orchestrator's `→ orchestrator: ...` annotation. You read them. You are allowed to **delete an entire item** (including its annotations) when the fix is verified on re-review — that is a delete, not a rewrite.
 
 ### How You Write a Review

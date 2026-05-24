@@ -51,7 +51,7 @@ Before defining tasks, map out the artifact pipeline:
 - What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 
-**Walk the project guidance docs and cache them in PLAN.md.** Before drafting tasks, walk up from every directory the plan will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the plan will load from. Populate the `## Project Conventions` section of `PLAN.md` with one-paragraph summaries per doc, stamped with the walk date (see `handoff-doc/references/plan-anatomy.md` §Project Conventions for the anatomy).
+**Walk the project guidance docs and cache them in PLAN.md.** Before drafting tasks, walk up from every directory the plan will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the plan will load from. Populate the `## Project Conventions` section of `PLAN.md` with one-paragraph summaries per doc, stamped with the walk date (see `task-system/references/planning.md` §Conventions Section for the discipline).
 
 **Pipeline file (required for multi-artifact work):**
 
@@ -79,7 +79,7 @@ For other verticals, the operational cycle looks different (e.g., derivation →
 
 ### Task Dependencies
 
-Each task block declares a `**Depends on:**` line (upstream task numbers, or `*(none)*`). See `superRA:handoff-doc` `references/plan-anatomy.md` §Task Block Anatomy for the required format. Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
+Each task block declares a `**Depends on:**` line (upstream task numbers, or `*(none)*`). See `task-system/references/planning.md` §Field-by-Field Notes for the format. Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
 
 **A task depends on another when it:**
 - reads the other task's output files;
@@ -90,7 +90,7 @@ Each task block declares a `**Depends on:**` line (upstream task numbers, or `*(
 
 ### Plan Document Header and Task Structure
 
-For the canonical `PLAN.md` template — required header (objective, methodology, domain-specific sections, output, expected results, pipeline) plus task block structure with the domain's step cycle and a worked example — load `superRA:handoff-doc` and read `references/plan-anatomy.md`. Domain-specific header sections (e.g., Data Inventory for data analysis, or Model Inventory / Assumption Map for theory/modeling) come from the domain skill's planning reference.
+For the canonical task structure — root task.md anatomy, per-task anatomy, and field-by-field notes — see `task-system/references/planning.md`. Domain-specific root sections (e.g., Data Inventory for data analysis, or Model Inventory / Assumption Map for theory/modeling) come from the domain skill's planning reference.
 
 Required header fields and task block structure are non-negotiable. The template's example code is illustrative — adapt the content to your domain and methodology, but preserve the step-cycle rhythm the domain prescribes.
 
@@ -100,9 +100,9 @@ Required header fields and task block structure are non-negotiable. The template
 
 Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a step's method adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits per the discipline below; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §User Feedback and Changing Plans below, which defines the confirm → log → inline-edit → roll-back-milestones → sweep-for-stale-content → atomic-commit protocol.
 
-**Editing discipline and anatomy templates** live in `superRA:handoff-doc` (load it when authoring `PLAN.md` / `RESULTS.md` from scratch). Role ownership and review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
+**Editing discipline** lives in `agents/implementer.md` §Editing Etiquette and `agents/reviewer.md` §Editing Etiquette. Task anatomy and results format live in `task-system/references/planning.md`.
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the stub anatomy in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Document it matures into a permanent record. Follow the active domain planning reference when it declares a different durable record.
+**Results:** Each task's `## Results` section is the live findings record. See `task-system/references/planning.md` §Results Shape for the template and two-stage lifecycle. At `integration-workflow` Document, results mature into a permanent record. Follow the active domain planning reference when it declares a different durable record.
 
 ### PLAN.md Is the Task Tracker
 
@@ -145,17 +145,17 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 **Protocol:**
 
 1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change. 
-2. **Log the decision** per `handoff-doc` §User Decisions Log — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes. The log entry must declare which tasks are affected and which project-level boxes are unchecked.
+2. **Log the decision** per `task-system/references/planning.md` §User Decisions Log — top-level `## Decisions` for cross-task changes, task-scoped blockquote for single-task changes. The log entry must declare which tasks are affected and which project-level boxes are unchecked.
 3. **Update `PLAN.md` inline:**
    - **Prefer modifying existing task blocks over appending.** Walk the task list and identify every task whose objective or output is affected by the change. Update each in place to reflect the new scope.
-   - **New task** → Only when the change is genuinely independent of every existing task's scope, append `### Task N+1: [name]` with the full anatomy from `handoff-doc/references/plan-anatomy.md`. Renumber later tasks if inserting earlier in the sequence.
+   - **New task** → Only when the change is genuinely independent of every existing task's scope, append `### Task N+1: [name]` with the full task anatomy (see `task-system/references/planning.md`). Renumber later tasks if inserting earlier in the sequence.
    - **Modified task** → rewrite the affected fields in place. Do not strike through. Do not add "Modified:" annotations.
    - **Removed task** → delete the block entirely. The Decisions entry preserves the rationale.
    - **Reordered tasks** → renumber and rewrite. The decision log preserves the original sequence.
-   - **Header fields.** After the task-block edits above, rewrite any line in the PLAN.md header (anatomy in `handoff-doc/references/plan-anatomy.md §Header`) that no longer matches the new plan. The header and task blocks must describe the same analysis after the edit.
+   - **Header fields.** After the task-block edits above, rewrite any line in the root task.md that no longer matches the new plan. The root and task blocks must describe the same analysis after the edit.
 
 4. **Update statuses** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* task-local statuses and rollup boxes are invalidated and *why*. Rules: clear per-task `**Review status:**` and `**Integration status:**` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `APPROVED` tasks. Minor-edited tasks with code unchanged may clear `**Integration status:**` while keeping `**Review status:** APPROVED`. Uncheck project-level `## Workflow Status` boxes whose rollup guarantee is no longer true; unchecking a rollup does not imply clearing every contributing task status.
-5. **Sweep PLAN.md for stale content** per `handoff-doc` §Stale Content Checklist. Earlier task blocks whose output has been superseded by a later task, cross-references to removed sections, review notes resolved by subsequent work — fix in place now, not later.
+5. **Sweep for stale content** per `task-system/references/planning.md` §Stale Content Checklist. Earlier task blocks whose output has been superseded by a later task, cross-references to removed sections, review notes resolved by subsequent work — fix in place now, not later.
 6. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
 7. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point. On every re-entry through `integration-workflow`, the **full** drift-test suite runs regardless of which tasks changed; only *authoring* new drift tests is scoped to the affected tasks.
 

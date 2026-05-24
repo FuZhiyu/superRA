@@ -38,7 +38,6 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 
 | Skill | What it provides |
 |---|---|
-| `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Document doc-writer). Usable standalone by a single author with no subagents. |
 | `result-protection` | Tools for protecting key research results from unintended changes; drift/regression tests are the current/default mechanism. Loaded by Protect / `Stage: protection` agents. |
 | `refactor-and-integrate` | Tools for **codebase coherence** — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host, and supplied Sync impact as justification evidence. Loaded by integration-phase agents. |
 | `report-in-markdown` | Markdown style guide for any agent writing markdown, with progressive-reveal references for figures, LaTeX math, and tables. |
@@ -50,7 +49,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 
 | Skill | Purpose |
 |---|---|
-| `using-superra` | Master skill every agent reads. Carries the distilled universal principles, code-change defaults, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Main-agent loads (cross-session detection, autonomy contract, handoff-doc default) live in `references/main-agent.md`. |
+| `using-superra` | Master skill every agent reads. Carries the distilled universal principles, code-change defaults, the Workflow / Domain / Utility / Meta skill inventory, the composable-design map, the Skill-Load Manifest (Stage → required skills + stage-scoped references), and the Execution Modes (subagent dispatch vs direct). Main-agent loads (cross-session detection, autonomy contract) live in `references/main-agent.md`. |
 
 ## Adding a Skill
 

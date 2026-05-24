@@ -63,7 +63,7 @@ The comment captures *what the paragraph is trying to do for the reader* — the
 
 ## Triage
 
-In shapes A and B, every diagnosed issue is implicitly tiered per `review.md §Fix tiers`. Apply `mechanical` and `conventional` tier issues as minimal edits in place. **Surface `authorial`-tier issues** to the author — chat reply for standalone polish; the existing handoff-doc convention (`superRA:handoff-doc`) when polish rides a workflow. Not silently fixing is a recognized outcome, not under-editing. The §Edit-vs-propose-vs-ask matrix already routes meaning-changing edits to **Ask**; triage names the surface path for issues that diagnose cleanly but need author input on the right answer — canonically a claim-evidence gap, also a topic-sentence rewrite that would move the paragraph's sequence.
+In shapes A and B, every diagnosed issue is implicitly tiered per `review.md §Fix tiers`. Apply `mechanical` and `conventional` tier issues as minimal edits in place. **Surface `authorial`-tier issues** to the author — chat reply for standalone polish; the task-system editing convention when polish rides a workflow. Not silently fixing is a recognized outcome, not under-editing. The §Edit-vs-propose-vs-ask matrix already routes meaning-changing edits to **Ask**; triage names the surface path for issues that diagnose cleanly but need author input on the right answer — canonically a claim-evidence gap, also a topic-sentence rewrite that would move the paragraph's sequence.
 
 In shape C, the findings list arrives pre-tiered; apply per the shape-C tier rules above.
 
