@@ -62,10 +62,17 @@ def add_result(
 
         findings_end = pos
         lines = body[pos:].split("\n")
+        last_bullet = pos  # track the position just after the last `- ` line
         for i, line in enumerate(lines):
-            if line.startswith("##") or line.startswith("### "):
+            if line.startswith("## ") or line.startswith("### "):
                 break
-            findings_end = pos + sum(len(l) + 1 for l in lines[: i + 1])
+            line_end = pos + sum(len(l) + 1 for l in lines[: i + 1])
+            if line.startswith("- "):
+                last_bullet = line_end
+            elif line.strip() == "" and last_bullet > pos:
+                # blank line after bullet list — stop here
+                break
+        findings_end = last_bullet
 
         body = body[:findings_end] + f"- {finding}\n" + body[findings_end:]
 

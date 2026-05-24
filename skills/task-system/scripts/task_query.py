@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -86,6 +87,11 @@ def print_frontier(frontier: list[Task], as_json: bool = False) -> None:
         print(f"  {icon} {task.path}: {task.title}{deps}")
 
 
+def _sanitize_mermaid_id(slug: str) -> str:
+    """Replace non-alphanumeric characters (except hyphens) with underscores."""
+    return re.sub(r"[^a-zA-Z0-9_-]", "_", slug)
+
+
 def render_dag(task: Task, subtree_path: str = "") -> str:
     """Render a Mermaid DAG of sibling dependencies within a subtree."""
     if subtree_path:
@@ -97,7 +103,7 @@ def render_dag(task: Task, subtree_path: str = "") -> str:
         target = task
 
     if not target.children:
-        return "graph LR\n    (no children)"
+        return "graph LR\n    %% no children"
 
     status_colors = {
         "not-started": ":::notstarted",
@@ -111,13 +117,15 @@ def render_dag(task: Task, subtree_path: str = "") -> str:
     for child in target.children:
         effective = child.effective_status()
         style = status_colors.get(effective, "")
-        node_id = child.slug
+        node_id = _sanitize_mermaid_id(child.slug)
         label = child.title or child.slug
         lines.append(f'    {node_id}["{label}"]{style}')
 
     for child in target.children:
+        child_id = _sanitize_mermaid_id(child.slug)
         for dep in child.depends_on:
-            lines.append(f"    {dep} --> {child.slug}")
+            dep_id = _sanitize_mermaid_id(dep)
+            lines.append(f"    {dep_id} --> {child_id}")
 
     lines.append("")
     lines.append("    classDef notstarted fill:#e0e0e0,stroke:#999,color:#333")

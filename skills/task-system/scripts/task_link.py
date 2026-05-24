@@ -20,6 +20,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _has_transitive_dep(parent_dir: Path, from_slug: str, to_slug: str) -> bool:
+    """Check if *from_slug* transitively depends on *to_slug* via depends_on chains.
+
+    Returns True when adding ``to_slug -> from_slug`` would create a cycle
+    (i.e. *to_slug* already reaches *from_slug*).
+    """
+    visited: set[str] = set()
+    stack = [from_slug]
+    while stack:
+        current = stack.pop()
+        if current in visited:
+            continue
+        visited.add(current)
+        task_md = parent_dir / current / "task.md"
+        if not task_md.exists():
+            continue
+        task = parse_task(task_md)
+        for dep in task.depends_on:
+            if dep == to_slug:
+                return True
+            stack.append(dep)
+    return False
+
+
 def link_task(
     plan_root: Path,
     task_path: str,
@@ -51,6 +75,16 @@ def link_task(
         if depends_on in task.depends_on:
             print(f"Already depends on {depends_on}")
             return
+
+        source_slug = (plan_root / task_path).name
+        if _has_transitive_dep(parent_dir, depends_on, source_slug):
+            print(
+                f"Error: adding {depends_on} as dependency of {task_path} "
+                f"would create a cycle ({depends_on} already depends on {source_slug})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
         task.depends_on.append(depends_on)
         task.updated = today_str()
         write_task(task)

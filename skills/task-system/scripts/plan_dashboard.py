@@ -144,16 +144,27 @@ const TASK_DATA = __TASK_DATA_JSON__;
 const md = window.markdownit({ html: true, linkify: true });
 let currentView = 'tree';
 let selectedPath = '';
+const taskByPath = {};
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function sanitizeMermaid(s) { return s.replace(/"/g, "'").replace(/[\\[\\](){}]/g, ''); }
+
+function buildIndex(task) { taskByPath[task.path] = task; for (const c of task.children) buildIndex(c); }
 
 function init() {
   document.documentElement.setAttribute('data-theme',
     localStorage.getItem('dashboard-theme') || 'light');
   mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+  buildIndex(TASK_DATA);
   renderSummary();
   renderTree();
   renderKanban();
-  if (TASK_DATA.children.length > 0) selectTask(TASK_DATA);
-  else selectTask(TASK_DATA);
+  selectTask(TASK_DATA);
 }
 
 function toggleTheme() {
@@ -272,16 +283,16 @@ function selectTask(task) {
   const status = task.effective_status;
 
   let metaHtml = '';
-  if (task.path) metaHtml += `<span>Path: <code>${task.path}</code></span>`;
-  metaHtml += `<span>Status: <span class="status-badge status-${status}">${status}</span></span>`;
+  if (task.path) metaHtml += `<span>Path: <code>${escapeHtml(task.path)}</code></span>`;
+  metaHtml += `<span>Status: <span class="status-badge status-${escapeHtml(status)}">${escapeHtml(status)}</span></span>`;
   if (task.review_status && task.review_status !== '~')
-    metaHtml += `<span>Review: ${task.review_status}</span>`;
+    metaHtml += `<span>Review: ${escapeHtml(task.review_status)}</span>`;
   if (task.integration_status && task.integration_status !== '~')
-    metaHtml += `<span>Integration: ${task.integration_status}</span>`;
+    metaHtml += `<span>Integration: ${escapeHtml(task.integration_status)}</span>`;
   if (task.depends_on.length)
-    metaHtml += `<span>Depends on: ${task.depends_on.join(', ')}</span>`;
-  if (task.script) metaHtml += `<span>Script: <code>${task.script}</code></span>`;
-  if (task.tags.length) metaHtml += `<span>Tags: ${task.tags.join(', ')}</span>`;
+    metaHtml += `<span>Depends on: ${task.depends_on.map(d => escapeHtml(d)).join(', ')}</span>`;
+  if (task.script) metaHtml += `<span>Script: <code>${escapeHtml(task.script)}</code></span>`;
+  if (task.tags.length) metaHtml += `<span>Tags: ${task.tags.map(t => escapeHtml(t)).join(', ')}</span>`;
 
   const bodyHtml = md.render(task.body || '');
 
@@ -300,7 +311,7 @@ function selectTask(task) {
       `<div class="section-body">${rendered}</div></details>`;
   }
 
-  detail.innerHTML = `<h1>${task.title || task.path || 'Root'}</h1>` +
+  detail.innerHTML = `<h1>${escapeHtml(task.title || task.path || 'Root')}</h1>` +
     `<div class="meta">${metaHtml}</div>` +
     (sectionsHtml || `<div class="section-body">${bodyHtml}</div>`);
 }
@@ -338,7 +349,7 @@ function renderKanban() {
     for (const task of tasks) {
       const card = document.createElement('div');
       card.className = 'kanban-card';
-      card.innerHTML = `<div>${task.title || task.path}</div><div class="card-path">${task.path}</div>`;
+      card.innerHTML = `<div>${escapeHtml(task.title || task.path)}</div><div class="card-path">${escapeHtml(task.path)}</div>`;
       card.onclick = () => { showView('tree'); selectTask(task); };
       col.appendChild(card);
     }
@@ -348,7 +359,7 @@ function renderKanban() {
 
 async function renderDag() {
   const container = document.getElementById('view-dag');
-  const target = selectedPath ? findTask(TASK_DATA, selectedPath) : TASK_DATA;
+  const target = selectedPath ? taskByPath[selectedPath] : TASK_DATA;
   const task = target || TASK_DATA;
 
   if (!task.children.length) {
@@ -365,7 +376,7 @@ async function renderDag() {
   for (const child of task.children) {
     const s = child.effective_status;
     const color = statusColors[s] || '#e0e0e0';
-    mermaidCode += `    ${child.path.split('/').pop()}["${child.title || child.path}"]\\n`;
+    mermaidCode += `    ${child.path.split('/').pop()}["${sanitizeMermaid(child.title || child.path)}"]\\n`;
     mermaidCode += `    style ${child.path.split('/').pop()} fill:${color}\\n`;
   }
   for (const child of task.children) {
@@ -375,10 +386,10 @@ async function renderDag() {
   }
 
   container.innerHTML = `<div class="dag-controls">` +
-    `<strong>DAG for:</strong> ${task.title || task.path || 'root'}</div>` +
+    `<strong>DAG for:</strong> ${escapeHtml(task.title || task.path || 'root')}</div>` +
     `<div class="mermaid">${mermaidCode}</div>`;
 
-  try { await mermaid.run({ nodes: container.querySelectorAll('.mermaid') }); } catch(e) {}
+  try { await mermaid.run({ nodes: container.querySelectorAll('.mermaid') }); } catch(e) { container.innerHTML += '<p style="color:var(--status-revise-text)">DAG error: ' + escapeHtml(e.message) + '</p>'; }
 }
 
 function findTask(task, path) {
@@ -390,17 +401,29 @@ function findTask(task, path) {
   return null;
 }
 
+function taskMatches(task, status, search) {
+  if (status && task.effective_status !== status) return false;
+  if (search && !(task.title || '').toLowerCase().includes(search) &&
+      !(task.path || '').toLowerCase().includes(search)) return false;
+  return true;
+}
+
+function anyDescendantMatches(task, status, search) {
+  if (taskMatches(task, status, search)) return true;
+  for (const c of task.children) {
+    if (anyDescendantMatches(c, status, search)) return true;
+  }
+  return false;
+}
+
 function applyFilters() {
   const status = document.getElementById('filter-status').value;
   const search = document.getElementById('search-box').value.toLowerCase();
   document.querySelectorAll('.tree-item').forEach(el => {
     const path = el.dataset.path || '';
-    const task = findTask(TASK_DATA, path);
+    const task = taskByPath[path];
     if (!task) return;
-    let visible = true;
-    if (status && task.effective_status !== status) visible = false;
-    if (search && !(task.title || '').toLowerCase().includes(search) &&
-        !path.toLowerCase().includes(search)) visible = false;
+    const visible = anyDescendantMatches(task, status, search);
     el.style.display = visible ? '' : 'none';
   });
 }
@@ -427,6 +450,7 @@ def generate_dashboard(plan_root: Path, output_path: Path | None = None) -> Path
         output_path = plan_root / "dashboard.html"
 
     data_json = json.dumps(data, indent=2)
+    data_json = data_json.replace("<", "\\u003c").replace(">", "\\u003e")
     html = DASHBOARD_HTML.replace("__TASK_DATA_JSON__", data_json)
 
     output_path.write_text(html, encoding="utf-8")

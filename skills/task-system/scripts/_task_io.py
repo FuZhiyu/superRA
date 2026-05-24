@@ -8,10 +8,10 @@ and status rollup for the directory-tree task system.
 from __future__ import annotations
 
 import re
+import warnings
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Optional
 
 
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---\n(.*)", re.DOTALL)
@@ -19,8 +19,6 @@ FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---\n(.*)", re.DOTALL)
 VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved")
 VALID_REVIEW_STATUSES = ("~", "implemented", "revise", "approved")
 VALID_INTEGRATION_STATUSES = ("~", "implemented", "revise", "approved")
-
-STATUS_RANK = {s: i for i, s in enumerate(VALID_STATUSES)}
 
 
 @dataclass
@@ -70,8 +68,8 @@ def _parse_yaml_value(raw: str) -> str | list[str]:
     if not raw or raw == "~":
         return raw
 
-    if raw.startswith("["):
-        inner = raw.strip("[]")
+    if raw.startswith("[") and raw.endswith("]"):
+        inner = raw[1:-1]
         if not inner.strip():
             return []
         return [v.strip().strip("\"'") for v in inner.split(",")]
@@ -132,6 +130,14 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
     return fm, body
 
 
+def _quote_yaml_scalar(key: str, value: str) -> str:
+    """Quote a YAML scalar value if needed for safe serialization."""
+    if key == "title":
+        escaped = value.replace('"', '\\"')
+        return f'"{escaped}"'
+    return value
+
+
 def serialize_frontmatter(fm: dict[str, str | list[str]]) -> str:
     """Serialize a frontmatter dict back to YAML text (without --- delimiters)."""
     lines = []
@@ -141,13 +147,9 @@ def serialize_frontmatter(fm: dict[str, str | list[str]]) -> str:
         "created", "updated",
     ]
 
-    for key in field_order:
-        if key not in fm:
-            continue
-        value = fm[key]
+    def _serialize_field(key: str, value: str | list[str]) -> None:
         if isinstance(value, list):
             if not value:
-                fm_key = key.replace("_", "_")
                 lines.append(f"{key}: []")
             elif len(value) == 1:
                 lines.append(f"{key}:")
@@ -157,19 +159,16 @@ def serialize_frontmatter(fm: dict[str, str | list[str]]) -> str:
                 for item in value:
                     lines.append(f"  - {item}")
         else:
-            lines.append(f"{key}: {value}")
+            lines.append(f"{key}: {_quote_yaml_scalar(key, value)}")
+
+    for key in field_order:
+        if key not in fm:
+            continue
+        _serialize_field(key, fm[key])
 
     for key, value in fm.items():
         if key not in field_order:
-            if isinstance(value, list):
-                if not value:
-                    lines.append(f"{key}: []")
-                else:
-                    lines.append(f"{key}:")
-                    for item in value:
-                        lines.append(f"  - {item}")
-            else:
-                lines.append(f"{key}: {value}")
+            _serialize_field(key, value)
 
     return "\n".join(lines) + "\n"
 
@@ -199,6 +198,22 @@ def parse_task(task_md_path: Path) -> Task:
     review_status = str(fm.get("review_status", "~"))
     integration_status = str(fm.get("integration_status", "~"))
 
+    if status not in VALID_STATUSES:
+        raise ValueError(
+            f"Invalid status {status!r} in {task_md_path}. "
+            f"Valid values: {VALID_STATUSES}"
+        )
+    if review_status not in VALID_REVIEW_STATUSES:
+        raise ValueError(
+            f"Invalid review_status {review_status!r} in {task_md_path}. "
+            f"Valid values: {VALID_REVIEW_STATUSES}"
+        )
+    if integration_status not in VALID_INTEGRATION_STATUSES:
+        raise ValueError(
+            f"Invalid integration_status {integration_status!r} in {task_md_path}. "
+            f"Valid values: {VALID_INTEGRATION_STATUSES}"
+        )
+
     return Task(
         path=path,
         dir_path=task_md_path.parent,
@@ -221,7 +236,7 @@ def write_task(task: Task) -> None:
     """Write a Task back to its task.md file, preserving body content."""
     fm: dict[str, str | list[str]] = {}
     if task.title:
-        fm["title"] = f'"{task.title}"'
+        fm["title"] = task.title
     fm["status"] = task.status
     fm["review_status"] = task.review_status
     fm["integration_status"] = task.integration_status
@@ -251,7 +266,7 @@ def write_task(task: Task) -> None:
     task_md.write_text(content, encoding="utf-8")
 
 
-def _find_plan_root(task_dir: Path) -> Optional[Path]:
+def _find_plan_root(task_dir: Path) -> Path | None:
     """Walk up from a task directory to find the plan root.
 
     The plan root is the directory that contains the top-level task.md
@@ -298,10 +313,19 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
 
 
 def resolve_path(plan_root: Path, task_path: str) -> Path:
-    """Resolve a task ID (relative path) to its directory on disk."""
+    """Resolve a task ID (relative path) to its directory on disk.
+
+    Raises ValueError if the resolved path escapes the plan root.
+    """
     if not task_path:
         return plan_root
-    return plan_root / task_path
+    resolved = (plan_root / task_path).resolve()
+    root_resolved = plan_root.resolve()
+    if not resolved.is_relative_to(root_resolved):
+        raise ValueError(
+            f"Task path {task_path!r} escapes plan root {plan_root}"
+        )
+    return resolved
 
 
 def compute_status(task: Task) -> str:
@@ -358,7 +382,15 @@ def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -
         deps_met = True
         for dep in child.depends_on:
             dep_task = sibling_map.get(dep)
-            if dep_task is None or dep_task.effective_status() != "approved":
+            if dep_task is None:
+                warnings.warn(
+                    f"Task {child.path!r} depends on {dep!r} which does not "
+                    f"match any sibling task",
+                    stacklevel=2,
+                )
+                deps_met = False
+                break
+            if dep_task.effective_status() != "approved":
                 deps_met = False
                 break
 

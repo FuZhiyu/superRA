@@ -85,8 +85,9 @@ def create_task(
     if output_files:
         output_line = "output:\n" + "".join(f"  - {f}\n" for f in output_files)
 
+    safe_title = title.replace('"', '\\"')
     content = TASK_TEMPLATE.format(
-        title=title,
+        title=safe_title,
         description=description,
         depends_on=deps_yaml,
         script_line=script_line,

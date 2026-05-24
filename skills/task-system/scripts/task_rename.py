@@ -40,20 +40,27 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
     old_slug = from_dir.name
     new_slug = to_dir.name
 
-    from_dir.rename(to_dir)
-    print(f"Renamed {from_dir} -> {to_dir}")
-
+    # Parse and validate all sibling files BEFORE renaming, so a parse
+    # failure does not leave the directory renamed with stale references.
     siblings = [
         d for d in from_parent.iterdir()
-        if d.is_dir() and (d / "task.md").exists() and d != to_dir
+        if d.is_dir() and (d / "task.md").exists() and d != from_dir
     ]
+    sibling_updates: list[tuple[Path, "Task"]] = []  # type: ignore[name-defined]
     for sibling_dir in siblings:
         task = parse_task(sibling_dir / "task.md")
         if old_slug in task.depends_on:
             task.depends_on = [new_slug if d == old_slug else d for d in task.depends_on]
             task.updated = today_str()
-            write_task(task)
-            print(f"  Updated depends_on in {sibling_dir.name}")
+            sibling_updates.append((sibling_dir, task))
+
+    # All parsing succeeded — now perform the rename and writes.
+    from_dir.rename(to_dir)
+    print(f"Renamed {from_dir} -> {to_dir}")
+
+    for sibling_dir, task in sibling_updates:
+        write_task(task)
+        print(f"  Updated depends_on in {sibling_dir.name}")
 
 
 def main(argv: list[str] | None = None) -> None:

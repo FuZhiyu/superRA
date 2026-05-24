@@ -1,7 +1,7 @@
 ---
 name: task-system
 description: >
-  Directory-tree task system for managing plans as filesystem hierarchies.
+  Directory-tree task system — filesystem hierarchy as task hierarchy.
   Use when creating, querying, or visualizing a .plan/ task tree; when
   migrating from PLAN.md + RESULTS.md to the tree format; or when
   generating an HTML dashboard. Triggers include "create a task tree",
@@ -18,12 +18,12 @@ A directory-tree task system where the filesystem hierarchy is the task hierarch
 
 ### Tasks are objectives. Steps are procedures.
 
-- A **task** (`task.md`) states an objective — *what* to achieve. It has its own review cycle, status, dependencies, and results. It maps to an agent dispatch boundary.
-- A **step** (checkbox inside a task) states a procedure — *how* to achieve the objective. It's an atomic action within a single script, reviewed together with the task.
+- A **task** (`task.md`) states an objective — *what* to achieve. It has its own review cycle, status, dependencies, and results.
+- A **step** (checkbox inside a task) states a procedure — *how* to achieve the objective.
 
-**When to nest:** Decompose into subtasks when the objective breaks into sub-objectives (each independently reviewable). Decompose into steps when it breaks into procedures. Only **leaf tasks** have steps. Branch tasks (with subdirectories) have no steps — their subtask tree is the decomposition.
+Only **leaf tasks** have steps. Branch tasks (with subdirectories) have no steps — their subtask tree is the decomposition.
 
-**Ownership:** The orchestrator owns the task tree (objectives, dependencies). For leaf tasks, the orchestrator may write initial steps as guidance, but the **implementer owns the steps** and may deviate. The reviewer evaluates whether the objective was achieved.
+**Decomposition rule:** Decompose into subtasks when the objective breaks into sub-objectives (each independently reviewable). Decompose into steps when it breaks into procedures.
 
 ### Dependencies are siblings-only
 
@@ -118,7 +118,7 @@ python3 <skill-dir>/scripts/plan_migrate.py \
 
 ```bash
 python3 <skill-dir>/scripts/plan_dashboard.py --plan-root .plan
-# Opens .plan/dashboard.html — self-contained, works offline
+# Opens .plan/dashboard.html — single-file, opens locally (requires internet for full rendering)
 ```
 
 ## Task File Format
@@ -131,7 +131,7 @@ review_status: ~              # ~ | implemented | revise | approved
 integration_status: ~         # ~ | implemented | revise | approved
 depends_on:                   # sibling directory names only
   - 01-load-raw-data
-tags: [data-merge]
+tags: [data-merge]            # both inline [x] and multi-line list forms are accepted
 script: Code/03_merge_chars.py
 input: [Data/holdings.parquet]
 output: [Data/merged.parquet]

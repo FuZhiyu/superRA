@@ -110,7 +110,8 @@ def _extract_results_sections(results_text: str) -> dict[int, str]:
         start = match.end()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(results_text)
         body = results_text[start:end].strip()
-        if body and "Not started" not in body.split("\n")[0]:
+        body_stripped = body.strip()
+        if body_stripped and "Not started" not in body_stripped.split("\n")[0]:
             sections[task_num] = body
     return sections
 
@@ -124,8 +125,11 @@ def _extract_field(body: str, field_name: str) -> str:
     return match.group(1).strip() if match else ""
 
 
-def _extract_steps_and_rest(body: str) -> tuple[str, str]:
-    """Split the task body into the metadata fields portion and the steps/rest."""
+def _extract_steps_and_rest(body: str) -> tuple[str, str, str, str]:
+    """Split the task body into metadata, steps, review notes, and sync impact.
+
+    Returns (meta, steps_body, review_notes, sync_impact).
+    """
     lines = body.split("\n")
     meta_end = 0
     for i, line in enumerate(lines):
@@ -135,9 +139,37 @@ def _extract_steps_and_rest(body: str) -> tuple[str, str]:
         if line.startswith("**") and ":**" in line:
             meta_end = i + 1
 
+    # Collect non-field, non-step content between metadata and steps
+    review_notes_lines: list[str] = []
+    sync_impact_lines: list[str] = []
+    extra_lines: list[str] = []
+    in_sync_impact = False
+
+    for line in lines[meta_end:]:
+        # Detect sync impact section
+        if re.match(r"^##\s+Sync\s+[Ii]mpact", line):
+            in_sync_impact = True
+            continue
+        if in_sync_impact:
+            if line.startswith("## ") or line.startswith("- [") or line.startswith("```"):
+                in_sync_impact = False
+            else:
+                sync_impact_lines.append(line)
+                continue
+
+        # Steps and code blocks go to steps
+        if line.startswith("- [") or line.startswith("```"):
+            extra_lines.append(line)
+        elif line.startswith("> "):
+            review_notes_lines.append(line)
+        else:
+            extra_lines.append(line)
+
     meta = "\n".join(lines[:meta_end]).strip()
-    rest = "\n".join(lines[meta_end:]).strip()
-    return meta, rest
+    rest = "\n".join(extra_lines).strip()
+    review_notes = "\n".join(review_notes_lines).strip()
+    sync_impact = "\n".join(sync_impact_lines).strip()
+    return meta, rest, review_notes, sync_impact
 
 
 def _compute_status_from_steps(body: str) -> str:
@@ -181,14 +213,17 @@ def _build_task_md(
     output_files: list[str],
     steps_body: str,
     results_body: str,
+    review_notes: str = "",
+    sync_impact: str = "",
 ) -> str:
     """Build a task.md file content string."""
     deps = "\n" + "".join(f"  - {d}\n" for d in depends_on) if depends_on else " []"
     today = today_str()
+    escaped_title = title.replace('"', '\\"')
 
     fm_lines = [
         "---",
-        f'title: "{title}"',
+        f'title: "{escaped_title}"',
         f"status: {status}",
         f"review_status: {review_status}",
         f"integration_status: {integration_status}",
@@ -219,14 +254,19 @@ def _build_task_md(
     if results_body:
         sections.extend(["## Results", "", results_body, ""])
 
+    if review_notes:
+        sections.extend(["## Review Notes", "", review_notes, ""])
+
+    if sync_impact:
+        sections.extend(["## Sync Impact", "", sync_impact, ""])
+
     return "\n".join(sections) + "\n"
 
 
 def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) -> None:
     """Run the migration."""
     if output_dir.exists() and any(output_dir.iterdir()):
-        print(f"Error: output directory is not empty: {output_dir}", file=sys.stderr)
-        sys.exit(1)
+        raise ValueError(f"output directory is not empty: {output_dir}")
 
     plan_text = plan_md_path.read_text(encoding="utf-8")
     results_text = ""
@@ -237,10 +277,15 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
     task_blocks = _extract_task_blocks(plan_text)
     results_sections = _extract_results_sections(results_text)
 
+    # Extract plan title from header heading, fallback to "Project Plan"
+    title_match = re.match(r"^#\s+(.+?)$", header, re.MULTILINE)
+    plan_title = title_match.group(1).strip() if title_match else "Project Plan"
+    escaped_plan_title = plan_title.replace('"', '\\"')
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     root_task_md = output_dir / "task.md"
-    root_content = f"---\ntitle: \"Project Plan\"\nstatus: not-started\nreview_status: ~\nintegration_status: ~\ndepends_on: []\ntags: []\ncreated: {today_str()}\nupdated: {today_str()}\n---\n\n{header}\n"
+    root_content = f"---\ntitle: \"{escaped_plan_title}\"\nstatus: not-started\nreview_status: ~\nintegration_status: ~\ndepends_on: []\ntags: []\ncreated: {today_str()}\nupdated: {today_str()}\n---\n\n{header}\n"
     root_task_md.write_text(root_content, encoding="utf-8")
     print(f"Created {root_task_md}")
 
@@ -273,7 +318,7 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
         review_status = _normalize_review_status(review_raw)
         integration_status = _normalize_review_status(integration_raw)
 
-        _, steps_body = _extract_steps_and_rest(body)
+        _, steps_body, review_notes, sync_impact = _extract_steps_and_rest(body)
 
         results_body = results_sections.get(task_num, "")
 
@@ -288,6 +333,8 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
             output_files=output_files,
             steps_body=steps_body,
             results_body=results_body,
+            review_notes=review_notes,
+            sync_impact=sync_impact,
         )
 
         task_md = task_dir / "task.md"
@@ -300,7 +347,11 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     results_path = Path(args.results_md) if args.results_md else None
-    migrate(Path(args.plan_md), results_path, Path(args.output))
+    try:
+        migrate(Path(args.plan_md), results_path, Path(args.output))
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

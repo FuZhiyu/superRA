@@ -236,6 +236,157 @@ class TestComputeFrontier:
         frontier = _task_io.compute_frontier(root)
         assert len(frontier) == 3
 
+    def test_revise_status_excluded_from_frontier(self, plan_root):
+        """A task with status 'revise' should NOT appear on the frontier.
+
+        The frontier only includes 'not-started' and 'in-progress' tasks.
+        'revise' means the task needs rework after review, but the current
+        implementation treats it as non-dispatchable until explicitly
+        moved back to 'in-progress'.
+        """
+        root = _task_io.walk_plan(plan_root)
+        # 02-second depends on 01-first (approved), so deps are met.
+        # Set it to 'revise' — it should NOT appear on the frontier.
+        root.children[1].status = "revise"
+        frontier = _task_io.compute_frontier(root)
+        paths = [t.path for t in frontier]
+        assert "02-second" not in paths, (
+            "'revise' tasks should not be on the frontier; "
+            "only 'not-started' and 'in-progress' are dispatchable"
+        )
+        # 03-third depends on 02-second which is 'revise' (not approved),
+        # so 03-third should also be blocked.
+        assert "03-third" not in paths
+
+    def test_diamond_dependency(self, tmp_path):
+        """Diamond DAG: D(approved) -> B, D -> C, B -> A, C -> A.
+
+        Frontier should be [B, C] — D is done, A is blocked by both B and C.
+        """
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        (root_dir / "task.md").write_text(
+            '---\ntitle: "Diamond"\nstatus: not-started\nreview_status: ~\n'
+            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# Diamond\n",
+            encoding="utf-8",
+        )
+        for name, status, deps in [
+            ("01-D", "approved", []),
+            ("02-B", "not-started", ["01-D"]),
+            ("03-C", "not-started", ["01-D"]),
+            ("04-A", "not-started", ["02-B", "03-C"]),
+        ]:
+            d = root_dir / name
+            d.mkdir()
+            deps_yaml = (
+                "depends_on: []\n" if not deps
+                else "depends_on:\n" + "".join(f"  - {dep}\n" for dep in deps)
+            )
+            (d / "task.md").write_text(
+                f'---\ntitle: "{name}"\nstatus: {status}\nreview_status: ~\n'
+                f"integration_status: ~\n{deps_yaml}tags: []\n---\n\n"
+                f"# {name}\n\n## Steps\n\n- [ ] Do it\n",
+                encoding="utf-8",
+            )
+        root = _task_io.walk_plan(root_dir)
+        frontier = _task_io.compute_frontier(root)
+        paths = [t.path for t in frontier]
+        assert "02-B" in paths
+        assert "03-C" in paths
+        assert "04-A" not in paths, "A is blocked by unapproved B and C"
+        assert "01-D" not in paths, "D is already approved"
+
+    def test_three_level_nesting(self, tmp_path):
+        """3-level deep tree: root -> L1 -> L2 -> leaf tasks.
+
+        Verify frontier propagates ancestors_ready=False through
+        intermediate levels correctly.
+        """
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        (root_dir / "task.md").write_text(
+            '---\ntitle: "Root"\nstatus: not-started\nreview_status: ~\n'
+            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# Root\n",
+            encoding="utf-8",
+        )
+        # Level 1: two branch tasks, L1-b depends on L1-a
+        l1a = root_dir / "01-L1a"
+        l1a.mkdir()
+        (l1a / "task.md").write_text(
+            '---\ntitle: "L1-a"\nstatus: not-started\nreview_status: ~\n'
+            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# L1-a\n",
+            encoding="utf-8",
+        )
+        l1b = root_dir / "02-L1b"
+        l1b.mkdir()
+        (l1b / "task.md").write_text(
+            '---\ntitle: "L1-b"\nstatus: not-started\nreview_status: ~\n'
+            "integration_status: ~\ndepends_on:\n  - 01-L1a\ntags: []\n---\n\n# L1-b\n",
+            encoding="utf-8",
+        )
+        # Level 2 under L1-a: one sub-branch
+        l2 = l1a / "01-L2"
+        l2.mkdir()
+        (l2 / "task.md").write_text(
+            '---\ntitle: "L2"\nstatus: not-started\nreview_status: ~\n'
+            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# L2\n",
+            encoding="utf-8",
+        )
+        # Level 3 (leaf) under L2
+        leaf = l2 / "01-leaf"
+        leaf.mkdir()
+        (leaf / "task.md").write_text(
+            '---\ntitle: "Deep Leaf"\nstatus: not-started\nreview_status: ~\n'
+            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n"
+            "# Deep Leaf\n\n## Steps\n\n- [ ] Do it\n",
+            encoding="utf-8",
+        )
+        # Level 2 under L1-b: a leaf that should be blocked
+        l1b_leaf = l1b / "01-blocked-leaf"
+        l1b_leaf.mkdir()
+        (l1b_leaf / "task.md").write_text(
+            '---\ntitle: "Blocked Leaf"\nstatus: not-started\nreview_status: ~\n'
+            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n"
+            "# Blocked Leaf\n\n## Steps\n\n- [ ] Do it\n",
+            encoding="utf-8",
+        )
+
+        root = _task_io.walk_plan(root_dir)
+        frontier = _task_io.compute_frontier(root)
+        paths = [t.path for t in frontier]
+        # Deep leaf under L1-a is reachable (no blocking deps at any level)
+        assert "01-L1a/01-L2/01-leaf" in paths
+        # Blocked leaf under L1-b is NOT reachable because L1-b depends on
+        # L1-a which is not yet approved
+        assert "02-L1b/01-blocked-leaf" not in paths, (
+            "ancestors_ready=False should propagate: L1-b is blocked by L1-a"
+        )
+
+    def test_empty_plan_tree(self, tmp_path):
+        """A plan with only root task.md and no children.
+
+        When the root has no children, it is treated as a leaf by
+        _collect_frontier. Since its status is 'not-started' and
+        ancestors_ready=True, the root itself appears on the frontier.
+        This is correct: a childless root IS the work to be done.
+
+        render_dag should return the fallback 'no children' output.
+        """
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        (root_dir / "task.md").write_text(
+            '---\ntitle: "Empty"\nstatus: not-started\nreview_status: ~\n'
+            "integration_status: ~\ndepends_on: []\ntags: []\n---\n\n# Empty\n",
+            encoding="utf-8",
+        )
+        root = _task_io.walk_plan(root_dir)
+        frontier = _task_io.compute_frontier(root)
+        # Root with no children is itself a leaf and is on the frontier
+        assert len(frontier) == 1
+        assert frontier[0].is_root
+        dag = task_query.render_dag(root)
+        assert "no children" in dag
+
 
 class TestWriteTask:
     def test_roundtrip(self, plan_root):
@@ -246,6 +397,7 @@ class TestWriteTask:
         assert task2.title == task.title
         assert task2.status == task.status
         assert task2.tags == task.tags
+        assert task2.body == original_body
 
 
 class TestFrontmatterParsing:
@@ -268,6 +420,27 @@ class TestFrontmatterParsing:
         text = '---\nreview_status: ~\n---\nBody\n'
         fm, body = _task_io.parse_frontmatter(text)
         assert fm["review_status"] == "~"
+
+    def test_no_frontmatter(self):
+        """Text with no frontmatter at all returns empty dict and full text."""
+        text = "Just a body with no frontmatter.\n"
+        fm, body = _task_io.parse_frontmatter(text)
+        assert fm == {}
+        assert body == text
+
+    def test_only_opening_delimiter(self):
+        """Text with only '---' opening but no closing should return empty dict."""
+        text = "---\ntitle: Test\nNo closing delimiter.\n"
+        fm, body = _task_io.parse_frontmatter(text)
+        assert fm == {}
+        assert body == text
+
+    def test_value_containing_colon(self):
+        """Values with colons (e.g., 'Part 1: Introduction') should parse correctly."""
+        text = '---\ntitle: "Part 1: Introduction"\nstatus: not-started\n---\nBody\n'
+        fm, body = _task_io.parse_frontmatter(text)
+        assert fm["title"] == "Part 1: Introduction"
+        assert fm["status"] == "not-started"
 
 
 # --- CLI script tests ---
@@ -299,21 +472,23 @@ class TestTaskCreate:
         assert task.depends_on == ["01-first"]
 
     def test_create_duplicate_fails(self, plan_root):
-        with pytest.raises(SystemExit):
+        with pytest.raises(SystemExit) as exc_info:
             task_create.create_task(
                 plan_root=plan_root,
                 task_path="01-first",
                 title="Duplicate",
             )
+        assert exc_info.value.code == 1
 
     def test_create_bad_dep_fails(self, plan_root):
-        with pytest.raises(SystemExit):
+        with pytest.raises(SystemExit) as exc_info:
             task_create.create_task(
                 plan_root=plan_root,
                 task_path="04-new",
                 title="New",
                 depends_on=["99-nonexistent"],
             )
+        assert exc_info.value.code == 1
 
 
 class TestTaskUpdate:
@@ -389,6 +564,47 @@ class TestTaskAddResult:
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         assert "Found 42 interesting rows" in task.body
 
+    def test_add_finding_with_preexisting_results(self, plan_root):
+        """Adding a finding to a task that already has ## Results and ### Key Findings.
+
+        The existing content (01-first has 'Found 100 rows') should be
+        preserved, and the new finding should be appended.
+        """
+        task_add_result.add_result(
+            plan_root=plan_root,
+            task_path="01-first",
+            finding="Found 200 more rows",
+        )
+        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
+        assert "Found 100 rows" in task.body, "Pre-existing finding should be preserved"
+        assert "Found 200 more rows" in task.body, "New finding should be appended"
+        # Verify structural integrity: exactly one ## Results and one ### Key Findings
+        assert task.body.count("## Results") == 1
+        assert task.body.count("### Key Findings") == 1
+
+
+class TestCollectAllTasks:
+    def test_depth_first_excluding_root(self, plan_root):
+        """collect_all_tasks returns depth-first ordered list excluding root."""
+        root = _task_io.walk_plan(plan_root)
+        all_tasks = _task_io.collect_all_tasks(root)
+        paths = [t.path for t in all_tasks]
+        assert "" not in paths, "Root should be excluded"
+        assert paths == ["01-first", "02-second", "03-third"]
+
+    def test_nested_depth_first(self, plan_with_branches):
+        """Nested plan returns children in depth-first order."""
+        root = _task_io.walk_plan(plan_with_branches)
+        all_tasks = _task_io.collect_all_tasks(root)
+        paths = [t.path for t in all_tasks]
+        assert "" not in paths
+        assert paths == [
+            "01-data-prep",
+            "01-data-prep/01-load",
+            "01-data-prep/02-merge",
+            "02-estimation",
+        ]
+
 
 class TestTaskQuery:
     def test_tree_to_json(self, plan_root):
@@ -405,6 +621,23 @@ class TestTaskQuery:
         assert "01-first" in mermaid
         assert "02-second" in mermaid
         assert "01-first --> 02-second" in mermaid
+
+    def test_render_dag_with_subtree_success(self, plan_with_branches):
+        """render_dag with a valid subtree_path renders only that subtree."""
+        root = _task_io.walk_plan(plan_with_branches)
+        mermaid = task_query.render_dag(root, subtree_path="01-data-prep")
+        assert "graph LR" in mermaid
+        assert "01-load" in mermaid
+        assert "02-merge" in mermaid
+        # Should NOT contain the sibling estimation task
+        assert "02-estimation" not in mermaid
+
+    def test_render_dag_with_nonexistent_subtree_exits(self, plan_root):
+        """render_dag with a non-existent subtree_path calls sys.exit(1)."""
+        root = _task_io.walk_plan(plan_root)
+        with pytest.raises(SystemExit) as exc_info:
+            task_query.render_dag(root, subtree_path="99-nonexistent")
+        assert exc_info.value.code == 1
 
 
 # --- Migration tests ---
