@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+:root {
+  --bg: #ffffff; --bg-alt: #f8f9fa; --bg-sidebar: #f0f1f3;
+  --text: #1a1a2e; --text-muted: #6c757d; --border: #dee2e6;
+  --accent: #0366d6; --accent-hover: #0256b9;
+  --status-not-started: #e0e0e0; --status-in-progress: #bbdefb;
+  --status-implemented: #fff9c4; --status-revise: #ffcdd2;
+  --status-approved: #c8e6c9;
+  --status-not-started-text: #333; --status-in-progress-text: #0d47a1;
+  --status-implemented-text: #e65100; --status-revise-text: #b71c1c;
+  --status-approved-text: #1b5e20;
+}
+[data-theme="dark"] {
+  --bg: #1a1a2e; --bg-alt: #16213e; --bg-sidebar: #0f3460;
+  --text: #e0e0e0; --text-muted: #a0a0a0; --border: #333;
+  --accent: #58a6ff; --accent-hover: #79b8ff;
+  --status-not-started: #444; --status-in-progress: #1a3a5c;
+  --status-implemented: #4a3800; --status-revise: #5c1a1a;
+  --status-approved: #1a3a1a;
+  --status-not-started-text: #ccc; --status-in-progress-text: #90caf9;
+  --status-implemented-text: #ffe082; --status-revise-text: #ef9a9a;
+  --status-approved-text: #a5d6a7;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
+.summary-bar { display: flex; align-items: center; gap: 16px; padding: 12px 20px;
+  background: var(--bg-alt); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.summary-bar h1 { font-size: 18px; margin-right: auto; }
+.summary-stat { font-size: 13px; color: var(--text-muted); }
+.summary-stat strong { color: var(--text); }
+.controls { display: flex; gap: 8px; align-items: center; }
+.controls button, .controls select { padding: 4px 10px; border: 1px solid var(--border);
+  border-radius: 4px; background: var(--bg); color: var(--text); cursor: pointer; font-size: 13px; }
+.controls button:hover { background: var(--bg-alt); }
+.controls button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.main-layout { display: flex; flex: 1; overflow: hidden; }
+.sidebar { width: 280px; min-width: 200px; overflow-y: auto; padding: 12px;
+  background: var(--bg-sidebar); border-right: 1px solid var(--border); flex-shrink: 0; }
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+.tree-item { cursor: pointer; padding: 3px 0; user-select: none; }
+.tree-item:hover { color: var(--accent); }
+.tree-item.selected { font-weight: 600; color: var(--accent); }
+.tree-children { margin-left: 16px; }
+.tree-toggle { display: inline-block; width: 16px; font-size: 10px; color: var(--text-muted); }
+.status-badge { display: inline-block; padding: 1px 6px; border-radius: 10px;
+  font-size: 11px; font-weight: 500; margin-left: 6px; }
+.status-not-started { background: var(--status-not-started); color: var(--status-not-started-text); }
+.status-in-progress { background: var(--status-in-progress); color: var(--status-in-progress-text); }
+.status-implemented { background: var(--status-implemented); color: var(--status-implemented-text); }
+.status-revise { background: var(--status-revise); color: var(--status-revise-text); }
+.status-approved { background: var(--status-approved); color: var(--status-approved-text); }
+.task-detail h1 { font-size: 22px; margin-bottom: 8px; }
+.task-detail .meta { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; }
+.task-detail .meta span { margin-right: 16px; }
+.task-detail details { margin: 12px 0; border: 1px solid var(--border); border-radius: 6px; }
+.task-detail summary { padding: 8px 12px; cursor: pointer; font-weight: 600;
+  background: var(--bg-alt); border-radius: 6px; }
+.task-detail .section-body { padding: 12px; }
+.task-detail .section-body pre { background: var(--bg-alt); padding: 12px;
+  border-radius: 4px; overflow-x: auto; font-size: 13px; }
+.task-detail .section-body code { font-size: 13px; }
+.task-detail .section-body ul { padding-left: 20px; }
+.task-detail .section-body li { margin: 4px 0; }
+.task-detail .section-body blockquote { border-left: 3px solid var(--accent);
+  padding: 8px 12px; margin: 8px 0; background: var(--bg-alt); }
+.kanban { display: flex; gap: 16px; padding: 16px; overflow-x: auto; min-height: 400px; }
+.kanban-col { min-width: 220px; flex: 1; background: var(--bg-alt);
+  border-radius: 8px; padding: 12px; }
+.kanban-col h3 { font-size: 14px; margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 2px solid var(--border); }
+.kanban-card { padding: 10px; margin-bottom: 8px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px; }
+.kanban-card:hover { border-color: var(--accent); }
+.kanban-card .card-path { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.dag-container { padding: 16px; }
+.dag-controls { margin-bottom: 12px; }
+.search-box { padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg); color: var(--text); width: 100%; margin-bottom: 8px; font-size: 13px; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="summary-bar">
+  <h1 id="plan-title">Plan Dashboard</h1>
+  <span class="summary-stat" id="stat-total"></span>
+  <span class="summary-stat" id="stat-progress"></span>
+  <span class="summary-stat" id="stat-updated"></span>
+  <div class="controls">
+    <button id="btn-tree" class="active" onclick="showView('tree')">Tree</button>
+    <button id="btn-dag" onclick="showView('dag')">DAG</button>
+    <button id="btn-kanban" onclick="showView('kanban')">Kanban</button>
+    <select id="filter-status" onchange="applyFilters()">
+      <option value="">All statuses</option>
+      <option value="not-started">Not started</option>
+      <option value="in-progress">In progress</option>
+      <option value="implemented">Implemented</option>
+      <option value="revise">Revise</option>
+      <option value="approved">Approved</option>
+    </select>
+    <button onclick="toggleTheme()" title="Toggle dark/light mode">◑</button>
+  </div>
+</div>
+
+<div class="main-layout">
+  <div class="sidebar" id="sidebar">
+    <input type="text" class="search-box" id="search-box" placeholder="Search tasks..." oninput="applyFilters()">
+    <div id="tree-root"></div>
+  </div>
+  <div class="content" id="content">
+    <div id="view-detail" class="task-detail"></div>
+    <div id="view-dag" class="dag-container hidden"></div>
+    <div id="view-kanban" class="kanban hidden"></div>
+  </div>
+</div>
+
+<script>
+const TASK_DATA = {
+  "path": "",
+  "title": "Task System Skill \u2014 Plan",
+  "status": "not-started",
+  "effective_status": "in-progress",
+  "review_status": "~",
+  "integration_status": "~",
+  "depends_on": [],
+  "tags": [],
+  "script": "",
+  "input": [],
+  "output": [],
+  "created": "2026-05-23",
+  "updated": "2026-05-23",
+  "is_leaf": false,
+  "body": "\n# Task System Skill \u2014 Plan\n\n\u003e **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use `superRA:skill-creator` when editing any `skills/*/SKILL.md`. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.\n\n**Objective:** Add a `task-system` skill to superRA that replaces flat PLAN.md/RESULTS.md task tracking with a filesystem-based hierarchy where each task is a self-contained `task.md` (plan + results unified), and a generated HTML dashboard provides human-friendly visualization with tree, DAG, and kanban views.\n\n**Methodology:** Build the system as a standalone skill (`skills/task-system/`) with Python CLI scripts for task CRUD, frontier computation, migration, and dashboard generation. Defer workflow integration to a follow-up PR.\n\n**Conventions:**\n- Scripts follow existing `skills/*/scripts/` patterns: stdlib-only Python, argparse CLI, `from __future__ import annotations`, type-annotated functions\n- Task ID = relative path from plan root (e.g., `01-data-preparation/02-merge`)\n- Dependencies are sibling-only (directory names within the same parent)\n- Parent task status rolls up from children automatically\n\n**Output:**\n- `skills/task-system/SKILL.md` \u2014 skill definition + usage docs\n- `skills/task-system/scripts/_task_io.py` \u2014 shared internals (parse, write, walk, frontier, rollup)\n- `skills/task-system/scripts/task_create.py` \u2014 create task directory + task.md\n- `skills/task-system/scripts/task_update.py` \u2014 update frontmatter fields\n- `skills/task-system/scripts/task_query.py` \u2014 tree, frontier, DAG queries\n- `skills/task-system/scripts/task_add_result.py` \u2014 append results to a task\n- `skills/task-system/scripts/task_link.py` \u2014 add/remove dependency edges\n- `skills/task-system/scripts/task_rename.py` \u2014 rename with sibling cascade\n- `skills/task-system/scripts/plan_migrate.py` \u2014 convert PLAN.md + RESULTS.md to `.plan/` tree\n- `skills/task-system/scripts/plan_dashboard.py` \u2014 generate self-contained HTML dashboard\n- `skills/task-system/scripts/test_task_system.py` \u2014 pytest test suite\n\n**Pipeline:** `~/.venv/bin/python -m pytest skills/task-system/scripts/test_task_system.py -v`\n\n---\n\n## Workflow Status\n\n- [x] **Plan approved**\n- [ ] **Execution complete**\n- [ ] **Drift tests created**\n- [ ] **Integrated**\n- [ ] **Docs finalized**\n- [ ] **Finished**\n\n---\n\n## Project Conventions\n\nWalked at planning time (2026-05-23). Re-walk on-demand only.\n\n### Repo root\n- `/CLAUDE.md` (HEAD at 530e0ee): superRA contributor guidelines. Flat skill layout, lean agents + rich references, skill authoring guidelines, ownership table, DRY + Necessity tests for every instruction line.\n- `/README.md` (HEAD at 530e0ee): User-facing product model. Skill categories table (domain, workflow, utility, meta). Install via `agents/.agents/plugins/marketplace.json`.\n\n### Module-level docs walked\n- `skills/CATEGORIES.md` (HEAD at 530e0ee): Skill category tables mirroring README, with one-line descriptions per skill.\n\n### Not walked (not reachable from the planned diff)\n- `skills/handoff-doc/`, workflow skills, agent specs, `skills/using-superRA/` \u2014 deferred to workflow integration PR.\n\n---\n",
+  "children": [
+    {
+      "path": "01-core-data-layer-task-iopy",
+      "title": "Core Data Layer (`_task_io.py`)",
+      "status": "implemented",
+      "effective_status": "implemented",
+      "review_status": "implemented",
+      "integration_status": "~",
+      "depends_on": [],
+      "tags": [],
+      "script": "skills/task-system/scripts/_task_io.py",
+      "input": [],
+      "output": [],
+      "created": "2026-05-23",
+      "updated": "2026-05-23",
+      "is_leaf": true,
+      "body": "\n# Core Data Layer (`_task_io.py`)\n\n## Steps\n\n- [x] **Step 1: Define `Task` dataclass** \u2014 fields: path, dir_path, title, status, review_status, integration_status, depends_on, tags, script, input, output, created, updated, body, children. Properties: is_leaf, is_root, slug, effective_status.\n\n- [x] **Step 2: YAML frontmatter parser** \u2014 stdlib-only (`re`), no PyYAML. Handles scalars, inline lists `[a, b]`, multi-line lists (`  - item`), tilde `~`. Regex: `FRONTMATTER_RE = r\"\\A---\\n(.*?\\n)---\\n(.*)\"`.\n\n- [x] **Step 3: Serializer** \u2014 `serialize_frontmatter()` with canonical field order (title, status, review_status, ..., updated). `write_task()` wraps frontmatter + body.\n\n- [x] **Step 4: Tree walker** \u2014 `walk_plan(plan_root)` recursively discovers `task.md` files in sorted subdirectories, builds `Task` tree. `_find_plan_root()` walks up from any task to the root.\n\n- [x] **Step 5: Frontier computation** \u2014 `compute_frontier(root)` returns leaf tasks where: own status is `not-started`/`in-progress`, all sibling `depends_on` targets are `approved`, and all ancestor sibling deps are met (recursive).\n\n- [x] **Step 6: Status rollup** \u2014 `compute_status(task)` for branch tasks: all approved \u2192 approved, any revise \u2192 revise, any in-progress/implemented \u2192 in-progress, else not-started.\n\n---\n\n## Results\n\n**Status:** Completed (Task 1 approved 2026-05-23)\n\n### Key Findings\n- 383-line module, stdlib-only (no PyYAML dependency)\n- `Task` dataclass with 14 fields + 4 computed properties (`is_leaf`, `is_root`, `slug`, `effective_status`)\n- Custom YAML frontmatter parser handles scalars, inline lists, multi-line lists, and tilde values via regex\n- `walk_plan()` builds full task tree by recursively scanning sorted subdirectories for `task.md` files\n- `compute_frontier()` correctly handles nested DAGs \u2014 checks sibling deps at each level and propagates ancestor readiness\n- Status rollup uses priority ordering: all-approved \u2192 any-revise \u2192 any-in-progress/implemented \u2192 not-started\n\n---\n\n",
+      "children": []
+    },
+    {
+      "path": "02-cli-scripts-crud",
+      "title": "CLI Scripts (CRUD)",
+      "status": "implemented",
+      "effective_status": "implemented",
+      "review_status": "implemented",
+      "integration_status": "~",
+      "depends_on": [
+        "01-core-data-layer-task-iopy"
+      ],
+      "tags": [],
+      "script": "",
+      "input": [],
+      "output": [],
+      "created": "2026-05-23",
+      "updated": "2026-05-23",
+      "is_leaf": true,
+      "body": "\n# CLI Scripts (CRUD)\n\n## Steps\n\n- [x] **Step 1: `task_create.py`** \u2014 `create_task(plan_root, path, title, depends_on, script, input, output)`. Validates parent exists, no duplicates, deps are existing siblings. Template with frontmatter + empty body sections.\n\n- [x] **Step 2: `task_update.py`** \u2014 `update_task(plan_root, path, status, review_status, integration_status, title, add_tags, remove_tags, script)`. Validates enums. Bumps `updated` timestamp.\n\n- [x] **Step 3: `task_add_result.py`** \u2014 `add_result(plan_root, path, finding, figure, note)`. Ensures `## Results` section exists, appends findings under `### Key Findings`, figures as `![caption](path)`, notes under `### Notes`.\n\n- [x] **Step 4: `task_link.py`** \u2014 `link_task(plan_root, path, depends_on, remove)`. Validates sibling exists when adding. Warns on remove of non-existent dep.\n\n- [x] **Step 5: `task_rename.py`** \u2014 `rename_task(plan_root, from_path, to_path)`. Must stay in same parent. Cascades `depends_on` updates to all siblings.\n\n- [x] **Step 6: `task_query.py`** \u2014 `--tree` (indented with status icons), `--frontier` (dispatchable leaves), `--dag [subtree]` (Mermaid format with classDef color-coding). Filter by `--status`, `--tag`. `--json` output. `tree_to_json()` serializes full tree for dashboard.\n\n---\n\n## Results\n\n**Status:** Completed (Task 2 approved 2026-05-23)\n\n### Key Findings\n- 6 scripts, each 65\u2013195 lines, all following argparse + function pattern\n- `task_create.py` validates: parent exists, no duplicate, deps are existing sibling directories with `task.md`\n- `task_update.py` validates enum values against `VALID_STATUSES`, `VALID_REVIEW_STATUSES`, `VALID_INTEGRATION_STATUSES`\n- `task_add_result.py` uses `_ensure_section()` to create `## Results` / `### Key Findings` / `### Notes` on demand\n- `task_rename.py` enforces same-parent constraint, cascades `depends_on` updates to all siblings\n- `task_query.py` provides 3 output modes: `--tree` (indented with Unicode status icons \u25cb\u25d0\u25d1\u2717\u25cf), `--frontier` (dispatch-ready leaves), `--dag` (Mermaid with classDef color-coding)\n\n---\n\n",
+      "children": []
+    },
+    {
+      "path": "03-migration-script",
+      "title": "Migration Script",
+      "status": "implemented",
+      "effective_status": "implemented",
+      "review_status": "implemented",
+      "integration_status": "~",
+      "depends_on": [
+        "01-core-data-layer-task-iopy"
+      ],
+      "tags": [],
+      "script": "skills/task-system/scripts/plan_migrate.py",
+      "input": [],
+      "output": [],
+      "created": "2026-05-23",
+      "updated": "2026-05-23",
+      "is_leaf": true,
+      "body": "\n# Migration Script\n\n## Steps\n\n- [x] **Step 1: Parse PLAN.md** \u2014 extract header (everything before `### Task 1:`), extract task blocks via `TASK_BLOCK_RE = r\"^###\\s+Task\\s+(\\d+):\\s+(.+?)$\"`. Per block: extract `**Depends on:**`, `**Review status:**`, `**Integration status:**`, `**Script:**`, `**Input:**`, `**Output:**` via field-specific regexes.\n\n- [x] **Step 2: Parse RESULTS.md** \u2014 extract per-task results via `RESULTS_SECTION_RE = r\"^##\\s+Task\\s+(\\d+):\\s+(.+?)$\"`. Skip stubs (`Not started`).\n\n- [x] **Step 3: Generate tree** \u2014 slugify titles (`re.sub` chain \u2192 lowercase, strip non-word, hyphenate). Map `Task N` numbers to `NN-slug/` directories. Convert `Task N` depends-on references to slug names. Infer status from checkbox states and review status. Build `task.md` with frontmatter + Steps + Results body sections.\n\n- [x] **Step 4: Write root task.md** \u2014 header content \u2192 root `.plan/task.md` with `title: \"Project Plan\"` frontmatter.\n\n---\n\n## Results\n\n**Status:** Completed (Task 3 approved 2026-05-23)\n\n### Key Findings\n- 307-line script parsing PLAN.md task blocks via regex `r\"^###\\s+Task\\s+(\\d+):\\s+(.+?)$\"`\n- Correctly extracts: depends_on (maps `Task N` references to slugs), review/integration status (normalizes to lowercase enum), script/input/output (backtick-delimited file lists), step checkboxes\n- Status inference from checkbox states: all checked + no review \u2192 implemented; partial checked \u2192 in-progress; review APPROVED \u2192 approved\n- `slugify()` produces clean directory names (lowercase, strip non-word, hyphenate, max 60 chars)\n- RESULTS.md sections merged into corresponding task.md `## Results` via task number matching; stubs (`Not started`) skipped\n\n---\n\n",
+      "children": []
+    },
+    {
+      "path": "04-html-dashboard",
+      "title": "HTML Dashboard",
+      "status": "implemented",
+      "effective_status": "implemented",
+      "review_status": "implemented",
+      "integration_status": "~",
+      "depends_on": [
+        "01-core-data-layer-task-iopy",
+        "02-cli-scripts-crud"
+      ],
+      "tags": [],
+      "script": "skills/task-system/scripts/plan_dashboard.py",
+      "input": [],
+      "output": [],
+      "created": "2026-05-23",
+      "updated": "2026-05-23",
+      "is_leaf": true,
+      "body": "\n# HTML Dashboard\n\n## Steps\n\n- [x] **Step 1: Dashboard generator** \u2014 `generate_dashboard(plan_root, output_path)`. Walks plan tree via `_task_io.walk_plan()`, serializes to JSON via `tree_to_json()`, embeds as `__TASK_DATA_JSON__` in HTML template string.\n\n- [x] **Step 2: HTML template \u2014 layout** \u2014 summary bar (title, stats, view buttons, status filter, theme toggle), sidebar (search + tree), main content area (detail/DAG/kanban views). CSS custom properties for dark/light mode.\n\n- [x] **Step 3: Tree view** \u2014 collapsible hierarchy with status badges (color-coded), progress counts on branch nodes (`approved/total`), click to select.\n\n- [x] **Step 4: Task detail panel** \u2014 rendered markdown body via markdown-it (CDN), progressive disclosure via `\u003cdetails\u003e` for Steps (with completion count), Results, Review Notes. Meta bar with status badge, path, depends_on, script, tags.\n\n- [x] **Step 5: DAG view** \u2014 Mermaid.js (CDN) dependency graph for selected subtree's children. Nodes colored by effective status. `mermaid.run()` for dynamic rendering.\n\n- [x] **Step 6: Kanban view** \u2014 columns by status (Not Started, In Progress, Implemented, Revise, Approved). Cards show title + path, click navigates to tree view.\n\n- [x] **Step 7: Search/filter** \u2014 text search across titles and paths, status filter dropdown. Filters apply to tree sidebar.\n\n---\n\n## Results\n\n**Status:** Completed (Task 4 approved 2026-05-23)\n\n### Key Findings\n- Self-contained 445-line HTML template embedded as Python string constant in `plan_dashboard.py`\n- CDN dependencies: markdown-it v14 (render task bodies), Mermaid v11 (DAG visualization)\n- CSS custom properties enable dark/light mode with 12 theme variables each\n- 5 views: summary bar, tree sidebar, task detail, DAG, kanban\n- Tree view shows collapsible hierarchy with status badges (5 colors) and branch progress counts\n- Task detail uses `\u003cdetails\u003e/\u003csummary\u003e` for progressive disclosure with step completion counts\n- DAG view renders Mermaid `graph LR` with status-colored nodes per subtree's children\n- Kanban shows leaf tasks only (the actionable units), grouped by status, read-only\n- Search filters tree items by title and path; status dropdown filters by effective status\n- Dashboard data embedded as JSON blob replacing `__TASK_DATA_JSON__` placeholder at generation time\n\n---\n\n",
+      "children": []
+    },
+    {
+      "path": "05-test-suite",
+      "title": "Test Suite",
+      "status": "implemented",
+      "effective_status": "implemented",
+      "review_status": "implemented",
+      "integration_status": "~",
+      "depends_on": [
+        "01-core-data-layer-task-iopy",
+        "02-cli-scripts-crud",
+        "03-migration-script",
+        "04-html-dashboard"
+      ],
+      "tags": [],
+      "script": "skills/task-system/scripts/test_task_system.py",
+      "input": [],
+      "output": [],
+      "created": "2026-05-23",
+      "updated": "2026-05-23",
+      "is_leaf": true,
+      "body": "\n# Test Suite\n\n## Steps\n\n- [x] **Step 1: Fixtures** \u2014 `plan_root` (flat 3-task chain: 01-first \u2192 02-second \u2192 03-third), `plan_with_branches` (nested: 01-data-prep/{01-load, 02-merge} \u2192 02-estimation).\n\n- [x] **Step 2: `_task_io` tests** \u2014 `TestParseTask` (leaf, deps, root), `TestWalkPlan` (flat, nested), `TestComputeStatus` (leaf, partial rollup, all-approved rollup), `TestComputeFrontier` (linear chain, nested, all-approved, no-deps forest), `TestWriteTask` (roundtrip), `TestFrontmatterParsing` (inline list, multiline list, empty list, tilde).\n\n- [x] **Step 3: CLI tests** \u2014 `TestTaskCreate` (basic, with deps, duplicate fails, bad dep fails), `TestTaskUpdate` (status, add tag, remove tag), `TestTaskLink` (add dep, remove dep), `TestTaskRename` (cascade), `TestTaskAddResult` (finding), `TestTaskQuery` (tree_to_json, render_dag).\n\n- [x] **Step 4: Migration test** \u2014 `TestPlanMigrate.test_slugify`, `test_migrate_basic` (synthetic PLAN.md + RESULTS.md \u2192 verify tree structure, field extraction, dependency mapping, results merging).\n\n- [x] **Step 5: Dashboard test** \u2014 `TestDashboard.test_generate_dashboard` (verify HTML output contains title, TASK_DATA, task names, mermaid).\n\n---\n\n## Results\n\n**Status:** Completed (Task 5 approved 2026-05-23)\n\n### Key Findings\n- 33 tests, all passing in 0.09s\n- Coverage: frontmatter parsing (4 edge cases), task CRUD (10 tests including error paths), tree walking (2), status rollup (3), frontier computation (4 including nested DAG), migration (2), dashboard generation (1)\n- Fixtures: `plan_root` (flat chain), `plan_with_branches` (nested with branch + leaf tasks)\n- Tests exercise both happy path and error conditions (duplicate create, bad dep, non-existent task)\n\n---\n\n",
+      "children": []
+    },
+    {
+      "path": "06-skill-definition-inventory-updates",
+      "title": "Skill Definition + Inventory Updates",
+      "status": "implemented",
+      "effective_status": "implemented",
+      "review_status": "implemented",
+      "integration_status": "~",
+      "depends_on": [
+        "01-core-data-layer-task-iopy",
+        "02-cli-scripts-crud",
+        "03-migration-script",
+        "04-html-dashboard"
+      ],
+      "tags": [],
+      "script": "",
+      "input": [],
+      "output": [],
+      "created": "2026-05-23",
+      "updated": "2026-05-23",
+      "is_leaf": true,
+      "body": "\n# Skill Definition + Inventory Updates\n\n## Steps\n\n- [x] **Step 1: `SKILL.md`** \u2014 frontmatter (name, description with trigger phrases, user-invocable: true). Body: core concepts (tasks vs steps, siblings-only deps), directory structure, command surface with examples, task file format template.\n\n- [x] **Step 2: `CATEGORIES.md`** \u2014 add `task-system` row to Utility table.\n\n- [x] **Step 3: `README.md`** \u2014 add `task-system` row to Utility Skills table.\n\n## Results\n\n**Status:** Completed (Task 6 approved 2026-05-23)\n\n### Key Findings\n- `SKILL.md`: 158 lines covering core concepts (tasks vs steps, siblings-only deps), directory structure, full command surface with examples, task file format template\n- `CATEGORIES.md`: one-line addition to Utility table\n- `README.md`: one-line addition to Utility Skills table with description covering all features (CRUD, frontier, DAG, migration, dashboard)\n\n",
+      "children": []
+    }
+  ]
+};
+const md = window.markdownit({ html: true, linkify: true });
+let currentView = 'tree';
+let selectedPath = '';
+const taskByPath = {};
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function sanitizeMermaid(s) { return s.replace(/"/g, "'").replace(/[\[\](){}]/g, ''); }
+
+function buildIndex(task) { taskByPath[task.path] = task; for (const c of task.children) buildIndex(c); }
+
+function init() {
+  document.documentElement.setAttribute('data-theme',
+    localStorage.getItem('dashboard-theme') || 'light');
+  mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+  buildIndex(TASK_DATA);
+  renderSummary();
+  renderTree();
+  renderKanban();
+  selectTask(TASK_DATA);
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('dashboard-theme', next);
+}
+
+function showView(view) {
+  currentView = view;
+  document.querySelectorAll('.controls button').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + view).classList.add('active');
+  document.getElementById('view-detail').classList.toggle('hidden', view === 'kanban' || view === 'dag');
+  document.getElementById('view-dag').classList.toggle('hidden', view !== 'dag');
+  document.getElementById('view-kanban').classList.toggle('hidden', view !== 'kanban');
+  document.getElementById('sidebar').classList.toggle('hidden', view === 'kanban');
+  if (view === 'dag') renderDag();
+}
+
+function renderSummary() {
+  const all = flattenTasks(TASK_DATA);
+  const leaves = all.filter(t => t.is_leaf);
+  const approved = leaves.filter(t => t.effective_status === 'approved').length;
+  document.getElementById('plan-title').textContent = TASK_DATA.title || 'Plan Dashboard';
+  document.getElementById('stat-total').innerHTML =
+    `<strong>${leaves.length}</strong> leaf tasks, <strong>${all.length - leaves.length}</strong> branches`;
+  document.getElementById('stat-progress').innerHTML =
+    `<strong>${approved}/${leaves.length}</strong> approved`;
+  const dates = all.map(t => t.updated).filter(Boolean).sort();
+  if (dates.length) document.getElementById('stat-updated').textContent = 'Updated: ' + dates[dates.length - 1];
+}
+
+function flattenTasks(task) {
+  let result = [task];
+  for (const c of task.children) result = result.concat(flattenTasks(c));
+  return result;
+}
+
+function renderTree() {
+  const root = document.getElementById('tree-root');
+  root.innerHTML = '';
+  for (const child of TASK_DATA.children) {
+    root.appendChild(buildTreeNode(child));
+  }
+}
+
+function buildTreeNode(task) {
+  const div = document.createElement('div');
+  const item = document.createElement('div');
+  item.className = 'tree-item';
+  item.dataset.path = task.path;
+
+  const toggle = document.createElement('span');
+  toggle.className = 'tree-toggle';
+  toggle.textContent = task.children.length ? '▸' : ' ';
+
+  const label = document.createElement('span');
+  const name = task.path.split('/').pop() || task.title;
+  label.textContent = name + ': ' + (task.title || '');
+
+  const badge = document.createElement('span');
+  badge.className = 'status-badge status-' + task.effective_status;
+  badge.textContent = task.effective_status;
+
+  if (!task.is_leaf) {
+    const approved = task.children.filter(c => c.effective_status === 'approved').length;
+    const progress = document.createElement('span');
+    progress.className = 'status-badge';
+    progress.style.background = 'transparent';
+    progress.style.color = 'var(--text-muted)';
+    progress.textContent = `${approved}/${task.children.length}`;
+    item.appendChild(toggle);
+    item.appendChild(label);
+    item.appendChild(badge);
+    item.appendChild(progress);
+  } else {
+    item.appendChild(toggle);
+    item.appendChild(label);
+    item.appendChild(badge);
+  }
+
+  item.onclick = (e) => {
+    e.stopPropagation();
+    if (task.children.length) {
+      const children = div.querySelector('.tree-children');
+      if (children) {
+        children.classList.toggle('hidden');
+        toggle.textContent = children.classList.contains('hidden') ? '▸' : '▾';
+      }
+    }
+    selectTask(task);
+  };
+
+  div.appendChild(item);
+
+  if (task.children.length) {
+    const childrenDiv = document.createElement('div');
+    childrenDiv.className = 'tree-children';
+    for (const child of task.children) {
+      childrenDiv.appendChild(buildTreeNode(child));
+    }
+    div.appendChild(childrenDiv);
+  }
+
+  return div;
+}
+
+function selectTask(task) {
+  selectedPath = task.path;
+  document.querySelectorAll('.tree-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.path === task.path);
+  });
+
+  const detail = document.getElementById('view-detail');
+  const status = task.effective_status;
+
+  let metaHtml = '';
+  if (task.path) metaHtml += `<span>Path: <code>${escapeHtml(task.path)}</code></span>`;
+  metaHtml += `<span>Status: <span class="status-badge status-${escapeHtml(status)}">${escapeHtml(status)}</span></span>`;
+  if (task.review_status && task.review_status !== '~')
+    metaHtml += `<span>Review: ${escapeHtml(task.review_status)}</span>`;
+  if (task.integration_status && task.integration_status !== '~')
+    metaHtml += `<span>Integration: ${escapeHtml(task.integration_status)}</span>`;
+  if (task.depends_on.length)
+    metaHtml += `<span>Depends on: ${task.depends_on.map(d => escapeHtml(d)).join(', ')}</span>`;
+  if (task.script) metaHtml += `<span>Script: <code>${escapeHtml(task.script)}</code></span>`;
+  if (task.tags.length) metaHtml += `<span>Tags: ${task.tags.map(t => escapeHtml(t)).join(', ')}</span>`;
+
+  const bodyHtml = md.render(task.body || '');
+
+  const sections = parseBodySections(task.body || '');
+  let sectionsHtml = '';
+  for (const sec of sections) {
+    const open = (sec.name === 'Steps' || sec.name === 'Results') ? ' open' : '';
+    const rendered = md.render(sec.content);
+    let summaryExtra = '';
+    if (sec.name === 'Steps') {
+      const checked = (sec.content.match(/- \[x\]/gi) || []).length;
+      const total = (sec.content.match(/- \[[ x]\]/gi) || []).length;
+      if (total) summaryExtra = ` (${checked}/${total})`;
+    }
+    sectionsHtml += `<details${open}><summary>${sec.name}${summaryExtra}</summary>` +
+      `<div class="section-body">${rendered}</div></details>`;
+  }
+
+  detail.innerHTML = `<h1>${escapeHtml(task.title || task.path || 'Root')}</h1>` +
+    `<div class="meta">${metaHtml}</div>` +
+    (sectionsHtml || `<div class="section-body">${bodyHtml}</div>`);
+}
+
+function parseBodySections(body) {
+  const lines = body.split('\n');
+  const sections = [];
+  let current = null;
+  for (const line of lines) {
+    const match = line.match(/^## (.+)$/);
+    if (match) {
+      if (current) sections.push(current);
+      current = { name: match[1], content: '' };
+    } else if (current) {
+      current.content += line + '\n';
+    }
+  }
+  if (current) sections.push(current);
+  return sections;
+}
+
+function renderKanban() {
+  const container = document.getElementById('view-kanban');
+  const statuses = ['not-started', 'in-progress', 'implemented', 'revise', 'approved'];
+  const labels = {'not-started': 'Not Started', 'in-progress': 'In Progress',
+    'implemented': 'Implemented', 'revise': 'Revise', 'approved': 'Approved'};
+  const all = flattenTasks(TASK_DATA).filter(t => t.is_leaf && t.path);
+
+  container.innerHTML = '';
+  for (const status of statuses) {
+    const col = document.createElement('div');
+    col.className = 'kanban-col';
+    const tasks = all.filter(t => t.effective_status === status);
+    col.innerHTML = `<h3>${labels[status]} (${tasks.length})</h3>`;
+    for (const task of tasks) {
+      const card = document.createElement('div');
+      card.className = 'kanban-card';
+      card.innerHTML = `<div>${escapeHtml(task.title || task.path)}</div><div class="card-path">${escapeHtml(task.path)}</div>`;
+      card.onclick = () => { showView('tree'); selectTask(task); };
+      col.appendChild(card);
+    }
+    container.appendChild(col);
+  }
+}
+
+async function renderDag() {
+  const container = document.getElementById('view-dag');
+  const target = selectedPath ? taskByPath[selectedPath] : TASK_DATA;
+  const task = target || TASK_DATA;
+
+  if (!task.children.length) {
+    container.innerHTML = '<p>No subtasks to visualize.</p>';
+    return;
+  }
+
+  const statusColors = {
+    'not-started': '#e0e0e0', 'in-progress': '#bbdefb',
+    'implemented': '#fff9c4', 'revise': '#ffcdd2', 'approved': '#c8e6c9'
+  };
+
+  let mermaidCode = 'graph LR\n';
+  for (const child of task.children) {
+    const s = child.effective_status;
+    const color = statusColors[s] || '#e0e0e0';
+    mermaidCode += `    ${child.path.split('/').pop()}["${sanitizeMermaid(child.title || child.path)}"]\n`;
+    mermaidCode += `    style ${child.path.split('/').pop()} fill:${color}\n`;
+  }
+  for (const child of task.children) {
+    for (const dep of child.depends_on) {
+      mermaidCode += `    ${dep} --> ${child.path.split('/').pop()}\n`;
+    }
+  }
+
+  container.innerHTML = `<div class="dag-controls">` +
+    `<strong>DAG for:</strong> ${escapeHtml(task.title || task.path || 'root')}</div>` +
+    `<div class="mermaid">${mermaidCode}</div>`;
+
+  try { await mermaid.run({ nodes: container.querySelectorAll('.mermaid') }); } catch(e) { container.innerHTML += '<p style="color:var(--status-revise-text)">DAG error: ' + escapeHtml(e.message) + '</p>'; }
+}
+
+function findTask(task, path) {
+  if (task.path === path) return task;
+  for (const c of task.children) {
+    const found = findTask(c, path);
+    if (found) return found;
+  }
+  return null;
+}
+
+function taskMatches(task, status, search) {
+  if (status && task.effective_status !== status) return false;
+  if (search && !(task.title || '').toLowerCase().includes(search) &&
+      !(task.path || '').toLowerCase().includes(search)) return false;
+  return true;
+}
+
+function anyDescendantMatches(task, status, search) {
+  if (taskMatches(task, status, search)) return true;
+  for (const c of task.children) {
+    if (anyDescendantMatches(c, status, search)) return true;
+  }
+  return false;
+}
+
+function applyFilters() {
+  const status = document.getElementById('filter-status').value;
+  const search = document.getElementById('search-box').value.toLowerCase();
+  document.querySelectorAll('.tree-item').forEach(el => {
+    const path = el.dataset.path || '';
+    const task = taskByPath[path];
+    if (!task) return;
+    const visible = anyDescendantMatches(task, status, search);
+    el.style.display = visible ? '' : 'none';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
