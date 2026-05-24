@@ -1,7 +1,7 @@
 ---
-title: "Update Handoff-Doc Skill"
-status: implemented
-review_status: revise
+title: "Deprecate Handoff-Doc Skill"
+status: not-started
+review_status: ~
 integration_status: ~
 depends_on: 
   - skill-restructure
@@ -13,69 +13,55 @@ updated: 2026-05-24
 
 ## Objective
 
-Update `skills/handoff-doc/SKILL.md` and its references for `.plan/` as the primary document format. The four principles (latest state only, live and committed, task structure, doc is the record) still apply — they're about discipline, not format.
+Deprecate `skills/handoff-doc/` — its content is now redundant with the task-system skill and the agent role specs.
 
-### Changes to SKILL.md body
+### What was handoff-doc
 
-- Reframe from "PLAN.md / RESULTS.md" to ".plan/ task hierarchy" throughout
-- "Handoff docs (`.plan/` task hierarchy)" replaces "Handoff docs (`PLAN.md`, `RESULTS.md`)"
-- References to `plan-anatomy.md` and `results-anatomy.md` updated for new content
+handoff-doc owned: four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, plan-anatomy templates, results-anatomy templates.
 
-### User Decisions Log
+### Why it's redundant
 
-- Decisions go in the relevant task's `## Decisions` section (any `##` section works — `## Decisions` is the recommended default)
-- Cross-task decisions go in root task's `## Decisions`
-- Same three-line blockquote format: `> **User decision (YYYY-MM-DD):**`, `> **Question asked:**`, `> **Rationale (if given):**`
-- No separate `## Decisions` section in a monolithic file
-- The `ask-user-question-logger` hook guidance adapted: log in the relevant task.md, not in PLAN.md
+With .plan/ as the primary handoff mechanism:
+- **Editing discipline** (inline-edit only, latest state, no strikethroughs) → now embedded in `agents/implementer.md` §Editing Etiquette
+- **Task anatomy** → now in `skills/task-system/references/planning.md`
+- **Results shape** → now in `skills/task-system/references/planning.md` or task-system consumer tier
+- **Ownership rules** → now in `skills/task-system/SKILL.md` (consumer tier) and agent role specs
+- **User Decisions Log** → trivial: "put decisions in `## Decisions` section"
+- **Stale-content checklist** → embeddable in role specs or task-system
 
-### Stale Content Checklist
+### What to do
 
-Adapted for task.md files:
-- Task objectives describing an approach abandoned after seeing the data — rewrite them
-- Results sections now incorporated into the current approach
-- Review items confirmed fixed on re-review (reviewer deletes from `## Review Notes`)
-- Sibling task objectives that assume an earlier approach which has since changed
+1. **Merge any remaining unique content** from `skills/handoff-doc/references/` into `skills/task-system/references/`:
+   - Plan-anatomy content (root task.md anatomy, task.md anatomy, field-by-field notes) → merge into `task-system/references/planning.md`
+   - Results-anatomy content (per-task results shape, figure embedding, Stage 2 maturation) → add as a section in `task-system/references/planning.md` or a new `task-system/references/results-guide.md`
+   - Stale-content checklist → embed in `task-system/SKILL.md` consumer tier
+   - User Decisions Log format (3-line blockquote) → embed in `task-system/references/planning.md`
 
-### `references/plan-anatomy.md`
+2. **Replace SKILL.md body** with a deprecation redirect:
+   ```
+   This skill is deprecated. Its concerns are now owned by:
+   - Editing discipline: agents/implementer.md §Editing Etiquette
+   - Task anatomy and creation: skills/task-system/ (references/planning.md)
+   - Results format: skills/task-system/ (references/planning.md §Results)
+   - User Decisions Log: skills/task-system/ (references/planning.md §Decisions)
+   ```
 
-Major rewrite for `.plan/` structure:
-- **Root task.md anatomy:** `## Objective` (project-level), `## Conventions` (naming, file layout, units), `## Workflow Status` (milestone checkboxes), `## Decisions` (cross-task)
-- **Task.md anatomy:** frontmatter fields (title, status, review_status, integration_status, depends_on, tags, script, input, output, created, updated) + flexible `##` body sections. Show example with recommended defaults
-- **Remove:** step-checkbox anatomy (`- [ ]` / `- [x]`), monolithic task block anatomy (`### Task N:`)
-- **Keep:** field-by-field notes adapted for frontmatter. Ownership rules (planner vs implementer vs reviewer)
+3. **Update Skill-Load Manifest** in `skills/using-superRA/SKILL.md`:
+   - Remove handoff-doc from the `Stage: documentation` row
+   - Remove the "main agents additionally load handoff-doc" instruction
+   - Remove from skill inventory table
 
-### `references/results-anatomy.md`
+4. **Update CATEGORIES.md and README.md** — remove or mark deprecated
 
-Simplify or merge into plan-anatomy — results now live in task.md `## Results`, not a separate file:
-- Stage 1 (implementation): task's `## Results` section is the dev log — findings, row counts, figures
-- Stage 2 (integration): results maturation happens in the same `## Results` sections, restructured for reader-facing clarity
-- No pre-allocation needed — each task.md starts with empty `## Results` (or whatever sections the planner writes)
+5. **Update CLAUDE.md ownership table** — reassign handoff-doc concerns to task-system
 
-### Sync Map
+6. **Remove handoff-doc loads** from any workflow skill that references `superRA:handoff-doc`
 
-- `## Sync Map` in root task.md (temporary, same lifecycle as current)
-- Task-local sync impact in task's `## Sync Impact` section
-- Removal at Integrate closeout: delete `## Sync Map` from root, delete `## Sync Impact` from affected tasks
+## Decisions
+
+> **User decision (2026-05-24):** Deprecate handoff-doc entirely — its content is redundant with task-system + agent role specs in the .plan/ world.
+> **Question asked:** Why do we still have handoff-doc if we're replacing PLAN.md/RESULTS.md with .plan/?
+> **Rationale:** Task-system skill now owns format/interaction, agent role specs own discipline, planning-workflow owns creation. No unique concern left for handoff-doc.
 
 ## Results
 
-Rewrote all three files in `skills/handoff-doc/` for `.plan/`-native operation:
-
-**SKILL.md** — Reframed from "PLAN.md / RESULTS.md" to ".plan/ task hierarchy" throughout. Four principles preserved with Principle 3 updated from "Task-block structure" to "Task hierarchy structure". References updated to point at new content. User Decisions Log now references task.md instead of PLAN.md. `## Conventions` replaces `## Project Conventions`.
-
-**references/plan-anatomy.md** — Major rewrite:
-- Root task.md anatomy: `## Objective`, `## Conventions`, `## Workflow Status`, `## Decisions`, `## Sync Map`
-- Task.md anatomy: frontmatter fields + flexible `## Heading` body sections with recommended defaults (`## Objective`, `## Results`, `## Decisions`, `## Review Notes`)
-- Removed: step-checkbox anatomy, monolithic `### Task N:` task-block anatomy, `PLAN.md` header template
-- Kept: ownership rules (planner vs implementer vs reviewer), field-by-field notes adapted for frontmatter, User Decisions Log spec, Sync Map lifecycle, Conventions section discipline
-
-**references/results-anatomy.md** — Simplified from RESULTS.md file anatomy to task.md `## Results` section anatomy:
-- Stage 1: results in task.md during implementation (no pre-allocation needed)
-- Stage 2: maturation in the same `## Results` sections during integration
-- Removed: separate file header, pre-allocated task stubs, status tracking per section
-- Kept: per-task results shape, reviewer caveats, figure embedding, Stage 2 transition pointer
-
-## Review Notes
-
-> 1. [MAJOR] [`skills/handoff-doc/references/results-anatomy.md:46-53`](../../../../../../skills/handoff-doc/references/results-anatomy.md#L46-L53) documents reviewer caveats at the bottom of `## Results`, but the companion `agents/reviewer.md` rewrite (in sibling task `agent-protocols`) explicitly prohibits the reviewer from touching `## Results`. The two files are now in conflict. This must be resolved consistently — see agent-protocols review item 2 for the proposed fix options. The resolution choice determines whether results-anatomy.md keeps or drops its §Reviewer Caveats section.

@@ -80,6 +80,7 @@ If the task's structure is unclear, flag it in your status return rather than in
 
 - **Body sections:** `## Results`, `## Decisions`, and any `##` section that serves the task. You may add, rewrite, or remove body sections as the work requires.
 - **`status:` frontmatter field** — set to `implemented` after your atomic commit.
+- **`review_status:` frontmatter field** — set to `implemented` after your atomic commit (signals "ready for review" to the orchestrator).
 - **`integration_status:` frontmatter field** — set to `implemented` when you commit Integrate refactor work. The integration reviewer set this to `revise` before you; the integration reviewer will flip it to `approved` after your fix pass.
 - **`→ implemented: ...` annotations** appended to review items in `## Review Notes` on a REVISE round (see below).
 
@@ -105,7 +106,7 @@ For each item in the review notes:
 3. **Append `→ implemented: <markdown-link citation + one-line fix description>`** directly after the item's text, on its own line, preserving the reviewer's original prose.
 4. If you think an item is wrong or was already handled, do NOT annotate it as implemented. Flag it in your status report and let the orchestrator adjudicate on the next pass.
 
-After annotating all items you're expected to address, set `status: implemented` in frontmatter and commit.
+After annotating all items you're expected to address, set `status: implemented` and `review_status: implemented` in frontmatter and commit.
 
 **Example of what review notes look like after your pass:**
 
@@ -124,7 +125,7 @@ You leave the review notes in this state for the reviewer to re-review. Do not r
 
 ### Update the Task and Commit
 
-**Edit your task.md directly.** Write findings in `## Results`, record decisions in `## Decisions`, respond to review items in `## Review Notes` with `→ implemented:` annotations. Set `status: implemented` in frontmatter.
+**Edit your task.md directly.** Write findings in `## Results`, record decisions in `## Decisions`, respond to review items in `## Review Notes` with `→ implemented:` annotations. Set `status: implemented` and `review_status: implemented` in frontmatter.
 
 **Single atomic commit.** Follow `superRA:using-superra` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + task.md together:
 ```bash

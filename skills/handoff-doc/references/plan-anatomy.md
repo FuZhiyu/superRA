@@ -154,7 +154,7 @@ Use CRSP-style merge conventions. Validate row counts post-merge.
 ### Field-by-field notes
 
 - **`status`** is a task-local validity marker. Valid values: `not-started`, `in-progress`, `implemented`, `revise`, `approved`. On re-entry, tasks in the transitive downstream closure of a modified task have their status cleared by default; unrelated approved tasks keep their status.
-- **`review_status`** is owned by the reviewer. Valid values: `~` (unset), `implemented`, `revise`, `approved`. Before execution starts, leave as `~`.
+- **`review_status`** — the implementer sets `implemented` (signaling ready-for-review); the reviewer sets `revise` or `approved`. Valid values: `~` (unset), `implemented`, `revise`, `approved`. Before execution starts, leave as `~`.
 - **`integration_status`** is owned by the integration reviewer and the implementer across the Integrate step. Valid values: `~`, `implemented`, `revise`, `approved`. The same DAG cascade rule applies as for `review_status`.
 - **`depends_on`** lists sibling directory names. Dependencies are sibling-only; parent status rolls up from children automatically.
 - **`script` / `input` / `output`** are fixed at planning time and only the orchestrator may change them (they define task scope).

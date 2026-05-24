@@ -43,18 +43,9 @@ Omit subsections that do not apply (other than the Notation & Assumptions Ledger
 
 - **Planner (`planning-workflow`)** — creates task.md with `## Results` section (empty or with placeholder text describing expected outputs).
 - **Implementer** — fills and updates `## Results` during execution. On subsequent iterations, replaces the section's prior content in place.
-- **Reviewer** (implementation stage only) — may add a reliability-caveat blockquote at the bottom of `## Results` if needed. Replaces any prior caveat on re-review; removes it entirely when approved with no remaining concerns.
 - **Orchestrator / standalone author** — everything.
 
-## Reviewer Caveats
-
-When an implementation reviewer approves a task but has a remaining reliability concern that doesn't block approval, they add a blockquote at the bottom of the task's `## Results`:
-
-```markdown
-> **Reviewer caveat (implementation):** Result based on 47 observations in the post-2020 subsample; power is limited.
-```
-
-On re-review, the caveat is **replaced** with the current one, never stacked. When the concern is resolved, the caveat is removed entirely.
+Reviewers do NOT edit `## Results`. Reliability concerns are raised as findings in `## Review Notes`; the implementer addresses them on the next REVISE round.
 
 ## Figure Embedding (Stage 1)
 
