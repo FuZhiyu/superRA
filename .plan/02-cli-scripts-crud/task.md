@@ -5,27 +5,23 @@ review_status: implemented
 integration_status: ~
 depends_on:
   - 01-core-data-layer-task-iopy
-
 tags: []
 created: 2026-05-23
 updated: 2026-05-23
 ---
 
-# CLI Scripts (CRUD)
+## Objective
+- **Step 1: `task_create.py`** — `create_task(plan_root, path, title, depends_on, script, input, output)`. Validates parent exists, no duplicates, deps are existing siblings. Template with frontmatter + empty body sections.
 
-## Steps
+- **Step 2: `task_update.py`** — `update_task(plan_root, path, status, review_status, integration_status, title, add_tags, remove_tags, script)`. Validates enums. Bumps `updated` timestamp.
 
-- [x] **Step 1: `task_create.py`** — `create_task(plan_root, path, title, depends_on, script, input, output)`. Validates parent exists, no duplicates, deps are existing siblings. Template with frontmatter + empty body sections.
+- **Step 3: `task_add_result.py`** — `add_result(plan_root, path, finding, figure, note)`. Ensures `## Results` section exists, appends findings under `### Key Findings`, figures as `![caption](path)`, notes under `### Notes`.
 
-- [x] **Step 2: `task_update.py`** — `update_task(plan_root, path, status, review_status, integration_status, title, add_tags, remove_tags, script)`. Validates enums. Bumps `updated` timestamp.
+- **Step 4: `task_link.py`** — `link_task(plan_root, path, depends_on, remove)`. Validates sibling exists when adding. Warns on remove of non-existent dep.
 
-- [x] **Step 3: `task_add_result.py`** — `add_result(plan_root, path, finding, figure, note)`. Ensures `## Results` section exists, appends findings under `### Key Findings`, figures as `![caption](path)`, notes under `### Notes`.
+- **Step 5: `task_rename.py`** — `rename_task(plan_root, from_path, to_path)`. Must stay in same parent. Cascades `depends_on` updates to all siblings.
 
-- [x] **Step 4: `task_link.py`** — `link_task(plan_root, path, depends_on, remove)`. Validates sibling exists when adding. Warns on remove of non-existent dep.
-
-- [x] **Step 5: `task_rename.py`** — `rename_task(plan_root, from_path, to_path)`. Must stay in same parent. Cascades `depends_on` updates to all siblings.
-
-- [x] **Step 6: `task_query.py`** — `--tree` (indented with status icons), `--frontier` (dispatchable leaves), `--dag [subtree]` (Mermaid format with classDef color-coding). Filter by `--status`, `--tag`. `--json` output. `tree_to_json()` serializes full tree for dashboard.
+- **Step 6: `task_query.py`** — `--tree` (indented with status icons), `--frontier` (dispatchable leaves), `--dag [subtree]` (Mermaid format with classDef color-coding). Filter by `--status`, `--tag`. `--json` output. `tree_to_json()` serializes full tree for dashboard.
 
 ---
 

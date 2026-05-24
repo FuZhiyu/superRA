@@ -5,24 +5,20 @@ review_status: implemented
 integration_status: ~
 depends_on:
   - 01-core-data-layer-task-iopy
-
 tags: []
 script: skills/task-system/scripts/plan_migrate.py
 created: 2026-05-23
 updated: 2026-05-23
 ---
 
-# Migration Script
+## Objective
+- **Step 1: Parse PLAN.md** — extract header (everything before `### Task 1:`), extract task blocks via `TASK_BLOCK_RE = r"^###\s+Task\s+(\d+):\s+(.+?)$"`. Per block: extract `**Depends on:**`, `**Review status:**`, `**Integration status:**`, `**Script:**`, `**Input:**`, `**Output:**` via field-specific regexes.
 
-## Steps
+- **Step 2: Parse RESULTS.md** — extract per-task results via `RESULTS_SECTION_RE = r"^##\s+Task\s+(\d+):\s+(.+?)$"`. Skip stubs (`Not started`).
 
-- [x] **Step 1: Parse PLAN.md** — extract header (everything before `### Task 1:`), extract task blocks via `TASK_BLOCK_RE = r"^###\s+Task\s+(\d+):\s+(.+?)$"`. Per block: extract `**Depends on:**`, `**Review status:**`, `**Integration status:**`, `**Script:**`, `**Input:**`, `**Output:**` via field-specific regexes.
+- **Step 3: Generate tree** — slugify titles (`re.sub` chain → lowercase, strip non-word, hyphenate). Map `Task N` numbers to `NN-slug/` directories. Convert `Task N` depends-on references to slug names. Infer status from checkbox states and review status. Build `task.md` with frontmatter + Steps + Results body sections.
 
-- [x] **Step 2: Parse RESULTS.md** — extract per-task results via `RESULTS_SECTION_RE = r"^##\s+Task\s+(\d+):\s+(.+?)$"`. Skip stubs (`Not started`).
-
-- [x] **Step 3: Generate tree** — slugify titles (`re.sub` chain → lowercase, strip non-word, hyphenate). Map `Task N` numbers to `NN-slug/` directories. Convert `Task N` depends-on references to slug names. Infer status from checkbox states and review status. Build `task.md` with frontmatter + Steps + Results body sections.
-
-- [x] **Step 4: Write root task.md** — header content → root `.plan/task.md` with `title: "Project Plan"` frontmatter.
+- **Step 4: Write root task.md** — header content → root `.plan/task.md` with `title: "Project Plan"` frontmatter.
 
 ---
 

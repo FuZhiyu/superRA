@@ -10,21 +10,18 @@ created: 2026-05-23
 updated: 2026-05-23
 ---
 
-# Core Data Layer (`_task_io.py`)
+## Objective
+- **Step 1: Define `Task` dataclass** — fields: path, dir_path, title, status, review_status, integration_status, depends_on, tags, script, input, output, created, updated, body, children. Properties: is_leaf, is_root, slug, effective_status.
 
-## Steps
+- **Step 2: YAML frontmatter parser** — stdlib-only (`re`), no PyYAML. Handles scalars, inline lists `[a, b]`, multi-line lists (`  - item`), tilde `~`. Regex: `FRONTMATTER_RE = r"\A---\n(.*?\n)---\n(.*)"`.
 
-- [x] **Step 1: Define `Task` dataclass** — fields: path, dir_path, title, status, review_status, integration_status, depends_on, tags, script, input, output, created, updated, body, children. Properties: is_leaf, is_root, slug, effective_status.
+- **Step 3: Serializer** — `serialize_frontmatter()` with canonical field order (title, status, review_status, ..., updated). `write_task()` wraps frontmatter + body.
 
-- [x] **Step 2: YAML frontmatter parser** — stdlib-only (`re`), no PyYAML. Handles scalars, inline lists `[a, b]`, multi-line lists (`  - item`), tilde `~`. Regex: `FRONTMATTER_RE = r"\A---\n(.*?\n)---\n(.*)"`.
+- **Step 4: Tree walker** — `walk_plan(plan_root)` recursively discovers `task.md` files in sorted subdirectories, builds `Task` tree. `_find_plan_root()` walks up from any task to the root.
 
-- [x] **Step 3: Serializer** — `serialize_frontmatter()` with canonical field order (title, status, review_status, ..., updated). `write_task()` wraps frontmatter + body.
+- **Step 5: Frontier computation** — `compute_frontier(root)` returns leaf tasks where: own status is `not-started`/`in-progress`, all sibling `depends_on` targets are `approved`, and all ancestor sibling deps are met (recursive).
 
-- [x] **Step 4: Tree walker** — `walk_plan(plan_root)` recursively discovers `task.md` files in sorted subdirectories, builds `Task` tree. `_find_plan_root()` walks up from any task to the root.
-
-- [x] **Step 5: Frontier computation** — `compute_frontier(root)` returns leaf tasks where: own status is `not-started`/`in-progress`, all sibling `depends_on` targets are `approved`, and all ancestor sibling deps are met (recursive).
-
-- [x] **Step 6: Status rollup** — `compute_status(task)` for branch tasks: all approved → approved, any revise → revise, any in-progress/implemented → in-progress, else not-started.
+- **Step 6: Status rollup** — `compute_status(task)` for branch tasks: all approved → approved, any revise → revise, any in-progress/implemented → in-progress, else not-started.
 
 ---
 

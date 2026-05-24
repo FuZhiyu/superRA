@@ -9,8 +9,6 @@ created: 2026-05-23
 updated: 2026-05-23
 ---
 
-# Task System Skill — Plan
-
 > **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use `superRA:skill-creator` when editing any `skills/*/SKILL.md`. Steps use checkbox (`- [ ]`) syntax for tracking and cross-session handoff.
 
 **Objective:** Add a `task-system` skill to superRA that replaces flat PLAN.md/RESULTS.md task tracking with a filesystem-based hierarchy where each task is a self-contained `task.md` (plan + results unified), and a generated HTML dashboard provides human-friendly visualization with tree, DAG, and kanban views.

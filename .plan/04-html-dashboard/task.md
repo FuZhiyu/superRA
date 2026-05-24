@@ -6,30 +6,26 @@ integration_status: ~
 depends_on:
   - 01-core-data-layer-task-iopy
   - 02-cli-scripts-crud
-
 tags: []
 script: skills/task-system/scripts/plan_dashboard.py
 created: 2026-05-23
 updated: 2026-05-23
 ---
 
-# HTML Dashboard
+## Objective
+- **Step 1: Dashboard generator** — `generate_dashboard(plan_root, output_path)`. Walks plan tree via `_task_io.walk_plan()`, serializes to JSON via `tree_to_json()`, embeds as `__TASK_DATA_JSON__` in HTML template string.
 
-## Steps
+- **Step 2: HTML template — layout** — summary bar (title, stats, view buttons, status filter, theme toggle), sidebar (search + tree), main content area (detail/DAG/kanban views). CSS custom properties for dark/light mode.
 
-- [x] **Step 1: Dashboard generator** — `generate_dashboard(plan_root, output_path)`. Walks plan tree via `_task_io.walk_plan()`, serializes to JSON via `tree_to_json()`, embeds as `__TASK_DATA_JSON__` in HTML template string.
+- **Step 3: Tree view** — collapsible hierarchy with status badges (color-coded), progress counts on branch nodes (`approved/total`), click to select.
 
-- [x] **Step 2: HTML template — layout** — summary bar (title, stats, view buttons, status filter, theme toggle), sidebar (search + tree), main content area (detail/DAG/kanban views). CSS custom properties for dark/light mode.
+- **Step 4: Task detail panel** — rendered markdown body via markdown-it (CDN), progressive disclosure via `<details>` for Steps (with completion count), Results, Review Notes. Meta bar with status badge, path, depends_on, script, tags.
 
-- [x] **Step 3: Tree view** — collapsible hierarchy with status badges (color-coded), progress counts on branch nodes (`approved/total`), click to select.
+- **Step 5: DAG view** — Mermaid.js (CDN) dependency graph for selected subtree's children. Nodes colored by effective status. `mermaid.run()` for dynamic rendering.
 
-- [x] **Step 4: Task detail panel** — rendered markdown body via markdown-it (CDN), progressive disclosure via `<details>` for Steps (with completion count), Results, Review Notes. Meta bar with status badge, path, depends_on, script, tags.
+- **Step 6: Kanban view** — columns by status (Not Started, In Progress, Implemented, Revise, Approved). Cards show title + path, click navigates to tree view.
 
-- [x] **Step 5: DAG view** — Mermaid.js (CDN) dependency graph for selected subtree's children. Nodes colored by effective status. `mermaid.run()` for dynamic rendering.
-
-- [x] **Step 6: Kanban view** — columns by status (Not Started, In Progress, Implemented, Revise, Approved). Cards show title + path, click navigates to tree view.
-
-- [x] **Step 7: Search/filter** — text search across titles and paths, status filter dropdown. Filters apply to tree sidebar.
+- **Step 7: Search/filter** — text search across titles and paths, status filter dropdown. Filters apply to tree sidebar.
 
 ---
 

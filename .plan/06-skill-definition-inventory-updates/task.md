@@ -8,21 +8,17 @@ depends_on:
   - 02-cli-scripts-crud
   - 03-migration-script
   - 04-html-dashboard
-
 tags: []
 created: 2026-05-23
 updated: 2026-05-23
 ---
 
-# Skill Definition + Inventory Updates
+## Objective
+- **Step 1: `SKILL.md`** — frontmatter (name, description with trigger phrases, user-invocable: true). Body: core concepts (tasks vs steps, siblings-only deps), directory structure, command surface with examples, task file format template.
 
-## Steps
+- **Step 2: `CATEGORIES.md`** — add `task-system` row to Utility table.
 
-- [x] **Step 1: `SKILL.md`** — frontmatter (name, description with trigger phrases, user-invocable: true). Body: core concepts (tasks vs steps, siblings-only deps), directory structure, command surface with examples, task file format template.
-
-- [x] **Step 2: `CATEGORIES.md`** — add `task-system` row to Utility table.
-
-- [x] **Step 3: `README.md`** — add `task-system` row to Utility Skills table.
+- **Step 3: `README.md`** — add `task-system` row to Utility Skills table.
 
 ## Results
 
