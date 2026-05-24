@@ -26,7 +26,7 @@ Any step -> planning-workflow §User Feedback and Changing Plans
 
 The main agent's Workflow Frontier Resolver chooses where to enter this workflow. Once entered, run the selected step's local gates exactly; do not redo task-local approvals outside the affected frontier simply because a rollup milestone was unchecked.
 
-Legitimate stop points (log every answer per `superRA:handoff-doc` §User Decisions Log **before** acting):
+Legitimate stop points (log every answer per `task-system/references/planning.md` §User Decisions Log **before** acting):
 
 - **Protect:** key-result protection confirmation.
 - **Sync:** target base confirmation when no prior decision records it; intent-changing conflicts surfaced by `semantic-merge`.
@@ -194,7 +194,7 @@ Agent(subagent_type: "superRA:reviewer"):
     `Integration status: APPROVED` or write task-local review notes and
     set `Integration status: REVISE`. Findings should cover minimum
     surviving branch delta, codebase fit, project-doc audit, drift-test
-    implications, and handoff-doc coherence. Do not recreate incoming-intent
+    implications, and task-file coherence. Do not recreate incoming-intent
     research or re-review semantic coherence already approved by sync review.
 ```
 

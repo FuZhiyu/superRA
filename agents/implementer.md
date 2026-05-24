@@ -62,7 +62,7 @@ When you own a task, your handoff is: update that task's body sections directly 
 
 ### Editing Etiquette
 
-Compact etiquette below; full discipline in `superRA:handoff-doc`. Load it on demand if anything below is unclear.
+Compact etiquette below; full discipline in `task-system/references/planning.md`. Load `superRA:task-system` on demand if anything below is unclear.
 
 **The task always reflects the latest state, not a log.** The file is for the current intended implementation and current findings only.
 

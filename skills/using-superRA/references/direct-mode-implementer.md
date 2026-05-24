@@ -19,7 +19,7 @@ In direct mode there is no dispatch prompt. Task context comes from `PLAN.md`, `
 3. **Read `PLAN.md`'s `## Project Conventions` section before editing any file.** If it is missing, empty, stale, or does not cover a convention you need, walk the directories on-demand, apply what you find, and flag the omission in your status return.
 4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
 
-The handoff-doc editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update `PLAN.md` / `RESULTS.md`.
+The editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update `PLAN.md` / `RESULTS.md`.
 
 ## Execution Protocol
 
@@ -59,7 +59,7 @@ When you own a PLAN.md task block, your handoff is the same: update that block a
 
 ### Editing Etiquette
 
-Compact etiquette below; full discipline in `superRA:handoff-doc`. Load it on demand if anything below is unclear.
+Compact etiquette below; full discipline in `task-system/references/planning.md`. Load `superRA:task-system` on demand if anything below is unclear.
 
 **The handoff doc always reflects the latest state, not a log.** The doc itself is for the current intended implementation and current findings only.
 
@@ -123,7 +123,7 @@ You leave the blockquote in this state for the reviewer to re-review. Do not rem
 
 1. **When you own a PLAN.md task block, update it in place.** Mark completed steps `[x]`. Rewrite step text if you deviated from the originally planned approach. Annotate review items as described above. Set `**Review status:** IMPLEMENTED`.
 
-2. **When you own a RESULTS.md task section, update it in place.** Your task's section is **pre-allocated** in `RESULTS.md` at planning time (`## Task N: <name>`, same order and name as `PLAN.md`). Find your section by heading and **replace its content** with current findings — do not append a new section at end-of-file (that creates merge conflicts on parallel dispatch). Mirror the per-task shape in `handoff-doc/references/results-anatomy.md`. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `report-in-markdown/references/rich-content.md` for the format details.
+2. **When you own a RESULTS.md task section, update it in place.** Your task's section is **pre-allocated** in `RESULTS.md` at planning time (`## Task N: <name>`, same order and name as `PLAN.md`). Find your section by heading and **replace its content** with current findings — do not append a new section at end-of-file (that creates merge conflicts on parallel dispatch). Mirror the per-task shape in `task-system/references/planning.md` §Results Shape. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `report-in-markdown/references/rich-content.md` for the format details.
 
 **Single atomic commit.** Follow `superRA:using-superra` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + `PLAN.md` + `RESULTS.md` together:
 ```bash

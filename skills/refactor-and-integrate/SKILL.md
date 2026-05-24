@@ -19,7 +19,7 @@ The active domain skill's stage-load table routes any domain-specific integratio
 
 ## Minimum Net Diff
 
-- `[BLOCKING]` **Minimum net diff to the governing baseline.** Touch only what approved task objectives, codebase-coherence checklist items, handoff-doc coherence, documentation currency, logged user decisions, or supplied Sync impact context justify. No unrelated cleanup, broad reformatting, defensive edits, speculative abstractions, or helper extraction that is not required by the current task.
+- `[BLOCKING]` **Minimum net diff to the governing baseline.** Touch only what approved task objectives, codebase-coherence checklist items, task-file coherence, documentation currency, logged user decisions, or supplied Sync impact context justify. No unrelated cleanup, broad reformatting, defensive edits, speculative abstractions, or helper extraction that is not required by the current task.
 
 Use `git diff <BASE_HEAD_SHA>..HEAD` in normal integration-workflow after Sync, or the caller-provided range when a dispatch explicitly overrides the baseline. In standalone refactor work, use the caller's governing git range or touched-file diff.
 

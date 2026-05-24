@@ -1,7 +1,7 @@
 ---
 title: "Deprecate Handoff-Doc Skill"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: 
   - skill-restructure
@@ -65,3 +65,14 @@ With .plan/ as the primary handoff mechanism:
 
 ## Results
 
+### Key Findings
+- Merged all unique content from `handoff-doc/references/` into `task-system/references/planning.md`: field-by-field notes, User Decisions Log, Conventions section discipline, Workflow Status checkboxes, Stale Content Checklist, Results Shape (two-stage lifecycle, per-task template, section ownership, figure embedding).
+- Replaced `handoff-doc/SKILL.md` body with 12-line deprecation redirect.
+- Replaced both reference files with one-line redirects.
+- Removed handoff-doc from `using-superRA/SKILL.md`: inventory table, Stage: documentation row (replaced with `report-in-markdown`), "main agents additionally load" instruction, Skill-Load Manifest explanatory paragraph.
+- Updated 14 files across workflow skills, agent files, utility skills, and domain references to point at `task-system/references/planning.md` instead of `handoff-doc`.
+- Updated CLAUDE.md ownership table, CATEGORIES.md, and README.md.
+
+### Notes
+- Historical plan files in `docs/plans/` were NOT updated — they are archival records of past work and their references to handoff-doc are accurate for the time they were written.
+- The `implementation-workflow/SKILL.md` "Step 0b: Handoff-Doc Existence Check" heading was not renamed — it still checks for plan file existence and the heading is descriptive of its legacy purpose.
