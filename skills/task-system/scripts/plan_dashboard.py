@@ -550,7 +550,7 @@ body {
 
 <script>
 const TASK_DATA = __TASK_DATA_JSON__;
-const md = window.markdownit({ html: true, linkify: true });
+const md = window.markdownit({ html: false, linkify: true });
 let currentView = 'tree';
 const taskByPath = {};
 const expandedTasks = new Set();

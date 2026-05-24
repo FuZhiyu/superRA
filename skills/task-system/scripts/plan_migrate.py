@@ -189,7 +189,7 @@ def _compute_status_from_steps(body: str) -> str:
     if "IMPLEMENTED" in review:
         return "implemented"
 
-    checked = len(re.findall(r"- \[x\]", body))
+    checked = len(re.findall(r"- \[[xX]\]", body))
     unchecked = len(re.findall(r"- \[ \]", body))
     if checked > 0 and unchecked == 0:
         return "implemented"
@@ -211,7 +211,7 @@ def _normalize_review_status(raw: str) -> str:
 
 def _strip_checkboxes(text: str) -> str:
     """Strip checkbox syntax from step text, converting to plain bullets."""
-    return re.sub(r"^- \[[x ]\] ", "- ", text, flags=re.MULTILINE)
+    return re.sub(r"^- \[[xX ]\] ", "- ", text, flags=re.MULTILINE)
 
 
 def _build_task_md(
@@ -396,10 +396,18 @@ def _upgrade_task_body(body: str) -> tuple[str, bool]:
 
     body = "\n".join(new_lines)
 
-    # Rename ## Steps to ## Objective and strip checkbox prefixes
-    if re.search(r"^## Steps\s*$", body, re.MULTILINE):
-        body = re.sub(r"^## Steps\s*$", "## Objective", body, flags=re.MULTILINE)
-        body = _strip_checkboxes(body)
+    # Rename ## Steps to ## Objective and strip checkboxes only within that section
+    steps_match = re.search(r"^## Steps\s*$", body, re.MULTILINE)
+    if steps_match:
+        steps_start = steps_match.start()
+        next_section = re.search(r"^## ", body[steps_match.end():], re.MULTILINE)
+        if next_section:
+            steps_end = steps_match.end() + next_section.start()
+            steps_content = body[steps_match.end():steps_end]
+            body = body[:steps_start] + "## Objective\n" + _strip_checkboxes(steps_content) + body[steps_end:]
+        else:
+            steps_content = body[steps_match.end():]
+            body = body[:steps_start] + "## Objective\n" + _strip_checkboxes(steps_content)
         changed = True
 
     return body, changed

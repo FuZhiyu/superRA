@@ -111,6 +111,14 @@ python3 <skill-dir>/scripts/plan_migrate.py \
   --plan-md PLAN.md --results-md RESULTS.md --output .plan
 ```
 
+### Upgrade existing .plan/ from v1 to v2 format
+
+```bash
+python3 <skill-dir>/scripts/plan_migrate.py --upgrade --plan-root .plan
+```
+
+Converts `## Steps` (checkboxes) to `## Objective` (prose), removes redundant `# Title` headings. Idempotent.
+
 ### Generate HTML dashboard
 
 ```bash
