@@ -1,6 +1,6 @@
 ---
 title: "Update Agent Role Specs"
-status: implemented
+status: approved
 review_status: approved
 integration_status: ~
 depends_on: 
