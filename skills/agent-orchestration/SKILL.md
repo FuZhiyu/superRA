@@ -7,7 +7,7 @@ description: Requires `superRA:using-superra` loaded first. Use when dispatching
 
 ## Overview
 
-You delegate tasks to specialized agents with isolated context. This skill carries the **high-level orchestrator guidance** — when to dispatch, what dispatch shape to use, how to read the resulting state from `PLAN.md`, and how to adjudicate reviewer feedback.
+You delegate tasks to specialized agents with isolated context. This skill carries the **high-level orchestrator guidance** — when to dispatch, what dispatch shape to use, how to read the resulting state from the task tree, and how to adjudicate reviewer feedback.
 
 Parallel-dispatch independent tasks/reviews; serialize iterative loops; do trivial work inline.
 
@@ -58,7 +58,7 @@ Harnesses expose multiple tiers of model capacity (Sonnet vs. Opus in Claude Cod
 
 **Default to medium tier (Sonnet in Claude Code, medium thinking in Codex).** Step up to higher tier (Opus / deep thinking) when *any* of these apply:
 
-- **Spec emerges mid-task.** The right approach only becomes clear after investigation, or the task requires re-scoping from what `PLAN.md` says.
+- **Spec emerges mid-task.** The right approach only becomes clear after investigation, or the task requires re-scoping from what the objective says.
 - **Silent-error risk is high.** Results-bearing code (data transforms, methodology, drift tests) where a wrong output ships without obvious failure.
 - **Adversarial first-pass review.** The failure mode is *not noticing* — capacity buys thoroughness, and lower-tier agents tend to over-comply, which breaks adversarial review. Narrow re-review of a cited fix stays on Sonnet.
 - **Heavy context synthesis.** Many files/skills must be reconciled in one head; Sonnet degrades faster under context pressure.
@@ -68,10 +68,11 @@ These are defaults, not rules. Use your discretion and honor any explicit user p
 ### Rules of thumb
 
 **≤150k tokens per agent.** When estimating: manifest skill loads (~5–15k
-each), `PLAN.md` + `RESULTS.md` (5–50k depending on stage), plus per-task
-file reads. If an agent's projected context exceeds ~150k, split the work
-across two agents even when the individual items are small — context
-thrash degrades output quality more than the cost of a second spawn.
+each), task tree context (ancestor chain + sibling deps, 2–20k depending
+on depth), plus per-task file reads. If an agent's projected context
+exceeds ~150k, split the work across two agents even when the individual
+items are small — context thrash degrades output quality more than the
+cost of a second spawn.
 
 
 ---
@@ -95,9 +96,9 @@ The `/parallel/` infix matters: the `merge-guard` hook exempts `*/parallel/*` so
 
 **Seeding data in.** Use `worktree-data-sync` in `--mode seed`. **Always pass `--from "$(pwd)"` (or an explicit path)** — never rely on `sync_worktree_data.py`'s `--from` default, which points at the main worktree, not the orchestrator's analysis worktree.
 
-**Harvest-out and conflicts.** `git merge --no-ff <current-branch>-agent/parallel/<slug>`. Task boundaries are set ex-ante in `PLAN.md`, so parallel branches are mechanically disjoint and typically merge cleanly. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. Cleanup: `git worktree remove` + `git branch -D`.
+**Harvest-out and conflicts.** `git merge --no-ff <current-branch>-agent/parallel/<slug>`. Task boundaries are set ex-ante in the task tree, so parallel branches are mechanically disjoint and typically merge cleanly. If a conflict surfaces, resolve trivial adjacent edits inline; escalate material ones to the researcher. Cleanup: `git worktree remove` + `git branch -D`.
 
-Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `PLAN.md` — git (`git worktree list`, `git branch`) is the source of truth.
+Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in the task tree — git (`git worktree list`, `git branch`) is the source of truth.
 
 ---
 
@@ -105,7 +106,7 @@ Transient state (branch names, HEAD SHAs, worktree paths) is not persisted in `P
 
 Every workflow skill that dispatches a task-scoped `implementer` or `reviewer` subagent uses the canonical template shape defined here. Stage-specific bodies (what goes into `Task:`, `Git range:`, and `Additionally:` for a given stage) live inside each workflow skill — those skills point here for the shape rules. Branch-level `Stage: sync` dispatches generic sync author / sync reviewer agents with explicit `semantic-merge` mode references.
 
-Templates carry required fields plus an optional `Additionally:` line for task-specific steering: focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. Omit `Additionally:` when there is no extra steering; never use it to restate role protocol, manifest loads, or `PLAN.md` content.
+Templates carry required fields plus an optional `Additionally:` line for task-specific steering: focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. Omit `Additionally:` when there is no extra steering; never use it to restate role protocol, manifest loads, or task content.
 
 **Canonical shape — required fields first, `Additionally:` anchor last:**
 
@@ -113,7 +114,7 @@ Templates carry required fields plus an optional `Additionally:` line for task-s
 ```
 Agent(subagent_type: "superRA:implementer"):
   Stage: <stage-name>
-  Task: <task pointer — e.g., "Task N in PLAN.md">
+  Task: <task path — e.g., "data-preparation/merge">
   Worktree: <absolute path>   # optional — parallel-dispatch only
 
   Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
@@ -123,14 +124,16 @@ Agent(subagent_type: "superRA:implementer"):
 ```
 Agent(subagent_type: "superRA:reviewer"):
   Stage: <stage-name>
-  Task: <task pointer>
+  Task: <task path — e.g., "data-preparation/merge">
   Git range: <BASE_SHA>..<HEAD_SHA>
   Worktree: <absolute path>   # optional — parallel-reviewer pattern only
 
   Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
 ```
 
-**Optional steering is strictly additive.** If your `Additionally:` line only paraphrases the default protocol, the skill-load manifest, or `PLAN.md` content, delete it — the agent reads those itself. Never include `Work from:` (cwd is implicit) or restate `PLAN.md` content / manifest loads.
+The implementer/reviewer find their task by running `task_read.py --path <task-path>`, which injects ancestor context and sibling dependency status automatically.
+
+**Optional steering is strictly additive.** If your `Additionally:` line only paraphrases the default protocol, the skill-load manifest, or task content, delete it — the agent reads those itself. Never include `Work from:` (cwd is implicit) or restate task content / manifest loads.
 
 If a non-default skill load, an extra domain reference, or an override is required, add `Skills:` and `References:` lines between the required fields and `Additionally:`.
 
@@ -141,8 +144,8 @@ These are the things the orchestrator does that no subagent does. Applies at eve
 - **Task sequencing and dispatch inside the selected frontier.** The main agent's Workflow Frontier Resolver chooses the workflow/frontier; this skill sizes, bundles, and dispatches the work inside that frontier.
 - **Adjudicate reviewer feedback in place.** See §Handling Reviewer Feedback below for the full protocol.
 - **Handle implementer status returns.** See §Handling Implementer Status below.
-- **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text in place, do not annotate. Commit atomically with the commit that completes the triggering task.
-- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck — hard blocker, methodology decision beyond RA authority, CRITICAL override, repeated reviewer disagreement. Log per `handoff-doc` §User Decisions Log **before** acting.
+- **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text in the relevant task's `task.md` in place, do not annotate. Commit atomically with the commit that completes the triggering task.
+- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck — hard blocker, methodology decision beyond RA authority, CRITICAL override, repeated reviewer disagreement. Log the decision in the relevant task's `## Decisions` section **before** acting.
 
 ## Handling Reviewer Feedback (Orchestrator Discipline)
 
@@ -157,21 +160,22 @@ When a reviewer returns REVISE:
    - **Pedantic but valid** (the issue is real but tiny — missing markdown cell on a trivial step, etc.) → decide whether the fix is worth the cycle. For minors, often yes; for cosmetic minors on a fast-iteration draft, often no
    - **Wrong** (the reviewer misread the code, missed context, or is suggesting a change that conflicts with the methodology you established with the human partner) → push back on the reviewer, do not forward to the implementer
 
-3. **If you reject reviewer feedback, document why in place on the review item.** Append an `→ orchestrator: rejected <reason>` annotation directly under the item in the review-notes blockquote:
+3. **If you reject reviewer feedback, document why in place on the review item.** Append an `→ orchestrator: rejected <reason>` annotation directly under the item in the task's `## Review Notes`:
    ```markdown
-   > **Review notes:**
+   ## Review Notes
+
    > 1. [MAJOR] Use log returns, not arithmetic. ([Code/03.py:42](Code/03.py#L42))
-   >    → orchestrator: rejected — methodology specifies arithmetic returns per plan header Section 2. Reviewer lacked methodology context.
+   >    → orchestrator: rejected — methodology specifies arithmetic returns per root task § Conventions. Reviewer lacked methodology context.
    ```
    For items you are flagging for a second opinion, use `→ orchestrator: <second opinion requested> <reason>` instead. The implementer will see these annotations and leave those items alone; the reviewer will see them on re-review and either accept the override (by deleting the item) or escalate.
 
-   **Do not clear the blockquote.** For items you accept, rewrite the task steps in place; the blockquote itself stays intact. The implementer appends `→ implemented: ...` annotations on their fix pass; the reviewer deletes confirmed-fixed items on re-review. For the full annotation mechanics see `agents/implementer.md §"How You Fix Review Items on a REVISE Round"` and `agents/reviewer.md §"How You Write a Review"`. Commit the annotated `PLAN.md` atomically with the adjudication.
+   **Do not clear the review notes.** For items you accept, rewrite the task's approach in place; the review notes stay intact. The implementer appends `→ implemented: ...` annotations on their fix pass; the reviewer deletes confirmed-fixed items on re-review. For the full annotation mechanics see `agents/implementer.md §"How You Fix Review Items on a REVISE Round"` and `agents/reviewer.md §"How You Write a Review"`. Commit the annotated `task.md` atomically with the adjudication.
 
    This protects you in three ways: (a) the human partner can audit the override, (b) future sessions see why the reviewer's note was ignored, (c) it forces you to articulate the reasoning rather than wave it away.
 
 4. **If you push back on the reviewer (rather than override them), re-dispatch the same reviewer with counter-evidence.** Cite the file:line that proves the reviewer wrong, the methodology section that overrides their suggestion, or the human partner conversation that established the convention. The reviewer should then either retract or escalate.
 
-5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Log per `handoff-doc` §User Decisions Log (inside the relevant task's review-notes area); commit the doc edit in the same commit as the re-dispatched implementer's fix (or as the commit that records the override).
+5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Log the decision in the relevant task's `## Decisions` section; commit the edit in the same commit as the re-dispatched implementer's fix (or as the commit that records the override).
 
 **The orchestrator's authority:** You can override any reviewer issue with documented reasoning. You cannot silently ignore one. If you find yourself dismissing reviewer feedback without writing down why, stop — that's the slip that turns a critical filter into an excuse to skip reviews.
 
@@ -181,16 +185,16 @@ When a reviewer returns REVISE:
 
 ## Review Status Reference
 
-Implementer and reviewer agents own their commits and document updates (see `agents/implementer.md` and `agents/reviewer.md`). The orchestrator only needs to know how to **read** the resulting state from `PLAN.md`:
+Implementer and reviewer agents own their commits and document updates (see `agents/implementer.md` and `agents/reviewer.md`). The orchestrator reads the resulting state from task frontmatter:
 
-| Status line | Meaning | Orchestrator action |
+| `review_status:` | Meaning | Orchestrator action |
 |---|---|---|
-| *(no line)* | Not started | Dispatch implementer |
-| `IMPLEMENTED` | Code committed and ready for review | Dispatch reviewer |
-| `REVISE` | Reviewer found `[BLOCKING]` issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
-| `APPROVED` | Review passed | Proceed to next task |
+| `~` | Not started | Dispatch implementer |
+| `implemented` | Code committed and ready for review | Dispatch reviewer |
+| `revise` | Reviewer found `[BLOCKING]` issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
+| `approved` | Review passed | Proceed to next task |
 
-**A task is complete only when its status is `APPROVED`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
+**A task is complete only when its `review_status` is `approved`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
 
 For direct mode (orchestrator executes the step itself), see `superRA:using-superra` §Execution Modes.
 
@@ -203,6 +207,6 @@ Implementers return one of four statuses in their dispatch response. Applies at 
 - **NEEDS_CONTEXT:** Provide missing upstream inputs, documentation, or methodology details and re-dispatch.
 - **BLOCKED:** Assess the blocker:
   1. Required input not available → help locate or download.
-  2. Input quality too poor → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
-  3. Task requires methodology decisions → escalate via `AskUserQuestion`, log answer in `PLAN.md` before proceeding.
-  4. Task too complex → break into smaller pieces or use a more capable model.
+  2. Input quality too poor → escalate via `AskUserQuestion`, log decision in the relevant task's `## Decisions` before proceeding.
+  3. Task requires methodology decisions → escalate via `AskUserQuestion`, log decision in the relevant task's `## Decisions` before proceeding.
+  4. Task too complex → break into subtasks or use a more capable model.
