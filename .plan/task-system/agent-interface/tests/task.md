@@ -1,7 +1,7 @@
 ---
 title: "Hook + CLI Tests"
 status: implemented
-review_status: ~
+review_status: approved
 integration_status: ~
 depends_on: 
   - core-and-hooks

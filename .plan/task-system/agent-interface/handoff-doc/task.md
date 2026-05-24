@@ -1,7 +1,7 @@
 ---
 title: "Deprecate Handoff-Doc Skill"
 status: implemented
-review_status: implemented
+review_status: revise
 integration_status: ~
 depends_on: 
   - skill-restructure
@@ -76,3 +76,8 @@ With .plan/ as the primary handoff mechanism:
 ### Notes
 - Historical plan files in `docs/plans/` were NOT updated — they are archival records of past work and their references to handoff-doc are accurate for the time they were written.
 - The `implementation-workflow/SKILL.md` "Step 0b: Handoff-Doc Existence Check" heading was not renamed — it still checks for plan file existence and the heading is descriptive of its legacy purpose.
+
+## Review Notes
+
+> 1. [MAJOR] Codex generator script and generated agents not updated. [`skills/codex-superra-setup/scripts/sync_codex_agents.py:311`](skills/codex-superra-setup/scripts/sync_codex_agents.py#L311) and [`:324`](skills/codex-superra-setup/scripts/sync_codex_agents.py#L324) contain hard-coded references to `handoff-doc`. The generated `.codex/agents/superra_implementer.toml` (3 occurrences) and `.codex/agents/superra_reviewer.toml` (3 occurrences) still direct agents to load the deprecated skill. Per `CLAUDE.md` §Codex and Harness Design, update the generator script text and regenerate the toml files.
+> 2. [MINOR] Corrupted section symbol. [`skills/using-superRA/SKILL.md:43`](skills/using-superRA/SKILL.md#L43) and [`skills/handoff-doc/SKILL.md:10`](skills/handoff-doc/SKILL.md#L10) have two U+FFFD replacement characters where a `§` should be (before "Editing Etiquette" for `agents/implementer.md`). Replace with the correct `§` character.
