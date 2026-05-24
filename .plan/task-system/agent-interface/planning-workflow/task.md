@@ -1,7 +1,7 @@
 ---
 title: ".plan/-Native Planning"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: 
   - agent-protocols
@@ -56,4 +56,20 @@ When documenting existing exploratory work into `.plan/`:
 - **Remove:** "Save plan to PLAN.md", "Create RESULTS.md alongside" — replaced by .plan/ creation
 
 ## Results
+
+### Key Findings
+
+Updated `skills/planning-workflow/SKILL.md` for `.plan/`-native output:
+
+- **Frontmatter description:** Updated triggers from "no PLAN.md" to "no .plan/", "executable plan document" to "executable task tree", "existing PLAN.md rewritten from scratch" to "existing .plan/ rewritten from scratch"
+- **Overview:** Output is now `.plan/` task tree, not `PLAN.md` + `RESULTS.md`. Removed "Save plan to PLAN.md" and "Create RESULTS.md alongside" directives.
+- **Phase 1-2:** Unchanged (format-independent)
+- **Phase 3:** "Walk project docs and cache in root task.md `## Conventions`" replaces "populate PLAN.md `## Project Conventions`". Added step to create `.plan/` directory with root task.md.
+- **Phase 4:** Complete rewrite — step-based decomposition replaced with subtask-based. References `task-system/references/planning.md` §Writing Objectives and §Splitting Tasks. Uses `task_create.py`. No checkboxes. Dependencies via `depends_on:` frontmatter.
+- **Retroactive Plan Creation:** New section — survey existing work, create `.plan/` with `--status implemented`, fill body sections.
+- **Living Plan and Results:** "PLAN.md Is the Task Tracker" became ".plan/ Is the Task Tracker" — same discipline adapted for filesystem hierarchy. Results live in task.md `## Results` sections.
+- **User Feedback and Changing Plans:** Adapted for `.plan/` — edit task.md files in place, add/remove task directories. Decision logging points to task.md `## Decisions` sections.
+- **Self-Review:** Added §8 Subtask Coverage check. Adapted existing checks for task tree structure instead of PLAN.md blocks.
+- **Execution Handoff:** Commits `.plan/` directory, hands off to implementation-workflow. Removed "check Plan approved box" (no checkboxes in `.plan/`).
+- **Removed:** "Plan Document Header and Task Structure" section (now just a pointer to planning.md), "Step Granularity" section (replaced by task-oriented guidance), all `- [ ]` / `- [x]` references.
 
