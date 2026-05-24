@@ -40,7 +40,7 @@ If you see unfamiliar uncommitted changes and cannot tell whether they are legit
 
 ## Handoff Docs
 
-Every agent edits task files at some point — implementers rewrite step text and record findings, reviewers write review-notes blockquotes, orchestrators annotate with adjudication notes. The editing discipline (four document principles, inline-edit rule, stale-content checklist, User Decisions Log format) lives in `agents/implementer.md` ��Editing Etiquette and `agents/reviewer.md` §Editing Etiquette. Task anatomy, field notes, and results format live in `skills/task-system/references/planning.md`.
+Every agent edits task files at some point — implementers rewrite step text and record findings, reviewers write review-notes blockquotes, orchestrators annotate with adjudication notes. The editing discipline (four document principles, inline-edit rule, stale-content checklist, User Decisions Log format) lives in `agents/implementer.md` §Editing Etiquette and `agents/reviewer.md` §Editing Etiquette. Task anatomy, field notes, and results format live in `skills/task-system/references/planning.md`.
 
 ## Skill Inventory
 
