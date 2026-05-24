@@ -1,6 +1,6 @@
 ---
 title: "PostToolUse Validation Hooks"
-status: not-started
+status: implemented
 review_status: ~
 integration_status: ~
 depends_on: 
@@ -49,3 +49,26 @@ The hook provides immediate feedback: validation warnings appear as hook output 
 
 ## Results
 
+### 1. Hook script ([`skills/task-system/scripts/task_hook.py`](skills/task-system/scripts/task_hook.py))
+
+Reads PostToolUse JSON from stdin. Fast path exits immediately for non-Edit/Write tools, non-`task.md` filenames, and paths not under `.plan/`. On a matching edit:
+
+- Calls `_find_plan_root()` from `_task_io.py` to locate the plan root.
+- Calls `validate_plan(plan_root)` and prints any warnings to stderr (prefixed `[task-hook] WARNING:`).
+- Calls `generate_dashboard(plan_root)` best-effort (try/except, non-fatal).
+- Always exits 0.
+
+Import approach: adds the `scripts/` directory to `sys.path` at runtime rather than using `importlib.util.spec_from_file_location`, which fails with `@dataclass` under Python 3.14 when the module is loaded outside `sys.modules`.
+
+### 2. Hook configuration ([`hooks/hooks.json`](hooks/hooks.json))
+
+Added a `PostToolUse` entry matching `Edit|Write` to the plugin's tracked `hooks/hooks.json`. Hook command: `python3 "${CLAUDE_PLUGIN_ROOT}/skills/task-system/scripts/task_hook.py"`, using the same `${CLAUDE_PLUGIN_ROOT}` convention as all other plugin hooks.
+
+Note: `.claude/` is gitignored in this project. The task spec's "add to `.claude/settings.json`" would be a local-only runtime config. The tracked deliverable is `hooks/hooks.json`, which is installed by the plugin system and picked up by Claude Code.
+
+### Verification
+
+- Fast-path cases (Bash tool, non-task.md edit, task.md outside `.plan/`): all exit 0 with no output.
+- Valid plan edit (`.plan/task.md`): runs validation silently, rebuilds dashboard, exits 0.
+- Invalid-status task.md: prints validation warning to stderr, dashboard rebuild catches the parse error non-fatally, exits 0.
+- All 53 existing `test_task_system.py` tests pass.
