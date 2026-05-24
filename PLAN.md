@@ -1,6 +1,18 @@
 # Task System Skill — Plan
 
-> **For agentic workers:** REQUIRED DISCIPLINE: Use `superRA:handoff-doc` for all PLAN.md / RESULTS.md editing. Use `superRA:skill-creator` when editing any `skills/*/SKILL.md`.
+> **For agentic workers — development convention on this branch:**
+>
+> This branch uses **`.plan/` task hierarchy** as the primary handoff mechanism. Follow these rules instead of the standard PLAN.md/RESULTS.md workflow:
+>
+> 1. **Read your task** from `.plan/<path>/task.md` — use `python3 skills/task-system/scripts/task_read.py --plan-root .plan --path <your-task-path>` for context-aware reading with ancestor chain and sibling dependency status
+> 2. **Edit task.md directly** (frontmatter + body sections) using Read/Edit tools — PostToolUse hooks validate automatically
+> 3. **Record results** in your task's `## Results` section (not a separate RESULTS.md)
+> 4. **Set status** in frontmatter: `status: implemented`, `review_status: ~` when you finish implementation
+> 5. **Commit atomically:** code + your task.md in one commit
+> 6. **Do NOT edit PLAN.md or RESULTS.md** — this file is a communication index only; `.plan/` is the source of truth
+>
+> Tools: `task_read.py` (read with context), `task_query.py --frontier` (see what's dispatchable), `task_query.py --tree` (see full hierarchy).
+> Skill docs: `skills/task-system/SKILL.md` (consumer-facing), `skills/task-system/references/planning.md` (planner-facing), `skills/task-system/references/internals.md` (contributor-facing).
 
 **Objective:** Add a `task-system` skill to superRA that replaces flat PLAN.md/RESULTS.md task tracking with a filesystem-based hierarchy where each task is a self-contained `task.md` with planner-owned `## Objective` and implementer-owned `## Results` (recursive at every level), and a generated HTML dashboard provides human-friendly visualization.
 
