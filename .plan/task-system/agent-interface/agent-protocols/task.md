@@ -1,7 +1,7 @@
 ---
 title: "Update Agent Role Specs"
 status: implemented
-review_status: revise
+review_status: implemented
 integration_status: ~
 depends_on: 
   - skill-restructure
@@ -73,4 +73,6 @@ All three files updated for `.plan/`-native operation:
 ## Review Notes
 
 > 1. [MAJOR] `agents/implementer.md` never instructs the implementer to set `review_status: implemented`, but the Review Status Reference table in [`skills/agent-orchestration/SKILL.md:192`](../../../../../../skills/agent-orchestration/SKILL.md#L192) uses `review_status: implemented` as the orchestrator's signal to dispatch the reviewer. Nothing in the system transitions `review_status` from `~` to `implemented`. In the old system, the implementer set `**Review status:** IMPLEMENTED`; the new equivalent (`review_status: implemented`) must also be set by the implementer. Fix: add `review_status: implemented` to the implementer's §What You Own list and the "Update the Task and Commit" instructions, alongside the existing `status: implemented` instruction. Also update `plan-anatomy.md` field note (line 157) which says `review_status` is "owned by the reviewer" — the reviewer owns `revise` and `approved`; the implementer owns `implemented`.
+>    → implemented: Added `review_status: implemented` to §What You Own, §Update the Task and Commit, and §REVISE round instructions in [agents/implementer.md](agents/implementer.md). Fixed plan-anatomy.md field note to show shared ownership.
 > 2. [MAJOR] Conflict: [`agents/reviewer.md:156`](../../../../../../agents/reviewer.md#L156) Pre-Commit Self-Check says "I did not touch any code, any `## Objective`, or any `## Results` section", and §What You Own lists only `review_status:`, `integration_status:`, and `## Review Notes`. But [`skills/handoff-doc/references/results-anatomy.md:49-53`](../../../../../../skills/handoff-doc/references/results-anatomy.md#L49-L53) says the reviewer adds reliability caveats to `## Results`. These cannot both be true. Fix: either (a) restore the caveat capability in reviewer.md's §What You Own and add an exception to the Pre-Commit Self-Check ("except reliability caveat at bottom of `## Results`"), or (b) remove the reviewer caveats feature from results-anatomy.md entirely. Option (a) preserves the old behavior.
+>    → implemented: Option (b) — removed reviewer caveats from [results-anatomy.md](skills/handoff-doc/references/results-anatomy.md). Reviewer uses ## Review Notes for reliability concerns; implementer addresses in ## Results on REVISE round.
