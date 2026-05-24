@@ -132,3 +132,58 @@ Write `SKILL.md` with core concepts (everything is a task, `## Objective` planne
 **Script:** `skills/task-system/scripts/test_task_system.py`
 
 Build `test_task_system.py`: fixtures for flat and nested plan trees (v2 format), tests for frontmatter parsing, task CRUD, tree walking, status rollup, frontier computation, migration, dashboard generation, body section parsing (`TestParseBodySections`), auto-rebuild (`TestAutoRebuild`), and v1→v2 migration idempotency (`TestMigrateV2`). 53 tests total.
+
+---
+
+## Agent Interface — Full Integration
+
+> **Source of truth:** `.plan/task-system/agent-interface/` — read detailed task.md files there. This section is a communication index.
+
+Make the task system the primary handoff mechanism. Full details and design decisions in `.plan/task-system/agent-interface/task.md`.
+
+### Task: Core Library Enhancements
+**Path:** `.plan/task-system/agent-interface/core-and-hooks/task-io-enhancements/`
+Topological sort for `walk_plan()`, validation functions (`validate_frontmatter`, `validate_dependencies`, `detect_cycles`, `validate_plan`).
+
+### Task: PostToolUse Validation Hooks
+**Path:** `.plan/task-system/agent-interface/core-and-hooks/validation-hooks/`
+**Depends on:** task-io-enhancements
+`task_hook.py` + `.claude/settings.json` configuration. Fires on Edit/Write of task.md, validates + rebuilds dashboard.
+
+### Task: Context-Aware Task Reading
+**Path:** `.plan/task-system/agent-interface/task-read/`
+`task_read.py` with ancestor objective injection, sibling dependency status, `--json`, auto-detect plan root.
+
+### Task: Progressive Skill Revelation
+**Path:** `.plan/task-system/agent-interface/skill-restructure/`
+Restructure SKILL.md into 3 tiers: consumer (SKILL.md), planner (references/planning.md), contributor (references/internals.md).
+
+### Task: Update Agent Role Specs
+**Path:** `.plan/task-system/agent-interface/agent-protocols/`
+**Depends on:** skill-restructure
+Update implementer.md, reviewer.md, dispatch templates for .plan/-native operation.
+
+### Task: Update Handoff-Doc Skill
+**Path:** `.plan/task-system/agent-interface/handoff-doc/`
+**Depends on:** skill-restructure
+Reframe handoff-doc for .plan/. Flexible body sections. In-task decisions. Rewrite plan-anatomy.md.
+
+### Task: .plan/-Native Planning
+**Path:** `.plan/task-system/agent-interface/planning-workflow/`
+**Depends on:** agent-protocols, handoff-doc
+Update planning-workflow for .plan/ output. Add objective writing + task splitting guides. Retroactive creation.
+
+### Task: .plan/-Native Implementation
+**Path:** `.plan/task-system/agent-interface/impl-workflow/`
+**Depends on:** agent-protocols, handoff-doc
+Update implementation-workflow for .plan/. Frontier-based dispatch, direct task.md editing.
+
+### Task: .plan/-Native Integration
+**Path:** `.plan/task-system/agent-interface/integ-workflow/`
+**Depends on:** agent-protocols, handoff-doc
+Update integration-workflow for .plan/. Drift tests by path, sync map in root task.md.
+
+### Task: Hook + CLI Tests
+**Path:** `.plan/task-system/agent-interface/tests/`
+**Depends on:** core-and-hooks, task-read
+Tests for validation functions, topological sort, task_read.py, task_hook.py.
