@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import Task, collect_all_tasks, compute_frontier, walk_plan
+from _task_io import Task, collect_all_tasks, compute_frontier, parse_body_sections, walk_plan
 
 
 STATUS_ICONS = {
@@ -150,6 +150,7 @@ def _find_subtask(task: Task, path: str) -> Task | None:
 
 def tree_to_json(task: Task) -> dict:
     """Serialize the task tree to a JSON-compatible dict."""
+    sections = parse_body_sections(task.body)
     return {
         "path": task.path,
         "title": task.title,
@@ -166,6 +167,10 @@ def tree_to_json(task: Task) -> dict:
         "updated": task.updated,
         "is_leaf": task.is_leaf,
         "body": task.body,
+        "objective": sections.get("Objective", ""),
+        "results": sections.get("Results", ""),
+        "decisions": sections.get("Decisions", ""),
+        "review_notes": sections.get("Review Notes", ""),
         "children": [tree_to_json(c) for c in task.children],
     }
 

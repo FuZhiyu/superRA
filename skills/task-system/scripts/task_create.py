@@ -23,9 +23,12 @@ tags: []
 updated: {today}
 ---
 
-# {title}
+## Objective
 
-{description}
+{objective}
+
+## Results
+
 """
 
 
@@ -34,7 +37,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--plan-root", required=True, help="Path to the plan root directory")
     parser.add_argument("--path", required=True, help="Task path relative to plan root (e.g., 01-data-prep/01-load)")
     parser.add_argument("--title", required=True, help="Task title")
-    parser.add_argument("--description", default="", help="Task description (one-line objective)")
+    parser.add_argument("--objective", default="", help="Task objective (one-line description)")
     parser.add_argument("--depends-on", nargs="*", default=[], help="Sibling dependency names")
     parser.add_argument("--script", default="", help="Script path")
     parser.add_argument("--input", nargs="*", default=[], help="Input file paths")
@@ -46,7 +49,7 @@ def create_task(
     plan_root: Path,
     task_path: str,
     title: str,
-    description: str = "",
+    objective: str = "",
     depends_on: list[str] | None = None,
     script: str = "",
     input_files: list[str] | None = None,
@@ -88,7 +91,7 @@ def create_task(
     safe_title = title.replace('"', '\\"')
     content = TASK_TEMPLATE.format(
         title=safe_title,
-        description=description,
+        objective=objective,
         depends_on=deps_yaml,
         script_line=script_line,
         input_line=input_line,
@@ -115,7 +118,7 @@ def main(argv: list[str] | None = None) -> None:
         plan_root=Path(args.plan_root),
         task_path=args.path,
         title=args.title,
-        description=args.description,
+        objective=args.objective,
         depends_on=args.depends_on,
         script=args.script,
         input_files=args.input,

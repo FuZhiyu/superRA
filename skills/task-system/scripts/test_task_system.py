@@ -452,7 +452,7 @@ class TestTaskCreate:
             plan_root=plan_root,
             task_path="04-new-task",
             title="New Task",
-            description="A new objective.",
+            objective="A new objective.",
         )
         task_md = plan_root / "04-new-task" / "task.md"
         assert task_md.exists()
