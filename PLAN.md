@@ -175,10 +175,10 @@ Restructure SKILL.md into 3 tiers: consumer (SKILL.md), planner (references/plan
 **Depends on:** skill-restructure
 Update implementer.md, reviewer.md, dispatch templates for .plan/-native operation.
 
-### Task: Update Handoff-Doc Skill
+### Task: Deprecate Handoff-Doc Skill
 **Path:** `.plan/task-system/agent-interface/handoff-doc/`
 **Depends on:** skill-restructure
-Reframe handoff-doc for .plan/. Flexible body sections. In-task decisions. Rewrite plan-anatomy.md.
+Deprecate handoff-doc — merge remaining content into task-system references, replace SKILL.md with redirect, remove from manifest/inventory.
 
 ### Task: .plan/-Native Planning
 **Path:** `.plan/task-system/agent-interface/planning-workflow/`
