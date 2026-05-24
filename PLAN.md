@@ -257,8 +257,16 @@ Replace the entire `DASHBOARD_HTML` string in `plan_dashboard.py` with the new t
 
 ### Task 5: V1-to-V2 Migration
 **Depends on:** Task 1
-**Review status:**
+**Review status:** REVISE
 **Integration status:**
+
+> **Review notes:**
+>
+> 1. **MAJOR** — [plan_migrate.py:400-402](skills/task-system/scripts/plan_migrate.py#L400-L402): `_upgrade_task_body()` applies `_strip_checkboxes()` to the **entire body** after detecting `## Steps`, not just the Steps section. Checkboxes in `## Results`, `## Review Notes`, or other sections are incorrectly stripped. Scope the stripping to only the text between `## Steps` and the next `## ` heading. (In `_build_task_md()` at line 265 this is already correct — stripping is applied only to `steps_body`.)
+>
+> 2. **MINOR** — [plan_migrate.py:214](skills/task-system/scripts/plan_migrate.py#L214): `_strip_checkboxes()` regex `r"^- \[[x ]\] "` does not match uppercase `[X]`. Many markdown editors produce `- [X]`. Fix: change character class to `[xX ]`. Same issue in `_compute_status_from_steps()` at [line 192](skills/task-system/scripts/plan_migrate.py#L192) where uppercase-checked boxes are miscounted.
+>
+> 3. **MINOR** — [plan_migrate.py:400-401](skills/task-system/scripts/plan_migrate.py#L400-L401): The regex `r'^## Steps\s*$'` substitution consumes the heading's trailing newline, causing the blank line after `## Objective` to be lost. Result is `## Objective\n- content` instead of `## Objective\n\n- content` (which is what `_build_task_md()` produces). Fix: use `r'^## Steps[ \t]*$'` to avoid matching newlines, or add a blank line in the replacement string.
 
 **Script:** `skills/task-system/scripts/plan_migrate.py`
 
