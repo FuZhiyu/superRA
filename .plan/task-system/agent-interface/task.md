@@ -1,6 +1,6 @@
 ---
 title: "Task-System Agent Interface"
-status: not-started
+status: approved
 review_status: ~
 integration_status: ~
 depends_on:  []

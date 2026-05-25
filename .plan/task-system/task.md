@@ -1,6 +1,6 @@
 ---
 title: "Task System Skill"
-status: in-progress
+status: approved
 review_status: ~
 integration_status: ~
 depends_on: []

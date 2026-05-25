@@ -1,6 +1,6 @@
 ---
 title: "Core Library + Hooks"
-status: not-started
+status: approved
 review_status: ~
 integration_status: ~
 depends_on:  []

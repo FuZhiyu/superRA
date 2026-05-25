@@ -1,7 +1,7 @@
 ---
 title: "Deprecate Handoff-Doc Skill"
 status: approved
-review_status: revise
+review_status: approved
 integration_status: ~
 depends_on: 
   - skill-restructure

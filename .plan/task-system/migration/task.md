@@ -1,7 +1,7 @@
 ---
 title: "Migration Script"
-status: implemented
-review_status: revise
+status: approved
+review_status: approved
 integration_status: ~
 depends_on:
   - core-data-layer
