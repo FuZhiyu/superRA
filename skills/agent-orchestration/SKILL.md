@@ -145,7 +145,7 @@ These are the things the orchestrator does that no subagent does. Applies at eve
 - **Adjudicate reviewer feedback in place.** See §Handling Reviewer Feedback below for the full protocol.
 - **Handle implementer status returns.** See §Handling Implementer Status below.
 - **Edit future tasks inline** when findings from a completed task change the upcoming plan — rewrite stale text in the relevant task's `task.md` in place, do not annotate. Commit atomically with the commit that completes the triggering task.
-- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck — hard blocker, methodology decision beyond RA authority, CRITICAL override, repeated reviewer disagreement. Log the decision in the relevant task's `## Decisions` section **before** acting.
+- **Escalate to the researcher via `AskUserQuestion`** (plain text if unavailable) when stuck — hard blocker, methodology decision beyond RA authority, CRITICAL override, repeated reviewer disagreement. Fold the decision into the task objective (rewrite it fully); add a `## Revision Notes` entry if the change is non-obvious.
 
 ## Handling Reviewer Feedback (Orchestrator Discipline)
 
@@ -175,13 +175,13 @@ When a reviewer returns REVISE:
 
 4. **If you push back on the reviewer (rather than override them), re-dispatch the same reviewer with counter-evidence.** Cite the file:line that proves the reviewer wrong, the methodology section that overrides their suggestion, or the human partner conversation that established the convention. The reviewer should then either retract or escalate.
 
-5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Log the decision in the relevant task's `## Decisions` section; commit the edit in the same commit as the re-dispatched implementer's fix (or as the commit that records the override).
+5. **If you genuinely cannot tell whether the reviewer is right, escalate via `AskUserQuestion`** (plain text if unavailable). Do not flip a coin and hope. Fold the decision into the task objective (rewrite it fully); add a `## Revision Notes` entry if the change is non-obvious. Commit the edit in the same commit as the re-dispatched implementer's fix.
 
 **The orchestrator's authority:** You can override any reviewer issue with documented reasoning. You cannot silently ignore one. If you find yourself dismissing reviewer feedback without writing down why, stop — that's the slip that turns a critical filter into an excuse to skip reviews.
 
 **The orchestrator's limits:**
-- You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable) and logging the researcher's decision per `task-system/references/planning.md` §User Decisions Log. CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override.
-- You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then log the answer per `task-system/references/planning.md` §User Decisions Log.
+- You cannot override CRITICAL severity without escalating via `AskUserQuestion` first (plain text if unavailable). CRITICAL means "will produce wrong results"; if the reviewer is wrong about that, it warrants a real discussion, not a unilateral override. Fold the decision into the task objective; add a revision note.
+- You cannot override the same reviewer issue twice across re-dispatches. If the reviewer keeps raising the same point and you keep rejecting it, the disagreement is real — escalate via `AskUserQuestion` and let the researcher settle it, then fold the answer into the task objective.
 
 ## Review Status Reference
 
@@ -207,6 +207,6 @@ Implementers return one of four statuses in their dispatch response. Applies at 
 - **NEEDS_CONTEXT:** Provide missing upstream inputs, documentation, or methodology details and re-dispatch.
 - **BLOCKED:** Assess the blocker:
   1. Required input not available → help locate or download.
-  2. Input quality too poor → escalate via `AskUserQuestion`, log decision in the relevant task's `## Decisions` before proceeding.
-  3. Task requires methodology decisions → escalate via `AskUserQuestion`, log decision in the relevant task's `## Decisions` before proceeding.
+  2. Input quality too poor → escalate via `AskUserQuestion`, fold the decision into the task objective before proceeding.
+  3. Task requires methodology decisions → escalate via `AskUserQuestion`, fold the decision into the task objective before proceeding.
   4. Task too complex → break into subtasks or use a more capable model.

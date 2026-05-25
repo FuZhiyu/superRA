@@ -92,12 +92,12 @@ Any `## Heading` is valid. Recommended defaults:
 |---|---|---|
 | `## Objective` | What success looks like — the goal, constraints, and validation criteria | planner |
 | `## Results` | Key findings and notes | implementer |
-| `## Decisions` | User decisions that shaped the work | implementer |
+| `## Revision Notes` | Temporary delta signal when a task objective is updated (what changed, significance); cleaned on approval | planner / orchestrator |
 | `## Review Notes` | Reviewer feedback | reviewer |
 
 ## Ownership Model
 
-You own the **body sections** of your assigned task (`## Results`, `## Decisions`, and status/review_status frontmatter). You do not own:
+You own the **body sections** of your assigned task (`## Results` and status/review_status frontmatter). You do not own:
 
 - **Other tasks' content** — steps, status, review notes, results.
 - **Scope-defining frontmatter** — `title`, `depends_on`, `script`, `input`, `output`. These are planner-owned.
