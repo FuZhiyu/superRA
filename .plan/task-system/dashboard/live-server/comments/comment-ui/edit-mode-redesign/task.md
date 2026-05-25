@@ -1,7 +1,7 @@
 ---
 title: "GitHub-style comment editing UX"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:  []
 tags: []
