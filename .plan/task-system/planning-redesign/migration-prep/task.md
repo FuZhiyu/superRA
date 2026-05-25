@@ -1,9 +1,9 @@
 ---
 title: "Add migration preparation instructions to task-system"
-status: implemented
+status: approved
 review_status: approved
 integration_status: ~
-depends_on:  []
+depends_on: []
 tags: []
 created: 2026-05-25
 updated: 2026-05-25
