@@ -78,6 +78,17 @@ def main() -> None:
     except Exception as exc:
         print(f"[task-hook] Validation error: {exc}", file=sys.stderr)
 
+    # Propagate parent status up the tree — best-effort, never fail
+    try:
+        task_path = str(file_path.parent.relative_to(plan_root))
+        if task_path == ".":
+            task_path = ""
+        updated = task_io.propagate_parent_status(plan_root, task_path)
+        if updated:
+            print(f"[task-hook] Propagated status to {updated} ancestor(s).", file=sys.stderr)
+    except Exception as exc:
+        print(f"[task-hook] Status propagation failed (non-fatal): {exc}", file=sys.stderr)
+
     # Regenerate dashboard — best-effort, never fail
     try:
         import plan_dashboard

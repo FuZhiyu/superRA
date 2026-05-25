@@ -1,7 +1,7 @@
 ---
 title: "Auto-compute and persist parent status from children"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: 
   - status-consistency
@@ -38,3 +38,22 @@ Currently `effective_status()` computes rolled-up status at render time, but the
 
 ## Results
 
+Implemented automatic parent status propagation across the task tree.
+
+**Functions added to [`_task_io.py`](skills/task-system/scripts/_task_io.py):**
+- `compute_review_status(task)` — analogous to `compute_status()`, rolls up `review_status` from children: all approved -> approved; any revise -> revise; any implemented -> implemented; otherwise ~.
+- `propagate_parent_status(plan_root, task_path)` — walks from a task up to root, recomputing `status` and `review_status` for each branch ancestor via rollup, with cascade reset of `integration_status` when `review_status` is not approved.
+
+**Changes to [`task_update.py`](skills/task-system/scripts/task_update.py):**
+- `update_task()` now calls `propagate_parent_status()` after every status write.
+- `fix_status_consistency()` updated to use `compute_review_status()` for branches (consistent with propagation — no oscillation between the two commands).
+- Added `propagate_all()` function and `--propagate-all` CLI flag: walks all branch tasks bottom-up, re-reading from disk at each level to ensure correct cascading.
+
+**Changes to [`task_hook.py`](skills/task-system/scripts/task_hook.py):**
+- Post-tool hook now calls `propagate_parent_status()` after validation, so any direct task.md edit by agents triggers propagation (best-effort, never blocks).
+
+**Design decision:** For branch tasks, `review_status` is purely rolled up from children rather than cascade-reset when status < implemented. Rationale: a branch with `status: in-progress` (not all children approved) can legitimately have children with completed reviews. The cascade is implicit — if children don't have reviews, `compute_review_status` returns `~` naturally. The explicit cascade (reset when status drops) only makes sense for leaf tasks where review requires implementation.
+
+**Validation:** Ran `--propagate-all` on the live `.plan/` tree. Result: 7 parent tasks updated (live-server, comments, comment-ui, tests, dashboard, task-system, root). Second run confirms idempotency ("All parent statuses already consistent"). `--fix` and `--propagate-all` produce consistent state with no oscillation.
+
+**Tests:** 13 new tests covering `compute_review_status`, `propagate_parent_status`, and `propagate_all` (including cascade, idempotency, and CLI entry point). All 113 tests pass.

@@ -1379,3 +1379,244 @@ class TestStatusConsistency:
         warnings = _task_io.validate_plan(root_dir)
         consistency_warnings = [w for w in warnings if "review_status" in w]
         assert len(consistency_warnings) >= 1
+
+
+# --- Status rollup propagation tests ---
+
+
+class TestComputeReviewStatus:
+    def test_leaf_returns_own_review_status(self, tmp_path):
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "leaf"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Leaf", "implemented",
+                       review_status="approved")
+        root = _task_io.walk_plan(root_dir)
+        leaf = root.children[0]
+        assert _task_io.compute_review_status(leaf) == "approved"
+
+    def test_all_children_approved(self, tmp_path):
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "approved")
+        for name in ["child-a", "child-b"]:
+            d = parent / name
+            d.mkdir()
+            _write_task_md(d / "task.md", name, "approved",
+                           review_status="approved")
+        root = _task_io.walk_plan(root_dir)
+        parent_task = root.children[0]
+        assert _task_io.compute_review_status(parent_task) == "approved"
+
+    def test_any_child_revise(self, tmp_path):
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "in-progress")
+        for name, rs in [("child-a", "approved"), ("child-b", "revise")]:
+            d = parent / name
+            d.mkdir()
+            _write_task_md(d / "task.md", name, "implemented",
+                           review_status=rs)
+        root = _task_io.walk_plan(root_dir)
+        parent_task = root.children[0]
+        assert _task_io.compute_review_status(parent_task) == "revise"
+
+    def test_any_child_implemented(self, tmp_path):
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "in-progress")
+        for name, rs in [("child-a", "approved"), ("child-b", "implemented")]:
+            d = parent / name
+            d.mkdir()
+            _write_task_md(d / "task.md", name, "implemented",
+                           review_status=rs)
+        root = _task_io.walk_plan(root_dir)
+        parent_task = root.children[0]
+        assert _task_io.compute_review_status(parent_task) == "implemented"
+
+    def test_all_children_tilde(self, tmp_path):
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        for name in ["child-a", "child-b"]:
+            d = parent / name
+            d.mkdir()
+            _write_task_md(d / "task.md", name, "not-started",
+                           review_status="~")
+        root = _task_io.walk_plan(root_dir)
+        parent_task = root.children[0]
+        assert _task_io.compute_review_status(parent_task) == "~"
+
+
+class TestPropagateParentStatus:
+    def test_propagates_status_to_parent(self, tmp_path):
+        """After changing a child status, propagation updates the parent."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        for name in ["child-a", "child-b"]:
+            d = parent / name
+            d.mkdir()
+            _write_task_md(d / "task.md", name, "approved",
+                           review_status="approved")
+        # Propagate from child-a
+        updated = _task_io.propagate_parent_status(root_dir, "parent/child-a")
+        assert updated >= 1
+
+        # Re-read parent — should now be approved
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "approved"
+        assert parent_task.review_status == "approved"
+
+    def test_propagates_up_to_root(self, tmp_path):
+        """Propagation walks all the way from leaf to root."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        child = parent / "child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "implemented",
+                       review_status="implemented")
+
+        updated = _task_io.propagate_parent_status(root_dir, "parent/child")
+        assert updated >= 1
+
+        # Parent should be in-progress (child is implemented, not approved)
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "in-progress"
+
+        # Root should also be in-progress
+        root_task = _task_io.parse_task(root_dir / "task.md")
+        assert root_task.status == "in-progress"
+
+    def test_review_status_rolls_up_from_children(self, tmp_path):
+        """Branch review_status is rolled up from children, not cascade-reset."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "implemented",
+                       review_status="implemented")
+        # Two children: one approved, one not-started (review ~)
+        for name, status, rs in [("child-a", "approved", "approved"),
+                                 ("child-b", "not-started", "~")]:
+            d = root_dir / name
+            d.mkdir()
+            _write_task_md(d / "task.md", name, status, review_status=rs)
+
+        updated = _task_io.propagate_parent_status(root_dir, "child-b")
+        assert updated >= 1
+
+        root_task = _task_io.parse_task(root_dir / "task.md")
+        # Status should be in-progress (mix of approved + not-started)
+        assert root_task.status == "in-progress"
+        # review_status is rolled up: one approved + one ~ = ~
+        # (only non-~ values: approved + implemented + revise trigger non-~ result;
+        #  here child-b has ~, child-a has approved, no child has 'implemented'
+        #  or 'revise', but not ALL are approved, so result is ~)
+        assert root_task.review_status == "~"
+
+    def test_cascade_resets_integration_when_review_not_approved(self, tmp_path):
+        """If rolled-up review_status is not approved, integration_status resets to ~."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "approved",
+                       review_status="approved", integration_status="implemented")
+        # Two children: one approved/approved, one implemented/implemented
+        for name, status, rs in [("child-a", "approved", "approved"),
+                                 ("child-b", "implemented", "implemented")]:
+            d = root_dir / name
+            d.mkdir()
+            _write_task_md(d / "task.md", name, status, review_status=rs)
+
+        updated = _task_io.propagate_parent_status(root_dir, "child-b")
+        assert updated >= 1
+
+        root_task = _task_io.parse_task(root_dir / "task.md")
+        # Rolled-up status should be in-progress (mix of approved + implemented)
+        assert root_task.status == "in-progress"
+        # review_status is rolled up: one approved + one implemented = implemented
+        assert root_task.review_status == "implemented"
+        # integration_status should be reset since review is not approved
+        assert root_task.integration_status == "~"
+
+    def test_no_update_when_already_correct(self, tmp_path):
+        """No writes happen if parent already has the correct status."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "in-progress")
+        child = root_dir / "child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "implemented",
+                       review_status="~")
+
+        updated = _task_io.propagate_parent_status(root_dir, "child")
+        assert updated == 0
+
+    def test_propagate_from_root_path_is_noop(self, tmp_path):
+        """Propagating from root (empty path) has no ancestors to update."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        updated = _task_io.propagate_parent_status(root_dir, "")
+        assert updated == 0
+
+
+class TestPropagateAll:
+    def test_propagate_all_updates_all_parents(self, tmp_path):
+        """--propagate-all updates all branch task statuses."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+
+        # Branch with two approved children
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        for name in ["child-a", "child-b"]:
+            d = parent / name
+            d.mkdir()
+            _write_task_md(d / "task.md", name, "approved",
+                           review_status="approved")
+
+        updated = task_update.propagate_all(root_dir)
+        assert updated >= 2  # parent + root
+
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "approved"
+        assert parent_task.review_status == "approved"
+
+        root_task = _task_io.parse_task(root_dir / "task.md")
+        assert root_task.status == "approved"
+        assert root_task.review_status == "approved"
+
+    def test_propagate_all_cli(self, tmp_path):
+        """CLI --propagate-all flag runs without error."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        child = root_dir / "child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "approved",
+                       review_status="approved")
+
+        # Run via main()
+        task_update.main(["--plan-root", str(root_dir), "--propagate-all"])

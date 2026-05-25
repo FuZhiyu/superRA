@@ -1,7 +1,7 @@
 ---
 title: "Per-block inline comments"
 status: in-progress
-review_status: ~
+review_status: approved
 integration_status: ~
 depends_on:
   - ../server

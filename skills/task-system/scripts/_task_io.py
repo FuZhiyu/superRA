@@ -434,6 +434,94 @@ def compute_status(task: Task) -> str:
     return "not-started"
 
 
+def compute_review_status(task: Task) -> str:
+    """Compute rolled-up review_status for a branch task from its children.
+
+    Rules:
+    - If all children have review_status 'approved' -> 'approved'
+    - If any child has review_status 'revise' -> 'revise'
+    - If any child has review_status 'implemented' -> 'implemented'
+    - Otherwise -> '~'
+    """
+    if task.is_leaf:
+        return task.review_status
+
+    child_statuses = [c.review_status if c.is_leaf else compute_review_status(c)
+                      for c in task.children]
+
+    if not child_statuses:
+        return task.review_status
+
+    if all(s == "approved" for s in child_statuses):
+        return "approved"
+    if any(s == "revise" for s in child_statuses):
+        return "revise"
+    if any(s == "implemented" for s in child_statuses):
+        return "implemented"
+    return "~"
+
+
+def propagate_parent_status(plan_root: Path, task_path: str) -> int:
+    """Walk from task_path up to the root, recomputing parent statuses.
+
+    For each ancestor that is not a leaf:
+    - Computes rolled-up status from children via compute_status()
+    - Computes rolled-up review_status via compute_review_status()
+    - Applies cascade logic (reset review/integration when status drops)
+    - Writes back if changed
+
+    Returns the number of ancestor tasks updated.
+    """
+    updated = 0
+    # Walk up from task_path to root
+    parts = task_path.strip("/").split("/") if task_path else []
+
+    # Build list of ancestor paths from immediate parent to root
+    ancestors: list[str] = []
+    for i in range(len(parts) - 1, -1, -1):
+        ancestors.append("/".join(parts[:i]) if i > 0 else "")
+
+    for ancestor_path in ancestors:
+        ancestor_dir = plan_root / ancestor_path if ancestor_path else plan_root
+        task_md = ancestor_dir / "task.md"
+        if not task_md.exists():
+            continue
+
+        # Re-walk this subtree to get current children
+        ancestor_task = parse_task(task_md)
+        ancestor_task.children = _walk_children(ancestor_dir, plan_root)
+
+        if ancestor_task.is_leaf:
+            continue
+
+        changed = False
+        rolled_status = compute_status(ancestor_task)
+        rolled_review = compute_review_status(ancestor_task)
+
+        if ancestor_task.status != rolled_status:
+            ancestor_task.status = rolled_status
+            changed = True
+
+        # For branch tasks, review_status is purely rolled up from children.
+        # The cascade (reset when status < implemented) is implicit: if children
+        # aren't implemented, compute_review_status returns ~ naturally.
+        if ancestor_task.review_status != rolled_review:
+            ancestor_task.review_status = rolled_review
+            changed = True
+
+        # Cascade: reset integration_status if review_status is not 'approved'
+        if ancestor_task.review_status != "approved" and ancestor_task.integration_status != "~":
+            ancestor_task.integration_status = "~"
+            changed = True
+
+        if changed:
+            ancestor_task.updated = today_str()
+            write_task(ancestor_task)
+            updated += 1
+
+    return updated
+
+
 def compute_frontier(root: Task) -> list[Task]:
     """Compute the dispatch frontier: leaf tasks ready to be worked on.
 
