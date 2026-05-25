@@ -50,7 +50,7 @@
     {#- Named sections -#}
     {% for name, content in sections %}
     {% if content and content.strip() %}
-    <div>
+    <div data-section="{{ name }}">
       <div class="section-toggle" onclick="toggleSection(this, event)">
         <span class="section-icon">&#9656;</span>
         <span class="section-label">{{ name }}</span>
@@ -86,7 +86,7 @@
 
     {% for name, content in ns.extra_sections %}
     {% if content.strip() %}
-    <div>
+    <div data-section="{{ name }}">
       <div class="section-toggle" onclick="toggleSection(this, event)">
         <span class="section-icon">&#9656;</span>
         <span class="section-label">{{ name }}</span>

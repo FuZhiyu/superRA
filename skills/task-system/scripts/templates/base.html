@@ -582,13 +582,14 @@ var md = window.markdownit({ html: false, linkify: true });
 var PROJECT_ROOT = {{ project_root | tojson }};
 
 /**
- * Render markdown text via markdown-it, then post-process links:
+ * Render markdown text via markdown-it, then post-process:
  * - Relative file paths -> vscode://file/{project_root}/{path}
  * - Image src -> /files/{src}
+ * - Wrap each block-level element in a .commentable-block container
+ *   with data-section and data-block attributes (when sectionName given)
  */
-function renderMarkdown(text) {
+function renderMarkdown(text, sectionName) {
   var html = md.render(text);
-  /* Post-process links and images in the rendered HTML */
   var container = document.createElement('div');
   container.innerHTML = html;
 
@@ -608,6 +609,30 @@ function renderMarkdown(text) {
       img.setAttribute('src', '/files/' + src);
     }
   });
+
+  /* Wrap top-level block elements in commentable containers */
+  if (sectionName) {
+    var blockTags = ['P','UL','OL','PRE','BLOCKQUOTE','TABLE','H1','H2','H3','H4','H5','H6'];
+    var children = Array.from(container.childNodes);
+    var blockIndex = 0;
+    for (var i = 0; i < children.length; i++) {
+      var child = children[i];
+      if (child.nodeType === 1 && blockTags.indexOf(child.tagName) >= 0) {
+        var wrapper = document.createElement('div');
+        wrapper.className = 'commentable-block';
+        wrapper.setAttribute('data-section', sectionName);
+        wrapper.setAttribute('data-block', blockIndex);
+        var btn = document.createElement('button');
+        btn.className = 'comment-gutter-btn';
+        btn.textContent = '+';
+        btn.setAttribute('onclick', 'showCommentForm(this)');
+        container.insertBefore(wrapper, child);
+        wrapper.appendChild(btn);
+        wrapper.appendChild(child);
+        blockIndex++;
+      }
+    }
+  }
 
   return container.innerHTML;
 }
@@ -687,16 +712,26 @@ function toggleSection(toggleEl, event) {
   icon.classList.toggle('expanded', isOpen);
 
   if (isOpen) {
+    /* Determine section name from parent's data-section or the label */
+    var sectionWrapper = toggleEl.closest('[data-section]');
+    var sectionName = sectionWrapper ? sectionWrapper.getAttribute('data-section') : '';
+
     /* Lazy-render markdown on first expand */
     var renderedMd = content.querySelector('.rendered-md');
     if (renderedMd && !renderedMd.dataset.rendered) {
       var tmpl = renderedMd.querySelector('template');
       if (tmpl) {
-        renderedMd.innerHTML = renderMarkdown(tmpl.innerHTML);
+        renderedMd.innerHTML = renderMarkdown(tmpl.innerHTML, sectionName);
         renderedMd.dataset.rendered = 'true';
       }
     }
     if (preview) preview.style.display = 'none';
+
+    /* Load comments for this task's section */
+    var taskNode = toggleEl.closest('.task-node');
+    if (taskNode) {
+      loadComments(taskNode.dataset.path);
+    }
   } else {
     if (preview) preview.style.display = '';
   }
@@ -830,7 +865,9 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
     if (!el.dataset.rendered) {
       var tmpl = el.querySelector('template');
       if (tmpl) {
-        el.innerHTML = renderMarkdown(tmpl.innerHTML);
+        var sectionWrapper = el.closest('[data-section]');
+        var sectionName = sectionWrapper ? sectionWrapper.getAttribute('data-section') : '';
+        el.innerHTML = renderMarkdown(tmpl.innerHTML, sectionName);
         el.dataset.rendered = 'true';
       }
     }
@@ -844,6 +881,200 @@ if (fullReloadEl) {
     location.reload();
   });
 }
+
+/* ── Comment UI functions ── */
+
+function showCommentForm(btn) {
+  var block = btn.closest('.commentable-block');
+  /* Remove any existing form in this block */
+  var existing = block.querySelector('.comment-form');
+  if (existing) { existing.remove(); return; }
+
+  var form = document.createElement('div');
+  form.className = 'comment-form';
+  var ta = document.createElement('textarea');
+  ta.placeholder = 'Add a comment...';
+  var submitBtn = document.createElement('button');
+  submitBtn.textContent = 'Comment';
+  submitBtn.onclick = function() {
+    var body = ta.value.trim();
+    if (!body) return;
+
+    var section = block.getAttribute('data-section');
+    var blockIndex = parseInt(block.getAttribute('data-block'), 10);
+    /* Extract text preview: first 60 chars of the block's text */
+    var blockContent = block.querySelector('p, ul, ol, pre, blockquote, table, h1, h2, h3, h4, h5, h6');
+    var textPreview = blockContent ? blockContent.textContent.substring(0, 60) : '';
+
+    var taskNode = block.closest('.task-node');
+    var taskPath = taskNode ? taskNode.dataset.path : '';
+
+    fetch('/api/task/' + taskPath + '/comment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        section: section,
+        block_index: blockIndex,
+        text_preview: textPreview,
+        body: body
+      })
+    }).then(function(resp) {
+      if (resp.ok) {
+        form.remove();
+        loadComments(taskPath);
+      }
+    });
+  };
+  var cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.background = 'var(--bg-alt)';
+  cancelBtn.style.color = 'var(--text-mid)';
+  cancelBtn.style.marginLeft = '4px';
+  cancelBtn.onclick = function() { form.remove(); };
+  form.appendChild(ta);
+  form.appendChild(submitBtn);
+  form.appendChild(cancelBtn);
+  block.appendChild(form);
+  ta.focus();
+}
+
+function loadComments(taskPath) {
+  fetch('/api/task/' + taskPath + '/comments')
+    .then(function(resp) { return resp.ok ? resp.json() : []; })
+    .then(function(comments) {
+      /* Find the task node */
+      var taskNode = document.querySelector('.task-node[data-path="' + taskPath + '"]');
+      if (!taskNode) return;
+
+      /* Remove existing comment threads in this task */
+      taskNode.querySelectorAll('.comment-thread').forEach(function(t) { t.remove(); });
+      taskNode.querySelectorAll('.comment-orphan-warning').forEach(function(w) { w.remove(); });
+
+      /* Group comments by section + block_index */
+      var grouped = {};
+      var orphaned = [];
+      for (var i = 0; i < comments.length; i++) {
+        var c = comments[i];
+        var key = c.anchor.section + '::' + c.anchor.block_index;
+        /* Check if the target block exists */
+        var block = taskNode.querySelector(
+          '.commentable-block[data-section="' + c.anchor.section + '"][data-block="' + c.anchor.block_index + '"]'
+        );
+        if (block) {
+          if (!grouped[key]) grouped[key] = { block: block, comments: [] };
+          grouped[key].comments.push(c);
+        } else {
+          orphaned.push(c);
+        }
+      }
+
+      /* Render grouped comments below their blocks */
+      for (var key in grouped) {
+        var entry = grouped[key];
+        var thread = renderCommentThread(entry.comments, taskPath);
+        entry.block.appendChild(thread);
+      }
+
+      /* Render orphaned comments at the section level */
+      if (orphaned.length > 0) {
+        var orphanBySection = {};
+        for (var j = 0; j < orphaned.length; j++) {
+          var sec = orphaned[j].anchor.section;
+          if (!orphanBySection[sec]) orphanBySection[sec] = [];
+          orphanBySection[sec].push(orphaned[j]);
+        }
+        for (var secName in orphanBySection) {
+          var sectionDiv = taskNode.querySelector('[data-section="' + secName + '"] .section-content');
+          if (sectionDiv && sectionDiv.classList.contains('open')) {
+            var warning = document.createElement('div');
+            warning.className = 'comment-orphan-warning';
+            warning.textContent = 'Orphaned comments (anchor lost):';
+            sectionDiv.appendChild(warning);
+            var thread2 = renderCommentThread(orphanBySection[secName], taskPath);
+            sectionDiv.appendChild(thread2);
+          }
+        }
+      }
+    });
+}
+
+function renderCommentThread(comments, taskPath) {
+  var thread = document.createElement('div');
+  thread.className = 'comment-thread';
+  for (var i = 0; i < comments.length; i++) {
+    (function(c) {
+      var item = document.createElement('div');
+      item.className = 'comment-item' + (c.resolved ? ' comment-resolved' : '');
+
+      var meta = document.createElement('div');
+      meta.className = 'comment-meta';
+      var ts = c.timestamp.substring(0, 16).replace('T', ' ');
+      meta.textContent = (c.author || 'anonymous') + ' · ' + ts;
+
+      var body = document.createElement('div');
+      body.className = 'comment-body';
+      body.textContent = c.body;
+
+      var actions = document.createElement('div');
+      actions.style.marginTop = '2px';
+
+      var resolveBtn = document.createElement('button');
+      resolveBtn.className = 'comment-form button';
+      resolveBtn.textContent = c.resolved ? 'Unresolve' : 'Resolve';
+      resolveBtn.style.fontSize = '10px';
+      resolveBtn.style.padding = '1px 6px';
+      resolveBtn.style.background = 'var(--bg-alt)';
+      resolveBtn.style.color = 'var(--text-mid)';
+      resolveBtn.style.border = '1px solid var(--border)';
+      resolveBtn.style.borderRadius = '3px';
+      resolveBtn.style.cursor = 'pointer';
+      resolveBtn.onclick = function() { resolveComment(taskPath, c.id, resolveBtn); };
+
+      var deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.style.fontSize = '10px';
+      deleteBtn.style.padding = '1px 6px';
+      deleteBtn.style.marginLeft = '4px';
+      deleteBtn.style.background = 'var(--bg-alt)';
+      deleteBtn.style.color = 'var(--st-rev-t)';
+      deleteBtn.style.border = '1px solid var(--border)';
+      deleteBtn.style.borderRadius = '3px';
+      deleteBtn.style.cursor = 'pointer';
+      deleteBtn.onclick = function() { deleteComment(taskPath, c.id, deleteBtn); };
+
+      actions.appendChild(resolveBtn);
+      actions.appendChild(deleteBtn);
+      item.appendChild(meta);
+      item.appendChild(body);
+      item.appendChild(actions);
+      thread.appendChild(item);
+    })(comments[i]);
+  }
+  return thread;
+}
+
+function resolveComment(taskPath, commentId, btn) {
+  fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'PATCH' })
+    .then(function(resp) { if (resp.ok) loadComments(taskPath); });
+}
+
+function deleteComment(taskPath, commentId, btn) {
+  fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'DELETE' })
+    .then(function(resp) { if (resp.ok) loadComments(taskPath); });
+}
+
+/* ── SSE: re-fetch comments when a task updates and sections are open ── */
+document.body.addEventListener('htmx:sseMessage', function(event) {
+  var evtName = event.detail.type || '';
+  if (evtName.startsWith('task:')) {
+    var taskPath = evtName.substring(5);
+    var taskNode = document.querySelector('.task-node[data-path="' + taskPath + '"]');
+    if (taskNode && taskNode.querySelector('.section-content.open')) {
+      /* Short delay to let the SSE swap finish rendering first */
+      setTimeout(function() { loadComments(taskPath); }, 200);
+    }
+  }
+});
 </script>
 </body>
 </html>
