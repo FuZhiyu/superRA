@@ -290,12 +290,13 @@ class TestDataLayer:
         content = content.replace("First Task", "Updated First Task")
         task_md.write_text(content)
 
-        updated = plan_dashboard.rebuild_task("01-first")
+        updated, children_changed = plan_dashboard.rebuild_task("01-first")
         assert updated is not None
         assert updated.title == "Updated First Task"
         assert plan_dashboard._task_index["01-first"].title == "Updated First Task"
+        assert children_changed is False
 
-    def test_rebuild_task_preserves_children(self, plan_root):
+    def test_rebuild_task_discovers_existing_children(self, plan_root):
         # Add a child to 01-first
         child = plan_root / "01-first" / "sub"
         child.mkdir()
@@ -306,18 +307,61 @@ class TestDataLayer:
         original = plan_dashboard._task_index["01-first"]
         assert len(original.children) == 1
 
-        # rebuild_task should preserve children
-        updated = plan_dashboard.rebuild_task("01-first")
+        # rebuild_task should re-discover existing children
+        updated, children_changed = plan_dashboard.rebuild_task("01-first")
         assert updated is not None
         assert len(updated.children) == 1
         assert updated.children[0].title == "Sub Task"
+        assert children_changed is False
+
+    def test_rebuild_task_discovers_new_children(self, plan_root):
+        """A new child created after the initial tree build is discovered."""
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard.rebuild_tree()
+
+        original = plan_dashboard._task_index["01-first"]
+        assert len(original.children) == 0
+
+        # Create a new child directory after the tree was built
+        child = plan_root / "01-first" / "sub"
+        child.mkdir()
+        _write_task_md(child / "task.md", "New Child", "not-started")
+
+        updated, children_changed = plan_dashboard.rebuild_task("01-first")
+        assert updated is not None
+        assert children_changed is True
+        assert len(updated.children) == 1
+        assert updated.children[0].title == "New Child"
+        # New child should be in the flat index
+        assert "01-first/sub" in plan_dashboard._task_index
+
+    def test_rebuild_task_removes_deleted_children(self, plan_root):
+        """A child removed from disk is dropped from the tree and index."""
+        child = plan_root / "01-first" / "sub"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Doomed Child", "not-started")
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard.rebuild_tree()
+
+        assert "01-first/sub" in plan_dashboard._task_index
+        assert len(plan_dashboard._task_index["01-first"].children) == 1
+
+        # Remove the child's task.md (simulating directory deletion)
+        (child / "task.md").unlink()
+        child.rmdir()
+
+        updated, children_changed = plan_dashboard.rebuild_task("01-first")
+        assert updated is not None
+        assert children_changed is True
+        assert len(updated.children) == 0
+        assert "01-first/sub" not in plan_dashboard._task_index
 
     def test_rebuild_task_returns_none_for_deleted(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard.rebuild_tree()
         # Remove the task.md
         (plan_root / "01-first" / "task.md").unlink()
-        result = plan_dashboard.rebuild_task("01-first")
+        result, children_changed = plan_dashboard.rebuild_task("01-first")
         assert result is None
         assert "01-first" not in plan_dashboard._task_index
 
