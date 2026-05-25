@@ -1,7 +1,7 @@
 ---
 title: "Auto-compute and persist parent status from children"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on: 
   - status-consistency
