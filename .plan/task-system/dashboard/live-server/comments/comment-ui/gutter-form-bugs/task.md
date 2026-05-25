@@ -1,7 +1,7 @@
 ---
 title: "Fix gutter button and comment form UX bugs"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:  []
 tags: []
