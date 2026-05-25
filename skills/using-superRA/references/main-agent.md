@@ -3,78 +3,79 @@
 ## MANDATORY: Session Start Actions
 
 Before your first substantive response, run these cross-session detection checks:
-1. Check for PLAN.md in the working directory
+1. Check for `.plan/task.md` in the working directory
 2. Check for analysis worktrees (`git worktree list`)
 3. Check for analysis branches (`git branch --list 'analysis/*'`)
 4. If any exist, report to the user: "Found in-progress analysis work: [details]"
 
 Do NOT skip these because the user "jumped straight into a task." The checks take 5 seconds and prevent lost work.
 
-**If an incomplete plan is found** (PLAN.md with unchecked `- [ ]` steps, non-APPROVED review status, unchecked workflow milestones, or active review notes):
-- Summarize: "Found in-progress analysis: `PLAN.md` (N tasks APPROVED, K with review issues or pending review; workflow milestones: <checked/unchecked summary>). Resume?"
-- If user confirms: load PLAN.md and RESULTS.md, check git log for latest state, run §Workflow Frontier Resolver, and continue from the returned frontier.
+**If an incomplete task tree is found** (`.plan/task.md` exists with tasks in non-approved status):
+- Run `task_query.py --tree` to get the full status summary.
+- Summarize: "Found in-progress analysis: `.plan/` (N tasks approved, K with issues). Resume?"
+- If user confirms: read the `.plan/` task tree, check git log for latest state, run §Workflow Frontier Resolver, and continue from the returned frontier.
 - If user declines: proceed normally
 
-**If in a worktree with no plan file:**
+**Backward compatibility:** If `PLAN.md` is found without a `.plan/` directory, offer migration via `plan_migrate.py`.
+
+**If in a worktree with no task tree:**
 - Note: "You're in worktree `<path>` on branch `<branch>`. Continue working here?"
 
 ## Workflow Frontier Resolver
 
-Before entering a workflow, resuming after interruption, or reacting to a changed plan, resolve the next safe entry point from durable facts. Mixed state is normal: some tasks may remain approved while changed tasks and their downstream dependents roll back.
+Before entering a workflow, resuming after interruption, or reacting to a changed task tree, resolve the next safe entry point from durable facts. Mixed state is normal: some tasks may remain approved while changed tasks and their downstream dependents roll back.
 
-The resolver diagnoses and routes. It does not perform the plan edit, implementation pass, integration pass, or merge itself; the workflow that owns the selected layer runs its local protocol.
+The resolver diagnoses and routes. It does not perform the task-tree edit, implementation pass, integration pass, or merge itself; the workflow that owns the selected layer runs its local protocol.
 
 **Read facts first:**
 
-- Git: current branch/worktree, `git status`, recent commits relevant to PLAN.md / RESULTS.md / task files, and any active merge/rebase/cherry-pick state.
-- Handoff docs: whether `PLAN.md` and `RESULTS.md` exist, are tracked, and match the committed state expected by the workflow about to run.
-- PLAN header: `## Workflow Status`, `## Decisions`, `## Sync Map` when present, project conventions, any logged implementation-workflow Step 4 disposition, and any declared pipeline.
-- Task blocks: `Depends on`, checkbox completion, `Review status`, `Integration status`, active review-notes blockquotes, and task/output references.
-- RESULTS.md: task sections exist for planned tasks and contain findings for completed work.
+- Git: current branch/worktree, `git status`, recent commits relevant to `.plan/` task files, and any active merge/rebase/cherry-pick state.
+- Task tree: whether `.plan/task.md` exists, is tracked, and matches the committed state expected by the workflow about to run.
+- Root task.md: `## Conventions`, `## Sync Map` when present, any logged implementation-workflow Step 4 disposition, and any declared pipeline.
+- Per-task frontmatter: `status`, `review_status`, `integration_status`, `depends_on`. Use `task_query.py --frontier` to find dispatchable tasks.
+- Per-task body: `## Results` sections for completed work, active `## Review Notes` blockquotes, `## Revision Notes` signaling recent changes.
 
 **Compute the affected frontier:**
 
-1. First check whether planning must run. If `PLAN.md` / `RESULTS.md` are missing, untracked, structurally incomplete, or contradicted by an unlogged material user decision, enter `planning-workflow` before implementation or integration work. Material scope, objective, input, output, methodology, or task-graph changes use `planning-workflow §User Feedback and Changing Plans`; after that protocol updates the docs, run this resolver again.
-2. Identify the changed or untrusted starting points from the durable facts: explicit user scope change, dirty or recent task-file edits, unchecked task steps, omitted / placeholder / cleared task status, active review notes, failed or missing reproducibility evidence, unchecked workflow rollups, or a requested final action.
-3. For each changed task, include downstream dependents whose inputs, outputs, or assumptions may have shifted. Preserve task-local `Review status` / `Integration status` for unrelated approved tasks. If a downstream task is unaffected, document the exemption in `## Decisions`.
-4. Treat `## Workflow Status` checkboxes as rollups, not task state. If a checked milestone no longer matches the task evidence or required global gate, that milestone is invalid. The owning workflow or plan-change protocol should uncheck it and record why; unrelated task-level statuses remain valid.
-5. If durable facts disagree in a way you cannot repair mechanically, stop under §The Three Pause Classes and log the answer before acting.
+1. First check whether planning must run. If `.plan/task.md` is missing, untracked, structurally incomplete, or contradicted by a material user decision not yet reflected in task objectives, enter `planning-workflow` before implementation or integration work. Material scope, objective, input, output, methodology, or task-graph changes use `planning-workflow §User Feedback and Changing the Task Tree`; after that protocol updates the task files, run this resolver again.
+2. Identify the changed or untrusted starting points from the durable facts: explicit user scope change, dirty or recent task-file edits, omitted / placeholder / cleared task status, active review notes, revision notes signaling a scope change, failed or missing reproducibility evidence, or a requested final action.
+3. For each changed task, include downstream dependents (via `depends_on:` edges) whose inputs, outputs, or assumptions may have shifted. Preserve task-local `review_status` / `integration_status` for unrelated approved tasks. If a downstream task is unaffected, note the exemption in a revision note on the changed task.
+4. If durable facts disagree in a way you cannot repair mechanically, stop under §The Three Pause Classes and resolve before acting.
 
 **Return the decision:**
 
 - Affected frontier: tasks and workflow layer(s) that need work.
-- Preserved-approved tasks: tasks whose `Review status` / `Integration status` remain valid.
-- Invalidated milestones: `## Workflow Status` boxes that are no longer true.
+- Preserved-approved tasks: tasks whose `review_status` / `integration_status` remain valid.
 - Next safe workflow owner and entry layer: planning, implementation / review, validation / completion, integration, documentation, or final merge / PR.
 - Required stop point: any researcher decision or irreparable contradiction that must be resolved before action.
 
 **Choose the next safe action:**
 
-1. Compare the decision with the canonical workflow order: plan repair or plan-change logging -> implementation / review -> reproducibility verification -> `Execution complete` box flip -> implementation-workflow Step 4 disposition -> integration -> documentation -> final merge / PR.
+1. Compare the decision with the canonical workflow order: task-tree repair or change protocol -> implementation / review -> reproducibility verification -> implementation-workflow Step 4 disposition -> integration -> documentation -> final merge / PR.
 2. Enter the earliest invalid layer for the affected frontier. Invoke the workflow skill that owns that layer; the workflow then runs its local mechanics and gates.
 3. For implementation or review, work only on tasks whose dependencies are satisfied and whose local status is not valid for that layer.
-4. If all affected implementation tasks are approved but reproducibility, `Execution complete`, or the Step 4 disposition is missing, enter `implementation-workflow` at Step 3 / Step 4. A current integration / PR request supplies intent only after that disposition is logged.
+4. If all affected implementation tasks are approved but reproducibility or the Step 4 disposition is missing, enter `implementation-workflow` at Step 3 / Step 4. A current integration / PR request supplies intent only after that disposition is logged.
 5. For integration or later layers, scope authoring and fix work to the affected frontier while still running required global gates before merge / PR.
 
 **Safety invariants:**
 
 - Do not add or trust a single global `Current state` field.
-- Do not act on a material user decision before it is logged in PLAN.md.
-- Do not clear unrelated task-local statuses when only a rollup milestone is invalid.
+- Do not act on a material user decision before it is reflected in `.plan/` task objectives.
+- Do not clear unrelated task-local statuses when only a changed task's downstream is affected.
 - Do not advance past implementation work without reviewer approval or documented adjudication of blocking review items.
 - Do not enter integration before implementation reproducibility and the Step 4 disposition are current.
 - Do not merge or open a PR before integration, documentation, and base-freshness gates are valid for the current frontier.
 
-## Changes of the Plan
+## Changes of the Task Tree
 
-Whenever the plan meaningfully changes — a new task, a removed or reordered task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `planning-workflow` and follow the §User Feedback and Changing Plans protocol (confirm → log decision → inline-edit PLAN.md → roll back milestones → sweep for stale content → atomic commit). Then run §Workflow Frontier Resolver to decide where to resume. Rewording a step inside an in-flight task to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §User Feedback and Changing Plans` for the full material-vs-not-material list and protocol.
+Whenever the task tree meaningfully changes — a new task, a removed or restructured task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `planning-workflow` and follow the §User Feedback and Changing the Task Tree protocol (confirm → update task files inline → clear affected statuses → sweep for stale content → atomic commit). Then run §Workflow Frontier Resolver to decide where to resume. Rewording an objective to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §User Feedback and Changing the Task Tree` for the full material-vs-not-material list and protocol.
 
 
 ## The Three Pause Classes
 
 This contract applies across every workflow step — planning, execution, integration, semantic sync, and finishing — not just execution. Workflow skills carry step-specific stop points; those plug into the three classes below.
 
-Stop and use `AskUserQuestion` (plain text if the harness does not expose the tool) for exactly three classes of pause, all of which require logging the researcher's answer per `task-system/references/planning.md` §User Decisions Log **before** acting on it:
+Stop and use `AskUserQuestion` (plain text if the harness does not expose the tool) for exactly three classes of pause. Fold the researcher's answer into the relevant task objective (rewriting it to be self-sufficient with the new context) **before** acting on it:
 
 1. **Hard blocker the RA cannot resolve from code and data.** Unexpected input-quality issues, missing or corrupted inputs, ambiguous upstream dependency the agent cannot trace, a transformation that produces an unexpected scope change (row count shift on a merge, date range change after a filter), validation failure against domain expectation, plan with critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required dependency unavailable.
 2. **Decision beyond the RA's authority.** Methodology choices, research intent, scope changes, sample / variable-definition calls, tradeoffs where the "right" answer depends on the research question — any call where the researcher is the one who knows which answer is wanted. Also: methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope change that would affect tasks not yet reached.
@@ -106,7 +107,7 @@ When nothing has changed since the last approved state, these phrasings are bann
 - "Let me know if you want me to..."
 - "Would you like me to dispatch the next implementer?"
 
-If you are about to type any of these, the answer is almost certainly that you should just do the work. If the work legitimately needs a decision, use `AskUserQuestion` with a specific pause-class question; log the answer per `task-system/references/planning.md` §User Decisions Log; and then proceed.
+If you are about to type any of these, the answer is almost certainly that you should just do the work. If the work legitimately needs a decision, use `AskUserQuestion` with a specific pause-class question; fold the answer into the task objective; and then proceed.
 
 **Ask for clarification rather than guessing** — but only when there is a real question. Fabricating a question to create a check-in violates this principle.
 
@@ -116,7 +117,7 @@ When a pause is legitimate, ask a single focused question and wait for the answe
 
 ## Log Before You Act
 
-Every user decision produced at a stop point is written into the relevant task.md per `task-system/references/planning.md` §User Decisions Log **before** the agent acts on it, and committed atomically with the work it unblocks. The doc is the record; the chat message is the pointer.
+Every user decision produced at a stop point is folded into the relevant task objective — rewritten to be self-sufficient with the new context — **before** the agent acts on it, and committed atomically with the work it unblocks. Add a `## Revision Notes` entry when the change is non-obvious. The task file is the record; the chat message is the pointer.
 
 
 ## Execution Modes
@@ -127,7 +128,7 @@ Subagent mode is the default — dispatch implementers and reviewers through `su
 
 - **Read the direct-mode role reference for the role you are playing.** `references/direct-mode-implementer.md` for an implementation step; `references/direct-mode-reviewer.md` for a review step. These are the skill-surface copies of the role protocol that direct mode can load across repos.
 - **The Skill-Load Manifest still drives loads.** Consult the manifest row for your Stage and load the listed skills/references in-session.
-- **Task context comes from `PLAN.md`, `RESULTS.md`, and the current session** — there is no dispatch prompt.
+- **Task context comes from `.plan/` task files** (via `task_read.py` or direct read of `task.md`) — there is no dispatch prompt.
 - **Self-review gate, editing discipline, and verdict protocol all apply.** Walk the active domain skill's gated checklist before committing. Reviewer verdicts are still APPROVE / REVISE.
 - **Review is never skipped.** Either dispatch a reviewer subagent or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
 
