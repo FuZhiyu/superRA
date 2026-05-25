@@ -108,6 +108,55 @@ The migrator:
 4. Creates the directory hierarchy with `task.md` files
 5. Generates the initial dashboard
 
+### Parser Expectations and Preparation
+
+The migration script uses strict regex patterns. Non-conforming PLAN.md files must be normalized before migration or migrated manually.
+
+**Task block detection** — `TASK_BLOCK_RE`:
+
+```
+^### Task (\d+): (.+?)$
+```
+
+Only `###`-level headings with the exact `Task N: Title` pattern are recognized. Tasks at `##` or `####`, unnumbered tasks, or tasks without the colon separator are invisible to the parser.
+
+**Results section detection** — `RESULTS_SECTION_RE`:
+
+```
+^## Task (\d+): (.+?)$
+```
+
+Matches `## Task N: Title` headings in RESULTS.md. Task numbers must correspond to those in PLAN.md. Sections whose first line contains "Not started" are skipped.
+
+**Field extraction** — `FIELD_RE` dictionary of patterns, each matching a bold-label line:
+
+| Field | Pattern | Notes |
+|---|---|---|
+| `depends_on` | `**Depends on:** <value>` | Comma-separated `Task N` refs or `*(none)*` |
+| `review_status` | `**Review status:** <value>` | Normalized: APPROVED/REVISE/IMPLEMENTED → lowercase |
+| `integration_status` | `**Integration status:** <value>` | Same normalization as review_status |
+| `script` | `**Script:** <value>` | Optional backtick wrapper stripped |
+| `input` | `**Input:** <value>` | Backtick-delimited list or comma-separated |
+| `output` | `**Output:** <value>` | Same as input |
+
+Missing fields default to empty/none. The `_extract_file_list` helper recognizes `*(none)*` as empty list, backtick-delimited items (`` `a`, `b` ``), or plain comma-separated values.
+
+**Status inference** — `_compute_status_from_steps`:
+
+1. If `**Review status:**` contains APPROVED → `approved`; REVISE → `revise`; IMPLEMENTED → `implemented`
+2. Otherwise count checkboxes: `- [xX]` (checked) and `- [ ]` (unchecked, exactly one space)
+3. All checked + none unchecked → `implemented`; mixed → `in-progress`; none checked → `not-started`
+
+Checkbox variants like `- [~]`, `- [-]`, or `- [X ]` (with extra space) are not matched by either pattern and are effectively invisible — leading to incorrect status inference.
+
+**Dependency resolution** — `_parse_depends_on` splits on commas, then `_migrate` matches each `Task N` reference to the corresponding slug via `task_num_to_slug`. Unresolved references (e.g. `Task 5` when only Tasks 1–4 exist) are silently dropped.
+
+**Header extraction** — everything before the first `### Task N:` heading becomes the root task's body.
+
+**Slugification** — `slugify()` lowercases, strips non-word characters, replaces whitespace/underscores with hyphens, and truncates to 60 characters. Directory names are `NN-slug` (zero-padded task number prefix).
+
+**Normalization vs manual migration:** When the PLAN.md structure diverges significantly (no numbered task headings, deeply nested prose, ≤3 tasks), manual migration using `task_create.py` is faster than reformatting the file to match parser expectations. See `SKILL.md` §Preparing a PLAN.md for migration for the normalization checklist and manual procedure.
+
 ### Upgrade from v1 to v2 format
 
 ```bash
