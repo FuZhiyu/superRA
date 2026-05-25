@@ -1,7 +1,7 @@
 ---
 title: "Update main-agent.md for .plan/-native operations"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on: 
   - skill-rewrite
