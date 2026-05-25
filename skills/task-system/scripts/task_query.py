@@ -170,6 +170,7 @@ def tree_to_json(task: Task) -> dict:
         "objective": sections.get("Objective", ""),
         "results": sections.get("Results", ""),
         "decisions": sections.get("Decisions", ""),
+        "revision_notes": sections.get("Revision Notes", ""),
         "review_notes": sections.get("Review Notes", ""),
         "children": [tree_to_json(c) for c in task.children],
     }

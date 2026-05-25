@@ -36,7 +36,7 @@ When the scope spans more than one lane (language/style, structure, or any consi
 
 ## Review-as-planning
 
-When the review's findings will drive subsequent edits (the typical case for a section-level proofread), the natural shape of the report is a `PLAN.md` task list: each finding becomes a task entry the implementer can pick up. Use the handoff-doc PLAN.md task-block format (`superRA:handoff-doc references/plan-anatomy.md`) when the findings will survive across sessions or dispatches; a chat-only findings report suffices for same-session iteration.
+When the review's findings will drive subsequent edits (the typical case for a section-level proofread), the natural shape of the report is a task list: each finding becomes a task the implementer can pick up. Use the standard task format (see `task-system/references/planning.md`) when the findings will survive across sessions or dispatches; a chat-only findings report suffices for same-session iteration.
 
 The boundary between "findings report" and "plan" is fluid. If the requester says "now go fix these", the findings list becomes the implementer's task list directly — don't re-author.
 

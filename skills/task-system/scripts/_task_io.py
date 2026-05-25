@@ -42,7 +42,8 @@ class Task:
     body: str = ""
     objective: str = ""
     results: str = ""
-    decisions: str = ""
+    decisions: str = ""        # legacy; prefer revision_notes
+    revision_notes: str = ""
     review_notes: str = ""
     children: list[Task] = field(default_factory=list)
 
@@ -258,6 +259,7 @@ def parse_task(task_md_path: Path) -> Task:
         objective=sections.get("Objective", ""),
         results=sections.get("Results", ""),
         decisions=sections.get("Decisions", ""),
+        revision_notes=sections.get("Revision Notes", ""),
         review_notes=sections.get("Review Notes", ""),
     )
 

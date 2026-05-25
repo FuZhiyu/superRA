@@ -22,9 +22,9 @@ The request names a file, section, or paragraph and asks for polish — no in-fl
 
 The request hands over an accepted-findings scope and asks to apply it. The scope **is** the work — apply each accepted finding as a minimal edit; do not silently extend to nearby issues. If a finding is ambiguous or incorrect, raise it; do not silently reinterpret.
 
-**When polish follows long-form review**, shape-C input is accepted PLAN.md review notes. The polish task names a bounded sweep (e.g., "all typos", "all citation-format issues") and points to the task-local review items it applies. Batching has already happened before the polish pass — the implementer applies the batch the task names, not re-batches inside polish. Read the findings directly from PLAN.md; no separate lookup is needed.
+**When polish follows long-form review**, shape-C input is accepted task-local `## Review Notes`. The polish task names a bounded sweep (e.g., "all typos", "all citation-format issues") and points to the task-local review items it applies. Batching has already happened before the polish pass — the implementer applies the batch the task names, not re-batches inside polish. Read the findings directly from the task's `## Review Notes`; no separate lookup is needed.
 
-**When polish is standalone** (a free-floating findings list, not a PLAN.md task block), the implementer reads the raw list and applies per finding.
+**When polish is standalone** (a free-floating findings list, not a task block), the implementer reads the raw list and applies per finding.
 
 In both cases, each accepted finding carries a `Fix:` tier (`review.md §Fix tiers`); polish-shape-C apply behavior follows the tier:
 
@@ -63,7 +63,7 @@ The comment captures *what the paragraph is trying to do for the reader* — the
 
 ## Triage
 
-In shapes A and B, every diagnosed issue is implicitly tiered per `review.md §Fix tiers`. Apply `mechanical` and `conventional` tier issues as minimal edits in place. **Surface `authorial`-tier issues** to the author — chat reply for standalone polish; the existing handoff-doc convention (`superRA:handoff-doc`) when polish rides a workflow. Not silently fixing is a recognized outcome, not under-editing. The §Edit-vs-propose-vs-ask matrix already routes meaning-changing edits to **Ask**; triage names the surface path for issues that diagnose cleanly but need author input on the right answer — canonically a claim-evidence gap, also a topic-sentence rewrite that would move the paragraph's sequence.
+In shapes A and B, every diagnosed issue is implicitly tiered per `review.md §Fix tiers`. Apply `mechanical` and `conventional` tier issues as minimal edits in place. **Surface `authorial`-tier issues** to the author — chat reply for standalone polish; the task-system editing convention when polish rides a workflow. Not silently fixing is a recognized outcome, not under-editing. The §Edit-vs-propose-vs-ask matrix already routes meaning-changing edits to **Ask**; triage names the surface path for issues that diagnose cleanly but need author input on the right answer — canonically a claim-evidence gap, also a topic-sentence rewrite that would move the paragraph's sequence.
 
 In shape C, the findings list arrives pre-tiered; apply per the shape-C tier rules above.
 

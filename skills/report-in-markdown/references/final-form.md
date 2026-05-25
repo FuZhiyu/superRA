@@ -21,7 +21,7 @@ git commit -m "results: fact-check Stage 2 RESULTS.md"
 
 Re-organize the now-fact-checked file. Still at worktree root, still Stage 1 figure paths. Changes:
 
-- Restructure from task-indexed to reader-facing — by objective, data source, or result type. Task numbering from `PLAN.md` disappears.
+- Restructure from task-indexed to reader-facing — by objective, data source, or result type. Task-path indexing disappears.
 - Merge related findings split across tasks (e.g., Task 3 built the sample, Task 5 ran the regression on it — combine into one section).
 - Strip resolved reviewer caveats; surface unresolved limitations into a "Limitations" section.
 - Add frontmatter per `baseline-io.md`. Stage 1 had none.
@@ -89,11 +89,11 @@ The Stage 2 form documents what was found. It does **not** interpret, recommend,
 - "classified Z% of cases as X".
 - "the regression coefficient is β = 0.12 (SE 0.04)".
 
-**Exception:** if the researcher explicitly asked for interpretation (e.g., in `PLAN.md`'s objective or methodology section), allow it but flag the location in a reviewer note.
+**Exception:** if the researcher explicitly asked for interpretation (e.g., in the task objective or methodology section), allow it but flag the location in a reviewer note.
 
 ### Methodology
 
-- [ ] Methodology sections **describe what was done**, not why. Why belongs in `PLAN.md`'s objective, not in the findings.
+- [ ] Methodology sections **describe what was done**, not why. Why belongs in the task objective, not in the findings.
 - [ ] Every methodological step links to the code file that implements it.
 - [ ] Classification rules, filter criteria, and sample construction are shown in tables if they have branching logic.
 - [ ] No evaluation of the methodology ("robust", "rigorous"). Just description.
@@ -141,7 +141,7 @@ Report issues in a plain checklist with line numbers and a specific proposed fix
 A matured `RESULTS.md` typically contains:
 
 1. **Frontmatter** (per `baseline-io.md`).
-2. **Title and one-paragraph objective** pulled from `PLAN.md`'s objective section.
+2. **Title and one-paragraph objective** pulled from root `.plan/task.md`'s objective section.
 3. **Data section** — what data was used, with links to the code that loaded/cleaned it.
 4. **Methodology section** — what was done, with links to scripts. Factual only.
 5. **Results sections** organized by topic. Tables, figures, cited numbers.

@@ -13,13 +13,13 @@ Required inputs:
 - `BASE_HEAD_SHA`
 - incoming range `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`
 - Sync commits (merge commit SHA plus any propagation-commit SHAs)
-- PLAN.md `## Sync Map`, if present
+- Root task.md `## Sync Map`, if present
 
 ## Process
 
 1. Verify the anchors: incoming intent comes from `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`; the post-sync governing baseline is `BASE_HEAD_SHA`.
 2. Read incoming commits and diffs. Independently summarize incoming intent.
-3. Read PLAN.md / RESULTS.md and independently summarize current-branch intent.
+3. Read the `.plan/` task tree and independently summarize current-branch intent.
 4. Inspect the sync commits (merge commit plus any propagation commits) and their combined diff. Confirm every kept, dropped, or synthesized hunk has a semantic rationale, classified by role per `SKILL.md §Shared Steps` step 2.
 5. Walk `SKILL.md §Semantic Coherence Checklist` top to bottom.
 6. Check the Sync Map against the diff and incoming intent. It should explain the branch-level thesis, not bury everything in task-local notes.
@@ -36,6 +36,6 @@ Two verdicts:
 
 When a Sync Map exists, record the verdict in `**Sync review status:**`. On REVISE, add `> **Sync review notes:**` under the Sync Map with specific findings and file/path evidence. On APPROVE, remove resolved sync-review notes and set `**Sync review status:** APPROVED`.
 
-If no Sync Map exists and the sync is truly no-op/trivial, report the verdict without editing PLAN.md. If the review finds a material issue, create a minimal Sync Map with sync-review notes so the issue is in the handoff record before returning REVISE.
+If no Sync Map exists and the sync is truly no-op/trivial, report the verdict without editing root task.md. If the review finds a material issue, create a minimal Sync Map with sync-review notes so the issue is in the handoff record before returning REVISE.
 
-Commit only PLAN.md when you edit review status or notes.
+Commit only root task.md when you edit review status or notes.

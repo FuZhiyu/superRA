@@ -37,7 +37,7 @@ The line-level marker families and replacement patterns that operationalize this
 
 A paper's writing-side conventions are paper-specific choices among defensible alternatives — choices a fresh agent would get wrong if not written down. Recording them once prevents re-inference and silent re-decision every session.
 
-**Where they live (lifecycle ladder, ordered by permanence).** `PLAN.md` (workflow-scoped) → `CLAUDE.md` (project-permanent). Long-form review retrofits a PLAN.md around the user's existing draft; reviewers then write findings as task-local review notes. Writing-side conventions live in the `## Project Conventions` header of whichever PLAN.md is in play; when no handoff doc is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability — same pattern as theory-modeling's per-task ledger → `PLAN.md` Notation Conventions promotion (`theory-modeling/SKILL.md §Documentation and handoff`).
+**Where they live (lifecycle ladder, ordered by permanence).** Root `.plan/task.md` (workflow-scoped) → `CLAUDE.md` (project-permanent). Long-form review retrofits a task tree around the user's existing draft; reviewers then write findings as task-local review notes. Writing-side conventions live in the `## Project Conventions` header of root `.plan/task.md`; when no task tree is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability — same pattern as theory-modeling's per-task ledger → root task.md Notation Conventions promotion (`theory-modeling/SKILL.md §Documentation and handoff`).
 
 **What writing contributes (rows alongside data and modeling contributions).**
 
@@ -89,4 +89,4 @@ Loading the listed reference is the authority grant — if `structure.md` is not
 
 ## Coupling to superRA workflows
 
-Most writing work is standalone — terminate at edit + commit, or at findings + commit. Larger work routes through `planning-workflow` with `references/planning.md`. Whole-section drafts, whole-paper revisions, and R&R passes continue through the full workflow. Long-form review retrofit uses PLAN.md only: the draft already exists, reviewers inspect it through `implementation-workflow`, and findings live in PLAN.md review notes rather than RESULTS.md.
+Most writing work is standalone — terminate at edit + commit, or at findings + commit. Larger work routes through `planning-workflow` with `references/planning.md`. Whole-section drafts, whole-paper revisions, and R&R passes continue through the full workflow. Long-form review retrofit uses the task tree only: the draft already exists, reviewers inspect it through `implementation-workflow`, and findings live in task-local `## Review Notes` sections.

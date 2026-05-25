@@ -4,9 +4,9 @@ Load at the **INTEGRATE phase** when preparing drift tests that guard a theory/m
 
 ---
 
-## Identifying Key Results from `RESULTS.md`
+## Identifying Key Results from Task Results
 
-Drift tests should protect **headline findings**, not every intermediate line of scratch algebra. Before writing tests, read `RESULTS.md` and extract candidates.
+Drift tests should protect **headline findings**, not every intermediate line of scratch algebra. Before writing tests, read task `## Results` sections and extract candidates.
 
 **Strong candidates** (should usually get a test):
 - closed-form policy rules, value functions, equilibrium mappings, or fixed-point identities that the final argument depends on
@@ -37,7 +37,7 @@ Set tolerances based on **the mathematical object being protected**, not on arbi
 | Reported numeric values from a baseline example | Relative tolerance around `1e-6` to `1e-4`, depending on conditioning and solver stability | Protects the published value without overfitting to floating-point noise |
 | Thresholds or regime boundaries | Check a small neighborhood on both sides of the threshold | Branch-selection drift often hides exactly at regime changes |
 
-If a tolerance needs to be looser than this table suggests, justify it in the test and in `RESULTS.md`.
+If a tolerance needs to be looser than this table suggests, justify it in the test and in the task's `## Results`.
 
 ---
 

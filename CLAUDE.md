@@ -54,6 +54,10 @@ Two tests, applied in order:
 
 **Maintenance cost is the tell.** Every restated rule is a place where the two copies can drift. When in doubt, delete the copy furthest from the authoritative source.
 
+## Terminology
+
+**"Plan" is the verb, not the noun.** "Planning" refers to the planning-workflow process — scoping and decomposing work. Everything in `.plan/` is a **task** — root-level tasks scope a workstream, nested tasks are dispatchable work. `.plan/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `.plan/` artifact, "planning" when referring to the process.
+
 ## Ownership Boundaries
 
 Use one source of truth per concern. Duplicated behavior text is a drift risk; when content appears in more than one place, one copy must be authoritative and the others should point to it.
@@ -67,7 +71,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, Sync Map + task-local Sync impact formats | `semantic-merge` |
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
-| Handoff-doc mechanics, templates, stale-content rules, User Decisions Log | `handoff-doc` |
+| Task anatomy, field notes, results shape, stale-content rules | `task-system` (references/planning.md) |
 | Markdown style guide rules — file-link citations plus figures, math, tables, and final-form markdown | `report-in-markdown` |
 | Harness-specific tool names and runtime differences | Adapter references under `skills/using-superRA/references/` |
 | Canonical role behavior | `agents/implementer.md` and `agents/reviewer.md` |
