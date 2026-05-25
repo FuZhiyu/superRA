@@ -115,7 +115,7 @@ The migration script uses strict regex patterns. Non-conforming PLAN.md files mu
 **Task block detection** — `TASK_BLOCK_RE`:
 
 ```
-^### Task (\d+): (.+?)$
+^###\s+Task\s+(\d+):\s+(.+?)$
 ```
 
 Only `###`-level headings with the exact `Task N: Title` pattern are recognized. Tasks at `##` or `####`, unnumbered tasks, or tasks without the colon separator are invisible to the parser.
@@ -123,7 +123,7 @@ Only `###`-level headings with the exact `Task N: Title` pattern are recognized.
 **Results section detection** — `RESULTS_SECTION_RE`:
 
 ```
-^## Task (\d+): (.+?)$
+^##\s+Task\s+(\d+):\s+(.+?)$
 ```
 
 Matches `## Task N: Title` headings in RESULTS.md. Task numbers must correspond to those in PLAN.md. Sections whose first line contains "Not started" are skipped.
@@ -149,7 +149,7 @@ Missing fields default to empty/none. The `_extract_file_list` helper recognizes
 
 Checkbox variants like `- [~]`, `- [-]`, or `- [X ]` (with extra space) are not matched by either pattern and are effectively invisible — leading to incorrect status inference.
 
-**Dependency resolution** — `_parse_depends_on` splits on commas, then `_migrate` matches each `Task N` reference to the corresponding slug via `task_num_to_slug`. Unresolved references (e.g. `Task 5` when only Tasks 1–4 exist) are silently dropped.
+**Dependency resolution** — `_parse_depends_on` splits on commas, then `migrate` matches each `Task N` reference to the corresponding slug via `task_num_to_slug`. Unresolved references (e.g. `Task 5` when only Tasks 1–4 exist) are silently dropped.
 
 **Header extraction** — everything before the first `### Task N:` heading becomes the root task's body.
 

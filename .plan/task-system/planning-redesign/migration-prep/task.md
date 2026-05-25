@@ -42,7 +42,10 @@ Added migration preparation instructions to two files, sourced directly from `pl
 ## Review Notes
 
 1. **[MAJOR]** [SKILL.md:219](skills/task-system/SKILL.md#L219) — The quick-check grep pattern `grep -c '^### Task [0-9]' PLAN.md` does not require the colon after the task number, but the parser's `TASK_BLOCK_RE` regex (`^###\s+Task\s+(\d+):\s+(.+?)$`) requires it. A heading like `### Task 2 - Title` (no colon) would be counted by grep but ignored by the parser, producing a false-positive compatibility result that could lead to silently dropped tasks during migration. Fix: change the grep pattern to `grep -c '^### Task [0-9].*:' PLAN.md` or `grep -cP '^### Task \d+:' PLAN.md` to require the colon.
+   → implemented: grep pattern changed to `'^### Task [0-9]*:'`
 
 2. **[MINOR]** [internals.md:118](skills/task-system/references/internals.md#L118) and [internals.md:127](skills/task-system/references/internals.md#L127) — The documented regex patterns use literal single spaces (e.g., `^### Task (\d+): (.+?)$`) but the actual code uses `\s+` for whitespace (e.g., `^###\s+Task\s+(\d+):\s+(.+?)$`). The simplification is conservative for normalization guidance (agents normalizing to single spaces will produce valid files), but since internals.md presents these as the code's actual regex patterns ("Task block detection -- `TASK_BLOCK_RE`:"), the discrepancy is misleading for agents trying to understand or debug parser behavior. Consider showing the actual `\s+` patterns or noting the simplification.
+   → implemented: patterns updated to show actual `\s+` syntax
 
 3. **[MINOR]** [internals.md:152](skills/task-system/references/internals.md#L152) — Reference to `_migrate` function: "then `_migrate` matches each `Task N` reference." The actual function is `migrate()` (no underscore prefix). An agent looking up the source code would not find `_migrate`.
+   → implemented: fixed to `migrate`

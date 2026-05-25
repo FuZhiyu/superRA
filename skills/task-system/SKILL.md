@@ -216,7 +216,7 @@ The migration script has strict format expectations. Before running it, verify c
 **Quick check — does the script see your tasks?**
 
 ```bash
-grep -c '^### Task [0-9]' PLAN.md
+grep -c '^### Task [0-9]*:' PLAN.md
 ```
 
 If the count does not match the number of tasks in the file, the PLAN.md needs normalization or manual migration.
