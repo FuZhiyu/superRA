@@ -1,7 +1,7 @@
 ---
 title: "CLI entry point and uv run integration"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:
   - ../server
@@ -35,3 +35,21 @@ Provide a single-command entry point for launching the live dashboard, with zero
 **Backward compatibility:**
 - Keep the existing `plan_dashboard.py generate` command for static HTML generation as a fallback
 - The `serve` subcommand is additive — doesn't break existing usage
+
+## Results
+
+Implemented in [`plan_dashboard.py`](skills/task-system/scripts/plan_dashboard.py).
+
+**CLI subcommands:**
+- `serve [--root .plan/] [--port 8080] [--no-open]` — starts FastAPI via `uvicorn.run()`, auto-opens browser after 1s delay unless `--no-open`
+- `generate --plan-root PATH [--output PATH]` — backward-compatible static HTML generation, preserves the full `DASHBOARD_HTML` template from the old script
+
+**PEP 723 inline metadata:**
+```python
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["fastapi", "uvicorn[standard]", "jinja2", "watchfiles", "pyyaml"]
+# ///
+```
+
+Launch: `uv run skills/task-system/scripts/plan_dashboard.py serve`
