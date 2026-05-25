@@ -1,9 +1,9 @@
 ---
 title: "Fix status and review_status consistency"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
-depends_on:  []
+depends_on: []
 tags: []
 created: 2026-05-25
 updated: 2026-05-25
@@ -27,3 +27,30 @@ Fix two consistency bugs in the task status system:
 
 ## Results
 
+### Implementation
+
+1. **`validate_status_consistency(task)`** added to [`_task_io.py:556-592`](skills/task-system/scripts/_task_io.py#L556). Enforces:
+   - `review_status` cannot advance past `~` unless `status >= implemented`
+   - `integration_status` cannot advance past `~` unless `review_status == approved`
+   - Integrated into `validate_frontmatter()` so it runs on every validation pass (hooks, `validate_plan()`).
+
+2. **`--fix` mode** added to [`task_update.py:93-118`](skills/task-system/scripts/task_update.py#L93). Scans the full tree, corrects branch (non-leaf) task `status` fields to match their rolled-up value from children. Prints warnings for leaf-level consistency issues it cannot auto-fix.
+
+3. **Review-status badge** in [`task_node.html:31-33`](skills/task-system/scripts/templates/task_node.html#L31). Shows a secondary outlined badge "review: {status}" when `review_status != '~'`, visually distinct from the primary filled status badge.
+
+4. **CSS for review badge** in [`base.html:274-281`](skills/task-system/scripts/templates/base.html#L274). Outlined style with color matching the status semantic (yellow for implemented, red for revise, green for approved).
+
+5. **7 tests** added to [`test_task_system.py`](skills/task-system/scripts/test_task_system.py) in `TestStatusConsistency` class covering validation logic, fix mode for branches, no-change for leaves, and integration with `validate_plan`.
+
+### Validation Against Live Tree
+
+Running `--fix` against the actual `.plan/` tree corrected 7 tasks:
+- `task-system`: `approved` -> `in-progress`
+- `task-system/dashboard`: `approved` -> `in-progress`
+- `task-system/dashboard/live-server`: `not-started` -> `in-progress`
+- `task-system/dashboard/live-server/comments`: `not-started` -> `in-progress`
+- `task-system/dashboard/live-server/comments/comment-ui`: `implemented` -> `in-progress`
+- `task-system/dashboard/live-server/tests`: `not-started` -> `in-progress`
+- `task-system/planning-redesign`: `not-started` -> `approved`
+
+The 3 test tasks (`server-tests`, `sse-tests`, `comment-tests`) with `review_status: implemented` will now show the review badge on the live dashboard.

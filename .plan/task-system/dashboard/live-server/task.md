@@ -1,13 +1,13 @@
 ---
 title: "Live Server Dashboard"
-status: not-started
+status: in-progress
 review_status: ~
 integration_status: ~
 depends_on:
   - ../
 tags: []
 created: 2026-05-24
-updated: 2026-05-24
+updated: 2026-05-25
 ---
 
 ## Objective

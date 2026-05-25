@@ -1,12 +1,12 @@
 ---
 title: "Planning Workflow Redesign"
-status: not-started
+status: approved
 review_status: ~
 integration_status: ~
-depends_on:  []
+depends_on: []
 tags: []
 created: 2026-05-24
-updated: 2026-05-24
+updated: 2026-05-25
 ---
 
 ## Objective
@@ -25,6 +25,10 @@ Redesign the superRA planning workflow to be domain-neutral, harness-independent
 - Domain skills' planning references (`econ-data-analysis/references/planning.md`, etc.) continue to plug in unchanged at Phase 2 — only their PLAN.md text references get updated
 - Direct-mode implementer/reviewer refs are generated files — update canonical agent specs then regenerate
 - Follow the DRY/Necessity gate from CLAUDE.md for every new line
+
+## Revision Notes
+
+- **2026-05-25 — review_status vs status mismatch blocked DAG frontier.** Reviewers set `review_status: approved`, but the DAG frontier requires the task `status:` itself to be `approved`. Orchestrator rollup flip for Tasks 01–03 (skill-rewrite, revision-notes, harness-reference), dashboard regenerated via task-system command, committed as metadata-only updates.
 
 ## Results
 

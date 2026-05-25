@@ -528,6 +528,51 @@ def validate_frontmatter(task: Task) -> list[str]:
     if not task.title or not task.title.strip():
         warnings_out.append("title must be a non-empty string")
 
+    # Status consistency checks
+    warnings_out.extend(validate_status_consistency(task))
+
+    return warnings_out
+
+
+# Status progression ordering (higher index = more advanced)
+_STATUS_ORDER = {s: i for i, s in enumerate(VALID_STATUSES)}
+_REVIEW_ORDER = {s: i for i, s in enumerate(VALID_REVIEW_STATUSES)}
+_INTEGRATION_ORDER = {s: i for i, s in enumerate(VALID_INTEGRATION_STATUSES)}
+
+
+def validate_status_consistency(task: Task) -> list[str]:
+    """Check that review_status and integration_status do not advance past status.
+
+    Rules:
+    - review_status cannot be 'implemented' or beyond unless status is at least
+      'implemented'.
+    - review_status cannot be 'approved' unless status is at least 'implemented'.
+    - integration_status cannot advance unless review_status is 'approved'.
+
+    Returns a list of warning strings for any violations.
+    """
+    warnings_out: list[str] = []
+
+    status_idx = _STATUS_ORDER.get(task.status, 0)
+    review_idx = _REVIEW_ORDER.get(task.review_status, 0)
+    integration_idx = _INTEGRATION_ORDER.get(task.integration_status, 0)
+
+    # review_status requires status >= implemented (index 2)
+    if review_idx > 0 and status_idx < _STATUS_ORDER["implemented"]:
+        warnings_out.append(
+            f"review_status is {task.review_status!r} but status is only "
+            f"{task.status!r}; status must be at least 'implemented' for "
+            f"review to advance"
+        )
+
+    # integration_status requires review_status == approved
+    if integration_idx > 0 and task.review_status != "approved":
+        warnings_out.append(
+            f"integration_status is {task.integration_status!r} but "
+            f"review_status is {task.review_status!r}; review must be "
+            f"'approved' before integration can advance"
+        )
+
     return warnings_out
 
 

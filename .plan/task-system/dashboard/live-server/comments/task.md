@@ -1,6 +1,6 @@
 ---
 title: "Per-block inline comments"
-status: not-started
+status: in-progress
 review_status: ~
 integration_status: ~
 depends_on:
@@ -9,7 +9,7 @@ depends_on:
   - ../live-reload
 tags: []
 created: 2026-05-24
-updated: 2026-05-24
+updated: 2026-05-25
 ---
 
 ## Objective

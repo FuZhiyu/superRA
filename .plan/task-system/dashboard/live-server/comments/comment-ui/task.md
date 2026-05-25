@@ -1,6 +1,6 @@
 ---
 title: "Comment UI in dashboard"
-status: implemented
+status: in-progress
 review_status: approved
 integration_status: ~
 depends_on:

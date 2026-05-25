@@ -28,6 +28,9 @@
     {% endif %}
     <span class="task-title-text">{{ task.title }}</span>
     <span class="badge badge-{{ eff_status }}">{{ eff_status }}</span>
+    {% if task.review_status and task.review_status != '~' %}
+    <span class="badge badge-review badge-review-{{ task.review_status }}">review: {{ task.review_status }}</span>
+    {% endif %}
     {% if not task.is_leaf and has_children %}
     {% set approved_count = [] %}
     {% for c in task.children %}

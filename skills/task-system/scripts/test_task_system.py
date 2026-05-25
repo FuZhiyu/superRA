@@ -1228,3 +1228,117 @@ class TestTaskHook:
         }
         code, _ = self._run_hook(payload)
         assert code == 0
+
+
+# --- Status Consistency Validation ---
+
+
+class TestStatusConsistency:
+    """Tests for validate_status_consistency and --fix mode."""
+
+    def test_valid_leaf_no_warnings(self, plan_root):
+        """A leaf with status=implemented, review_status=implemented is valid."""
+        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
+        task.status = "implemented"
+        task.review_status = "implemented"
+        warnings = _task_io.validate_status_consistency(task)
+        assert warnings == []
+
+    def test_review_ahead_of_status(self, tmp_path):
+        """review_status=implemented with status=not-started should warn."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        d = root_dir / "task-a"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Task A", "not-started",
+                       review_status="implemented")
+        task = _task_io.parse_task(d / "task.md")
+        warnings = _task_io.validate_status_consistency(task)
+        assert len(warnings) == 1
+        assert "review_status" in warnings[0]
+        assert "'not-started'" in warnings[0]
+
+    def test_review_approved_status_implemented_is_valid(self, tmp_path):
+        """review_status=approved with status=implemented is valid."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        d = root_dir / "task-a"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Task A", "implemented",
+                       review_status="approved")
+        task = _task_io.parse_task(d / "task.md")
+        warnings = _task_io.validate_status_consistency(task)
+        assert warnings == []
+
+    def test_integration_without_review_approved(self, tmp_path):
+        """integration_status=implemented with review_status=~ should warn."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        d = root_dir / "task-a"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Task A", "implemented",
+                       review_status="~", integration_status="implemented")
+        task = _task_io.parse_task(d / "task.md")
+        warnings = _task_io.validate_status_consistency(task)
+        assert len(warnings) == 1
+        assert "integration_status" in warnings[0]
+
+    def test_fix_mode_corrects_parent_status(self, tmp_path):
+        """--fix should set parent status to rolled-up value from children."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+
+        child1 = parent / "child-a"
+        child1.mkdir()
+        _write_task_md(child1 / "task.md", "Child A", "approved",
+                       review_status="approved")
+
+        child2 = parent / "child-b"
+        child2.mkdir()
+        _write_task_md(child2 / "task.md", "Child B", "implemented",
+                       review_status="implemented")
+
+        # Parent status is "not-started" but children are approved/implemented
+        # Rolled-up status should be "in-progress"
+        fixed = task_update.fix_status_consistency(root_dir)
+        assert fixed >= 1
+
+        # Re-read the parent task
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "in-progress"
+
+    def test_fix_mode_no_change_for_leaf(self, tmp_path):
+        """--fix should NOT change leaf task status (only branches)."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+
+        leaf = root_dir / "leaf-task"
+        leaf.mkdir()
+        _write_task_md(leaf / "task.md", "Leaf", "not-started")
+
+        fixed = task_update.fix_status_consistency(root_dir)
+        assert fixed == 0
+
+        leaf_task = _task_io.parse_task(leaf / "task.md")
+        assert leaf_task.status == "not-started"
+
+    def test_validate_plan_catches_consistency_issues(self, tmp_path):
+        """validate_plan should report status consistency warnings."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+
+        d = root_dir / "bad-task"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Bad Task", "not-started",
+                       review_status="approved")
+
+        warnings = _task_io.validate_plan(root_dir)
+        consistency_warnings = [w for w in warnings if "review_status" in w]
+        assert len(consistency_warnings) >= 1

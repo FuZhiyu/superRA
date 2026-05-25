@@ -12,8 +12,12 @@ from _task_io import (
     VALID_INTEGRATION_STATUSES,
     VALID_REVIEW_STATUSES,
     VALID_STATUSES,
+    collect_all_tasks,
+    compute_status,
     parse_task,
     today_str,
+    validate_status_consistency,
+    walk_plan,
     write_task,
 )
 
@@ -21,7 +25,7 @@ from _task_io import (
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Update task frontmatter fields.")
     parser.add_argument("--plan-root", required=True, help="Path to the plan root directory")
-    parser.add_argument("--path", required=True, help="Task path relative to plan root")
+    parser.add_argument("--path", help="Task path relative to plan root")
     parser.add_argument("--status", choices=VALID_STATUSES, help="Set task status")
     parser.add_argument("--review-status", choices=VALID_REVIEW_STATUSES, help="Set review status")
     parser.add_argument("--integration-status", choices=VALID_INTEGRATION_STATUSES, help="Set integration status")
@@ -29,6 +33,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--add-tag", action="append", default=[], help="Add a tag")
     parser.add_argument("--remove-tag", action="append", default=[], help="Remove a tag")
     parser.add_argument("--script", help="Set script path")
+    parser.add_argument("--fix", action="store_true",
+                        help="Scan the tree and fix status consistency mismatches "
+                             "(corrects parent status fields to match rolled-up children)")
     return parser.parse_args(argv)
 
 
@@ -90,8 +97,66 @@ def update_task(
         print("No changes.")
 
 
+def fix_status_consistency(plan_root: Path) -> int:
+    """Scan the tree and fix status/review_status mismatches.
+
+    For branch (non-leaf) tasks, sets the frontmatter `status` field to
+    match the rolled-up status from children. Also flags leaf tasks with
+    review_status or integration_status inconsistencies.
+
+    Returns the number of tasks fixed.
+    """
+    root = walk_plan(plan_root)
+    all_tasks = collect_all_tasks(root)
+    fixed_count = 0
+
+    for task in all_tasks:
+        changed = False
+
+        # For branch tasks: align frontmatter status with rolled-up value
+        if not task.is_leaf:
+            rolled_up = compute_status(task)
+            if task.status != rolled_up:
+                print(f"  fix: {task.path}: status {task.status!r} -> {rolled_up!r} (rolled up from children)")
+                task.status = rolled_up
+                changed = True
+
+        # For all tasks: check review/integration consistency
+        warnings = validate_status_consistency(task)
+        if warnings:
+            for w in warnings:
+                print(f"  warn: {task.path}: {w}")
+
+        if changed:
+            task.updated = today_str()
+            write_task(task)
+            fixed_count += 1
+
+    return fixed_count
+
+
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+
+    if args.fix:
+        plan_root = Path(args.plan_root)
+        print(f"Scanning {plan_root} for status consistency issues...")
+        fixed = fix_status_consistency(plan_root)
+        if fixed:
+            print(f"Fixed {fixed} task(s).")
+            try:
+                from plan_dashboard import generate_dashboard
+                generate_dashboard(plan_root)
+            except Exception:
+                pass
+        else:
+            print("No inconsistencies found.")
+        return
+
+    if not args.path:
+        print("Error: --path is required (unless using --fix)", file=sys.stderr)
+        sys.exit(1)
+
     update_task(
         plan_root=Path(args.plan_root),
         task_path=args.path,

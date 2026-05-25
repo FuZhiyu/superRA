@@ -1,6 +1,6 @@
 ---
 title: "HTML Dashboard"
-status: approved
+status: in-progress
 review_status: approved
 integration_status: ~
 depends_on:
@@ -9,7 +9,7 @@ depends_on:
 tags: []
 script: skills/task-system/scripts/plan_dashboard.py
 created: 2026-05-23
-updated: 2026-05-24
+updated: 2026-05-25
 ---
 
 ## Objective

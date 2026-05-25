@@ -1,6 +1,6 @@
 ---
 title: "Test suite for live dashboard"
-status: not-started
+status: in-progress
 review_status: ~
 integration_status: ~
 depends_on:
