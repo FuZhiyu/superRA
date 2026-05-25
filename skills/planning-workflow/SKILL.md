@@ -7,6 +7,8 @@ description: "Requires `superRA:using-superra` loaded first. Use when starting a
 
 **First, load `superRA:using-superra` if not already loaded.**
 
+**If the harness has activated plan mode, load `references/harness-plan-mode.md` before proceeding.**
+
 ## Overview
 
 Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs a `.plan/` task tree for the implementation-workflow to consume.
