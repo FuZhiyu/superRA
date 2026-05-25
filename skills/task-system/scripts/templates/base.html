@@ -511,7 +511,7 @@ body {
 }
 .comment-item { margin: 4px 0; }
 .comment-meta { color: var(--text-mute); font-size: 11px; }
-.comment-body { margin-top: 2px; }
+.comment-body { margin-top: 2px; white-space: pre-wrap; }
 .comment-resolved { opacity: 0.5; }
 .comment-form textarea {
   width: 100%; min-height: 60px; margin: 4px 0;
@@ -904,6 +904,7 @@ if (fullReloadEl) {
 
 /* ── Comment UI: suppress SSE node-swap after local comment changes ── */
 var _commentEditPaths = {};  /* taskPath -> timestamp of last local comment op */
+var _activeCommentEdit = null; /* { save: fn, cancel: fn, textarea: el } — at most one open editor */
 
 document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
   /* event.target is the task-node element that matched sse-swap */
@@ -1144,9 +1145,41 @@ function updateSectionBadges(taskPath, comments) {
   });
 }
 
+function _dismissActiveEdit() {
+  /* Close the currently-open comment editor if any.
+     Auto-saves if content changed, otherwise cancels.
+     Does NOT call loadComments — caller can safely set up a new editor on any task. */
+  if (!_activeCommentEdit) return;
+  var prev = _activeCommentEdit;
+  _activeCommentEdit = null;
+  var newBody = prev.textarea.value.trim();
+  var changed = newBody && newBody !== prev.originalText;
+  /* Restore DOM: show original body + actions, remove textarea + controls */
+  prev.bodyEl.textContent = changed ? newBody : prev.originalText;
+  prev.bodyEl.style.display = '';
+  prev.controls.remove();
+  prev.textarea.remove();
+  prev.actionsDiv.style.display = '';
+  /* Fire-and-forget API save if content changed */
+  if (changed) {
+    _commentEditPaths[prev.taskPath] = Date.now();
+    fetch('/api/task/' + prev.taskPath + '/comment/' + prev.commentId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: newBody })
+    });
+  }
+}
+
 function startEditComment(item, bodyEl, comment, taskPath) {
+  /* Single-edit mode: close any already-open editor first */
+  _dismissActiveEdit();
+
   /* Replace body text with an editable textarea + Save/Cancel */
   var originalText = comment.body;
+  var actionsDiv = item.querySelector('div:last-child'); /* Edit/Resolve/Delete container */
+  actionsDiv.style.display = 'none';
+
   var ta = document.createElement('textarea');
   ta.value = originalText;
   ta.style.cssText = 'width:100%;min-height:60px;margin:4px 0;font-family:var(--font-mono);font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;resize:vertical;';
@@ -1163,6 +1196,7 @@ function startEditComment(item, bodyEl, comment, taskPath) {
   cancelBtn.style.cssText = 'font-family:var(--font-mono);font-size:11px;padding:3px 10px;background:var(--bg-alt);color:var(--text-mid);border:none;border-radius:3px;cursor:pointer;margin-left:4px;';
 
   function saveEdit() {
+    _activeCommentEdit = null;
     var newBody = ta.value.trim();
     if (!newBody || newBody === originalText) { cancelEdit(); return; }
     _commentEditPaths[taskPath] = Date.now();
@@ -1176,10 +1210,12 @@ function startEditComment(item, bodyEl, comment, taskPath) {
   }
 
   function cancelEdit() {
+    _activeCommentEdit = null;
     bodyEl.textContent = originalText;
     bodyEl.style.display = '';
     controls.remove();
     ta.remove();
+    actionsDiv.style.display = '';
   }
 
   saveBtn.onclick = saveEdit;
@@ -1203,6 +1239,12 @@ function startEditComment(item, bodyEl, comment, taskPath) {
   ta.parentNode.insertBefore(controls, ta.nextSibling);
   ta.focus();
   ta.selectionStart = ta.selectionEnd = ta.value.length;
+
+  _activeCommentEdit = {
+    save: saveEdit, cancel: cancelEdit, textarea: ta, controls: controls,
+    bodyEl: bodyEl, actionsDiv: actionsDiv, originalText: originalText,
+    taskPath: taskPath, commentId: comment.id
+  };
 }
 
 function resolveComment(taskPath, commentId, btn) {
