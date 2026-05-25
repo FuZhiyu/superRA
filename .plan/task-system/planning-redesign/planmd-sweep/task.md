@@ -1,7 +1,7 @@
 ---
 title: "Sweep PLAN.md/RESULTS.md references across skills"
 status: implemented
-review_status: revise
+review_status: approved
 integration_status: ~
 depends_on: 
   - main-agent-update
@@ -140,8 +140,3 @@ Swept all operational PLAN.md/RESULTS.md references and all `## Decisions` / `Us
 
 All 92 task-system tests pass. `sync_codex_agents.py --check` passes. Contract tests show 48 passed / 6 failed (all 6 pre-existing).
 
-## Review Notes
-
-1. **[MAJOR]** [refactor-and-integrate/SKILL.md:45](skills/refactor-and-integrate/SKILL.md#L45) — Sync impact format changed from `**Sync impact:**` (bold inline field) to `## Sync Impact` (section heading). The rest of the codebase consistently uses the `**Sync impact:**` bold-field format: [semantic-merge/SKILL.md:126](skills/semantic-merge/SKILL.md#L126) says `task-local **Sync impact:** annotations`; [workflow-sync-author.md:66](skills/semantic-merge/references/workflow-sync-author.md#L66) shows the template as `**Sync impact:** Cluster ...`. The replacement should preserve the bold-field format: e.g., `When task files contain **Sync impact:** fields, use those fields as evidence...`.
-
-2. **[MINOR]** [implementation-workflow/SKILL.md:153](skills/implementation-workflow/SKILL.md#L153) and [implementation-workflow/SKILL.md:169](skills/implementation-workflow/SKILL.md#L169) — Stale cross-references to `planning-workflow §User Feedback and Changing Plans`. The section was renamed to `§User Feedback and Changing the Task Tree` (at [planning-workflow/SKILL.md:182](skills/planning-workflow/SKILL.md#L182)). The implementer updated the same reference in [semantic-merge/SKILL.md](skills/semantic-merge/SKILL.md) but missed these two in implementation-workflow. Pre-existing staleness, but the implementer already edited this file in this task and updated the equivalent reference in semantic-merge, so it is a missed consistency fix.
