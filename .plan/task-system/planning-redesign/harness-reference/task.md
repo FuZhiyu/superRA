@@ -1,7 +1,7 @@
 ---
 title: "Create harness-plan-mode.md reference"
-status: not-started
-review_status: ~
+status: implemented
+review_status: approved
 integration_status: ~
 depends_on:  []
 tags: []
@@ -37,3 +37,13 @@ This reference is loaded when the harness activates plan mode AND the agent reco
 
 ## Results
 
+Created [`skills/planning-workflow/references/harness-plan-mode.md`](../../../../skills/planning-workflow/references/harness-plan-mode.md) with four sections:
+
+- **Core Principle** — states the non-default constraint: plan mode is exploration + approval; `.plan/` is the output; the plan file is not authoritative
+- **During Plan Mode** — names the three pre-write phases (Discovery, Exploration, Domain Setup) and requires writing the plan file last after exploration and domain hard gates are satisfied
+- **What Goes in the Harness Plan File** — specifies the per-task fields (path, title, objective, depends_on, script/input/output) plus tree visualization and dependency DAG
+- **At Exit from Plan Mode** — instructs direct creation of `.plan/` from conversation context; no migration
+
+Also added a load directive in [`skills/planning-workflow/SKILL.md`](../../../../skills/planning-workflow/SKILL.md) immediately after the `using-superra` load line: "If the harness has activated plan mode, load `references/harness-plan-mode.md` before proceeding."
+
+DRY/Necessity gate applied: every line either states a non-default constraint, provides a concrete format the agent needs, or scopes when to load. No restated defaults, no cross-skill pattern citations, no design essays.
