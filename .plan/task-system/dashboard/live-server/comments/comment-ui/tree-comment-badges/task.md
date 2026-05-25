@@ -50,7 +50,7 @@ Added endpoint at [plan_dashboard.py:422-439](skills/task-system/scripts/plan_da
 ### Client: `updateTreeCommentBadges()`
 Added function at [base.html:1099-1145](skills/task-system/scripts/templates/base.html#L1099). Logic:
 - Fetches `/api/comments/summary` for all unresolved counts
-- For each task path with comments, finds its `.task-node` in the DOM
+- For each task path with comments, finds its `.task-node` in the DOM. If the node isn't rendered (lazy-loaded depth >= 2), walks up path segments (`split('/')` + `pop()`) until finding a rendered ancestor
 - If the task's `.task-body` is open, skips (section-level badges handle it)
 - Otherwise, walks up ancestor `.task-node` elements to find the deepest collapsed ancestor
 - Aggregates counts from multiple descendants onto the same collapsed ancestor via a `Map`
@@ -58,7 +58,7 @@ Added function at [base.html:1099-1145](skills/task-system/scripts/templates/bas
 - Clears all existing `.tree-comment-badge` elements before recalculating
 
 ### CSS
-Combined `.section-comment-badge` and `.tree-comment-badge` selectors for shared styling (same accent-background pill).
+Shared base styling for `.section-comment-badge` and `.tree-comment-badge` (accent-background pill). Section badges keep `margin-left: auto` (right-aligned in section toggles); tree badges use `margin-left: 4px` (inline after status badge/progress in task rows). Badge is inserted after `.task-progress` or `.badge` element in the row rather than appended at the end.
 
 ### Call sites
 - `DOMContentLoaded` event listener for initial page load
