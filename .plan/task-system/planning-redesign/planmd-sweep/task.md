@@ -1,12 +1,11 @@
 ---
 title: "Sweep PLAN.md/RESULTS.md references across skills"
-status: implemented
+status: approved
 review_status: approved
 integration_status: ~
-depends_on: 
+depends_on:
   - main-agent-update
   - revision-notes
-
 tags: []
 created: 2026-05-24
 updated: 2026-05-24
