@@ -26,7 +26,7 @@ from typing import AsyncGenerator
 # ---------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _task_io import Task, collect_all_tasks, parse_task, walk_plan
+from _task_io import Task, _walk_children, collect_all_tasks, parse_task, walk_plan
 from task_query import tree_to_json
 
 # ---------------------------------------------------------------------------
@@ -78,32 +78,58 @@ def rebuild_tree() -> None:
     _build_index(_root_task, _task_index)
 
 
-def rebuild_task(task_path: str) -> Task | None:
+def rebuild_task(task_path: str) -> tuple[Task | None, bool]:
     """Re-parse a single task.md and update it in the index.
 
-    Returns the updated Task or None if the file no longer exists.
+    Returns ``(updated_task, children_changed)``.  *updated_task* is ``None``
+    when the file no longer exists.  *children_changed* is ``True`` when child
+    directories were added or removed since the last index snapshot, signalling
+    the caller to broadcast a full-reload instead of a single-task fragment.
     """
     global _root_task
     task_dir = PLAN_ROOT / task_path if task_path else PLAN_ROOT
     task_md = task_dir / "task.md"
     if not task_md.exists():
         _task_index.pop(task_path, None)
-        return None
+        return None, False
     try:
         updated = parse_task(task_md)
     except Exception:
-        return _task_index.get(task_path)
+        return _task_index.get(task_path), False
 
-    # Preserve children from the existing index entry
+    # --- Re-discover children from the filesystem ---
     existing = _task_index.get(task_path)
+    old_child_paths: set[str] = set()
     if existing is not None:
-        updated.children = existing.children
+        old_child_paths = {c.path for c in existing.children}
 
+    # Walk current child subdirectories that contain a task.md
+    new_children = _walk_children(task_dir, PLAN_ROOT)
+    new_child_paths = {c.path for c in new_children}
+
+    children_changed = new_child_paths != old_child_paths
+
+    updated.children = new_children
+
+    # Update the flat index: register the task itself and all discovered
+    # children; remove entries for children that no longer exist.
     _task_index[task_path] = updated
+    for gone_path in old_child_paths - new_child_paths:
+        _remove_from_index(gone_path)
+    for child in new_children:
+        _build_index(child, _task_index)
 
     # Patch the node inside the tree so the parent's reference stays valid
     _replace_node_in_tree(_root_task, task_path, updated)
-    return updated
+    return updated, children_changed
+
+
+def _remove_from_index(task_path: str) -> None:
+    """Remove a task and all its descendants from the flat index."""
+    task = _task_index.pop(task_path, None)
+    if task is not None:
+        for child in task.children:
+            _remove_from_index(child.path)
 
 
 def _replace_node_in_tree(node: Task | None, target_path: str, replacement: Task) -> bool:
@@ -190,12 +216,18 @@ async def _watch_plan_root() -> None:
             rebuild_tree()
             await _broadcast("full-reload", "{}")
         else:
+            any_children_changed = False
             for task_path in changed_paths:
-                updated = rebuild_task(task_path)
-                if updated is not None and _root_task is not None:
+                updated, children_changed = rebuild_task(task_path)
+                if children_changed:
+                    any_children_changed = True
+
+                if not any_children_changed and updated is not None and _root_task is not None:
                     fragment = _render_task_node(updated)
                     await _broadcast(f"task:{task_path}", fragment)
 
+            if any_children_changed:
+                await _broadcast("full-reload", "{}")
             if changed_paths and _root_task is not None:
                 summary_html = _render_summary()
                 await _broadcast("summary-updated", summary_html)

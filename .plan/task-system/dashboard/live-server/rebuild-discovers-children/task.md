@@ -1,7 +1,7 @@
 ---
 title: "Fix rebuild_task() to discover new children"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -21,3 +21,22 @@ File: skills/task-system/scripts/plan_dashboard.py, function rebuild_task() at l
 
 ## Results
 
+**Changed files:**
+- [plan_dashboard.py:81](skills/task-system/scripts/plan_dashboard.py#L81) -- `rebuild_task()` rewritten
+- [plan_dashboard.py:127](skills/task-system/scripts/plan_dashboard.py#L127) -- new `_remove_from_index()` helper
+- [plan_dashboard.py:218](skills/task-system/scripts/plan_dashboard.py#L218) -- `_watch_plan_root()` updated to handle `(task, children_changed)` tuple
+- [test_dashboard.py:283](skills/task-system/scripts/test_dashboard.py#L283) -- existing tests updated, 3 new tests added
+
+**What changed in `rebuild_task()`:**
+
+1. Return signature changed from `Task | None` to `tuple[Task | None, bool]`. The bool (`children_changed`) is `True` when the set of child directory paths changed since the last index snapshot.
+2. Instead of `updated.children = existing.children`, the function calls `_walk_children(task_dir, PLAN_ROOT)` to re-discover child subdirectories from disk. This uses the same `_walk_children` already used by `walk_plan` for the initial tree build, so topological sorting and recursive parsing are preserved.
+3. Stale children (directories that no longer exist) are removed from `_task_index` via the new `_remove_from_index()` recursive helper. New children are added via `_build_index()`.
+4. The caller in `_watch_plan_root()` unpacks the tuple. If any task's children changed during the batch, it broadcasts `full-reload` instead of per-task fragment SSE events.
+
+**New tests (all pass):**
+- `test_rebuild_task_discovers_new_children` -- child created after initial build is found by rebuild
+- `test_rebuild_task_removes_deleted_children` -- child removed from disk is dropped from tree and index
+- `test_rebuild_task_discovers_existing_children` -- (renamed from `test_rebuild_task_preserves_children`) existing children are re-discovered correctly with `children_changed=False`
+
+**Test results:** 53/53 pass in `test_dashboard.py`, 92/92 pass in `test_task_system.py`.
