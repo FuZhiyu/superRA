@@ -1,7 +1,7 @@
 ---
 title: "Fix gutter button clipping from overflow:hidden"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -19,3 +19,14 @@ File: `skills/task-system/scripts/templates/base.html` — CSS lines 496-506 (`.
 
 ## Results
 
+Removed the negative-margin approach entirely. Three CSS changes in [`base.html`](skills/task-system/scripts/templates/base.html):
+
+1. **`.section-content`** ([line 344](skills/task-system/scripts/templates/base.html#L344)): `padding-left: 20px` -> `4px`. Reduced because the commentable-block now provides its own indent via padding instead of relying on section-content padding minus negative margin.
+
+2. **`.commentable-block`** ([line 497](skills/task-system/scripts/templates/base.html#L497)): removed `margin-left: -28px`, changed `padding-left: 28px` -> `24px`. The 24px padding area holds the 20px gutter button with 2px gap on each side. No content extends outside the `.section-content` overflow boundary.
+
+3. **`.comment-gutter-btn`** ([line 500](skills/task-system/scripts/templates/base.html#L500)): `left: 0` -> `2px`. Centers the 20px button within the 24px padding area.
+
+**Layout math:** Net text indent is `4px (section-content) + 24px (commentable-block) = 28px`, compared to the original `20px (section) - 28px (margin) + 28px (padding) = 20px`. An 8px increase — barely noticeable. The gutter button sits at `4px + 2px = 6px` from the section-content border edge, fully inside the padding box and visible under `overflow: hidden`.
+
+All 53 existing dashboard tests pass.
