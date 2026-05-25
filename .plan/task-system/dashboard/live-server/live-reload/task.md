@@ -1,7 +1,7 @@
 ---
 title: "Filesystem watcher and SSE live reload"
 status: implemented
-review_status: revise
+review_status: approved
 integration_status: ~
 depends_on:
   - ../server
@@ -50,8 +50,3 @@ Implemented in [`plan_dashboard.py`](skills/task-system/scripts/plan_dashboard.p
 - `event: summary-updated` with `data: <rendered summary HTML>`
 - `event: full-reload` with `data: {}`
 
-## Review Notes
-
-1. **[MAJOR]** SSE swap for task nodes creates nested `<div class="task-node">` elements, corrupting the DOM. `_render_task_node()` ([plan_dashboard.py:247-254](skills/task-system/scripts/plan_dashboard.py#L247)) renders the full `render_task_node` macro output, which produces a complete `<div class="task-node" sse-swap="task:X">...</div>`. The `sse-swap` attribute on `task_node.html` line 20 defaults to `innerHTML` swap (no `hx-swap` override). So when the SSE event arrives, htmx replaces the **contents** of the existing `<div class="task-node">` with the **full** rendered node including its own `<div class="task-node">` wrapper — producing nested duplicate wrappers. Fix: add `hx-swap="outerHTML"` to the task-node div in [task_node.html:16-20](skills/task-system/scripts/templates/task_node.html#L16), so the entire element is replaced rather than its contents.
-
-2. **[MAJOR]** `full-reload` handler at [base.html:839](skills/task-system/scripts/templates/base.html#L839) is dead code. It listens for `htmx:sseMessage` with `event.detail.type === 'full-reload'`, but the htmx SSE extension only dispatches `htmx:sseMessage` for events that have a matching `sse-swap` or `hx-trigger="sse:*"` element registered. Since no element in the DOM has `sse-swap="full-reload"` or `hx-trigger="sse:full-reload"`, the `EventSource` never registers a listener for the `full-reload` event name, so `htmx:sseMessage` never fires for it. Structural changes remain invisible to the browser. Fix: either (a) add a hidden element inside the SSE scope with `sse-swap="full-reload"` that triggers a reload, or (b) add `hx-trigger="sse:full-reload"` to an element within the SSE scope, or (c) use a direct `EventSource` listener instead of relying on htmx event dispatch.
