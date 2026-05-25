@@ -319,6 +319,22 @@ body {
   white-space: nowrap;
   max-width: 400px;
 }
+.section-comment-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  margin-left: auto;
+  flex-shrink: 0;
+}
 
 .section-content {
   overflow: hidden;
@@ -478,15 +494,15 @@ body {
 }
 
 /* ── Comment gutter and threads ── */
-.commentable-block { position: relative; }
+.commentable-block { position: relative; padding-left: 28px; margin-left: -28px; }
 .commentable-block:hover .comment-gutter-btn { opacity: 1; }
 .comment-gutter-btn {
-  position: absolute; left: -28px; top: 2px;
+  position: absolute; left: 0; top: 2px;
   width: 20px; height: 20px; border-radius: 50%;
   background: var(--accent); color: #fff;
   font-size: 12px; line-height: 20px; text-align: center;
   cursor: pointer; opacity: 0; transition: opacity 0.15s;
-  border: none;
+  border: none; z-index: 1;
 }
 .comment-thread {
   margin: 4px 0 8px; padding: 8px 12px;
@@ -699,6 +715,10 @@ function toggleTask(rowEl) {
         node.dataset.needsLoad = 'false';
       }
     }
+    /* Load comment counts for section badges */
+    if (node.dataset.path) {
+      loadComments(node.dataset.path);
+    }
   }
 }
 
@@ -882,13 +902,29 @@ if (fullReloadEl) {
   });
 }
 
+/* ── Comment UI: suppress SSE node-swap after local comment changes ── */
+var _commentEditPaths = {};  /* taskPath -> timestamp of last local comment op */
+
+document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
+  /* event.target is the task-node element that matched sse-swap */
+  var taskPath = event.target && event.target.dataset ? event.target.dataset.path : '';
+  if (taskPath) {
+    var ts = _commentEditPaths[taskPath];
+    if (ts && (Date.now() - ts) < 3000) {
+      /* Suppress SSE swap — we already refreshed comments locally */
+      event.preventDefault();
+      delete _commentEditPaths[taskPath];
+    }
+  }
+});
+
 /* ── Comment UI functions ── */
 
 function showCommentForm(btn) {
   var block = btn.closest('.commentable-block');
-  /* Remove any existing form in this block */
+  /* If a form already exists in this block, just focus it */
   var existing = block.querySelector('.comment-form');
-  if (existing) { existing.remove(); return; }
+  if (existing) { existing.querySelector('textarea').focus(); return; }
 
   var form = document.createElement('div');
   form.className = 'comment-form';
@@ -896,7 +932,8 @@ function showCommentForm(btn) {
   ta.placeholder = 'Add a comment...';
   var submitBtn = document.createElement('button');
   submitBtn.textContent = 'Comment';
-  submitBtn.onclick = function() {
+
+  function submitComment() {
     var body = ta.value.trim();
     if (!body) return;
 
@@ -909,6 +946,15 @@ function showCommentForm(btn) {
     var taskNode = block.closest('.task-node');
     var taskPath = taskNode ? taskNode.dataset.path : '';
 
+    /* Remember which sections are open before reloading comments */
+    var openSections = [];
+    taskNode.querySelectorAll('.section-content.open').forEach(function(sec) {
+      var toggle = sec.previousElementSibling;
+      var label = toggle ? toggle.querySelector('.section-label') : null;
+      if (label) openSections.push(label.textContent);
+    });
+
+    _commentEditPaths[taskPath] = Date.now();
     fetch('/api/task/' + taskPath + '/comment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -924,13 +970,24 @@ function showCommentForm(btn) {
         loadComments(taskPath);
       }
     });
-  };
+  }
+
+  submitBtn.onclick = submitComment;
   var cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Cancel';
   cancelBtn.style.background = 'var(--bg-alt)';
   cancelBtn.style.color = 'var(--text-mid)';
   cancelBtn.style.marginLeft = '4px';
   cancelBtn.onclick = function() { form.remove(); };
+  ta.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submitComment();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      form.remove();
+    }
+  });
   form.appendChild(ta);
   form.appendChild(submitBtn);
   form.appendChild(cancelBtn);
@@ -995,6 +1052,9 @@ function loadComments(taskPath) {
           }
         }
       }
+
+      /* Update section header badges with unresolved counts */
+      updateSectionBadges(taskPath, comments);
     });
 }
 
@@ -1018,30 +1078,24 @@ function renderCommentThread(comments, taskPath) {
       var actions = document.createElement('div');
       actions.style.marginTop = '2px';
 
+      var actionBtnStyle = 'font-size:10px;padding:1px 6px;background:var(--bg-alt);border:1px solid var(--border);border-radius:3px;cursor:pointer;';
+
+      var editBtn = document.createElement('button');
+      editBtn.textContent = 'Edit';
+      editBtn.style.cssText = actionBtnStyle + 'color:var(--text-mid);';
+      editBtn.onclick = function() { startEditComment(item, body, c, taskPath); };
+
       var resolveBtn = document.createElement('button');
-      resolveBtn.className = 'comment-form button';
       resolveBtn.textContent = c.resolved ? 'Unresolve' : 'Resolve';
-      resolveBtn.style.fontSize = '10px';
-      resolveBtn.style.padding = '1px 6px';
-      resolveBtn.style.background = 'var(--bg-alt)';
-      resolveBtn.style.color = 'var(--text-mid)';
-      resolveBtn.style.border = '1px solid var(--border)';
-      resolveBtn.style.borderRadius = '3px';
-      resolveBtn.style.cursor = 'pointer';
+      resolveBtn.style.cssText = actionBtnStyle + 'color:var(--text-mid);margin-left:4px;';
       resolveBtn.onclick = function() { resolveComment(taskPath, c.id, resolveBtn); };
 
       var deleteBtn = document.createElement('button');
       deleteBtn.textContent = 'Delete';
-      deleteBtn.style.fontSize = '10px';
-      deleteBtn.style.padding = '1px 6px';
-      deleteBtn.style.marginLeft = '4px';
-      deleteBtn.style.background = 'var(--bg-alt)';
-      deleteBtn.style.color = 'var(--st-rev-t)';
-      deleteBtn.style.border = '1px solid var(--border)';
-      deleteBtn.style.borderRadius = '3px';
-      deleteBtn.style.cursor = 'pointer';
+      deleteBtn.style.cssText = actionBtnStyle + 'color:var(--st-rev-t);margin-left:4px;';
       deleteBtn.onclick = function() { deleteComment(taskPath, c.id, deleteBtn); };
 
+      actions.appendChild(editBtn);
       actions.appendChild(resolveBtn);
       actions.appendChild(deleteBtn);
       item.appendChild(meta);
@@ -1053,12 +1107,112 @@ function renderCommentThread(comments, taskPath) {
   return thread;
 }
 
+function updateSectionBadges(taskPath, comments) {
+  var taskNode = document.querySelector('.task-node[data-path="' + taskPath + '"]');
+  if (!taskNode) return;
+
+  /* Count unresolved comments per section */
+  var counts = {};
+  for (var i = 0; i < comments.length; i++) {
+    var c = comments[i];
+    if (!c.resolved) {
+      var sec = c.anchor.section;
+      counts[sec] = (counts[sec] || 0) + 1;
+    }
+  }
+
+  /* Update or create badges on each section-toggle */
+  taskNode.querySelectorAll('[data-section]').forEach(function(wrapper) {
+    var sectionName = wrapper.getAttribute('data-section');
+    var toggle = wrapper.querySelector('.section-toggle');
+    if (!toggle) return;
+
+    var badge = toggle.querySelector('.section-comment-badge');
+    var count = counts[sectionName] || 0;
+
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'section-comment-badge';
+        toggle.appendChild(badge);
+      }
+      badge.textContent = count;
+      badge.title = count + ' unresolved comment' + (count > 1 ? 's' : '');
+    } else if (badge) {
+      badge.remove();
+    }
+  });
+}
+
+function startEditComment(item, bodyEl, comment, taskPath) {
+  /* Replace body text with an editable textarea + Save/Cancel */
+  var originalText = comment.body;
+  var ta = document.createElement('textarea');
+  ta.value = originalText;
+  ta.style.cssText = 'width:100%;min-height:60px;margin:4px 0;font-family:var(--font-mono);font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;resize:vertical;';
+
+  var controls = document.createElement('div');
+  controls.style.marginTop = '2px';
+
+  var saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save';
+  saveBtn.style.cssText = 'font-family:var(--font-mono);font-size:11px;padding:3px 10px;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;';
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.cssText = 'font-family:var(--font-mono);font-size:11px;padding:3px 10px;background:var(--bg-alt);color:var(--text-mid);border:none;border-radius:3px;cursor:pointer;margin-left:4px;';
+
+  function saveEdit() {
+    var newBody = ta.value.trim();
+    if (!newBody || newBody === originalText) { cancelEdit(); return; }
+    _commentEditPaths[taskPath] = Date.now();
+    fetch('/api/task/' + taskPath + '/comment/' + comment.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: newBody })
+    }).then(function(resp) {
+      if (resp.ok) loadComments(taskPath);
+    });
+  }
+
+  function cancelEdit() {
+    bodyEl.textContent = originalText;
+    bodyEl.style.display = '';
+    controls.remove();
+    ta.remove();
+  }
+
+  saveBtn.onclick = saveEdit;
+  cancelBtn.onclick = cancelEdit;
+
+  ta.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    }
+  });
+
+  controls.appendChild(saveBtn);
+  controls.appendChild(cancelBtn);
+
+  bodyEl.style.display = 'none';
+  bodyEl.parentNode.insertBefore(ta, bodyEl.nextSibling);
+  ta.parentNode.insertBefore(controls, ta.nextSibling);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = ta.value.length;
+}
+
 function resolveComment(taskPath, commentId, btn) {
+  _commentEditPaths[taskPath] = Date.now();
   fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'PATCH' })
     .then(function(resp) { if (resp.ok) loadComments(taskPath); });
 }
 
 function deleteComment(taskPath, commentId, btn) {
+  _commentEditPaths[taskPath] = Date.now();
   fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'DELETE' })
     .then(function(resp) { if (resp.ok) loadComments(taskPath); });
 }
