@@ -28,9 +28,11 @@
     <span class="task-title-text">{{ task.title }}</span>
     <span class="badge badge-{{ eff_status }}">{{ eff_status }}</span>
     {% if not task.is_leaf and has_children %}
-    {% set approved_count = task.children | selectattr('is_leaf') | list | length %}
-    {#- Count approved children -#}
-    <span class="task-progress">({{ task.children | map(attribute='path') | list | length }} children)</span>
+    {% set approved_count = [] %}
+    {% for c in task.children %}
+      {% if c.effective_status() == 'approved' %}{% set _ = approved_count.append(1) %}{% endif %}
+    {% endfor %}
+    <span class="task-progress">({{ approved_count | length }}/{{ task.children | length }})</span>
     {% endif %}
   </div>
 

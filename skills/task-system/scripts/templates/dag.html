@@ -26,11 +26,17 @@ graph LR
     style {{ node_id }} fill:{{ color }}
 {% endif %}
 {% endfor %}
+{% set path_set = all_tasks | map(attribute='path') | list %}
 {% for t in all_tasks %}
 {% if t.path %}
 {% set child_id = t.path | replace('/', '_') | replace('-', '_') %}
 {% for dep in t.depends_on %}
-{% set dep_id = dep | replace('/', '_') | replace('-', '_') %}
+{#- Resolve relative ../sibling references to absolute paths -#}
+{% set dep_raw = dep.lstrip('./') %}
+{% set parent = '/'.join(t.path.split('/')[:-1]) %}
+{% set resolved = (parent ~ '/' ~ dep_raw).lstrip('/') if parent else dep_raw %}
+{% if resolved not in path_set %}{% set resolved = dep_raw %}{% endif %}
+{% set dep_id = resolved | replace('/', '_') | replace('-', '_') %}
     {{ dep_id }} --> {{ child_id }}
 {% endfor %}
 {% endif %}

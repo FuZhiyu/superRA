@@ -323,6 +323,32 @@ async def sse_events():
     )
 
 
+# --- Route: GET /dag ---------------------------------------------------------
+
+@app.get("/dag", response_class=HTMLResponse)
+async def dag_view():
+    """Render the DAG mermaid diagram partial."""
+    if _root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    env = _get_jinja_env()
+    template = env.get_template("dag.html")
+    all_tasks = collect_all_tasks(_root_task)
+    return HTMLResponse(content=template.render(root_task=_root_task, all_tasks=all_tasks))
+
+
+# --- Route: GET /kanban ------------------------------------------------------
+
+@app.get("/kanban", response_class=HTMLResponse)
+async def kanban_view():
+    """Render the kanban board partial."""
+    if _root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    env = _get_jinja_env()
+    template = env.get_template("kanban.html")
+    all_tasks = collect_all_tasks(_root_task)
+    return HTMLResponse(content=template.render(all_tasks=all_tasks))
+
+
 # --- Route: GET /files/{path} ----------------------------------------------
 
 @app.get("/files/{path:path}")
