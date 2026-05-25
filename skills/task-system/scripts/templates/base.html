@@ -478,15 +478,15 @@ body {
 }
 
 /* ── Comment gutter and threads ── */
-.commentable-block { position: relative; }
+.commentable-block { position: relative; padding-left: 28px; margin-left: -28px; }
 .commentable-block:hover .comment-gutter-btn { opacity: 1; }
 .comment-gutter-btn {
-  position: absolute; left: -28px; top: 2px;
+  position: absolute; left: 0; top: 2px;
   width: 20px; height: 20px; border-radius: 50%;
   background: var(--accent); color: #fff;
   font-size: 12px; line-height: 20px; text-align: center;
   cursor: pointer; opacity: 0; transition: opacity 0.15s;
-  border: none;
+  border: none; z-index: 1;
 }
 .comment-thread {
   margin: 4px 0 8px; padding: 8px 12px;
@@ -882,13 +882,29 @@ if (fullReloadEl) {
   });
 }
 
+/* ── Comment UI: suppress SSE node-swap after local comment changes ── */
+var _commentEditPaths = {};  /* taskPath -> timestamp of last local comment op */
+
+document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
+  /* event.target is the task-node element that matched sse-swap */
+  var taskPath = event.target && event.target.dataset ? event.target.dataset.path : '';
+  if (taskPath) {
+    var ts = _commentEditPaths[taskPath];
+    if (ts && (Date.now() - ts) < 3000) {
+      /* Suppress SSE swap — we already refreshed comments locally */
+      event.preventDefault();
+      delete _commentEditPaths[taskPath];
+    }
+  }
+});
+
 /* ── Comment UI functions ── */
 
 function showCommentForm(btn) {
   var block = btn.closest('.commentable-block');
-  /* Remove any existing form in this block */
+  /* If a form already exists in this block, just focus it */
   var existing = block.querySelector('.comment-form');
-  if (existing) { existing.remove(); return; }
+  if (existing) { existing.querySelector('textarea').focus(); return; }
 
   var form = document.createElement('div');
   form.className = 'comment-form';
@@ -896,7 +912,8 @@ function showCommentForm(btn) {
   ta.placeholder = 'Add a comment...';
   var submitBtn = document.createElement('button');
   submitBtn.textContent = 'Comment';
-  submitBtn.onclick = function() {
+
+  function submitComment() {
     var body = ta.value.trim();
     if (!body) return;
 
@@ -909,6 +926,15 @@ function showCommentForm(btn) {
     var taskNode = block.closest('.task-node');
     var taskPath = taskNode ? taskNode.dataset.path : '';
 
+    /* Remember which sections are open before reloading comments */
+    var openSections = [];
+    taskNode.querySelectorAll('.section-content.open').forEach(function(sec) {
+      var toggle = sec.previousElementSibling;
+      var label = toggle ? toggle.querySelector('.section-label') : null;
+      if (label) openSections.push(label.textContent);
+    });
+
+    _commentEditPaths[taskPath] = Date.now();
     fetch('/api/task/' + taskPath + '/comment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -924,7 +950,9 @@ function showCommentForm(btn) {
         loadComments(taskPath);
       }
     });
-  };
+  }
+
+  submitBtn.onclick = submitComment;
   var cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Cancel';
   cancelBtn.style.background = 'var(--bg-alt)';
@@ -1054,11 +1082,13 @@ function renderCommentThread(comments, taskPath) {
 }
 
 function resolveComment(taskPath, commentId, btn) {
+  _commentEditPaths[taskPath] = Date.now();
   fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'PATCH' })
     .then(function(resp) { if (resp.ok) loadComments(taskPath); });
 }
 
 function deleteComment(taskPath, commentId, btn) {
+  _commentEditPaths[taskPath] = Date.now();
   fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'DELETE' })
     .then(function(resp) { if (resp.ok) loadComments(taskPath); });
 }
