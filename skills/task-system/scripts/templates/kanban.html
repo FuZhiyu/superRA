@@ -1,0 +1,35 @@
+{#- Kanban board view — rendered as an htmx partial or inline in base.html.
+    Shows leaf tasks in 5 status columns.
+
+    Variables: all_tasks (list[Task])
+-#}
+{% set leaves = all_tasks | selectattr('is_leaf') | list %}
+
+{% set statuses = [
+  ('not-started', 'Not Started'),
+  ('in-progress', 'In Progress'),
+  ('implemented', 'Implemented'),
+  ('revise', 'Revise'),
+  ('approved', 'Approved'),
+] %}
+
+{% for status_key, status_label in statuses %}
+  {% set tasks_in_col = [] %}
+  {% for t in leaves %}
+    {% if t.effective_status() == status_key %}
+      {% set _ = tasks_in_col.append(t) %}
+    {% endif %}
+  {% endfor %}
+
+  <div class="kanban-col">
+    <div class="kanban-col-header">
+      {{ status_label }} <span class="count">{{ tasks_in_col | length }}</span>
+    </div>
+    {% for t in tasks_in_col %}
+    <div class="kanban-card" onclick="showTreeAndExpand('{{ t.path }}')">
+      <div class="kanban-card-title">{{ t.title or t.path }}</div>
+      <div class="kanban-card-path">{{ t.path }}</div>
+    </div>
+    {% endfor %}
+  </div>
+{% endfor %}

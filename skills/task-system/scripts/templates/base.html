@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ root_task.title or 'Plan Dashboard' }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2/sse.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+/* ── Light / Dark tokens ── */
+:root {
+  --font-display: 'Source Serif 4', 'Georgia', serif;
+  --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
+
+  --bg:        #faf9f7;
+  --bg-alt:    #f2f0ec;
+  --bg-card:   #ffffff;
+  --bg-hover:  #edeae4;
+  --text:      #2c2a25;
+  --text-mid:  #6b6560;
+  --text-mute: #9e9890;
+  --border:    #ddd8d0;
+  --border-lt: #eae6df;
+  --accent:    #b44d2d;
+  --accent-hover: #953f24;
+  --accent-soft: rgba(180,77,45,0.08);
+
+  --tree-line: #d4cfc7;
+
+  --st-ns:     #e8e5df;  --st-ns-t:   #8a857d;
+  --st-ip:     #d6e6f5;  --st-ip-t:   #2a6496;
+  --st-impl:   #f5edd4;  --st-impl-t: #8a6d1b;
+  --st-rev:    #f5d9d4;  --st-rev-t:  #9b3228;
+  --st-ok:     #d4e8d4;  --st-ok-t:   #2d6a30;
+
+  --progress-bg:    #e8e5df;
+  --progress-fill:  #6b9e6d;
+
+  --kanban-bg: var(--bg-alt);
+  --kanban-card-bg: var(--bg-card);
+  --kanban-card-border: var(--border);
+
+  --shadow-sm: 0 1px 2px rgba(44,42,37,0.06);
+  --shadow-md: 0 2px 8px rgba(44,42,37,0.08);
+}
+
+[data-theme="dark"] {
+  --bg:        #1c1b19;
+  --bg-alt:    #252320;
+  --bg-card:   #2c2a27;
+  --bg-hover:  #353330;
+  --text:      #e0ddd7;
+  --text-mid:  #a09b93;
+  --text-mute: #706b63;
+  --border:    #3d3a35;
+  --border-lt: #33302c;
+  --accent:    #e07850;
+  --accent-hover: #f09070;
+  --accent-soft: rgba(224,120,80,0.10);
+
+  --tree-line: #3d3a35;
+
+  --st-ns:     #33312e;  --st-ns-t:   #9e9890;
+  --st-ip:     #1f3248;  --st-ip-t:   #7ab0e0;
+  --st-impl:   #3a3018;  --st-impl-t: #d4b64a;
+  --st-rev:    #3e201c;  --st-rev-t:  #e08070;
+  --st-ok:     #1e3320;  --st-ok-t:   #7ec080;
+
+  --progress-bg:    #33312e;
+  --progress-fill:  #5a9a5c;
+
+  --kanban-bg: var(--bg-alt);
+  --kanban-card-bg: var(--bg-card);
+  --kanban-card-border: var(--border);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ── Reset + base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Header bar ── */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 24px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.header-title {
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  white-space: nowrap;
+}
+.header-stats {
+  display: flex; align-items: center; gap: 14px;
+  margin-left: 8px;
+  font-size: 12px; color: var(--text-mute);
+}
+.header-stats strong { color: var(--text-mid); font-weight: 600; }
+
+/* Progress bar */
+.progress-track {
+  width: 120px; height: 6px;
+  background: var(--progress-bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--progress-fill);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.header-spacer { flex: 1; }
+
+/* Controls */
+.header-controls {
+  display: flex; align-items: center; gap: 6px;
+}
+.hc-btn, .hc-select {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.hc-btn:hover, .hc-select:hover { background: var(--bg-hover); color: var(--text); }
+.hc-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.hc-search {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  width: 180px;
+  transition: border-color 0.15s ease;
+}
+.hc-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.hc-search::placeholder { color: var(--text-mute); }
+.theme-toggle {
+  font-size: 16px; line-height: 1;
+  background: none; border: none;
+  color: var(--text-mute); cursor: pointer;
+  padding: 4px;
+  transition: color 0.15s ease;
+}
+.theme-toggle:hover { color: var(--text); }
+
+/* ── Main content area ── */
+.main-content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+}
+
+/* ── Tree View ── */
+.task-tree { }
+.task-node {
+  position: relative;
+}
+.task-node + .task-node { margin-top: 1px; }
+
+/* Tree connector lines */
+.task-children {
+  position: relative;
+  margin-left: 20px;
+  padding-left: 16px;
+  border-left: 1px solid var(--tree-line);
+}
+
+/* ── Task row (always visible) ── */
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease;
+}
+.task-row:hover { background: var(--bg-hover); }
+
+.task-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  font-size: 10px;
+  color: var(--text-mute);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.task-toggle.expanded { transform: rotate(90deg); }
+.task-toggle.leaf { visibility: hidden; }
+
+.task-slug {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+}
+.task-title-text {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Status badge */
+.badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 1px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.badge-not-started  { background: var(--st-ns);   color: var(--st-ns-t);   }
+.badge-in-progress  { background: var(--st-ip);   color: var(--st-ip-t);   }
+.badge-implemented  { background: var(--st-impl); color: var(--st-impl-t); }
+.badge-revise       { background: var(--st-rev);  color: var(--st-rev-t);  }
+.badge-approved     { background: var(--st-ok);   color: var(--st-ok-t);   }
+
+.task-progress {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-mute);
+  flex-shrink: 0;
+}
+
+/* ── Task body (expanded) ── */
+.task-body {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.2s ease;
+  padding: 0 8px 0 30px;
+}
+.task-body.open {
+  max-height: 5000px;
+  opacity: 1;
+  padding: 4px 8px 8px 30px;
+}
+
+/* Section toggles inside task body */
+.section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  margin: 2px 0;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease;
+}
+.section-toggle:hover { background: var(--bg-hover); }
+.section-icon {
+  font-size: 9px;
+  color: var(--text-mute);
+  transition: transform 0.2s ease;
+  width: 12px;
+  text-align: center;
+}
+.section-icon.expanded { transform: rotate(90deg); }
+.section-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-mid);
+}
+.section-preview {
+  font-size: 11px;
+  color: var(--text-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+
+.section-content {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  padding-left: 20px;
+}
+.section-content.open {
+  max-height: 8000px;
+  opacity: 1;
+  padding-bottom: 4px;
+}
+
+/* Rendered markdown inside sections */
+.rendered-md {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+  padding: 6px 0;
+}
+.rendered-md h1, .rendered-md h2, .rendered-md h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 12px 0 6px;
+}
+.rendered-md h1 { font-size: 16px; }
+.rendered-md h2 { font-size: 14px; }
+.rendered-md h3 { font-size: 13px; }
+.rendered-md p { margin: 4px 0; }
+.rendered-md ul, .rendered-md ol { padding-left: 18px; margin: 4px 0; }
+.rendered-md li { margin: 2px 0; }
+.rendered-md pre {
+  background: var(--bg-alt);
+  padding: 10px 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 6px 0;
+  border: 1px solid var(--border-lt);
+}
+.rendered-md code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.rendered-md p code, .rendered-md li code {
+  background: var(--bg-alt);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+.rendered-md blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 4px 12px;
+  margin: 6px 0;
+  background: var(--accent-soft);
+  border-radius: 0 3px 3px 0;
+}
+.rendered-md table {
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.rendered-md th, .rendered-md td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  text-align: left;
+}
+.rendered-md th { background: var(--bg-alt); font-weight: 600; }
+
+/* Metadata pills inside task body */
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-lt);
+}
+.meta-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-mute);
+  background: var(--bg-alt);
+  padding: 2px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.meta-pill strong { color: var(--text-mid); font-weight: 600; }
+
+/* ── DAG view ── */
+.dag-container {
+  padding: 16px 0;
+}
+.dag-controls {
+  font-family: var(--font-display);
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: var(--text-mid);
+}
+.dag-controls strong { color: var(--text); }
+
+/* ── Kanban view ── */
+.kanban {
+  display: flex;
+  gap: 14px;
+  padding: 16px 0;
+  overflow-x: auto;
+  min-height: 400px;
+}
+.kanban-col {
+  min-width: 200px;
+  flex: 1;
+  background: var(--kanban-bg);
+  border-radius: 6px;
+  padding: 10px;
+}
+.kanban-col-header {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+  color: var(--text-mid);
+}
+.kanban-col-header .count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-mute);
+  font-weight: 400;
+}
+.kanban-card {
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: var(--kanban-card-bg);
+  border: 1px solid var(--kanban-card-border);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.kanban-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+.kanban-card-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text);
+}
+.kanban-card-path {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-mute);
+  margin-top: 3px;
+}
+
+/* ── Comment gutter and threads ── */
+.commentable-block { position: relative; }
+.commentable-block:hover .comment-gutter-btn { opacity: 1; }
+.comment-gutter-btn {
+  position: absolute; left: -28px; top: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 12px; line-height: 20px; text-align: center;
+  cursor: pointer; opacity: 0; transition: opacity 0.15s;
+  border: none;
+}
+.comment-thread {
+  margin: 4px 0 8px; padding: 8px 12px;
+  background: var(--accent-soft); border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0; font-size: 12px;
+}
+.comment-item { margin: 4px 0; }
+.comment-meta { color: var(--text-mute); font-size: 11px; }
+.comment-body { margin-top: 2px; }
+.comment-resolved { opacity: 0.5; }
+.comment-form textarea {
+  width: 100%; min-height: 60px; margin: 4px 0;
+  font-family: var(--font-mono); font-size: 12px;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 6px 8px; resize: vertical;
+}
+.comment-form button {
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 3px 10px; background: var(--accent); color: #fff;
+  border: none; border-radius: 3px; cursor: pointer;
+}
+.comment-orphan-warning {
+  color: var(--st-rev-t); font-size: 11px; font-style: italic;
+}
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.task-node { animation: fadeIn 0.15s ease both; }
+.task-tree > .task-node:nth-child(1)  { animation-delay: 0.02s; }
+.task-tree > .task-node:nth-child(2)  { animation-delay: 0.04s; }
+.task-tree > .task-node:nth-child(3)  { animation-delay: 0.06s; }
+.task-tree > .task-node:nth-child(4)  { animation-delay: 0.08s; }
+.task-tree > .task-node:nth-child(5)  { animation-delay: 0.10s; }
+.task-tree > .task-node:nth-child(6)  { animation-delay: 0.12s; }
+.task-tree > .task-node:nth-child(7)  { animation-delay: 0.14s; }
+.task-tree > .task-node:nth-child(8)  { animation-delay: 0.16s; }
+.task-tree > .task-node:nth-child(9)  { animation-delay: 0.18s; }
+.task-tree > .task-node:nth-child(10) { animation-delay: 0.20s; }
+</style>
+</head>
+<body>
+{% from "task_node.html" import render_task_node %}
+
+<!-- ── Header ── -->
+<div class="header">
+  <span class="header-title">{{ root_task.title or 'Plan Dashboard' }}</span>
+  <div class="header-stats" id="summary-bar"
+       sse-swap="summary-updated"
+       hx-swap="innerHTML">
+    {% include "summary_bar.html" %}
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-controls">
+    <input type="text" class="hc-search" id="search-box" placeholder="Search tasks..." oninput="applyFilters()">
+    <select class="hc-select" id="filter-status" onchange="applyFilters()">
+      <option value="">All statuses</option>
+      <option value="not-started">not-started</option>
+      <option value="in-progress">in-progress</option>
+      <option value="implemented">implemented</option>
+      <option value="revise">revise</option>
+      <option value="approved">approved</option>
+    </select>
+    <button class="hc-btn active" id="btn-tree" onclick="showView('tree')">Tree</button>
+    <button class="hc-btn" id="btn-dag" onclick="showView('dag')">DAG</button>
+    <button class="hc-btn" id="btn-kanban" onclick="showView('kanban')">Kanban</button>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">&#9681;</button>
+  </div>
+</div>
+
+<!-- ── Content ── -->
+<div class="main-content" hx-ext="sse" sse-connect="/events">
+  <div id="view-tree" class="task-tree">
+    {% for child in root_task.children %}
+      {{ render_task_node(child, project_root, depth=0) }}
+    {% endfor %}
+  </div>
+  <div id="view-dag" class="dag-container hidden"></div>
+  <div id="view-kanban" class="kanban hidden"></div>
+</div>
+
+<script>
+/* ── Markdown-it setup ── */
+var md = window.markdownit({ html: false, linkify: true });
+var PROJECT_ROOT = {{ project_root | tojson }};
+
+/**
+ * Render markdown text via markdown-it, then post-process links:
+ * - Relative file paths -> vscode://file/{project_root}/{path}
+ * - Image src -> /files/{src}
+ */
+function renderMarkdown(text) {
+  var html = md.render(text);
+  /* Post-process links and images in the rendered HTML */
+  var container = document.createElement('div');
+  container.innerHTML = html;
+
+  /* Rewrite relative links to vscode:// URIs */
+  container.querySelectorAll('a[href]').forEach(function(a) {
+    var href = a.getAttribute('href');
+    if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#')) {
+      a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + href);
+      a.setAttribute('target', '_blank');
+    }
+  });
+
+  /* Rewrite relative image sources to /files/ endpoint */
+  container.querySelectorAll('img[src]').forEach(function(img) {
+    var src = img.getAttribute('src');
+    if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
+      img.setAttribute('src', '/files/' + src);
+    }
+  });
+
+  return container.innerHTML;
+}
+
+/* ── Theme toggle ── */
+(function() {
+  var saved = localStorage.getItem('dashboard-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme() {
+  var html = document.documentElement;
+  var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('dashboard-theme', next);
+}
+
+/* ── View switching ── */
+var currentView = 'tree';
+
+function showView(view) {
+  currentView = view;
+  document.querySelectorAll('.header-controls .hc-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  document.getElementById('btn-' + view).classList.add('active');
+  document.getElementById('view-tree').classList.toggle('hidden', view !== 'tree');
+  document.getElementById('view-dag').classList.toggle('hidden', view !== 'dag');
+  document.getElementById('view-kanban').classList.toggle('hidden', view !== 'kanban');
+  if (view === 'dag') renderDagView();
+  if (view === 'kanban') renderKanbanView();
+}
+
+/* ── Task expand/collapse ── */
+function toggleTask(rowEl) {
+  var node = rowEl.closest('.task-node');
+  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+  var body = node.querySelector(':scope > .task-body');
+  var children = node.querySelector(':scope > .task-children');
+
+  if (!toggle || toggle.classList.contains('leaf')) return;
+
+  var isExpanded = toggle.classList.contains('expanded');
+
+  if (isExpanded) {
+    /* Collapse */
+    toggle.classList.remove('expanded');
+    if (body) body.classList.remove('open');
+    if (children) children.style.display = 'none';
+  } else {
+    /* Expand */
+    toggle.classList.add('expanded');
+    if (body) body.classList.add('open');
+    if (children) {
+      children.style.display = '';
+      /* Lazy-load children via htmx if needed */
+      if (node.dataset.needsLoad === 'true') {
+        var path = node.dataset.path;
+        var pathId = path.replace(/\//g, '-');
+        htmx.ajax('GET', '/task/' + path, {
+          target: '#' + pathId + '-children',
+          swap: 'innerHTML'
+        });
+        node.dataset.needsLoad = 'false';
+      }
+    }
+  }
+}
+
+/* ── Section expand/collapse (inside task body) ── */
+function toggleSection(toggleEl, event) {
+  event.stopPropagation();
+  var content = toggleEl.nextElementSibling;
+  var icon = toggleEl.querySelector('.section-icon');
+  var preview = toggleEl.querySelector('.section-preview');
+  var isOpen = content.classList.toggle('open');
+  icon.classList.toggle('expanded', isOpen);
+
+  if (isOpen) {
+    /* Lazy-render markdown on first expand */
+    var renderedMd = content.querySelector('.rendered-md');
+    if (renderedMd && !renderedMd.dataset.rendered) {
+      var tmpl = renderedMd.querySelector('template');
+      if (tmpl) {
+        renderedMd.innerHTML = renderMarkdown(tmpl.innerHTML);
+        renderedMd.dataset.rendered = 'true';
+      }
+    }
+    if (preview) preview.style.display = 'none';
+  } else {
+    if (preview) preview.style.display = '';
+  }
+}
+
+/* ── Search/Filter (client-side) ── */
+function applyFilters() {
+  var status = document.getElementById('filter-status').value;
+  var search = document.getElementById('search-box').value.toLowerCase();
+
+  document.querySelectorAll('#view-tree .task-node').forEach(function(el) {
+    var matches = true;
+    if (status && el.dataset.status !== status) matches = false;
+    if (search) {
+      var titleEl = el.querySelector(':scope > .task-row > .task-title-text');
+      var slugEl = el.querySelector(':scope > .task-row > .task-slug');
+      var title = titleEl ? titleEl.textContent.toLowerCase() : '';
+      var slug = slugEl ? slugEl.textContent.toLowerCase() : '';
+      var path = (el.dataset.path || '').toLowerCase();
+      if (!title.includes(search) && !slug.includes(search) && !path.includes(search)) {
+        /* Check if any descendant matches */
+        var descendantMatch = false;
+        el.querySelectorAll('.task-node').forEach(function(child) {
+          var ct = child.querySelector(':scope > .task-row > .task-title-text');
+          var cs = child.querySelector(':scope > .task-row > .task-slug');
+          var cTitle = ct ? ct.textContent.toLowerCase() : '';
+          var cSlug = cs ? cs.textContent.toLowerCase() : '';
+          var cPath = (child.dataset.path || '').toLowerCase();
+          if (cTitle.includes(search) || cSlug.includes(search) || cPath.includes(search)) {
+            descendantMatch = true;
+          }
+        });
+        if (!descendantMatch) matches = false;
+      }
+    }
+    el.classList.toggle('hidden', !matches);
+  });
+}
+
+/* ── DAG rendering (mermaid) ── */
+async function renderDagView() {
+  var container = document.getElementById('view-dag');
+  /* Fetch the DAG partial from the server */
+  try {
+    var resp = await fetch('/dag');
+    if (resp.ok) {
+      container.innerHTML = await resp.text();
+      /* Re-run mermaid on the new content */
+      var mermaidEls = container.querySelectorAll('.mermaid');
+      if (mermaidEls.length) {
+        await mermaid.run({ nodes: mermaidEls });
+      }
+    } else {
+      container.innerHTML = '<p style="color:var(--text-mute)">Could not load DAG view.</p>';
+    }
+  } catch(e) {
+    container.innerHTML = '<p style="color:var(--st-rev-t)">DAG render error: ' + e.message + '</p>';
+  }
+}
+
+/* ── Kanban rendering ── */
+async function renderKanbanView() {
+  var container = document.getElementById('view-kanban');
+  try {
+    var resp = await fetch('/kanban');
+    if (resp.ok) {
+      container.innerHTML = await resp.text();
+    } else {
+      container.innerHTML = '<p style="color:var(--text-mute)">Could not load kanban view.</p>';
+    }
+  } catch(e) {
+    container.innerHTML = '<p style="color:var(--st-rev-t)">Kanban render error: ' + e.message + '</p>';
+  }
+}
+
+/* ── Kanban card click: switch to tree and expand to path ── */
+function showTreeAndExpand(path) {
+  showView('tree');
+  /* Expand ancestor nodes */
+  var parts = path.split('/');
+  var accumulated = '';
+  for (var i = 0; i < parts.length; i++) {
+    accumulated = i === 0 ? parts[i] : accumulated + '/' + parts[i];
+    var nodeId = 'task-' + accumulated.replace(/\//g, '-');
+    var node = document.getElementById(nodeId);
+    if (node) {
+      var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+      var body = node.querySelector(':scope > .task-body');
+      var children = node.querySelector(':scope > .task-children');
+      if (toggle && !toggle.classList.contains('expanded')) {
+        toggle.classList.add('expanded');
+        if (body) body.classList.add('open');
+        if (children) {
+          children.style.display = '';
+          if (node.dataset.needsLoad === 'true') {
+            htmx.ajax('GET', '/task/' + accumulated, {
+              target: '#' + accumulated.replace(/\//g, '-') + '-children',
+              swap: 'innerHTML'
+            });
+            node.dataset.needsLoad = 'false';
+          }
+        }
+      }
+    }
+  }
+  /* Scroll to the target node */
+  requestAnimationFrame(function() {
+    var targetId = 'task-' + path.replace(/\//g, '-');
+    var target = document.getElementById(targetId);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
+/* ── Initialize mermaid ── */
+mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+
+/* ── htmx event: process newly swapped content for markdown rendering ── */
+document.body.addEventListener('htmx:afterSwap', function(event) {
+  /* Re-render any already-open sections in the swapped content */
+  event.detail.target.querySelectorAll('.section-content.open .rendered-md').forEach(function(el) {
+    if (!el.dataset.rendered) {
+      var tmpl = el.querySelector('template');
+      if (tmpl) {
+        el.innerHTML = renderMarkdown(tmpl.innerHTML);
+        el.dataset.rendered = 'true';
+      }
+    }
+  });
+});
+</script>
+</body>
+</html>

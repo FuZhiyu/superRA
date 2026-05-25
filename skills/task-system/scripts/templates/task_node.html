@@ -1,0 +1,145 @@
+{#- Jinja2 macro: renders a single task node with expand/collapse, status badge,
+    collapsible body sections, metadata pills, and recursive children.
+
+    Usage:
+      {% from "task_node.html" import render_task_node %}
+      {{ render_task_node(task, project_root, depth=0) }}
+-#}
+
+{% macro render_task_node(task, project_root, depth=0) %}
+{% set eff_status = task.effective_status() %}
+{% set path_id = task.path | replace('/', '-') %}
+{% set has_children = task.children | length > 0 %}
+{% set has_body = task.body and task.body.strip() %}
+{% set has_expandable = has_children or has_body %}
+
+<div class="task-node"
+     data-path="{{ task.path }}"
+     data-status="{{ eff_status }}"
+     id="task-{{ path_id }}"
+     sse-swap="task:{{ task.path }}">
+
+  {#- Task row (always visible) -#}
+  <div class="task-row" onclick="toggleTask(this)">
+    <span class="task-toggle{{ '' if has_expandable else ' leaf' }}">&#9656;</span>
+    {% if task.slug %}
+    <span class="task-slug">{{ task.slug }}</span>
+    {% endif %}
+    <span class="task-title-text">{{ task.title }}</span>
+    <span class="badge badge-{{ eff_status }}">{{ eff_status }}</span>
+    {% if not task.is_leaf and has_children %}
+    {% set approved_count = task.children | selectattr('is_leaf') | list | length %}
+    {#- Count approved children -#}
+    <span class="task-progress">({{ task.children | map(attribute='path') | list | length }} children)</span>
+    {% endif %}
+  </div>
+
+  {#- Task body (hidden by default, toggled on click) -#}
+  <div class="task-body">
+    {#- Collapsible sections -#}
+    {% set sections = [
+      ('Objective', task.objective),
+      ('Results', task.results),
+      ('Decisions', task.decisions),
+      ('Review Notes', task.review_notes),
+    ] %}
+
+    {#- Named sections -#}
+    {% for name, content in sections %}
+    {% if content and content.strip() %}
+    <div>
+      <div class="section-toggle" onclick="toggleSection(this, event)">
+        <span class="section-icon">&#9656;</span>
+        <span class="section-label">{{ name }}</span>
+        <span class="section-preview">{{ content | replace('\n', ' ') | replace('#', '') | replace('*', '') | replace('`', '') | replace('>', '') | replace('-', '') | truncate(80) }}</span>
+      </div>
+      <div class="section-content">
+        <div class="rendered-md">
+          <template>{{ content }}</template>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {#- Extra ## sections from body not covered above -#}
+    {% set known_sections = ['Objective', 'Results', 'Decisions', 'Review Notes'] %}
+    {% set body_lines = task.body.split('\n') if task.body else [] %}
+    {% set ns = namespace(current_name=None, current_lines=[], extra_sections=[]) %}
+    {% for line in body_lines %}
+      {% if line.startswith('## ') %}
+        {% if ns.current_name and ns.current_name not in known_sections %}
+          {% set _ = ns.extra_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
+        {% endif %}
+        {% set ns.current_name = line[3:] %}
+        {% set ns.current_lines = [] %}
+      {% elif ns.current_name is not none %}
+        {% set ns.current_lines = ns.current_lines + [line] %}
+      {% endif %}
+    {% endfor %}
+    {% if ns.current_name and ns.current_name not in known_sections %}
+      {% set _ = ns.extra_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
+    {% endif %}
+
+    {% for name, content in ns.extra_sections %}
+    {% if content.strip() %}
+    <div>
+      <div class="section-toggle" onclick="toggleSection(this, event)">
+        <span class="section-icon">&#9656;</span>
+        <span class="section-label">{{ name }}</span>
+        <span class="section-preview">{{ content | replace('\n', ' ') | replace('#', '') | replace('*', '') | replace('`', '') | replace('>', '') | replace('-', '') | truncate(80) }}</span>
+      </div>
+      <div class="section-content">
+        <div class="rendered-md">
+          <template>{{ content }}</template>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {#- Metadata pills -#}
+    {% if task.depends_on or task.script or task.tags or task.input or task.output %}
+    <div class="task-meta">
+      {% if task.depends_on %}
+      <span class="meta-pill"><strong>depends:</strong> {{ task.depends_on | join(', ') }}</span>
+      {% endif %}
+      {% if task.script %}
+      <span class="meta-pill"><strong>script:</strong> {{ task.script }}</span>
+      {% endif %}
+      {% if task.tags %}
+      <span class="meta-pill"><strong>tags:</strong> {{ task.tags | join(', ') }}</span>
+      {% endif %}
+      {% if task.input %}
+      <span class="meta-pill"><strong>in:</strong> {{ task.input | join(', ') }}</span>
+      {% endif %}
+      {% if task.output %}
+      <span class="meta-pill"><strong>out:</strong> {{ task.output | join(', ') }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {#- Children container -#}
+  {% if has_children %}
+  <div class="task-children" id="{{ path_id }}-children" style="display:none;">
+    {% if depth < 2 %}
+      {#- Render children inline for depth 0 and 1 -#}
+      {% for child in task.children %}
+        {{ render_task_node(child, project_root, depth + 1) }}
+      {% endfor %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {#- htmx lazy-load for deeper children -#}
+  {% if has_children and depth >= 2 %}
+  <script>
+    (function() {
+      var node = document.getElementById('task-{{ path_id }}');
+      if (node) node.dataset.needsLoad = 'true';
+    })();
+  </script>
+  {% endif %}
+</div>
+{% endmacro %}

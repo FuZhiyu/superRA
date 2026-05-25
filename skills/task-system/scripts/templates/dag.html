@@ -1,0 +1,38 @@
+{#- DAG view — generates a mermaid diagram from task dependencies.
+    Status-colored nodes.
+
+    Variables: root_task (Task), all_tasks (list[Task])
+-#}
+
+{% set status_colors = {
+  'not-started': '#e0e0e0',
+  'in-progress': '#bbdefb',
+  'implemented': '#fff9c4',
+  'revise': '#ffcdd2',
+  'approved': '#c8e6c9',
+} %}
+
+<div class="dag-controls">
+  <strong>Dependency Graph:</strong> {{ root_task.title or 'root' }}
+</div>
+<div class="mermaid">
+graph LR
+{% for t in all_tasks %}
+{% if t.path %}
+{% set node_id = t.path | replace('/', '_') | replace('-', '_') %}
+{% set eff = t.effective_status() %}
+{% set color = status_colors.get(eff, '#e0e0e0') %}
+    {{ node_id }}["{{ t.title | replace('"', "'") | replace('[', '') | replace(']', '') | replace('(', '') | replace(')', '') | replace('{', '') | replace('}', '') }}"]
+    style {{ node_id }} fill:{{ color }}
+{% endif %}
+{% endfor %}
+{% for t in all_tasks %}
+{% if t.path %}
+{% set child_id = t.path | replace('/', '_') | replace('-', '_') %}
+{% for dep in t.depends_on %}
+{% set dep_id = dep | replace('/', '_') | replace('-', '_') %}
+    {{ dep_id }} --> {{ child_id }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+</div>
