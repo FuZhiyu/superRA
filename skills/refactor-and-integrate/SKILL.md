@@ -42,7 +42,7 @@ Leave docs above the affected area alone unless they are stale.
 
 ## Sync Impact Context
 
-When task files contain `## Sync Impact` sections, use those fields as evidence for why a hunk already exists in the governing diff. Follow the referenced Sync Map cluster only when needed to evaluate that hunk.
+When task files contain `**Sync impact:**` fields, use those fields as evidence for why a hunk already exists in the governing diff. Follow the referenced Sync Map cluster only when needed to evaluate that hunk.
 
 Sync impact justifies existing hunks only when it is already present; it does not create new refactor targets or excuse unrelated codebase changes.
 

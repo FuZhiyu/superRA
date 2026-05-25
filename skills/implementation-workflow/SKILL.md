@@ -150,7 +150,7 @@ Fold the researcher's answer into the relevant task objective (rewriting it to b
 **Execute the user's choice:**
 
 - **Option 1 (Proceed with integration):** Invoke `superRA:integration-workflow`. It runs Protect, Sync, Integrate, Document, and Finish.
-- **Option 2 (Change the plan):** Re-enter `superRA:planning-workflow §User Feedback and Changing Plans` — treat the researcher's scope change as the trigger; after the plan edit commit, run the main-agent Workflow Frontier Resolver to choose the next entry point.
+- **Option 2 (Change the plan):** Re-enter `superRA:planning-workflow §User Feedback and Changing the Task Tree` — treat the researcher's scope change as the trigger; after the plan edit commit, run the main-agent Workflow Frontier Resolver to choose the next entry point.
 - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
 - **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
 
@@ -166,7 +166,7 @@ The autonomy contract is in `superRA:using-superra/references/main-agent.md` (ma
 
 - **Step 4 completion menu.** User-defined workflow milestone (see Step 4 above for the four options).
 - **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
-- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `planning-workflow §User Feedback and Changing Plans`; after the plan edit commit, run the Workflow Frontier Resolver. Pause class (2) in the autonomy contract.
+- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `planning-workflow §User Feedback and Changing the Task Tree`; after the plan edit commit, run the Workflow Frontier Resolver. Pause class (2) in the autonomy contract.
 
 Every stop above: stop and `AskUserQuestion` (plain text if unavailable); fold the answer into the relevant task objective **before** acting on it.
 
