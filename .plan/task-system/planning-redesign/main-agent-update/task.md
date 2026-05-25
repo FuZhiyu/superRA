@@ -2,7 +2,7 @@
 title: "Update main-agent.md for .plan/-native operations"
 status: approved
 review_status: approved
-integration_status: ~
+integration_status: approved
 depends_on:
   - skill-rewrite
 tags: []

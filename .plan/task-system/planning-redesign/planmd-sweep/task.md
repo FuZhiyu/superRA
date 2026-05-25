@@ -2,7 +2,7 @@
 title: "Sweep PLAN.md/RESULTS.md references across skills"
 status: approved
 review_status: approved
-integration_status: ~
+integration_status: revise
 depends_on:
   - main-agent-update
   - revision-notes
@@ -138,4 +138,10 @@ Swept all operational PLAN.md/RESULTS.md references and all `## Decisions` / `Us
 `grep -rn '## Decisions\|User Decisions Log' skills/ agents/ --include='*.md'` returns only `internals.md:30` (data model field comment marked `(legacy)`).
 
 All 92 task-system tests pass. `sync_codex_agents.py --check` passes. Contract tests show 48 passed / 6 failed (all 6 pre-existing).
+
+## Review Notes
+
+1. [MAJOR] Three stale `§User Feedback and Changing Plans` cross-references remain in [`skills/integration-workflow/SKILL.md`](../../../../skills/integration-workflow/SKILL.md) at lines [19](../../../../skills/integration-workflow/SKILL.md#L19), [47](../../../../skills/integration-workflow/SKILL.md#L47), and [209](../../../../skills/integration-workflow/SKILL.md#L209). The section was renamed to `§User Feedback and Changing the Task Tree` in the skill-rewrite task, and the planmd-sweep touched this file (6 `## Decisions` refs replaced) but missed these three cross-references. An agent following any of these links will not find the section. Fix: replace all three with `§User Feedback and Changing the Task Tree`.
+
+2. [MAJOR] [`CLAUDE.md:74`](../../../../CLAUDE.md#L74) Ownership Boundaries table still lists "User Decisions Log" as a concern owned by `task-system (references/planning.md)`. The User Decisions Log section was removed from `planning.md` by the revision-notes task; this table entry is now stale. The file was touched by this diff (added §Terminology) but this table entry was not updated. Fix: replace "User Decisions Log" with "revision notes" or remove it from the table entry description — the concern it pointed to no longer exists as a named section.
 
