@@ -1,7 +1,7 @@
 ---
 title: "Comment sidecar format and server routes"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: []
 tags: []
@@ -46,3 +46,17 @@ Define the sidecar YAML format for comments and implement the server-side routes
 - On read, verify `block_index` still matches `text_preview`
 - If mismatch, scan blocks in the section for a fuzzy match (substring containment) and update the index
 - If no match found, mark the comment as `orphaned: true` and render it at the section level
+
+## Results
+
+Implemented in [`_comments.py`](../../../../../skills/task-system/scripts/_comments.py):
+
+- `Comment` / `CommentAnchor` dataclasses with `orphaned` as a runtime-only flag (not persisted to YAML)
+- `load_comments` / `save_comments` — YAML sidecar I/O with `yaml.safe_load` / `yaml.dump`
+- `add_comment` — auto-increment ID, git author detection, ISO timestamp
+- `resolve_comment` — toggle resolved boolean
+- `delete_comment` — remove by ID
+- `split_into_blocks` — handles paragraphs, fenced code blocks, and grouped list items
+- `resolve_anchors` — re-resolves anchors against current body via `parse_body_sections`, with fuzzy substring fallback and orphan marking
+
+Server routes (`POST`, `GET`, `PATCH`, `DELETE`) are implemented in the sibling `server` task's `task_serve.py` and call these functions directly.
