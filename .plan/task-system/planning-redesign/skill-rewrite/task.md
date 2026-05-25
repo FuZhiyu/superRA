@@ -1,7 +1,7 @@
 ---
 title: "Rewrite planning-workflow SKILL.md"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -59,3 +59,15 @@ Other principles:
 
 ## Results
 
+### Files Modified
+
+- [`skills/planning-workflow/SKILL.md`](skills/planning-workflow/SKILL.md) — Complete rewrite. New 5-phase structure (Phase 0-4): Task Tree Discovery, Exploration, Domain Setup & Scope, Design & Task Decomposition, Review & Commit. Dropped `## Decisions` log from task-tree creation and change protocol. Added `## Revision Notes` mechanism. Renamed sections to use "task tree" terminology throughout. Kept and adapted: Retroactive Plan Creation, Living Task Tree, .plan/ Is the Task Tracker, User Feedback and Changing the Task Tree, Remember.
+- [`CLAUDE.md`](CLAUDE.md) — Added §Terminology section with the "plan is the verb" convention.
+- [`skills/task-system/references/planning.md`](skills/task-system/references/planning.md) — Added terminology pointer at the top, referencing CLAUDE.md §Terminology.
+
+### Key Design Decisions
+
+- **Terminology authority chain:** CLAUDE.md §Terminology is the project-wide canonical source. SKILL.md §Overview carries the full convention (owning skill — shapes every word choice in the file). planning.md points to CLAUDE.md.
+- **`## Decisions` removal is scoped:** This task drops `## Decisions` from the SKILL.md (no longer created in Phase 3, no longer logged in the change protocol). The deeper removal from `planning.md` (§User Decisions Log, §Field-by-Field Notes, §Root task.md Anatomy) is owned by the `revision-notes` sibling task.
+- **Phase 3 merges old Phase 3 + Phase 4.** The old file-structure and task-decomposition phases were artificially split; the new Phase 3 covers artifact pipeline mapping, task structure, creation, and dependencies in one coherent section.
+- **Phase 4 adds user review gate.** The old Self-Review section is now Phase 4 with an explicit user-review step before commit — the task tree is presented to the user for approval, not auto-committed.

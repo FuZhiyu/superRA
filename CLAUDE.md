@@ -54,6 +54,10 @@ Two tests, applied in order:
 
 **Maintenance cost is the tell.** Every restated rule is a place where the two copies can drift. When in doubt, delete the copy furthest from the authoritative source.
 
+## Terminology
+
+**"Plan" is the verb, not the noun.** "Planning" refers to the planning-workflow process — scoping and decomposing work. Everything in `.plan/` is a **task** — root-level tasks scope a workstream, nested tasks are dispatchable work. `.plan/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `.plan/` artifact, "planning" when referring to the process.
+
 ## Ownership Boundaries
 
 Use one source of truth per concern. Duplicated behavior text is a drift risk; when content appears in more than one place, one copy must be authoritative and the others should point to it.

@@ -2,6 +2,8 @@
 
 Load this reference when you are an orchestrator or planner creating, restructuring, or maintaining a `.plan/` task tree.
 
+**Terminology:** "Plan" is the verb (the planning process), not the noun. Everything in `.plan/` is a **task**. `.plan/` is "the task tree." See `CLAUDE.md` §Terminology for the full convention.
+
 ## Writing Objectives
 
 An objective describes what success looks like, not how to get there.
