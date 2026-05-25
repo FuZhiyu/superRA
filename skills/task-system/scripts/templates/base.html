@@ -959,6 +959,15 @@ function showCommentForm(btn) {
   cancelBtn.style.color = 'var(--text-mid)';
   cancelBtn.style.marginLeft = '4px';
   cancelBtn.onclick = function() { form.remove(); };
+  ta.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submitComment();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      form.remove();
+    }
+  });
   form.appendChild(ta);
   form.appendChild(submitBtn);
   form.appendChild(cancelBtn);
