@@ -121,6 +121,21 @@ def fix_status_consistency(plan_root: Path) -> int:
                 task.status = rolled_up
                 changed = True
 
+            # After rolling status down, enforce review/integration consistency:
+            # review_status cannot advance past ~ unless status >= implemented
+            status_idx = VALID_STATUSES.index(task.status) if task.status in VALID_STATUSES else 0
+            impl_idx = VALID_STATUSES.index("implemented")
+            if status_idx < impl_idx and task.review_status != "~":
+                print(f"  fix: {task.path}: review_status {task.review_status!r} -> '~' (status below 'implemented')")
+                task.review_status = "~"
+                changed = True
+
+            # integration_status cannot advance past ~ unless review_status == approved
+            if task.review_status != "approved" and task.integration_status != "~":
+                print(f"  fix: {task.path}: integration_status {task.integration_status!r} -> '~' (review_status not 'approved')")
+                task.integration_status = "~"
+                changed = True
+
         # For all tasks: check review/integration consistency
         warnings = validate_status_consistency(task)
         if warnings:

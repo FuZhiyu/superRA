@@ -1328,6 +1328,43 @@ class TestStatusConsistency:
         leaf_task = _task_io.parse_task(leaf / "task.md")
         assert leaf_task.status == "not-started"
 
+    def test_fix_mode_resets_review_status_when_status_rolled_down(self, tmp_path):
+        """--fix should reset review_status when rolled-up status < implemented."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+
+        parent = root_dir / "parent"
+        parent.mkdir()
+        # Parent has approved status and review_status
+        _write_task_md(parent / "task.md", "Parent", "approved",
+                       review_status="approved", integration_status="implemented")
+
+        # Children force parent status down to in-progress
+        child1 = parent / "child-a"
+        child1.mkdir()
+        _write_task_md(child1 / "task.md", "Child A", "approved",
+                       review_status="approved")
+
+        child2 = parent / "child-b"
+        child2.mkdir()
+        _write_task_md(child2 / "task.md", "Child B", "not-started")
+
+        fixed = task_update.fix_status_consistency(root_dir)
+        assert fixed >= 1
+
+        parent_task = _task_io.parse_task(parent / "task.md")
+        # Status rolled down to in-progress (below implemented)
+        assert parent_task.status == "in-progress"
+        # review_status must be reset to ~ since status < implemented
+        assert parent_task.review_status == "~"
+        # integration_status must be reset to ~ since review_status is no longer approved
+        assert parent_task.integration_status == "~"
+
+        # Verify no remaining warnings for this task
+        warnings = _task_io.validate_status_consistency(parent_task)
+        assert warnings == []
+
     def test_validate_plan_catches_consistency_issues(self, tmp_path):
         """validate_plan should report status consistency warnings."""
         root_dir = tmp_path / ".plan"

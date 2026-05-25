@@ -1,7 +1,7 @@
 ---
 title: "HTML Dashboard"
 status: in-progress
-review_status: approved
+review_status: ~
 integration_status: ~
 depends_on:
   - core-data-layer

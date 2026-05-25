@@ -1,7 +1,7 @@
 ---
 title: "Comment UI in dashboard"
 status: in-progress
-review_status: approved
+review_status: ~
 integration_status: ~
 depends_on:
   - ../sidecar-format
