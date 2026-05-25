@@ -209,6 +209,41 @@ python3 <skill-dir>/scripts/plan_migrate.py \
   --plan-md PLAN.md --results-md RESULTS.md --output .plan
 ```
 
+#### Preparing a PLAN.md for migration
+
+The migration script has strict format expectations. Before running it, verify compatibility.
+
+**Quick check — does the script see your tasks?**
+
+```bash
+grep -c '^### Task [0-9]*:' PLAN.md
+```
+
+If the count does not match the number of tasks in the file, the PLAN.md needs normalization or manual migration.
+
+**What the script expects:**
+
+- Task headings in PLAN.md: `### Task N: Title` (exactly `###`, numbered, colon-separated)
+- Result headings in RESULTS.md: `## Task N: Title`
+- Metadata as bold-label lines: `**Depends on:**`, `**Script:**`, `**Input:**`, `**Output:**`, `**Review status:**`, `**Integration status:**`
+- Status inferred from checkboxes (`- [x]` / `- [ ]`): all checked = `implemented`, mixed = `in-progress`, none = `not-started`. A `**Review status:**` of APPROVED/REVISE/IMPLEMENTED overrides checkbox inference
+- Dependencies as comma-separated `Task N` references (e.g. `**Depends on:** Task 1, Task 3`) or `*(none)*`
+- File lists as backtick-delimited (`` `file.py` ``) or comma-separated values; `*(none)*` for empty
+
+**Normalization checklist** (for files that diverge from the above):
+
+1. Renumber task headings to `### Task 1: Title`, `### Task 2: Title`, etc.
+2. Fix heading levels — tasks must be `###` (not `##` or `####`)
+3. Add missing metadata fields with safe defaults: `**Depends on:** *(none)*`, `**Script:** *(none)*`
+4. Standardize checkboxes to `- [x]` (done) or `- [ ]` (not done) — other markers like `[~]` or `[-]` are not recognized
+5. If RESULTS.md exists, ensure headings match: `## Task N: Title` with the same numbering
+
+**When to skip normalization and migrate manually:** If the PLAN.md has 3 or fewer tasks, or the structure is heavily free-form (no task headings, prose-only, deeply nested), manual migration is faster:
+
+1. Create `.plan/` and its root `task.md` (or use `task_create.py` for children)
+2. For each logical task, create a child directory and write `task.md` directly — see §Task File Format above for the template
+3. Run `plan_dashboard.py` to generate the dashboard
+
 ### Upgrade existing .plan/ from v1 to v2 format
 
 ```bash
