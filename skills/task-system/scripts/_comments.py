@@ -243,6 +243,21 @@ def resolve_comment(task_dir: Path, comment_id: int) -> Comment | None:
     return target
 
 
+def edit_comment(task_dir: Path, comment_id: int, body: str) -> Comment | None:
+    """Update the body text of *comment_id*. Return updated comment or None."""
+    comments = load_comments(task_dir)
+    target: Comment | None = None
+    for c in comments:
+        if c.id == comment_id:
+            c.body = body
+            target = c
+            break
+    if target is None:
+        return None
+    save_comments(task_dir, comments)
+    return target
+
+
 def delete_comment(task_dir: Path, comment_id: int) -> bool:
     """Remove comment by ID. Return True if found and deleted."""
     comments = load_comments(task_dir)

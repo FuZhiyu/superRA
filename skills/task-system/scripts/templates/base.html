@@ -1055,30 +1055,24 @@ function renderCommentThread(comments, taskPath) {
       var actions = document.createElement('div');
       actions.style.marginTop = '2px';
 
+      var actionBtnStyle = 'font-size:10px;padding:1px 6px;background:var(--bg-alt);border:1px solid var(--border);border-radius:3px;cursor:pointer;';
+
+      var editBtn = document.createElement('button');
+      editBtn.textContent = 'Edit';
+      editBtn.style.cssText = actionBtnStyle + 'color:var(--text-mid);';
+      editBtn.onclick = function() { startEditComment(item, body, c, taskPath); };
+
       var resolveBtn = document.createElement('button');
-      resolveBtn.className = 'comment-form button';
       resolveBtn.textContent = c.resolved ? 'Unresolve' : 'Resolve';
-      resolveBtn.style.fontSize = '10px';
-      resolveBtn.style.padding = '1px 6px';
-      resolveBtn.style.background = 'var(--bg-alt)';
-      resolveBtn.style.color = 'var(--text-mid)';
-      resolveBtn.style.border = '1px solid var(--border)';
-      resolveBtn.style.borderRadius = '3px';
-      resolveBtn.style.cursor = 'pointer';
+      resolveBtn.style.cssText = actionBtnStyle + 'color:var(--text-mid);margin-left:4px;';
       resolveBtn.onclick = function() { resolveComment(taskPath, c.id, resolveBtn); };
 
       var deleteBtn = document.createElement('button');
       deleteBtn.textContent = 'Delete';
-      deleteBtn.style.fontSize = '10px';
-      deleteBtn.style.padding = '1px 6px';
-      deleteBtn.style.marginLeft = '4px';
-      deleteBtn.style.background = 'var(--bg-alt)';
-      deleteBtn.style.color = 'var(--st-rev-t)';
-      deleteBtn.style.border = '1px solid var(--border)';
-      deleteBtn.style.borderRadius = '3px';
-      deleteBtn.style.cursor = 'pointer';
+      deleteBtn.style.cssText = actionBtnStyle + 'color:var(--st-rev-t);margin-left:4px;';
       deleteBtn.onclick = function() { deleteComment(taskPath, c.id, deleteBtn); };
 
+      actions.appendChild(editBtn);
       actions.appendChild(resolveBtn);
       actions.appendChild(deleteBtn);
       item.appendChild(meta);
@@ -1088,6 +1082,67 @@ function renderCommentThread(comments, taskPath) {
     })(comments[i]);
   }
   return thread;
+}
+
+function startEditComment(item, bodyEl, comment, taskPath) {
+  /* Replace body text with an editable textarea + Save/Cancel */
+  var originalText = comment.body;
+  var ta = document.createElement('textarea');
+  ta.value = originalText;
+  ta.style.cssText = 'width:100%;min-height:60px;margin:4px 0;font-family:var(--font-mono);font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;resize:vertical;';
+
+  var controls = document.createElement('div');
+  controls.style.marginTop = '2px';
+
+  var saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save';
+  saveBtn.style.cssText = 'font-family:var(--font-mono);font-size:11px;padding:3px 10px;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;';
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.cssText = 'font-family:var(--font-mono);font-size:11px;padding:3px 10px;background:var(--bg-alt);color:var(--text-mid);border:none;border-radius:3px;cursor:pointer;margin-left:4px;';
+
+  function saveEdit() {
+    var newBody = ta.value.trim();
+    if (!newBody || newBody === originalText) { cancelEdit(); return; }
+    _commentEditPaths[taskPath] = Date.now();
+    fetch('/api/task/' + taskPath + '/comment/' + comment.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: newBody })
+    }).then(function(resp) {
+      if (resp.ok) loadComments(taskPath);
+    });
+  }
+
+  function cancelEdit() {
+    bodyEl.textContent = originalText;
+    bodyEl.style.display = '';
+    controls.remove();
+    ta.remove();
+  }
+
+  saveBtn.onclick = saveEdit;
+  cancelBtn.onclick = cancelEdit;
+
+  ta.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    }
+  });
+
+  controls.appendChild(saveBtn);
+  controls.appendChild(cancelBtn);
+
+  bodyEl.style.display = 'none';
+  bodyEl.parentNode.insertBefore(ta, bodyEl.nextSibling);
+  ta.parentNode.insertBefore(controls, ta.nextSibling);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = ta.value.length;
 }
 
 function resolveComment(taskPath, commentId, btn) {

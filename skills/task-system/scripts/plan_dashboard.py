@@ -36,6 +36,7 @@ try:
     from _comments import (
         add_comment,
         delete_comment,
+        edit_comment,
         load_comments,
         resolve_comment,
     )
@@ -433,13 +434,30 @@ async def list_comments(path: str):
 
 
 @app.patch("/api/task/{path:path}/comment/{comment_id}")
-async def toggle_comment(path: str, comment_id: int):
-    """Toggle resolved status of a comment."""
+async def toggle_comment(path: str, comment_id: int, request: Request):
+    """Toggle resolved status or edit body of a comment.
+
+    Without a JSON body (or empty body): toggle resolved.
+    With JSON ``{"body": "..."}`` : update the comment text.
+    """
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
     task = _find_task(path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
+
+    # Try to read a JSON body; if absent or empty, fall back to resolve toggle
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+
+    if "body" in data:
+        result = edit_comment(task.dir_path, comment_id, data["body"])
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"Comment not found: {comment_id}")
+        return {"id": result.id, "body": result.body}
+
     result = resolve_comment(task.dir_path, comment_id)
     if result is None:
         raise HTTPException(status_code=404, detail=f"Comment not found: {comment_id}")
