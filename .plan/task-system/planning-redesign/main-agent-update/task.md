@@ -1,7 +1,7 @@
 ---
 title: "Update main-agent.md for .plan/-native operations"
-status: not-started
-review_status: ~
+status: implemented
+review_status: approved
 integration_status: ~
 depends_on: 
   - skill-rewrite
@@ -47,3 +47,28 @@ The `revision-notes` sibling task handles the same concept change in all OTHER f
 
 ## Results
 
+### Files Modified
+
+- [`skills/using-superRA/references/main-agent.md`](skills/using-superRA/references/main-agent.md) — Complete rewrite of all PLAN.md/RESULTS.md references to `.plan/` task-tree operations.
+
+### Changes by Section
+
+**§Session Start Actions:** Check for `.plan/task.md` instead of `PLAN.md`. Use `task_query.py --tree` for status summary. Simplified incomplete-plan detection to frontmatter status checks (no more checkbox counting). Added backward-compatibility clause for legacy `PLAN.md` migration. Changed "no plan file" to "no task tree."
+
+**§Workflow Frontier Resolver:** Replaced all five "Read facts" bullet points — removed PLAN header/Workflow Status/Decisions/RESULTS.md references; now reads `.plan/` task tree existence, root task.md sections, per-task frontmatter via `task_query.py --frontier`, and per-task body sections including `## Revision Notes`. Removed "Invalidated milestones" from the return decision (no more `## Workflow Status` boxes). Simplified step 3 (downstream via `depends_on:` edges, exemption noted in revision note instead of `## Decisions`). Removed step 4 (`## Workflow Status` checkbox rollup logic). Updated canonical workflow order to drop `Execution complete` box flip. Updated safety invariants: "reflected in `.plan/` task objectives" instead of "logged in PLAN.md," and "changed task's downstream" instead of "rollup milestone."
+
+**§Changes of the Plan:** Renamed to "§Changes of the Task Tree." Protocol steps now reference `.plan/` task files and `planning-workflow §User Feedback and Changing the Task Tree` (matching the renamed section in the rewritten SKILL.md).
+
+**§Three Pause Classes:** Replaced "logging the researcher's answer per User Decisions Log" with "fold the researcher's answer into the relevant task objective."
+
+**§Log Before You Act:** Replaced `## Decisions` log language with fold-into-objective + `## Revision Notes` mechanism.
+
+**§Banned Phrasings:** Updated the AskUserQuestion guidance to say "fold the answer into the task objective" instead of referencing the User Decisions Log.
+
+**§Direct Mode:** Task context now from `.plan/` task files via `task_read.py` instead of PLAN.md/RESULTS.md.
+
+### Verification
+
+- `grep -n 'PLAN\.md\|RESULTS\.md\|User Decisions Log\|## Decisions\|## Workflow Status\|Changing Plans' main-agent.md` returns only the backward-compatibility migration line (intentional).
+- No checkbox, unchecked, or "plan file" references remain.
+- All cross-references to planning-workflow use the updated section name (`§User Feedback and Changing the Task Tree`).
