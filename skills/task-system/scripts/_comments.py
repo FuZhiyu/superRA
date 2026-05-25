@@ -280,11 +280,12 @@ def resolve_anchors(comments: list[Comment], body: str) -> list[Comment]:
             continue
 
         blocks = split_into_blocks(section_content)
+        preview = anchor.text_preview.strip()
 
         # Check current index
         if (
             0 <= anchor.block_index < len(blocks)
-            and anchor.text_preview in blocks[anchor.block_index]
+            and preview in blocks[anchor.block_index]
         ):
             comment.orphaned = False
             continue
@@ -292,7 +293,7 @@ def resolve_anchors(comments: list[Comment], body: str) -> list[Comment]:
         # Scan for the preview elsewhere in the section
         found = False
         for idx, block in enumerate(blocks):
-            if anchor.text_preview in block:
+            if preview in block:
                 anchor.block_index = idx
                 comment.orphaned = False
                 found = True

@@ -1,0 +1,62 @@
+- id: 1
+  author: Julie Zhiyu Fu
+  timestamp: '2026-05-25T10:34:58.889592'
+  resolved: false
+  anchor:
+    section: Objective
+    block_index: 10
+    text_preview: '
+
+      Comment thread background: subtle tint (like GitHub''s yello'
+  body: "the plus sign is only half shown; \n\nin addition, cmd + enter (ctrl enter\
+    \ on windows?)  should work naturally; and escape should should naturally when\
+    \ interacting with comment as well"
+- id: 2
+  author: Julie Zhiyu Fu
+  timestamp: '2026-05-25T11:55:13.131322'
+  resolved: false
+  anchor:
+    section: Objective
+    block_index: 10
+    text_preview: '
+
+      Comment thread background: subtle tint (like GitHub''s yello'
+  body: we should be able to edit the comment as well
+- id: 3
+  author: Julie Zhiyu Fu
+  timestamp: '2026-05-25T12:00:58.869486'
+  resolved: false
+  anchor:
+    section: Objective
+    block_index: 10
+    text_preview: '
+
+      Comment thread background: subtle tint (like GitHub''s yello'
+  body: 'there should be some ui indication to see in which section (defined as the
+    ## section) we have some outstanding unresolved comments; it should be visible
+    when the section is folded as well'
+- id: 4
+  author: Julie Zhiyu Fu
+  timestamp: '2026-05-25T12:02:41.594431'
+  resolved: false
+  anchor:
+    section: Objective
+    block_index: 10
+    text_preview: '
+
+      Comment thread background: subtle tint (like GitHub''s yello'
+  body: when I add more comments to one section, as I click on the plus, the comments
+    block first switch from resolve delete buttons to delete button only, one by one,
+    and only I go through all these comments can I add new comment.
+- id: 5
+  author: Julie Zhiyu Fu
+  timestamp: '2026-05-25T12:03:09.550881'
+  resolved: false
+  anchor:
+    section: Objective
+    block_index: 10
+    text_preview: '
+
+      Comment thread background: subtle tint (like GitHub''s yello'
+  body: and for some reason once I add the comment, the section was folded back so
+    I need to expand it one by one
