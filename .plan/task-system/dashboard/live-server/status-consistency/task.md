@@ -1,7 +1,7 @@
 ---
 title: "Fix status and review_status consistency"
 status: implemented
-review_status: implemented
+review_status: revise
 integration_status: ~
 depends_on: []
 tags: []
@@ -54,3 +54,9 @@ Running `--fix` against the actual `.plan/` tree corrected 7 tasks:
 - `task-system/planning-redesign`: `not-started` -> `approved`
 
 The 3 test tasks (`server-tests`, `sse-tests`, `comment-tests`) with `review_status: implemented` will now show the review badge on the live dashboard.
+
+## Review Notes
+
+1. **[MAJOR]** `--fix` mode introduces new consistency violations. When a branch task has `review_status: approved` and `status: approved`, rolling status down to `in-progress` (from children) creates a `review_status > status` violation — the very rule this task implements. Evidence: [task_update.py:117-122](skills/task-system/scripts/task_update.py#L117) changes `status` without checking or adjusting `review_status`; running `validate_plan` after `--fix` reports 2 new violations (`task-system/dashboard` and `comments/comment-ui`). Fix: after setting `task.status = rolled_up`, also reset `review_status` to `~` if the new status is below `implemented` (since review cannot logically advance past status), or at minimum skip the status rolldown when it would introduce a review_status inconsistency and emit a specific warning explaining why.
+
+2. **[MINOR]** Review badge CSS committed under wrong task. The `.badge-review` CSS in `base.html` was committed in the math-rendering commit (b76518b) rather than the status-consistency commit (511b8ac). Functionally correct (both are in the same branch), but the status-consistency commit's `task_node.html` references CSS classes that were introduced by a different task's commit. No action needed — noting for commit hygiene only.
