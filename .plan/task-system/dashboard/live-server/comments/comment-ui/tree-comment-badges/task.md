@@ -1,7 +1,7 @@
 ---
 title: "Bubble comment badges up through collapsed tree nodes"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -44,3 +44,32 @@ Files:
 
 ## Results
 
+### Server: `GET /api/comments/summary`
+Added endpoint at [plan_dashboard.py:422-439](skills/task-system/scripts/plan_dashboard.py#L422). Recursively walks `_root_task` tree, calls `load_comments()` on each task's `dir_path`, counts unresolved comments, and returns `{taskPath: unresolvedCount}` for tasks with count > 0. Guarded by `_COMMENTS_AVAILABLE` and `_root_task` checks.
+
+### Client: `updateTreeCommentBadges()`
+Added function at [base.html:1099-1145](skills/task-system/scripts/templates/base.html#L1099). Logic:
+- Fetches `/api/comments/summary` for all unresolved counts
+- For each task path with comments, finds its `.task-node` in the DOM
+- If the task's `.task-body` is open, skips (section-level badges handle it)
+- Otherwise, walks up ancestor `.task-node` elements to find the deepest collapsed ancestor
+- Aggregates counts from multiple descendants onto the same collapsed ancestor via a `Map`
+- Renders `.tree-comment-badge` spans on the target `.task-row` elements
+- Clears all existing `.tree-comment-badge` elements before recalculating
+
+### CSS
+Combined `.section-comment-badge` and `.tree-comment-badge` selectors for shared styling (same accent-background pill).
+
+### Call sites
+- `DOMContentLoaded` event listener for initial page load
+- At the end of `toggleTask()` after expand/collapse
+- SSE `task:` message handler (300ms delay to let swap render first)
+
+### Tests
+4 new tests added to [test_dashboard.py](skills/task-system/scripts/test_dashboard.py):
+- `test_comments_summary_empty` — returns `{}` with no comments
+- `test_comments_summary_counts_unresolved` — correct counts across multiple tasks
+- `test_comments_summary_excludes_resolved` — resolved comments not counted
+- `test_comments_summary_nested_tasks` — includes child task comments
+
+All 57 tests pass (53 existing + 4 new).

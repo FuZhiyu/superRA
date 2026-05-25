@@ -319,7 +319,8 @@ body {
   white-space: nowrap;
   max-width: 400px;
 }
-.section-comment-badge {
+.section-comment-badge,
+.tree-comment-badge {
   display: inline-block;
   font-family: var(--font-mono);
   font-size: 10px;
@@ -720,6 +721,9 @@ function toggleTask(rowEl) {
       loadComments(node.dataset.path);
     }
   }
+
+  /* Recalculate tree-level comment badges after expand/collapse */
+  updateTreeCommentBadges();
 }
 
 /* ── Section expand/collapse (inside task body) ── */
@@ -1145,6 +1149,62 @@ function updateSectionBadges(taskPath, comments) {
   });
 }
 
+/* ── Tree-level comment badges (bubble up through collapsed ancestors) ── */
+function updateTreeCommentBadges() {
+  /* Clear existing tree-level badges */
+  document.querySelectorAll('.tree-comment-badge').forEach(function(b) { b.remove(); });
+
+  fetch('/api/comments/summary')
+    .then(function(resp) { return resp.ok ? resp.json() : {}; })
+    .then(function(summary) {
+      /* Build a map: target task-row element -> aggregated count */
+      var targetCounts = new Map();
+
+      for (var taskPath in summary) {
+        var count = summary[taskPath];
+        if (count <= 0) continue;
+
+        var node = document.querySelector('.task-node[data-path="' + taskPath + '"]');
+        if (!node) continue;
+
+        /* Check if this task's body is expanded (open).
+           If it is, section-level badges handle it — skip. */
+        var body = node.querySelector(':scope > .task-body');
+        if (body && body.classList.contains('open')) continue;
+
+        /* Walk up ancestor .task-node elements to find the deepest
+           collapsed one. If the task itself is collapsed, it is
+           the target (body not open). Otherwise, walk up. */
+        var target = node;  /* default: the task itself (already confirmed collapsed above) */
+        var parent = node.parentElement;
+        while (parent) {
+          var ancestorNode = parent.closest('.task-node');
+          if (!ancestorNode) break;
+          var ancestorBody = ancestorNode.querySelector(':scope > .task-body');
+          if (ancestorBody && !ancestorBody.classList.contains('open')) {
+            target = ancestorNode;
+          }
+          parent = ancestorNode.parentElement;
+        }
+
+        var targetRow = target.querySelector(':scope > .task-row');
+        if (!targetRow) continue;
+
+        var prev = targetCounts.get(targetRow) || 0;
+        targetCounts.set(targetRow, prev + count);
+      }
+
+      /* Render badges on the target rows */
+      targetCounts.forEach(function(count, row) {
+        var badge = document.createElement('span');
+        badge.className = 'tree-comment-badge';
+        badge.textContent = count;
+        badge.title = count + ' unresolved comment' + (count > 1 ? 's' : '');
+        row.appendChild(badge);
+      });
+    });
+}
+
 function _dismissActiveEdit() {
   /* Close the currently-open comment editor if any.
      Auto-saves if content changed, otherwise cancels.
@@ -1269,7 +1329,14 @@ document.body.addEventListener('htmx:sseMessage', function(event) {
       /* Short delay to let the SSE swap finish rendering first */
       setTimeout(function() { loadComments(taskPath); }, 200);
     }
+    /* Re-calculate tree-level comment badges on any task change */
+    setTimeout(function() { updateTreeCommentBadges(); }, 300);
   }
+});
+
+/* ── Initial tree-level comment badges on page load ── */
+document.addEventListener('DOMContentLoaded', function() {
+  updateTreeCommentBadges();
 });
 </script>
 </body>

@@ -419,6 +419,28 @@ async def serve_file(path: str):
 # route.  The {path:path} parameter is greedy and would swallow /task/x/comments
 # as path="x/comments".  Templates should call /api/task/PATH/comments etc.
 
+@app.get("/api/comments/summary")
+async def comments_summary():
+    """Return ``{taskPath: unresolvedCount}`` for all tasks with unresolved comments."""
+    if not _COMMENTS_AVAILABLE:
+        raise HTTPException(status_code=501, detail="Comments module not available")
+    if _root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+
+    result: dict[str, int] = {}
+
+    def _walk(task: Task) -> None:
+        comments = load_comments(task.dir_path)
+        unresolved = sum(1 for c in comments if not c.resolved)
+        if unresolved > 0:
+            result[task.path] = unresolved
+        for child in task.children:
+            _walk(child)
+
+    _walk(_root_task)
+    return result
+
+
 @app.post("/api/task/{path:path}/comment")
 async def create_comment(path: str, request: Request):
     """Create a comment on a task."""

@@ -250,6 +250,52 @@ class TestServerRoutes:
         resp = client.get("/api/task/01-first/comments")
         assert all(c["id"] != comment_id for c in resp.json())
 
+    def test_comments_summary_empty(self, client):
+        """GET /api/comments/summary returns {} when no comments exist."""
+        resp = client.get("/api/comments/summary")
+        assert resp.status_code == 200
+        assert resp.json() == {}
+
+    def test_comments_summary_counts_unresolved(self, client, plan_root):
+        """GET /api/comments/summary returns counts of unresolved comments per task."""
+        # Add comments to different tasks
+        add_comment(plan_root / "01-first", "Objective", 0, "p1", "body1", author="u")
+        add_comment(plan_root / "01-first", "Results", 0, "p2", "body2", author="u")
+        add_comment(plan_root / "02-second", "Objective", 0, "p3", "body3", author="u")
+
+        resp = client.get("/api/comments/summary")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["01-first"] == 2
+        assert data["02-second"] == 1
+        assert "03-third" not in data  # no comments
+
+    def test_comments_summary_excludes_resolved(self, client, plan_root):
+        """Resolved comments are not counted in the summary."""
+        c = add_comment(plan_root / "01-first", "Objective", 0, "p", "body", author="u")
+        resolve_comment(plan_root / "01-first", c.id)
+
+        resp = client.get("/api/comments/summary")
+        assert resp.status_code == 200
+        data = resp.json()
+        # c is resolved, so 01-first should not appear (count == 0)
+        assert "01-first" not in data
+
+    def test_comments_summary_nested_tasks(self, client, plan_root):
+        """Summary includes comments on nested child tasks."""
+        child = plan_root / "01-first" / "sub"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Sub Task", "not-started",
+                       objective="A child.")
+        plan_dashboard.rebuild_tree()
+
+        add_comment(child, "Objective", 0, "preview", "nested comment", author="u")
+
+        resp = client.get("/api/comments/summary")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["01-first/sub"] == 1
+
     def test_comment_api_404_on_bad_task(self, client):
         resp = client.post(
             "/api/task/nonexistent/comment",
