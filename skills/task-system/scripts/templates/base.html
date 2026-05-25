@@ -319,6 +319,22 @@ body {
   white-space: nowrap;
   max-width: 400px;
 }
+.section-comment-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  margin-left: auto;
+  flex-shrink: 0;
+}
 
 .section-content {
   overflow: hidden;
@@ -699,6 +715,10 @@ function toggleTask(rowEl) {
         node.dataset.needsLoad = 'false';
       }
     }
+    /* Load comment counts for section badges */
+    if (node.dataset.path) {
+      loadComments(node.dataset.path);
+    }
   }
 }
 
@@ -1032,6 +1052,9 @@ function loadComments(taskPath) {
           }
         }
       }
+
+      /* Update section header badges with unresolved counts */
+      updateSectionBadges(taskPath, comments);
     });
 }
 
@@ -1082,6 +1105,43 @@ function renderCommentThread(comments, taskPath) {
     })(comments[i]);
   }
   return thread;
+}
+
+function updateSectionBadges(taskPath, comments) {
+  var taskNode = document.querySelector('.task-node[data-path="' + taskPath + '"]');
+  if (!taskNode) return;
+
+  /* Count unresolved comments per section */
+  var counts = {};
+  for (var i = 0; i < comments.length; i++) {
+    var c = comments[i];
+    if (!c.resolved) {
+      var sec = c.anchor.section;
+      counts[sec] = (counts[sec] || 0) + 1;
+    }
+  }
+
+  /* Update or create badges on each section-toggle */
+  taskNode.querySelectorAll('[data-section]').forEach(function(wrapper) {
+    var sectionName = wrapper.getAttribute('data-section');
+    var toggle = wrapper.querySelector('.section-toggle');
+    if (!toggle) return;
+
+    var badge = toggle.querySelector('.section-comment-badge');
+    var count = counts[sectionName] || 0;
+
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'section-comment-badge';
+        toggle.appendChild(badge);
+      }
+      badge.textContent = count;
+      badge.title = count + ' unresolved comment' + (count > 1 ? 's' : '');
+    } else if (badge) {
+      badge.remove();
+    }
+  });
 }
 
 function startEditComment(item, bodyEl, comment, taskPath) {
