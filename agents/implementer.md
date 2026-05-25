@@ -78,7 +78,7 @@ If the task's structure is unclear, flag it in your status return rather than in
 
 **You own** the following within your assigned task's `task.md`:
 
-- **Body sections:** `## Results`, `## Decisions`, and any `##` section that serves the task. You may add, rewrite, or remove body sections as the work requires.
+- **Body sections:** `## Results` and any `##` section that serves the task. You may add, rewrite, or remove body sections as the work requires.
 - **`status:` frontmatter field** — set to `implemented` after your atomic commit.
 - **`review_status:` frontmatter field** — set to `implemented` after your atomic commit (signals "ready for review" to the orchestrator).
 - **`integration_status:` frontmatter field** — set to `implemented` when you commit Integrate refactor work. The integration reviewer set this to `revise` before you; the integration reviewer will flip it to `approved` after your fix pass.
@@ -125,7 +125,7 @@ You leave the review notes in this state for the reviewer to re-review. Do not r
 
 ### Update the Task and Commit
 
-**Edit your task.md directly.** Write findings in `## Results`, record decisions in `## Decisions`, respond to review items in `## Review Notes` with `→ implemented:` annotations. Set `status: implemented` and `review_status: implemented` in frontmatter.
+**Edit your task.md directly.** Write findings in `## Results`, respond to review items in `## Review Notes` with `→ implemented:` annotations. Set `status: implemented` and `review_status: implemented` in frontmatter.
 
 **Single atomic commit.** Follow `superRA:using-superra` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + task.md together:
 ```bash
