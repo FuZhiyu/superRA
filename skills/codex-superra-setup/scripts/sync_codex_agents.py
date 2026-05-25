@@ -273,9 +273,14 @@ def split_top_level_sections(body: str) -> tuple[str, dict[str, str]]:
     current_heading: str | None = None
     current_lines: list[str] = []
     preface_lines: list[str] = []
+    in_code_fence = False
 
     for line in body.splitlines(keepends=True):
-        if line.startswith("## "):
+        stripped = line.rstrip()
+        if stripped.startswith("```"):
+            in_code_fence = not in_code_fence
+
+        if not in_code_fence and line.startswith("## "):
             if current_heading is None:
                 if not sections:
                     preface = "".join(preface_lines).strip()
@@ -330,18 +335,18 @@ def cleanup_implementer_handoff(section: str) -> str:
     # wording references "first dispatch", "re-dispatch prompt", and a
     # one-line delta, none of which exist in direct mode.
     source_opener = (
-        "On a first dispatch there is no review-notes blockquote yet; you just "
-        "implement the steps, update the docs, and commit. On a REVISE round "
-        "the blockquote exists — the reviewer wrote it, and the orchestrator "
-        "may have rewritten some steps (for accepted items) or appended "
+        "On a first dispatch there are no review notes yet; you just "
+        "implement the objective, update the task, and commit. On a REVISE round "
+        "the `## Review Notes` section exists — the reviewer wrote it, and the "
+        "orchestrator may have appended "
         "`→ orchestrator: ...` notes to items it is rejecting or flagging for "
         "a second opinion. Your re-dispatch prompt carries a one-line delta "
         "pointing at what changed."
     )
     direct_opener = (
-        "On a first pass there is no review-notes blockquote yet; you just "
-        "implement the steps, update the docs, and commit. On a REVISE round "
-        "the blockquote exists — it was written previously, and items may "
+        "On a first pass there are no review notes yet; you just "
+        "implement the objective, update the task, and commit. On a REVISE round "
+        "the `## Review Notes` section exists — it was written previously, and items may "
         "carry `→ orchestrator: ...` notes rejecting them or flagging them for "
         "a second opinion."
     )

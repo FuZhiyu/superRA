@@ -10,10 +10,10 @@ Before task drafting, collect enough context to populate the writing header fiel
 
 ## Writing Plan Header
 
-Add a writing-specific section to the PLAN.md header:
+Add a writing-specific section to root `.plan/task.md`:
 
 ```markdown
-**Writing workflow:** <Long-form review retrofit (PLAN-only; no RESULTS.md) | Draft / Polish workflow>
+**Writing workflow:** <Long-form review retrofit (review-only; no ## Results) | Draft / Polish workflow>
 
 **Writing targets:** <files and sections in scope>
 
@@ -21,35 +21,31 @@ Add a writing-specific section to the PLAN.md header:
 
 **Mode:** <Review | Polish | Draft>
 
-**Review lanes:** <style, structure, terminology, notation, citations, numerical, math, argument-logic, code-paper; omit lanes out of scope>
+**Review lanes:** <style, structure, terminology, notation, cross-references, citations, numerical, math, argument-logic, code-paper; omit lanes out of scope>
 
 **Build command:** <latexmk / quarto / project command, or "not applicable" with reason>
 
-**Writing output:** <review notes in PLAN.md | edited manuscript | drafted section>
-
-**RESULTS.md:** <required | intentionally absent; review findings live in PLAN.md review notes>
+**Writing output:** <review notes in task ## Review Notes | edited manuscript | drafted section>
 ```
 
-Use only the rows that apply. For long-form review retrofit, write these rows exactly so downstream workflows can recognize the PLAN-only path:
+Use only the rows that apply. For long-form review retrofit, write this row exactly so downstream workflows can recognize the review-only path:
 
 ```markdown
-**Writing workflow:** Long-form review retrofit (PLAN-only; no RESULTS.md)
-
-**RESULTS.md:** intentionally absent; review findings live in PLAN.md review notes
+**Writing workflow:** Long-form review retrofit (review-only; no ## Results)
 ```
 
 ## Retrofitting a Review Plan
 
-Long-form review treats the user's existing draft as the implementation under review. The planner retroactively creates PLAN.md around that artifact:
+Long-form review treats the user's existing draft as the implementation under review. The planner retroactively creates the task tree around that artifact:
 
 - one task per review lane or deep-review perspective;
 - each task points at the target file/section and loaded lane reference;
-- `**Review status:**` starts unset, then reviewers set `REVISE` with task-local review notes or `APPROVED`;
-- no RESULTS.md is created; findings belong in PLAN.md review notes.
+- `review_status:` starts unset, then reviewers set it to `revise` with task-local review notes or `approved`;
+- no `## Results` sections are created; findings belong in task-local `## Review Notes`.
 
 This path uses implementation-workflow for reviewer dispatch and status handling, but not for implementer output production.
 
-Because implementation-workflow's generic entry check expects RESULTS.md, the writing orchestrator handles this retrofit as a writing-owned exception: do not modify implementation-workflow; instead, enter with the PLAN.md that carries the exact PLAN-only rows above and treat PLAN.md review notes as the sole durable findings surface for this writing mode.
+Because implementation-workflow's generic entry check expects `## Results`, the writing orchestrator handles this retrofit as a writing-owned exception: do not modify implementation-workflow; instead, enter with the task tree that carries the exact review-only rows above and treat task-local `## Review Notes` as the sole durable findings surface for this writing mode.
 
 ## Project Conventions
 

@@ -36,7 +36,7 @@ These rules apply wherever drift tests protect key results: Protect, Sync, Integ
 
 **Never:**
 
-- **Silently update expectations for meaningful result changes.** A failure after a refactor, merge, or rebase means one of three things: the change broke something and must be fixed; the tolerance is too tight and needs domain justification plus researcher confirmation; or the result meaningfully shifted and needs a research conversation. Log the decision per `task-system/references/planning.md` §User Decisions Log before updating expectations.
+- **Silently update expectations for meaningful result changes.** A failure after a refactor, merge, or rebase means one of three things: the change broke something and must be fixed; the tolerance is too tight and needs domain justification plus researcher confirmation; or the result meaningfully shifted and needs a research conversation. Fold the decision into the relevant task objective before updating expectations.
 - **Proceed past failing drift tests without assessment.** Failing tests block the workflow until classified and resolved.
 - **Remove or weaken existing drift tests during Sync or Integrate.** Tests are part of the analysis contract.
 - **Treat drift tests as the only safety net.** They protect key results; they do not replace review or domain discipline.

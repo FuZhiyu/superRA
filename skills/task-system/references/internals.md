@@ -27,7 +27,8 @@ class Task:
     body: str           # full body text after frontmatter
     objective: str      # extracted from ## Objective
     results: str        # extracted from ## Results
-    decisions: str      # extracted from ## Decisions
+    decisions: str      # extracted from ## Decisions (legacy)
+    revision_notes: str # extracted from ## Revision Notes
     review_notes: str   # extracted from ## Review Notes
     children: list[Task]
 ```

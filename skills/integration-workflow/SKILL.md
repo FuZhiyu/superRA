@@ -26,7 +26,7 @@ Any step -> planning-workflow §User Feedback and Changing Plans
 
 The main agent's Workflow Frontier Resolver chooses where to enter this workflow. Once entered, run the selected step's local gates exactly; do not redo task-local approvals outside the affected frontier simply because a rollup milestone was unchecked.
 
-Legitimate stop points (log every answer per `task-system/references/planning.md` §User Decisions Log **before** acting):
+Legitimate stop points (fold every answer into the relevant task objective **before** acting):
 
 - **Protect:** key-result protection confirmation.
 - **Sync:** target base confirmation when no prior decision records it; intent-changing conflicts surfaced by `semantic-merge`.
@@ -69,7 +69,7 @@ Sync brings the analysis branch onto the current base before refactor starts. It
 
 ### Step 1: Resolve the target base
 
-Resolve and record a candidate base ref from prior `## Decisions` or git. This is a branch/ref name, not a merge-base SHA:
+Resolve and record a candidate base ref from prior task context or git. This is a branch/ref name, not a merge-base SHA:
 
 ```bash
 if git rev-parse --verify --quiet origin/main >/dev/null; then
@@ -89,7 +89,7 @@ Is that correct, or did it split from a release branch, co-authored track,
 or sibling analysis branch?
 ```
 
-Log the confirmed `BASE_REF` in root task.md `## Decisions` before fetching, computing anchors, or dispatching.
+Record the confirmed `BASE_REF` in root task.md before fetching, computing anchors, or dispatching.
 
 ### Step 2: Compute sync anchors
 
@@ -140,7 +140,7 @@ Agent(generic):
   codebase-review context recorded.
 ```
 
-If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision is required, the orchestrator asks the user, logs the decision in root task.md `## Decisions`, commits the log entry, and re-dispatches the sync author with the decision context.
+If the sync author returns `NEEDS_CONTEXT` or `BLOCKED` because a user decision is required, the orchestrator asks the user, folds the decision into the relevant task objective, commits, and re-dispatches the sync author with the decision context.
 
 ### Step 4: Dispatch the sync reviewer
 
@@ -207,7 +207,7 @@ Read the task-local `## Review Notes` sections for tasks with `integration_statu
 
 - Batch all user-owned questions into one stop point.
 - Route substantive plan restructures through `planning-workflow §User Feedback and Changing Plans`.
-- Log user decisions in root task.md `## Decisions` before dispatching fixes.
+- Fold user decisions into the relevant task objectives before dispatching fixes.
 
 ### Step 4: Refactor loop
 
@@ -255,7 +255,7 @@ These tasks have substantive results that could benefit from maturation
 Should I mature all of them, or only a subset?
 ```
 
-Log the answer in root task.md `## Decisions` before dispatching.
+Fold the answer into root task.md before dispatching.
 
 ### Step 2: Dispatch doc-writer
 
@@ -356,4 +356,4 @@ Report what was published or landed and what was cleaned up.
 - Run the full drift-test suite on every integration pass (new drift tests scoped to tasks not yet `integration_status: approved`; running the suite is not scoped).
 - Use semantic-merge for intent-aware branch syncs.
 - Keep Sync serialized and refactor parallelizable only after Sync lands.
-- Log user decisions in task.md `## Decisions` before acting.
+- Fold user decisions into task objectives before acting.

@@ -12,14 +12,14 @@ For Codex agents: Load `using-superra` skill.
 
 ## Before You Start
 
-In direct mode there is no dispatch prompt. Task context comes from `PLAN.md`, `RESULTS.md`, the current session, and the current branch state.
+In direct mode there is no dispatch prompt. Task context comes from the task's `task.md`, the current session, and the current branch state.
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references.
-2. **Read your task source directly from `PLAN.md`** (the task block plus the relevant header context). If resuming, also read the matching `RESULTS.md` section.
-3. **Read `PLAN.md`'s `## Project Conventions` section before editing any file.** If it is missing, empty, stale, or does not cover a convention you need, walk the directories on-demand, apply what you find, and flag the omission in your status return.
+2. **Read your task via `task_read.py --path <path>`.** This gives you the full task content with ancestor context and sibling dependency status automatically.
+3. **Read the root task.md's `## Conventions` section before editing any file.** If it is missing, empty, stale, or does not cover a convention you need, walk the directories on-demand, apply what you find, and flag the omission in your status return.
 4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
 
-The editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update `PLAN.md` / `RESULTS.md`.
+The editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update the task, not at dispatch time.
 
 ## Execution Protocol
 
@@ -55,38 +55,38 @@ If you find issues during self-review, fix them now.
 
 ## Handoff — Unified Across Stages
 
-When you own a PLAN.md task block, your handoff is the same: update that block and its matching RESULTS.md section.
+When you own a task, your handoff is: update that task's body sections directly in its `task.md`.
 
 ### Editing Etiquette
 
 Compact etiquette below; full discipline in `task-system/references/planning.md`. Load `superRA:task-system` on demand if anything below is unclear.
 
-**The handoff doc always reflects the latest state, not a log.** The doc itself is for the current intended implementation and current findings only.
+**The task always reflects the latest state, not a log.** The file is for the current intended implementation and current findings only.
 
 - **Inline-edit only.** Replace stale content in place — never "Update:" / "Revised:" / "Previously..." blocks, no strikethroughs. Git owns history.
-- **Preserve task-block boundaries.** When appending a `→ implemented: ...` reply inside a review-notes blockquote, stay strictly within the assigned task block — never disturb the `---` separators or the adjacent `### Task N:` headings. Restore a boundary if a prior round elided it.
-- **Remove superseded content, don't stack it.** Abandoned steps, discovery notes now reflected in the steps, and fixed review items are deleted, not crossed out. The task block should read as a single coherent current-state description after every edit.
+- **Stay within your assigned task.** When appending a `→ implemented: ...` reply inside review notes, stay strictly within your task's `task.md`. Never edit another task's file.
+- **Remove superseded content, don't stack it.** Abandoned approaches, discovery notes now reflected in results, and fixed review items are deleted, not crossed out. The task should read as a single coherent current-state description after every edit.
 - **Cite source files as markdown links** per `report-in-markdown` §File-reference rule (e.g., `[file.py:42](file.py#L42)`).
-- **Doc before report.** Every material finding, result, caveat, or change lands in `PLAN.md` / `RESULTS.md` **before** it appears in your status return.
+- **Doc before report.** Every material finding, result, caveat, or change lands in the task's `task.md` **before** it appears in your status return.
 
-If the doc's structure is unclear, flag it in your status return rather than inventing one.
+If the task's structure is unclear, flag it in your status return rather than inventing one.
 
 ### What You Own, What You Don't
 
-**You own** the following slots in your assigned task block, and only within your assigned task:
+**You own** the following within your assigned task's `task.md`:
 
-- **Steps and step code.** You may rewrite, reorder, add, or remove steps when the data forces deviation from the originally planned approach — the plan reflects what was actually done, not what was originally imagined. Replace stale step text in place; do not append a "Revised:" version alongside it.
-- **`**Review status:** IMPLEMENTED`** line, set after your atomic commit.
-- **`**Integration status:** IMPLEMENTED`** line — flipped by you on each in-scope task when you commit Integrate refactor work. The integration reviewer set these to `REVISE` before you; the integration reviewer will flip them to `APPROVED` after your fix pass.
-- **`→ implemented: ...` annotations** appended to review items on a REVISE round (see below).
-- Your assigned task's section of `RESULTS.md`.
+- **Body sections:** `## Results` and any `##` section that serves the task. You may add, rewrite, or remove body sections as the work requires.
+- **`status:` frontmatter field** — set to `implemented` after your atomic commit.
+- **`review_status:` frontmatter field** — set to `implemented` after your atomic commit (signals "ready for review" to the orchestrator).
+- **`integration_status:` frontmatter field** — set to `implemented` when you commit Integrate refactor work. The integration reviewer set this to `revise` before you; the integration reviewer will flip it to `approved` after your fix pass.
+- **`→ implemented: ...` annotations** appended to review items in `## Review Notes` on a REVISE round (see below).
 
 **You may NOT edit:**
 
-- The task objective, script path, or input/output — these define task scope.
-- Any other task's content (steps, status, review notes, results section).
-- **The PLAN.md header.** Read it, but do not edit it. If you identify any header change or issue, report it in your status return.
-- **The reviewer's prose** inside a review-notes blockquote item. You append `→ implemented: ...` annotations; you do not rewrite what the reviewer wrote.
+- Scope-defining frontmatter: `title`, `depends_on`, `script`, `input`, `output` — these are planner-owned.
+- The `## Objective` section — planner-owned; read it, do not rewrite it.
+- Any other task's `task.md`.
+- **The reviewer's prose** inside a review item. You append `→ implemented: ...` annotations; you do not rewrite what the reviewer wrote.
 - **Any `→ orchestrator: ...` annotation** already present on a review item. Leave it intact.
 - **Any review item's existence.** You never delete review items. Only the reviewer and the orchestrator have delete authority; your only tool is the `→ implemented: ...` annotation.
 
@@ -94,21 +94,22 @@ If you believe a review item is invalid or already handled, do NOT annotate it a
 
 ### How You Fix Review Items on a REVISE Round
 
-On a first pass there is no review-notes blockquote yet; you just implement the steps, update the docs, and commit. On a REVISE round the blockquote exists — it was written previously, and items may carry `→ orchestrator: ...` notes rejecting them or flagging them for a second opinion.
+On a first pass there are no review notes yet; you just implement the objective, update the task, and commit. On a REVISE round the `## Review Notes` section exists — it was written previously, and items may carry `→ orchestrator: ...` notes rejecting them or flagging them for a second opinion.
 
-For each item in the blockquote:
+For each item in the review notes:
 
 1. **Read the item and any annotations on it.** If the item has a `→ orchestrator: rejected ...` note, the orchestrator has already decided; do not touch it. If the item has a `→ orchestrator: <second opinion requested> ...` note, the orchestrator is flagging it for the **reviewer**, not for you — do not fix it, do not annotate it with `→ implemented:`, and leave the entire item exactly as-is. Note it in your status report so the orchestrator sees you observed the flag.
 2. **For items with no `→ orchestrator:` annotation (or an orchestrator note that does not reject the item), go to the cited `file:line` and fix the code** per the item's guidance and any orchestrator rewrite of the step that accompanies it.
-3. **Append `→ implemented: <markdown-link citation + one-line fix description>`** directly after the item's text inside the blockquote, on its own line, preserving the reviewer's original prose.
+3. **Append `→ implemented: <markdown-link citation + one-line fix description>`** directly after the item's text, on its own line, preserving the reviewer's original prose.
 4. If you think an item is wrong or was already handled, do NOT annotate it as implemented. Flag it in your status report and let the orchestrator adjudicate on the next pass.
 
-After annotating all items you're expected to address, set `**Review status:** IMPLEMENTED` and commit.
+After annotating all items you're expected to address, set `status: implemented` and `review_status: implemented` in frontmatter and commit.
 
-**Example of what the blockquote looks like after your pass:**
+**Example of what review notes look like after your pass:**
 
 ```markdown
-> **Review notes:**
+## Review Notes
+
 > 1. [MAJOR] Step 2 uses inner join; should be left join. ([Code/03.py:42](Code/03.py#L42))
 >    → implemented: switched to left join, row count preserved ([Code/03.py:42](Code/03.py#L42))
 > 2. [MINOR] Missing row-count log after merge. ([Code/03.py:45](Code/03.py#L45))
@@ -117,30 +118,27 @@ After annotating all items you're expected to address, set `**Review status:** I
 >    → orchestrator: rejected — methodology specifies arithmetic returns per plan header Section 2
 ```
 
-You leave the blockquote in this state for the reviewer to re-review. Do not remove items; do not mark them resolved; do not strike through.
+You leave the review notes in this state for the reviewer to re-review. Do not remove items; do not mark them resolved; do not strike through.
 
-### Update the Docs and Commit
+### Update the Task and Commit
 
-1. **When you own a PLAN.md task block, update it in place.** Mark completed steps `[x]`. Rewrite step text if you deviated from the originally planned approach. Annotate review items as described above. Set `**Review status:** IMPLEMENTED`.
+**Edit your task.md directly.** Write findings in `## Results`, respond to review items in `## Review Notes` with `→ implemented:` annotations. Set `status: implemented` and `review_status: implemented` in frontmatter.
 
-2. **When you own a RESULTS.md task section, update it in place.** Your task's section is **pre-allocated** in `RESULTS.md` at planning time (`## Task N: <name>`, same order and name as `PLAN.md`). Find your section by heading and **replace its content** with current findings — do not append a new section at end-of-file (that creates merge conflicts on parallel dispatch). Mirror the per-task shape in `task-system/references/planning.md` §Results Shape. Figures must be embedded with `![caption](results_attachments/fig_name.png)` syntax pointing at committed image files. If your task section contains figures, LaTeX math, or tables, also load `report-in-markdown/references/rich-content.md` for the format details.
-
-**Single atomic commit.** Follow `superRA:using-superra` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + `PLAN.md` + `RESULTS.md` together:
+**Single atomic commit.** Follow `superRA:using-superra` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + task.md together:
 ```bash
-git add [code files] PLAN.md RESULTS.md results_attachments/
-git commit -m "task N: [brief description]"
+git add [code files] .plan/<task-path>/task.md
+git commit -m "task <task-path>: [brief description]"
 ```
 
 ## Pre-Commit Self-Check
 
 Before staging your commit, verify:
-- [ ] Every PLAN.md edit is inside my assigned task block.
+- [ ] Every edit is inside my assigned task's `task.md`.
 - [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations.
-- [ ] I replaced stale step notes in place — no "Previously..." or "Update:" blocks, no strikethroughs.
-- [ ] My RESULTS.md edits are confined to my task's pre-allocated section (replaced in place — not a new section appended at EOF).
+- [ ] I replaced stale content in place — no "Previously..." or "Update:" blocks, no strikethroughs.
+- [ ] The task reads as a single coherent current-state description.
 - [ ] Figures are embedded with `![caption](results_attachments/...)` and the image files are committed.
-- [ ] The task block and results section read as single coherent current-state descriptions.
-- [ ] Every material finding I am about to report is already written into `PLAN.md` (task block) or `RESULTS.md` (task section), not only in my status report. The doc is the record; the report only points at it.
+- [ ] Every material finding I am about to report is already written into the task's `task.md`, not only in my status report. The task is the record; the report only points at it.
 
 ## Escalation
 

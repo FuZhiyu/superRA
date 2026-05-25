@@ -130,7 +130,7 @@ If any check fails: fix it before proceeding. Do not present completion options 
 
 ### Step 4: Present Completion Options
 
-**Domain pre-step (theory-modeling only): notation/assumption promotion.** Before presenting the completion menu, when the active domain is theory-modeling, scan each task's `## Results` Notation & Assumptions Ledger and collect every entry whose symbol or assumption is not yet in the root task.md's Notation Conventions table. If any candidates exist, surface them via `AskUserQuestion` with a per-candidate Promote / Keep-in-ledger / Remove choice. Apply the researcher's answers: promotions are inline-edited into the canonical table atomically with a `## Decisions` log entry recording the promoted symbols; keep-in-ledger candidates stay where they are; remove decisions delete both the ledger entry and any in-text use (re-dispatch the implementer if code changes are needed). Skip this pre-step entirely when the domain is not theory-modeling or when every ledger says "None." The semantics of the necessity gate, the ledger schema, and the canonical-vs-ledger split are owned by `theory-modeling/SKILL.md` §Documentation and handoff — do not restate them here.
+**Domain pre-step (theory-modeling only): notation/assumption promotion.** Before presenting the completion menu, when the active domain is theory-modeling, scan each task's `## Results` Notation & Assumptions Ledger and collect every entry whose symbol or assumption is not yet in the root task.md's Notation Conventions table. If any candidates exist, surface them via `AskUserQuestion` with a per-candidate Promote / Keep-in-ledger / Remove choice. Apply the researcher's answers: promotions are inline-edited into the canonical table and committed; keep-in-ledger candidates stay where they are; remove decisions delete both the ledger entry and any in-text use (re-dispatch the implementer if code changes are needed). Skip this pre-step entirely when the domain is not theory-modeling or when every ledger says "None." The semantics of the necessity gate, the ledger schema, and the canonical-vs-ledger split are owned by `theory-modeling/SKILL.md` §Documentation and handoff — do not restate them here.
 
 **Present the 4 completion options via `AskUserQuestion` when available** (plain-text fallback otherwise). Each option gets a short description.
 
@@ -145,7 +145,7 @@ What would you like to do?
 4. Discard this work
 ```
 
-Log the researcher's answer per `task-system/references/planning.md` §User Decisions Log — root task.md `## Decisions` section, before executing the choice, included in the first commit of whatever workflow the option dispatches to.
+Fold the researcher's answer into the relevant task objective (rewriting it to be self-sufficient with the new context) before executing the choice, included in the first commit of whatever workflow the option dispatches to.
 
 **Execute the user's choice:**
 
@@ -168,7 +168,7 @@ The autonomy contract is in `superRA:using-superra/references/main-agent.md` (ma
 - **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
 - **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `planning-workflow §User Feedback and Changing Plans`; after the plan edit commit, run the Workflow Frontier Resolver. Pause class (2) in the autonomy contract.
 
-Every stop above: stop and `AskUserQuestion` (plain text if unavailable); log per `task-system/references/planning.md` §User Decisions Log **before** acting on it.
+Every stop above: stop and `AskUserQuestion` (plain text if unavailable); fold the answer into the relevant task objective **before** acting on it.
 
 ## Agent Loads
 

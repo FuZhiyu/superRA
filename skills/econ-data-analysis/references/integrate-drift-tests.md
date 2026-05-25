@@ -2,7 +2,7 @@
 
 Load during Protect when preparing drift tests that guard a data analysis's key results.
 
-Answers the data-analysis-specific questions: what should a drift test protect, how to set econ tolerances, and how to pull candidate invariants out of `RESULTS.md`.
+Answers the data-analysis-specific questions: what should a drift test protect, how to set econ tolerances, and how to pull candidate invariants out of task `## Results` sections.
 
 For the implementation-level quality checklist (coverage, independence, clarity, robustness, test format, cross-cutting integrity Red Flags), also load `skills/result-protection/references/drift-test-quality.md`.
 
@@ -18,9 +18,9 @@ Drift tests are not a substitute for the one-pass review or the describe-analyze
 
 ---
 
-## Identifying Key Results from `RESULTS.md`
+## Identifying Key Results from Task Results
 
-Drift tests should protect **headline findings**, not every number in the analysis. Before writing tests, read `RESULTS.md` and extract candidates:
+Drift tests should protect **headline findings**, not every number in the analysis. Before writing tests, read task `## Results` sections and extract candidates:
 
 **Strong candidates** (should get a test):
 - Coefficients and standard errors of the main regression(s) — at minimum the sign, magnitude, and significance of the headline coefficient(s)
@@ -29,7 +29,7 @@ Drift tests should protect **headline findings**, not every number in the analys
 - Any number the researcher would read aloud when presenting the analysis
 
 **Weak candidates** (probably skip):
-- Intermediate merge row counts (covered by the describe-analyze-validate audit trail in PLAN.md / RESULTS.md)
+- Intermediate merge row counts (covered by the describe-analyze-validate audit trail in task files)
 - Descriptive statistics on raw inputs (upstream, not load-bearing for conclusions)
 - Sensitivity-analysis numbers (these are already robustness themselves — testing a robustness check against itself adds little)
 

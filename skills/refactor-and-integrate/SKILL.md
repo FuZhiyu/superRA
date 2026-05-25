@@ -42,7 +42,7 @@ Leave docs above the affected area alone unless they are stale.
 
 ## Sync Impact Context
 
-When PLAN.md task blocks contain `**Sync impact:**`, use those fields as evidence for why a hunk already exists in the governing diff. Follow the referenced Sync Map cluster only when needed to evaluate that hunk.
+When task files contain `## Sync Impact` sections, use those fields as evidence for why a hunk already exists in the governing diff. Follow the referenced Sync Map cluster only when needed to evaluate that hunk.
 
 Sync impact justifies existing hunks only when it is already present; it does not create new refactor targets or excuse unrelated codebase changes.
 
@@ -51,7 +51,7 @@ Sync impact justifies existing hunks only when it is already present; it does no
 Implementers run this immediately before every return or commit, including no-change cases:
 
 1. **Recompute the governing diff.** In integration-workflow after Sync, use `git diff <BASE_HEAD_SHA>..HEAD`. In standalone refactor work, use the caller-provided git range or touched-file diff.
-2. **Leave a compact trail.** In the assigned PLAN.md task block when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without PLAN.md, put the same line in the status return.
+2. **Leave a compact trail.** In the assigned task's `## Results` when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without a task file, put the same line in the status return.
 3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
 4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `Integration status: APPROVED`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.
 5. **Prune or record.** Any hunk without a current justification is out of scope. Revert it, or record the underlying need where the reviewer can verify it.

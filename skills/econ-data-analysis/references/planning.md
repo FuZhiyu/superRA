@@ -7,13 +7,13 @@ Two planning-only concerns:
 1. **Data Inventory — the hard gate that blocks task drafting until available data is inventoried and gaps are surfaced.**
 2. **Sensitivity Analysis Design — which robustness checks matter for this specific study.**
 
-Both happen once at planning time and then live in `PLAN.md` as sections the analysis references.
+Both happen once at planning time and then live in root `.plan/task.md` as sections the analysis references.
 
 ---
 
 ## Data Inventory (Hard Gate)
 
-The plan cannot be written without a data inventory. Your job is data logistics — what exists, what's missing, where to find it — not research design. The inventory becomes the **Data Inventory** section of `PLAN.md`.
+The plan cannot be written without a data inventory. Your job is data logistics — what exists, what's missing, where to find it — not research design. The inventory becomes the `## Data Inventory` section of root `.plan/task.md`.
 
 <HARD-GATE>
 Do NOT write any task structure, invoke any implementation skill, or take any planning action beyond this gate until you have presented a data inventory and the researcher has approved it. This applies to EVERY data analysis regardless of perceived simplicity.
@@ -57,14 +57,14 @@ Create a task for each of these items and complete them in order:
 ### Common Mistakes
 
 - **Skipping project exploration:** asking "what data do you have?" when the project directory has it. Always check the file system first, then ask about gaps.
-- **Skipping the inventory:** verbal agreement on data, no written record. Always document the inventory — it becomes part of `PLAN.md`.
+- **Skipping the inventory:** verbal agreement on data, no written record. Always document the inventory — it becomes part of root `.plan/task.md`.
 
 ### Red Flags — Hard Gate Protection
 
 The Data Inventory gate applies to every data analysis regardless of perceived simplicity. The following loopholes are closed:
 
 **Never:**
-- Skip the gate and propose the data inventory verbally. It must be written into `PLAN.md`.
+- Skip the gate and propose the data inventory verbally. It must be written into root `.plan/task.md`.
 - Proceed to task drafting before the researcher explicitly approves the inventory.
 - Say "I'll assume we have X data — we can check later." Check first, then plan.
 - Write task structure speculatively while data availability is uncertain.

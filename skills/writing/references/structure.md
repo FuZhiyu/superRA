@@ -129,5 +129,5 @@ Walked top to bottom when the task drafts, restructures, or reviews structure. T
 
 ### Handoff
 
-- `[BLOCKING]` Any structural change was documented in the handoff (chat / `PLAN.md` / review notes) so the author can verify it matches what was requested.
+- `[BLOCKING]` Any structural change was documented in the handoff (chat / task `## Review Notes` / review notes) so the author can verify it matches what was requested.
 - Any structural concerns noticed but *not* acted on (because out of scope) were flagged for the author.

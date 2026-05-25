@@ -8,8 +8,8 @@ Load when writing markdown that contains figures, LaTeX math, or tables. Rules a
 
 The target `attachments/` directory is supplied by the caller, not hard-coded in this skill. Common cases:
 
-- Stage 1 `RESULTS.md` → `results_attachments/` at project root (superRA convention, see `task-system/references/planning.md` §Figure Embedding).
-- Permanent `RESULTS.md` → `attachments/` next to the relocated file.
+- Stage 1 task `## Results` → `results_attachments/` at project root (superRA convention, see `task-system/references/planning.md` §Figure Embedding).
+- Permanent matured results → `attachments/` next to the relocated file.
 - Standalone report → `./attachments/` next to the report file.
 
 If the invoking skill did not specify a directory, default to `attachments/` next to the output file. Refer to the target as `ATTACH_DIR` in your head; substitute the actual path when embedding.

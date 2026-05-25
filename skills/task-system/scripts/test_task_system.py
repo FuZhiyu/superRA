@@ -582,7 +582,7 @@ class TestTaskQuery:
         assert len(data["children"]) == 3
         assert data["children"][0]["is_leaf"] is True
         # Verify v2 fields are present in JSON output
-        for key in ("objective", "results", "decisions", "review_notes"):
+        for key in ("objective", "results", "decisions", "revision_notes", "review_notes"):
             assert key in data, f"Missing key {key!r} in tree_to_json output"
         first_child = data["children"][0]
         assert "Complete step 1." in first_child["objective"]
@@ -699,6 +699,7 @@ class TestParseBodySections:
             "## Objective\n\nDo the thing.\n\n"
             "## Results\n\n### Key Findings\n- Found it\n\n"
             "## Decisions\n\n> Use method A\n\n"
+            "## Revision Notes\n\nChanged scope to X.\n\n"
             "## Review Notes\n\n> [MAJOR] Fix this\n"
         )
         sections = parse_body_sections(body)
@@ -706,6 +707,8 @@ class TestParseBodySections:
         assert "Do the thing." in sections["Objective"]
         assert "Results" in sections
         assert "Decisions" in sections
+        assert "Revision Notes" in sections
+        assert "Changed scope to X." in sections["Revision Notes"]
         assert "Review Notes" in sections
 
     def test_objective_only(self):
