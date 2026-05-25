@@ -32,10 +32,12 @@ graph LR
 {% set child_id = t.path | replace('/', '_') | replace('-', '_') %}
 {% for dep in t.depends_on %}
 {#- Resolve relative ../sibling references to absolute paths -#}
-{% set dep_raw = dep.lstrip('./') %}
+{% set dep_clean = dep %}
+{% if dep_clean.startswith('../') %}{% set dep_clean = dep_clean[3:] %}{% endif %}
+{% if dep_clean.startswith('./') %}{% set dep_clean = dep_clean[2:] %}{% endif %}
 {% set parent = '/'.join(t.path.split('/')[:-1]) %}
-{% set resolved = (parent ~ '/' ~ dep_raw).lstrip('/') if parent else dep_raw %}
-{% if resolved not in path_set %}{% set resolved = dep_raw %}{% endif %}
+{% set resolved = (parent ~ '/' ~ dep_clean).lstrip('/') if parent else dep_clean %}
+{% if resolved not in path_set %}{% set resolved = dep_clean %}{% endif %}
 {% set dep_id = resolved | replace('/', '_') | replace('-', '_') %}
     {{ dep_id }} --> {{ child_id }}
 {% endfor %}

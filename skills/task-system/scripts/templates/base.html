@@ -700,38 +700,49 @@ function toggleSection(toggleEl, event) {
   }
 }
 
-/* ── Search/Filter (client-side) ── */
+/* ── Search/Filter (client-side, descendant-aware) ── */
+function nodeMatchesStatus(el, status) {
+  if (!status) return true;
+  if (el.dataset.status === status) return true;
+  var children = el.querySelectorAll(':scope > .task-children > .task-node');
+  for (var i = 0; i < children.length; i++) {
+    if (nodeMatchesStatus(children[i], status)) return true;
+  }
+  return false;
+}
+
+function nodeMatchesSearch(el, search) {
+  if (!search) return true;
+  var titleEl = el.querySelector(':scope > .task-row > .task-title-text');
+  var slugEl = el.querySelector(':scope > .task-row > .task-slug');
+  var title = titleEl ? titleEl.textContent.toLowerCase() : '';
+  var slug = slugEl ? slugEl.textContent.toLowerCase() : '';
+  var path = (el.dataset.path || '').toLowerCase();
+  if (title.includes(search) || slug.includes(search) || path.includes(search)) return true;
+  var children = el.querySelectorAll(':scope > .task-children > .task-node');
+  for (var i = 0; i < children.length; i++) {
+    if (nodeMatchesSearch(children[i], search)) return true;
+  }
+  return false;
+}
+
 function applyFilters() {
   var status = document.getElementById('filter-status').value;
   var search = document.getElementById('search-box').value.toLowerCase();
 
-  document.querySelectorAll('#view-tree .task-node').forEach(function(el) {
-    var matches = true;
-    if (status && el.dataset.status !== status) matches = false;
-    if (search) {
-      var titleEl = el.querySelector(':scope > .task-row > .task-title-text');
-      var slugEl = el.querySelector(':scope > .task-row > .task-slug');
-      var title = titleEl ? titleEl.textContent.toLowerCase() : '';
-      var slug = slugEl ? slugEl.textContent.toLowerCase() : '';
-      var path = (el.dataset.path || '').toLowerCase();
-      if (!title.includes(search) && !slug.includes(search) && !path.includes(search)) {
-        /* Check if any descendant matches */
-        var descendantMatch = false;
-        el.querySelectorAll('.task-node').forEach(function(child) {
-          var ct = child.querySelector(':scope > .task-row > .task-title-text');
-          var cs = child.querySelector(':scope > .task-row > .task-slug');
-          var cTitle = ct ? ct.textContent.toLowerCase() : '';
-          var cSlug = cs ? cs.textContent.toLowerCase() : '';
-          var cPath = (child.dataset.path || '').toLowerCase();
-          if (cTitle.includes(search) || cSlug.includes(search) || cPath.includes(search)) {
-            descendantMatch = true;
-          }
-        });
-        if (!descendantMatch) matches = false;
-      }
-    }
-    el.classList.toggle('hidden', !matches);
+  document.querySelectorAll('#view-tree > .task-node').forEach(function(el) {
+    applyFiltersToNode(el, status, search);
   });
+}
+
+function applyFiltersToNode(el, status, search) {
+  var visible = nodeMatchesStatus(el, status) && nodeMatchesSearch(el, search);
+  el.classList.toggle('hidden', !visible);
+  if (visible) {
+    el.querySelectorAll(':scope > .task-children > .task-node').forEach(function(child) {
+      applyFiltersToNode(child, status, search);
+    });
+  }
 }
 
 /* ── DAG rendering (mermaid) ── */
@@ -813,7 +824,6 @@ mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
 
 /* ── htmx event: process newly swapped content for markdown rendering ── */
 document.body.addEventListener('htmx:afterSwap', function(event) {
-  /* Re-render any already-open sections in the swapped content */
   event.detail.target.querySelectorAll('.section-content.open .rendered-md').forEach(function(el) {
     if (!el.dataset.rendered) {
       var tmpl = el.querySelector('template');
@@ -823,6 +833,13 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
       }
     }
   });
+});
+
+/* ── SSE full-reload: structural changes (task added/deleted) ── */
+document.body.addEventListener('htmx:sseMessage', function(event) {
+  if (event.detail.type === 'full-reload') {
+    location.reload();
+  }
 });
 </script>
 </body>

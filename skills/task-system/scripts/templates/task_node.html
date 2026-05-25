@@ -57,7 +57,7 @@
       </div>
       <div class="section-content">
         <div class="rendered-md">
-          <template>{{ content }}</template>
+          <template>{{ content | replace('</template>', '&lt;/template&gt;') }}</template>
         </div>
       </div>
     </div>
@@ -93,7 +93,7 @@
       </div>
       <div class="section-content">
         <div class="rendered-md">
-          <template>{{ content }}</template>
+          <template>{{ content | replace('</template>', '&lt;/template&gt;') }}</template>
         </div>
       </div>
     </div>

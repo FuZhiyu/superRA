@@ -129,8 +129,12 @@ def _find_task(path: str) -> Task | None:
 
 
 async def _broadcast(event: str, data: str) -> None:
-    """Send an SSE-formatted message to every connected client."""
-    message = f"event: {event}\ndata: {data}\n\n"
+    """Send an SSE-formatted message to every connected client.
+
+    Multi-line data is handled per SSE spec: each line gets a ``data:`` prefix.
+    """
+    data_lines = "".join(f"data: {line}\n" for line in data.split("\n"))
+    message = f"event: {event}\n{data_lines}\n"
     dead: list[asyncio.Queue[str]] = []
     for q in _sse_clients:
         try:
@@ -151,7 +155,8 @@ async def _watch_plan_root() -> None:
     import watchfiles
 
     async for changes in watchfiles.awatch(PLAN_ROOT):
-        # Debounce: collect all changes over a 200ms window
+        # watchfiles already debounces (default 1600ms); the sleep adds a
+        # short extra window so rapid back-to-back writes coalesce.
         await asyncio.sleep(0.2)
 
         structural_change = False
@@ -187,14 +192,12 @@ async def _watch_plan_root() -> None:
             for task_path in changed_paths:
                 updated = rebuild_task(task_path)
                 if updated is not None and _root_task is not None:
-                    # Render the updated task HTML fragment
-                    fragment = _render_task_fragment(updated)
-                    data = json.dumps({"path": task_path, "html": fragment})
-                    await _broadcast("task-updated", data)
+                    fragment = _render_task_node(updated)
+                    await _broadcast(f"task:{task_path}", fragment)
 
-                    # Also update summary bar
-                    summary_html = _render_summary()
-                    await _broadcast("summary-updated", summary_html)
+            if changed_paths and _root_task is not None:
+                summary_html = _render_summary()
+                await _broadcast("summary-updated", summary_html)
 
 
 # ---------------------------------------------------------------------------
@@ -238,6 +241,16 @@ def _render_task_fragment(task: Task) -> str:
     """Render the task_children.html template for a single task."""
     env = _get_jinja_env()
     template = env.get_template("task_children.html")
+    return template.render(task=task, project_root=_project_root)
+
+
+def _render_task_node(task: Task) -> str:
+    """Render a single task node via the task_node macro (for SSE swap)."""
+    env = _get_jinja_env()
+    template = env.from_string(
+        '{% from "task_node.html" import render_task_node %}'
+        '{{ render_task_node(task, project_root, depth=2) }}'
+    )
     return template.render(task=task, project_root=_project_root)
 
 
