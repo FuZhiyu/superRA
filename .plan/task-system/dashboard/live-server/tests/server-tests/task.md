@@ -1,7 +1,7 @@
 ---
 title: "Server route and data layer tests"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: []
 tags: []
@@ -23,3 +23,11 @@ Test FastAPI routes and the in-memory data layer.
 - `rebuild_tree()` populates task index correctly
 - `rebuild_task()` updates single task without losing children
 - Comment API routes: POST create, GET list, PATCH resolve, DELETE
+
+## Results
+
+Implemented in [`test_dashboard.py`](skills/task-system/scripts/test_dashboard.py).
+
+**TestServerRoutes** (14 tests): GET /, GET /task/{path} (valid + 404), GET /dag (mermaid), GET /kanban (5 columns), GET /files (serve + traversal rejection + 404), SSE heartbeat via generator, full comment API CRUD cycle, comment 404 cases.
+
+**TestDataLayer** (5 tests): `rebuild_tree()` populates index, `rebuild_task()` updates single task preserving children, returns None for deleted task, `_build_index()` creates flat dict.

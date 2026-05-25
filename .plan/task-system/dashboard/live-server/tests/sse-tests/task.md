@@ -1,7 +1,7 @@
 ---
 title: "SSE broadcast and template rendering tests"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: []
 tags: []
@@ -22,3 +22,11 @@ Test SSE event framing and Jinja2 template rendering correctness.
 - Template rendering: `</template>` in markdown content is escaped
 - Template rendering: DAG dependency arrows resolve `../sibling` paths correctly
 - Jinja2 filters: `vscode_link` and `file_url` produce correct URIs
+
+## Results
+
+Implemented in [`test_dashboard.py`](skills/task-system/scripts/test_dashboard.py).
+
+**TestSSEBroadcast** (4 tests): single-line broadcast, multi-line with per-line `data:` prefix, event naming `task:{path}`, full-queue client dropped.
+
+**TestTemplateRendering** (8 tests): `_render_task_node()` sse-swap + hx-swap attrs, badge class, `_render_summary()` counts, vscode_link filter, file_url filter, `</template>` escaping, kanban 5 columns, DAG dependency arrows.

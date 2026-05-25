@@ -1,7 +1,7 @@
 ---
 title: "Comment system and CLI tests"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: []
 tags: []
@@ -25,3 +25,11 @@ Test the comment sidecar data layer and agent CLI.
 - CLI `resolve` toggles and prints confirmation
 - CLI `list-tree` aggregates counts across plan tree
 - YAML round-trip: save then load preserves all fields
+
+## Results
+
+Implemented in [`test_dashboard.py`](skills/task-system/scripts/test_dashboard.py).
+
+**TestComments** (13 tests): load_comments empty, add_comment auto-increment + gap handling, resolve_comment toggle + nonexistent, delete_comment bool, split_into_blocks (paragraphs, fenced code, lists), resolve_anchors (exact match, shifted block, orphan detection, missing section), YAML round-trip.
+
+**TestCLI** (5 tests): list subcommand output, list no comments, resolve subcommand, list-tree with comments, list-tree empty.
