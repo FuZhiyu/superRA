@@ -1,7 +1,7 @@
 ---
 title: "Fix status and review_status consistency"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on: []
 tags: []
@@ -50,10 +50,3 @@ Running `--fix` against the actual `.plan/` tree (after prior status rollups) ad
 
 A second `--fix` pass confirms zero remaining inconsistencies. The only remaining `validate_plan` warnings are unrelated `depends_on` path-format issues (relative `../` references).
 
-## Review Notes
-
-1. **[MAJOR]** `--fix` mode introduces new consistency violations. When a branch task has `review_status: approved` and `status: approved`, rolling status down to `in-progress` (from children) creates a `review_status > status` violation — the very rule this task implements. Evidence: [task_update.py:117-122](skills/task-system/scripts/task_update.py#L117) changes `status` without checking or adjusting `review_status`; running `validate_plan` after `--fix` reports 2 new violations (`task-system/dashboard` and `comments/comment-ui`). Fix: after setting `task.status = rolled_up`, also reset `review_status` to `~` if the new status is below `implemented` (since review cannot logically advance past status), or at minimum skip the status rolldown when it would introduce a review_status inconsistency and emit a specific warning explaining why.
-   → implemented: after rolling status down, `fix_status_consistency()` now resets `review_status` to `~` when new status < `implemented`, and resets `integration_status` to `~` when `review_status` != `approved`. Added test `test_fix_mode_resets_review_status_when_status_rolled_down`. Re-ran `--fix` against live tree — zero remaining violations. ([task_update.py:126-137](skills/task-system/scripts/task_update.py#L126), [test_task_system.py:1331-1362](skills/task-system/scripts/test_task_system.py#L1331))
-
-2. **[MINOR]** Review badge CSS committed under wrong task. The `.badge-review` CSS in `base.html` was committed in the math-rendering commit (b76518b) rather than the status-consistency commit (511b8ac). Functionally correct (both are in the same branch), but the status-consistency commit's `task_node.html` references CSS classes that were introduced by a different task's commit. No action needed — noting for commit hygiene only.
-   → orchestrator: accepted as noted, no action required — both commits land in the same PR.
