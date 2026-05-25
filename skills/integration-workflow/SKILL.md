@@ -16,7 +16,7 @@ Integrate -> refactor with Sync context and pass integration review
 Document  -> mature task.md ## Results sections for reader-facing clarity
 Finish    -> final freshness check, PR or fast-forward, and cleanup
 
-Any step -> planning-workflow §User Feedback and Changing Plans
+Any step -> planning-workflow §User Feedback and Changing the Task Tree
            when scope, methodology, task structure, or APPROVED status changes materially
 ```
 
@@ -44,7 +44,7 @@ Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the 
 
 Result protection guards key results during Sync, Integrate, Finish, and future work. Drift tests are the current/default protection mechanism. For the writing vertical, "key results" are the manuscript artifacts; protection is satisfied by document-build success plus outline stability across the merged state — see `skills/writing/references/integration.md`.
 
-**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `integration_status:` unset or not `approved` plus orchestrator-declared related tasks from `planning-workflow §User Feedback and Changing Plans`; running the suite is not scoped.
+**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `integration_status:` unset or not `approved` plus orchestrator-declared related tasks from `planning-workflow §User Feedback and Changing the Task Tree`; running the suite is not scoped.
 
 ### Steps
 
@@ -206,7 +206,7 @@ Agent(subagent_type: "superRA:reviewer"):
 Read the task-local `## Review Notes` sections for tasks with `integration_status: revise`. Classify reviewer findings per `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
 - Batch all user-owned questions into one stop point.
-- Route substantive plan restructures through `planning-workflow §User Feedback and Changing Plans`.
+- Route substantive plan restructures through `planning-workflow §User Feedback and Changing the Task Tree`.
 - Fold user decisions into the relevant task objectives before dispatching fixes.
 
 ### Step 4: Refactor loop
