@@ -28,6 +28,10 @@ Created 6 Jinja2 templates under [`skills/task-system/scripts/templates/`](skill
 
 **Verification:** All 6 templates parse as valid Jinja2 and render successfully with mock Task objects. CSS cross-check confirms 0 missing selectors from the original dashboard.
 
+## Revision Notes
+
+**Lazy-load broken for depth >= 3 (htmx v2 script execution).** The recursive lazy-load mechanism for deeply nested tasks is broken. `task_node.html` (lines 138-146) injects an inline `<script>` tag to set `node.dataset.needsLoad = 'true'` on nodes at depth >= 2, enabling their children to be fetched via `htmx.ajax('GET', '/task/' + path)` on first expand. However, htmx v2 does **not** execute `<script>` tags in swapped content by default (security change from v1). When a parent node is lazy-loaded (e.g., expanding `comments` fetches `/task/comments` and injects its children including `comment-ui` via `innerHTML` swap), the `<script>` in the injected `comment-ui` node never executes. Result: `needsLoad` is never set, so clicking `comment-ui` expands its body but never triggers the fetch for its own children — the 4 subtasks are invisible. This affects any task at depth >= 3 in the tree (e.g., `task-system > dashboard > live-server > comments > comment-ui > [children]`). Depths 0-1 are unaffected (inline-rendered). Depth 2 works because the initial page template renders the `<script>` server-side (not via htmx swap). Fix options: (a) set `htmx.config.allowScriptTags = true`, (b) replace the `<script>` approach with an `htmx:afterSwap` event listener that scans injected nodes for `[data-needs-load]` attributes, or (c) move the `needsLoad` flag to a `data-` attribute on the HTML element itself (no script needed) and scan after swap.
+
 ## Decisions
 
 - Markdown content stored in `<template>` tags inside `rendered-md` divs, rendered client-side by markdown-it on first section expand (lazy rendering).
