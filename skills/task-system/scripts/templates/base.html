@@ -333,9 +333,10 @@ body {
   border-radius: 8px;
   background: var(--accent);
   color: #fff;
-  margin-left: auto;
   flex-shrink: 0;
 }
+.section-comment-badge { margin-left: auto; }
+.tree-comment-badge { margin-left: 4px; }
 
 .section-content {
   overflow: hidden;
@@ -1165,7 +1166,16 @@ function updateTreeCommentBadges() {
         if (count <= 0) continue;
 
         var node = document.querySelector('.task-node[data-path="' + taskPath + '"]');
-        if (!node) continue;
+        if (!node) {
+          /* Node not in DOM (lazy-loaded children). Walk up path segments
+             until we find an ancestor that IS rendered. */
+          var parts = taskPath.split('/');
+          while (parts.length > 1 && !node) {
+            parts.pop();
+            node = document.querySelector('.task-node[data-path="' + parts.join('/') + '"]');
+          }
+          if (!node) continue;
+        }
 
         /* Check if this task's body is expanded (open).
            If it is, section-level badges handle it — skip. */
@@ -1194,13 +1204,22 @@ function updateTreeCommentBadges() {
         targetCounts.set(targetRow, prev + count);
       }
 
-      /* Render badges on the target rows */
+      /* Render badges on the target rows — insert after the last
+         badge/progress element so the badge sits near visible content
+         rather than at the far end of the flex row */
       targetCounts.forEach(function(count, row) {
         var badge = document.createElement('span');
         badge.className = 'tree-comment-badge';
         badge.textContent = count;
         badge.title = count + ' unresolved comment' + (count > 1 ? 's' : '');
-        row.appendChild(badge);
+        var anchor = row.querySelector('.task-progress') || row.querySelector('.badge');
+        if (anchor && anchor.nextSibling) {
+          row.insertBefore(badge, anchor.nextSibling);
+        } else if (anchor) {
+          anchor.after(badge);
+        } else {
+          row.appendChild(badge);
+        }
       });
     });
 }
