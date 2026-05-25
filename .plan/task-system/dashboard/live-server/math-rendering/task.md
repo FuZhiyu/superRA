@@ -1,7 +1,7 @@
 ---
 title: "Add LaTeX math rendering"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -28,3 +28,15 @@ The dashboard renders task body sections with markdown-it, which already handles
 
 ## Results
 
+Added KaTeX math rendering to the dashboard via CDN resources in both `base.html` (live server) and `plan_dashboard.py` (static generate):
+
+- **CDN resources loaded** (after markdown-it, before mermaid):
+  - `katex@0.16/dist/katex.min.css` — KaTeX stylesheet
+  - `katex@0.16/dist/katex.min.js` — KaTeX rendering engine
+  - `markdown-it-texmath@1/texmath.min.js` — markdown-it plugin that hooks KaTeX into the parser
+
+- **Plugin configured**: `md.use(texmath, { engine: katex, delimiters: 'dollars' })` — supports `$...$` (inline) and `$$...$$` (display math)
+
+- **Theme integration**: `.katex { color: var(--text); }` ensures math inherits the dashboard's light/dark text color token. `.katex-display { margin: 0.75em 0; }` gives display math vertical breathing room.
+
+- **Verified**: Restarted the live server on port 8888; page source confirms CDN links, CSS overrides, and plugin initialization are all present and correctly ordered.

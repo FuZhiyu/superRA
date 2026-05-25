@@ -10,6 +10,9 @@
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2/sse.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <style>
 /* ── Light / Dark tokens ── */
@@ -81,6 +84,10 @@
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
   --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
 }
+
+/* ── KaTeX theme integration ── */
+.katex { color: var(--text); }
+.katex-display { margin: 0.75em 0; }
 
 /* ── Reset + base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -262,6 +269,17 @@ body {
 .badge-implemented  { background: var(--st-impl); color: var(--st-impl-t); }
 .badge-revise       { background: var(--st-rev);  color: var(--st-rev-t);  }
 .badge-approved     { background: var(--st-ok);   color: var(--st-ok-t);   }
+
+/* Review-status badge (secondary, outlined style to distinguish from primary) */
+.badge-review {
+  font-size: 9px;
+  padding: 0px 5px;
+  border: 1px solid currentColor;
+  background: transparent;
+}
+.badge-review-implemented { color: var(--st-impl-t); border-color: var(--st-impl-t); }
+.badge-review-revise      { color: var(--st-rev-t);  border-color: var(--st-rev-t);  }
+.badge-review-approved    { color: var(--st-ok-t);   border-color: var(--st-ok-t);   }
 
 .task-progress {
   font-family: var(--font-mono);
@@ -597,6 +615,7 @@ body {
 <script>
 /* ── Markdown-it setup ── */
 var md = window.markdownit({ html: false, linkify: true });
+md.use(texmath, { engine: katex, delimiters: 'dollars' });
 var PROJECT_ROOT = {{ project_root | tojson }};
 
 /**

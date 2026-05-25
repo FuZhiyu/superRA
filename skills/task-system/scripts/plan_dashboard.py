@@ -564,6 +564,9 @@ DASHBOARD_HTML = """\
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <style>
 /* ── Light / Dark tokens ── */
@@ -635,6 +638,10 @@ DASHBOARD_HTML = """\
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
   --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
 }
+
+/* ── KaTeX theme integration ── */
+.katex { color: var(--text); }
+.katex-display { margin: 0.75em 0; }
 
 /* ── Reset + base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1091,6 +1098,7 @@ body {
 <script>
 const TASK_DATA = __TASK_DATA_JSON__;
 const md = window.markdownit({ html: false, linkify: true });
+md.use(texmath, { engine: katex, delimiters: 'dollars' });
 let currentView = 'tree';
 const taskByPath = {};
 const expandedTasks = new Set();
