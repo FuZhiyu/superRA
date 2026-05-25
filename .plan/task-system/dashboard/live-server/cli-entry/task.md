@@ -1,7 +1,7 @@
 ---
 title: "CLI entry point and uv run integration"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:
   - ../server
