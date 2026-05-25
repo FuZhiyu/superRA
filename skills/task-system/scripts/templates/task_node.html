@@ -17,7 +17,8 @@
      data-path="{{ task.path }}"
      data-status="{{ eff_status }}"
      id="task-{{ path_id }}"
-     sse-swap="task:{{ task.path }}">
+     sse-swap="task:{{ task.path }}"
+     hx-swap="outerHTML">
 
   {#- Task row (always visible) -#}
   <div class="task-row" onclick="toggleTask(this)">
