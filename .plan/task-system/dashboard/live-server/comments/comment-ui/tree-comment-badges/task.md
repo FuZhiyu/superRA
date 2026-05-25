@@ -1,7 +1,7 @@
 ---
 title: "Bubble comment badges up through collapsed tree nodes"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:  []
 tags: []
