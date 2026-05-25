@@ -7,3 +7,5 @@ inspo
 triage/
 __pycache__/
 **.pyc
+.plan/**/dashboard.html
+.plan/dashboard.html
