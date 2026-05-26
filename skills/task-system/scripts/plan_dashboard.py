@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from _task_io import Task, _walk_children, collect_all_tasks, parse_task, walk_plan
 from _worktree_discovery import (
     WorktreeInfo,
+    _parse_plan_title,
     discover_worktrees,
     filter_worktrees,
     get_git_common_dir,
@@ -69,6 +70,9 @@ _watcher_task: asyncio.Task | None = None
 
 # Active worktree path (absolute); set from PLAN_ROOT at startup
 _current_worktree_path: str = ""
+
+# Concurrency guard for worktree switch sequence
+_switch_lock: asyncio.Lock = asyncio.Lock()
 
 # SSE broadcast: one asyncio.Queue per connected client
 _sse_clients: set[asyncio.Queue[str]] = set()
@@ -561,7 +565,6 @@ async def list_worktrees():
         task_md = PLAN_ROOT / "task.md"
         if task_md.is_file():
             try:
-                from _worktree_discovery import _parse_plan_title
                 plan_title = _parse_plan_title(task_md)
             except Exception:
                 pass
@@ -643,31 +646,49 @@ async def switch_worktree(request: Request):
             detail=f"Invalid plan root (missing task.md): {new_plan_root}",
         )
 
-    # --- Atomic switch sequence ---
-    # 1. Cancel existing watcher
-    if _watcher_task is not None:
-        _watcher_task.cancel()
+    # --- Atomic switch sequence (serialized via lock) ---
+    async with _switch_lock:
+        # Save previous state for rollback
+        prev_plan_root = PLAN_ROOT
+        prev_project_root = _project_root
+        prev_worktree_path = _current_worktree_path
+
+        # 1. Cancel existing watcher
+        if _watcher_task is not None:
+            _watcher_task.cancel()
+            try:
+                await _watcher_task
+            except asyncio.CancelledError:
+                pass
+            _watcher_task = None
+
         try:
-            await _watcher_task
-        except asyncio.CancelledError:
-            pass
-        _watcher_task = None
+            # 2. Update PLAN_ROOT
+            PLAN_ROOT = new_plan_root
 
-    # 2. Update PLAN_ROOT
-    PLAN_ROOT = new_plan_root
+            # 3. Rebuild tree
+            rebuild_tree()
 
-    # 3. Rebuild tree
-    rebuild_tree()
+            # 4. Update project root and current worktree path
+            _project_root = str(PLAN_ROOT.resolve().parent)
+            _current_worktree_path = target_wt.path
 
-    # 4. Update project root and current worktree path
-    _project_root = str(PLAN_ROOT.resolve().parent)
-    _current_worktree_path = target_wt.path
+            # 5. Spawn new watcher
+            _watcher_task = asyncio.create_task(_watch_plan_root())
+        except Exception:
+            # Roll back to previous state
+            PLAN_ROOT = prev_plan_root
+            _project_root = prev_project_root
+            _current_worktree_path = prev_worktree_path
+            # Re-spawn watcher on the old root
+            _watcher_task = asyncio.create_task(_watch_plan_root())
+            raise HTTPException(
+                status_code=500,
+                detail="Switch failed; rolled back to previous worktree",
+            )
 
-    # 5. Spawn new watcher
-    _watcher_task = asyncio.create_task(_watch_plan_root())
-
-    # 6. Broadcast full-reload
-    await _broadcast("full-reload", "{}")
+        # 6. Broadcast full-reload
+        await _broadcast("full-reload", "{}")
 
     return {
         "ok": True,
