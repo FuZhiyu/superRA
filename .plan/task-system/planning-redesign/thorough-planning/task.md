@@ -1,7 +1,7 @@
 ---
 title: "Thorough Planning Reference"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:
   - entry-and-placement
@@ -100,13 +100,3 @@ All 6 validation criteria pass:
 - Critical files: concise section with qualification criteria and one-line format
 - Incremental refinement: explicitly composes with depth tiers (thorough initial, quick refinement)
 
-## Review Notes
-
-1. [MAJOR] `subagent_type: "research"` is not defined in any agent spec, Claude tools adapter ([claude-tools.md](skills/using-superRA/references/claude-tools.md)), or Codex tool map ([codex-instructions.md:74-76](skills/using-superRA/references/codex-instructions.md#L74)). The system defines only `superRA:implementer`, `superRA:reviewer`, and `generic` (for sync). The parenthetical "(or any general-purpose agent the harness exposes)" at [thorough-planning.md:20](skills/planning-workflow/references/thorough-planning.md#L20) acknowledges the ambiguity but does not resolve it — an agent following this reference would not know what concrete harness action to take. Fix: either define the harness mapping for `"research"` in each adapter reference, or drop back to a generic/default agent type with an explicit note about how each harness handles it (e.g., Claude Code spawns a generic Agent with the prompt text; Codex uses `spawn_agent(agent_type="default")`). Same issue at [thorough-planning.md:73](skills/planning-workflow/references/thorough-planning.md#L73) for the multi-perspective design template.
-→ implemented: replaced `subagent_type: "research"` with `"Explore"` (Claude Code's built-in read-only search agent) at both the exploration template ([thorough-planning.md:23](skills/planning-workflow/references/thorough-planning.md#L23)) and the design template ([thorough-planning.md:72](skills/planning-workflow/references/thorough-planning.md#L72)), with parenthetical noting other harnesses may use different type names.
-
-2. [MAJOR] The exploration dispatch template ([thorough-planning.md:23-29](skills/planning-workflow/references/thorough-planning.md#L23)) introduces new fields (`Objective:`, `Scope:`) and the design template ([thorough-planning.md:73-80](skills/planning-workflow/references/thorough-planning.md#L73)) adds `Context:` — none of which exist in the canonical agent-orchestration dispatch template shape ([SKILL.md:114-132](skills/agent-orchestration/SKILL.md#L114)). The task objective's design constraint explicitly requires "not a new template shape," and the implementer's self-validation claims "no new template shape" — but this is a new shape. Fix: restructure the exploration template to use the canonical field set. Exploration agents genuinely differ from task-scoped agents (no task path or stage), so the natural fit is to use `Additionally:` to carry the exploration objective and scope constraints, making the template a thin specialization of the canonical shape rather than a parallel one. Alternatively, explicitly acknowledge this is a new lightweight template and explain why the canonical shape cannot apply — but this would require the orchestrator to accept a design-constraint relaxation.
-→ implemented: removed all invented fields (`Objective:`, `Scope:`, `Context:`). Both templates now show a plain `Agent(subagent_type: "Explore")` call with the exploration/design objective as free-form prompt body text. Explicitly noted these do not use the canonical task-scoped template since they have no task path or stage. ([thorough-planning.md:20-29](skills/planning-workflow/references/thorough-planning.md#L20), [thorough-planning.md:69-80](skills/planning-workflow/references/thorough-planning.md#L69))
-
-3. [MINOR] Plan-mode subagent dispatch claim at [thorough-planning.md:39](skills/planning-workflow/references/thorough-planning.md#L39) states exploration agents "can be dispatched during plan mode" as fact. Whether a harness allows subagent dispatch during plan mode is harness-dependent. The harness-plan-mode reference supports this for the planning workflow's own text, but subagent spawning during plan mode is not guaranteed across harnesses. Fix: soften to "exploration agents are read-only and compatible with plan mode constraints; verify your harness supports subagent dispatch during plan mode" or similar.
-→ implemented: softened to "compatible with plan mode constraints where the harness supports subagent dispatch during plan mode" ([thorough-planning.md:38](skills/planning-workflow/references/thorough-planning.md#L38))
