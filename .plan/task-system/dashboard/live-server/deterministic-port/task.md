@@ -1,7 +1,7 @@
 ---
 title: "Deterministic port from worktree path"
 status: implemented
-review_status: revise
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -30,23 +30,25 @@ When multiple worktrees each run their own dashboard, they collide on the defaul
 
 ## Results
 
-Implemented in [plan_dashboard.py:1554-1566](skills/task-system/scripts/plan_dashboard.py#L1554-L1566).
+Implemented in [plan_dashboard.py:1555-1567](skills/task-system/scripts/plan_dashboard.py#L1555-L1567).
 
 Changes made to `skills/task-system/scripts/plan_dashboard.py`:
 
-1. Added `import socket` to the module imports (line 18).
-2. Added `_default_port(plan_root: Path) -> int` helper (lines 1554-1566) that:
-   - Computes `hash(str(plan_root.resolve())) % 900 + 8100` for range 8100-8999.
+1. Added `import hashlib` and `import socket` to the module imports (lines 17-19).
+2. Added `_default_port(plan_root: Path) -> int` helper (lines 1555-1567) that:
+   - Computes `int(hashlib.sha256(str(plan_root.resolve()).encode()).hexdigest(), 16) % 900 + 8100` for range 8100-8999.
    - Checks port availability via `socket.connect_ex`; tries next port on collision (up to 10 attempts, wrapping at 8999).
    - Falls back to OS-assigned (`port=0`) if all 10 attempts fail.
-3. Changed `--port` default from `8080` to `None` (line 1585).
-4. In `main()`, resolves port via `_default_port(PLAN_ROOT)` when `args.port is None` (line 1621).
-5. Updated startup banner to: `Starting dashboard at http://localhost:{port} (derived from {PLAN_ROOT})`.
+3. Changed `--port` default from `8080` to `None` (line 1586).
+4. In `main()`, resolves port via `_default_port(PLAN_ROOT)` when `args.port is None` (line 1622).
+5. Startup banner conditionally shows "(derived from ...)" only when port was auto-computed (lines 1627-1630).
 
-Verified: two different plan root paths produce different deterministic ports (8561 vs 8167), both in range 8100-8999, and the mapping is stable across calls. Explicit `--port` override still works.
+Verified: `hashlib.sha256` produces the same port for the same path across multiple Python invocations (8913 consistently for the test path), and different paths yield different ports (8913 vs 8458). Explicit `--port` override still works and no longer shows misleading "derived from" text.
 
 ## Review Notes
 
 1. **[CRITICAL]** [plan_dashboard.py:1560](skills/task-system/scripts/plan_dashboard.py#L1560) — `hash()` is non-deterministic across Python processes. Python 3.3+ randomizes hash seeds by default (`PYTHONHASHSEED`), so `hash(str(plan_root.resolve()))` returns a different value each time the script is invoked. Empirically confirmed: three consecutive invocations of `python3 -c "print(hash('/path') % 900 + 8100)"` produced 8483, 8389, 8387. The port is effectively random, not deterministic, defeating the task's core goal ("each worktree always gets the same port"). **Fix:** Replace `hash()` with a stable hash function, e.g. `int(hashlib.sha256(str(plan_root.resolve()).encode()).hexdigest(), 16) % 900 + 8100`.
+   → implemented: replaced `hash()` with `hashlib.sha256`; added `import hashlib` ([plan_dashboard.py:17](skills/task-system/scripts/plan_dashboard.py#L17), [plan_dashboard.py:1561](skills/task-system/scripts/plan_dashboard.py#L1561))
 
 2. **[MINOR]** [plan_dashboard.py:1626](skills/task-system/scripts/plan_dashboard.py#L1626) — The startup banner always prints "(derived from {PLAN_ROOT})" even when the user explicitly passes `--port`. This is misleading when the port was not derived at all. **Fix:** Conditionally show "(derived from ...)" only when `args.port is None`; otherwise print the port without the derivation note.
+   → implemented: conditional banner — shows "(derived from ...)" only when port is auto-computed ([plan_dashboard.py:1627-1630](skills/task-system/scripts/plan_dashboard.py#L1627-L1630))

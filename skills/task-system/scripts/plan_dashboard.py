@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import socket
 import sys
@@ -1557,7 +1558,7 @@ def _default_port(plan_root: Path) -> int:
     Maps into range 8100-8999. If the port is in use, tries the next port up
     (wrapping at 8999). Falls back to OS-assigned (port=0) after 10 attempts.
     """
-    base_port = hash(str(plan_root.resolve())) % 900 + 8100
+    base_port = int(hashlib.sha256(str(plan_root.resolve()).encode()).hexdigest(), 16) % 900 + 8100
     for i in range(10):
         port = 8100 + (base_port - 8100 + i) % 900
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -1623,7 +1624,10 @@ def main(argv: list[str] | None = None) -> None:
         import uvicorn
 
         url = f"http://localhost:{port}"
-        print(f"Starting dashboard at {url} (derived from {PLAN_ROOT})")
+        if args.port is None:
+            print(f"Starting dashboard at {url} (derived from {PLAN_ROOT})")
+        else:
+            print(f"Starting dashboard at {url}")
         print(f"Watching: {PLAN_ROOT}")
 
         if not args.no_open:
