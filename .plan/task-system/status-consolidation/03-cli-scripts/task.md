@@ -1,6 +1,6 @@
 ---
 title: "Update CLI scripts for unified status"
-status: implemented
+status: approved
 depends_on:
   - 02-data-layer
 tags: [code]
