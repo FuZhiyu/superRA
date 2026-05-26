@@ -1,6 +1,6 @@
 ---
 title: "Update agent specs and workflow skills"
-status: implemented
+status: approved
 review_status: ~
 integration_status: ~
 depends_on:
