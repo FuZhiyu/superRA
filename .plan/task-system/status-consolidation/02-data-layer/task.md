@@ -1,5 +1,5 @@
 ---
-title: "Update core data layer to remove review_status"
+title: "Update core data layer to remove review_status and integration_status"
 status: not-started
 review_status: ~
 integration_status: ~
@@ -15,18 +15,16 @@ updated: 2026-05-26
 
 ## Objective
 
-Update `_task_io.py` to remove the `review_status` field from the data model. This is the foundation all other tasks depend on.
+Update `_task_io.py` to remove both `review_status` and `integration_status` from the data model. This is the foundation all other tasks depend on.
 
 Changes:
 
-1. **Remove `VALID_REVIEW_STATUSES` constant** (line 20). Validation of `review_status` in `parse_task()` (lines 227-232) is removed.
-2. **Remove `review_status` from `Task` dataclass** (line 32). Remove the field and its default.
-3. **Update `parse_frontmatter` / `parse_task`** — stop reading `review_status` from YAML. If encountered in an old file, ignore silently (forward-compatible reading).
-4. **Update `serialize_frontmatter` / `write_task`** — remove `review_status` from `field_order` (line 166) and from `write_task` (line 267).
-5. **Update frontmatter validation** (line 512-515 range) — remove `review_status` validation.
+1. **Remove `VALID_REVIEW_STATUSES` and `VALID_INTEGRATION_STATUSES` constants** (lines 20-21). Remove their validation in `parse_task()`.
+2. **Remove `review_status` and `integration_status` from `Task` dataclass** (lines 32-33). Remove the fields and their defaults.
+3. **Update `parse_frontmatter` / `parse_task`** — stop reading these fields from YAML. If encountered in an old file, ignore silently (forward-compatible reading).
+4. **Update `serialize_frontmatter` / `write_task`** — remove both fields from `field_order` and from `write_task`.
+5. **Update frontmatter validation** — remove validation for both fields.
 
-The `integration_status` field and its constant `VALID_INTEGRATION_STATUSES` stay unchanged.
-
-Verify: `compute_status()` and `compute_frontier()` already ignore `review_status` — confirm no changes needed.
+Verify: `compute_status()` and `compute_frontier()` already ignore both fields — confirm no changes needed.
 
 ## Results
