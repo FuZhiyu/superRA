@@ -1,7 +1,7 @@
 ---
 title: "Worktree Selector Tests"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: 
   - discovery
@@ -35,3 +35,21 @@ Test suite for the worktree discovery and server switching features. Create `ski
 - `_default_port` without a git common dir falls back to plan-root hashing (backward compatible)
 
 **Test infrastructure:** Mock `subprocess.run` for git commands (no actual git repo required). Create temporary directories with `.plan/task.md` fixtures for filesystem checks. Use `fastapi.testclient.TestClient` for route tests.
+
+## Results
+
+Test file created at [`skills/task-system/scripts/test_worktree_selector.py`](skills/task-system/scripts/test_worktree_selector.py). 53 tests, all passing (`uv run pytest skills/task-system/scripts/test_worktree_selector.py -v`).
+
+**Coverage by test class:**
+
+| Class | Tests | Covers |
+|---|---|---|
+| `TestParsePorcelain` | 9 | Multi-worktree parsing, paths, HEAD, branches, detached, locked, prunable with reason, empty output, single worktree |
+| `TestParsePlanTitle` | 6 | Normal/quoted titles, no frontmatter, no title field, nonexistent file, broken file |
+| `TestGetGitCommonDir` | 5 | Resolved path return, failure/empty/missing-git/timeout all return None |
+| `TestDiscoverWorktrees` | 9 | Full discovery with plans, non-git/missing-git, prunable skip, no-plan, broken task.md, agent detection (branch + path), detached HEAD |
+| `TestFilterWorktrees` | 6 | Default excludes prunable/no-plan, keeps agents, `include_prunable` override, `require_plan=False`, empty |
+| `TestSortWorktrees` | 5 | Descending by activity, None sorts last, all-None, single, empty |
+| `TestDefaultPort` | 4 | Consistent port from git common dir across plan roots, fallback to plan-root hashing, valid range, different repos different ports |
+| `TestWorktreeRoutes` | 8 | GET /api/worktrees JSON + fields + fallback, POST switch: missing field 400, no-git 404, nonexistent worktree 404, valid switch 200, missing task.md 400 |
+| `TestSSEBroadcastOnSwitch` | 1 | Verifies full-reload SSE event after successful switch |
