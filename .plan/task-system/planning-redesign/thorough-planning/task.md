@@ -1,7 +1,7 @@
 ---
 title: "Thorough Planning Reference"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:
   - entry-and-placement
@@ -75,3 +75,27 @@ Each refinement round can be lighter (quick-depth update to the tree) even thoug
 - Incremental refinement composes with the depth tiers (thorough initial pass, quick refinement)
 
 ## Results
+
+### File Created
+
+[`skills/planning-workflow/references/thorough-planning.md`](skills/planning-workflow/references/thorough-planning.md) (126 lines) — the thorough planning reference, loaded when depth tier is "thorough."
+
+### Coverage
+
+Five sections covering all required topics:
+
+1. **Exploration Dispatch** — parallel read-only agents (2-4), lightweight dispatch shape using `subagent_type: "research"` with explicit read-only instruction, example objectives for both research and software contexts, plan-mode compatibility note.
+2. **Exploration Synthesis** — consolidation, mapping to work, entry assessment reassessment, gap identification. Main agent work, not delegated.
+3. **Multi-Perspective Design (optional)** — when-to-use / when-not-to-use criteria, dispatch shape, reconciliation protocol with connection to `planning-workflow §Substantive Questions` for surfacing tradeoffs from competing designs.
+4. **Critical Files for Implementation** — 3-5 files, qualification criteria, format as `## Critical Files` section in root `task.md`.
+5. **Incremental Refinement** — refinement rounds use quick-depth mechanics, references standard change protocol, targeted follow-up exploration for missed areas.
+
+### Validation
+
+All 6 validation criteria pass:
+- Standalone loadable: opens with load condition, self-contained pattern description, cross-references by section name
+- Existing dispatch patterns: uses `Agent(subagent_type: ...)` shape from agent-orchestration; no new template shape
+- No DRY violations: no content duplicated from agent-orchestration §Workload Balancing/§Dispatch Templates or planning-workflow SKILL.md phase descriptions
+- Works for research and software: examples include data pipeline/analysis and skill development/code structure
+- Critical files: concise section with qualification criteria and one-line format
+- Incremental refinement: explicitly composes with depth tiers (thorough initial, quick refinement)
