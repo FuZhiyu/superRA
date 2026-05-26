@@ -1,7 +1,7 @@
 ---
 title: "Update core data layer: remove stale fields, add archived status"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:
   - 01-design
