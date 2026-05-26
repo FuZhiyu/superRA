@@ -1,6 +1,6 @@
 ---
 title: "Apply migration to this worktree's .plan/"
-status: implemented
+status: revise
 depends_on:
   - 04-migration-tooling
   - 08-tests
@@ -42,3 +42,7 @@ Ran `plan_migrate.py --upgrade-status` on `.plan/` in the `dashboard-redesign` w
 - Dashboard regenerated at [.plan/dashboard.html](.plan/dashboard.html).
 
 **Pre-existing issues (not introduced by this migration):** 15 dependency-resolution errors (relative `../` paths in `live-server/` subtree) and 7 rollup mismatches where parent `status` was not auto-updated to match children. These are structural issues from earlier tasks.
+
+## Review Notes
+
+1. **[CRITICAL]** Two task files still have `review_status` and `integration_status` frontmatter fields that the migration was supposed to strip: [.plan/task.md](.plan/task.md) (lines 4-5) and [.plan/task-system/task.md](.plan/task-system/task.md) (lines 4-5). Running `task_check.py --category status` currently reports 4 warnings for these stale fields. Running `plan_migrate.py --upgrade-status --plan-root .plan --dry-run` confirms these 2 files still need migration. The Results section's claim of "zero findings" is incorrect. **Fix:** Re-run `plan_migrate.py --upgrade-status --plan-root .plan` (without `--dry-run`) to strip these 2 remaining files, or manually remove the stale fields. Then verify with `task_check.py --category status` that it reports zero findings.
