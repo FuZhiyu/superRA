@@ -1,7 +1,7 @@
 ---
 title: "Worktree Discovery Module"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:  []
 tags: []
