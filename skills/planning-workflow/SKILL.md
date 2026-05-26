@@ -23,19 +23,39 @@ Write comprehensive task objectives for a reader skilled at the craft but with z
 
 Commit the task tree before proceeding to execution.
 
-## Phase 0: Task Tree Discovery
+## Entry Assessment
 
-Check for an existing `.plan/` in the working directory.
+Before any exploration or task design, assess three independent dimensions of the incoming work. There is no procedural difference between creating a task tree and updating one — both pass through the same entry assessment.
 
-**If `.plan/` exists:** Read the tree, summarize its current state (task count, status distribution, root-level task titles), and assess whether the new work relates to an existing root-level task. If related, recommend updating the existing task — this routes to §User Feedback and Changing the Task Tree. If not related, create a new root-level task. Present the existing tree to the user and let them decide placement: new root-level task (independent workstream) or subtask under an existing task.
+**1. Where it goes — Placement.** If `.plan/` exists, read the tree and walk it to find where the new work belongs, using the concern-first placement logic in `task-system/references/planning.md` §Placing Work in the Tree. If `.plan/` does not exist, check for a legacy `PLAN.md` (offer migration via `task-system` §Migration if found) and then the new work becomes the first root-level task.
 
-**If `.plan/` does not exist:** Check for a legacy `PLAN.md`. If found, offer migration via `task-system` §Migration. If no legacy artifacts, proceed to Phase 1.
+**2. How deep — Depth tier.** Choose a tier that modulates how deeply the subsequent phases execute. See §Depth Tiers below. Both placement and depth may need refinement after exploration — placement because the tree relationship was not clear upfront, depth because the work turned out more complex than expected.
+
+**3. What mode — Routing path.** Most work is forward planning (the default). Two alternatives:
+- **Retroactive documentation** — existing code/results need a `.plan/` record. Detected when the entry assessment finds code without task coverage. Routes through the same phases but sets `status: implemented` on created tasks. See §Retroactive Plan Creation.
+- **Consolidation** — tree cleanup requested or detected as needed. Routes to `references/consolidation.md`.
+
+**Placement and depth are independent dimensions.** Neither determines the other. Work can clearly belong under an existing task but still need thorough planning; uncertain tree location does not mean the work itself is hard to plan.
+
+## Depth Tiers
+
+Three tiers that modulate how deeply each subsequent phase executes. A spectrum, not rigid modes — escalate mid-planning if complexity warrants it.
+
+**Quick** — for minor updates, known additions, single-task changes. Light scan of existing `.plan/`, skip deep exploration, go directly to task design. The main agent does everything inline. Appropriate when: updating an objective after a scope revision, adding a well-understood subtask, adjusting dependencies.
+
+**Standard** — the default. Main agent explores project structure, loads domain skill, designs tasks. Appropriate when: new workstreams in familiar territory, adding a significant new branch to the tree, domain hard gates need satisfying.
+
+**Thorough** — dispatch parallel exploration agents before task design. Load `references/thorough-planning.md` for the dispatch pattern. Appropriate when: complex or unfamiliar projects, large scope spanning multiple codebase areas, user explicitly requests deep planning ("plan hard", "explore thoroughly", "I want a detailed plan"). When thorough planning returns competing designs from multiple agents, the unresolved tensions between them are a natural source of substantive questions for the user — see §Substantive Questions.
+
+The depth tier mainly modulates Phase 1 (Exploration) — quick skips deep exploration, standard does the current default, thorough dispatches agents. Phase 2 (Domain Setup) and Phase 3 (Design) scale correspondingly. Phase 4 (Review & Commit) is the same at all tiers.
 
 ## Phase 1: Exploration
 
 Context exploration before task design. Read project structure, existing code, data directories, documentation, CLAUDE.md/README.md files, and git history for relevant prior work.
 
-Depth is adaptive — the agent's judgment call, not a mechanical rule. Lightweight scan for simple or well-understood work; deeper systematic exploration for complex or unfamiliar projects. Domain skills' hard-gate data gathering (data inventory, model primitives survey, manuscript assessment) begins here, but the phase itself is domain-neutral.
+Depth scales with the tier chosen in §Entry Assessment. Quick tier: light scan of the tree neighborhood where the work will land. Standard tier: systematic exploration of the relevant project areas. Thorough tier: dispatch parallel exploration agents per `references/thorough-planning.md`. Domain skills' hard-gate data gathering (data inventory, model primitives survey, manuscript assessment) begins here, but the phase itself is domain-neutral.
+
+Exploration may reveal that the initial placement or depth tier needs adjustment — revisit the entry assessment if so.
 
 ## Phase 2: Domain Setup & Scope
 
@@ -132,11 +152,15 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ### User Review
 
-Present the task tree to the user for review before committing: show the tree (via `task_query.py --tree`), highlight key design decisions, and ask for approval. Commit only after user approval.
+Verify the task tree aligns with the user's intent. Present the tree (via `task_query.py --tree`) and surface remaining open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way. Present tradeoffs as options, not assertions. If you have no genuine questions, the tree presentation itself is the review.
 
 ### Execution Handoff
 
 Commit the `.plan/` directory atomically. Then hand off to `superRA:implementation-workflow`, which owns execution-mode selection, frontier-based dispatch, and review discipline.
+
+## Substantive Questions
+
+At any point during planning, surface questions when you are making assumptions about the user's intent. Do not make large assumptions silently. When you identify a genuine design tradeoff with distinct alternatives, present the options for the user to choose between — do not assert one and narrate your reasoning. Questions are a quality mechanism for tying loose ends, not process checkpoints.
 
 ## Retroactive Plan Creation
 

@@ -42,6 +42,28 @@ A task should be the right size for independent dispatch and review.
 
 **Goal-oriented naming:** "Merge holdings with characteristics" not "Run merge script."
 
+## Placing Work in the Tree
+
+A two-step decision: first find which task's **concern** covers the new work, then decide **granularity** (how big is the extension?).
+
+### Step 1 — Find the concern
+
+Walk the tree recursively. At each level, ask: does an existing task's topic or concern cover this work? If yes, descend into that task and repeat. If no task at this level covers it, create a sibling at this level.
+
+### Step 2 — Decide granularity
+
+Once you have found the right task:
+
+- **Update** — the extension is simple enough that the task stays right-sized for a single dispatch. Rewrite its objective to include both old and new scope. Example: a merge task that handled fund data now also needs to handle CRSP data — same concern, extended scope, still one task.
+
+- **Nest** — the extension is complex enough to warrant its own dispatch and review cycle. Add as a child subtask. The parent's objective may also be broadened to reflect the expanded scope. Example: a data-preparation task that now needs a whole new cleaning pipeline for a second data source — same concern, but the new work needs independent implementation.
+
+- **Create sibling** — the work does not belong under any existing task's concern at this level. Applied at the root level, this creates a new root-level task.
+
+The recursion handles all levels uniformly: start at the root, walk down through the tree, land the work at the right depth.
+
+**Anti-patterns:** creating a new task for what is really a scope extension of an existing task; nesting three or more levels deep when unnecessary; creating siblings with near-identical concerns.
+
 ## Root task.md Anatomy
 
 The root `.plan/task.md` frames the entire project. It carries:

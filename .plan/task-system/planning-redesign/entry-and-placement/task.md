@@ -1,7 +1,7 @@
 ---
 title: "Entry Assessment, Depth Tiers, and Task Placement"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: []
 tags: []
@@ -98,3 +98,26 @@ Update `references/harness-plan-mode.md` to align with the new entry logic. In p
 - Harness plan mode reference is consistent with the new entry logic
 
 ## Results
+
+### Changes Made
+
+**[skills/planning-workflow/SKILL.md](skills/planning-workflow/SKILL.md):**
+- Replaced Phase 0 (Task Tree Discovery) with §Entry Assessment producing three independent outputs: placement, depth tier, routing path
+- Added §Depth Tiers (Quick/Standard/Thorough) with triggers and phase-modulation behavior
+- Updated Phase 1 to scale with depth tier and note that placement/depth can be revised after exploration
+- Reframed Phase 4 §User Review from approval-seeking to alignment-and-loose-ends
+- Added §Substantive Questions as a cross-cutting instruction outside any specific phase
+- Routing paths for retroactive and consolidation are clean pointers in the entry assessment, not duplicated protocol
+
+**[skills/task-system/references/planning.md](skills/task-system/references/planning.md):**
+- Added §Placing Work in the Tree between §Splitting Tasks and §Root task.md Anatomy
+- Two-step logic: Step 1 (find the concern via recursive tree walk) then Step 2 (decide granularity: update / nest / create sibling)
+- Anti-patterns documented
+
+**[skills/planning-workflow/references/harness-plan-mode.md](skills/planning-workflow/references/harness-plan-mode.md):**
+- Replaced "Discovery" bullet with "Entry Assessment" covering placement, depth tier, and routing path
+- Updated "Exploration" bullet to note depth-tier scaling
+
+### Validation
+
+All 11 validation criteria pass — verified by line-by-line review of the modified files.
