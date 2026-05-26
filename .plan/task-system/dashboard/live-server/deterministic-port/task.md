@@ -1,7 +1,7 @@
 ---
 title: "Deterministic port from worktree path"
 status: implemented
-review_status: implemented
+review_status: revise
 integration_status: ~
 depends_on:  []
 tags: []
@@ -44,3 +44,9 @@ Changes made to `skills/task-system/scripts/plan_dashboard.py`:
 5. Updated startup banner to: `Starting dashboard at http://localhost:{port} (derived from {PLAN_ROOT})`.
 
 Verified: two different plan root paths produce different deterministic ports (8561 vs 8167), both in range 8100-8999, and the mapping is stable across calls. Explicit `--port` override still works.
+
+## Review Notes
+
+1. **[CRITICAL]** [plan_dashboard.py:1560](skills/task-system/scripts/plan_dashboard.py#L1560) — `hash()` is non-deterministic across Python processes. Python 3.3+ randomizes hash seeds by default (`PYTHONHASHSEED`), so `hash(str(plan_root.resolve()))` returns a different value each time the script is invoked. Empirically confirmed: three consecutive invocations of `python3 -c "print(hash('/path') % 900 + 8100)"` produced 8483, 8389, 8387. The port is effectively random, not deterministic, defeating the task's core goal ("each worktree always gets the same port"). **Fix:** Replace `hash()` with a stable hash function, e.g. `int(hashlib.sha256(str(plan_root.resolve()).encode()).hexdigest(), 16) % 900 + 8100`.
+
+2. **[MINOR]** [plan_dashboard.py:1626](skills/task-system/scripts/plan_dashboard.py#L1626) — The startup banner always prints "(derived from {PLAN_ROOT})" even when the user explicitly passes `--port`. This is misleading when the port was not derived at all. **Fix:** Conditionally show "(derived from ...)" only when `args.port is None`; otherwise print the port without the derivation note.
