@@ -1,7 +1,7 @@
 ---
 title: "Update task-system skill docs"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:
   - 01-design
