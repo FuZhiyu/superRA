@@ -193,14 +193,15 @@ python3 <skill-dir>/scripts/task_rename.py \
   --plan-root .plan --from 01-data/01-load --to 01-data/01-load-raw
 ```
 
-### Generate HTML dashboard
+### Dashboard
 
 ```bash
-python3 <skill-dir>/scripts/plan_dashboard.py --plan-root .plan
-# Writes .plan/dashboard.html
+uv run <skill-dir>/scripts/plan_dashboard.py serve --root .plan/
 ```
 
-The dashboard is automatically regenerated after every mutation command (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`).
+Starts a live dashboard server with SSE hot-reload — auto-updates when task files change. Port is derived deterministically from the plan root path (range 8100–8999), so multiple worktrees can each run their own dashboard without conflicts. Use `--port N` to override.
+
+The static `generate` subcommand is deprecated — use `serve` instead.
 
 ### Migrate from PLAN.md + RESULTS.md
 
