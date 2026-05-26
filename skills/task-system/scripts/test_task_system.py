@@ -32,13 +32,12 @@ import task_update
 
 
 def _write_task_md(path: Path, title: str, status: str, **kwargs):
-    """Write a v2-format task.md file.
+    """Write a task.md file (unified status format).
 
-    kwargs: review_status, integration_status, depends_on, tags,
-            objective, results, created, updated.
+    kwargs: depends_on, tags, objective, results, created, updated.
+    For legacy test scenarios, review_status and integration_status can be
+    passed to produce old-format files.
     """
-    review_status = kwargs.get("review_status", "~")
-    integration_status = kwargs.get("integration_status", "~")
     depends_on = kwargs.get("depends_on", [])
     tags = kwargs.get("tags", [])
     objective = kwargs.get("objective", "")
@@ -59,11 +58,20 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
     if results:
         body += f"\n## Results\n\n{results}\n"
 
-    content = (
-        f'---\ntitle: "{title}"\nstatus: {status}\nreview_status: {review_status}\n'
-        f"integration_status: {integration_status}\ndepends_on:{deps_yaml}\n"
-        f"tags: {tags_yaml}\ncreated: {created}\nupdated: {updated}\n---\n\n{body}"
-    )
+    # Build frontmatter — include legacy fields only if explicitly passed
+    fm_lines = [f'title: "{title}"', f"status: {status}"]
+    if "review_status" in kwargs:
+        fm_lines.append(f"review_status: {kwargs['review_status']}")
+    if "integration_status" in kwargs:
+        fm_lines.append(f"integration_status: {kwargs['integration_status']}")
+    fm_lines.extend([
+        f"depends_on:{deps_yaml}",
+        f"tags: {tags_yaml}",
+        f"created: {created}",
+        f"updated: {updated}",
+    ])
+
+    content = "---\n" + "\n".join(fm_lines) + "\n---\n\n" + body
     path.write_text(content, encoding="utf-8")
 
 
@@ -82,7 +90,7 @@ def plan_root(tmp_path):
     d1 = root / "01-first"
     d1.mkdir()
     _write_task_md(d1 / "task.md", "First Task", "approved",
-                   review_status="approved", tags=["data"],
+                   tags=["data"],
                    objective="Complete step 1.",
                    results="### Key Findings\n- Found 100 rows")
 
@@ -118,7 +126,6 @@ def plan_with_branches(tmp_path):
     child1 = parent / "01-load"
     child1.mkdir()
     _write_task_md(child1 / "task.md", "Load Data", "approved",
-                   review_status="approved",
                    objective="Read parquet files.")
 
     child2 = parent / "02-merge"
@@ -144,7 +151,6 @@ class TestParseTask:
         task = _task_io.parse_task(plan_root / "01-first" / "task.md")
         assert task.title == "First Task"
         assert task.status == "approved"
-        assert task.review_status == "approved"
         assert task.depends_on == []
         assert task.tags == ["data"]
         assert task.path == "01-first"
@@ -670,8 +676,15 @@ class TestPlanMigrate:
         assert "## Objective" in content
         assert "## Steps" not in content
 
+        # Migrated files should not contain stale status fields
+        assert "review_status" not in content
+        assert "integration_status" not in content
+
         t2 = _task_io.parse_task(output / "02-analyze" / "task.md")
         assert "01-load-data" in t2.depends_on
+        root_content = (output / "task.md").read_text(encoding="utf-8")
+        assert "review_status" not in root_content
+        assert "integration_status" not in root_content
 
 
 # --- Dashboard tests ---
@@ -818,6 +831,186 @@ class TestMigrateV2:
         assert len(modified) == 0  # nothing changed
 
 
+# --- Status consolidation upgrade tests ---
+
+
+class TestUpgradeStatus:
+    def setup_method(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.plan_root = Path(self.tmpdir) / ".plan"
+        self.plan_root.mkdir()
+        _write_task_md(self.plan_root / "task.md", "Root", "not-started")
+
+    def teardown_method(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_strips_review_and_integration_status(self):
+        """Removes review_status and integration_status from frontmatter."""
+        task_dir = self.plan_root / "01-task"
+        task_dir.mkdir()
+        _write_task_md(task_dir / "task.md", "Task A", "implemented",
+                       review_status="approved", integration_status="~")
+
+        modified = plan_migrate.upgrade_status(self.plan_root)
+        assert len(modified) >= 1
+        content = (task_dir / "task.md").read_text(encoding="utf-8")
+        assert "review_status" not in content
+        assert "integration_status" not in content
+
+    def test_review_status_takes_precedence_over_status(self):
+        """review_status overrides status when integration_status is ~."""
+        task_dir = self.plan_root / "01-task"
+        task_dir.mkdir()
+        _write_task_md(task_dir / "task.md", "Task A", "implemented",
+                       review_status="approved", integration_status="~")
+
+        plan_migrate.upgrade_status(self.plan_root)
+        fm, _ = _task_io.parse_frontmatter(
+            (task_dir / "task.md").read_text(encoding="utf-8")
+        )
+        assert fm["status"] == "approved"
+
+    def test_integration_status_takes_precedence_over_review(self):
+        """integration_status overrides both review_status and status."""
+        task_dir = self.plan_root / "01-task"
+        task_dir.mkdir()
+        _write_task_md(task_dir / "task.md", "Task A", "implemented",
+                       review_status="approved", integration_status="revise")
+
+        plan_migrate.upgrade_status(self.plan_root)
+        fm, _ = _task_io.parse_frontmatter(
+            (task_dir / "task.md").read_text(encoding="utf-8")
+        )
+        assert fm["status"] == "revise"
+
+    def test_status_preserved_when_no_overrides(self):
+        """When review/integration are both ~, status is kept as-is."""
+        task_dir = self.plan_root / "01-task"
+        task_dir.mkdir()
+        _write_task_md(task_dir / "task.md", "Task A", "in-progress",
+                       review_status="~", integration_status="~")
+
+        plan_migrate.upgrade_status(self.plan_root)
+        fm, _ = _task_io.parse_frontmatter(
+            (task_dir / "task.md").read_text(encoding="utf-8")
+        )
+        assert fm["status"] == "in-progress"
+
+    def test_removes_workflow_status_section(self):
+        """Strips ## Workflow Status sections from the task body."""
+        task_dir = self.plan_root / "01-task"
+        task_dir.mkdir()
+        content = (
+            '---\ntitle: "Task A"\nstatus: approved\nreview_status: approved\n'
+            "integration_status: ~\ndepends_on: []\ntags: []\n"
+            "created: 2026-01-01\nupdated: 2026-01-01\n---\n\n"
+            "## Objective\n\nDo the thing.\n\n"
+            "## Workflow Status\n\nPhase: implementation\n\n"
+            "## Results\n\nDone.\n"
+        )
+        (task_dir / "task.md").write_text(content, encoding="utf-8")
+
+        plan_migrate.upgrade_status(self.plan_root)
+        new_content = (task_dir / "task.md").read_text(encoding="utf-8")
+        assert "## Workflow Status" not in new_content
+        assert "Phase: implementation" not in new_content
+        assert "## Objective" in new_content
+        assert "## Results" in new_content
+
+    def test_dry_run_does_not_write(self):
+        """--dry-run reports changes without modifying files."""
+        task_dir = self.plan_root / "01-task"
+        task_dir.mkdir()
+        _write_task_md(task_dir / "task.md", "Task A", "implemented",
+                       review_status="approved", integration_status="~")
+        original = (task_dir / "task.md").read_text(encoding="utf-8")
+
+        modified = plan_migrate.upgrade_status(self.plan_root, dry_run=True)
+        assert len(modified) >= 1
+        # File should be unchanged
+        assert (task_dir / "task.md").read_text(encoding="utf-8") == original
+
+    def test_idempotent_on_already_clean_files(self):
+        """Files without review_status/integration_status are not touched."""
+        task_dir = self.plan_root / "01-task"
+        task_dir.mkdir()
+        _write_task_md(task_dir / "task.md", "Task A", "approved")
+
+        modified = plan_migrate.upgrade_status(self.plan_root)
+        assert len(modified) == 0
+
+    def test_multiple_files_upgraded(self):
+        """All task.md files in the tree are processed."""
+        for i in range(1, 4):
+            d = self.plan_root / f"{i:02d}-task"
+            d.mkdir()
+            _write_task_md(d / "task.md", f"Task {i}", "implemented",
+                           review_status="approved", integration_status="~")
+
+        modified = plan_migrate.upgrade_status(self.plan_root)
+        # Root + 3 tasks, but root has no stale fields so only 3 modified
+        assert len(modified) == 3
+
+
+class TestMigrationMapping:
+    """Tests for _compute_status_from_steps migration mapping in PLAN.md migration."""
+
+    def test_integration_status_wins(self, tmp_path):
+        """When PLAN.md has integration_status, it determines the unified status."""
+        plan_md = tmp_path / "PLAN.md"
+        plan_md.write_text(
+            "# Test Plan\n\n---\n\n"
+            "### Task 1: Done Task\n"
+            "**Depends on:** *(none)*\n"
+            "**Review status:** approved\n"
+            "**Integration status:** revise\n\n"
+            "- [x] Step 1\n",
+            encoding="utf-8",
+        )
+        output = tmp_path / ".plan"
+        plan_migrate.migrate(plan_md, None, output)
+        fm, _ = _task_io.parse_frontmatter(
+            (output / "01-done-task" / "task.md").read_text(encoding="utf-8")
+        )
+        assert fm["status"] == "revise"
+
+    def test_review_status_wins_over_checkbox(self, tmp_path):
+        """When review_status is set but integration_status is not, review wins."""
+        plan_md = tmp_path / "PLAN.md"
+        plan_md.write_text(
+            "# Test Plan\n\n---\n\n"
+            "### Task 1: Reviewed Task\n"
+            "**Depends on:** *(none)*\n"
+            "**Review status:** approved\n\n"
+            "- [x] Step 1\n",
+            encoding="utf-8",
+        )
+        output = tmp_path / ".plan"
+        plan_migrate.migrate(plan_md, None, output)
+        fm, _ = _task_io.parse_frontmatter(
+            (output / "01-reviewed-task" / "task.md").read_text(encoding="utf-8")
+        )
+        assert fm["status"] == "approved"
+
+    def test_checkbox_fallback(self, tmp_path):
+        """When no review/integration status, checkboxes determine status."""
+        plan_md = tmp_path / "PLAN.md"
+        plan_md.write_text(
+            "# Test Plan\n\n---\n\n"
+            "### Task 1: Partial Task\n"
+            "**Depends on:** *(none)*\n\n"
+            "- [x] Step 1\n"
+            "- [ ] Step 2\n",
+            encoding="utf-8",
+        )
+        output = tmp_path / ".plan"
+        plan_migrate.migrate(plan_md, None, output)
+        fm, _ = _task_io.parse_frontmatter(
+            (output / "01-partial-task" / "task.md").read_text(encoding="utf-8")
+        )
+        assert fm["status"] == "in-progress"
+
+
 # --- Validation function tests ---
 
 
@@ -833,12 +1026,6 @@ class TestValidateFrontmatter:
         warnings = _task_io.validate_frontmatter(task)
         assert any("invalid status" in w for w in warnings)
         assert any("done" in w for w in warnings)
-
-    def test_bad_review_status_value(self, plan_root):
-        task = _task_io.parse_task(plan_root / "01-first" / "task.md")
-        task.review_status = "complete"  # invalid
-        warnings = _task_io.validate_frontmatter(task)
-        assert any("invalid review_status" in w for w in warnings)
 
     def test_depends_on_not_list(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")

@@ -15,8 +15,6 @@ TASK_TEMPLATE = """\
 ---
 title: "{title}"
 status: not-started
-review_status: ~
-integration_status: ~
 depends_on: {depends_on}
 tags: []
 {script_line}{input_line}{output_line}created: {today}

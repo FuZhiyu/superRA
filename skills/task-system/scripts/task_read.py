@@ -128,10 +128,13 @@ def _render_frontmatter_readable(fm: dict) -> str:
     """Render frontmatter dict as readable key: value lines."""
     lines = []
     field_order = [
-        "title", "status", "review_status", "integration_status",
+        "title", "status",
         "depends_on", "tags", "script", "input", "output",
         "created", "updated",
     ]
+    # Stale fields removed from the data model — suppress in output even if
+    # still present in old task files.
+    _STALE_FIELDS = {"review_status", "integration_status"}
     seen = set()
     for key in field_order:
         if key not in fm:
@@ -150,7 +153,7 @@ def _render_frontmatter_readable(fm: dict) -> str:
         else:
             lines.append(f"{key}: {val}")
     for key, val in fm.items():
-        if key in seen:
+        if key in seen or key in _STALE_FIELDS:
             continue
         if isinstance(val, list):
             lines.append(f"{key}: {', '.join(val) if val else '(none)'}")
@@ -241,8 +244,6 @@ def render_json(
         "title": target_task.title,
         "status": target_task.status,
         "effective_status": target_task.effective_status(),
-        "review_status": target_task.review_status,
-        "integration_status": target_task.integration_status,
         "depends_on": target_task.depends_on,
         "tags": target_task.tags,
         "script": target_task.script,

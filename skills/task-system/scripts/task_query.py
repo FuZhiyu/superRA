@@ -19,6 +19,7 @@ STATUS_ICONS = {
     "implemented": "◑",
     "revise": "✗",
     "approved": "●",
+    "archived": "▪",
 }
 
 
@@ -111,6 +112,7 @@ def render_dag(task: Task, subtree_path: str = "") -> str:
         "implemented": ":::implemented",
         "revise": ":::revise",
         "approved": ":::approved",
+        "archived": ":::archived",
     }
 
     lines = ["graph LR"]
@@ -133,6 +135,7 @@ def render_dag(task: Task, subtree_path: str = "") -> str:
     lines.append("    classDef implemented fill:#fff9c4,stroke:#f9a825,color:#e65100")
     lines.append("    classDef revise fill:#ffcdd2,stroke:#e53935,color:#b71c1c")
     lines.append("    classDef approved fill:#c8e6c9,stroke:#43a047,color:#1b5e20")
+    lines.append("    classDef archived fill:#f5f5f5,stroke:#bdbdbd,color:#9e9e9e")
 
     return "\n".join(lines)
 
@@ -156,8 +159,6 @@ def tree_to_json(task: Task) -> dict:
         "title": task.title,
         "status": task.status,
         "effective_status": task.effective_status(),
-        "review_status": task.review_status,
-        "integration_status": task.integration_status,
         "depends_on": task.depends_on,
         "tags": task.tags,
         "script": task.script,

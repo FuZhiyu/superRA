@@ -31,21 +31,36 @@ FIELD_RE = {
     "output": re.compile(r"^\*\*Output:\*\*\s*(.+)$", re.MULTILINE),
 }
 
+# Fields that are removed during status consolidation upgrade
+STALE_STATUS_FIELDS = {"review_status", "integration_status"}
+
+# Regex to match ## Workflow Status sections in task bodies
+WORKFLOW_STATUS_SECTION_RE = re.compile(
+    r"^## Workflow Status\s*\n(?:(?!^## ).)*",
+    re.MULTILINE | re.DOTALL,
+)
+
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Migrate PLAN.md + RESULTS.md into a .plan/ directory tree, "
-        "or upgrade existing v1 task files to v2 format."
+        "or upgrade existing task files."
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--plan-md", help="Path to PLAN.md (v1 migration)")
+    group.add_argument("--plan-md", help="Path to PLAN.md (PLAN.md -> .plan/ migration)")
     group.add_argument(
         "--upgrade", action="store_true", default=False,
-        help="Upgrade existing .plan/ task files from v1 to v2 format",
+        help="Upgrade existing .plan/ task files from v1 to v2 format (headings, checkboxes)",
+    )
+    group.add_argument(
+        "--upgrade-status", action="store_true", default=False,
+        help="Consolidate review_status/integration_status into single status field",
     )
     parser.add_argument("--results-md", default="", help="Path to RESULTS.md (optional, for --plan-md)")
     parser.add_argument("--output", default="", help="Output directory (for --plan-md, e.g., .plan)")
-    parser.add_argument("--plan-root", default="", help="Plan root directory (for --upgrade)")
+    parser.add_argument("--plan-root", default="", help="Plan root directory (for --upgrade/--upgrade-status)")
+    parser.add_argument("--dry-run", action="store_true", default=False,
+                        help="Show what would change without writing files (for --upgrade-status)")
     return parser.parse_args(argv)
 
 
@@ -179,26 +194,8 @@ def _extract_steps_and_rest(body: str) -> tuple[str, str, str, str]:
     return meta, rest, review_notes, sync_impact
 
 
-def _compute_status_from_steps(body: str) -> str:
-    """Infer task status from checkbox states and review status."""
-    review = _extract_field(body, "review_status").upper()
-    if "APPROVED" in review:
-        return "approved"
-    if "REVISE" in review:
-        return "revise"
-    if "IMPLEMENTED" in review:
-        return "implemented"
-
-    checked = len(re.findall(r"- \[[xX]\]", body))
-    unchecked = len(re.findall(r"- \[ \]", body))
-    if checked > 0 and unchecked == 0:
-        return "implemented"
-    if checked > 0:
-        return "in-progress"
-    return "not-started"
-
-
-def _normalize_review_status(raw: str) -> str:
+def _normalize_status_value(raw: str) -> str:
+    """Normalize a raw status string from PLAN.md to a canonical status value."""
     raw = raw.strip().upper()
     if "APPROVED" in raw:
         return "approved"
@@ -206,7 +203,33 @@ def _normalize_review_status(raw: str) -> str:
         return "revise"
     if "IMPLEMENTED" in raw:
         return "implemented"
-    return "~"
+    return ""
+
+
+def _compute_status_from_steps(body: str) -> str:
+    """Infer unified task status from PLAN.md fields and checkbox states.
+
+    Applies the migration mapping: integration_status > review_status > checkboxes.
+    """
+    # Most-recent lifecycle field takes precedence (migration mapping)
+    integration_raw = _extract_field(body, "integration_status")
+    integration = _normalize_status_value(integration_raw)
+    if integration:
+        return integration
+
+    review_raw = _extract_field(body, "review_status")
+    review = _normalize_status_value(review_raw)
+    if review:
+        return review
+
+    # Fall back to checkbox-based inference
+    checked = len(re.findall(r"- \[[xX]\]", body))
+    unchecked = len(re.findall(r"- \[ \]", body))
+    if checked > 0 and unchecked == 0:
+        return "implemented"
+    if checked > 0:
+        return "in-progress"
+    return "not-started"
 
 
 def _strip_checkboxes(text: str) -> str:
@@ -217,8 +240,6 @@ def _strip_checkboxes(text: str) -> str:
 def _build_task_md(
     title: str,
     status: str,
-    review_status: str,
-    integration_status: str,
     depends_on: list[str],
     script: str,
     input_files: list[str],
@@ -237,8 +258,6 @@ def _build_task_md(
         "---",
         f'title: "{escaped_title}"',
         f"status: {status}",
-        f"review_status: {review_status}",
-        f"integration_status: {integration_status}",
         f"depends_on:{deps}",
         "tags: []",
     ]
@@ -299,7 +318,7 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     root_task_md = output_dir / "task.md"
-    root_content = f"---\ntitle: \"{escaped_plan_title}\"\nstatus: not-started\nreview_status: ~\nintegration_status: ~\ndepends_on: []\ntags: []\ncreated: {today_str()}\nupdated: {today_str()}\n---\n\n{header}\n"
+    root_content = f"---\ntitle: \"{escaped_plan_title}\"\nstatus: not-started\ndepends_on: []\ntags: []\ncreated: {today_str()}\nupdated: {today_str()}\n---\n\n{header}\n"
     root_task_md.write_text(root_content, encoding="utf-8")
     print(f"Created {root_task_md}")
 
@@ -322,15 +341,12 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
                 if dep_num in task_num_to_slug:
                     depends_on_slugs.append(task_num_to_slug[dep_num])
 
-        review_raw = _extract_field(body, "review_status")
-        integration_raw = _extract_field(body, "integration_status")
         script = _extract_field(body, "script")
         input_files = _extract_file_list(_extract_field(body, "input"))
         output_files = _extract_file_list(_extract_field(body, "output"))
 
+        # Unified status: migration mapping applied inside _compute_status_from_steps
         status = _compute_status_from_steps(body)
-        review_status = _normalize_review_status(review_raw)
-        integration_status = _normalize_review_status(integration_raw)
 
         _, steps_body, review_notes, sync_impact = _extract_steps_and_rest(body)
 
@@ -339,8 +355,6 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
         task_content = _build_task_md(
             title=title,
             status=status,
-            review_status=review_status,
-            integration_status=integration_status,
             depends_on=depends_on_slugs,
             script=script,
             input_files=input_files,
@@ -441,6 +455,98 @@ def upgrade_v1_to_v2(plan_root: Path) -> list[Path]:
     return modified
 
 
+def _apply_migration_mapping(
+    status: str, review_status: str, integration_status: str,
+) -> str:
+    """Apply the status consolidation migration mapping.
+
+    Precedence: integration_status > review_status > status.
+    Returns the unified status value.
+    """
+    if integration_status and integration_status != "~":
+        return integration_status
+    if review_status and review_status != "~":
+        return review_status
+    return status
+
+
+def upgrade_status(plan_root: Path, dry_run: bool = False) -> list[Path]:
+    """Consolidate review_status/integration_status into the single status field.
+
+    Walks all task.md files under plan_root and for each:
+    - Reads the (status, review_status, integration_status) triple from frontmatter
+    - Applies migration mapping to determine the unified status
+    - Removes review_status and integration_status lines from frontmatter
+    - Removes any ## Workflow Status sections from the body
+    - Writes the file back (unless dry_run is True)
+
+    Returns the list of files that were (or would be) modified.
+    """
+    modified: list[Path] = []
+
+    for task_md in sorted(plan_root.rglob("task.md")):
+        text = task_md.read_text(encoding="utf-8")
+        fm, body = parse_frontmatter(text)
+
+        changed = False
+
+        # Read the triple
+        old_status = str(fm.get("status", "not-started"))
+        old_review = str(fm.get("review_status", "~"))
+        old_integration = str(fm.get("integration_status", "~"))
+
+        # Apply migration mapping
+        new_status = _apply_migration_mapping(old_status, old_review, old_integration)
+        if new_status != old_status:
+            changed = True
+
+        # Check for stale fields to remove
+        has_stale = any(k in fm for k in STALE_STATUS_FIELDS)
+        if has_stale:
+            changed = True
+
+        # Check for ## Workflow Status section in body
+        if WORKFLOW_STATUS_SECTION_RE.search(body):
+            changed = True
+
+        if not changed:
+            continue
+
+        # Apply changes
+        fm["status"] = new_status
+        for stale_key in STALE_STATUS_FIELDS:
+            fm.pop(stale_key, None)
+
+        new_body = WORKFLOW_STATUS_SECTION_RE.sub("", body)
+        # Clean up any double blank lines left by section removal
+        while "\n\n\n" in new_body:
+            new_body = new_body.replace("\n\n\n", "\n\n")
+
+        label = "[dry-run] " if dry_run else ""
+        source = ""
+        if old_review != "~" and old_review:
+            source = f" (from review_status={old_review!r})"
+        if old_integration != "~" and old_integration:
+            source = f" (from integration_status={old_integration!r})"
+        print(f"{label}{'Would update' if dry_run else 'Updated'} {task_md}: "
+              f"status={old_status!r} -> {new_status!r}{source}")
+
+        if not dry_run:
+            fm_text = serialize_frontmatter(fm)
+            content = f"---\n{fm_text}---\n{new_body}"
+            task_md.write_text(content, encoding="utf-8")
+
+        modified.append(task_md)
+
+    if not modified:
+        print("All task files already use the unified status field.")
+    else:
+        verb = "Would update" if dry_run else "Updated"
+        print(f"\n{verb} {len(modified)} file(s).")
+
+    return modified
+
+
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
 
@@ -449,6 +555,11 @@ def main(argv: list[str] | None = None) -> None:
             print("Error: --plan-root is required with --upgrade", file=sys.stderr)
             sys.exit(1)
         upgrade_v1_to_v2(Path(args.plan_root))
+    elif args.upgrade_status:
+        if not args.plan_root:
+            print("Error: --plan-root is required with --upgrade-status", file=sys.stderr)
+            sys.exit(1)
+        upgrade_status(Path(args.plan_root), dry_run=args.dry_run)
     else:
         if not args.output:
             print("Error: --output is required with --plan-md", file=sys.stderr)
