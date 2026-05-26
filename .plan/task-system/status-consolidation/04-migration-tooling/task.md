@@ -1,7 +1,7 @@
 ---
 title: "Update migration tooling"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:
   - 02-data-layer
