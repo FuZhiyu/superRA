@@ -156,6 +156,23 @@ body {
   transition: all 0.15s ease;
 }
 .hc-btn:hover, .hc-select:hover { background: var(--bg-hover); color: var(--text); }
+
+/* Worktree selector */
+.worktree-selector {
+  display: none;  /* shown by JS when multiple worktrees */
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+.worktree-selector .wt-icon {
+  font-size: 14px;
+  color: var(--text-mute);
+  line-height: 1;
+}
+.worktree-selector .hc-select {
+  max-width: 240px;
+  text-overflow: ellipsis;
+}
 .hc-btn.active {
   background: var(--accent);
   color: #fff;
@@ -575,7 +592,12 @@ body {
 
 <!-- ── Header ── -->
 <div class="header">
-  <span class="header-title">{{ root_task.title or 'Plan Dashboard' }}</span>
+  <span class="header-title" id="header-title">{{ root_task.title or 'Plan Dashboard' }}</span>
+  <div class="worktree-selector" id="worktree-selector">
+    <span class="wt-icon" title="Switch worktree">&#9095;</span>
+    <select class="hc-select" id="worktree-select" onchange="switchWorktree(this.value)">
+    </select>
+  </div>
   <div class="header-stats" id="summary-bar"
        sse-swap="summary-updated"
        hx-swap="innerHTML">
@@ -929,6 +951,68 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
     }
   });
 });
+
+/* ── Worktree selector ── */
+var _wtPreviousValue = '';  /* track previous selection for revert on error */
+
+function populateWorktreeSelector(data) {
+  var selector = document.getElementById('worktree-selector');
+  var select = document.getElementById('worktree-select');
+  if (!selector || !select) return;
+
+  /* Hide if single worktree or no data */
+  if (!data || !data.worktrees || data.worktrees.length <= 1) {
+    selector.style.display = 'none';
+    return;
+  }
+
+  /* Build options */
+  select.innerHTML = '';
+  data.worktrees.forEach(function(wt) {
+    var opt = document.createElement('option');
+    opt.value = wt.path;
+    var label = wt.branch || wt.path.split('/').pop();
+    if (wt.plan_title) label += ' — ' + wt.plan_title;
+    if (wt.is_agent) label = '[agent] ' + label;
+    opt.textContent = label;
+    if (wt.is_agent) opt.style.opacity = '0.6';
+    if (wt.is_current) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  _wtPreviousValue = select.value;
+  selector.style.display = 'flex';
+}
+
+function fetchWorktrees() {
+  fetch('/api/worktrees')
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) { if (data) populateWorktreeSelector(data); })
+    .catch(function() { /* graceful: hide selector */ });
+}
+
+function switchWorktree(planRoot) {
+  if (!planRoot || planRoot === _wtPreviousValue) return;
+  fetch('/api/worktree/switch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan_root: planRoot })
+  })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.detail || 'Switch failed'); });
+      /* Success — SSE full-reload will trigger location.reload() */
+      _wtPreviousValue = planRoot;
+    })
+    .catch(function(err) {
+      alert('Worktree switch failed: ' + err.message);
+      /* Revert dropdown to previous selection */
+      var select = document.getElementById('worktree-select');
+      if (select) select.value = _wtPreviousValue;
+    });
+}
+
+/* Fetch worktrees on page load */
+fetchWorktrees();
 
 /* ── SSE full-reload: structural changes (task added/deleted) ── */
 var fullReloadEl = document.getElementById('sse-full-reload');
