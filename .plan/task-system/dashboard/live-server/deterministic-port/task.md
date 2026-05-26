@@ -1,7 +1,7 @@
 ---
 title: "Deterministic port from worktree path"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:  []
 tags: []
@@ -45,10 +45,3 @@ Changes made to `skills/task-system/scripts/plan_dashboard.py`:
 
 Verified: `hashlib.sha256` produces the same port for the same path across multiple Python invocations (8913 consistently for the test path), and different paths yield different ports (8913 vs 8458). Explicit `--port` override still works and no longer shows misleading "derived from" text.
 
-## Review Notes
-
-1. **[CRITICAL]** [plan_dashboard.py:1560](skills/task-system/scripts/plan_dashboard.py#L1560) — `hash()` is non-deterministic across Python processes. Python 3.3+ randomizes hash seeds by default (`PYTHONHASHSEED`), so `hash(str(plan_root.resolve()))` returns a different value each time the script is invoked. Empirically confirmed: three consecutive invocations of `python3 -c "print(hash('/path') % 900 + 8100)"` produced 8483, 8389, 8387. The port is effectively random, not deterministic, defeating the task's core goal ("each worktree always gets the same port"). **Fix:** Replace `hash()` with a stable hash function, e.g. `int(hashlib.sha256(str(plan_root.resolve()).encode()).hexdigest(), 16) % 900 + 8100`.
-   → implemented: replaced `hash()` with `hashlib.sha256`; added `import hashlib` ([plan_dashboard.py:17](skills/task-system/scripts/plan_dashboard.py#L17), [plan_dashboard.py:1561](skills/task-system/scripts/plan_dashboard.py#L1561))
-
-2. **[MINOR]** [plan_dashboard.py:1626](skills/task-system/scripts/plan_dashboard.py#L1626) — The startup banner always prints "(derived from {PLAN_ROOT})" even when the user explicitly passes `--port`. This is misleading when the port was not derived at all. **Fix:** Conditionally show "(derived from ...)" only when `args.port is None`; otherwise print the port without the derivation note.
-   → implemented: conditional banner — shows "(derived from ...)" only when port is auto-computed ([plan_dashboard.py:1627-1630](skills/task-system/scripts/plan_dashboard.py#L1627-L1630))
