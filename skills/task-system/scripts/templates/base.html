@@ -171,6 +171,8 @@ body {
 }
 .worktree-selector .hc-select {
   max-width: 240px;
+  overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
 }
 .hc-btn.active {
@@ -970,7 +972,7 @@ function populateWorktreeSelector(data) {
   select.innerHTML = '';
   data.worktrees.forEach(function(wt) {
     var opt = document.createElement('option');
-    opt.value = wt.path;
+    opt.value = wt.plan_root || wt.path;
     var label = wt.branch || wt.path.split('/').pop();
     if (wt.plan_title) label += ' — ' + wt.plan_title;
     if (wt.is_agent) label = '[agent] ' + label;

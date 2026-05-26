@@ -599,6 +599,7 @@ async def list_worktrees():
                 "plan_title": w.plan_title,
                 "is_current": is_current,
                 "has_plan": w.plan_root is not None,
+                "plan_root": w.plan_root,
                 "is_agent": w.is_agent,
                 "last_activity": w.last_activity,
             }
