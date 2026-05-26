@@ -1,7 +1,7 @@
 ---
 title: "Deterministic port from worktree path"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -30,3 +30,17 @@ When multiple worktrees each run their own dashboard, they collide on the defaul
 
 ## Results
 
+Implemented in [plan_dashboard.py:1554-1566](skills/task-system/scripts/plan_dashboard.py#L1554-L1566).
+
+Changes made to `skills/task-system/scripts/plan_dashboard.py`:
+
+1. Added `import socket` to the module imports (line 18).
+2. Added `_default_port(plan_root: Path) -> int` helper (lines 1554-1566) that:
+   - Computes `hash(str(plan_root.resolve())) % 900 + 8100` for range 8100-8999.
+   - Checks port availability via `socket.connect_ex`; tries next port on collision (up to 10 attempts, wrapping at 8999).
+   - Falls back to OS-assigned (`port=0`) if all 10 attempts fail.
+3. Changed `--port` default from `8080` to `None` (line 1585).
+4. In `main()`, resolves port via `_default_port(PLAN_ROOT)` when `args.port is None` (line 1621).
+5. Updated startup banner to: `Starting dashboard at http://localhost:{port} (derived from {PLAN_ROOT})`.
+
+Verified: two different plan root paths produce different deterministic ports (8561 vs 8167), both in range 8100-8999, and the mapping is stable across calls. Explicit `--port` override still works.

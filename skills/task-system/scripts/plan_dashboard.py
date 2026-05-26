@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import socket
 import sys
 import webbrowser
 from contextlib import asynccontextmanager
@@ -1550,6 +1551,21 @@ def generate_dashboard(plan_root: Path, output_path: Path | None = None) -> Path
 # ---------------------------------------------------------------------------
 
 
+def _default_port(plan_root: Path) -> int:
+    """Derive a deterministic port from the resolved plan root path.
+
+    Maps into range 8100-8999. If the port is in use, tries the next port up
+    (wrapping at 8999). Falls back to OS-assigned (port=0) after 10 attempts.
+    """
+    base_port = hash(str(plan_root.resolve())) % 900 + 8100
+    for i in range(10):
+        port = 8100 + (base_port - 8100 + i) % 900
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("localhost", port)) != 0:
+                return port
+    return 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Task dashboard: live server or static HTML generation.",
@@ -1566,8 +1582,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     serve_p.add_argument(
         "--port",
         type=int,
-        default=8080,
-        help="Server port (default: 8080)",
+        default=None,
+        help="Server port (default: deterministic port derived from plan root)",
     )
     serve_p.add_argument(
         "--no-open",
@@ -1602,10 +1618,12 @@ def main(argv: list[str] | None = None) -> None:
             print(f"Error: plan root not found: {PLAN_ROOT}", file=sys.stderr)
             sys.exit(1)
 
+        port = args.port if args.port is not None else _default_port(PLAN_ROOT)
+
         import uvicorn
 
-        url = f"http://localhost:{args.port}"
-        print(f"Starting dashboard server at {url}")
+        url = f"http://localhost:{port}"
+        print(f"Starting dashboard at {url} (derived from {PLAN_ROOT})")
         print(f"Watching: {PLAN_ROOT}")
 
         if not args.no_open:
@@ -1622,7 +1640,7 @@ def main(argv: list[str] | None = None) -> None:
         uvicorn.run(
             app,
             host="0.0.0.0",
-            port=args.port,
+            port=port,
             log_level="info",
         )
 
