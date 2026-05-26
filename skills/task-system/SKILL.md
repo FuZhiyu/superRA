@@ -73,9 +73,7 @@ Edit `task.md` directly with Read/Edit tools. The file has two parts:
 | Field | Type | Values | Owner |
 |---|---|---|---|
 | `title` | string | descriptive name | planner |
-| `status` | enum | `not-started` \| `in-progress` \| `implemented` \| `revise` \| `approved` | implementer |
-| `review_status` | enum | `~` \| `implemented` \| `revise` \| `approved` | reviewer |
-| `integration_status` | enum | `~` \| `implemented` \| `revise` \| `approved` | reviewer |
+| `status` | enum | `not-started` \| `in-progress` \| `implemented` \| `revise` \| `approved` \| `archived` | implementer / reviewer |
 | `depends_on` | list | sibling directory names | planner |
 | `tags` | list | free-form | planner |
 | `script` | string | path to primary script | planner |
@@ -97,7 +95,7 @@ Any `## Heading` is valid. Recommended defaults:
 
 ## Ownership Model
 
-You own the **body sections** of your assigned task (`## Results` and status/review_status frontmatter). You do not own:
+You own the **body sections** of your assigned task (`## Results` and `status` frontmatter). The `status` field is co-owned: implementer owns transitions up to `implemented`, reviewer owns `implemented → revise` and `implemented → approved`. You do not own:
 
 - **Other tasks' content** — steps, status, review notes, results.
 - **Scope-defining frontmatter** — `title`, `depends_on`, `script`, `input`, `output`. These are planner-owned.
@@ -108,9 +106,7 @@ You own the **body sections** of your assigned task (`## Results` and status/rev
 ```yaml
 ---
 title: "Merge with Fund Characteristics"
-status: not-started           # not-started | in-progress | implemented | revise | approved
-review_status: ~              # ~ | implemented | revise | approved
-integration_status: ~         # ~ | implemented | revise | approved
+status: not-started           # not-started | in-progress | implemented | revise | approved | archived
 depends_on:                   # sibling directory names only
   - 01-load-raw-data
 tags: [data-merge]            # both inline [x] and multi-line list forms are accepted
@@ -165,7 +161,7 @@ python3 <skill-dir>/scripts/task_create.py \
 ```bash
 python3 <skill-dir>/scripts/task_update.py \
   --plan-root .plan --path 01-data/03-filter \
-  --status approved --review-status approved
+  --status approved
 ```
 
 ### Add results to a task
@@ -225,8 +221,8 @@ If the count does not match the number of tasks in the file, the PLAN.md needs n
 
 - Task headings in PLAN.md: `### Task N: Title` (exactly `###`, numbered, colon-separated)
 - Result headings in RESULTS.md: `## Task N: Title`
-- Metadata as bold-label lines: `**Depends on:**`, `**Script:**`, `**Input:**`, `**Output:**`, `**Review status:**`, `**Integration status:**`
-- Status inferred from checkboxes (`- [x]` / `- [ ]`): all checked = `implemented`, mixed = `in-progress`, none = `not-started`. A `**Review status:**` of APPROVED/REVISE/IMPLEMENTED overrides checkbox inference
+- Metadata as bold-label lines: `**Depends on:**`, `**Script:**`, `**Input:**`, `**Output:**`, `**Review status:**`, `**Integration status:**` (legacy fields mapped to unified `status`)
+- Status mapped from legacy fields: if `integration_status` is set, it takes precedence; else if `review_status` is set, it takes precedence; else inferred from checkboxes (`- [x]` / `- [ ]`): all checked = `implemented`, mixed = `in-progress`, none = `not-started`
 - Dependencies as comma-separated `Task N` references (e.g. `**Depends on:** Task 1, Task 3`) or `*(none)*`
 - File lists as backtick-delimited (`` `file.py` ``) or comma-separated values; `*(none)*` for empty
 

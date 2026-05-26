@@ -14,9 +14,7 @@ class Task:
     path: str           # relative path from plan root (empty string for root)
     dir_path: Path      # absolute path to the task directory
     title: str
-    status: str         # not-started | in-progress | implemented | revise | approved
-    review_status: str  # ~ | implemented | revise | approved
-    integration_status: str
+    status: str         # not-started | in-progress | implemented | revise | approved | archived
     depends_on: list[str]
     tags: list[str]
     script: str
@@ -61,9 +59,7 @@ Key properties:
 ### Enum constants
 
 ```python
-VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved")
-VALID_REVIEW_STATUSES = ("~", "implemented", "revise", "approved")
-VALID_INTEGRATION_STATUSES = ("~", "implemented", "revise", "approved")
+VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved", "archived")
 ```
 
 ### Child ordering
@@ -133,8 +129,8 @@ Matches `## Task N: Title` headings in RESULTS.md. Task numbers must correspond 
 | Field | Pattern | Notes |
 |---|---|---|
 | `depends_on` | `**Depends on:** <value>` | Comma-separated `Task N` refs or `*(none)*` |
-| `review_status` | `**Review status:** <value>` | Normalized: APPROVED/REVISE/IMPLEMENTED → lowercase |
-| `integration_status` | `**Integration status:** <value>` | Same normalization as review_status |
+| `review_status` | `**Review status:** <value>` | Legacy source field; normalized to lowercase and mapped to unified `status` |
+| `integration_status` | `**Integration status:** <value>` | Legacy source field; same normalization and mapping |
 | `script` | `**Script:** <value>` | Optional backtick wrapper stripped |
 | `input` | `**Input:** <value>` | Backtick-delimited list or comma-separated |
 | `output` | `**Output:** <value>` | Same as input |
@@ -143,9 +139,11 @@ Missing fields default to empty/none. The `_extract_file_list` helper recognizes
 
 **Status inference** — `_compute_status_from_steps`:
 
-1. If `**Review status:**` contains APPROVED → `approved`; REVISE → `revise`; IMPLEMENTED → `implemented`
-2. Otherwise count checkboxes: `- [xX]` (checked) and `- [ ]` (unchecked, exactly one space)
-3. All checked + none unchecked → `implemented`; mixed → `in-progress`; none checked → `not-started`
+The migrator maps the legacy `(status, review_status, integration_status)` triple to a single `status` field:
+
+1. If `integration_status` is set and non-`~` → use as `status` (most recent lifecycle event)
+2. Else if `review_status` is set and non-`~` → use as `status`
+3. Else infer from checkboxes: `- [xX]` (checked) and `- [ ]` (unchecked, exactly one space). All checked + none unchecked → `implemented`; mixed → `in-progress`; none checked → `not-started`
 
 Checkbox variants like `- [~]`, `- [-]`, or `- [X ]` (with extra space) are not matched by either pattern and are effectively invisible — leading to incorrect status inference.
 

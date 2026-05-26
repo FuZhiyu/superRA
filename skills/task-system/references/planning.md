@@ -76,7 +76,7 @@ python3 <skill-dir>/scripts/task_create.py \
   --depends-on 02-merge
 ```
 
-`task_create.py` auto-fills the template with current dates and frontmatter defaults (`status: not-started`, `review_status: ~`, `integration_status: ~`).
+`task_create.py` auto-fills the template with current dates and frontmatter defaults (`status: not-started`).
 
 ### Rename a task (cascades to sibling depends_on)
 
@@ -97,9 +97,7 @@ python3 <skill-dir>/scripts/task_link.py \
 
 ## Field-by-Field Notes
 
-- **`status`** is a task-local validity marker. Valid values: `not-started`, `in-progress`, `implemented`, `revise`, `approved`. On re-entry, tasks in the transitive downstream closure of a modified task have their status cleared by default; unrelated approved tasks keep their status.
-- **`review_status`** — the implementer sets `implemented` (signaling ready-for-review); the reviewer sets `revise` or `approved`. Valid values: `~` (unset), `implemented`, `revise`, `approved`. Before execution starts, leave as `~`.
-- **`integration_status`** is owned by the integration reviewer and the implementer across the Integrate step. Valid values: `~`, `implemented`, `revise`, `approved`. The same DAG cascade rule applies as for `review_status`.
+- **`status`** is a task-local validity marker. Valid values: `not-started`, `in-progress`, `implemented`, `revise`, `approved`, `archived`. Co-owned by implementer and reviewer: implementer owns transitions up to `implemented` (and `revise → implemented` on fix rounds); reviewer owns `implemented → revise` and `implemented → approved`. On re-entry, tasks in the transitive downstream closure of a modified task have their status cleared by default; unrelated approved tasks keep their status.
 - **`depends_on`** lists sibling directory names. Dependencies are sibling-only; parent status rolls up from children automatically.
 - **`script` / `input` / `output`** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **`## Objective`** is planner-owned. Implementers read it but do not rewrite it.
@@ -116,10 +114,6 @@ The root task.md `## Conventions` section caches project guidance so dispatched 
 - Entry format: one paragraph per doc — a summary, not an excerpt.
 - Stamp the walk date.
 - List the NOT-walked paths too — an empty section is ambiguous; explicitly naming out-of-scope directories removes the ambiguity.
-
-## Workflow Status Checkboxes
-
-Flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. Each box is a rollup over per-task statuses plus global gates. A box is unchecked again only when a scope change or post-sync refactor invalidates the milestone.
 
 ## Stale Content Checklist
 
