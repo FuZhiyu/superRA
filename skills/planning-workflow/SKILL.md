@@ -37,6 +37,8 @@ Before any exploration or task design, assess three independent dimensions of th
 
 **Placement and depth are independent dimensions.** Neither determines the other. Work can clearly belong under an existing task but still need thorough planning; uncertain tree location does not mean the work itself is hard to plan.
 
+**Ask when unclear.** When the existing tree and project context do not make placement or depth obvious, ask the user rather than guessing silently. Present the concrete options under consideration — e.g., "nest under task X vs. create a new root-level task" or "standard vs. thorough depth" — with a one-line rationale for each. Wrong placement creates rework; wrong depth wastes effort or misses complexity.
+
 ## Depth Tiers
 
 Three tiers that modulate how deeply each subsequent phase executes. A spectrum, not rigid modes — escalate mid-planning if complexity warrants it.
