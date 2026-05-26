@@ -1,7 +1,7 @@
 ---
 title: "Server-Side Switching"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on: 
   - discovery
@@ -51,13 +51,3 @@ All changes are in [`plan_dashboard.py`](../../../../../skills/task-system/scrip
 
 **`main()` updated**: calls `get_git_common_dir()` before port derivation and passes it to `_default_port()`. Startup log message shows the port derivation source.
 
-## Review Notes
-
-1. [MAJOR] **No rollback on switch sequence failure.** The "atomic switch sequence" in [plan_dashboard.py:646-670](../../../../../skills/task-system/scripts/plan_dashboard.py#L646) modifies global state incrementally (cancel watcher at step 1, update `PLAN_ROOT` at step 2) before calling `rebuild_tree()` at step 3. If `rebuild_tree()` raises (e.g., malformed task.md, filesystem permission error), the server is left in an inconsistent state: watcher cancelled and set to `None`, `PLAN_ROOT` pointing to the new root, but `_root_task`/`_task_index` holding the stale old tree and no watcher running. The objective states "On failure: returns 400/404, current state untouched" — this guarantee holds for pre-switch validation failures but not for errors during the switch sequence itself. **Fix:** Wrap steps 2-5 in a try/except that rolls back `PLAN_ROOT`, `_project_root`, and `_current_worktree_path` to their previous values and re-spawns a watcher on the old root if any step fails.
-→ implemented: saved previous values before watcher cancel; wrapped steps 2-5 in try/except that rolls back all three globals and re-spawns a watcher on the old root, returning 500 on failure ([plan_dashboard.py:651-688](../../../../../skills/task-system/scripts/plan_dashboard.py#L651))
-
-2. [MINOR] **No concurrency guard on switch endpoint.** Two concurrent `POST /api/worktree/switch` requests could interleave at the `await _watcher_task` point (step 1), causing both to proceed through the switch sequence independently. The second request's watcher task assignment at step 5 would orphan the watcher spawned by the first request. An `asyncio.Lock` around the switch sequence would prevent this. Low practical risk for a single-user dashboard, but worth noting.
-→ implemented: added module-level `_switch_lock = asyncio.Lock()` (line 75) and wrapped the entire switch sequence with `async with _switch_lock:` ([plan_dashboard.py:75](../../../../../skills/task-system/scripts/plan_dashboard.py#L75), [plan_dashboard.py:650](../../../../../skills/task-system/scripts/plan_dashboard.py#L650))
-
-3. [MINOR] **Private function import inside fallback branch.** [plan_dashboard.py:564](../../../../../skills/task-system/scripts/plan_dashboard.py#L564) imports `_parse_plan_title` from `_worktree_discovery` inside the function body of `list_worktrees`, even though `_worktree_discovery` is already imported at the module top level (lines 30-36). Either add `_parse_plan_title` to the top-level import or inline the title extraction logic to avoid the lazy import of a private symbol.
-→ implemented: added `_parse_plan_title` to the top-level import from `_worktree_discovery` (line 34) and removed the inline import ([plan_dashboard.py:34](../../../../../skills/task-system/scripts/plan_dashboard.py#L34))
