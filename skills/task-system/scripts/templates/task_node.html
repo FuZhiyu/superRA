@@ -71,7 +71,7 @@
       </div>
       <div class="section-content">
         <div class="rendered-md">
-          <template>{{ content | replace('</template>', '&lt;/template&gt;') | safe }}</template>
+          <script type="text/x-markdown">{{ content | replace('</script>', '<\\/script>') }}</script>
         </div>
       </div>
     </div>

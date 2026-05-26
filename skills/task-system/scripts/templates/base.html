@@ -774,9 +774,9 @@ function toggleSection(toggleEl, event) {
     /* Lazy-render markdown on first expand */
     var renderedMd = content.querySelector('.rendered-md');
     if (renderedMd && !renderedMd.dataset.rendered) {
-      var tmpl = renderedMd.querySelector('template');
+      var tmpl = renderedMd.querySelector('script[type="text/x-markdown"]');
       if (tmpl) {
-        renderedMd.innerHTML = renderMarkdown(tmpl.innerHTML, sectionName, taskPath);
+        renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
         renderedMd.dataset.rendered = 'true';
       }
     }
@@ -917,13 +917,13 @@ mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
 document.body.addEventListener('htmx:afterSwap', function(event) {
   event.detail.target.querySelectorAll('.section-content.open .rendered-md').forEach(function(el) {
     if (!el.dataset.rendered) {
-      var tmpl = el.querySelector('template');
+      var tmpl = el.querySelector('script[type="text/x-markdown"]');
       if (tmpl) {
         var sectionWrapper = el.closest('[data-section]');
         var sectionName = sectionWrapper ? sectionWrapper.getAttribute('data-section') : '';
         var taskNode = el.closest('.task-node');
         var taskPath = taskNode ? taskNode.dataset.path : '';
-        el.innerHTML = renderMarkdown(tmpl.innerHTML, sectionName, taskPath);
+        el.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
         el.dataset.rendered = 'true';
       }
     }
@@ -1213,16 +1213,19 @@ function updateTreeCommentBadges() {
         var body = node.querySelector(':scope > .task-body');
         if (body && body.classList.contains('open')) continue;
 
-        /* Walk up ancestor .task-node elements to find the shallowest
-           (topmost) collapsed one — the highest visible collapsed row. */
-        var target = node;  /* default: the task itself (already confirmed collapsed above) */
+        /* Walk up ancestors: if an ancestor's children container is hidden,
+           the current node isn't visible — bubble the badge to that ancestor.
+           Stop as soon as we reach an ancestor whose children are shown. */
+        var target = node;
         var parent = node.parentElement;
         while (parent) {
           var ancestorNode = parent.closest('.task-node');
           if (!ancestorNode) break;
-          var ancestorBody = ancestorNode.querySelector(':scope > .task-body');
-          if (ancestorBody && !ancestorBody.classList.contains('open')) {
+          var ancestorChildren = ancestorNode.querySelector(':scope > .task-children');
+          if (ancestorChildren && ancestorChildren.style.display === 'none') {
             target = ancestorNode;
+          } else {
+            break;
           }
           parent = ancestorNode.parentElement;
         }
