@@ -19,6 +19,7 @@ from _task_io import parse_body_sections
 import plan_dashboard
 import plan_migrate
 import task_add_result
+import task_check
 import task_create
 import task_hook
 import task_link
@@ -1415,3 +1416,475 @@ class TestTaskHook:
         }
         code, _ = self._run_hook(payload)
         assert code == 0
+
+
+# --- Archived status tests ---
+
+
+class TestArchivedInFrontier:
+    def test_archived_leaf_excluded_from_frontier(self, tmp_path):
+        """A leaf task with status 'archived' never appears on the frontier."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-active"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "Active", "not-started")
+        d2 = root_dir / "02-archived"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "Archived", "archived")
+        root = _task_io.walk_plan(root_dir)
+        frontier = _task_io.compute_frontier(root)
+        paths = [t.path for t in frontier]
+        assert "01-active" in paths
+        assert "02-archived" not in paths
+
+    def test_archived_dependency_treated_as_satisfied(self, tmp_path):
+        """A task depending on an archived sibling has its dependency satisfied."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-dep"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "Dep", "archived")
+        d2 = root_dir / "02-downstream"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "Downstream", "not-started",
+                       depends_on=["01-dep"])
+        root = _task_io.walk_plan(root_dir)
+        frontier = _task_io.compute_frontier(root)
+        paths = [t.path for t in frontier]
+        assert "02-downstream" in paths, (
+            "archived dependency should be treated as satisfied"
+        )
+
+
+class TestArchivedInRollup:
+    def test_archived_excluded_from_rollup(self, tmp_path):
+        """Parent with 2 approved + 1 archived children computes as approved."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "01-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        for slug, status in [("01-a", "approved"), ("02-b", "approved"), ("03-c", "archived")]:
+            d = parent / slug
+            d.mkdir()
+            _write_task_md(d / "task.md", slug, status)
+        root = _task_io.walk_plan(root_dir)
+        parent_task = root.children[0]
+        assert parent_task.effective_status() == "approved"
+
+    def test_all_archived_children_rollup_archived(self, tmp_path):
+        """When all children are archived, parent computes as archived."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "01-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        for slug in ["01-a", "02-b"]:
+            d = parent / slug
+            d.mkdir()
+            _write_task_md(d / "task.md", slug, "archived")
+        root = _task_io.walk_plan(root_dir)
+        parent_task = root.children[0]
+        assert parent_task.effective_status() == "archived"
+
+    def test_archived_ignored_in_partial_rollup(self, tmp_path):
+        """Parent with 1 approved + 1 not-started + 1 archived = in-progress."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "01-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        for slug, status in [("01-a", "approved"), ("02-b", "not-started"), ("03-c", "archived")]:
+            d = parent / slug
+            d.mkdir()
+            _write_task_md(d / "task.md", slug, status)
+        root = _task_io.walk_plan(root_dir)
+        parent_task = root.children[0]
+        assert parent_task.effective_status() == "in-progress"
+
+
+# --- Cascade tests ---
+
+
+class TestCascade:
+    def setup_method(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.plan_root = Path(self.tmpdir) / ".plan"
+        self.plan_root.mkdir()
+        _write_task_md(self.plan_root / "task.md", "Root", "not-started")
+        # Branch task with two leaf children
+        branch = self.plan_root / "01-branch"
+        branch.mkdir()
+        _write_task_md(branch / "task.md", "Branch", "not-started")
+        c1 = branch / "01-leaf-a"
+        c1.mkdir()
+        _write_task_md(c1 / "task.md", "Leaf A", "not-started")
+        c2 = branch / "02-leaf-b"
+        c2.mkdir()
+        _write_task_md(c2 / "task.md", "Leaf B", "in-progress")
+
+    def teardown_method(self):
+        shutil.rmtree(self.tmpdir)
+
+    def test_cascade_approved(self):
+        """--cascade approved sets all descendant leaves to approved."""
+        task_update.update_task(
+            self.plan_root, "01-branch",
+            status="approved", cascade=True,
+        )
+        a = _task_io.parse_task(self.plan_root / "01-branch" / "01-leaf-a" / "task.md")
+        b = _task_io.parse_task(self.plan_root / "01-branch" / "02-leaf-b" / "task.md")
+        assert a.status == "approved"
+        assert b.status == "approved"
+
+    def test_cascade_not_started(self):
+        """--cascade not-started resets all descendant leaves."""
+        task_update.update_task(
+            self.plan_root, "01-branch",
+            status="not-started", cascade=True,
+        )
+        a = _task_io.parse_task(self.plan_root / "01-branch" / "01-leaf-a" / "task.md")
+        b = _task_io.parse_task(self.plan_root / "01-branch" / "02-leaf-b" / "task.md")
+        assert a.status == "not-started"
+        assert b.status == "not-started"
+
+    def test_cascade_archived(self):
+        """--cascade archived archives all descendant leaves."""
+        task_update.update_task(
+            self.plan_root, "01-branch",
+            status="archived", cascade=True,
+        )
+        a = _task_io.parse_task(self.plan_root / "01-branch" / "01-leaf-a" / "task.md")
+        b = _task_io.parse_task(self.plan_root / "01-branch" / "02-leaf-b" / "task.md")
+        assert a.status == "archived"
+        assert b.status == "archived"
+
+    def test_cascade_rejected_for_in_progress(self):
+        """--cascade with in-progress errors out."""
+        with pytest.raises(SystemExit) as exc_info:
+            task_update.update_task(
+                self.plan_root, "01-branch",
+                status="in-progress", cascade=True,
+            )
+        assert exc_info.value.code == 1
+
+    def test_cascade_rejected_for_implemented(self):
+        """--cascade with implemented errors out."""
+        with pytest.raises(SystemExit) as exc_info:
+            task_update.update_task(
+                self.plan_root, "01-branch",
+                status="implemented", cascade=True,
+            )
+        assert exc_info.value.code == 1
+
+    def test_cascade_rejected_for_revise(self):
+        """--cascade with revise errors out."""
+        with pytest.raises(SystemExit) as exc_info:
+            task_update.update_task(
+                self.plan_root, "01-branch",
+                status="revise", cascade=True,
+            )
+        assert exc_info.value.code == 1
+
+    def test_cascade_skips_archived_descendants(self):
+        """--cascade not-started does not unarchive already-archived leaves."""
+        # Archive one leaf first
+        leaf_a = _task_io.parse_task(
+            self.plan_root / "01-branch" / "01-leaf-a" / "task.md"
+        )
+        leaf_a.status = "archived"
+        _task_io.write_task(leaf_a)
+        # Cascade not-started — should skip the archived leaf
+        task_update.update_task(
+            self.plan_root, "01-branch",
+            status="not-started", cascade=True,
+        )
+        a = _task_io.parse_task(self.plan_root / "01-branch" / "01-leaf-a" / "task.md")
+        b = _task_io.parse_task(self.plan_root / "01-branch" / "02-leaf-b" / "task.md")
+        assert a.status == "archived", "archived leaf should not be unarchived by cascade"
+        assert b.status == "not-started"
+
+    def test_branch_status_without_cascade_warns(self, capsys):
+        """Setting status on a branch task without --cascade prints a warning."""
+        task_update.update_task(
+            self.plan_root, "01-branch",
+            status="approved",
+        )
+        captured = capsys.readouterr()
+        assert "children" in captured.err.lower() or "rollup" in captured.err.lower()
+
+
+# --- Forward-compatible reading tests ---
+
+
+class TestForwardCompatibleReading:
+    def test_old_file_with_review_and_integration_status_parses(self, tmp_path):
+        """_task_io.parse_task silently ignores review_status/integration_status."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-old"
+        d.mkdir()
+        # Write an old-format file with all three status fields
+        _write_task_md(d / "task.md", "Old Task", "implemented",
+                       review_status="approved", integration_status="~")
+        # parse_task should work without error and use the status field
+        task = _task_io.parse_task(d / "task.md")
+        assert task.status == "implemented"
+        assert task.title == "Old Task"
+
+    def test_old_file_stale_fields_not_in_task_object(self, tmp_path):
+        """Task object has no review_status/integration_status attributes from old files."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-old"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Old Task", "in-progress",
+                       review_status="implemented", integration_status="revise")
+        task = _task_io.parse_task(d / "task.md")
+        # The Task dataclass should not have these attributes
+        assert not hasattr(task, "review_status")
+        assert not hasattr(task, "integration_status")
+
+    def test_write_task_does_not_emit_stale_fields(self, tmp_path):
+        """write_task never writes review_status or integration_status."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-task"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Task", "approved")
+        task = _task_io.parse_task(d / "task.md")
+        _task_io.write_task(task)
+        content = (d / "task.md").read_text(encoding="utf-8")
+        assert "review_status" not in content
+        assert "integration_status" not in content
+
+
+# --- Diagnostic tool (task_check.py) tests ---
+
+
+class TestTaskCheck:
+    def test_clean_tree_no_findings(self, tmp_path):
+        """A valid tree produces no findings."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-a"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "Task A", "not-started")
+        d2 = root_dir / "02-b"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "Task B", "not-started",
+                       depends_on=["01-a"])
+        findings = task_check.run_checks(root_dir)
+        assert len(findings) == 0
+
+    def test_detects_invalid_status(self, tmp_path):
+        """Flags a task with an invalid status value."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-bad"
+        d.mkdir()
+        # Write raw file with an invalid status
+        content = (
+            '---\ntitle: "Bad"\nstatus: completed\n'
+            "depends_on: []\ntags: []\ncreated: 2026-01-01\n"
+            "updated: 2026-01-01\n---\n\n## Objective\n\nBad status.\n"
+        )
+        (d / "task.md").write_text(content, encoding="utf-8")
+        findings = task_check.run_checks(root_dir, category="status")
+        assert any(f.category == "status" and f.severity == "error" for f in findings)
+        assert any("completed" in f.message for f in findings)
+
+    def test_detects_stale_review_status(self, tmp_path):
+        """Flags stale review_status field still present in frontmatter."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-stale"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Stale", "approved",
+                       review_status="approved")
+        findings = task_check.run_checks(root_dir, category="status")
+        assert any(
+            "review_status" in f.message and f.category == "status"
+            for f in findings
+        )
+
+    def test_detects_stale_integration_status(self, tmp_path):
+        """Flags stale integration_status field still present in frontmatter."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-stale"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Stale", "approved",
+                       integration_status="~")
+        findings = task_check.run_checks(root_dir, category="status")
+        assert any(
+            "integration_status" in f.message and f.category == "status"
+            for f in findings
+        )
+
+    def test_detects_broken_dependency(self, tmp_path):
+        """Flags depends_on referencing a non-existent sibling."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-bad"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Bad", "not-started",
+                       depends_on=["99-missing"])
+        findings = task_check.run_checks(root_dir, category="dependency")
+        assert any(
+            f.category == "dependency" and f.severity == "error"
+            and "99-missing" in f.message
+            for f in findings
+        )
+
+    def test_detects_cycle(self, tmp_path):
+        """Flags dependency cycles."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-a"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "A", "not-started",
+                       depends_on=["02-b"])
+        d2 = root_dir / "02-b"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "B", "not-started",
+                       depends_on=["01-a"])
+        findings = task_check.run_checks(root_dir, category="dependency")
+        assert any(
+            f.category == "dependency" and "cycle" in f.message.lower()
+            for f in findings
+        )
+
+    def test_warns_archived_dependency(self, tmp_path):
+        """Warns when a task depends on an archived sibling."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-dep"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "Dep", "archived")
+        d2 = root_dir / "02-consumer"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "Consumer", "not-started",
+                       depends_on=["01-dep"])
+        findings = task_check.run_checks(root_dir, category="dependency")
+        assert any(
+            f.category == "dependency" and f.severity == "warning"
+            and "archived" in f.message
+            for f in findings
+        )
+
+    def test_detects_rollup_mismatch(self, tmp_path):
+        """Flags when stored parent status disagrees with computed rollup."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "01-parent"
+        parent.mkdir()
+        # Stored status says approved, but children are not all approved
+        _write_task_md(parent / "task.md", "Parent", "approved")
+        c1 = parent / "01-child"
+        c1.mkdir()
+        _write_task_md(c1 / "task.md", "Child A", "approved")
+        c2 = parent / "02-child"
+        c2.mkdir()
+        _write_task_md(c2 / "task.md", "Child B", "not-started")
+        findings = task_check.run_checks(root_dir, category="rollup")
+        assert any(
+            f.category == "rollup" and "rollup" in f.message.lower()
+            for f in findings
+        )
+
+    def test_json_output_parseable(self, tmp_path):
+        """--json output is valid JSON with expected keys."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-a"
+        d.mkdir()
+        _write_task_md(d / "task.md", "A", "not-started")
+        findings = task_check.run_checks(root_dir)
+        json_str = task_check.format_json(findings)
+        data = json.loads(json_str)
+        assert "ok" in data
+        assert "total" in data
+        assert "errors" in data
+        assert "warnings" in data
+        assert "findings" in data
+        assert data["ok"] is True
+        assert data["total"] == 0
+
+    def test_json_output_with_findings(self, tmp_path):
+        """JSON output includes finding details when issues exist."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-bad"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Bad", "not-started",
+                       depends_on=["99-missing"])
+        findings = task_check.run_checks(root_dir)
+        data = json.loads(task_check.format_json(findings))
+        assert data["ok"] is False
+        assert data["total"] >= 1
+        assert len(data["findings"]) >= 1
+        f = data["findings"][0]
+        assert "task_path" in f
+        assert "category" in f
+        assert "severity" in f
+        assert "message" in f
+
+    def test_text_output_clean(self, tmp_path):
+        """Text output says 'All checks passed' for a clean tree."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        findings = task_check.run_checks(root_dir)
+        text = task_check.format_text(findings)
+        assert "All checks passed" in text
+
+    def test_text_output_with_issues(self, tmp_path):
+        """Text output reports issue count for a tree with problems."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-bad"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Bad", "not-started",
+                       depends_on=["99-missing"])
+        findings = task_check.run_checks(root_dir)
+        text = task_check.format_text(findings)
+        assert "issue(s)" in text
+
+    def test_category_filter(self, tmp_path):
+        """Running with category='status' only returns status findings."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-bad"
+        d.mkdir()
+        # This file has a broken dep (dependency issue) and stale field (status issue)
+        _write_task_md(d / "task.md", "Bad", "not-started",
+                       depends_on=["99-missing"],
+                       review_status="approved")
+        # Only status findings
+        status_findings = task_check.run_checks(root_dir, category="status")
+        assert all(f.category == "status" for f in status_findings)
+        # Only dependency findings
+        dep_findings = task_check.run_checks(root_dir, category="dependency")
+        assert all(f.category == "dependency" for f in dep_findings)
