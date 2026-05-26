@@ -1,6 +1,7 @@
 ---
 title: "Update and extend test suite"
-status: implemented
+status: approved
+review_status: approved
 depends_on:
   - 02-data-layer
   - 03-cli-scripts
