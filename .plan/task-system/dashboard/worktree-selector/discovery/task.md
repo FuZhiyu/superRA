@@ -1,9 +1,9 @@
 ---
 title: "Worktree Discovery Module"
-status: implemented
+status: approved
 review_status: approved
 integration_status: ~
-depends_on:  []
+depends_on: []
 tags: []
 created: 2026-05-26
 updated: 2026-05-26
