@@ -7,6 +7,7 @@ depends_on:
   - 02-data-layer
   - 03-cli-scripts
   - 04-migration-tooling
+  - 10-tree-diagnostics
 tags: [code, tests]
 script: ""
 input: []
@@ -17,24 +18,39 @@ updated: 2026-05-26
 
 ## Objective
 
-Update existing tests and add new ones to cover the unified status model.
+Update existing tests and add new ones to cover the unified status model, `archived` status, `--cascade`, and the diagnostic tool.
 
-**`test_task_system.py`:**
-- Remove `review_status` from all test fixture helpers (lines 40, 63)
-- Remove `review_status="approved"` from fixture task creation (lines 85, 121)
-- Remove `review_status` assertions (line 147)
-- Remove `review_status` from frontmatter parse assertions (line 385)
-- Update or remove `test_bad_review_status_value` test (line 837)
-- Update all frontmatter strings in test fixtures (lines 383, 780, 808)
+**`test_task_system.py` — field removal:**
+- Remove `review_status` and `integration_status` from all test fixture helpers
+- Remove assertions for both fields
+- Update or remove `test_bad_review_status_value` test
+- Update all frontmatter strings in test fixtures
 
-**`test_dashboard.py`:**
-- Remove `review_status` from test fixture helper (lines 29, 32)
-- Remove `review_status="approved"` from fixture creation (line 53)
+**`test_dashboard.py` — field removal:**
+- Remove both fields from test fixture helpers and fixture creation
 
-**New tests to add:**
-- Test that `_task_io.py` silently ignores `review_status` in old task files (forward-compatible reading)
-- Test the migration mapping: given various `(status, review_status)` combinations, verify the upgrade produces the correct unified `status`
-- Test that `compute_frontier()` behavior is unchanged after the field removal
-- Test `--upgrade-status` dry-run and actual upgrade modes
+**New tests — archived status:**
+- `archived` tasks excluded from `compute_frontier()`
+- `archived` tasks excluded from `compute_status()` rollup (parent with 2 approved + 1 archived = approved)
+- `archived` tasks don't block dependents (sibling depends on archived task → dependency satisfied)
+
+**New tests — cascade:**
+- `--cascade approved` on branch task sets all descendant leaves to `approved`
+- `--cascade not-started` resets all descendant leaves
+- `--cascade archived` archives all descendant leaves
+- `--cascade` with `in-progress`/`implemented`/`revise` errors
+- Warning when setting status on branch task without `--cascade`
+
+**New tests — migration:**
+- Migration mapping: given various `(status, review_status, integration_status)` triples, verify the upgrade produces the correct unified `status`
+- Forward-compatible reading: `_task_io.py` silently ignores `review_status`/`integration_status` in old task files
+- `--upgrade-status` dry-run and actual upgrade modes
+- `## Workflow Status` section removal
+
+**New tests — diagnostics:**
+- `--check` detects: invalid status values, rollup mismatches, broken dependencies, cycles, archived dependency warnings, stale fields, orphan dirs
+- `--fix` repairs: parent status sync, stale field removal, archived dependency cleanup
+- `--dry-run` reports but doesn't write
+- Exit codes: 0 clean, 1 issues found
 
 ## Results

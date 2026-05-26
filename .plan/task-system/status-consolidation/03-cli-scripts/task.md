@@ -15,24 +15,23 @@ updated: 2026-05-26
 
 ## Objective
 
-Update all task-system CLI scripts to remove `review_status` references.
+Update all task-system CLI scripts to remove `review_status` and `integration_status` references, add `archived` status support, and add `--cascade` for branch tasks.
 
 **`task_update.py`:**
-- Remove `--review-status` CLI argument (line 26)
-- Remove `review_status` parameter from update function (line 39)
-- Remove conditional update logic (lines 58-60)
-- Remove passing to function (line 99)
+- Remove `--review-status` and `--integration-status` CLI arguments
+- Remove corresponding parameters, conditional update logic, and function passing
+- Add `--cascade` flag: when setting status on a branch task, cascade to all descendant leaves. Warn (not error) when setting status on a branch task without `--cascade` — "This task has children; stored status is overridden by computed rollup."
+- `--cascade` only valid for `approved`, `not-started`, and `archived` (the states with clear recursive semantics). Error on `--cascade` with `in-progress`, `implemented`, or `revise`.
 
 **`task_create.py`:**
-- Remove `review_status: ~` from the task template (line 18)
+- Remove `review_status: ~` and `integration_status: ~` from the task template
 
 **`task_read.py`:**
-- Remove `review_status` from frontmatter field order for readable output (line 131)
-- Remove `review_status` from JSON output (line 244)
+- Remove `review_status` and `integration_status` from frontmatter field order for readable output
+- Remove both from JSON output
 
 **`task_query.py`:**
-- Remove `review_status` from JSON serialization (line 159)
-
-All scripts must still pass `integration_status` through unchanged.
+- Remove `review_status` and `integration_status` from JSON serialization
+- `archived` tasks excluded from frontier computation
 
 ## Results
