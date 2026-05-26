@@ -1,6 +1,6 @@
 ---
 title: "Thorough Planning Reference"
-status: implemented
+status: approved
 review_status: approved
 integration_status: ~
 depends_on:
