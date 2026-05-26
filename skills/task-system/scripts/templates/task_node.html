@@ -42,40 +42,13 @@
 
   {#- Task body (hidden by default, toggled on click) -#}
   <div class="task-body">
-    {#- Collapsible sections -#}
-    {% set sections = [
-      ('Objective', task.objective),
-      ('Results', task.results),
-      ('Decisions', task.decisions),
-      ('Review Notes', task.review_notes),
-    ] %}
-
-    {#- Named sections -#}
-    {% for name, content in sections %}
-    {% if content and content.strip() %}
-    <div data-section="{{ name }}">
-      <div class="section-toggle" onclick="toggleSection(this, event)">
-        <span class="section-icon">&#9656;</span>
-        <span class="section-label">{{ name }}</span>
-        <span class="section-preview">{{ content | replace('\n', ' ') | replace('#', '') | replace('*', '') | replace('`', '') | replace('>', '') | replace('-', '') | truncate(80) }}</span>
-      </div>
-      <div class="section-content">
-        <div class="rendered-md">
-          <template>{{ content | replace('</template>', '&lt;/template&gt;') }}</template>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-    {% endfor %}
-
-    {#- Extra ## sections from body not covered above -#}
-    {% set known_sections = ['Objective', 'Results', 'Decisions', 'Review Notes'] %}
+    {#- Parse ALL ## sections from task.body in document order -#}
     {% set body_lines = task.body.split('\n') if task.body else [] %}
-    {% set ns = namespace(current_name=None, current_lines=[], extra_sections=[]) %}
+    {% set ns = namespace(current_name=None, current_lines=[], all_sections=[]) %}
     {% for line in body_lines %}
       {% if line.startswith('## ') %}
-        {% if ns.current_name and ns.current_name not in known_sections %}
-          {% set _ = ns.extra_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
+        {% if ns.current_name %}
+          {% set _ = ns.all_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
         {% endif %}
         {% set ns.current_name = line[3:] %}
         {% set ns.current_lines = [] %}
@@ -83,11 +56,12 @@
         {% set ns.current_lines = ns.current_lines + [line] %}
       {% endif %}
     {% endfor %}
-    {% if ns.current_name and ns.current_name not in known_sections %}
-      {% set _ = ns.extra_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
+    {% if ns.current_name %}
+      {% set _ = ns.all_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
     {% endif %}
 
-    {% for name, content in ns.extra_sections %}
+    {#- Render sections in document order -#}
+    {% for name, content in ns.all_sections %}
     {% if content.strip() %}
     <div data-section="{{ name }}">
       <div class="section-toggle" onclick="toggleSection(this, event)">
@@ -97,7 +71,7 @@
       </div>
       <div class="section-content">
         <div class="rendered-md">
-          <template>{{ content | replace('</template>', '&lt;/template&gt;') }}</template>
+          <template>{{ content | replace('</template>', '&lt;/template&gt;') | safe }}</template>
         </div>
       </div>
     </div>
