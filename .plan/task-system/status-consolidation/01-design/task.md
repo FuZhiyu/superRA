@@ -1,7 +1,7 @@
 ---
 title: "Design the unified status model"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on: []
 tags: [design]
@@ -61,16 +61,3 @@ The spec must cover:
 
 Design spec written in parent task's `## Design Spec` section. Covers all 9 items from the objective: field definition, status semantics table, state machine with transition ownership, rollup rules, frontier rules, parent-status computation policy, `--cascade` semantics, migration mapping, phase inference, and diagnostic tool spec.
 
-## Review Notes
-
-1. **[MAJOR] Phase inference rules are not exhaustive.**
-   → implemented: Restructured as numbered priority cascade. Rule 1: all approved → done. Rule 2: any not-started/in-progress → implementation. Rule 3: otherwise → review. The "otherwise" catch-all covers the approved+implemented mix.
-
-2. **[MAJOR] All-children-archived edge case is unspecified in rollup rules.**
-   → implemented: Added explicit rule 1 (checked first): "No non-archived children remain → `archived`." Numbered all rules as ordered priority cascade.
-
-3. **[MINOR] `--cascade` behavior on already-archived descendants is unspecified.**
-   → implemented: Added: "Archived descendants are skipped unless the cascade value is itself `archived`."
-
-4. **[MINOR] Rollup rules should be explicitly ordered.**
-   → implemented: Converted to numbered list with "checked in this order" heading.
