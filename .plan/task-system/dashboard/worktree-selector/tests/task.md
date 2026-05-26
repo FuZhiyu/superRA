@@ -1,12 +1,11 @@
 ---
 title: "Worktree Selector Tests"
-status: implemented
+status: approved
 review_status: approved
 integration_status: ~
-depends_on: 
+depends_on:
   - discovery
   - server-routes
-
 tags: []
 created: 2026-05-26
 updated: 2026-05-26
