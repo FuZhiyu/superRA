@@ -1,7 +1,7 @@
 ---
 title: "Fix section order and HTML-escaping in task body rendering"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on:  []
 tags: []
