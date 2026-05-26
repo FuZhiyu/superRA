@@ -1,7 +1,7 @@
 ---
 title: "Thorough Planning Reference"
-status: approved
-review_status: approved
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:
   - entry-and-placement
@@ -54,6 +54,14 @@ The task tree at thorough depth is not one-shot. The main agent may refine after
 
 Each refinement round can be lighter (quick-depth update to the tree) even though the initial pass was thorough.
 
+**6. Agent Review Before User Review**
+
+At thorough depth, Phase 4 (Review & Commit) gains an agent review step between Self-Review and User Review. The main agent dispatches a reviewer agent that receives the complete `.plan/` directory and the exploration synthesis. The reviewer evaluates the same self-review checklist plus structural coherence across tasks: whether task boundaries make sense, dependencies are complete, and decomposition granularity is appropriate. The reviewer returns APPROVE or REVISE with findings; REVISE findings must be fixed before proceeding to User Review.
+
+Add this as a new subsection `### Agent Review (Thorough Depth Only)` in `planning-workflow/SKILL.md` §Phase 4, between `### Self-Review` and `### User Review`. Also update the thorough-planning reference to note this step and its connection to exploration synthesis.
+
+The earlier statement in SKILL.md §Depth Tiers that "Phase 4 (Review & Commit) is the same at all tiers" must be updated to reflect this thorough-only difference.
+
 ### Design constraints
 
 - The reference must compose cleanly with agent-orchestration dispatch templates — exploration agents use existing dispatch patterns, not a new template shape.
@@ -73,6 +81,12 @@ Each refinement round can be lighter (quick-depth update to the tree) even thoug
 - The dispatch pattern works for both research (data analysis, theory) and software (skill development, infrastructure) contexts
 - Critical files identification is concise and actionable
 - Incremental refinement composes with the depth tiers (thorough initial pass, quick refinement)
+- Agent review step exists in both SKILL.md §Phase 4 and the thorough-planning reference
+- SKILL.md §Depth Tiers paragraph about Phase 4 being "the same at all tiers" is updated
+
+## Revision Notes
+
+- **2026-05-26 — Added §6 "Agent Review Before User Review."** Thorough plans get a reviewer agent dispatch in Phase 4 between self-review and user review. Reviewer evaluates self-review checklist + structural coherence; REVISE findings must be fixed before user sees the tree. Also requires updating the "same at all tiers" statement in SKILL.md §Depth Tiers.
 
 ## Results
 
@@ -82,21 +96,29 @@ Each refinement round can be lighter (quick-depth update to the tree) even thoug
 
 ### Coverage
 
-Five sections covering all required topics:
+Six sections in `thorough-planning.md` covering all required topics:
 
 1. **Exploration Dispatch** — parallel read-only agents (2-4), lightweight dispatch shape using `subagent_type: "Explore"` with objective in prompt body, example objectives for both research and software contexts, harness-qualified plan-mode compatibility note.
 2. **Exploration Synthesis** — consolidation, mapping to work, entry assessment reassessment, gap identification. Main agent work, not delegated.
 3. **Multi-Perspective Design (optional)** — when-to-use / when-not-to-use criteria, dispatch shape, reconciliation protocol with connection to `planning-workflow §Substantive Questions` for surfacing tradeoffs from competing designs.
 4. **Critical Files for Implementation** — 3-5 files, qualification criteria, format as `## Critical Files` section in root `task.md`.
 5. **Incremental Refinement** — refinement rounds use quick-depth mechanics, references standard change protocol, targeted follow-up exploration for missed areas.
+6. **Agent Review** — reviewer agent dispatched in Phase 4 between self-review and user review; receives `.plan/` directory + exploration synthesis; evaluates self-review checklist + structural coherence; returns APPROVE/REVISE.
+
+Three edits to [`skills/planning-workflow/SKILL.md`](skills/planning-workflow/SKILL.md) for §6:
+- Added `### Agent Review (Thorough Depth Only)` subsection in §Phase 4 between Self-Review and User Review ([SKILL.md:153](skills/planning-workflow/SKILL.md#L153)).
+- Updated §Depth Tiers closing paragraph to note the thorough-only Phase 4 difference ([SKILL.md:50](skills/planning-workflow/SKILL.md#L50)).
+- Updated `thorough-planning.md` opening paragraph to reflect Phase 4 is no longer "unchanged" ([thorough-planning.md:5](skills/planning-workflow/references/thorough-planning.md#L5)).
 
 ### Validation
 
-All 6 validation criteria pass:
+All 8 validation criteria pass:
 - Standalone loadable: opens with load condition, self-contained pattern description, cross-references by section name
 - Existing dispatch patterns: uses `Agent(subagent_type: "Explore")` — explicitly not the canonical task-scoped template since exploration agents have no task path or stage; acknowledged as a simpler shape rather than a parallel template
 - No DRY violations: no content duplicated from agent-orchestration §Workload Balancing/§Dispatch Templates or planning-workflow SKILL.md phase descriptions
 - Works for research and software: examples include data pipeline/analysis and skill development/code structure
 - Critical files: concise section with qualification criteria and one-line format
 - Incremental refinement: explicitly composes with depth tiers (thorough initial, quick refinement)
+- Agent review step exists in both SKILL.md §Phase 4 and the thorough-planning reference
+- SKILL.md §Depth Tiers paragraph about Phase 4 being "the same at all tiers" is updated to note the thorough-only exception
 

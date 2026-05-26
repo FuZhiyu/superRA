@@ -2,7 +2,7 @@
 
 Load this reference when depth tier is "thorough." Defines the dispatch pattern for deep planning with parallel exploration and optional multi-perspective design.
 
-Thorough planning replaces the main agent's inline Phase 1 exploration with parallel read-only agents, optionally extends Phase 3 with multi-perspective design agents, and adds critical-files identification before handoff to implementation. Phases 2 and 4 are the same as standard depth — domain setup still happens after exploration synthesis, and review/commit is unchanged.
+Thorough planning replaces the main agent's inline Phase 1 exploration with parallel read-only agents, optionally extends Phase 3 with multi-perspective design agents, adds critical-files identification before handoff to implementation, and adds an agent review step in Phase 4. Phase 2 is the same as standard depth — domain setup still happens after exploration synthesis.
 
 ## Exploration Dispatch
 
@@ -112,6 +112,22 @@ After the task tree is designed (Phase 3 complete), identify 3-5 files that are 
 ```
 
 Keep it short — 3-5 files, one line each with a brief reason. This is a prioritization aid for implementation agents, not a complete file inventory.
+
+## Agent Review
+
+At thorough depth, Phase 4 gains an agent review step between self-review and user review (see `planning-workflow §Phase 4: Agent Review`). The main agent dispatches a reviewer agent that receives:
+
+1. The complete `.plan/` directory (the task tree as designed).
+2. The exploration synthesis from Phase 1 — the consolidated understanding of project context that informed the design.
+
+The exploration synthesis is essential input because the reviewer needs the same project context the main agent used to make design decisions. Without it, the reviewer cannot evaluate whether the task decomposition fits the actual codebase structure, data layout, and existing conventions discovered during exploration.
+
+**What the reviewer evaluates:**
+
+- The self-review checklist from `planning-workflow §Phase 4: Self-Review` — domain coverage, placeholder scan, pipeline consistency, validation coverage, handoff test, dependency graph sanity, subtask coverage.
+- **Structural coherence** — whether task boundaries align with the project structure found during exploration, dependencies are complete and correctly ordered, and decomposition granularity matches the complexity of each area.
+
+The reviewer returns APPROVE or REVISE with findings. REVISE findings must be fixed before the tree is presented to the user.
 
 ## Incremental Refinement
 
