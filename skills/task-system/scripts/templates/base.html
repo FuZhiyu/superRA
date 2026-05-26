@@ -625,16 +625,19 @@ var PROJECT_ROOT = {{ project_root | tojson }};
  * - Wrap each block-level element in a .commentable-block container
  *   with data-section and data-block attributes (when sectionName given)
  */
-function renderMarkdown(text, sectionName) {
+function renderMarkdown(text, sectionName, taskPath) {
   var html = md.render(text);
   var container = document.createElement('div');
   container.innerHTML = html;
+
+  /* Base directory for resolving relative paths within a task */
+  var pathPrefix = taskPath ? '.plan/' + taskPath + '/' : '';
 
   /* Rewrite relative links to vscode:// URIs */
   container.querySelectorAll('a[href]').forEach(function(a) {
     var href = a.getAttribute('href');
     if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#')) {
-      a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + href);
+      a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + pathPrefix + href);
       a.setAttribute('target', '_blank');
     }
   });
@@ -643,7 +646,7 @@ function renderMarkdown(text, sectionName) {
   container.querySelectorAll('img[src]').forEach(function(img) {
     var src = img.getAttribute('src');
     if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
-      img.setAttribute('src', '/files/' + src);
+      img.setAttribute('src', '/files/' + pathPrefix + src);
     }
   });
 
@@ -760,19 +763,22 @@ function toggleSection(toggleEl, event) {
     var sectionWrapper = toggleEl.closest('[data-section]');
     var sectionName = sectionWrapper ? sectionWrapper.getAttribute('data-section') : '';
 
+    /* Get the task path for resolving relative paths */
+    var taskNode = toggleEl.closest('.task-node');
+    var taskPath = taskNode ? taskNode.dataset.path : '';
+
     /* Lazy-render markdown on first expand */
     var renderedMd = content.querySelector('.rendered-md');
     if (renderedMd && !renderedMd.dataset.rendered) {
       var tmpl = renderedMd.querySelector('template');
       if (tmpl) {
-        renderedMd.innerHTML = renderMarkdown(tmpl.innerHTML, sectionName);
+        renderedMd.innerHTML = renderMarkdown(tmpl.innerHTML, sectionName, taskPath);
         renderedMd.dataset.rendered = 'true';
       }
     }
     if (preview) preview.style.display = 'none';
 
     /* Load comments for this task's section */
-    var taskNode = toggleEl.closest('.task-node');
     if (taskNode) {
       loadComments(taskNode.dataset.path);
     }
@@ -911,7 +917,9 @@ document.body.addEventListener('htmx:afterSwap', function(event) {
       if (tmpl) {
         var sectionWrapper = el.closest('[data-section]');
         var sectionName = sectionWrapper ? sectionWrapper.getAttribute('data-section') : '';
-        el.innerHTML = renderMarkdown(tmpl.innerHTML, sectionName);
+        var taskNode = el.closest('.task-node');
+        var taskPath = taskNode ? taskNode.dataset.path : '';
+        el.innerHTML = renderMarkdown(tmpl.innerHTML, sectionName, taskPath);
         el.dataset.rendered = 'true';
       }
     }

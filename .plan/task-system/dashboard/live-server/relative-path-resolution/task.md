@@ -1,7 +1,7 @@
 ---
 title: "Fix relative path resolution in rendered markdown"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -35,3 +35,16 @@ Relative paths in task.md markdown (links and images like `./diagram.png` or `..
 
 ## Results
 
+Modified [`base.html`](skills/task-system/scripts/templates/base.html) with three changes:
+
+1. **Function signature** (line 628): `renderMarkdown(text, sectionName)` -> `renderMarkdown(text, sectionName, taskPath)`. When `taskPath` is provided, a `pathPrefix` of `.plan/{taskPath}/` is prepended to relative image `src` and link `href` values before the `/files/` or `vscode://file/` prefix.
+
+2. **`toggleSection` call site** (line 775): Walks up from `toggleEl` to `.task-node` via `closest()`, reads `dataset.path`, and passes it as the third argument.
+
+3. **`htmx:afterSwap` call site** (line 922): Same pattern — walks up from the `.rendered-md` element to its `.task-node` ancestor and passes `dataset.path`.
+
+**Path resolution behavior:**
+- `./diagram.png` in task at `task-system/dashboard` -> `/files/.plan/task-system/dashboard/./diagram.png` (server normalizes)
+- `../scripts/foo.py` -> `vscode://file/{ROOT}/.plan/task-system/../scripts/foo.py` (VS Code normalizes)
+- Absolute URLs (`http://`, `https://`) and anchors (`#`) are unchanged (existing guards)
+- When `taskPath` is empty/falsy, falls back to previous behavior (resolves against project root)
