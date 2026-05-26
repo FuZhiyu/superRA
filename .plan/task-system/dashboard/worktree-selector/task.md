@@ -3,8 +3,7 @@ title: "Worktree Selector"
 status: not-started
 review_status: ~
 integration_status: ~
-depends_on: 
-  - live-server
+depends_on: []
 
 tags: []
 created: 2026-05-26
