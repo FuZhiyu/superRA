@@ -29,6 +29,8 @@ Replace the static single-file HTML dashboard with a live-updating server-based 
 - `mermaid` (CDN) — DAG rendering
 - `markdown-it` (CDN) — markdown rendering in task bodies
 
+The static `generate` subcommand is deprecated; `serve` is the primary interface.
+
 **Architecture:**
 - Server reads `.plan/` tree on startup, serves HTML fragments per task node
 - Expand a task → `hx-get="/task/<path>"` fetches rendered children
