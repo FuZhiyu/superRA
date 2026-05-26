@@ -1,7 +1,7 @@
 ---
 title: "Assign revision notes cleanup to reviewer"
 status: implemented
-review_status: implemented
+review_status: revise
 integration_status: ~
 depends_on: []
 tags: []
@@ -48,3 +48,9 @@ All six edits applied surgically to two files:
 
 5. [planning.md:73](skills/task-system/references/planning.md#L73) — Root anatomy: changed passive "cleaned out when re-implemented and approved" to "The reviewer removes this section when approving the task."
 6. [planning.md:129](skills/task-system/references/planning.md#L129) — Field notes: same change — made reviewer ownership explicit.
+
+## Review Notes
+
+1. **[MAJOR]** [reviewer.md:117](agents/reviewer.md#L117) — The "You may NOT edit" list says "Any body section other than `## Review Notes`" which now contradicts line 113 that tells the reviewer to remove `## Revision Notes` at APPROVE. A reviewer agent reading both rules literally gets a contradiction: line 113 says remove it, line 117 says don't touch it. Fix: update line 117 to say "other than `## Review Notes` and `## Revision Notes` (removal only, per above)" or equivalent phrasing that carves out the removal-at-APPROVE case.
+
+2. **[MAJOR]** [reviewer.md:157](agents/reviewer.md#L157) — Pre-commit self-check item 1 says "I only edited the `review_status:` frontmatter field and `## Review Notes` section" — this does not account for `## Revision Notes` removal. A reviewer who removes `## Revision Notes` (as instructed by item 5 on line 161) would fail self-check item 1. Fix: update line 157 to include `## Revision Notes` removal, e.g. "I only edited the `review_status:` frontmatter field, `## Review Notes` section, and `## Revision Notes` section (removal only at APPROVE) of my assigned task".
