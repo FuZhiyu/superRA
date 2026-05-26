@@ -1,11 +1,10 @@
 ---
 title: "Update migration tooling"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on:
   - 02-data-layer
-tags: [code]
+tags:
+  - code
 script: skills/task-system/scripts/plan_migrate.py
 input: []
 output: []

@@ -1,8 +1,6 @@
 ---
 title: "Filesystem watcher and SSE live reload"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on:
   - ../server
   - ../templates

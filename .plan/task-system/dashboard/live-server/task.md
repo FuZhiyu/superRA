@@ -1,8 +1,6 @@
 ---
 title: "Live Server Dashboard"
 status: not-started
-review_status: ~
-integration_status: ~
 depends_on:
   - ../
 tags: []

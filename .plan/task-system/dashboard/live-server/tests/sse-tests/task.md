@@ -1,8 +1,6 @@
 ---
 title: "SSE broadcast and template rendering tests"
 status: implemented
-review_status: implemented
-integration_status: ~
 depends_on: []
 tags: []
 created: 2026-05-25

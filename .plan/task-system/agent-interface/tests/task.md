@@ -1,12 +1,9 @@
 ---
 title: "Hook + CLI Tests"
 status: approved
-review_status: approved
-integration_status: ~
-depends_on: 
+depends_on:
   - core-and-hooks
   - task-read
-
 tags: []
 created: 2026-05-24
 updated: 2026-05-24

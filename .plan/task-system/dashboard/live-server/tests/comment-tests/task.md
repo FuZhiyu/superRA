@@ -1,8 +1,6 @@
 ---
 title: "Comment system and CLI tests"
 status: implemented
-review_status: implemented
-integration_status: ~
 depends_on: []
 tags: []
 created: 2026-05-25

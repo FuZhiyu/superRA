@@ -1,8 +1,6 @@
 ---
 title: "Fix rebuild_task() to discover new children"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-25

@@ -1,8 +1,6 @@
 ---
 title: "FastAPI server and task data layer"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-24

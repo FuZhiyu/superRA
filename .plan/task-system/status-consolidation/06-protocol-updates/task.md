@@ -1,12 +1,12 @@
 ---
 title: "Update agent specs and workflow skills"
 status: approved
-review_status: ~
-integration_status: ~
 depends_on:
   - 01-design
-tags: [docs, protocol]
-script: ""
+tags:
+  - docs
+  - protocol
+script: 
 input: []
 output: []
 created: 2026-05-26

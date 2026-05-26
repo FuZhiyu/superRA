@@ -1,8 +1,6 @@
 ---
 title: "Consolidate to a single status field"
 status: in-progress
-review_status: implemented
-integration_status: ~
 depends_on:
   - agent-interface
 tags:
@@ -32,7 +30,6 @@ No `## Workflow Status` section in task files. Phase inference is recursive — 
 **Deferred:** Rearchitecting the integration workflow to be scope-flexible (single task, subtree, or branch-wide) and to reuse `status` for its revise cycle. Tracked separately under `agent-interface`. This task focuses on removing the redundant fields from the data model and updating all consumers.
 
 **Scope:** task-system data layer, CLI scripts, SKILL.md, agent specs, workflow skills (implementation-workflow, agent-orchestration, planning-workflow), dashboard rendering, migration of existing `.plan/` trees, and tests.
-
 
 ## Design Spec
 

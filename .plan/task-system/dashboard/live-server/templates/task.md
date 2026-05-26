@@ -1,8 +1,6 @@
 ---
 title: "Jinja2 templates and htmx frontend"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on:
   - ../server
 tags: []

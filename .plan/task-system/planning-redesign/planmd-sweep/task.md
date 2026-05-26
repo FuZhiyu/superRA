@@ -1,8 +1,6 @@
 ---
 title: "Sweep PLAN.md/RESULTS.md references across skills"
 status: approved
-review_status: approved
-integration_status: approved
 depends_on:
   - main-agent-update
   - revision-notes

@@ -1,8 +1,6 @@
 ---
 title: "Skill Definition + Inventory"
 status: approved
-review_status: approved
-integration_status: ~
 depends_on:
   - core-data-layer
   - cli-scripts

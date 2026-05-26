@@ -1,9 +1,7 @@
 ---
 title: "Task-System Agent Interface"
 status: approved
-review_status: ~
-integration_status: ~
-depends_on:  []
+depends_on: []
 tags: []
 created: 2026-05-24
 updated: 2026-05-24
@@ -22,7 +20,6 @@ Make the task system the primary handoff mechanism, replacing the monolithic PLA
 **Flexible body sections.** No rigid structure enforced. Any `## Heading` is valid — each becomes a foldable layer in dashboard. Recommended defaults: `## Objective`, `## Results`, `## Decisions`, `## Review Notes`.
 
 **User decisions in-task.** Decisions go in the relevant task's `## Decisions` section. Cross-cutting decisions in root task's `## Decisions`. No separate monolithic section.
-
 
 **Progressive skill revelation (3 tiers).** Consumer (SKILL.md body: read, edit, query), Planner (references/planning.md: objectives, splitting, retroactive), Contributor (references/internals.md: data layer, hooks).
 

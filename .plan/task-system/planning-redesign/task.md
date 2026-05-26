@@ -1,9 +1,7 @@
 ---
 title: "Planning Workflow Redesign"
 status: not-started
-review_status: ~
-integration_status: ~
-depends_on:  []
+depends_on: []
 tags: []
 created: 2026-05-24
 updated: 2026-05-24

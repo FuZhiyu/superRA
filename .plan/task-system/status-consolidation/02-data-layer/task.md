@@ -1,11 +1,10 @@
 ---
 title: "Update core data layer: remove stale fields, add archived status"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on:
   - 01-design
-tags: [code]
+tags:
+  - code
 script: skills/task-system/scripts/_task_io.py
 input: []
 output: []

@@ -1,8 +1,6 @@
 ---
 title: "Agent CLI for reading and resolving comments"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on:
   - ../sidecar-format
 tags: []

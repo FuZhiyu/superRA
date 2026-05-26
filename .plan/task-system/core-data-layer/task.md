@@ -1,8 +1,6 @@
 ---
 title: "Core Data Layer"
 status: approved
-review_status: approved
-integration_status: ~
 depends_on: []
 tags: []
 script: skills/task-system/scripts/_task_io.py

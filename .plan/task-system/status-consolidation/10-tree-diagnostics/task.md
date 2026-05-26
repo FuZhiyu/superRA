@@ -1,12 +1,12 @@
 ---
 title: "Build task_check.py diagnostic tool"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on:
   - 02-data-layer
-tags: [code, tooling]
-script: ""
+tags:
+  - code
+  - tooling
+script: 
 input: []
 output: []
 created: 2026-05-26

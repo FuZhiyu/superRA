@@ -1,12 +1,11 @@
 ---
 title: "Update task-system skill docs"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on:
   - 01-design
-tags: [docs]
-script: ""
+tags:
+  - docs
+script: 
 input: []
 output: []
 created: 2026-05-26

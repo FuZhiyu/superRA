@@ -1,8 +1,6 @@
 ---
 title: "Comment UI in dashboard"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on:
   - ../sidecar-format
 tags: []

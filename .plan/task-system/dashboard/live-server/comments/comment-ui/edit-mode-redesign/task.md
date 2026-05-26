@@ -1,9 +1,7 @@
 ---
 title: "GitHub-style comment editing UX"
-status: implemented
-review_status: approved
-integration_status: ~
-depends_on:  []
+status: approved
+depends_on: []
 tags: []
 created: 2026-05-25
 updated: 2026-05-25

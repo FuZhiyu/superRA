@@ -1,8 +1,6 @@
 ---
 title: "Per-block inline comments"
 status: not-started
-review_status: ~
-integration_status: ~
 depends_on:
   - ../server
   - ../templates

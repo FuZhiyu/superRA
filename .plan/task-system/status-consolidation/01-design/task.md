@@ -1,11 +1,10 @@
 ---
 title: "Design the unified status model"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on: []
-tags: [design]
-script: ""
+tags:
+  - design
+script: 
 input: []
 output: []
 created: 2026-05-26

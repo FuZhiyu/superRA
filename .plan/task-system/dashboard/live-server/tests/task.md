@@ -1,8 +1,6 @@
 ---
 title: "Test suite for live dashboard"
 status: not-started
-review_status: ~
-integration_status: ~
 depends_on:
   - ../server
   - ../templates

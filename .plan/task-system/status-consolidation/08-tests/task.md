@@ -1,14 +1,15 @@
 ---
 title: "Update and extend test suite"
 status: approved
-review_status: approved
 depends_on:
   - 02-data-layer
   - 03-cli-scripts
   - 04-migration-tooling
   - 10-tree-diagnostics
-tags: [code, tests]
-script: ""
+tags:
+  - code
+  - tests
+script: 
 input: []
 output: []
 created: 2026-05-26

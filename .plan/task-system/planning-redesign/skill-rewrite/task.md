@@ -1,8 +1,6 @@
 ---
 title: "Rewrite planning-workflow SKILL.md"
 status: approved
-review_status: approved
-integration_status: approved
 depends_on: []
 tags: []
 created: 2026-05-24

@@ -1,12 +1,9 @@
 ---
 title: ".plan/-Native Integration"
 status: approved
-review_status: approved
-integration_status: ~
-depends_on: 
+depends_on:
   - agent-protocols
   - handoff-doc
-
 tags: []
 created: 2026-05-24
 updated: 2026-05-24
@@ -23,7 +20,6 @@ Update `skills/integration-workflow/SKILL.md` for `.plan/`.
 - **Integrate:** `integration_status:` in frontmatter (already supported by task system). Integration reviewer edits frontmatter directly. Post-sync refactor commits code + task.md
 - **Document:** results maturation happens in task.md `## Results` sections, not a separate RESULTS.md. Stage 2 maturation = restructuring/polishing results within each task.md for reader-facing clarity, potentially reorganizing body sections
 - **Finish:** `.plan/` is committed as-is. PLAN.md is a manual communication index (no generation step)
-
 
 ## Results
 

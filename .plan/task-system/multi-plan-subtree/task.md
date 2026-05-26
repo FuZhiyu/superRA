@@ -1,8 +1,6 @@
 ---
 title: "Multi-plan support and subtree-scoped dashboard"
 status: not-started
-review_status: ~
-integration_status: ~
 depends_on:
   - core-data-layer
   - dashboard

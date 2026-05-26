@@ -1,8 +1,6 @@
 ---
 title: "Create harness-plan-mode.md reference"
 status: approved
-review_status: approved
-integration_status: approved
 depends_on: []
 tags: []
 created: 2026-05-24

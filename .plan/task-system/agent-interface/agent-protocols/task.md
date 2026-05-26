@@ -1,11 +1,8 @@
 ---
 title: "Update Agent Role Specs"
 status: approved
-review_status: approved
-integration_status: ~
-depends_on: 
+depends_on:
   - skill-restructure
-
 tags: []
 created: 2026-05-24
 updated: 2026-05-24

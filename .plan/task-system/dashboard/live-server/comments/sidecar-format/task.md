@@ -1,8 +1,6 @@
 ---
 title: "Comment sidecar format and server routes"
-status: implemented
-review_status: approved
-integration_status: ~
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-24

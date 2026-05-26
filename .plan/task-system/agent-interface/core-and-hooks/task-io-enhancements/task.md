@@ -1,9 +1,7 @@
 ---
 title: "Core Library Enhancements"
 status: approved
-review_status: approved
-integration_status: ~
-depends_on:  []
+depends_on: []
 tags: []
 created: 2026-05-24
 updated: 2026-05-24

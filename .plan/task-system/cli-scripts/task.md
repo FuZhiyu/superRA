@@ -1,8 +1,6 @@
 ---
 title: "CLI Scripts"
 status: approved
-review_status: approved
-integration_status: ~
 depends_on:
   - core-data-layer
 tags: []
