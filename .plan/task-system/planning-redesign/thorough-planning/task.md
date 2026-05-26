@@ -1,7 +1,7 @@
 ---
 title: "Thorough Planning Reference"
 status: implemented
-review_status: implemented
+review_status: revise
 integration_status: ~
 depends_on:
   - entry-and-placement
@@ -122,3 +122,12 @@ All 8 validation criteria pass:
 - Agent review step exists in both SKILL.md §Phase 4 and the thorough-planning reference
 - SKILL.md §Depth Tiers paragraph about Phase 4 being "the same at all tiers" is updated to note the thorough-only exception
 
+## Review Notes
+
+1. **MINOR — Incomplete checklist enumeration in `thorough-planning.md`.**
+
+[thorough-planning.md:127](skills/planning-workflow/references/thorough-planning.md#L127) enumerates 7 checklist items in the summary ("domain coverage, placeholder scan, pipeline consistency, validation coverage, handoff test, dependency graph sanity, subtask coverage") but the authoritative self-review checklist in [SKILL.md:149](skills/planning-workflow/SKILL.md#L149) has 8 items — item 6, "Verification coverage (where applicable)," is missing from the enumeration. The pointer to the full checklist (`planning-workflow §Phase 4: Self-Review`) is present, so a careful reader would load the full list. But the enumeration is the only prose that names the checklist items for the dispatched reviewer, and a reviewer agent could use it as a shortcut and silently skip verification coverage. Fix: add "verification coverage" to the inline enumeration at line 127, between "handoff test" and "dependency graph sanity."
+
+2. **MINOR — Cross-reference notation is novel and the subsection name is inexact.**
+
+[thorough-planning.md:118](skills/planning-workflow/references/thorough-planning.md#L118) uses `planning-workflow §Phase 4: Agent Review` and [thorough-planning.md:127](skills/planning-workflow/references/thorough-planning.md#L127) uses `planning-workflow §Phase 4: Self-Review`. The colon-scoped format (`§Parent: Subsection`) is not used anywhere else in the skill files — the repo convention is `skill §Section Name` (e.g., `task-system/references/planning.md §Placing Work in the Tree`). The actual subsection title in SKILL.md is "Agent Review (Thorough Depth Only)", not "Agent Review". These are navigable by a human but diverge from repo convention and omit the "(Thorough Depth Only)" qualifier. Fix: change both to the conventional format. For line 118: `planning-workflow §Agent Review (Thorough Depth Only)`. For line 127: `planning-workflow §Self-Review`. The parent-section qualifier is unnecessary because section names are unique within the file.
