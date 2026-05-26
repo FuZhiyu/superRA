@@ -1,7 +1,7 @@
 ---
 title: "Worktree Discovery Module"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -44,3 +44,16 @@ Default: exclude prunable, require `.plan/` with valid `task.md`. Agent worktree
 - `.plan/task.md` exists but is unparseable → set `plan_root` but `plan_title = None`
 
 **Constraints:** stdlib-only (subprocess for git). Follow existing `_task_io.py` patterns: `from __future__ import annotations`, type-annotated, dataclasses. Importable from `plan_dashboard.py`.
+
+## Results
+
+Implemented [`_worktree_discovery.py`](../../../../../skills/task-system/scripts/_worktree_discovery.py) with all specified components:
+
+- `WorktreeInfo` dataclass with all 10 fields (`path`, `branch`, `head`, `plan_root`, `plan_title`, `is_current`, `is_locked`, `is_prunable`, `is_agent`, `last_activity`).
+- `discover_worktrees(plan_dirname=".plan")` — parses `git worktree list --porcelain`, resolves paths, detects plan roots and titles, computes `is_agent` heuristic, fetches `last_activity` timestamps. Returns empty list when not in a git repo or git is unavailable.
+- `sort_worktrees()` — descending by `last_activity`, None sorts last.
+- `filter_worktrees()` — keyword-only `include_prunable` and `require_plan` parameters.
+- `get_git_common_dir()` — resolves to absolute path, returns None outside git.
+- Minimal frontmatter title parser (regex-based, avoids `_task_io` import to stay decoupled).
+
+Verified against the live repo with 15 worktrees: correctly identifies 1 current, 6 agent, 4 prunable, 8 with valid `.plan/`. Sort and filter edge cases (None activity, empty lists) confirmed.
