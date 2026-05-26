@@ -458,6 +458,45 @@ class TestTaskCreate:
             )
         assert exc_info.value.code == 1
 
+    def test_create_root_task_generates_serve_script(self, plan_root):
+        task_create.create_task(
+            plan_root=plan_root,
+            task_path="04-new-task",
+            title="New Task",
+        )
+        serve = plan_root / "serve"
+        assert serve.exists()
+        content = serve.read_text(encoding="utf-8")
+        assert "plan_dashboard.py" in content
+        assert "uv run" in content
+        assert 'exec uv run' in content
+        # Verify it's executable
+        import stat
+        assert serve.stat().st_mode & stat.S_IXUSR
+
+    def test_create_root_task_does_not_overwrite_serve(self, plan_root):
+        serve = plan_root / "serve"
+        serve.write_text("existing content", encoding="utf-8")
+        task_create.create_task(
+            plan_root=plan_root,
+            task_path="04-new-task",
+            title="New Task",
+        )
+        assert serve.read_text(encoding="utf-8") == "existing content"
+
+    def test_create_nested_task_does_not_generate_serve(self, plan_root):
+        # Create a parent for nesting
+        parent = plan_root / "04-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        task_create.create_task(
+            plan_root=plan_root,
+            task_path="04-parent/01-child",
+            title="Child Task",
+        )
+        serve = plan_root / "serve"
+        assert not serve.exists()
+
 
 class TestTaskUpdate:
     def test_update_status(self, plan_root):

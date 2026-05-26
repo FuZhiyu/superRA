@@ -133,7 +133,8 @@ For the canonical task structure — root task.md anatomy, per-task anatomy, and
 ### Create the `.plan/` Directory
 
 1. Create `.plan/task.md` (root) with `## Objective` (project-level goal, methodology, scope) and `## Conventions` (cached project guidance).
-2. Create child task directories with full objectives per §Task Structure above.
+2. Generate `.plan/serve` — a short shell script that launches the dashboard. Resolve `<skill-dir>/scripts/plan_dashboard.py` to a relative path from `.plan/` and write it into the script. (If using `task_create.py` to create root-level tasks, this is handled automatically.)
+3. Create child task directories with full objectives per §Task Structure above.
 
 ## Phase 4: Review & Commit
 

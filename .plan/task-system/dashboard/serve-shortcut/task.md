@@ -1,7 +1,7 @@
 ---
 title: "Generate .plan/serve shortcut script"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -30,3 +30,20 @@ Generate a `.plan/serve` shell script when `.plan/` is first created, so users c
 
 ## Results
 
+### Changes
+
+1. **[`task_create.py`](skills/task-system/scripts/task_create.py)** — Added `_maybe_generate_serve_script()` function and a call site in `create_task()`. Generates `.plan/serve` when creating a root-level task (no `/` in path) and the script does not already exist. Path resolution: uses `relative_to()` for in-repo paths (produces `../skills/task-system/scripts/plan_dashboard.py`), falls back to absolute path for out-of-repo usage.
+
+2. **[`planning-workflow/SKILL.md`](skills/planning-workflow/SKILL.md)** — Added step 2 to §Create the `.plan/` Directory instructing agents to generate `.plan/serve` alongside root `task.md`.
+
+3. **[`task-system/SKILL.md`](skills/task-system/SKILL.md)** — Updated §Dashboard to show `bash .plan/serve` as the primary invocation and explain the shortcut script.
+
+4. **[`test_task_system.py`](skills/task-system/scripts/test_task_system.py)** — Added three tests: `test_create_root_task_generates_serve_script` (verifies creation, content, executable bit), `test_create_root_task_does_not_overwrite_serve` (idempotency), `test_create_nested_task_does_not_generate_serve` (nested tasks skip generation).
+
+### Script content (9 lines)
+
+The generated `.plan/serve` script resolves `PLAN_DIR` from its own location, checks that the dashboard script exists, and runs it via `uv run` with `--root` and forwarded arguments.
+
+### Verification
+
+All 116 tests pass including the 3 new tests.
