@@ -48,9 +48,8 @@ Update existing tests and add new ones to cover the unified status model, `archi
 - `## Workflow Status` section removal
 
 **New tests — diagnostics:**
-- `--check` detects: invalid status values, rollup mismatches, broken dependencies, cycles, archived dependency warnings, stale fields, orphan dirs
-- `--fix` repairs: parent status sync, stale field removal, archived dependency cleanup
-- `--dry-run` reports but doesn't write
+- Detects: invalid status values, rollup mismatches, broken dependencies, cycles, archived dependency warnings, stale fields
+- `--json` output is parseable
 - Exit codes: 0 clean, 1 issues found
 
 ## Results
