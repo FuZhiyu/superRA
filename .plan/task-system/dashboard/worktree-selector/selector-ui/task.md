@@ -1,7 +1,7 @@
 ---
 title: "Frontend Worktree Selector"
 status: implemented
-review_status: revise
+review_status: approved
 integration_status: ~
 depends_on: 
   - server-routes
@@ -50,10 +50,3 @@ All changes in [base.html](../../../../../skills/task-system/scripts/templates/b
 - `switchWorktree(planRoot)`: Sends `POST /api/worktree/switch` with `{plan_root}`. On success, updates `_wtPreviousValue` and lets the SSE `full-reload` event (broadcast by the server) trigger `location.reload()`. On error, shows `alert()` with the error message and reverts the dropdown to `_wtPreviousValue`.
 - `fetchWorktrees()` called at script load time (line 1015). Re-fetch on full-reload is handled implicitly: `location.reload()` re-runs the entire page including `fetchWorktrees()`.
 
-## Review Notes
-
-1. **[CRITICAL]** Option value uses wrong path — switch will always 404.
-   -> implemented: Added `plan_root` field to `/api/worktrees` response entries in plan_dashboard.py. Changed JS to `opt.value = wt.plan_root || wt.path` so the switch endpoint receives the `.plan/` path.
-
-2. **[MINOR]** CSS `text-overflow: ellipsis` without `overflow: hidden`.
-   -> implemented: Added `overflow: hidden` and `white-space: nowrap` to `.worktree-selector .hc-select`.
