@@ -115,7 +115,7 @@ Keep it short — 3-5 files, one line each with a brief reason. This is a priori
 
 ## Agent Review
 
-At thorough depth, Phase 4 gains an agent review step between self-review and user review (see `planning-workflow §Phase 4: Agent Review`). The main agent dispatches a reviewer agent that receives:
+At thorough depth, Phase 4 gains an agent review step between self-review and user review (see `planning-workflow §Agent Review (Thorough Depth Only)`). The main agent dispatches a reviewer agent that receives:
 
 1. The complete `.plan/` directory (the task tree as designed).
 2. The exploration synthesis from Phase 1 — the consolidated understanding of project context that informed the design.
@@ -124,7 +124,7 @@ The exploration synthesis is essential input because the reviewer needs the same
 
 **What the reviewer evaluates:**
 
-- The self-review checklist from `planning-workflow §Phase 4: Self-Review` — domain coverage, placeholder scan, pipeline consistency, validation coverage, handoff test, dependency graph sanity, subtask coverage.
+- The self-review checklist from `planning-workflow §Self-Review` — domain coverage, placeholder scan, pipeline consistency, validation coverage, handoff test, verification coverage, dependency graph sanity, subtask coverage.
 - **Structural coherence** — whether task boundaries align with the project structure found during exploration, dependencies are complete and correctly ordered, and decomposition granularity matches the complexity of each area.
 
 The reviewer returns APPROVE or REVISE with findings. REVISE findings must be fixed before the tree is presented to the user.

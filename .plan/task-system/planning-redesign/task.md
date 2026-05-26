@@ -1,7 +1,7 @@
 ---
 title: "Planning Workflow Redesign"
-status: in_progress
-review_status: ~
+status: approved
+review_status: approved
 integration_status: ~
 depends_on: []
 tags: []
