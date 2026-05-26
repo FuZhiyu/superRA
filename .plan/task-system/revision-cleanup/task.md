@@ -1,7 +1,7 @@
 ---
 title: "Assign revision notes cleanup to reviewer"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: []
 tags: []
@@ -35,3 +35,16 @@ Assign cleanup to the reviewer — the natural owner, since the reviewer already
 
 ## Results
 
+All six edits applied surgically to two files:
+
+**`agents/reviewer.md` (4 edits):**
+
+1. [reviewer.md:82](agents/reviewer.md#L82) — APPROVE verdict now includes "Remove `## Revision Notes` if present."
+2. [reviewer.md:86](agents/reviewer.md#L86) — Re-review approval now removes both `## Review Notes` and `## Revision Notes`.
+3. [reviewer.md:113](agents/reviewer.md#L113) — Added `## Revision Notes` section to ownership list with constraint: remove-only at APPROVE, content is planner-owned.
+4. [reviewer.md:161](agents/reviewer.md#L161) — Added pre-commit self-check: "On APPROVE: I removed `## Revision Notes` if present."
+
+**`skills/task-system/references/planning.md` (2 edits):**
+
+5. [planning.md:73](skills/task-system/references/planning.md#L73) — Root anatomy: changed passive "cleaned out when re-implemented and approved" to "The reviewer removes this section when approving the task."
+6. [planning.md:129](skills/task-system/references/planning.md#L129) — Field notes: same change — made reviewer ownership explicit.
