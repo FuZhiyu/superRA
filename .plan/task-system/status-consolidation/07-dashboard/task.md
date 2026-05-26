@@ -15,13 +15,13 @@ updated: 2026-05-26
 
 ## Objective
 
-Update `plan_dashboard.py` and the live-server dashboard to stop rendering `review_status` as a separate field.
+Verify and update `plan_dashboard.py` and the live-server dashboard for the unified status model.
 
-- Remove `review_status` from the JSON data embedded in the static dashboard HTML
-- Remove `review_status` from the live-server's task data layer
-- The kanban and tree views should continue using `effective_status()` which already reads only `status` — confirm no changes needed there
-- If the dashboard currently shows `review_status` as a separate badge or column, remove it
+The dashboard already uses `effective_status()` for rendering, so this task may be mostly verification. Specifically:
 
-The `integration_status` display stays unchanged.
+- Confirm neither `review_status` nor `integration_status` appear in the dashboard code, JSON data layer, or templates. If any traces exist, remove them.
+- Confirm the kanban and tree views render correctly with only `status`.
+- Add `archived` to the status color/badge mapping (e.g., a distinct color or icon so archived tasks are visually distinguishable).
+- Confirm `archived` tasks are handled sensibly in all views (tree, DAG, kanban) — they should appear but be visually muted or in a separate kanban column.
 
 ## Results

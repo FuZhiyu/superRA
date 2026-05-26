@@ -15,9 +15,9 @@ updated: 2026-05-26
 
 ## Objective
 
-Update all agent role specs and workflow skills to use the unified `status` field instead of the `status` + `review_status` pair. The core change: where agents previously set two fields on one event, they now set one.
+Update all agent role specs and workflow skills to use the unified `status` field instead of the `status` + `review_status` + `integration_status` triple. The core change: where agents previously set two fields on one event, they now set one.
 
-**Out of scope:** Rearchitecting the integration workflow for scope-flexible operation. That is tracked separately. This task only removes `review_status` and `integration_status` references and updates the protocols to use `status` for the implementation review cycle.
+**Out of scope:** Rearchitecting the integration workflow for scope-flexible operation. That is tracked separately. This task removes field references and updates protocols to use `status` only.
 
 **Agent specs:**
 
@@ -34,17 +34,21 @@ Update all agent role specs and workflow skills to use the unified `status` fiel
 **Workflow skills:**
 
 `skills/implementation-workflow/SKILL.md`:
-- Step 2 line 93: replace "status: implemented and review_status: implemented" with "status: implemented"
-- Step 2 line 94: replace "review_status: approved" with "status: approved"
-- Remove `## Workflow Status` checkbox references in Step 3
+- §Step 2 (Execute Tasks): replace "status: implemented and review_status: implemented" with "status: implemented"
+- §Step 2 reviewer dispatch: replace "review_status: approved" with "status: approved"
+- §Step 3 (Verify Pipeline): remove `## Workflow Status` checkbox references
+
+`skills/integration-workflow/SKILL.md`:
+- Replace all `integration_status` references with `status` (§Integrate step, §Refactor loop, reviewer dispatch instructions, implementer fix instructions)
+- Update the integration reviewer's field ownership to use `status` instead of `integration_status`
 
 `skills/agent-orchestration/SKILL.md`:
-- Review Status Reference table (line 190): update to reference `status:` instead of `review_status:`
-- Completion gate (line 197): "task is complete when its `status` is `approved`"
+- §Review Status Reference table: update to reference `status:` instead of `review_status:`
+- §Completion gate: "task is complete when its `status` is `approved`"
 
 `skills/planning-workflow/SKILL.md`:
-- Line 162: update primary tracker note
-- Line 211: update status clear instructions (now just reset `status`)
+- §Primary tracker: update field reference
+- §Status clear instructions: now just reset `status` instead of clearing `review_status` and `integration_status` separately
 
 **Using-superRA references:**
 

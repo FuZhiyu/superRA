@@ -32,6 +32,6 @@ Update all task-system CLI scripts to remove `review_status` and `integration_st
 
 **`task_query.py`:**
 - Remove `review_status` and `integration_status` from JSON serialization
-- `archived` tasks excluded from frontier computation
+- Note: `archived` exclusion from frontier and rollup is handled in `_task_io.py` (task 02), not here. Verify `task_query.py` renders archived tasks correctly in `--tree` output (e.g., with a distinct badge).
 
 ## Results

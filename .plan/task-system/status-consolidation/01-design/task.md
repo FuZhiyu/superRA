@@ -39,7 +39,7 @@ The spec must cover:
    - Orchestrator owns: `approved → not-started` (scope invalidation), any state → `archived`
    - Integration reuses the same cycle: when integration review surfaces issues, `approved → revise`, then the fix cycle runs again
 
-4. **Parent status is computed, not stored authoritatively.** `effective_status()` computes rollup at read time. Stored parent status may be stale — `task_check.py --fix` periodically syncs it. CLI warns when manually setting status on a branch task without `--cascade`.
+4. **Parent status is computed, not stored authoritatively.** `effective_status()` computes rollup at read time. Stored parent status may be stale — `task_check.py` reports mismatches. CLI warns when manually setting status on a branch task without `--cascade`.
 
 5. **`--cascade` semantics.** Only for `approved`, `not-started`, and `archived`. Sets all descendant leaves to the given status. Other values (`in-progress`, `implemented`, `revise`) don't have clear recursive semantics and are rejected with `--cascade`.
 
@@ -55,6 +55,6 @@ The spec must cover:
 
 8. **Removed artifacts.** `review_status` field, `integration_status` field, `## Workflow Status` section — all removed from task files.
 
-9. **Diagnostic tool.** `task_check.py` with `--check` (read-only diagnostic) and `--fix` (auto-repair) modes. Validates status validity, rollup consistency, dependency integrity, archived dependency logic, frontmatter completeness, orphan directories.
+9. **Diagnostic tool.** `task_check.py` — read-only diagnostic (no auto-fix). Three checks: status validity, dependency integrity, rollup consistency. Reports issues; agents or humans decide what to fix.
 
 ## Results
