@@ -44,7 +44,7 @@ Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the 
 
 Result protection guards key results during Sync, Integrate, Finish, and future work. Drift tests are the current/default protection mechanism. For the writing vertical, "key results" are the manuscript artifacts; protection is satisfied by document-build success plus outline stability across the merged state — see `skills/writing/references/integration.md`.
 
-**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `integration_status:` unset or not `approved` plus orchestrator-declared related tasks from `planning-workflow §User Feedback and Changing the Task Tree`; running the suite is not scoped.
+**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `status:` not `approved` plus orchestrator-declared related tasks from `planning-workflow §User Feedback and Changing the Task Tree`; running the suite is not scoped.
 
 ### Steps
 
@@ -193,8 +193,8 @@ Agent(subagent_type: "superRA:reviewer"):
   Additionally: read task-local `## Sync Impact` sections and referenced Sync Map clusters
     (root task.md) as context, then review `git diff <BASE_HEAD_SHA>..HEAD`.
     For every touched or Sync-impact-affected task, either set
-    `integration_status: approved` in its frontmatter or write review notes in
-    `## Review Notes` and set `integration_status: revise`. Findings should
+    `status: approved` in its frontmatter or write review notes in
+    `## Review Notes` and set `status: revise`. Findings should
     cover minimum surviving branch delta, codebase fit, project-doc audit,
     drift-test implications, and task-file coherence. Do not recreate
     incoming-intent research or re-review semantic coherence already approved
@@ -203,7 +203,7 @@ Agent(subagent_type: "superRA:reviewer"):
 
 ### Step 3: Orchestrator adjudication
 
-Read the task-local `## Review Notes` sections for tasks with `integration_status: revise`. Classify reviewer findings per `superRA:agent-orchestration` §Handling Reviewer Feedback.
+Read the task-local `## Review Notes` sections for tasks with `status: revise`. Classify reviewer findings per `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
 - Batch all user-owned questions into one stop point.
 - Route substantive plan restructures through `planning-workflow §User Feedback and Changing the Task Tree`.
@@ -211,13 +211,13 @@ Read the task-local `## Review Notes` sections for tasks with `integration_statu
 
 ### Step 4: Refactor loop
 
-Dispatch implementer(s) for accepted `integration_status: revise` items:
+Dispatch implementer(s) for accepted `status: revise` items:
 
 ```text
 Agent(subagent_type: "superRA:implementer"):
   Stage: integration
   Task: Fix integration review items for <task-path-list>
-  Tasks in scope: <task paths with integration_status: revise>
+  Tasks in scope: <task paths with status: revise>
   BASE_HEAD_SHA: <BASE_HEAD_SHA>
 
   Additionally: read task-local `## Sync Impact` sections and referenced Sync Map clusters
@@ -227,7 +227,7 @@ Agent(subagent_type: "superRA:implementer"):
     reviewer finding.
 ```
 
-Re-dispatch the reviewer for narrow re-review plus the branch-wide pruning sweep over `BASE_HEAD_SHA..HEAD`. Iterate until all in-scope tasks have `integration_status: approved` and every surviving hunk is justified by approved objectives, approved semantic-sync context, logged user decisions, or project convention fit.
+Re-dispatch the reviewer for narrow re-review plus the branch-wide pruning sweep over `BASE_HEAD_SHA..HEAD`. Iterate until all in-scope tasks have `status: approved` and every surviving hunk is justified by approved objectives, approved semantic-sync context, logged user decisions, or project convention fit.
 
 ### Step 5: Close Integrate
 
@@ -353,7 +353,7 @@ Report what was published or landed and what was cleaned up.
 - Enter Finish without checking whether the base advanced again.
 
 **Always:**
-- Run the full drift-test suite on every integration pass (new drift tests scoped to tasks not yet `integration_status: approved`; running the suite is not scoped).
+- Run the full drift-test suite on every integration pass (new drift tests scoped to tasks not yet `status: approved`; running the suite is not scoped).
 - Use semantic-merge for intent-aware branch syncs.
 - Keep Sync serialized and refactor parallelizable only after Sync lands.
 - Fold user decisions into task objectives before acting.

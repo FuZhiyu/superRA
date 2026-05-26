@@ -36,7 +36,7 @@ Task files follow the standard task.md anatomy (see `task-system/references/plan
 
 Dispatch through `agent-orchestration`'s canonical reviewer template. Keep `Stage: implementation`; long-form review changes the artifact under review, not the superRA stage model.
 
-Reviewers do not append to a shared findings section. They write task-local review notes and set `review_status: revise` or `approved` using the normal reviewer protocol.
+Reviewers do not append to a shared findings section. They write task-local review notes and set `status: revise` or `approved` using the normal reviewer protocol.
 
 Consistency-lane reviewers use the relevant `consistency/<dim>.md` output format inside the review-notes item. Language/style and structure reviewers use `review.md`'s finding format and add `Fix: mechanical | conventional | authorial` using `review.md §Fix tiers`.
 
@@ -48,7 +48,7 @@ Use the task-system status rollup. For review-only long-form review:
 
 - All tasks start with `status: not-started`.
 - `status` rolls up to `approved` when every review task is `approved`.
-- Integration-related statuses (`integration_status`) remain unset unless the researcher later asks to apply edits or integrate manuscript changes.
+- Integration uses the same `status` field — tasks stay at `approved` unless integration review sets them back to `revise`.
 
 ## Review-Time Indices
 

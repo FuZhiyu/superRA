@@ -90,8 +90,8 @@ If the task tree exists, is tracked, and the worktree is clean, proceed to Step 
 
 1. **Dispatch implementer.** Subagent mode: dispatch agents following `superRA:agent-orchestration`. The `Task:` field uses the task path (e.g., `Task: data-preparation/merge`).
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
-3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + task.md (with `status: implemented` and `review_status: implemented`). **Dispatch the reviewer (one comprehensive pass).** The reviewer reads the task via `task_read.py --path <path>`, walks the active domain skill's gated checklist, writes findings in the task's `## Review Notes` section, and returns APPROVE or REVISE. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
-4. **Once APPROVE:** the reviewer has set `review_status: approved` in the task's frontmatter. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If findings change upcoming tasks, update future task objectives in their `task.md` files and commit. Proceed to next task.
+3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + task.md (with `status: implemented`). **Dispatch the reviewer (one comprehensive pass).** The reviewer reads the task via `task_read.py --path <path>`, walks the active domain skill's gated checklist, writes findings in the task's `## Review Notes` section, and returns APPROVE or REVISE. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
+4. **Once APPROVE:** the reviewer has set `status: approved` in the task's frontmatter. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If findings change upcoming tasks, update future task objectives in their `task.md` files and commit. Proceed to next task.
 
 When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, the orchestrator may dispatch `Stage: integration` against that single task before advancing. This uses existing stage flexibility — no new mechanism.
 
@@ -126,7 +126,7 @@ After every task is `approved`, verify the work end-to-end before presenting com
 
 If any check fails: fix it before proceeding. Do not present completion options for unreproducible work.
 
-**Once all five checks pass:** check the `Execution complete` box in root task.md `## Workflow Status` and commit the box-flip before presenting the Step 4 completion menu.
+**Once all five checks pass:** proceed to the Step 4 completion menu.
 
 ### Step 4: Present Completion Options
 

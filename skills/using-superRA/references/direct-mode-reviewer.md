@@ -74,11 +74,11 @@ Walk the active domain skill's gated checklist top to bottom, plus any operation
 
 Two verdicts:
 
-**APPROVE:** No `[BLOCKING]` findings. No review notes needed; set `review_status: approved` in frontmatter.
+**APPROVE:** No `[BLOCKING]` findings. No review notes needed; set `status: approved` in frontmatter.
 
-**REVISE:** One or more `[BLOCKING]` items failed. Write the `## Review Notes` section with specific items: markdown-link citation (e.g., [file.py:42](file.py#L42)), description, severity, what to fix. When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, say so in plain prose alongside that finding (e.g., "— note: re-check this after the pre-merge describe is added"). Set `review_status: revise` in frontmatter.
+**REVISE:** One or more `[BLOCKING]` items failed. Write the `## Review Notes` section with specific items: markdown-link citation (e.g., [file.py:42](file.py#L42)), description, severity, what to fix. When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, say so in plain prose alongside that finding (e.g., "— note: re-check this after the pre-merge describe is added"). Set `status: revise` in frontmatter.
 
-On re-review after a REVISE fix: verify (1) each cited fix is correct, and (2) any finding annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass — no third full walk. Delete confirmed-fixed items from `## Review Notes`. When all items are resolved, remove the `## Review Notes` section entirely and set `review_status: approved`.
+On re-review after a REVISE fix: verify (1) each cited fix is correct, and (2) any finding annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass — no third full walk. Delete confirmed-fixed items from `## Review Notes`. When all items are resolved, remove the `## Review Notes` section entirely and set `status: approved`.
 
 ## Handoff — Unified Across Stages
 
@@ -102,8 +102,7 @@ If the task's structure is unclear, flag it in your status return rather than in
 
 **You own** the following within your assigned task's `task.md`:
 
-- **`review_status:` frontmatter field** — set to `approved` or `revise` per the verdict protocol in §Verdict.
-- **`integration_status:` frontmatter field** — flipped by you in the integration stage, symmetric with `review_status`. As **integration reviewer**, consume task-local sync impact context, then review the governing diff. For every touched or sync-impact-affected task, set `approved` when it passes or `revise` when you write task-local review notes. On re-review, flip in-scope tasks to `approved` when fixes pass, or back to `revise` on specific failing tasks. Not applicable to other reviewer stages.
+- **`status:` frontmatter field** — reviewer owns `implemented → revise` and `implemented → approved`. As **integration reviewer**, also owns `approved → revise` when integration review surfaces issues. Consume task-local sync impact context, then review the governing diff. For every touched or sync-impact-affected task, set `approved` when it passes or `revise` when you write task-local review notes. On re-review, flip in-scope tasks to `approved` when fixes pass, or back to `revise` on specific failing tasks.
 - **The `## Review Notes` section** — write it on first review, delete items or rewrite items on re-review, and remove the section entirely when empty (at APPROVED).
 
 **You may NOT edit:**
@@ -120,7 +119,7 @@ If the task's structure is unclear, flag it in your status return rather than in
 1. Read the task's `## Objective` and the code at the cited files.
 2. Walk the domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. Never halt on a failure — continue through the rest so the implementer gets one comprehensive pass.
 3. For each issue you find, add a numbered item to a new `## Review Notes` section. Each item has: severity (CRITICAL / MAJOR / MINOR), markdown-link citation (e.g., [file.py:42](file.py#L42)), what is wrong, what to fix. In Integrate, any Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
-4. Set `review_status:` per the verdict protocol in §Verdict: `approved` (no `[BLOCKING]` items) or `revise` (at least one `[BLOCKING]` item).
+4. Set `status:` per the verdict protocol in §Verdict: `approved` (no `[BLOCKING]` items) or `revise` (at least one `[BLOCKING]` item).
 5. Commit the task.md only: `git commit -m "review: <task-path> <verdict>"`.
 
 **Commit hygiene.** Follow `superRA:using-superra` §Commit Hygiene before staging the task.md for your `review:` commit — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit.
@@ -139,7 +138,7 @@ For each item, decide one of:
 - **Orchestrator override accepted** → delete the item. The orchestrator's rejection is sufficient.
 - **Orchestrator override you disagree with** → leave the item in place and append a counter-argument as a fresh sub-bullet below the annotation. **Also surface the disagreement in your status report's Headline findings**, so the orchestrator sees it before the next dispatch decision and can escalate to the human partner.
 
-**When `## Review Notes` is empty, remove the section entirely** and set `review_status: approved`. Commit the task.md.
+**When `## Review Notes` is empty, remove the section entirely** and set `status: approved`. Commit the task.md.
 
 **Re-review scope:** After a REVISE, your second pass is **narrow** — not a full walk of §Review. Verify (a) each cited fix is correct, and (b) any finding you annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass. If a fix invalidated a dependent finding (different results, different sample, different variable definition), rewrite that item to describe the new problem. At Stage `integration`, keep the task-level walkthrough narrow in this sense, but still perform the branch-wide surviving-diff confirmation required by `integration-workflow`: treat `git diff <BASE_HEAD_SHA>..HEAD` as a pruning sweep, not a fresh full-task checklist walk. Only reopen a previously `approved` integration task if that sweep surfaces a new unjustified surviving hunk touching it.
 
@@ -148,7 +147,7 @@ For each item, decide one of:
 ### Pre-Commit Self-Check
 
 Before committing:
-- [ ] I only edited the `review_status:` frontmatter field and `## Review Notes` section of my assigned task (plus `integration_status:` flips on in-scope tasks if integration reviewer).
+- [ ] I only edited the `status:` frontmatter field and `## Review Notes` section of my assigned task.
 - [ ] I did not touch any code, any `## Objective`, or any `## Results` section.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] `## Review Notes` describes current issues only, in severity order. If empty, the section is removed entirely.
@@ -162,7 +161,7 @@ Before committing:
 
 **Headline findings:** [1-3 bullets naming the most important issues or strengths; full list is in `<task-path>/task.md` `## Review Notes`]
 
-**Doc edits (what changed since previous dispatch):** [e.g., "`<task-path>/task.md` — set review_status: revise, wrote ## Review Notes with 2 MAJOR + 1 MINOR items." Or on re-review: "deleted review items 1 and 2 after verifying fixes, rewrote item 3 to reflect remaining bug." Say "none" for ad-hoc stage.]
+**Doc edits (what changed since previous dispatch):** [e.g., "`<task-path>/task.md` — set status: revise, wrote ## Review Notes with 2 MAJOR + 1 MINOR items." Or on re-review: "deleted review items 1 and 2 after verifying fixes, rewrote item 3 to reflect remaining bug." Say "none" for ad-hoc stage.]
 ```
 
 If the orchestrator wants the full issue list, severities, and file:line citations, they read `## Review Notes` in the task directly.

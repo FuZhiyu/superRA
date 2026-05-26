@@ -40,7 +40,7 @@ Long-form review treats the user's existing draft as the implementation under re
 
 - one task per review lane or deep-review perspective;
 - each task points at the target file/section and loaded lane reference;
-- `review_status:` starts unset, then reviewers set it to `revise` with task-local review notes or `approved`;
+- `status:` starts `not-started`, then reviewers set it to `revise` with task-local review notes or `approved`;
 - no `## Results` sections are created; findings belong in task-local `## Review Notes`.
 
 This path uses implementation-workflow for reviewer dispatch and status handling, but not for implementer output production.

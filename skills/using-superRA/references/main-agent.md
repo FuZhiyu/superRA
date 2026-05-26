@@ -32,20 +32,20 @@ The resolver diagnoses and routes. It does not perform the task-tree edit, imple
 - Git: current branch/worktree, `git status`, recent commits relevant to `.plan/` task files, and any active merge/rebase/cherry-pick state.
 - Task tree: whether `.plan/task.md` exists, is tracked, and matches the committed state expected by the workflow about to run.
 - Root task.md: `## Conventions`, `## Sync Map` when present, any logged implementation-workflow Step 4 disposition, and any declared pipeline.
-- Per-task frontmatter: `status`, `review_status`, `integration_status`, `depends_on`. Use `task_query.py --frontier` to find dispatchable tasks.
+- Per-task frontmatter: `status`, `depends_on`. Use `task_query.py --frontier` to find dispatchable tasks.
 - Per-task body: `## Results` sections for completed work, active `## Review Notes` blockquotes, `## Revision Notes` signaling recent changes.
 
 **Compute the affected frontier:**
 
 1. First check whether planning must run. If `.plan/task.md` is missing, untracked, structurally incomplete, or contradicted by a material user decision not yet reflected in task objectives, enter `planning-workflow` before implementation or integration work. Material scope, objective, input, output, methodology, or task-graph changes use `planning-workflow §User Feedback and Changing the Task Tree`; after that protocol updates the task files, run this resolver again.
 2. Identify the changed or untrusted starting points from the durable facts: explicit user scope change, dirty or recent task-file edits, omitted / placeholder / cleared task status, active review notes, revision notes signaling a scope change, failed or missing reproducibility evidence, or a requested final action.
-3. For each changed task, include downstream dependents (via `depends_on:` edges) whose inputs, outputs, or assumptions may have shifted. Preserve task-local `review_status` / `integration_status` for unrelated approved tasks. If a downstream task is unaffected, note the exemption in a revision note on the changed task.
+3. For each changed task, include downstream dependents (via `depends_on:` edges) whose inputs, outputs, or assumptions may have shifted. Preserve `status` for unrelated approved tasks. If a downstream task is unaffected, note the exemption in a revision note on the changed task.
 4. If durable facts disagree in a way you cannot repair mechanically, stop under §The Three Pause Classes and resolve before acting.
 
 **Return the decision:**
 
 - Affected frontier: tasks and workflow layer(s) that need work.
-- Preserved-approved tasks: tasks whose `review_status` / `integration_status` remain valid.
+- Preserved-approved tasks: tasks whose `status` remains `approved`.
 - Next safe workflow owner and entry layer: planning, implementation / review, validation / completion, integration, documentation, or final merge / PR.
 - Required stop point: any researcher decision or irreparable contradiction that must be resolved before action.
 

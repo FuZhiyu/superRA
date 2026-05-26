@@ -159,7 +159,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 ### .plan/ Is the Task Tracker
 
-**`.plan/` is the primary task tracker** — not `Todo` tools, not chat, not status reports, not a session-internal scratchpad. The task files with their frontmatter `status:` / `review_status:` fields are the authoritative state of what is planned, what is in progress, and what is done.
+**`.plan/` is the primary task tracker** — not `Todo` tools, not chat, not status reports, not a session-internal scratchpad. The task files with their frontmatter `status:` field are the authoritative state of what is planned, what is in progress, and what is done.
 
 `TodoWrite` (or any equivalent harness-provided todo UI) has a narrower role: a transient view of what the agent is doing right now in this session. It is acceptable for ephemeral session-internal todos that do not represent analysis tasks. It is **not** acceptable as a substitute for a `.plan/` task. If the work is part of the analysis — a new task, a discovered subtask, a methodology check, a sensitivity run, a refactor pass — it lives in `.plan/` first.
 
@@ -208,7 +208,7 @@ When the task tree changes — task details updated, tasks added, removed, or re
    - **Removed task** — Delete the directory entirely.
    - **Root task.md** — After the task edits above, rewrite any field in root task.md that no longer matches the new tree.
 
-3. **Update statuses** by orchestrator judgment. Clear `review_status` and `integration_status` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `approved` tasks.
+3. **Update statuses** by orchestrator judgment. Reset `status` to `not-started` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `approved` tasks.
 4. **Sweep for stale content** per `task-system/references/planning.md` §Stale Content Checklist.
 5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
 6. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point.

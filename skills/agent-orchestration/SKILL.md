@@ -187,14 +187,15 @@ When a reviewer returns REVISE:
 
 Implementer and reviewer agents own their commits and document updates (see `agents/implementer.md` and `agents/reviewer.md`). The orchestrator reads the resulting state from task frontmatter:
 
-| `review_status:` | Meaning | Orchestrator action |
+| `status:` | Meaning | Orchestrator action |
 |---|---|---|
-| `~` | Not started | Dispatch implementer |
+| `not-started` | Planned, no work yet | Dispatch implementer |
+| `in-progress` | Being worked on | Wait for implementer or re-dispatch |
 | `implemented` | Code committed and ready for review | Dispatch reviewer |
 | `revise` | Reviewer found `[BLOCKING]` issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
 | `approved` | Review passed | Proceed to next task |
 
-**A task is complete only when its `review_status` is `approved`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
+**A task is complete only when its `status` is `approved`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
 
 For direct mode (orchestrator executes the step itself), see `superRA:using-superra` §Execution Modes.
 
