@@ -45,4 +45,5 @@ Ran `plan_migrate.py --upgrade-status` on `.plan/` in the `dashboard-redesign` w
 
 ## Review Notes
 
-1. **[CRITICAL]** Two task files still have `review_status` and `integration_status` frontmatter fields that the migration was supposed to strip: [.plan/task.md](.plan/task.md) (lines 4-5) and [.plan/task-system/task.md](.plan/task-system/task.md) (lines 4-5). Running `task_check.py --category status` currently reports 4 warnings for these stale fields. Running `plan_migrate.py --upgrade-status --plan-root .plan --dry-run` confirms these 2 files still need migration. The Results section's claim of "zero findings" is incorrect. **Fix:** Re-run `plan_migrate.py --upgrade-status --plan-root .plan` (without `--dry-run`) to strip these 2 remaining files, or manually remove the stale fields. Then verify with `task_check.py --category status` that it reports zero findings.
+1. **[CRITICAL]** Two task files still have `review_status` and `integration_status` frontmatter fields.
+   → implemented: Manually stripped stale fields from both `.plan/task.md` and `.plan/task-system/task.md`. Verified with `task_check.py --category status`: "All checks passed. No issues found."

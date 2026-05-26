@@ -1,8 +1,6 @@
 ---
 title: "Better Handoff"
-status: in-progress
-review_status: ~
-integration_status: ~
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-23
