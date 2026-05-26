@@ -1,7 +1,7 @@
 ---
 title: "Thorough Planning Reference"
-status: approved
-review_status: approved
+status: not_started
+review_status: ~
 integration_status: ~
 depends_on:
   - entry-and-placement
@@ -54,6 +54,14 @@ The task tree at thorough depth is not one-shot. The main agent may refine after
 
 Each refinement round can be lighter (quick-depth update to the tree) even though the initial pass was thorough.
 
+**6. Agent Review Before User Review**
+
+At thorough depth, Phase 4 (Review & Commit) gains an agent review step between Self-Review and User Review. The main agent dispatches a reviewer agent that receives the complete `.plan/` directory and the exploration synthesis. The reviewer evaluates the same self-review checklist plus structural coherence across tasks: whether task boundaries make sense, dependencies are complete, and decomposition granularity is appropriate. The reviewer returns APPROVE or REVISE with findings; REVISE findings must be fixed before proceeding to User Review.
+
+Add this as a new subsection `### Agent Review (Thorough Depth Only)` in `planning-workflow/SKILL.md` §Phase 4, between `### Self-Review` and `### User Review`. Also update the thorough-planning reference to note this step and its connection to exploration synthesis.
+
+The earlier statement in SKILL.md §Depth Tiers that "Phase 4 (Review & Commit) is the same at all tiers" must be updated to reflect this thorough-only difference.
+
 ### Design constraints
 
 - The reference must compose cleanly with agent-orchestration dispatch templates — exploration agents use existing dispatch patterns, not a new template shape.
@@ -73,6 +81,12 @@ Each refinement round can be lighter (quick-depth update to the tree) even thoug
 - The dispatch pattern works for both research (data analysis, theory) and software (skill development, infrastructure) contexts
 - Critical files identification is concise and actionable
 - Incremental refinement composes with the depth tiers (thorough initial pass, quick refinement)
+- Agent review step exists in both SKILL.md §Phase 4 and the thorough-planning reference
+- SKILL.md §Depth Tiers paragraph about Phase 4 being "the same at all tiers" is updated
+
+## Revision Notes
+
+- **2026-05-26 — Added §6 "Agent Review Before User Review."** Thorough plans get a reviewer agent dispatch in Phase 4 between self-review and user review. Reviewer evaluates self-review checklist + structural coherence; REVISE findings must be fixed before user sees the tree. Also requires updating the "same at all tiers" statement in SKILL.md §Depth Tiers.
 
 ## Results
 

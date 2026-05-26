@@ -1,7 +1,7 @@
 ---
 title: "Entry Assessment, Depth Tiers, and Task Placement"
-status: approved
-review_status: approved
+status: not_started
+review_status: ~
 integration_status: ~
 depends_on: []
 tags: []
@@ -55,7 +55,13 @@ The recursion handles all levels uniformly: start at the root, walk down through
 
 Anti-patterns: creating a new task for what's really a scope extension; nesting 3+ levels deep when unnecessary; creating siblings with near-identical concerns.
 
-### 4. Substantive Questions Throughout Planning
+### 4. Ask When Placement or Depth Is Unclear
+
+Add an explicit instruction in §Entry Assessment: when the existing tree and project context do not make the placement or depth tier obvious, the agent must use `AskUserQuestion` to ask the user rather than guessing silently. Present the concrete options under consideration (e.g., "nest under task X vs. create a new root-level task" or "standard vs. thorough depth") with a one-line rationale for each. Wrong placement creates rework; wrong depth wastes effort or misses complexity.
+
+Place this immediately after the "Placement and depth are independent dimensions" paragraph in §Entry Assessment.
+
+### 5. Substantive Questions Throughout Planning
 
 Add a cross-cutting instruction (not gated to any phase) adapted from Claude Code's plan mode mechanism. Three components:
 
@@ -65,7 +71,7 @@ Add a cross-cutting instruction (not gated to any phase) adapted from Claude Cod
 
 **Multi-perspective surfacing (thorough tier):** When thorough planning returns competing designs from multiple agents, the unresolved tensions between them are the natural source of substantive questions. This is already covered by the thorough-planning reference (sibling task) but the SKILL.md should note the connection.
 
-### 5. Entry Modes (Routing Paths)
+### 6. Entry Modes (Routing Paths)
 
 These are routing decisions in the Entry Assessment, not separate workflows:
 
@@ -73,7 +79,7 @@ These are routing decisions in the Entry Assessment, not separate workflows:
 - **Retroactive documentation** — existing code/results need a `.plan/` record. Detected when the entry assessment finds code without task coverage. Routes through the same phases but sets `status: implemented` on created tasks. References existing §Retroactive Plan Creation content — no new instruction needed, just clear routing.
 - **Consolidation** — tree cleanup requested or detected as needed. Routes to `references/consolidation.md`. See sibling task `consolidation/`.
 
-### 6. Harness Plan Mode Alignment
+### 7. Harness Plan Mode Alignment
 
 Update `references/harness-plan-mode.md` to align with the new entry logic. In plan mode, depth tier selection happens during the exploration phase; the plan file reflects the chosen depth and placement decisions.
 
@@ -96,6 +102,11 @@ Update `references/harness-plan-mode.md` to align with the new entry logic. In p
 - The phases (Exploration, Domain Setup, Design, Review) still work at all depth levels
 - No DRY violations with agent-orchestration, task-system, or §User Feedback and Changing the Task Tree
 - Harness plan mode reference is consistent with the new entry logic
+- §Entry Assessment includes an explicit "ask when unclear" instruction for placement and depth, placed after the independence paragraph
+
+## Revision Notes
+
+- **2026-05-26 — Added §4 "Ask When Placement or Depth Is Unclear."** New instruction: when the tree/context doesn't make placement or depth obvious, use `AskUserQuestion` with concrete options rather than guessing. Renumbered §§5–7.
 
 ## Results
 
