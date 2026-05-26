@@ -1,7 +1,7 @@
 ---
 title: "Entry Assessment, Depth Tiers, and Task Placement"
 status: implemented
-review_status: implemented
+review_status: approved
 integration_status: ~
 depends_on: []
 tags: []
