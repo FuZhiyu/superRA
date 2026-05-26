@@ -1,6 +1,6 @@
 ---
 title: "Design the unified status model"
-status: not-started
+status: implemented
 review_status: ~
 integration_status: ~
 depends_on: []
@@ -58,3 +58,5 @@ The spec must cover:
 9. **Diagnostic tool.** `task_check.py` — read-only diagnostic (no auto-fix). Three checks: status validity, dependency integrity, rollup consistency. Reports issues; agents or humans decide what to fix.
 
 ## Results
+
+Design spec written in parent task's `## Design Spec` section. Covers all 9 items from the objective: field definition, status semantics table, state machine with transition ownership, rollup rules, frontier rules, parent-status computation policy, `--cascade` semantics, migration mapping, phase inference, and diagnostic tool spec.
