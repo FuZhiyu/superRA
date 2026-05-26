@@ -285,7 +285,7 @@ def _render_task_node(task: Task) -> str:
     env = _get_jinja_env()
     template = env.from_string(
         '{% from "task_node.html" import render_task_node %}'
-        '{{ render_task_node(task, project_root, depth=2) }}'
+        '{{ render_task_node(task, project_root, depth=3) }}'
     )
     return template.render(task=task, project_root=_project_root)
 
@@ -1225,8 +1225,12 @@ function renderSummary() {
 function renderTree() {
   const root = document.getElementById('view-tree');
   root.innerHTML = '';
-  for (var i = 0; i < TASK_DATA.children.length; i++) {
-    root.appendChild(renderTaskNode(TASK_DATA.children[i], 0));
+  if (TASK_DATA.body && TASK_DATA.body.trim()) {
+    root.appendChild(renderTaskNode(TASK_DATA, 0));
+  } else {
+    for (var i = 0; i < TASK_DATA.children.length; i++) {
+      root.appendChild(renderTaskNode(TASK_DATA.children[i], 0));
+    }
   }
 }
 

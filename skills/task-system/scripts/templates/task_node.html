@@ -8,7 +8,7 @@
 
 {% macro render_task_node(task, project_root, depth=0) %}
 {% set eff_status = task.effective_status() %}
-{% set path_id = task.path | replace('/', '-') %}
+{% set path_id = (task.path | replace('/', '-')) or 'root' %}
 {% set has_children = task.children | length > 0 %}
 {% set has_body = task.body and task.body.strip() %}
 {% set has_expandable = has_children or has_body %}
@@ -103,8 +103,8 @@
   {#- Children container -#}
   {% if has_children %}
   <div class="task-children" id="{{ path_id }}-children" style="display:none;">
-    {% if depth < 2 %}
-      {#- Render children inline for depth 0 and 1 -#}
+    {% if depth < 3 %}
+      {#- Render children inline for depth 0, 1, and 2 -#}
       {% for child in task.children %}
         {{ render_task_node(child, project_root, depth + 1) }}
       {% endfor %}
@@ -113,7 +113,7 @@
   {% endif %}
 
   {#- htmx lazy-load for deeper children -#}
-  {% if has_children and depth >= 2 %}
+  {% if has_children and depth >= 3 %}
   <script>
     (function() {
       var node = document.getElementById('task-{{ path_id }}');

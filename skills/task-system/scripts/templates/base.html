@@ -604,9 +604,13 @@ body {
   {#- Hidden element to catch full-reload SSE events -#}
   <div id="sse-full-reload" sse-swap="full-reload" hx-swap="none" style="display:none;"></div>
   <div id="view-tree" class="task-tree">
-    {% for child in root_task.children %}
-      {{ render_task_node(child, project_root, depth=0) }}
-    {% endfor %}
+    {% if root_task.body and root_task.body.strip() %}
+      {{ render_task_node(root_task, project_root, depth=0) }}
+    {% else %}
+      {% for child in root_task.children %}
+        {{ render_task_node(child, project_root, depth=0) }}
+      {% endfor %}
+    {% endif %}
   </div>
   <div id="view-dag" class="dag-container hidden"></div>
   <div id="view-kanban" class="kanban hidden"></div>
