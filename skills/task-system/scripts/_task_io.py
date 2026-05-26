@@ -17,9 +17,7 @@ from pathlib import Path
 
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---\n(.*)", re.DOTALL)
 
-VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved")
-VALID_REVIEW_STATUSES = ("~", "implemented", "revise", "approved")
-VALID_INTEGRATION_STATUSES = ("~", "implemented", "revise", "approved")
+VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved", "archived")
 
 
 @dataclass
@@ -30,8 +28,6 @@ class Task:
     dir_path: Path
     title: str = ""
     status: str = "not-started"
-    review_status: str = "~"
-    integration_status: str = "~"
     depends_on: list[str] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
     script: str = ""
@@ -167,7 +163,7 @@ def serialize_frontmatter(fm: dict[str, str | list[str]]) -> str:
     """Serialize a frontmatter dict back to YAML text (without --- delimiters)."""
     lines = []
     field_order = [
-        "title", "status", "review_status", "integration_status",
+        "title", "status",
         "depends_on", "tags", "script", "input", "output",
         "created", "updated",
     ]
@@ -220,24 +216,13 @@ def parse_task(task_md_path: Path) -> Task:
 
     title = str(fm.get("title", ""))
     status = str(fm.get("status", "not-started"))
-    review_status = str(fm.get("review_status", "~"))
-    integration_status = str(fm.get("integration_status", "~"))
 
     if status not in VALID_STATUSES:
         raise ValueError(
             f"Invalid status {status!r} in {task_md_path}. "
             f"Valid values: {VALID_STATUSES}"
         )
-    if review_status not in VALID_REVIEW_STATUSES:
-        raise ValueError(
-            f"Invalid review_status {review_status!r} in {task_md_path}. "
-            f"Valid values: {VALID_REVIEW_STATUSES}"
-        )
-    if integration_status not in VALID_INTEGRATION_STATUSES:
-        raise ValueError(
-            f"Invalid integration_status {integration_status!r} in {task_md_path}. "
-            f"Valid values: {VALID_INTEGRATION_STATUSES}"
-        )
+    # Silently ignore review_status / integration_status if present in old files
 
     sections = parse_body_sections(body)
 
@@ -246,8 +231,6 @@ def parse_task(task_md_path: Path) -> Task:
         dir_path=task_md_path.parent,
         title=title,
         status=status,
-        review_status=review_status,
-        integration_status=integration_status,
         depends_on=_to_list(fm.get("depends_on", [])),
         tags=_to_list(fm.get("tags", [])),
         script=str(fm.get("script", "")),
@@ -270,8 +253,6 @@ def write_task(task: Task) -> None:
     if task.title:
         fm["title"] = task.title
     fm["status"] = task.status
-    fm["review_status"] = task.review_status
-    fm["integration_status"] = task.integration_status
     if task.depends_on:
         fm["depends_on"] = task.depends_on
     else:
@@ -409,19 +390,22 @@ def resolve_path(plan_root: Path, task_path: str) -> Path:
 def compute_status(task: Task) -> str:
     """Compute rolled-up status for a branch task from its children.
 
-    Rules:
-    - If all children are approved -> approved
-    - If any child is revise -> revise
-    - If any child is in-progress or implemented -> in-progress
-    - Otherwise -> not-started
+    Archived children are excluded from rollup.  Rules checked in order:
+    1. No non-archived children remain -> archived
+    2. All children approved -> approved
+    3. Any child revise -> revise
+    4. Any child in-progress or implemented -> in-progress
+    5. Any child approved (but not all) -> in-progress
+    6. Otherwise -> not-started
     """
     if task.is_leaf:
         return task.status
 
-    child_statuses = [c.effective_status() for c in task.children]
+    all_statuses = [c.effective_status() for c in task.children]
+    child_statuses = [s for s in all_statuses if s != "archived"]
 
     if not child_statuses:
-        return task.status
+        return "archived"
 
     if all(s == "approved" for s in child_statuses):
         return "approved"
@@ -450,6 +434,8 @@ def compute_frontier(root: Task) -> list[Task]:
 def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -> None:
     """Recursively collect frontier tasks."""
     if task.is_leaf:
+        if task.status == "archived":
+            return  # archived tasks never appear on the frontier
         if ancestors_ready and task.status in ("not-started", "in-progress"):
             frontier.append(task)
         return
@@ -457,6 +443,10 @@ def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -
     sibling_map = {c.slug: c for c in task.children}
 
     for child in task.children:
+        # Skip archived children entirely
+        if child.effective_status() == "archived":
+            continue
+
         deps_met = True
         for dep in child.depends_on:
             dep_task = sibling_map.get(dep)
@@ -468,7 +458,9 @@ def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -
                 )
                 deps_met = False
                 break
-            if dep_task.effective_status() != "approved":
+            # Archived dependencies are treated as satisfied
+            dep_status = dep_task.effective_status()
+            if dep_status not in ("approved", "archived"):
                 deps_met = False
                 break
 
@@ -508,14 +500,6 @@ def validate_frontmatter(task: Task) -> list[str]:
     if task.status not in VALID_STATUSES:
         warnings_out.append(
             f"invalid status {task.status!r}; expected one of {VALID_STATUSES}"
-        )
-    if task.review_status not in VALID_REVIEW_STATUSES:
-        warnings_out.append(
-            f"invalid review_status {task.review_status!r}; expected one of {VALID_REVIEW_STATUSES}"
-        )
-    if task.integration_status not in VALID_INTEGRATION_STATUSES:
-        warnings_out.append(
-            f"invalid integration_status {task.integration_status!r}; expected one of {VALID_INTEGRATION_STATUSES}"
         )
     if not isinstance(task.depends_on, list) or not all(
         isinstance(v, str) for v in task.depends_on

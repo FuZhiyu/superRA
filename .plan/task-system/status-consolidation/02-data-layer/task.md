@@ -1,7 +1,7 @@
 ---
 title: "Update core data layer: remove stale fields, add archived status"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on:
   - 01-design
@@ -35,3 +35,22 @@ Update `_task_io.py` to remove `review_status` and `integration_status` from the
 Confirm that `effective_status()` still works correctly with these changes — it delegates to `compute_status()` for branch tasks and reads `status` directly for leaves.
 
 ## Results
+
+All changes in [`_task_io.py`](skills/task-system/scripts/_task_io.py).
+
+**Removed stale fields:**
+- Deleted `VALID_REVIEW_STATUSES` and `VALID_INTEGRATION_STATUSES` constants ([`_task_io.py:20`](skills/task-system/scripts/_task_io.py#L20))
+- Removed `review_status` and `integration_status` from `Task` dataclass ([`_task_io.py:24`](skills/task-system/scripts/_task_io.py#L24))
+- `parse_task()` no longer reads these fields; silently ignores them if present in old files ([`_task_io.py:225`](skills/task-system/scripts/_task_io.py#L225))
+- `write_task()` no longer writes these fields ([`_task_io.py:252`](skills/task-system/scripts/_task_io.py#L252))
+- `serialize_frontmatter()` field_order no longer lists them ([`_task_io.py:165`](skills/task-system/scripts/_task_io.py#L165))
+- `validate_frontmatter()` no longer validates them ([`_task_io.py:502`](skills/task-system/scripts/_task_io.py#L502))
+
+**Added `archived` status:**
+- Added to `VALID_STATUSES` tuple ([`_task_io.py:20`](skills/task-system/scripts/_task_io.py#L20))
+- `compute_status()` filters out archived children before rollup; returns `archived` when all children are archived ([`_task_io.py:390`](skills/task-system/scripts/_task_io.py#L390))
+- `_collect_frontier()` skips archived tasks (never on frontier) and treats archived dependencies as satisfied ([`_task_io.py:436`](skills/task-system/scripts/_task_io.py#L436))
+
+**Forward compatibility verified:** Parsed the existing `.plan/` tree (60 tasks, many with old `review_status`/`integration_status` fields) successfully. All tasks parse without error; the stale fields are silently ignored.
+
+**Behavioral verification:** 11 inline tests covering all changed code paths pass: VALID_STATUSES content, dataclass fields, compute_status with archived children (mixed, all-archived), compute_frontier with archived tasks and archived dependencies, serialize/validate without stale fields, effective_status delegation, and forward-compatible parsing of old frontmatter.
