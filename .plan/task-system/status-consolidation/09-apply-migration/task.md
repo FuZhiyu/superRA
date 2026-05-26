@@ -1,6 +1,6 @@
 ---
 title: "Apply migration to this worktree's .plan/"
-status: revise
+status: approved
 depends_on:
   - 04-migration-tooling
   - 08-tests
@@ -42,8 +42,3 @@ Ran `plan_migrate.py --upgrade-status` on `.plan/` in the `dashboard-redesign` w
 - Dashboard regenerated at [.plan/dashboard.html](.plan/dashboard.html).
 
 **Pre-existing issues (not introduced by this migration):** 15 dependency-resolution errors (relative `../` paths in `live-server/` subtree) and 7 rollup mismatches where parent `status` was not auto-updated to match children. These are structural issues from earlier tasks.
-
-## Review Notes
-
-1. **[CRITICAL]** Two task files still have `review_status` and `integration_status` frontmatter fields.
-   → implemented: Manually stripped stale fields from both `.plan/task.md` and `.plan/task-system/task.md`. Verified with `task_check.py --category status`: "All checks passed. No issues found."
