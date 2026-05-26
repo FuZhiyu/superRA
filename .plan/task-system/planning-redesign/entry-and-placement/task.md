@@ -1,7 +1,7 @@
 ---
 title: "Entry Assessment, Depth Tiers, and Task Placement"
-status: not_started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: []
 tags: []
@@ -119,6 +119,7 @@ Update `references/harness-plan-mode.md` to align with the new entry logic. In p
 - Reframed Phase 4 §User Review from approval-seeking to alignment-and-loose-ends
 - Added §Substantive Questions as a cross-cutting instruction outside any specific phase
 - Routing paths for retroactive and consolidation are clean pointers in the entry assessment, not duplicated protocol
+- Added "Ask when unclear" paragraph in §Entry Assessment immediately after the independence paragraph — instructs agents to present concrete options via `AskUserQuestion` when placement or depth is ambiguous ([SKILL.md:40](skills/planning-workflow/SKILL.md#L40))
 
 **[skills/task-system/references/planning.md](skills/task-system/references/planning.md):**
 - Added §Placing Work in the Tree between §Splitting Tasks and §Root task.md Anatomy
@@ -131,4 +132,4 @@ Update `references/harness-plan-mode.md` to align with the new entry logic. In p
 
 ### Validation
 
-All 11 validation criteria pass — verified by line-by-line review of the modified files.
+All 12 validation criteria pass — verified by line-by-line review of the modified files (original 11 plus the new §4 criterion).
