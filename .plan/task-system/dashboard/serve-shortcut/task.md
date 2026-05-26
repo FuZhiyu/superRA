@@ -1,7 +1,7 @@
 ---
 title: "Generate .plan/serve shortcut script"
 status: implemented
-review_status: implemented
+review_status: revise
 integration_status: ~
 depends_on:  []
 tags: []
@@ -47,3 +47,9 @@ The generated `.plan/serve` script resolves `PLAN_DIR` from its own location, ch
 ### Verification
 
 All 116 tests pass including the 3 new tests.
+
+## Review Notes
+
+1. **[MAJOR]** [task_create.py:38-41](skills/task-system/scripts/task_create.py#L38-L41) — Absolute path fallback produces a broken serve script. When `plan_root` is outside the repo tree, `dashboard_relpath` becomes an absolute path (e.g., `/Users/.../plan_dashboard.py`), but the template at line 18 always prepends `$PLAN_DIR/`, producing `$PLAN_DIR//Users/.../plan_dashboard.py` — a nonsensical concatenation. The script's `[ ! -f "$DASHBOARD" ]` guard catches this at runtime (prints error and exits 1), so it is fail-safe, but the generated serve script is non-functional for the plugin/out-of-repo case. Fix: either (a) use two template variants — one with `$PLAN_DIR/` prefix for relative paths and one without for absolute paths, or (b) use `os.path.relpath(dashboard.resolve(), plan_root.resolve())` which always produces a relative path and avoids the fallback entirely.
+
+2. **[MINOR]** [test_task_system.py:461-475](skills/task-system/scripts/test_task_system.py#L461-L475) — `test_create_root_task_generates_serve_script` runs in a tmp directory (outside the repo), so it exercises the absolute-path fallback, but only asserts that `plan_dashboard.py` and `exec uv run` appear in the content. It does not detect the `$PLAN_DIR/` + absolute path concatenation bug. Add an assertion that the `DASHBOARD=` line does not contain `$PLAN_DIR/` followed by a `/`-rooted path (or, if item 1 is fixed via `os.path.relpath`, assert the path is relative).
