@@ -49,7 +49,7 @@ Three tiers that modulate how deeply each subsequent phase executes. A spectrum,
 
 **Thorough** — dispatch parallel exploration agents before task design. Load `references/thorough-planning.md` for the dispatch pattern. Appropriate when: complex or unfamiliar projects, large scope spanning multiple codebase areas, user explicitly requests deep planning ("plan hard", "explore thoroughly", "I want a detailed plan"). When thorough planning returns competing designs from multiple agents, the unresolved tensions between them are a natural source of substantive questions for the user — see §Substantive Questions.
 
-The depth tier mainly modulates Phase 1 (Exploration) — quick skips deep exploration, standard does the current default, thorough dispatches agents. Phase 2 (Domain Setup) and Phase 3 (Design) scale correspondingly. Phase 4 (Review & Commit) is the same at all tiers.
+The depth tier mainly modulates Phase 1 (Exploration) — quick skips deep exploration, standard does the current default, thorough dispatches agents. Phase 2 (Domain Setup) and Phase 3 (Design) scale correspondingly. Phase 4 (Review & Commit) is the same at all tiers except that thorough depth adds an agent review step between self-review and user review — see §Agent Review below.
 
 ## Phase 1: Exploration
 
@@ -151,6 +151,14 @@ After writing the complete task tree:
 8. **Subtask coverage:** No task carries implicit sub-steps that should be separate subtasks.
 
 Fix issues inline. No need to re-review — just fix and move on.
+
+### Agent Review (Thorough Depth Only)
+
+At thorough depth, dispatch a reviewer agent before presenting the tree to the user. The reviewer receives the complete `.plan/` directory and the exploration synthesis from Phase 1. It evaluates the self-review checklist above plus structural coherence across tasks: whether task boundaries make sense, dependencies are complete, and decomposition granularity is appropriate for the work scope.
+
+The reviewer returns APPROVE or REVISE with findings. REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
+
+Skip this step at quick and standard depth — the self-review checklist is sufficient when the main agent designed the tree itself without parallel exploration.
 
 ### User Review
 
