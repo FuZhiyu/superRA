@@ -114,7 +114,7 @@ If the task's structure is unclear, flag it in your status return rather than in
 
 **You may NOT edit:**
 
-- Any body section other than `## Review Notes` — even if you believe the results or objective is wrong. Raise the issue as a review item in `## Review Notes` and let the orchestrator decide.
+- Any body section other than `## Review Notes` (and `## Revision Notes` removal at APPROVE) — even if you believe the results or objective is wrong. Raise the issue as a review item in `## Review Notes` and let the orchestrator decide.
 - Any other task's `task.md`.
 - **The root task.md** or any ancestor task body. If your review surfaces a project-level concern that belongs in those, raise it in your status report; do not edit the root task yourself.
 - **Rewrite** the prose of an implementer's `→ implemented: ...` annotation or an orchestrator's `→ orchestrator: ...` annotation. You read them. You are allowed to **delete an entire item** (including its annotations) when the fix is verified on re-review — that is a delete, not a rewrite.
@@ -154,7 +154,7 @@ For each item, decide one of:
 ### Pre-Commit Self-Check
 
 Before committing:
-- [ ] I only edited the `review_status:` frontmatter field and `## Review Notes` section of my assigned task (plus `integration_status:` flips on in-scope tasks if integration reviewer).
+- [ ] I only edited the `review_status:` frontmatter field, `## Review Notes` section, and (at APPROVE) removed `## Revision Notes` of my assigned task (plus `integration_status:` flips on in-scope tasks if integration reviewer).
 - [ ] I did not touch any code, any `## Objective`, or any `## Results` section.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] `## Review Notes` describes current issues only, in severity order. If empty, the section is removed entirely.
