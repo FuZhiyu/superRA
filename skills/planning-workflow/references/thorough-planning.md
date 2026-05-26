@@ -17,17 +17,16 @@ During Phase 1, dispatch 2-4 exploration agents in parallel. Each agent covers a
 
 Two agents suffice when the work touches one codebase area. Four when the work spans independent areas or the project is unfamiliar. The orchestrator adapts — these are starting points, not rigid categories.
 
-**Dispatch shape.** Exploration agents use a lightweight version of the agent-orchestration dispatch template. They do not load implementer/reviewer role specs or domain skills — they are read-only reconnaissance. Use `subagent_type: "research"` (or any general-purpose agent the harness exposes) with an explicit read-only instruction:
+**Dispatch shape.** Exploration agents do not use the canonical task-scoped dispatch template — they have no task path or stage. They are simpler: a read-only `Explore` agent with the exploration objective and scope in the prompt body. Use `subagent_type: "Explore"` (Claude Code's built-in read-only search agent; other harnesses may use a different type name for lightweight read-only agents):
 
 ```
-Agent(subagent_type: "research"):
-  Objective: <focused exploration goal>
-  Scope: <directories or file patterns to explore>
-
-  Additionally: Read-only exploration for planning. Read the files in scope,
-  analyze patterns and structure, and return findings. Do not create, modify,
-  or delete any files. Do not commit.
+Agent(subagent_type: "Explore"):
+  Map the data pipeline in `src/analysis/`: what scripts exist, what each
+  produces, what the dependency order is, and what data files they read.
+  Focus on `src/analysis/` and `data/processed/`.
 ```
+
+The prompt body carries the exploration objective and any scope constraints. No structured fields beyond `subagent_type` — keep it plain.
 
 **Example objectives** (adapt to the project):
 
@@ -36,7 +35,7 @@ Agent(subagent_type: "research"):
 - "Survey `skills/planning-workflow/` and its references: current structure, cross-references to other skills, and patterns used in existing reference files."
 - "Review git history for `src/model/` over the last 20 commits: what changed, what approaches were tried, any reverted work."
 
-**In harness plan mode:** exploration agents can be dispatched during plan mode since they are read-only. Their findings inform the plan file written at exit.
+**Plan mode compatibility:** exploration agents are read-only and compatible with plan mode constraints where the harness supports subagent dispatch during plan mode. Their findings inform the plan file written at exit.
 
 ## Exploration Synthesis
 
@@ -67,17 +66,18 @@ Most thorough planning needs parallel exploration but single-agent design. The m
 - The different "perspectives" are really just different parts of one sequential pipeline.
 - A single pass with the exploration findings in hand is sufficient.
 
-**Dispatch shape.** Design agents use the same lightweight template as exploration agents, but with a design objective:
+**Dispatch shape.** Design agents use the same lightweight shape as exploration agents — a read-only `Explore` agent with the design objective in the prompt body:
 
 ```
-Agent(subagent_type: "research"):
-  Objective: <design objective — propose a task tree for this area/approach>
-  Context: <relevant exploration findings, constraints, existing task tree structure>
-
-  Additionally: Read-only design for planning. Propose a task tree structure
-  for your area — task titles, objectives, dependencies, and expected outputs.
-  Return the proposal as structured text. Do not create files or commit.
+Agent(subagent_type: "Explore"):
+  Propose a task tree for rebuilding the data pipeline in `src/data/`.
+  Consider: the file inventory from exploration shows 12 raw CSVs and 3
+  intermediate parquets; existing conventions use Julia scripts; the pipeline
+  must produce a merged panel dataset. Return task titles, objectives,
+  dependencies, and expected outputs as structured text. Do not create files.
 ```
+
+Include relevant exploration findings and constraints directly in the prompt body — no separate structured fields.
 
 **Example:** For a project needing both a data pipeline rebuild and a new estimation model:
 
