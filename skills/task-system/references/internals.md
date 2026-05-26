@@ -165,18 +165,13 @@ python3 <skill-dir>/scripts/plan_migrate.py --upgrade --plan-root .plan
 
 Converts `## Steps` (checkboxes) to `## Objective` (prose), removes redundant `# Title` headings. Idempotent — safe to run multiple times.
 
-## Dashboard Generation: `plan_dashboard.py`
+## Dashboard: `plan_dashboard.py`
 
-```bash
-python3 <skill-dir>/scripts/plan_dashboard.py --plan-root .plan
-```
+The dashboard is a live-updating server (FastAPI + SSE), not a static HTML file. The primary launch method is `bash .plan/serve`; agents use `uv run <skill-dir>/scripts/plan_dashboard.py serve --root .plan/`. The static `generate` subcommand is deprecated.
 
-Generates `.plan/dashboard.html` — a single-file HTML page with:
-- **Tree view** — hierarchical task display with status badges
-- **DAG view** — dependency graph rendered with Mermaid
-- **Kanban view** — tasks grouped by status column
+For CLI usage, view options, and `.plan/serve` details, see `SKILL.md` §Dashboard — that section is authoritative.
 
-The dashboard requires internet access for full rendering (loads Mermaid and CSS from CDN). It is regenerated automatically after mutation commands.
+**Auto-rebuild.** Mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) trigger dashboard regeneration after completing their mutation. The SSE-based live server also watches for file changes and pushes updates to connected browsers.
 
 ## Script Inventory
 
@@ -191,5 +186,5 @@ The dashboard requires internet access for full rendering (loads Mermaid and CSS
 | `task_link.py` | Add or remove sibling dependencies |
 | `task_rename.py` | Rename a task directory (cascades to sibling `depends_on`) |
 | `plan_migrate.py` | Migrate from PLAN.md/RESULTS.md or upgrade v1 -> v2 |
-| `plan_dashboard.py` | Generate the HTML dashboard |
+| `plan_dashboard.py` | Live dashboard server (`serve`) and static generation (`generate`, deprecated) |
 | `test_task_system.py` | Test suite for `_task_io.py` |

@@ -1,7 +1,7 @@
 ---
 title: "Dashboard serve documentation clarity"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: 
   - serve-shortcut
@@ -27,3 +27,8 @@ Fix documentation so agents find the dashboard serve command without probing, an
 
 ## Results
 
+Three documentation files updated to surface the live dashboard and `.plan/serve` shortcut:
+
+1. **`internals.md` §Dashboard** ([internals.md:168](skills/task-system/references/internals.md#L168)) — rewrote from static-generation description to live-server description; cross-references SKILL.md §Dashboard as authoritative; updated Script Inventory entry for `plan_dashboard.py` to mention `serve` and deprecated `generate`.
+2. **`SKILL.md` §Dashboard** — already updated by the serve-shortcut implementer with `.plan/serve` as primary command, `uv run` as agent-facing form, and explanation of the shortcut script. No further changes needed.
+3. **`README.md`** ([README.md:52](README.md#L52)) — added one-line dashboard mention in the workflow overview, between the invocation keywords and key principles sections.
