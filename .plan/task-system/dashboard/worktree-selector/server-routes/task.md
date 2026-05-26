@@ -1,7 +1,7 @@
 ---
 title: "Server-Side Switching"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: 
   - discovery
@@ -29,3 +29,21 @@ Add worktree listing and switching routes to `plan_dashboard.py` (`skills/task-s
 - In `main()`, call `get_git_common_dir()` before starting the server. If in a git repo, use the common dir for port derivation. Otherwise fall back to plan-root hash (backward compatible).
 
 **Graceful degradation:** If not in a git repo, `/api/worktrees` returns a single entry (the current plan root) and the switch endpoint returns 404. The frontend hides the dropdown.
+
+## Results
+
+All changes are in [`plan_dashboard.py`](../../../../../skills/task-system/scripts/plan_dashboard.py).
+
+**Module-level state additions** (lines 67-71):
+- `_watcher_task: asyncio.Task | None` — stores the background watcher for cancellation on switch.
+- `_current_worktree_path: str` — tracks the active worktree's absolute path.
+
+**`lifespan()` refactored** (lines 321-335): now stores the watcher task in `_watcher_task` and sets `_current_worktree_path` from `_project_root` at startup. Shutdown cancels via `_watcher_task` with a null guard.
+
+**`GET /api/worktrees`** (lines 554-607): calls `discover_worktrees()` + `filter_worktrees()` + `sort_worktrees()`, returns JSON with `current` (active worktree path) and `worktrees` (list with `path`, `branch`, `plan_title`, `is_current`, `has_plan`, `is_agent`, `last_activity`). Non-git fallback returns a single entry for the current plan root.
+
+**`POST /api/worktree/switch`** (lines 610-676): validates the requested `plan_root` against discovered worktrees, then performs the atomic switch sequence: cancel watcher, update `PLAN_ROOT`, `rebuild_tree()`, update `_project_root` and `_current_worktree_path`, spawn new watcher, broadcast `full-reload`. Returns `{"ok": true, "plan_root": "...", "branch": "..."}` on success. Returns 400/404 with current state untouched on failure.
+
+**`_default_port()` updated** (lines 1701-1712): accepts optional `git_common_dir` parameter. When provided, hashes the common dir instead of `PLAN_ROOT` so all worktrees of the same repo share one dashboard port. Falls back to plan-root hash when not in a git repo.
+
+**`main()` updated** (lines 1773-1781): calls `get_git_common_dir()` before port derivation and passes it to `_default_port()`. Startup log message shows the port derivation source.
