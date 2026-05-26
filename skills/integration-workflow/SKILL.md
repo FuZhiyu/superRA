@@ -342,6 +342,7 @@ Report what was published or landed and what was cleaned up.
 - **Standalone analysis:** Protect still runs. Sync may be a no-op. Integrate often collapses to a short reviewer pass.
 - **Small changes:** Keep the same five steps, but dispatch fewer agents and keep `## Sync Map` absent from root task.md when there is no material sync context.
 - **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
+- **Task tree consolidation:** When the tree has accumulated structural debt (overlapping tasks, stale objectives, hidden dependencies, granularity mismatches) — whether noticed during integration review or flagged by the user — load `planning-workflow/references/consolidation.md` for a consolidation pass before or during Integrate. Consolidation is optional and orchestrator- or user-triggered, not a mandatory step.
 
 ## Red Flags
 

@@ -1,7 +1,7 @@
 ---
 title: "Task Tree Consolidation"
-status: not-started
-review_status: ~
+status: implemented
+review_status: implemented
 integration_status: ~
 depends_on: []
 tags: []
@@ -83,3 +83,18 @@ Add a brief section or note in `skills/integration-workflow/SKILL.md` (likely in
 - Integration-workflow hook is minimal — a routing pointer, not duplicated protocol
 
 ## Results
+
+### Deliverables
+
+1. **Created** [`skills/planning-workflow/references/consolidation.md`](skills/planning-workflow/references/consolidation.md) — standalone consolidation protocol covering: symptom identification, survey protocol (using `task_query.py --tree` and `--dag`), issue classification table (merge/link/prune/split/flatten/restructure), user approval gate with proposal format example, execution mechanics with dependency-ordered application and post-verification, stale content sweep, and atomic commit discipline.
+
+2. **Modified** [`skills/integration-workflow/SKILL.md`](skills/integration-workflow/SKILL.md) — added one bullet in §When to Lighten routing to the consolidation reference when tree structural debt is noticed during integration. Minimal pointer, no duplicated protocol.
+
+### Validation Against Criteria
+
+- Standalone and integration use: the reference has a §Standalone vs Integration Use section explicitly covering both paths.
+- User approval required: §User Approval Gate requires explicit confirmation before any destructive changes, with a concrete proposal format example.
+- Git reversibility: §Execution Mechanics prescribes atomic commits so `git revert` undoes the full consolidation.
+- No DRY violations: the reference explicitly states it complements (does not replace) §User Feedback and Changing the Task Tree, §Splitting Tasks, and §Stale Content Checklist — it points to them rather than restating their content.
+- Standalone loadable: the reference opens with its own load condition and context; it does not require the full planning-workflow skill to be loaded first.
+- Integration-workflow hook is minimal: one bullet in §When to Lighten, routing to the reference by path.
