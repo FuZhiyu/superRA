@@ -9,7 +9,7 @@ depends_on:
 tags: []
 script: skills/task-system/scripts/plan_dashboard.py
 created: 2026-05-23
-updated: 2026-05-25
+updated: 2026-05-26
 ---
 
 ## Objective

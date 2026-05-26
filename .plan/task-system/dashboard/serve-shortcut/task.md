@@ -1,7 +1,7 @@
 ---
 title: "Generate .plan/serve shortcut script"
 status: implemented
-review_status: revise
+review_status: implemented
 integration_status: ~
 depends_on:  []
 tags: []
@@ -32,13 +32,13 @@ Generate a `.plan/serve` shell script when `.plan/` is first created, so users c
 
 ### Changes
 
-1. **[`task_create.py`](skills/task-system/scripts/task_create.py)** — Added `_maybe_generate_serve_script()` function and a call site in `create_task()`. Generates `.plan/serve` when creating a root-level task (no `/` in path) and the script does not already exist. Path resolution: uses `relative_to()` for in-repo paths (produces `../skills/task-system/scripts/plan_dashboard.py`), falls back to absolute path for out-of-repo usage.
+1. **[`task_create.py`](skills/task-system/scripts/task_create.py)** — Added `_maybe_generate_serve_script()` function and a call site in `create_task()`. Generates `.plan/serve` when creating a root-level task (no `/` in path) and the script does not already exist. Path resolution: uses `os.path.relpath(dashboard.resolve(), plan_root.resolve())` to always produce a relative path — works for both in-repo and out-of-repo (plugin) cases with no fallback branch.
 
 2. **[`planning-workflow/SKILL.md`](skills/planning-workflow/SKILL.md)** — Added step 2 to §Create the `.plan/` Directory instructing agents to generate `.plan/serve` alongside root `task.md`.
 
 3. **[`task-system/SKILL.md`](skills/task-system/SKILL.md)** — Updated §Dashboard to show `bash .plan/serve` as the primary invocation and explain the shortcut script.
 
-4. **[`test_task_system.py`](skills/task-system/scripts/test_task_system.py)** — Added three tests: `test_create_root_task_generates_serve_script` (verifies creation, content, executable bit), `test_create_root_task_does_not_overwrite_serve` (idempotency), `test_create_nested_task_does_not_generate_serve` (nested tasks skip generation).
+4. **[`test_task_system.py`](skills/task-system/scripts/test_task_system.py)** — Added three tests: `test_create_root_task_generates_serve_script` (verifies creation, content, executable bit, and that the `DASHBOARD=` line uses a relative path), `test_create_root_task_does_not_overwrite_serve` (idempotency), `test_create_nested_task_does_not_generate_serve` (nested tasks skip generation).
 
 ### Script content (9 lines)
 
@@ -51,5 +51,7 @@ All 116 tests pass including the 3 new tests.
 ## Review Notes
 
 1. **[MAJOR]** [task_create.py:38-41](skills/task-system/scripts/task_create.py#L38-L41) — Absolute path fallback produces a broken serve script. When `plan_root` is outside the repo tree, `dashboard_relpath` becomes an absolute path (e.g., `/Users/.../plan_dashboard.py`), but the template at line 18 always prepends `$PLAN_DIR/`, producing `$PLAN_DIR//Users/.../plan_dashboard.py` — a nonsensical concatenation. The script's `[ ! -f "$DASHBOARD" ]` guard catches this at runtime (prints error and exits 1), so it is fail-safe, but the generated serve script is non-functional for the plugin/out-of-repo case. Fix: either (a) use two template variants — one with `$PLAN_DIR/` prefix for relative paths and one without for absolute paths, or (b) use `os.path.relpath(dashboard.resolve(), plan_root.resolve())` which always produces a relative path and avoids the fallback entirely.
+→ implemented: replaced `relative_to()` + absolute-path fallback with `os.path.relpath(dashboard.resolve(), plan_root.resolve())`, eliminating the fallback branch entirely ([task_create.py:37](skills/task-system/scripts/task_create.py#L37))
 
 2. **[MINOR]** [test_task_system.py:461-475](skills/task-system/scripts/test_task_system.py#L461-L475) — `test_create_root_task_generates_serve_script` runs in a tmp directory (outside the repo), so it exercises the absolute-path fallback, but only asserts that `plan_dashboard.py` and `exec uv run` appear in the content. It does not detect the `$PLAN_DIR/` + absolute path concatenation bug. Add an assertion that the `DASHBOARD=` line does not contain `$PLAN_DIR/` followed by a `/`-rooted path (or, if item 1 is fixed via `os.path.relpath`, assert the path is relative).
+→ implemented: added assertion that extracts the path after `$PLAN_DIR/` and verifies it does not start with `/` ([test_task_system.py:472-479](skills/task-system/scripts/test_task_system.py#L472-L479))

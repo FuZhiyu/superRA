@@ -470,6 +470,16 @@ class TestTaskCreate:
         assert "plan_dashboard.py" in content
         assert "uv run" in content
         assert 'exec uv run' in content
+        # DASHBOARD= line must use a relative path (no leading '/')
+        for line in content.splitlines():
+            if line.startswith("DASHBOARD="):
+                # Extract the path after $PLAN_DIR/
+                assert "$PLAN_DIR/" in line
+                after_prefix = line.split("$PLAN_DIR/", 1)[1].rstrip('"')
+                assert not after_prefix.startswith("/"), (
+                    f"DASHBOARD path should be relative, got: {after_prefix}"
+                )
+                break
         # Verify it's executable
         import stat
         assert serve.stat().st_mode & stat.S_IXUSR

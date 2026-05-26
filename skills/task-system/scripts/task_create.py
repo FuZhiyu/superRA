@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -33,12 +34,7 @@ def _maybe_generate_serve_script(plan_root: Path) -> None:
     if serve_path.exists():
         return
     dashboard = Path(__file__).parent / "plan_dashboard.py"
-    try:
-        relpath = dashboard.resolve().relative_to(plan_root.resolve().parent)
-        dashboard_relpath = str(Path("..") / relpath)
-    except ValueError:
-        # Outside the repo tree — fall back to absolute path
-        dashboard_relpath = str(dashboard.resolve())
+    dashboard_relpath = os.path.relpath(dashboard.resolve(), plan_root.resolve())
     content = SERVE_SCRIPT_TEMPLATE.format(dashboard_relpath=dashboard_relpath)
     serve_path.write_text(content, encoding="utf-8")
     serve_path.chmod(0o755)
