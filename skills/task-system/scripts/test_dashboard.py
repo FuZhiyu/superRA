@@ -37,9 +37,7 @@ from _comments import (
 # ---------------------------------------------------------------------------
 
 def _write_task_md(path: Path, title: str, status: str, **kwargs):
-    """Write a v2-format task.md file (mirrors test_task_system.py helper)."""
-    review_status = kwargs.get("review_status", "~")
-    integration_status = kwargs.get("integration_status", "~")
+    """Write a task.md file with the unified status model."""
     depends_on = kwargs.get("depends_on", [])
     tags = kwargs.get("tags", [])
     objective = kwargs.get("objective", "")
@@ -61,8 +59,8 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
         body += f"\n## Results\n\n{results}\n"
 
     content = (
-        f'---\ntitle: "{title}"\nstatus: {status}\nreview_status: {review_status}\n'
-        f"integration_status: {integration_status}\ndepends_on:{deps_yaml}\n"
+        f'---\ntitle: "{title}"\nstatus: {status}\n'
+        f"depends_on:{deps_yaml}\n"
         f"tags: {tags_yaml}\ncreated: {created}\nupdated: {updated}\n---\n\n{body}"
     )
     path.write_text(content, encoding="utf-8")
@@ -84,7 +82,7 @@ def plan_root(tmp_path):
     d1 = root / "01-first"
     d1.mkdir()
     _write_task_md(d1 / "task.md", "First Task", "approved",
-                   review_status="approved", tags=["data"],
+                   tags=["data"],
                    objective="Complete step 1.",
                    results="### Key Findings\n- Found 100 rows")
 
@@ -159,11 +157,11 @@ class TestServerRoutes:
         assert "mermaid" in resp.text
         assert "graph LR" in resp.text
 
-    def test_kanban_returns_5_columns(self, client):
+    def test_kanban_returns_6_columns(self, client):
         resp = client.get("/kanban")
         assert resp.status_code == 200
-        # Each column has a kanban-col-header; count those for the 5 statuses
-        assert resp.text.count("kanban-col-header") == 5
+        # Each column has a kanban-col-header; count those for the 6 statuses
+        assert resp.text.count("kanban-col-header") == 6
 
     def test_files_serves_existing_file(self, client, plan_root):
         # Create a test file in the project root
@@ -680,7 +678,7 @@ class TestTemplateRendering:
         # The raw </template> should be escaped
         assert "&lt;/template&gt;" in html
 
-    def test_kanban_has_5_status_columns(self, plan_root):
+    def test_kanban_has_6_status_columns(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
@@ -688,7 +686,7 @@ class TestTemplateRendering:
         template = env.get_template("kanban.html")
         all_tasks = _task_io.collect_all_tasks(plan_dashboard._root_task)
         html = template.render(all_tasks=all_tasks)
-        assert html.count("kanban-col-header") == 5
+        assert html.count("kanban-col-header") == 6
 
     def test_dag_has_dependency_arrows(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root

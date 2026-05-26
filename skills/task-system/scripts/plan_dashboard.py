@@ -591,6 +591,7 @@ DASHBOARD_HTML = """\
   --st-impl:   #f5edd4;  --st-impl-t: #8a6d1b;
   --st-rev:    #f5d9d4;  --st-rev-t:  #9b3228;
   --st-ok:     #d4e8d4;  --st-ok-t:   #2d6a30;
+  --st-arch:   #e8e5df;  --st-arch-t: #9e9890;
 
   --progress-bg:    #e8e5df;
   --progress-fill:  #6b9e6d;
@@ -624,6 +625,7 @@ DASHBOARD_HTML = """\
   --st-impl:   #3a3018;  --st-impl-t: #d4b64a;
   --st-rev:    #3e201c;  --st-rev-t:  #e08070;
   --st-ok:     #1e3320;  --st-ok-t:   #7ec080;
+  --st-arch:   #2a2925;  --st-arch-t: #706b63;
 
   --progress-bg:    #33312e;
   --progress-fill:  #5a9a5c;
@@ -816,6 +818,7 @@ body {
 .badge-implemented  { background: var(--st-impl); color: var(--st-impl-t); }
 .badge-revise       { background: var(--st-rev);  color: var(--st-rev-t);  }
 .badge-approved     { background: var(--st-ok);   color: var(--st-ok-t);   }
+.badge-archived     { background: var(--st-arch); color: var(--st-arch-t); opacity: 0.7; }
 
 .task-progress {
   font-family: var(--font-mono);
@@ -1073,6 +1076,7 @@ body {
       <option value="implemented">implemented</option>
       <option value="revise">revise</option>
       <option value="approved">approved</option>
+      <option value="archived">archived</option>
     </select>
     <button class="hc-btn active" id="btn-tree" onclick="showView('tree')">Tree</button>
     <button class="hc-btn" id="btn-dag" onclick="showView('dag')">DAG</button>
@@ -1195,14 +1199,17 @@ function showView(view) {
 function renderSummary() {
   const all = flattenTasks(TASK_DATA);
   const leaves = all.filter(function(t) { return t.is_leaf; });
+  const archivedCount = leaves.filter(function(t) { return t.effective_status === 'archived'; }).length;
+  const activeLeaves = leaves.length - archivedCount;
   const approved = leaves.filter(function(t) { return t.effective_status === 'approved'; }).length;
-  const pct = leaves.length ? Math.round(100 * approved / leaves.length) : 0;
+  const pct = activeLeaves ? Math.round(100 * approved / activeLeaves) : 0;
 
   document.getElementById('plan-title').textContent = TASK_DATA.title || 'Plan Dashboard';
-  document.getElementById('stat-tasks').innerHTML =
-    '<strong>' + leaves.length + '</strong> tasks, <strong>' + (all.length - leaves.length) + '</strong> groups';
+  var tasksText = '<strong>' + activeLeaves + '</strong> tasks, <strong>' + (all.length - leaves.length) + '</strong> groups';
+  if (archivedCount) tasksText += ', <strong>' + archivedCount + '</strong> archived';
+  document.getElementById('stat-tasks').innerHTML = tasksText;
   document.getElementById('stat-approved').innerHTML =
-    '<strong>' + approved + '/' + leaves.length + '</strong> approved';
+    '<strong>' + approved + '/' + activeLeaves + '</strong> approved';
   document.getElementById('progress-fill').style.width = pct + '%';
   const dates = all.map(function(t) { return t.updated; }).filter(Boolean).sort();
   if (dates.length) {
@@ -1433,7 +1440,8 @@ async function renderDag() {
 
   var statusColors = {
     'not-started': '#e0e0e0', 'in-progress': '#bbdefb',
-    'implemented': '#fff9c4', 'revise': '#ffcdd2', 'approved': '#c8e6c9'
+    'implemented': '#fff9c4', 'revise': '#ffcdd2', 'approved': '#c8e6c9',
+    'archived': '#f5f5f5'
   };
 
   var mermaidCode = 'graph LR\\n';
@@ -1471,10 +1479,11 @@ async function renderDag() {
 function renderKanban() {
   var container = document.getElementById('view-kanban');
   container.innerHTML = '';
-  var statuses = ['not-started', 'in-progress', 'implemented', 'revise', 'approved'];
+  var statuses = ['not-started', 'in-progress', 'implemented', 'revise', 'approved', 'archived'];
   var labels = {
     'not-started': 'Not Started', 'in-progress': 'In Progress',
-    'implemented': 'Implemented', 'revise': 'Revise', 'approved': 'Approved'
+    'implemented': 'Implemented', 'revise': 'Revise', 'approved': 'Approved',
+    'archived': 'Archived'
   };
   var all = flattenTasks(TASK_DATA).filter(function(t) { return t.is_leaf && t.path; });
 

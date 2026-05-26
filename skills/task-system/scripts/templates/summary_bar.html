@@ -3,13 +3,14 @@
     Variables: root_task (Task), all_tasks (list[Task])
 -#}
 {% set leaves = all_tasks | selectattr('is_leaf') | list %}
-{% set total_leaves = leaves | length %}
-{% set groups = (all_tasks | length) - total_leaves %}
+{% set archived_leaves = leaves | selectattr('status', 'equalto', 'archived') | list | length %}
+{% set active_leaves = leaves | length - archived_leaves %}
+{% set groups = (all_tasks | length) - (leaves | length) %}
 {% set approved = leaves | selectattr('status', 'equalto', 'approved') | list | length %}
-{% set pct = ((100 * approved / total_leaves) | round | int) if total_leaves > 0 else 0 %}
+{% set pct = ((100 * approved / active_leaves) | round | int) if active_leaves > 0 else 0 %}
 {% set dates = all_tasks | map(attribute='updated') | select | sort | list %}
 
-<span id="stat-tasks"><strong>{{ total_leaves }}</strong> tasks, <strong>{{ groups }}</strong> groups</span>
-<span id="stat-approved"><strong>{{ approved }}/{{ total_leaves }}</strong> approved</span>
+<span id="stat-tasks"><strong>{{ active_leaves }}</strong> tasks, <strong>{{ groups }}</strong> groups{% if archived_leaves %}, <strong>{{ archived_leaves }}</strong> archived{% endif %}</span>
+<span id="stat-approved"><strong>{{ approved }}/{{ active_leaves }}</strong> approved</span>
 <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:{{ pct }}%"></div></div>
 {% if dates %}<span id="stat-updated">{{ dates[-1] }}</span>{% endif %}

@@ -37,6 +37,7 @@
   --st-impl:   #f5edd4;  --st-impl-t: #8a6d1b;
   --st-rev:    #f5d9d4;  --st-rev-t:  #9b3228;
   --st-ok:     #d4e8d4;  --st-ok-t:   #2d6a30;
+  --st-arch:   #e8e5df;  --st-arch-t: #9e9890;
 
   --progress-bg:    #e8e5df;
   --progress-fill:  #6b9e6d;
@@ -70,6 +71,7 @@
   --st-impl:   #3a3018;  --st-impl-t: #d4b64a;
   --st-rev:    #3e201c;  --st-rev-t:  #e08070;
   --st-ok:     #1e3320;  --st-ok-t:   #7ec080;
+  --st-arch:   #2a2925;  --st-arch-t: #706b63;
 
   --progress-bg:    #33312e;
   --progress-fill:  #5a9a5c;
@@ -262,6 +264,7 @@ body {
 .badge-implemented  { background: var(--st-impl); color: var(--st-impl-t); }
 .badge-revise       { background: var(--st-rev);  color: var(--st-rev-t);  }
 .badge-approved     { background: var(--st-ok);   color: var(--st-ok-t);   }
+.badge-archived     { background: var(--st-arch); color: var(--st-arch-t); opacity: 0.7; }
 
 .task-progress {
   font-family: var(--font-mono);
@@ -573,6 +576,7 @@ body {
       <option value="implemented">implemented</option>
       <option value="revise">revise</option>
       <option value="approved">approved</option>
+      <option value="archived">archived</option>
     </select>
     <button class="hc-btn active" id="btn-tree" onclick="showView('tree')">Tree</button>
     <button class="hc-btn" id="btn-dag" onclick="showView('dag')">DAG</button>
