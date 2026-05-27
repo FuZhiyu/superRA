@@ -930,9 +930,268 @@ function showTreeAndExpand(path) {
 /* ── Initialize mermaid ── */
 mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
 
-/* ── htmx event: process newly swapped content for markdown rendering ── */
+/* ── UI state capture/restore across SSE outerHTML swaps ── */
+var _pendingSwapState = {};  /* taskPath -> captured UI state, lives between before/after events */
+
+/**
+ * Capture the UI state of a task node and all its descendants before
+ * an outerHTML swap destroys the DOM subtree.
+ */
+function captureNodeState(node) {
+  var state = {
+    expandedPaths: [],    /* data-path values of expanded task toggles */
+    openSections: {},     /* { taskPath: [sectionName, ...] } */
+    childrenVisible: [],  /* data-path values where .task-children is visible */
+    renderedSections: {}, /* { taskPath: [sectionName, ...] } — sections with rendered markdown */
+    scrollTop: 0,
+    commentFormDrafts: {} /* { taskPath: textareaValue } — save any in-flight comment text */
+  };
+
+  /* Capture scroll position of .main-content (nearest scrollable ancestor) */
+  var scrollContainer = document.querySelector('.main-content');
+  if (scrollContainer) {
+    state.scrollTop = scrollContainer.scrollTop || window.scrollY;
+  }
+
+  /* Walk all task nodes within this subtree (including the node itself) */
+  var taskNodes = [node];
+  var descendants = node.querySelectorAll('.task-node');
+  for (var i = 0; i < descendants.length; i++) taskNodes.push(descendants[i]);
+
+  for (var j = 0; j < taskNodes.length; j++) {
+    var tn = taskNodes[j];
+    var path = tn.dataset.path;
+    if (!path) continue;
+
+    /* Expanded task toggles */
+    var toggle = tn.querySelector(':scope > .task-row > .task-toggle');
+    if (toggle && toggle.classList.contains('expanded')) {
+      state.expandedPaths.push(path);
+    }
+
+    /* Children visibility */
+    var children = tn.querySelector(':scope > .task-children');
+    if (children && children.style.display !== 'none') {
+      state.childrenVisible.push(path);
+    }
+
+    /* Open sections and rendered markdown state */
+    var sectionEls = tn.querySelectorAll(':scope > .task-body [data-section]');
+    for (var k = 0; k < sectionEls.length; k++) {
+      var sectionEl = sectionEls[k];
+      var sectionName = sectionEl.getAttribute('data-section');
+      var content = sectionEl.querySelector('.section-content');
+      if (content && content.classList.contains('open')) {
+        if (!state.openSections[path]) state.openSections[path] = [];
+        state.openSections[path].push(sectionName);
+
+        /* Check if markdown was rendered */
+        var renderedMd = content.querySelector('.rendered-md');
+        if (renderedMd && renderedMd.dataset.rendered === 'true') {
+          if (!state.renderedSections[path]) state.renderedSections[path] = [];
+          state.renderedSections[path].push(sectionName);
+        }
+      }
+    }
+
+    /* Save comment form draft text if any (multiple forms possible, keyed by section+block) */
+    var commentForms = tn.querySelectorAll(':scope > .task-body .comment-form textarea');
+    for (var fi = 0; fi < commentForms.length; fi++) {
+      var cfTa = commentForms[fi];
+      if (!cfTa.value.trim()) continue;
+      var cfBlock = cfTa.closest('.commentable-block');
+      if (!cfBlock) continue;
+      var cfSection = cfBlock.getAttribute('data-section') || '';
+      var cfBlockIdx = cfBlock.getAttribute('data-block') || '0';
+      if (!state.commentFormDrafts[path]) state.commentFormDrafts[path] = [];
+      state.commentFormDrafts[path].push({
+        section: cfSection,
+        blockIndex: cfBlockIdx,
+        text: cfTa.value
+      });
+    }
+  }
+
+  return state;
+}
+
+/**
+ * Restore captured UI state onto a newly swapped task node.
+ */
+function restoreNodeState(node, state) {
+  if (!state) return;
+
+  /* Build lookup of all task nodes in the new subtree */
+  var allNodes = [node];
+  var descendants = node.querySelectorAll('.task-node');
+  for (var i = 0; i < descendants.length; i++) allNodes.push(descendants[i]);
+
+  var nodesByPath = {};
+  for (var j = 0; j < allNodes.length; j++) {
+    var p = allNodes[j].dataset.path;
+    if (p) nodesByPath[p] = allNodes[j];
+  }
+
+  /* Restore expanded state and children visibility */
+  for (var ei = 0; ei < state.expandedPaths.length; ei++) {
+    var ePath = state.expandedPaths[ei];
+    var eNode = nodesByPath[ePath];
+    if (!eNode) continue;
+
+    var toggle = eNode.querySelector(':scope > .task-row > .task-toggle');
+    var body = eNode.querySelector(':scope > .task-body');
+    var children = eNode.querySelector(':scope > .task-children');
+
+    if (toggle && !toggle.classList.contains('leaf')) {
+      toggle.classList.add('expanded');
+    }
+    if (body) body.classList.add('open');
+    if (children && state.childrenVisible.indexOf(ePath) >= 0) {
+      children.style.display = '';
+    }
+  }
+
+  /* Restore open sections */
+  for (var sPath in state.openSections) {
+    var sNode = nodesByPath[sPath];
+    if (!sNode) continue;
+
+    var sectionNames = state.openSections[sPath];
+    for (var si = 0; si < sectionNames.length; si++) {
+      var sName = sectionNames[si];
+      var sectionWrapper = sNode.querySelector(':scope > .task-body [data-section="' + sName + '"]');
+      if (!sectionWrapper) continue;
+
+      var content = sectionWrapper.querySelector('.section-content');
+      var icon = sectionWrapper.querySelector('.section-icon');
+      var preview = sectionWrapper.querySelector('.section-preview');
+
+      if (content) content.classList.add('open');
+      if (icon) icon.classList.add('expanded');
+      if (preview) preview.style.display = 'none';
+
+      /* Re-render markdown if it was previously rendered */
+      var shouldRender = state.renderedSections[sPath] &&
+                         state.renderedSections[sPath].indexOf(sName) >= 0;
+      if (shouldRender) {
+        var renderedMd = content ? content.querySelector('.rendered-md') : null;
+        if (renderedMd) {
+          var tmpl = renderedMd.querySelector('script[type="text/x-markdown"]');
+          if (tmpl) {
+            var taskPath = sNode.dataset.path || '';
+            renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sName, taskPath);
+            renderedMd.dataset.rendered = 'true';
+          }
+        }
+      }
+    }
+  }
+
+  /* Restore comment form drafts */
+  for (var draftPath in state.commentFormDrafts) {
+    var draftNode = nodesByPath[draftPath];
+    var drafts = state.commentFormDrafts[draftPath];
+    if (!draftNode || !drafts) continue;
+
+    for (var di = 0; di < drafts.length; di++) {
+      var draft = drafts[di];
+      /* Find the matching commentable-block in an open section */
+      var targetBlock = draftNode.querySelector(
+        '.commentable-block[data-section="' + draft.section + '"][data-block="' + draft.blockIndex + '"]'
+      );
+      if (targetBlock) {
+        /* Re-create the comment form via the gutter button */
+        var gutterBtn = targetBlock.querySelector('.comment-gutter-btn');
+        if (gutterBtn) {
+          showCommentForm(gutterBtn);
+          var restoredTa = targetBlock.querySelector('.comment-form textarea');
+          if (restoredTa) restoredTa.value = draft.text;
+        }
+      } else {
+        /* Block not found (section not yet rendered or structure changed).
+           Save to sessionStorage so the user can recover their draft. */
+        var storageKey = 'commentDraft::' + draftPath + '::' + draft.section + '::' + draft.blockIndex;
+        try { sessionStorage.setItem(storageKey, draft.text); } catch(e) { /* ignore quota errors */ }
+      }
+    }
+  }
+
+  /* Re-load comments for expanded tasks (outerHTML swap wipes loaded comment threads) */
+  for (var ci = 0; ci < state.expandedPaths.length; ci++) {
+    var cPath = state.expandedPaths[ci];
+    if (nodesByPath[cPath]) {
+      loadComments(cPath);
+    }
+  }
+
+  /* Restore scroll position */
+  var scrollContainer = document.querySelector('.main-content');
+  if (scrollContainer && state.scrollTop) {
+    /* Use requestAnimationFrame to ensure layout is settled */
+    requestAnimationFrame(function() {
+      scrollContainer.scrollTop = state.scrollTop;
+      /* Fallback for window scroll */
+      if (scrollContainer.scrollTop === 0 && state.scrollTop > 0) {
+        window.scrollTo(0, state.scrollTop);
+      }
+    });
+  }
+}
+
+/* ── Comment UI: suppress SSE node-swap after local comment changes ── */
+var _commentEditPaths = {};  /* taskPath -> timestamp of last local comment op */
+var _activeCommentEdit = null; /* { save: fn, cancel: fn, textarea: el } — at most one open editor */
+
+/* ── htmx SSE pre-message: capture state before swap, suppress after local comment edits ── */
+document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
+  /* event.target is the task-node element that matched sse-swap */
+  var taskPath = event.target && event.target.dataset ? event.target.dataset.path : '';
+  if (taskPath) {
+    /* Suppress swap if we just did a local comment edit */
+    var ts = _commentEditPaths[taskPath];
+    if (ts && (Date.now() - ts) < 3000) {
+      event.preventDefault();
+      delete _commentEditPaths[taskPath];
+      return;
+    }
+
+    /* Capture UI state before the swap destroys the DOM */
+    _pendingSwapState[taskPath] = captureNodeState(event.target);
+  }
+});
+
+/* ── htmx afterSwap: restore UI state and render markdown after SSE swap ── */
 document.body.addEventListener('htmx:afterSwap', function(event) {
-  event.detail.target.querySelectorAll('.section-content.open .rendered-md').forEach(function(el) {
+  var target = event.detail.target;
+
+  /* For outerHTML swaps, target may be the new element or its parent.
+     Resolve to the actual .task-node with pending state. */
+  var taskPath = target.dataset ? target.dataset.path : '';
+  var restoreTarget = null;
+
+  if (taskPath && _pendingSwapState[taskPath]) {
+    restoreTarget = target;
+  } else {
+    /* Check if a child .task-node has pending state (outerHTML target = parent) */
+    for (var pendingPath in _pendingSwapState) {
+      var candidate = target.querySelector('.task-node[data-path="' + pendingPath + '"]');
+      if (candidate) {
+        restoreTarget = candidate;
+        taskPath = pendingPath;
+        break;
+      }
+    }
+  }
+
+  if (restoreTarget && taskPath && _pendingSwapState[taskPath]) {
+    var state = _pendingSwapState[taskPath];
+    delete _pendingSwapState[taskPath];
+    restoreNodeState(restoreTarget, state);
+    return; /* restoreNodeState handles markdown rendering for restored sections */
+  }
+
+  /* Fallback: render markdown in any sections that are already open (e.g. htmx AJAX loads) */
+  target.querySelectorAll('.section-content.open .rendered-md').forEach(function(el) {
     if (!el.dataset.rendered) {
       var tmpl = el.querySelector('script[type="text/x-markdown"]');
       if (tmpl) {
@@ -1012,27 +1271,33 @@ fetchWorktrees();
 /* ── SSE full-reload: structural changes (task added/deleted) ── */
 var fullReloadEl = document.getElementById('sse-full-reload');
 if (fullReloadEl) {
-  fullReloadEl.addEventListener('htmx:beforeSwap', function() {
-    location.reload();
+  fullReloadEl.addEventListener('htmx:beforeSwap', function(event) {
+    /* hx-swap="none" on #sse-full-reload means htmx won't touch the DOM;
+       we use the event purely as a signal to do our own AJAX tree refresh. */
+
+    var treeContainer = document.getElementById('view-tree');
+    if (!treeContainer) { location.reload(); return; }
+
+    /* Capture state from all task nodes in the tree */
+    var mergedState = captureNodeState(treeContainer);
+
+    /* Fetch fresh tree HTML and swap it in */
+    fetch('/tree')
+      .then(function(resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.text();
+      })
+      .then(function(html) {
+        treeContainer.innerHTML = html;
+        /* Restore state on the new tree nodes */
+        restoreNodeState(treeContainer, mergedState);
+      })
+      .catch(function() {
+        /* AJAX failed — hard reload as last resort */
+        location.reload();
+      });
   });
 }
-
-/* ── Comment UI: suppress SSE node-swap after local comment changes ── */
-var _commentEditPaths = {};  /* taskPath -> timestamp of last local comment op */
-var _activeCommentEdit = null; /* { save: fn, cancel: fn, textarea: el } — at most one open editor */
-
-document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
-  /* event.target is the task-node element that matched sse-swap */
-  var taskPath = event.target && event.target.dataset ? event.target.dataset.path : '';
-  if (taskPath) {
-    var ts = _commentEditPaths[taskPath];
-    if (ts && (Date.now() - ts) < 3000) {
-      /* Suppress SSE swap — we already refreshed comments locally */
-      event.preventDefault();
-      delete _commentEditPaths[taskPath];
-    }
-  }
-});
 
 /* ── Comment UI functions ── */
 
