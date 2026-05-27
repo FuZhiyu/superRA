@@ -465,6 +465,55 @@ class TestTaskCreate:
             )
         assert exc_info.value.code == 1
 
+    def test_create_root_task_generates_serve_script(self, plan_root):
+        task_create.create_task(
+            plan_root=plan_root,
+            task_path="04-new-task",
+            title="New Task",
+        )
+        serve = plan_root / "serve"
+        assert serve.exists()
+        content = serve.read_text(encoding="utf-8")
+        assert "plan_dashboard.py" in content
+        assert "uv run" in content
+        assert 'exec uv run' in content
+        # DASHBOARD= line must use a relative path (no leading '/')
+        for line in content.splitlines():
+            if line.startswith("DASHBOARD="):
+                # Extract the path after $PLAN_DIR/
+                assert "$PLAN_DIR/" in line
+                after_prefix = line.split("$PLAN_DIR/", 1)[1].rstrip('"')
+                assert not after_prefix.startswith("/"), (
+                    f"DASHBOARD path should be relative, got: {after_prefix}"
+                )
+                break
+        # Verify it's executable
+        import stat
+        assert serve.stat().st_mode & stat.S_IXUSR
+
+    def test_create_root_task_does_not_overwrite_serve(self, plan_root):
+        serve = plan_root / "serve"
+        serve.write_text("existing content", encoding="utf-8")
+        task_create.create_task(
+            plan_root=plan_root,
+            task_path="04-new-task",
+            title="New Task",
+        )
+        assert serve.read_text(encoding="utf-8") == "existing content"
+
+    def test_create_nested_task_does_not_generate_serve(self, plan_root):
+        # Create a parent for nesting
+        parent = plan_root / "04-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        task_create.create_task(
+            plan_root=plan_root,
+            task_path="04-parent/01-child",
+            title="Child Task",
+        )
+        serve = plan_root / "serve"
+        assert not serve.exists()
+
 
 class TestTaskUpdate:
     def test_update_status(self, plan_root):
@@ -1888,3 +1937,180 @@ class TestTaskCheck:
         # Only dependency findings
         dep_findings = task_check.run_checks(root_dir, category="dependency")
         assert all(f.category == "dependency" for f in dep_findings)
+
+
+# --- Status rollup propagation tests (from better-handoff, adapted for unified status) ---
+
+
+class TestFixStatusConsistency:
+    """Tests for --fix mode with unified status model."""
+
+    def test_fix_mode_corrects_parent_status(self, tmp_path):
+        """--fix should set parent status to rolled-up value from children."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+
+        child1 = parent / "child-a"
+        child1.mkdir()
+        _write_task_md(child1 / "task.md", "Child A", "approved")
+
+        child2 = parent / "child-b"
+        child2.mkdir()
+        _write_task_md(child2 / "task.md", "Child B", "implemented")
+
+        # Parent status is "not-started" but children are approved/implemented
+        # Rolled-up status should be "in-progress"
+        fixed = task_update.fix_status_consistency(root_dir)
+        assert fixed >= 1
+
+        # Re-read the parent task
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "in-progress"
+
+    def test_fix_mode_no_change_for_leaf(self, tmp_path):
+        """--fix should NOT change leaf task status (only branches)."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+
+        leaf = root_dir / "leaf-task"
+        leaf.mkdir()
+        _write_task_md(leaf / "task.md", "Leaf", "not-started")
+
+        fixed = task_update.fix_status_consistency(root_dir)
+        assert fixed == 0
+
+        leaf_task = _task_io.parse_task(leaf / "task.md")
+        assert leaf_task.status == "not-started"
+
+    def test_fix_mode_corrects_rolled_down_status(self, tmp_path):
+        """--fix corrects parent status when children force it down."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "approved")
+
+        child1 = parent / "child-a"
+        child1.mkdir()
+        _write_task_md(child1 / "task.md", "Child A", "approved")
+
+        child2 = parent / "child-b"
+        child2.mkdir()
+        _write_task_md(child2 / "task.md", "Child B", "not-started")
+
+        fixed = task_update.fix_status_consistency(root_dir)
+        assert fixed >= 1
+
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "in-progress"
+
+
+class TestPropagateParentStatus:
+    def test_propagates_status_to_parent(self, tmp_path):
+        """After changing a child status, propagation updates the parent."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        for name in ["child-a", "child-b"]:
+            d = parent / name
+            d.mkdir()
+            _write_task_md(d / "task.md", name, "approved")
+        # Propagate from child-a
+        updated = _task_io.propagate_parent_status(root_dir, "parent/child-a")
+        assert updated >= 1
+
+        # Re-read parent — should now be approved
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "approved"
+
+    def test_propagates_up_to_root(self, tmp_path):
+        """Propagation walks all the way from leaf to root."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        child = parent / "child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "implemented")
+
+        updated = _task_io.propagate_parent_status(root_dir, "parent/child")
+        assert updated >= 1
+
+        # Parent should be in-progress (child is implemented, not approved)
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "in-progress"
+
+        # Root should also be in-progress
+        root_task = _task_io.parse_task(root_dir / "task.md")
+        assert root_task.status == "in-progress"
+
+    def test_no_update_when_already_correct(self, tmp_path):
+        """No writes happen if parent already has the correct status."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "in-progress")
+        child = root_dir / "child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "implemented")
+
+        updated = _task_io.propagate_parent_status(root_dir, "child")
+        assert updated == 0
+
+    def test_propagate_from_root_path_is_noop(self, tmp_path):
+        """Propagating from root (empty path) has no ancestors to update."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        updated = _task_io.propagate_parent_status(root_dir, "")
+        assert updated == 0
+
+
+class TestPropagateAll:
+    def test_propagate_all_updates_all_parents(self, tmp_path):
+        """--propagate-all updates all branch task statuses."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+
+        # Branch with two approved children
+        parent = root_dir / "parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        for name in ["child-a", "child-b"]:
+            d = parent / name
+            d.mkdir()
+            _write_task_md(d / "task.md", name, "approved")
+
+        updated = task_update.propagate_all(root_dir)
+        assert updated >= 2  # parent + root
+
+        parent_task = _task_io.parse_task(parent / "task.md")
+        assert parent_task.status == "approved"
+
+        root_task = _task_io.parse_task(root_dir / "task.md")
+        assert root_task.status == "approved"
+
+    def test_propagate_all_cli(self, tmp_path):
+        """CLI --propagate-all flag runs without error."""
+        root_dir = tmp_path / ".plan"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        child = root_dir / "child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "approved")
+
+        # Run via main()
+        task_update.main(["--plan-root", str(root_dir), "--propagate-all"])

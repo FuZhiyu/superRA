@@ -331,7 +331,6 @@ def _topological_sort(tasks: list[Task]) -> list[Task]:
                 dependents[dep].append(task.slug)
 
     ready: list[str] = []
-    ready: list[str] = []
     for slug, deg in in_degree.items():
         if deg == 0:
             heapq.heappush(ready, slug)
@@ -416,6 +415,51 @@ def compute_status(task: Task) -> str:
     if any(s == "approved" for s in child_statuses):
         return "in-progress"
     return "not-started"
+
+
+def propagate_parent_status(plan_root: Path, task_path: str) -> int:
+    """Walk from task_path up to the root, recomputing parent statuses.
+
+    For each ancestor that is not a leaf, computes rolled-up status from
+    children via compute_status() and writes back if changed.
+
+    Returns the number of ancestor tasks updated.
+    """
+    updated = 0
+    # Walk up from task_path to root
+    parts = task_path.strip("/").split("/") if task_path else []
+
+    # Build list of ancestor paths from immediate parent to root
+    ancestors: list[str] = []
+    for i in range(len(parts) - 1, -1, -1):
+        ancestors.append("/".join(parts[:i]) if i > 0 else "")
+
+    for ancestor_path in ancestors:
+        ancestor_dir = plan_root / ancestor_path if ancestor_path else plan_root
+        task_md = ancestor_dir / "task.md"
+        if not task_md.exists():
+            continue
+
+        # Re-walk this subtree to get current children
+        ancestor_task = parse_task(task_md)
+        ancestor_task.children = _walk_children(ancestor_dir, plan_root)
+
+        if ancestor_task.is_leaf:
+            continue
+
+        changed = False
+        rolled_status = compute_status(ancestor_task)
+
+        if ancestor_task.status != rolled_status:
+            ancestor_task.status = rolled_status
+            changed = True
+
+        if changed:
+            ancestor_task.updated = today_str()
+            write_task(ancestor_task)
+            updated += 1
+
+    return updated
 
 
 def compute_frontier(root: Task) -> list[Task]:

@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
+import socket
 import sys
 import webbrowser
 from contextlib import asynccontextmanager
@@ -27,6 +29,14 @@ from typing import AsyncGenerator
 sys.path.insert(0, str(Path(__file__).parent))
 
 from _task_io import Task, _walk_children, collect_all_tasks, parse_task, walk_plan
+from _worktree_discovery import (
+    WorktreeInfo,
+    _parse_plan_title,
+    discover_worktrees,
+    filter_worktrees,
+    get_git_common_dir,
+    sort_worktrees,
+)
 from task_query import tree_to_json
 
 # ---------------------------------------------------------------------------
@@ -54,6 +64,15 @@ PLAN_ROOT: Path = Path(".plan")
 _root_task: Task | None = None
 _task_index: dict[str, Task] = {}
 _project_root: str = ""
+
+# Watcher task (stored for cancellation on worktree switch)
+_watcher_task: asyncio.Task | None = None
+
+# Active worktree path (absolute); set from PLAN_ROOT at startup
+_current_worktree_path: str = ""
+
+# Concurrency guard for worktree switch sequence
+_switch_lock: asyncio.Lock = asyncio.Lock()
 
 # SSE broadcast: one asyncio.Queue per connected client
 _sse_clients: set[asyncio.Queue[str]] = set()
@@ -283,7 +302,7 @@ def _render_task_node(task: Task) -> str:
     env = _get_jinja_env()
     template = env.from_string(
         '{% from "task_node.html" import render_task_node %}'
-        '{{ render_task_node(task, project_root, depth=2) }}'
+        '{{ render_task_node(task, project_root, depth=3) }}'
     )
     return template.render(task=task, project_root=_project_root)
 
@@ -306,16 +325,18 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: build task tree; spawn watcher.  Shutdown: cancel watcher."""
-    global _project_root
+    global _project_root, _watcher_task, _current_worktree_path
     _project_root = str(PLAN_ROOT.resolve().parent)
+    _current_worktree_path = _project_root
     rebuild_tree()
-    watcher_task = asyncio.create_task(_watch_plan_root())
+    _watcher_task = asyncio.create_task(_watch_plan_root())
     yield
-    watcher_task.cancel()
-    try:
-        await watcher_task
-    except asyncio.CancelledError:
-        pass
+    if _watcher_task is not None:
+        _watcher_task.cancel()
+        try:
+            await _watcher_task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(lifespan=lifespan)
@@ -532,6 +553,151 @@ async def remove_comment(path: str, comment_id: int):
     return {"status": "deleted"}
 
 
+# --- Worktree routes -------------------------------------------------------
+
+@app.get("/api/worktrees")
+async def list_worktrees():
+    """Return discovered worktrees with plan info, ordered by last activity."""
+    all_wts = discover_worktrees()
+    if not all_wts:
+        # Not in a git repo — return a single-entry fallback
+        plan_title: str | None = None
+        task_md = PLAN_ROOT / "task.md"
+        if task_md.is_file():
+            try:
+                plan_title = _parse_plan_title(task_md)
+            except Exception:
+                pass
+        return {
+            "current": _current_worktree_path,
+            "worktrees": [
+                {
+                    "path": _current_worktree_path,
+                    "branch": None,
+                    "plan_title": plan_title,
+                    "is_current": True,
+                    "has_plan": True,
+                    "is_agent": False,
+                    "last_activity": None,
+                }
+            ],
+        }
+
+    filtered = filter_worktrees(all_wts)
+    ordered = sort_worktrees(filtered)
+
+    entries = []
+    for w in ordered:
+        is_current = (
+            w.plan_root is not None
+            and str(Path(w.plan_root).resolve()) == str(PLAN_ROOT.resolve())
+        )
+        entries.append(
+            {
+                "path": w.path,
+                "branch": w.branch,
+                "plan_title": w.plan_title,
+                "is_current": is_current,
+                "has_plan": w.plan_root is not None,
+                "plan_root": w.plan_root,
+                "is_agent": w.is_agent,
+                "last_activity": w.last_activity,
+            }
+        )
+
+    return {
+        "current": _current_worktree_path,
+        "worktrees": entries,
+    }
+
+
+@app.post("/api/worktree/switch")
+async def switch_worktree(request: Request):
+    """Hot-swap the active plan root to a different worktree."""
+    global PLAN_ROOT, _project_root, _watcher_task, _current_worktree_path
+
+    body = await request.json()
+    plan_root_str = body.get("plan_root")
+    if not plan_root_str:
+        raise HTTPException(status_code=400, detail="Missing 'plan_root' field")
+
+    new_plan_root = Path(plan_root_str).resolve()
+
+    # Validate: must be a known worktree with a valid .plan/
+    all_wts = discover_worktrees()
+    if not all_wts:
+        raise HTTPException(status_code=404, detail="Not in a git repo; switching unavailable")
+
+    # Find matching worktree
+    target_wt: WorktreeInfo | None = None
+    for w in all_wts:
+        if w.plan_root is not None and str(Path(w.plan_root).resolve()) == str(new_plan_root):
+            target_wt = w
+            break
+
+    if target_wt is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No worktree found with plan root: {new_plan_root}",
+        )
+
+    if not new_plan_root.is_dir() or not (new_plan_root / "task.md").is_file():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid plan root (missing task.md): {new_plan_root}",
+        )
+
+    # --- Atomic switch sequence (serialized via lock) ---
+    async with _switch_lock:
+        # Save previous state for rollback
+        prev_plan_root = PLAN_ROOT
+        prev_project_root = _project_root
+        prev_worktree_path = _current_worktree_path
+
+        # 1. Cancel existing watcher
+        if _watcher_task is not None:
+            _watcher_task.cancel()
+            try:
+                await _watcher_task
+            except asyncio.CancelledError:
+                pass
+            _watcher_task = None
+
+        try:
+            # 2. Update PLAN_ROOT
+            PLAN_ROOT = new_plan_root
+
+            # 3. Rebuild tree
+            rebuild_tree()
+
+            # 4. Update project root and current worktree path
+            _project_root = str(PLAN_ROOT.resolve().parent)
+            _current_worktree_path = target_wt.path
+
+            # 5. Spawn new watcher
+            _watcher_task = asyncio.create_task(_watch_plan_root())
+        except Exception:
+            # Roll back to previous state
+            PLAN_ROOT = prev_plan_root
+            _project_root = prev_project_root
+            _current_worktree_path = prev_worktree_path
+            # Re-spawn watcher on the old root
+            _watcher_task = asyncio.create_task(_watch_plan_root())
+            raise HTTPException(
+                status_code=500,
+                detail="Switch failed; rolled back to previous worktree",
+            )
+
+        # 6. Broadcast full-reload
+        await _broadcast("full-reload", "{}")
+
+    return {
+        "ok": True,
+        "plan_root": str(PLAN_ROOT),
+        "branch": target_wt.branch,
+    }
+
+
 # --- Route: GET /task/{path} -----------------------------------------------
 # MUST come after comment routes — {path:path} is greedy and would swallow
 # suffixes like /comments or /comment/123.
@@ -564,6 +730,9 @@ DASHBOARD_HTML = """\
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <style>
 /* ── Light / Dark tokens ── */
@@ -637,6 +806,10 @@ DASHBOARD_HTML = """\
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
   --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
 }
+
+/* ── KaTeX theme integration ── */
+.katex { color: var(--text); }
+.katex-display { margin: 0.75em 0; }
 
 /* ── Reset + base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1095,6 +1268,7 @@ body {
 <script>
 const TASK_DATA = __TASK_DATA_JSON__;
 const md = window.markdownit({ html: false, linkify: true });
+md.use(texmath, { engine: katex, delimiters: 'dollars' });
 let currentView = 'tree';
 const taskByPath = {};
 const expandedTasks = new Set();
@@ -1222,8 +1396,12 @@ function renderSummary() {
 function renderTree() {
   const root = document.getElementById('view-tree');
   root.innerHTML = '';
-  for (var i = 0; i < TASK_DATA.children.length; i++) {
-    root.appendChild(renderTaskNode(TASK_DATA.children[i], 0));
+  if (TASK_DATA.body && TASK_DATA.body.trim()) {
+    root.appendChild(renderTaskNode(TASK_DATA, 0));
+  } else {
+    for (var i = 0; i < TASK_DATA.children.length; i++) {
+      root.appendChild(renderTaskNode(TASK_DATA.children[i], 0));
+    }
   }
 }
 
@@ -1551,6 +1729,26 @@ def generate_dashboard(plan_root: Path, output_path: Path | None = None) -> Path
 # ---------------------------------------------------------------------------
 
 
+def _default_port(plan_root: Path, git_common_dir: str | None = None) -> int:
+    """Derive a deterministic port from the repo or plan root.
+
+    When *git_common_dir* is provided, the port is derived from the common
+    dir so all worktrees of the same repo share a single dashboard port.
+    Otherwise falls back to plan-root hashing (backward compatible).
+
+    Maps into range 8100-8999. If the port is in use, tries the next port up
+    (wrapping at 8999). Falls back to OS-assigned (port=0) after 10 attempts.
+    """
+    hash_source = git_common_dir if git_common_dir else str(plan_root.resolve())
+    base_port = int(hashlib.sha256(hash_source.encode()).hexdigest(), 16) % 900 + 8100
+    for i in range(10):
+        port = 8100 + (base_port - 8100 + i) % 900
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("localhost", port)) != 0:
+                return port
+    return 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Task dashboard: live server or static HTML generation.",
@@ -1567,8 +1765,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     serve_p.add_argument(
         "--port",
         type=int,
-        default=8080,
-        help="Server port (default: 8080)",
+        default=None,
+        help="Server port (default: deterministic port derived from plan root)",
     )
     serve_p.add_argument(
         "--no-open",
@@ -1603,10 +1801,17 @@ def main(argv: list[str] | None = None) -> None:
             print(f"Error: plan root not found: {PLAN_ROOT}", file=sys.stderr)
             sys.exit(1)
 
+        git_common_dir = get_git_common_dir()
+        port = args.port if args.port is not None else _default_port(PLAN_ROOT, git_common_dir)
+
         import uvicorn
 
-        url = f"http://localhost:{args.port}"
-        print(f"Starting dashboard server at {url}")
+        url = f"http://localhost:{port}"
+        if args.port is None:
+            source = git_common_dir if git_common_dir else str(PLAN_ROOT)
+            print(f"Starting dashboard at {url} (port derived from {source})")
+        else:
+            print(f"Starting dashboard at {url}")
         print(f"Watching: {PLAN_ROOT}")
 
         if not args.no_open:
@@ -1623,7 +1828,7 @@ def main(argv: list[str] | None = None) -> None:
         uvicorn.run(
             app,
             host="0.0.0.0",
-            port=args.port,
+            port=port,
             log_level="info",
         )
 

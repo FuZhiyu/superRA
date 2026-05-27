@@ -1,13 +1,13 @@
 ---
 title: "HTML Dashboard"
-status: approved
+status: in-progress
 depends_on:
   - core-data-layer
   - cli-scripts
 tags: []
 script: skills/task-system/scripts/plan_dashboard.py
 created: 2026-05-23
-updated: 2026-05-24
+updated: 2026-05-26
 ---
 
 ## Objective

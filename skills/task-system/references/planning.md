@@ -42,13 +42,35 @@ A task should be the right size for independent dispatch and review.
 
 **Goal-oriented naming:** "Merge holdings with characteristics" not "Run merge script."
 
+## Placing Work in the Tree
+
+A two-step decision: first find which task's **concern** covers the new work, then decide **granularity** (how big is the extension?).
+
+### Step 1 — Find the concern
+
+Walk the tree recursively. At each level, ask: does an existing task's topic or concern cover this work? If yes, descend into that task and repeat. If no task at this level covers it, create a sibling at this level.
+
+### Step 2 — Decide granularity
+
+Once you have found the right task:
+
+- **Update** — the extension is simple enough that the task stays right-sized for a single dispatch. Rewrite its objective to include both old and new scope. Example: a merge task that handled fund data now also needs to handle CRSP data — same concern, extended scope, still one task.
+
+- **Nest** — the extension is complex enough to warrant its own dispatch and review cycle. Add as a child subtask. The parent's objective may also be broadened to reflect the expanded scope. Example: a data-preparation task that now needs a whole new cleaning pipeline for a second data source — same concern, but the new work needs independent implementation.
+
+- **Create sibling** — the work does not belong under any existing task's concern at this level. Applied at the root level, this creates a new root-level task.
+
+The recursion handles all levels uniformly: start at the root, walk down through the tree, land the work at the right depth.
+
+**Anti-patterns:** creating a new task for what is really a scope extension of an existing task; nesting three or more levels deep when unnecessary; creating siblings with near-identical concerns.
+
 ## Root task.md Anatomy
 
 The root `.plan/task.md` frames the entire project. It carries:
 
 - **`## Objective`** — project-level goal, methodology summary, scope boundaries
 - **`## Conventions`** — naming conventions, paths, units, variable definitions that apply across all tasks
-- **`## Revision Notes`** — temporary delta signal when a task is updated (what changed, significance). Same cleanup lifecycle as review notes — cleaned out when the task is re-implemented and approved
+- **`## Revision Notes`** — temporary delta signal when a task is updated (what changed, significance). The reviewer removes this section when approving the task — same lifecycle as `## Review Notes`
 
 The root task does not carry `script`, `input`, or `output` — those belong on leaf tasks.
 
@@ -102,7 +124,7 @@ python3 <skill-dir>/scripts/task_link.py \
 - **`script` / `input` / `output`** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **`## Objective`** is planner-owned. Implementers read it but do not rewrite it.
 - **`## Results`** is implementer-owned. Updated with findings during execution. See §Results Shape below.
-- **`## Revision Notes`** carries the delta signal when a task objective is updated — what changed, why, and how significant (trivial/mechanical vs substantive). Temporary: cleaned out when the task is re-implemented and approved. Same lifecycle as `## Review Notes`.
+- **`## Revision Notes`** carries the delta signal when a task objective is updated — what changed, why, and how significant (trivial/mechanical vs substantive). Temporary: the reviewer removes this section when approving the task. Same lifecycle as `## Review Notes`.
 - **`## Review Notes`** is present only when there are active items. On `approved`, the section content is removed entirely.
 
 ## Conventions Section

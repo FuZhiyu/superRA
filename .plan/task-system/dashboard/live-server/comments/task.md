@@ -1,13 +1,13 @@
 ---
 title: "Per-block inline comments"
-status: not-started
+status: approved
 depends_on:
   - ../server
   - ../templates
   - ../live-reload
 tags: []
 created: 2026-05-24
-updated: 2026-05-24
+updated: 2026-05-26
 ---
 
 ## Objective

@@ -49,6 +49,8 @@ flowchart TB
 
 To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, `implement according to the plan`, `integrate it with the update on the main`, ...
 
+Each `.plan/` includes a `serve` script — run `bash .plan/serve` to open the live dashboard with tree, DAG, and kanban views that auto-update as tasks progress.
+
 ### Key principles of the workflow
 
 1. **Implementer–reviewer pair at every step.** An adversarial reviewer inspects every implementation; work only advances after `APPROVE`. Review is never skipped, regardless of how trivial a step looks.

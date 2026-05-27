@@ -1,10 +1,10 @@
 ---
 title: "Planning Workflow Redesign"
-status: not-started
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-24
-updated: 2026-05-24
+updated: 2026-05-26
 ---
 
 ## Objective

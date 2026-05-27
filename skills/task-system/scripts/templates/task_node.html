@@ -8,7 +8,7 @@
 
 {% macro render_task_node(task, project_root, depth=0) %}
 {% set eff_status = task.effective_status() %}
-{% set path_id = task.path | replace('/', '-') %}
+{% set path_id = (task.path | replace('/', '-')) or 'root' %}
 {% set has_children = task.children | length > 0 %}
 {% set has_body = task.body and task.body.strip() %}
 {% set has_expandable = has_children or has_body %}
@@ -39,40 +39,13 @@
 
   {#- Task body (hidden by default, toggled on click) -#}
   <div class="task-body">
-    {#- Collapsible sections -#}
-    {% set sections = [
-      ('Objective', task.objective),
-      ('Results', task.results),
-      ('Decisions', task.decisions),
-      ('Review Notes', task.review_notes),
-    ] %}
-
-    {#- Named sections -#}
-    {% for name, content in sections %}
-    {% if content and content.strip() %}
-    <div data-section="{{ name }}">
-      <div class="section-toggle" onclick="toggleSection(this, event)">
-        <span class="section-icon">&#9656;</span>
-        <span class="section-label">{{ name }}</span>
-        <span class="section-preview">{{ content | replace('\n', ' ') | replace('#', '') | replace('*', '') | replace('`', '') | replace('>', '') | replace('-', '') | truncate(80) }}</span>
-      </div>
-      <div class="section-content">
-        <div class="rendered-md">
-          <template>{{ content | replace('</template>', '&lt;/template&gt;') }}</template>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-    {% endfor %}
-
-    {#- Extra ## sections from body not covered above -#}
-    {% set known_sections = ['Objective', 'Results', 'Decisions', 'Review Notes'] %}
+    {#- Parse ALL ## sections from task.body in document order -#}
     {% set body_lines = task.body.split('\n') if task.body else [] %}
-    {% set ns = namespace(current_name=None, current_lines=[], extra_sections=[]) %}
+    {% set ns = namespace(current_name=None, current_lines=[], all_sections=[]) %}
     {% for line in body_lines %}
       {% if line.startswith('## ') %}
-        {% if ns.current_name and ns.current_name not in known_sections %}
-          {% set _ = ns.extra_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
+        {% if ns.current_name %}
+          {% set _ = ns.all_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
         {% endif %}
         {% set ns.current_name = line[3:] %}
         {% set ns.current_lines = [] %}
@@ -80,11 +53,12 @@
         {% set ns.current_lines = ns.current_lines + [line] %}
       {% endif %}
     {% endfor %}
-    {% if ns.current_name and ns.current_name not in known_sections %}
-      {% set _ = ns.extra_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
+    {% if ns.current_name %}
+      {% set _ = ns.all_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
     {% endif %}
 
-    {% for name, content in ns.extra_sections %}
+    {#- Render sections in document order -#}
+    {% for name, content in ns.all_sections %}
     {% if content.strip() %}
     <div data-section="{{ name }}">
       <div class="section-toggle" onclick="toggleSection(this, event)">
@@ -94,7 +68,7 @@
       </div>
       <div class="section-content">
         <div class="rendered-md">
-          <template>{{ content | replace('</template>', '&lt;/template&gt;') }}</template>
+          <script type="text/x-markdown">{{ content | replace('</script>', '<\\/script>') }}</script>
         </div>
       </div>
     </div>
@@ -126,8 +100,8 @@
   {#- Children container -#}
   {% if has_children %}
   <div class="task-children" id="{{ path_id }}-children" style="display:none;">
-    {% if depth < 2 %}
-      {#- Render children inline for depth 0 and 1 -#}
+    {% if depth < 3 %}
+      {#- Render children inline for depth 0, 1, and 2 -#}
       {% for child in task.children %}
         {{ render_task_node(child, project_root, depth + 1) }}
       {% endfor %}
@@ -136,7 +110,7 @@
   {% endif %}
 
   {#- htmx lazy-load for deeper children -#}
-  {% if has_children and depth >= 2 %}
+  {% if has_children and depth >= 3 %}
   <script>
     (function() {
       var node = document.getElementById('task-{{ path_id }}');

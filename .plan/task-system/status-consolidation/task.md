@@ -1,6 +1,6 @@
 ---
 title: "Consolidate to a single status field"
-status: revise
+status: approved
 depends_on:
   - agent-interface
 tags:
