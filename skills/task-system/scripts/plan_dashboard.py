@@ -206,7 +206,8 @@ async def _watch_plan_root() -> None:
         # short extra window so rapid back-to-back writes coalesce.
         await asyncio.sleep(0.2)
 
-        structural_change = False
+        # Paths of tasks whose parent needs re-rendering (structural changes)
+        structural_parent_paths: set[str] = set()
         changed_paths: set[str] = set()
 
         for change_type, file_path_str in changes:
@@ -225,30 +226,76 @@ async def _watch_plan_root() -> None:
 
             if change_type == watchfiles.Change.added:
                 if name == "task.md":
-                    structural_change = True
+                    # Parent of the new task needs re-rendering
+                    parent_path = str(Path(task_path).parent) if task_path else ""
+                    if parent_path == ".":
+                        parent_path = ""
+                    structural_parent_paths.add(parent_path)
             elif change_type == watchfiles.Change.deleted:
                 if name == "task.md":
-                    structural_change = True
+                    parent_path = str(Path(task_path).parent) if task_path else ""
+                    if parent_path == ".":
+                        parent_path = ""
+                    structural_parent_paths.add(parent_path)
             else:
                 changed_paths.add(task_path)
 
-        if structural_change:
+        if structural_parent_paths:
+            # Rebuild full tree for consistency, then broadcast parent fragments
             rebuild_tree()
-            await _broadcast("full-reload", "{}")
-        else:
+
+            if _root_task is not None:
+                for parent_path in structural_parent_paths:
+                    if parent_path == "" and not (_root_task.body and _root_task.body.strip()):
+                        # Root-level structural change but root has no body
+                        # node in DOM — fall back to full-reload so the
+                        # client's AJAX handler re-fetches /tree.
+                        await _broadcast("full-reload", "{}")
+                        break
+                    parent_task = _task_index.get(parent_path)
+                    if parent_task is not None:
+                        fragment = _render_task_node(parent_task)
+                        await _broadcast(f"task:{parent_path}", fragment)
+                    else:
+                        # Parent not in index (inconsistent state) —
+                        # fall back to full-reload
+                        await _broadcast("full-reload", "{}")
+                        break
+
+                summary_html = _render_summary()
+                await _broadcast("summary-updated", summary_html)
+
+        # Process content-only changes (skip paths already covered by
+        # structural parent broadcasts)
+        content_paths = changed_paths - structural_parent_paths
+        if content_paths:
             any_children_changed = False
-            for task_path in changed_paths:
+            children_changed_paths: set[str] = set()
+
+            for task_path in content_paths:
                 updated, children_changed = rebuild_task(task_path)
                 if children_changed:
                     any_children_changed = True
-
-                if not any_children_changed and updated is not None and _root_task is not None:
+                    children_changed_paths.add(task_path)
+                elif updated is not None and _root_task is not None:
                     fragment = _render_task_node(updated)
                     await _broadcast(f"task:{task_path}", fragment)
 
             if any_children_changed:
-                await _broadcast("full-reload", "{}")
-            if changed_paths and _root_task is not None:
+                # Re-render each task whose children changed instead of
+                # falling back to full-reload
+                rebuild_tree()
+                if _root_task is not None:
+                    for task_path in children_changed_paths:
+                        task = _task_index.get(task_path)
+                        if task is not None:
+                            fragment = _render_task_node(task)
+                            await _broadcast(f"task:{task_path}", fragment)
+                        else:
+                            await _broadcast("full-reload", "{}")
+                            break
+
+            if content_paths and _root_task is not None:
                 summary_html = _render_summary()
                 await _broadcast("summary-updated", summary_html)
 
@@ -297,14 +344,28 @@ def _render_task_fragment(task: Task) -> str:
     return template.render(task=task, project_root=_project_root)
 
 
-def _render_task_node(task: Task) -> str:
-    """Render a single task node via the task_node macro (for SSE swap)."""
+def _task_depth(task_path: str) -> int:
+    """Return the depth of a task in the tree (0 for root children, etc.)."""
+    if not task_path:
+        return 0
+    return task_path.count("/")
+
+
+def _render_task_node(task: Task, depth: int | None = None) -> str:
+    """Render a single task node via the task_node macro (for SSE swap).
+
+    *depth* controls how many levels of children are rendered inline vs
+    lazy-loaded.  When ``None``, the depth is inferred from the task's
+    position in the tree (``task.path``).
+    """
+    if depth is None:
+        depth = _task_depth(task.path)
     env = _get_jinja_env()
     template = env.from_string(
-        '{% from "task_node.html" import render_task_node %}'
-        '{{ render_task_node(task, project_root, depth=3) }}'
+        '{%- from "task_node.html" import render_task_node -%}'
+        '{{ render_task_node(task, project_root, depth=depth) }}'
     )
-    return template.render(task=task, project_root=_project_root)
+    return template.render(task=task, project_root=_project_root, depth=depth)
 
 
 def _render_summary() -> str:
@@ -357,6 +418,30 @@ async def index():
         all_tasks=all_tasks,
         project_root=_project_root,
     )
+    return HTMLResponse(content=html)
+
+
+# --- Route: GET /tree (tree HTML fragment for AJAX full-reload fallback) ----
+
+@app.get("/tree", response_class=HTMLResponse)
+async def tree_fragment():
+    """Return just the task tree HTML nodes (no page chrome)."""
+    if _root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    env = _get_jinja_env()
+    # Re-use the same rendering logic as base.html: if root has body, render
+    # it as a node; otherwise render its children at depth 0.
+    template = env.from_string(
+        '{%- from "task_node.html" import render_task_node -%}'
+        '{% if root_task.body and root_task.body.strip() %}'
+        '{{ render_task_node(root_task, project_root, depth=0) }}'
+        '{% else %}'
+        '{% for child in root_task.children %}'
+        '{{ render_task_node(child, project_root, depth=0) }}'
+        '{% endfor %}'
+        '{% endif %}'
+    )
+    html = template.render(root_task=_root_task, project_root=_project_root)
     return HTMLResponse(content=html)
 
 
