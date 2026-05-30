@@ -1,0 +1,77 @@
+\documentclass[12pt]{article}
+\usepackage{setspace}
+\usepackage[left=1in, right=1in, top=1.1in, bottom=1.1in]{geometry}
+\usepackage{color}
+\usepackage{amsmath,amssymb}
+\usepackage[backend=biber,style=authoryear,natbib=true]{biblatex}
+\addbibresource{../references.bib}
+\usepackage[title]{appendix}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{placeins}
+\usepackage{float}
+\usepackage[normalem]{ulem}
+\usepackage{amsthm}
+\usepackage{comment}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.15}
+
+% Math operator shortcuts
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\Corr}{Corr}
+
+% Theorem-like environments
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+
+% Colored author-note macros — rename to your coauthors' initials
+\newcommand{\NOTEA}[1]{\textsf{\color{blue}[\textbf{A's note:} #1]}}
+\newcommand{\NOTEB}[1]{\textsf{\color{red}[\textbf{B's note:} #1]}}
+\newcommand{\NOTEC}[1]{\textsf{\color{green}[\textbf{C's note:} #1]}}
+
+\title{ProjectExample}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+TODO: abstract.
+\end{abstract}
+
+\section{Introduction}
+TODO.
+
+\section{Model / Data}
+TODO. Example figure inclusion: \texttt{\textbackslash includegraphics\{Figures/example.pdf\}}. Example table inclusion: \texttt{\textbackslash input\{Tables/example.tex\}}.
+
+\section{Results}
+TODO.
+
+\section{Conclusion}
+TODO.
+
+\printbibliography
+
+\appendix
+\section{Appendix}
+TODO.
+
+\end{document}

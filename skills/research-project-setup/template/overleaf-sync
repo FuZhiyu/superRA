@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# overleaf-sync — bidirectional sync between Paper/ subtree and the Overleaf project.
+#
+# Usage:
+#   ./overleaf-sync pull     # fetch overleaf and squash-merge into Paper/
+#   ./overleaf-sync push     # push committed local Paper/ subtree, then re-anchor
+#   ./overleaf-sync status   # show incoming + outgoing pending changes
+#
+# One-time setup: register the Overleaf project as a git remote called `overleaf`:
+#   git remote add overleaf https://git@git.overleaf.com/<PROJECT_ID>
+#
+# Always operates on `main`. Subtree on a feature branch fragments history.
+#
+# Squash mode + anchors: pulls use --squash so monorepo history stays compact.
+# git subtree creates a synthetic squash commit with git-subtree-split pointing
+# at the Overleaf tip, then merges that anchor into main. After every push we
+# run a degenerate squash-pull to advance the anchor marker to the new upstream
+# tip; without that, a later "coauthor edits online -> we pull" produces
+# spurious conflicts because the anchor still points to pre-push upstream.
+#
+# Ported from /Users/zhiyufu/Dropbox/research_projects/ElasticityBound-Local/overleaf-sync
+
+set -euo pipefail
+
+PREFIX="Paper"
+REMOTE="overleaf"
+REMOTE_BRANCH="master"
+REQUIRED_BRANCH="main"
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+    echo "error: not inside a git repository" >&2
+    exit 1
+}
+cd "$repo_root"
+
+require_remote() {
+    git remote get-url "$REMOTE" >/dev/null 2>&1 || {
+        echo "error: remote '$REMOTE' not configured. Add it with:" >&2
+        echo "    git remote add $REMOTE https://git@git.overleaf.com/<PROJECT_ID>" >&2
+        exit 1
+    }
+}
+
+require_main() {
+    local cur
+    cur=$(git rev-parse --abbrev-ref HEAD)
+    if [[ "$cur" != "$REQUIRED_BRANCH" ]]; then
+        echo "error: must be on '$REQUIRED_BRANCH' (currently on '$cur')." >&2
+        echo "  subtree commands on a feature branch fragment history." >&2
+        echo "  switch to $REQUIRED_BRANCH, run this, then merge $REQUIRED_BRANCH back into your branch." >&2
+        exit 1
+    fi
+}
+
+require_clean() {
+    if ! git diff --quiet -- "$PREFIX" || ! git diff --cached --quiet -- "$PREFIX"; then
+        echo "error: working tree under $PREFIX/ has uncommitted changes. Commit or stash them first." >&2
+        git status --short -- "$PREFIX" >&2
+        exit 1
+    fi
+}
+
+cmd=${1:-}
+case "$cmd" in
+    pull)
+        require_remote
+        require_main
+        require_clean
+        git fetch "$REMOTE"
+        git subtree pull --prefix="$PREFIX" "$REMOTE" "$REMOTE_BRANCH" --squash \
+            -m "overleaf-sync: pull Overleaf updates"
+        ;;
+    push)
+        require_remote
+        require_main
+        require_clean
+        git subtree push --prefix="$PREFIX" "$REMOTE" "$REMOTE_BRANCH"
+        # Re-anchor: advance the squash anchor to the post-push upstream tip
+        # so a subsequent coauthor-edit-then-pull doesn't replay our own push.
+        # Content is identical to upstream at this point.
+        git fetch "$REMOTE"
+        git subtree pull --prefix="$PREFIX" "$REMOTE" "$REMOTE_BRANCH" --squash \
+            -m "overleaf-sync: re-anchor after push"
+        ;;
+    status)
+        require_remote
+        git fetch "$REMOTE"
+        dirty=$(git status --short -- "$PREFIX")
+        if [[ -n "$dirty" ]]; then
+            echo "local uncommitted changes under $PREFIX/:"
+            echo "$dirty"
+            echo
+        fi
+        remote_tree=$(git rev-parse "$REMOTE/$REMOTE_BRANCH^{tree}")
+        local_tree=$(git rev-parse "HEAD:$PREFIX")
+        if [[ "$remote_tree" == "$local_tree" ]]; then
+            echo "in sync: $PREFIX/ tree matches $REMOTE/$REMOTE_BRANCH ($remote_tree)"
+        else
+            echo "diverged: $PREFIX/ tree ($local_tree) != $REMOTE/$REMOTE_BRANCH tree ($remote_tree)"
+            echo
+            echo "=== Recent commits on $REMOTE/$REMOTE_BRANCH ==="
+            git log --oneline -5 "$REMOTE/$REMOTE_BRANCH"
+            echo
+            echo "=== Recent commits on local main touching $PREFIX/ ==="
+            git log --oneline -5 -- "$PREFIX"
+            echo
+            echo "Run './overleaf-sync pull' (incoming) or './overleaf-sync push' (outgoing) to reconcile."
+        fi
+        ;;
+    ""|-h|--help|help)
+        sed -n '2,10p' "$0"
+        exit 0
+        ;;
+    *)
+        echo "error: unknown command '$cmd'. Run with no arg for usage." >&2
+        exit 1
+        ;;
+esac

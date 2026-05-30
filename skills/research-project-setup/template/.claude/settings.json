@@ -1,0 +1,86 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv add:*)",
+      "Bash(uv run:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv pip:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(jupytext:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git log:*)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)",
+      "Bash(git mv:*)",
+      "Bash(git subtree:*)",
+      "Bash(git fetch:*)",
+      "Bash(git remote:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(gh pr view:*)",
+      "Bash(pdflatex:*)",
+      "Bash(latexmk:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "Bash(ln:*)",
+      "Bash(chmod:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(awk:*)",
+      "Bash(tee:*)",
+      "Bash(jq:*)",
+      "Bash(./overleaf-sync:*)",
+      "WebSearch",
+      "mcp__zotero__zotero_search_items",
+      "mcp__zotero__zotero_get_item_children",
+      "mcp__zotero__zotero_get_item_fulltext",
+      "mcp__zotero__zotero_get_item_metadata",
+      "mcp__zotero__zotero_get_recent",
+      "mcp__zotero__zotero_semantic_search",
+      "Edit(./Data/**)",
+      "Write(./Data/**)",
+      "Edit(./Notes/**)",
+      "Write(./Notes/**)",
+      "Edit(./Output/**)",
+      "Write(./Output/**)"
+    ],
+    "additionalDirectories": ["./Data", "./Notes", "./Output"],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": ["zotero"],
+  "enabledPlugins": {
+    "superRA@superRA": true
+  },
+  "extraKnownMarketplaces": {
+    "superRA": {
+      "source": {
+        "source": "github",
+        "repo": "FuZhiyu/superRA"
+      }
+    }
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "filesystem": {
+      "allowWrite": [
+        "./Data",
+        "./Notes",
+        "./Output",
+        "//tmp",
+        "//private/tmp",
+        "//var/folders",
+        "~/.venvs",
+        "~/.cache",
+        "~/.local/share/uv"
+      ]
+    }
+  }
+}
