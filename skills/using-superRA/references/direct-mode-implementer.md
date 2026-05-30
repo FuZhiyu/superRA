@@ -135,7 +135,7 @@ Before staging your commit, verify:
 - [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations.
 - [ ] I replaced stale content in place — no "Previously..." or "Update:" blocks, no strikethroughs.
 - [ ] The task reads as a single coherent current-state description.
-- [ ] Figures are embedded with `![caption](results_attachments/...)` and the image files are committed.
+- [ ] Figures are embedded with `![caption](attachments/...)` and the image files are committed to the task's `attachments/` directory.
 - [ ] Every material finding I am about to report is already written into the task's `task.md`, not only in my status report. The task is the record; the report only points at it.
 
 ## Escalation

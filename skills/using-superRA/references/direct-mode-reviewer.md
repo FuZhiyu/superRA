@@ -74,11 +74,11 @@ Walk the active domain skill's gated checklist top to bottom, plus any operation
 
 Two verdicts:
 
-**APPROVE:** No `[BLOCKING]` findings. No review notes needed; set `status: approved` in frontmatter.
+**APPROVE:** No `[BLOCKING]` findings. No review notes needed; set `status: approved` in frontmatter. Remove `## Revision Notes` if present.
 
 **REVISE:** One or more `[BLOCKING]` items failed. Write the `## Review Notes` section with specific items: markdown-link citation (e.g., [file.py:42](file.py#L42)), description, severity, what to fix. When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, say so in plain prose alongside that finding (e.g., "— note: re-check this after the pre-merge describe is added"). Set `status: revise` in frontmatter.
 
-On re-review after a REVISE fix: verify (1) each cited fix is correct, and (2) any finding annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass — no third full walk. Delete confirmed-fixed items from `## Review Notes`. When all items are resolved, remove the `## Review Notes` section entirely and set `status: approved`.
+On re-review after a REVISE fix: verify (1) each cited fix is correct, and (2) any finding annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass — no third full walk. Delete confirmed-fixed items from `## Review Notes`. When all items are resolved, remove both `## Review Notes` and `## Revision Notes` (if present) and set `status: approved`.
 
 ## Handoff — Unified Across Stages
 
@@ -104,10 +104,11 @@ If the task's structure is unclear, flag it in your status return rather than in
 
 - **`status:` frontmatter field** — reviewer owns `implemented → revise` and `implemented → approved`. As **integration reviewer**, also owns `approved → revise` when integration review surfaces issues. Consume task-local sync impact context, then review the governing diff. For every touched or sync-impact-affected task, set `approved` when it passes or `revise` when you write task-local review notes. On re-review, flip in-scope tasks to `approved` when fixes pass, or back to `revise` on specific failing tasks.
 - **The `## Review Notes` section** — write it on first review, delete items or rewrite items on re-review, and remove the section entirely when empty (at APPROVED).
+- **The `## Revision Notes` section** — remove the entire section at APPROVE. You may not edit its content (that is planner-owned); you only remove it when approving the task.
 
 **You may NOT edit:**
 
-- Any body section other than `## Review Notes` — even if you believe the results or objective is wrong. Raise the issue as a review item in `## Review Notes` and let the orchestrator decide.
+- Any body section other than `## Review Notes` (and `## Revision Notes` removal at APPROVE) — even if you believe the results or objective is wrong. Raise the issue as a review item in `## Review Notes` and let the orchestrator decide.
 - Any other task's `task.md`.
 - **The root task.md** or any ancestor task body. If your review surfaces a project-level concern that belongs in those, raise it in your status report; do not edit the root task yourself.
 - **Rewrite** the prose of an implementer's `→ implemented: ...` annotation or an orchestrator's `→ orchestrator: ...` annotation. You read them. You are allowed to **delete an entire item** (including its annotations) when the fix is verified on re-review — that is a delete, not a rewrite.
@@ -147,10 +148,11 @@ For each item, decide one of:
 ### Pre-Commit Self-Check
 
 Before committing:
-- [ ] I only edited the `status:` frontmatter field and `## Review Notes` section of my assigned task.
+- [ ] I only edited the `status:` frontmatter field, `## Review Notes` section, and (at APPROVE) removed `## Revision Notes` of my assigned task.
 - [ ] I did not touch any code, any `## Objective`, or any `## Results` section.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] `## Review Notes` describes current issues only, in severity order. If empty, the section is removed entirely.
+- [ ] On APPROVE: I removed `## Revision Notes` if present.
 - [ ] Every material review finding I am about to report is already written into `## Review Notes` in the task's `task.md`, not only in my status report. The task is the record; the report only points at it.
 
 ## Review Summary
