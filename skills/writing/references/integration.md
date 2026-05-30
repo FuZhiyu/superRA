@@ -1,6 +1,6 @@
 # Integration Discipline for Writing
 
-> Load when the writing task is riding `integration-workflow` (whole-section drafts, whole-paper revisions, R&R passes that touch a base branch). Generic codebase-coherence gates live in `superRA:refactor-and-integrate`; this file owns the writing-specific integration gates.
+> Load when the writing task is riding `superintegrate` (whole-section drafts, whole-paper revisions, R&R passes that touch a base branch). Generic codebase-coherence gates live in `superRA:refactor-and-integrate`; this file owns the writing-specific integration gates.
 
 The writing vertical has no numerical drift tests of its own (unless the task also produced numbers, in which case `econ-data-analysis/references/integration.md` applies in addition). The integration-specific concerns are: the document still builds on the merged state, the structural skeleton is preserved or its changes are authorized, and every hunk in the cumulative diff traces back to a task or a documented decision.
 

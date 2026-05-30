@@ -33,14 +33,14 @@ The header is the project's standing context, written at planning time and updat
 
 ## Workflow Status
 
-A checklist of workflow milestone rollups. Each box summarizes task-local validity markers (`**Review status:**` and `**Integration status:**`) plus any required global verification for that milestone. It flips only when all contributing tasks and gates have the appropriate status. Each box flips at the moment its workflow step completes, in the same commit that completes the step. A new agent reads this section as evidence for the main-agent Workflow Frontier Resolver; the task blocks remain the authority for mixed-state work. On re-entry, the orchestrator unchecks affected boxes by judgment and declares in §Decisions which boxes were cleared and why. Unchecking a rollup does not clear unrelated task statuses. The full drift-test suite must re-run green before rechecking `Drift tests created` — see `planning-workflow §User Feedback and Changing Plans`.
+A checklist of workflow milestone rollups. Each box summarizes task-local validity markers (`**Review status:**` and `**Integration status:**`) plus any required global verification for that milestone. It flips only when all contributing tasks and gates have the appropriate status. Each box flips at the moment its workflow step completes, in the same commit that completes the step. A new agent reads this section as evidence for the main-agent Workflow Frontier Resolver; the task blocks remain the authority for mixed-state work. On re-entry, the orchestrator unchecks affected boxes by judgment and declares in §Decisions which boxes were cleared and why. Unchecking a rollup does not clear unrelated task statuses. The full drift-test suite must re-run green before rechecking `Drift tests created` — see `superplan §User Feedback and Changing Plans`.
 
-- [ ] **Plan approved** — researcher signed off on the required domain gate + plan (`planning-workflow` Phase 2)
-- [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`implementation-workflow` Step 3)
-- [ ] **Drift tests created** — drift tests passing on baseline (`integration-workflow` Protect)
-- [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync (`integration-workflow` Integrate)
-- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`integration-workflow` Document)
-- [ ] **Finished** — branch landed locally, PR opened, or requested cleanup completed (`integration-workflow` Finish)
+- [ ] **Plan approved** — researcher signed off on the required domain gate + plan (`superplan` Phase 2)
+- [ ] **Execution complete** — all tasks `APPROVED`, pipeline reproducible (`superimplement` Step 3)
+- [ ] **Drift tests created** — drift tests passing on baseline (`superintegrate` Protect)
+- [ ] **Integrated** — integration reviewer `APPROVED` on `BASE_HEAD_SHA..HEAD` after Sync (`superintegrate` Integrate)
+- [ ] **Docs finalized** — RESULTS.md matured, project docs audited, doc-reviewer `APPROVED` (`superintegrate` Document)
+- [ ] **Finished** — branch landed locally, PR opened, or requested cleanup completed (`superintegrate` Finish)
 
 ---
 ```
@@ -76,7 +76,7 @@ Use one top-level order for every PLAN.md:
 
 ## Project Conventions
 
-Sits after `## Workflow Status` and before optional `## Decisions` / `## Sync Map` sections. Populated by the orchestrator at `planning-workflow` Phase 3 and refreshed at `implementation-workflow` Step 1 when new upstream docs are discovered. Subagents read this section instead of re-walking the project's `CLAUDE.md` / `AGENTS.md` / `README.md` tree on every dispatch; if something they need is missing, they walk on-demand and flag the omission in their status return so the orchestrator can update the section.
+Sits after `## Workflow Status` and before optional `## Decisions` / `## Sync Map` sections. Populated by the orchestrator at `superplan` Phase 3 and refreshed at `superimplement` Step 1 when new upstream docs are discovered. Subagents read this section instead of re-walking the project's `CLAUDE.md` / `AGENTS.md` / `README.md` tree on every dispatch; if something they need is missing, they walk on-demand and flag the omission in their status return so the orchestrator can update the section.
 
 ```markdown
 ## Project Conventions
@@ -118,7 +118,7 @@ Researcher answers to `AskUserQuestion` / plain-text pauses land in `PLAN.md` **
 **Where it lands:**
 
 - **Task-scoped decision** (affects one task's scope, methodology, or implementation) → blockquote inside that task block, directly under `**Review status:**`. Uses the same blockquote syntax as review notes, so it sits naturally beside the adjudication protocol in `agents/implementer.md` / `agents/reviewer.md`.
-- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `implementation-workflow` Step 4 completion choice, `integration-workflow` Protect drift-test selection, `integration-workflow` Document doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed after `## Project Conventions` and before `## Sync Map` / the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
+- **Cross-task / project-level decision** (methodology affecting multiple tasks, sample definition, output scope, `superimplement` Step 4 completion choice, `superintegrate` Protect drift-test selection, `superintegrate` Document doc disposition) → a top-level `## Decisions` section in `PLAN.md`, placed after `## Project Conventions` and before `## Sync Map` / the first task block. Append new decisions to the bottom; do not rewrite prior decisions.
 
 **Format (both locations):**
 
@@ -220,7 +220,7 @@ Validate: row count matches expectation, unmatched rate reasonable, distribution
 - **Script / Input / Output** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **Steps** are editable by the implementer: they may rewrite, reorder, add, or remove steps when the data forces deviation from the planned approach. Steps are expressed as checkbox items with inline code blocks that contain the actual analyst code.
 - **Review notes blockquote** is present only when there are active items. On `APPROVED`, the blockquote is removed entirely. During Integrate, review items should cite Sync impact only as context for the approved post-sync diff; they should still identify a codebase-coherence, documentation, drift-test, or minimum-net-diff issue. For how items enter, get annotated, and exit across iterations, see `agents/reviewer.md` (first-round REVISE and re-review deletion) and `agents/implementer.md` (annotating fixes with `→ implemented: ...`).
-- **`## Workflow Status` checkboxes** are flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. Each box is a rollup over per-task statuses plus global gates: e.g., `Execution complete` flips only when every task has `**Review status:** APPROVED`; `Drift tests created` flips only when the full drift-test suite passes (which requires all tasks to have `**Integration status:**` coverage). A box is unchecked again only when a scope change or post-sync refactor invalidates the milestone — see `planning-workflow §User Feedback and Changing Plans`. Unchecking a box records that the rollup is false; it does not clear unrelated task-local status. Subagents may not flip boxes; if a subagent reports work that completes a milestone, the orchestrator flips the box in the next commit.
+- **`## Workflow Status` checkboxes** are flipped only by the orchestrator (or standalone author), only at the moment the named workflow step completes, and only in the same commit that completes that step. Each box is a rollup over per-task statuses plus global gates: e.g., `Execution complete` flips only when every task has `**Review status:** APPROVED`; `Drift tests created` flips only when the full drift-test suite passes (which requires all tasks to have `**Integration status:**` coverage). A box is unchecked again only when a scope change or post-sync refactor invalidates the milestone — see `superplan §User Feedback and Changing Plans`. Unchecking a box records that the rollup is false; it does not clear unrelated task-local status. Subagents may not flip boxes; if a subagent reports work that completes a milestone, the orchestrator flips the box in the next commit.
 
 ## No Placeholders
 

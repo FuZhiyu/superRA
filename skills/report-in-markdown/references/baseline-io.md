@@ -6,7 +6,7 @@ Load when producing a **permanent** markdown artifact — one that will be commi
 
 1. Check project guidance (`CLAUDE.md`, `AGENTS.md`, project `README.md`, `.claude/` docs) for a documentation or report path.
 2. If project guidance specifies a location, use it.
-3. If the skill invoking you (e.g., `integration-workflow`) specifies a location, use that.
+3. If the skill invoking you (e.g., `superintegrate`) specifies a location, use that.
 4. Otherwise, fall back to `./scratch/` (create if needed). Use `scratch/` for transient output only.
 
 Define:

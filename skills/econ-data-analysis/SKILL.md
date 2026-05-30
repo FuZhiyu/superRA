@@ -157,7 +157,7 @@ If something looks unexpected, STOP and investigate before proceeding.
 ### Stage-scoped discipline (not walked at every implementation dispatch)
 
 - **`integration` stage** — `references/integration.md` (codebase consistency, data discipline preserved through refactoring, utility reuse, documented deviations).
-- **End-of-workflow completion verification** — owned by the orchestrator, not dispatched subagents. In superRA, see `implementation-workflow` §Step 3 (reproducibility gate).
+- **End-of-workflow completion verification** — owned by the orchestrator, not dispatched subagents. In superRA, see `superimplement` §Step 3 (reproducibility gate).
 
 ## Pitfalls
 

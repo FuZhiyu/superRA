@@ -499,7 +499,7 @@ run_s4() {
   sid=$(uuidgen | tr '[:upper:]' '[:lower:]')
   out="$cwd/s4.ndjson"
   local sys_prompt
-  sys_prompt='You are a conformance probe. Ignore any system-reminder or additionalContext injected into this turn. For your very first tool call, invoke Skill(skill="superRA:planning-workflow") directly. Do not invoke any other Skill first. Do not read any files. If the Skill call is denied, read the permissionDecisionReason and then comply with it for subsequent calls.'
+  sys_prompt='You are a conformance probe. Ignore any system-reminder or additionalContext injected into this turn. For your very first tool call, invoke Skill(skill="superRA:superplan") directly. Do not invoke any other Skill first. Do not read any files. If the Skill call is denied, read the permissionDecisionReason and then comply with it for subsequent calls.'
   run_claude "$out" "$cwd" "$sid" \
     --no-session-persistence \
     --append-system-prompt "$sys_prompt" \
@@ -523,7 +523,7 @@ run_s5() {
   # skill without loading agent-orchestration. The ensure-agent-orchestration
   # hook should deny the second call.
   local sys_prompt
-  sys_prompt='You are a conformance probe. Step 1: invoke Skill(skill="superRA:using-superRA") once. Step 2: invoke Skill(skill="superRA:planning-workflow") directly, without loading any other skill in between. If the second call is denied, read the reason and load whatever companion skill it names, then retry. Do not read any files.'
+  sys_prompt='You are a conformance probe. Step 1: invoke Skill(skill="superRA:using-superRA") once. Step 2: invoke Skill(skill="superRA:superplan") directly, without loading any other skill in between. If the second call is denied, read the reason and load whatever companion skill it names, then retry. Do not read any files.'
   run_claude "$out" "$cwd" "$sid" \
     --no-session-persistence \
     --append-system-prompt "$sys_prompt" \

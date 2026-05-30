@@ -60,7 +60,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 
 | Concern | Owner |
 | --- | --- |
-| Phase choreography, stop points, task/status transitions | `planning-workflow`, `implementation-workflow`, `integration-workflow` |
+| Phase choreography, stop points, task/status transitions | `superplan`, `superimplement`, `superintegrate` |
 | Cross-stage orchestration, dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` |
 | Execution modes and Skill-Load Manifest | `using-superra` |
 | Domain discipline, domain gates, pitfalls, stage-scoped domain references — including, for `theory-modeling`, both creation-time four-gate discipline and task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline) | The relevant domain skill, e.g. `econ-data-analysis` or `theory-modeling` |

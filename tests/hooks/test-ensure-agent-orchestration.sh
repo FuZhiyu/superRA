@@ -121,26 +121,26 @@ run_case "V2 Skill empty"                expect-silent "Skill" ""
 #
 # Transcript present but only mentions the other companion (using-superRA) —
 # this hook must still deny because it specifically guards agent-orchestration.
-run_case "V3a planning-workflow no-transcript"    expect-deny  "Skill" "superRA:planning-workflow"       "$other_transcript"
-run_case "V3b implementation-workflow not-loaded" expect-deny  "Skill" "superRA:implementation-workflow" "$other_transcript"
-run_case "V3c integration-workflow not-loaded"    expect-deny  "Skill" "superRA:integration-workflow"    "$other_transcript"
+run_case "V3a superplan no-transcript"    expect-deny  "Skill" "superRA:superplan"       "$other_transcript"
+run_case "V3b superimplement not-loaded" expect-deny  "Skill" "superRA:superimplement" "$other_transcript"
+run_case "V3c superintegrate not-loaded"    expect-deny  "Skill" "superRA:superintegrate"    "$other_transcript"
 
 # V4: workflow skill, companion loaded -> silent
-run_case "V4a planning-workflow loaded"          expect-silent "Skill" "superRA:planning-workflow"       "$loaded_transcript"
-run_case "V4b implementation-workflow loaded"    expect-silent "Skill" "superRA:implementation-workflow" "$loaded_transcript"
-run_case "V4c integration-workflow loaded"       expect-silent "Skill" "superRA:integration-workflow"    "$loaded_transcript"
+run_case "V4a superplan loaded"          expect-silent "Skill" "superRA:superplan"       "$loaded_transcript"
+run_case "V4b superimplement loaded"    expect-silent "Skill" "superRA:superimplement" "$loaded_transcript"
+run_case "V4c superintegrate loaded"       expect-silent "Skill" "superRA:superintegrate"    "$loaded_transcript"
 
 # V4d: tolerant whitespace around the colon
 tolerant_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{ "skill" : "superRA:agent-orchestration" }}]}}'
-run_case "V4d tolerant-whitespace"       expect-silent "Skill" "superRA:planning-workflow" "$tolerant_transcript"
+run_case "V4d tolerant-whitespace"       expect-silent "Skill" "superRA:superplan" "$tolerant_transcript"
 
 # V5: fail-open on missing transcript
-run_case "V5a transcript empty-string"   expect-silent "Skill" "superRA:planning-workflow" "" "empty"
-run_case "V5b transcript nonexistent"    expect-silent "Skill" "superRA:planning-workflow" "" "nonexistent"
+run_case "V5a transcript empty-string"   expect-silent "Skill" "superRA:superplan" "" "empty"
+run_case "V5b transcript nonexistent"    expect-silent "Skill" "superRA:superplan" "" "nonexistent"
 
 # V6: deny payload valid JSON with round-tripping reason (embedded
 # double quotes inside Skill(skill="...") exercise the json.dumps escape).
-run_case "V6 deny-reason round-trip"     expect-deny   "Skill" "superRA:planning-workflow" "$other_transcript"
+run_case "V6 deny-reason round-trip"     expect-deny   "Skill" "superRA:superplan" "$other_transcript"
 
 echo
 echo "Passed: $pass    Failed: $fail"

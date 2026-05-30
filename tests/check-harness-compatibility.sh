@@ -72,11 +72,11 @@ text = Path("skills/using-superRA/SKILL.md").read_text(encoding="utf-8")
 m = re.search(r"^name:\s*(\S+)\s*$", text, re.MULTILINE)
 assert m and m.group(1) == "using-superra", f"using-superRA SKILL.md name must be lowercase 'using-superra', got {m and m.group(1)!r}"
 using_text = text
-planning_text = Path("skills/planning-workflow/SKILL.md").read_text(encoding="utf-8")
+planning_text = Path("skills/superplan/SKILL.md").read_text(encoding="utf-8")
 refactor_text = Path("skills/refactor-and-integrate/SKILL.md").read_text(encoding="utf-8")
 assert "`theory-modeling`" in using_text, "using-superRA must list theory-modeling"
 assert "superRA:theory-modeling" in using_text, "using-superRA manifest must reference theory-modeling"
-assert "`superRA:theory-modeling`" in planning_text, "planning-workflow must route theory-modeling"
+assert "`superRA:theory-modeling`" in planning_text, "superplan must route theory-modeling"
 # Per Task 7 (domain-neutral workflow/utility skills): refactor-and-integrate must NOT name a specific
 # domain's integration reference; the active domain skill's stage-load table routes it.
 assert "theory-modeling/references/integration.md" not in refactor_text, "refactor-and-integrate SKILL.md must stay domain-neutral"

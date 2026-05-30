@@ -1,9 +1,9 @@
 ---
-name: integration-workflow
-description: Requires `superRA:using-superra` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need protection before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when RESULTS.md needs to mature into its permanent record; when PLAN.md needs final disposition; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "protect key results", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "open the PR", or the transition from `implementation-workflow`'s completion menu.
+name: superintegrate
+description: Requires `superRA:using-superra` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need protection before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when RESULTS.md needs to mature into its permanent record; when PLAN.md needs final disposition; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "protect key results", "write drift tests for the key results", "sync with main and refactor", "consolidate RESULTS.md", "mature the results document", "update project docs for this analysis", "open the PR", or the transition from `superimplement`'s completion menu.
 ---
 
-# Integration Workflow
+# superintegrate — the INTEGRATE phase
 
 **First, load `superRA:using-superra` if not already loaded.**
 
@@ -16,11 +16,11 @@ Integrate -> refactor with Sync context and pass integration review
 Document  -> mature RESULTS.md and dispose of PLAN.md
 Finish    -> final freshness check, PR or fast-forward, and cleanup
 
-Any step -> planning-workflow §User Feedback and Changing Plans
+Any step -> superplan §User Feedback and Changing Plans
            when scope, methodology, task structure, or APPROVED status changes materially
 ```
 
-**Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
+**Announce at start:** "I'm using the superintegrate skill to prepare this work for integration."
 
 ## Stop Points
 
@@ -44,7 +44,7 @@ Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the 
 
 Result protection guards key results during Sync, Integrate, Finish, and future work. Drift tests are the current/default protection mechanism. For the writing vertical, "key results" are the manuscript artifacts; protection is satisfied by document-build success plus outline stability across the merged state — see `skills/writing/references/integration.md`.
 
-**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `**Integration status:**` unset or not `APPROVED` plus orchestrator-declared related tasks from `planning-workflow §User Feedback and Changing Plans`; running the suite is not scoped.
+**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `**Integration status:**` unset or not `APPROVED` plus orchestrator-declared related tasks from `superplan §User Feedback and Changing Plans`; running the suite is not scoped.
 
 ### Steps
 
@@ -203,7 +203,7 @@ Agent(subagent_type: "superRA:reviewer"):
 Read the task-local integration notes. Classify reviewer findings per `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
 - Batch all user-owned questions into one stop point.
-- Route substantive plan restructures through `planning-workflow §User Feedback and Changing Plans`.
+- Route substantive plan restructures through `superplan §User Feedback and Changing Plans`.
 - Log user decisions before dispatching fixes.
 
 ### Step 4: Refactor loop
@@ -305,7 +305,7 @@ Log the answer before moving or removing files. Include the log in the same comm
 
 ## Finish
 
-Finish executes the user's completion choice from `implementation-workflow`.
+Finish executes the user's completion choice from `superimplement`.
 
 ### Step 1: Freshness check
 

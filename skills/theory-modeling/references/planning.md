@@ -1,6 +1,6 @@
 # Theory-Modeling Planning Discipline
 
-Load at the **PLAN phase** when the work involves mathematical modeling. `planning-workflow` invokes this reference after Phase 1 (scope check) to apply domain-specific discipline before tasks are drafted.
+Load at the **PLAN phase** when the work involves mathematical modeling. `superplan` invokes this reference after Phase 1 (scope check) to apply domain-specific discipline before tasks are drafted.
 
 ---
 
@@ -122,4 +122,4 @@ Every theory/modeling plan should include explicit verification tasks. At the pl
 
 ## Handoff to Implementation
 
-After the Model Inventory / Assumption Map is approved, the verification plan is agreed, and tasks are drafted, `planning-workflow` commits the plan and hands off to `implementation-workflow`. The main `theory-modeling` skill body carries the cross-cutting discipline that applies at every implementation step: the Iron Law and the intuition + interpretability + stated reason through-line running across the four gates (Objects & Notation, Assumptions, Derivations, Verification & Rendering), verification, and documentation.
+After the Model Inventory / Assumption Map is approved, the verification plan is agreed, and tasks are drafted, `superplan` commits the plan and hands off to `superimplement`. The main `theory-modeling` skill body carries the cross-cutting discipline that applies at every implementation step: the Iron Law and the intuition + interpretability + stated reason through-line running across the four gates (Objects & Notation, Assumptions, Derivations, Verification & Rendering), verification, and documentation.

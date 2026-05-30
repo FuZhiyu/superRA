@@ -10,9 +10,9 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 
 | Skill | Phase | Role |
 |---|---|---|
-| `planning-workflow` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
-| `implementation-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
-| `integration-workflow` | INTEGRATE | Protect key results, Sync with the current base, Integrate/refactor the post-sync diff, Document final results, then Finish with PR / fast-forward / cleanup. |
+| `superplan` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
+| `superimplement` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
+| `superintegrate` | INTEGRATE | Protect key results, Sync with the current base, Integrate/refactor the post-sync diff, Document final results, then Finish with PR / fast-forward / cleanup. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
 ## Domain — vertical-specific discipline
@@ -38,7 +38,7 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 
 | Skill | What it provides |
 |---|---|
-| `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`planning-workflow` Phase 2, `integration-workflow` Document doc-writer). Usable standalone by a single author with no subagents. |
+| `handoff-doc` | Handoff-doc discipline — four document principles, inline-edit rule, stale-content checklist, User Decisions Log format, figure-embedding pointer, full `PLAN.md` / `RESULTS.md` anatomy templates (`plan-anatomy.md`, `results-anatomy.md`). Loaded on demand when the compact etiquette in `agents/implementer.md` / `agents/reviewer.md` step 1 is not enough, and always by doc-creators (`superplan` Phase 2, `superintegrate` Document doc-writer). Usable standalone by a single author with no subagents. |
 | `result-protection` | Tools for protecting key research results from unintended changes; drift/regression tests are the current/default mechanism. Loaded by Protect / `Stage: protection` agents. |
 | `refactor-and-integrate` | Tools for **codebase coherence** — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host, and supplied Sync impact as justification evidence. Loaded by integration-phase agents. |
 | `report-in-markdown` | Markdown style guide for any agent writing markdown, with progressive-reveal references for figures, LaTeX math, and tables. |

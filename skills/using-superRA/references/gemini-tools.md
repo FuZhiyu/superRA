@@ -18,7 +18,7 @@ Skills use Claude Code tool names. When you encounter these in a skill, use your
 
 ## No subagent support
 
-Gemini CLI has no equivalent to Claude Code's `Task` tool. Skills that rely on subagent dispatch (`superRA:agent-orchestration`) will fall back to single-session execution via `implementation-workflow`.
+Gemini CLI has no equivalent to Claude Code's `Task` tool. Skills that rely on subagent dispatch (`superRA:agent-orchestration`) will fall back to single-session execution via `superimplement`.
 
 ## Additional Gemini CLI tools
 
