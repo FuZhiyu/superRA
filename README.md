@@ -49,7 +49,7 @@ flowchart TB
     class FINISHED terminal
 ```
 
-To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, `implement according to the plan`, `integrate it with the update on the main`, ...
+To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, `implement according to the plan`, `integrate it with the update on the main`, ... — or name a phase skill directly: `superplan`, `superimplement`, `superintegrate`.
 
 ### Key principles of the workflow
 
