@@ -35,7 +35,7 @@ git commit -m "results: restructure Stage 2 RESULTS.md to reader-facing"
 
 ### Commit 3 — Materialize figures
 
-Copy figures from `results_attachments/` (worktree root, Stage 1 directory) into `${RESULTS_ATTACHMENTS_DIR}` (= `${RESULTS_DIR}/attachments`). Convert PDF→PNG if needed per `rich-content.md`. Update embed paths in `RESULTS.md` from `results_attachments/...` to `attachments/...` so they resolve correctly after Commit 4's relocation.
+Collect figures from task-local `attachments/` directories (e.g., `.plan/task-path/attachments/`) into `${RESULTS_ATTACHMENTS_DIR}` (= `${RESULTS_DIR}/attachments`). Convert PDF→PNG if needed per `rich-content.md`. Update embed paths in `RESULTS.md` from `.plan/task-path/attachments/...` to `attachments/...` so they resolve correctly after Commit 4's relocation.
 
 The file is still at worktree root at this point — only the figures and their embed paths have moved.
 
@@ -44,7 +44,7 @@ git add RESULTS.md ${RESULTS_ATTACHMENTS_DIR}/
 git commit -m "results: materialize figures into ${RESULTS_DIR}/attachments"
 ```
 
-**Validation before commit:** every figure embedded in `RESULTS.md` renders when previewed (every relative path resolves to a committed file). Every figure is a PNG (or the project's mandated format), not a PDF. `results_attachments/` at the worktree root still exists — do not delete it until after Commit 4 and the separate disposition pass.
+**Validation before commit:** every figure embedded in `RESULTS.md` renders when previewed (every relative path resolves to a committed file). Every figure is a PNG (or the project's mandated format), not a PDF. Task-local `attachments/` directories under `.plan/` still exist — do not delete them until after Commit 4 and the separate disposition pass.
 
 ### Commit 4 — Relocate
 

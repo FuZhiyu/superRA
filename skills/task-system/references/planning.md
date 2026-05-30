@@ -171,7 +171,7 @@ Results live in each task's `## Results` section. The same section matures throu
 - Final sample: N rows
 
 ### Figures and Tables
-![Descriptive caption for fig A](results_attachments/fig_taskN_a.png)
+![Descriptive caption for fig A](attachments/fig_taskN_a.png)
 
 ### Notes
 - [any caveat, data quirk, or decision the reader needs to interpret the results]
@@ -191,10 +191,12 @@ Omit subsections that do not apply.
 
 ### Figure Embedding
 
-Figures committed to `results_attachments/` at the project root. Embed with:
+Figures committed to `attachments/` next to the task's `task.md` (e.g., `.plan/my-task/attachments/fig.png`). Embed with a path relative to the task file:
 
 ```markdown
-![Descriptive caption](results_attachments/fig_name.png)
+![Descriptive caption](attachments/fig_name.png)
 ```
+
+This keeps tasks self-contained — moving a task moves its figures, and the dashboard resolves these paths correctly via the task's `pathPrefix`.
 
 Full figure-embedding mechanics — PDF→PNG conversion, caption discipline, file-reference conventions — live in `skills/report-in-markdown/references/rich-content.md`.

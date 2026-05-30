@@ -116,7 +116,7 @@ After every task is `approved`, verify the work end-to-end before presenting com
 
 2. **Task tree up to date?** Run `task_query.py --tree` and confirm all tasks show `approved`. No tasks stuck in `implemented` or `revise`. Discovery notes captured in task `## Results` sections.
 
-3. **Results recorded?** Each completed task has findings in its `## Results` section. Figure attachments in `results_attachments/` committed.
+3. **Results recorded?** Each completed task has findings in its `## Results` section. Figure attachments in each task's `attachments/` directory committed.
 
 4. **Reproducibility verification.**
    - Multi-script pipeline runs end-to-end if the plan declares one.

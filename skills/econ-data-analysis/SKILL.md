@@ -151,7 +151,7 @@ If something looks unexpected, STOP and investigate before proceeding.
 
 - `[BLOCKING]` Task `## Results` updated in place. The task file is the record — findings live there before they appear in any status report.
 - `[BLOCKING]` Markdown cells explain what each block does and why; reasoning for major decisions sits alongside the code.
-- `[BLOCKING]` Figures saved under `results_attachments/` and embedded in task `## Results` via relative paths per `superRA:report-in-markdown`.
+- `[BLOCKING]` Figures saved under the task's `attachments/` directory and embedded in task `## Results` as `attachments/fig.png` per `superRA:report-in-markdown`.
 - `[BLOCKING]` No dangling TODO / placeholder / `XXX` strings shipped.
 
 ### Stage-scoped discipline (not walked at every implementation dispatch)
