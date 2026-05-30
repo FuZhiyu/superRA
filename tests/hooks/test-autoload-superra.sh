@@ -98,16 +98,22 @@ run_case "V2d Super_RA"     expect-reminder "Super_RA time"
 run_case "V2e superra lc"   expect-reminder "superra please"
 run_case "V2f mid-sentence" expect-reminder "ok, superRA, go"
 
+# V2g-i: phase skill names are trigger words too -> reminder
+run_case "V2g superplan"      expect-reminder "let's superplan this"
+run_case "V2h superimplement" expect-reminder "run superimplement now"
+run_case "V2i superintegrate" expect-reminder "superintegrate the branch"
+
 # V3: word boundary -> silent (no false positive)
 run_case "V3 superrapid" expect-silent "this is superrapid output"
 run_case "V3 superrant"  expect-silent "no superrant behavior here"
+run_case "V3 superplanet" expect-silent "the superplanetary survey"
 
 # V4: already loaded (transcript shows a Skill invocation) -> silent
 loaded_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:using-superRA"}}]}}'
 run_case "V4 already-loaded" expect-silent "superRA again, what now?" "$loaded_transcript"
 
 # V4b: transcript mentions a different superRA skill -> still remind
-other_skill='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:planning-workflow"}}]}}'
+other_skill='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:superplan"}}]}}'
 run_case "V4b other-superRA-skill" expect-reminder "superRA hello" "$other_skill"
 
 # V5: transcript_path empty -> reminder (fail-open)

@@ -1,6 +1,6 @@
 # Drift Tests for Theory-Modeling Results
 
-Load at the **INTEGRATE phase** when preparing drift tests that guard a theory/modeling project's key results before merge. `integration-workflow` Phase A invokes this reference alongside `result-protection/references/drift-test-quality.md` (generic test quality checklist + cross-cutting integrity Red Flags).
+Load at the **INTEGRATE phase** when preparing drift tests that guard a theory/modeling project's key results before merge. `superintegrate` Phase A invokes this reference alongside `result-protection/references/drift-test-quality.md` (generic test quality checklist + cross-cutting integrity Red Flags).
 
 ---
 

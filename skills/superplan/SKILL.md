@@ -1,19 +1,19 @@
 ---
-name: planning-workflow
-description: "Requires `superRA:using-superra` loaded first. Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet; when you have an idea and need to translate it into an executable plan document; when a fresh branch needs its planning artifacts bootstrapped. Triggers include \"let's analyze X\", \"write me a plan for Y\", \"we're starting a new project on Z\", \"before writing any code\", empty working directory for a new task, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → INTEGRATE workflow; hands off to `implementation-workflow` once the plan is approved. Domain-agnostic: for implemented verticals such as data analysis or theory/modeling, invokes the matching domain skill and planning reference before task drafting."
+name: superplan
+description: "Requires `superRA:using-superra` loaded first. Use when starting a new piece of research work with an objective and methodology but no code or PLAN.md yet; when you have an idea and need to translate it into an executable plan document; when a fresh branch needs its planning artifacts bootstrapped. Triggers include \"let's analyze X\", \"write me a plan for Y\", \"we're starting a new project on Z\", \"before writing any code\", empty working directory for a new task, or an existing PLAN.md that is being rewritten from scratch. Sits at the PLAN phase of the superRA PLAN → IMPLEMENT → INTEGRATE workflow; hands off to `superimplement` once the plan is approved. Domain-agnostic: for implemented verticals such as data analysis or theory/modeling, invokes the matching domain skill and planning reference before task drafting."
 ---
 
-# Planning Workflow
+# superplan — the PLAN phase
 
 **First, load `superRA:using-superra` if not already loaded.**
 
 ## Overview
 
-Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the implementation-workflow to consume.
+Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of plan creation: scope check, domain-vertical setup, task decomposition, self-review, execution handoff. Outputs `PLAN.md` and `RESULTS.md` for the superimplement to consume.
 
 Write comprehensive plans for a reader skilled at the craft but with zero context for this specific project — which files to create, what inputs to load, how to transform them, what to validate, and how to document results. Frequent commits.
 
-**Announce at start:** "I'm using the planning-workflow skill to create the project plan."
+**Announce at start:** "I'm using the superplan skill to create the project plan."
 
 **Save plan to:** `PLAN.md` at the project root (if in a worktree, the worktree root; otherwise, the project root or user-specified location)
 - Create `RESULTS.md` alongside (see Living Plan and Results Docs section below), unless the active domain planning reference declares a different durable record.
@@ -102,7 +102,7 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 **Editing discipline and anatomy templates** live in `superRA:handoff-doc` (load it when authoring `PLAN.md` / `RESULTS.md` from scratch). Role ownership and review-loop annotation protocols live in `agents/implementer.md` and `agents/reviewer.md`.
 
-**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the stub anatomy in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `integration-workflow` Document it matures into a permanent record. Follow the active domain planning reference when it declares a different durable record.
+**Results document:** Create `RESULTS.md` alongside `PLAN.md` using the stub anatomy in `superRA:handoff-doc` §references/results-anatomy.md (including why pre-allocation is load-bearing for parallel dispatch). This is the Stage 1 form; at `superintegrate` Document it matures into a permanent record. Follow the active domain planning reference when it declares a different durable record.
 
 ### PLAN.md Is the Task Tracker
 
@@ -134,7 +134,7 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 - Changing the analysis-level objective, methodology, sample definition, or expected output.
 - Changing data sources or project-wide conventions.
 - Scope additions arriving after integration or merge (post-PR additions, adjacent features surfaced by reviewers, follow-on ideas).
-- Substantive restructure findings surfaced mid-INTEGRATE (by the `integration-workflow` Sync agent, Integrate reviewer, or Document reviewer) — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
+- Substantive restructure findings surfaced mid-INTEGRATE (by the `superintegrate` Sync agent, Integrate reviewer, or Document reviewer) — task add/remove/combine, DAG edge flip, prior APPROVED status invalidation. The orchestrator authors the Restructure Proposal; the researcher decides.
 
 **Not material (handle as inline discovery edits per the Living Plan section above):**
 
@@ -157,7 +157,7 @@ When the plan changes — task details updated, tasks added, removed, or reorder
 4. **Update statuses** by orchestrator judgment. The orchestrator declares in the §Decisions entry *which* task-local statuses and rollup boxes are invalidated and *why*. Rules: clear per-task `**Review status:**` and `**Integration status:**` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `APPROVED` tasks. Minor-edited tasks with code unchanged may clear `**Integration status:**` while keeping `**Review status:** APPROVED`. Uncheck project-level `## Workflow Status` boxes whose rollup guarantee is no longer true; unchecking a rollup does not imply clearing every contributing task status.
 5. **Sweep PLAN.md for stale content** per `handoff-doc` §Stale Content Checklist. Earlier task blocks whose output has been superseded by a later task, cross-references to removed sections, review notes resolved by subsequent work — fix in place now, not later.
 6. **Commit atomically** — PLAN.md edit + decision log entry + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
-7. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point. On every re-entry through `integration-workflow`, the **full** drift-test suite runs regardless of which tasks changed; only *authoring* new drift tests is scoped to the affected tasks.
+7. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point. On every re-entry through `superintegrate`, the **full** drift-test suite runs regardless of which tasks changed; only *authoring* new drift tests is scoped to the affected tasks.
 
 
 **Banned shortcuts:**
@@ -198,4 +198,4 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ## Execution Handoff
 
-After finalizing the plan, check the **`Plan approved`** box in `PLAN.md` §Workflow Status and commit the plan + box-flip atomically. Then hand off to `superRA:implementation-workflow`, which owns execution-mode selection (subagent vs direct — see `superRA:using-superra` §Execution Modes) and review discipline.
+After finalizing the plan, check the **`Plan approved`** box in `PLAN.md` §Workflow Status and commit the plan + box-flip atomically. Then hand off to `superRA:superimplement`, which owns execution-mode selection (subagent vs direct — see `superRA:using-superra` §Execution Modes) and review discipline.

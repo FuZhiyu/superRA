@@ -47,9 +47,9 @@ Long-form review treats the user's existing draft as the implementation under re
 - `**Review status:**` starts unset, then reviewers set `REVISE` with task-local review notes or `APPROVED`;
 - no RESULTS.md is created; findings belong in PLAN.md review notes.
 
-This path uses implementation-workflow for reviewer dispatch and status handling, but not for implementer output production.
+This path uses superimplement for reviewer dispatch and status handling, but not for implementer output production.
 
-Because implementation-workflow's generic entry check expects RESULTS.md, the writing orchestrator handles this retrofit as a writing-owned exception: do not modify implementation-workflow; instead, enter with the PLAN.md that carries the exact PLAN-only rows above and treat PLAN.md review notes as the sole durable findings surface for this writing mode.
+Because superimplement's generic entry check expects RESULTS.md, the writing orchestrator handles this retrofit as a writing-owned exception: do not modify superimplement; instead, enter with the PLAN.md that carries the exact PLAN-only rows above and treat PLAN.md review notes as the sole durable findings surface for this writing mode.
 
 ## Project Conventions
 

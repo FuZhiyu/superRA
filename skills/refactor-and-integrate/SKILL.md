@@ -21,7 +21,7 @@ The active domain skill's stage-load table routes any domain-specific integratio
 
 - `[BLOCKING]` **Minimum net diff to the governing baseline.** Touch only what approved task objectives, codebase-coherence checklist items, handoff-doc coherence, documentation currency, logged user decisions, or supplied Sync impact context justify. No unrelated cleanup, broad reformatting, defensive edits, speculative abstractions, or helper extraction that is not required by the current task.
 
-Use `git diff <BASE_HEAD_SHA>..HEAD` in normal integration-workflow after Sync, or the caller-provided range when a dispatch explicitly overrides the baseline. In standalone refactor work, use the caller's governing git range or touched-file diff.
+Use `git diff <BASE_HEAD_SHA>..HEAD` in normal superintegrate after Sync, or the caller-provided range when a dispatch explicitly overrides the baseline. In standalone refactor work, use the caller's governing git range or touched-file diff.
 
 Review the governing diff line by line. Any hunk without a current justification is out of scope; revert it or record the justification before return. A no-change diff still requires the Final Diff Self-Check trail below.
 
@@ -50,7 +50,7 @@ Sync impact justifies existing hunks only when it is already present; it does no
 
 Implementers run this immediately before every return or commit, including no-change cases:
 
-1. **Recompute the governing diff.** In integration-workflow after Sync, use `git diff <BASE_HEAD_SHA>..HEAD`. In standalone refactor work, use the caller-provided git range or touched-file diff.
+1. **Recompute the governing diff.** In superintegrate after Sync, use `git diff <BASE_HEAD_SHA>..HEAD`. In standalone refactor work, use the caller-provided git range or touched-file diff.
 2. **Leave a compact trail.** In the assigned PLAN.md task block when one exists, write or refresh `**Final diff self-check:** <command/range>; <no surviving hunks OR surviving-change classes>; <suspicious hunk justifications or none>`. Without PLAN.md, put the same line in the status return.
 3. **Summarize ordinary hunks by class.** Examples: "utility reuse in task scripts", "module README currency", "test contract wording". Do not justify every line when the class is already covered by the task objective or checklist.
 4. **Justify suspicious hunks by file and line/hunk.** Suspicious cases are: `skills/*` or `agents/*` instruction edits, prior overprescription or scope-creep findings, base-side restorations or relocations, touched tasks already marked `Integration status: APPROVED`, broad formatting or rewrite hunks, and changes justified only by Sync impact. Apply any local instruction-prose gate only to files that local guidance covers.

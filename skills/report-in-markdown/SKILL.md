@@ -26,8 +26,8 @@ Resolve paths **relative to the markdown file's directory** (use `../` as needed
 |---|---|
 | Implementer / reviewer writing routine task-block citations only | nothing beyond this file |
 | Implementer writing a `RESULTS.md` task section with figures / math / tables | `rich-content.md` |
-| `integration-workflow` Document doc-writer subagent | `baseline-io.md` + `rich-content.md` + `final-form.md` |
-| `integration-workflow` Document doc-reviewer subagent | `final-form.md` |
+| `superintegrate` Document doc-writer subagent | `baseline-io.md` + `rich-content.md` + `final-form.md` |
+| `superintegrate` Document doc-reviewer subagent | `final-form.md` |
 | Standalone markdown report (any context) | `baseline-io.md` + `rich-content.md` |
 
 The `attachments/` directory is a caller parameter; defaults and fallbacks are in `references/rich-content.md` §Figures.

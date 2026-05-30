@@ -2,8 +2,9 @@
 # UserPromptSubmit hook: auto-load the superRA master skill.
 #
 # Fires on every user prompt. If the prompt mentions "superRA" (or a
-# case/spacing variant) AND the session transcript does not already
-# show a Skill invocation for superRA:using-superRA, inject a
+# case/spacing variant) or names a phase skill directly (superplan,
+# superimplement, superintegrate) AND the session transcript does not
+# already show a Skill invocation for superRA:using-superRA, inject a
 # system-reminder telling Claude to load the master skill before
 # responding. Suppressed on non-matching prompts and on sessions where
 # the skill is already loaded.
@@ -16,6 +17,9 @@
 #   V2c prompt="kick off super-ra workflow"                  -> reminder
 #   V2d prompt="Super_RA time"                               -> reminder
 #   V2e prompt="superra please"                              -> reminder
+#   V2g prompt="let's superplan this"                        -> reminder
+#   V2h prompt="run superimplement now"                      -> reminder
+#   V2i prompt="superintegrate the branch"                   -> reminder
 #   V3  prompt="this is superrapid"                          -> {}  (word boundary)
 #   V4  prompt="superRA again", transcript contains the load -> {}
 #   V5  prompt="superRA fresh", transcript_path missing      -> reminder (fail-open)
@@ -44,7 +48,7 @@ print(prompt + "\t" + tp)
 IFS=$'\t' read -r prompt transcript_path <<<"$parsed"
 
 # Fast path: no superRA mention -> silent.
-if ! printf '%s' "$prompt" | grep -iqE '(^|[^[:alnum:]])super[-_ ]?ra([^[:alnum:]]|$)'; then
+if ! printf '%s' "$prompt" | grep -iqE '(^|[^[:alnum:]])(super[-_ ]?ra|superplan|superimplement|superintegrate)([^[:alnum:]]|$)'; then
   printf '{}\n'
   exit 0
 fi
