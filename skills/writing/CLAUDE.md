@@ -43,7 +43,7 @@ Writing rules are additive to baseline writing competence. Add only constraints 
 - `references/consistency/*.md` owns dimension-specific review checks and output details.
 - `references/long-form-review.md` owns multi-lane review orchestration, PLAN-only review retrofit, and review-time indices.
 - `references/refactor-and-compile.md` owns document-wide prose refactors and build/compile discipline.
-- `references/integration.md` owns behavior specific to writing work riding `integration-workflow`.
+- `references/integration.md` owns behavior specific to writing work riding `superintegrate`.
 
 If a rule is already carried by one of these references, point to it instead of restating it.
 
@@ -53,7 +53,7 @@ Standalone writing invocations terminate at edit plus commit, or findings plus c
 
 Multi-lane review may dispatch one reviewer per lane, but the dispatch mechanics belong to `agent-orchestration`; `writing` supplies the lane files and the long-form-review reference.
 
-The PLAN-only long-form review retrofit (`references/long-form-review.md` + `references/planning.md`) is writing-owned: `planning-workflow` routes large writing work to the writing planning reference, and `implementation-workflow` carries no PLAN-only-exception prose. Contract tests in `tests/test-sync-integration-contract.sh` enforce this — do not move the exception into the workflow skills.
+The PLAN-only long-form review retrofit (`references/long-form-review.md` + `references/planning.md`) is writing-owned: `superplan` routes large writing work to the writing planning reference, and `superimplement` carries no PLAN-only-exception prose. Contract tests in `tests/test-sync-integration-contract.sh` enforce this — do not move the exception into the workflow skills.
 
 ## Extension rules
 

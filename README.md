@@ -1,5 +1,7 @@
 # superRA
 
+> ⚠️ **Breaking change (0.2.0):** the three workflow phase skills were renamed — `planning-workflow` → `superplan`, `implementation-workflow` → `superimplement`, `integration-workflow` → `superintegrate` — to avoid colliding with Claude Code's Workflow tool / `/workflows`. Update any saved `Skill(superRA:planning-workflow|implementation-workflow|integration-workflow)` calls to the new ids, and refresh globally-installed Codex agents by rerunning `codex-superra-setup`. See [RELEASE-NOTES](RELEASE-NOTES.md) for the migration note.
+
 superRA turns AI coding agents into disciplined Research Assistants. It ships:
 
 1. An adaptive **plan-implement-integrate workflow** that enforces reviewer sign-off at every step and keeps results reproducible long-term.
@@ -25,7 +27,7 @@ superRA brings discipline to the agent on three fronts. An **implementer–revie
 
 This workflow assumes basic familiarity with git branch/PR workflow; worktrees help but are optional.
 
-superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. Each phase corresponds to a workflow skill to teach agents how to carry out in order, and a `using-superra` skill serves as the shared disciplines and knowledges across agents. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases form a cycle, not a pipeline: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope change after merge all route back through `planning-workflow §User Feedback and Changing Plans`, which walks the task DAG and resumes at the right re-entry point.
+superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. Each phase corresponds to a workflow skill to teach agents how to carry out in order, and a `using-superra` skill serves as the shared disciplines and knowledges across agents. The phases are domain-agnostic; the domain skill supplies the discipline that applies inside each phase. The phases form a cycle, not a pipeline: a discovery during IMPLEMENT, a reviewer request during INTEGRATE, or a scope change after merge all route back through `superplan §User Feedback and Changing Plans`, which walks the task DAG and resumes at the right re-entry point.
 
 ```mermaid
 flowchart TB
@@ -47,7 +49,7 @@ flowchart TB
     class FINISHED terminal
 ```
 
-To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, `implement according to the plan`, `integrate it with the update on the main`, ...
+To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, `implement according to the plan`, `integrate it with the update on the main`, ... — or name a phase skill directly: `superplan`, `superimplement`, `superintegrate`.
 
 Each `.plan/` includes a `serve` script — run `bash .plan/serve` to open the live dashboard with tree, DAG, and kanban views that auto-update as tasks progress.
 
@@ -108,8 +110,8 @@ bundle through `/hooks`.
 | **exit-plan-mode** | Claude Code `ExitPlanMode` | Suggest materializing a plan into `PLAN.md` + `RESULTS.md` when it will guide later work. |
 | **codex-plan-stop** | Codex `Stop` while in plan mode after a proposed-plan response | Codex equivalent of the plan-materialization reminder. |
 | **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Inject a reminder to load `superRA:using-superRA` if the master skill has not yet loaded this session. |
-| **ensure-using-superra** | Claude Code `PreToolUse` on `Skill(superRA:*-workflow)` | Hard-deny the workflow-skill call when `superRA:using-superRA` is not yet loaded; reason directs Claude to load it and retry. |
-| **ensure-agent-orchestration** | Claude Code `PreToolUse` on `Skill(superRA:*-workflow)` | Same pattern as above, gating on `superRA:agent-orchestration`. |
+| **ensure-using-superra** | Claude Code `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Hard-deny the workflow-skill call when `superRA:using-superRA` is not yet loaded; reason directs Claude to load it and retry. |
+| **ensure-agent-orchestration** | Claude Code `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Same pattern as above, gating on `superRA:agent-orchestration`. |
 
 ## Installation
 

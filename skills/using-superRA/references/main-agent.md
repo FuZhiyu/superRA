@@ -31,13 +31,13 @@ The resolver diagnoses and routes. It does not perform the task-tree edit, imple
 
 - Git: current branch/worktree, `git status`, recent commits relevant to `.plan/` task files, and any active merge/rebase/cherry-pick state.
 - Task tree: whether `.plan/task.md` exists, is tracked, and matches the committed state expected by the workflow about to run.
-- Root task.md: `## Conventions`, `## Sync Map` when present, any logged implementation-workflow Step 4 disposition, and any declared pipeline.
+- Root task.md: `## Conventions`, `## Sync Map` when present, any logged superimplement Step 4 disposition, and any declared pipeline.
 - Per-task frontmatter: `status`, `depends_on`. Use `task_query.py --frontier` to find dispatchable tasks.
 - Per-task body: `## Results` sections for completed work, active `## Review Notes` blockquotes, `## Revision Notes` signaling recent changes.
 
 **Compute the affected frontier:**
 
-1. First check whether planning must run. If `.plan/task.md` is missing, untracked, structurally incomplete, or contradicted by a material user decision not yet reflected in task objectives, enter `planning-workflow` before implementation or integration work. Material scope, objective, input, output, methodology, or task-graph changes use `planning-workflow §User Feedback and Changing the Task Tree`; after that protocol updates the task files, run this resolver again.
+1. First check whether planning must run. If `.plan/task.md` is missing, untracked, structurally incomplete, or contradicted by a material user decision not yet reflected in task objectives, enter `superplan` before implementation or integration work. Material scope, objective, input, output, methodology, or task-graph changes use `superplan §User Feedback and Changing the Task Tree`; after that protocol updates the task files, run this resolver again.
 2. Identify the changed or untrusted starting points from the durable facts: explicit user scope change, dirty or recent task-file edits, omitted / placeholder / cleared task status, active review notes, revision notes signaling a scope change, failed or missing reproducibility evidence, or a requested final action.
 3. For each changed task, include downstream dependents (via `depends_on:` edges) whose inputs, outputs, or assumptions may have shifted. Preserve `status` for unrelated approved tasks. If a downstream task is unaffected, note the exemption in a revision note on the changed task.
 4. If durable facts disagree in a way you cannot repair mechanically, stop under §The Three Pause Classes and resolve before acting.
@@ -51,10 +51,10 @@ The resolver diagnoses and routes. It does not perform the task-tree edit, imple
 
 **Choose the next safe action:**
 
-1. Compare the decision with the canonical workflow order: task-tree repair or change protocol -> implementation / review -> reproducibility verification -> implementation-workflow Step 4 disposition -> integration -> documentation -> final merge / PR.
+1. Compare the decision with the canonical workflow order: task-tree repair or change protocol -> implementation / review -> reproducibility verification -> superimplement Step 4 disposition -> integration -> documentation -> final merge / PR.
 2. Enter the earliest invalid layer for the affected frontier. Invoke the workflow skill that owns that layer; the workflow then runs its local mechanics and gates.
 3. For implementation or review, work only on tasks whose dependencies are satisfied and whose local status is not valid for that layer.
-4. If all affected implementation tasks are approved but reproducibility or the Step 4 disposition is missing, enter `implementation-workflow` at Step 3 / Step 4. A current integration / PR request supplies intent only after that disposition is logged.
+4. If all affected implementation tasks are approved but reproducibility or the Step 4 disposition is missing, enter `superimplement` at Step 3 / Step 4. A current integration / PR request supplies intent only after that disposition is logged.
 5. For integration or later layers, scope authoring and fix work to the affected frontier while still running required global gates before merge / PR.
 
 **Safety invariants:**
@@ -68,7 +68,7 @@ The resolver diagnoses and routes. It does not perform the task-tree edit, imple
 
 ## Changes of the Task Tree
 
-Whenever the task tree meaningfully changes — a new task, a removed or restructured task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `planning-workflow` and follow the §User Feedback and Changing the Task Tree protocol (confirm → update task files inline → clear affected statuses → sweep for stale content → atomic commit). Then run §Workflow Frontier Resolver to decide where to resume. Rewording an objective to match what the data forced is not a material change and stays an inline discovery edit. See `planning-workflow §User Feedback and Changing the Task Tree` for the full material-vs-not-material list and protocol.
+Whenever the task tree meaningfully changes — a new task, a removed or restructured task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `superplan` and follow the §User Feedback and Changing the Task Tree protocol (confirm → update task files inline → clear affected statuses → sweep for stale content → atomic commit). Then run §Workflow Frontier Resolver to decide where to resume. Rewording an objective to match what the data forced is not a material change and stays an inline discovery edit. See `superplan §User Feedback and Changing the Task Tree` for the full material-vs-not-material list and protocol.
 
 
 ## The Three Pause Classes
@@ -79,7 +79,7 @@ Stop and use `AskUserQuestion` (plain text if the harness does not expose the to
 
 1. **Hard blocker the RA cannot resolve from code and data.** Unexpected input-quality issues, missing or corrupted inputs, ambiguous upstream dependency the agent cannot trace, a transformation that produces an unexpected scope change (row count shift on a merge, date range change after a filter), validation failure against domain expectation, plan with critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required dependency unavailable.
 2. **Decision beyond the RA's authority.** Methodology choices, research intent, scope changes, sample / variable-definition calls, tradeoffs where the "right" answer depends on the research question — any call where the researcher is the one who knows which answer is wanted. Also: methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope change that would affect tasks not yet reached.
-3. **User-defined workflow milestone.** Stops baked into a workflow because the researcher wants a decision at that point. The 4-option completion menu at `implementation-workflow` Step 4; drift-test selection at `integration-workflow` Protect; doc disposition at `integration-workflow` Document; intent-changing conflict escalation in `semantic-merge`. These are intentional stops, not check-ins.
+3. **User-defined workflow milestone.** Stops baked into a workflow because the researcher wants a decision at that point. The 4-option completion menu at `superimplement` Step 4; drift-test selection at `superintegrate` Protect; doc disposition at `superintegrate` Document; intent-changing conflict escalation in `semantic-merge`. These are intentional stops, not check-ins.
 
 All three classes have one thing in common: the agent cannot answer the question from the code and data alone, and the answer will shape downstream work in a way another agent could not reconstruct without it.
 

@@ -1,10 +1,10 @@
 # Task Tree Consolidation
 
-Load this reference when the task tree has accumulated structural debt — overlapping tasks, stale objectives, hidden dependencies, granularity mismatches — and needs a proactive cleanup pass. Loadable standalone (user asks to clean up) or via integration-workflow routing.
+Load this reference when the task tree has accumulated structural debt — overlapping tasks, stale objectives, hidden dependencies, granularity mismatches — and needs a proactive cleanup pass. Loadable standalone (user asks to clean up) or via superintegrate routing.
 
 Consolidation is structure-level cleanup. It complements but does not replace:
-- `planning-workflow §User Feedback and Changing the Task Tree` — individual reactive changes to the tree.
-- `planning-workflow §Splitting Tasks` / `task-system/references/planning.md §Splitting Tasks` — structural heuristics applied during planning; consolidation applies them retroactively.
+- `superplan §User Feedback and Changing the Task Tree` — individual reactive changes to the tree.
+- `superplan §Splitting Tasks` / `task-system/references/planning.md §Splitting Tasks` — structural heuristics applied during planning; consolidation applies them retroactively.
 - `task-system/references/planning.md §Stale Content Checklist` — content-level cleanup within existing tasks.
 
 ## When to Consolidate
@@ -123,6 +123,6 @@ After approval:
 
 **Standalone:** The user asks to clean up the tree at any time. Load this reference, run the survey, propose, and execute.
 
-**During integration:** The orchestrator or user identifies tree complexity during the integration-workflow. Route here for the cleanup pass, then return to integration. Consolidation during integration is optional — triggered by assessment, not mandatory.
+**During integration:** The orchestrator or user identifies tree complexity during the superintegrate. Route here for the cleanup pass, then return to integration. Consolidation during integration is optional — triggered by assessment, not mandatory.
 
 In both cases, the same protocol applies: survey, classify, propose, get approval, execute atomically.

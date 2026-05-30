@@ -19,9 +19,9 @@ These defaults apply whenever you write, review, or refactor code.
 
 SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
 
-1. `planning-workflow` creates or revises the `.plan/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a plan change invalidates.
-2. `implementation-workflow` executes task blocks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
-3. `integration-workflow` protects key results, syncs and refactors against the integration base, matures documentation, and performs the final merge / PR / cleanup action.
+1. `superplan` creates or revises the `.plan/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a plan change invalidates.
+2. `superimplement` executes task blocks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
+3. `superintegrate` protects key results, syncs and refactors against the integration base, matures documentation, and performs the final merge / PR / cleanup action.
 
 The map is ordered, but re-entry is normal. A changed task, reviewer finding, scope revision, or interrupted session re-enters at the earliest invalid layer for the affected task frontier while preserving unrelated approved work. The main-agent Workflow Frontier Resolver adds four things agents must do consistently: inspect durable evidence, compute the affected frontier, route to the workflow that owns the earliest invalid layer, and enforce the non-negotiable gates before advancement.
 
@@ -48,9 +48,9 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 
 | Category | Skill | One-line purpose |
 |---|---|---|
-| Workflow | `planning-workflow` | PLAN phase: scope check, task decomposition, plan draft. |
-| Workflow | `implementation-workflow` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
-| Workflow | `integration-workflow` | INTEGRATE: Protect, Sync, Integrate, Document, Finish. |
+| Workflow | `superplan` | PLAN phase: scope check, task decomposition, plan draft. |
+| Workflow | `superimplement` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
+| Workflow | `superintegrate` | INTEGRATE: Protect, Sync, Integrate, Document, Finish. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |
 | Domain | `econ-data-analysis` | Data-analysis vertical: Iron Law, describe-analyze-validate, pitfalls, common rationalizations. |
 | Domain | `theory-modeling` | Theory/modeling vertical: four-gate intuition/interpretability checklist (Objects & Notation, Assumptions, Derivations, Verification & Rendering), notation and assumption discipline, proof and numerical verification. |
@@ -84,13 +84,13 @@ Apply to every dispatch regardless of domain.
 
 | `Stage:` | Emitted by | Required skills |
 |---|---|---|
-| `implementation` | `implementation-workflow` | — |
-| `protection` | `integration-workflow` Protect | `result-protection` |
-| `sync` | `integration-workflow` Sync | `semantic-merge` |
-| `integration` | `integration-workflow` Integrate | `refactor-and-integrate` |
-| `documentation` | `integration-workflow` Document | `report-in-markdown` |
+| `implementation` | `superimplement` | — |
+| `protection` | `superintegrate` Protect | `result-protection` |
+| `sync` | `superintegrate` Sync | `semantic-merge` |
+| `integration` | `superintegrate` Integrate | `refactor-and-integrate` |
+| `documentation` | `superintegrate` Document | `report-in-markdown` |
 
-`Stage: sync` is branch-level. `integration-workflow` dispatches generic sync author / sync reviewer agents with the mode references named in that workflow; the canonical implementer/reviewer role specs do not carry Sync-specific exceptions.
+`Stage: sync` is branch-level. `superintegrate` dispatches generic sync author / sync reviewer agents with the mode references named in that workflow; the canonical implementer/reviewer role specs do not carry Sync-specific exceptions.
 
 ### Domain add-ons (topic-driven)
 

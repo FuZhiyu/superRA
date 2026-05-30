@@ -32,7 +32,7 @@ The prompt body carries the exploration objective and any scope constraints. No 
 
 - "Map the data pipeline in `src/analysis/`: what scripts exist, what each produces, what the dependency order is, and what data files they read."
 - "Inventory the data files in `data/raw/` and `data/processed/`: file formats, approximate sizes, column schemas where inferrable, and any README or codebook files."
-- "Survey `skills/planning-workflow/` and its references: current structure, cross-references to other skills, and patterns used in existing reference files."
+- "Survey `skills/superplan/` and its references: current structure, cross-references to other skills, and patterns used in existing reference files."
 - "Review git history for `src/model/` over the last 20 commits: what changed, what approaches were tried, any reverted work."
 
 **Plan mode compatibility:** exploration agents are read-only and compatible with plan mode constraints where the harness supports subagent dispatch during plan mode. Their findings inform the plan file written at exit.
@@ -88,7 +88,7 @@ Include relevant exploration findings and constraints directly in the prompt bod
 
 - **Shared assumptions** that both designs made independently (good — confirms the approach).
 - **Interface disagreements** — where one design expects an output format the other does not produce. Resolve by adjusting the task objectives.
-- **Genuine tradeoffs** — where the designs propose fundamentally different approaches and the right choice depends on research intent. These are substantive questions for the user per `planning-workflow §Substantive Questions`. Present the tradeoff with the competing proposals as evidence, let the user decide, then fold the decision into the task tree.
+- **Genuine tradeoffs** — where the designs propose fundamentally different approaches and the right choice depends on research intent. These are substantive questions for the user per `superplan §Substantive Questions`. Present the tradeoff with the competing proposals as evidence, let the user decide, then fold the decision into the task tree.
 
 ## Critical Files for Implementation
 
@@ -115,7 +115,7 @@ Keep it short — 3-5 files, one line each with a brief reason. This is a priori
 
 ## Agent Review
 
-At thorough depth, Phase 4 gains an agent review step between self-review and user review (see `planning-workflow §Agent Review (Thorough Depth Only)`). The main agent dispatches a reviewer agent that receives:
+At thorough depth, Phase 4 gains an agent review step between self-review and user review (see `superplan §Agent Review (Thorough Depth Only)`). The main agent dispatches a reviewer agent that receives:
 
 1. The complete `.plan/` directory (the task tree as designed).
 2. The exploration synthesis from Phase 1 — the consolidated understanding of project context that informed the design.
@@ -124,7 +124,7 @@ The exploration synthesis is essential input because the reviewer needs the same
 
 **What the reviewer evaluates:**
 
-- The self-review checklist from `planning-workflow §Self-Review` — domain coverage, placeholder scan, pipeline consistency, validation coverage, handoff test, verification coverage, dependency graph sanity, subtask coverage.
+- The self-review checklist from `superplan §Self-Review` — domain coverage, placeholder scan, pipeline consistency, validation coverage, handoff test, verification coverage, dependency graph sanity, subtask coverage.
 - **Structural coherence** — whether task boundaries align with the project structure found during exploration, dependencies are complete and correctly ordered, and decomposition granularity matches the complexity of each area.
 
 The reviewer returns APPROVE or REVISE with findings. REVISE findings must be fixed before the tree is presented to the user.
@@ -137,6 +137,6 @@ The task tree at thorough depth is not one-shot. After the initial thorough pass
 - Exploration findings that were not fully absorbed in the first pass.
 - Domain hard gate results from Phase 2 that constrain the scope.
 
-Each refinement round uses quick-depth mechanics — inline edits to existing task objectives, adding or removing subtasks, adjusting dependencies — even though the initial pass was thorough. The heavy exploration is already done; refinement applies the standard planning-workflow change protocol (`§User Feedback and Changing the Task Tree` for material changes, inline edits for non-material refinements).
+Each refinement round uses quick-depth mechanics — inline edits to existing task objectives, adding or removing subtasks, adjusting dependencies — even though the initial pass was thorough. The heavy exploration is already done; refinement applies the standard superplan change protocol (`§User Feedback and Changing the Task Tree` for material changes, inline edits for non-material refinements).
 
 If refinement reveals that a whole area was missed and needs its own exploration, dispatch a targeted exploration agent for that area rather than re-running the full parallel exploration.

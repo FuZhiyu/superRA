@@ -1,6 +1,6 @@
 ---
 name: semantic-merge
-description: "Use when about to run `git merge`, `git rebase`, or `git cherry-pick`; when syncing a feature, analysis, or work branch with a current base branch before integration; or when incoming changes may touch results-bearing files, source scripts, task files, drift tests, or domain-discipline artifacts. Triggers include: bare `git merge` / `git rebase` / `git cherry-pick` (the merge-guard hook flags these automatically), \"sync with main\", \"pull main into this branch\", \"rebase onto main\", \"cherry-pick commit X\", or any branch integration where conflict resolution must preserve the intent behind each side. Invoked by `integration-workflow` during Sync and usable standalone by any agent or human doing an intent-aware branch integration."
+description: "Use when about to run `git merge`, `git rebase`, or `git cherry-pick`; when syncing a feature, analysis, or work branch with a current base branch before integration; or when incoming changes may touch results-bearing files, source scripts, task files, drift tests, or domain-discipline artifacts. Triggers include: bare `git merge` / `git rebase` / `git cherry-pick` (the merge-guard hook flags these automatically), \"sync with main\", \"pull main into this branch\", \"rebase onto main\", \"cherry-pick commit X\", or any branch integration where conflict resolution must preserve the intent behind each side. Invoked by `superintegrate` during Sync and usable standalone by any agent or human doing an intent-aware branch integration."
 ---
 
 # Semantic Merge
@@ -13,8 +13,8 @@ Integrate branches by intent, not by lines. Understand what each side was trying
 
 Load exactly the mode reference that matches the call path:
 
-- **Workflow sync author:** `references/workflow-sync-author.md` when `integration-workflow` dispatches an agent to bring the current branch onto a confirmed base. The author owns the Workflow Sync Map and task-local Sync impact format, and carries the Workflow Sync scope boundary.
-- **Workflow sync reviewer:** `references/workflow-sync-reviewer.md` when `integration-workflow` dispatches a separate reviewer before Integrate begins. The reviewer points at the author reference for boundary and format recognition.
+- **Workflow sync author:** `references/workflow-sync-author.md` when `superintegrate` dispatches an agent to bring the current branch onto a confirmed base. The author owns the Workflow Sync Map and task-local Sync impact format, and carries the Workflow Sync scope boundary.
+- **Workflow sync reviewer:** `references/workflow-sync-reviewer.md` when `superintegrate` dispatches a separate reviewer before Integrate begins. The reviewer points at the author reference for boundary and format recognition.
 - **Standalone merge:** `references/standalone-merge.md` when this skill is invoked directly for a merge, rebase, cherry-pick, or branch sync outside the full integration workflow. The standalone reference owns the Semantic Merge Record format and the standalone scope boundary.
 
 All modes walk the §Semantic Coherence Checklist below as the shared gated checklist.
@@ -66,7 +66,7 @@ Ask the user before resolving — with intent and consequences, not raw diff chu
 
 - both sides imply different valid intents,
 - a conflict changes data contracts, inputs, test expectations, program outputs, or the meaning of a published result,
-- task structure would change (routed through `planning-workflow §User Feedback and Changing the Task Tree`),
+- task structure would change (routed through `superplan §User Feedback and Changing the Task Tree`),
 - drift-test or result-level expectations would move because outputs meaningfully changed.
 
 Fold every answer into the relevant task objective (rewriting it to be self-sufficient with the new context) before committing the resolution. When no task tree is present, record the decision in the standalone merge record and the sync commit body.
@@ -75,7 +75,7 @@ Fold every answer into the relevant task objective (rewriting it to be self-suff
 
 Run the sync operation only after intent investigation. Resolve by the plan from Step 3. Preserve base-current deletions and relocations by default; restore branch-side content only when current-branch intent, an approved task objective, or a logged user decision justifies it.
 
-**Land one merge commit plus N propagation commits as needed to reach semantic coherence.** Every commit must leave the tree passing **existing protection** — drift tests and key-result coverage established in `integration-workflow` Protect when in workflow mode, or existing tests and drift tests when standalone. Protection-pass is the per-commit lower bound, not the whole-mode stopping rule: the whole-mode stopping rule is §Semantic Coherence Checklist §Scope boundary below.
+**Land one merge commit plus N propagation commits as needed to reach semantic coherence.** Every commit must leave the tree passing **existing protection** — drift tests and key-result coverage established in `superintegrate` Protect when in workflow mode, or existing tests and drift tests when standalone. Protection-pass is the per-commit lower bound, not the whole-mode stopping rule: the whole-mode stopping rule is §Semantic Coherence Checklist §Scope boundary below.
 
 Include the conflict resolution, resolved docs, and the mode-specific handoff artifact (Sync Map + task-local Sync impact in workflow mode; `SEMANTIC_MERGE.md` merge record in standalone mode) with the commits that produce them. Broader **codebase-coherence** work — fitting the resulting code into the host project's naming conventions, reusing utilities, keeping the PR-friendly diff, walking up project docs, minimizing net diff against the host — is out of scope for this skill. Handoff artifacts may record context that explains the post-sync diff for later codebase review; they do not carry unresolved semantic-merge work into Integrate.
 
@@ -122,7 +122,7 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 **Handoff docs and merge records:**
 
 - `[BLOCKING]` Task files remain coherent after the sync when present.
-- `[BLOCKING]` Task-structure changes were routed through `planning-workflow §User Feedback and Changing the Task Tree` before adaptation proceeded.
+- `[BLOCKING]` Task-structure changes were routed through `superplan §User Feedback and Changing the Task Tree` before adaptation proceeded.
 - `[BLOCKING]` Affected task blocks have task-local `**Sync impact:**` annotations when workflow Sync leaves task-specific context needed to understand the post-sync diff.
 - `[ADVISORY]` Routine task-file conflict resolutions are summarized in the Sync Map.
 

@@ -10,9 +10,9 @@ Own the procedural shape of each phase: what agent to dispatch, in what sequence
 
 | Skill | Phase | Role |
 |---|---|---|
-| `planning-workflow` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
-| `implementation-workflow` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
-| `integration-workflow` | INTEGRATE | Protect key results, Sync with the current base, Integrate/refactor the post-sync diff, Document final results, then Finish with PR / fast-forward / cleanup. |
+| `superplan` | PLAN | Scope check, task decomposition, self-review, execution handoff. Points at the domain skill for domain-specific planning gates. |
+| `superimplement` | IMPLEMENT + VALIDATE | Per-task dispatch, one-pass review loop (APPROVE / REVISE), reproducibility verification, 4-option completion menu. |
+| `superintegrate` | INTEGRATE | Protect key results, Sync with the current base, Integrate/refactor the post-sync diff, Document final results, then Finish with PR / fast-forward / cleanup. |
 | `agent-orchestration` | cross-cutting | Multi-agent dispatch patterns: workload balancing, parallel subagents, reviewer-feedback adjudication. |
 
 ## Domain — vertical-specific discipline

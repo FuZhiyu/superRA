@@ -28,7 +28,7 @@ Standard risk-based stories predict ...
 
 ## Workflow coupling
 
-Whole-section drafts are multi-task work — route through `planning-workflow` (`.plan/` task tree). Paragraph-scale drafts (an abstract from the body, a paragraph from notes) terminate at edit + commit.
+Whole-section drafts are multi-task work — route through `superplan` (`.plan/` task tree). Paragraph-scale drafts (an abstract from the body, a paragraph from notes) terminate at edit + commit.
 
 ## Match the author's tone
 

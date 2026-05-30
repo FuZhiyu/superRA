@@ -1,5 +1,20 @@
 # superRA Release Notes
 
+## [0.2.0] - 2026-05-30
+
+### Breaking
+
+- **Workflow phase skills renamed to escape a namespace collision** with Claude Code's new Workflow tool / `/workflows`: `planning-workflow` → `superplan`, `implementation-workflow` → `superimplement`, `integration-workflow` → `superintegrate`. The skill directories, frontmatter `name` fields, and every cross-reference moved to the new ids; the generic PLAN → IMPLEMENT → INTEGRATE phase vocabulary is unchanged.
+
+### Migration
+
+- Any saved or scripted invocation must switch ids: `Skill(superRA:planning-workflow)` → `superRA:superplan`, `superRA:implementation-workflow` → `superRA:superimplement`, `superRA:integration-workflow` → `superRA:superintegrate`.
+- Users who installed the named Codex agents globally should refresh them by rerunning the `codex-superra-setup` skill, since the generated agents were regenerated from the renamed sources.
+
+### Release Prep
+
+- Version manifests bumped to `0.2.0` across package, Claude, Cursor, Codex, marketplace, and Gemini extension metadata via `scripts/bump-version.sh`. The minor bump (rather than a patch) marks this pre-1.0 breaking change.
+
 ## [0.1.3] - 2026-05-02
 
 ### Added

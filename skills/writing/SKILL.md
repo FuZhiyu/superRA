@@ -85,8 +85,8 @@ Loading the listed reference is the authority grant — if `structure.md` is not
 | `references/planning.md` | PLAN phase for large writing work; defines the writing header and PLAN-only long-form review retrofit. |
 | `references/long-form-review.md` | Multi-lane review (style/language, structure, or more than one consistency dimension), `deep` thoroughness, or full-paper / pre-submission scope. |
 | `references/refactor-and-compile.md` | Find-replace across the document, build/compile any time edits are made. |
-| `references/integration.md` | The writing task is riding `integration-workflow`. |
+| `references/integration.md` | The writing task is riding `superintegrate`. |
 
 ## Coupling to superRA workflows
 
-Most writing work is standalone — terminate at edit + commit, or at findings + commit. Larger work routes through `planning-workflow` with `references/planning.md`. Whole-section drafts, whole-paper revisions, and R&R passes continue through the full workflow. Long-form review retrofit uses the task tree only: the draft already exists, reviewers inspect it through `implementation-workflow`, and findings live in task-local `## Review Notes` sections.
+Most writing work is standalone — terminate at edit + commit, or at findings + commit. Larger work routes through `superplan` with `references/planning.md`. Whole-section drafts, whole-paper revisions, and R&R passes continue through the full workflow. Long-form review retrofit uses the task tree only: the draft already exists, reviewers inspect it through `superimplement`, and findings live in task-local `## Review Notes` sections.

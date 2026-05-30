@@ -97,46 +97,46 @@ assert_absent_regex \
 assert_contains \
   "Skill manifest routes Sync to semantic merge" \
   "skills/using-superRA/SKILL.md" \
-  '| `sync` | `integration-workflow` Sync | `semantic-merge` |'
+  '| `sync` | `superintegrate` Sync | `semantic-merge` |'
 
 assert_contains \
   "Integration workflow dispatches a sync-stage author" \
-  "skills/integration-workflow/SKILL.md" \
+  "skills/superintegrate/SKILL.md" \
   "Stage: sync"
 
 assert_contains \
   "Integration workflow dispatches a generic sync author" \
-  "skills/integration-workflow/SKILL.md" \
+  "skills/superintegrate/SKILL.md" \
   "Role: sync author"
 
 assert_contains \
   "Integration workflow dispatches a generic sync reviewer" \
-  "skills/integration-workflow/SKILL.md" \
+  "skills/superintegrate/SKILL.md" \
   "Role: sync reviewer"
 
 assert_contains \
   "Integration workflow sync author loads mode reference" \
-  "skills/integration-workflow/SKILL.md" \
+  "skills/superintegrate/SKILL.md" \
   "semantic-merge/references/workflow-sync-author.md"
 
 assert_contains \
   "Integration workflow sync reviewer loads mode reference" \
-  "skills/integration-workflow/SKILL.md" \
+  "skills/superintegrate/SKILL.md" \
   "semantic-merge/references/workflow-sync-reviewer.md"
 
 assert_contains \
   "Integration workflow computes BASE_HEAD_SHA from base ref" \
-  "skills/integration-workflow/SKILL.md" \
+  "skills/superintegrate/SKILL.md" \
   'BASE_HEAD_SHA=$(git rev-parse "$BASE_REF")'
 
 assert_contains \
   "Integration workflow defines post-sync governing baseline" \
-  "skills/integration-workflow/SKILL.md" \
+  "skills/superintegrate/SKILL.md" \
   "BASE_HEAD_SHA..HEAD"
 
 assert_contains \
   "Integration review does not re-review semantic coherence" \
-  "skills/integration-workflow/SKILL.md" \
+  "skills/superintegrate/SKILL.md" \
   "Do not recreate incoming-intent"
 
 assert_contains \
@@ -147,11 +147,11 @@ assert_contains \
 assert_contains \
   "Skill manifest routes Protect to result protection" \
   "skills/using-superRA/SKILL.md" \
-  '| `protection` | `integration-workflow` Protect | `result-protection` |'
+  '| `protection` | `superintegrate` Protect | `result-protection` |'
 
 assert_contains \
   "Integration workflow dispatches Protect as protection stage" \
-  "skills/integration-workflow/SKILL.md" \
+  "skills/superintegrate/SKILL.md" \
   'Dispatch protection-creator.** `Stage: protection`, canonical implementer template.'
 
 assert_contains \
@@ -282,7 +282,7 @@ assert_contains \
 
 assert_contains \
   "Planning workflow routes writing to planning reference" \
-  "skills/planning-workflow/SKILL.md" \
+  "skills/superplan/SKILL.md" \
   'load `skills/writing/references/planning.md`'
 
 assert_contains \
@@ -298,22 +298,22 @@ assert_contains \
 assert_absent \
   "Planning workflow does not own writing PLAN-only retrofit marker" \
   "Long-form review retrofit" \
-  "skills/planning-workflow/SKILL.md"
+  "skills/superplan/SKILL.md"
 
 assert_absent \
   "Planning workflow does not own PLAN-only exception prose" \
   "PLAN-only" \
-  "skills/planning-workflow/SKILL.md"
+  "skills/superplan/SKILL.md"
 
 assert_absent \
   "Planning workflow does not own no-RESULTS exception prose" \
   "no RESULTS.md" \
-  "skills/planning-workflow/SKILL.md"
+  "skills/superplan/SKILL.md"
 
 assert_absent \
   "Implementation workflow does not own writing PLAN-only retrofit" \
   "Long-form review retrofit" \
-  "skills/implementation-workflow/SKILL.md"
+  "skills/superimplement/SKILL.md"
 
 assert_absent \
   "Long-form review no longer names REVIEW.md" \

@@ -14,7 +14,7 @@ Review lanes are:
 
 ## Task Tree Retrofit
 
-Long-form review treats the user's existing draft as the implementation under review. The orchestrator creates the task tree from the target document, then dispatches reviewers through implementation-workflow.
+Long-form review treats the user's existing draft as the implementation under review. The orchestrator creates the task tree from the target document, then dispatches reviewers through superimplement.
 
 The root `.plan/task.md` must carry the writing planning rows from `planning.md`, including:
 

@@ -56,7 +56,7 @@ Two tests, applied in order:
 
 ## Terminology
 
-**"Plan" is the verb, not the noun.** "Planning" refers to the planning-workflow process — scoping and decomposing work. Everything in `.plan/` is a **task** — root-level tasks scope a workstream, nested tasks are dispatchable work. `.plan/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `.plan/` artifact, "planning" when referring to the process.
+**"Plan" is the verb, not the noun.** "Planning" refers to the superplan process — scoping and decomposing work. Everything in `.plan/` is a **task** — root-level tasks scope a workstream, nested tasks are dispatchable work. `.plan/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `.plan/` artifact, "planning" when referring to the process.
 
 ## Ownership Boundaries
 
@@ -64,7 +64,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 
 | Concern | Owner |
 | --- | --- |
-| Phase choreography, stop points, task/status transitions | `planning-workflow`, `implementation-workflow`, `integration-workflow` |
+| Phase choreography, stop points, task/status transitions | `superplan`, `superimplement`, `superintegrate` |
 | Cross-stage orchestration, dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` |
 | Execution modes and Skill-Load Manifest | `using-superra` |
 | Domain discipline, domain gates, pitfalls, stage-scoped domain references — including, for `theory-modeling`, both creation-time four-gate discipline and task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline) | The relevant domain skill, e.g. `econ-data-analysis` or `theory-modeling` |

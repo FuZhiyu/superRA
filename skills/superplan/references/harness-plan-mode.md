@@ -16,7 +16,7 @@ The harness plan file is not the authoritative plan. It is a single-file flat re
 
 The read-only constraint applies to file creation, not to exploration. Use it.
 
-Run the planning-workflow phases that do not require writing task files:
+Run the superplan phases that do not require writing task files:
 
 - **Entry Assessment** — check for an existing `.plan/`, read the root `task.md` if present, determine placement in the tree, choose a depth tier, and identify the routing path (forward, retroactive, or consolidation). Depth tier selection happens here; the plan file reflects the chosen depth and placement decisions.
 - **Exploration** — read project files, load domain skill planning references, inventory data or model primitives as the domain requires, satisfy any domain hard gates that require researcher approval before task structure is drafted. Depth scales with the tier: quick skips deep exploration, standard explores relevant areas, thorough dispatches parallel exploration agents.

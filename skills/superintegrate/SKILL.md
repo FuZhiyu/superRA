@@ -1,6 +1,6 @@
 ---
-name: integration-workflow
-description: Requires `superRA:using-superra` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need protection before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when task results need maturation into reader-facing permanent records; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "protect key results", "write drift tests for the key results", "sync with main and refactor", "mature the results", "update project docs for this analysis", "open the PR", or the transition from `implementation-workflow`'s completion menu.
+name: superintegrate
+description: Requires `superRA:using-superra` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need protection before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when task results need maturation into reader-facing permanent records; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "protect key results", "write drift tests for the key results", "sync with main and refactor", "mature the results", "update project docs for this analysis", "open the PR", or the transition from `superimplement`'s completion menu.
 ---
 
 # Integration Workflow
@@ -16,11 +16,11 @@ Integrate -> refactor with Sync context and pass integration review
 Document  -> mature task.md ## Results sections for reader-facing clarity
 Finish    -> final freshness check, PR or fast-forward, and cleanup
 
-Any step -> planning-workflow §User Feedback and Changing the Task Tree
+Any step -> superplan §User Feedback and Changing the Task Tree
            when scope, methodology, task structure, or APPROVED status changes materially
 ```
 
-**Announce at start:** "I'm using the integration-workflow skill to prepare this work for integration."
+**Announce at start:** "I'm using the superintegrate skill to prepare this work for integration."
 
 ## Stop Points
 
@@ -44,7 +44,7 @@ Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the 
 
 Result protection guards key results during Sync, Integrate, Finish, and future work. Drift tests are the current/default protection mechanism. For the writing vertical, "key results" are the manuscript artifacts; protection is satisfied by document-build success plus outline stability across the merged state — see `skills/writing/references/integration.md`.
 
-**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `status:` not `approved` plus orchestrator-declared related tasks from `planning-workflow §User Feedback and Changing the Task Tree`; running the suite is not scoped.
+**Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `status:` not `approved` plus orchestrator-declared related tasks from `superplan §User Feedback and Changing the Task Tree`; running the suite is not scoped.
 
 ### Steps
 
@@ -206,7 +206,7 @@ Agent(subagent_type: "superRA:reviewer"):
 Read the task-local `## Review Notes` sections for tasks with `status: revise`. Classify reviewer findings per `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
 - Batch all user-owned questions into one stop point.
-- Route substantive plan restructures through `planning-workflow §User Feedback and Changing the Task Tree`.
+- Route substantive plan restructures through `superplan §User Feedback and Changing the Task Tree`.
 - Fold user decisions into the relevant task objectives before dispatching fixes.
 
 ### Step 4: Refactor loop
@@ -291,7 +291,7 @@ On APPROVE, flip `Docs finalized` in root task.md §Workflow Status and commit.
 
 ## Finish
 
-Finish executes the user's completion choice from `implementation-workflow`. The `.plan/` directory is committed as-is — it is part of the permanent branch record.
+Finish executes the user's completion choice from `superimplement`. The `.plan/` directory is committed as-is — it is part of the permanent branch record.
 
 ### Step 1: Freshness check
 
@@ -342,7 +342,7 @@ Report what was published or landed and what was cleaned up.
 - **Standalone analysis:** Protect still runs. Sync may be a no-op. Integrate often collapses to a short reviewer pass.
 - **Small changes:** Keep the same five steps, but dispatch fewer agents and keep `## Sync Map` absent from root task.md when there is no material sync context.
 - **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
-- **Task tree consolidation:** When the tree has accumulated structural debt (overlapping tasks, stale objectives, hidden dependencies, granularity mismatches) — whether noticed during integration review or flagged by the user — load `planning-workflow/references/consolidation.md` for a consolidation pass before or during Integrate. Consolidation is optional and orchestrator- or user-triggered, not a mandatory step.
+- **Task tree consolidation:** When the tree has accumulated structural debt (overlapping tasks, stale objectives, hidden dependencies, granularity mismatches) — whether noticed during integration review or flagged by the user — load `superplan/references/consolidation.md` for a consolidation pass before or during Integrate. Consolidation is optional and orchestrator- or user-triggered, not a mandatory step.
 
 ## Red Flags
 

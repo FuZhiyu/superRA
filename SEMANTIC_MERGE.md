@@ -1,6 +1,74 @@
 # Semantic Merge Record
 
 **Operation:** `merge`
+**Current branch:** `better-handoff`
+**Incoming ref:** `origin/main` (commit `3e0de35`, PR #30)
+**Governing baseline:** merge-base `d861089`
+**Merge commit:** _(this commit)_
+**Propagation commits:** None (all propagation landed in the merge commit)
+
+## Current Branch Intent
+
+`better-handoff` (265 commits since the merge base) is the task-system / dashboard / status-consolidation workstream: `.plan/` directory-tree task system replacing `PLAN.md`/`RESULTS.md`, unified `status` field (status-consolidation), `handoff-doc` deprecation toward `task-system`, dashboard server + worktree selector, and the dynamic-workflows planning workstream. Its content for the workflow skills, agent specs, and references is the newest on both sides.
+
+## Incoming Intent
+
+A single commit (#30): a **pure mechanical rename** of the three workflow phase skills to escape a namespace collision with Claude Code's new Workflow tool / `/workflows` — `planning-workflow → superplan`, `implementation-workflow → superimplement`, `integration-workflow → superintegrate`. It renames the skill directories, frontmatter `name:` fields, and every cross-reference repo-wide, plus a `0.2.0` version bump across all plugin/package manifests and a RELEASE-NOTES entry. It carries no behavioral content that `better-handoff` lacks; in fact its skill bodies are the *old* pre-`better-handoff` content with only the names changed.
+
+## Resolution Thesis
+
+No genuine content fork existed, so resolution is uniform: **adopt the rename (incoming's entire intent) on top of `better-handoff`'s newer content.**
+
+- **Every content conflict resolved to ours (`better-handoff`)** — its bodies strictly supersede incoming's old-content-renamed versions (incoming still carried `PLAN.md`/`RESULTS.md`, the old Self-Review section, and `handoff-doc` references that `better-handoff` already removed).
+- **Rename re-applied repo-wide to the live tree** — including `better-handoff`'s *new* files that commit #30 never saw (`skills/task-system/SKILL.md`, `skills/superplan/references/*`, `CLAUDE.md` terminology note, etc.). This is the load-bearing stale-reference step: incoming's intent extended onto the newer base.
+- **Directory rename completed by hand** where git's rename detection could not: `better-handoff`'s newly-added references (`consolidation.md`, `harness-plan-mode.md`, `thorough-planning.md`) were relocated from `skills/planning-workflow/references/` to `skills/superplan/references/`.
+- **Generated artifacts regenerated** from the swept sources via `sync_codex_agents.py --scope project` (`--check` clean).
+- **Version bumps + RELEASE-NOTES** (`0.2.0`) taken from incoming (auto-merged cleanly).
+
+### Scope decision: historical records preserved
+
+The rename sweep deliberately **excluded** `docs/plans/**`, `docs/process-issues-*`, `.plan/**`, `PLAN.md`, `RELEASE-NOTES.md`, and `README.md`'s migration banner. These are historical/archival records or the rename documentation itself; commit #30's own file scope excluded them for the same reason, and renaming them would falsify the record (e.g. `.plan/task-system/agent-interface/planning-workflow/` is a *task directory* identifier, not a skill reference). Old skill names surviving there are intentional and accurate-at-the-time.
+
+## File / Script Impact Map
+
+| Path or path cluster | Incoming intent | Resolution | Codebase context |
+|---|---|---|---|
+| `skills/{planning-workflow,implementation-workflow,integration-workflow}/` | renamed to `super*` | Dirs renamed; `SKILL.md` bodies = ours; old dirs removed | New refs relocated into `superplan/references/` |
+| `skills/superplan/SKILL.md`, `superimplement/SKILL.md`, `superintegrate/SKILL.md` | rename + old body | Ours (newer body) + rename applied | — |
+| `skills/{using-superRA,CATEGORIES,semantic-merge,writing,refactor-and-integrate,report-in-markdown,theory-modeling,task-system,handoff-doc}` | rename references | Ours + rename swept | `handoff-doc` is mid-deprecation on this branch |
+| `agents/reviewer.md` | rename one ref | Ours + rename swept | — |
+| `.codex/agents/*.toml`, `skills/using-superRA/references/direct-mode-*.md` | regenerated | Regenerated from sources (`--check` clean) | Generated — do not hand-edit |
+| `.cursor-plugin/plugin.json` | version bump | **Kept `better-handoff`'s deletion** (commit `adc75d1` removed the cursor plugin); incoming's bump on a deleted file is moot | — |
+| `package.json`, `.claude-plugin/*`, `.codex-plugin/plugin.json`, `gemini-extension.json` | bump to `0.2.0` | Theirs (auto-merged) | — |
+| `RELEASE-NOTES.md` | add `0.2.0` entry | Theirs stacked on ours (auto-merged); old names retained as rename documentation | — |
+| `hooks/*`, `tests/*` | rename references | Auto-merged + swept | — |
+| `docs/**`, `.plan/**`, `PLAN.md` | (untouched by #30) | Excluded from sweep — historical records | See scope decision above |
+
+## User Decisions
+
+None required. The rename is the user's stated intent ("sync with origin/main"); merge-vs-rebase (merge, given 265-vs-1 divergence) and the historical-records scope decision are non-intent-changing judgment calls, documented above rather than escalated. No data contract, test expectation, or published result changed.
+
+## Checks
+
+- No conflict markers anywhere in the tree.
+- No live old skill-name references remain (`git grep` across the tree minus the excluded historical set: clean).
+- Frontmatter `name:` fields = `superplan` / `superimplement` / `superintegrate`; `.agents/skills/super*` symlinks resolve; `superplan/references/*` pointers resolve.
+- `tests/check-harness-compatibility.sh` and `tests/test-sync-integration-contract.sh`: 48 pass / 6 fail — **identical to pre-merge `better-handoff` baseline** (verified by running against `git archive HEAD`). The 6 failures are pre-existing, from `better-handoff`'s in-progress `handoff-doc`/Sync-contract deprecation, not from this merge.
+- `tests/hooks/test-autoload-superra.sh` (20), `test-ensure-using-superra.sh` (16), `test-ensure-agent-orchestration.sh` (16): all pass.
+- `sync_codex_agents.py --scope project --check`: clean. Generator self-test (`test_sync_codex_agents.py`): 6/6 pass.
+
+## Codebase Context
+
+- The 6 pre-existing harness-compat failures (Plan-anatomy Sync Map / Sync-impact assertions, integration-review semantic-coherence, planning-workflow writing-route) belong to `better-handoff`'s unfinished `handoff-doc → task-system` deprecation. They are unrelated to the rename and out of this sync's scope.
+- `docs/plans/**` and `.plan/**` retain old skill names by design (historical records). If a future task wants the task-tree prose updated to the new names, that is a separate, non-merge edit.
+
+---
+
+## Prior Merge Record (historical — internal `worktree-dashboard-redesign ← better-handoff`)
+
+# Semantic Merge Record
+
+**Operation:** `merge`
 **Current branch:** `worktree-dashboard-redesign`
 **Incoming ref:** `better-handoff`
 **Governing baseline:** `c1bf384`
