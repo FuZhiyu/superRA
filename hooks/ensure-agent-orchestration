@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# PreToolUse hook: hard-gate superRA:*-workflow Skill calls on
-# superRA:agent-orchestration being loaded first.
+# PreToolUse hook: hard-gate the three superRA phase skills'
+# (superRA:superplan, superRA:superimplement, superRA:superintegrate)
+# Skill calls on superRA:agent-orchestration being loaded first.
 #
 # Fires on every PreToolUse event. Only acts when:
 #   tool_name == "Skill" AND
