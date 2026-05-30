@@ -107,7 +107,7 @@ loaded_transcript='{"type":"assistant","message":{"content":[{"type":"tool_use",
 run_case "V4 already-loaded" expect-silent "superRA again, what now?" "$loaded_transcript"
 
 # V4b: transcript mentions a different superRA skill -> still remind
-other_skill='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:planning-workflow"}}]}}'
+other_skill='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"superRA:superplan"}}]}}'
 run_case "V4b other-superRA-skill" expect-reminder "superRA hello" "$other_skill"
 
 # V5: transcript_path empty -> reminder (fail-open)

@@ -33,7 +33,7 @@ Drift tests should protect **headline findings**, not every number in the analys
 - Descriptive statistics on raw inputs (upstream, not load-bearing for conclusions)
 - Sensitivity-analysis numbers (these are already robustness themselves — testing a robustness check against itself adds little)
 
-**Always ask the researcher to confirm the candidate list** before writing tests. Drift-test coverage is a researcher-owned decision because it encodes what counts as a "key result." `integration-workflow` Protect bakes this question into the workflow via `AskUserQuestion`.
+**Always ask the researcher to confirm the candidate list** before writing tests. Drift-test coverage is a researcher-owned decision because it encodes what counts as a "key result." `superintegrate` Protect bakes this question into the workflow via `AskUserQuestion`.
 
 ---
 

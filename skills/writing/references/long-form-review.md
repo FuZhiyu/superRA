@@ -14,7 +14,7 @@ Review lanes are:
 
 ## PLAN.md Retrofit
 
-Long-form review treats the user's existing draft as the implementation under review. The orchestrator creates PLAN.md from the target document, then dispatches reviewers through implementation-workflow.
+Long-form review treats the user's existing draft as the implementation under review. The orchestrator creates PLAN.md from the target document, then dispatches reviewers through superimplement.
 
 The PLAN.md header must carry the writing planning rows from `planning.md`, including:
 

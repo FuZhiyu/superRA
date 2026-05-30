@@ -4,9 +4,9 @@
 #
 # Fires on every PreToolUse event. Only acts when:
 #   tool_name == "Skill" AND
-#   tool_input.skill in {superRA:planning-workflow,
-#                        superRA:implementation-workflow,
-#                        superRA:integration-workflow}
+#   tool_input.skill in {superRA:superplan,
+#                        superRA:superimplement,
+#                        superRA:superintegrate}
 # and the session transcript does NOT already show a Skill invocation
 # for superRA:using-superRA. In that case the hook emits a
 # permissionDecision: deny payload instructing Claude to load the
@@ -18,8 +18,8 @@
 # Test vectors (see tests/hooks/test-ensure-using-superra.sh):
 #   V1  tool_name="Bash"                                     -> {}
 #   V2  skill="superRA:handoff-doc"                          -> {}
-#   V3  skill="superRA:planning-workflow", not loaded        -> deny
-#   V4  skill="superRA:planning-workflow", already loaded    -> {}
+#   V3  skill="superRA:superplan", not loaded        -> deny
+#   V4  skill="superRA:superplan", already loaded    -> {}
 #   V5  transcript_path empty / nonexistent                  -> {}
 #   V6  deny payload is valid JSON with round-tripping reason
 
@@ -64,7 +64,7 @@ fi
 
 # Fast path: only act on the three workflow skills.
 case "$skill" in
-  superRA:planning-workflow|superRA:implementation-workflow|superRA:integration-workflow)
+  superRA:superplan|superRA:superimplement|superRA:superintegrate)
     ;;
   *)
     printf '{}\n'
