@@ -1098,6 +1098,10 @@ body {
   opacity: 1;
   padding: 4px 8px 8px 30px;
 }
+.task-body.uncapped {
+  max-height: none;
+  overflow: visible;
+}
 
 /* Section toggles inside task body */
 .section-toggle {
@@ -1146,6 +1150,10 @@ body {
   max-height: 8000px;
   opacity: 1;
   padding-bottom: 4px;
+}
+.section-content.uncapped {
+  max-height: none;
+  overflow: visible;
 }
 
 /* Rendered markdown inside sections */
@@ -1570,17 +1578,30 @@ function renderTaskNode(task, depth) {
 
       secToggle.onclick = function(e) {
         e.stopPropagation();
-        var isOpen = secContent.classList.toggle('open');
-        secIcon.classList.toggle('expanded', isOpen);
-        if (isOpen) {
+        var wasOpen = secContent.classList.contains('open');
+        if (wasOpen) {
+          expandedSections.delete(secKey);
+          secIcon.classList.remove('expanded');
+          secContent.classList.remove('uncapped');
+          secContent.style.maxHeight = secContent.scrollHeight + 'px';
+          secContent.offsetHeight;
+          secContent.classList.remove('open');
+          secContent.style.maxHeight = '';
+          secPreview.style.display = '';
+        } else {
           expandedSections.add(secKey);
+          secContent.classList.add('open');
+          secIcon.classList.add('expanded');
+          secContent.addEventListener('transitionend', function handler(ev) {
+            if (ev.propertyName === 'max-height' && secContent.classList.contains('open')) {
+              secContent.classList.add('uncapped');
+            }
+            secContent.removeEventListener('transitionend', handler);
+          });
           if (!rendered.innerHTML) {
             rendered.innerHTML = md.render(sec.content);
           }
           secPreview.style.display = 'none';
-        } else {
-          expandedSections.delete(secKey);
-          secPreview.style.display = '';
         }
       };
 
@@ -1650,6 +1671,7 @@ function renderTaskNode(task, depth) {
   if (expandedTasks.has(task.path)) {
     toggle.classList.add('expanded');
     body.classList.add('open');
+    body.classList.add('uncapped');
   }
 
   /* ── Click handler ── */
@@ -1660,13 +1682,23 @@ function renderTaskNode(task, depth) {
       if (isExpanded) {
         expandedTasks.delete(taskRef.path);
         toggleEl.classList.remove('expanded');
+        bodyEl.classList.remove('uncapped');
+        bodyEl.style.maxHeight = bodyEl.scrollHeight + 'px';
+        bodyEl.offsetHeight;
         bodyEl.classList.remove('open');
+        bodyEl.style.maxHeight = '';
         var ch = nodeEl.querySelector(':scope > .task-children');
         if (ch) ch.style.display = 'none';
       } else {
         expandedTasks.add(taskRef.path);
         toggleEl.classList.add('expanded');
         bodyEl.classList.add('open');
+        bodyEl.addEventListener('transitionend', function handler(ev) {
+          if (ev.propertyName === 'max-height' && bodyEl.classList.contains('open')) {
+            bodyEl.classList.add('uncapped');
+          }
+          bodyEl.removeEventListener('transitionend', handler);
+        });
         var ch2 = nodeEl.querySelector(':scope > .task-children');
         if (ch2) ch2.style.display = '';
       }

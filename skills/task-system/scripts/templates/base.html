@@ -312,6 +312,10 @@ body {
   opacity: 1;
   padding: 4px 8px 8px 30px;
 }
+.task-body.uncapped {
+  max-height: none;
+  overflow: visible;
+}
 
 /* Section toggles inside task body */
 .section-toggle {
@@ -378,6 +382,10 @@ body {
   max-height: 8000px;
   opacity: 1;
   padding-bottom: 4px;
+}
+.section-content.uncapped {
+  max-height: none;
+  overflow: visible;
 }
 
 /* Rendered markdown inside sections */
@@ -727,6 +735,25 @@ function showView(view) {
   if (view === 'kanban') renderKanbanView();
 }
 
+/* ── Uncap helper: remove max-height after expand transition finishes ── */
+function uncapAfterTransition(el) {
+  function handler(e) {
+    if (e.propertyName === 'max-height' && el.classList.contains('open')) {
+      el.classList.add('uncapped');
+    }
+    el.removeEventListener('transitionend', handler);
+  }
+  el.addEventListener('transitionend', handler);
+}
+
+function recapForCollapse(el) {
+  el.classList.remove('uncapped');
+  el.style.maxHeight = el.scrollHeight + 'px';
+  el.offsetHeight; /* force layout */
+  el.classList.remove('open');
+  el.style.maxHeight = '';
+}
+
 /* ── Task expand/collapse ── */
 function toggleTask(rowEl) {
   var node = rowEl.closest('.task-node');
@@ -741,12 +768,15 @@ function toggleTask(rowEl) {
   if (isExpanded) {
     /* Collapse */
     toggle.classList.remove('expanded');
-    if (body) body.classList.remove('open');
+    if (body) recapForCollapse(body);
     if (children) children.style.display = 'none';
   } else {
     /* Expand */
     toggle.classList.add('expanded');
-    if (body) body.classList.add('open');
+    if (body) {
+      body.classList.add('open');
+      uncapAfterTransition(body);
+    }
     if (children) {
       children.style.display = '';
       /* Lazy-load children via htmx if needed */
@@ -776,10 +806,20 @@ function toggleSection(toggleEl, event) {
   var content = toggleEl.nextElementSibling;
   var icon = toggleEl.querySelector('.section-icon');
   var preview = toggleEl.querySelector('.section-preview');
-  var isOpen = content.classList.toggle('open');
-  icon.classList.toggle('expanded', isOpen);
 
-  if (isOpen) {
+  var wasOpen = content.classList.contains('open');
+
+  if (wasOpen) {
+    /* Collapse */
+    icon.classList.remove('expanded');
+    recapForCollapse(content);
+    if (preview) preview.style.display = '';
+  } else {
+    /* Expand */
+    content.classList.add('open');
+    icon.classList.add('expanded');
+    uncapAfterTransition(content);
+
     /* Determine section name from parent's data-section or the label */
     var sectionWrapper = toggleEl.closest('[data-section]');
     var sectionName = sectionWrapper ? sectionWrapper.getAttribute('data-section') : '';
@@ -803,8 +843,6 @@ function toggleSection(toggleEl, event) {
     if (taskNode) {
       loadComments(taskNode.dataset.path);
     }
-  } else {
-    if (preview) preview.style.display = '';
   }
 }
 
@@ -905,7 +943,7 @@ function showTreeAndExpand(path) {
       var children = node.querySelector(':scope > .task-children');
       if (toggle && !toggle.classList.contains('expanded')) {
         toggle.classList.add('expanded');
-        if (body) body.classList.add('open');
+        if (body) { body.classList.add('open'); body.classList.add('uncapped'); }
         if (children) {
           children.style.display = '';
           if (node.dataset.needsLoad === 'true') {
@@ -1045,7 +1083,7 @@ function restoreNodeState(node, state) {
     if (toggle && !toggle.classList.contains('leaf')) {
       toggle.classList.add('expanded');
     }
-    if (body) body.classList.add('open');
+    if (body) { body.classList.add('open'); body.classList.add('uncapped'); }
     if (children && state.childrenVisible.indexOf(ePath) >= 0) {
       children.style.display = '';
     }
@@ -1066,7 +1104,7 @@ function restoreNodeState(node, state) {
       var icon = sectionWrapper.querySelector('.section-icon');
       var preview = sectionWrapper.querySelector('.section-preview');
 
-      if (content) content.classList.add('open');
+      if (content) { content.classList.add('open'); content.classList.add('uncapped'); }
       if (icon) icon.classList.add('expanded');
       if (preview) preview.style.display = 'none';
 
