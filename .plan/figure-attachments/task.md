@@ -22,7 +22,7 @@ Migrate the figure attachment convention from a shared root-level `results_attac
 5. `agents/implementer.md` line 143 — update pre-commit checklist
 6. `skills/using-superRA/references/direct-mode-implementer.md` line 138 — update pre-commit checklist
 
-**Legacy authority removed by `task-system/deprecate-planmd-refs`:**
+**Legacy authority removed by [task-system/planning-redesign/planmd-sweep](../task-system/planning-redesign/planmd-sweep/task.md):**
 - `skills/report-in-markdown/references/final-form.md` formerly owned Stage 2 final-results relocation. Current Stage 2 task-result maturation lives in `skills/task-system/references/planning.md` §Results Shape; figure mechanics live in `skills/report-in-markdown/references/rich-content.md` §Figures.
 
 **Generated files (regenerate after source changes):**
