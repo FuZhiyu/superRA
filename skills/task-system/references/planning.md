@@ -124,7 +124,7 @@ python3 <skill-dir>/scripts/task_link.py \
 - **`script` / `input` / `output`** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **`## Objective`** is planner-owned. Implementers read it but do not rewrite it.
 - **`## Results`** is implementer-owned. Updated with findings during execution. See §Results Shape below.
-- **`## Revision Notes`** carries the delta signal when a task objective is updated — what changed, why, and how significant (trivial/mechanical vs substantive). Temporary: the reviewer removes this section when approving the task. Same lifecycle as `## Review Notes`.
+- **`## Revision Notes`** carries the delta signal when a task objective is updated — what changed, why, and how significant (trivial/mechanical vs substantive). Temporary: the reviewer removes this section when approving the task. Same lifecycle as `## Review Notes`. `validate_plan` warns (it never mutates) when an `approved` task still carries a non-empty `## Revision Notes` section, so a leak surfaces through the `[task-hook]` channel; the reviewer remains responsible for removing it at approval.
 - **`## Review Notes`** is present only when there are active items. On `approved`, the section content is removed entirely.
 
 ## Conventions Section
