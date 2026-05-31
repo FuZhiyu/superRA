@@ -1,6 +1,6 @@
 ---
 title: "Shared reveal-in-tree navigation primitive + Kanban click-through"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-30
