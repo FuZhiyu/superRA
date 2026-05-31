@@ -42,6 +42,7 @@ Then check:
 **Completeness:**
 - Did I implement everything in the task spec?
 - Are outputs saved where specified?
+- Does my assigned task's `## Results` carry the primary summary of major outcomes, numbers, caveats, and verification evidence before I return DONE / DONE_WITH_CONCERNS?
 
 **Reproducibility:**
 - If the task uses scripts, notebooks, or rendered notes, do they follow the domain/project format convention?
@@ -67,7 +68,7 @@ Compact etiquette below; full discipline in `task-system/references/planning.md`
 - **Stay within your assigned task.** When appending a `→ implemented: ...` reply inside review notes, stay strictly within your task's `task.md`. Never edit another task's file.
 - **Remove superseded content, don't stack it.** Abandoned approaches, discovery notes now reflected in results, and fixed review items are deleted, not crossed out. The task should read as a single coherent current-state description after every edit.
 - **Cite source files as markdown links** per `report-in-markdown` §File-reference rule (e.g., `[file.py:42](file.py#L42)`).
-- **Doc before report.** Every material finding, result, caveat, or change lands in the task's `task.md` **before** it appears in your status return.
+- **Doc before report.** Every material finding, result, caveat, verification command, and major output lands in the task's `## Results` **before** it appears in your status return. The status report is a navigation aid, not the record.
 
 If the task's structure is unclear, flag it in your status return rather than inventing one.
 

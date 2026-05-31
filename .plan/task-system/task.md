@@ -4,7 +4,7 @@ status: in-progress
 depends_on: []
 tags: []
 created: 2026-05-23
-updated: 2026-05-30
+updated: 2026-05-31
 ---
 
 ## Objective
@@ -44,3 +44,4 @@ Add a `task-system` skill to superRA that replaces flat PLAN.md/RESULTS.md task 
 - Structured ownership: `## Objective` (planner) / `## Results` (implementer, recursive)
 - Auto-rebuild: dashboard stays current after every CLI mutation
 - Dashboard: Source Serif 4 + IBM Plex Mono, recursive expand/collapse, dark/light mode
+- `.plan/` task files are now the primary researcher-facing results record: implementers write substantive task `## Results`, reviewers verify result substance, orchestrators selectively summarize approved child results into parent `## Results`, and the old separate `RESULTS.md` / `final-form.md` maturation path has been removed ([planning-redesign/planmd-sweep/task.md](planning-redesign/planmd-sweep/task.md)).

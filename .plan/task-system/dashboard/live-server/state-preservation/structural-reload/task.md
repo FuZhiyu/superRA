@@ -1,8 +1,6 @@
 ---
 title: "Replace full-reload with incremental tree update"
 status: implemented
-review_status: approved
-integration_status: ~
 depends_on:
   - capture-restore
 tags: []

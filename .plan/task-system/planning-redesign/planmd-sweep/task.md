@@ -6,12 +6,14 @@ depends_on:
   - revision-notes
 tags: []
 created: 2026-05-24
-updated: 2026-05-24
+updated: 2026-05-31
 ---
 
 ## Objective
 
 Update all remaining operational references to PLAN.md/RESULTS.md across skill files and references. After this task, `grep -rn 'PLAN\.md' skills/` should return only migration/historical references (in `task-system` and `CATEGORIES.md`), not operational references.
+
+Consolidation update, 2026-05-31: this task also absorbs the former standalone task-results follow-up. The absorbed scope makes task `## Results` the primary researcher-facing result record, keeps status reports short and pointer-based, assigns parent result rollups to the orchestrator, routes Documentation-stage summary placement through the researcher, removes the separate final-form results workflow, and sweeps stale README / hook / contributor guidance.
 
 ### Files and Changes
 
@@ -62,6 +64,17 @@ Run `grep -rn 'PLAN\.md\|RESULTS\.md' skills/ --include='*.md'` and confirm rema
 
 Swept all operational PLAN.md/RESULTS.md references and all `## Decisions` / `User Decisions Log` references across skill files, references, and supporting code. Additionally fixed the `sync_codex_agents.py` generator to handle code-fenced `##` headings and updated its pattern-matching strings to track the current `agents/implementer.md` wording.
 
+### Consolidated Follow-up, 2026-05-31
+
+- Made task `## Results` the primary implementer record: the canonical implementer self-check now requires major outcomes, numbers, caveats, and verification evidence before DONE / DONE_WITH_CONCERNS, and the handoff report remains a short navigation aid after the task file is substantive ([../../../../agents/implementer.md](../../../../agents/implementer.md)).
+- Added orchestrator-owned parent result rollups after child approval and strengthened the superimplement completion gate to reject missing, thin, or status-report-only major results ([../../../../skills/superimplement/SKILL.md](../../../../skills/superimplement/SKILL.md)).
+- Moved Stage 2 result maturation into task-system ownership: selected task `## Results` sections mature in place, child tasks carry evidence and caveats, parent tasks summarize direct children selectively, reviewers verify result substance, and orchestrators own upward rollups ([../../../../skills/task-system/references/planning.md](../../../../skills/task-system/references/planning.md)).
+- Updated Documentation-stage choreography to ask the researcher where summaries should be updated before dispatching doc work, and to review matured task-file results against task-system results guidance rather than a separate final-results artifact ([../../../../skills/superintegrate/SKILL.md](../../../../skills/superintegrate/SKILL.md)).
+- Removed the stale final-form results workflow from report-in-markdown. The remaining markdown guidance routes routine task citations through the core file-reference rule and loads rich-content only for figures, math, or tables ([../../../../skills/report-in-markdown/SKILL.md](../../../../skills/report-in-markdown/SKILL.md), [../../../../skills/report-in-markdown/references/rich-content.md](../../../../skills/report-in-markdown/references/rich-content.md), [../../../../skills/report-in-markdown/references/baseline-io.md](../../../../skills/report-in-markdown/references/baseline-io.md)).
+- Updated the approved figure-attachments task record so current authority points to task-system results shape / figure embedding and report-in-markdown rich-content figure mechanics ([../../../figure-attachments/task.md](../../../figure-attachments/task.md)).
+- Updated user-facing and hook guidance away from `PLAN.md + RESULTS.md` and toward `.plan/` task files as the durable record ([../../../../README.md](../../../../README.md), [../../../../hooks/ask-user-question-logger](../../../../hooks/ask-user-question-logger), [../../../../hooks/exit-plan-mode](../../../../hooks/exit-plan-mode), [../../../../hooks/codex-plan-stop](../../../../hooks/codex-plan-stop)).
+- Regenerated implementer artifacts from the canonical role spec ([../../../../skills/using-superRA/references/direct-mode-implementer.md](../../../../skills/using-superRA/references/direct-mode-implementer.md), [../../../../.codex/agents/superra_implementer.toml](../../../../.codex/agents/superra_implementer.toml)).
+
 ### Files Modified
 
 **PLAN.md/RESULTS.md sweep (40 files):**
@@ -91,7 +104,7 @@ Swept all operational PLAN.md/RESULTS.md references and all `## Decisions` / `Us
 - [`skills/report-in-markdown/SKILL.md`](skills/report-in-markdown/SKILL.md) — 4 refs (description, body, load map, references)
 - [`skills/report-in-markdown/references/baseline-io.md`](skills/report-in-markdown/references/baseline-io.md) — 3 refs (load condition, filename, git_dirty note)
 - [`skills/report-in-markdown/references/rich-content.md`](skills/report-in-markdown/references/rich-content.md) — 2 refs (attachment directory cases)
-- [`skills/report-in-markdown/references/final-form.md`](skills/report-in-markdown/references/final-form.md) — 3 operational refs (task-path indexing, exception, methodology)
+- Former `skills/report-in-markdown/references/final-form.md` — 3 operational refs were removed before the file itself was deleted in the consolidated follow-up.
 - [`skills/refactor-and-integrate/SKILL.md`](skills/refactor-and-integrate/SKILL.md) — 2 refs (sync impact context, final diff self-check)
 - [`skills/agent-orchestration/references/agent-teams.md`](skills/agent-orchestration/references/agent-teams.md) — 6 refs (task graph, dispatch, session handoff, checkpointing)
 
@@ -130,10 +143,15 @@ Swept all operational PLAN.md/RESULTS.md references and all `## Decisions` / `Us
 - `using-superRA/SKILL.md:63` — skill inventory mentioning migration feature (correct)
 - `main-agent.md:19` — backward-compatibility migration offer (correct)
 - `planning-workflow/SKILL.md:32` — legacy PLAN.md detection (correct)
-- `report-in-markdown/references/final-form.md` — literal `RESULTS.md` output file artifact (correct)
 - `report-in-markdown/references/baseline-io.md` — literal `RESULTS.md` filename (correct)
 
 `grep -rn '## Decisions\|User Decisions Log' skills/ agents/ --include='*.md'` returns only `internals.md:30` (data model field comment marked `(legacy)`).
 
 All 92 task-system tests pass. `sync_codex_agents.py --check` passes. Contract tests show 48 passed / 6 failed (all 6 pre-existing).
 
+Follow-up validation:
+- Researcher chose manual integration checks rather than drift/static tests for the protocol-level results. Manual checks covered the primary task-results rule, orchestrator-owned parent rollups, final-form workflow removal, and Documentation-stage reviewer routing.
+- `rg -n "RESULTS\\.md|PLAN\\.md" README.md agents skills .codex hooks` passed the stale-reference sweep: surviving hits are legacy migration/backward-compatibility references or migration tests.
+- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` regenerated project Codex role artifacts, and `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` reported all generated files up to date.
+- `uv run pytest skills/task-system/scripts/test_task_system.py skills/task-system/scripts/tests/test_state_preservation.py skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 200 tests after integration closeout.
+- **Final diff self-check:** `git diff 19457675bf570a079bc960765a1832736cddf918..HEAD`; surviving change classes are task-results protocol docs, task-tree consolidation into this task, final-form workflow removal, stale-reference sweep, generated implementer artifacts, and user-facing README / hook guidance. Suspicious hunks are justified by the approved task-results objective, the researcher-requested consolidation, generated-artifact regeneration, and the AGENTS.md DRY/Necessity gate for instruction edits; no unrelated hunks found. Final checks: `python3 skills/task-system/scripts/task_check.py --plan-root .plan` passed, and `uv run pytest skills/task-system/scripts/test_task_system.py skills/task-system/scripts/tests/test_state_preservation.py skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 205 tests.

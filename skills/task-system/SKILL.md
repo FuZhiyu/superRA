@@ -3,7 +3,7 @@ name: task-system
 description: >
   Directory-tree task system — filesystem hierarchy as task hierarchy.
   Use when creating, querying, or visualizing a .plan/ task tree; when
-  migrating from PLAN.md + RESULTS.md to the tree format; or when
+  migrating legacy PLAN.md + RESULTS.md to the tree format; or when
   generating an HTML dashboard. Triggers include "create a task tree",
   "show the frontier", "generate the dashboard", "migrate the plan",
   "what tasks are ready", "show the task DAG".
@@ -63,10 +63,14 @@ python3 <skill-dir>/scripts/task_query.py --plan-root .plan --tree --json
 
 ## How to Edit a Task
 
-Edit `task.md` directly with Read/Edit tools. The file has two parts:
+Edit `task.md` directly with Read/Edit tools — this is the canonical way to mutate a task, including its `status` and every body section. The PostToolUse hook is what makes direct edit the safe path: after each edit it validates the frontmatter (enum values, dependency references, cycles), propagates parent status, and rebuilds the dashboard. Direct edit is what the safety net is built around, not an unsafe shortcut. The file has two parts:
 
 1. **Frontmatter** (YAML between `---` delimiters) — structured metadata
 2. **Body** (everything after the closing `---`) — free-form markdown sections
+
+### Moving / reorganizing tasks
+
+Move a task with a plain `mv` of its directory — it carries its `task.md`, `comments.yaml`, and whole subtree. The PostToolUse hook revalidates the tree, propagates status, and rebuilds the dashboard after the move. One caveat: `depends_on` references sibling slugs, so a move that crosses a dependency boundary strands the reference — validation flags the now-dangling dependency, and you re-wire it with `task_link.py` or a direct edit (the hook does not auto-cascade). `task_rename.py` remains the convenience for an atomic same-parent rename that also cascades sibling `depends_on`, but is no longer required to keep the tree consistent after a manual move.
 
 ### Frontmatter fields
 
@@ -90,7 +94,7 @@ Any `## Heading` is valid. Recommended defaults:
 |---|---|---|
 | `## Objective` | What success looks like — the goal, constraints, and validation criteria | planner |
 | `## Results` | Key findings and notes | implementer |
-| `## Revision Notes` | Temporary delta signal when a task objective is updated (what changed, significance); cleaned on approval | planner / orchestrator |
+| `## Revision Notes` | Temporary delta signal when a task objective is updated (what changed, significance); reviewer removes it on approval (`validate_plan` only warns if an `approved` task still carries one) | planner / orchestrator |
 | `## Review Notes` | Reviewer feedback | reviewer |
 
 ## Ownership Model
@@ -146,7 +150,11 @@ python3 <skill-dir>/scripts/task_query.py --plan-root .plan --frontier
 python3 <skill-dir>/scripts/task_query.py --plan-root .plan --dag 01-data
 ```
 
-### Create a task
+### Mutating the tree (scaffolding and bulk operations)
+
+To set a single field on one task — including `status` — edit `task.md` directly (see §How to Edit a Task). The CLIs below are convenience scaffolding for creating tasks with a template and for bulk or scripted changes; reach for them when direct edit would be tedious or error-prone, not as the per-field path.
+
+Scaffold a new task (template + dates):
 
 ```bash
 python3 <skill-dir>/scripts/task_create.py \
@@ -156,15 +164,14 @@ python3 <skill-dir>/scripts/task_create.py \
   --depends-on 02-merge
 ```
 
-### Update task status
+Bulk status work across the tree:
 
 ```bash
-python3 <skill-dir>/scripts/task_update.py \
-  --plan-root .plan --path 01-data/03-filter \
-  --status approved
+python3 <skill-dir>/scripts/task_update.py --plan-root .plan --propagate-all
+python3 <skill-dir>/scripts/task_update.py --plan-root .plan --path 01-data --cascade --status approved
 ```
 
-### Add results to a task
+Append a result programmatically:
 
 ```bash
 python3 <skill-dir>/scripts/task_add_result.py \
@@ -172,7 +179,7 @@ python3 <skill-dir>/scripts/task_add_result.py \
   --finding "Loaded 4.7M rows across 12K funds"
 ```
 
-### Manage dependencies
+Manage dependencies (also fixes a dangling `depends_on` after a manual move):
 
 ```bash
 python3 <skill-dir>/scripts/task_link.py \
@@ -182,7 +189,7 @@ python3 <skill-dir>/scripts/task_link.py \
   --plan-root .plan --path 01-data/03-filter --depends-on 02-merge --remove
 ```
 
-### Rename a task
+Atomic same-parent rename that cascades sibling `depends_on` (a plain `mv` also works — see §Moving / reorganizing tasks):
 
 ```bash
 python3 <skill-dir>/scripts/task_rename.py \
@@ -202,14 +209,14 @@ Starts a live dashboard server with SSE hot-reload — auto-updates when task fi
 
 The static `generate` subcommand is deprecated — use `serve` instead.
 
-### Migrate from PLAN.md + RESULTS.md
+### Migrate legacy PLAN.md + RESULTS.md
 
 ```bash
 python3 <skill-dir>/scripts/plan_migrate.py \
   --plan-md PLAN.md --results-md RESULTS.md --output .plan
 ```
 
-#### Preparing a PLAN.md for migration
+#### Preparing a legacy PLAN.md for migration
 
 The migration script has strict format expectations. Before running it, verify compatibility.
 

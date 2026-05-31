@@ -13,15 +13,17 @@ Migrate the figure attachment convention from a shared root-level `results_attac
 
 ### Files to change
 
-**Authoritative instruction files (7):**
+**Authoritative instruction files (current):**
 
 1. `skills/task-system/references/planning.md` §Figure Embedding (lines 192–200) + example in results template (line 174) — rewrite to task-local `attachments/`
 2. `skills/report-in-markdown/references/rich-content.md` §caller-parameter table (lines 9–15) + §Materialize figures (line 25) + §Embed example (line 48) — update Stage 1 convention from `results_attachments/` to task-local `attachments/`, fix embed example to use `ATTACH_DIR` placeholder or show context-specific examples
-3. `skills/report-in-markdown/references/final-form.md` §Commit 3 (lines 37–47) — collect from task-specific `.plan/*/attachments/` directories instead of root `results_attachments/`
-4. `skills/econ-data-analysis/SKILL.md` line 154 — update `[BLOCKING]` checklist from `results_attachments/` to task-local `attachments/`
-5. `skills/implementation-workflow/SKILL.md` line 119 — update Step 3 verification gate
-6. `agents/implementer.md` line 143 — update pre-commit checklist
-7. `skills/using-superRA/references/direct-mode-implementer.md` line 138 — update pre-commit checklist
+3. `skills/econ-data-analysis/SKILL.md` line 154 — update `[BLOCKING]` checklist from `results_attachments/` to task-local `attachments/`
+4. `skills/superimplement/SKILL.md` line 119 — update Step 3 verification gate
+5. `agents/implementer.md` line 143 — update pre-commit checklist
+6. `skills/using-superRA/references/direct-mode-implementer.md` line 138 — update pre-commit checklist
+
+**Legacy authority removed by [task-system/planning-redesign/planmd-sweep](../task-system/planning-redesign/planmd-sweep/task.md):**
+- `skills/report-in-markdown/references/final-form.md` formerly owned Stage 2 final-results relocation. Current Stage 2 task-result maturation lives in `skills/task-system/references/planning.md` §Results Shape; figure mechanics live in `skills/report-in-markdown/references/rich-content.md` §Figures.
 
 **Generated files (regenerate after source changes):**
 - `.codex/agents/superra_implementer.toml` line 149
@@ -32,12 +34,12 @@ Migrate the figure attachment convention from a shared root-level `results_attac
 
 - **Task-local over unified `.plan/attachments/`:** self-contained tasks survive moves; no depth-counting for relative paths.
 - **Embed syntax:** `attachments/fig.png` (relative to task.md). No `./` prefix needed.
-- **Maturation (Stage 2):** Commit 3 in `final-form.md` collects from all `.plan/*/attachments/` into `${RESULTS_DIR}/attachments/`. RESULTS.md at root references figures via full task path (`.plan/task-path/attachments/fig.png`) before maturation rewrites them.
+- **Maturation (Stage 2):** selected task `## Results` sections mature in place under `skills/task-system/references/planning.md` §Results Shape. Task figures stay in task-local `attachments/` unless a caller explicitly chooses another directory per `skills/report-in-markdown/references/rich-content.md` §Figures.
 - **Dashboard:** no code changes needed — `pathPrefix` logic already prepends `.plan/{taskPath}/` to relative image `src`.
 
 ## Results
 
-All 7 authoritative instruction files updated. Generated Codex agent files regenerated via `sync_codex_agents.py`. Zero remaining `results_attachments/` references in active files (only in historical `docs/plans/` and this task's own description).
+Current attachment guidance is task-local: task results embed figures from `attachments/` next to each `task.md`, Stage 2 maturation keeps selected results in task files, and rich-content figure mechanics treat `attachments/` as a caller-supplied directory. Generated Codex agent files were regenerated via `sync_codex_agents.py`. Zero remaining active `results_attachments/` references outside legacy migration or historical records.
 
 ### Files changed
 
@@ -45,9 +47,8 @@ All 7 authoritative instruction files updated. Generated Codex agent files regen
 |---|---|
 | [planning.md](../../skills/task-system/references/planning.md) | §Figure Embedding + results template example → task-local `attachments/` |
 | [rich-content.md](../../skills/report-in-markdown/references/rich-content.md) | Caller-parameter table, Stage 1 description, embed example → `ATTACH_DIR` placeholder |
-| [final-form.md](../../skills/report-in-markdown/references/final-form.md) | Commit 3 → collect from `.plan/*/attachments/` |
 | [SKILL.md (econ-data-analysis)](../../skills/econ-data-analysis/SKILL.md) | `[BLOCKING]` checklist → task-local `attachments/` |
-| [SKILL.md (implementation-workflow)](../../skills/implementation-workflow/SKILL.md) | Step 3 gate → task-local `attachments/` |
+| [SKILL.md (superimplement)](../../skills/superimplement/SKILL.md) | Step 3 gate → task-local `attachments/` |
 | [implementer.md](../../agents/implementer.md) | Pre-commit checklist → `attachments/...` |
 | [direct-mode-implementer.md](../../skills/using-superRA/references/direct-mode-implementer.md) | Pre-commit checklist → `attachments/...` |
 | `.codex/agents/superra_implementer.toml` | Regenerated from source |
@@ -55,4 +56,3 @@ All 7 authoritative instruction files updated. Generated Codex agent files regen
 ### Dashboard
 
 No code changes needed. `base.html` line 663 already computes `pathPrefix = '.plan/' + taskPath + '/'` and prepends it to relative image `src` attributes (line 678), so task-local `attachments/fig.png` resolves correctly to `/files/.plan/task-path/attachments/fig.png`.
-

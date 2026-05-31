@@ -240,22 +240,23 @@ Run the full drift-test suite again. When it passes and integration review is AP
 
 ## Document
 
-Document matures task.md `## Results` sections from live dev log to reader-facing permanent record (Stage 2 maturation per `task-system/references/planning.md` §Results Shape).
+Document matures selected task.md `## Results` sections from live dev log to reader-facing permanent record (Stage 2 maturation per `task-system/references/planning.md` §Results Shape).
 
 ### Step 1: Identify maturation scope
 
-Walk the `.plan/` tree and identify tasks whose `## Results` sections need maturation — those with substantive findings that would benefit from restructuring, polish, or figure materialization. Trivial results (e.g., "renamed variable, no findings") need no maturation. If project guidance is silent on maturation scope, ask:
+Walk the `.plan/` tree and identify tasks whose `## Results` sections need maturation or summary rollups — those with substantive findings that would benefit from restructuring, polish, parent/root summaries, or figure materialization. Trivial results (e.g., "renamed variable, no findings") need no maturation. If project guidance is silent on where summaries should be updated, ask:
 
 ```text
 These tasks have substantive results that could benefit from maturation
-(restructuring for reader-facing clarity):
+or parent/root summary updates:
 - [task-path-1: one-line summary]
 - [task-path-2: one-line summary]
 
-Should I mature all of them, or only a subset?
+Where should I update summaries: leaf tasks only, specific parent tasks,
+the root task, all listed workstreams, or a subset?
 ```
 
-Fold the answer into root task.md before dispatching.
+Fold the answer into the relevant root or parent task `## Results` / `## Revision Notes` before dispatching.
 
 ### Step 2: Dispatch doc-writer
 
@@ -265,12 +266,12 @@ Agent(subagent_type: "superRA:implementer"):
   Task: Mature results for reader-facing clarity
   Tasks in scope: <task paths whose results need maturation>
 
-  Additionally: mature each task's `## Results` section per
-    `report-in-markdown/references/final-form.md`: fact-check against code
-    outputs, restructure for reader clarity, materialize figures, ensure
-    notation consistency across tasks. Edit each task.md in place. Land
-    recoverable commits (one per task or logical group) and report which
-    sub-commits landed.
+  Additionally: mature each in-scope task's `## Results` section per
+    `task-system/references/planning.md` §Results Shape: fact-check against
+    code outputs, restructure for reader clarity, materialize figures when
+    needed using `report-in-markdown`, and ensure notation consistency across
+    tasks. Edit task.md files in place. Land recoverable commits (one per
+    task or logical group) and report which sub-commits landed.
 ```
 
 ### Step 3: Dispatch doc-reviewer
@@ -282,7 +283,10 @@ Agent(subagent_type: "superRA:reviewer"):
   Git range: <BASE_SHA>..<HEAD_SHA>
   Tasks in scope: <same task paths>
 
-  Additionally: <prior-round adjudication notes if re-dispatching>
+  Additionally: Review each in-scope task's `## Results` section per
+    `task-system/references/planning.md` §Results Shape, including Stage 2
+    maturation, parent rollups, and task-local figure attachments.
+    <prior-round adjudication notes if re-dispatching>
 ```
 
 Iterate REVISE -> fix -> narrow re-review until APPROVE. If a documentation finding traces to analysis code, re-enter Integrate.

@@ -31,7 +31,7 @@ superRA organizes work into three phases: **PLAN → IMPLEMENT → INTEGRATE**. 
 
 ```mermaid
 flowchart TB
-    PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>PLAN.md + RESULTS.md"]
+    PLAN["<b>PLAN</b><br/>scope · task decomposition<br/>.plan/ task tree"]
     IMPLEMENT["<b>IMPLEMENT</b> (per task)<br/>implementer ⇄ reviewer loop<br/>APPROVE advances · REVISE loops back"]
     INTEGRATE["<b>INTEGRATE</b><br/>Protect results <br/>Sync with base<br/>Integrate/refactor<br/>Document<br/>Finish"]
     FINISHED(["finished"])
@@ -56,7 +56,7 @@ Each `.plan/` includes a `serve` script — run `bash .plan/serve` to open the l
 ### Key principles of the workflow
 
 1. **Implementer–reviewer pair at every step.** An adversarial reviewer inspects every implementation; work only advances after `APPROVE`. Review is never skipped, regardless of how trivial a step looks.
-2. **Handoff docs always reflect the current state.** Material progress lives in committed `PLAN.md` and `RESULTS.md`, not in the chat log. A fresh agent can open the repo and resume from the docs plus git state alone.
+2. **Task files always reflect the current state.** Material progress lives in committed `.plan/` task files: `## Objective` records the intended work, `## Results` records what happened and what was found, `## Review Notes` carries active review findings, and status frontmatter records task state. A fresh agent can open the repo and resume from the task tree plus git state alone.
 3. **Fast early for exploration, strict for integration. Semantic sync always.** During implementation, optimize for speed and correctness of the analysis itself. Once results are in hand, the integration phase protects key results (drift tests are the default mechanism), syncs against the current base with `semantic-merge`, runs a dedicated sync review, refactors the post-sync diff to fit the codebase, and matures documentation for the long haul. Intent-aware branch syncs never use a bare `git merge`.
 4. **Autonomous with human in the loop.** The agent drives work forward on its own power and stops — via `AskUserQuestion` — only for hard blockers, decisions beyond its authority, and user-defined workflow milestones.
 5. **Adaptive and composable.** Research is rarely linear and never has a single style. The workflow supplies protocols, not requirements, and can be adapted to different rhythms. It is domain-agnostic: data analysis, theory-modeling, and writing today; literature review and simulation in the pipeline.
@@ -106,8 +106,8 @@ bundle through `/hooks`.
 | Hook | Trigger | Purpose |
 |------|---------|---------|
 | **merge-guard** | Claude Code Bash hook; Codex `PreToolUse` on `Bash` | Remind to use the `semantic-merge` skill before bare merge/rebase/cherry-pick commands. Codex shell interception is not complete, so this is a reminder surface, not an enforcement boundary. |
-| **ask-user-question-logger** | Claude Code `AskUserQuestion` | Suggest logging important decisions in `PLAN.md`. The script accepts Codex `request_user_input` payloads for future/manual wiring, but the Codex plugin does not install it until Codex documents that tool as a `PostToolUse` surface. |
-| **exit-plan-mode** | Claude Code `ExitPlanMode` | Suggest materializing a plan into `PLAN.md` + `RESULTS.md` when it will guide later work. |
+| **ask-user-question-logger** | Claude Code `AskUserQuestion` | Suggest logging important decisions in the relevant `.plan/` task file. The script accepts Codex `request_user_input` payloads for future/manual wiring, but the Codex plugin does not install it until Codex documents that tool as a `PostToolUse` surface. |
+| **exit-plan-mode** | Claude Code `ExitPlanMode` | Suggest materializing a proposed plan into a `.plan/` task tree when it will guide later work. |
 | **codex-plan-stop** | Codex `Stop` while in plan mode after a proposed-plan response | Codex equivalent of the plan-materialization reminder. |
 | **autoload-superra** | `UserPromptSubmit` when the prompt mentions a superRA term | Inject a reminder to load `superRA:using-superRA` if the master skill has not yet loaded this session. |
 | **ensure-using-superra** | Claude Code `PreToolUse` on `Skill(superRA:superplan|superimplement|superintegrate)` | Hard-deny the workflow-skill call when `superRA:using-superRA` is not yet loaded; reason directs Claude to load it and retry. |

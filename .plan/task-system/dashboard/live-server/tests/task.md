@@ -2,11 +2,11 @@
 title: "Test suite for live dashboard"
 status: in-progress
 depends_on:
-  - ../server
-  - ../templates
-  - ../live-reload
-  - ../cli-entry
-  - ../comments
+  - server
+  - templates
+  - live-reload
+  - cli-entry
+  - comments
 tags: []
 created: 2026-05-25
 updated: 2026-05-26

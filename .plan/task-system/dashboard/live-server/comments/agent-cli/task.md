@@ -2,7 +2,7 @@
 title: "Agent CLI for reading and resolving comments"
 status: approved
 depends_on:
-  - ../sidecar-format
+  - sidecar-format
 tags: []
 created: 2026-05-24
 updated: 2026-05-24

@@ -31,8 +31,6 @@ Session ID: use context if available; otherwise generate `session-YYYYMMDD-HHMMS
 
 `YYYY-MM-DD-report-[description].md` for standalone reports.
 
-For results maturing at INTEGRATE Document, the filename is simply `RESULTS.md`, placed at the permanent location (not date-stamped). The name is the identity of the artifact across stages — do not rename.
-
 ## Frontmatter
 
 ```yaml
@@ -56,12 +54,12 @@ Field notes:
 - `tags`: caller can add more (e.g., `"results"`, `"integration"`, `"30-minute"`).
 - `project`: include if known from context or project guidance.
 - `git_message`: human-readable HEAD commit subject — pairs with `git_commit` for quick identification without a separate git lookup.
-- `git_dirty`: record honestly. Stage 2 results should be written *as part of* the integration commit, so the expected state is `false` at commit time. If you are drafting before committing, `true` is fine — the record is for auditability, not gating.
+- `git_dirty`: record honestly. For a committed report, the expected state is `false` at commit time. If you are drafting before committing, `true` is fine — the record is for auditability, not gating.
 - `permalink`: project-relative path with no extension. Example: `analyses/bop/RESULTS` or `notes/2026-03-07-report-analysis`.
 
 ## Write the file
 
-Write the caller's content verbatim after the frontmatter. **No content modifications.** If the content violates `rich-content.md` or `final-form.md` rules, that is the caller's responsibility — report back but do not silently edit.
+Write the caller's content verbatim after the frontmatter. **No content modifications.** If the content violates `rich-content.md` rules, that is the caller's responsibility — report back but do not silently edit.
 
 ## Return a clickable link
 

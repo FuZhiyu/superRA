@@ -2,8 +2,8 @@
 title: "Filesystem watcher and SSE live reload"
 status: approved
 depends_on:
-  - ../server
-  - ../templates
+  - server
+  - templates
 tags: []
 created: 2026-05-24
 updated: 2026-05-24

@@ -2,9 +2,9 @@
 title: "Per-block inline comments"
 status: approved
 depends_on:
-  - ../server
-  - ../templates
-  - ../live-reload
+  - server
+  - templates
+  - live-reload
 tags: []
 created: 2026-05-24
 updated: 2026-05-26

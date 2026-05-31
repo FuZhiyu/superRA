@@ -1466,6 +1466,246 @@ class TestTaskHook:
         code, _ = self._run_hook(payload)
         assert code == 0
 
+    # --- Bash (manual move) branch ---
+
+    def test_bash_mv_triggers_rebuild_and_propagation(self, plan_with_branches):
+        """A Bash mv that re-parents a task rebuilds the dashboard and rolls up status.
+
+        Moving the lone not-started child out from under 01-data-prep (leaving
+        only the approved 01-load) should let the parent roll up to approved
+        once the post-move reconcile runs.
+        """
+        root = plan_with_branches
+        # Remove the stale dashboard so we can assert it gets regenerated.
+        dashboard = root / "dashboard.html"
+        if dashboard.exists():
+            dashboard.unlink()
+
+        src = root / "01-data-prep" / "02-merge"
+        dst = root / "02-merge"
+        shutil.move(str(src), str(dst))
+
+        # Parent had a not-started child before the move; assert it has not yet
+        # rolled up (sanity that the reconcile is what changes it).
+        before = _task_io.parse_task(root / "01-data-prep" / "task.md")
+        assert before.status == "not-started"
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv {src} {dst}"},
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
+        assert dashboard.exists(), "dashboard should be regenerated after the move"
+
+        after = _task_io.parse_task(root / "01-data-prep" / "task.md")
+        assert after.status == "approved", (
+            "parent should roll up to approved after its only remaining child is approved"
+        )
+
+    def test_bash_mv_dangling_dep_warns_and_does_not_rewrite(self, plan_with_branches):
+        """A re-parent that strands a depends_on warns but never rewrites the edge."""
+        root = plan_with_branches
+        # 02-merge depends_on 01-load, both under 01-data-prep. Move 02-merge to
+        # the top level so its sibling dependency 01-load is no longer present.
+        src = root / "01-data-prep" / "02-merge"
+        dst = root / "02-merge"
+        shutil.move(str(src), str(dst))
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv {src} {dst}"},
+        }
+        code, stderr = self._run_hook(payload)
+        assert code == 0
+        assert "01-load" in stderr and "WARNING" in stderr, (
+            "dangling dependency should surface as a validation warning"
+        )
+        # The hook must NOT rewrite the dependency — it stays as authored.
+        moved = _task_io.parse_task(dst / "task.md")
+        assert moved.depends_on == ["01-load"], (
+            "hook must not auto-cascade depends_on for a post-hoc move"
+        )
+
+    def test_bash_readonly_plan_command_no_side_effects(self, plan_root):
+        """A read-only .plan Bash command early-exits with no dashboard rebuild."""
+        dashboard = plan_root / "dashboard.html"
+        if dashboard.exists():
+            dashboard.unlink()
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": f"python3 task_query.py --plan-root {plan_root} frontier"
+            },
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
+        assert not dashboard.exists(), (
+            "read-only .plan command must not trigger a dashboard rebuild"
+        )
+
+    def test_bash_command_without_plan_exits_zero(self):
+        """A Bash command touching no .plan tree exits 0 with no error."""
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": "mv /tmp/a.txt /tmp/b.txt"},
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
+
+
+# --- Revision-note stale-leak validation tests ---
+
+
+def _task_md_text(title: str, status: str, *, objective: str = "Do the thing.",
+                  revnote: str | None = None) -> str:
+    """Build a task.md text with an optional ## Revision Notes section."""
+    body = f"## Objective\n\n{objective}\n"
+    if revnote is not None:
+        body += f"\n## Revision Notes\n\n{revnote}\n"
+    fm = (
+        f'title: "{title}"\n'
+        f"status: {status}\n"
+        f"depends_on: []\n"
+        f"tags: []\n"
+        f"created: 2026-01-01\n"
+        f"updated: 2026-01-01\n"
+    )
+    return f"---\n{fm}---\n\n{body}"
+
+
+class TestHasNonemptySection:
+    def test_detects_real_header_with_content(self):
+        body = "## Revision Notes\n\nReopen: rework X.\n"
+        assert _task_io._has_nonempty_section(body, "Revision Notes")
+
+    def test_empty_section_is_false(self):
+        body = "## Revision Notes\n\n## Next\n\nstuff\n"
+        assert not _task_io._has_nonempty_section(body, "Revision Notes")
+
+    def test_missing_header_is_false(self):
+        body = "## Objective\n\nDo the thing.\n"
+        assert not _task_io._has_nonempty_section(body, "Revision Notes")
+
+    def test_header_inside_fence_is_ignored(self):
+        body = (
+            "## Objective\n\nSee the format below:\n\n"
+            "```\n## Revision Notes\n\nquoted example\n```\n"
+        )
+        assert not _task_io._has_nonempty_section(body, "Revision Notes")
+
+    def test_tilde_fence_is_ignored(self):
+        body = (
+            "## Objective\n\n~~~\n## Revision Notes\n\nquoted\n~~~\n"
+        )
+        assert not _task_io._has_nonempty_section(body, "Revision Notes")
+
+    def test_real_header_after_fenced_quote_still_detected(self):
+        body = (
+            "## Objective\n\n```\n## Revision Notes\n```\n\n"
+            "## Revision Notes\n\nGenuine note.\n"
+        )
+        assert _task_io._has_nonempty_section(body, "Revision Notes")
+
+
+class TestValidateRevisionNotes:
+    def test_approved_with_revnote_warns(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Objective\n\nx\n\n## Revision Notes\n\nstale note\n",
+        )
+        assert _task_io.validate_revision_notes(t)
+
+    def test_approved_without_revnote_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Objective\n\nx\n",
+        )
+        assert _task_io.validate_revision_notes(t) == []
+
+    def test_implemented_with_revnote_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="implemented",
+            body="## Objective\n\nx\n\n## Revision Notes\n\nrework\n",
+        )
+        assert _task_io.validate_revision_notes(t) == []
+
+    def test_not_started_with_revnote_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="not-started",
+            body="## Objective\n\nx\n\n## Revision Notes\n\nearly\n",
+        )
+        assert _task_io.validate_revision_notes(t) == []
+
+    def test_in_progress_with_revnote_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="in-progress",
+            body="## Objective\n\nx\n\n## Revision Notes\n\nwip\n",
+        )
+        assert _task_io.validate_revision_notes(t) == []
+
+    def test_approved_with_fenced_header_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Objective\n\n```\n## Revision Notes\n\nquoted\n```\n",
+        )
+        assert _task_io.validate_revision_notes(t) == []
+
+    def test_approved_with_empty_revnote_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Objective\n\nx\n\n## Revision Notes\n\n## Next\n\ny\n",
+        )
+        assert _task_io.validate_revision_notes(t) == []
+
+
+class TestValidatePlanRevisionNotes:
+    def _write(self, path: Path, text: str) -> None:
+        path.write_text(text, encoding="utf-8")
+
+    def test_validate_plan_warns_on_approved_revnote(self, tmp_path):
+        root = tmp_path / ".plan"
+        root.mkdir()
+        self._write(root / "task.md", _task_md_text("Root", "not-started"))
+        d = root / "01-task"
+        d.mkdir()
+        self._write(d / "task.md",
+                    _task_md_text("Task", "approved", revnote="stale note"))
+        warnings = _task_io.validate_plan(root)
+        assert any("Revision Notes" in w and w.startswith("01-task:")
+                   for w in warnings)
+
+    def test_validate_plan_silent_on_implemented_revnote(self, tmp_path):
+        root = tmp_path / ".plan"
+        root.mkdir()
+        self._write(root / "task.md", _task_md_text("Root", "not-started"))
+        d = root / "01-task"
+        d.mkdir()
+        self._write(d / "task.md",
+                    _task_md_text("Task", "implemented", revnote="rework"))
+        warnings = _task_io.validate_plan(root)
+        assert not any("Revision Notes" in w for w in warnings)
+
+    def test_validate_plan_silent_on_fenced_header(self, tmp_path):
+        root = tmp_path / ".plan"
+        root.mkdir()
+        self._write(root / "task.md", _task_md_text("Root", "not-started"))
+        d = root / "01-task"
+        d.mkdir()
+        fenced = (
+            "## Objective\n\nSee format:\n\n"
+            "```\n## Revision Notes\n\nquoted\n```\n"
+        )
+        fm = (
+            'title: "Task"\nstatus: approved\ndepends_on: []\n'
+            "tags: []\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+        )
+        self._write(d / "task.md", f"---\n{fm}---\n\n{fenced}")
+        warnings = _task_io.validate_plan(root)
+        assert not any("Revision Notes" in w for w in warnings)
+
+
 
 # --- Archived status tests ---
 

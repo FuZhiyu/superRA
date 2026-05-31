@@ -6,7 +6,7 @@ user-invocable: true
 
 # Report in Markdown
 
-The markdown style guide for any agent writing markdown. Use the rule below for source-file citations; load references only when the output needs figures, LaTeX math, tables, or final-form results guidance.
+The markdown style guide for any agent writing markdown. Use the rule below for source-file citations; load references only when the output needs figures, LaTeX math, tables, or standalone-report IO.
 
 ## File-reference rule
 
@@ -26,8 +26,8 @@ Resolve paths **relative to the markdown file's directory** (use `../` as needed
 |---|---|
 | Implementer / reviewer writing routine task-block citations only | nothing beyond this file |
 | Implementer writing a task `## Results` section with figures / math / tables | `rich-content.md` |
-| `superintegrate` Document doc-writer subagent | `baseline-io.md` + `rich-content.md` + `final-form.md` |
-| `superintegrate` Document doc-reviewer subagent | `final-form.md` |
+| `superintegrate` Document doc-writer subagent | `rich-content.md` when figures / math / tables are in scope |
+| `superintegrate` Document doc-reviewer subagent | nothing beyond this file unless figures / math / tables are in scope |
 | Standalone markdown report (any context) | `baseline-io.md` + `rich-content.md` |
 
 The `attachments/` directory is a caller parameter; defaults and fallbacks are in `references/rich-content.md` §Figures.
@@ -36,4 +36,3 @@ The `attachments/` directory is a caller parameter; defaults and fallbacks are i
 
 - `references/baseline-io.md` — frontmatter spec, filename convention, output-path resolution. Permanent artifacts only.
 - `references/rich-content.md` — figure handling (PDF→PNG, relative-path embedding), LaTeX math, markdown tables.
-- `references/final-form.md` — final results consolidation: fact-check checklist, task-indexed → reader-facing restructure, figure materialization, relocation.

@@ -1,6 +1,6 @@
 ---
 title: "Task tree consolidation"
-status: not-started
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-26
@@ -19,7 +19,7 @@ Proactive consolidation sweep over the current task tree to clear accumulated st
 
 **4. Reconcile stored vs computed status.** `task_check.py` flags `migration` storing `status: approved` while its child rolls up to `not-started`. Also investigate `section-expand-uncap` (status `not-started`, but commit `4372f68` "impl: uncap task/section height after expand" suggests it was implemented and the status was never flipped). Recompute and persist correct branch statuses tree-wide so every stored parent status matches `compute_status()`.
 
-**5. Flatten redundant nesting.** `migration` is a single-child parent (`deprecate-planmd-refs`) that adds no context beyond its child. Absorb the child into the parent, or leave it if `migration` is intended as a grouping for future migration tasks — orchestrator's call at survey time.
+**5. Flatten redundant nesting.** At survey time, `migration` had a single child that added no migration-task context beyond its child. Absorb such child work into the parent, or leave it if `migration` is intended as a grouping for future migration tasks — orchestrator's call at survey time.
 
 **Scope note.** The survey must cover the full current tree. The newly added `dynamic-workflows` workstream (4 tasks) has clean linear `depends_on` and needs no consolidation. The completed `status-consolidation` subtree's only residue is the stale fields in item 3.
 
@@ -30,13 +30,12 @@ Proactive consolidation sweep over the current task tree to clear accumulated st
 - No standalone task directory whose sole content is one completed bug fix; each such fix is a one-line entry in the `live-server` Fixes log.
 - All component subtasks and their `## Results` records are preserved intact.
 
-## Revision Notes
-
-Objective rewritten 2026-05-30 against the current tree (substantive). Deltas from the original:
-- Dependency-error count corrected 13 → 16 (current `task_check.py` output).
-- Original item (3) "mark 3 unreviewed test tasks as `review_status: approved`" is **obsolete** — `status-consolidation` removed `review_status` / `integration_status` from the data model. Replaced with item 3 (remove stale residual fields) and item 4 (reconcile stored-vs-computed status).
-- Original item (2) "merge 9 tiny tasks into 2 groups" reframed per researcher decision: completed single-fix tasks become one-line entries in the parent's Fixes log rather than standalone tasks or merged groups; component subtasks stay as tasks.
-- Added flatten item (5) for the single-child `migration` parent and a scope note covering the newly added `dynamic-workflows` workstream.
-- Removed this task's own stale `review_status` / `integration_status` frontmatter fields.
-
 ## Results
+
+Executed in commit `501e43f`. `task_check.py --plan-root .plan`: 25 issues → **0** (verification gate passed).
+
+- **Dependency errors (16 → 0).** Stripped the `../` prefix from every `depends_on` in the `live-server` subtree (`comments`, `comments/comment-ui`, `comments/agent-cli`, `live-reload`, `templates`, `cli-entry`, `tests`); all now name bare direct siblings. Removed `live-server`'s malformed bare `../` (set `depends_on: []` — it had no real dependency).
+- **Collapsed 8 single-fix tasks** into a `### Fixes` log in `live-server`'s `## Results`, one line + commit ref each, then deleted their directories: `section-rendering-fixes`, `math-template-escaping`, `comment-badge-walkup-fix`, `relative-path-resolution`, `rebuild-discovers-children`, `status-consistency`, `root-task-rendering`, and the placeholder `section-expand-uncap` (whose fix had shipped in `4372f68` but was never written up). Repointed `status-rollup-propagation` off its now-deleted `status-consistency` dependency. Component subtasks (`server`, `templates`, `live-reload`, `cli-entry`, `comments`, `math-rendering`, `deterministic-port`, `status-rollup-propagation`, `state-preservation`, `tests`) preserved with their results intact.
+- **Stale fields removed** from the `state-preservation` subtree (`state-preservation` + `capture-restore`, `structural-reload`, `tests`) — residual `review_status`/`integration_status` the `status-consolidation` migration missed. Left `status` as-is (no auto-promotion); the `implemented` children correctly roll up to an `in-progress` parent.
+- **Restructure (revised from "flatten").** Survey found `migration` is a substantive *completed* task, not a hollow single-child parent. The follow-up PLAN.md/RESULTS.md deprecation work was first promoted out of `migration`, then later consolidated into the existing [planning-redesign/planmd-sweep](../planning-redesign/planmd-sweep/task.md) task.
+- **Scope confirmed clean:** the newly added `dynamic-workflows` workstream needed no consolidation.
