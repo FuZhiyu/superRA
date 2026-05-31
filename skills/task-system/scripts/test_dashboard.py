@@ -671,22 +671,29 @@ class TestTemplateRendering:
         result = env.filters["file_url"]("images/fig1.png")
         assert result == "/files/images/fig1.png"
 
-    def test_template_escapes_closing_template_tag(self, plan_root):
-        """</template> in markdown content should be escaped."""
+    def test_script_payload_escapes_closing_script_tag(self, plan_root):
+        """</script> in markdown content must be escaped so it cannot break out
+        of the <script type="text/x-markdown"> payload container.
+
+        (The payload used to live in a <template> element — hence the old test
+        name — but was moved to a <script type="text/x-markdown"> tag, whose
+        only breakout sequence is </script>.)
+        """
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard._project_root = str(plan_root.parent)
 
-        # Write a task whose body contains </template>
+        # Write a task whose body contains a literal </script>
         task_md = plan_root / "01-first" / "task.md"
         content = task_md.read_text()
-        content = content.replace("Complete step 1.", "Use </template> tag in code.")
+        content = content.replace("Complete step 1.", "Use </script> tag in code.")
         task_md.write_text(content)
         plan_dashboard.rebuild_tree()
 
         task = plan_dashboard._task_index["01-first"]
         html = plan_dashboard._render_task_node(task)
-        # The raw </template> should be escaped
-        assert "&lt;/template&gt;" in html
+        # The content's </script> is backslash-escaped to <\/script> so it does
+        # not prematurely close the payload container.
+        assert "<\\/script>" in html
 
     def test_kanban_has_6_status_columns(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
