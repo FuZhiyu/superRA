@@ -241,59 +241,40 @@ async def _watch_plan_root() -> None:
                 changed_paths.add(task_path)
 
         if structural_parent_paths:
-            # Rebuild full tree for consistency, then broadcast parent fragments
+            # A task dir was added or deleted: the tree shape changed. The
+            # master-detail client rebuilds its whole sidebar and restores
+            # activePath on full-reload, so a single full-reload is both the
+            # correct and the simplest signal here — no per-parent fragment
+            # juggling, no descendant fold/highlight to preserve by hand.
             rebuild_tree()
-
+            await _broadcast("full-reload", "{}")
             if _root_task is not None:
-                for parent_path in structural_parent_paths:
-                    if parent_path == "" and not (_root_task.body and _root_task.body.strip()):
-                        # Root-level structural change but root has no body
-                        # node in DOM — fall back to full-reload so the
-                        # client's AJAX handler re-fetches /tree.
-                        await _broadcast("full-reload", "{}")
-                        break
-                    parent_task = _task_index.get(parent_path)
-                    if parent_task is not None:
-                        fragment = _render_task_node(parent_task)
-                        await _broadcast(f"task:{parent_path}", fragment)
-                    else:
-                        # Parent not in index (inconsistent state) —
-                        # fall back to full-reload
-                        await _broadcast("full-reload", "{}")
-                        break
-
                 summary_html = _render_summary()
                 await _broadcast("summary-updated", summary_html)
 
-        # Process content-only changes (skip paths already covered by
-        # structural parent broadcasts)
+        # Process content-only changes (skip paths already covered by the
+        # structural full-reload above).
         content_paths = changed_paths - structural_parent_paths
         if content_paths:
             any_children_changed = False
-            children_changed_paths: set[str] = set()
 
             for task_path in content_paths:
                 updated, children_changed = rebuild_task(task_path)
                 if children_changed:
+                    # A task.md edit that changes this task's own child set is
+                    # structural too — let the client rebuild the sidebar.
                     any_children_changed = True
-                    children_changed_paths.add(task_path)
                 elif updated is not None and _root_task is not None:
-                    fragment = _render_task_node(updated)
+                    # Pure content edit: swap the body-free sidebar row. The
+                    # client's active-card / children-DAG refresh keys off the
+                    # event name, not this fragment, so a nav (no-body) row is
+                    # the cheap, correct payload for the declarative sse-swap.
+                    fragment = _render_nav_node(updated)
                     await _broadcast(f"task:{task_path}", fragment)
 
             if any_children_changed:
-                # Re-render each task whose children changed instead of
-                # falling back to full-reload
                 rebuild_tree()
-                if _root_task is not None:
-                    for task_path in children_changed_paths:
-                        task = _task_index.get(task_path)
-                        if task is not None:
-                            fragment = _render_task_node(task)
-                            await _broadcast(f"task:{task_path}", fragment)
-                        else:
-                            await _broadcast("full-reload", "{}")
-                            break
+                await _broadcast("full-reload", "{}")
 
             if content_paths and _root_task is not None:
                 summary_html = _render_summary()

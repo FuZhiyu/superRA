@@ -1645,6 +1645,11 @@ async function loadNavTree() {
     container.innerHTML = await resp.text();
     markLazyNodes();
     indexNavTitles(container);
+    /* Bind the freshly-injected rows' declarative sse-swap="task:<path>" to the
+       live EventSource. htmx only wires sse-swap elements it has processed, and
+       innerHTML injection bypasses that — so process the new subtree explicitly.
+       Without this the sidebar never live-updates on a task:<path> event. */
+    if (window.htmx) htmx.process(container);
   } catch (e) { /* best-effort: a failed sidebar must not block the router */ }
 }
 
@@ -1738,6 +1743,8 @@ async function loadNavChildren(node) {
     children.innerHTML = await resp.text();
     markLazyNodes();
     indexNavTitles(children);
+    /* Wire the lazily-loaded rows' sse-swap to the EventSource (see loadNavTree). */
+    if (window.htmx) htmx.process(children);
     return true;
   } catch (e) { return false; }
 }
@@ -1807,280 +1814,123 @@ function showTreeAndExpand(path) { return revealTask(path); }
 /* ── Initialize mermaid ── */
 mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
 
-/* ── UI state capture/restore across SSE outerHTML swaps ── */
-var _pendingSwapState = {};  /* taskPath -> captured UI state, lives between before/after events */
+/* ════════════════════════════════════════════════════════════════════════
+   Live reload — the single-active-node SSE model.
+   ──────────────────────────────────────────────────────────────────────
+   Under master-detail the only open, detailed node is `activePath`; every
+   other node is a body-free sidebar row. So the heavy capture/restore tree
+   machinery is gone — the only state to preserve across a `task:<path>` echo
+   is "is this the active card?" (re-fetch /node and re-render) and "is its
+   parent the active node?" (re-render the children-DAG). htmx still owns the
+   declarative `sse-swap="task:<path>"` outerHTML swap on each sidebar row and
+   the summary bar; nothing here calls setActive from the server channel.
 
-/**
- * Capture the UI state of a task node and all its descendants before
- * an outerHTML swap destroys the DOM subtree.
- */
-function captureNodeState(node) {
-  var state = {
-    expandedPaths: [],    /* data-path values of expanded task toggles */
-    openSections: {},     /* { taskPath: [sectionName, ...] } */
-    childrenVisible: [],  /* data-path values where .task-children is visible */
-    renderedSections: {}, /* { taskPath: [sectionName, ...] } — sections with rendered markdown */
-    scrollTop: 0,
-    commentFormDrafts: {} /* { taskPath: textareaValue } — save any in-flight comment text */
-  };
+   Three watcher events (plan_dashboard.py): `task:<path>` (content edit,
+   payload = body-free nav row), `summary-updated` (header bar, htmx-only),
+   and `full-reload` (structural add/delete or worktree switch).
+   ════════════════════════════════════════════════════════════════════════ */
 
-  /* Capture scroll position of .main-content (nearest scrollable ancestor) */
-  var scrollContainer = document.querySelector('.main-content');
-  if (scrollContainer) {
-    state.scrollTop = scrollContainer.scrollTop || window.scrollY;
-  }
-
-  /* Walk all task nodes within this subtree (including the node itself) */
-  var taskNodes = [node];
-  var descendants = node.querySelectorAll('.task-node');
-  for (var i = 0; i < descendants.length; i++) taskNodes.push(descendants[i]);
-
-  for (var j = 0; j < taskNodes.length; j++) {
-    var tn = taskNodes[j];
-    var path = tn.dataset.path;
-    if (!path) continue;
-
-    /* Expanded task toggles */
-    var toggle = tn.querySelector(':scope > .task-row > .task-toggle');
-    if (toggle && toggle.classList.contains('expanded')) {
-      state.expandedPaths.push(path);
-    }
-
-    /* Children visibility */
-    var children = tn.querySelector(':scope > .task-children');
-    if (children && children.style.display !== 'none') {
-      state.childrenVisible.push(path);
-    }
-
-    /* Open sections and rendered markdown state */
-    var sectionEls = tn.querySelectorAll(':scope > .task-body [data-section]');
-    for (var k = 0; k < sectionEls.length; k++) {
-      var sectionEl = sectionEls[k];
-      var sectionName = sectionEl.getAttribute('data-section');
-      var content = sectionEl.querySelector('.section-content');
-      if (content && content.classList.contains('open')) {
-        if (!state.openSections[path]) state.openSections[path] = [];
-        state.openSections[path].push(sectionName);
-
-        /* Check if markdown was rendered */
-        var renderedMd = content.querySelector('.rendered-md');
-        if (renderedMd && renderedMd.dataset.rendered === 'true') {
-          if (!state.renderedSections[path]) state.renderedSections[path] = [];
-          state.renderedSections[path].push(sectionName);
-        }
-      }
-    }
-
-    /* Save comment form draft text if any (multiple forms possible, keyed by section+block) */
-    var commentForms = tn.querySelectorAll(':scope > .task-body .comment-form textarea');
-    for (var fi = 0; fi < commentForms.length; fi++) {
-      var cfTa = commentForms[fi];
-      if (!cfTa.value.trim()) continue;
-      var cfBlock = cfTa.closest('.commentable-block');
-      if (!cfBlock) continue;
-      var cfSection = cfBlock.getAttribute('data-section') || '';
-      var cfBlockIdx = cfBlock.getAttribute('data-block') || '0';
-      if (!state.commentFormDrafts[path]) state.commentFormDrafts[path] = [];
-      state.commentFormDrafts[path].push({
-        section: cfSection,
-        blockIndex: cfBlockIdx,
-        text: cfTa.value
-      });
-    }
-  }
-
-  return state;
+/* parent('a/b/c') -> 'a/b'; parent('a') -> '' (root); parent('') -> null. */
+function parentPath(path) {
+  if (!path) return null;
+  var i = path.lastIndexOf('/');
+  return i === -1 ? '' : path.slice(0, i);
 }
 
-/**
- * Restore captured UI state onto a newly swapped task node.
- */
-function restoreNodeState(node, state) {
-  if (!state) return;
-
-  /* Build lookup of all task nodes in the new subtree */
-  var allNodes = [node];
-  var descendants = node.querySelectorAll('.task-node');
-  for (var i = 0; i < descendants.length; i++) allNodes.push(descendants[i]);
-
-  var nodesByPath = {};
-  for (var j = 0; j < allNodes.length; j++) {
-    var p = allNodes[j].dataset.path;
-    if (p) nodesByPath[p] = allNodes[j];
+/* A task:<path> content edit arrived (dispatched from sseBeforeMessage, i.e. just
+   *before* htmx swaps that path's body-free sidebar row). The fresh nav fragment
+   carries no nav-active class, so the active highlight is wiped when the active
+   row is the one swapped. Refresh only the detail-panel parts that depend on the
+   changed task:
+     - path === activePath  -> re-render the active card by re-running
+       loadActiveNode (same /node fetch + section render + loadComments pipeline
+       as a fresh navigation, without touching activePath / history), and re-assert
+       the nav-active highlight the imminent row swap will clear. The highlight
+       reads the row htmx is about to replace, so defer it past the swap.
+     - parent(path) === activePath -> re-render the children-DAG (the changed
+       task is a sibling shown in the graph). loadChildrenDag's own
+       (path, child-status-signature) cache makes this a no-op when nothing
+       graph-relevant changed. The DAG re-renders from a fresh /dag fetch, so it
+       is safe to start immediately. */
+function onTaskUpdate(path) {
+  if (path === activePath) {
+    loadActiveNode(path);
+    /* Run after htmx's outerHTML row swap detaches the current row, so the
+       highlight lands on the freshly-swapped (unhighlighted) replacement row. */
+    setTimeout(function() { if (path === activePath) updateSidebar(path); }, 0);
+  } else if (parentPath(path) === activePath) {
+    loadChildrenDag(activePath);
   }
+}
 
-  /* Restore expanded state and children visibility */
-  for (var ei = 0; ei < state.expandedPaths.length; ei++) {
-    var ePath = state.expandedPaths[ei];
-    var eNode = nodesByPath[ePath];
-    if (!eNode) continue;
-
-    var toggle = eNode.querySelector(':scope > .task-row > .task-toggle');
-    var body = eNode.querySelector(':scope > .task-body');
-    var children = eNode.querySelector(':scope > .task-children');
-
-    if (toggle && !toggle.classList.contains('leaf')) {
-      toggle.classList.add('expanded');
-    }
-    if (body) { body.classList.add('open'); body.classList.add('uncapped'); }
-    if (children && state.childrenVisible.indexOf(ePath) >= 0) {
-      children.style.display = '';
-    }
+/* ── full-reload: structural add/delete, or worktree switch ──
+   The tree shape changed, so rebuild the whole sidebar from /nav, then re-run
+   setActive(activePath) to restore highlight + breadcrumb + main panel + folds.
+   If activePath no longer exists, fall back to its nearest surviving ancestor
+   and replaceState the corrected hash (no new history entry — this is a server
+   signal, not a user navigation). */
+async function onFullReload() {
+  var wanted = activePath;
+  await loadNavTree();
+  var target = resolveSurvivingPath(wanted);
+  restoring = true;
+  if (target !== wanted) {
+    history.replaceState({ path: target }, '', '#/' + target);
   }
+  setActive(target);
+  restoring = false;
+}
 
-  /* Restore open sections */
-  for (var sPath in state.openSections) {
-    var sNode = nodesByPath[sPath];
-    if (!sNode) continue;
-
-    var sectionNames = state.openSections[sPath];
-    for (var si = 0; si < sectionNames.length; si++) {
-      var sName = sectionNames[si];
-      var sectionWrapper = sNode.querySelector(':scope > .task-body [data-section="' + sName + '"]');
-      if (!sectionWrapper) continue;
-
-      var content = sectionWrapper.querySelector('.section-content');
-      var icon = sectionWrapper.querySelector('.section-icon');
-      var preview = sectionWrapper.querySelector('.section-preview');
-
-      if (content) { content.classList.add('open'); content.classList.add('uncapped'); }
-      if (icon) icon.classList.add('expanded');
-      if (preview) preview.style.display = 'none';
-
-      /* Re-render markdown if it was previously rendered */
-      var shouldRender = state.renderedSections[sPath] &&
-                         state.renderedSections[sPath].indexOf(sName) >= 0;
-      if (shouldRender) {
-        var renderedMd = content ? content.querySelector('.rendered-md') : null;
-        if (renderedMd) {
-          var tmpl = renderedMd.querySelector('script[type="text/x-markdown"]');
-          if (tmpl) {
-            var taskPath = sNode.dataset.path || '';
-            renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sName, taskPath);
-            renderedMd.dataset.rendered = 'true';
-          }
-        }
-      }
-    }
+/* Nearest still-present path at or above `path`, by walking up until a nav row
+   exists; '' (root) always survives. The sidebar tree has just been reloaded,
+   so a missing row means that task dir was deleted. */
+function resolveSurvivingPath(path) {
+  var p = path;
+  while (p) {
+    if (document.getElementById(navNodeId(p))) return p;
+    p = parentPath(p);
   }
-
-  /* Restore comment form drafts */
-  for (var draftPath in state.commentFormDrafts) {
-    var draftNode = nodesByPath[draftPath];
-    var drafts = state.commentFormDrafts[draftPath];
-    if (!draftNode || !drafts) continue;
-
-    for (var di = 0; di < drafts.length; di++) {
-      var draft = drafts[di];
-      /* Find the matching commentable-block in an open section */
-      var targetBlock = draftNode.querySelector(
-        '.commentable-block[data-section="' + draft.section + '"][data-block="' + draft.blockIndex + '"]'
-      );
-      if (targetBlock) {
-        /* Re-create the comment form via the gutter button */
-        var gutterBtn = targetBlock.querySelector('.comment-gutter-btn');
-        if (gutterBtn) {
-          showCommentForm(gutterBtn);
-          var restoredTa = targetBlock.querySelector('.comment-form textarea');
-          if (restoredTa) restoredTa.value = draft.text;
-        }
-      } else {
-        /* Block not found (section not yet rendered or structure changed).
-           Save to sessionStorage so the user can recover their draft. */
-        var storageKey = 'commentDraft::' + draftPath + '::' + draft.section + '::' + draft.blockIndex;
-        try { sessionStorage.setItem(storageKey, draft.text); } catch(e) { /* ignore quota errors */ }
-      }
-    }
-  }
-
-  /* Re-load comments for expanded tasks (outerHTML swap wipes loaded comment threads) */
-  for (var ci = 0; ci < state.expandedPaths.length; ci++) {
-    var cPath = state.expandedPaths[ci];
-    if (nodesByPath[cPath]) {
-      loadComments(cPath);
-    }
-  }
-
-  /* Restore scroll position */
-  var scrollContainer = document.querySelector('.main-content');
-  if (scrollContainer && state.scrollTop) {
-    /* Use requestAnimationFrame to ensure layout is settled */
-    requestAnimationFrame(function() {
-      scrollContainer.scrollTop = state.scrollTop;
-      /* Fallback for window scroll */
-      if (scrollContainer.scrollTop === 0 && state.scrollTop > 0) {
-        window.scrollTo(0, state.scrollTop);
-      }
-    });
-  }
+  return '';  /* root */
 }
 
 /* ── Comment UI: suppress SSE node-swap after local comment changes ── */
 var _commentEditPaths = {};  /* taskPath -> timestamp of last local comment op */
 var _activeCommentEdit = null; /* { save: fn, cancel: fn, textarea: el } — at most one open editor */
 
-/* ── htmx SSE pre-message: capture state before swap, suppress after local comment edits ── */
+/* ── htmx SSE pre-message: the single dispatch point for task:<path> edits ──
+   htmx owns the declarative `sse-swap="task:<path>"` swap of the body-free
+   sidebar row. We hook sseBeforeMessage (not sseMessage) because the row swap is
+   `hx-swap="outerHTML"`: htmx fires sseMessage on the *old* element AFTER it has
+   been detached by the swap, so a body-level sseMessage listener never sees it.
+   sseBeforeMessage fires on the still-attached row, before the swap, and bubbles
+   to body — so it's the reliable place to react.
+
+   event.target is the matched sidebar row (data-path); event.data is the new
+   body-free fragment. Two responsibilities:
+     1. Comment-edit suppression: a local comment write records a timestamp in
+        _commentEditPaths; when the watcher's own echo for that path lands within
+        3s, preventDefault so htmx doesn't clobber the freshly-edited row, clear
+        the window, and skip the detail-panel refresh (re-fetching /node mid-edit
+        would clobber the open editor).
+     2. Detail-panel refresh: otherwise dispatch onTaskUpdate. The active-card and
+        children-DAG refreshes are independent fetches, but re-asserting the
+        nav-active highlight reads the row the swap is about to replace, so that
+        part is deferred to after the swap (see onTaskUpdate). */
+function withinCommentEditWindow(taskPath) {
+  var ts = _commentEditPaths[taskPath];
+  return !!(ts && (Date.now() - ts) < 3000);
+}
 document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
-  /* event.target is the task-node element that matched sse-swap */
-  var taskPath = event.target && event.target.dataset ? event.target.dataset.path : '';
-  if (taskPath) {
-    /* Suppress swap if we just did a local comment edit */
-    var ts = _commentEditPaths[taskPath];
-    if (ts && (Date.now() - ts) < 3000) {
-      event.preventDefault();
-      delete _commentEditPaths[taskPath];
-      return;
-    }
-
-    /* Capture UI state before the swap destroys the DOM */
-    _pendingSwapState[taskPath] = captureNodeState(event.target);
+  var taskPath = event.target && event.target.dataset ? event.target.dataset.path : undefined;
+  if (taskPath === undefined) return;  /* not a sidebar row (summary bar / full-reload) */
+  if (withinCommentEditWindow(taskPath)) {
+    event.preventDefault();
+    delete _commentEditPaths[taskPath];
+    return;
   }
-});
-
-/* ── htmx afterSwap: restore UI state and render markdown after SSE swap ── */
-document.body.addEventListener('htmx:afterSwap', function(event) {
-  var target = event.detail.target;
-
-  /* For outerHTML swaps, target may be the new element or its parent.
-     Resolve to the actual .task-node with pending state. */
-  var taskPath = target.dataset ? target.dataset.path : '';
-  var restoreTarget = null;
-
-  if (taskPath && _pendingSwapState[taskPath]) {
-    restoreTarget = target;
-  } else {
-    /* Check if a child .task-node has pending state (outerHTML target = parent) */
-    for (var pendingPath in _pendingSwapState) {
-      var candidate = target.querySelector('.task-node[data-path="' + pendingPath + '"]');
-      if (candidate) {
-        restoreTarget = candidate;
-        taskPath = pendingPath;
-        break;
-      }
-    }
-  }
-
-  if (restoreTarget && taskPath && _pendingSwapState[taskPath]) {
-    var state = _pendingSwapState[taskPath];
-    delete _pendingSwapState[taskPath];
-    restoreNodeState(restoreTarget, state);
-    return; /* restoreNodeState handles markdown rendering for restored sections */
-  }
-
-  /* Fallback: render markdown in any sections that are already open (e.g. htmx AJAX loads) */
-  target.querySelectorAll('.section-content.open .rendered-md').forEach(function(el) {
-    if (!el.dataset.rendered) {
-      var tmpl = el.querySelector('script[type="text/x-markdown"]');
-      if (tmpl) {
-        var sectionWrapper = el.closest('[data-section]');
-        var sectionName = sectionWrapper ? sectionWrapper.getAttribute('data-section') : '';
-        var taskNode = el.closest('.task-node');
-        var taskPath = taskNode ? taskNode.dataset.path : '';
-        el.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
-        el.dataset.rendered = 'true';
-      }
-    }
-  });
+  onTaskUpdate(taskPath);
+  /* Recompute the sidebar comment-count badges after the row swap settles. */
+  setTimeout(updateTreeCommentBadges, 100);
 });
 
 /* ── Worktree selector ── */
@@ -2145,35 +1995,15 @@ function switchWorktree(planRoot) {
 /* Fetch worktrees on page load */
 fetchWorktrees();
 
-/* ── SSE full-reload: structural changes (task added/deleted) ── */
+/* ── SSE full-reload: structural changes (task added/deleted, worktree switch) ──
+   #sse-full-reload carries hx-swap="none", so htmx never mutates the DOM for this
+   event — the sse extension calls api.swap with a none-spec and fires no
+   htmx:beforeSwap. The reliable signal is htmx:sseBeforeMessage on the element
+   itself (the same hook task:<path> rows use); use it purely as a trigger to
+   rebuild the sidebar and restore activePath. */
 var fullReloadEl = document.getElementById('sse-full-reload');
 if (fullReloadEl) {
-  fullReloadEl.addEventListener('htmx:beforeSwap', function(event) {
-    /* hx-swap="none" on #sse-full-reload means htmx won't touch the DOM;
-       we use the event purely as a signal to do our own AJAX tree refresh. */
-
-    var treeContainer = document.getElementById('view-tree');
-    if (!treeContainer) { location.reload(); return; }
-
-    /* Capture state from all task nodes in the tree */
-    var mergedState = captureNodeState(treeContainer);
-
-    /* Fetch fresh tree HTML and swap it in */
-    fetch('/tree')
-      .then(function(resp) {
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        return resp.text();
-      })
-      .then(function(html) {
-        treeContainer.innerHTML = html;
-        /* Restore state on the new tree nodes */
-        restoreNodeState(treeContainer, mergedState);
-      })
-      .catch(function() {
-        /* AJAX failed — hard reload as last resort */
-        location.reload();
-      });
-  });
+  fullReloadEl.addEventListener('htmx:sseBeforeMessage', function() { onFullReload(); });
 }
 
 /* ── Comment UI functions ── */
@@ -2601,21 +2431,6 @@ function deleteComment(taskPath, commentId, btn) {
   fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'DELETE' })
     .then(function(resp) { if (resp.ok) loadComments(taskPath); });
 }
-
-/* ── SSE: re-fetch comments when a task updates and sections are open ── */
-document.body.addEventListener('htmx:sseMessage', function(event) {
-  var evtName = event.detail.type || '';
-  if (evtName.startsWith('task:')) {
-    var taskPath = evtName.substring(5);
-    var taskNode = commentTaskNode(taskPath);
-    if (taskNode && taskNode.querySelector('.section-content.open')) {
-      /* Short delay to let the SSE swap finish rendering first */
-      setTimeout(function() { loadComments(taskPath); }, 200);
-    }
-    /* Re-calculate tree-level comment badges on any task change */
-    setTimeout(function() { updateTreeCommentBadges(); }, 300);
-  }
-});
 
 /* ── Page load: populate the sidebar, then start the hash router ──
    The nav rows must exist before initRouter's first setActive so the active
