@@ -1,6 +1,6 @@
 ---
 title: "Main panel — active-node card + children card flow"
-status: implemented
+status: approved
 depends_on:
   - server-partials
   - routing-shell
@@ -32,10 +32,6 @@ Fetch `GET /dag?root={path}` ([`plan_dashboard.py`](../../../../../skills/task-s
 - Comment gutters and markdown (links rewritten to `vscode://`, images via `/files/`) work in the card exactly as in the old tree body.
 - Navigating back to a previously viewed node restores the cards from cache without recomputing; a child whose status changed busts the cache and re-renders.
 - No references remain to `mermaid`, `mermaid.run`, `mermaid.initialize`, `wireDagNodeClicks`, or the mermaid CDN script; the children panel renders cards only. `node --check` on the main script passes; live-server drive (HTTP + headless browser where available) shows the full drill loop with no console errors. `pytest skills/task-system/scripts/test_task_system.py` still passes.
-
-## Revision Notes
-
-**2026-05-31 — substantive (children render reworked; user feedback).** The children panel previously rendered a **mermaid dependency graph** whenever a parent's children had inter-child edges, and the flat card grid otherwise. The researcher dislikes the mermaid drawing and wants the cards used uniformly. The dependency case now renders the **same `.child-card`s in a layered topological flow** with per-card `↳ after:` dependency footers (Option A of the layout choice; the researcher delegated the pick), and **mermaid is removed from the page entirely**. The flat-grid (no-dependency) case and the whole `loadActiveNode` card are unchanged. Confirmed scope: only **direct** children are shown — no recursion. The `## Results` below describes the prior mermaid implementation and is stale for the children panel until re-implemented (the active-node-card portion of it still holds).
 
 ## Results
 
