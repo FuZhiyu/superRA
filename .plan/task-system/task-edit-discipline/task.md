@@ -1,6 +1,6 @@
 ---
 title: "Task Edit Discipline — Manual Move + Edit-Path Guidance"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-30
@@ -30,7 +30,3 @@ Background facts that motivate the change, already established:
 In scope: `skills/task-system/scripts/task_hook.py`, `skills/task-system/scripts/_task_io.py` (the new `validate_plan` warning rule), `hooks/hooks.json`, the task-system test suite, `skills/task-system/SKILL.md`, and `skills/task-system/references/planning.md` (one-line doc note). Out of scope and explicitly NOT to be expanded into here: the static `dashboard.html` generation cleanup, and bringing Codex/Cursor hook variants to task-validation parity (those variants do not wire `task_hook.py` at all today — see `move-hook` task).
 
 **No generated artifacts are affected.** With the revision-note work reduced to a non-destructive warning, `agents/reviewer.md` is no longer touched (the reviewer keeps the removal duty), so the generated reviewer references (`direct-mode-reviewer.md`, `.codex/agents/superra_reviewer.toml`) need no regeneration.
-
-## Revision Notes
-
-Scope addition then narrowing across 2026-05-30 → 2026-05-31. First (05-30) added revision-note lifecycle *automation* as two subtasks (`revnote-status-sync` + `revnote-docs`). Then (05-31), after first-pass review found a CRITICAL data-loss path in the auto-mutation (a stateless post-hoc hook destroys a planner's freshly added note in the uncommitted-approval window), the researcher chose warn-only with no mutation. The two subtasks collapsed to one — `revnote-warning` (renamed from `revnote-status-sync` via `git mv`); `revnote-docs` was deleted (reviewer keeps the removal duty → no reviewer-spec edit, no Codex regen). `move-hook` and `skill-guidance` remain approved and unchanged. Cleaned when the parent's children are approved.
