@@ -1,6 +1,6 @@
 ---
 title: "Simplify live-reload to the single-active-node model"
-status: implemented
+status: approved
 depends_on:
   - sidebar-nav
   - main-panel
