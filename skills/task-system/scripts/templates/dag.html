@@ -8,7 +8,7 @@
     Nodes are clickable: each maps back to its task path and, on click, calls
     the shared `revealTask(path)` primitive (from navigate-to-task) to open the
     task in the tree view. Click wiring is done in JS after mermaid renders
-    (see renderDagView in base.html), using the node_id -> path map emitted on
+    (see wireDagNodeClicks in base.html), using the node_id -> path map emitted on
     the .dag-controls div's data-node-paths attribute — this keeps the path
     mapping authoritative regardless of any slug collision in the node ids.
 
@@ -63,7 +63,7 @@
 {% for t in all_tasks %}{% if t.path %}{% set _ = titles.map.update({t.path: t.title}) %}{% endif %}{% endfor %}
 
 {#- Authoritative node_id -> task path map for click wiring (consumed by
-    renderDagView in base.html after mermaid renders). Stored as a data
+    wireDagNodeClicks in base.html after mermaid renders). Stored as a data
     attribute on the controls div — kept out of the .mermaid element so the
     mermaid parser never ingests it. -#}
 {% set pathmap = {} %}

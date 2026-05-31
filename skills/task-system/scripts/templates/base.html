@@ -990,27 +990,6 @@ function applyFiltersToNode(el, status, search) {
 }
 
 /* ── DAG rendering (mermaid) ── */
-async function renderDagView() {
-  var container = document.getElementById('view-dag');
-  /* Fetch the DAG partial from the server */
-  try {
-    var resp = await fetch('/dag');
-    if (resp.ok) {
-      container.innerHTML = await resp.text();
-      /* Re-run mermaid on the new content */
-      var mermaidEls = container.querySelectorAll('.mermaid');
-      if (mermaidEls.length) {
-        await mermaid.run({ nodes: mermaidEls });
-        wireDagNodeClicks(container);
-      }
-    } else {
-      container.innerHTML = '<p style="color:var(--text-mute)">Could not load DAG view.</p>';
-    }
-  } catch(e) {
-    container.innerHTML = '<p style="color:var(--st-rev-t)">DAG render error: ' + e.message + '</p>';
-  }
-}
-
 /* Make rendered DAG nodes clickable: each node opens its task in the tree via
    the shared revealTask(path) primitive. The dag.html partial emits an
    authoritative node_id -> task path map; we attach handlers after mermaid
@@ -1205,8 +1184,19 @@ function updateSidebar(path) { /* stub: sidebar-nav */ }
 function loadActiveNode(path) { /* stub: main-panel */ }
 function loadChildrenDag(path) { /* stub: main-panel */ }
 
-/* hashchange / popstate: re-apply the hash without writing new history. */
+/* popstate (back/forward): re-apply the hash without writing new history. */
 window.addEventListener('popstate', function() {
+  restoring = true;
+  setActive(parseHash());
+  restoring = false;
+});
+
+/* hashchange (manual address-bar hash edit): navigate to the new hash without
+   writing new history. setActive's own pushState mutates location.hash and
+   re-fires this event, so no-op when the hash already matches activePath;
+   otherwise apply it in restoring mode (no extra pushState/history entry). */
+window.addEventListener('hashchange', function() {
+  if (parseHash() === activePath) return;
   restoring = true;
   setActive(parseHash());
   restoring = false;
