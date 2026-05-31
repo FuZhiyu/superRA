@@ -1,6 +1,6 @@
 ---
 title: "Design A — inline per-subtree DAG panels"
-status: implemented
+status: approved
 depends_on:
   - navigate-to-task
 tags: []
