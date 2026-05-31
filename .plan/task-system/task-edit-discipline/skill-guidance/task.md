@@ -1,6 +1,6 @@
 ---
 title: "SKILL.md edit-path guidance: direct-edit canonical, CLI as scaffolding, manual move documented"
-status: implemented
+status: approved
 depends_on:
   - move-hook
 tags: []
