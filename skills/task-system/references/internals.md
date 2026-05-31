@@ -78,15 +78,16 @@ It does not use a YAML library — the parser is minimal and purpose-built.
 
 ## Hook Architecture
 
-The task system does not currently ship its own hooks. Frontmatter validation happens inside `parse_task()` at parse time — invalid enum values raise `ValueError`.
+`task_hook.py` is the task system's PostToolUse hook, wired in `hooks/hooks.json` under two matchers:
 
-The dashboard is regenerated automatically by mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) — each calls `plan_dashboard.py` after completing its mutation.
+- **`Edit|Write`** — fires when a `task.md` is edited directly, reconciling from the edited file's plan root.
+- **`Bash`** — fires when a shell command both references `.plan` and contains a filesystem-mutating verb (`mv`, `git mv`, `rm`, `rmdir`, `cp`, `mkdir`), so a plain `mv` reorganization of the tree stays validated. Read-only `.plan` commands (`task_query.py`, `grep .plan`, `.plan/serve`) fail the verb test and early-exit.
 
-Hook integration points for future development:
-- **PostToolUse on Edit/Write** — validate frontmatter when `task.md` is edited directly (currently not wired)
-- **PostToolUse on Edit/Write** — auto-regenerate dashboard after direct edits (currently only mutation scripts trigger this)
+On a match the hook runs the same best-effort reconcile — `validate_plan` (warnings to stderr), `propagate_parent_status`, `generate_dashboard` — each in its own try/except, never blocking, always exit 0. See `task_hook.py` for the gating regexes and plan-root discovery, and `hooks/hooks.json` for the wiring.
 
-The plugin hook configuration lives in `hooks/hooks.json` (Claude Code) and `hooks/hooks-codex.json` (Codex). See those files for the hook wiring format.
+Frontmatter validation also happens inside `parse_task()` at parse time, independent of the hook — invalid enum values raise `ValueError`. The mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) still rebuild the dashboard themselves after their mutation, so the dashboard stays current whether a task is changed by direct edit, by `mv`, or through a CLI.
+
+The Codex and Cursor hook configs (`hooks/hooks-codex.json`, `hooks/hooks-cursor.json`) do not wire `task_hook.py` at all; task-validation parity for those harnesses is unimplemented.
 
 ## Migration: `plan_migrate.py`
 
