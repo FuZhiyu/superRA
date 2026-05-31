@@ -1,6 +1,6 @@
 ---
 title: "Three-region shell + activePath hash router"
-status: implemented
+status: revise
 depends_on:
   - server-partials
 tags: []
@@ -63,3 +63,11 @@ The master-detail shell and the `activePath` hash router are in place in [`base.
 - `py_compile` clean; `pytest test_task_system.py` 152 passed; `pytest test_dashboard.py` 56 passed (the one remaining failure, `test_template_escapes_closing_template_tag`, is **pre-existing** — red on the base commit before this change, unrelated to the shell).
 
 **Test updated.** `test_index_contains_task_nodes` asserted the index embedded the server-rendered task-node tree; that contract changed (the tree now loads client-side from `/nav`). Renamed to `test_index_contains_workspace_shell` and re-pointed it at the shell regions + the Workspace/Kanban toggle (and the absence of `#btn-dag`).
+
+## Review Notes
+
+Verified independently: tests `57/57` (`test_dashboard.py`) + `152/152` (`test_task_system.py`) green on HEAD; rendered page script passes `node --check`; a mock-DOM harness confirms the router contract the dispatch flagged — `initRouter("")` → `replaceState` only and normalizes to `#/`; user `setActive('a/b/c')` → exactly one `pushState`; BACK via `popstate` → no `pushState`/`replaceState` (no double history entry); re-`setActive` of the current path → no `pushState` (the `location.hash !== hash` guard works); the active crumb is correctly inert (`disabled`); no SSE handler calls `setActive` (clean boundary). All CSS tokens used by the new workspace/breadcrumb styles are defined in both themes.
+
+1. **MAJOR** — [base.html:1208](../../../../../skills/task-system/scripts/templates/base.html#L1208): the `hashchange` listener named in the Objective ("Wire `hashchange`/`popstate` → `setActive(parseHash())` with the guard") is not implemented — only `popstate` is wired, and the comment on this line ("hashchange / popstate: re-apply the hash…") claims `hashchange` is handled when it is not. Confirmed: `grep` finds no `addEventListener('hashchange'`/`onhashchange` in the template, and the harness reports `window._onhashchange` absent. Effect: back/forward works (fires `popstate`), but a user who edits the URL hash in the address bar and presses Enter without reloading gets no navigation — `activePath`/breadcrumb/regions do not update. This is a direct-addressing path the parent's Deep-linking principle calls for. Fix: add a `hashchange` listener that, under the `restoring` guard (set true → `setActive(parseHash())` → set false, mirroring the `popstate` handler), re-applies the hash without writing new history; or, if the orchestrator deems manual address-bar hash editing out of scope, drop `hashchange` from the Objective and correct the misleading line-1208 comment so the doc and code agree.
+
+2. **MINOR** — [base.html:993](../../../../../skills/task-system/scripts/templates/base.html#L993): `renderDagView()` is now orphaned dead code. Removing the `#view-dag` container and the `showView('dag')` call in this task made it unreachable (no remaining caller; `grep` shows `renderDagView` defined but never invoked, and its target `#view-dag` no longer exists in the markup). Per `using-superra` Code-Change Defaults ("Remove helper code only when your own change made them unused"), this change made it unused, so it should be deleted. Note its helper `wireDagNodeClicks` is still used by the inline DAG panels (`toggleDagPanel`) and must stay.
