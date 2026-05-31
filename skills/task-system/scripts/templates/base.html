@@ -576,6 +576,13 @@ body {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Brief highlight when a task is revealed via navigation (Kanban/DAG click) */
+@keyframes revealPulse {
+  0%   { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+  100% { background: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
+.task-row.reveal-flash { animation: revealPulse 1.6s ease-out; }
 .task-node { animation: fadeIn 0.15s ease both; }
 .task-tree > .task-node:nth-child(1)  { animation-delay: 0.02s; }
 .task-tree > .task-node:nth-child(2)  { animation-delay: 0.04s; }
@@ -927,43 +934,112 @@ async function renderKanbanView() {
   }
 }
 
-/* ── Kanban card click: switch to tree and expand to path ── */
-function showTreeAndExpand(path) {
+/* ── Shared navigation primitive: reveal a task in the tree ──
+ *
+ * Keyed by task path, callable from any view (Kanban cards, DAG nodes,
+ * the browser console). Lands the reader on the task in the tree view with
+ * every ancestor expanded, the target's body open, its rendered-markdown
+ * sections expanded, scrolled into view, and briefly highlighted.
+ *
+ * Async because deeply nested targets (depth >= 3) are lazy-loaded via htmx;
+ * we await each ancestor's children before descending so the target node and
+ * its sections exist in the DOM before we expand and scroll to them.
+ */
+async function revealTask(path) {
   showView('tree');
-  /* Expand ancestor nodes */
+
   var parts = path.split('/');
   var accumulated = '';
+
+  /* Expand every ancestor along the path, awaiting any lazy children load
+     so the next segment's node is present before we reach it. The final
+     iteration handles the target node's own body/children. */
   for (var i = 0; i < parts.length; i++) {
     accumulated = i === 0 ? parts[i] : accumulated + '/' + parts[i];
     var nodeId = 'task-' + accumulated.replace(/\//g, '-');
     var node = document.getElementById(nodeId);
-    if (node) {
-      var toggle = node.querySelector(':scope > .task-row > .task-toggle');
-      var body = node.querySelector(':scope > .task-body');
-      var children = node.querySelector(':scope > .task-children');
-      if (toggle && !toggle.classList.contains('expanded')) {
-        toggle.classList.add('expanded');
-        if (body) { body.classList.add('open'); body.classList.add('uncapped'); }
-        if (children) {
-          children.style.display = '';
-          if (node.dataset.needsLoad === 'true') {
-            htmx.ajax('GET', '/task/' + accumulated, {
-              target: '#' + accumulated.replace(/\//g, '-') + '-children',
-              swap: 'innerHTML'
-            });
-            node.dataset.needsLoad = 'false';
-          }
+    if (!node) break;  /* path doesn't resolve in the current tree */
+
+    var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+    var body = node.querySelector(':scope > .task-body');
+    var children = node.querySelector(':scope > .task-children');
+
+    if (toggle && !toggle.classList.contains('leaf') &&
+        !toggle.classList.contains('expanded')) {
+      toggle.classList.add('expanded');
+      if (body) { body.classList.add('open'); body.classList.add('uncapped'); }
+      if (children) {
+        children.style.display = '';
+        if (node.dataset.needsLoad === 'true') {
+          node.dataset.needsLoad = 'false';
+          await htmx.ajax('GET', '/task/' + accumulated, {
+            target: '#' + accumulated.replace(/\//g, '-') + '-children',
+            swap: 'innerHTML'
+          });
         }
       }
+    } else if (toggle && toggle.classList.contains('expanded') && body) {
+      /* Already expanded — ensure the body is open (it may have been a
+         row that was expanded for children only). */
+      body.classList.add('open');
+      body.classList.add('uncapped');
     }
   }
-  /* Scroll to the target node */
+
+  /* The target node now exists; open its body and render its detail sections. */
+  var targetId = 'task-' + path.replace(/\//g, '-');
+  var target = document.getElementById(targetId);
+  if (!target) return;
+
+  expandTaskDetails(target);
+
   requestAnimationFrame(function() {
-    var targetId = 'task-' + path.replace(/\//g, '-');
-    var target = document.getElementById(targetId);
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    var row = target.querySelector(':scope > .task-row');
+    if (row) {
+      row.classList.remove('reveal-flash');
+      void row.offsetWidth;  /* restart the animation if re-revealed */
+      row.classList.add('reveal-flash');
+    }
   });
 }
+
+/* Open a task node's body and expand all its markdown sections, rendering
+   their markdown on first reveal. Mirrors toggleSection's lazy render. */
+function expandTaskDetails(node) {
+  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+  var body = node.querySelector(':scope > .task-body');
+  if (toggle && !toggle.classList.contains('leaf')) {
+    toggle.classList.add('expanded');
+  }
+  if (body) { body.classList.add('open'); body.classList.add('uncapped'); }
+  var taskPath = node.dataset.path || '';
+
+  node.querySelectorAll(':scope > .task-body [data-section]').forEach(function(wrapper) {
+    var content = wrapper.querySelector('.section-content');
+    var icon = wrapper.querySelector('.section-icon');
+    var preview = wrapper.querySelector('.section-preview');
+    if (content) { content.classList.add('open'); content.classList.add('uncapped'); }
+    if (icon) icon.classList.add('expanded');
+    if (preview) preview.style.display = 'none';
+
+    var sectionName = wrapper.getAttribute('data-section') || '';
+    var renderedMd = content ? content.querySelector('.rendered-md') : null;
+    if (renderedMd && !renderedMd.dataset.rendered) {
+      var tmpl = renderedMd.querySelector('script[type="text/x-markdown"]');
+      if (tmpl) {
+        renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
+        renderedMd.dataset.rendered = 'true';
+      }
+    }
+  });
+
+  /* Load comment counts for the now-open sections. */
+  if (taskPath && typeof loadComments === 'function') loadComments(taskPath);
+}
+
+/* Back-compat alias — existing call sites (Kanban cards) keep working. */
+function showTreeAndExpand(path) { return revealTask(path); }
 
 /* ── Initialize mermaid ── */
 mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
