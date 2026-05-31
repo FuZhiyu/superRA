@@ -5,14 +5,16 @@
     `subgraph` per parent task so the global view is legible at tree scale
     instead of one undifferentiated blob.
 
-    Nodes are clickable: each maps back to its task path and, on click, calls
-    setActive(path) to descend to that task in the master-detail workspace.
-    This template now serves the per-node children DAG (GET /dag?root=<path>);
-    the standalone global-DAG tab is gone. Click wiring is done in JS after
-    mermaid renders (see wireDagNodeClicks in base.html), using the node_id ->
-    path map emitted on the .dag-controls div's data-node-paths attribute —
-    this keeps the path mapping authoritative regardless of any slug collision
-    in the node ids.
+    This template is the parsed data source for the per-node children panel
+    (GET /dag?root=<path>): base.html's loadChildrenDag reads the child set and
+    per-child status from the node_id->path map and `style <id> fill:#color`
+    lines, and the inter-child dependency edges from the `<dep_id> --> <child_id>`
+    lines, then renders the children as clickable cards (a flat grid, or a
+    layered topological flow when there are inter-child deps). The node_id->path
+    map on the .dag-controls div's data-node-paths attribute keeps the mapping
+    authoritative regardless of any slug collision in the node ids. The standalone
+    global-DAG tab and the in-page mermaid render are gone; the `.mermaid` div
+    below is no longer rendered — it is the line-based source the parser reads.
 
     Variables: root_task (Task), all_tasks (list[Task])
 -#}
@@ -64,10 +66,10 @@
 {% set titles = namespace(map={}) %}
 {% for t in all_tasks %}{% if t.path %}{% set _ = titles.map.update({t.path: t.title}) %}{% endif %}{% endfor %}
 
-{#- Authoritative node_id -> task path map for click wiring (consumed by
-    wireDagNodeClicks in base.html after mermaid renders). Stored as a data
-    attribute on the controls div — kept out of the .mermaid element so the
-    mermaid parser never ingests it. -#}
+{#- Authoritative node_id -> task path map (consumed by loadChildrenDag in
+    base.html to resolve each rendered card's task path). Stored as a data
+    attribute on the controls div — kept out of the .mermaid source block so a
+    mermaid-syntax parser would never ingest it. -#}
 {% set pathmap = {} %}
 {% for pair in ns.pairs %}{% set nid, p = pair.split('\t') %}{% set _ = pathmap.update({nid: p}) %}{% endfor %}
 

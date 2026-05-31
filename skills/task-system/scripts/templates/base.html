@@ -13,7 +13,6 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <style>
 /* ── Light / Dark tokens ── */
 :root {
@@ -535,10 +534,9 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
    shown (no collapse animation gating its height like a tree row). */
 .active-node-body { display: block; }
 
-/* ── Children DAG / subtask grid ── */
+/* ── Children subtask cards (flat grid + layered dependency flow) ── */
 .children-dag { margin-top: 26px; }
 .children-dag:empty { margin-top: 0; }
-.children-dag .mermaid { overflow-x: auto; }
 
 .child-grid {
   display: grid;
@@ -579,6 +577,62 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   color: var(--text);
   line-height: 1.25;
 }
+/* Direct-sibling-dependency footer on a card in the layered flow. */
+.child-card-deps {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-mute);
+  margin-top: 2px;
+}
+.child-card-deps .dep-arrow { color: var(--accent); margin-right: 3px; }
+.child-card-deps .dep-label { color: var(--text-mid); }
+.child-card-deps .dep-slug { color: var(--text-mid); }
+
+/* ── Layered dependency flow: topological tiers stacked in execution order ──
+   Cards reuse .child-card; tiers stack top->bottom, each a wrapping row. A
+   subtle downward spine + chevron between tiers signals flow direction without
+   drawing node-to-node connectors. */
+.child-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 4px;
+}
+.flow-tier {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+/* Inter-tier cue: a centered vertical spine capped by a downward chevron,
+   sitting in the gap between consecutive tiers. */
+.flow-sep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 26px;
+  margin: 2px 0;
+  pointer-events: none;
+}
+.flow-sep::before {
+  content: "";
+  flex: 1;
+  width: 0;
+  border-left: 2px dashed var(--border);
+}
+.flow-sep::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(45deg);
+  opacity: 0.75;
+}
+/* The card knows its tier (for a faint left accent on dependent tiers). */
+.child-card.has-deps { border-left: 3px solid var(--accent-soft); }
+.child-card.has-deps:hover { border-left-color: var(--accent); }
 
 /* When Workspace is showing, the Kanban container is hidden via .hidden;
    when Kanban shows, it keeps the legacy centered layout. */
@@ -867,15 +921,6 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
 }
 .dag-controls strong { color: var(--text); }
 .dag-hint { color: var(--text-mute); font-size: 13px; }
-/* Clickable DAG nodes: hint affordance on hover. The node shape is the first
-   child <rect>/<polygon> inside the mermaid node group. */
-.dag-node-clickable { cursor: pointer; }
-.dag-node-clickable:hover > rect,
-.dag-node-clickable:hover > polygon,
-.dag-node-clickable:hover > path {
-  stroke: var(--accent);
-  stroke-width: 2px;
-}
 
 /* ── Kanban view ── */
 .kanban {
@@ -1448,39 +1493,6 @@ function nodeOwnRowMatches(el, status, search) {
   return true;
 }
 
-/* ── DAG rendering (mermaid) ── */
-/* Make rendered DAG nodes clickable: each child node descends to that task via
-   setActive(path) — clicking a child in the children-DAG makes it the active
-   node. The dag.html partial emits an authoritative node_id -> task path map;
-   we attach handlers after mermaid renders rather than via `click ... call` so
-   we avoid needing mermaid's 'loose' security level and stay robust to any
-   node-id slug collision. */
-function wireDagNodeClicks(container) {
-  var mapEl = container.querySelector('.dag-controls[data-node-paths]');
-  if (!mapEl) return;
-  var nodePaths;
-  try { nodePaths = JSON.parse(mapEl.getAttribute('data-node-paths')); } catch(e) { return; }
-
-  /* Mermaid v11 ids each node as <g class="node"
-     id="mermaid-<runId>-flowchart-<nodeId>-<n>">. Recover <nodeId> by
-     stripping everything up to and including "-flowchart-" and the trailing
-     "-<n>" index, then look up the task path. */
-  container.querySelectorAll('g.node').forEach(function(g) {
-    var id = g.id || '';
-    var m = id.match(/-flowchart-(.+)-\d+$/);
-    var nodeId = m ? m[1] : id;
-    var path = nodePaths[nodeId];
-    if (!path) return;
-    g.style.cursor = 'pointer';
-    g.classList.add('dag-node-clickable');
-    g.addEventListener('click', function(ev) {
-      ev.preventDefault();
-      ev.stopPropagation();
-      setActive(path);
-    });
-  });
-}
-
 /* ── Kanban rendering ── */
 async function renderKanbanView() {
   var container = document.getElementById('view-kanban');
@@ -1731,14 +1743,17 @@ function patchCardBadgeWhenReady(path, token) {
   })();
 }
 
-/* Children DAG: the active node's direct children, presented as a clickable
-   graph (the key inversion — subtasks live in the main panel, not the tree).
-   A single GET /dag?root=<path> drives all three cases via its emitted child
-   set + edges; the root is special-cased (empty root would return the global
-   graph). Output is cached per (path, child-status-signature) so navigating
-   back to an unchanged node skips the mermaid re-render; a child whose status
-   changed busts the cache. */
-var _childrenDagCache = {};   /* path -> { sig, html, wired } */
+/* Children panel: the active node's direct children, rendered as clickable
+   `.child-card`s — never a mermaid graph (the key inversion: subtasks live in
+   the main panel). A single GET /dag?root=<path> supplies the child set, their
+   per-child status, and the inter-child dependency edges; the root is
+   special-cased (empty root would return the global graph). Children with no
+   inter-dependency get a flat grid; children with at least one inter-child
+   dependency get the same cards in a layered topological flow with per-card
+   `↳ after:` footers. Output is cached per (path, child-status+edge-signature)
+   so navigating back to an unchanged node restores the built HTML; a child
+   whose status or sibling deps changed busts the cache and re-renders. */
+var _childrenDagCache = {};   /* path -> { sig, html } */
 
 async function loadChildrenDag(path) {
   var region = document.getElementById('children-dag');
@@ -1751,87 +1766,74 @@ async function loadChildrenDag(path) {
      direct children straight off the top-level nav rows, always in the DOM. */
   if (!path) {
     var rootKids = rootChildrenFromNav();
-    var rootSig = rootKids.map(function(c) { return c.path + ':' + c.status; }).join('|');
-    renderChildrenFromCache(region, path, rootSig, function() {
+    var rootSig = childrenSig(rootKids, {});
+    renderChildren(region, path, rootSig, function() {
       return rootKids.length ? buildChildGrid(rootKids) : '';
-    }, false);
+    });
     return;
   }
 
-  var resp, mermaidSrc;
+  var resp, dagSrc;
   try {
     resp = await fetch('/dag?root=' + encodeURIComponent(path));
     if (token !== loadChildrenDag._token) return;  /* superseded */
     if (!resp.ok) { region.innerHTML = ''; return; }
-    mermaidSrc = await resp.text();
+    dagSrc = await resp.text();
     if (token !== loadChildrenDag._token) return;  /* superseded */
   } catch (e) {
-    region.innerHTML = '<p style="color:var(--st-rev-t)">DAG error: ' + e.message + '</p>';
+    region.innerHTML = '<p style="color:var(--st-rev-t)">Subtasks error: ' + e.message + '</p>';
     return;
   }
 
-  var info = parseChildrenDag(mermaidSrc);
+  var info = parseChildrenDag(dagSrc);
 
   /* Leaf node: no children -> render nothing (card-only view). */
   if (info.children.length === 0) {
-    _childrenDagCache[path] = { sig: '', html: '', wired: false };
+    _childrenDagCache[path] = { sig: '', html: '' };
     region.innerHTML = '';
     return;
   }
 
-  var sig = info.children.map(function(c) { return c.path + ':' + c.status; }).join('|');
-
-  if (info.hasEdges) {
-    /* Inter-child dependencies -> the mermaid dependency graph. Cache the
-       rendered SVG; re-running mermaid is the expensive step we want to skip. */
-    var cached = _childrenDagCache[path];
-    if (cached && cached.sig === sig && cached.kind === 'mermaid') {
-      region.innerHTML = cached.html;
-      wireDagNodeClicks(region);
-      return;
-    }
-    region.innerHTML = mermaidSrc;
-    var mermaidEls = region.querySelectorAll('.mermaid');
-    if (mermaidEls.length) {
-      try {
-        await mermaid.run({ nodes: mermaidEls });
-        if (token !== loadChildrenDag._token) return;  /* superseded mid-render */
-        wireDagNodeClicks(region);
-      } catch (e) {
-        region.innerHTML = '<p style="color:var(--st-rev-t)">DAG render error: ' + e.message + '</p>';
-        return;
-      }
-    }
-    _childrenDagCache[path] = { sig: sig, kind: 'mermaid', html: region.innerHTML };
-    return;
-  }
-
-  /* Children with no inter-dependencies -> a plain clickable child-card grid
-     (cheaper and clearer than an edgeless mermaid graph). */
-  renderChildrenFromCache(region, path, sig, function() {
-    return buildChildGrid(info.children);
-  }, true);
+  var sig = childrenSig(info.children, info.edges);
+  renderChildren(region, path, sig, function() {
+    return info.hasEdges
+      ? buildChildFlow(info.children, info.edges)
+      : buildChildGrid(info.children);
+  });
 }
 
-/* Render a grid from cache when (path, sig) is unchanged; otherwise build,
-   cache, and inject. `grid` is true for /dag-derived grids (kind tag). */
-function renderChildrenFromCache(region, path, sig, build, grid) {
+/* Cache signature: child paths + status + their direct-sibling deps, so a
+   status change or a dependency change forces a re-render. */
+function childrenSig(children, edges) {
+  return children.map(function(c) {
+    var deps = (edges[c.path] || []).slice().sort().join(',');
+    return c.path + ':' + c.status + ':' + deps;
+  }).join('|');
+}
+
+/* Restore from cache when (path, sig) is unchanged; otherwise build, cache,
+   and inject. The cards' delegated click handler is the static markup's
+   onclick, so cached HTML stays clickable with no re-wiring. */
+function renderChildren(region, path, sig, build) {
   var cached = _childrenDagCache[path];
-  if (cached && cached.sig === sig && cached.kind === 'grid') {
+  if (cached && cached.sig === sig) {
     region.innerHTML = cached.html;
     return;
   }
   var html = build();
   region.innerHTML = html;
-  _childrenDagCache[path] = { sig: sig, kind: 'grid', html: html };
+  _childrenDagCache[path] = { sig: sig, html: html };
 }
 
-/* Parse a /dag?root=<path> mermaid fragment into the direct-children set.
-   The fragment carries an authoritative node_id->path map on
-   .dag-controls[data-node-paths]; per-node status comes from the
-   `style <id> fill:#<color>` lines (the color->status map is the fixed one in
-   dag.html). Titles prefer the shared pathTitles lookup. `hasEdges` is true
-   when the graph has at least one `-->` dependency edge. */
+/* Parse a /dag?root=<path> fragment into the direct-children set plus the
+   inter-child dependency edges. The fragment carries an authoritative
+   node_id->path map on .dag-controls[data-node-paths]; per-node status comes
+   from the `style <id> fill:#<color>` lines (the color->status map is the
+   fixed one in dag.html). Edges come from the `<dep_id> --> <child_id>` lines
+   (dag.html emits prerequisite --> dependent), mapped back through nodePaths;
+   `edges[childPath]` is the list of sibling paths that child directly depends
+   on. Titles prefer the shared pathTitles lookup. `hasEdges` is true when at
+   least one edge resolved. */
 var DAG_FILL_STATUS = {
   '#e0e0e0': 'not-started', '#bbdefb': 'in-progress', '#fff9c4': 'implemented',
   '#ffcdd2': 'revise', '#c8e6c9': 'approved', '#f5f5f5': 'archived',
@@ -1859,7 +1861,18 @@ function parseChildrenDag(src) {
       status: DAG_FILL_STATUS[fills[nodeId]] || '',
     });
   }
-  return { children: children, hasEdges: src.indexOf('-->') !== -1 };
+  /* Dependency edges: `<dep_id> --> <child_id>` => child depends on dep. */
+  var edges = {};   /* childPath -> [depPath, …] (direct sibling deps only) */
+  var hasEdges = false;
+  src.replace(/^\s*(\S+)\s*-->\s*(\S+)\s*$/gm, function(_, depId, childId) {
+    var depPath = nodePaths[depId], childPath = nodePaths[childId];
+    if (depPath && childPath) {
+      (edges[childPath] = edges[childPath] || []).push(depPath);
+      hasEdges = true;
+    }
+    return '';
+  });
+  return { children: children, edges: edges, hasEdges: hasEdges };
 }
 
 /* Root's direct children, read off the top-level nav rows (always inlined). */
@@ -1883,23 +1896,79 @@ function rootChildrenFromNav() {
   return out;
 }
 
-/* Build the clickable child-card grid HTML: slug + title + status badge per
-   child, each descending via setActive on click. Titles/slugs are escaped. */
-function buildChildGrid(children) {
-  var cards = children.map(function(c) {
-    return '<button class="child-card" data-path="' + escapeAttr(c.path) + '">'
-      + (c.slug ? '<span class="child-card-slug">' + escapeHtml(c.slug) + '</span>' : '')
-      + '<span class="child-card-title">' + escapeHtml(c.title) + '</span>'
-      + (c.status ? '<span class="badge badge-' + c.status + '">' + c.status + '</span>' : '')
-      + '</button>';
-  }).join('');
-  return '<div class="dag-controls"><strong>Subtasks</strong>'
-    + '<span class="dag-hint">— click to drill in</span></div>'
-    + '<div class="child-grid" onclick="onChildGridClick(event)">' + cards + '</div>';
+/* One clickable child card: slug + title + status badge, descending via the
+   delegated onChildCardClick on the enclosing container. `depPaths` (optional)
+   appends a `↳ after: <slug…>` footer naming the card's direct sibling deps. */
+function childCardHTML(c, depPaths) {
+  var deps = '';
+  if (depPaths && depPaths.length) {
+    var slugs = depPaths.map(function(d) {
+      return '<span class="dep-slug">' + escapeHtml(d.split('/').pop()) + '</span>';
+    }).join('<span class="dep-label">, </span>');
+    deps = '<span class="child-card-deps"><span class="dep-arrow">↳</span>'
+      + '<span class="dep-label">after: </span>' + slugs + '</span>';
+  }
+  return '<button class="child-card' + (depPaths && depPaths.length ? ' has-deps' : '')
+    + '" data-path="' + escapeAttr(c.path) + '">'
+    + (c.slug ? '<span class="child-card-slug">' + escapeHtml(c.slug) + '</span>' : '')
+    + '<span class="child-card-title">' + escapeHtml(c.title) + '</span>'
+    + (c.status ? '<span class="badge badge-' + c.status + '">' + c.status + '</span>' : '')
+    + deps
+    + '</button>';
 }
 
-/* Delegated click for the child-card grid: descend to the clicked child. */
-function onChildGridClick(event) {
+var SUBTASK_HEADER = '<div class="dag-controls"><strong>Subtasks</strong>'
+  + '<span class="dag-hint">— click to drill in</span></div>';
+
+/* Flat clickable grid for children with no inter-dependency. */
+function buildChildGrid(children) {
+  var cards = children.map(function(c) { return childCardHTML(c, null); }).join('');
+  return SUBTASK_HEADER
+    + '<div class="child-grid" onclick="onChildCardClick(event)">' + cards + '</div>';
+}
+
+/* Layered dependency flow: the same cards grouped into topological tiers in
+   execution order (tier 0 = children depending on no sibling; tier k = children
+   whose sibling deps all sit in earlier tiers), stacked top->bottom with a
+   subtle inter-tier flow cue. Each dependent card footers `↳ after:` with its
+   direct sibling deps. Cycle-safe: a pass that places no remaining child drops
+   the leftovers into the final tier instead of looping. */
+function buildChildFlow(children, edges) {
+  var byPath = {};
+  children.forEach(function(c) { byPath[c.path] = c; });
+  /* Keep only deps that point at an actual sibling in this child set. */
+  var deps = {};
+  children.forEach(function(c) {
+    deps[c.path] = (edges[c.path] || []).filter(function(d) { return byPath[d]; });
+  });
+
+  var placed = {};
+  var remaining = children.map(function(c) { return c.path; });
+  var tiers = [];
+  while (remaining.length) {
+    var tier = remaining.filter(function(p) {
+      return deps[p].every(function(d) { return placed[d]; });
+    });
+    if (tier.length === 0) tier = remaining.slice();   /* cycle -> flush rest */
+    tier.forEach(function(p) { placed[p] = true; });
+    tiers.push(tier);
+    remaining = remaining.filter(function(p) { return !placed[p]; });
+  }
+
+  var tierHTML = tiers.map(function(tier, i) {
+    var cards = tier.map(function(p) {
+      return childCardHTML(byPath[p], deps[p]);
+    }).join('');
+    var sep = i < tiers.length - 1 ? '<div class="flow-sep" aria-hidden="true"></div>' : '';
+    return '<div class="flow-tier">' + cards + '</div>' + sep;
+  }).join('');
+
+  return SUBTASK_HEADER
+    + '<div class="child-flow" onclick="onChildCardClick(event)">' + tierHTML + '</div>';
+}
+
+/* Delegated click for both the grid and the flow: descend to the clicked child. */
+function onChildCardClick(event) {
   var card = event.target.closest('.child-card');
   if (card && card.dataset.path !== undefined) setActive(card.dataset.path);
 }
@@ -2138,14 +2207,11 @@ async function updateSidebar(path) {
 
 /* ── Back-compat alias ──
    revealTask(path)/showTreeAndExpand(path) were the giant-tree reveal
-   primitive; callers (Kanban cards, DAG node clicks) now just drill to the
-   task in the Workspace. The deep-link ancestor-walk that expands the sidebar
-   lives in updateSidebar above. */
+   primitive; Kanban cards still call it to drill to the task in the Workspace.
+   The deep-link ancestor-walk that expands the sidebar lives in updateSidebar
+   above. */
 function revealTask(path) { showView('workspace'); setActive(path); }
 function showTreeAndExpand(path) { return revealTask(path); }
-
-/* ── Initialize mermaid ── */
-mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
 
 /* ════════════════════════════════════════════════════════════════════════
    Sidebar chrome — pin/unpin auto-hide, resizable width, narrow-screen drawer.
@@ -2616,11 +2682,11 @@ function parentPath(path) {
        as a fresh navigation, without touching activePath / history), and re-assert
        the nav-active highlight the imminent row swap will clear. The highlight
        reads the row htmx is about to replace, so defer it past the swap.
-     - parent(path) === activePath -> re-render the children-DAG (the changed
-       task is a sibling shown in the graph). loadChildrenDag's own
-       (path, child-status-signature) cache makes this a no-op when nothing
-       graph-relevant changed. The DAG re-renders from a fresh /dag fetch, so it
-       is safe to start immediately. */
+     - parent(path) === activePath -> re-render the children panel (the changed
+       task is a sibling card). loadChildrenDag's own (path, child-status+edge
+       signature) cache makes this a no-op when nothing card-relevant changed.
+       The panel re-renders from a fresh /dag fetch, so it is safe to start
+       immediately. */
 function onTaskUpdate(path) {
   if (path === activePath) {
     loadActiveNode(path);
