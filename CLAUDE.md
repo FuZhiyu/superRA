@@ -72,7 +72,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
 | Task anatomy, field notes, results shape, stale-content rules | `task-system` (references/planning.md) |
-| Markdown style guide rules — file-link citations plus figures, math, tables, and final-form markdown | `report-in-markdown` |
+| Markdown style guide rules — file-link citations plus figures, math, and tables | `report-in-markdown` |
 | Harness-specific tool names and runtime differences | Adapter references under `skills/using-superRA/references/` |
 | Canonical role behavior | `agents/implementer.md` and `agents/reviewer.md` |
 
@@ -99,7 +99,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 - **Harness differences live in adapters.** Put tool-name mappings and runtime differences in the owning adapter reference under `skills/using-superRA/references/`, such as `codex-instructions.md` or `claude-tools.md`.
 - **Direct mode reads skill-owned role references.** Cross-repo plugin use cannot assume raw repo-relative agent files are available, so direct mode loads the generated role references under `skills/using-superRA/references/`.
 - **Codex named agents are generated.** `.codex/agents/` and global `~/.codex/agents/` files come from `skills/codex-superra-setup/scripts/sync_codex_agents.py`.
-- **Surface generated artifacts in PLAN.md.** When a plan touches `skills/*` or `agents/*`, list the generated files and the generator command in the PLAN.md header so every dispatched agent knows on arrival which files must go through `sync_codex_agents.py` rather than being hand-edited. Currently generated: `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`.
+- **Surface generated artifacts in the task tree.** When a task touches `skills/*` or `agents/*`, list the generated files and the generator command in the relevant `.plan/` task file so every dispatched agent knows on arrival which files must go through `sync_codex_agents.py` rather than being hand-edited. Currently generated: `skills/using-superRA/references/direct-mode-implementer.md`, `skills/using-superRA/references/direct-mode-reviewer.md`, `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`.
 - **Codex plugin packaging installs skills, not named agents.** `codex-superra-setup` owns named-agent installation.
 - **Contributor aliases point here.** `AGENTS.md` and `AGENT.md` remain aliases for this file so Codex-facing contributor guidance has one source.
 

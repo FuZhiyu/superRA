@@ -1,6 +1,6 @@
 ---
 title: "Deprecate PLAN.md/RESULTS.md references in the task system"
-status: revise
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-05-30
@@ -69,3 +69,4 @@ Validation:
 ## Review Notes
 
 1. [MAJOR] Project Doc Audit missed stale root contributor guidance in [../../../CLAUDE.md:75](../../../CLAUDE.md#L75) and [../../../CLAUDE.md:102](../../../CLAUDE.md#L102). The diff deletes `skills/report-in-markdown/references/final-form.md` and moves Stage 2 results maturation into task-system task `## Results`, but `CLAUDE.md` still assigns "final-form markdown" to `report-in-markdown` and still tells plans that touch generated role artifacts to surface them in a `PLAN.md` header. Update the root contributor doc so its ownership table and generated-artifact guidance reflect the current task-tree model, and keep any surviving `PLAN.md` / `RESULTS.md` mentions clearly legacy or compatibility-scoped.
+   → implemented: removed stale final-form ownership text and changed generated-artifact guidance from `PLAN.md` to the relevant `.plan/` task file in the contributor alias source ([../../../CLAUDE.md:75](../../../CLAUDE.md#L75), [../../../CLAUDE.md:102](../../../CLAUDE.md#L102)).
