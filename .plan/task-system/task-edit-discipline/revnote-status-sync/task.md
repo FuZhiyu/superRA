@@ -1,6 +1,6 @@
 ---
 title: "Hook: revision-note ↔ status automation"
-status: implemented
+status: revise
 depends_on:
   - move-hook
 tags: []
@@ -81,3 +81,9 @@ New class in [test_task_system.py](../../../../skills/task-system/scripts/test_t
 ### Note on the dashboard step
 
 The dashboard rebuild is best-effort and unrelated to this change; in a minimal environment it logs `No module named 'fastapi'` and is swallowed by its existing try/except (exit 0 preserved), matching prior hook behavior.
+
+## Review Notes
+
+1. **CRITICAL** — [task_hook.py:299](../../../../skills/task-system/scripts/task_hook.py#L299) Behavior B strips a planner's `## Revision Notes` when the approval lived only in an *uncommitted/unstaged* working edit. `_recover_prior_status` reads the last *committed* (or staged) status; when a task is approved in the working tree but that approval was never committed or staged, and the planner then adds a revision note to reopen the still-`approved` task (intent: Behavior A), the recovered prior is the genuinely-last-committed `revise`/`implemented`, so `status == "approved" and prior != "approved"` fires Behavior B and the note is silently deleted. Reproduced: commit a task at `revise`, approve it in the working tree only (no commit/stage), add a revnote with status still `approved` → hook strips the note instead of flipping to `revise`. This is exactly the "wrong guess could delete a planner's revision note" failure the objective's safe-default is meant to prevent; here it is reached because status alone cannot tell "just-approved-uncommitted" from "committed-at-revise." The implementation faithfully follows the objective's stated "last committed version" discriminator, so the gap may be in the discriminator itself — flagging for orchestrator adjudication. Possible fixes: (a) compare the *committed body* for revnote presence (the committed text is already fetched in `_recover_prior_status` but the body is discarded) — only treat it as a genuine approval transition (B) when the prior body also already carried a revnote, otherwise fall to the safe no-op; or (b) when prior status is non-approved, require the staged/committed status to actually equal `approved` before stripping, and treat the uncommitted-approval case as unrecoverable → no-op. Either way, the destructive branch must not be the default when A/B is genuinely ambiguous.
+
+2. **MINOR** — [task_hook.py:197](../../../../skills/task-system/scripts/task_hook.py#L197) `_body_has_revision_notes` matches a `## Revision Notes` line lexically anywhere in the body, including inside a fenced code block (e.g., a `## Results` section that quotes a `## Revision Notes` header while documenting this very feature). Reproduced: a fenced block containing `## Revision Notes` returns `True`, which on an approval edit would invoke `_strip_revision_notes` and could delete content from inside the code block. Low-probability but the gate is purely lexical with no fence awareness. Consider skipping fenced regions, or at minimum note the limitation. (Re-check after item 1 is resolved, since the same body-aware comparison suggested there would also localize this.)
