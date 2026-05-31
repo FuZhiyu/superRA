@@ -1,6 +1,6 @@
 ---
 title: "Main panel — active-node card + children DAG"
-status: implemented
+status: approved
 depends_on:
   - server-partials
   - routing-shell
