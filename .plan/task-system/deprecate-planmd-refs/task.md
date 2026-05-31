@@ -55,6 +55,7 @@ Validation:
 - Regenerated the generated implementer artifacts from [../../../agents/implementer.md](../../../agents/implementer.md): [../../../skills/using-superRA/references/direct-mode-implementer.md:42-68](../../../skills/using-superRA/references/direct-mode-implementer.md#L42-L68) and [../../../.codex/agents/superra_implementer.toml:49-75](../../../.codex/agents/superra_implementer.toml#L49-L75).
 
 ### Validation
+- Protection disposition: researcher chose manual integration checks rather than drift/static tests for the protocol-level results. Manual checks cover the primary task-results rule, orchestrator-owned parent rollups, and `final-form.md` removal / Documentation-stage reviewer routing.
 - `rg -n "RESULTS\\.md|PLAN\\.md" README.md agents skills .codex hooks` passed the stale-reference sweep: surviving hits are legacy migration/backward-compatibility references or migration tests.
 - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` regenerated project Codex role artifacts; `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` reported all generated files up to date.
 - `uv run pytest skills/task-system/scripts/test_task_system.py skills/task-system/scripts/tests/test_state_preservation.py skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 189 tests.
