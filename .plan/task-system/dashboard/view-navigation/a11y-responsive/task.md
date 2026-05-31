@@ -1,6 +1,6 @@
 ---
 title: "Sidebar chrome (collapse/auto-hide/resize) + keyboard nav + responsive + a11y"
-status: implemented
+status: approved
 depends_on:
   - sidebar-nav
   - main-panel
@@ -78,7 +78,3 @@ The stale comment in `switchWorktree` ([base.html](../../../../../skills/task-sy
 - At a narrow viewport the sidebar becomes an overlay drawer with backdrop, focus trap, `Esc`-close, and close-on-navigate (regardless of pin state); the main panel is full width when closed; breadcrumb and DAG don't overflow.
 - `prefers-reduced-motion` disables the slide/auto-hide and other animations; contrast is acceptable in both themes.
 - `node --check` passes; live-server drive (with a headless browser for keyboard + a11y checks where available) confirms the above with no console errors. `pytest skills/task-system/scripts/test_task_system.py` still passes.
-
-## Revision Notes
-
-**2026-05-30 — scope addition (user).** After seeing the working sidebar, the user asked for a better-designed nav bar: hover-to-reveal / auto-hide behavior and an adjustable (resizable) width. Folded both into this task's Sidebar-chrome section (it already owned sidebar collapse + responsive behavior) rather than adding a separate task, and retitled accordingly. Substantive but self-contained — no change to the other five tasks.
