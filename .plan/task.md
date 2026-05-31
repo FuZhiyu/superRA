@@ -21,7 +21,7 @@ Improve the superRA handoff system — task tracking, planning artifacts, and hu
 **Pre-sync merge base:** `5eb06d2d76e3877e944a7e7cf819152243e192cb`
 **Synced base head:** `21f594832c383eea8019e0b5ab7b8acc4a2b9bc4`
 **Incoming range:** `5eb06d2d76e3877e944a7e7cf819152243e192cb..21f594832c383eea8019e0b5ab7b8acc4a2b9bc4`
-**Sync commits:** `PENDING`
+**Sync commits:** `5c87877`, `<this Sync Map propagation commit>`
 **Sync review status:** `IMPLEMENTED`
 
 ### Branch Summary
