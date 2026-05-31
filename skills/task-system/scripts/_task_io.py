@@ -151,6 +151,34 @@ def parse_body_sections(body: str) -> dict[str, str]:
     return sections
 
 
+def _has_nonempty_section(body: str, section: str) -> bool:
+    """True if ``body`` has a non-empty ``## <section>`` header outside fenced code.
+
+    Unlike ``parse_body_sections`` (which is fence-blind), this skips ``## ``
+    lines that appear inside a ``` ``` ``` fenced block, so a section header that
+    is merely quoted inside an Objective/Results code block does not count. A
+    section is non-empty when at least one non-blank line follows its header
+    before the next top-level header or end of file.
+    """
+    lines = body.split("\n")
+    in_fence = False
+    header_re = re.compile(rf"^##[ \t]+{re.escape(section)}[ \t]*$")
+    for i, line in enumerate(lines):
+        if re.match(r"^[ \t]*(```|~~~)", line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if header_re.match(line):
+            for nxt in lines[i + 1:]:
+                if re.match(r"^## ", nxt):
+                    break
+                if nxt.strip():
+                    return True
+            return False
+    return False
+
+
 def _quote_yaml_scalar(key: str, value: str) -> str:
     """Quote a YAML scalar value if needed for safe serialization."""
     if key == "title":
@@ -559,6 +587,25 @@ def validate_frontmatter(task: Task) -> list[str]:
     return warnings_out
 
 
+def validate_revision_notes(task: Task) -> list[str]:
+    """Warn when an ``approved`` task still carries a ``## Revision Notes`` section.
+
+    The reviewer owns revision-note removal at approval, so an approved task
+    holding a non-empty note is a stale leak. Only ``approved`` warns:
+    ``implemented`` + a note is a legitimate mid-state (a reopened, reworked
+    task awaiting re-review), and earlier states never carry one. Detection is
+    fence-aware so a header quoted inside a code block does not trigger it.
+    """
+    if task.status != "approved":
+        return []
+    if not _has_nonempty_section(task.body, "Revision Notes"):
+        return []
+    return [
+        "approved task still carries a ## Revision Notes section; "
+        "the reviewer should remove it at approval"
+    ]
+
+
 def validate_dependencies(task: Task, siblings: list[str]) -> list[str]:
     """Check that all depends_on entries reference existing sibling directory names.
 
@@ -651,6 +698,9 @@ def validate_plan(plan_root: Path) -> list[str]:
             for w in validate_frontmatter(task):
                 warnings_out.append(f"{prefix}: {w}")
 
+            for w in validate_revision_notes(task):
+                warnings_out.append(f"{prefix}: {w}")
+
             for w in validate_dependencies(task, sibling_names):
                 warnings_out.append(f"{prefix}: {w}")
 
@@ -666,6 +716,8 @@ def validate_plan(plan_root: Path) -> list[str]:
         try:
             root_task = parse_task(root_task_md)
             for w in validate_frontmatter(root_task):
+                warnings_out.append(f"(root): {w}")
+            for w in validate_revision_notes(root_task):
                 warnings_out.append(f"(root): {w}")
         except Exception as exc:
             warnings_out.append(f"(root): parse error: {exc}")

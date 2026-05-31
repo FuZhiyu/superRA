@@ -94,7 +94,7 @@ Any `## Heading` is valid. Recommended defaults:
 |---|---|---|
 | `## Objective` | What success looks like — the goal, constraints, and validation criteria | planner |
 | `## Results` | Key findings and notes | implementer |
-| `## Revision Notes` | Temporary delta signal when a task objective is updated (what changed, significance); cleaned on approval | planner / orchestrator |
+| `## Revision Notes` | Temporary delta signal when a task objective is updated (what changed, significance); reviewer removes it on approval (`validate_plan` only warns if an `approved` task still carries one) | planner / orchestrator |
 | `## Review Notes` | Reviewer feedback | reviewer |
 
 ## Ownership Model

@@ -1555,12 +1555,12 @@ class TestTaskHook:
         assert code == 0
 
 
-# --- Revision-note <-> status automation tests ---
+# --- Revision-note stale-leak validation tests ---
 
 
 def _task_md_text(title: str, status: str, *, objective: str = "Do the thing.",
                   revnote: str | None = None) -> str:
-    """Build a task.md text with optional ## Revision Notes section."""
+    """Build a task.md text with an optional ## Revision Notes section."""
     body = f"## Objective\n\n{objective}\n"
     if revnote is not None:
         body += f"\n## Revision Notes\n\n{revnote}\n"
@@ -1575,286 +1575,136 @@ def _task_md_text(title: str, status: str, *, objective: str = "Do the thing.",
     return f"---\n{fm}---\n\n{body}"
 
 
-class TestRevisionNoteSync:
-    """Behavior A/B revision-note lifecycle on the Edit/Write reconcile path."""
+class TestHasNonemptySection:
+    def test_detects_real_header_with_content(self):
+        body = "## Revision Notes\n\nReopen: rework X.\n"
+        assert _task_io._has_nonempty_section(body, "Revision Notes")
 
-    def _run_hook(self, payload: dict):
-        import subprocess
-        hook_path = SCRIPTS_DIR / "task_hook.py"
-        result = subprocess.run(
-            [sys.executable, str(hook_path)],
-            input=json.dumps(payload),
-            capture_output=True,
-            text=True,
+    def test_empty_section_is_false(self):
+        body = "## Revision Notes\n\n## Next\n\nstuff\n"
+        assert not _task_io._has_nonempty_section(body, "Revision Notes")
+
+    def test_missing_header_is_false(self):
+        body = "## Objective\n\nDo the thing.\n"
+        assert not _task_io._has_nonempty_section(body, "Revision Notes")
+
+    def test_header_inside_fence_is_ignored(self):
+        body = (
+            "## Objective\n\nSee the format below:\n\n"
+            "```\n## Revision Notes\n\nquoted example\n```\n"
         )
-        return result.returncode, result.stderr
+        assert not _task_io._has_nonempty_section(body, "Revision Notes")
 
-    def _git(self, repo: Path, *args: str) -> None:
-        import subprocess
-        subprocess.run(["git", "-C", str(repo), *args], check=True,
-                       capture_output=True, text=True)
-
-    def _make_git_plan(self, tmp_path: Path) -> Path:
-        """Init a git repo at tmp_path with an empty .plan/ root committed."""
-        repo = tmp_path
-        self._git(repo, "init")
-        self._git(repo, "config", "user.email", "t@example.com")
-        self._git(repo, "config", "user.name", "Test")
-        root = repo / ".plan"
-        root.mkdir()
-        (root / "task.md").write_text(
-            _task_md_text("Root", "not-started"), encoding="utf-8"
+    def test_tilde_fence_is_ignored(self):
+        body = (
+            "## Objective\n\n~~~\n## Revision Notes\n\nquoted\n~~~\n"
         )
-        return root
+        assert not _task_io._has_nonempty_section(body, "Revision Notes")
 
-    def _commit_task(self, repo: Path, task_dir: Path, text: str) -> None:
-        """Write a task.md and commit it so a prior status is recoverable."""
-        task_dir.mkdir(parents=True, exist_ok=True)
-        (task_dir / "task.md").write_text(text, encoding="utf-8")
-        self._git(repo, "add", "-A")
-        self._git(repo, "commit", "-m", "fixture")
-
-    def _edit_payload(self, task_md: Path) -> dict:
-        return {"tool_name": "Edit", "tool_input": {"file_path": str(task_md)}}
-
-    # --- Behavior A: revnote added to a completed task -> flip to revise ---
-
-    def test_a_approved_with_added_revnote_flips_to_revise(self, tmp_path):
-        repo = tmp_path
-        root = self._make_git_plan(repo)
-        d = root / "01-task"
-        # Prior committed status: approved (no revnote).
-        self._commit_task(repo, d, _task_md_text("Task", "approved"))
-        # The edit adds a revision note, status still approved.
-        task_md = d / "task.md"
-        task_md.write_text(
-            _task_md_text("Task", "approved", revnote="Reopen: rework X."),
-            encoding="utf-8",
+    def test_real_header_after_fenced_quote_still_detected(self):
+        body = (
+            "## Objective\n\n```\n## Revision Notes\n```\n\n"
+            "## Revision Notes\n\nGenuine note.\n"
         )
+        assert _task_io._has_nonempty_section(body, "Revision Notes")
 
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0
 
-        after = _task_io.parse_task(task_md)
-        assert after.status == "revise", "revnote on approved task should flip to revise"
-        assert "Reopen: rework X." in after.body, "revision note must be preserved"
-
-    def test_a_implemented_with_added_revnote_flips_to_revise(self, tmp_path):
-        repo = tmp_path
-        root = self._make_git_plan(repo)
-        d = root / "01-task"
-        self._commit_task(repo, d, _task_md_text("Task", "implemented"))
-        task_md = d / "task.md"
-        task_md.write_text(
-            _task_md_text("Task", "implemented", revnote="Please redo step 2."),
-            encoding="utf-8",
+class TestValidateRevisionNotes:
+    def test_approved_with_revnote_warns(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Objective\n\nx\n\n## Revision Notes\n\nstale note\n",
         )
+        assert _task_io.validate_revision_notes(t)
 
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0
-        after = _task_io.parse_task(task_md)
-        assert after.status == "revise"
-        assert "Please redo step 2." in after.body
-
-    # --- Behavior B: flip to approved -> remove revnote ---
-
-    def test_b_approval_transition_removes_revnote(self, tmp_path):
-        repo = tmp_path
-        root = self._make_git_plan(repo)
-        d = root / "01-task"
-        # Prior committed status: revise, with a revision note present.
-        self._commit_task(
-            repo, d,
-            _task_md_text("Task", "revise", revnote="Fix the join."),
+    def test_approved_without_revnote_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Objective\n\nx\n",
         )
-        task_md = d / "task.md"
-        # The edit approves the task; the revnote is still present.
-        task_md.write_text(
-            _task_md_text("Task", "approved", revnote="Fix the join."),
-            encoding="utf-8",
+        assert _task_io.validate_revision_notes(t) == []
+
+    def test_implemented_with_revnote_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="implemented",
+            body="## Objective\n\nx\n\n## Revision Notes\n\nrework\n",
         )
+        assert _task_io.validate_revision_notes(t) == []
 
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0
-        after = _task_io.parse_task(task_md)
-        assert after.status == "approved", "status must stay approved"
-        assert "Revision Notes" not in after.body, "approval must remove the revnote section"
-        assert "Fix the join." not in after.body
-
-    def test_b_from_implemented_removes_revnote(self, tmp_path):
-        repo = tmp_path
-        root = self._make_git_plan(repo)
-        d = root / "01-task"
-        self._commit_task(
-            repo, d,
-            _task_md_text("Task", "implemented", revnote="Tweak the label."),
+    def test_not_started_with_revnote_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="not-started",
+            body="## Objective\n\nx\n\n## Revision Notes\n\nearly\n",
         )
-        task_md = d / "task.md"
-        task_md.write_text(
-            _task_md_text("Task", "approved", revnote="Tweak the label."),
-            encoding="utf-8",
+        assert _task_io.validate_revision_notes(t) == []
+
+    def test_in_progress_with_revnote_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="in-progress",
+            body="## Objective\n\nx\n\n## Revision Notes\n\nwip\n",
         )
+        assert _task_io.validate_revision_notes(t) == []
 
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0
-        after = _task_io.parse_task(task_md)
-        assert after.status == "approved"
-        assert "Revision Notes" not in after.body
-
-    # --- Disambiguation: same {approved + revnote} end-state, opposite intents ---
-
-    def test_disambiguation_resolves_on_prior_status(self, tmp_path):
-        """Identical {approved + revnote} end-state resolves A vs B on prior status."""
-        # Fixture A: prior approved -> Behavior A (flip to revise, keep note).
-        repo_a = tmp_path / "a"
-        repo_a.mkdir()
-        root_a = self._make_git_plan(repo_a)
-        da = root_a / "01-task"
-        self._commit_task(repo_a, da, _task_md_text("T", "approved"))
-        md_a = da / "task.md"
-        md_a.write_text(_task_md_text("T", "approved", revnote="note"), encoding="utf-8")
-        code, _ = self._run_hook(self._edit_payload(md_a))
-        assert code == 0
-        res_a = _task_io.parse_task(md_a)
-        assert res_a.status == "revise"
-        assert "note" in res_a.body
-
-        # Fixture B: prior revise -> Behavior B (stay approved, drop note).
-        repo_b = tmp_path / "b"
-        repo_b.mkdir()
-        root_b = self._make_git_plan(repo_b)
-        db = root_b / "01-task"
-        self._commit_task(repo_b, db, _task_md_text("T", "revise", revnote="note"))
-        md_b = db / "task.md"
-        md_b.write_text(_task_md_text("T", "approved", revnote="note"), encoding="utf-8")
-        code, _ = self._run_hook(self._edit_payload(md_b))
-        assert code == 0
-        res_b = _task_io.parse_task(md_b)
-        assert res_b.status == "approved"
-        assert "Revision Notes" not in res_b.body
-
-    # --- No-ops ---
-
-    def test_noop_not_started_with_revnote(self, tmp_path):
-        repo = tmp_path
-        root = self._make_git_plan(repo)
-        d = root / "01-task"
-        self._commit_task(repo, d, _task_md_text("T", "not-started"))
-        task_md = d / "task.md"
-        task_md.write_text(
-            _task_md_text("T", "not-started", revnote="early note"),
-            encoding="utf-8",
+    def test_approved_with_fenced_header_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Objective\n\n```\n## Revision Notes\n\nquoted\n```\n",
         )
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0
-        after = _task_io.parse_task(task_md)
-        assert after.status == "not-started", "non-completed status must be untouched"
-        assert "early note" in after.body
+        assert _task_io.validate_revision_notes(t) == []
 
-    def test_noop_in_progress_with_revnote(self, tmp_path):
-        repo = tmp_path
-        root = self._make_git_plan(repo)
-        d = root / "01-task"
-        self._commit_task(repo, d, _task_md_text("T", "in-progress"))
-        task_md = d / "task.md"
-        task_md.write_text(
-            _task_md_text("T", "in-progress", revnote="wip note"),
-            encoding="utf-8",
+    def test_approved_with_empty_revnote_no_warn(self):
+        t = _task_io.Task(
+            path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
+            body="## Objective\n\nx\n\n## Revision Notes\n\n## Next\n\ny\n",
         )
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0
-        after = _task_io.parse_task(task_md)
-        assert after.status == "in-progress"
-        assert "wip note" in after.body
+        assert _task_io.validate_revision_notes(t) == []
 
-    def test_noop_approved_without_revnote(self, tmp_path):
-        repo = tmp_path
-        root = self._make_git_plan(repo)
-        d = root / "01-task"
-        self._commit_task(repo, d, _task_md_text("T", "revise"))
-        task_md = d / "task.md"
-        # Approve, no revnote present at all -> nothing to clean, stays approved.
-        task_md.write_text(_task_md_text("T", "approved"), encoding="utf-8")
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0
-        after = _task_io.parse_task(task_md)
-        assert after.status == "approved"
 
-    def test_noop_prior_status_unrecoverable(self, tmp_path):
-        """Uncommitted task in a non-git tree: no revnote automation, no crash."""
-        # No git init -> prior status cannot be recovered.
+class TestValidatePlanRevisionNotes:
+    def _write(self, path: Path, text: str) -> None:
+        path.write_text(text, encoding="utf-8")
+
+    def test_validate_plan_warns_on_approved_revnote(self, tmp_path):
         root = tmp_path / ".plan"
         root.mkdir()
-        (root / "task.md").write_text(_task_md_text("Root", "not-started"),
-                                      encoding="utf-8")
+        self._write(root / "task.md", _task_md_text("Root", "not-started"))
         d = root / "01-task"
         d.mkdir()
-        task_md = d / "task.md"
-        # Identical {approved + revnote} end-state, but A vs B is unknowable.
-        task_md.write_text(
-            _task_md_text("T", "approved", revnote="ambiguous note"),
-            encoding="utf-8",
-        )
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0, "must not crash when prior status is unrecoverable"
-        after = _task_io.parse_task(task_md)
-        # Safe fallback: do nothing — status and note both untouched.
-        assert after.status == "approved"
-        assert "ambiguous note" in after.body
+        self._write(d / "task.md",
+                    _task_md_text("Task", "approved", revnote="stale note"))
+        warnings = _task_io.validate_plan(root)
+        assert any("Revision Notes" in w and w.startswith("01-task:")
+                   for w in warnings)
 
-    # --- Invariants ---
-
-    def test_review_notes_never_touched(self, tmp_path):
-        """The hook only manages ## Revision Notes; ## Review Notes is left alone."""
-        repo = tmp_path
-        root = self._make_git_plan(repo)
+    def test_validate_plan_silent_on_implemented_revnote(self, tmp_path):
+        root = tmp_path / ".plan"
+        root.mkdir()
+        self._write(root / "task.md", _task_md_text("Root", "not-started"))
         d = root / "01-task"
-        prior = _task_md_text("T", "revise", revnote="rework")
-        # Add a Review Notes section to the prior committed version.
-        prior = prior.replace(
-            "## Revision Notes\n\nrework\n",
-            "## Revision Notes\n\nrework\n\n## Review Notes\n\n> 1. [MAJOR] fix it\n",
-        )
-        self._commit_task(repo, d, prior)
-        task_md = d / "task.md"
-        # Approve while both note sections are present.
-        new_text = _task_md_text("T", "approved", revnote="rework").replace(
-            "## Revision Notes\n\nrework\n",
-            "## Revision Notes\n\nrework\n\n## Review Notes\n\n> 1. [MAJOR] fix it\n",
-        )
-        task_md.write_text(new_text, encoding="utf-8")
+        d.mkdir()
+        self._write(d / "task.md",
+                    _task_md_text("Task", "implemented", revnote="rework"))
+        warnings = _task_io.validate_plan(root)
+        assert not any("Revision Notes" in w for w in warnings)
 
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0
-        after = _task_io.parse_task(task_md)
-        assert after.status == "approved"
-        assert "Revision Notes" not in after.body, "revnote should be removed"
-        assert "Review Notes" in after.body, "review notes must be left intact"
-        assert "fix it" in after.body
-
-    def test_hook_write_does_not_loop(self, tmp_path):
-        """The hook's own write is direct file I/O, not a tool call -> no re-trigger.
-
-        We verify the single invocation converges: a second identical hook run on
-        the now-revised file is a no-op (idempotent), confirming the write does
-        not itself need another reconcile pass.
-        """
-        repo = tmp_path
-        root = self._make_git_plan(repo)
+    def test_validate_plan_silent_on_fenced_header(self, tmp_path):
+        root = tmp_path / ".plan"
+        root.mkdir()
+        self._write(root / "task.md", _task_md_text("Root", "not-started"))
         d = root / "01-task"
-        self._commit_task(repo, d, _task_md_text("T", "approved"))
-        task_md = d / "task.md"
-        task_md.write_text(
-            _task_md_text("T", "approved", revnote="reopen"), encoding="utf-8"
+        d.mkdir()
+        fenced = (
+            "## Objective\n\nSee format:\n\n"
+            "```\n## Revision Notes\n\nquoted\n```\n"
         )
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0
-        first = task_md.read_text(encoding="utf-8")
-        assert "status: revise" in first
-        # Second run: status is now revise (not a completed state) -> no-op.
-        code, _ = self._run_hook(self._edit_payload(task_md))
-        assert code == 0
-        assert task_md.read_text(encoding="utf-8") == first
+        fm = (
+            'title: "Task"\nstatus: approved\ndepends_on: []\n'
+            "tags: []\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+        )
+        self._write(d / "task.md", f"---\n{fm}---\n\n{fenced}")
+        warnings = _task_io.validate_plan(root)
+        assert not any("Revision Notes" in w for w in warnings)
+
 
 
 # --- Archived status tests ---

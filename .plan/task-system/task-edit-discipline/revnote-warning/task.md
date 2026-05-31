@@ -1,6 +1,6 @@
 ---
 title: "Warn (don't mutate) on stale revision notes in approved tasks"
-status: not-started
+status: implemented
 depends_on:
   - move-hook
 tags: []
@@ -33,6 +33,18 @@ Add one accurate line where the revision-note lifecycle is described (`skills/ta
 - `validate_plan` warns for an `approved` task with a non-empty `## Revision Notes` section; does **not** warn for: `not-started` / `in-progress` / `implemented` + revnote, `approved` without a revnote, or a `## Revision Notes` header that appears only inside a fenced code block in another section.
 - The auto-mutation code and its mutation tests are gone; `git grep` finds no `_reconcile_revision_notes` / `_strip_revision_notes` references; the hook no longer changes status or removes content for revision notes.
 - Full task-system suite green (`uv run --with pytest python -m pytest test_task_system.py`). Manual: an `approved` task.md carrying a revnote produces the warning on the next reconcile; a `not-started` one does not; a fenced `## Revision Notes` header does not.
+
+## Results
+
+All three parts implemented; full suite green (163 passed) and `git grep` finds no auto-mutation symbols.
+
+**Part 1 — auto-mutation removed.** Deleted from [task_hook.py](../../../../skills/task-system/scripts/task_hook.py): `_reconcile_revision_notes`, `_recover_prior_status`, `_strip_revision_notes`, `_body_has_revision_notes`, the `_COMPLETED_STATES` / `_REVNOTE_SECTION_RE` constants, the call in `_handle_edit_write`, and the now-unused `import subprocess`. The `re` import stays (used by the move-hook `_MUTATING_RE` / `_PLAN_TOKEN_RE`). The move-hook `_reconcile` (validate → propagate → dashboard) and all other hook behavior are untouched. Removed `TestRevisionNoteSync` (and its `_make_git_plan` / git-recovery scaffolding) from [test_task_system.py](../../../../skills/task-system/scripts/test_task_system.py).
+
+**Part 2 — non-destructive warning.** Added two functions to [_task_io.py](../../../../skills/task-system/scripts/_task_io.py): `_has_nonempty_section(body, section)` — a small local fence-aware scanner that skips `## ` headers inside ``` ``` ``` / `~~~` fenced blocks and treats a section as non-empty only when a non-blank line follows the header before the next top-level `## `; and `validate_revision_notes(task)` — warns only when `status == "approved"` and the fence-aware scan finds a non-empty `## Revision Notes` section. Wired into `validate_plan` alongside `validate_frontmatter` at both the per-task level and the root task. `Task.revision_notes` (fence-blind) is deliberately not trusted; `parse_body_sections` is left unchanged. The warning rides the existing `[task-hook]` channel, so it flags every stale revision note tree-wide on each reconcile.
+
+**Part 3 — docs.** One line added to [planning.md](../../../../skills/task-system/references/planning.md) §Revision Notes lifecycle and the `## Revision Notes` row of the section table in [SKILL.md](../../../../skills/task-system/SKILL.md): `validate_plan` warns (never mutates) when an `approved` task still carries the section; the reviewer keeps the removal duty. `agents/reviewer.md` untouched; no Codex/direct-mode regeneration.
+
+**Tests.** Replaced the mutation tests with `TestHasNonemptySection` (real header, empty section, missing header, ``` and `~~~` fenced headers ignored, real header after a fenced quote still detected), `TestValidateRevisionNotes` (approved+revnote warns; approved-without / implemented / not-started / in-progress / fenced / empty do not), and `TestValidatePlanRevisionNotes` (end-to-end `validate_plan` warns on approved+revnote, silent on implemented+revnote and on a fenced header). Manual hook run on a temp `.plan/`: approved+revnote emits the warning with content byte-identical before/after; not-started+revnote and fenced-only produce zero revnote warnings.
 
 ## Notes
 
