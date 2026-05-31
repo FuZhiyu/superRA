@@ -1,6 +1,6 @@
 ---
 title: "Bash-triggered task-tree revalidation (manual move support)"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-30
