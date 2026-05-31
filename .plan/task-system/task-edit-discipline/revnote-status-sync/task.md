@@ -1,6 +1,6 @@
 ---
 title: "Hook: revision-note ↔ status automation"
-status: not-started
+status: implemented
 depends_on:
   - move-hook
 tags: []
@@ -50,3 +50,34 @@ Full task-system suite green (`uv run --with pytest python -m pytest test_task_s
 ## Notes
 
 `agents/reviewer.md` and `planning.md` currently assign revision-note removal to the reviewer; reconciling those instructions to point at this hook (and regenerating the Codex/direct-mode reviewer artifacts) is the sibling `revnote-docs` task, which depends on this one so its docs match shipped behavior. Code + tests only here; no doc or generated-artifact edits.
+
+## Results
+
+Added the revision-note ↔ status automation to the `Edit`/`Write` reconcile path of [task_hook.py](../../../../skills/task-system/scripts/task_hook.py) and 11 tests. Full task-system suite green: **158 passed** (`uv run --with pytest python -m pytest test_task_system.py`), 147 prior + 11 new. Both behaviors confirmed in a scratch git-backed `.plan/`: a revnote added to a committed-approved task flips it to `revise` (note preserved); approving a committed-`revise` task that still carries a revnote removes the section (status stays `approved`).
+
+### `task_hook.py` — revnote lifecycle on the Edit/Write path only
+
+The automation runs in [`_reconcile_revision_notes`](../../../../skills/task-system/scripts/task_hook.py#L254), called from [`_handle_edit_write`](../../../../skills/task-system/scripts/task_hook.py#L322) **before** `_reconcile` so a status flip is visible to parent rollup. It is wrapped in its own best-effort try/except; the hook still always exits 0 and the `Bash` branch is untouched (revision notes are edited via `Edit`/`Write`, not the shell).
+
+Flow inside `_reconcile_revision_notes`:
+- **Leaf guard.** If the task directory contains any child `task.md`, return — a branch's status is rolled up from children, not authored, so it is not a target.
+- **Gate.** Act only when the current frontmatter status is a completed state (`approved`/`implemented`) AND a `## Revision Notes` header is present. `_body_has_revision_notes` matches the header at line start (leading whitespace tolerated), so an empty-content section still counts as present.
+- **Disambiguation.** [`_recover_prior_status`](../../../../skills/task-system/scripts/task_hook.py#L205) recovers the last committed status via `git -C <repo> show :<rel>` (index) then `HEAD:<rel>`, resolving the repo root with `git rev-parse --show-toplevel` and parsing the recovered frontmatter with `_task_io.parse_frontmatter`. The rule from the objective:
+  - `status == approved` and `prior != approved` → **Behavior B** (approval transition): strip the `## Revision Notes` section via `_strip_revision_notes`, keep status `approved`.
+  - else if `status == prior` (both completed) → **Behavior A**: set status to `revise`, keep the note.
+- **Safe fallback.** If `_recover_prior_status` returns `None` (not committed/staged, not in a git tree, `git` unavailable, or unparseable) the function returns without touching the file — a missed automation self-heals on the next committed edit, whereas a wrong guess could delete a planner's note.
+
+Reused `_task_io.parse_frontmatter` / `serialize_frontmatter` (no hand-rolled YAML). Section removal is a local `task_hook.py` concern via `_REVNOTE_SECTION_RE` (header through the next `## ` header or EOF). `## Review Notes` is never matched, so the reviewer's own loop is untouched.
+
+### Tests — `TestRevisionNoteSync`
+
+New class in [test_task_system.py](../../../../skills/task-system/scripts/test_task_system.py). Each case inits a real git repo under `tmp_path`, commits a known prior status, then edits and runs the hook as a subprocess (same harness as `TestTaskHook`). Cases:
+- **A:** approved + added revnote (prior approved) → `revise`, note preserved; same for `implemented`.
+- **B:** approval transition from prior `revise` and from prior `implemented` → note removed, status `approved`.
+- **Disambiguation:** identical `{approved + revnote}` end-state, one fixture with prior `approved` → A, one with prior `revise` → B.
+- **No-ops:** `not-started`/`in-progress` with revnote untouched; `approved` with no revnote untouched; prior-status unrecoverable (non-git tmp tree) → no automation, no crash.
+- **Invariants:** `## Review Notes` left intact while the revnote is removed; the hook's own write converges (a second run on the now-`revise` file is a no-op, confirming no reconcile loop); all cases exit 0.
+
+### Note on the dashboard step
+
+The dashboard rebuild is best-effort and unrelated to this change; in a minimal environment it logs `No module named 'fastapi'` and is swallowed by its existing try/except (exit 0 preserved), matching prior hook behavior.

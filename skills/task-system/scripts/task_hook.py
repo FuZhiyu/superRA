@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -182,6 +183,142 @@ def _handle_bash(data: dict) -> None:
     sys.exit(0)
 
 
+_COMPLETED_STATES = ("approved", "implemented")
+
+# A `## Revision Notes` section: its header through (but not including) the next
+# `## ` header, or end of file.
+_REVNOTE_SECTION_RE = re.compile(
+    r"(?ms)^[ \t]*##[ \t]+Revision Notes[ \t]*$.*?(?=^[ \t]*##[ \t]+|\Z)"
+)
+
+
+def _body_has_revision_notes(body: str) -> bool:
+    """True if the body contains a ``## Revision Notes`` header."""
+    return bool(re.search(r"(?m)^[ \t]*##[ \t]+Revision Notes[ \t]*$", body))
+
+
+def _strip_revision_notes(body: str) -> str:
+    """Remove the entire ``## Revision Notes`` section from a task body."""
+    return _REVNOTE_SECTION_RE.sub("", body)
+
+
+def _recover_prior_status(task_io, file_path: Path) -> str | None:
+    """Recover the last committed status of a task.md, best-effort.
+
+    Tries the staged (index) version first, then HEAD. Returns the parsed
+    ``status`` frontmatter value, or None when the prior state cannot be
+    recovered (file not committed/staged, not in a git tree, git unavailable,
+    or unparseable). A None result must map to the safe no-op fallback —
+    never a destructive guess.
+    """
+    work_dir = file_path.parent
+    try:
+        toplevel = subprocess.run(
+            ["git", "-C", str(work_dir), "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return None
+    if toplevel.returncode != 0:
+        return None
+    repo_root = Path(toplevel.stdout.strip())
+    try:
+        rel = file_path.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return None
+
+    for ref in (f":{rel}", f"HEAD:{rel}"):
+        try:
+            shown = subprocess.run(
+                ["git", "-C", str(repo_root), "show", ref],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except Exception:
+            continue
+        if shown.returncode != 0:
+            continue
+        try:
+            fm, _ = task_io.parse_frontmatter(shown.stdout)
+        except Exception:
+            continue
+        status = fm.get("status")
+        if isinstance(status, str) and status:
+            return status
+    return None
+
+
+def _reconcile_revision_notes(task_io, file_path: Path) -> None:
+    """Run the revision-note ↔ status automation on an edited leaf task.md.
+
+    Behavior A — a revision note added to a completed task (approved/implemented)
+    that did NOT just transition to approved → flip status to ``revise``.
+    Behavior B — a task flipped TO approved that still carries a revision note →
+    remove the section.
+
+    Both intents share the identical ``{approved + revnote}`` end-state; the
+    discriminator is whether status changed to ``approved`` in this edit,
+    recovered from the last committed version. When the prior status cannot be
+    recovered the automation is a no-op (the safe fallback), since a wrong guess
+    could delete a planner's revision note.
+
+    Only leaf tasks are touched — a branch's status is rolled up from its
+    children, so its authored frontmatter status is not a target for this flip.
+    """
+    # Leaf check: a task directory with any child task.md is a branch.
+    task_dir = file_path.parent
+    for child in task_dir.iterdir():
+        if child.is_dir() and (child / "task.md").exists():
+            return
+
+    try:
+        text = file_path.read_text(encoding="utf-8")
+    except Exception:
+        return
+
+    fm, body = task_io.parse_frontmatter(text)
+    status = fm.get("status")
+    if not isinstance(status, str) or not status:
+        return
+
+    has_revnote = _body_has_revision_notes(body)
+
+    # Behavior A and B only act on completed states carrying a revision note.
+    if status not in _COMPLETED_STATES or not has_revnote:
+        return
+
+    prior_status = _recover_prior_status(task_io, file_path)
+    if prior_status is None:
+        # Safe fallback: cannot tell A from B, so leave the note untouched.
+        return
+
+    new_text: str | None = None
+    if status == "approved" and prior_status != "approved":
+        # Behavior B — approval transition: the rework is done, clean the note.
+        stripped = _strip_revision_notes(body)
+        new_text = f"---\n{task_io.serialize_frontmatter(fm)}---\n{stripped}"
+    elif status == prior_status:
+        # Behavior A — note added to a still-completed task: route back to revise.
+        fm["status"] = "revise"
+        new_text = f"---\n{task_io.serialize_frontmatter(fm)}---\n{body}"
+
+    if new_text is not None:
+        try:
+            file_path.write_text(new_text, encoding="utf-8")
+            print(
+                f"[task-hook] Revision-note lifecycle applied to {file_path}.",
+                file=sys.stderr,
+            )
+        except Exception as exc:
+            print(
+                f"[task-hook] Revision-note reconcile failed (non-fatal): {exc}",
+                file=sys.stderr,
+            )
+
+
 def _handle_edit_write(data: dict) -> None:
     """Reconcile the plan tree for an Edit/Write of a task.md."""
     tool_input = data.get("tool_input", {}) or {}
@@ -209,6 +346,16 @@ def _handle_edit_write(data: dict) -> None:
     task_path = str(file_path.parent.relative_to(plan_root))
     if task_path == ".":
         task_path = ""
+
+    # Run the revision-note ↔ status automation first so a status flip is
+    # reflected before parent rollup. Best-effort, never blocks.
+    try:
+        _reconcile_revision_notes(task_io, file_path)
+    except Exception as exc:
+        print(
+            f"[task-hook] Revision-note reconcile failed (non-fatal): {exc}",
+            file=sys.stderr,
+        )
 
     _reconcile(plan_root, task_path=task_path)
     sys.exit(0)
