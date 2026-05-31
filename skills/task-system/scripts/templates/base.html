@@ -220,32 +220,263 @@ body {
   overflow-y: auto;
 }
 
-/* ── Master-detail workspace ── */
+/* ── Master-detail workspace ──────────────────────────────────────────────
+   Sidebar chrome model. The sidebar (#nav-tree) is always an absolutely
+   positioned element inside the relatively-positioned .workspace; a separate
+   .sidebar-spacer reserves the layout width the detail panel flows beside, and
+   the sidebar slides over that reservation with a GPU-friendly `transform`.
+   Only `transform` and the spacer width animate, so pin/unpin and drawer
+   open/close stay smooth. Three modes, set by classes on .workspace:
+     .sb-pinned    — spacer = full width, sidebar flush at translateX(0).
+     .sb-unpinned  — spacer = rail width, sidebar retracted so only a thin
+                     hover-rail peeks; hover slides the full sidebar out as an
+                     overlay above the detail panel; auto-hides on mouse-leave.
+     .sb-drawer    — (narrow screens) spacer = 0, sidebar is a fixed off-canvas
+                     drawer toggled by the header hamburger, with backdrop +
+                     focus trap, regardless of pin state.
+   --sidebar-width is the user-resizable width (drag handle / keyboard), clamped
+   and persisted; --rail-width is the retracted hover strip. */
 .workspace {
+  --sidebar-width: 280px;
+  --rail-width: 16px;
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(240px, 320px) 1fr;
+  grid-template-columns: auto 1fr;
   height: 100%;
   min-height: 0;
 }
 .workspace.hidden { display: none !important; }
 
-/* Left rail — persistent navigation tree */
+/* Layout spacer the detail panel flows beside; the sidebar overlays it. */
+.sidebar-spacer {
+  flex: 0 0 auto;
+  transition: width 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sb-pinned   .sidebar-spacer { width: var(--sidebar-width); }
+.sb-unpinned .sidebar-spacer { width: var(--rail-width); }
+.sb-drawer   .sidebar-spacer { width: 0; }
+
+/* Left rail — persistent navigation sidebar (the moving element). A flex
+   column: a fixed header chrome strip on top, the scrolling tree region below. */
 .nav-tree {
-  height: 100%;
-  overflow-y: auto;
-  padding: 14px 10px 40px;
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 10px 0;
   border-right: 1px solid var(--border);
   background: var(--bg-alt);
+  z-index: 30;
+  transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.26s ease;
+  outline: none;
 }
+/* The scrolling tree region (role="tree"); the header above it stays fixed. */
+.nav-tree-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0 40px;
+}
+.sb-pinned .nav-tree { transform: translateX(0); }
+/* Unpinned: retract so only --rail-width peeks at the screen edge. */
+.sb-unpinned .nav-tree {
+  transform: translateX(calc(-1 * (var(--sidebar-width) - var(--rail-width))));
+}
+/* Hover (or kept open during keyboard focus) slides the full sidebar out as
+   an overlay above the detail panel, with a lifting shadow. Driven by a single
+   .sb-revealed class on the workspace. */
+.sb-unpinned.sb-revealed .nav-tree {
+  transform: translateX(0);
+  box-shadow: var(--shadow-md), 6px 0 24px rgba(0,0,0,0.10);
+}
+
+/* Thin hover-rail affordance shown only when unpinned: a slim decorative strip
+   at the screen edge with a grip cue that invites the hover-reveal. It is
+   pointer-transparent — the retracted sidebar's own visible edge underneath is
+   the hover target (sidebar mouseenter reveals), so the rail is pure chrome and
+   never competes for the pointer. */
+.sidebar-rail {
+  display: none;
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 0;
+  width: var(--rail-width);
+  pointer-events: none;
+  z-index: 31;
+  background: linear-gradient(to right, var(--bg-alt), var(--bg-alt) 60%, transparent);
+  border-right: 1px solid var(--border);
+}
+.sb-unpinned .sidebar-rail { display: block; transition: opacity 0.2s ease; }
+.sb-unpinned.sb-revealed .sidebar-rail { opacity: 0; pointer-events: none; }
+/* Grip dots centered on the rail to read as an affordance, not a void. */
+.sidebar-rail::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px; height: 26px;
+  border-radius: 2px;
+  background: var(--text-mute);
+  opacity: 0.5;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+/* The sidebar's own hover (its visible edge is the hover target) lights the
+   grip cue, since the rail itself is pointer-transparent. */
+.sb-unpinned .nav-tree:hover ~ .sidebar-rail::before { opacity: 1; background: var(--accent); }
+
+/* Resize drag handle on the sidebar's right edge. A 7px hit area straddling
+   the border; a visible grip line on hover/focus/active. role="separator",
+   keyboard-operable (←/→). Hidden in drawer mode (width is fixed there). */
+.sidebar-resizer {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: calc(var(--sidebar-width) - 3px);
+  width: 7px;
+  z-index: 32;
+  cursor: col-resize;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: background 0.12s ease;
+}
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+.sidebar-resizer:hover::after,
+.sidebar-resizer:focus-visible::after,
+.workspace.sb-resizing .sidebar-resizer::after {
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+.sidebar-resizer:focus-visible { outline: none; }
+.sb-drawer .sidebar-resizer { display: none; }
+/* While dragging: kill the slide transitions so the sidebar tracks the cursor
+   1:1 (no lag/rubber-banding), and disable text selection page-wide. */
+.workspace.sb-resizing .nav-tree,
+.workspace.sb-resizing .sidebar-spacer { transition: none; }
+body.sb-resizing-active { cursor: col-resize; user-select: none; }
+
+/* ── Narrow-screen overlay drawer ── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  z-index: 28;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.sb-drawer .nav-tree {
+  position: fixed;
+  top: 0; bottom: 0; left: 0;
+  width: min(var(--sidebar-width), 86vw);
+  transform: translateX(-100%);
+  box-shadow: none;
+  z-index: 130;
+}
+.sb-drawer .sidebar-rail { display: none; }
+.sb-drawer.sb-drawer-open .nav-tree {
+  transform: translateX(0);
+  box-shadow: var(--shadow-md), 8px 0 32px rgba(0,0,0,0.22);
+}
+.sb-drawer.sb-drawer-open .sidebar-backdrop {
+  display: block;
+  opacity: 1;
+}
+
+/* Header hamburger — visible only on narrow screens (toggles the drawer). */
+.nav-hamburger {
+  display: none;
+  font-size: 18px; line-height: 1;
+  background: none; border: none;
+  color: var(--text-mid); cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nav-hamburger:hover { background: var(--bg-hover); color: var(--text); }
+
+/* Pin toggle in the sidebar header (desktop chrome). */
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-lt);
+}
+.sidebar-head-label {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-mid);   /* >=5:1 on --bg-alt in both themes (WCAG AA) */
+  text-transform: uppercase;
+}
+.sidebar-head-spacer { flex: 1; }
+.pin-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  font-size: 13px; line-height: 1;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--text-mute);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.2s ease;
+}
+.pin-toggle:hover { background: var(--bg-hover); color: var(--text); }
+.pin-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Pinned state: accent pin, upright. Unpinned: muted, tilted. */
+.sb-pinned .pin-toggle { color: var(--accent); }
+.sb-unpinned .pin-toggle { transform: rotate(45deg); }
+/* Drawer mode (narrow): pin state doesn't drive the layout, so the toggle would
+   be inert — hide it to avoid a no-op control. */
+.sb-drawer .pin-toggle { display: none; }
 
 /* Right — drill-down detail panel (breadcrumb + active node + children DAG) */
 .detail-panel {
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px 28px 60px;
 }
 .detail-panel > * {
   max-width: 860px;
+}
+.children-dag { overflow-x: auto; }
+
+/* ── Narrow breakpoint: force drawer mode regardless of pin state ── */
+@media (max-width: 860px) {
+  .nav-hamburger { display: inline-flex; }
+  /* JS adds .sb-drawer below this width; this guard keeps the layout sane even
+     before the resize handler runs (e.g. first paint at a narrow width). */
+  .workspace:not(.sb-drawer) .sidebar-spacer { width: 0; }
+  .detail-panel { padding: 16px 18px 60px; }
+  /* Tighten the header so it never forces a horizontal scrollbar: trim the
+     padding/gaps and let the controls wrap under the title row. */
+  .header { padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
+  .header-controls { flex-wrap: wrap; gap: 4px; }
+}
+
+/* Phone width: drop the verbose summary stats + free-text search; the title,
+   drawer hamburger, view toggle, and theme control are what stay essential.
+   Filtering/search remain reachable on wider screens. */
+@media (max-width: 620px) {
+  .header-stats { display: none; }
+  .hc-search { display: none; }
+  #filter-status { display: none; }
+  .worktree-selector .hc-select { max-width: 140px; }
 }
 
 /* ── Breadcrumb ── */
@@ -393,6 +624,15 @@ body {
 }
 .nav-tree .task-row.nav-active:hover { background: var(--accent-soft); }
 .nav-tree .task-row.nav-active .task-title-text { color: var(--text); }
+
+/* Keyboard focus ring for the roving-tabindex tree row (one row focusable at a
+   time). Distinct from .nav-active (the activePath highlight) so a keyboard
+   user can see where focus is even before they hit Enter. */
+.nav-tree .task-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.nav-tree .task-row { scroll-margin: 8px; }
 
 .task-toggle {
   display: inline-flex;
@@ -756,11 +996,30 @@ body {
 .task-tree > .task-node:nth-child(8)  { animation-delay: 0.16s; }
 .task-tree > .task-node:nth-child(9)  { animation-delay: 0.18s; }
 .task-tree > .task-node:nth-child(10) { animation-delay: 0.20s; }
+
+/* ── Reduced motion ──
+   Honor prefers-reduced-motion across the whole UI: kill the reveal-flash,
+   node fade-in, expand/collapse and section transitions, and the sidebar
+   chrome's slide/auto-hide/drawer/resize animations. Pin/unpin and drawer
+   open/close still work — they just snap instead of sliding. Scroll behavior
+   is left to scrollIntoView (called with default behavior, not 'smooth'). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .task-node { animation: none; }
+  .task-row.reveal-flash { animation: none; }
+}
 </style>
 </head>
 <body>
 <!-- ── Header ── -->
 <div class="header">
+  <button class="nav-hamburger" id="nav-hamburger" type="button"
+          aria-label="Open navigation" aria-controls="nav-tree" aria-expanded="false"
+          onclick="toggleDrawer()">&#9776;</button>
   <span class="header-title" id="header-title">{{ root_task.title or 'Plan Dashboard' }}</span>
   <div class="worktree-selector" id="worktree-selector">
     <span class="wt-icon" title="Switch worktree">&#9095;</span>
@@ -798,13 +1057,47 @@ body {
   {#- Master-detail workspace: persistent sidebar nav-tree + drill-down main panel.
       Region content is loaded client-side by the activePath router (sidebar-nav
       fills #nav-tree; main-panel fills #active-node / #children-dag). -#}
-  <div id="workspace" class="workspace">
-    <aside id="nav-tree" class="nav-tree" role="tree" aria-label="Task navigation"></aside>
+  <div id="workspace" class="workspace sb-pinned">
+    {#- Layout spacer the detail panel flows beside; the sidebar overlays it. -#}
+    <div class="sidebar-spacer" aria-hidden="true"></div>
+    {#- Persistent navigation sidebar (absolutely positioned; slides over the
+        spacer). The .nav-tree box holds a header chrome strip (pin toggle) and
+        the scrolling #nav-tree region, which is the role="tree". The header is
+        aria-hidden so it stays out of the tree's accessibility model. -#}
+    <aside class="nav-tree" id="sidebar">
+      <div class="sidebar-head" aria-hidden="true">
+        <span class="sidebar-head-label">Tasks</span>
+        <span class="sidebar-head-spacer"></span>
+        <button class="pin-toggle" id="pin-toggle" type="button"
+                aria-pressed="true" aria-label="Unpin sidebar (auto-hide)"
+                title="Pinned — click to auto-hide" onclick="toggleSidebarPin()">
+          {#- Pushpin icon; inherits currentColor so it tints with the accent
+              token (theme-aware). The .sb-unpinned rotate gives the "unpinned"
+              tilt. -#}
+          <svg class="pin-icon" width="15" height="15" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="17" x2="12" y2="22"></line>
+            <path d="M9 9V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4l2 3v2H7v-2l2-3z"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="nav-tree" class="nav-tree-scroll" role="tree"
+           aria-label="Task navigation" tabindex="-1"></div>
+    </aside>
+    <button class="sidebar-resizer" id="sidebar-resizer" type="button"
+            role="separator" aria-orientation="vertical"
+            aria-label="Resize sidebar" aria-valuemin="200" aria-valuemax="480"
+            aria-valuenow="280" aria-controls="nav-tree"></button>
+    <div class="sidebar-rail" id="sidebar-rail" aria-hidden="true"></div>
     <main class="detail-panel">
       <nav id="crumbs" class="crumbs" aria-label="Breadcrumb"></nav>
       <div id="active-node" class="active-node"></div>
       <div id="children-dag" class="children-dag"></div>
     </main>
+    {#- Drawer backdrop (narrow screens): inside the workspace so the
+        .sb-drawer-open mode class reaches it; fixed-position covers the page. -#}
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeDrawer()"></div>
   </div>
 
   <div id="view-kanban" class="kanban hidden"></div>
@@ -1069,6 +1362,9 @@ function applyFilters() {
     restoreNavFolds(preFilterFoldState);  /* leaving filter mode */
     preFilterFoldState = null;
   }
+
+  /* Visibility of rows changed -> keep exactly one row tab-focusable. */
+  refreshRovingTabindex();
 }
 
 function applyFiltersToNode(el, status, search) {
@@ -1103,6 +1399,8 @@ function setNavFold(node, open) {
   if (!toggle || toggle.classList.contains('leaf') || !children) return;
   toggle.classList.toggle('expanded', open);
   children.style.display = open ? '' : 'none';
+  var row = node.querySelector(':scope > .task-row');
+  if (row) row.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
 /* Restore folds from a snapshot; any node that appeared since (e.g. a branch
@@ -1210,6 +1508,7 @@ async function renderKanbanView() {
 
 var activePath = '';        /* '' = root */
 var restoring = false;      /* true while applying a load/popstate hash — suppress pushState */
+var _moveFocusOnLoad = false; /* set per user-nav so loadActiveNode lands focus on the new heading */
 
 /* A path -> display-title lookup. sidebar-nav populates this from /nav; until
    then the breadcrumb falls back to the path slug. */
@@ -1232,6 +1531,11 @@ function setActive(path) {
   if (!restoring) {
     var hash = '#/' + path;
     if (location.hash !== hash) history.pushState({ path: path }, '', hash);
+    /* User-initiated navigation: land focus on the new card heading once it
+       paints (a11y — SR users follow focus to the new content). Suppressed on
+       initial load / popstate restores (restoring=true), which must not steal
+       focus from the page. */
+    _moveFocusOnLoad = true;
   }
 
   /* A node click always means "show me the workspace." */
@@ -1241,6 +1545,11 @@ function setActive(path) {
   updateSidebar(path);
   loadActiveNode(path);
   loadChildrenDag(path);
+
+  /* Chrome: a selection means "done navigating" — auto-hide the unpinned
+     overlay and close the narrow-screen drawer. Defined in the sidebar-chrome
+     module below; guard so the router still works if it ever loads first. */
+  if (typeof onNavigationChrome === 'function') onNavigationChrome();
 }
 
 /* Rebuild the breadcrumb from the active path: root › seg › … › active.
@@ -1326,7 +1635,7 @@ async function loadActiveNode(path) {
 
     region.innerHTML =
       '<header class="active-node-head">'
-      + '<h2 class="active-node-title"></h2>'
+      + '<h2 class="active-node-title" tabindex="-1"></h2>'
       + (status ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
       + '</header>'
       /* Wrap the body in a real .task-node so the comment/section helpers,
@@ -1336,6 +1645,14 @@ async function loadActiveNode(path) {
     /* Set the title via textContent (avoids HTML injection from titles). */
     var titleEl = region.querySelector('.active-node-title');
     if (titleEl) titleEl.textContent = slug ? (slug + ' · ' + title) : title;
+
+    /* a11y: on a user-initiated navigation, move focus to the new heading so
+       keyboard/SR users land on the freshly-loaded content. Consume the flag so
+       SSE-driven re-renders of the same card never yank focus. */
+    if (_moveFocusOnLoad && titleEl) {
+      _moveFocusOnLoad = false;
+      titleEl.focus({ preventScroll: true });
+    }
 
     /* Expand every section by default and render its markdown + comments.
        Scope to the card's own top-level section wrappers — renderMarkdown adds
@@ -1645,6 +1962,7 @@ async function loadNavTree() {
     container.innerHTML = await resp.text();
     markLazyNodes();
     indexNavTitles(container);
+    applyTreeAria();   /* tree roles + roving tabindex on the freshly-injected rows */
     /* Bind the freshly-injected rows' declarative sse-swap="task:<path>" to the
        live EventSource. htmx only wires sse-swap elements it has processed, and
        innerHTML injection bypasses that — so process the new subtree explicitly.
@@ -1716,18 +2034,24 @@ async function toggleNavCaret(node) {
   var children = node.querySelector(':scope > .task-children');
   if (!toggle || !children) return;
 
+  var row = node.querySelector(':scope > .task-row');
+
   if (toggle.classList.contains('expanded')) {
     toggle.classList.remove('expanded');
     children.style.display = 'none';
+    if (row) row.setAttribute('aria-expanded', 'false');
+    refreshRovingTabindex();   /* rows just hidden may have held the tabbable row */
     return;
   }
 
   toggle.classList.add('expanded');
   children.style.display = '';
+  if (row) row.setAttribute('aria-expanded', 'true');
   if (node.dataset.needsLoad === 'true') {
     node.dataset.needsLoad = 'false';
     await loadNavChildren(node);
   }
+  refreshRovingTabindex();
 }
 
 /* Lazily fetch a node's body-free children into its .task-children container.
@@ -1743,6 +2067,7 @@ async function loadNavChildren(node) {
     children.innerHTML = await resp.text();
     markLazyNodes();
     indexNavTitles(children);
+    applyTreeAria();   /* tree roles + roving tabindex on the newly-loaded rows */
     /* Wire the lazily-loaded rows' sse-swap to the EventSource (see loadNavTree). */
     if (window.htmx) htmx.process(children);
     return true;
@@ -1758,6 +2083,8 @@ async function expandNavNode(node) {
   if (!toggle || toggle.classList.contains('leaf') || !children) return;
   toggle.classList.add('expanded');
   children.style.display = '';
+  var row = node.querySelector(':scope > .task-row');
+  if (row) row.setAttribute('aria-expanded', 'true');
   if (node.dataset.needsLoad === 'true') {
     node.dataset.needsLoad = 'false';
     await loadNavChildren(node);
@@ -1773,9 +2100,10 @@ async function updateSidebar(path) {
   var container = document.getElementById('nav-tree');
   if (!container) return;
 
-  /* Exactly one active row: clear the previous highlight first. */
+  /* Exactly one active row: clear the previous highlight + aria-selected. */
   container.querySelectorAll('.task-row.nav-active').forEach(function(r) {
     r.classList.remove('nav-active');
+    r.removeAttribute('aria-selected');
   });
 
   try {
@@ -1797,6 +2125,11 @@ async function updateSidebar(path) {
   var row = target.querySelector(':scope > .task-row');
   if (row) {
     row.classList.add('nav-active');
+    row.setAttribute('aria-selected', 'true');
+    /* Roving tabindex follows the active row so a subsequent Tab into the tree
+       lands on it. (applyTreeAria also keeps roles current after any lazy load
+       the ancestor walk just triggered.) */
+    applyTreeAria();
     requestAnimationFrame(function() {
       row.scrollIntoView({ block: 'nearest' });
     });
@@ -1813,6 +2146,442 @@ function showTreeAndExpand(path) { return revealTask(path); }
 
 /* ── Initialize mermaid ── */
 mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+
+/* ════════════════════════════════════════════════════════════════════════
+   Sidebar chrome — pin/unpin auto-hide, resizable width, narrow-screen drawer.
+   ──────────────────────────────────────────────────────────────────────
+   Pure presentation: none of this touches activePath. The workspace carries
+   the mode class (.sb-pinned / .sb-unpinned / .sb-drawer) and the live
+   --sidebar-width custom property; the sidebar slides via transform so pin and
+   reveal stay smooth. Pin state + chosen width persist in localStorage.
+   ════════════════════════════════════════════════════════════════════════ */
+var SB_WIDTH_MIN = 200, SB_WIDTH_MAX = 480, SB_WIDTH_DEFAULT = 280;
+var SB_NARROW = 860;                 /* px: below this the sidebar is a drawer */
+var sbPinned = true;                 /* set from localStorage on init */
+var sbWidth = SB_WIDTH_DEFAULT;
+var _sbHideTimer = null;             /* auto-hide grace-delay timer (unpinned) */
+
+function workspaceEl() { return document.getElementById('workspace'); }
+
+/* Whether the current viewport forces drawer mode (overrides pin state). */
+function sbIsNarrow() { return window.innerWidth <= SB_NARROW; }
+
+/* Apply the chosen width as the workspace custom property + sync the resizer's
+   aria-valuenow. Clamped by the caller. */
+function applySidebarWidth(w) {
+  sbWidth = w;
+  var ws = workspaceEl();
+  if (ws) ws.style.setProperty('--sidebar-width', w + 'px');
+  var rz = document.getElementById('sidebar-resizer');
+  if (rz) rz.setAttribute('aria-valuenow', String(w));
+}
+
+function clampSidebarWidth(w) {
+  if (isNaN(w)) return SB_WIDTH_DEFAULT;
+  return Math.max(SB_WIDTH_MIN, Math.min(SB_WIDTH_MAX, Math.round(w)));
+}
+
+/* Set the workspace mode class from (pin state, viewport). Narrow always wins:
+   the sidebar is the overlay drawer regardless of pin. */
+function applySidebarMode() {
+  var ws = workspaceEl();
+  if (!ws) return;
+  var narrow = sbIsNarrow();
+  ws.classList.toggle('sb-drawer', narrow);
+  ws.classList.toggle('sb-pinned', !narrow && sbPinned);
+  ws.classList.toggle('sb-unpinned', !narrow && !sbPinned);
+  if (narrow || sbPinned) {
+    /* Leaving unpinned/drawer-reveal context: clear any reveal state. */
+    ws.classList.remove('sb-revealed');
+    clearTimeout(_sbHideTimer);
+  }
+  if (!narrow) closeDrawer();   /* a resize up from narrow drops the drawer */
+  syncPinToggle();
+}
+
+function syncPinToggle() {
+  var btn = document.getElementById('pin-toggle');
+  if (!btn) return;
+  btn.setAttribute('aria-pressed', sbPinned ? 'true' : 'false');
+  if (sbPinned) {
+    btn.setAttribute('aria-label', 'Unpin sidebar (auto-hide)');
+    btn.title = 'Pinned — click to auto-hide';
+  } else {
+    btn.setAttribute('aria-label', 'Pin sidebar (keep open)');
+    btn.title = 'Auto-hide — click to pin';
+  }
+}
+
+/* Pin toggle: flip pinned/unpinned, persist, re-apply mode. No-op on narrow
+   screens (drawer mode owns the layout there) beyond persisting the choice. */
+function toggleSidebarPin() {
+  sbPinned = !sbPinned;
+  try { localStorage.setItem('dashboard-sidebar-pinned', sbPinned ? '1' : '0'); } catch (e) {}
+  applySidebarMode();
+}
+
+/* ── Unpinned auto-hide: hover the rail/edge to reveal, mouse-leave to hide ── */
+function revealSidebar() {
+  var ws = workspaceEl();
+  if (!ws || !ws.classList.contains('sb-unpinned')) return;
+  clearTimeout(_sbHideTimer);
+  ws.classList.add('sb-revealed');
+}
+/* Hide after a short grace delay so a brief cursor slip off the edge doesn't
+   snap it shut. A navigation selection calls this with delay=0. */
+function hideSidebar(delay) {
+  var ws = workspaceEl();
+  if (!ws || !ws.classList.contains('sb-unpinned')) return;
+  clearTimeout(_sbHideTimer);
+  _sbHideTimer = setTimeout(function() {
+    ws.classList.remove('sb-revealed');
+  }, delay == null ? 220 : delay);
+}
+
+function initSidebarChrome() {
+  /* Restore persisted pin + width. */
+  try {
+    var savedPin = localStorage.getItem('dashboard-sidebar-pinned');
+    if (savedPin !== null) sbPinned = savedPin === '1';
+    var savedW = parseInt(localStorage.getItem('dashboard-sidebar-width'), 10);
+    if (!isNaN(savedW)) sbWidth = clampSidebarWidth(savedW);
+  } catch (e) {}
+  applySidebarWidth(sbWidth);
+  applySidebarMode();
+
+  var sidebar = document.getElementById('sidebar');
+
+  /* Hover-reveal: the retracted sidebar's visible edge is the hover target (the
+     rail is pure decoration above it). Entering reveals; leaving starts the
+     grace-delay hide. */
+  if (sidebar) {
+    sidebar.addEventListener('mouseenter', revealSidebar);
+    sidebar.addEventListener('mouseleave', function() { hideSidebar(); });
+  }
+
+  initSidebarResizer();
+
+  /* Re-evaluate mode on viewport changes (debounced via rAF). */
+  var rafPending = false;
+  window.addEventListener('resize', function() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(function() { rafPending = false; applySidebarMode(); });
+  });
+}
+
+/* ── Resizable width: pointer drag + keyboard (←/→) on the separator handle ── */
+function initSidebarResizer() {
+  var rz = document.getElementById('sidebar-resizer');
+  var ws = workspaceEl();
+  if (!rz || !ws) return;
+
+  var dragging = false;
+
+  function onMove(ev) {
+    if (!dragging) return;
+    /* Width = cursor X relative to the workspace's left edge. */
+    var rect = ws.getBoundingClientRect();
+    applySidebarWidth(clampSidebarWidth(ev.clientX - rect.left));
+  }
+  function onUp() {
+    if (!dragging) return;
+    dragging = false;
+    ws.classList.remove('sb-resizing');
+    document.body.classList.remove('sb-resizing-active');
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    persistSidebarWidth();
+  }
+  rz.addEventListener('pointerdown', function(ev) {
+    /* Drag only makes sense when the sidebar is laid out (not drawer mode). */
+    if (sbIsNarrow()) return;
+    ev.preventDefault();
+    dragging = true;
+    ws.classList.add('sb-resizing');
+    document.body.classList.add('sb-resizing-active');
+    /* Unpinned + drag: keep the sidebar revealed so the user sees the resize. */
+    revealSidebar();
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  });
+
+  /* Keyboard: ←/← nudge by 16px, Home/End jump to clamp bounds. */
+  rz.addEventListener('keydown', function(ev) {
+    var step = ev.shiftKey ? 48 : 16;
+    var next = null;
+    if (ev.key === 'ArrowLeft')       next = sbWidth - step;
+    else if (ev.key === 'ArrowRight') next = sbWidth + step;
+    else if (ev.key === 'Home')       next = SB_WIDTH_MIN;
+    else if (ev.key === 'End')        next = SB_WIDTH_MAX;
+    if (next === null) return;
+    ev.preventDefault();
+    revealSidebar();
+    applySidebarWidth(clampSidebarWidth(next));
+    persistSidebarWidth();
+  });
+}
+
+function persistSidebarWidth() {
+  try { localStorage.setItem('dashboard-sidebar-width', String(sbWidth)); } catch (e) {}
+}
+
+/* ── Narrow-screen overlay drawer ──
+   Toggled by the header hamburger. Open: show backdrop, trap focus inside the
+   sidebar, Esc closes, and any navigation (setActive) closes it. Works only in
+   drawer mode (narrow); on desktop the hamburger is hidden. */
+var _drawerLastFocus = null;       /* element to restore focus to on close */
+
+function toggleDrawer() {
+  var ws = workspaceEl();
+  if (!ws) return;
+  if (ws.classList.contains('sb-drawer-open')) closeDrawer();
+  else openDrawer();
+}
+
+function openDrawer() {
+  var ws = workspaceEl();
+  if (!ws || !ws.classList.contains('sb-drawer')) return;
+  _drawerLastFocus = document.activeElement;
+  ws.classList.add('sb-drawer-open');
+  var ham = document.getElementById('nav-hamburger');
+  if (ham) { ham.setAttribute('aria-expanded', 'true'); ham.setAttribute('aria-label', 'Close navigation'); }
+  /* Move focus into the drawer so SR/keyboard users land inside it. */
+  var first = drawerFocusables()[0];
+  if (first) first.focus();
+  document.addEventListener('keydown', drawerKeydown, true);
+}
+
+function closeDrawer() {
+  var ws = workspaceEl();
+  if (!ws || !ws.classList.contains('sb-drawer-open')) return;
+  ws.classList.remove('sb-drawer-open');
+  var ham = document.getElementById('nav-hamburger');
+  if (ham) { ham.setAttribute('aria-expanded', 'false'); ham.setAttribute('aria-label', 'Open navigation'); }
+  document.removeEventListener('keydown', drawerKeydown, true);
+  /* Restore focus to the opener (hamburger) for keyboard continuity. */
+  if (_drawerLastFocus && document.contains(_drawerLastFocus)) _drawerLastFocus.focus();
+  else if (ham) ham.focus();
+  _drawerLastFocus = null;
+}
+
+/* Focusable elements inside the open drawer, for the focus trap. */
+function drawerFocusables() {
+  var sidebar = document.getElementById('sidebar');
+  if (!sidebar) return [];
+  return Array.prototype.filter.call(
+    sidebar.querySelectorAll('button, [href], [tabindex]:not([tabindex="-1"]), .task-row[tabindex="0"]'),
+    function(el) { return el.offsetParent !== null || el === document.activeElement; }
+  );
+}
+
+/* Esc closes; Tab/Shift+Tab cycle within the drawer (focus trap). */
+function drawerKeydown(ev) {
+  var ws = workspaceEl();
+  if (!ws || !ws.classList.contains('sb-drawer-open')) return;
+  if (ev.key === 'Escape') {
+    ev.preventDefault();
+    closeDrawer();
+    return;
+  }
+  if (ev.key !== 'Tab') return;
+  var f = drawerFocusables();
+  if (f.length === 0) return;
+  var first = f[0], last = f[f.length - 1];
+  if (ev.shiftKey && document.activeElement === first) {
+    ev.preventDefault(); last.focus();
+  } else if (!ev.shiftKey && document.activeElement === last) {
+    ev.preventDefault(); first.focus();
+  }
+}
+
+/* Called from setActive after a navigation: auto-hide the unpinned overlay and
+   close the drawer (a selection is a "done navigating" signal). */
+function onNavigationChrome() {
+  hideSidebar(0);
+  closeDrawer();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Keyboard navigation for the sidebar tree (role="tree", roving tabindex).
+   ──────────────────────────────────────────────────────────────────────
+   Exactly one row is tab-focusable at a time (roving tabindex); arrows move
+   focus among the *visible* rows, →/← expand/collapse (or move in/out), and
+   Enter/Space activate via setActive. ARIA (role, aria-expanded, aria-level,
+   aria-selected) is applied to the injected rows after every nav load.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Apply tree ARIA + roving tabindex to every nav row currently in the DOM.
+   Idempotent; re-run after each /nav and lazy /nav/{path} injection. Rows are
+   treeitems, their .task-children containers are groups, depth -> aria-level. */
+function applyTreeAria() {
+  var root = document.getElementById('nav-tree');
+  if (!root) return;
+  root.querySelectorAll('.task-node').forEach(function(node) {
+    var row = node.querySelector(':scope > .task-row');
+    if (!row) return;
+    row.setAttribute('role', 'treeitem');
+    row.setAttribute('aria-level', String(nodeDepth(node)));
+    /* Label: "<slug> — <title>, <status>" for a meaningful SR announcement. */
+    if (!row.getAttribute('aria-label')) {
+      var slug = node.dataset.path ? node.dataset.path.split('/').pop() : 'root';
+      var titleEl = row.querySelector('.task-title-text');
+      var title = titleEl ? titleEl.textContent.trim() : '';
+      var label = (slug ? slug : 'root') + (title ? ' — ' + title : '');
+      if (node.dataset.status) label += ', ' + node.dataset.status;
+      row.setAttribute('aria-label', label);
+    }
+    var toggle = row.querySelector(':scope > .task-toggle');
+    var children = node.querySelector(':scope > .task-children');
+    if (toggle && !toggle.classList.contains('leaf') && children) {
+      children.setAttribute('role', 'group');
+      row.setAttribute('aria-expanded',
+        toggle.classList.contains('expanded') ? 'true' : 'false');
+    } else {
+      row.removeAttribute('aria-expanded');
+    }
+    /* Roving tabindex: default every row out of the tab order; the active row
+       (or the first row) is made tabbable by refreshRovingTabindex. */
+    if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '-1');
+  });
+  refreshRovingTabindex();
+}
+
+/* 1-based aria-level from the number of .task-children ancestors. */
+function nodeDepth(node) {
+  var level = 1, p = node.parentElement;
+  while (p) {
+    if (p.classList && p.classList.contains('task-children')) level++;
+    p = p.parentElement;
+  }
+  return level;
+}
+
+/* Ensure exactly one row is tabbable (tabindex=0): the active row if present,
+   else the first visible row. Everything else is tabindex=-1. */
+function refreshRovingTabindex() {
+  var root = document.getElementById('nav-tree');
+  if (!root) return;
+  var rows = root.querySelectorAll('.task-row');
+  rows.forEach(function(r) { r.setAttribute('tabindex', '-1'); });
+  var active = root.querySelector('.task-row.nav-active');
+  var target = (active && isRowVisible(active)) ? active : firstVisibleRow();
+  if (target) target.setAttribute('tabindex', '0');
+}
+
+/* Visible = the row's node and all ancestor groups are displayed (not folded,
+   not filtered out). */
+function isRowVisible(row) {
+  var el = row;
+  while (el && el.id !== 'nav-tree') {
+    if (el.nodeType === 1) {
+      var cs = el.style && el.style.display === 'none';
+      if (cs || (el.classList && el.classList.contains('hidden'))) return false;
+    }
+    el = el.parentElement;
+  }
+  return true;
+}
+
+function firstVisibleRow() {
+  var root = document.getElementById('nav-tree');
+  if (!root) return null;
+  var rows = root.querySelectorAll('.task-row');
+  for (var i = 0; i < rows.length; i++) {
+    if (isRowVisible(rows[i])) return rows[i];
+  }
+  return null;
+}
+
+/* Ordered list of currently-visible rows (document order = visual order). */
+function visibleRows() {
+  var root = document.getElementById('nav-tree');
+  if (!root) return [];
+  return Array.prototype.filter.call(
+    root.querySelectorAll('.task-row'), isRowVisible);
+}
+
+/* Move roving focus to a row: make it the only tabbable row and focus it. */
+function focusRow(row) {
+  if (!row) return;
+  var root = document.getElementById('nav-tree');
+  if (root) root.querySelectorAll('.task-row').forEach(function(r) {
+    r.setAttribute('tabindex', '-1');
+  });
+  row.setAttribute('tabindex', '0');
+  row.focus();
+  row.scrollIntoView({ block: 'nearest' });
+}
+
+/* Keyboard handler for the tree, delegated from #nav-tree (survives row swaps).
+   ↑/↓ move among visible rows; →/← expand/collapse or move in/out; Enter/Space
+   activate; Home/End jump to first/last visible row. */
+function initTreeKeyboard() {
+  var root = document.getElementById('nav-tree');
+  if (!root) return;
+  root.addEventListener('keydown', function(ev) {
+    var row = ev.target.closest ? ev.target.closest('.task-row') : null;
+    if (!row || !root.contains(row)) return;
+    var node = row.closest('.task-node');
+    var toggle = row.querySelector(':scope > .task-toggle');
+    var isParent = toggle && !toggle.classList.contains('leaf');
+    var expanded = isParent && toggle.classList.contains('expanded');
+    var rows = visibleRows();
+    var idx = rows.indexOf(row);
+
+    switch (ev.key) {
+      case 'ArrowDown':
+        ev.preventDefault();
+        if (idx >= 0 && idx < rows.length - 1) focusRow(rows[idx + 1]);
+        break;
+      case 'ArrowUp':
+        ev.preventDefault();
+        if (idx > 0) focusRow(rows[idx - 1]);
+        break;
+      case 'ArrowRight':
+        ev.preventDefault();
+        if (isParent && !expanded) {
+          /* Expand (may lazy-load); focus stays on the row. */
+          toggleNavCaret(node).then(function() {
+            applyTreeAria();
+          });
+        } else if (isParent && expanded) {
+          /* Already open: move into the first visible child. */
+          var after = visibleRows();
+          var ai = after.indexOf(row);
+          if (ai >= 0 && ai < after.length - 1) focusRow(after[ai + 1]);
+        }
+        break;
+      case 'ArrowLeft':
+        ev.preventDefault();
+        if (isParent && expanded) {
+          toggleNavCaret(node);                 /* collapse */
+          applyTreeAria();
+        } else {
+          /* Move to parent row. */
+          var parentNode = node.parentElement
+            ? node.parentElement.closest('.task-node') : null;
+          var prow = parentNode
+            ? parentNode.querySelector(':scope > .task-row') : null;
+          if (prow) focusRow(prow);
+        }
+        break;
+      case 'Enter':
+      case ' ':
+        ev.preventDefault();
+        if (node && node.dataset.path !== undefined) setActive(node.dataset.path);
+        break;
+      case 'Home':
+        ev.preventDefault();
+        if (rows.length) focusRow(rows[0]);
+        break;
+      case 'End':
+        ev.preventDefault();
+        if (rows.length) focusRow(rows[rows.length - 1]);
+        break;
+    }
+  });
+}
 
 /* ════════════════════════════════════════════════════════════════════════
    Live reload — the single-active-node SSE model.
@@ -1981,7 +2750,8 @@ function switchWorktree(planRoot) {
   })
     .then(function(r) {
       if (!r.ok) return r.json().then(function(e) { throw new Error(e.detail || 'Switch failed'); });
-      /* Success — SSE full-reload will trigger location.reload() */
+      /* Success — the SSE full-reload event drives onFullReload(), which rebuilds
+         the sidebar in place and re-runs setActive (no full page reload). */
       _wtPreviousValue = planRoot;
     })
     .catch(function(err) {
@@ -2437,7 +3207,9 @@ function deleteComment(taskPath, commentId, btn) {
    highlight lands on a real row (deep hashes still lazy-load their ancestors
    inside updateSidebar). Sidebar load is awaited but best-effort. */
 document.addEventListener('DOMContentLoaded', async function() {
+  initSidebarChrome();    /* pin/resize/drawer chrome — pure presentation */
   initSidebarEvents();
+  initTreeKeyboard();      /* roving-tabindex keyboard nav on #nav-tree */
   await loadNavTree();
   initRouter();
   updateTreeCommentBadges();
