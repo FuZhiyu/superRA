@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Migrate a PLAN.md + RESULTS.md pair into a .plan/ directory tree."""
+"""Migrate a legacy PLAN.md + RESULTS.md pair into a .plan/ directory tree."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ WORKFLOW_STATUS_SECTION_RE = re.compile(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Migrate PLAN.md + RESULTS.md into a .plan/ directory tree, "
+        description="Migrate legacy PLAN.md + RESULTS.md into a .plan/ directory tree, "
         "or upgrade existing task files."
     )
     group = parser.add_mutually_exclusive_group(required=True)

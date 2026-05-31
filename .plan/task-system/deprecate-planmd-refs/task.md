@@ -1,6 +1,6 @@
 ---
 title: "Deprecate PLAN.md/RESULTS.md references in the task system"
-status: not-started
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-05-30
@@ -42,3 +42,22 @@ Validation:
 - Ensure every file path cited in edited task files or docs is a markdown link with a relative path and line anchor when pointing at a specific source line.
 
 ## Results
+
+### Key Findings
+- Made task `## Results` the primary implementer record: the canonical implementer self-check now requires major outcomes, numbers, caveats, and verification evidence before DONE / DONE_WITH_CONCERNS, and the handoff rule says the status report is only a navigation aid ([../../../agents/implementer.md:45-48](../../../agents/implementer.md#L45-L48), [../../../agents/implementer.md:70-74](../../../agents/implementer.md#L70-L74)).
+- Added orchestrator-owned parent result rollups after child approval and strengthened the superimplement completion gate to fail missing, thin, or status-report-only major results ([../../../skills/superimplement/SKILL.md:91-94](../../../skills/superimplement/SKILL.md#L91-L94), [../../../skills/superimplement/SKILL.md:117-119](../../../skills/superimplement/SKILL.md#L117-L119)).
+- Moved Stage 2 results guidance into task-system ownership: selected task `## Results` sections mature in place, child tasks carry evidence/caveats, parent tasks summarize direct children selectively, reviewers verify result substance, and orchestrators own upward rollups ([../../../skills/task-system/references/planning.md:150-157](../../../skills/task-system/references/planning.md#L150-L157), [../../../skills/task-system/references/planning.md:185-193](../../../skills/task-system/references/planning.md#L185-L193)).
+- Updated Documentation-stage choreography to ask where summaries should be updated before dispatching doc work and to dispatch against task-system results guidance instead of a separate final-results artifact ([../../../skills/superintegrate/SKILL.md:243-259](../../../skills/superintegrate/SKILL.md#L243-L259), [../../../skills/superintegrate/SKILL.md:269-274](../../../skills/superintegrate/SKILL.md#L269-L274)).
+- Removed the stale `final-form.md` reference from `report-in-markdown` and deleted [../../../skills/report-in-markdown/references/final-form.md](../../../skills/report-in-markdown/references/final-form.md). The remaining report-in-markdown load map only routes to `rich-content.md` for figures/math/tables and `baseline-io.md` for standalone reports ([../../../skills/report-in-markdown/SKILL.md:23-38](../../../skills/report-in-markdown/SKILL.md#L23-L38), [../../../skills/report-in-markdown/references/rich-content.md:9-13](../../../skills/report-in-markdown/references/rich-content.md#L9-L13), [../../../skills/report-in-markdown/references/baseline-io.md:30-62](../../../skills/report-in-markdown/references/baseline-io.md#L30-L62)).
+- Updated user-facing and hook guidance away from `PLAN.md + RESULTS.md` and toward `.plan/` task files as the durable record ([../../../README.md:34](../../../README.md#L34), [../../../README.md:58-59](../../../README.md#L58-L59), [../../../README.md:108-111](../../../README.md#L108-L111), [../../../hooks/ask-user-question-logger:32](../../../hooks/ask-user-question-logger#L32), [../../../hooks/exit-plan-mode:25](../../../hooks/exit-plan-mode#L25), [../../../hooks/codex-plan-stop:48](../../../hooks/codex-plan-stop#L48)).
+- Regenerated the generated implementer artifacts from [../../../agents/implementer.md](../../../agents/implementer.md): [../../../skills/using-superRA/references/direct-mode-implementer.md:42-68](../../../skills/using-superRA/references/direct-mode-implementer.md#L42-L68) and [../../../.codex/agents/superra_implementer.toml:49-75](../../../.codex/agents/superra_implementer.toml#L49-L75).
+
+### Validation
+- `rg -n "RESULTS\\.md|PLAN\\.md" README.md agents skills .codex hooks` passed the stale-reference sweep: surviving hits are legacy migration/backward-compatibility references or migration tests.
+- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` regenerated project Codex role artifacts; `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` reported all generated files up to date.
+- `uv run pytest skills/task-system/scripts/test_task_system.py skills/task-system/scripts/tests/test_state_preservation.py skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 189 tests.
+- `python3 -m pytest ...` was attempted first and failed because the system Python has no `pytest`; the `uv run pytest ...` command above is the successful repo-managed run.
+
+### Notes
+- The root [../../task.md](../../task.md) has no `## Conventions` section. I used the ancestor task context from `task_read.py`, the repository contributor guidance, and targeted reads of owning workflow/skill files.
+- I self-applied the AGENTS.md DRY/Necessity gate to added instruction lines: behavior rules were placed in the owning role/workflow/task-system surfaces, while markdown mechanics remain delegated to `report-in-markdown`.

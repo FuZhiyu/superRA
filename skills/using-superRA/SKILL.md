@@ -60,7 +60,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `report-in-markdown` | Markdown style guide for any agent writing markdown — always-loaded alongside `using-superra`; on-demand references cover figures, LaTeX math, and tables. |
 | Utility | `semantic-merge` | Tools for semantic coherence in branch integration — intent investigation, role classification, conflict resolution, stale-reference detect-and-resolve, propagation-to-coherence — with workflow sync author/reviewer mode references and standalone merge mode. |
 | Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
-| Utility | `task-system` | Directory-tree task system — filesystem hierarchy as task hierarchy, `task.md` per task (plan + results unified), sibling-only dependencies, status rollup, frontier computation, DAG rendering, migration from `PLAN.md` / `RESULTS.md`, and HTML dashboard generation. |
+| Utility | `task-system` | Directory-tree task system — filesystem hierarchy as task hierarchy, `task.md` per task (plan + results unified), sibling-only dependencies, status rollup, frontier computation, DAG rendering, legacy migration from `PLAN.md` / `RESULTS.md`, and HTML dashboard generation. |
 | Utility | `codex-superra-setup` | Generate and install the named `superra_implementer` / `superra_reviewer` Codex custom agents into `~/.codex/agents/` (global) or `.codex/agents/` (project). |
 | Meta | `using-superra` | This skill — the master skill every agent reads. |
 

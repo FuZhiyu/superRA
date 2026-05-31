@@ -154,7 +154,7 @@ Results live in each task's `## Results` section. The same section matures throu
 ### Two-Stage Lifecycle
 
 - **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record — terse, agent-facing. "Latest state only" — re-implementation replaces a task's results; it does not append history.
-- **Stage 2 — Permanent record (INTEGRATE phase).** Results maturation restructures for reader-facing clarity. The Stage 2 consolidation discipline lives in `skills/report-in-markdown/references/final-form.md`.
+- **Stage 2 — Permanent record (INTEGRATE Document).** Results maturation keeps findings in task files and restructures selected `## Results` sections for reader-facing clarity. Child tasks carry task-level evidence and caveats; parent tasks summarize direct child findings with links when a researcher needs a higher-level monitoring view.
 
 ### Per-task results template
 
@@ -186,8 +186,11 @@ Omit subsections that do not apply.
 
 - **Planner** — creates task.md with `## Results` section (empty or with placeholder text).
 - **Implementer** — fills and updates `## Results` during execution. On subsequent iterations, replaces the section's prior content in place.
-- **Orchestrator / standalone author** — everything.
-- **Reviewers** do NOT edit `## Results`. Concerns are raised in `## Review Notes`.
+- **Reviewer** — verifies the assigned task's `## Results` are substantive enough before approval. Concerns are raised in `## Review Notes`.
+- **Orchestrator** — after child approval, updates the immediate parent's `## Results` when the child produced a major result worth surfacing; at subtree closeout, summarizes selectively upward.
+- **Standalone author** — everything.
+
+Parent rollups summarize direct children for monitoring. Do not recursively copy every finding up the tree; link to child task files for full evidence and caveats.
 
 ### Figure Embedding
 

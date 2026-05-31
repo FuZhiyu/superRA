@@ -90,7 +90,7 @@ The plugin hook configuration lives in `hooks/hooks.json` (Claude Code) and `hoo
 
 ## Migration: `plan_migrate.py`
 
-### From PLAN.md + RESULTS.md to .plan/
+### From legacy PLAN.md + RESULTS.md to .plan/
 
 ```bash
 python3 <skill-dir>/scripts/plan_migrate.py \
@@ -183,6 +183,6 @@ For CLI usage, view options, and `.plan/serve` details, see `SKILL.md` §Dashboa
 | `task_query.py` | Query the tree: `--tree`, `--frontier`, `--dag`, `--json` |
 | `task_link.py` | Add or remove sibling dependencies |
 | `task_rename.py` | Rename a task directory (cascades to sibling `depends_on`) |
-| `plan_migrate.py` | Migrate from PLAN.md/RESULTS.md or upgrade v1 -> v2 |
+| `plan_migrate.py` | Migrate from legacy PLAN.md/RESULTS.md or upgrade v1 -> v2 |
 | `plan_dashboard.py` | Live dashboard server (`serve`) and static generation (`generate`, deprecated) |
 | `test_task_system.py` | Test suite for `_task_io.py` |

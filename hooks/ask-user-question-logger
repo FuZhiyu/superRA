@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PostToolUse hook: fires after AskUserQuestion/request_user_input returns an answer.
-# Offers a reminder to record important user decisions in PLAN.md.
+# Offers a reminder to record important user decisions in task files.
 # Does NOT block — the discipline system handles enforcement.
 
 set -euo pipefail
@@ -29,7 +29,7 @@ case "$tool_name" in
     ;;
 esac
 
-context="<IMPORTANT>You just received an answer from the user. If it affects scope, methodology, task status, or later reproducibility, consider recording it in PLAN.md before relying on it. See superRA:handoff-doc §User Decisions Log for the suggested format.</IMPORTANT>"
+context="<IMPORTANT>You just received an answer from the user. If it affects scope, methodology, task status, or later reproducibility, consider recording it in the relevant .plan/ task.md before relying on it.</IMPORTANT>"
 
 # Platform-appropriate output format (matches merge-guard / session-start pattern)
 if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then

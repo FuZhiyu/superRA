@@ -3,7 +3,7 @@ name: task-system
 description: >
   Directory-tree task system — filesystem hierarchy as task hierarchy.
   Use when creating, querying, or visualizing a .plan/ task tree; when
-  migrating from PLAN.md + RESULTS.md to the tree format; or when
+  migrating legacy PLAN.md + RESULTS.md to the tree format; or when
   generating an HTML dashboard. Triggers include "create a task tree",
   "show the frontier", "generate the dashboard", "migrate the plan",
   "what tasks are ready", "show the task DAG".
@@ -209,14 +209,14 @@ Starts a live dashboard server with SSE hot-reload — auto-updates when task fi
 
 The static `generate` subcommand is deprecated — use `serve` instead.
 
-### Migrate from PLAN.md + RESULTS.md
+### Migrate legacy PLAN.md + RESULTS.md
 
 ```bash
 python3 <skill-dir>/scripts/plan_migrate.py \
   --plan-md PLAN.md --results-md RESULTS.md --output .plan
 ```
 
-#### Preparing a PLAN.md for migration
+#### Preparing a legacy PLAN.md for migration
 
 The migration script has strict format expectations. Before running it, verify compatibility.
 
