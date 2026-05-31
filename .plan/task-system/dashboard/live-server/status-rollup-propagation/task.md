@@ -1,8 +1,7 @@
 ---
 title: "Auto-compute and persist parent status from children"
 status: approved
-depends_on:
-  - status-consistency
+depends_on: []
 tags: []
 created: 2026-05-25
 updated: 2026-05-25

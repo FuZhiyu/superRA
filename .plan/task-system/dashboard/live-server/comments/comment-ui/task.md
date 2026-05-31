@@ -2,7 +2,7 @@
 title: "Comment UI in dashboard"
 status: approved
 depends_on:
-  - ../sidecar-format
+  - sidecar-format
 tags: []
 created: 2026-05-24
 updated: 2026-05-25

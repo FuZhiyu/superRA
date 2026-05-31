@@ -1,8 +1,7 @@
 ---
 title: "Live Server Dashboard"
 status: in-progress
-depends_on:
-  - ../
+depends_on: []
 tags: []
 created: 2026-05-24
 updated: 2026-05-26
@@ -32,3 +31,18 @@ Replace the static single-file HTML dashboard with a live-updating server-based 
 - Expand a task → `hx-get="/task/<path>"` fetches rendered children
 - SSE endpoint `/events` pushes `task-updated` events when watchfiles detects changes
 - Each task node declares `sse-swap="task:<path>"` to auto-update on change
+
+## Results
+
+### Fixes
+
+Single-bug fixes folded in from their former standalone subtasks during tree consolidation (full detail in git history at the cited commits):
+
+- **Section order + HTML escaping** — unified `task_node.html` section rendering to preserve document order; added `| safe` on template content (`19da922`).
+- **Math entity escaping** — replaced `<template>` with `<script type="text/x-markdown">` so KaTeX gets literal `>` instead of `&gt;` (`ccd67c8`).
+- **Comment badge walk-up** — badge bubbling checks children visibility (not body-open state) and stops at the first visible ancestor, so counts land on the correct tree level (`0c422e7`).
+- **Relative path resolution** — relative links/images in rendered markdown resolve against the task's own `.plan/<path>/` directory, not the project root (`adf3944`).
+- **Rebuild discovers children** — `rebuild_task()` re-walks the task directory on partial updates so new/removed subtasks are discovered; broadcasts full-reload when the child set changes (`dafb5ec`).
+- **Status consistency** — added status/`review_status` ordering validation and a `task_update.py --fix` mode to correct branch-status mismatches (`78fc53a`; superseded by the later single-status model).
+- **Root task rendering** — root `.plan/task.md` renders as a tree node when it has body content, with a children-only fallback otherwise (`f8dbb69`).
+- **Section expand uncap** — removed the max-height cap on task/section bodies after expand (`4372f68`).

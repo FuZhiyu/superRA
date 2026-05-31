@@ -2,7 +2,7 @@
 title: "CLI entry point and uv run integration"
 status: approved
 depends_on:
-  - ../server
+  - server
 tags: []
 created: 2026-05-24
 updated: 2026-05-24

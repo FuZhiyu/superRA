@@ -2,7 +2,7 @@
 title: "Jinja2 templates and htmx frontend"
 status: approved
 depends_on:
-  - ../server
+  - server
 tags: []
 created: 2026-05-24
 updated: 2026-05-24
