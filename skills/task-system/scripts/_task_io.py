@@ -63,21 +63,6 @@ class Task:
             return self.status
         return compute_status(self)
 
-    def has_child_dependency_graph(self) -> bool:
-        """True when this task has >=2 children with at least one dependency
-        edge among them.  Dependencies are sibling-only, so an edge exists
-        when some child's ``depends_on`` names another child's slug.  Gates
-        whether an inline per-subtree DAG panel is worth rendering."""
-        if len(self.children) < 2:
-            return False
-        child_slugs = {c.slug for c in self.children}
-        for child in self.children:
-            for dep in child.depends_on:
-                dep_slug = dep.lstrip("./").rsplit("/", 1)[-1]
-                if dep_slug in child_slugs:
-                    return True
-        return False
-
 
 def _parse_yaml_value(raw: str) -> str | list[str]:
     """Parse a simple YAML value: scalar string, inline list, or multi-line list."""
