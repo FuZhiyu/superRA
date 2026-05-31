@@ -1,6 +1,6 @@
 ---
 title: "Deprecate PLAN.md/RESULTS.md references in the task system"
-status: implemented
+status: revise
 depends_on:  []
 tags: []
 created: 2026-05-30
@@ -61,3 +61,8 @@ Validation:
 ### Notes
 - The root [../../task.md](../../task.md) has no `## Conventions` section. I used the ancestor task context from `task_read.py`, the repository contributor guidance, and targeted reads of owning workflow/skill files.
 - I self-applied the AGENTS.md DRY/Necessity gate to added instruction lines: behavior rules were placed in the owning role/workflow/task-system surfaces, while markdown mechanics remain delegated to `report-in-markdown`.
+
+## Review Notes
+
+1. [MAJOR] [skills/superintegrate/SKILL.md:279-286](../../../skills/superintegrate/SKILL.md#L279-L286) dispatches the Documentation-stage reviewer with only "Review matured results" and prior-round adjudication notes, while the Stage manifest still loads only `report-in-markdown` for `Stage: documentation` ([skills/using-superRA/SKILL.md:90-91](../../../skills/using-superRA/SKILL.md#L90-L91)) and `report-in-markdown` now explicitly tells doc reviewers to load nothing beyond the base markdown rule unless rich content is in scope ([skills/report-in-markdown/SKILL.md:27-30](../../../skills/report-in-markdown/SKILL.md#L27-L30)). After deleting `final-form.md`, the replacement Stage 2 review standard lives in `task-system/references/planning.md` ([skills/task-system/references/planning.md:150-193](../../../skills/task-system/references/planning.md#L150-L193)), but doc reviewers are no longer routed to it. Fix by making Documentation-stage review load or cite the task-system results-shape guidance, either in the manifest/load map or in the doc-reviewer dispatch, so reviewers can verify the new task-file maturation and rollup rules.
+2. [MAJOR] The branch deletes `skills/report-in-markdown/references/final-form.md`, but the approved sibling task [figure-attachments/task.md:20](../../figure-attachments/task.md#L20), [figure-attachments/task.md:35](../../figure-attachments/task.md#L35), and [figure-attachments/task.md:48](../../figure-attachments/task.md#L48) still cite that deleted file as an authoritative instruction and result target. This leaves active `.plan/` state pointing at a missing source of truth and preserves the old `RESULTS.md` maturation model this task is supposed to retire. Update that task record in place, or otherwise mark the references as legacy/historical and point current attachment maturation guidance to `task-system/references/planning.md` / `rich-content.md`.
