@@ -30,15 +30,6 @@ Proactive consolidation sweep over the current task tree to clear accumulated st
 - No standalone task directory whose sole content is one completed bug fix; each such fix is a one-line entry in the `live-server` Fixes log.
 - All component subtasks and their `## Results` records are preserved intact.
 
-## Revision Notes
-
-Objective rewritten 2026-05-30 against the current tree (substantive). Deltas from the original:
-- Dependency-error count corrected 13 → 16 (current `task_check.py` output).
-- Original item (3) "mark 3 unreviewed test tasks as `review_status: approved`" is **obsolete** — `status-consolidation` removed `review_status` / `integration_status` from the data model. Replaced with item 3 (remove stale residual fields) and item 4 (reconcile stored-vs-computed status).
-- Original item (2) "merge 9 tiny tasks into 2 groups" reframed per researcher decision: completed single-fix tasks become one-line entries in the parent's Fixes log rather than standalone tasks or merged groups; component subtasks stay as tasks.
-- Added flatten item (5) for the single-child `migration` parent and a scope note covering the newly added `dynamic-workflows` workstream.
-- Removed this task's own stale `review_status` / `integration_status` frontmatter fields.
-
 ## Results
 
 Executed in commit `501e43f`. `task_check.py --plan-root .plan`: 25 issues → **0** (verification gate passed).

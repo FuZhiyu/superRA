@@ -82,10 +82,6 @@ The earlier statement in SKILL.md §Depth Tiers that "Phase 4 (Review & Commit) 
 - Agent review step exists in both SKILL.md §Phase 4 and the thorough-planning reference
 - SKILL.md §Depth Tiers paragraph about Phase 4 being "the same at all tiers" is updated
 
-## Revision Notes
-
-- **2026-05-26 — Added §6 "Agent Review Before User Review."** Thorough plans get a reviewer agent dispatch in Phase 4 between self-review and user review. Reviewer evaluates self-review checklist + structural coherence; REVISE findings must be fixed before user sees the tree. Also requires updating the "same at all tiers" statement in SKILL.md §Depth Tiers.
-
 ## Results
 
 ### File Created

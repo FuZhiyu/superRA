@@ -102,10 +102,6 @@ Update `references/harness-plan-mode.md` to align with the new entry logic. In p
 - Harness plan mode reference is consistent with the new entry logic
 - §Entry Assessment includes an explicit "ask when unclear" instruction for placement and depth, placed after the independence paragraph
 
-## Revision Notes
-
-- **2026-05-26 — Added §4 "Ask When Placement or Depth Is Unclear."** New instruction: when the tree/context doesn't make placement or depth obvious, use `AskUserQuestion` with concrete options rather than guessing. Renumbered §§5–7.
-
 ## Results
 
 ### Changes Made
