@@ -100,12 +100,14 @@ body {
   line-height: 1.5;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Header bar ── */
 .header {
-  position: sticky; top: 0; z-index: 100;
+  flex: 0 0 auto; z-index: 100;
   display: flex; align-items: center; gap: 16px;
   padding: 10px 24px;
   background: var(--bg-card);
@@ -208,8 +210,84 @@ body {
 .theme-toggle:hover { color: var(--text); }
 
 /* ── Main content area ── */
+/* The body is a flex column (header + main-content); main-content fills the
+   rest of the viewport. In Workspace the sidebar + detail panel each scroll
+   independently (main-content itself does not overflow); when Kanban shows,
+   main-content scrolls the centered board. */
 .main-content {
-  max-width: 960px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Master-detail workspace ── */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  height: 100%;
+  min-height: 0;
+}
+.workspace.hidden { display: none !important; }
+
+/* Left rail — persistent navigation tree */
+.nav-tree {
+  height: 100%;
+  overflow-y: auto;
+  padding: 14px 10px 40px;
+  border-right: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+
+/* Right — drill-down detail panel (breadcrumb + active node + children DAG) */
+.detail-panel {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px 28px 60px;
+}
+.detail-panel > * {
+  max-width: 860px;
+}
+
+/* ── Breadcrumb ── */
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 0 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-lt);
+}
+.crumb {
+  font-family: inherit;
+  font-size: inherit;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.crumb:hover { background: var(--bg-hover); color: var(--text); }
+.crumb.active {
+  color: var(--text);
+  font-weight: 600;
+  cursor: default;
+}
+.crumb.active:hover { background: none; }
+.crumb-sep {
+  color: var(--text-mute);
+  user-select: none;
+  padding: 0 1px;
+}
+
+/* When Workspace is showing, the Kanban container is hidden via .hidden;
+   when Kanban shows, it keeps the legacy centered layout. */
+#view-kanban:not(.hidden) {
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px 24px 60px;
 }
@@ -612,8 +690,6 @@ body {
 </style>
 </head>
 <body>
-{% from "task_node.html" import render_task_node %}
-
 <!-- ── Header ── -->
 <div class="header">
   <span class="header-title" id="header-title">{{ root_task.title or 'Plan Dashboard' }}</span>
@@ -639,8 +715,7 @@ body {
       <option value="approved">approved</option>
       <option value="archived">archived</option>
     </select>
-    <button class="hc-btn active" id="btn-tree" onclick="showView('tree')">Tree</button>
-    <button class="hc-btn" id="btn-dag" onclick="showView('dag')">DAG</button>
+    <button class="hc-btn active" id="btn-workspace" onclick="showView('workspace')">Workspace</button>
     <button class="hc-btn" id="btn-kanban" onclick="showView('kanban')">Kanban</button>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">&#9681;</button>
   </div>
@@ -650,16 +725,19 @@ body {
 <div class="main-content" hx-ext="sse" sse-connect="/events">
   {#- Hidden element to catch full-reload SSE events -#}
   <div id="sse-full-reload" sse-swap="full-reload" hx-swap="none" style="display:none;"></div>
-  <div id="view-tree" class="task-tree">
-    {% if root_task.body and root_task.body.strip() %}
-      {{ render_task_node(root_task, project_root, depth=0) }}
-    {% else %}
-      {% for child in root_task.children %}
-        {{ render_task_node(child, project_root, depth=0) }}
-      {% endfor %}
-    {% endif %}
+
+  {#- Master-detail workspace: persistent sidebar nav-tree + drill-down main panel.
+      Region content is loaded client-side by the activePath router (sidebar-nav
+      fills #nav-tree; main-panel fills #active-node / #children-dag). -#}
+  <div id="workspace" class="workspace">
+    <aside id="nav-tree" class="nav-tree" role="tree" aria-label="Task navigation"></aside>
+    <main class="detail-panel">
+      <nav id="crumbs" class="crumbs" aria-label="Breadcrumb"></nav>
+      <div id="active-node" class="active-node"></div>
+      <div id="children-dag" class="children-dag"></div>
+    </main>
   </div>
-  <div id="view-dag" class="dag-container hidden"></div>
+
   <div id="view-kanban" class="kanban hidden"></div>
 </div>
 
@@ -741,8 +819,8 @@ function toggleTheme() {
   localStorage.setItem('dashboard-theme', next);
 }
 
-/* ── View switching ── */
-var currentView = 'tree';
+/* ── View switching ── Workspace (master-detail drill-down) vs Kanban board ── */
+var currentView = 'workspace';
 
 function showView(view) {
   currentView = view;
@@ -750,10 +828,8 @@ function showView(view) {
     b.classList.remove('active');
   });
   document.getElementById('btn-' + view).classList.add('active');
-  document.getElementById('view-tree').classList.toggle('hidden', view !== 'tree');
-  document.getElementById('view-dag').classList.toggle('hidden', view !== 'dag');
+  document.getElementById('workspace').classList.toggle('hidden', view !== 'workspace');
   document.getElementById('view-kanban').classList.toggle('hidden', view !== 'kanban');
-  if (view === 'dag') renderDagView();
   if (view === 'kanban') renderKanbanView();
 }
 
@@ -1030,111 +1106,128 @@ async function renderKanbanView() {
   }
 }
 
-/* ── Shared navigation primitive: reveal a task in the tree ──
- *
- * Keyed by task path, callable from any view (Kanban cards, DAG nodes,
- * the browser console). Lands the reader on the task in the tree view with
- * every ancestor expanded, the target's body open, its rendered-markdown
- * sections expanded, scrolled into view, and briefly highlighted.
- *
- * Async because deeply nested targets (depth >= 3) are lazy-loaded via htmx;
- * we await each ancestor's children before descending so the target node and
- * its sections exist in the DOM before we expand and scroll to them.
- */
-async function revealTask(path) {
-  showView('tree');
+/* ════════════════════════════════════════════════════════════════════════
+   activePath hash router — the single source of truth for navigation.
+   ──────────────────────────────────────────────────────────────────────
+   `activePath` names the task currently shown in the main panel. Everything
+   else (sidebar highlight, breadcrumb, active-node body, children DAG) is a
+   pure function of it. The URL hash mirrors it verbatim: `#/<task/path>`,
+   `#/` (or empty) = the root. setActive() is the one entry point; the
+   browser's own back/forward stack drives navigation via popstate.
+   ════════════════════════════════════════════════════════════════════════ */
 
-  var parts = path.split('/');
+var activePath = '';        /* '' = root */
+var restoring = false;      /* true while applying a load/popstate hash — suppress pushState */
+
+/* A path -> display-title lookup. sidebar-nav populates this from /nav; until
+   then the breadcrumb falls back to the path slug. */
+var pathTitles = {};
+
+/* Read location.hash as `#/<task/path>` -> the path verbatim ('' for root). */
+function parseHash() {
+  var h = location.hash || '';
+  if (h.charAt(0) === '#') h = h.slice(1);   /* strip leading # */
+  if (h.charAt(0) === '/') h = h.slice(1);   /* strip leading / */
+  return h;
+}
+
+/* The one navigation entry point. Sets activePath, writes history (unless
+   restoring), then refreshes every derived region. */
+function setActive(path) {
+  path = path || '';
+  activePath = path;
+
+  if (!restoring) {
+    var hash = '#/' + path;
+    if (location.hash !== hash) history.pushState({ path: path }, '', hash);
+  }
+
+  /* A node click always means "show me the workspace." */
+  if (currentView !== 'workspace') showView('workspace');
+
+  updateBreadcrumb(path);
+  updateSidebar(path);
+  loadActiveNode(path);
+  loadChildrenDag(path);
+}
+
+/* Rebuild the breadcrumb from the active path: root › seg › … › active.
+   Each non-active crumb is a button that ascends by setting that ancestor
+   active; the active crumb is inert. */
+function updateBreadcrumb(path) {
+  var crumbs = document.getElementById('crumbs');
+  if (!crumbs) return;
+  crumbs.innerHTML = '';
+
+  var segs = path ? path.split('/') : [];
+
+  function addCrumb(label, crumbPath, isActive) {
+    var btn = document.createElement('button');
+    btn.className = 'crumb' + (isActive ? ' active' : '');
+    btn.textContent = label;
+    if (isActive) {
+      btn.setAttribute('aria-current', 'page');
+      btn.disabled = true;
+    } else {
+      btn.addEventListener('click', function() { setActive(crumbPath); });
+    }
+    crumbs.appendChild(btn);
+  }
+
+  function addSep() {
+    var sep = document.createElement('span');
+    sep.className = 'crumb-sep';
+    sep.textContent = '›';
+    crumbs.appendChild(sep);
+  }
+
+  /* Root crumb (active when at the root). */
+  addCrumb('root', '', segs.length === 0);
+
   var accumulated = '';
-
-  /* Expand every ancestor along the path, awaiting any lazy children load
-     so the next segment's node is present before we reach it. The final
-     iteration handles the target node's own body/children. */
-  for (var i = 0; i < parts.length; i++) {
-    accumulated = i === 0 ? parts[i] : accumulated + '/' + parts[i];
-    var nodeId = 'task-' + accumulated.replace(/\//g, '-');
-    var node = document.getElementById(nodeId);
-    if (!node) break;  /* path doesn't resolve in the current tree */
-
-    var toggle = node.querySelector(':scope > .task-row > .task-toggle');
-    var body = node.querySelector(':scope > .task-body');
-    var children = node.querySelector(':scope > .task-children');
-
-    if (toggle && !toggle.classList.contains('leaf') &&
-        !toggle.classList.contains('expanded')) {
-      toggle.classList.add('expanded');
-      if (body) { body.classList.add('open'); body.classList.add('uncapped'); }
-      if (children) {
-        children.style.display = '';
-        if (node.dataset.needsLoad === 'true') {
-          node.dataset.needsLoad = 'false';
-          await htmx.ajax('GET', '/task/' + accumulated, {
-            target: '#' + accumulated.replace(/\//g, '-') + '-children',
-            swap: 'innerHTML'
-          });
-        }
-      }
-    } else if (toggle && toggle.classList.contains('expanded') && body) {
-      /* Already expanded — ensure the body is open (it may have been a
-         row that was expanded for children only). */
-      body.classList.add('open');
-      body.classList.add('uncapped');
-    }
+  for (var i = 0; i < segs.length; i++) {
+    accumulated = i === 0 ? segs[i] : accumulated + '/' + segs[i];
+    addSep();
+    /* Prefer the real title once the sidebar supplies it; fall back to slug. */
+    var label = pathTitles[accumulated] || segs[i];
+    addCrumb(label, accumulated, i === segs.length - 1);
   }
-
-  /* The target node now exists; open its body and render its detail sections. */
-  var targetId = 'task-' + path.replace(/\//g, '-');
-  var target = document.getElementById(targetId);
-  if (!target) return;
-
-  expandTaskDetails(target);
-
-  requestAnimationFrame(function() {
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    var row = target.querySelector(':scope > .task-row');
-    if (row) {
-      row.classList.remove('reveal-flash');
-      void row.offsetWidth;  /* restart the animation if re-revealed */
-      row.classList.add('reveal-flash');
-    }
-  });
 }
 
-/* Open a task node's body and expand all its markdown sections, rendering
-   their markdown on first reveal. Mirrors toggleSection's lazy render. */
-function expandTaskDetails(node) {
-  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
-  var body = node.querySelector(':scope > .task-body');
-  if (toggle && !toggle.classList.contains('leaf')) {
-    toggle.classList.add('expanded');
-  }
-  if (body) { body.classList.add('open'); body.classList.add('uncapped'); }
-  var taskPath = node.dataset.path || '';
+/* ── Region content loaders (STUBS) ──
+   These are intentionally empty in routing-shell. The sibling tasks fill them:
+   - sidebar-nav  -> updateSidebar: render/highlight #nav-tree, ancestor walk.
+   - main-panel   -> loadActiveNode: fetch /node/<path> into #active-node;
+                     loadChildrenDag: fetch /dag?root=<path> into #children-dag.
+   Keep them as no-ops here so the router is fully wired and observable
+   (breadcrumb + activePath + history) before the regions have content. */
+function updateSidebar(path) { /* stub: sidebar-nav */ }
+function loadActiveNode(path) { /* stub: main-panel */ }
+function loadChildrenDag(path) { /* stub: main-panel */ }
 
-  node.querySelectorAll(':scope > .task-body [data-section]').forEach(function(wrapper) {
-    var content = wrapper.querySelector('.section-content');
-    var icon = wrapper.querySelector('.section-icon');
-    var preview = wrapper.querySelector('.section-preview');
-    if (content) { content.classList.add('open'); content.classList.add('uncapped'); }
-    if (icon) icon.classList.add('expanded');
-    if (preview) preview.style.display = 'none';
+/* hashchange / popstate: re-apply the hash without writing new history. */
+window.addEventListener('popstate', function() {
+  restoring = true;
+  setActive(parseHash());
+  restoring = false;
+});
 
-    var sectionName = wrapper.getAttribute('data-section') || '';
-    var renderedMd = content ? content.querySelector('.rendered-md') : null;
-    if (renderedMd && !renderedMd.dataset.rendered) {
-      var tmpl = renderedMd.querySelector('script[type="text/x-markdown"]');
-      if (tmpl) {
-        renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
-        renderedMd.dataset.rendered = 'true';
-      }
-    }
-  });
-
-  /* Load comment counts for the now-open sections. */
-  if (taskPath && typeof loadComments === 'function') loadComments(taskPath);
+/* Resolve the initial hash on load (default the root), normalize it with
+   replaceState so reload/back land cleanly, then activate it. */
+function initRouter() {
+  var path = parseHash();
+  restoring = true;
+  history.replaceState({ path: path }, '', '#/' + path);
+  setActive(path);
+  restoring = false;
 }
 
-/* Back-compat alias — existing call sites (Kanban cards) keep working. */
+/* ── Back-compat alias ──
+   revealTask(path)/showTreeAndExpand(path) were the giant-tree reveal
+   primitive; callers (Kanban cards, DAG node clicks) now just drill to the
+   task in the Workspace. The deep-link ancestor-walk that expands the sidebar
+   lives in sidebar-nav's updateSidebar. */
+function revealTask(path) { showView('workspace'); setActive(path); }
 function showTreeAndExpand(path) { return revealTask(path); }
 
 /* ── Initialize mermaid ── */
@@ -1940,8 +2033,9 @@ document.body.addEventListener('htmx:sseMessage', function(event) {
   }
 });
 
-/* ── Initial tree-level comment badges on page load ── */
+/* ── Page load: start the hash router, then initial comment badges ── */
 document.addEventListener('DOMContentLoaded', function() {
+  initRouter();
   updateTreeCommentBadges();
 });
 </script>

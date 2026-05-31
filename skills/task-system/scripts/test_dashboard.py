@@ -128,10 +128,20 @@ class TestServerRoutes:
         assert resp.status_code == 200
         assert "Test Project" in resp.text
 
-    def test_index_contains_task_nodes(self, client):
+    def test_index_contains_workspace_shell(self, client):
+        # The master-detail workspace renders an empty shell server-side; the
+        # nav-tree and active-node regions are filled client-side from
+        # /nav and /node, so the index no longer embeds the task-node tree.
         resp = client.get("/")
-        assert "task-node" in resp.text
-        assert "First Task" in resp.text
+        text = resp.text
+        assert 'id="nav-tree"' in text
+        assert 'id="crumbs"' in text
+        assert 'id="active-node"' in text
+        assert 'id="children-dag"' in text
+        # Workspace/Kanban toggle; the standalone DAG button is removed.
+        assert 'id="btn-workspace"' in text
+        assert 'id="btn-kanban"' in text
+        assert 'id="btn-dag"' not in text
 
     def test_get_task_returns_children_fragment(self, client, plan_root):
         # Add children to 01-first so the fragment has content
