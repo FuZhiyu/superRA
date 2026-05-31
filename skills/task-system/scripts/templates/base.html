@@ -484,6 +484,11 @@ body {
   stroke: var(--accent);
   stroke-width: 2px;
 }
+/* Inline per-subtree DAG panel (inside an expanded parent task body) */
+.dag-panel { margin: 2px 0; }
+.dag-panel-content .mermaid { overflow-x: auto; }
+.dag-panel-content .dag-controls { font-size: 12px; margin-bottom: 8px; }
+.dag-panel-content .dag-hint { font-size: 11px; }
 
 /* ── Kanban view ── */
 .kanban {
@@ -959,6 +964,55 @@ function wireDagNodeClicks(container) {
       revealTask(path);
     });
   });
+}
+
+/* ── Inline per-subtree DAG panel (inside an expanded parent task) ──
+ *
+ * Folds open/closed like a section. On first open it lazily fetches the
+ * sibling dependency graph for this task's direct children from
+ * /dag?root=<path>, runs mermaid on it, then wires node clicks through the
+ * same shared revealTask(path) primitive used by the global DAG tab. */
+async function toggleDagPanel(toggleEl, event) {
+  event.stopPropagation();
+  var panel = toggleEl.closest('.dag-panel');
+  var content = panel.querySelector('.dag-panel-content');
+  var icon = toggleEl.querySelector('.section-icon');
+  var preview = toggleEl.querySelector('.section-preview');
+
+  if (content.classList.contains('open')) {
+    /* Collapse */
+    icon.classList.remove('expanded');
+    recapForCollapse(content);
+    if (preview) preview.style.display = '';
+    return;
+  }
+
+  /* Expand */
+  content.classList.add('open');
+  icon.classList.add('expanded');
+  uncapAfterTransition(content);
+  if (preview) preview.style.display = 'none';
+
+  /* Lazy-render the graph on first open */
+  if (!content.dataset.rendered) {
+    var root = panel.dataset.dagRoot;
+    try {
+      var resp = await fetch('/dag?root=' + encodeURIComponent(root));
+      if (resp.ok) {
+        content.innerHTML = await resp.text();
+        var mermaidEls = content.querySelectorAll('.mermaid');
+        if (mermaidEls.length) {
+          await mermaid.run({ nodes: mermaidEls });
+          wireDagNodeClicks(content);
+        }
+        content.dataset.rendered = 'true';
+      } else {
+        content.innerHTML = '<p style="color:var(--text-mute)">Could not load dependency graph.</p>';
+      }
+    } catch(e) {
+      content.innerHTML = '<p style="color:var(--st-rev-t)">DAG render error: ' + e.message + '</p>';
+    }
+  }
 }
 
 /* ── Kanban rendering ── */

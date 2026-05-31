@@ -75,6 +75,22 @@
     {% endif %}
     {% endfor %}
 
+    {#- Inline per-subtree DAG panel: the sibling dependency graph over this
+        task's direct children. Shown only when there are >=2 children with at
+        least one inter-child dependency. The graph itself is fetched lazily
+        from /dag?root=<path> on first open, reusing the same dag.html renderer
+        and the shared wireDagNodeClicks/revealTask click wiring. -#}
+    {% if task.has_child_dependency_graph() %}
+    <div class="dag-panel" data-dag-root="{{ task.path }}">
+      <div class="section-toggle" onclick="toggleDagPanel(this, event)">
+        <span class="section-icon">&#9656;</span>
+        <span class="section-label">Dependencies</span>
+        <span class="section-preview">sibling dependency graph over {{ task.children | length }} children — click a node to open it</span>
+      </div>
+      <div class="section-content dag-panel-content"></div>
+    </div>
+    {% endif %}
+
     {#- Metadata pills -#}
     {% if task.depends_on or task.script or task.tags or task.input or task.output %}
     <div class="task-meta">

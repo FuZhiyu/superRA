@@ -1,6 +1,6 @@
 ---
 title: "Design A — inline per-subtree DAG panels"
-status: not-started
+status: implemented
 depends_on:
   - navigate-to-task
 tags: []
@@ -24,3 +24,25 @@ Add a foldable DAG panel inside each parent task node that has children with dep
 - Clicking a node in an inline panel opens that task in the tree, expanded, details visible (reuses the `navigate-to-task` primitive — no duplicated reveal logic).
 - The global `/dag` tab is untouched and still works.
 - Node colors match task status as in the existing `dag.html`. Serve the dashboard (`python skills/task-system/scripts/plan_dashboard.py serve --root .plan`) and confirm in both light and dark themes.
+
+## Results
+
+Inline per-subtree DAG panels ship inside each expanded parent task node, scoped to that parent's direct-children sibling graph, reusing the global DAG renderer and the shared reveal primitive without forking either.
+
+**Implementation.**
+
+- **Gating helper** — [`_task_io.py:66`](../../../../../skills/task-system/scripts/_task_io.py#L66) adds `Task.has_child_dependency_graph()`, returning `True` only when a task has ≥2 children and at least one child's `depends_on` names a sibling slug. This is the single source of truth for "does this parent get a panel," used by the macro.
+- **Scoped route** — [`plan_dashboard.py:481`](../../../../../skills/task-system/scripts/plan_dashboard.py#L481) extends `GET /dag` with an optional `root=<task path>` query param. With `root`, it renders the *same* `dag.html` template against `sub_root.children` (the direct children = the sibling-only graph); without `root` it is the unchanged global view. No parallel renderer — `dag.html` is untouched and already renders correctly against a sub-root because its edge resolution maps `depends_on` slugs to `parent/slug`, which is present in the scoped `all_tasks`.
+- **Panel markup** — [`task_node.html:78`](../../../../../skills/task-system/scripts/templates/task_node.html#L78) emits a foldable `.dag-panel` (a "Dependencies" `.section-toggle` + lazy `.dag-panel-content`) inside the task body, guarded by `task.has_child_dependency_graph()`. Because the panel lives in the `render_task_node` macro, it appears on every render path: inline (depth ≤ 2), the lazy `/task/<path>` fragment for deeper subtrees, and SSE node swaps.
+- **Lazy render + click wiring** — [`base.html:964`](../../../../../skills/task-system/scripts/templates/base.html#L964) adds `toggleDagPanel()`, which folds like a section (reusing `uncapAfterTransition`/`recapForCollapse`) and on first open fetches `/dag?root=<path>`, runs `mermaid.run`, then calls the **existing** `wireDagNodeClicks(content)` — so node clicks route through the shared `revealTask(path)` primitive from `navigate-to-task`. No reveal logic is duplicated.
+- **Styling** — [`base.html:481`](../../../../../skills/task-system/scripts/templates/base.html#L481) adds four `.dag-panel*` rules that only adjust spacing/scroll and inherit the existing theme tokens and `.dag-node-clickable` hover affordance, so light/dark and the clickable-node highlight come for free.
+
+**Verification (live server, HTTP).**
+
+- `GET /dag?root=task-system/dashboard/view-navigation` → 200, one subgraph, exactly its 3 children, both correct edges (`navigate-to-task → dag-global-tab`, `navigate-to-task → dag-inline-panels`), authoritative `data-node-paths` map present.
+- `GET /dag` (global) → 200, 16 subgraphs — untouched.
+- `GET /dag?root=does/not/exist` → 404.
+- Index page renders `data-dag-root` panels on exactly the parents with inter-child edges and none on leaves; the lazy `/task/<live-server>` fragment emits panels for its deeper `comments` / `state-preservation` subtrees, confirming all render paths are covered.
+- `py_compile` clean on both edited Python files.
+
+**Scope note.** Only the live FastAPI/htmx server (templates + route) is touched, matching the task's named files and the sibling `dag-global-tab` task's scope. The static `generate` path's self-contained `DASHBOARD_HTML` (a separate JS renderer) is intentionally left unchanged. `frontend-design` is not a loadable skill here; the panel was styled to the existing `base.html` design tokens and section-toggle patterns rather than from that reference.

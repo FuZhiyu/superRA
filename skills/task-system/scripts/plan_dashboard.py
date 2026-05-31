@@ -479,12 +479,24 @@ async def sse_events():
 # --- Route: GET /dag ---------------------------------------------------------
 
 @app.get("/dag", response_class=HTMLResponse)
-async def dag_view():
-    """Render the DAG mermaid diagram partial."""
+async def dag_view(root: str | None = None):
+    """Render the DAG mermaid diagram partial.
+
+    Without ``root``: the global view over the whole tree, clustered by subtree.
+    With ``root=<task path>``: an inline per-subtree panel scoped to that task's
+    direct children (their sibling dependency graph), reusing the same template.
+    """
     if _root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
     template = env.get_template("dag.html")
+    if root:
+        sub_root = _find_task(root)
+        if sub_root is None:
+            raise HTTPException(status_code=404, detail=f"Task not found: {root}")
+        # Scope to the parent's direct children — the sibling-only graph.
+        sub_tasks = list(sub_root.children)
+        return HTMLResponse(content=template.render(root_task=sub_root, all_tasks=sub_tasks))
     all_tasks = collect_all_tasks(_root_task)
     return HTMLResponse(content=template.render(root_task=_root_task, all_tasks=all_tasks))
 
