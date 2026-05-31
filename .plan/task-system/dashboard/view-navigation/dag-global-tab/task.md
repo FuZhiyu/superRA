@@ -1,6 +1,6 @@
 ---
 title: "Design B — clickable, subtree-clustered global DAG tab"
-status: implemented
+status: approved
 depends_on:
   - navigate-to-task
 tags: []
