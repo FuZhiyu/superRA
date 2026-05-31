@@ -22,7 +22,7 @@ This task ships the Kanban half of the workstream; do not touch the DAG views he
 - Clicking any Kanban card switches to the tree view and opens that exact task, expanded, with its rendered markdown details visible (not just a highlighted collapsed row).
 - The reveal works for a deeply nested task (ancestors all expand) and for a root-level task.
 - The function is reusable by path from outside the Kanban (so the DAG tasks can call it) — confirm by calling it from the browser console with a known task path.
-- Serve the dashboard (`bash .plan/serve`) and confirm in both light and dark themes.
+- Serve the dashboard (`python skills/task-system/scripts/plan_dashboard.py serve --root .plan`) and confirm in both light and dark themes.
 
 ## Results
 

@@ -26,4 +26,4 @@ Do not touch the inline-panel work; this task owns only the global tab and its t
 
 - The global DAG tab renders the whole tree grouped into per-subtree clusters, status-colored, legible at the current `.plan/` tree's scale.
 - Clicking any node switches to the tree view and opens that task, expanded, details visible (reuses the `navigate-to-task` primitive — no duplicated reveal logic).
-- Node-id↔path mapping is unique (no two tasks collapse to the same node). Serve the dashboard (`bash .plan/serve`) and confirm in both light and dark themes.
+- Node-id↔path mapping is unique (no two tasks collapse to the same node). Serve the dashboard (`python skills/task-system/scripts/plan_dashboard.py serve --root .plan`) and confirm in both light and dark themes.

@@ -23,4 +23,4 @@ Add a foldable DAG panel inside each parent task node that has children with dep
 - A parent task with dependent children shows a foldable DAG panel scoped to exactly those children; a parent with no inter-child dependencies (or <2 children) shows no panel.
 - Clicking a node in an inline panel opens that task in the tree, expanded, details visible (reuses the `navigate-to-task` primitive — no duplicated reveal logic).
 - The global `/dag` tab is untouched and still works.
-- Node colors match task status as in the existing `dag.html`. Serve the dashboard (`bash .plan/serve`) and confirm in both light and dark themes.
+- Node colors match task status as in the existing `dag.html`. Serve the dashboard (`python skills/task-system/scripts/plan_dashboard.py serve --root .plan`) and confirm in both light and dark themes.
