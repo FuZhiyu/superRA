@@ -1466,6 +1466,94 @@ class TestTaskHook:
         code, _ = self._run_hook(payload)
         assert code == 0
 
+    # --- Bash (manual move) branch ---
+
+    def test_bash_mv_triggers_rebuild_and_propagation(self, plan_with_branches):
+        """A Bash mv that re-parents a task rebuilds the dashboard and rolls up status.
+
+        Moving the lone not-started child out from under 01-data-prep (leaving
+        only the approved 01-load) should let the parent roll up to approved
+        once the post-move reconcile runs.
+        """
+        root = plan_with_branches
+        # Remove the stale dashboard so we can assert it gets regenerated.
+        dashboard = root / "dashboard.html"
+        if dashboard.exists():
+            dashboard.unlink()
+
+        src = root / "01-data-prep" / "02-merge"
+        dst = root / "02-merge"
+        shutil.move(str(src), str(dst))
+
+        # Parent had a not-started child before the move; assert it has not yet
+        # rolled up (sanity that the reconcile is what changes it).
+        before = _task_io.parse_task(root / "01-data-prep" / "task.md")
+        assert before.status == "not-started"
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv {src} {dst}"},
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
+        assert dashboard.exists(), "dashboard should be regenerated after the move"
+
+        after = _task_io.parse_task(root / "01-data-prep" / "task.md")
+        assert after.status == "approved", (
+            "parent should roll up to approved after its only remaining child is approved"
+        )
+
+    def test_bash_mv_dangling_dep_warns_and_does_not_rewrite(self, plan_with_branches):
+        """A re-parent that strands a depends_on warns but never rewrites the edge."""
+        root = plan_with_branches
+        # 02-merge depends_on 01-load, both under 01-data-prep. Move 02-merge to
+        # the top level so its sibling dependency 01-load is no longer present.
+        src = root / "01-data-prep" / "02-merge"
+        dst = root / "02-merge"
+        shutil.move(str(src), str(dst))
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv {src} {dst}"},
+        }
+        code, stderr = self._run_hook(payload)
+        assert code == 0
+        assert "01-load" in stderr and "WARNING" in stderr, (
+            "dangling dependency should surface as a validation warning"
+        )
+        # The hook must NOT rewrite the dependency — it stays as authored.
+        moved = _task_io.parse_task(dst / "task.md")
+        assert moved.depends_on == ["01-load"], (
+            "hook must not auto-cascade depends_on for a post-hoc move"
+        )
+
+    def test_bash_readonly_plan_command_no_side_effects(self, plan_root):
+        """A read-only .plan Bash command early-exits with no dashboard rebuild."""
+        dashboard = plan_root / "dashboard.html"
+        if dashboard.exists():
+            dashboard.unlink()
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": f"python3 task_query.py --plan-root {plan_root} frontier"
+            },
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
+        assert not dashboard.exists(), (
+            "read-only .plan command must not trigger a dashboard rebuild"
+        )
+
+    def test_bash_command_without_plan_exits_zero(self):
+        """A Bash command touching no .plan tree exits 0 with no error."""
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": "mv /tmp/a.txt /tmp/b.txt"},
+        }
+        code, _ = self._run_hook(payload)
+        assert code == 0
+
 
 # --- Archived status tests ---
 

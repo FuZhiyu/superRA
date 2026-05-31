@@ -1,6 +1,6 @@
 ---
 title: "Bash-triggered task-tree revalidation (manual move support)"
-status: not-started
+status: implemented
 depends_on: []
 tags: []
 created: 2026-05-30
@@ -45,3 +45,31 @@ Extend `TestTaskHook` (existing helper runs `task_hook.main()` with a JSON paylo
 ## Out of scope
 
 Codex and Cursor hook variants (`hooks/hooks-codex.json`, `hooks/hooks-cursor.json`) do not wire `task_hook.py` for `Edit`/`Write` at all today, so there is no Bash-parity change to make there; bringing those harnesses to task-validation parity is a separate, larger effort and is not part of this task. Note this asymmetry in the implementation results so it is not mistaken for an omission.
+
+## Results
+
+Implemented the Bash branch, wired the matcher, and added four tests. Full task-system suite green: **147 passed** (`python -m pytest test_task_system.py`), including the 4 new `TestTaskHook` Bash cases. Manual scratch-`.plan/` move confirmed: dangling-dep warning prints, parent status rolls up, `depends_on` left intact, exit 0.
+
+### `task_hook.py`
+
+`main()` now dispatches on `tool_name`: `Bash` → [`_handle_bash`](../../../../skills/task-system/scripts/task_hook.py#L121), `Edit`/`Write` → [`_handle_edit_write`](../../../../skills/task-system/scripts/task_hook.py#L183). The shared three-step reconcile (validate → propagate → rebuild dashboard, each in its own best-effort try/except, always exit 0) was extracted into [`_reconcile`](../../../../skills/task-system/scripts/task_hook.py#L38) so both branches call one source of truth — the `Edit`/`Write` behavior is unchanged.
+
+Bash gating ([`_handle_bash`](../../../../skills/task-system/scripts/task_hook.py#L121)): act only when the command both contains `.plan` **and** matches a filesystem-mutating verb (`mv`, `git mv`, `rm`, `rmdir`, `cp`, `mkdir`) via `_MUTATING_RE`. A read-only command that merely mentions `.plan` (`task_query.py`, `grep .plan`, `.plan/serve`) fails the verb test and early-exits. No attempt is made to parse `mv` source/destination semantics.
+
+**Plan-root discovery deviation from the objective.** The objective suggested resolving a `.plan` token and "walking up via `_find_plan_root`". `_find_plan_root` requires every directory on the walk to exist (it calls `.exists()`), but after a move the source path is gone and a destination may not yet be materialized in the form the token names. So instead [`_find_plan_root_for_token`](../../../../skills/task-system/scripts/task_hook.py#L106) splits the token on its first `.plan` path segment and returns the directory up to and including it — existence-independent, which is the correct behavior for post-hoc move tokens. Tokens are extracted with `_PLAN_TOKEN_RE`, resolved against `cwd`, and de-duplicated by resolved path so each distinct plan root reconciles once. When no resolvable token is found, it falls back to `cwd/.plan`.
+
+**Whole-tree status propagation.** `propagate_parent_status` only recomputes the ancestor chain of one given `task_path`, but a structural move can change several branches at once and the hook does not know the precise post-move location. [`_propagate_whole_tree`](../../../../skills/task-system/scripts/task_hook.py#L79) walks the tree, collects every leaf path, and calls `propagate_parent_status` for each — covering all intermediate parents. The `Edit`/`Write` path still uses the single-chain call since it knows its exact `task_path`.
+
+**No `depends_on` auto-cascade.** The hook never rewrites sibling `depends_on`. A move that strands a dependency surfaces as a `validate_plan` warning on stderr (`[task-hook]` prefix); re-wiring stays an explicit human/agent action. Verified by `test_bash_mv_dangling_dep_warns_and_does_not_rewrite`.
+
+### `hooks.json`
+
+Added a second `PostToolUse` entry with `"matcher": "Bash"` invoking the same `task_hook.py` command. The existing `Edit|Write` entry and the unrelated `merge-guard` PreToolUse Bash hook are unchanged.
+
+### Tests
+
+Added to `TestTaskHook`: `test_bash_mv_triggers_rebuild_and_propagation` (dashboard regenerated + parent rolls up to approved), `test_bash_mv_dangling_dep_warns_and_does_not_rewrite`, `test_bash_readonly_plan_command_no_side_effects`, `test_bash_command_without_plan_exits_zero`.
+
+### Out-of-scope asymmetry confirmed
+
+`hooks/hooks-codex.json` and `hooks/hooks-cursor.json` do not wire `task_hook.py` for `Edit`/`Write` today, so there is no Bash-parity entry to add there. This is the documented asymmetry, not an omission.
