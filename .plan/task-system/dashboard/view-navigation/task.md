@@ -7,6 +7,8 @@ created: 2026-05-30
 updated: 2026-05-31
 ---
 
+**Sync impact:** Cluster `revnote-stale-cleanup` removed this task's stale `## Revision Notes` section (the merged-in `validate_revision_notes` rule flags revision notes on `approved` tasks); cluster `task-io-additive` notes that `Task.has_child_dependency_graph()` is now dead code after this task's mermaid removal. Source: root task.md `## Sync Map`.
+
 ## Objective
 
 Replace the dashboard's three-tab presentation shell (Tree / global DAG / Kanban) with a single **master-detail drill-down workspace** that makes the task tree navigable by drilling layer by layer instead of expanding one giant scroll. Kanban stays as a separate board. The work is on the live FastAPI/htmx server only (`skills/task-system/scripts/plan_dashboard.py` + `skills/task-system/scripts/templates/`); the static `generate` / `DASHBOARD_HTML` path is legacy and self-contained and stays out of scope.
