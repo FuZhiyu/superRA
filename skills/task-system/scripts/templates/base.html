@@ -284,6 +284,71 @@ body {
   padding: 0 1px;
 }
 
+/* ── Active-node card (the focused detail view) ── */
+.active-node-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.active-node-title {
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text);
+  margin: 0;
+}
+.active-node-head .badge { align-self: center; }
+/* The card body reuses the tree-body section/comment chrome, but it is always
+   shown (no collapse animation gating its height like a tree row). */
+.active-node-body { display: block; }
+
+/* ── Children DAG / subtask grid ── */
+.children-dag { margin-top: 26px; }
+.children-dag:empty { margin-top: 0; }
+.children-dag .mermaid { overflow-x: auto; }
+
+.child-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+.child-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+.child-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.child-card-slug {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+.child-card-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+
 /* When Workspace is showing, the Kanban container is hidden via .hidden;
    when Kanban shows, it keeps the legacy centered layout. */
 #view-kanban:not(.hidden) {
@@ -571,11 +636,6 @@ body {
   stroke: var(--accent);
   stroke-width: 2px;
 }
-/* Inline per-subtree DAG panel (inside an expanded parent task body) */
-.dag-panel { margin: 2px 0; }
-.dag-panel-content .mermaid { overflow-x: auto; }
-.dag-panel-content .dag-controls { font-size: 12px; margin-bottom: 8px; }
-.dag-panel-content .dag-hint { font-size: 11px; }
 
 /* ── Kanban view ── */
 .kanban {
@@ -1091,11 +1151,12 @@ function nodeOwnRowMatches(el, status, search) {
 }
 
 /* ── DAG rendering (mermaid) ── */
-/* Make rendered DAG nodes clickable: each node opens its task in the tree via
-   the shared revealTask(path) primitive. The dag.html partial emits an
-   authoritative node_id -> task path map; we attach handlers after mermaid
-   renders rather than via `click ... call` so we avoid needing mermaid's
-   'loose' security level and stay robust to any node-id slug collision. */
+/* Make rendered DAG nodes clickable: each child node descends to that task via
+   setActive(path) — clicking a child in the children-DAG makes it the active
+   node. The dag.html partial emits an authoritative node_id -> task path map;
+   we attach handlers after mermaid renders rather than via `click ... call` so
+   we avoid needing mermaid's 'loose' security level and stay robust to any
+   node-id slug collision. */
 function wireDagNodeClicks(container) {
   var mapEl = container.querySelector('.dag-controls[data-node-paths]');
   if (!mapEl) return;
@@ -1117,58 +1178,9 @@ function wireDagNodeClicks(container) {
     g.addEventListener('click', function(ev) {
       ev.preventDefault();
       ev.stopPropagation();
-      revealTask(path);
+      setActive(path);
     });
   });
-}
-
-/* ── Inline per-subtree DAG panel (inside an expanded parent task) ──
- *
- * Folds open/closed like a section. On first open it lazily fetches the
- * sibling dependency graph for this task's direct children from
- * /dag?root=<path>, runs mermaid on it, then wires node clicks through the
- * same shared revealTask(path) primitive used by the global DAG tab. */
-async function toggleDagPanel(toggleEl, event) {
-  event.stopPropagation();
-  var panel = toggleEl.closest('.dag-panel');
-  var content = panel.querySelector('.dag-panel-content');
-  var icon = toggleEl.querySelector('.section-icon');
-  var preview = toggleEl.querySelector('.section-preview');
-
-  if (content.classList.contains('open')) {
-    /* Collapse */
-    icon.classList.remove('expanded');
-    recapForCollapse(content);
-    if (preview) preview.style.display = '';
-    return;
-  }
-
-  /* Expand */
-  content.classList.add('open');
-  icon.classList.add('expanded');
-  uncapAfterTransition(content);
-  if (preview) preview.style.display = 'none';
-
-  /* Lazy-render the graph on first open */
-  if (!content.dataset.rendered) {
-    var root = panel.dataset.dagRoot;
-    try {
-      var resp = await fetch('/dag?root=' + encodeURIComponent(root));
-      if (resp.ok) {
-        content.innerHTML = await resp.text();
-        var mermaidEls = content.querySelectorAll('.mermaid');
-        if (mermaidEls.length) {
-          await mermaid.run({ nodes: mermaidEls });
-          wireDagNodeClicks(content);
-        }
-        content.dataset.rendered = 'true';
-      } else {
-        content.innerHTML = '<p style="color:var(--text-mute)">Could not load dependency graph.</p>';
-      }
-    } catch(e) {
-      content.innerHTML = '<p style="color:var(--st-rev-t)">DAG render error: ' + e.message + '</p>';
-    }
-  }
 }
 
 /* ── Kanban rendering ── */
@@ -1275,14 +1287,312 @@ function updateBreadcrumb(path) {
 }
 
 /* ── Region content loaders ──
-   updateSidebar is implemented below (sidebar-nav). The main-panel loaders are
-   still stubs filled by the main-panel task:
-   - loadActiveNode:  fetch /node/<path> into #active-node.
-   - loadChildrenDag: fetch /dag?root=<path> into #children-dag.
-   Keep them as no-ops so the router stays observable before those regions
-   have content. */
-function loadActiveNode(path) { /* stub: main-panel */ }
-function loadChildrenDag(path) { /* stub: main-panel */ }
+   updateSidebar is implemented below (sidebar-nav); loadActiveNode and
+   loadChildrenDag fill the main panel (this task). The active node's body and
+   the children DAG are pure functions of activePath, refetched on every nav. */
+
+/* Active-node card: the focused detail view for the current task. Fetch the
+   body-only /node/<path> partial and wrap it in a `.task-node[data-path]` so
+   the existing section + comment pipeline (toggleSection, loadComments,
+   updateSectionBadges, the comment forms) works byte-for-byte as in the old
+   tree body — every one of those walks up to `.task-node[data-path]`. The
+   breadcrumb already shows the path, so the card header is just title + status.
+   Sections default to EXPANDED here (this is the detail view, not a tree row). */
+async function loadActiveNode(path) {
+  var region = document.getElementById('active-node');
+  if (!region) return;
+
+  /* Guard against a slow fetch landing after the user has navigated away. */
+  var token = (loadActiveNode._token = (loadActiveNode._token || 0) + 1);
+
+  var slug = path ? path.split('/').pop() : '';
+
+  try {
+    var resp = await fetch('/node/' + path);
+    if (token !== loadActiveNode._token) return;  /* superseded */
+    if (!resp.ok) {
+      region.innerHTML = '<p style="color:var(--text-mute)">Could not load this task.</p>';
+      return;
+    }
+    var body = await resp.text();
+    if (token !== loadActiveNode._token) return;  /* superseded */
+
+    /* Read title + status after the fetch resolves: updateSidebar (started in
+       the same setActive tick) has had time to materialize the row, so its
+       data-status and the indexed title are usually available even on a fresh
+       descent. Both fall back gracefully when the sidebar row isn't in yet. */
+    var title = pathTitles[path] || slug || 'root';
+    var status = navRowStatus(path);
+
+    region.innerHTML =
+      '<header class="active-node-head">'
+      + '<h2 class="active-node-title"></h2>'
+      + (status ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
+      + '</header>'
+      /* Wrap the body in a real .task-node so the comment/section helpers,
+         which all resolve via `.task-node[data-path]`, find their context. */
+      + '<div class="task-node active-node-body" data-path="' + path + '">' + body + '</div>';
+
+    /* Set the title via textContent (avoids HTML injection from titles). */
+    var titleEl = region.querySelector('.active-node-title');
+    if (titleEl) titleEl.textContent = slug ? (slug + ' · ' + title) : title;
+
+    /* Expand every section by default and render its markdown + comments.
+       Scope to the card's own top-level section wrappers — renderMarkdown adds
+       nested [data-section] commentable-blocks, which must not be re-revealed. */
+    var taskNode = region.querySelector('.task-node[data-path]');
+    if (taskNode) {
+      taskNode.querySelectorAll(':scope > [data-section]').forEach(function(wrapper) {
+        revealCardSection(wrapper, path);
+      });
+      loadComments(path);
+    }
+
+    /* If the sidebar row hadn't landed yet, the status badge is missing. The
+       deep-descent ancestor-walk in updateSidebar can outlast this fetch, so
+       patch the badge once the row materializes (best-effort, single retry). */
+    if (!status) patchCardBadgeWhenReady(path, token);
+  } catch (e) {
+    if (token !== loadActiveNode._token) return;
+    region.innerHTML = '<p style="color:var(--st-rev-t)">Load error: ' + e.message + '</p>';
+  }
+}
+
+/* Open one section in the active-node card: mirror toggleSection's expand
+   branch (open + uncap + lazy-render the x-markdown payload) without the toggle
+   event, since the card opens sections programmatically rather than on click. */
+function revealCardSection(wrapper, taskPath) {
+  var content = wrapper.querySelector(':scope > .section-content');
+  var toggle = wrapper.querySelector(':scope > .section-toggle');
+  if (!content) return;
+  var icon = toggle ? toggle.querySelector('.section-icon') : null;
+  var preview = toggle ? toggle.querySelector('.section-preview') : null;
+  var sectionName = wrapper.getAttribute('data-section') || '';
+
+  content.classList.add('open');
+  if (icon) icon.classList.add('expanded');
+  uncapAfterTransition(content);
+  if (preview) preview.style.display = 'none';
+
+  var renderedMd = content.querySelector('.rendered-md');
+  if (renderedMd && !renderedMd.dataset.rendered) {
+    var tmpl = renderedMd.querySelector('script[type="text/x-markdown"]');
+    if (tmpl) {
+      renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
+      renderedMd.dataset.rendered = 'true';
+    }
+  }
+}
+
+/* Status of a task from its sidebar row, when that row is in the DOM (the
+   nav rows carry data-status). Falls back to '' so the caller omits the badge
+   for a deep-link target whose row hasn't materialized yet. */
+function navRowStatus(path) {
+  var row = document.getElementById(navNodeId(path));
+  return row ? (row.dataset.status || '') : '';
+}
+
+/* Poll briefly for the sidebar row to land, then inject the status badge into
+   the card header. Bails if the card has since navigated away (token mismatch)
+   or the row never appears. Best-effort cosmetic fill for fresh deep descents. */
+function patchCardBadgeWhenReady(path, token) {
+  var tries = 0;
+  (function attempt() {
+    if (token !== loadActiveNode._token) return;        /* navigated away */
+    var status = navRowStatus(path);
+    var head = document.querySelector('#active-node .active-node-head');
+    if (status && head && !head.querySelector('.badge')) {
+      var badge = document.createElement('span');
+      badge.className = 'badge badge-' + status;
+      badge.textContent = status;
+      head.appendChild(badge);
+      return;
+    }
+    if (status || tries >= 10) return;                  /* done or gave up */
+    tries++;
+    setTimeout(attempt, 60);
+  })();
+}
+
+/* Children DAG: the active node's direct children, presented as a clickable
+   graph (the key inversion — subtasks live in the main panel, not the tree).
+   A single GET /dag?root=<path> drives all three cases via its emitted child
+   set + edges; the root is special-cased (empty root would return the global
+   graph). Output is cached per (path, child-status-signature) so navigating
+   back to an unchanged node skips the mermaid re-render; a child whose status
+   changed busts the cache. */
+var _childrenDagCache = {};   /* path -> { sig, html, wired } */
+
+async function loadChildrenDag(path) {
+  var region = document.getElementById('children-dag');
+  if (!region) return;
+
+  var token = (loadChildrenDag._token = (loadChildrenDag._token || 0) + 1);
+
+  /* The root's children aren't reachable via /dag?root='' (empty root selects
+     the global graph), and the root never has inter-child deps — read its
+     direct children straight off the top-level nav rows, always in the DOM. */
+  if (!path) {
+    var rootKids = rootChildrenFromNav();
+    var rootSig = rootKids.map(function(c) { return c.path + ':' + c.status; }).join('|');
+    renderChildrenFromCache(region, path, rootSig, function() {
+      return rootKids.length ? buildChildGrid(rootKids) : '';
+    }, false);
+    return;
+  }
+
+  var resp, mermaidSrc;
+  try {
+    resp = await fetch('/dag?root=' + encodeURIComponent(path));
+    if (token !== loadChildrenDag._token) return;  /* superseded */
+    if (!resp.ok) { region.innerHTML = ''; return; }
+    mermaidSrc = await resp.text();
+    if (token !== loadChildrenDag._token) return;  /* superseded */
+  } catch (e) {
+    region.innerHTML = '<p style="color:var(--st-rev-t)">DAG error: ' + e.message + '</p>';
+    return;
+  }
+
+  var info = parseChildrenDag(mermaidSrc);
+
+  /* Leaf node: no children -> render nothing (card-only view). */
+  if (info.children.length === 0) {
+    _childrenDagCache[path] = { sig: '', html: '', wired: false };
+    region.innerHTML = '';
+    return;
+  }
+
+  var sig = info.children.map(function(c) { return c.path + ':' + c.status; }).join('|');
+
+  if (info.hasEdges) {
+    /* Inter-child dependencies -> the mermaid dependency graph. Cache the
+       rendered SVG; re-running mermaid is the expensive step we want to skip. */
+    var cached = _childrenDagCache[path];
+    if (cached && cached.sig === sig && cached.kind === 'mermaid') {
+      region.innerHTML = cached.html;
+      wireDagNodeClicks(region);
+      return;
+    }
+    region.innerHTML = mermaidSrc;
+    var mermaidEls = region.querySelectorAll('.mermaid');
+    if (mermaidEls.length) {
+      try {
+        await mermaid.run({ nodes: mermaidEls });
+        if (token !== loadChildrenDag._token) return;  /* superseded mid-render */
+        wireDagNodeClicks(region);
+      } catch (e) {
+        region.innerHTML = '<p style="color:var(--st-rev-t)">DAG render error: ' + e.message + '</p>';
+        return;
+      }
+    }
+    _childrenDagCache[path] = { sig: sig, kind: 'mermaid', html: region.innerHTML };
+    return;
+  }
+
+  /* Children with no inter-dependencies -> a plain clickable child-card grid
+     (cheaper and clearer than an edgeless mermaid graph). */
+  renderChildrenFromCache(region, path, sig, function() {
+    return buildChildGrid(info.children);
+  }, true);
+}
+
+/* Render a grid from cache when (path, sig) is unchanged; otherwise build,
+   cache, and inject. `grid` is true for /dag-derived grids (kind tag). */
+function renderChildrenFromCache(region, path, sig, build, grid) {
+  var cached = _childrenDagCache[path];
+  if (cached && cached.sig === sig && cached.kind === 'grid') {
+    region.innerHTML = cached.html;
+    return;
+  }
+  var html = build();
+  region.innerHTML = html;
+  _childrenDagCache[path] = { sig: sig, kind: 'grid', html: html };
+}
+
+/* Parse a /dag?root=<path> mermaid fragment into the direct-children set.
+   The fragment carries an authoritative node_id->path map on
+   .dag-controls[data-node-paths]; per-node status comes from the
+   `style <id> fill:#<color>` lines (the color->status map is the fixed one in
+   dag.html). Titles prefer the shared pathTitles lookup. `hasEdges` is true
+   when the graph has at least one `-->` dependency edge. */
+var DAG_FILL_STATUS = {
+  '#e0e0e0': 'not-started', '#bbdefb': 'in-progress', '#fff9c4': 'implemented',
+  '#ffcdd2': 'revise', '#c8e6c9': 'approved', '#f5f5f5': 'archived',
+};
+function parseChildrenDag(src) {
+  var children = [];
+  var mapEl = document.createElement('div');
+  mapEl.innerHTML = src;
+  var controls = mapEl.querySelector('.dag-controls[data-node-paths]');
+  var nodePaths = {};
+  if (controls) {
+    try { nodePaths = JSON.parse(controls.getAttribute('data-node-paths')); } catch (e) { nodePaths = {}; }
+  }
+  /* node_id -> fill color, from `style <id> fill:#color` lines. */
+  var fills = {};
+  src.replace(/style\s+(\S+)\s+fill:(#[0-9a-fA-F]{3,6})/g, function(_, id, color) {
+    fills[id] = color.toLowerCase(); return '';
+  });
+  for (var nodeId in nodePaths) {
+    var p = nodePaths[nodeId];
+    children.push({
+      path: p,
+      slug: p.split('/').pop(),
+      title: pathTitles[p] || p.split('/').pop(),
+      status: DAG_FILL_STATUS[fills[nodeId]] || '',
+    });
+  }
+  return { children: children, hasEdges: src.indexOf('-->') !== -1 };
+}
+
+/* Root's direct children, read off the top-level nav rows (always inlined). */
+function rootChildrenFromNav() {
+  var out = [];
+  var rootNode = document.getElementById('task-root');
+  var container = rootNode
+    ? rootNode.querySelector(':scope > .task-children')
+    : document.getElementById('nav-tree');
+  if (!container) return out;
+  container.querySelectorAll(':scope > .task-node').forEach(function(node) {
+    var p = node.dataset.path;
+    if (!p) return;
+    out.push({
+      path: p,
+      slug: p.split('/').pop(),
+      title: pathTitles[p] || p.split('/').pop(),
+      status: node.dataset.status || '',
+    });
+  });
+  return out;
+}
+
+/* Build the clickable child-card grid HTML: slug + title + status badge per
+   child, each descending via setActive on click. Titles/slugs are escaped. */
+function buildChildGrid(children) {
+  var cards = children.map(function(c) {
+    return '<button class="child-card" data-path="' + escapeAttr(c.path) + '">'
+      + (c.slug ? '<span class="child-card-slug">' + escapeHtml(c.slug) + '</span>' : '')
+      + '<span class="child-card-title">' + escapeHtml(c.title) + '</span>'
+      + (c.status ? '<span class="badge badge-' + c.status + '">' + c.status + '</span>' : '')
+      + '</button>';
+  }).join('');
+  return '<div class="dag-controls"><strong>Subtasks</strong>'
+    + '<span class="dag-hint">— click to drill in</span></div>'
+    + '<div class="child-grid" onclick="onChildGridClick(event)">' + cards + '</div>';
+}
+
+/* Delegated click for the child-card grid: descend to the clicked child. */
+function onChildGridClick(event) {
+  var card = event.target.closest('.child-card');
+  if (card && card.dataset.path !== undefined) setActive(card.dataset.path);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
 
 /* popstate (back/forward): re-apply the hash without writing new history. */
 window.addEventListener('popstate', function() {
@@ -1943,12 +2253,22 @@ function showCommentForm(btn) {
   ta.focus();
 }
 
+/* Resolve the task node that holds a task's commentable blocks + sections.
+   Those live in the active-node card (#active-node), not the body-free sidebar
+   rows — and both carry `.task-node[data-path]`, with the sidebar row first in
+   the DOM. So prefer the card; fall back to a global match for any caller that
+   runs before the card exists. */
+function commentTaskNode(taskPath) {
+  var card = document.querySelector('#active-node .task-node[data-path="' + taskPath + '"]');
+  return card || document.querySelector('.task-node[data-path="' + taskPath + '"]');
+}
+
 function loadComments(taskPath) {
   fetch('/api/task/' + taskPath + '/comments')
     .then(function(resp) { return resp.ok ? resp.json() : []; })
     .then(function(comments) {
-      /* Find the task node */
-      var taskNode = document.querySelector('.task-node[data-path="' + taskPath + '"]');
+      /* Find the task node holding this task's commentable blocks (the card). */
+      var taskNode = commentTaskNode(taskPath);
       if (!taskNode) return;
 
       /* Remove existing comment threads in this task */
@@ -2056,7 +2376,7 @@ function renderCommentThread(comments, taskPath) {
 }
 
 function updateSectionBadges(taskPath, comments) {
-  var taskNode = document.querySelector('.task-node[data-path="' + taskPath + '"]');
+  var taskNode = commentTaskNode(taskPath);
   if (!taskNode) return;
 
   /* Count unresolved comments per section */
@@ -2287,7 +2607,7 @@ document.body.addEventListener('htmx:sseMessage', function(event) {
   var evtName = event.detail.type || '';
   if (evtName.startsWith('task:')) {
     var taskPath = evtName.substring(5);
-    var taskNode = document.querySelector('.task-node[data-path="' + taskPath + '"]');
+    var taskNode = commentTaskNode(taskPath);
     if (taskNode && taskNode.querySelector('.section-content.open')) {
       /* Short delay to let the SSE swap finish rendering first */
       setTimeout(function() { loadComments(taskPath); }, 200);
