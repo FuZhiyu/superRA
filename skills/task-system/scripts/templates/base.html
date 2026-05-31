@@ -979,13 +979,36 @@ function nodeMatchesSearch(el, search) {
   return false;
 }
 
+/* Fold-state snapshot captured the moment a filter becomes active (from the
+   no-filter state), so clearing the filter restores the user's prior folds
+   instead of leaving the tree force-expanded. Null whenever no filter is
+   active. Keyed by data-path -> expanded?(bool). */
+var preFilterFoldState = null;
+
 function applyFilters() {
   var status = document.getElementById('filter-status').value;
   var search = document.getElementById('search-box').value.toLowerCase();
+  var active = !!status || !!search;
+
+  if (active && preFilterFoldState === null) {
+    preFilterFoldState = snapshotNavFolds();  /* entering filter mode */
+  }
 
   document.querySelectorAll('#nav-tree > .task-node').forEach(function(el) {
     applyFiltersToNode(el, status, search);
   });
+
+  if (active) {
+    /* Matching rows live behind collapsed ancestors (the whole sidebar is
+       folded by default), so `.hidden` removal alone leaves them invisible.
+       Expand the ancestor chain of every still-visible match so matches are
+       actually revealed. Scoped to rows already in the DOM — deep, not-yet
+       lazy-loaded branches are intentionally not eagerly loaded to search. */
+    revealFilterMatches(status, search);
+  } else if (preFilterFoldState !== null) {
+    restoreNavFolds(preFilterFoldState);  /* leaving filter mode */
+    preFilterFoldState = null;
+  }
 }
 
 function applyFiltersToNode(el, status, search) {
@@ -996,6 +1019,75 @@ function applyFiltersToNode(el, status, search) {
       applyFiltersToNode(child, status, search);
     });
   }
+}
+
+/* Record each loaded non-leaf nav node's expanded state by path, so it can be
+   restored verbatim when the filter clears. */
+function snapshotNavFolds() {
+  var state = {};
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+    if (!toggle || toggle.classList.contains('leaf')) return;
+    var p = node.dataset.path;
+    if (p === undefined) return;
+    state[p] = toggle.classList.contains('expanded');
+  });
+  return state;
+}
+
+/* Set one node's fold open/closed without lazy-loading (search must not pull
+   in deep branches). Mirrors expandNavNode's class/display contract. */
+function setNavFold(node, open) {
+  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+  var children = node.querySelector(':scope > .task-children');
+  if (!toggle || toggle.classList.contains('leaf') || !children) return;
+  toggle.classList.toggle('expanded', open);
+  children.style.display = open ? '' : 'none';
+}
+
+/* Restore folds from a snapshot; any node that appeared since (e.g. a branch
+   the user lazy-loaded while searching) defaults to collapsed. */
+function restoreNavFolds(state) {
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    var p = node.dataset.path;
+    if (p === undefined) return;
+    setNavFold(node, state[p] === true);
+  });
+}
+
+/* After filtering, expand the ancestor chain of every still-visible matching
+   row so matches are on screen. A node is a "match anchor" if it is not hidden
+   and its own row matches (independent of descendants); we expand all of its
+   ancestors. Operates only on rows already in the DOM. */
+function revealFilterMatches(status, search) {
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    if (node.classList.contains('hidden')) return;
+    if (!nodeOwnRowMatches(node, status, search)) return;
+    /* Walk up through ancestor .task-node containers, expanding each. */
+    var parent = node.parentElement
+      ? node.parentElement.closest('.task-node') : null;
+    while (parent) {
+      setNavFold(parent, true);
+      parent = parent.parentElement
+        ? parent.parentElement.closest('.task-node') : null;
+    }
+  });
+}
+
+/* Whether this node's OWN row (not its descendants) satisfies the filter. */
+function nodeOwnRowMatches(el, status, search) {
+  if (status && el.dataset.status !== status) return false;
+  if (search) {
+    var titleEl = el.querySelector(':scope > .task-row > .task-title-text');
+    var slugEl = el.querySelector(':scope > .task-row > .task-slug');
+    var title = titleEl ? titleEl.textContent.toLowerCase() : '';
+    var slug = slugEl ? slugEl.textContent.toLowerCase() : '';
+    var path = (el.dataset.path || '').toLowerCase();
+    if (!(title.includes(search) || slug.includes(search) || path.includes(search))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /* ── DAG rendering (mermaid) ── */

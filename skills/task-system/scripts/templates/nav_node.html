@@ -6,8 +6,9 @@
     attributes the rest of the system keys off: id="task-<path-id>", data-path,
     data-status, and sse-swap="task:<path>" so SSE row swaps keep working.
 
-    Inlines children to depth 2; depth >=3 children are marked
-    data-needsLoad='true' for lazy load via GET /nav/{path}.
+    Inlines children to depth 2; depth >=3 children are left as an empty
+    .task-children container, which the sidebar's markLazyNodes() flags
+    data-needsLoad='true' client-side for lazy load via GET /nav/{path}.
 
     Usage:
       {% from "nav_node.html" import render_nav_node %}
@@ -53,16 +54,6 @@
       {% endfor %}
     {% endif %}
   </div>
-  {% endif %}
-
-  {#- Lazy-load marker for deeper children -#}
-  {% if has_children and depth >= 3 %}
-  <script>
-    (function() {
-      var node = document.getElementById('task-{{ path_id }}');
-      if (node) node.dataset.needsLoad = 'true';
-    })();
-  </script>
   {% endif %}
 </div>
 {% endmacro %}

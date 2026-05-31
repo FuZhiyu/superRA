@@ -2177,8 +2177,12 @@ class TestMasterDetailPartials:
     def test_nav_lazy_loads_deep_children(self, tmp_path):
         with self._client(self._deep_plan(tmp_path)) as c:
             r = c.get("/nav")
-            # Depth >=3 children are stubs, not inlined.
-            assert "needsLoad" in r.text
+            # Depth >=3 children are not inlined: the depth-3 boundary node
+            # renders an EMPTY .task-children container (its child node is
+            # absent), which the sidebar's markLazyNodes() flags client-side
+            # for lazy load. No server-emitted needsLoad flag is shipped.
+            assert "needsLoad" not in r.text
+            assert 'id="02-b-02-y-01-deep-children"' in r.text
             assert 'id="task-02-b-02-y-01-deep-01-deeper"' not in r.text
 
     def test_nav_path_returns_deep_children_body_free(self, tmp_path):
