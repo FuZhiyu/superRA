@@ -1,6 +1,6 @@
 ---
 title: "Make DAG and Kanban views navigable"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-30
