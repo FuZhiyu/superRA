@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
+import shutil
+import subprocess
 import sys
 from io import StringIO
 from pathlib import Path
@@ -113,6 +116,64 @@ def client(plan_root):
     plan_dashboard.rebuild_tree()
 
     # Use the app without the lifespan (no watcher needed in tests)
+    with TestClient(plan_dashboard.app, raise_server_exceptions=True) as c:
+        yield c
+
+
+@pytest.fixture
+def flow_plan_root(tmp_path):
+    """A plan tree with one parent whose direct children form a branching
+    dependency chain (a -> b, a -> c, b -> d) and a second parent whose
+    children have no inter-child dependency.  Exercises the GET /dag?root=
+    data contract that base.html's children panel parses into cards.
+
+    Statuses are deliberately varied so per-child fill colors are testable.
+    """
+    root = tmp_path / ".plan"
+    root.mkdir()
+    _write_task_md(root / "task.md", "Test Project", "not-started",
+                   objective="A test plan.")
+
+    # Parent with a branching dependency chain among its direct children.
+    flow = root / "00-flow"
+    flow.mkdir()
+    _write_task_md(flow / "task.md", "Flow Parent", "in-progress",
+                   objective="Branching children.")
+    children = {
+        "a": ("Child A", "approved", []),
+        "b": ("Child B", "in-progress", ["a"]),
+        "c": ("Child C", "not-started", ["a"]),
+        "d": ("Child D", "not-started", ["b"]),
+    }
+    for slug, (title, status, deps) in children.items():
+        d = flow / slug
+        d.mkdir()
+        _write_task_md(d / "task.md", title, status,
+                       depends_on=deps, objective=f"Task {slug}.")
+
+    # Parent whose children have no inter-child dependency.
+    flat = root / "01-flat"
+    flat.mkdir()
+    _write_task_md(flat / "task.md", "Flat Parent", "not-started",
+                   objective="Independent children.")
+    for slug in ("x", "y"):
+        d = flat / slug
+        d.mkdir()
+        _write_task_md(d / "task.md", f"Child {slug.upper()}", "not-started",
+                       objective=f"Task {slug}.")
+
+    return root
+
+
+@pytest.fixture
+def flow_client(flow_plan_root):
+    """TestClient pointed at the branching-dependency plan tree."""
+    from starlette.testclient import TestClient
+
+    plan_dashboard.PLAN_ROOT = flow_plan_root
+    plan_dashboard._project_root = str(flow_plan_root.resolve().parent)
+    plan_dashboard._jinja_env = None
+    plan_dashboard.rebuild_tree()
     with TestClient(plan_dashboard.app, raise_server_exceptions=True) as c:
         yield c
 
@@ -799,3 +860,261 @@ class TestCLI:
                 "list-tree",
             ])
         assert "No unresolved comments" in captured.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Children-panel data contract (GET /dag?root=<path>)
+#
+# base.html's children panel parses the GET /dag?root=<path> fragment client
+# side: the direct-child set from `.dag-controls[data-node-paths]`, each child's
+# status from `style <id> fill:#<color>` lines, and the inter-child dependency
+# edges from `<dep_id> --> <child_id>` lines (prerequisite --> dependent).  These
+# tests pin the server-side half of that contract so the cards keep parsing.
+# ---------------------------------------------------------------------------
+
+BASE_HTML = (SCRIPTS_DIR / "templates" / "base.html").read_text(encoding="utf-8")
+
+# node_id -> status fill color, mirrored from base.html's DAG_FILL_STATUS map.
+_FILL_STATUS = {
+    "#e0e0e0": "not-started", "#bbdefb": "in-progress", "#fff9c4": "implemented",
+    "#ffcdd2": "revise", "#c8e6c9": "approved", "#f5f5f5": "archived",
+}
+
+
+def _parse_dag_fragment(html):
+    """Parse a /dag?root= fragment the way base.html's parseChildrenDag does:
+    return (node_paths, status_by_path, edges) where edges is the set of
+    (dep_path, child_path) pairs in prerequisite -> dependent direction."""
+    m = re.search(r"data-node-paths='(\{.*?\})'", html)
+    node_paths = json.loads(m.group(1)) if m else {}
+    fills = dict(re.findall(r"style\s+(\S+)\s+fill:(#[0-9a-fA-F]{3,6})", html))
+    status_by_path = {
+        node_paths[nid]: _FILL_STATUS.get(color.lower(), "")
+        for nid, color in fills.items() if nid in node_paths
+    }
+    edges = set()
+    for dep_id, child_id in re.findall(r"^\s*(\S+)\s*-->\s*(\S+)\s*$", html, re.M):
+        if dep_id in node_paths and child_id in node_paths:
+            edges.add((node_paths[dep_id], node_paths[child_id]))
+    return node_paths, status_by_path, edges
+
+
+class TestChildrenDagContract:
+    def test_branching_parent_node_paths_are_direct_children_only(self, flow_client):
+        resp = flow_client.get("/dag?root=00-flow")
+        assert resp.status_code == 200
+        node_paths, _, _ = _parse_dag_fragment(resp.text)
+        assert set(node_paths.values()) == {
+            "00-flow/a", "00-flow/b", "00-flow/c", "00-flow/d",
+        }
+
+    def test_branching_parent_per_child_status_fills(self, flow_client):
+        resp = flow_client.get("/dag?root=00-flow")
+        _, status_by_path, _ = _parse_dag_fragment(resp.text)
+        assert status_by_path == {
+            "00-flow/a": "approved",
+            "00-flow/b": "in-progress",
+            "00-flow/c": "not-started",
+            "00-flow/d": "not-started",
+        }
+
+    def test_branching_parent_edges_direction(self, flow_client):
+        """Edges run prerequisite -> dependent: a->b, a->c, b->d."""
+        resp = flow_client.get("/dag?root=00-flow")
+        _, _, edges = _parse_dag_fragment(resp.text)
+        assert edges == {
+            ("00-flow/a", "00-flow/b"),
+            ("00-flow/a", "00-flow/c"),
+            ("00-flow/b", "00-flow/d"),
+        }
+
+    def test_no_dependency_parent_has_no_edges(self, flow_client):
+        resp = flow_client.get("/dag?root=01-flat")
+        node_paths, _, edges = _parse_dag_fragment(resp.text)
+        assert set(node_paths.values()) == {"01-flat/x", "01-flat/y"}
+        assert edges == set()
+        assert "-->" not in resp.text
+
+    def test_leaf_parent_has_empty_child_set(self, flow_client):
+        """A leaf (no children) yields an empty node-path map and no edges."""
+        resp = flow_client.get("/dag?root=00-flow/a")
+        node_paths, _, edges = _parse_dag_fragment(resp.text)
+        assert node_paths == {}
+        assert edges == set()
+
+
+# ---------------------------------------------------------------------------
+# Mermaid-removal regression
+#
+# The children panel was reworked from a clickable mermaid DAG to flat/layered
+# `.child-card`s; mermaid and its click-wiring were removed.  One descriptive
+# `mermaid` token survives in a comment and the `.mermaid` div is the line-based
+# parser source, so we assert the *live* references are gone, not the bare word.
+# ---------------------------------------------------------------------------
+
+
+class TestMermaidRemoval:
+    def test_no_mermaid_cdn_script(self):
+        assert not re.search(r"<script[^>]+src=[^>]*mermaid", BASE_HTML, re.I)
+
+    def test_no_mermaid_runtime_calls(self):
+        assert "mermaid.initialize" not in BASE_HTML
+        assert "mermaid.run" not in BASE_HTML
+
+    def test_no_wire_dag_node_clicks(self):
+        assert "wireDagNodeClicks" not in BASE_HTML
+
+    def test_served_page_has_no_mermaid_runtime(self, client):
+        text = client.get("/").text
+        assert not re.search(r"<script[^>]+src=[^>]*mermaid", text, re.I)
+        assert "mermaid.initialize" not in text
+        assert "mermaid.run" not in text
+        assert "wireDagNodeClicks" not in text
+
+
+# ---------------------------------------------------------------------------
+# Children-panel client logic (node-backed)
+#
+# The flat-grid-vs-layered-flow decision and the topological tiering live only
+# in base.html's JS.  These tests extract the pure builder functions and run
+# them under node so the genuinely new client logic is exercised, not just the
+# server contract above.  Skipped when node is unavailable.
+# ---------------------------------------------------------------------------
+
+_NODE = shutil.which("node")
+
+
+def _extract_js_defs(names):
+    """Slice the named top-level `function NAME`/`var NAME` definitions out of
+    base.html's inline script.  Every top-level construct (function/var/comment/
+    event-listener) starts at column 0, so each def spans from its own header
+    line up to the next top-level construct — this captures balanced braces and
+    multi-line `var` continuations without a JS parser."""
+    # Column-0 boundaries that open a new top-level construct.
+    boundaries = list(re.finditer(
+        r"^(?:async function|function|var|window\.|/\*|//)", BASE_HTML, re.M,
+    ))
+    offsets = [b.start() for b in boundaries] + [len(BASE_HTML)]
+    wanted = {}
+    order = []
+    for i, b in enumerate(boundaries):
+        m = re.match(r"(?:async function|function|var)\s+([A-Za-z_$][\w$]*)",
+                     BASE_HTML[b.start():])
+        if not m:
+            continue
+        name = m.group(1)
+        if name in names:
+            wanted[name] = BASE_HTML[b.start():offsets[i + 1]].rstrip()
+            order.append(name)
+    missing = set(names) - set(wanted)
+    assert not missing, f"definitions not found in base.html: {missing}"
+    # Preserve source order so functions referencing earlier ones resolve.
+    return "\n".join(wanted[n] for n in order)
+
+
+def _run_node(harness_body):
+    """Run extracted client builders + a harness body under node; the body
+    prints a JSON line we parse back.  Returns the decoded object."""
+    defs = _extract_js_defs([
+        "DAG_FILL_STATUS", "childrenSig", "childCardHTML", "SUBTASK_HEADER",
+        "buildChildGrid", "buildChildFlow", "escapeHtml", "escapeAttr",
+    ])
+    script = defs + "\n" + harness_body
+    proc = subprocess.run(
+        [_NODE, "-e", script],
+        capture_output=True, text=True, timeout=20,
+    )
+    assert proc.returncode == 0, f"node failed:\n{proc.stderr}"
+    return json.loads(proc.stdout.strip().splitlines()[-1])
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestChildFlowClientLogic:
+    def test_extracted_builders_run_under_node(self):
+        """Smoke test: the extracted functions evaluate and a flat grid builds."""
+        out = _run_node(
+            "var kids=[{path:'p/a',slug:'a',title:'A',status:'approved'}];"
+            "var html=buildChildGrid(kids);"
+            "console.log(JSON.stringify({"
+            "  hasCard: html.indexOf('child-card')>=0,"
+            "  hasGrid: html.indexOf('child-grid')>=0,"
+            "  hasFlow: html.indexOf('child-flow')>=0}));"
+        )
+        assert out["hasCard"] and out["hasGrid"] and not out["hasFlow"]
+
+    def test_topological_tier_order(self):
+        """buildChildFlow groups children into execution tiers: a (tier 0),
+        then b & c (depend on a), then d (depends on b)."""
+        out = _run_node(
+            "var kids=["
+            "  {path:'a',slug:'a',title:'A',status:'approved'},"
+            "  {path:'b',slug:'b',title:'B',status:'in-progress'},"
+            "  {path:'c',slug:'c',title:'C',status:'not-started'},"
+            "  {path:'d',slug:'d',title:'D',status:'not-started'}];"
+            "var edges={b:['a'],c:['a'],d:['b']};"
+            "var html=buildChildFlow(kids, edges);"
+            "var tiers=html.split('flow-tier').slice(1).map(function(seg){"
+            "  var m=seg.match(/data-path=\"([a-d])\"/g)||[];"
+            "  return m.map(function(s){return s.match(/\"([a-d])\"/)[1];});});"
+            "console.log(JSON.stringify({tiers: tiers}));"
+        )
+        assert out["tiers"] == [["a"], ["b", "c"], ["d"]]
+
+    def test_cycle_is_safe_and_terminates(self):
+        """A cyclic edge set must still terminate and place every child; the
+        unresolvable nodes are flushed into the final tier."""
+        out = _run_node(
+            "var kids=["
+            "  {path:'a',slug:'a',title:'A',status:'not-started'},"
+            "  {path:'b',slug:'b',title:'B',status:'not-started'},"
+            "  {path:'c',slug:'c',title:'C',status:'not-started'}];"
+            "var edges={a:['b'],b:['a'],c:[]};"  # a<->b cycle, c independent
+            "var html=buildChildFlow(kids, edges);"
+            "var tiers=html.split('flow-tier').slice(1).map(function(seg){"
+            "  var m=seg.match(/data-path=\"([a-c])\"/g)||[];"
+            "  return m.map(function(s){return s.match(/\"([a-c])\"/)[1];});});"
+            "var all=[].concat.apply([],tiers).sort().join('');"
+            "console.log(JSON.stringify({all: all, lastTier: tiers[tiers.length-1].sort()}));"
+        )
+        # Every child placed exactly once; the cyclic pair lands in the last tier.
+        assert out["all"] == "abc"
+        assert set(out["lastTier"]) == {"a", "b"}
+
+    def test_after_footer_names_direct_deps_only(self):
+        """A dependent card's `after:` footer lists only its direct sibling
+        deps (d depends on b, not transitively on a)."""
+        out = _run_node(
+            "var kids=["
+            "  {path:'a',slug:'a',title:'A',status:'approved'},"
+            "  {path:'b',slug:'b',title:'B',status:'approved'},"
+            "  {path:'d',slug:'d',title:'D',status:'not-started'}];"
+            "var edges={b:['a'],d:['b']};"
+            "var html=buildChildFlow(kids, edges);"
+            # Isolate d's card markup, then read its dep-slug footer entries.
+            "var dCard=html.split('data-path=\"d\"')[1].split('</button>')[0];"
+            "var deps=(dCard.match(/dep-slug\">([a-d])</g)||[])"
+            "  .map(function(s){return s.match(/>([a-d])</)[1];});"
+            "console.log(JSON.stringify({deps: deps}));"
+        )
+        assert out["deps"] == ["b"]
+
+    def test_children_sig_busts_on_status_change(self):
+        out = _run_node(
+            "var k1=[{path:'a',status:'not-started'},{path:'b',status:'approved'}];"
+            "var k2=[{path:'a',status:'in-progress'},{path:'b',status:'approved'}];"
+            "var e={};"
+            "console.log(JSON.stringify({"
+            "  same: childrenSig(k1,e)===childrenSig(k1,e),"
+            "  busted: childrenSig(k1,e)!==childrenSig(k2,e)}));"
+        )
+        assert out["same"] and out["busted"]
+
+    def test_children_sig_busts_on_dependency_change(self):
+        out = _run_node(
+            "var kids=[{path:'a',status:'approved'},{path:'b',status:'not-started'}];"
+            "var e1={b:['a']};"
+            "var e2={};"
+            "console.log(JSON.stringify({"
+            "  busted: childrenSig(kids,e1)!==childrenSig(kids,e2)}));"
+        )
+        assert out["busted"]
