@@ -474,6 +474,16 @@ body {
   color: var(--text-mid);
 }
 .dag-controls strong { color: var(--text); }
+.dag-hint { color: var(--text-mute); font-size: 13px; }
+/* Clickable DAG nodes: hint affordance on hover. The node shape is the first
+   child <rect>/<polygon> inside the mermaid node group. */
+.dag-node-clickable { cursor: pointer; }
+.dag-node-clickable:hover > rect,
+.dag-node-clickable:hover > polygon,
+.dag-node-clickable:hover > path {
+  stroke: var(--accent);
+  stroke-width: 2px;
+}
 
 /* ── Kanban view ── */
 .kanban {
@@ -910,6 +920,7 @@ async function renderDagView() {
       var mermaidEls = container.querySelectorAll('.mermaid');
       if (mermaidEls.length) {
         await mermaid.run({ nodes: mermaidEls });
+        wireDagNodeClicks(container);
       }
     } else {
       container.innerHTML = '<p style="color:var(--text-mute)">Could not load DAG view.</p>';
@@ -917,6 +928,37 @@ async function renderDagView() {
   } catch(e) {
     container.innerHTML = '<p style="color:var(--st-rev-t)">DAG render error: ' + e.message + '</p>';
   }
+}
+
+/* Make rendered DAG nodes clickable: each node opens its task in the tree via
+   the shared revealTask(path) primitive. The dag.html partial emits an
+   authoritative node_id -> task path map; we attach handlers after mermaid
+   renders rather than via `click ... call` so we avoid needing mermaid's
+   'loose' security level and stay robust to any node-id slug collision. */
+function wireDagNodeClicks(container) {
+  var mapEl = container.querySelector('.dag-controls[data-node-paths]');
+  if (!mapEl) return;
+  var nodePaths;
+  try { nodePaths = JSON.parse(mapEl.getAttribute('data-node-paths')); } catch(e) { return; }
+
+  /* Mermaid v11 ids each node as <g class="node"
+     id="mermaid-<runId>-flowchart-<nodeId>-<n>">. Recover <nodeId> by
+     stripping everything up to and including "-flowchart-" and the trailing
+     "-<n>" index, then look up the task path. */
+  container.querySelectorAll('g.node').forEach(function(g) {
+    var id = g.id || '';
+    var m = id.match(/-flowchart-(.+)-\d+$/);
+    var nodeId = m ? m[1] : id;
+    var path = nodePaths[nodeId];
+    if (!path) return;
+    g.style.cursor = 'pointer';
+    g.classList.add('dag-node-clickable');
+    g.addEventListener('click', function(ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      revealTask(path);
+    });
+  });
 }
 
 /* ── Kanban rendering ── */

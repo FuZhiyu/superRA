@@ -1,5 +1,16 @@
-{#- DAG view — generates a mermaid diagram from task dependencies.
-    Status-colored nodes.
+{#- DAG view — mermaid diagram of task dependencies, clustered by subtree.
+
+    Dependencies are sibling-only, so the dependency graph is naturally a
+    union of per-parent (sibling-scoped) clusters. We render one mermaid
+    `subgraph` per parent task so the global view is legible at tree scale
+    instead of one undifferentiated blob.
+
+    Nodes are clickable: each maps back to its task path and, on click, calls
+    the shared `revealTask(path)` primitive (from navigate-to-task) to open the
+    task in the tree view. Click wiring is done in JS after mermaid renders
+    (see renderDagView in base.html), using the node_id -> path map emitted on
+    the .dag-controls div's data-node-paths attribute — this keeps the path
+    mapping authoritative regardless of any slug collision in the node ids.
 
     Variables: root_task (Task), all_tasks (list[Task])
 -#}
@@ -13,24 +24,74 @@
   'archived': '#f5f5f5',
 } %}
 
-<div class="dag-controls">
+{#- Build a unique node_id for every task path. The historical slug
+    (`/` and `-` -> `_`) is lossy (`a-b/c` and `a/b-c` both collapse to
+    `a_b_c`); we disambiguate collisions with a numeric suffix and record the
+    authoritative node_id -> path mapping in `ns.node_ids` (emitted later as
+    the data-node-paths attribute) for the click wiring. -#}
+{% set ns = namespace(seen={}, node_ids={}, pairs=[]) %}
+{% for t in all_tasks %}
+{% if t.path %}
+{% set base = t.path | replace('/', '_') | replace('-', '_') %}
+{% if base in ns.seen %}
+{% set _ = ns.seen.update({base: ns.seen[base] + 1}) %}
+{% set node_id = base ~ '__' ~ ns.seen[base] %}
+{% else %}
+{% set _ = ns.seen.update({base: 0}) %}
+{% set node_id = base %}
+{% endif %}
+{% set _ = ns.node_ids.update({t.path: node_id}) %}
+{% set _ = ns.pairs.append(node_id ~ '\t' ~ t.path) %}
+{% endif %}
+{% endfor %}
+
+{#- Group tasks by parent path so each parent becomes one subgraph cluster. -#}
+{% set groups = namespace(order=[], by_parent={}) %}
+{% for t in all_tasks %}
+{% if t.path %}
+{% set parent = '/'.join(t.path.split('/')[:-1]) %}
+{% if parent not in groups.by_parent %}
+{% set _ = groups.order.append(parent) %}
+{% set _ = groups.by_parent.update({parent: []}) %}
+{% endif %}
+{% set _ = groups.by_parent[parent].append(t) %}
+{% endif %}
+{% endfor %}
+
+{#- Title lookup for parent labels (a parent path is itself a task path). -#}
+{% set titles = namespace(map={}) %}
+{% for t in all_tasks %}{% if t.path %}{% set _ = titles.map.update({t.path: t.title}) %}{% endif %}{% endfor %}
+
+{#- Authoritative node_id -> task path map for click wiring (consumed by
+    renderDagView in base.html after mermaid renders). Stored as a data
+    attribute on the controls div — kept out of the .mermaid element so the
+    mermaid parser never ingests it. -#}
+{% set pathmap = {} %}
+{% for pair in ns.pairs %}{% set nid, p = pair.split('\t') %}{% set _ = pathmap.update({nid: p}) %}{% endfor %}
+
+<div class="dag-controls" data-node-paths='{{ pathmap | tojson }}'>
   <strong>Dependency Graph:</strong> {{ root_task.title or 'root' }}
+  <span class="dag-hint">— grouped by subtree; click any node to open it in the tree</span>
 </div>
 <div class="mermaid">
 graph LR
-{% for t in all_tasks %}
-{% if t.path %}
-{% set node_id = t.path | replace('/', '_') | replace('-', '_') %}
+{% for parent in groups.order %}
+{% set label = titles.map.get(parent) or (parent.split('/')[-1] if parent else 'root') %}
+{% set sg_id = 'sg_' ~ (parent | replace('/', '_') | replace('-', '_')) if parent else 'sg_root' %}
+  subgraph {{ sg_id }}["{{ label | replace('"', "'") | replace('[', '') | replace(']', '') | e }}"]
+{% for t in groups.by_parent[parent] %}
+{% set node_id = ns.node_ids[t.path] %}
 {% set eff = t.effective_status() %}
 {% set color = status_colors.get(eff, '#e0e0e0') %}
-    {{ node_id }}["{{ t.title | replace('"', "'") | replace('[', '') | replace(']', '') | replace('(', '') | replace(')', '') | replace('{', '') | replace('}', '') }}"]
+    {{ node_id }}["{{ t.title | replace('"', "'") | replace('[', '') | replace(']', '') | replace('(', '') | replace(')', '') | replace('{', '') | replace('}', '') | e }}"]
     style {{ node_id }} fill:{{ color }}
-{% endif %}
+{% endfor %}
+  end
 {% endfor %}
 {% set path_set = all_tasks | map(attribute='path') | list %}
 {% for t in all_tasks %}
 {% if t.path %}
-{% set child_id = t.path | replace('/', '_') | replace('-', '_') %}
+{% set child_id = ns.node_ids[t.path] %}
 {% for dep in t.depends_on %}
 {#- Resolve relative ../sibling references to absolute paths -#}
 {% set dep_clean = dep %}
@@ -39,8 +100,10 @@ graph LR
 {% set parent = '/'.join(t.path.split('/')[:-1]) %}
 {% set resolved = (parent ~ '/' ~ dep_clean).lstrip('/') if parent else dep_clean %}
 {% if resolved not in path_set %}{% set resolved = dep_clean %}{% endif %}
-{% set dep_id = resolved | replace('/', '_') | replace('-', '_') %}
+{% if resolved in ns.node_ids %}
+{% set dep_id = ns.node_ids[resolved] %}
     {{ dep_id }} --> {{ child_id }}
+{% endif %}
 {% endfor %}
 {% endif %}
 {% endfor %}
