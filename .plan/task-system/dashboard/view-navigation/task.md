@@ -1,6 +1,6 @@
 ---
 title: "Master-detail drill-down workspace"
-status: in-progress
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-30

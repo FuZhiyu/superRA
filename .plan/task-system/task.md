@@ -1,10 +1,10 @@
 ---
 title: "Task System Skill"
-status: in-progress
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-23
-updated: 2026-05-26
+updated: 2026-05-30
 ---
 
 ## Objective
