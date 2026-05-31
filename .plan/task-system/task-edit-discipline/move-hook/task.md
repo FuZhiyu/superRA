@@ -73,3 +73,9 @@ Added to `TestTaskHook`: `test_bash_mv_triggers_rebuild_and_propagation` (dashbo
 ### Out-of-scope asymmetry confirmed
 
 `hooks/hooks-codex.json` and `hooks/hooks-cursor.json` do not wire `task_hook.py` for `Edit`/`Write` today, so there is no Bash-parity entry to add there. This is the documented asymmetry, not an omission.
+
+### Project Doc Audit fix
+
+Rewrote `skills/task-system/references/internals.md` §Hook Architecture to match shipped reality: `task_hook.py` is the PostToolUse hook wired in `hooks/hooks.json` on both `Edit|Write` (direct `task.md` edits) and `Bash` (filesystem-mutating `.plan` commands), running validate → propagate → dashboard, best-effort/always-exit-0. The stale "does not currently ship its own hooks" framing and the "future development / not wired" bullets are removed; parse-time `parse_task()` validation and the mutation-CLI dashboard rebuild are preserved as still-true facts. Description points at `task_hook.py` / `hooks/hooks.json` rather than restating internals.
+
+**Final diff self-check:** `git diff 8a4b0f8^..HEAD`; surviving-change classes — task-system increment (`task_hook.py`, `hooks.json`, tests, `SKILL.md`), task-file currency (`move-hook/task.md`), and this round's doc-currency fix (`references/internals.md`). The `skills/*` instruction edit (internals.md) is a documentation-currency rewrite required by review item 1, passes DRY/Necessity (architecture-level, points at owning files, no per-line restatement of `task_hook.py`), and is the only edit this round. No unjustified hunks. Suite green: 147 passed.
