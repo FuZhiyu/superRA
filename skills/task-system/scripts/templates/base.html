@@ -320,6 +320,15 @@ body {
 }
 .task-row:hover { background: var(--bg-hover); }
 
+/* Active row in the sidebar nav-tree — exactly one at a time. Left accent bar
+   + soft accent wash; theme-aware via --accent / --accent-soft tokens. */
+.nav-tree .task-row.nav-active {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.nav-tree .task-row.nav-active:hover { background: var(--accent-soft); }
+.nav-tree .task-row.nav-active .task-title-text { color: var(--text); }
+
 .task-toggle {
   display: inline-flex;
   align-items: center;
@@ -974,7 +983,7 @@ function applyFilters() {
   var status = document.getElementById('filter-status').value;
   var search = document.getElementById('search-box').value.toLowerCase();
 
-  document.querySelectorAll('#view-tree > .task-node').forEach(function(el) {
+  document.querySelectorAll('#nav-tree > .task-node').forEach(function(el) {
     applyFiltersToNode(el, status, search);
   });
 }
@@ -1173,14 +1182,13 @@ function updateBreadcrumb(path) {
   }
 }
 
-/* ── Region content loaders (STUBS) ──
-   These are intentionally empty in routing-shell. The sibling tasks fill them:
-   - sidebar-nav  -> updateSidebar: render/highlight #nav-tree, ancestor walk.
-   - main-panel   -> loadActiveNode: fetch /node/<path> into #active-node;
-                     loadChildrenDag: fetch /dag?root=<path> into #children-dag.
-   Keep them as no-ops here so the router is fully wired and observable
-   (breadcrumb + activePath + history) before the regions have content. */
-function updateSidebar(path) { /* stub: sidebar-nav */ }
+/* ── Region content loaders ──
+   updateSidebar is implemented below (sidebar-nav). The main-panel loaders are
+   still stubs filled by the main-panel task:
+   - loadActiveNode:  fetch /node/<path> into #active-node.
+   - loadChildrenDag: fetch /dag?root=<path> into #children-dag.
+   Keep them as no-ops so the router stays observable before those regions
+   have content. */
 function loadActiveNode(path) { /* stub: main-panel */ }
 function loadChildrenDag(path) { /* stub: main-panel */ }
 
@@ -1212,11 +1220,185 @@ function initRouter() {
   restoring = false;
 }
 
+/* ════════════════════════════════════════════════════════════════════════
+   Sidebar navigation tree — fills #nav-tree and is the only place the sidebar's
+   fold state and active highlight live.
+   ──────────────────────────────────────────────────────────────────────
+   The sidebar is navigation-only: rows carry no task body. Two affordances per
+   row — the disclosure caret folds children *in the sidebar only* (a local
+   state independent of activePath), and the row label calls setActive(). The
+   active highlight, ancestor auto-expand, and scroll-into-view are derived
+   from activePath via updateSidebar(), so there is no second source of truth.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Fetch the body-free nav tree, populate #nav-tree, then index its titles so
+   the breadcrumb can show real titles. Resolves once the inline rows exist;
+   deeper (>=3) branches stay lazy until their caret first opens. */
+async function loadNavTree() {
+  var container = document.getElementById('nav-tree');
+  if (!container) return;
+  try {
+    var resp = await fetch('/nav');
+    if (!resp.ok) return;
+    container.innerHTML = await resp.text();
+    markLazyNodes();
+    indexNavTitles(container);
+  } catch (e) { /* best-effort: a failed sidebar must not block the router */ }
+}
+
+/* nav_node.html marks depth>=3 children for lazy load via an inline <script>
+   that sets dataset.needsLoad. Those scripts do NOT run when the fragment is
+   injected via innerHTML, so flag them here instead: a node carrying an empty
+   .task-children container (children exist server-side but weren't inlined) is
+   exactly a lazy branch. Leaf nodes have no .task-children at all, so they are
+   never flagged. Idempotent; re-run after every nav fragment injection. */
+function markLazyNodes() {
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    var kids = node.querySelector(':scope > .task-children');
+    if (kids && kids.children.length === 0 && node.dataset.needsLoad !== 'false') {
+      node.dataset.needsLoad = 'true';
+    }
+  });
+}
+
+/* Harvest path -> title from every nav row currently in the DOM into the
+   shared pathTitles map (used by updateBreadcrumb). Idempotent; re-run after
+   lazy loads bring more rows in. */
+function indexNavTitles(scope) {
+  (scope || document).querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    var p = node.dataset.path;
+    if (!p) return;
+    var titleEl = node.querySelector(':scope > .task-row > .task-title-text');
+    if (titleEl) pathTitles[p] = titleEl.textContent;
+  });
+}
+
+/* DOM id of a nav row, mirroring nav_node.html's
+   `id="task-{{ (path|replace('/','-')) or 'root' }}"` — the root task (empty
+   path) is `task-root`, not `task-`. */
+function navNodeId(path) {
+  return 'task-' + ((path || '').replace(/\//g, '-') || 'root');
+}
+
+/* Caret/label click handling, delegated from #nav-tree so it survives the
+   innerHTML swaps from /nav and lazy /nav/{path} loads. */
+function initSidebarEvents() {
+  var container = document.getElementById('nav-tree');
+  if (!container) return;
+  container.addEventListener('click', function(ev) {
+    var toggle = ev.target.closest('.task-toggle');
+    if (toggle && container.contains(toggle) && !toggle.classList.contains('leaf')) {
+      ev.stopPropagation();
+      toggleNavCaret(toggle.closest('.task-node'));
+      return;
+    }
+    var row = ev.target.closest('.task-row');
+    if (row && container.contains(row)) {
+      var node = row.closest('.task-node');
+      if (node && node.dataset.path !== undefined) setActive(node.dataset.path);
+    }
+  });
+}
+
+/* Fold/unfold one node's children in the sidebar only — never touches
+   activePath. On first open of a lazy (>=3 depth) branch, fetch its children
+   via /nav/{path} and index the new titles. */
+async function toggleNavCaret(node) {
+  if (!node) return;
+  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+  var children = node.querySelector(':scope > .task-children');
+  if (!toggle || !children) return;
+
+  if (toggle.classList.contains('expanded')) {
+    toggle.classList.remove('expanded');
+    children.style.display = 'none';
+    return;
+  }
+
+  toggle.classList.add('expanded');
+  children.style.display = '';
+  if (node.dataset.needsLoad === 'true') {
+    node.dataset.needsLoad = 'false';
+    await loadNavChildren(node);
+  }
+}
+
+/* Lazily fetch a node's body-free children into its .task-children container.
+   Returns true on success. Best-effort: a failed branch leaves the caret open
+   but empty and never throws. */
+async function loadNavChildren(node) {
+  var path = node.dataset.path;
+  var children = node.querySelector(':scope > .task-children');
+  if (!path || !children) return false;
+  try {
+    var resp = await fetch('/nav/' + path);
+    if (!resp.ok) return false;
+    children.innerHTML = await resp.text();
+    markLazyNodes();
+    indexNavTitles(children);
+    return true;
+  } catch (e) { return false; }
+}
+
+/* Expand a node's children in the sidebar (no toggle of activePath). Loads
+   lazily if needed so the next segment of an ancestor walk is present. */
+async function expandNavNode(node) {
+  if (!node) return;
+  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+  var children = node.querySelector(':scope > .task-children');
+  if (!toggle || toggle.classList.contains('leaf') || !children) return;
+  toggle.classList.add('expanded');
+  children.style.display = '';
+  if (node.dataset.needsLoad === 'true') {
+    node.dataset.needsLoad = 'false';
+    await loadNavChildren(node);
+  }
+}
+
+/* updateSidebar(path): the activePath-derived sidebar refresh. Highlights
+   exactly the matching row, expands its full ancestor chain (lazy-loading any
+   branch not yet in the DOM via the proven ancestor-walk-and-await loop), and
+   scrolls it into view. Entirely best-effort — a failed sidebar branch never
+   throws and never blocks the main panel, which fetches by full path. */
+async function updateSidebar(path) {
+  var container = document.getElementById('nav-tree');
+  if (!container) return;
+
+  /* Exactly one active row: clear the previous highlight first. */
+  container.querySelectorAll('.task-row.nav-active').forEach(function(r) {
+    r.classList.remove('nav-active');
+  });
+
+  try {
+    /* Walk root -> target, expanding (and lazy-loading) each ancestor so the
+       next segment's node is in the DOM before we reach it. */
+    var segs = path ? path.split('/') : [];
+    var accumulated = '';
+    for (var i = 0; i < segs.length - 1; i++) {
+      accumulated = i === 0 ? segs[i] : accumulated + '/' + segs[i];
+      var ancestor = document.getElementById(navNodeId(accumulated));
+      if (!ancestor) break;  /* branch unresolvable in the current tree */
+      await expandNavNode(ancestor);
+    }
+  } catch (e) { /* swallow: sidebar reveal is best-effort */ }
+
+  var target = document.getElementById(navNodeId(path));
+  if (!target) return;
+
+  var row = target.querySelector(':scope > .task-row');
+  if (row) {
+    row.classList.add('nav-active');
+    requestAnimationFrame(function() {
+      row.scrollIntoView({ block: 'nearest' });
+    });
+  }
+}
+
 /* ── Back-compat alias ──
    revealTask(path)/showTreeAndExpand(path) were the giant-tree reveal
    primitive; callers (Kanban cards, DAG node clicks) now just drill to the
    task in the Workspace. The deep-link ancestor-walk that expands the sidebar
-   lives in sidebar-nav's updateSidebar. */
+   lives in updateSidebar above. */
 function revealTask(path) { showView('workspace'); setActive(path); }
 function showTreeAndExpand(path) { return revealTask(path); }
 
@@ -2023,8 +2205,13 @@ document.body.addEventListener('htmx:sseMessage', function(event) {
   }
 });
 
-/* ── Page load: start the hash router, then initial comment badges ── */
-document.addEventListener('DOMContentLoaded', function() {
+/* ── Page load: populate the sidebar, then start the hash router ──
+   The nav rows must exist before initRouter's first setActive so the active
+   highlight lands on a real row (deep hashes still lazy-load their ancestors
+   inside updateSidebar). Sidebar load is awaited but best-effort. */
+document.addEventListener('DOMContentLoaded', async function() {
+  initSidebarEvents();
+  await loadNavTree();
   initRouter();
   updateTreeCommentBadges();
 });
