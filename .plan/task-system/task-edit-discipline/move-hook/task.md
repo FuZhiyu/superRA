@@ -1,6 +1,6 @@
 ---
 title: "Bash-triggered task-tree revalidation (manual move support)"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-30
@@ -73,3 +73,9 @@ Added to `TestTaskHook`: `test_bash_mv_triggers_rebuild_and_propagation` (dashbo
 ### Out-of-scope asymmetry confirmed
 
 `hooks/hooks-codex.json` and `hooks/hooks-cursor.json` do not wire `task_hook.py` for `Edit`/`Write` today, so there is no Bash-parity entry to add there. This is the documented asymmetry, not an omission.
+
+## Review Notes
+
+Integration review (range `8a4b0f8^..HEAD`). The increment internals are clean: code matches the Results, the full suite is green (147 passed), the governing diff is minimal, no generated artifacts (`direct-mode-*`, `.codex/agents/*.toml`) needed regeneration, and the Codex/Cursor adapter asymmetry is correctly out of scope. One Project Doc Audit finding blocks approval.
+
+1. MAJOR (documentation currency) — [skills/task-system/references/internals.md:79](../../../../skills/task-system/references/internals.md#L79) §Hook Architecture is stale and now contradicts shipped behavior. It states "The task system does not currently ship its own hooks" and lists, under "Hook integration points for future development", [internals.md:86](../../../../skills/task-system/references/internals.md#L86) "PostToolUse on Edit/Write — validate frontmatter … (currently not wired)" and [internals.md:87](../../../../skills/task-system/references/internals.md#L87) "auto-regenerate dashboard … (currently only mutation scripts trigger this)". In fact `task_hook.py` is wired in `hooks/hooks.json` for both `Edit|Write` and (as of this increment) `Bash`, runs `validate_plan` + `propagate_parent_status` + `generate_dashboard`, and is exactly the safety net that [SKILL.md:66](../../../../skills/task-system/SKILL.md#L66) and the new [SKILL.md:73](../../../../skills/task-system/SKILL.md#L73) move note now point readers toward. README:89 names `references/internals.md` as the canonical contributor doc for "hook architecture", so this is the doc a contributor lands on, and it tells them the opposite of what ships. The Edit/Write half was already stale before this increment (hook added in `3d9edfa`); this increment adds the Bash trigger, making it doubly stale and bringing it squarely into the Project Doc Audit walk-up from the touched `task_hook.py` / `hooks.json` / `SKILL.md` (all in the same skill dir). Fix: rewrite §Hook Architecture to describe the now-shipping hook — `task_hook.py` fires on PostToolUse for `Edit`/`Write` of a `task.md` and for structural `Bash` commands that mutate a `.plan/` tree, running validate → propagate → dashboard, always exit 0, never blocking; the "future development" framing and the "not wired" / "only mutation scripts trigger this" claims must go. Keep it tight and point at the owning files rather than restating hook internals.
