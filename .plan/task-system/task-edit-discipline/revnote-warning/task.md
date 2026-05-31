@@ -1,6 +1,6 @@
 ---
 title: "Warn (don't mutate) on stale revision notes in approved tasks"
-status: implemented
+status: approved
 depends_on:
   - move-hook
 tags: []
@@ -49,7 +49,3 @@ All three parts implemented; full suite green (163 passed) and `git grep` finds 
 ## Notes
 
 Code (`task_hook.py` removal, `_task_io.py` warning rule) + tests + a one-line doc note only. No `agents/reviewer.md` change, no Codex/direct-mode regeneration. Standalone — no longer has a dependent doc task.
-
-## Revision Notes
-
-Substantive pivot (2026-05-31): the original design auto-mutated — flip a completed task to `revise` when a revision note was added, and delete the `## Revision Notes` section on approval. First-pass review found a CRITICAL data-loss path: in the uncommitted-approval window the status-based discriminator strips a planner's freshly added note. The researcher decided auto-deletion is too error-prone and chose warn-only, no mutation. This task is rewritten to remove the auto-mutation (committed in `21f5948`) and add a single non-destructive `validate_plan` warning instead. The former sibling `revnote-docs` (which moved the cleanup duty off the reviewer and regenerated Codex artifacts) was deleted: the reviewer keeps the removal duty, so no reviewer-spec change or regeneration is needed. The earlier review notes critiqued the discarded mutation design and are therefore moot. Cleaned when this task is approved.
