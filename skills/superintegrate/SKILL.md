@@ -283,7 +283,10 @@ Agent(subagent_type: "superRA:reviewer"):
   Git range: <BASE_SHA>..<HEAD_SHA>
   Tasks in scope: <same task paths>
 
-  Additionally: <prior-round adjudication notes if re-dispatching>
+  Additionally: Review each in-scope task's `## Results` section per
+    `task-system/references/planning.md` §Results Shape, including Stage 2
+    maturation, parent rollups, and task-local figure attachments.
+    <prior-round adjudication notes if re-dispatching>
 ```
 
 Iterate REVISE -> fix -> narrow re-review until APPROVE. If a documentation finding traces to analysis code, re-enter Integrate.
