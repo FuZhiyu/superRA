@@ -1,10 +1,10 @@
 ---
 title: "Master-detail drill-down workspace"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-30
-updated: 2026-05-30
+updated: 2026-05-31
 ---
 
 ## Objective
