@@ -2114,3 +2114,126 @@ class TestPropagateAll:
 
         # Run via main()
         task_update.main(["--plan-root", str(root_dir), "--propagate-all"])
+
+
+# --- Master-detail server partials (/nav, /nav/{path}, /node/{path}) -------
+
+
+class TestMasterDetailPartials:
+    """Shape checks for the additive master-detail server endpoints."""
+
+    def _deep_plan(self, tmp_path):
+        """A plan tree deep enough (>=4 levels) to exercise lazy nav loading."""
+        root = tmp_path / ".plan"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started",
+                       objective="Root objective.")
+        a = root / "01-a"
+        a.mkdir()
+        _write_task_md(a / "task.md", "A", "approved",
+                       objective="A obj.", results="Found 100 rows")
+        b = root / "02-b"
+        b.mkdir()
+        _write_task_md(b / "task.md", "B", "not-started",
+                       depends_on=["01-a"], tags=["analysis"],
+                       objective="B obj.")
+        x = b / "01-x"
+        x.mkdir()
+        _write_task_md(x / "task.md", "X", "approved", objective="X obj.")
+        y = b / "02-y"
+        y.mkdir()
+        _write_task_md(y / "task.md", "Y", "not-started",
+                       depends_on=["01-x"], objective="Y obj.")
+        deep = y / "01-deep"
+        deep.mkdir()
+        _write_task_md(deep / "task.md", "Deep", "not-started",
+                       objective="deep obj.")
+        deeper = deep / "01-deeper"
+        deeper.mkdir()
+        _write_task_md(deeper / "task.md", "Deeper", "not-started",
+                       objective="deeper obj.")
+        return root
+
+    def _client(self, plan_root):
+        pytest.importorskip("httpx")
+        from fastapi.testclient import TestClient
+        plan_dashboard.PLAN_ROOT = plan_root
+        return TestClient(plan_dashboard.app)
+
+    def test_nav_is_body_free(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            r = c.get("/nav")
+            assert r.status_code == 200
+            # Rows for the whole tree, but no body / section markup.
+            assert 'class="task-body"' not in r.text
+            assert 'class="section-content"' not in r.text
+            assert "data-section=" not in r.text
+            # Per-node attributes the rest of the system keys off are intact.
+            assert 'id="task-01-a"' in r.text
+            assert 'data-path="01-a"' in r.text
+            assert 'sse-swap="task:01-a"' in r.text
+            assert "badge-approved" in r.text
+
+    def test_nav_lazy_loads_deep_children(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            r = c.get("/nav")
+            # Depth >=3 children are stubs, not inlined.
+            assert "needsLoad" in r.text
+            assert 'id="task-02-b-02-y-01-deep-01-deeper"' not in r.text
+
+    def test_nav_path_returns_deep_children_body_free(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            r = c.get("/nav/02-b/02-y/01-deep")
+            assert r.status_code == 200
+            assert 'id="task-02-b-02-y-01-deep-01-deeper"' in r.text
+            assert 'class="task-body"' not in r.text
+
+    def test_nav_path_missing_404(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            assert c.get("/nav/does-not-exist").status_code == 404
+
+    def test_node_is_body_only(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            r = c.get("/node/01-a")
+            assert r.status_code == 200
+            assert 'data-section="Objective"' in r.text
+            assert 'data-section="Results"' in r.text
+            assert '<script type="text/x-markdown">' in r.text
+            # No row, no children container.
+            assert 'class="task-row"' not in r.text
+            assert 'class="task-children"' not in r.text
+
+    def test_node_meta_pills(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            r = c.get("/node/02-b")
+            assert 'class="task-meta"' in r.text
+            assert "<strong>depends:</strong> 01-a" in r.text
+            assert "<strong>tags:</strong> analysis" in r.text
+
+    def test_node_sections_match_full_node(self, tmp_path):
+        """The body-only partial emits the same section markup as the full node."""
+        import re
+        with self._client(self._deep_plan(tmp_path)) as c:
+            node = c.get("/node/01-a").text
+            full = c.get("/task/").text  # children of root incl. the full 01-a node
+
+            def norm(s):
+                return [ln.strip() for ln in s.splitlines() if ln.strip()]
+
+            for sec in ("Objective", "Results"):
+                node_block = re.search(
+                    rf'<div data-section="{sec}">.*?</script>', node, re.S)
+                full_block = re.search(
+                    rf'<div data-section="{sec}">.*?</script>', full, re.S)
+                assert node_block is not None
+                assert full_block is not None
+                assert norm(node_block.group(0)) == norm(full_block.group(0))
+
+    def test_node_missing_404(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            assert c.get("/node/does-not-exist").status_code == 404
+
+    def test_existing_routes_unaffected(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            for route in ("/", "/tree", "/dag", "/kanban"):
+                assert c.get(route).status_code == 200

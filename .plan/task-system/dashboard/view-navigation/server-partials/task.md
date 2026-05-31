@@ -1,6 +1,6 @@
 ---
 title: "Server + template partials for master-detail"
-status: not-started
+status: implemented
 depends_on: []
 tags: []
 created: 2026-05-30
@@ -27,3 +27,19 @@ This task ships no visible UI change — the new routes are additive and the ref
 - The refactor leaves the index page render unchanged — diff the served `/` HTML (or the full-node fragment) before vs. after and confirm only the intended removal (inline dag-panel) differs.
 - `py_compile` clean; existing `pytest skills/task-system/scripts/test_task_system.py` still passes (143). Add a lightweight check (FastAPI `TestClient` if it fits the suite, else a live-server HTTP smoke) for `/nav` and `/node/{path}` shape + the 404.
 - Serve the dashboard (`python skills/task-system/scripts/plan_dashboard.py serve --root .plan`) and confirm the existing Tree/DAG/Kanban tabs still render (nothing wired to the new routes yet).
+
+## Results
+
+Additive endpoints and a behavior-preserving body-macro refactor are in place; no visible UI change ships. All work is on the live server only — the static `generate`/`DASHBOARD_HTML` path is untouched.
+
+**Body-sharing refactor.** Extracted the task-body block (sections + meta pills) from `render_task_node` into a shared `render_task_body(task, project_root)` macro in [`task_node.html`](../../../../../skills/task-system/scripts/templates/task_node.html). Both the full-node render and the new `/node/{path}` partial call it, so body markup has one source of truth. The old inline `.dag-panel` accordion was dropped (the children-DAG region replaces it in the `main-panel` task). A whitespace-normalized diff of the served `/tree` fragment before vs. after confirms the **only** semantic change is the two `.dag-panel` blocks disappearing — every `data-section` block, `<script type="text/x-markdown">` payload, `task-meta` pill, badge, row, and children container is byte-identical (modulo macro-extraction reindentation). `<div>` balance is preserved (58/58 → 52/52, the 6 removed divs being the two 3-div dag-panels).
+
+**`GET /nav` — body-free sidebar tree.** New `nav_node.html` macro renders the `.task-row` chrome (toggle/slug/title/badge/progress) and the recursive children container, with **no** `.task-body` / sections. Preserves `id="task-<path-id>"`, `data-path`, `data-status`, and `sse-swap="task:<path>"` so SSE row swaps keep working. Inlines to depth 2; depth ≥3 children get the `data-needsLoad='true'` stub. Root-or-children logic mirrors `/tree`. Helper `_render_nav_node`; route in [`plan_dashboard.py`](../../../../../skills/task-system/scripts/plan_dashboard.py).
+
+**`GET /nav/{path}` — nav-scoped lazy children.** New `nav_children.html` fragment (parallels `task_children.html`) renders body-free children of a deep node so the sidebar lazy-loads without pulling bodies. Greedy `{path:path}` route placed after the comment routes; 404 on miss.
+
+**`GET /node/{path}` — active-node body-only partial.** New `node_body.html` calls the shared `render_task_body` macro, emitting only meta pills + `## ` sections (each a `data-section` block with its lazy markdown `<script>` payload), no row, no children. Resolved via `_find_task`, 404 on miss. A regression test confirms the `Objective`/`Results` section blocks it emits are byte-identical (whitespace-normalized) to what the full node emits, so the client's `renderMarkdown`/`loadComments`/comment-form code consumes it unchanged. (Note: `.commentable-block` wrappers are added client-side by `renderMarkdown` in `base.html`; the server emits the `data-section` block + markdown payload, which is the byte-for-byte-identical input the client already consumes.)
+
+**Validation run.** `py_compile` clean. Full suite green at **152 passed** (143 baseline + 9 new in `TestMasterDetailPartials` using FastAPI `TestClient`, guarded by `pytest.importorskip("httpx")`): `/nav` body-free + attribute integrity, depth-≥3 lazy stubs, `/nav/{deep}` body-free children, `/node/{path}` body-only + meta pills + section-markup-equals-full-node, and both 404s. Existing `/`, `/tree`, `/dag`, `/kanban` all still 200.
+
+**Out of scope, flagged for downstream.** `base.html` still carries the now-orphaned `toggleDagPanel` JS handler and `.dag-panel` CSS. They are dead but harmless — `toggleDagPanel` was only reachable via an inline `onclick` on the dag-panel element that is no longer emitted, with no load-time or `querySelectorAll` invocation, so the index page is unaffected at load. Left for the `main-panel` task that reworks `base.html` to introduce the children-DAG region, rather than expanding this task's scope.

@@ -368,6 +368,36 @@ def _render_task_node(task: Task, depth: int | None = None) -> str:
     return template.render(task=task, project_root=_project_root, depth=depth)
 
 
+def _render_nav_node(task: Task, depth: int | None = None) -> str:
+    """Render a single navigation-only task node (row + children, no body).
+
+    *depth* controls inline vs lazy-loaded children, mirroring
+    ``_render_task_node``.  When ``None``, depth is inferred from ``task.path``.
+    """
+    if depth is None:
+        depth = _task_depth(task.path)
+    env = _get_jinja_env()
+    template = env.from_string(
+        '{%- from "nav_node.html" import render_nav_node -%}'
+        '{{ render_nav_node(task, depth=depth) }}'
+    )
+    return template.render(task=task, depth=depth)
+
+
+def _render_nav_children(task: Task) -> str:
+    """Render the nav_children.html fragment (body-free children) for a task."""
+    env = _get_jinja_env()
+    template = env.get_template("nav_children.html")
+    return template.render(task=task)
+
+
+def _render_node_body(task: Task) -> str:
+    """Render the node_body.html fragment (body-only) for a single task."""
+    env = _get_jinja_env()
+    template = env.get_template("node_body.html")
+    return template.render(task=task, project_root=_project_root)
+
+
 def _render_summary() -> str:
     """Render the summary_bar.html template."""
     env = _get_jinja_env()
@@ -442,6 +472,33 @@ async def tree_fragment():
         '{% endif %}'
     )
     html = template.render(root_task=_root_task, project_root=_project_root)
+    return HTMLResponse(content=html)
+
+
+# --- Route: GET /nav (navigation-only tree fragment) -----------------------
+
+@app.get("/nav", response_class=HTMLResponse)
+async def nav_fragment():
+    """Return the navigation-only tree (rows, no task bodies) for the sidebar.
+
+    Mirrors /tree's root-or-children logic but renders nav_node (body-free).
+    Children are inlined to depth 2; depth >=3 children are lazy-load stubs
+    fetched via /nav/{path}.
+    """
+    if _root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    env = _get_jinja_env()
+    template = env.from_string(
+        '{%- from "nav_node.html" import render_nav_node -%}'
+        '{% if root_task.body and root_task.body.strip() %}'
+        '{{ render_nav_node(root_task, depth=0) }}'
+        '{% else %}'
+        '{% for child in root_task.children %}'
+        '{{ render_nav_node(child, depth=0) }}'
+        '{% endfor %}'
+        '{% endif %}'
+    )
+    html = template.render(root_task=_root_task)
     return HTMLResponse(content=html)
 
 
@@ -806,6 +863,37 @@ async def get_task(path: str):
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     html = _render_task_fragment(task)
+    return HTMLResponse(content=html)
+
+
+# --- Route: GET /nav/{path} (nav-only lazy children) -----------------------
+# {path:path} is greedy; keep after the comment routes for the same reason as
+# /task/{path}.  Returns body-free children so deep sidebar nodes lazy-load
+# without pulling task bodies.
+
+@app.get("/nav/{path:path}", response_class=HTMLResponse)
+async def get_nav(path: str):
+    """Return a navigation-only fragment with the children of the task at *path*."""
+    task = _find_task(path)
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"Task not found: {path}")
+    html = _render_nav_children(task)
+    return HTMLResponse(content=html)
+
+
+# --- Route: GET /node/{path} (active-node body-only partial) ----------------
+# {path:path} is greedy; keep after the comment routes.  Renders only the body
+# half (meta pills + sections) of a single task, byte-for-byte the same section
+# markup the index emits, so the client's renderMarkdown/loadComments consume it
+# unchanged.
+
+@app.get("/node/{path:path}", response_class=HTMLResponse)
+async def get_node(path: str):
+    """Return the body-only HTML fragment for the task at *path*."""
+    task = _find_task(path)
+    if task is None:
+        raise HTTPException(status_code=404, detail=f"Task not found: {path}")
+    html = _render_node_body(task)
     return HTMLResponse(content=html)
 
 
