@@ -1,6 +1,6 @@
 ---
 title: "Planning Review Mode"
-status: implemented
+status: approved
 depends_on: [01-objective-guidance-task-anatomy, 02-objective-first-reviewer]
 tags: []
 created: 2026-06-01
