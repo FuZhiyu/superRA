@@ -1,6 +1,6 @@
 ---
 title: "Objective-First Reviewer Protocol"
-status: revise
+status: implemented
 depends_on: [01-objective-guidance-task-anatomy]
 tags: []
 created: 2026-06-01
@@ -43,7 +43,7 @@ Potential reviewer failure modes to close:
 - Revised the canonical reviewer protocol so review is explicitly task-local and objective-first: reviewers evaluate `## Objective`, scope frontmatter, implementer `## Results`, reviewed git range, changed outputs, and active domain gates together; domain checklists remain mandatory gates but are no longer the review boundary ([../../../agents/reviewer.md:43](../../../agents/reviewer.md#L43)).
 - Updated reviewer verdict semantics so CRITICAL and MAJOR task-level findings block approval even when no domain checklist item names the issue, while failed `[BLOCKING]` domain gates still force REVISE ([../../../agents/reviewer.md:82](../../../agents/reviewer.md#L82), [../../../agents/reviewer.md:86](../../../agents/reviewer.md#L86), [../../../agents/reviewer.md:90](../../../agents/reviewer.md#L90)).
 - Updated first-review mechanics to check objective satisfaction, declared outputs, implementer results, reviewed diff, and active domain gates before setting `approved` or `revise` ([../../../agents/reviewer.md:131](../../../agents/reviewer.md#L131), [../../../agents/reviewer.md:134](../../../agents/reviewer.md#L134)).
-- Replaced `superimplement`'s checklist-only review description with pointers to `agents/reviewer.md` §Review Protocol and the task-local review boundary; `agent-orchestration` did not need changes because no adjudication wording conflict was found ([../../../skills/superimplement/SKILL.md:12](../../../skills/superimplement/SKILL.md#L12), [../../../skills/superimplement/SKILL.md:93](../../../skills/superimplement/SKILL.md#L93), [../../../skills/superimplement/SKILL.md:161](../../../skills/superimplement/SKILL.md#L161)).
+- Replaced `superimplement`'s checklist-only review description with pointers to `agents/reviewer.md` §Review Protocol and the task-local review boundary; updated stale workflow shorthand so REVISE means reviewer-found blocking findings, including CRITICAL/MAJOR task-level findings and failed `[BLOCKING]` domain gates ([../../../skills/superimplement/SKILL.md:12](../../../skills/superimplement/SKILL.md#L12), [../../../skills/superimplement/SKILL.md:30](../../../skills/superimplement/SKILL.md#L30), [../../../skills/superimplement/SKILL.md:93](../../../skills/superimplement/SKILL.md#L93), [../../../skills/superimplement/SKILL.md:161](../../../skills/superimplement/SKILL.md#L161), [../../../skills/agent-orchestration/SKILL.md:195](../../../skills/agent-orchestration/SKILL.md#L195)).
 
 ### Generated Artifacts
 - Regenerated with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
@@ -59,3 +59,4 @@ Potential reviewer failure modes to close:
 ## Review Notes
 
 1. [MAJOR] [../../../skills/agent-orchestration/SKILL.md:195](../../../skills/agent-orchestration/SKILL.md#L195) still defines `status: revise` as "Reviewer found `[BLOCKING]` issue(s)," but the revised reviewer protocol now returns REVISE for either failed `[BLOCKING]` domain gates or blocking CRITICAL/MAJOR task-level findings that may not be labeled `[BLOCKING]` ([../../../agents/reviewer.md:86](../../../agents/reviewer.md#L86), [../../../agents/reviewer.md:90](../../../agents/reviewer.md#L90)). This is the wording conflict the objective says should trigger an `agent-orchestration` update; leaving it unchanged risks the orchestrator treating non-checklist task-level failures as outside the REVISE loop. Update the status reference, and any matching stale workflow shorthand such as [../../../skills/superimplement/SKILL.md:30](../../../skills/superimplement/SKILL.md#L30), to describe reviewer-found blocking findings rather than only `[BLOCKING]` checklist items.
+   → implemented: updated the Review Status Reference and matching `superimplement` shorthand to say reviewer-found blocking findings rather than only `[BLOCKING]` checklist items ([../../../skills/agent-orchestration/SKILL.md:195](../../../skills/agent-orchestration/SKILL.md#L195), [../../../skills/superimplement/SKILL.md:30](../../../skills/superimplement/SKILL.md#L30), [../../../skills/superimplement/SKILL.md:182](../../../skills/superimplement/SKILL.md#L182)).

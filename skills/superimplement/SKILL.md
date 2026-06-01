@@ -27,7 +27,7 @@ Default mode dispatches a fresh subagent per task. Each task gets one comprehens
 2. **Go through tasks:**
    a. Dispatch implementer subagent. Answer context questions, re-dispatch if needed.
    b. Dispatch reviewer subagent (one comprehensive pass).
-   c. **APPROVE** → next task. **REVISE** → fix `[BLOCKING]` findings → narrow re-review (cited fixes + dependent findings). Loop until APPROVE.
+   c. **APPROVE** → next task. **REVISE** → fix reviewer-found blocking findings → narrow re-review (cited fixes + dependent findings). Loop until APPROVE.
 3. When no selected task still requires implementation or review, verify pipeline + reproducibility (Step 3).
 4. Present Step 4 completion menu; dispatch `superintegrate` on merge/PR.
 
@@ -179,7 +179,7 @@ This workflow runs the `implementation` Stage for both roles (see `superRA:using
 **Never:**
 - Start work on main/master branch without proposing a feature branch first (Step 0)
 - Skip review — even in direct mode
-- Proceed with unfixed `[BLOCKING]` items (a REVISE task is not complete until the re-review promotes it to APPROVED)
+- Proceed with unfixed blocking findings (a REVISE task is not complete until the re-review promotes it to APPROVED)
 - Dispatch multiple implementers in parallel on the same worktree — when parallel-dispatching ≥2 implementers, each must run in its own worktree per `superRA:agent-orchestration` §Parallelization and Worktree Isolation
 - Paraphrase the task into the dispatch instead of pointing the subagent at the task path (the pointer-based convention is mandatory — subagents read the task via `task_read.py` so the dispatch and task.md cannot drift)
 - Ignore implementer input-quality or methodology concerns

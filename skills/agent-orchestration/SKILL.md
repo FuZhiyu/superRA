@@ -192,7 +192,7 @@ Implementer and reviewer agents own their commits and document updates (see `age
 | `not-started` | Planned, no work yet | Dispatch implementer |
 | `in-progress` | Being worked on | Wait for implementer or re-dispatch |
 | `implemented` | Code committed and ready for review | Dispatch reviewer |
-| `revise` | Reviewer found `[BLOCKING]` issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
+| `revise` | Reviewer found blocking issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
 | `approved` | Review passed | Proceed to next task |
 
 **A task is complete only when its `status` is `approved`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
