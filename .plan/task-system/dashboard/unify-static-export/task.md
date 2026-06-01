@@ -22,7 +22,7 @@ The hard part is that base.html is built for a server: its client JS fetches `/n
 
 Keep `generate_dashboard(plan_root, output_path=None) -> Path` import-compatible: same name, signature, return contract (writes the self-contained file, defaults to `plan_root / "dashboard.html"`, returns the path, prints the written path). All four auto-callers must keep working unchanged. Reuse the existing Jinja env helper (`_get_jinja_env()` / `env.get_template("base.html")`) rather than re-reading the file.
 
-Regenerate the committed `.plan/dashboard.html` from the new path and commit it as part of this task. The regenerated file is now the full-featured dashboard (accent links, renderMarkdown, KaTeX math, all views) running offline.
+Regenerate `.plan/dashboard.html` from the new path and verify it (the regenerated file is now the full-featured dashboard — accent links, renderMarkdown, KaTeX math, all views — running offline). Note: `.plan/dashboard.html` is gitignored (a local build artifact, `.gitignore` `.plan/**/dashboard.html`), so do **not** commit it; regenerate-and-verify only.
 
 Validation:
 - `python3 skills/task-system/scripts/plan_dashboard.py generate` produces a single HTML file that opens via `file://` with no network/SSE/`fetch` activity (check devtools network tab is empty for task data), renders the same tree/views the live server shows, and has no dead comment/worktree controls or console errors.
