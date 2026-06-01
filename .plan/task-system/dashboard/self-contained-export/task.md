@@ -1,6 +1,6 @@
 ---
 title: "Self-contained export: embed figures and math"
-status: not-started
+status: implemented
 depends_on:
   - subtree-export
 tags: []
@@ -45,4 +45,29 @@ Exercise the **real end-user path**, not just routes/units (a prior round shippe
 
 ## Results
 
-_(to be filled by the implementer)_
+The standalone export is now fully self-contained for figures and math. Both deliverables ship on the single unified standalone machinery (`render_standalone_html()` / `_build_standalone_fragments()` / the `standalone` flag) — no parallel renderer, no second template, no change to `serve` output. The live `serve` path stays CDN-backed and byte-equivalent to before; both whole-tree and subtree exports gain the embedding.
+
+### Deliverable 1 — Base64-embed figures
+
+[`_build_standalone_images(scoped_root)`](../../../../skills/task-system/scripts/plan_dashboard.py#L1076) builds a `{ client-key -> data-URI }` map injected into the template as `standalone_images` and surfaced client-side as `var STANDALONE_IMAGES` ([base.html:1227](../../../../skills/task-system/scripts/templates/base.html#L1227)). For every task in the (re-based) export tree it scans the raw markdown `body` for image refs — both `![alt](src)` and `<img src=...>` ([`_iter_body_image_srcs`](../../../../skills/task-system/scripts/plan_dashboard.py#L1046)) — skips absolute / `http(s):` / `data:` srcs ([`_is_embeddable_src`](../../../../skills/task-system/scripts/plan_dashboard.py#L1064)), resolves each remaining src against the task's **real on-disk** `dir_path` (left un-rebased by `_rebase_subtree` so figure bytes stay reachable), reads the bytes, and base64-encodes with the extension's MIME (png/jpeg/gif/svg+xml/webp). The key is the exact string the client computes in the `img[src]` loop: `task.path + '/' + src` for a task body, bare `src` for the root body (empty re-based path).
+
+The client `img[src]` loop's standalone branch now consults `STANDALONE_IMAGES` first ([base.html:1394](../../../../skills/task-system/scripts/templates/base.html#L1394)): on a hit it sets `<img src>` to the data URI; on a miss it falls back to today's relative-path rewrite unchanged. Server (`!STANDALONE`) mode is untouched.
+
+### Deliverable 2 — Vendor and inline the render libraries
+
+Vendored under [`skills/task-system/scripts/vendor/`](../../../../skills/task-system/scripts/vendor/README.md): `markdown-it.min.js` (14.2.0), `katex.min.js` + `katex.min.css` (0.16.47), `texmath.min.js` (1.0.0), and all 20 `fonts/KaTeX_*.woff2`. Exact versions, source URLs, SHA-256s, and a re-fetch recipe are in `vendor/README.md` so the pin is auditable. The major-version CDN tags in `base.html` resolved to these exact versions on 2026-06-01 (via the jsdelivr `x-jsd-version` header).
+
+[`_build_standalone_assets()`](../../../../skills/task-system/scripts/plan_dashboard.py#L1149) reads the vendored files and returns the inline JS bodies plus a font-inlined KaTeX CSS. [`_inline_katex_css`](../../../../skills/task-system/scripts/plan_dashboard.py#L1121) rewrites each `@font-face` so its `src` is a single base64 `data:font/woff2` URI, dropping the woff/ttf fallback sources (woff2 only). The head asset tags are gated on `standalone` ([base.html:12](../../../../skills/task-system/scripts/templates/base.html#L12)): standalone mode emits the three libraries as inline `<script>` blocks and the font-inlined CSS as an inline `<style>`; server mode keeps the four CDN `<link>`/`<script>` tags exactly as before. Google Fonts and htmx/sse stay on CDN in both modes (offline they fail gracefully — `onerror` does not halt later inline scripts; prose falls back to system serif/mono). A defensive `</script>`/`</style>` → `<\/...` escape guards a future re-pin whose body might contain a literal closer (none do today).
+
+### Validation
+
+- **Real offline open (behavioral, headless Chromium with the network HARD-BLOCKED).** A synthetic plan-tree fixture (one task with one figure + one `$e^{i\pi}+1=0$`) exported via `generate --root`, opened via `file://` with every non-`file://` request aborted: the figure renders with `naturalWidth > 0` (bytes decoded from the data URI), KaTeX produced its `.katex` DOM, and the markdown is rendered (not raw). The only blocked external requests were Google Fonts + htmx/sse (the allowed-to-remain CDN tags) — no markdown-it/katex/texmath fetch, proving self-containment. The named real-figure fixture — the `task-system/dashboard/hyperlink-styling` subtree (`attachments/links-light.png`, `links-dark.png`) — exported and opened offline the same way: both figures decode (2/2, `naturalWidth > 0`).
+- **Source/DOM evidence.** The standalone output contains a `data:image/...;base64,` per referenced figure, the 20 inlined KaTeX `@font-face` `data:font/woff2;base64,` URIs, the inline markdown-it/texmath/KaTeX `<script>` bodies, and **no** CDN `<link>`/`<script src>` for markdown-it / texmath / katex (Google Fonts + htmx/sse remain). The `img[src]` loop consults `STANDALONE_IMAGES` before the relative-path fallback.
+- **Server mode unchanged.** A `serve`-rendered page still uses the four CDN render tags, inlines nothing (no woff2 data URI, no `STANDALONE_IMAGES`), and is `window.STANDALONE = false`. Whole-tree `generate` with no `--root` works; `generate_dashboard(root=None)` stays byte-identical to the bare call (existing regression test).
+- **Tests.** `uv run pytest skills/task-system/scripts/test_task_system.py skills/task-system/scripts/test_dashboard.py` → **273 passed** (broader run incl. `tests/` + `test_worktree_selector.py` → 362 passed). New: `TestStandaloneSelfContained` (9 tests) in `test_task_system.py` and `test_served_page_keeps_cdn_render_tags` in `test_dashboard.py`. These committed pytest are **source-presence / build-helper unit** checks (data-URI emission, image-map keys + MIME + remote/absolute/HTML-img handling, CDN-tag absence in standalone, woff2-only font inlining, vendor-file presence, server-mode CDN retained). The **behavioral** browser check (figure actually decodes + KaTeX actually renders from an offline `file://` open) is the headless-Chromium run above — recorded here, not committed, since this suite has no browser harness.
+
+### Notes / caveats
+
+- The whole-tree default-output (`dashboard.html` written into `.plan`, gitignored) is not committed — regenerate-only.
+- The downloaded-file figure-portability limitation from `[subtree-export](../subtree-export/task.md)` is now **resolved** for embedded figures: figures travel as base64 data URIs, so a file moved to Downloads still shows them. The relative-path fallback only fires for srcs with no embedded bytes.
+- `plan_dashboard.py` and `base.html` are not in the generated-from-spec set; no `sync_codex_agents.py` run is needed.

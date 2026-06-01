@@ -278,6 +278,20 @@ class TestServerRoutes:
         assert "shareSubtree(" in html
         assert "window.STANDALONE ? '' :" in html
 
+    def test_served_page_keeps_cdn_render_tags(self, client):
+        """Server mode is unchanged by the standalone embedding: the live page
+        still loads markdown-it/KaTeX/texmath from the CDN and does NOT inline the
+        vendored libraries or font woff2 data URIs."""
+        html = client.get("/").text
+        assert "cdn.jsdelivr.net/npm/markdown-it@14" in html
+        assert "cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css" in html
+        assert "cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js" in html
+        assert "cdn.jsdelivr.net/npm/markdown-it-texmath@1" in html
+        # No standalone-only inlining leaks into the served page.
+        assert "data:font/woff2;base64," not in html
+        assert "var STANDALONE_IMAGES =" not in html
+        assert "window.STANDALONE = false" in html
+
     def test_files_serves_existing_file(self, client, plan_root):
         # Create a test file in the project root
         project_root = plan_root.parent

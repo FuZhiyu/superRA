@@ -74,6 +74,32 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
     path.write_text(content, encoding="utf-8")
 
 
+def _write_tiny_png(path: Path) -> bytes:
+    """Write a minimal valid 2x2 PNG (no PIL dependency) and return its bytes."""
+    import struct
+    import zlib
+
+    def _chunk(typ: bytes, data: bytes) -> bytes:
+        body = typ + data
+        return (
+            struct.pack(">I", len(data))
+            + body
+            + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
+        )
+
+    ihdr = struct.pack(">IIBBBBB", 2, 2, 8, 2, 0, 0, 0)
+    raw = (b"\x00" + b"\xff\x00\x00" * 2) * 2
+    png = (
+        b"\x89PNG\r\n\x1a\n"
+        + _chunk(b"IHDR", ihdr)
+        + _chunk(b"IDAT", zlib.compress(raw))
+        + _chunk(b"IEND", b"")
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(png)
+    return png
+
+
 # --- Fixtures ---
 
 
@@ -946,6 +972,154 @@ class TestDashboard:
             plan_root, plan_root / "b.html", root=None
         )
         assert a.read_text("utf-8") == b.read_text("utf-8")
+
+
+class TestStandaloneSelfContained:
+    """The standalone export embeds figures (base64 data URIs) and inlines the
+    vendored render libraries (markdown-it/texmath/KaTeX + woff2 fonts) so a
+    moved/offline single file renders figures and math with no CDN fetch.
+
+    These committed assertions are SOURCE-PRESENCE checks (the data URIs, inline
+    script/style bodies, and CDN-tag absence are in the output string). The
+    behavioral proof — that a browser actually decodes the figure and renders the
+    KaTeX DOM from a file:// open with the network blocked — is a separate
+    headless-Chromium check, recorded in the task's Results (not committed here,
+    since there is no browser harness in this suite).
+    """
+
+    @pytest.fixture
+    def fig_math_plan(self, tmp_path):
+        """A two-task plan: a root and one child whose body has a relative figure
+        and a `$...$` math expression — the minimum to exercise both embeddings."""
+        root = tmp_path / ".plan"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Embed Project", "not-started",
+                       objective="Root overview.")
+        child = root / "01-figmath"
+        child.mkdir()
+        _write_tiny_png(child / "attachments" / "demo.png")
+        _write_task_md(
+            child / "task.md", "Figure and Math", "not-started",
+            objective="Math $e^{i\\pi}+1=0$ and a figure.\n\n"
+                      "![red square](attachments/demo.png)",
+        )
+        return root
+
+    def test_figure_embedded_as_data_uri(self, fig_math_plan):
+        """A relative figure in a task body is base64-embedded under the exact
+        client key, and its data URI carries the correct PNG MIME."""
+        out = fig_math_plan / "export.html"
+        plan_dashboard.generate_dashboard(
+            fig_math_plan, out, root="01-figmath"
+        )
+        html = out.read_text("utf-8")
+        # The map var is present and contains a PNG data URI for the figure.
+        assert "var STANDALONE_IMAGES =" in html
+        assert "data:image/png;base64," in html
+        # Re-based root key: the child becomes the root (path ""), so the figure
+        # key is the bare src, not a task-path-prefixed one.
+        assert "attachments/demo.png" in html
+
+    def test_image_map_keys_and_mime(self, fig_math_plan):
+        """_build_standalone_images keys by the client-computed string and picks
+        MIME by extension; the bytes round-trip through the data URI."""
+        import base64
+
+        full = plan_dashboard.walk_plan(fig_math_plan)
+        # Whole-tree (un-rebased) tree: the child keeps its real path "01-figmath",
+        # so the key is "01-figmath/attachments/demo.png".
+        images = plan_dashboard._build_standalone_images(full)
+        key = "01-figmath/attachments/demo.png"
+        assert key in images
+        assert images[key].startswith("data:image/png;base64,")
+        # Decoding the data URI yields a valid PNG (magic bytes).
+        b64 = images[key].split(",", 1)[1]
+        assert base64.b64decode(b64).startswith(b"\x89PNG\r\n\x1a\n")
+
+    def test_image_map_skips_remote_and_absolute(self, tmp_path):
+        """http(s)/absolute/data srcs are never embedded; only resolvable
+        relative figures are."""
+        root = tmp_path / ".plan"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        child = root / "01-mixed"
+        child.mkdir()
+        _write_tiny_png(child / "local.png")
+        _write_task_md(
+            child / "task.md", "Mixed", "not-started",
+            objective="![a](local.png) ![b](https://x/y.png) "
+                      "![c](/abs.png) ![d](data:image/png;base64,AAAA)",
+        )
+        images = plan_dashboard._build_standalone_images(
+            plan_dashboard.walk_plan(root)
+        )
+        assert "01-mixed/local.png" in images
+        assert not any("https://x/y.png" in k for k in images)
+        assert not any(k.endswith("/abs.png") for k in images)
+        assert "01-mixed/data:image/png;base64,AAAA" not in images
+
+    def test_image_map_handles_html_img_tag(self, tmp_path):
+        """`<img src=...>` references are embedded the same as `![alt](src)`."""
+        root = tmp_path / ".plan"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        child = root / "01-html"
+        child.mkdir()
+        _write_tiny_png(child / "pic.png")
+        _write_task_md(
+            child / "task.md", "Html", "not-started",
+            objective='An image: <img src="pic.png" alt="p">',
+        )
+        images = plan_dashboard._build_standalone_images(
+            plan_dashboard.walk_plan(root)
+        )
+        assert "01-html/pic.png" in images
+
+    def test_standalone_inlines_render_libraries(self, fig_math_plan):
+        """Standalone output inlines the vendored markdown-it/texmath/KaTeX JS and
+        the font-inlined KaTeX CSS — and drops the CDN tags for those three."""
+        out = fig_math_plan / "export.html"
+        plan_dashboard.generate_dashboard(fig_math_plan, out, root="01-figmath")
+        html = out.read_text("utf-8")
+        # Inline library bodies present (version banner / global from each lib).
+        assert "markdown-it 14.2.0" in html
+        assert "katex" in html.lower()
+        # KaTeX @font-face rewritten to a base64 woff2 data URI (inlined fonts).
+        assert "data:font/woff2;base64," in html
+        # The required CDN tags for these three are GONE in standalone.
+        assert "cdn.jsdelivr.net/npm/markdown-it@" not in html
+        assert "cdn.jsdelivr.net/npm/katex@" not in html
+        assert "cdn.jsdelivr.net/npm/markdown-it-texmath@" not in html
+        # Google Fonts + htmx/sse CDN tags may remain (allowed by scope).
+        assert "fonts.googleapis.com" in html
+        assert "htmx.org@2" in html
+
+    def test_img_loop_consults_standalone_images_first(self):
+        """The client img[src] loop looks up STANDALONE_IMAGES before its
+        relative-path fallback (guards the lookup against removal)."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "STANDALONE_IMAGES.hasOwnProperty(key)" in src
+
+    def test_inline_katex_css_uses_woff2_only(self):
+        """The CSS font-inlining rewrites every @font-face to one base64 woff2
+        data URI and emits no remaining url(fonts/...woff2) reference."""
+        assets = plan_dashboard._build_standalone_assets()
+        css = assets["katex_css"]
+        assert "data:font/woff2;base64," in css
+        # Every original url(fonts/KaTeX_*.woff2) is replaced by a data URI.
+        assert "url(fonts/KaTeX_" not in css
+        # All 20 KaTeX font faces are inlined.
+        assert css.count("data:font/woff2;base64,") == 20
+
+    def test_vendor_files_present(self):
+        """The vendored render libraries and the full woff2 font set exist so the
+        export build is hermetic (no fetch-at-build)."""
+        vendor = SCRIPTS_DIR / "vendor"
+        for name in ("markdown-it.min.js", "katex.min.js",
+                     "katex.min.css", "texmath.min.js", "README.md"):
+            assert (vendor / name).exists(), f"missing vendored {name}"
+        woff2 = list((vendor / "fonts").glob("KaTeX_*.woff2"))
+        assert len(woff2) == 20, f"expected 20 woff2 fonts, found {len(woff2)}"
 
 
 # --- parse_body_sections tests ---

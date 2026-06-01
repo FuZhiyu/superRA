@@ -9,10 +9,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2/sse.js"></script>
+{% if standalone %}
+{# Standalone export: inline the vendored render libraries + font-inlined KaTeX
+   CSS so markdown and math render from a moved/offline file with no CDN fetch.
+   Server mode keeps the CDN tags (the {% else %} branch). #}
+<style>{{ standalone_assets.katex_css }}</style>
+<script>{{ standalone_assets.markdown_it_js }}</script>
+<script>{{ standalone_assets.katex_js }}</script>
+<script>{{ standalone_assets.texmath_js }}</script>
+{% else %}
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"></script>
+{% endif %}
 <style>
 /* ── Light / Dark tokens ── */
 :root {
@@ -1210,6 +1220,11 @@ var STANDALONE_FRAGMENTS = {{ standalone_fragments | tojson }};
    used to resolve task-relative <img> sources to a file:// path that resolves
    offline. Empty string keeps image sources task-relative to the file. */
 var STANDALONE_PLAN_DIR = {{ standalone_plan_dir | tojson }};
+/* { client-key -> data:URI } for every relative figure referenced in a task body,
+   base64-embedded at build time so figures render from a moved/offline file. The
+   key matches the string the img[src] loop computes (taskPath + '/' + src, or bare
+   src for the root body). The img loop consults this before its relative fallback. */
+var STANDALONE_IMAGES = {{ standalone_images | tojson }};
 
 /* Build a fake Response that yields a pre-rendered fragment (or [] for the
    comment/summary JSON endpoints). Mirrors just enough of the fetch Response
@@ -1371,8 +1386,17 @@ function renderMarkdown(text, sectionName, taskPath) {
     var src = img.getAttribute('src');
     if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
       if (window.STANDALONE) {
-        var rel = taskPath ? STANDALONE_PLAN_DIR + taskPath + '/' + src : STANDALONE_PLAN_DIR + src;
-        img.setAttribute('src', rel);
+        /* Prefer the base64 data URI embedded at build time (figure-portable in a
+           moved/offline file). Key it exactly as the build helper does: taskPath +
+           '/' + src for a task body, bare src for the root body. Fall back to the
+           relative-path rewrite when no embedded bytes exist for this src. */
+        var key = taskPath ? taskPath + '/' + src : src;
+        if (STANDALONE_IMAGES.hasOwnProperty(key)) {
+          img.setAttribute('src', STANDALONE_IMAGES[key]);
+        } else {
+          var rel = taskPath ? STANDALONE_PLAN_DIR + taskPath + '/' + src : STANDALONE_PLAN_DIR + src;
+          img.setAttribute('src', rel);
+        }
       } else {
         img.setAttribute('src', '/files/' + pathPrefix + src);
       }
