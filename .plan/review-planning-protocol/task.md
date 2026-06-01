@@ -1,0 +1,32 @@
+---
+title: "Review and Planning Protocol"
+status: not-started
+depends_on: []
+tags: []
+created: 2026-06-01
+---
+
+## Objective
+
+Improve superRA's planning and review workflow so reviewers evaluate whether work genuinely achieves the task objective, not only whether it passes domain checklists. Add an explicit task-authoring split between the authoritative `## Objective` and advisory `## Planner Guidance`, and formalize optional planning review for thorough planning / handoff scenarios.
+
+This work must preserve the repo's source-of-truth boundaries:
+- canonical reviewer behavior lives in `agents/reviewer.md`;
+- canonical implementer behavior lives in `agents/implementer.md`;
+- task anatomy and objective/guidance semantics live in `skills/task-system/references/planning.md`;
+- superplan owns planning-phase choreography and optional planning review;
+- generated Codex agents and direct-mode role references are regenerated, never hand-edited.
+
+Success means a future implementer/reviewer pair can distinguish binding objectives from planner suggestions, a reviewer approval requires task-local objective satisfaction plus domain gates, and thorough planning can run a semantic planning-review pass without overloading implementation task statuses.
+
+## Planner Guidance
+
+Exploration from the design review identified three implementation slices:
+- First update task anatomy so `## Objective` is the normative contract and optional `## Planner Guidance` holds non-binding starting points.
+- Then update reviewer behavior so it derives required deliverables from the objective, declared frontmatter outputs, implementer results, and the diff before walking domain gates.
+- Finally add a `planning-review` reviewer mode owned by superplan, using root-level `## Planning Review Notes` rather than normal task `status:`.
+
+Avoid broad rewrites of domain skills. The domain skills own the specific gates; this work should only clarify how generic workflow/role protocols compose with those gates.
+
+## Results
+
