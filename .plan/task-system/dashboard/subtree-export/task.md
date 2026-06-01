@@ -1,6 +1,6 @@
 ---
 title: "Export subtree dashboard to standalone HTML"
-status: implemented
+status: approved
 depends_on:
   - unify-static-export
 tags: []
@@ -27,12 +27,6 @@ Validation:
 - The CLI subtree export produces the same file for a given `--root`; whole-tree `generate` is unchanged.
 - The live `serve` path and the whole-tree static export are otherwise unchanged in behavior.
 - Test coverage for the subtree-scoped build (subtree fragment/path set is scoped correctly; the export route returns an attachment; offline-clean) added to the dashboard/task-system suite; run `uv run pytest skills/task-system/scripts/test_task_system.py skills/task-system/scripts/test_dashboard.py`.
-
-## Revision Notes
-
-Updated 2026-05-31: added `depends_on: unify-static-export` and narrowed scope from "build the standalone-from-base.html machinery" to "add subtree scoping on top of it." The whole-tree unification + `DASHBOARD_HTML` deletion + server-less standalone mode are now owned by `unify-static-export`; this task is the subtree-scoping increment only. Substantive (dependency + scope narrowing).
-
-Updated 2026-05-31 (later): researcher confirmed building this now and centered it on a **Share function** — a Share/Export button in the live dashboard that downloads any task's subtree as embedded HTML (via a server route returning `Content-Disposition: attachment`), with the CLI subtree export as the secondary path. Both are now required deliverables. Substantive (made the live Share button a hard requirement, was previously "CLI and/or button").
 
 ## Results
 
