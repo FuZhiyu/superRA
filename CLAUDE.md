@@ -82,6 +82,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 - **Flat skill layout.** Every skill lives at `skills/<name>/SKILL.md`. Grouping lives in `skills/CATEGORIES.md`, `README.md`, and the skill inventory, not in nested directories.
 - **Shared gated checklists.** Implementers and reviewers use the same checklist files. `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items may be reported as minor findings without blocking.
 - **Generated artifacts stay generated.** Direct-mode role references and Codex named-agent files are produced from canonical agent specs. Update the generator or source spec, then regenerate.
+- **Vendored assets are re-fetched, not generated.** CDN-mirrored third-party files under `skills/task-system/scripts/vendor/` are hand-managed and re-fetchable per their own `vendor/README.md`; do not treat them as generated-from-spec.
 
 ## Skill Authoring Guidelines
 
