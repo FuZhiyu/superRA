@@ -131,6 +131,16 @@ Agent(subagent_type: "superRA:reviewer"):
   Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
 ```
 
+**Planning reviewer:**
+```
+Agent(subagent_type: "superRA:reviewer"):
+  Stage: planning-review
+  Task: <task path or root>
+  Review mode: handoff-readiness | design-review
+  Context: <exploration synthesis, inline or path>
+  Review target: assigned task/subtree design, not implementation diff
+```
+
 The implementer/reviewer find their task by running `task_read.py --path <task-path>`, which injects ancestor context and sibling dependency status automatically.
 
 **Optional steering is strictly additive.** If your `Additionally:` line only paraphrases the default protocol, the skill-load manifest, or task content, delete it — the agent reads those itself. Never include `Work from:` (cwd is implicit) or restate task content / manifest loads.

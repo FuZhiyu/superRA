@@ -1,6 +1,6 @@
 ---
 title: "Objective vs Planner Guidance Task Anatomy"
-status: revise
+status: implemented
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -43,7 +43,7 @@ Keep `## Planner Guidance` optional. A validator warning for missing guidance is
 
 ### Validation
 - `uv run pytest skills/task-system/scripts/test_task_system.py skills/task-system/scripts/test_dashboard.py skills/task-system/scripts/tests/test_state_preservation.py skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 310 tests.
-- `python3 skills/task-system/scripts/task_check.py --plan-root .plan` passed: all checks passed, no issues found.
+- `python3 skills/task-system/scripts/task_check.py --plan-root superRA` passed after the task-root rename: all checks passed, no issues found.
 - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` passed: generated agent files and direct-mode role references are up to date.
 - DRY/Necessity self-check: added and revised instruction lines change behavior at owner surfaces only; the revise-round task-system lines close the direct-reader ownership gap without adding a validator requirement for missing or empty `## Planner Guidance`.
 
@@ -52,10 +52,12 @@ Keep `## Planner Guidance` optional. A validator warning for missing guidance is
 - Generated outputs updated from canonical role specs: [../../../skills/using-superRA/references/direct-mode-implementer.md](../../../skills/using-superRA/references/direct-mode-implementer.md), [../../../skills/using-superRA/references/direct-mode-reviewer.md](../../../skills/using-superRA/references/direct-mode-reviewer.md), [../../../.codex/agents/superra_implementer.toml](../../../.codex/agents/superra_implementer.toml), [../../../.codex/agents/superra_reviewer.toml](../../../.codex/agents/superra_reviewer.toml).
 
 ### Notes
-- Root `.plan/task.md` conventions were read; they identify repo `AGENTS.md` / `CLAUDE.md` as the contributor-facing authority for internals and confirm no additional guidance files under the touched implementation paths.
+- Root `superRA/task.md` conventions were read; they identify repo `AGENTS.md` / `CLAUDE.md` as the contributor-facing authority for internals and confirm no additional guidance files under the touched implementation paths.
 
 ## Review Notes
 
 1. MAJOR: [../../../skills/superplan/SKILL.md:98-100](../../../skills/superplan/SKILL.md#L98-L100) fails the AGENTS.md DRY/Necessity gate because it immediately points to the task-system objective-writing guide and then restates the same `## Objective` / `## Planner Guidance` semantics already owned by [../../../skills/task-system/references/planning.md:7-30](../../../skills/task-system/references/planning.md#L7-L30) and already summarized at [../../../skills/superplan/SKILL.md:16](../../../skills/superplan/SKILL.md#L16). Remove the duplicate line or replace it with a pure pointer so the instruction lives at the smallest owning surface.
+   → implemented: removed the duplicate `## Objective` / `## Planner Guidance` semantics line from `superplan` and left the task-system planning reference as the owner ([../../../skills/superplan/SKILL.md](../../../skills/superplan/SKILL.md)).
 
 2. MAJOR: The approved task record still contains pre-rename `.plan` evidence after the branch was synced to the `superRA/` task root: [task.md:46](task.md#L46) records `task_check.py --plan-root .plan`, and [task.md:55](task.md#L55) says root `.plan/task.md` conventions were read. Refresh the Results to cite the current `superRA/` command and `superRA/task.md` conventions, or clearly state that the old `.plan` entries were historical and superseded by current post-sync validation.
+   → implemented: refreshed the task record to cite `--plan-root superRA` validation and `superRA/task.md` conventions ([task.md](task.md)).

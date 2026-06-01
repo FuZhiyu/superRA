@@ -1,6 +1,6 @@
 ---
 title: "Objective-First Reviewer Protocol"
-status: revise
+status: implemented
 depends_on: [01-objective-guidance-task-anatomy]
 tags: []
 created: 2026-06-01
@@ -50,7 +50,7 @@ Potential reviewer failure modes to close:
 - Generated outputs updated from `agents/reviewer.md`: [../../../skills/using-superRA/references/direct-mode-reviewer.md](../../../skills/using-superRA/references/direct-mode-reviewer.md), [../../../.codex/agents/superra_reviewer.toml](../../../.codex/agents/superra_reviewer.toml).
 
 ### Validation
-- `python3 skills/task-system/scripts/task_check.py --plan-root .plan` passed: all checks passed, no issues found.
+- `python3 skills/task-system/scripts/task_check.py --plan-root superRA` passed after the task-root rename: all checks passed, no issues found.
 - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` passed: generated agent files and direct-mode role references are up to date.
 - `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 6 tests.
 - Manual dry run passed by assertion against the revised reviewer protocol text: a checklist-passing task missing a declared output produces REVISE as a blocking task-level finding, while an implementation that deviates from `## Planner Guidance` but satisfies `## Objective` is not a review failure.
@@ -59,3 +59,4 @@ Potential reviewer failure modes to close:
 ## Review Notes
 
 1. MAJOR: The approved task record still cites stale pre-rename validation: [task.md:53](task.md#L53) records `python3 skills/task-system/scripts/task_check.py --plan-root .plan` after the workstream has been merged onto the `superRA/` task-root rename. Refresh the Results to cite current post-sync validation with `--plan-root superRA` so the task file remains coherent with the merged state.
+   → implemented: refreshed the task record to cite current `--plan-root superRA` validation ([task.md](task.md)).

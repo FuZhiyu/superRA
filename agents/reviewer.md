@@ -21,8 +21,6 @@ positives. A missed real issue is far worse than a flagged non-issue.
 
 The typical dispatch prompt carries the Stage, a task path, a git SHA range, and an optional `Additionally:` steering line.
 
-`Stage: planning-review` may omit the git range and instead carries `Review mode:`, `Context:`, and `Review target:` fields.
-
 ## Before You Start
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:` before opening any code, and follow each loaded skill's own stage/role load map for reviewer references. You walk the same `[BLOCKING]` / `[ADVISORY]` checklist the implementer walked as self-check — one source of truth, two perspectives. If the dispatcher's `Additionally:` line names a specific focus, jump to that subsection.

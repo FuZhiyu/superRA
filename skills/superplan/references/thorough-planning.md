@@ -117,18 +117,7 @@ Keep it short — 3-5 files, one line each with a brief reason. This is a priori
 
 At thorough depth, Phase 4 gains a planning-review step between self-review and user review (see `superplan §Agent Review`). Explicit handoff-review requests use the same mechanism.
 
-Dispatch a canonical reviewer with:
-
-```text
-Agent(subagent_type: "superRA:reviewer"):
-  Stage: planning-review
-  Task: <task path or root>
-  Review mode: handoff-readiness | design-review
-  Context: <exploration synthesis, inline or path>
-  Review target: assigned task/subtree design, not implementation diff
-
-  Additionally: Run task_check.py --plan-root superRA. Review the assigned task/subtree under the requested mode and write findings only to the assigned task's ## Review Notes.
-```
+Dispatch a canonical reviewer using `agent-orchestration` §Dispatch Templates.
 
 The reviewer needs the context used to make design decisions: the exploration synthesis for handoff-readiness, and the relevant design rationale or domain context for design-review. `task_check.py` is a structural preflight, not the semantic review.
 

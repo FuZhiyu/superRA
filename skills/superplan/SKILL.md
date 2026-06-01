@@ -97,8 +97,6 @@ Before defining tasks, map out the artifact pipeline:
 
 For the objective writing guide and task splitting heuristics, see `task-system/references/planning.md` §Writing Objectives and §Splitting Tasks.
 
-`## Objective` is the authoritative implementation and review contract. `## Planner Guidance` is optional and advisory; omit it when there is no useful hint.
-
 ### Creating Tasks
 
 Use `task_create.py` to create tasks (auto-fills template with dates, frontmatter defaults):
@@ -159,7 +157,7 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ### Agent Review
 
-At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Choose `Review mode: handoff-readiness` when the question is whether the task tree is clear, complete, internally consistent, and implementer-ready; choose `Review mode: design-review` when the question is whether the architecture, decomposition, assumptions, and domain reasoning are good enough for the objective. See `references/thorough-planning.md` §Planning Review for dispatch shape and note lifecycle.
+At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Choose `Review mode: handoff-readiness` when the question is whether the task tree is clear, complete, internally consistent, and implementer-ready; choose `Review mode: design-review` when the question is whether the architecture, decomposition, assumptions, and domain reasoning are good enough for the objective. See `references/thorough-planning.md` §Planning Review for mode details; use `agent-orchestration` §Dispatch Templates for the dispatch shape.
 
 The reviewer returns APPROVE or REVISE without changing task statuses. REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
 
