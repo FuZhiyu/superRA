@@ -800,6 +800,13 @@ class TestDashboard:
         src = (SCRIPTS_DIR / "plan_dashboard.py").read_text("utf-8")
         assert "DASHBOARD_HTML" not in src
 
+    def test_vscode_file_links_translate_line_anchors(self):
+        """File links keep their GitHub-style line anchor as VS Code's :line form
+        so clicking jumps to the cited line (vscode://file ignores a #L fragment).
+        Guards the renderMarkdown anchor-translation logic against removal."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "match(/#L" in src
+
     def test_build_standalone_fragments_match_server_routes(self, plan_root):
         """Pre-rendered fragments are byte-identical to the live route output."""
         pytest.importorskip("httpx")

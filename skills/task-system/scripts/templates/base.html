@@ -1346,7 +1346,18 @@ function renderMarkdown(text, sectionName, taskPath) {
         a.removeAttribute('target');
         a.classList.add('task-link');
       } else {
-        a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + pathPrefix + href);
+        /* Genuine file link. Translate a trailing GitHub-style line anchor
+           (#L42, #L42C5 column, #L42-L50 range) into VS Code's path:line[:col]
+           form so the editor jumps to the cited line — vscode://file ignores a
+           #L... fragment. Hrefs without such an anchor are left unchanged. */
+        var filePath = pathPrefix + href;
+        var loc = '';
+        var lm = filePath.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
+        if (lm) {
+          loc = ':' + lm[1] + (lm[2] ? ':' + lm[2] : '');
+          filePath = filePath.slice(0, lm.index);
+        }
+        a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + filePath + loc);
         a.setAttribute('target', '_blank');
       }
     }
