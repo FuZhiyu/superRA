@@ -1,6 +1,6 @@
 ---
 title: "Drop updated frontmatter field"
-status: implemented
+status: approved
 depends_on: []
 tags: [task-system, schema, metadata]
 script: ""
@@ -46,11 +46,3 @@ Integration fix after `better-handoff` sync:
 - Clarified the root Sync Map: the sync preserved the base branch's committed template-backed dashboard exporter, but did not commit unrelated in-flight subtree Share/export work. That dirty work was stashed before revalidation so the metadata integration checks run against the committed tree.
 - Final Diff Self-Check for the integration range `f0c103664dc9e987a5c4bf6475aa2d5a910a21c4..HEAD`: surviving hunks are limited to the `codex-task-hooks` task tree, removal of `updated:` frontmatter from `.plan/**/task.md`, task-system schema/writer/query/read/update/link/rename/result/migration cleanup, dashboard summary removal in `templates/summary_bar.html`, docs/examples/tests for the new schema, review/sync notes, and the approved task status. No exporter/share implementation hunks are part of this integration; that code belongs to the separate subtree-export workstream.
 - Clean-tree validation after stashing unrelated subtree Share/export work: `uv run pytest skills/task-system/scripts/test_task_system.py skills/task-system/scripts/test_dashboard.py skills/task-system/scripts/tests/test_state_preservation.py` passed: 288 tests; `python3 skills/task-system/scripts/task_check.py --plan-root .plan` passed.
-
-## Review Notes
-
-1. MAJOR [../../../task.md:21](../../../task.md#L21), [../../../../skills/task-system/scripts/plan_dashboard.py:887](../../../../skills/task-system/scripts/plan_dashboard.py#L887), [../../../../skills/task-system/scripts/templates/base.html:1838](../../../../skills/task-system/scripts/templates/base.html#L1838), [../../../../skills/task-system/scripts/test_dashboard.py:234](../../../../skills/task-system/scripts/test_dashboard.py#L234), [../../../../skills/task-system/scripts/test_task_system.py:856](../../../../skills/task-system/scripts/test_task_system.py#L856): the merge record says the integration kept `better-handoff`'s newer template-backed standalone dashboard exporter, but the committed review range `f0c103664dc9e987a5c4bf6475aa2d5a910a21c4..73e4487a40aca64926ef326b71f5a7e18915dce9` has no `skills/task-system/scripts/plan_dashboard.py`, `skills/task-system/scripts/templates/base.html`, or exporter test hunks. The exporter/share implementation currently exists only as unstaged worktree changes, so the merge commit under review does not actually preserve the stated base-side behavior and the tests were run against a dirty tree. Commit the intended exporter/share hunks as part of the integration result, or remove the stale Sync Map claim if the exporter is intentionally out of scope.
-   -> implemented: stashed the unrelated dirty subtree Share/export work, reran validation against the committed tree, and narrowed the root Sync Map to state that this sync preserved the base branch's committed template-backed exporter without committing Share/export implementation hunks.
-
-2. MAJOR [task.md:38](task.md#L38): the assigned task's `## Results` validation trail has tests, grep, and `task_check`, but it does not include the required integration Final Diff Self-Check naming the governing range and surviving-change classes/suspicious hunk justifications. Add a fresh final-diff self-check for `git diff f0c103664dc9e987a5c4bf6475aa2d5a910a21c4..73e4487a40aca64926ef326b71f5a7e18915dce9`, including how the committed exporter/share hunks are justified once finding 1 is fixed.
-   -> implemented: added the Final Diff Self-Check above for `f0c103664dc9e987a5c4bf6475aa2d5a910a21c4..HEAD`, including the explicit exclusion of exporter/share implementation hunks from this metadata integration.
