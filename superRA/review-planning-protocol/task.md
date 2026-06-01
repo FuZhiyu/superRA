@@ -32,6 +32,8 @@ Avoid broad rewrites of domain skills. The domain skills own the specific gates;
 
 ### Integration Status
 
+**PR #29 follow-up integration (in progress).** Confirmed `BASE_REF = better-handoff` (the PR #29 head branch). Anchors: `PRE_SYNC_BASE_SHA = 75a86ccebd0e...` (prior fork/sync point), `BASE_HEAD_SHA = 876178e32d22...` (current `better-handoff` HEAD). The incoming range `75a86cce..876178e3` carries the not-started plans for this exact work (`b36d563f`) plus a dynamic-workflows task move (`876178e3`); the plan overlap on `task-system/cli-scripts/path-containment/task.md` resolves toward this branch's implemented superset. This integration pass covers two approved tasks: `review-planning-protocol/05-recursive-context-conventions` and `task-system/cli-scripts/path-containment`. **Protect:** key behaviors (task_create escape rejection; task_read full-objective ancestor rendering) are guarded by the regression tests added in those tasks; full suite passes (210 task-system + 6 sync-codex).
+
 - Synced onto `better-handoff` at `75a86ccebd0ec37a0a9e904f0fd5b824752cf6f1` and preserved the incoming `superRA/` task-root rename.
 - Moved `review-planning-protocol` task records under `superRA/` and refreshed active planning-review command references to use `--plan-root superRA`.
 - Accepted the integration review's DRY/Necessity findings: planning-review dispatch shape now lives in `agent-orchestration`, while `superplan` and its thorough-planning reference point to that owner; the reviewer role no longer describes planning-review dispatch fields.
