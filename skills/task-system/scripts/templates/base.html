@@ -1248,9 +1248,60 @@ var md = window.markdownit({ html: false, linkify: true });
 md.use(texmath, { engine: katex, delimiters: 'dollars' });
 var PROJECT_ROOT = {{ project_root | tojson }};
 
+/* Membership oracle for in-tree task references. Every task's tree path, as a
+   set, so renderMarkdown can decide whether a relative body link points at a
+   real task in this tree (-> internal navigation) or at a plain file (-> the
+   vscode:// rewrite). Built from the full tree both render paths pass in, so it
+   is complete even though the sidebar nav lazy-loads deep branches. */
+var TASK_PATHS = (function () {
+  var set = {};
+  {% for t in all_tasks %}set[{{ t.path | tojson }}] = true;
+  {% endfor %}return set;
+})();
+
+/* Resolve a task-relative href (`task.md`, `../merge/task.md`, `sibling/task.md`)
+   against the active task's tree path and, if it names a real task, return that
+   task's canonical tree path; otherwise null (caller keeps the vscode:// path).
+   A target is an in-tree task when, after dropping a trailing `/task.md` or a
+   bare trailing `/`, the normalized tree path is in TASK_PATHS. */
+function resolveInternalTaskPath(href, taskPath) {
+  /* Strip any #fragment / ?query — they don't affect which task is referenced. */
+  var clean = href.replace(/[?#].*$/, '');
+  if (!clean) return null;
+
+  /* Base segments: the directory of the active task. An absolute `.plan/...`
+     href resolves from the tree root instead of the active task's dir. */
+  var segs;
+  if (clean.indexOf('.plan/') === 0) {
+    segs = clean.slice('.plan/'.length).split('/');
+  } else if (clean.charAt(0) === '/') {
+    return null;  /* filesystem-absolute, not a tree path */
+  } else {
+    segs = (taskPath ? taskPath.split('/') : []).concat(clean.split('/'));
+  }
+
+  /* Normalize . / .. segments into a clean tree path. */
+  var out = [];
+  for (var i = 0; i < segs.length; i++) {
+    var s = segs[i];
+    if (s === '' || s === '.') continue;
+    if (s === '..') { if (out.length) out.pop(); else return null; continue; }
+    out.push(s);
+  }
+
+  /* Drop a trailing `task.md` (or bare trailing slash already handled by the
+     empty-segment skip) so a directory ref and a task.md ref both canonicalize
+     to the same tree path. */
+  if (out.length && out[out.length - 1] === 'task.md') out.pop();
+
+  var path = out.join('/');
+  return TASK_PATHS[path] ? path : null;
+}
+
 /**
  * Render markdown text via markdown-it, then post-process:
- * - Relative file paths -> vscode://file/{project_root}/{path}
+ * - In-tree task references -> internal hash navigation (#/<task-path>)
+ * - Other relative file paths -> vscode://file/{project_root}/{path}
  * - Image src -> /files/{src}
  * - Wrap each block-level element in a .commentable-block container
  *   with data-section and data-block attributes (when sectionName given)
@@ -1263,12 +1314,22 @@ function renderMarkdown(text, sectionName, taskPath) {
   /* Base directory for resolving relative paths within a task */
   var pathPrefix = taskPath ? '.plan/' + taskPath + '/' : '';
 
-  /* Rewrite relative links to vscode:// URIs */
+  /* Rewrite relative links. A relative href that resolves to a real task in
+     this tree becomes an internal hash link (#/<task-path>) so it focuses that
+     card via the existing hashchange/setActive router; everything else (scripts,
+     figures, paths outside the tree) keeps the vscode://file rewrite. */
   container.querySelectorAll('a[href]').forEach(function(a) {
     var href = a.getAttribute('href');
     if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#')) {
-      a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + pathPrefix + href);
-      a.setAttribute('target', '_blank');
+      var internal = resolveInternalTaskPath(href, taskPath);
+      if (internal !== null) {
+        a.setAttribute('href', '#/' + internal);
+        a.removeAttribute('target');
+        a.classList.add('task-link');
+      } else {
+        a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + pathPrefix + href);
+        a.setAttribute('target', '_blank');
+      }
     }
   });
 

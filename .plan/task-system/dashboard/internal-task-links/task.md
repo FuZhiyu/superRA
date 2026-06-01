@@ -1,6 +1,6 @@
 ---
 title: "Internal task-to-task links"
-status: not-started
+status: implemented
 depends_on:
   - unify-static-export
 tags: []
@@ -30,4 +30,23 @@ Validation: in both themes, clicking an in-tree task citation navigates to that 
 Updated 2026-05-31: added `depends_on: unify-static-export` and removed the "patch both render paths" framing. The static export previously had no `renderMarkdown` at all (separate `DASHBOARD_HTML` copy); once `unify-static-export` routes `generate` through `base.html`, this feature is implemented once in `base.html`'s `renderMarkdown` and inherited by both the live server and the static export. Sequenced after the cleanup per researcher decision. Substantive (dependency + single-source simplification).
 
 ## Results
+
+In-tree task citations in any rendered task body now navigate **within** the dashboard instead of launching VS Code; genuine file links (scripts, figures, out-of-tree paths) keep the existing `vscode://file/...` rewrite. Implemented entirely in `base.html`'s `renderMarkdown`, so the live `serve` server and the static `generate` export inherit it from one source (per the `[unify-static-export](../unify-static-export/task.md)` unification this task depends on). The deep-path case is exercised live by this sentence's link to the nested non-sibling task `[routing-shell](../view-navigation/routing-shell/task.md)` — a `../slug/child/task.md` ref that resolves to `task-system/dashboard/view-navigation/routing-shell`.
+
+### What changed
+
+- **Membership oracle.** Added `TASK_PATHS`, a JS set of every task's tree path, emitted into the template from the `all_tasks` list both render paths already pass ([base.html:1256](../../../../skills/task-system/scripts/templates/base.html#L1256)). Built from the full tree rather than the DOM, so it stays complete even though the sidebar nav lazy-loads deep branches.
+- **Resolver.** Added `resolveInternalTaskPath(href, taskPath)` ([base.html:1267](../../../../skills/task-system/scripts/templates/base.html#L1267)): strips any `#fragment`/`?query`, resolves the href against the active task's tree dir (`.plan/`-absolute and filesystem-absolute hrefs handled), normalizes `.`/`..` (over-popping past the root yields `null`), drops a trailing `task.md` or bare `/` so a directory ref and a `task.md` ref canonicalize identically, and returns the canonical tree path only when it is in `TASK_PATHS` — otherwise `null`.
+- **Rewrite branch.** In the `a[href]` loop ([base.html:1321](../../../../skills/task-system/scripts/templates/base.html#L1321)), a relative href that resolves to a real task becomes `href="#/<task-path>"` with `target` dropped and a `task-link` class added; everything else keeps the `vscode://file/...` rewrite untouched. Internal navigation routes through the existing `hashchange` + `setActive` path — no new entry point. `setActive` → `loadActiveNode` fetches `/node/<path>` (resolved offline from the embedded fragments in standalone mode), so sibling, nested, and deep targets all focus correctly without the card needing to be pre-rendered.
+
+### Styling
+
+The `task-link` class is a non-visual hook only; no separate CSS rule was added, so internal links keep the themed `.rendered-md a` accent styling the sibling `[hyperlink-styling](../hyperlink-styling/task.md)` task establishes ([base.html:895](../../../../skills/task-system/scripts/templates/base.html#L895)) rather than escaping the accent rule. `frontend-design` was not needed — the change is pure resolution-and-rewrite logic, no new affordance.
+
+### Verification
+
+- `~/.venv/bin/python -m pytest skills/task-system/scripts/test_task_system.py -q` → **179 passed**.
+- A node harness over the actual resolver covered 15 cases — same-dir (`task.md`), sibling (`../slug/task.md`), deep/nested (`../slug/child/task.md`), directory refs with and without a trailing slash, `.plan/`-absolute, ancestor, `#fragment`/`?query` stripping, and root-task citations (empty `taskPath`) all resolve to internal paths; scripts, figures, nonexistent `task.md`, filesystem-absolute, root-escaping `..`, and out-of-tree paths all return `null` (keeping `vscode://`). A second harness over the full rewrite branch confirmed the internal case sets `#/<path>`, removes `target`, and adds `task-link`, while the file/external/`#`-anchor cases are left on their existing behavior.
+- The root `task.md` citation `[planning-redesign/planmd-sweep/task.md](planning-redesign/planmd-sweep/task.md)` renders from the root task (`data-path=""`), so it resolves to `task-system/planning-redesign/planmd-sweep`, a known task → internal link. This is the real sibling-citation case the objective called for.
+- Regenerated `.plan/dashboard.html` (`plan_dashboard.py generate`) and rendered the live `serve` index in-process: both embed `resolveInternalTaskPath` and a 100-entry `TASK_PATHS` set. Because both paths render from `base.html`, the static export and the live server are identical by construction.
 
