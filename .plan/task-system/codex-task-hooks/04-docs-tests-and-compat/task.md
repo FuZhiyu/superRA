@@ -4,6 +4,7 @@ status: not-started
 depends_on:
   - 01-deprecate-decision-reminder
   - 02-enable-codex-task-hook
+  - 03-drop-updated-frontmatter
 tags: [docs, tests, codex]
 script: ""
 input: [README.md, docs/README.codex.md, skills/task-system/SKILL.md, skills/task-system/references/internals.md, tests/check-harness-compatibility.sh, tests/hooks/test-codex-hooks.sh, tests/hooks/test-codex-e2e-cli.sh]
@@ -14,7 +15,7 @@ updated: 2026-06-01
 
 ## Objective
 
-Make active documentation and compatibility checks match the new supported behavior after the deprecation and Codex task-hook tasks land.
+Make active documentation and compatibility checks match the new supported behavior after the deprecation, Codex task-hook, and `updated` frontmatter cleanup tasks land.
 
 Update the README hook table, Codex README, task-system skill docs, and task-system internals reference so they state:
 
