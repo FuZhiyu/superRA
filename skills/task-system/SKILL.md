@@ -91,19 +91,20 @@ Any `## Heading` is valid. Recommended defaults:
 
 | Section | Purpose | Owner |
 |---|---|---|
-| `## Objective` | Authoritative implementation/review contract: goal, constraints, required decisions, fixed inputs/outputs, validation criteria | planner |
-| `## Planner Guidance` | Optional advisory route: candidate files, prior exploration notes, likely sequence, implementation hints | planner |
+| `## Objective` | Authoritative implementation/review contract: goal, constraints, required decisions, researcher-required implementation details, fixed inputs/outputs, validation criteria | planner |
+| `## Planner Guidance` | Optional advisory route: suggested routes, candidate files, prior exploration notes, likely sequence, implementation hints | planner |
 | `## Results` | Key findings and notes | implementer |
 | `## Revision Notes` | Temporary delta signal when a task objective is updated (what changed, significance); reviewer removes it on approval (`validate_plan` only warns if an `approved` task still carries one) | planner / orchestrator |
 | `## Review Notes` | Reviewer feedback | reviewer |
 
 ## Ownership Model
 
-You own the **body sections** of your assigned task (`## Results` and `status` frontmatter). The `status` field is co-owned: implementer owns transitions up to `implemented`, reviewer owns `implemented → revise` and `implemented → approved`. You do not own:
+On an assigned task, implementers own `## Results` and their allowed `status` transitions; reviewers own `## Review Notes` and review status transitions. The `status` field is co-owned: implementer owns transitions up to `implemented`, reviewer owns `implemented → revise` and `implemented → approved`. You do not own:
 
 - **Other tasks' content** — steps, status, review notes, results.
 - **Scope-defining frontmatter** — `title`, `depends_on`, `script`, `input`, `output`. These are planner-owned.
-- **The `## Objective` section** — planner-owned; read it, do not rewrite it.
+- **The `## Objective` section** — planner-owned and binding; read it, do not rewrite it.
+- **The `## Planner Guidance` section** — planner-owned and advisory; read it, do not rewrite it.
 
 ## Task File Format
 
