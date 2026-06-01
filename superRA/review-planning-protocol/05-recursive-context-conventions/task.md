@@ -1,6 +1,6 @@
 ---
 title: "Recursive Context and Conventions"
-status: implemented
+status: revise
 depends_on:
   - 01-objective-guidance-task-anatomy
   - 02-objective-first-reviewer
@@ -44,6 +44,21 @@ This task builds on the approved `## Objective` / `## Planner Guidance` split. T
 - Generated Codex artifacts are in sync: `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check`.
 - Targeted tests pass: task-system tests covering `task_read.py`, plus `uv run pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py`.
 - Every new or changed instruction line passes the AGENTS.md DRY and Necessity tests.
+
+## Review Notes
+
+1. **[MAJOR]** The writing vertical's `## Project Conventions` protocol still hardcodes root-task-special convention semantics — exactly what this task's `### Scope` ("Revisit domain planning references that currently say inventories or convention tables live in the root task. Give them scoped semantics") and `### Validation` ("A stale-reference sweep finds no behavior-shaping instruction that requires root `## Conventions` as the source for implementer/reviewer context") directed be removed. The implementer scoped the manuscript *inventory* placement ([skills/writing/references/planning.md:50](../../../skills/writing/references/planning.md#L50)) but left the conventions *surface* itself pinned to root:
+   - [skills/writing/SKILL.md:40](../../../skills/writing/SKILL.md#L40): "Writing-side conventions live in the `## Project Conventions` header of **root `superRA/task.md`**" with a ladder "Root `superRA/task.md` (workflow-scoped) → `CLAUDE.md`".
+   - [skills/writing/CLAUDE.md:33](../../../skills/writing/CLAUDE.md#L33): "Writing-side project conventions live in the active `## Project Conventions` surface: **root `superRA/task.md`** for workflow-scoped work…".
+   - [skills/writing/references/long-form-review.md:55](../../../skills/writing/references/long-form-review.md#L55): "add a compact task-local note or a sibling section in **root `superRA/task.md`**".
+
+   This surface is behavior-shaping — `references/polish.md` and `references/draft.md` treat its rows as the binding established choice ("divergences from them are findings to fix or surface, not free authorial calls"), so the root pin is a live convention source for implementer/reviewer agents, not a cosmetic label. After this task, every other vertical scopes conventions to "the task whose subtree it governs" (econ Data Inventory, theory Model Inventory), leaving writing as the lone vertical asserting root-special ownership for a non-deliberately-project-wide convention table. That is an internal inconsistency the task set out to eliminate.
+
+   The implementer surfaced this as a judgment call (Results §Notes / §Guidance Deviations) and chose to leave the protocol intact to avoid redesigning a sibling vertical. The competing read of the objective — "do not *introduce* a new top-level `## Conventions` protocol" — is about not creating one, and does not license leaving an *existing* root-pinned one that the `### Scope` bullet explicitly tells the implementer to revisit and scope. Contrast theory-modeling's Notation Conventions table, which is correctly left at root because the objective allows "project-wide only when deliberately placed at the top ancestor" and the diff explicitly re-justified it as deliberately project-wide ([skills/theory-modeling/references/planning.md:9](../../../skills/theory-modeling/references/planning.md#L9)); the writing `## Project Conventions` is described as merely "workflow-scoped" with a promotion ladder, so it has no parallel deliberate-project-wide justification.
+
+   To fix: give the writing `## Project Conventions` surface the same scoped semantics — place it on the `## Objective` of the task whose subtree is the manuscript (top task for a single-manuscript project, the writing-subtree root otherwise), consistent with the manuscript-inventory scoping already applied at [skills/writing/references/planning.md:13](../../../skills/writing/references/planning.md#L13). Update the three references above (SKILL.md:40 ladder, CLAUDE.md:33, long-form-review.md:55) so they no longer pin to root. If the orchestrator judges this sibling-vertical redesign genuinely out of this task's scope, that is a legitimate call to make explicitly — but it should be decided by the orchestrator and recorded, not silently deferred, because the `### Scope` and `### Validation` criteria as written are not yet met.
+
+2. **[MINOR]** The recursive scoped-context principle ("place at the lowest task whose subtree it governs") is stated in three places within [skills/task-system/references/planning.md](../../../skills/task-system/references/planning.md): §Writing Objectives (line 22), the §Task Anatomy `## Objective` bullet (line ~77), and the first Discipline bullet of §Ancestor Context and Conventions (line ~143). The anatomy bullet correctly points back with "(see §Writing Objectives)", but the §Ancestor Context Discipline bullet restates the placement rule in full. Within a single owning file this is borderline rather than a hard DRY violation since each section serves a distinct reader moment, but consider collapsing the §Ancestor Context Discipline placement bullet to a pointer at §Writing Objectives to reduce the drift surface.
 
 ## Results
 
