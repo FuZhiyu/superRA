@@ -16,18 +16,18 @@ Caller supplies (or the agent infers from the session):
 - governing baseline (merge base, or caller-declared baseline)
 - direction — ask when direction is ambiguous and affects results, scope, or architecture
 
-Current-branch intent comes from branch name, commits, `.plan/` task tree if present, project docs, and diffs. Incoming intent comes from commits, diffs, docs, and any caller-supplied context.
+Current-branch intent comes from branch name, commits, `superRA/` task tree if present, project docs, and diffs. Incoming intent comes from commits, diffs, docs, and any caller-supplied context.
 
 ## Mode-Specific Process
 
-1. Create or update `SEMANTIC_MERGE.md` when the operation is material, lacks `.plan/` task structure, or needs durable file/script-level context. When no task tree is present, record user decisions in `SEMANTIC_MERGE.md` and the relevant commit body.
+1. Create or update `SEMANTIC_MERGE.md` when the operation is material, lacks `superRA/` task structure, or needs durable file/script-level context. When no task tree is present, record user decisions in `SEMANTIC_MERGE.md` and the relevant commit body.
 2. Run the requested merge / rebase / cherry-pick after intent investigation.
 3. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the checklist. Every commit must leave existing tests and drift tests passing — per-commit protection-pass is the lower bound. Do not silently re-expect drift tests after meaningful result changes; escalate per `SKILL.md §Shared Steps` step 4. Include conflict resolution, resolved docs, and `SEMANTIC_MERGE.md` with the commits that produce them.
 4. Record any **codebase-coherence** context useful for later review — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — in the `SEMANTIC_MERGE.md` File / Script Impact Map. The record explains the approved post-merge diff; it is not a backlog of unresolved semantic work.
 
 ## Semantic Merge Record Format
 
-When no `.plan/` task structure exists, or when standalone semantic-merge needs a durable record beyond the commit body, create or update `SEMANTIC_MERGE.md`:
+When no `superRA/` task structure exists, or when standalone semantic-merge needs a durable record beyond the commit body, create or update `SEMANTIC_MERGE.md`:
 
 ```markdown
 # Semantic Merge Record

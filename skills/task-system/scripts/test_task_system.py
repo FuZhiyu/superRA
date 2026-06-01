@@ -74,13 +74,39 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
     path.write_text(content, encoding="utf-8")
 
 
+def _write_tiny_png(path: Path) -> bytes:
+    """Write a minimal valid 2x2 PNG (no PIL dependency) and return its bytes."""
+    import struct
+    import zlib
+
+    def _chunk(typ: bytes, data: bytes) -> bytes:
+        body = typ + data
+        return (
+            struct.pack(">I", len(data))
+            + body
+            + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
+        )
+
+    ihdr = struct.pack(">IIBBBBB", 2, 2, 8, 2, 0, 0, 0)
+    raw = (b"\x00" + b"\xff\x00\x00" * 2) * 2
+    png = (
+        b"\x89PNG\r\n\x1a\n"
+        + _chunk(b"IHDR", ihdr)
+        + _chunk(b"IDAT", zlib.compress(raw))
+        + _chunk(b"IEND", b"")
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(png)
+    return png
+
+
 # --- Fixtures ---
 
 
 @pytest.fixture
 def plan_root(tmp_path):
     """Create a minimal plan tree for testing."""
-    root = tmp_path / ".plan"
+    root = tmp_path / "superRA"
     root.mkdir()
 
     _write_task_md(root / "task.md", "Test Project", "not-started",
@@ -111,7 +137,7 @@ def plan_root(tmp_path):
 @pytest.fixture
 def plan_with_branches(tmp_path):
     """Create a plan tree with branch tasks (non-leaf) and leaf tasks."""
-    root = tmp_path / ".plan"
+    root = tmp_path / "superRA"
     root.mkdir()
 
     _write_task_md(root / "task.md", "Branch Project", "not-started",
@@ -231,7 +257,7 @@ class TestComputeFrontier:
         assert len(frontier) == 0
 
     def test_no_deps_all_frontier(self, tmp_path):
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Test", "not-started")
         for name in ["01-a", "02-b", "03-c"]:
@@ -270,7 +296,7 @@ class TestComputeFrontier:
 
         Frontier should be [B, C] — D is done, A is blocked by both B and C.
         """
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Diamond", "not-started")
         for name, status, deps in [
@@ -297,7 +323,7 @@ class TestComputeFrontier:
         Verify frontier propagates ancestors_ready=False through
         intermediate levels correctly.
         """
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         # Level 1: two branch tasks, L1-b depends on L1-a
@@ -344,7 +370,7 @@ class TestComputeFrontier:
 
         render_dag should return the fallback 'no children' output.
         """
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Empty", "not-started")
         root = _task_io.walk_plan(root_dir)
@@ -633,6 +659,100 @@ class TestTaskAddResult:
         assert task.body.count("### Key Findings") == 1
 
 
+class TestReviewedCliTaskRootDefaults:
+    def test_reviewed_clis_autodetect_superra_from_repo_dir(self, plan_root, monkeypatch):
+        """Reviewed CLIs run from a repo dir without an explicit --plan-root."""
+        monkeypatch.chdir(plan_root.parent)
+
+        task_update.main(["--propagate-all"])
+        task_update.main(["--path", "02-second", "--status", "in-progress"])
+        task_add_result.main([
+            "--path", "02-second",
+            "--finding", "CLI autodetected the task root",
+        ])
+        task_link.main([
+            "--path", "03-third",
+            "--depends-on", "01-first",
+        ])
+        task_rename.main([
+            "--from", "01-first",
+            "--to", "01-first-renamed",
+        ])
+
+        with pytest.raises(SystemExit) as excinfo:
+            task_check.main([])
+        assert excinfo.value.code == 0
+
+        second = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        third = _task_io.parse_task(plan_root / "03-third" / "task.md")
+        assert second.status == "in-progress"
+        assert "CLI autodetected the task root" in second.body
+        assert "01-first-renamed" in second.depends_on
+        assert "01-first-renamed" in third.depends_on
+
+    def test_explicit_plan_root_override_is_preserved(self, tmp_path, monkeypatch):
+        """An explicit legacy path overrides a visible superRA/ task root."""
+        superra_root = tmp_path / "superRA"
+        superra_root.mkdir()
+        _write_task_md(superra_root / "task.md", "SuperRA", "not-started")
+        superra_task = superra_root / "01-target"
+        superra_task.mkdir()
+        _write_task_md(superra_task / "task.md", "SuperRA Target", "not-started")
+
+        legacy_root = tmp_path / ".plan"
+        legacy_root.mkdir()
+        _write_task_md(legacy_root / "task.md", "Legacy", "not-started")
+        legacy_task = legacy_root / "01-target"
+        legacy_task.mkdir()
+        _write_task_md(legacy_task / "task.md", "Legacy Target", "not-started")
+
+        monkeypatch.chdir(tmp_path)
+        task_add_result.main([
+            "--plan-root", str(legacy_root),
+            "--path", "01-target",
+            "--finding", "explicit legacy override",
+        ])
+
+        legacy = _task_io.parse_task(legacy_task / "task.md")
+        current = _task_io.parse_task(superra_task / "task.md")
+        assert "explicit legacy override" in legacy.body
+        assert "explicit legacy override" not in current.body
+
+    def test_task_check_autodetects_legacy_plan_root(self, tmp_path, monkeypatch):
+        """Legacy .plan/ remains readable when superRA/ is absent."""
+        legacy_root = tmp_path / ".plan"
+        legacy_root.mkdir()
+        _write_task_md(legacy_root / "task.md", "Legacy", "not-started")
+        child = legacy_root / "01-child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "not-started")
+
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(SystemExit) as excinfo:
+            task_check.main([])
+        assert excinfo.value.code == 0
+
+    def test_reviewed_cli_help_describes_autodetect_task_root(self, capsys):
+        """The reviewed CLIs document optional task-root auto-detection."""
+        parsers = [
+            task_update.parse_args,
+            task_add_result.parse_args,
+            task_link.parse_args,
+            task_rename.parse_args,
+            task_check.parse_args,
+        ]
+
+        for parse in parsers:
+            with pytest.raises(SystemExit) as excinfo:
+                parse(["--help"])
+            assert excinfo.value.code == 0
+            out = capsys.readouterr().out
+            assert "--plan-root" in out
+            assert "task root directory" in out
+            assert "auto-detect" in out
+            assert "superRA" in out
+
+
 class TestCollectAllTasks:
     def test_depth_first_excluding_root(self, plan_root):
         """collect_all_tasks returns depth-first ordered list excluding root."""
@@ -734,7 +854,7 @@ class TestPlanMigrate:
             encoding="utf-8",
         )
 
-        output = tmp_path / ".plan"
+        output = tmp_path / "superRA"
         plan_migrate.migrate(plan_md, results_md, output)
 
         assert (output / "task.md").exists()
@@ -984,6 +1104,154 @@ class TestDashboard:
         assert a.read_text("utf-8") == b.read_text("utf-8")
 
 
+class TestStandaloneSelfContained:
+    """The standalone export embeds figures (base64 data URIs) and inlines the
+    vendored render libraries (markdown-it/texmath/KaTeX + woff2 fonts) so a
+    moved/offline single file renders figures and math with no CDN fetch.
+
+    These committed assertions are SOURCE-PRESENCE checks (the data URIs, inline
+    script/style bodies, and CDN-tag absence are in the output string). The
+    behavioral proof — that a browser actually decodes the figure and renders the
+    KaTeX DOM from a file:// open with the network blocked — is a separate
+    headless-Chromium check, recorded in the task's Results (not committed here,
+    since there is no browser harness in this suite).
+    """
+
+    @pytest.fixture
+    def fig_math_plan(self, tmp_path):
+        """A two-task plan: a root and one child whose body has a relative figure
+        and a `$...$` math expression — the minimum to exercise both embeddings."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Embed Project", "not-started",
+                       objective="Root overview.")
+        child = root / "01-figmath"
+        child.mkdir()
+        _write_tiny_png(child / "attachments" / "demo.png")
+        _write_task_md(
+            child / "task.md", "Figure and Math", "not-started",
+            objective="Math $e^{i\\pi}+1=0$ and a figure.\n\n"
+                      "![red square](attachments/demo.png)",
+        )
+        return root
+
+    def test_figure_embedded_as_data_uri(self, fig_math_plan):
+        """A relative figure in a task body is base64-embedded under the exact
+        client key, and its data URI carries the correct PNG MIME."""
+        out = fig_math_plan / "export.html"
+        plan_dashboard.generate_dashboard(
+            fig_math_plan, out, root="01-figmath"
+        )
+        html = out.read_text("utf-8")
+        # The map var is present and contains a PNG data URI for the figure.
+        assert "var STANDALONE_IMAGES =" in html
+        assert "data:image/png;base64," in html
+        # Re-based root key: the child becomes the root (path ""), so the figure
+        # key is the bare src, not a task-path-prefixed one.
+        assert "attachments/demo.png" in html
+
+    def test_image_map_keys_and_mime(self, fig_math_plan):
+        """_build_standalone_images keys by the client-computed string and picks
+        MIME by extension; the bytes round-trip through the data URI."""
+        import base64
+
+        full = plan_dashboard.walk_plan(fig_math_plan)
+        # Whole-tree (un-rebased) tree: the child keeps its real path "01-figmath",
+        # so the key is "01-figmath/attachments/demo.png".
+        images = plan_dashboard._build_standalone_images(full)
+        key = "01-figmath/attachments/demo.png"
+        assert key in images
+        assert images[key].startswith("data:image/png;base64,")
+        # Decoding the data URI yields a valid PNG (magic bytes).
+        b64 = images[key].split(",", 1)[1]
+        assert base64.b64decode(b64).startswith(b"\x89PNG\r\n\x1a\n")
+
+    def test_image_map_skips_remote_and_absolute(self, tmp_path):
+        """http(s)/absolute/data srcs are never embedded; only resolvable
+        relative figures are."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        child = root / "01-mixed"
+        child.mkdir()
+        _write_tiny_png(child / "local.png")
+        _write_task_md(
+            child / "task.md", "Mixed", "not-started",
+            objective="![a](local.png) ![b](https://x/y.png) "
+                      "![c](/abs.png) ![d](data:image/png;base64,AAAA)",
+        )
+        images = plan_dashboard._build_standalone_images(
+            plan_dashboard.walk_plan(root)
+        )
+        assert "01-mixed/local.png" in images
+        assert not any("https://x/y.png" in k for k in images)
+        assert not any(k.endswith("/abs.png") for k in images)
+        assert "01-mixed/data:image/png;base64,AAAA" not in images
+
+    def test_image_map_handles_html_img_tag(self, tmp_path):
+        """`<img src=...>` references are embedded the same as `![alt](src)`."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        child = root / "01-html"
+        child.mkdir()
+        _write_tiny_png(child / "pic.png")
+        _write_task_md(
+            child / "task.md", "Html", "not-started",
+            objective='An image: <img src="pic.png" alt="p">',
+        )
+        images = plan_dashboard._build_standalone_images(
+            plan_dashboard.walk_plan(root)
+        )
+        assert "01-html/pic.png" in images
+
+    def test_standalone_inlines_render_libraries(self, fig_math_plan):
+        """Standalone output inlines the vendored markdown-it/texmath/KaTeX JS and
+        the font-inlined KaTeX CSS — and drops the CDN tags for those three."""
+        out = fig_math_plan / "export.html"
+        plan_dashboard.generate_dashboard(fig_math_plan, out, root="01-figmath")
+        html = out.read_text("utf-8")
+        # Inline library bodies present (version banner / global from each lib).
+        assert "markdown-it 14.2.0" in html
+        assert "katex" in html.lower()
+        # KaTeX @font-face rewritten to a base64 woff2 data URI (inlined fonts).
+        assert "data:font/woff2;base64," in html
+        # The required CDN tags for these three are GONE in standalone.
+        assert "cdn.jsdelivr.net/npm/markdown-it@" not in html
+        assert "cdn.jsdelivr.net/npm/katex@" not in html
+        assert "cdn.jsdelivr.net/npm/markdown-it-texmath@" not in html
+        # Google Fonts + htmx/sse CDN tags may remain (allowed by scope).
+        assert "fonts.googleapis.com" in html
+        assert "htmx.org@2" in html
+
+    def test_img_loop_consults_standalone_images_first(self):
+        """The client img[src] loop looks up STANDALONE_IMAGES before its
+        relative-path fallback (guards the lookup against removal)."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "STANDALONE_IMAGES.hasOwnProperty(key)" in src
+
+    def test_inline_katex_css_uses_woff2_only(self):
+        """The CSS font-inlining rewrites every @font-face to one base64 woff2
+        data URI and emits no remaining url(fonts/...woff2) reference."""
+        assets = plan_dashboard._build_standalone_assets()
+        css = assets["katex_css"]
+        assert "data:font/woff2;base64," in css
+        # Every original url(fonts/KaTeX_*.woff2) is replaced by a data URI.
+        assert "url(fonts/KaTeX_" not in css
+        # All 20 KaTeX font faces are inlined.
+        assert css.count("data:font/woff2;base64,") == 20
+
+    def test_vendor_files_present(self):
+        """The vendored render libraries and the full woff2 font set exist so the
+        export build is hermetic (no fetch-at-build)."""
+        vendor = SCRIPTS_DIR / "vendor"
+        for name in ("markdown-it.min.js", "katex.min.js",
+                     "katex.min.css", "texmath.min.js", "README.md"):
+            assert (vendor / name).exists(), f"missing vendored {name}"
+        woff2 = list((vendor / "fonts").glob("KaTeX_*.woff2"))
+        assert len(woff2) == 20, f"expected 20 woff2 fonts, found {len(woff2)}"
+
+
 # --- parse_body_sections tests ---
 
 
@@ -1030,7 +1298,7 @@ class TestParseBodySections:
 class TestAutoRebuild:
     def setup_method(self):
         self.tmpdir = tempfile.mkdtemp()
-        self.plan_root = Path(self.tmpdir) / ".plan"
+        self.plan_root = Path(self.tmpdir) / "superRA"
         self.plan_root.mkdir()
         # Create root task.md
         _write_task_md(self.plan_root / "task.md", "Root", "not-started")
@@ -1063,7 +1331,7 @@ class TestAutoRebuild:
 class TestMigrateV2:
     def setup_method(self):
         self.tmpdir = tempfile.mkdtemp()
-        self.plan_root = Path(self.tmpdir) / ".plan"
+        self.plan_root = Path(self.tmpdir) / "superRA"
         self.plan_root.mkdir()
 
     def teardown_method(self):
@@ -1121,7 +1389,7 @@ class TestMigrateV2:
 class TestUpgradeStatus:
     def setup_method(self):
         self.tmpdir = tempfile.mkdtemp()
-        self.plan_root = Path(self.tmpdir) / ".plan"
+        self.plan_root = Path(self.tmpdir) / "superRA"
         self.plan_root.mkdir()
         _write_task_md(self.plan_root / "task.md", "Root", "not-started")
 
@@ -1251,7 +1519,7 @@ class TestMigrationMapping:
             "- [x] Step 1\n",
             encoding="utf-8",
         )
-        output = tmp_path / ".plan"
+        output = tmp_path / "superRA"
         plan_migrate.migrate(plan_md, None, output)
         fm, _ = _task_io.parse_frontmatter(
             (output / "01-done-task" / "task.md").read_text(encoding="utf-8")
@@ -1269,7 +1537,7 @@ class TestMigrationMapping:
             "- [x] Step 1\n",
             encoding="utf-8",
         )
-        output = tmp_path / ".plan"
+        output = tmp_path / "superRA"
         plan_migrate.migrate(plan_md, None, output)
         fm, _ = _task_io.parse_frontmatter(
             (output / "01-reviewed-task" / "task.md").read_text(encoding="utf-8")
@@ -1287,7 +1555,7 @@ class TestMigrationMapping:
             "- [ ] Step 2\n",
             encoding="utf-8",
         )
-        output = tmp_path / ".plan"
+        output = tmp_path / "superRA"
         plan_migrate.migrate(plan_md, None, output)
         fm, _ = _task_io.parse_frontmatter(
             (output / "01-partial-task" / "task.md").read_text(encoding="utf-8")
@@ -1360,7 +1628,7 @@ class TestValidateDependencies:
 class TestDetectCycles:
     def _make_tasks(self, tmp_path, specs):
         """Create tasks from (slug, deps) specs. Returns list of Task objects."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir(exist_ok=True)
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         for slug, deps in specs:
@@ -1436,7 +1704,7 @@ class TestValidatePlan:
         assert any(w.startswith("04-bad:") for w in warnings)
 
     def test_cycle_produces_warning(self, tmp_path):
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d1 = root_dir / "01-a"
@@ -1455,7 +1723,7 @@ class TestValidatePlan:
 class TestTopologicalSort:
     def _make_plan(self, tmp_path, specs):
         """Create plan from list of (slug, title, deps) specs."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         for slug, title, deps in specs:
@@ -1603,6 +1871,14 @@ class TestTaskRead:
         detected = task_read._autodetect_plan_root(plan_root / "01-first")
         assert detected == plan_root
 
+    def test_autodetect_plan_root_from_repo_subdirectory(self, plan_root):
+        """Auto-detect sibling task root while walking up from normal repo dirs."""
+        repo_dir = plan_root.parent
+        nested = repo_dir / "skills" / "task-system"
+        nested.mkdir(parents=True)
+        detected = task_read._autodetect_plan_root(nested)
+        assert detected == plan_root
+
     def test_autodetect_returns_none_outside_plan(self, tmp_path):
         """Returns None when called from a directory with no task.md ancestry."""
         detected = task_read._autodetect_plan_root(tmp_path)
@@ -1633,7 +1909,7 @@ class TestTaskRead:
 
 
 class TestTaskHook:
-    def _run_hook(self, payload: dict) -> int:
+    def _run_hook(self, payload: dict, cwd: Path | None = None) -> int:
         """Run task_hook.main() with the given payload via stdin, return exit code."""
         import io
         import subprocess
@@ -1643,6 +1919,7 @@ class TestTaskHook:
             input=json.dumps(payload),
             capture_output=True,
             text=True,
+            cwd=cwd,
         )
         return result.returncode, result.stderr
 
@@ -1714,8 +1991,8 @@ class TestTaskHook:
         assert result.returncode == 0
 
     def test_file_not_in_plan_directory_exits_zero(self, tmp_path):
-        """Hook exits 0 for task.md files not inside a .plan/ directory."""
-        # Create a task.md somewhere outside of .plan/
+        """Hook exits 0 for task.md files not inside a superRA/ directory."""
+        # Create a task.md somewhere outside of superRA/
         other_task = tmp_path / "task.md"
         other_task.write_text("## Objective\n\nSome task.\n")
         payload = {
@@ -1787,7 +2064,7 @@ class TestTaskHook:
         )
 
     def test_bash_readonly_plan_command_no_side_effects(self, plan_root):
-        """A read-only .plan Bash command early-exits with no dashboard rebuild."""
+        """A read-only superRA Bash command early-exits with no dashboard rebuild."""
         dashboard = plan_root / "dashboard.html"
         if dashboard.exists():
             dashboard.unlink()
@@ -1801,17 +2078,29 @@ class TestTaskHook:
         code, _ = self._run_hook(payload)
         assert code == 0
         assert not dashboard.exists(), (
-            "read-only .plan command must not trigger a dashboard rebuild"
+            "read-only superRA command must not trigger a dashboard rebuild"
         )
 
     def test_bash_command_without_plan_exits_zero(self):
-        """A Bash command touching no .plan tree exits 0 with no error."""
+        """A Bash command touching no superRA tree exits 0 with no error."""
         payload = {
             "tool_name": "Bash",
             "tool_input": {"command": "mv /tmp/a.txt /tmp/b.txt"},
         }
         code, _ = self._run_hook(payload)
         assert code == 0
+
+    def test_bash_command_with_superra_prefix_path_exits_zero(self, tmp_path):
+        """A path segment like superRA.worktrees is not the superRA task root."""
+        pseudo_worktree = tmp_path / "superRA.worktrees"
+        pseudo_worktree.mkdir()
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv {pseudo_worktree}/a.txt {pseudo_worktree}/b.txt"},
+        }
+        code, stderr = self._run_hook(payload, cwd=tmp_path)
+        assert code == 0
+        assert stderr == ""
 
 
 # --- Revision-note stale-leak validation tests ---
@@ -1923,7 +2212,7 @@ class TestValidatePlanRevisionNotes:
         path.write_text(text, encoding="utf-8")
 
     def test_validate_plan_warns_on_approved_revnote(self, tmp_path):
-        root = tmp_path / ".plan"
+        root = tmp_path / "superRA"
         root.mkdir()
         self._write(root / "task.md", _task_md_text("Root", "not-started"))
         d = root / "01-task"
@@ -1935,7 +2224,7 @@ class TestValidatePlanRevisionNotes:
                    for w in warnings)
 
     def test_validate_plan_silent_on_implemented_revnote(self, tmp_path):
-        root = tmp_path / ".plan"
+        root = tmp_path / "superRA"
         root.mkdir()
         self._write(root / "task.md", _task_md_text("Root", "not-started"))
         d = root / "01-task"
@@ -1946,7 +2235,7 @@ class TestValidatePlanRevisionNotes:
         assert not any("Revision Notes" in w for w in warnings)
 
     def test_validate_plan_silent_on_fenced_header(self, tmp_path):
-        root = tmp_path / ".plan"
+        root = tmp_path / "superRA"
         root.mkdir()
         self._write(root / "task.md", _task_md_text("Root", "not-started"))
         d = root / "01-task"
@@ -1971,7 +2260,7 @@ class TestValidatePlanRevisionNotes:
 class TestArchivedInFrontier:
     def test_archived_leaf_excluded_from_frontier(self, tmp_path):
         """A leaf task with status 'archived' never appears on the frontier."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d1 = root_dir / "01-active"
@@ -1988,7 +2277,7 @@ class TestArchivedInFrontier:
 
     def test_archived_dependency_treated_as_satisfied(self, tmp_path):
         """A task depending on an archived sibling has its dependency satisfied."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d1 = root_dir / "01-dep"
@@ -2009,7 +2298,7 @@ class TestArchivedInFrontier:
 class TestArchivedInRollup:
     def test_archived_excluded_from_rollup(self, tmp_path):
         """Parent with 2 approved + 1 archived children computes as approved."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         parent = root_dir / "01-parent"
@@ -2025,7 +2314,7 @@ class TestArchivedInRollup:
 
     def test_all_archived_children_rollup_archived(self, tmp_path):
         """When all children are archived, parent computes as archived."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         parent = root_dir / "01-parent"
@@ -2041,7 +2330,7 @@ class TestArchivedInRollup:
 
     def test_archived_ignored_in_partial_rollup(self, tmp_path):
         """Parent with 1 approved + 1 not-started + 1 archived = in-progress."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         parent = root_dir / "01-parent"
@@ -2062,7 +2351,7 @@ class TestArchivedInRollup:
 class TestCascade:
     def setup_method(self):
         self.tmpdir = tempfile.mkdtemp()
-        self.plan_root = Path(self.tmpdir) / ".plan"
+        self.plan_root = Path(self.tmpdir) / "superRA"
         self.plan_root.mkdir()
         _write_task_md(self.plan_root / "task.md", "Root", "not-started")
         # Branch task with two leaf children
@@ -2173,7 +2462,7 @@ class TestCascade:
 class TestForwardCompatibleReading:
     def test_old_file_with_review_and_integration_status_parses(self, tmp_path):
         """_task_io.parse_task silently ignores review_status/integration_status."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-old"
@@ -2188,7 +2477,7 @@ class TestForwardCompatibleReading:
 
     def test_old_file_stale_fields_not_in_task_object(self, tmp_path):
         """Task object has no review_status/integration_status attributes from old files."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-old"
@@ -2202,7 +2491,7 @@ class TestForwardCompatibleReading:
 
     def test_write_task_does_not_emit_stale_fields(self, tmp_path):
         """write_task never writes review_status or integration_status."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-task"
@@ -2221,7 +2510,7 @@ class TestForwardCompatibleReading:
 class TestTaskCheck:
     def test_clean_tree_no_findings(self, tmp_path):
         """A valid tree produces no findings."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d1 = root_dir / "01-a"
@@ -2236,7 +2525,7 @@ class TestTaskCheck:
 
     def test_detects_invalid_status(self, tmp_path):
         """Flags a task with an invalid status value."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-bad"
@@ -2254,7 +2543,7 @@ class TestTaskCheck:
 
     def test_detects_stale_review_status(self, tmp_path):
         """Flags stale review_status field still present in frontmatter."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-stale"
@@ -2269,7 +2558,7 @@ class TestTaskCheck:
 
     def test_detects_stale_integration_status(self, tmp_path):
         """Flags stale integration_status field still present in frontmatter."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-stale"
@@ -2284,7 +2573,7 @@ class TestTaskCheck:
 
     def test_detects_broken_dependency(self, tmp_path):
         """Flags depends_on referencing a non-existent sibling."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-bad"
@@ -2300,7 +2589,7 @@ class TestTaskCheck:
 
     def test_detects_cycle(self, tmp_path):
         """Flags dependency cycles."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d1 = root_dir / "01-a"
@@ -2319,7 +2608,7 @@ class TestTaskCheck:
 
     def test_warns_archived_dependency(self, tmp_path):
         """Warns when a task depends on an archived sibling."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d1 = root_dir / "01-dep"
@@ -2338,7 +2627,7 @@ class TestTaskCheck:
 
     def test_detects_rollup_mismatch(self, tmp_path):
         """Flags when stored parent status disagrees with computed rollup."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         parent = root_dir / "01-parent"
@@ -2359,7 +2648,7 @@ class TestTaskCheck:
 
     def test_json_output_parseable(self, tmp_path):
         """--json output is valid JSON with expected keys."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-a"
@@ -2378,7 +2667,7 @@ class TestTaskCheck:
 
     def test_json_output_with_findings(self, tmp_path):
         """JSON output includes finding details when issues exist."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-bad"
@@ -2398,7 +2687,7 @@ class TestTaskCheck:
 
     def test_text_output_clean(self, tmp_path):
         """Text output says 'All checks passed' for a clean tree."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         findings = task_check.run_checks(root_dir)
@@ -2407,7 +2696,7 @@ class TestTaskCheck:
 
     def test_text_output_with_issues(self, tmp_path):
         """Text output reports issue count for a tree with problems."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-bad"
@@ -2420,7 +2709,7 @@ class TestTaskCheck:
 
     def test_category_filter(self, tmp_path):
         """Running with category='status' only returns status findings."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         d = root_dir / "01-bad"
@@ -2445,7 +2734,7 @@ class TestFixStatusConsistency:
 
     def test_fix_mode_corrects_parent_status(self, tmp_path):
         """--fix should set parent status to rolled-up value from children."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
 
@@ -2472,7 +2761,7 @@ class TestFixStatusConsistency:
 
     def test_fix_mode_no_change_for_leaf(self, tmp_path):
         """--fix should NOT change leaf task status (only branches)."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
 
@@ -2488,7 +2777,7 @@ class TestFixStatusConsistency:
 
     def test_fix_mode_corrects_rolled_down_status(self, tmp_path):
         """--fix corrects parent status when children force it down."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
 
@@ -2514,7 +2803,7 @@ class TestFixStatusConsistency:
 class TestPropagateParentStatus:
     def test_propagates_status_to_parent(self, tmp_path):
         """After changing a child status, propagation updates the parent."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         parent = root_dir / "parent"
@@ -2534,7 +2823,7 @@ class TestPropagateParentStatus:
 
     def test_propagates_up_to_root(self, tmp_path):
         """Propagation walks all the way from leaf to root."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         parent = root_dir / "parent"
@@ -2557,7 +2846,7 @@ class TestPropagateParentStatus:
 
     def test_no_update_when_already_correct(self, tmp_path):
         """No writes happen if parent already has the correct status."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "in-progress")
         child = root_dir / "child"
@@ -2569,7 +2858,7 @@ class TestPropagateParentStatus:
 
     def test_propagate_from_root_path_is_noop(self, tmp_path):
         """Propagating from root (empty path) has no ancestors to update."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         updated = _task_io.propagate_parent_status(root_dir, "")
@@ -2579,7 +2868,7 @@ class TestPropagateParentStatus:
 class TestPropagateAll:
     def test_propagate_all_updates_all_parents(self, tmp_path):
         """--propagate-all updates all branch task statuses."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
 
@@ -2603,7 +2892,7 @@ class TestPropagateAll:
 
     def test_propagate_all_cli(self, tmp_path):
         """CLI --propagate-all flag runs without error."""
-        root_dir = tmp_path / ".plan"
+        root_dir = tmp_path / "superRA"
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Root", "not-started")
         child = root_dir / "child"
@@ -2622,7 +2911,7 @@ class TestMasterDetailPartials:
 
     def _deep_plan(self, tmp_path):
         """A plan tree deep enough (>=4 levels) to exercise lazy nav loading."""
-        root = tmp_path / ".plan"
+        root = tmp_path / "superRA"
         root.mkdir()
         _write_task_md(root / "task.md", "Root", "not-started",
                        objective="Root objective.")

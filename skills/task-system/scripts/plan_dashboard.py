@@ -6,7 +6,7 @@
 """Live-updating task dashboard server with backward-compatible static generation.
 
 Usage:
-    uv run plan_dashboard.py serve [--root .plan/] [--port 8080] [--no-open]
+    uv run plan_dashboard.py serve [--root superRA/] [--port 8080] [--no-open]
     uv run plan_dashboard.py generate --plan-root PATH [--output PATH]
 """
 
@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import hashlib
 import json
+import re
 import socket
 import sys
 import webbrowser
@@ -29,7 +31,7 @@ from typing import AsyncGenerator
 # ---------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _task_io import Task, _walk_children, collect_all_tasks, parse_task, walk_plan
+from _task_io import TASK_ROOT_DIRNAME, Task, _walk_children, collect_all_tasks, parse_task, walk_plan
 from _worktree_discovery import (
     WorktreeInfo,
     _parse_plan_title,
@@ -59,7 +61,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Module-level state (configured before uvicorn.run)
 # ---------------------------------------------------------------------------
-PLAN_ROOT: Path = Path(".plan")
+PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 
 # In-memory task tree and flat index
 _root_task: Task | None = None
@@ -759,7 +761,7 @@ async def switch_worktree(request: Request):
 
     new_plan_root = Path(plan_root_str).resolve()
 
-    # Validate: must be a known worktree with a valid .plan/
+    # Validate: must be a known worktree with a valid task root.
     all_wts = discover_worktrees()
     if not all_wts:
         raise HTTPException(status_code=404, detail="Not in a git repo; switching unavailable")
@@ -1020,6 +1022,156 @@ def _set_module_state(root_task: Task | None, index: dict[str, Task], project_ro
     _project_root = project_root
 
 
+# ---------------------------------------------------------------------------
+# Standalone embedding — figures (base64 data URIs) and vendored render libs
+# ---------------------------------------------------------------------------
+
+_VENDOR_DIR = Path(__file__).parent / "vendor"
+
+# Image extension -> MIME, for the data: URI of an embedded figure.
+_IMG_MIME = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+    ".webp": "image/webp",
+}
+
+# Markdown `![alt](src)` and HTML `<img src=...>` (single/double/unquoted) refs.
+_MD_IMG_RE = re.compile(r"!\[[^\]]*\]\(\s*([^)\s]+)")
+_HTML_IMG_RE = re.compile(r"""<img\b[^>]*?\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.IGNORECASE)
+
+
+def _iter_body_image_srcs(body: str) -> list[str]:
+    """Extract every image src referenced in a raw markdown body — both
+    ``![alt](src)`` and ``<img src=...>`` forms — preserving first-seen order."""
+    srcs: list[str] = []
+    seen: set[str] = set()
+    for m in _MD_IMG_RE.finditer(body):
+        s = m.group(1).strip()
+        if s and s not in seen:
+            seen.add(s)
+            srcs.append(s)
+    for m in _HTML_IMG_RE.finditer(body):
+        s = (m.group(1) or m.group(2) or m.group(3) or "").strip()
+        if s and s not in seen:
+            seen.add(s)
+            srcs.append(s)
+    return srcs
+
+
+def _is_embeddable_src(src: str) -> bool:
+    """A relative figure path we should embed — not absolute, not a URL, not an
+    already-inlined data URI."""
+    low = src.lower()
+    return not (
+        src.startswith("/")
+        or low.startswith("http://")
+        or low.startswith("https://")
+        or low.startswith("data:")
+    )
+
+
+def _build_standalone_images(scoped_root: Task) -> dict[str, str]:
+    """Build the ``{ client-key: data-URI }`` map the standalone ``img[src]`` loop
+    consults before its relative-path fallback.
+
+    For every task in the (re-based) export tree, find the relative image refs in
+    its raw markdown ``body``, resolve each against the task's **real on-disk** dir
+    (``dir_path``, left un-rebased by ``_rebase_subtree`` precisely so figure bytes
+    stay reachable), read the bytes, and base64-encode with the extension's MIME.
+
+    The key is the exact string the client computes in the ``img[src]`` loop:
+    ``task.path + '/' + src`` for a task body, and the bare ``src`` for the root
+    body (empty path) — using the re-based ``task.path``, not ``dir_path``.
+    Unreadable files / unknown extensions are skipped (the client then falls back
+    to its relative-path rewrite, unchanged).
+    """
+    images: dict[str, str] = {}
+    for task in [scoped_root, *collect_all_tasks(scoped_root)]:
+        if not task.body:
+            continue
+        for src in _iter_body_image_srcs(task.body):
+            if not _is_embeddable_src(src):
+                continue
+            key = f"{task.path}/{src}" if task.path else src
+            if key in images:
+                continue
+            ext = Path(src.split("?", 1)[0].split("#", 1)[0]).suffix.lower()
+            mime = _IMG_MIME.get(ext)
+            if mime is None:
+                continue
+            img_path = (task.dir_path / src).resolve()
+            try:
+                raw = img_path.read_bytes()
+            except OSError:
+                continue
+            b64 = base64.b64encode(raw).decode("ascii")
+            images[key] = f"data:{mime};base64,{b64}"
+    return images
+
+
+# KaTeX @font-face blocks reference woff2 (and woff/ttf fallbacks) via url(...);
+# match a whole @font-face block so we can rewrite just its src to one data URI.
+_FONTFACE_RE = re.compile(r"@font-face\s*\{[^}]*\}", re.IGNORECASE)
+_FONT_URL_RE = re.compile(r"url\(\s*(?:fonts/)?(KaTeX_[A-Za-z0-9_-]+)\.woff2\s*\)", re.IGNORECASE)
+
+
+def _inline_katex_css(css: str, fonts_dir: Path) -> str:
+    """Rewrite each KaTeX ``@font-face`` so its ``src`` is a single base64 ``data:``
+    woff2 URI, dropping the woff/ttf fallback sources (woff2 only).
+
+    KaTeX's CSS references its fonts via ``url(fonts/KaTeX_*.woff2)``; this reads the
+    vendored woff2 bytes and replaces the whole ``src:`` declaration with one
+    ``url(data:font/woff2;base64,...) format("woff2")`` so the inlined ``<style>``
+    needs no external font fetch.
+    """
+
+    def _replace_block(block_match: re.Match[str]) -> str:
+        block = block_match.group(0)
+        font_match = _FONT_URL_RE.search(block)
+        if font_match is None:
+            return block
+        woff2 = fonts_dir / f"{font_match.group(1)}.woff2"
+        try:
+            raw = woff2.read_bytes()
+        except OSError:
+            return block
+        b64 = base64.b64encode(raw).decode("ascii")
+        data_src = f'src:url(data:font/woff2;base64,{b64}) format("woff2")'
+        # Replace the original src:...; (which lists woff2/woff/ttf) with our one.
+        return re.sub(r"src\s*:[^;}]*", data_src, block, count=1)
+
+    return _FONTFACE_RE.sub(_replace_block, css)
+
+
+def _build_standalone_assets() -> dict[str, str]:
+    """Read the vendored render libraries and return the inlined JS/CSS strings the
+    standalone template emits in place of the CDN ``<link>``/``<script>`` tags.
+
+    Returns ``markdown_it_js`` / ``katex_js`` / ``texmath_js`` (raw minified JS, emitted
+    as inline ``<script>`` bodies) and ``katex_css`` (KaTeX CSS with every ``@font-face``
+    rewritten to a base64 woff2 ``data:`` URI, emitted as an inline ``<style>``).
+    """
+    def _read_js(name: str) -> str:
+        # Guard against a future re-pin whose body contains a literal </script>
+        # that would prematurely close the inline block (none do today).
+        text = (_VENDOR_DIR / name).read_text(encoding="utf-8")
+        return re.sub(r"</(script)", r"<\\/\1", text, flags=re.IGNORECASE)
+
+    fonts_dir = _VENDOR_DIR / "fonts"
+    css = (_VENDOR_DIR / "katex.min.css").read_text(encoding="utf-8")
+    css = _inline_katex_css(css, fonts_dir)
+    css = re.sub(r"</(style)", r"<\\/\1", css, flags=re.IGNORECASE)
+    return {
+        "markdown_it_js": _read_js("markdown-it.min.js"),
+        "katex_js": _read_js("katex.min.js"),
+        "texmath_js": _read_js("texmath.min.js"),
+        "katex_css": css,
+    }
+
+
 def render_standalone_html(
     plan_root: Path,
     output_path: Path | None = None,
@@ -1077,6 +1229,13 @@ def render_standalone_html(
         if output_parent == subtree_dir.resolve():
             standalone_plan_dir = ""
 
+    # Figures: a { client-key -> data-URI } map the standalone img loop consults
+    # before its relative-path fallback, so figures survive a moved/offline file.
+    standalone_images = _build_standalone_images(scoped_root)
+    # Render libraries: inlined JS/CSS read from the vendored files (font-inlined
+    # KaTeX CSS), emitted in standalone mode instead of the CDN tags.
+    standalone_assets = _build_standalone_assets()
+
     env = _get_jinja_env()
     template = env.get_template("base.html")
     # XSS-safe: the embedded fragments and data are injected via Jinja's `| tojson`
@@ -1089,6 +1248,8 @@ def render_standalone_html(
         standalone=True,
         standalone_fragments=fragments,
         standalone_plan_dir=standalone_plan_dir,
+        standalone_images=standalone_images,
+        standalone_assets=standalone_assets,
     )
 
 
@@ -1150,8 +1311,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     serve_p = subparsers.add_parser("serve", help="Start the live dashboard server")
     serve_p.add_argument(
         "--root",
-        default=".plan/",
-        help="Path to the .plan/ directory (default: .plan/ in cwd)",
+        default=f"{TASK_ROOT_DIRNAME}/",
+        help=f"Path to the task root directory (default: {TASK_ROOT_DIRNAME}/ in cwd)",
     )
     serve_p.add_argument(
         "--port",

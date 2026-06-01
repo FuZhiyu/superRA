@@ -12,7 +12,7 @@ During Phase 1, dispatch 2-4 exploration agents in parallel. Each agent covers a
 
 - **Project structure and conventions** — directory layout, build system, existing patterns, `CLAUDE.md` / `README.md` files, test infrastructure.
 - **Relevant code and data** — existing scripts, data files and their schemas, pipeline artifacts, intermediate outputs.
-- **History and prior work** — git log for the affected areas, past approaches, related tasks in `.plan/` if one exists.
+- **History and prior work** — git log for the affected areas, past approaches, related tasks in `superRA/` if one exists.
 - **Domain-specific survey** — data inventory for analysis work, existing model notes for theory work, manuscript structure for writing work.
 
 Two agents suffice when the work touches one codebase area. Four when the work spans independent areas or the project is unfamiliar. The orchestrator adapts — these are starting points, not rigid categories.
@@ -127,7 +127,7 @@ Agent(subagent_type: "superRA:reviewer"):
   Context: <exploration synthesis, inline or path>
   Review target: assigned task/subtree design, not implementation diff
 
-  Additionally: Run task_check.py --plan-root .plan. Review the assigned task/subtree under the requested mode and write findings only to the assigned task's ## Review Notes.
+  Additionally: Run task_check.py --plan-root superRA. Review the assigned task/subtree under the requested mode and write findings only to the assigned task's ## Review Notes.
 ```
 
 The reviewer needs the context used to make design decisions: the exploration synthesis for handoff-readiness, and the relevant design rationale or domain context for design-review. `task_check.py` is a structural preflight, not the semantic review.

@@ -104,9 +104,9 @@ After approval:
 3. **Verify the result:**
    ```bash
    # Check tree structure
-   python3 <skill-dir>/scripts/task_query.py --plan-root .plan --tree
+   python3 <skill-dir>/scripts/task_query.py --plan-root superRA --tree
    # Check for cycles and broken dependencies
-   python3 <skill-dir>/scripts/task_query.py --plan-root .plan --dag
+   python3 <skill-dir>/scripts/task_query.py --plan-root superRA --dag
    ```
    Confirm: no cycles, no broken `depends_on`, no orphans with missing links, structure matches the approved proposal.
 

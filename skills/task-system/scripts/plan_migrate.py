@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Migrate a legacy PLAN.md + RESULTS.md pair into a .plan/ directory tree."""
+"""Migrate a legacy PLAN.md + RESULTS.md pair into a task directory tree."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import parse_frontmatter, serialize_frontmatter, today_str
+from _task_io import TASK_ROOT_DIRNAME, parse_frontmatter, serialize_frontmatter, today_str
 
 
 TASK_BLOCK_RE = re.compile(
@@ -43,21 +43,25 @@ WORKFLOW_STATUS_SECTION_RE = re.compile(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Migrate legacy PLAN.md + RESULTS.md into a .plan/ directory tree, "
+        description=f"Migrate legacy PLAN.md + RESULTS.md into a {TASK_ROOT_DIRNAME}/ task tree, "
         "or upgrade existing task files."
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--plan-md", help="Path to PLAN.md (PLAN.md -> .plan/ migration)")
+    group.add_argument("--plan-md", help=f"Path to PLAN.md (PLAN.md -> {TASK_ROOT_DIRNAME}/ migration)")
     group.add_argument(
         "--upgrade", action="store_true", default=False,
-        help="Upgrade existing .plan/ task files from v1 to v2 format (headings, checkboxes)",
+        help="Upgrade existing task files from v1 to v2 format (headings, checkboxes)",
     )
     group.add_argument(
         "--upgrade-status", action="store_true", default=False,
         help="Consolidate review_status/integration_status into single status field",
     )
     parser.add_argument("--results-md", default="", help="Path to RESULTS.md (optional, for --plan-md)")
-    parser.add_argument("--output", default="", help="Output directory (for --plan-md, e.g., .plan)")
+    parser.add_argument(
+        "--output",
+        default="",
+        help=f"Output directory (for --plan-md; default: {TASK_ROOT_DIRNAME})",
+    )
     parser.add_argument("--plan-root", default="", help="Plan root directory (for --upgrade/--upgrade-status)")
     parser.add_argument("--dry-run", action="store_true", default=False,
                         help="Show what would change without writing files (for --upgrade-status)")
@@ -427,7 +431,7 @@ def _upgrade_task_body(body: str) -> tuple[str, bool]:
 
 
 def upgrade_v1_to_v2(plan_root: Path) -> list[Path]:
-    """Walk a .plan/ directory and upgrade all v1 task files to v2 format.
+    """Walk a task-tree directory and upgrade all v1 task files to v2 format.
 
     Returns the list of files that were modified.
     """
@@ -560,12 +564,10 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(1)
         upgrade_status(Path(args.plan_root), dry_run=args.dry_run)
     else:
-        if not args.output:
-            print("Error: --output is required with --plan-md", file=sys.stderr)
-            sys.exit(1)
+        output = args.output or TASK_ROOT_DIRNAME
         results_path = Path(args.results_md) if args.results_md else None
         try:
-            migrate(Path(args.plan_md), results_path, Path(args.output))
+            migrate(Path(args.plan_md), results_path, Path(output))
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)

@@ -137,7 +137,7 @@ You leave the review notes in this state for the reviewer to re-review. Do not r
 
 **Single atomic commit.** Follow `superRA:using-superra` §Commit Hygiene — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit. Stage code + task.md together:
 ```bash
-git add [code files] .plan/<task-path>/task.md
+git add [code files] superRA/<task-path>/task.md
 git commit -m "task <task-path>: [brief description]"
 ```
 

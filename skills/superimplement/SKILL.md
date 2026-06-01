@@ -1,6 +1,6 @@
 ---
 name: superimplement
-description: Requires `superRA:using-superra` loaded first. Use when you have a `.plan/` task tree and are ready to implement its tasks; when a plan has been approved and you need per-task implementation with an implementer-reviewer pair; when resuming work on a plan where some tasks are `implemented`, some `revise`, and some not started; when an analysis is code-complete and you want to verify reproducibility and present completion options (merge / PR / keep / discard). Triggers include "execute the plan", "run task N", "implement this plan", "finish this analysis", a branch with an approved plan but no code yet, or a `revise` state that needs orchestrator adjudication before re-dispatch.
+description: Requires `superRA:using-superra` loaded first. Use when you have a `superRA/` task tree and are ready to implement its tasks; when a plan has been approved and you need per-task implementation with an implementer-reviewer pair; when resuming work on a plan where some tasks are `implemented`, some `revise`, and some not started; when an analysis is code-complete and you want to verify reproducibility and present completion options (merge / PR / keep / discard). Triggers include "execute the plan", "run task N", "implement this plan", "finish this analysis", a branch with an approved plan but no code yet, or a `revise` state that needs orchestrator adjudication before re-dispatch.
 ---
 
 # Implementation Workflow
@@ -15,7 +15,7 @@ Default mode dispatches a fresh subagent per task. Each task gets one comprehens
 
 ## Execution Modes
 
-1. Load plan from `.plan/` task tree; if the tree is missing, structurally incomplete, or contradicted by unlogged material decisions, the main agent's Workflow Frontier Resolver routes to `superRA:superplan` first.
+1. Load plan from `superRA/` task tree; if the tree is missing, structurally incomplete, or contradicted by unlogged material decisions, the main agent's Workflow Frontier Resolver routes to `superRA:superplan` first.
 2. Use **subagent mode** (default): dispatch implementer subagent per task; fresh context per task; orchestrator preserves context for coordination.
 3. Fall back to **direct mode** when the harness lacks subagent capability, the user explicitly requests it, or tasks are trivial. Direct mode: main agent implements; reviewer subagents still dispatched after each task (review is never skipped).
 
@@ -50,13 +50,13 @@ If the user declines, proceed — they've given explicit consent to work on the 
 
 ### Step 0b: Task Tree Existence Check
 
-After the branch check, confirm the `.plan/` directory exists with a root `task.md`, is tracked, and has no uncommitted modifications:
+After the branch check, confirm the `superRA/` directory exists with a root `task.md`, is tracked, and has no uncommitted modifications:
 
 ```bash
-[ -f .plan/task.md ] \
-  && git ls-files --error-unmatch .plan/task.md >/dev/null 2>&1 \
-  && git diff --quiet -- .plan/ \
-  && git diff --quiet --cached -- .plan/
+[ -f superRA/task.md ] \
+  && git ls-files --error-unmatch superRA/task.md >/dev/null 2>&1 \
+  && git diff --quiet -- superRA/ \
+  && git diff --quiet --cached -- superRA/
 ```
 
 All conjuncts must succeed. The first confirms the root task exists; the rest confirm tracking and a clean worktree.
@@ -69,7 +69,7 @@ If the task tree exists, is tracked, and the worktree is clean, proceed to Step 
 
 ### Step 1: Load and Review Plan
 
-1. Read the root `.plan/task.md` and run `task_query.py --tree` to see the full task tree with statuses.
+1. Read the root `superRA/task.md` and run `task_query.py --tree` to see the full task tree with statuses.
 2. **Resolve entry.** If the main agent has not already done so, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver. Continue here only when the resolver selects implementation, review, reproducibility verification, or the Step 4 completion disposition; otherwise follow the resolver's selected owner. If all tasks are already `approved`, skip task dispatch and start at Step 3 / Step 4 so approved work is verified and disposition-logged before integration.
 3. **Load the active domain skill(s) following the manifest.** Also load any task-specific helper skills named in the root task.md.
 4. **Read root task.md's `## Conventions` section** (anatomy: `task-system/references/planning.md` §Conventions Section). If the section is missing, empty, or stale, walk and populate it now — commit before dispatching subagents.

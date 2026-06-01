@@ -35,7 +35,7 @@ If the worktree is dirty with unrelated changes, preserve them reversibly with a
 
 ### 2. Investigate intent on both sides
 
-Read commit messages, diffs, and handoff docs for each side. For workflow mode, current-branch intent comes from the `.plan/` task tree; for standalone mode, it comes from the branch name, commits, any present handoff docs, and diffs. Incoming intent comes from the commit range on the other side of the merge base.
+Read commit messages, diffs, and handoff docs for each side. For workflow mode, current-branch intent comes from the `superRA/` task tree; for standalone mode, it comes from the branch name, commits, any present handoff docs, and diffs. Incoming intent comes from the commit range on the other side of the merge base.
 
 **Classify each cluster of changes by role.** The role drives how the cluster is resolved:
 

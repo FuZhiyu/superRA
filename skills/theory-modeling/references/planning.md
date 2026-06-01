@@ -6,7 +6,7 @@ Load at the **PLAN phase** when the work involves mathematical modeling. `superp
 
 ## Model Inventory / Assumption Map (Hard Gate)
 
-The plan cannot be written without a model inventory. The researcher arrives with a question and methodology already in mind. Your job at this gate is not to redesign the model. Your job is to surface what the model actually contains: primitives, endogenous objects, timing, assumptions, normalization choices, and what evidence will count as verification. The inventory becomes the `## Model Inventory / Assumption Map` section of root `.plan/task.md`.
+The plan cannot be written without a model inventory. The researcher arrives with a question and methodology already in mind. Your job at this gate is not to redesign the model. Your job is to surface what the model actually contains: primitives, endogenous objects, timing, assumptions, normalization choices, and what evidence will count as verification. The inventory becomes the `## Model Inventory / Assumption Map` section of root `superRA/task.md`.
 
 <HARD-GATE>
 Do NOT write any task structure, invoke any implementation skill, or take any planning action beyond this gate until you have written the Model Inventory / Assumption Map and the researcher has approved it. This applies to EVERY theory/modeling project regardless of perceived simplicity.
@@ -28,7 +28,7 @@ Complete the following planning checks in order:
 
 5. **Design the verification plan** - decide which results will be checked by substitution, which need limiting or special cases, which need a simple numerical example, what baseline parameter values or ranges will be used, and what pass condition each check must satisfy.
 
-6. **Present the inventory and get researcher approval.** Write it into root `.plan/task.md` as a dedicated header section using this structure, then ask the researcher to confirm before proceeding to task drafting:
+6. **Present the inventory and get researcher approval.** Write it into root `superRA/task.md` as a dedicated header section using this structure, then ask the researcher to confirm before proceeding to task drafting:
 
 ```markdown
 **Model Inventory / Assumption Map:**
@@ -81,7 +81,7 @@ leave the column as "conventional" and skip further justification.
 ### Red Flags
 
 **Never:**
-- Proceed to task drafting on the basis of a verbal description only. The inventory must be written into root `.plan/task.md`.
+- Proceed to task drafting on the basis of a verbal description only. The inventory must be written into root `superRA/task.md`.
 - Say "the notation is standard" without listing the symbols and meanings.
 - Write tasks in parallel with the inventory "to save time."
 - Use "TBD assumptions", "notation to be cleaned later", or "verify numerically if needed" in task steps.

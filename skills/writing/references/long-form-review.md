@@ -16,7 +16,7 @@ Review lanes are:
 
 Long-form review treats the user's existing draft as the implementation under review. The orchestrator creates the task tree from the target document, then dispatches reviewers through superimplement.
 
-The root `.plan/task.md` must carry the writing planning rows from `planning.md`, including:
+The root `superRA/task.md` must carry the writing planning rows from `planning.md`, including:
 
 ```markdown
 **Writing workflow:** Long-form review retrofit (review-only; no ## Results)
@@ -52,4 +52,4 @@ Use the task-system status rollup. For review-only long-form review:
 
 ## Review-Time Indices
 
-Use `## Project Conventions` only for durable convention choices covered by `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`. For review-time lookup aids, add a compact task-local note or a sibling section in root `.plan/task.md` when useful. Common indices: key terminology, figures and tables, cross-references, and notation pointers needed for the assigned lanes.
+Use `## Project Conventions` only for durable convention choices covered by `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`. For review-time lookup aids, add a compact task-local note or a sibling section in root `superRA/task.md` when useful. Common indices: key terminology, figures and tables, cross-references, and notation pointers needed for the assigned lanes.

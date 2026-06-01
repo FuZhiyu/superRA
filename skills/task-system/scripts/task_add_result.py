@@ -8,13 +8,17 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import parse_task, write_task
+from _task_io import TASK_ROOT_DIRNAME, parse_task, resolve_plan_root_arg, write_task
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Add results to a task.")
-    parser.add_argument("--plan-root", required=True, help="Path to the plan root directory")
-    parser.add_argument("--path", required=True, help="Task path relative to plan root")
+    parser.add_argument(
+        "--plan-root",
+        default=None,
+        help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
+    )
+    parser.add_argument("--path", required=True, help="Task path relative to task root")
     parser.add_argument("--finding", help="Key finding to append")
     parser.add_argument("--figure", help="Figure path (relative to task attachments/)")
     parser.add_argument("--figure-caption", default="", help="Caption for the figure")
@@ -104,8 +108,12 @@ def add_result(
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+    plan_root = resolve_plan_root_arg(args.plan_root)
+    if plan_root is None:
+        print("Error: could not auto-detect task root. Use --plan-root.", file=sys.stderr)
+        sys.exit(1)
     add_result(
-        plan_root=Path(args.plan_root),
+        plan_root=plan_root,
         task_path=args.path,
         finding=args.finding,
         figure=args.figure,

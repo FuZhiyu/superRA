@@ -82,7 +82,7 @@ def _init_dashboard(plan_root: Path):
 @pytest.fixture
 def plan_root(tmp_path):
     """Create a minimal plan tree: root + 3 leaf tasks."""
-    root = tmp_path / ".plan"
+    root = tmp_path / "superRA"
     root.mkdir()
 
     _write_task_md(root / "task.md", "Test Project", "not-started",
@@ -517,7 +517,7 @@ class TestWatcherDecisionLogic:
 
     def test_root_structural_change_with_no_body_falls_back(self, tmp_path):
         """Root-level structural change when root has no body -> full-reload."""
-        root = tmp_path / ".plan"
+        root = tmp_path / "superRA"
         root.mkdir()
         # Root with truly empty body — no ## sections at all
         bare_content = (

@@ -2,7 +2,7 @@
 """Worktree discovery for the task-system dashboard.
 
 Discovers all git worktrees of the current repo, identifies which ones
-have valid `.plan/` directories, and provides sorting/filtering helpers.
+have valid task-tree directories, and provides sorting/filtering helpers.
 """
 
 from __future__ import annotations
@@ -13,8 +13,10 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-# Minimal frontmatter title extraction — avoids importing _task_io to keep
-# this module free of intra-package coupling.
+from _task_io import LEGACY_TASK_ROOT_DIRNAME, TASK_ROOT_DIRNAME
+
+# Minimal frontmatter title extraction keeps discovery independent of full task
+# parsing.
 _FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---\n", re.DOTALL)
 _TITLE_RE = re.compile(r'^title:\s*"?([^"\n]+)"?\s*$', re.MULTILINE)
 
@@ -149,7 +151,19 @@ def _parse_porcelain(output: str) -> list[dict[str, str]]:
     return blocks
 
 
-def discover_worktrees(plan_dirname: str = ".plan") -> list[WorktreeInfo]:
+def _find_plan_root(worktree_path: str, preferred_dirname: str) -> tuple[Path, str | None] | tuple[None, None]:
+    dirnames = [preferred_dirname]
+    for dirname in (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME):
+        if dirname not in dirnames:
+            dirnames.append(dirname)
+    for dirname in dirnames:
+        candidate = Path(worktree_path) / dirname
+        if (candidate / "task.md").is_file():
+            return candidate, dirname
+    return None, None
+
+
+def discover_worktrees(plan_dirname: str = TASK_ROOT_DIRNAME) -> list[WorktreeInfo]:
     """Discover all worktrees of the current git repo.
 
     Returns a list of ``WorktreeInfo`` for every worktree reported by
@@ -188,14 +202,14 @@ def discover_worktrees(plan_dirname: str = ".plan") -> list[WorktreeInfo]:
         if raw_branch is not None:
             branch = raw_branch.removeprefix("refs/heads/")
 
-        # Plan check — skip for paths that don't exist on disk
+        # Task-root check — skip for paths that don't exist on disk
         plan_root: str | None = None
         plan_title: str | None = None
         if not is_prunable and os.path.isdir(wt_path):
-            task_md = Path(wt_path) / plan_dirname / "task.md"
-            if task_md.is_file():
-                plan_root = str((Path(wt_path) / plan_dirname).resolve())
-                plan_title = _parse_plan_title(task_md)
+            task_root, _ = _find_plan_root(wt_path, plan_dirname)
+            if task_root is not None:
+                plan_root = str(task_root.resolve())
+                plan_title = _parse_plan_title(task_root / "task.md")
 
         # Activity timestamp
         ref = branch if branch is not None else head_sha
@@ -239,7 +253,7 @@ def filter_worktrees(
 ) -> list[WorktreeInfo]:
     """Filter worktrees by prunable status and plan availability.
 
-    Default: exclude prunable, require a valid ``.plan/`` with ``task.md``.
+    Default: exclude prunable, require a valid task root with ``task.md``.
     Agent worktrees are never filtered out — the ``is_agent`` flag is
     available for UI labeling.
     """

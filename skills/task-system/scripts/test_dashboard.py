@@ -75,7 +75,7 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
 @pytest.fixture
 def plan_root(tmp_path):
     """Create a minimal plan tree for dashboard testing."""
-    root = tmp_path / ".plan"
+    root = tmp_path / "superRA"
     root.mkdir()
 
     _write_task_md(root / "task.md", "Test Project", "not-started",
@@ -128,7 +128,7 @@ def flow_plan_root(tmp_path):
 
     Statuses are deliberately varied so per-child fill colors are testable.
     """
-    root = tmp_path / ".plan"
+    root = tmp_path / "superRA"
     root.mkdir()
     _write_task_md(root / "task.md", "Test Project", "not-started",
                    objective="A test plan.")
@@ -277,6 +277,20 @@ class TestServerRoutes:
         # The button is gated to server mode in the card header builder.
         assert "shareSubtree(" in html
         assert "window.STANDALONE ? '' :" in html
+
+    def test_served_page_keeps_cdn_render_tags(self, client):
+        """Server mode is unchanged by the standalone embedding: the live page
+        still loads markdown-it/KaTeX/texmath from the CDN and does NOT inline the
+        vendored libraries or font woff2 data URIs."""
+        html = client.get("/").text
+        assert "cdn.jsdelivr.net/npm/markdown-it@14" in html
+        assert "cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css" in html
+        assert "cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js" in html
+        assert "cdn.jsdelivr.net/npm/markdown-it-texmath@1" in html
+        # No standalone-only inlining leaks into the served page.
+        assert "data:font/woff2;base64," not in html
+        assert "var STANDALONE_IMAGES =" not in html
+        assert "window.STANDALONE = false" in html
 
     def test_files_serves_existing_file(self, client, plan_root):
         # Create a test file in the project root

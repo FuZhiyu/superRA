@@ -10,7 +10,7 @@ Before task drafting, collect enough context to populate the writing header fiel
 
 ## Writing Plan Header
 
-Add a writing-specific section to root `.plan/task.md`:
+Add a writing-specific section to root `superRA/task.md`:
 
 ```markdown
 **Writing workflow:** <Long-form review retrofit (review-only; no ## Results) | Draft / Polish workflow>

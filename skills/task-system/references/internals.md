@@ -80,7 +80,7 @@ It does not use a YAML library — the parser is minimal and purpose-built.
 `task_hook.py` is the task system's PostToolUse hook, wired in `hooks/hooks.json` under two matchers:
 
 - **`Edit|Write`** — fires when a `task.md` is edited directly, reconciling from the edited file's plan root.
-- **`Bash`** — fires when a shell command both references `.plan` and contains a filesystem-mutating verb (`mv`, `git mv`, `rm`, `rmdir`, `cp`, `mkdir`), so a plain `mv` reorganization of the tree stays validated. Read-only `.plan` commands (`task_query.py`, `grep .plan`, `.plan/serve`) fail the verb test and early-exit.
+- **`Bash`** — fires when a shell command both references `superRA` and contains a filesystem-mutating verb (`mv`, `git mv`, `rm`, `rmdir`, `cp`, `mkdir`), so a plain `mv` reorganization of the tree stays validated. Read-only `superRA` commands (`task_query.py`, `grep superRA`, `superRA/serve`) fail the verb test and early-exit.
 
 On a match the hook runs the same best-effort reconcile — `validate_plan` (warnings to stderr), `propagate_parent_status`, `generate_dashboard` — each in its own try/except, never blocking, always exit 0. See `task_hook.py` for the gating regexes and plan-root discovery, and `hooks/hooks.json` for the wiring.
 
@@ -90,11 +90,11 @@ The Codex and Cursor hook configs (`hooks/hooks-codex.json`, `hooks/hooks-cursor
 
 ## Migration: `plan_migrate.py`
 
-### From legacy PLAN.md + RESULTS.md to .plan/
+### From legacy PLAN.md + RESULTS.md to superRA/
 
 ```bash
 python3 <skill-dir>/scripts/plan_migrate.py \
-  --plan-md PLAN.md --results-md RESULTS.md --output .plan
+  --plan-md PLAN.md --results-md RESULTS.md --output superRA
 ```
 
 The migrator:
@@ -158,16 +158,16 @@ Checkbox variants like `- [~]`, `- [-]`, or `- [X ]` (with extra space) are not 
 ### Upgrade from v1 to v2 format
 
 ```bash
-python3 <skill-dir>/scripts/plan_migrate.py --upgrade --plan-root .plan
+python3 <skill-dir>/scripts/plan_migrate.py --upgrade --plan-root superRA
 ```
 
 Converts `## Steps` (checkboxes) to `## Objective` (prose), removes redundant `# Title` headings. Idempotent — safe to run multiple times.
 
 ## Dashboard: `plan_dashboard.py`
 
-The dashboard is a live-updating server (FastAPI + SSE), not a static HTML file. The primary launch method is `bash .plan/serve`; agents use `uv run <skill-dir>/scripts/plan_dashboard.py serve --root .plan/`. The static `generate` subcommand is deprecated.
+The dashboard is a live-updating server (FastAPI + SSE), not a static HTML file. The primary launch method is `bash superRA/serve`; agents use `uv run <skill-dir>/scripts/plan_dashboard.py serve --root superRA/`. The static `generate` subcommand is deprecated.
 
-For CLI usage, view options, and `.plan/serve` details, see `SKILL.md` §Dashboard — that section is authoritative.
+For CLI usage, view options, and `superRA/serve` details, see `SKILL.md` §Dashboard — that section is authoritative.
 
 **Auto-rebuild.** Mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) trigger dashboard regeneration after completing their mutation. The SSE-based live server also watches for file changes and pushes updates to connected browsers.
 

@@ -2,7 +2,7 @@
 """PostToolUse hook: validate task.md and rebuild dashboard on edit/write/move.
 
 Fires after Edit/Write tool calls (targeting a task.md) and after Bash tool
-calls that structurally mutate a .plan/ task tree (mv, rm, cp, mkdir, ...).
+calls that structurally mutate a task tree (mv, rm, cp, mkdir, ...).
 In both cases it runs the same best-effort reconcile — validate the tree,
 propagate parent status, rebuild the dashboard. Always exits 0 — never blocks
 the agent.
@@ -21,6 +21,11 @@ import json
 import re
 import sys
 from pathlib import Path
+
+
+TASK_ROOT_DIRNAME = "superRA"
+LEGACY_TASK_ROOT_DIRNAME = ".plan"
+TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
 
 
 def _scripts_dir() -> Path:
@@ -101,28 +106,34 @@ def _propagate_whole_tree(task_io, plan_root: Path) -> int:
     return updated
 
 
-# Filesystem-mutating verbs that can restructure a .plan/ task tree.
+# Filesystem-mutating verbs that can restructure a task tree.
 _MUTATING_RE = re.compile(
     r"(?:^|[\s;&|(])(?:git\s+mv|mv|rm|rmdir|cp|mkdir)(?:\s|$)"
 )
-# Path-like tokens that mention a .plan directory.
-_PLAN_TOKEN_RE = re.compile(r"(?:^|[\s'\"=])((?:[^\s'\"=]*/)?\.plan[^\s'\";|&]*)")
+# Path-like tokens that mention a task-root directory.
+_PLAN_TOKEN_RE = re.compile(
+    r"(?:^|[\s'\"=])((?:[^\s'\"=]*/)?(?:superRA(?=$|/|[\s'\";|&])(?:/[^\s'\";|&]*)?|\.plan[^\s'\";|&]*))"
+)
+
+
+def _command_mentions_task_root(command: str) -> bool:
+    return _PLAN_TOKEN_RE.search(command) is not None
 
 
 def _find_plan_root_for_token(task_io, token: str, cwd: Path) -> Path | None:
-    """Resolve a .plan-containing command token to its plan root directory.
+    """Resolve a task-root-containing command token to its plan root directory.
 
     The token may be a source that no longer exists (post-move) or a
     destination that does not exist yet, so this does not rely on the path
-    existing. It splits on the first '.plan' segment and returns the directory
-    up to and including it, resolved against cwd when relative.
+    existing. It splits on the first task-root segment and returns the
+    directory up to and including it, resolved against cwd when relative.
     """
     raw = Path(token)
     base = raw if raw.is_absolute() else (cwd / raw)
     parts = base.parts
     plan_idx = None
     for i, part in enumerate(parts):
-        if part == ".plan" or part.startswith(".plan"):
+        if part == TASK_ROOT_DIRNAME or part == LEGACY_TASK_ROOT_DIRNAME or part.startswith(f"{LEGACY_TASK_ROOT_DIRNAME}."):
             plan_idx = i
             break
     if plan_idx is None:
@@ -130,21 +141,21 @@ def _find_plan_root_for_token(task_io, token: str, cwd: Path) -> Path | None:
     plan_root = Path(*parts[: plan_idx + 1])
     if (plan_root / "task.md").exists() or plan_root.is_dir():
         return plan_root
-    # The .plan dir itself may have been moved/removed; walk up to an existing one.
+    # The task root itself may have been moved/removed; walk up to an existing one.
     return plan_root if plan_root.exists() else None
 
 
 def _handle_bash(data: dict) -> None:
-    """Reconcile any .plan tree touched by a structural Bash command."""
+    """Reconcile any task tree touched by a structural Bash command."""
     tool_input = data.get("tool_input", {}) or {}
     command = tool_input.get("command", "") or ""
     if not command:
         sys.exit(0)
 
-    # Gate: must reference .plan AND contain a mutating verb. A read-only
-    # command that merely mentions .plan (task_query.py, grep .plan, ...) is
+    # Gate: must reference a task root AND contain a mutating verb. A read-only
+    # command that merely mentions a task root (task_query.py, grep, serve) is
     # not a structural change and must early-exit.
-    if ".plan" not in command:
+    if not _command_mentions_task_root(command):
         sys.exit(0)
     if not _MUTATING_RE.search(command):
         sys.exit(0)
@@ -167,12 +178,14 @@ def _handle_bash(data: dict) -> None:
         seen.add(resolved)
         plan_roots.append(root)
 
-    # Fallback: no resolvable token but the command still touched .plan — try
-    # the .plan/ under the process working directory.
+    # Fallback: no resolvable token but the command still touched a task root —
+    # try the standard roots under the process working directory.
     if not plan_roots:
-        candidate = cwd / ".plan"
-        if candidate.is_dir():
-            plan_roots.append(candidate)
+        for dirname in TASK_ROOT_DIRNAMES:
+            candidate = cwd / dirname
+            if candidate.is_dir():
+                plan_roots.append(candidate)
+                break
 
     for plan_root in plan_roots:
         if not (plan_root / "task.md").exists() and not plan_root.is_dir():
@@ -195,9 +208,9 @@ def _handle_edit_write(data: dict) -> None:
     if file_path.name != "task.md":
         sys.exit(0)
 
-    # Must be inside a .plan/ directory somewhere in the path
+    # Must be inside a task-root directory somewhere in the path
     parts = file_path.parts
-    if not any(p.startswith(".plan") for p in parts):
+    if not any(p == TASK_ROOT_DIRNAME or p == LEGACY_TASK_ROOT_DIRNAME or p.startswith(f"{LEGACY_TASK_ROOT_DIRNAME}.") for p in parts):
         sys.exit(0)
 
     _ensure_scripts_on_path()

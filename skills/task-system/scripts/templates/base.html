@@ -9,10 +9,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2/sse.js"></script>
+{% if standalone %}
+{# Standalone export: inline the vendored render libraries + font-inlined KaTeX
+   CSS so markdown and math render from a moved/offline file with no CDN fetch.
+   Server mode keeps the CDN tags (the {% else %} branch). #}
+<style>{{ standalone_assets.katex_css }}</style>
+<script>{{ standalone_assets.markdown_it_js }}</script>
+<script>{{ standalone_assets.katex_js }}</script>
+<script>{{ standalone_assets.texmath_js }}</script>
+{% else %}
 <script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"></script>
+{% endif %}
 <style>
 /* ── Light / Dark tokens ── */
 :root {
@@ -1206,10 +1216,15 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
    ══════════════════════════════════════════════════════════════════════════ */
 window.STANDALONE = true;
 var STANDALONE_FRAGMENTS = {{ standalone_fragments | tojson }};
-/* Relative directory (from the dashboard file) holding the embedded .plan tree,
+/* Relative directory (from the dashboard file) holding the embedded task tree,
    used to resolve task-relative <img> sources to a file:// path that resolves
    offline. Empty string keeps image sources task-relative to the file. */
 var STANDALONE_PLAN_DIR = {{ standalone_plan_dir | tojson }};
+/* { client-key -> data:URI } for every relative figure referenced in a task body,
+   base64-embedded at build time so figures render from a moved/offline file. The
+   key matches the string the img[src] loop computes (taskPath + '/' + src, or bare
+   src for the root body). The img loop consults this before its relative fallback. */
+var STANDALONE_IMAGES = {{ standalone_images | tojson }};
 
 /* Build a fake Response that yields a pre-rendered fragment (or [] for the
    comment/summary JSON endpoints). Mirrors just enough of the fetch Response
@@ -1288,10 +1303,13 @@ function resolveInternalTaskPath(href, taskPath) {
   var clean = href.replace(/[?#].*$/, '');
   if (!clean) return null;
 
-  /* Base segments: the directory of the active task. An absolute `.plan/...`
-     href resolves from the tree root instead of the active task's dir. */
+  /* Base segments: the directory of the active task. An absolute `superRA/...`
+     href resolves from the tree root instead of the active task's dir. Legacy
+     `.plan/...` links resolve the same way for migrated task prose. */
   var segs;
-  if (clean.indexOf('.plan/') === 0) {
+  if (clean.indexOf('superRA/') === 0) {
+    segs = clean.slice('superRA/'.length).split('/');
+  } else if (clean.indexOf('.plan/') === 0) {
     segs = clean.slice('.plan/'.length).split('/');
   } else if (clean.charAt(0) === '/') {
     return null;  /* filesystem-absolute, not a tree path */
@@ -1331,7 +1349,7 @@ function renderMarkdown(text, sectionName, taskPath) {
   container.innerHTML = html;
 
   /* Base directory for resolving relative paths within a task */
-  var pathPrefix = taskPath ? '.plan/' + taskPath + '/' : '';
+  var pathPrefix = taskPath ? 'superRA/' + taskPath + '/' : '';
 
   /* Rewrite relative links. A relative href that resolves to a real task in
      this tree becomes an internal hash link (#/<task-path>) so it focuses that
@@ -1365,14 +1383,23 @@ function renderMarkdown(text, sectionName, taskPath) {
 
   /* Rewrite relative image sources. In server mode they resolve via the /files/
      route; in standalone mode there is no server, so resolve them relative to
-     the dashboard file (STANDALONE_PLAN_DIR points at the embedded .plan tree)
+     the dashboard file (STANDALONE_PLAN_DIR points at the embedded task tree)
      so figures load from a file:// open. */
   container.querySelectorAll('img[src]').forEach(function(img) {
     var src = img.getAttribute('src');
     if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
       if (window.STANDALONE) {
-        var rel = taskPath ? STANDALONE_PLAN_DIR + taskPath + '/' + src : STANDALONE_PLAN_DIR + src;
-        img.setAttribute('src', rel);
+        /* Prefer the base64 data URI embedded at build time (figure-portable in a
+           moved/offline file). Key it exactly as the build helper does: taskPath +
+           '/' + src for a task body, bare src for the root body. Fall back to the
+           relative-path rewrite when no embedded bytes exist for this src. */
+        var key = taskPath ? taskPath + '/' + src : src;
+        if (STANDALONE_IMAGES.hasOwnProperty(key)) {
+          img.setAttribute('src', STANDALONE_IMAGES[key]);
+        } else {
+          var rel = taskPath ? STANDALONE_PLAN_DIR + taskPath + '/' + src : STANDALONE_PLAN_DIR + src;
+          img.setAttribute('src', rel);
+        }
       } else {
         img.setAttribute('src', '/files/' + pathPrefix + src);
       }

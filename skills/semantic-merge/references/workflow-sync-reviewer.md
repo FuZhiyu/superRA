@@ -19,7 +19,7 @@ Required inputs:
 
 1. Verify the anchors: incoming intent comes from `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`; the post-sync governing baseline is `BASE_HEAD_SHA`.
 2. Read incoming commits and diffs. Independently summarize incoming intent.
-3. Read the `.plan/` task tree and independently summarize current-branch intent.
+3. Read the `superRA/` task tree and independently summarize current-branch intent.
 4. Inspect the sync commits (merge commit plus any propagation commits) and their combined diff. Confirm every kept, dropped, or synthesized hunk has a semantic rationale, classified by role per `SKILL.md §Shared Steps` step 2.
 5. Walk `SKILL.md §Semantic Coherence Checklist` top to bottom.
 6. Check the Sync Map against the diff and incoming intent. It should explain the branch-level thesis, not bury everything in task-local notes.

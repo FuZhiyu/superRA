@@ -33,14 +33,14 @@ Agent(subagent_type: "superRA:reviewer"):
   Context: <exploration synthesis, inline or path>
   Review target: assigned task/subtree design, not implementation diff
 
-  Additionally: Run task_check.py --plan-root .plan. Review the assigned task/subtree under the requested mode and write findings only to the assigned task's ## Review Notes.
+  Additionally: Run task_check.py --plan-root superRA. Review the assigned task/subtree under the requested mode and write findings only to the assigned task's ## Review Notes.
 ```
 
 `task_check.py` is a structural preflight, not the semantic review. The planning reviewer must receive enough context for the requested mode: exploration synthesis for handoff-readiness, and the relevant design rationale / domain context for design-review. The orchestrator can use a simple agent for this when the review is lightweight; the protocol still needs the reviewer-role instructions so the same mechanism works for thorough review.
 
 ## Validation
 
-- Run `python3 skills/task-system/scripts/task_check.py --plan-root .plan` on a representative task tree.
+- Run `python3 skills/task-system/scripts/task_check.py --plan-root superRA` on a representative task tree.
 - Run generated-agent regeneration/checks if `agents/reviewer.md` changes.
 - Exercise a small planning-review fixture or dry run: reviewer writes `## Review Notes` on the assigned planning target, planner fixes tree, re-review removes the notes without touching task statuses.
 - Confirm quick/standard planning are not forced through planning review; thorough planning and explicit handoff review are the intended triggers.
@@ -56,7 +56,7 @@ Agent(subagent_type: "superRA:reviewer"):
 
 ### Validation
 
-- `python3 skills/task-system/scripts/task_check.py --plan-root .plan` — passed.
+- `python3 skills/task-system/scripts/task_check.py --plan-root superRA` — passed.
 - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` — passed; generated project agents and direct-mode role references are up to date.
 - `uv run pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py` — passed, 6 tests.
 - Disposable fixture under `/private/tmp/superra-planning-review-fixture` — `task_check.py` passed after adding `[BLOCKING]` / `[ADVISORY]` `## Review Notes` to an assigned task with `status: not-started`, and passed again after simulating planner fixes and removing `## Review Notes`; `status:` remained `not-started` throughout.

@@ -48,7 +48,7 @@ Result protection guards key results during Sync, Integrate, Finish, and future 
 
 ### Steps
 
-1. **Extract key results from task.md `## Results` sections.** Walk the `.plan/` tree (`task_query.py --tree`) and identify main findings across tasks. Protect main findings, not every intermediate number. Reference tasks by path (e.g., `data-preparation/merge`).
+1. **Extract key results from task.md `## Results` sections.** Walk the `superRA/` tree (`task_query.py --tree`) and identify main findings across tasks. Protect main findings, not every intermediate number. Reference tasks by path (e.g., `data-preparation/merge`).
 2. **Confirm coverage with the researcher.** Stop point:
    ```text
    These results seem like the key findings to protect:
@@ -130,7 +130,7 @@ Agent(generic):
   Use semantic-merge workflow sync author mode. Land the merge commit plus
   any propagation commits needed to reach semantic coherence — `SKILL.md
   §Semantic Coherence Checklist §Scope boundary` is the stopping rule. Write
-  `## Sync Map` section in root task.md (.plan/task.md) only when there is
+  `## Sync Map` section in root task.md (superRA/task.md) only when there is
   material overlap, a conflict, a user decision, sync-review carryover, or
   post-sync context. Add task-local `## Sync Impact` sections to affected
   task.md files. Defer codebase coherence — convention fit, utility reuse,
@@ -244,7 +244,7 @@ Document matures selected task.md `## Results` sections from live dev log to rea
 
 ### Step 1: Identify maturation scope
 
-Walk the `.plan/` tree and identify tasks whose `## Results` sections need maturation or summary rollups — those with substantive findings that would benefit from restructuring, polish, parent/root summaries, or figure materialization. Trivial results (e.g., "renamed variable, no findings") need no maturation. If project guidance is silent on where summaries should be updated, ask:
+Walk the `superRA/` tree and identify tasks whose `## Results` sections need maturation or summary rollups — those with substantive findings that would benefit from restructuring, polish, parent/root summaries, or figure materialization. Trivial results (e.g., "renamed variable, no findings") need no maturation. If project guidance is silent on where summaries should be updated, ask:
 
 ```text
 These tasks have substantive results that could benefit from maturation
@@ -295,7 +295,7 @@ On APPROVE, flip `Docs finalized` in root task.md §Workflow Status and commit.
 
 ## Finish
 
-Finish executes the user's completion choice from `superimplement`. The `.plan/` directory is committed as-is — it is part of the permanent branch record.
+Finish executes the user's completion choice from `superimplement`. The `superRA/` directory is committed as-is — it is part of the permanent branch record.
 
 ### Step 1: Freshness check
 

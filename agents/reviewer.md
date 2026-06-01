@@ -66,7 +66,7 @@ At `Stage: planning-review`, review the assigned task or subtree before implemen
 - **handoff-readiness** — check whether the task/subtree is clear, complete, human-readable, internally consistent, and ready for an implementer.
 - **design-review** — check whether the proposed architecture, decomposition, assumptions, artifact pipeline, dependencies, and domain reasoning are good enough for the objective.
 
-Use provided context as review evidence; run `task_check.py --plan-root .plan` when the dispatch asks for it. There may be no git range or implementation diff.
+Use provided context as review evidence; run `task_check.py --plan-root superRA` when the dispatch asks for it. There may be no git range or implementation diff.
 
 Return APPROVE or REVISE without editing task `status:`. On REVISE, write numbered `[BLOCKING]` / `[ADVISORY]` findings in the assigned target's `## Review Notes` only; link child task files when a finding concerns a descendant. On re-review, delete fixed items. On APPROVE, remove the assigned target's `## Review Notes` section. Do not edit child task review notes, `## Revision Notes`, or any body section other than the assigned target's `## Review Notes`.
 
