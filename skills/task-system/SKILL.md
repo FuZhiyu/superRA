@@ -84,7 +84,6 @@ Move a task with a plain `mv` of its directory — it carries its `task.md`, `co
 | `input` | list | input file paths | planner |
 | `output` | list | output file paths | planner |
 | `created` | date | ISO 8601 | auto |
-| `updated` | date | ISO 8601 | auto |
 
 ### Body sections
 
@@ -118,7 +117,6 @@ script: Code/03_merge_chars.py
 input: [Data/holdings.parquet]
 output: [Data/merged.parquet]
 created: 2026-05-24
-updated: 2026-05-24
 ---
 
 ## Objective

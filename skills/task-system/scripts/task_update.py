@@ -14,7 +14,6 @@ from _task_io import (
     compute_status,
     parse_task,
     propagate_parent_status,
-    today_str,
     walk_plan,
     write_task,
 )
@@ -124,7 +123,6 @@ def update_task(
                 continue
             if leaf.status != status:
                 leaf.status = status
-                leaf.updated = today_str()
                 write_task(leaf)
                 n_updated += 1
         print(f"Cascaded status={status!r} to {n_updated} descendant leaf(s).")
@@ -158,7 +156,6 @@ def update_task(
             changed = True
 
     if changed:
-        task.updated = today_str()
         write_task(task)
         print(f"Updated {task_md}")
         # Propagate status to ancestors
@@ -198,7 +195,6 @@ def fix_status_consistency(plan_root: Path) -> int:
                 changed = True
 
         if changed:
-            task.updated = today_str()
             write_task(task)
             fixed_count += 1
 
@@ -245,7 +241,6 @@ def propagate_all(plan_root: Path) -> int:
             changed = True
 
         if changed:
-            fresh.updated = today_str()
             write_task(fresh)
             total_updated += 1
 

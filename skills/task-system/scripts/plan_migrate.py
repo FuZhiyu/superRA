@@ -273,7 +273,6 @@ def _build_task_md(
             fm_lines.append(f"  - {f}")
     fm_lines.extend([
         f"created: {today}",
-        f"updated: {today}",
         "---",
     ])
 
@@ -318,7 +317,7 @@ def migrate(plan_md_path: Path, results_md_path: Path | None, output_dir: Path) 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     root_task_md = output_dir / "task.md"
-    root_content = f"---\ntitle: \"{escaped_plan_title}\"\nstatus: not-started\ndepends_on: []\ntags: []\ncreated: {today_str()}\nupdated: {today_str()}\n---\n\n{header}\n"
+    root_content = f"---\ntitle: \"{escaped_plan_title}\"\nstatus: not-started\ndepends_on: []\ntags: []\ncreated: {today_str()}\n---\n\n{header}\n"
     root_task_md.write_text(root_content, encoding="utf-8")
     print(f"Created {root_task_md}")
 

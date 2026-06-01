@@ -130,11 +130,11 @@ def _render_frontmatter_readable(fm: dict) -> str:
     field_order = [
         "title", "status",
         "depends_on", "tags", "script", "input", "output",
-        "created", "updated",
+        "created",
     ]
     # Stale fields removed from the data model — suppress in output even if
     # still present in old task files.
-    _STALE_FIELDS = {"review_status", "integration_status"}
+    _STALE_FIELDS = {"review_status", "integration_status", "updated"}
     seen = set()
     for key in field_order:
         if key not in fm:
@@ -250,7 +250,6 @@ def render_json(
         "input": target_task.input,
         "output": target_task.output,
         "created": target_task.created,
-        "updated": target_task.updated,
         "sections": {k: v.strip() for k, v in sections.items()},
     }
 

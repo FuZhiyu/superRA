@@ -41,7 +41,6 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
     results = kwargs.get("results", "")
     body_text = kwargs.get("body_text", "")
     created = kwargs.get("created", "2026-01-01")
-    updated = kwargs.get("updated", "2026-01-01")
 
     if depends_on:
         deps_yaml = "\n" + "".join(f"  - {d}\n" for d in depends_on)
@@ -63,7 +62,7 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
     content = (
         f'---\ntitle: "{title}"\nstatus: {status}\nreview_status: {review_status}\n'
         f"integration_status: {integration_status}\ndepends_on:{deps_yaml}\n"
-        f"tags: {tags_yaml}\ncreated: {created}\nupdated: {updated}\n---\n\n{body}"
+        f"tags: {tags_yaml}\ncreated: {created}\n---\n\n{body}"
     )
     path.write_text(content, encoding="utf-8")
 
@@ -524,7 +523,7 @@ class TestWatcherDecisionLogic:
         bare_content = (
             '---\ntitle: "Empty Root"\nstatus: not-started\nreview_status: ~\n'
             'integration_status: ~\ndepends_on: []\ntags: []\n'
-            'created: 2026-01-01\nupdated: 2026-01-01\n---\n'
+            'created: 2026-01-01\n---\n'
         )
         (root / "task.md").write_text(bare_content, encoding="utf-8")
 

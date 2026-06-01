@@ -5,7 +5,6 @@ depends_on:
   - task-io-enhancements
 tags: []
 created: 2026-05-24
-updated: 2026-05-24
 ---
 
 ## Objective

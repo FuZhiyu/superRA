@@ -34,7 +34,6 @@ class Task:
     input: list[str] = field(default_factory=list)
     output: list[str] = field(default_factory=list)
     created: str = ""
-    updated: str = ""
     body: str = ""
     objective: str = ""
     results: str = ""
@@ -193,7 +192,7 @@ def serialize_frontmatter(fm: dict[str, str | list[str]]) -> str:
     field_order = [
         "title", "status",
         "depends_on", "tags", "script", "input", "output",
-        "created", "updated",
+        "created",
     ]
 
     def _serialize_field(key: str, value: str | list[str]) -> None:
@@ -265,7 +264,6 @@ def parse_task(task_md_path: Path) -> Task:
         input=_to_list(fm.get("input", [])),
         output=_to_list(fm.get("output", [])),
         created=str(fm.get("created", "")),
-        updated=str(fm.get("updated", "")),
         body=body,
         objective=sections.get("Objective", ""),
         results=sections.get("Results", ""),
@@ -297,8 +295,6 @@ def write_task(task: Task) -> None:
         fm["output"] = task.output
     if task.created:
         fm["created"] = task.created
-    if task.updated:
-        fm["updated"] = task.updated
 
     fm_text = serialize_frontmatter(fm)
     content = f"---\n{fm_text}---\n{task.body}"
@@ -483,7 +479,6 @@ def propagate_parent_status(plan_root: Path, task_path: str) -> int:
             changed = True
 
         if changed:
-            ancestor_task.updated = today_str()
             write_task(ancestor_task)
             updated += 1
 

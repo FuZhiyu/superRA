@@ -10,7 +10,6 @@ depends_on:
 tags: []
 script: skills/task-system/scripts/test_task_system.py
 created: 2026-05-23
-updated: 2026-05-24
 ---
 
 ## Objective

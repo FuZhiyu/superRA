@@ -5,7 +5,6 @@ depends_on:
   - skill-rewrite
 tags: []
 created: 2026-05-24
-updated: 2026-05-24
 ---
 
 ## Objective

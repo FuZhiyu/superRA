@@ -6,7 +6,6 @@ depends_on:
   - main-panel
 tags: []
 created: 2026-05-30
-updated: 2026-05-31
 ---
 
 ## Objective

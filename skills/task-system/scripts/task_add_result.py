@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import parse_task, today_str, write_task
+from _task_io import parse_task, write_task
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -93,7 +93,6 @@ def add_result(
         body = body[:next_section] + f"- {note}\n" + body[next_section:]
 
     task.body = body
-    task.updated = today_str()
     write_task(task)
     print(f"Updated results in {task_md}")
     try:

@@ -2,7 +2,6 @@
 title: Contributor Note — State Externalization & Workflow Boundary
 status: not-started
 created: 2026-05-30
-updated: 2026-05-30
 depends_on: []
 ---
 

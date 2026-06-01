@@ -4,7 +4,6 @@ status: in-progress
 depends_on: []
 tags: []
 created: 2026-05-23
-updated: 2026-05-31
 ---
 
 ## Objective

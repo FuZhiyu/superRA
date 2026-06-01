@@ -165,7 +165,6 @@ def tree_to_json(task: Task) -> dict:
         "input": task.input,
         "output": task.output,
         "created": task.created,
-        "updated": task.updated,
         "is_leaf": task.is_leaf,
         "body": task.body,
         "objective": sections.get("Objective", ""),

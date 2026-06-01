@@ -2,7 +2,6 @@
 title: Expose Domain Gates as Review Lenses
 status: not-started
 created: 2026-05-30
-updated: 2026-05-30
 depends_on: [01-review-and-tier-patterns]
 ---
 

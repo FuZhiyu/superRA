@@ -9,7 +9,6 @@ script: skills/task-system/scripts/plan_migrate.py
 input: []
 output: []
 created: 2026-05-26
-updated: 2026-05-26
 ---
 
 ## Objective

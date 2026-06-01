@@ -4,7 +4,6 @@ status: not-started
 depends_on: []
 tags: []
 created: 2026-05-30
-updated: 2026-05-30
 ---
 
 # Dynamic Workflows — Learn & Integrate
