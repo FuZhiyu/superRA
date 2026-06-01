@@ -24,7 +24,7 @@ Success means a future implementer/reviewer pair can distinguish binding objecti
 Exploration from the design review identified three implementation slices:
 - First update task anatomy so `## Objective` is the normative contract and optional `## Planner Guidance` holds non-binding starting points.
 - Then update reviewer behavior so it reviews the objective, declared frontmatter outputs, implementer results, and the diff as a coherent whole, using the reviewer's own judgment and the active domain gates together.
-- Finally add a `planning-review` reviewer mode owned by superplan, using root-level `## Planning Review Notes` rather than normal task `status:`.
+- Finally add a `planning-review` reviewer mode owned by superplan, using task-local `## Review Notes` on the assigned planning target rather than normal task `status:`.
 
 Avoid broad rewrites of domain skills. The domain skills own the specific gates; this work should only clarify how generic workflow/role protocols compose with those gates.
 
