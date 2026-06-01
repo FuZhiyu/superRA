@@ -1206,7 +1206,11 @@ function _standaloneResponse(payload, found) {
 
 /* Resolve a fetch URL against the embedded data instead of the network.
    - Exact fragment hits (/nav, /node/<path>, /dag?root=<path>, /kanban,
-     /nav/<path>) return their pre-rendered HTML.
+     /nav/<path>) return their pre-rendered HTML. The map is keyed by the raw
+     (decoded) path, but the /dag loader builds its URL with
+     encodeURIComponent(path), which escapes the '/' in multi-segment paths to
+     %2F. We decode before the lookup so an encoded request
+     (/dag?root=a%2Fb) and a raw request (/node/a/b) both match the map.
    - Comment GETs return [] / {} so loadComments + the summary badge no-op.
    - Worktree GET returns a single-entry payload so the selector stays hidden.
    - Server-only writes (POST/PATCH/DELETE /api/*) resolve ok with no effect;
@@ -1215,6 +1219,10 @@ function _standaloneResponse(payload, found) {
 function standaloneFetch(url) {
   if (STANDALONE_FRAGMENTS.hasOwnProperty(url)) {
     return _standaloneResponse(STANDALONE_FRAGMENTS[url], true);
+  }
+  var decoded = decodeURIComponent(url);
+  if (decoded !== url && STANDALONE_FRAGMENTS.hasOwnProperty(decoded)) {
+    return _standaloneResponse(STANDALONE_FRAGMENTS[decoded], true);
   }
   if (/\/comments($|\?)/.test(url)) return _standaloneResponse([], true);
   if (url.indexOf('/api/comments/summary') !== -1) return _standaloneResponse({}, true);

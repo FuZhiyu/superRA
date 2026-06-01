@@ -917,9 +917,11 @@ def _build_standalone_fragments() -> dict[str, str]:
 
     # Per-task fragments: /node/<path>, /dag?root=<path>, and /nav/<path> for any
     # non-leaf (the depth>=3 lazy branches the sidebar requests on first open).
-    # The /dag key uses the bare path: the client requests
-    # /dag?root=encodeURIComponent(path), and task slugs ([A-Za-z0-9-] plus '/')
-    # contain nothing encodeURIComponent escapes, so the encoded URL == the path.
+    # All three are keyed by the bare (decoded) path. /node and /nav are fetched
+    # with raw string concatenation client-side, so their URLs carry the path
+    # un-encoded. /dag is fetched with encodeURIComponent(path), which escapes the
+    # '/' of a multi-segment path to %2F — so the standalone fetch shim decodes
+    # the URL before the map lookup, matching all three against these bare keys.
     all_tasks = collect_all_tasks(_root_task)
     for task in all_tasks:
         fragments[f"/node/{task.path}"] = _render_node_body(task)

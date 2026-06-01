@@ -813,6 +813,42 @@ class TestDashboard:
                 == c.get("/dag", params={"root": "02-second"}).text
             )
 
+    def test_standalone_dag_resolves_for_nested_path(self, plan_with_branches):
+        """The /dag fragment for a multi-segment (nested) task must be reachable
+        under the exact URL the standalone client builds.
+
+        The client fetches '/dag?root=' + encodeURIComponent(path); for a nested
+        path encodeURIComponent escapes '/' to %2F, so the request URL differs
+        from the bare map key. The fetch shim decodes before the map lookup —
+        this test locks that decode-then-lookup against the byte-identical
+        server route, reproducing the %2F mismatch a single-segment path hides.
+        """
+        pytest.importorskip("httpx")
+        from urllib.parse import quote
+
+        from fastapi.testclient import TestClient
+
+        plan_dashboard.PLAN_ROOT = plan_with_branches
+        plan_dashboard.generate_dashboard(plan_with_branches)
+        fragments = plan_dashboard._build_standalone_fragments()
+
+        nested = "01-data-prep/02-merge"
+        # The exact URL string the standalone client builds (JS encodeURIComponent
+        # escapes '/' to %2F; quote(safe='') matches it for slug characters).
+        client_url = "/dag?root=" + quote(nested, safe="")
+        assert "%2F" in client_url  # guard: the nested path really is encoded.
+        assert client_url not in fragments  # the map is keyed by the bare path.
+
+        # The shim decodes the client URL before the lookup; that must hit.
+        decoded_url = "/dag?root=" + nested
+        assert decoded_url in fragments
+
+        with TestClient(plan_dashboard.app) as c:
+            assert (
+                fragments[decoded_url]
+                == c.get("/dag", params={"root": nested}).text
+            )
+
 
 # --- parse_body_sections tests ---
 
