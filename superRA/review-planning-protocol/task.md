@@ -1,6 +1,6 @@
 ---
 title: "Review and Planning Protocol"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -29,3 +29,7 @@ Exploration from the design review identified three implementation slices:
 Avoid broad rewrites of domain skills. The domain skills own the specific gates; this work should only clarify how generic workflow/role protocols compose with those gates.
 
 ## Results
+
+## Review Notes
+
+1. MAJOR: [../../skills/refactor-and-integrate/SKILL.md:54-55](../../skills/refactor-and-integrate/SKILL.md#L54-L55) requires a fresh final diff self-check trail in the assigned task's `## Results`, but this parent task's [task.md:31](task.md#L31) `## Results` section is empty. Fix by recording the current `git diff 75a86ccebd0ec37a0a9e904f0fd5b824752cf6f1..HEAD` self-check, surviving change classes, suspicious hunk justifications for the `skills/*` / `agents/*` instruction edits and generated artifacts, and any pruned/unjustified hunks.

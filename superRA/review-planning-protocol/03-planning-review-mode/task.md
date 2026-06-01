@@ -1,6 +1,6 @@
 ---
 title: "Planning Review Mode"
-status: approved
+status: revise
 depends_on: [01-objective-guidance-task-anatomy, 02-objective-first-reviewer]
 tags: []
 created: 2026-06-01
@@ -60,3 +60,7 @@ Agent(subagent_type: "superRA:reviewer"):
 - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` — passed; generated project agents and direct-mode role references are up to date.
 - `uv run pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py` — passed, 6 tests.
 - Disposable fixture under `/private/tmp/superra-planning-review-fixture` — `task_check.py` passed after adding `[BLOCKING]` / `[ADVISORY]` `## Review Notes` to an assigned task with `status: not-started`, and passed again after simulating planner fixes and removing `## Review Notes`; `status:` remained `not-started` throughout.
+
+## Review Notes
+
+1. MAJOR: The planning-review dispatch instructions do not preserve the repo's source-of-truth boundary for dispatch shape. [../../../skills/agent-orchestration/SKILL.md:105-136](../../../skills/agent-orchestration/SKILL.md#L105-L136) owns canonical dispatch templates and forbids `Additionally:` lines that restate role protocol, but [../../../skills/superplan/references/thorough-planning.md:120-131](../../../skills/superplan/references/thorough-planning.md#L120-L131) embeds a full reviewer dispatch template and an `Additionally:` tail that repeats planning-review note ownership. At the same time, [../../../agents/reviewer.md:24](../../../agents/reviewer.md#L24) describes the planning-review dispatch fields directly in the role spec, which is the AGENTS.md "here is what you will receive" anti-pattern. Fix by putting any required planning-review dispatch-shape exception in the dispatch-template owner (`agent-orchestration`) or by pointing there, and keep `superplan` to stage-specific choreography and `agents/reviewer.md` to reviewer behavior.
