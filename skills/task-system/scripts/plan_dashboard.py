@@ -879,1061 +879,121 @@ async def get_node(path: str):
 
 
 # ---------------------------------------------------------------------------
-# Static HTML generation (backward compatibility)
+# Static HTML generation — single-file, server-less export from base.html
 # ---------------------------------------------------------------------------
-
-# Keep the full DASHBOARD_HTML template from the old plan_dashboard.py for the
-# `generate` subcommand.  It is a self-contained single-file HTML dashboard.
-
-DASHBOARD_HTML = """\
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plan Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
-<style>
-/* ── Light / Dark tokens ── */
-:root {
-  --font-display: 'Source Serif 4', 'Georgia', serif;
-  --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
-
-  --bg:        #faf9f7;
-  --bg-alt:    #f2f0ec;
-  --bg-card:   #ffffff;
-  --bg-hover:  #edeae4;
-  --text:      #2c2a25;
-  --text-mid:  #6b6560;
-  --text-mute: #9e9890;
-  --border:    #ddd8d0;
-  --border-lt: #eae6df;
-  --accent:    #b44d2d;
-  --accent-hover: #953f24;
-  --accent-soft: rgba(180,77,45,0.08);
-
-  --tree-line: #d4cfc7;
-
-  --st-ns:     #e8e5df;  --st-ns-t:   #8a857d;
-  --st-ip:     #d6e6f5;  --st-ip-t:   #2a6496;
-  --st-impl:   #f5edd4;  --st-impl-t: #8a6d1b;
-  --st-rev:    #f5d9d4;  --st-rev-t:  #9b3228;
-  --st-ok:     #d4e8d4;  --st-ok-t:   #2d6a30;
-  --st-arch:   #e8e5df;  --st-arch-t: #9e9890;
-
-  --progress-bg:    #e8e5df;
-  --progress-fill:  #6b9e6d;
-
-  --kanban-bg: var(--bg-alt);
-  --kanban-card-bg: var(--bg-card);
-  --kanban-card-border: var(--border);
-
-  --shadow-sm: 0 1px 2px rgba(44,42,37,0.06);
-  --shadow-md: 0 2px 8px rgba(44,42,37,0.08);
-}
-
-[data-theme="dark"] {
-  --bg:        #1c1b19;
-  --bg-alt:    #252320;
-  --bg-card:   #2c2a27;
-  --bg-hover:  #353330;
-  --text:      #e0ddd7;
-  --text-mid:  #a09b93;
-  --text-mute: #706b63;
-  --border:    #3d3a35;
-  --border-lt: #33302c;
-  --accent:    #e07850;
-  --accent-hover: #f09070;
-  --accent-soft: rgba(224,120,80,0.10);
-
-  --tree-line: #3d3a35;
-
-  --st-ns:     #33312e;  --st-ns-t:   #9e9890;
-  --st-ip:     #1f3248;  --st-ip-t:   #7ab0e0;
-  --st-impl:   #3a3018;  --st-impl-t: #d4b64a;
-  --st-rev:    #3e201c;  --st-rev-t:  #e08070;
-  --st-ok:     #1e3320;  --st-ok-t:   #7ec080;
-  --st-arch:   #2a2925;  --st-arch-t: #706b63;
-
-  --progress-bg:    #33312e;
-  --progress-fill:  #5a9a5c;
-
-  --kanban-bg: var(--bg-alt);
-  --kanban-card-bg: var(--bg-card);
-  --kanban-card-border: var(--border);
-
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
-  --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-/* ── KaTeX theme integration ── */
-.katex { color: var(--text); }
-.katex-display { margin: 0.75em 0; }
-
-/* ── Reset + base ── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 14px; -webkit-font-smoothing: antialiased; }
-body {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.5;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-}
-
-/* ── Header bar ── */
-.header {
-  position: sticky; top: 0; z-index: 100;
-  display: flex; align-items: center; gap: 16px;
-  padding: 10px 24px;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
-.header-title {
-  font-family: var(--font-display);
-  font-size: 18px; font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text);
-  white-space: nowrap;
-}
-.header-stats {
-  display: flex; align-items: center; gap: 14px;
-  margin-left: 8px;
-  font-size: 12px; color: var(--text-mute);
-}
-.header-stats strong { color: var(--text-mid); font-weight: 600; }
-
-/* Progress bar */
-.progress-track {
-  width: 120px; height: 6px;
-  background: var(--progress-bg);
-  border-radius: 3px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  background: var(--progress-fill);
-  border-radius: 3px;
-  transition: width 0.4s ease;
-}
-
-.header-spacer { flex: 1; }
-
-/* Controls */
-.header-controls {
-  display: flex; align-items: center; gap: 6px;
-}
-.hc-btn, .hc-select {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-  color: var(--text-mid);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.hc-btn:hover, .hc-select:hover { background: var(--bg-hover); color: var(--text); }
-.hc-btn.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-.hc-search {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--bg);
-  color: var(--text);
-  width: 180px;
-  transition: border-color 0.15s ease;
-}
-.hc-search:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-.hc-search::placeholder { color: var(--text-mute); }
-.theme-toggle {
-  font-size: 16px; line-height: 1;
-  background: none; border: none;
-  color: var(--text-mute); cursor: pointer;
-  padding: 4px;
-  transition: color 0.15s ease;
-}
-.theme-toggle:hover { color: var(--text); }
-
-/* ── Main content area ── */
-.main-content {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 20px 24px 60px;
-}
-
-/* ── Tree View ── */
-.task-tree { }
-.task-node {
-  position: relative;
-}
-.task-node + .task-node { margin-top: 1px; }
-
-/* Tree connector lines */
-.task-children {
-  position: relative;
-  margin-left: 20px;
-  padding-left: 16px;
-  border-left: 1px solid var(--tree-line);
-}
-
-/* ── Task row (always visible) ── */
-.task-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.12s ease;
-}
-.task-row:hover { background: var(--bg-hover); }
-
-.task-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px; height: 16px;
-  font-size: 10px;
-  color: var(--text-mute);
-  transition: transform 0.2s ease;
-  flex-shrink: 0;
-}
-.task-toggle.expanded { transform: rotate(90deg); }
-.task-toggle.leaf { visibility: hidden; }
-
-.task-slug {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text);
-  white-space: nowrap;
-}
-.task-title-text {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--text-mid);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-/* Status badge */
-.badge {
-  display: inline-block;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  padding: 1px 7px;
-  border-radius: 3px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.badge-not-started  { background: var(--st-ns);   color: var(--st-ns-t);   }
-.badge-in-progress  { background: var(--st-ip);   color: var(--st-ip-t);   }
-.badge-implemented  { background: var(--st-impl); color: var(--st-impl-t); }
-.badge-revise       { background: var(--st-rev);  color: var(--st-rev-t);  }
-.badge-approved     { background: var(--st-ok);   color: var(--st-ok-t);   }
-.badge-archived     { background: var(--st-arch); color: var(--st-arch-t); opacity: 0.7; }
-
-.task-progress {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-mute);
-  flex-shrink: 0;
-}
-
-/* ── Task body (expanded) ── */
-.task-body {
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.2s ease;
-  padding: 0 8px 0 30px;
-}
-.task-body.open {
-  max-height: 5000px;
-  opacity: 1;
-  padding: 4px 8px 8px 30px;
-}
-.task-body.uncapped {
-  max-height: none;
-  overflow: visible;
-}
-
-/* Section toggles inside task body */
-.section-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  margin: 2px 0;
-  border-radius: 3px;
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.12s ease;
-}
-.section-toggle:hover { background: var(--bg-hover); }
-.section-icon {
-  font-size: 9px;
-  color: var(--text-mute);
-  transition: transform 0.2s ease;
-  width: 12px;
-  text-align: center;
-}
-.section-icon.expanded { transform: rotate(90deg); }
-.section-label {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-mid);
-}
-.section-preview {
-  font-size: 11px;
-  color: var(--text-mute);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 400px;
-}
-
-.section-content {
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transition: max-height 0.3s ease, opacity 0.2s ease;
-  padding-left: 20px;
-}
-.section-content.open {
-  max-height: 8000px;
-  opacity: 1;
-  padding-bottom: 4px;
-}
-.section-content.uncapped {
-  max-height: none;
-  overflow: visible;
-}
-
-/* Rendered markdown inside sections */
-.rendered-md {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--text);
-  padding: 6px 0;
-}
-.rendered-md h1, .rendered-md h2, .rendered-md h3 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  margin: 12px 0 6px;
-}
-.rendered-md h1 { font-size: 16px; }
-.rendered-md h2 { font-size: 14px; }
-.rendered-md h3 { font-size: 13px; }
-.rendered-md p { margin: 4px 0; }
-.rendered-md ul, .rendered-md ol { padding-left: 18px; margin: 4px 0; }
-.rendered-md li { margin: 2px 0; }
-.rendered-md pre {
-  background: var(--bg-alt);
-  padding: 10px 12px;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 6px 0;
-  border: 1px solid var(--border-lt);
-}
-.rendered-md code {
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.rendered-md p code, .rendered-md li code {
-  background: var(--bg-alt);
-  padding: 1px 4px;
-  border-radius: 2px;
-}
-.rendered-md blockquote {
-  border-left: 3px solid var(--accent);
-  padding: 4px 12px;
-  margin: 6px 0;
-  background: var(--accent-soft);
-  border-radius: 0 3px 3px 0;
-}
-.rendered-md table {
-  border-collapse: collapse;
-  margin: 6px 0;
-  font-size: 12px;
-}
-.rendered-md th, .rendered-md td {
-  border: 1px solid var(--border);
-  padding: 4px 8px;
-  text-align: left;
-}
-.rendered-md th { background: var(--bg-alt); font-weight: 600; }
-/* Links inherit the warm accent palette instead of browser default blue/purple.
-   Restrained 1px underline at reduced opacity that solidifies on hover; visited
-   stays on-theme (the accent, never default purple). Accent tokens are
-   theme-aware, so one rule covers both light and dark. */
-.rendered-md a {
-  color: var(--accent);
-  text-decoration: underline;
-  text-decoration-color: var(--accent-soft);
-  text-underline-offset: 2px;
-  transition: color 0.15s ease, text-decoration-color 0.15s ease;
-}
-.rendered-md a:hover {
-  color: var(--accent-hover);
-  text-decoration-color: var(--accent-hover);
-}
-.rendered-md a:visited { color: var(--accent); }
-.rendered-md a:visited:hover { color: var(--accent-hover); }
-
-/* Metadata pills inside task body */
-.task-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid var(--border-lt);
-}
-.meta-pill {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-mute);
-  background: var(--bg-alt);
-  padding: 2px 7px;
-  border-radius: 3px;
-  white-space: nowrap;
-}
-.meta-pill strong { color: var(--text-mid); font-weight: 600; }
-
-/* ── DAG view ── */
-.dag-container {
-  padding: 16px 0;
-}
-.dag-controls {
-  font-family: var(--font-display);
-  font-size: 14px;
-  margin-bottom: 12px;
-  color: var(--text-mid);
-}
-.dag-controls strong { color: var(--text); }
-
-/* ── Kanban view ── */
-.kanban {
-  display: flex;
-  gap: 14px;
-  padding: 16px 0;
-  overflow-x: auto;
-  min-height: 400px;
-}
-.kanban-col {
-  min-width: 200px;
-  flex: 1;
-  background: var(--kanban-bg);
-  border-radius: 6px;
-  padding: 10px;
-}
-.kanban-col-header {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: 600;
-  padding-bottom: 8px;
-  margin-bottom: 8px;
-  border-bottom: 2px solid var(--border);
-  color: var(--text-mid);
-}
-.kanban-col-header .count {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--text-mute);
-  font-weight: 400;
-}
-.kanban-card {
-  padding: 8px 10px;
-  margin-bottom: 6px;
-  background: var(--kanban-card-bg);
-  border: 1px solid var(--kanban-card-border);
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-.kanban-card:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-sm);
-}
-.kanban-card-title {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--text);
-}
-.kanban-card-path {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-mute);
-  margin-top: 3px;
-}
-
-/* ── Utility ── */
-.hidden { display: none !important; }
-
-/* ── Animations ── */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.task-node { animation: fadeIn 0.15s ease both; }
-.task-tree > .task-node:nth-child(1)  { animation-delay: 0.02s; }
-.task-tree > .task-node:nth-child(2)  { animation-delay: 0.04s; }
-.task-tree > .task-node:nth-child(3)  { animation-delay: 0.06s; }
-.task-tree > .task-node:nth-child(4)  { animation-delay: 0.04s; }
-.task-tree > .task-node:nth-child(5)  { animation-delay: 0.10s; }
-.task-tree > .task-node:nth-child(6)  { animation-delay: 0.12s; }
-.task-tree > .task-node:nth-child(7)  { animation-delay: 0.14s; }
-.task-tree > .task-node:nth-child(8)  { animation-delay: 0.16s; }
-.task-tree > .task-node:nth-child(9)  { animation-delay: 0.18s; }
-.task-tree > .task-node:nth-child(10) { animation-delay: 0.20s; }
-</style>
-</head>
-<body>
-
-<!-- ── Header ── -->
-<div class="header">
-  <span class="header-title" id="plan-title">Plan Dashboard</span>
-  <div class="header-stats">
-    <span id="stat-tasks"></span>
-    <span id="stat-approved"></span>
-    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-    <span id="stat-updated"></span>
-  </div>
-  <div class="header-spacer"></div>
-  <div class="header-controls">
-    <input type="text" class="hc-search" id="search-box" placeholder="Search tasks..." oninput="applyFilters()">
-    <select class="hc-select" id="filter-status" onchange="applyFilters()">
-      <option value="">All statuses</option>
-      <option value="not-started">not-started</option>
-      <option value="in-progress">in-progress</option>
-      <option value="implemented">implemented</option>
-      <option value="revise">revise</option>
-      <option value="approved">approved</option>
-      <option value="archived">archived</option>
-    </select>
-    <button class="hc-btn active" id="btn-tree" onclick="showView('tree')">Tree</button>
-    <button class="hc-btn" id="btn-dag" onclick="showView('dag')">DAG</button>
-    <button class="hc-btn" id="btn-kanban" onclick="showView('kanban')">Kanban</button>
-    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">&#9681;</button>
-  </div>
-</div>
-
-<!-- ── Content ── -->
-<div class="main-content">
-  <div id="view-tree" class="task-tree"></div>
-  <div id="view-dag" class="dag-container hidden"></div>
-  <div id="view-kanban" class="kanban hidden"></div>
-</div>
-
-<script>
-const TASK_DATA = __TASK_DATA_JSON__;
-const md = window.markdownit({ html: false, linkify: true });
-md.use(texmath, { engine: katex, delimiters: 'dollars' });
-let currentView = 'tree';
-const taskByPath = {};
-const expandedTasks = new Set();
-const expandedSections = new Set();
-
-/* ── Helpers ── */
-
-function esc(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-
-function sanitizeMermaid(s) {
-  return s.replace(/"/g, "'").replace(/[\\[\\](){}]/g, '');
-}
-
-function flattenTasks(task) {
-  let r = [task];
-  for (const c of task.children) r = r.concat(flattenTasks(c));
-  return r;
-}
-
-function buildIndex(task) {
-  taskByPath[task.path] = task;
-  for (const c of task.children) buildIndex(c);
-}
-
-function parseBodySections(body) {
-  const lines = body.split('\\n');
-  const sections = [];
-  let cur = null;
-  for (const line of lines) {
-    const m = line.match(/^## (.+)$/);
-    if (m) {
-      if (cur) sections.push(cur);
-      cur = { name: m[1], content: '' };
-    } else if (cur) {
-      cur.content += line + '\\n';
-    }
-  }
-  if (cur) sections.push(cur);
-  return sections;
-}
-
-function sectionPreview(content) {
-  const stripped = content.replace(/\\n/g, ' ').replace(/[#*`>\\-]/g, '').trim();
-  if (!stripped) return '';
-  return stripped.length > 80 ? stripped.slice(0, 80) + '...' : stripped;
-}
-
-function taskMatches(task, status, search) {
-  if (status && task.effective_status !== status) return false;
-  if (search && !(task.title || '').toLowerCase().includes(search) &&
-      !(task.path || '').toLowerCase().includes(search)) return false;
-  return true;
-}
-
-function anyDescendantMatches(task, status, search) {
-  if (taskMatches(task, status, search)) return true;
-  for (const c of task.children) {
-    if (anyDescendantMatches(c, status, search)) return true;
-  }
-  return false;
-}
-
-/* ── Init ── */
-
-function init() {
-  document.documentElement.setAttribute('data-theme',
-    localStorage.getItem('dashboard-theme') || 'light');
-  mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
-  buildIndex(TASK_DATA);
-  renderSummary();
-  renderTree();
-}
-
-/* ── Theme ── */
-
-function toggleTheme() {
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('dashboard-theme', next);
-}
-
-/* ── View switching ── */
-
-function showView(view) {
-  currentView = view;
-  document.querySelectorAll('.hc-btn').forEach(function(b) { b.classList.remove('active'); });
-  document.getElementById('btn-' + view).classList.add('active');
-  document.getElementById('view-tree').classList.toggle('hidden', view !== 'tree');
-  document.getElementById('view-dag').classList.toggle('hidden', view !== 'dag');
-  document.getElementById('view-kanban').classList.toggle('hidden', view !== 'kanban');
-  if (view === 'dag') renderDag();
-  if (view === 'kanban') renderKanban();
-}
-
-/* ── Summary bar ── */
-
-function renderSummary() {
-  const all = flattenTasks(TASK_DATA);
-  const leaves = all.filter(function(t) { return t.is_leaf; });
-  const archivedCount = leaves.filter(function(t) { return t.effective_status === 'archived'; }).length;
-  const activeLeaves = leaves.length - archivedCount;
-  const approved = leaves.filter(function(t) { return t.effective_status === 'approved'; }).length;
-  const pct = activeLeaves ? Math.round(100 * approved / activeLeaves) : 0;
-
-  document.getElementById('plan-title').textContent = TASK_DATA.title || 'Plan Dashboard';
-  var tasksText = '<strong>' + activeLeaves + '</strong> tasks, <strong>' + (all.length - leaves.length) + '</strong> groups';
-  if (archivedCount) tasksText += ', <strong>' + archivedCount + '</strong> archived';
-  document.getElementById('stat-tasks').innerHTML = tasksText;
-  document.getElementById('stat-approved').innerHTML =
-    '<strong>' + approved + '/' + activeLeaves + '</strong> approved';
-  document.getElementById('progress-fill').style.width = pct + '%';
-  const dates = all.map(function(t) { return t.updated; }).filter(Boolean).sort();
-  if (dates.length) {
-    document.getElementById('stat-updated').textContent = dates[dates.length - 1];
-  }
-}
-
-/* ── Tree view (recursive expand/collapse) ── */
-
-function renderTree() {
-  const root = document.getElementById('view-tree');
-  root.innerHTML = '';
-  if (TASK_DATA.body && TASK_DATA.body.trim()) {
-    root.appendChild(renderTaskNode(TASK_DATA, 0));
-  } else {
-    for (var i = 0; i < TASK_DATA.children.length; i++) {
-      root.appendChild(renderTaskNode(TASK_DATA.children[i], 0));
-    }
-  }
-}
-
-function renderTaskNode(task, depth) {
-  const node = document.createElement('div');
-  node.className = 'task-node';
-  node.dataset.path = task.path;
-
-  /* ── Row (always visible) ── */
-  const row = document.createElement('div');
-  row.className = 'task-row';
-
-  const hasExpandable = task.children.length > 0 || (task.body && task.body.trim());
-  const toggle = document.createElement('span');
-  toggle.className = 'task-toggle' + (hasExpandable ? '' : ' leaf');
-  toggle.textContent = '\\u25B8';
-
-  const slug = document.createElement('span');
-  slug.className = 'task-slug';
-  const slugText = task.path ? task.path.split('/').pop() : '';
-  slug.textContent = slugText;
-
-  const titleSpan = document.createElement('span');
-  titleSpan.className = 'task-title-text';
-  titleSpan.textContent = task.title || '';
-
-  const badge = document.createElement('span');
-  badge.className = 'badge badge-' + task.effective_status;
-  badge.textContent = task.effective_status;
-
-  row.appendChild(toggle);
-  if (slugText) row.appendChild(slug);
-  row.appendChild(titleSpan);
-  row.appendChild(badge);
-
-  if (!task.is_leaf && task.children.length) {
-    const approvedCount = task.children.filter(function(c) { return c.effective_status === 'approved'; }).length;
-    const prog = document.createElement('span');
-    prog.className = 'task-progress';
-    prog.textContent = '(' + approvedCount + '/' + task.children.length + ')';
-    row.appendChild(prog);
-  }
-
-  node.appendChild(row);
-
-  /* ── Body (expandable) ── */
-  const body = document.createElement('div');
-  body.className = 'task-body';
-
-  const sections = parseBodySections(task.body || '');
-  const sectionKeys = ['Objective', 'Results', 'Decisions', 'Review Notes'];
-  const shownSections = sections.filter(function(s) { return sectionKeys.indexOf(s.name) >= 0 && s.content.trim(); });
-  const otherSections = sections.filter(function(s) { return sectionKeys.indexOf(s.name) < 0 && s.content.trim(); });
-  var allSections = shownSections.concat(otherSections);
-
-  for (var si = 0; si < allSections.length; si++) {
-    (function(sec) {
-      var secKey = task.path + '::' + sec.name;
-      var secDiv = document.createElement('div');
-
-      var secToggle = document.createElement('div');
-      secToggle.className = 'section-toggle';
-      var secIcon = document.createElement('span');
-      secIcon.className = 'section-icon';
-      secIcon.textContent = '\\u25B8';
-      var secLabel = document.createElement('span');
-      secLabel.className = 'section-label';
-      secLabel.textContent = sec.name;
-      var secPreview = document.createElement('span');
-      secPreview.className = 'section-preview';
-      secPreview.textContent = sectionPreview(sec.content);
-
-      secToggle.appendChild(secIcon);
-      secToggle.appendChild(secLabel);
-      secToggle.appendChild(secPreview);
-
-      var secContent = document.createElement('div');
-      secContent.className = 'section-content';
-      var rendered = document.createElement('div');
-      rendered.className = 'rendered-md';
-
-      secToggle.onclick = function(e) {
-        e.stopPropagation();
-        var wasOpen = secContent.classList.contains('open');
-        if (wasOpen) {
-          expandedSections.delete(secKey);
-          secIcon.classList.remove('expanded');
-          secContent.classList.remove('uncapped');
-          secContent.style.maxHeight = secContent.scrollHeight + 'px';
-          secContent.offsetHeight;
-          secContent.classList.remove('open');
-          secContent.style.maxHeight = '';
-          secPreview.style.display = '';
-        } else {
-          expandedSections.add(secKey);
-          secContent.classList.add('open');
-          secIcon.classList.add('expanded');
-          secContent.addEventListener('transitionend', function handler(ev) {
-            if (ev.propertyName === 'max-height' && secContent.classList.contains('open')) {
-              secContent.classList.add('uncapped');
-            }
-            secContent.removeEventListener('transitionend', handler);
-          });
-          if (!rendered.innerHTML) {
-            rendered.innerHTML = md.render(sec.content);
-          }
-          secPreview.style.display = 'none';
-        }
-      };
-
-      secContent.appendChild(rendered);
-      secDiv.appendChild(secToggle);
-      secDiv.appendChild(secContent);
-      body.appendChild(secDiv);
-    })(allSections[si]);
-  }
-
-  /* Metadata pills */
-  var hasMeta = (task.depends_on && task.depends_on.length) ||
-                task.script ||
-                (task.tags && task.tags.length) ||
-                (task.input && task.input.length) ||
-                (task.output && task.output.length);
-  if (hasMeta) {
-    var metaDiv = document.createElement('div');
-    metaDiv.className = 'task-meta';
-    if (task.depends_on && task.depends_on.length) {
-      var pill = document.createElement('span');
-      pill.className = 'meta-pill';
-      pill.innerHTML = '<strong>depends:</strong> ' + task.depends_on.map(function(d) { return esc(d); }).join(', ');
-      metaDiv.appendChild(pill);
-    }
-    if (task.script) {
-      var pill2 = document.createElement('span');
-      pill2.className = 'meta-pill';
-      pill2.innerHTML = '<strong>script:</strong> ' + esc(task.script);
-      metaDiv.appendChild(pill2);
-    }
-    if (task.tags && task.tags.length) {
-      var pill3 = document.createElement('span');
-      pill3.className = 'meta-pill';
-      pill3.innerHTML = '<strong>tags:</strong> ' + task.tags.map(function(t) { return esc(t); }).join(', ');
-      metaDiv.appendChild(pill3);
-    }
-    if (task.input && task.input.length) {
-      var pill4 = document.createElement('span');
-      pill4.className = 'meta-pill';
-      pill4.innerHTML = '<strong>in:</strong> ' + task.input.map(function(x) { return esc(x); }).join(', ');
-      metaDiv.appendChild(pill4);
-    }
-    if (task.output && task.output.length) {
-      var pill5 = document.createElement('span');
-      pill5.className = 'meta-pill';
-      pill5.innerHTML = '<strong>out:</strong> ' + task.output.map(function(x) { return esc(x); }).join(', ');
-      metaDiv.appendChild(pill5);
-    }
-    body.appendChild(metaDiv);
-  }
-
-  node.appendChild(body);
-
-  /* ── Children (recursive) ── */
-  if (task.children.length) {
-    var childrenDiv = document.createElement('div');
-    childrenDiv.className = 'task-children';
-    if (!expandedTasks.has(task.path)) childrenDiv.style.display = 'none';
-    for (var ci = 0; ci < task.children.length; ci++) {
-      childrenDiv.appendChild(renderTaskNode(task.children[ci], depth + 1));
-    }
-    node.appendChild(childrenDiv);
-  }
-
-  /* Restore expanded state on re-render */
-  if (expandedTasks.has(task.path)) {
-    toggle.classList.add('expanded');
-    body.classList.add('open');
-    body.classList.add('uncapped');
-  }
-
-  /* ── Click handler ── */
-  (function(taskRef, toggleEl, bodyEl, nodeEl) {
-    row.onclick = function(e) {
-      e.stopPropagation();
-      var isExpanded = expandedTasks.has(taskRef.path);
-      if (isExpanded) {
-        expandedTasks.delete(taskRef.path);
-        toggleEl.classList.remove('expanded');
-        bodyEl.classList.remove('uncapped');
-        bodyEl.style.maxHeight = bodyEl.scrollHeight + 'px';
-        bodyEl.offsetHeight;
-        bodyEl.classList.remove('open');
-        bodyEl.style.maxHeight = '';
-        var ch = nodeEl.querySelector(':scope > .task-children');
-        if (ch) ch.style.display = 'none';
-      } else {
-        expandedTasks.add(taskRef.path);
-        toggleEl.classList.add('expanded');
-        bodyEl.classList.add('open');
-        bodyEl.addEventListener('transitionend', function handler(ev) {
-          if (ev.propertyName === 'max-height' && bodyEl.classList.contains('open')) {
-            bodyEl.classList.add('uncapped');
-          }
-          bodyEl.removeEventListener('transitionend', handler);
-        });
-        var ch2 = nodeEl.querySelector(':scope > .task-children');
-        if (ch2) ch2.style.display = '';
-      }
-    };
-  })(task, toggle, body, node);
-
-  return node;
-}
-
-/* ── Filters ── */
-
-function applyFilters() {
-  var status = document.getElementById('filter-status').value;
-  var search = document.getElementById('search-box').value.toLowerCase();
-  document.querySelectorAll('.task-node').forEach(function(el) {
-    var path = el.dataset.path || '';
-    var task = taskByPath[path];
-    if (!task) { el.style.display = ''; return; }
-    var visible = anyDescendantMatches(task, status, search);
-    el.style.display = visible ? '' : 'none';
-  });
-}
-
-/* ── DAG view ── */
-
-async function renderDag() {
-  var container = document.getElementById('view-dag');
-  var task = TASK_DATA;
-
-  if (!task.children.length) {
-    container.innerHTML = '<p style="color:var(--text-mute)">No subtasks to visualize.</p>';
-    return;
-  }
-
-  var statusColors = {
-    'not-started': '#e0e0e0', 'in-progress': '#bbdefb',
-    'implemented': '#fff9c4', 'revise': '#ffcdd2', 'approved': '#c8e6c9',
-    'archived': '#f5f5f5'
-  };
-
-  var mermaidCode = 'graph LR\\n';
-  var allTasks = flattenTasks(task).filter(function(t) { return t.path; });
-  for (var i = 0; i < allTasks.length; i++) {
-    var child = allTasks[i];
-    var s = child.effective_status;
-    var color = statusColors[s] || '#e0e0e0';
-    var nodeId = child.path.replace(/[^a-zA-Z0-9_]/g, '_');
-    mermaidCode += '    ' + nodeId + '["' + sanitizeMermaid(child.title || child.path) + '"]\\n';
-    mermaidCode += '    style ' + nodeId + ' fill:' + color + '\\n';
-  }
-  for (var j = 0; j < allTasks.length; j++) {
-    var ch = allTasks[j];
-    var childId = ch.path.replace(/[^a-zA-Z0-9_]/g, '_');
-    for (var k = 0; k < ch.depends_on.length; k++) {
-      var depId = ch.depends_on[k].replace(/[^a-zA-Z0-9_]/g, '_');
-      mermaidCode += '    ' + depId + ' --> ' + childId + '\\n';
-    }
-  }
-
-  container.innerHTML = '<div class="dag-controls">' +
-    '<strong>Dependency Graph:</strong> ' + esc(task.title || 'root') + '</div>' +
-    '<div class="mermaid">' + mermaidCode + '</div>';
-
-  try {
-    await mermaid.run({ nodes: container.querySelectorAll('.mermaid') });
-  } catch(e) {
-    container.innerHTML += '<p style="color:var(--st-rev-t);margin-top:8px">DAG render error: ' + esc(e.message) + '</p>';
-  }
-}
-
-/* ── Kanban view ── */
-
-function renderKanban() {
-  var container = document.getElementById('view-kanban');
-  container.innerHTML = '';
-  var statuses = ['not-started', 'in-progress', 'implemented', 'revise', 'approved', 'archived'];
-  var labels = {
-    'not-started': 'Not Started', 'in-progress': 'In Progress',
-    'implemented': 'Implemented', 'revise': 'Revise', 'approved': 'Approved',
-    'archived': 'Archived'
-  };
-  var all = flattenTasks(TASK_DATA).filter(function(t) { return t.is_leaf && t.path; });
-
-  for (var i = 0; i < statuses.length; i++) {
-    var st = statuses[i];
-    var col = document.createElement('div');
-    col.className = 'kanban-col';
-    var tasks = all.filter(function(t) { return t.effective_status === st; });
-    col.innerHTML = '<div class="kanban-col-header">' + labels[st] +
-      ' <span class="count">' + tasks.length + '</span></div>';
-    for (var j = 0; j < tasks.length; j++) {
-      (function(t) {
-        var card = document.createElement('div');
-        card.className = 'kanban-card';
-        card.innerHTML = '<div class="kanban-card-title">' + esc(t.title || t.path) + '</div>' +
-          '<div class="kanban-card-path">' + esc(t.path) + '</div>';
-        card.onclick = function() { showView('tree'); expandToPath(t.path); };
-        col.appendChild(card);
-      })(tasks[j]);
-    }
-    container.appendChild(col);
-  }
-}
-
-function expandToPath(path) {
-  var parts = path.split('/');
-  var accumulated = '';
-  for (var i = 0; i < parts.length; i++) {
-    accumulated = i === 0 ? parts[i] : accumulated + '/' + parts[i];
-    expandedTasks.add(accumulated);
-  }
-  renderTree();
-  requestAnimationFrame(function() {
-    var el = document.querySelector('.task-node[data-path="' + path + '"]');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  });
-}
-
-document.addEventListener('DOMContentLoaded', init);
-</script>
-</body>
-</html>
-"""
+# The `generate` subcommand renders the SAME base.html template the live server
+# serves, in standalone mode: every fragment the live client fetches (/nav,
+# /nav/<path>, /node/<path>, /dag?root=<path>, /kanban) is pre-rendered here with
+# the identical Jinja partials and embedded inline, and base.html's standalone
+# fetch shim resolves the client's fetch() calls from that embedded map. There
+# is exactly one dashboard source (base.html + its partials); no duplicate
+# template string.
+
+
+def _build_standalone_fragments() -> dict[str, str]:
+    """Pre-render every server fragment the standalone client fetches.
+
+    Mirrors the live routes (/nav, /nav/<path>, /node/<path>, /dag?root=<path>,
+    /kanban) byte-for-byte by reusing the same render helpers, keyed by the exact
+    URL the client requests so base.html's standaloneFetch resolves them offline.
+    Assumes module state (``_root_task``, ``_project_root``) is already set.
+    """
+    assert _root_task is not None
+    fragments: dict[str, str] = {}
+
+    # /nav — the body-free sidebar tree (root-or-children logic, depth<3 inline).
+    env = _get_jinja_env()
+    nav_tmpl = env.from_string(
+        '{%- from "nav_node.html" import render_nav_node -%}'
+        '{% if root_task.body and root_task.body.strip() %}'
+        '{{ render_nav_node(root_task, depth=0) }}'
+        '{% else %}'
+        '{% for child in root_task.children %}'
+        '{{ render_nav_node(child, depth=0) }}'
+        '{% endfor %}'
+        '{% endif %}'
+    )
+    fragments["/nav"] = nav_tmpl.render(root_task=_root_task)
+
+    # Per-task fragments: /node/<path>, /dag?root=<path>, and /nav/<path> for any
+    # non-leaf (the depth>=3 lazy branches the sidebar requests on first open).
+    # The /dag key uses the bare path: the client requests
+    # /dag?root=encodeURIComponent(path), and task slugs ([A-Za-z0-9-] plus '/')
+    # contain nothing encodeURIComponent escapes, so the encoded URL == the path.
+    all_tasks = collect_all_tasks(_root_task)
+    for task in all_tasks:
+        fragments[f"/node/{task.path}"] = _render_node_body(task)
+        fragments[f"/dag?root={task.path}"] = _render_dag_fragment(task)
+        if task.children:
+            fragments[f"/nav/{task.path}"] = _render_nav_children(task)
+
+    # /kanban — the full board.
+    kanban_tmpl = env.get_template("kanban.html")
+    fragments["/kanban"] = kanban_tmpl.render(all_tasks=all_tasks)
+
+    return fragments
+
+
+def _render_dag_fragment(task: Task) -> str:
+    """Render dag.html scoped to a task's direct children — the same payload the
+    live ``GET /dag?root=<path>`` route returns (sibling-only graph)."""
+    env = _get_jinja_env()
+    template = env.get_template("dag.html")
+    return template.render(root_task=task, all_tasks=list(task.children))
 
 
 def generate_dashboard(plan_root: Path, output_path: Path | None = None) -> Path:
-    """Generate a self-contained static HTML dashboard (backward-compat)."""
-    root = walk_plan(plan_root)
-    data = tree_to_json(root)
+    """Generate a self-contained static HTML dashboard from base.html.
+
+    Renders base.html in standalone mode with all server fragments pre-rendered
+    and embedded inline, so the output opens via ``file://`` with zero network
+    calls for task data.  Import-compatible with the previous implementation:
+    same signature, defaults ``output_path`` to ``plan_root / "dashboard.html"``,
+    writes the file, prints the path, and returns it.
+    """
+    global _root_task, _task_index, _project_root
 
     if output_path is None:
         output_path = plan_root / "dashboard.html"
 
-    data_json = json.dumps(data, indent=2)
-    data_json = data_json.replace("<", "\\u003c").replace(">", "\\u003e")
-    html = DASHBOARD_HTML.replace("__TASK_DATA_JSON__", data_json)
+    # Configure module state the render helpers read (mirrors the serve lifespan).
+    _root_task = walk_plan(plan_root)
+    _task_index = {}
+    _build_index(_root_task, _task_index)
+    _project_root = str(plan_root.resolve().parent)
 
+    all_tasks = collect_all_tasks(_root_task)
+    fragments = _build_standalone_fragments()
+
+    # Where the embedded .plan tree sits relative to the dashboard file, so
+    # standalone <img> sources resolve from a file:// open.  The dashboard is
+    # written into plan_root, and tasks reference figures relative to their dir,
+    # so the prefix is just the plan-root directory name plus a slash.
+    output_parent = output_path.resolve().parent
+    try:
+        plan_rel = plan_root.resolve().relative_to(output_parent)
+        standalone_plan_dir = f"{plan_rel.as_posix()}/"
+    except ValueError:
+        standalone_plan_dir = ""
+    # The committed default (dashboard.html written INTO plan_root) means task
+    # dirs sit beside the file, so no .plan/ prefix is needed.
+    if output_parent == plan_root.resolve():
+        standalone_plan_dir = ""
+
+    env = _get_jinja_env()
+    template = env.get_template("base.html")
+    html = template.render(
+        root_task=_root_task,
+        all_tasks=all_tasks,
+        project_root=_project_root,
+        standalone=True,
+        standalone_fragments=fragments,
+        standalone_plan_dir=standalone_plan_dir,
+    )
+
+    # XSS-safe: the embedded fragments and data are injected via Jinja's `| tojson`
+    # filter, which escapes `<`, `>`, `&`, and line separators (so an embedded
+    # `</script>` cannot prematurely close the <script> block).
     output_path.write_text(html, encoding="utf-8")
     print(f"Dashboard written to {output_path}")
     return output_path

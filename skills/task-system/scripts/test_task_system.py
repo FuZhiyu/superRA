@@ -741,16 +741,77 @@ class TestPlanMigrate:
 
 
 class TestDashboard:
+    """The static `generate` path renders base.html in standalone mode — one
+    template, server-less, with all fragments embedded inline."""
+
     def test_generate_dashboard(self, plan_root):
         output = plan_root / "dashboard.html"
-        plan_dashboard.generate_dashboard(plan_root, output)
+        ret = plan_dashboard.generate_dashboard(plan_root, output)
+        assert ret == output
         assert output.exists()
         html = output.read_text(encoding="utf-8")
-        assert "Plan Dashboard" in html
-        assert "TASK_DATA" in html
+        # Rendered from base.html: real titles, not the old fallback string.
         assert "Test Project" in html
         assert "First Task" in html
-        assert "mermaid" in html
+        # base.html's full feature set (absent from the deleted DASHBOARD_HTML).
+        assert "function renderMarkdown" in html
+        assert "katex" in html
+
+    def test_generate_defaults_output_into_plan_root(self, plan_root):
+        ret = plan_dashboard.generate_dashboard(plan_root)
+        assert ret == plan_root / "dashboard.html"
+        assert ret.exists()
+
+    def test_generate_is_standalone(self, plan_root):
+        html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
+        assert "window.STANDALONE = true" in html
+        assert "STANDALONE_FRAGMENTS =" in html
+
+    def test_generate_has_no_live_server_calls(self, plan_root):
+        """The export must make zero network/SSE calls for task data."""
+        html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
+        assert "sse-connect=" not in html
+        assert 'hx-ext="sse"' not in html
+        assert "EventSource(" not in html
+        assert "new WebSocket" not in html
+        # No live server-only affordances rendered.
+        assert 'id="worktree-selector"' not in html
+        assert 'id="sse-full-reload"' not in html
+
+    def test_generate_embeds_fragments_inline(self, plan_root):
+        """Every fragment the standalone client fetches is pre-rendered inline."""
+        html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
+        # Nav tree, per-node bodies, per-node child DAGs, and the kanban board.
+        assert "/nav" in html
+        assert "/node/01-first" in html
+        assert "/dag?root=02-second" in html
+        assert "/kanban" in html
+        # The embedded data carries the section markdown payloads.
+        assert "Found 100 rows" in html
+
+    def test_dashboard_html_constant_removed(self):
+        """The duplicate hand-maintained template is gone — one source remains."""
+        src = (SCRIPTS_DIR / "plan_dashboard.py").read_text("utf-8")
+        assert "DASHBOARD_HTML" not in src
+
+    def test_build_standalone_fragments_match_server_routes(self, plan_root):
+        """Pre-rendered fragments are byte-identical to the live route output."""
+        pytest.importorskip("httpx")
+        from fastapi.testclient import TestClient
+
+        plan_dashboard.PLAN_ROOT = plan_root
+        # Generate to set module state, then build the fragment map.
+        plan_dashboard.generate_dashboard(plan_root)
+        fragments = plan_dashboard._build_standalone_fragments()
+
+        with TestClient(plan_dashboard.app) as c:
+            assert fragments["/nav"] == c.get("/nav").text
+            assert fragments["/node/01-first"] == c.get("/node/01-first").text
+            assert fragments["/kanban"] == c.get("/kanban").text
+            assert (
+                fragments["/dag?root=02-second"]
+                == c.get("/dag", params={"root": "02-second"}).text
+            )
 
 
 # --- parse_body_sections tests ---

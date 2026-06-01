@@ -1083,11 +1083,13 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
           aria-label="Open navigation" aria-controls="nav-tree" aria-expanded="false"
           onclick="toggleDrawer()">&#9776;</button>
   <span class="header-title" id="header-title">{{ root_task.title or 'Plan Dashboard' }}</span>
+  {% if not standalone %}
   <div class="worktree-selector" id="worktree-selector">
     <span class="wt-icon" title="Switch worktree">&#9095;</span>
     <select class="hc-select" id="worktree-select" onchange="switchWorktree(this.value)">
     </select>
   </div>
+  {% endif %}
   <div class="header-stats" id="summary-bar"
        sse-swap="summary-updated"
        hx-swap="innerHTML">
@@ -1112,9 +1114,11 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
 </div>
 
 <!-- ── Content ── -->
-<div class="main-content" hx-ext="sse" sse-connect="/events">
+<div class="main-content"{% if not standalone %} hx-ext="sse" sse-connect="/events"{% endif %}>
+  {% if not standalone %}
   {#- Hidden element to catch full-reload SSE events -#}
   <div id="sse-full-reload" sse-swap="full-reload" hx-swap="none" style="display:none;"></div>
+  {% endif %}
 
   {#- Master-detail workspace: persistent sidebar nav-tree + drill-down main panel.
       Region content is loaded client-side by the activePath router (sidebar-nav
@@ -1166,6 +1170,71 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
 </div>
 
 <script>
+{% if standalone %}
+/* ══════════════════════════════════════════════════════════════════════════
+   STANDALONE MODE — server-less single-file export.
+   ──────────────────────────────────────────────────────────────────────────
+   The live dashboard fetches HTML/JSON fragments from the FastAPI server
+   (/nav, /nav/<path>, /node/<path>, /dag?root=<path>, /kanban, /api/*). A file
+   opened via file:// has no server, so generate_dashboard() pre-renders every
+   one of those fragments with the SAME Jinja partials the server uses and
+   embeds them here as a {url -> fragment} map. The fetch shim below resolves
+   the client's fetch() calls from that map (and no-ops the server-only /api/*
+   writes), so navigation, view-switching, lazy nav loads, and markdown/figure
+   rendering all work offline with zero network calls for task data. Server-only
+   affordances (comments, worktree switch, SSE auto-refresh) are degraded: their
+   controls are hidden in the template and their fetches resolve to empty.
+   ══════════════════════════════════════════════════════════════════════════ */
+window.STANDALONE = true;
+var STANDALONE_FRAGMENTS = {{ standalone_fragments | tojson }};
+/* Relative directory (from the dashboard file) holding the embedded .plan tree,
+   used to resolve task-relative <img> sources to a file:// path that resolves
+   offline. Empty string keeps image sources task-relative to the file. */
+var STANDALONE_PLAN_DIR = {{ standalone_plan_dir | tojson }};
+
+/* Build a fake Response that yields a pre-rendered fragment (or [] for the
+   comment/summary JSON endpoints). Mirrors just enough of the fetch Response
+   contract for the existing loaders: ok, status, text(), json(). */
+function _standaloneResponse(payload, found) {
+  return Promise.resolve({
+    ok: found,
+    status: found ? 200 : 404,
+    text: function () { return Promise.resolve(found ? payload : ''); },
+    json: function () { return Promise.resolve(found ? payload : null); },
+  });
+}
+
+/* Resolve a fetch URL against the embedded data instead of the network.
+   - Exact fragment hits (/nav, /node/<path>, /dag?root=<path>, /kanban,
+     /nav/<path>) return their pre-rendered HTML.
+   - Comment GETs return [] / {} so loadComments + the summary badge no-op.
+   - Worktree GET returns a single-entry payload so the selector stays hidden.
+   - Server-only writes (POST/PATCH/DELETE /api/*) resolve ok with no effect;
+     their UI controls are hidden in standalone mode, so they are never reached
+     in normal use — this only keeps a stray call from throwing. */
+function standaloneFetch(url) {
+  if (STANDALONE_FRAGMENTS.hasOwnProperty(url)) {
+    return _standaloneResponse(STANDALONE_FRAGMENTS[url], true);
+  }
+  if (/\/comments($|\?)/.test(url)) return _standaloneResponse([], true);
+  if (url.indexOf('/api/comments/summary') !== -1) return _standaloneResponse({}, true);
+  if (url.indexOf('/api/worktrees') !== -1) {
+    return _standaloneResponse({ current: '', worktrees: [] }, true);
+  }
+  return _standaloneResponse(null, false);
+}
+
+/* Replace window.fetch wholesale in standalone mode. Every task-data load in
+   this page goes through fetch(); routing them here guarantees zero network
+   calls for task content from a file:// open. */
+window.fetch = function (input) {
+  var url = typeof input === 'string' ? input : (input && input.url) || '';
+  return standaloneFetch(url);
+};
+{% else %}
+window.STANDALONE = false;
+{% endif %}
+
 /* ── Markdown-it setup ── */
 var md = window.markdownit({ html: false, linkify: true });
 md.use(texmath, { engine: katex, delimiters: 'dollars' });
@@ -1195,11 +1264,19 @@ function renderMarkdown(text, sectionName, taskPath) {
     }
   });
 
-  /* Rewrite relative image sources to /files/ endpoint */
+  /* Rewrite relative image sources. In server mode they resolve via the /files/
+     route; in standalone mode there is no server, so resolve them relative to
+     the dashboard file (STANDALONE_PLAN_DIR points at the embedded .plan tree)
+     so figures load from a file:// open. */
   container.querySelectorAll('img[src]').forEach(function(img) {
     var src = img.getAttribute('src');
     if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
-      img.setAttribute('src', '/files/' + pathPrefix + src);
+      if (window.STANDALONE) {
+        var rel = taskPath ? STANDALONE_PLAN_DIR + taskPath + '/' + src : STANDALONE_PLAN_DIR + src;
+        img.setAttribute('src', rel);
+      } else {
+        img.setAttribute('src', '/files/' + pathPrefix + src);
+      }
     }
   });
 
@@ -1215,12 +1292,16 @@ function renderMarkdown(text, sectionName, taskPath) {
         wrapper.className = 'commentable-block';
         wrapper.setAttribute('data-section', sectionName);
         wrapper.setAttribute('data-block', blockIndex);
-        var btn = document.createElement('button');
-        btn.className = 'comment-gutter-btn';
-        btn.textContent = '+';
-        btn.setAttribute('onclick', 'showCommentForm(this)');
         container.insertBefore(wrapper, child);
-        wrapper.appendChild(btn);
+        /* The comment "+" gutter button needs the server to persist a comment;
+           in standalone mode there is no server, so omit it — no dead control. */
+        if (!window.STANDALONE) {
+          var btn = document.createElement('button');
+          btn.className = 'comment-gutter-btn';
+          btn.textContent = '+';
+          btn.setAttribute('onclick', 'showCommentForm(this)');
+          wrapper.appendChild(btn);
+        }
         wrapper.appendChild(child);
         blockIndex++;
       }

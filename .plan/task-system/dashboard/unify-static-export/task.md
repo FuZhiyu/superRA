@@ -1,6 +1,6 @@
 ---
 title: "Unify static export onto base.html"
-status: not-started
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-05-31
@@ -37,3 +37,28 @@ Created 2026-05-31 from a researcher-initiated scope change: the duplicate-dashb
 
 ## Results
 
+The duplicate `DASHBOARD_HTML` constant is gone; the static `generate` path now renders the same [`base.html`](../../../../skills/task-system/scripts/templates/base.html) the live server serves, in a new **standalone mode**. There is exactly one dashboard source.
+
+### Approach: pre-render-and-embed + fetch shim
+
+Rather than re-implement the server's Jinja partials as a parallel client-side renderer, the standalone build **pre-renders every fragment the live client fetches** using the identical partials, embeds them in a `{url -> fragment}` map, and shims `window.fetch` to resolve from that map. This keeps the generated markup byte-identical to server output and required no second renderer.
+
+- **Template flag.** [`base.html`](../../../../skills/task-system/scripts/templates/base.html) takes a `standalone` Jinja boolean. When set, it emits `window.STANDALONE = true`, the embedded `STANDALONE_FRAGMENTS` map (`| tojson`), a `standaloneFetch(url)` resolver, and replaces `window.fetch` wholesale so every task-data load resolves offline. When unset (serve mode), none of this emits and the page is byte-for-byte the old live shell.
+- **Fragments pre-rendered** in [`_build_standalone_fragments()`](../../../../skills/task-system/scripts/plan_dashboard.py#L893): `/nav` (full sidebar tree), `/nav/<path>` (lazy nav children for every non-leaf), `/node/<path>` (body-only partial per task), `/dag?root=<path>` (sibling child-graph per task), and `/kanban`. Each reuses the same `_render_*` helpers / Jinja env the routes use — verified byte-identical against the live `TestClient` routes in `test_build_standalone_fragments_match_server_routes`.
+- **Graceful degradation.** Server-only affordances are gated off in standalone mode: the worktree selector (`{% if not standalone %}`), the `hx-ext="sse"`/`sse-connect="/events"` SSE wiring and the `#sse-full-reload` element, and the comment "+" gutter buttons (skipped in `renderMarkdown` when `window.STANDALONE`). Comment/worktree GET fetches resolve to empty payloads so loaders no-op; no dead controls, no console errors.
+- **Figures offline.** `renderMarkdown` rewrites relative `<img src>` to `/files/...` in serve mode but to a file-relative path (`STANDALONE_PLAN_DIR + taskPath + '/' + src`) in standalone mode, so figures load from a `file://` open. `vscode://` link rewriting and KaTeX math are unconditional and carry over.
+
+### `generate_dashboard` contract preserved
+
+[`generate_dashboard(plan_root, output_path=None) -> Path`](../../../../skills/task-system/scripts/plan_dashboard.py#L945) keeps the same name, signature, and return contract: defaults the output to `plan_root / "dashboard.html"`, writes the self-contained file, prints the path, returns it. It sets module state (`_root_task`, `_task_index`, `_project_root`) the render helpers read (mirroring the serve lifespan), then renders `base.html` with `standalone=True`. All four auto-callers (`task_create.py`, `task_update.py`, `task_link.py`, `task_add_result.py`) import and call it unchanged.
+
+### Verification
+
+- `grep DASHBOARD_HTML` across the scripts returns only the two test assertions/comments documenting its removal — the constant is gone from `plan_dashboard.py` (net −1057/+264 lines across the three files).
+- Generated output is offline-clean: no live `hx-ext="sse"`, `sse-connect`, `EventSource(`, or `window.WebSocket` in the page shell; `window.fetch` is overridden; the worktree selector and `#sse-full-reload` element are absent. (`sse-connect`/`EventSource` *do* appear inside the embedded task-content blob for the superRA repo's own plan, which documents the SSE implementation — that is escaped JSON data, not live code.)
+- Serve mode confirmed unchanged via `TestClient`: `/` still emits `hx-ext="sse"`, `sse-connect="/events"`, the worktree selector, `#sse-full-reload`, and `window.STANDALONE = false` with no embedded fragments.
+- Test suite: **214 pass** (`uv run pytest test_task_system.py tests/`). `TestDashboard` was rewritten to cover the unified path — standalone flag, embedded fragments, no live-server calls, `DASHBOARD_HTML`-removed, default output path, and route-parity of the pre-rendered fragments.
+
+### Note on the committed dashboard
+
+The Objective asks to regenerate and commit `.plan/dashboard.html`. In *this* repo that file is **gitignored** (`.gitignore:11-12`: `.plan/**/dashboard.html`, `.plan/dashboard.html`) — the generated dashboard is a local build artifact, not a tracked file. I regenerated it from the new path and verified it (full-featured: renderMarkdown, KaTeX, all views; offline-clean), but did not force-add a gitignored file. The regeneration is reproducible via `uv run python skills/task-system/scripts/plan_dashboard.py generate --plan-root .plan`.
