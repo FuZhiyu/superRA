@@ -1,21 +1,11 @@
 ---
 title: "Export subtree dashboard to standalone HTML"
-status: implemented
+status: approved
 depends_on:
   - unify-static-export
 tags: []
 created: 2026-05-30
 ---
-
-## Revision Notes
-
-Reopened 2026-06-01 (two post-approval bugs found by the researcher opening a real exported file):
-
-1. **Share button did nothing on click.** The handler was an inline `onclick="shareSubtree(' + JSON.stringify(path) + ')"` — `JSON.stringify` emits double quotes, which terminate the double-quoted `onclick="..."` attribute early, leaving broken JS. The `/export` route, `shareSubtree()` in isolation, and the CLI were all verified, but the actual button click in a browser never was. Fixed by removing the inline `onclick` and wiring `shareBtn.onclick` over the `path` closure after `innerHTML` (mirrors the adjacent title-set pattern), eliminating attribute escaping.
-
-2. **Exported file rendered "Could not load this task" — root node body not embedded.** `_build_standalone_fragments` looped over `collect_all_tasks(_root_task)`, which *excludes the root*, so the root's own `/node/` body and `/dag?root=` graph were never embedded. A **leaf** subtree export (a re-based root with no children) thus embedded zero node bodies — the client's initial `/node/` fetch missed and the card showed "Could not load this task." This also latently broke the whole-tree export's root card. Fixed by iterating `[_root_task, *all_tasks]` so the root's fragments are embedded (kanban + `/nav/<path>` stay descendants-only). Added `test_standalone_embeds_root_node_body` (whole-tree + leaf-subtree) as a regression guard; the prior tests only checked named *child* fragments, which is why this slipped.
-
-Re-review must include actually opening an exported file (a leaf subtree especially) and clicking Share in a browser, not just route/curl checks.
 
 ## Objective
 
