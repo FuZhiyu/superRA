@@ -94,6 +94,17 @@ def create_task(
     output_files = output_files or []
 
     task_dir = plan_root / task_path
+    resolved_root = plan_root.resolve()
+    resolved_task = task_dir.resolve()
+    try:
+        resolved_task.relative_to(resolved_root)
+    except ValueError:
+        print(
+            f"Error: task path escapes the task root: {task_path!r}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     if task_dir.exists():
         print(f"Error: directory already exists: {task_dir}", file=sys.stderr)
         sys.exit(1)

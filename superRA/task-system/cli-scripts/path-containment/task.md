@@ -1,6 +1,6 @@
 ---
 title: "Path Containment for Task Creation"
-status: not-started
+status: implemented
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -30,3 +30,25 @@ PR #29 review flagged that `create_task()` builds `task_dir = plan_root / task_p
 
 ## Results
 
+### Fix
+
+Added containment check in [`task_create.py`](skills/task-system/scripts/task_create.py) inside `create_task()`, immediately after `task_dir` is constructed and before any filesystem read or write. The check resolves both `plan_root` and `task_dir` via `.resolve()`, then calls `resolved_task.relative_to(resolved_root)`. On `ValueError` it prints an error and calls `sys.exit(1)`.
+
+The check is 8 lines, local to `create_task()`, and adds no new imports or helpers. It covers both `..` traversal (e.g. `../escaped`) and absolute paths outside the root, because both fail `relative_to` after resolution.
+
+### Tests
+
+Added three tests to `TestTaskCreate` in [`test_task_system.py`](skills/task-system/scripts/test_task_system.py):
+
+- `test_traversal_rejected` — `--path ../escaped` exits 1 and creates no file.
+- `test_absolute_path_outside_root_rejected` — absolute path outside root exits 1 and creates no file.
+- `test_valid_nested_create_succeeds` — a valid nested path (`04-parent/01-child`) succeeds.
+
+### Verification
+
+```
+uv run pytest skills/task-system/scripts/test_task_system.py -v
+# 208 passed in 2.62s
+```
+
+All three new tests were confirmed to fail on the pre-fix code (the `../escaped` case created the file successfully) and pass after the fix.

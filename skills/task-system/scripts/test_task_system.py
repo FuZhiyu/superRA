@@ -566,6 +566,45 @@ class TestTaskCreate:
         serve = plan_root / "serve"
         assert not serve.exists()
 
+    def test_traversal_rejected(self, plan_root, tmp_path):
+        """Path traversal via .. is rejected before any filesystem mutation."""
+        with pytest.raises(SystemExit) as exc_info:
+            task_create.create_task(
+                plan_root=plan_root,
+                task_path="../escaped",
+                title="Escaped",
+            )
+        assert exc_info.value.code == 1
+        assert not (tmp_path / "escaped").exists()
+
+    def test_absolute_path_outside_root_rejected(self, plan_root, tmp_path):
+        """An absolute path outside the task root is rejected."""
+        outside = str(tmp_path / "outside")
+        with pytest.raises(SystemExit) as exc_info:
+            task_create.create_task(
+                plan_root=plan_root,
+                task_path=outside,
+                title="Outside",
+            )
+        assert exc_info.value.code == 1
+        assert not Path(outside).exists()
+
+    def test_valid_nested_create_succeeds(self, plan_root):
+        """A valid nested path (existing parent) is created without error."""
+        parent = plan_root / "04-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        task_create.create_task(
+            plan_root=plan_root,
+            task_path="04-parent/01-child",
+            title="Child Task",
+            objective="A nested task.",
+        )
+        task_md = plan_root / "04-parent" / "01-child" / "task.md"
+        assert task_md.exists()
+        task = _task_io.parse_task(task_md)
+        assert task.title == "Child Task"
+
 
 class TestTaskUpdate:
     def test_update_status(self, plan_root):
