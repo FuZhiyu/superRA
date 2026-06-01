@@ -530,6 +530,25 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   margin: 0;
 }
 .active-node-head .badge { align-self: center; }
+/* Share/Export control — pushed to the trailing edge of the card header. */
+.share-btn {
+  margin-left: auto;
+  align-self: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.share-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
 /* The card body reuses the tree-body section/comment chrome, but it is always
    shown (no collapse animation gating its height like a tree row). */
 .active-node-body { display: block; }
@@ -1816,6 +1835,12 @@ async function loadActiveNode(path) {
       '<header class="active-node-head">'
       + '<h2 class="active-node-title" tabindex="-1"></h2>'
       + (status ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
+      /* Share/Export: download this node's subtree as a standalone HTML file.
+         Server-backed (/export), so it is omitted in standalone mode — a
+         downloaded file has no server to re-export from. */
+      + (window.STANDALONE ? '' :
+         '<button class="share-btn" type="button" title="Download this subtree as a standalone HTML file"'
+         + ' onclick="shareSubtree(' + JSON.stringify(path) + ')">Share</button>')
       + '</header>'
       /* Wrap the body in a real .task-node so the comment/section helpers,
          which all resolve via `.task-node[data-path]`, find their context. */
@@ -1852,6 +1877,22 @@ async function loadActiveNode(path) {
     if (token !== loadActiveNode._token) return;
     region.innerHTML = '<p style="color:var(--st-rev-t)">Load error: ' + e.message + '</p>';
   }
+}
+
+/* Share/Export: hand off to the server's /export route, which returns the
+   subtree's standalone HTML with Content-Disposition: attachment so the browser
+   saves it directly. A bare-path root exports the whole tree; a task path scopes
+   to that subtree. We navigate a hidden anchor (not location.href) so the
+   attachment download never replaces the dashboard page. Server-only — the
+   button is omitted in standalone mode. */
+function shareSubtree(path) {
+  var url = '/export' + (path ? '?root=' + encodeURIComponent(path) : '');
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '';   /* let Content-Disposition pick the filename */
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 /* Open one section in the active-node card: mirror toggleSection's expand

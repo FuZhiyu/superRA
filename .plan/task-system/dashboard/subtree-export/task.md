@@ -1,6 +1,6 @@
 ---
 title: "Export subtree dashboard to standalone HTML"
-status: not-started
+status: implemented
 depends_on:
   - unify-static-export
 tags: []
@@ -36,3 +36,33 @@ Updated 2026-05-31 (later): researcher confirmed building this now and centered 
 
 ## Results
 
+Subtree scoping is layered onto the unified standalone machinery from `[unify-static-export](../unify-static-export/task.md)` — no parallel renderer, no second template. Both deliverables ship: a live-dashboard **Share** button backed by a `GET /export` route, and a CLI `generate --root <task-path>` flag. Whole-tree `generate` (the default, with no `--root`) is byte-identical to before.
+
+### Key design decision: re-base, don't keep full paths
+
+The Objective sketched "locate the node with `_find_task(<path>)` and scope `_root_task` to that node." A located node keeps its **full** tree path (e.g. `task-system/dashboard`) because [`parse_task`](../../../../skills/task-system/scripts/_task_io.py#L232) computes every `task.path` relative to the git-discovered `.plan` root, not relative to where the walk starts. Keeping full paths breaks the standalone+navigation machinery in three ways, all of which key on `task.path` treating the empty string as the root:
+
+- The breadcrumb splits `activePath` and renders an ancestor crumb per segment; full paths produce dead crumbs (`root › task-system › dashboard › …`) for ancestors not in the export, whose `/node/<ancestor>` fragments don't exist → empty cards.
+- `_task_depth(task.path)` drives nav inline-vs-lazy: a depth-3 subtree root renders everything lazy-loaded immediately instead of inlining to depth 2.
+- The JS router boots at `activePath = ''` and the nav root id is `task-root` ([nav_node.html:20](../../../../skills/task-system/scripts/templates/nav_node.html#L20)); a full-path root row id (`task-task-system-dashboard`) never matches, so the initial active node 404s and the highlight is lost.
+
+So the increment **re-bases** the subtree: [`_rebase_subtree(task, root_path)`](../../../../skills/task-system/scripts/plan_dashboard.py#L984) strips the `root_path + '/'` prefix from every path so the subtree node becomes `path=""` and descendants are relative to it. The identical machinery then renders the subtree exactly as it renders a whole tree. `depends_on` holds sibling slugs (last segment), unaffected by re-basing; `dir_path` is left untouched so figure/file resolution still points at real dirs.
+
+### Implementation
+
+- **Render extraction.** [`render_standalone_html(plan_root, output_path, root)`](../../../../skills/task-system/scripts/plan_dashboard.py#L1017) returns the standalone HTML string (no file write). When `root` is given it walks the full tree, `_build_index` + dict-lookup to locate the node (raising `KeyError` if absent), re-bases it, and drives module state (`_root_task`/`_task_index`/`_project_root`) off the re-based subtree — so `_build_standalone_fragments()`, `collect_all_tasks`, and `TASK_PATHS` all scope to the subtree automatically. [`generate_dashboard`](../../../../skills/task-system/scripts/plan_dashboard.py#L1089) is now a thin writer over it; its name/signature/return contract are preserved (the four auto-callers import it unchanged) with `root=None` added as an optional third arg.
+- **Figure prefix.** `standalone_plan_dir` is computed from the **subtree** dir (its real on-disk `dir_path`) relative to the output file, so re-based task paths resolve their `<img>` sources from a `file://` open (e.g. default-output-into-`.plan` + `--root task-system/dashboard` → prefix `task-system/dashboard/`).
+- **Share route.** [`GET /export?root=<path>`](../../../../skills/task-system/scripts/plan_dashboard.py#L887) returns the subtree's standalone HTML with `Content-Disposition: attachment; filename="<slug>-dashboard.html"`. It snapshots and restores the live server's module state around the render (via [`_set_module_state`](../../../../skills/task-system/scripts/plan_dashboard.py#L1008)) so a Share click never perturbs the running server. Empty `root` exports the whole tree.
+- **Share button.** The active-node card builder in [base.html](../../../../skills/task-system/scripts/templates/base.html#L1838) emits a `Share` button (server-mode only — gated on `!window.STANDALONE`, since a downloaded file has no server to re-export from), and [`shareSubtree(path)`](../../../../skills/task-system/scripts/templates/base.html#L1888) navigates a hidden `<a download>` to `/export?root=…` so the attachment download never replaces the page. Styled with a new `.share-btn` rule using the accent tokens.
+- **CLI.** `generate` gains `--root <task-path>`; an unknown root prints an error and exits 1.
+
+### Validation
+
+- **Offline-clean (subtree).** A `--root task-system/dashboard` export against the real `.plan` tree: `window.STANDALONE = true`, `window.fetch` overridden, no `hx-ext="sse"` / `sse-connect` / `EventSource(`, no `worktree-selector` / `sse-full-reload`, `resolveInternalTaskPath` + `TASK_PATHS` retained. All 45 embedded task paths and `/node` fragment keys are re-based (no `task-system/` prefix, no out-of-subtree siblings).
+- **Share route.** Returns 200 with `attachment` disposition; subtree scoping confirmed (`00-flow` export contains re-based child `a`, excludes sibling `01-flat`); unknown root → 404; live `/node` + `/` unchanged after an export (state restored).
+- **Whole-tree unchanged.** `generate_dashboard(root=None)` is byte-identical to the bare call (regression-locked by a test). `.plan/dashboard.html` regenerates without error (gitignored — regenerate-only, not committed).
+- **Tests.** `uv run pytest skills/task-system/scripts/test_task_system.py skills/task-system/scripts/test_dashboard.py skills/task-system/scripts/tests/` → **298 passed**. New: 5 subtree-build tests in `TestDashboard` (path-set scoping, fragment scoping, offline-clean, unknown-root, whole-tree-unchanged) and 5 route tests in `TestServerRoutes` (attachment, subtree scope+filename, unknown-root 404, live-state-undisturbed, Share-button wired).
+
+### Known limitation
+
+Figures in a *downloaded* share file are non-portable (the prefix resolves against the embedded `.plan` tree's location, which isn't beside a file saved to Downloads) — the same single-file limitation the whole-tree export already has. The export is otherwise fully self-contained and offline.

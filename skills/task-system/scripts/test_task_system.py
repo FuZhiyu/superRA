@@ -855,6 +855,69 @@ class TestDashboard:
                 == c.get("/dag", params={"root": nested}).text
             )
 
+    def test_subtree_export_scopes_paths_to_subtree(self, plan_with_branches):
+        """A --root export re-bases every embedded task path so the subtree node
+        is the root: paths are relative to it and out-of-subtree siblings are
+        absent."""
+        out = plan_with_branches / "sub.html"
+        plan_dashboard.generate_dashboard(
+            plan_with_branches, out, root="01-data-prep"
+        )
+        html = out.read_text("utf-8")
+        # Re-based: the subtree's children appear under their relative paths.
+        assert 'set["01-load"] = true' in html
+        assert 'set["02-merge"] = true' in html
+        # The full tree path of the subtree root is gone (re-based to "").
+        assert 'set["01-data-prep' not in html
+        # The out-of-subtree sibling never enters the embedded path set.
+        assert 'set["02-estimation"] = true' not in html
+
+    def test_subtree_export_fragments_cover_only_subtree(self, plan_with_branches):
+        """The pre-rendered fragment map covers exactly the subtree, keyed by
+        re-based paths, with no whole-tree-only fragments leaking in."""
+        out = plan_with_branches / "sub.html"
+        plan_dashboard.generate_dashboard(
+            plan_with_branches, out, root="01-data-prep"
+        )
+        html = out.read_text("utf-8")
+        assert '"/node/01-load"' in html
+        assert '"/node/02-merge"' in html
+        # Out-of-subtree node fragment must not be embedded.
+        assert '"/node/02-estimation"' not in html
+        # No un-rebased full-path fragment keys survive.
+        assert '/node/01-data-prep/' not in html
+
+    def test_subtree_export_is_offline_clean(self, plan_with_branches):
+        """The subtree export inherits the standalone offline-clean property:
+        embedded data, no SSE/worktree controls."""
+        out = plan_with_branches / "sub.html"
+        plan_dashboard.generate_dashboard(
+            plan_with_branches, out, root="01-data-prep"
+        )
+        html = out.read_text("utf-8")
+        assert "window.STANDALONE = true" in html
+        assert "STANDALONE_FRAGMENTS =" in html
+        assert "sse-connect=" not in html
+        assert 'hx-ext="sse"' not in html
+        assert "EventSource(" not in html
+        assert 'id="worktree-selector"' not in html
+        assert 'id="sse-full-reload"' not in html
+
+    def test_subtree_export_unknown_root_raises(self, plan_with_branches):
+        with pytest.raises(KeyError):
+            plan_dashboard.generate_dashboard(
+                plan_with_branches, plan_with_branches / "x.html", root="no/such"
+            )
+
+    def test_whole_tree_export_unchanged_by_root_param(self, plan_root):
+        """generate_dashboard(root=None) is byte-identical to the bare call —
+        adding the subtree-scoping branch did not perturb the whole-tree path."""
+        a = plan_dashboard.generate_dashboard(plan_root, plan_root / "a.html")
+        b = plan_dashboard.generate_dashboard(
+            plan_root, plan_root / "b.html", root=None
+        )
+        assert a.read_text("utf-8") == b.read_text("utf-8")
+
 
 # --- parse_body_sections tests ---
 

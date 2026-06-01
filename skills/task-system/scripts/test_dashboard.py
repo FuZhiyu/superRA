@@ -233,6 +233,51 @@ class TestServerRoutes:
         # Each column has a kanban-col-header; count those for the 6 statuses
         assert resp.text.count("kanban-col-header") == 6
 
+    def test_export_returns_attachment(self, client):
+        """The Share route returns standalone HTML as a file download."""
+        resp = client.get("/export")
+        assert resp.status_code == 200
+        cd = resp.headers.get("content-disposition", "")
+        assert "attachment" in cd
+        assert ".html" in cd
+        assert "window.STANDALONE = true" in resp.text
+
+    def test_export_subtree_scopes_and_names_file(self, flow_client):
+        """A root= export scopes the embedded data to that subtree and names the
+        download after the subtree slug."""
+        resp = flow_client.get("/export", params={"root": "00-flow"})
+        assert resp.status_code == 200
+        assert 'filename="00-flow-dashboard.html"' in resp.headers.get(
+            "content-disposition", ""
+        )
+        html = resp.text
+        # Re-based subtree children present; out-of-subtree sibling absent.
+        assert 'set["a"] = true' in html
+        assert 'set["01-flat"] = true' not in html
+
+    def test_export_unknown_root_returns_404(self, client):
+        resp = client.get("/export", params={"root": "no/such"})
+        assert resp.status_code == 404
+
+    def test_export_does_not_disturb_live_state(self, client):
+        """Rendering an export must restore the live server's module state so
+        subsequent live routes are unaffected."""
+        before = client.get("/node/01-first").text
+        client.get("/export", params={"root": "01-first"})
+        after = client.get("/node/01-first").text
+        assert before == after
+        # And the live index still serves (state intact).
+        assert client.get("/").status_code == 200
+
+    def test_index_wires_share_button(self, client):
+        """The live page carries the Share affordance: the per-node Share button
+        is emitted in the active-node card and backed by shareSubtree()."""
+        html = client.get("/").text
+        assert "function shareSubtree" in html
+        # The button is gated to server mode in the card header builder.
+        assert "shareSubtree(" in html
+        assert "window.STANDALONE ? '' :" in html
+
     def test_files_serves_existing_file(self, client, plan_root):
         # Create a test file in the project root
         project_root = plan_root.parent

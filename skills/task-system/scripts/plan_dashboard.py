@@ -20,6 +20,7 @@ import socket
 import sys
 import webbrowser
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -878,6 +879,42 @@ async def get_node(path: str):
     return HTMLResponse(content=html)
 
 
+# --- Route: GET /export (standalone subtree download) ----------------------
+# The "Share" button backs onto this: it renders the same standalone single-file
+# HTML the CLI `generate --root <path>` produces, scoped to a subtree, and serves
+# it with Content-Disposition: attachment so the browser saves a portable file.
+
+@app.get("/export")
+async def export_subtree(root: str = ""):
+    """Return a self-contained standalone HTML dashboard scoped to *root*'s
+    subtree as a file download.
+
+    Empty *root* exports the whole tree.  The rendered HTML is identical to
+    ``plan_dashboard.py generate [--root <path>]``: server-less, all fragments
+    embedded inline, opens via ``file://``.  Restores live module state after
+    rendering so the running server is unaffected.
+    """
+    if _root_task is None:
+        raise HTTPException(status_code=500, detail="Task tree not initialized")
+    if root and _find_task(root) is None:
+        raise HTTPException(status_code=404, detail=f"Task not found: {root}")
+
+    # render_standalone_html drives module state (_root_task/_task_index) the way
+    # generate_dashboard does, so snapshot and restore the live server's state.
+    saved_root, saved_index, saved_project = _root_task, _task_index, _project_root
+    try:
+        html = render_standalone_html(PLAN_ROOT, root=root or None)
+    finally:
+        _set_module_state(saved_root, saved_index, saved_project)
+
+    slug = root.rsplit("/", 1)[-1] if root else (_root_task.slug or "plan")
+    filename = f"{slug or 'plan'}-dashboard.html"
+    return HTMLResponse(
+        content=html,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 # ---------------------------------------------------------------------------
 # Static HTML generation — single-file, server-less export from base.html
 # ---------------------------------------------------------------------------
@@ -944,58 +981,129 @@ def _render_dag_fragment(task: Task) -> str:
     return template.render(root_task=task, all_tasks=list(task.children))
 
 
-def generate_dashboard(plan_root: Path, output_path: Path | None = None) -> Path:
-    """Generate a self-contained static HTML dashboard from base.html.
+def _rebase_subtree(task: Task, root_path: str) -> Task:
+    """Return a copy of *task*'s subtree with every path re-based so *root_path*
+    becomes the empty-string root.
 
-    Renders base.html in standalone mode with all server fragments pre-rendered
-    and embedded inline, so the output opens via ``file://`` with zero network
-    calls for task data.  Import-compatible with the previous implementation:
-    same signature, defaults ``output_path`` to ``plan_root / "dashboard.html"``,
-    writes the file, prints the path, and returns it.
+    The whole standalone + navigation machinery (depth-based inline-vs-lazy nav,
+    breadcrumb, the ``''`` JS root, ``TASK_PATHS``, the ``task-root`` nav id)
+    keys on ``task.path`` and treats the empty path as the root.  A subtree node
+    carries its full tree path (e.g. ``a/b/c``); stripping the ``root_path + '/'``
+    prefix from it and every descendant re-roots the subtree so that identical
+    machinery renders it as if it were a whole tree.  ``depends_on`` holds sibling
+    slugs (last path segment), which are unaffected by re-basing, and ``dir_path``
+    is left untouched so figure/file resolution still points at the real dirs.
     """
+    prefix = f"{root_path}/" if root_path else ""
+
+    def _rebase(node: Task) -> Task:
+        new_path = node.path[len(prefix):] if prefix and node.path.startswith(prefix) else node.path
+        if node.path == root_path:
+            new_path = ""
+        return replace(node, path=new_path, children=[_rebase(c) for c in node.children])
+
+    return _rebase(task)
+
+
+def _set_module_state(root_task: Task | None, index: dict[str, Task], project_root: str) -> None:
+    """Set the render-helper module state in one place (used to snapshot/restore
+    around a standalone render that must not perturb a live server)."""
     global _root_task, _task_index, _project_root
+    _root_task = root_task
+    _task_index = index
+    _project_root = project_root
 
-    if output_path is None:
-        output_path = plan_root / "dashboard.html"
 
-    # Configure module state the render helpers read (mirrors the serve lifespan).
-    _root_task = walk_plan(plan_root)
-    _task_index = {}
-    _build_index(_root_task, _task_index)
-    _project_root = str(plan_root.resolve().parent)
+def render_standalone_html(
+    plan_root: Path,
+    output_path: Path | None = None,
+    root: str | None = None,
+) -> str:
+    """Render the self-contained standalone dashboard HTML and return it.
 
-    all_tasks = collect_all_tasks(_root_task)
+    Drives the render-helper module state (``_root_task`` / ``_task_index`` /
+    ``_project_root``) the same way the serve lifespan does, renders base.html in
+    standalone mode with every server fragment pre-rendered and embedded inline,
+    and returns the HTML string (no file write).  When *root* names a task path,
+    the export is scoped to that subtree: the node is located in the full tree,
+    re-based so it becomes the root, and the embedded data / pre-rendered
+    fragments / nav cover exactly that subtree.  Whole-tree export (``root=None``)
+    is unchanged.  *output_path* (when given) only fixes where ``<img>`` sources
+    resolve from a ``file://`` open; the HTML itself is not written here.
+    """
+    full_root = walk_plan(plan_root)
+    project_root = str(plan_root.resolve().parent)
+
+    if root:
+        full_index: dict[str, Task] = {}
+        _build_index(full_root, full_index)
+        located = full_index.get(root)
+        if located is None:
+            raise KeyError(f"Task not found: {root}")
+        # The dir the subtree's figures resolve against (its real on-disk dir).
+        subtree_dir = located.dir_path
+        scoped_root = _rebase_subtree(located, root)
+    else:
+        scoped_root = full_root
+        subtree_dir = plan_root
+
+    index: dict[str, Task] = {}
+    _build_index(scoped_root, index)
+    _set_module_state(scoped_root, index, project_root)
+
+    all_tasks = collect_all_tasks(scoped_root)
     fragments = _build_standalone_fragments()
 
-    # Where the embedded .plan tree sits relative to the dashboard file, so
-    # standalone <img> sources resolve from a file:// open.  The dashboard is
-    # written into plan_root, and tasks reference figures relative to their dir,
-    # so the prefix is just the plan-root directory name plus a slash.
-    output_parent = output_path.resolve().parent
-    try:
-        plan_rel = plan_root.resolve().relative_to(output_parent)
-        standalone_plan_dir = f"{plan_rel.as_posix()}/"
-    except ValueError:
-        standalone_plan_dir = ""
-    # The committed default (dashboard.html written INTO plan_root) means task
-    # dirs sit beside the file, so no .plan/ prefix is needed.
-    if output_parent == plan_root.resolve():
-        standalone_plan_dir = ""
+    # Where the embedded task tree sits relative to the dashboard file, so
+    # standalone <img> sources resolve from a file:// open.  Tasks reference
+    # figures relative to their dir, and re-based task paths are relative to the
+    # subtree root, so the prefix is the subtree dir relative to the output file.
+    standalone_plan_dir = ""
+    if output_path is not None:
+        output_parent = output_path.resolve().parent
+        try:
+            plan_rel = subtree_dir.resolve().relative_to(output_parent)
+            standalone_plan_dir = f"{plan_rel.as_posix()}/" if plan_rel.as_posix() != "." else ""
+        except ValueError:
+            standalone_plan_dir = ""
+        # The committed default (dashboard.html written INTO the subtree dir)
+        # means task dirs sit beside the file, so no prefix is needed.
+        if output_parent == subtree_dir.resolve():
+            standalone_plan_dir = ""
 
     env = _get_jinja_env()
     template = env.get_template("base.html")
-    html = template.render(
-        root_task=_root_task,
+    # XSS-safe: the embedded fragments and data are injected via Jinja's `| tojson`
+    # filter, which escapes `<`, `>`, `&`, and line separators (so an embedded
+    # `</script>` cannot prematurely close the <script> block).
+    return template.render(
+        root_task=scoped_root,
         all_tasks=all_tasks,
-        project_root=_project_root,
+        project_root=project_root,
         standalone=True,
         standalone_fragments=fragments,
         standalone_plan_dir=standalone_plan_dir,
     )
 
-    # XSS-safe: the embedded fragments and data are injected via Jinja's `| tojson`
-    # filter, which escapes `<`, `>`, `&`, and line separators (so an embedded
-    # `</script>` cannot prematurely close the <script> block).
+
+def generate_dashboard(
+    plan_root: Path,
+    output_path: Path | None = None,
+    root: str | None = None,
+) -> Path:
+    """Generate a self-contained static HTML dashboard from base.html.
+
+    Renders base.html in standalone mode with all server fragments pre-rendered
+    and embedded inline, so the output opens via ``file://`` with zero network
+    calls for task data.  Import-compatible with the previous implementation:
+    same name, defaults ``output_path`` to ``plan_root / "dashboard.html"``,
+    writes the file, prints the path, and returns it.  *root* scopes the export
+    to a subtree (see ``render_standalone_html``).
+    """
+    if output_path is None:
+        output_path = plan_root / "dashboard.html"
+
+    html = render_standalone_html(plan_root, output_path, root)
     output_path.write_text(html, encoding="utf-8")
     print(f"Dashboard written to {output_path}")
     return output_path
@@ -1063,6 +1171,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="",
         help="Output HTML path (default: <plan-root>/dashboard.html)",
     )
+    gen_p.add_argument(
+        "--root",
+        dest="subtree_root",
+        default="",
+        help="Task path to scope the export to (default: whole tree)",
+    )
 
     return parser.parse_args(argv)
 
@@ -1115,7 +1229,12 @@ def main(argv: list[str] | None = None) -> None:
             print(f"Error: plan root not found: {plan_root}", file=sys.stderr)
             sys.exit(1)
         output = Path(args.output) if args.output else None
-        generate_dashboard(plan_root, output)
+        subtree_root = args.subtree_root or None
+        try:
+            generate_dashboard(plan_root, output, root=subtree_root)
+        except KeyError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
 
     else:
         # No subcommand given — print help
