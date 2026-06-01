@@ -959,11 +959,17 @@ def _build_standalone_fragments() -> dict[str, str]:
     # un-encoded. /dag is fetched with encodeURIComponent(path), which escapes the
     # '/' of a multi-segment path to %2F — so the standalone fetch shim decodes
     # the URL before the map lookup, matching all three against these bare keys.
+    # Include the root itself, not just its descendants: the client fetches the
+    # root's /node/ body and /dag?root= children-graph on initial load.
+    # collect_all_tasks excludes the root, so without it the root card shows
+    # "Could not load this task" — and a leaf-only subtree export (root with no
+    # children) embeds no node body at all. /nav/<path> stays descendants-only
+    # (the root is served by the main /nav fragment, never /nav/).
     all_tasks = collect_all_tasks(_root_task)
-    for task in all_tasks:
+    for task in [_root_task, *all_tasks]:
         fragments[f"/node/{task.path}"] = _render_node_body(task)
         fragments[f"/dag?root={task.path}"] = _render_dag_fragment(task)
-        if task.children:
+        if task.children and task.path:
             fragments[f"/nav/{task.path}"] = _render_nav_children(task)
 
     # /kanban — the full board.

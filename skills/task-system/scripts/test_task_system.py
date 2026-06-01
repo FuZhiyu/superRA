@@ -855,6 +855,28 @@ class TestDashboard:
                 == c.get("/dag", params={"root": nested}).text
             )
 
+    def test_standalone_embeds_root_node_body(self, plan_with_branches):
+        """The root's OWN /node/ body must be embedded, not just descendants'.
+
+        collect_all_tasks excludes the root, so without including it the root
+        card fetches a missing /node/ fragment and renders "Could not load this
+        task" — and a leaf-only subtree export (a re-based root with no children)
+        embeds no node body at all.
+        """
+        plan_dashboard.PLAN_ROOT = plan_with_branches
+
+        # Whole tree: the root's /node/ (empty path) fragment is embedded.
+        whole = plan_dashboard.render_standalone_html(plan_with_branches, root=None)
+        assert '"/node/"' in whole
+
+        # Leaf subtree: the re-based root has the empty path; its body must be
+        # present and reachable (the exact case that rendered "Could not load").
+        leaf = plan_dashboard.render_standalone_html(
+            plan_with_branches, root="01-data-prep/02-merge"
+        )
+        assert '"/node/"' in leaf
+        assert "Merge Data" in leaf
+
     def test_subtree_export_scopes_paths_to_subtree(self, plan_with_branches):
         """A --root export re-bases every embedded task path so the subtree node
         is the root: paths are relative to it and out-of-subtree siblings are
