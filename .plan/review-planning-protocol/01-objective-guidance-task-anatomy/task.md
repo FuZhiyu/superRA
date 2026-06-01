@@ -1,6 +1,6 @@
 ---
 title: "Objective vs Planner Guidance Task Anatomy"
-status: implemented
+status: revise
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -52,3 +52,7 @@ Keep `## Planner Guidance` optional. A validator warning for missing guidance is
 
 ### Notes
 - Root `.plan/task.md` has no `## Conventions` section; implementation used repo `AGENTS.md`, the task's `## Planner Guidance`, and owning files as on-demand convention sources.
+
+## Review Notes
+
+1. **MAJOR** [../../../skills/task-system/SKILL.md:102](../../../skills/task-system/SKILL.md#L102) — the task-system skill's own ownership model still says the assigned-task body sections are `## Results` plus `status`, and the "You do not own" list only protects `## Objective` at [../../../skills/task-system/SKILL.md:106](../../../skills/task-system/SKILL.md#L106). This contradicts the new section table that marks `## Planner Guidance` planner-owned at [../../../skills/task-system/SKILL.md:95](../../../skills/task-system/SKILL.md#L95) and leaves a direct reader of `task-system/SKILL.md` with incomplete editing rules. Update this ownership model so `## Planner Guidance` is explicitly planner-owned/advisory and not implementer-editable, consistent with `agents/implementer.md` and `task-system/references/planning.md`.
