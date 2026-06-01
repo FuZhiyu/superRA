@@ -1839,8 +1839,7 @@ async function loadActiveNode(path) {
          Server-backed (/export), so it is omitted in standalone mode — a
          downloaded file has no server to re-export from. */
       + (window.STANDALONE ? '' :
-         '<button class="share-btn" type="button" title="Download this subtree as a standalone HTML file"'
-         + ' onclick="shareSubtree(' + JSON.stringify(path) + ')">Share</button>')
+         '<button class="share-btn" type="button" title="Download this subtree as a standalone HTML file">Share</button>')
       + '</header>'
       /* Wrap the body in a real .task-node so the comment/section helpers,
          which all resolve via `.task-node[data-path]`, find their context. */
@@ -1849,6 +1848,11 @@ async function loadActiveNode(path) {
     /* Set the title via textContent (avoids HTML injection from titles). */
     var titleEl = region.querySelector('.active-node-title');
     if (titleEl) titleEl.textContent = slug ? (slug + ' · ' + title) : title;
+
+    /* Wire the Share button via a closure over `path` — an inline onclick can't
+       carry the path safely (a quoted path breaks the double-quoted attribute). */
+    var shareBtn = region.querySelector('.share-btn');
+    if (shareBtn) shareBtn.onclick = function() { shareSubtree(path); };
 
     /* a11y: on a user-initiated navigation, move focus to the new heading so
        keyboard/SR users land on the freshly-loaded content. Consume the flag so

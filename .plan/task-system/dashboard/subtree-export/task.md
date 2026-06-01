@@ -1,11 +1,15 @@
 ---
 title: "Export subtree dashboard to standalone HTML"
-status: approved
+status: implemented
 depends_on:
   - unify-static-export
 tags: []
 created: 2026-05-30
 ---
+
+## Revision Notes
+
+Reopened 2026-06-01 (post-approval bug): the live-dashboard **Share button did nothing on click**. The button's handler was an inline `onclick="shareSubtree(' + JSON.stringify(path) + ')"` — `JSON.stringify` emits double quotes, which terminate the double-quoted `onclick="..."` attribute early, leaving a broken handler. The `/export` route, `shareSubtree()` in isolation, and the CLI were all verified, but the actual button click in a browser never was, so the escaping bug shipped. Fixed by removing the inline `onclick` and wiring `shareBtn.onclick` programmatically over the `path` closure after `innerHTML` (mirrors the adjacent title-set pattern), eliminating attribute escaping entirely. Re-review must include an actual headless click of the button, not just a route/curl check.
 
 ## Objective
 
