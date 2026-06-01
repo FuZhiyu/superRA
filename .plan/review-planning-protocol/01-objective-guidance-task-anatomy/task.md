@@ -1,6 +1,6 @@
 ---
 title: "Objective vs Planner Guidance Task Anatomy"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -13,10 +13,6 @@ Introduce an optional `## Planner Guidance` task-body section and clarify that `
 The change must keep existing task files valid. Do not bulk-migrate old objectives automatically; split objective/guidance opportunistically when a task is created or materially rewritten. Preserve the task system's free-form section behavior: arbitrary `##` sections are valid, rendered in order, and read through `task_read.py`.
 
 Update implementer/reviewer role specs only where the distinction changes behavior: implementers may deviate from `## Planner Guidance` when a better route satisfies `## Objective`; reviewers must not fail a task merely because guidance was not followed, but should flag guidance that is misleading, contradicts the objective, or would fail to achieve it.
-
-## Revision Notes
-
-- 2026-06-01: Clarified that user-requested implementation details are required and belong in `## Objective` / frontmatter, not advisory `## Planner Guidance`.
 
 ## Planner Guidance
 
@@ -57,8 +53,3 @@ Keep `## Planner Guidance` optional. A validator warning for missing guidance is
 
 ### Notes
 - Root `.plan/task.md` conventions were read; they identify repo `AGENTS.md` / `CLAUDE.md` as the contributor-facing authority for internals and confirm no additional guidance files under the touched implementation paths.
-
-## Review Notes
-
-1. **MAJOR** [../../../skills/task-system/SKILL.md:102](../../../skills/task-system/SKILL.md#L102) — the task-system skill's own ownership model still says the assigned-task body sections are `## Results` plus `status`, and the "You do not own" list only protects `## Objective` at [../../../skills/task-system/SKILL.md:106](../../../skills/task-system/SKILL.md#L106). This contradicts the new section table that marks `## Planner Guidance` planner-owned at [../../../skills/task-system/SKILL.md:95](../../../skills/task-system/SKILL.md#L95) and leaves a direct reader of `task-system/SKILL.md` with incomplete editing rules. Update this ownership model so `## Planner Guidance` is explicitly planner-owned/advisory and not implementer-editable, consistent with `agents/implementer.md` and `task-system/references/planning.md`.
-   → implemented: clarified binding researcher-required details in `## Objective`, advisory `## Planner Guidance`, and non-editable planner ownership in the task-system skill ownership model ([../../../skills/task-system/SKILL.md:94](../../../skills/task-system/SKILL.md#L94), [../../../skills/task-system/SKILL.md:107](../../../skills/task-system/SKILL.md#L107)).
