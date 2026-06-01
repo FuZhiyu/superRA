@@ -1291,6 +1291,23 @@ body {
   text-align: left;
 }
 .rendered-md th { background: var(--bg-alt); font-weight: 600; }
+/* Links inherit the warm accent palette instead of browser default blue/purple.
+   Restrained 1px underline at reduced opacity that solidifies on hover; visited
+   stays on-theme (the accent, never default purple). Accent tokens are
+   theme-aware, so one rule covers both light and dark. */
+.rendered-md a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-soft);
+  text-underline-offset: 2px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+.rendered-md a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: var(--accent-hover);
+}
+.rendered-md a:visited { color: var(--accent); }
+.rendered-md a:visited:hover { color: var(--accent-hover); }
 
 /* Metadata pills inside task body */
 .task-meta {
