@@ -10,6 +10,16 @@ created: 2026-05-23
 
 Improve the superRA handoff system — task tracking, planning artifacts, and human-readable visualization.
 
+## Conventions
+
+Walk date: 2026-06-01.
+
+`AGENTS.md` / `CLAUDE.md` at repo root is the contributor-facing authority for superRA internals. When modifying skills, hooks, agents, harness adapters, or internal docs, treat the work as skill creation: read owning files before editing, load `skill-creator` before editing `skills/*/SKILL.md`, keep changes focused, verify behavior rather than prose alone, preserve the README/user-facing vs AGENTS/internal separation, and apply the DRY + Necessity gate line by line. Ownership boundaries matter: workflow choreography belongs to `superplan` / `superimplement` / `superintegrate`; dispatch and reviewer-feedback adjudication belong to `agent-orchestration`; task anatomy belongs to `task-system/references/planning.md`; canonical role behavior belongs to `agents/implementer.md` and `agents/reviewer.md`; generated Codex/direct-mode artifacts must be regenerated from sources rather than hand-edited.
+
+`README.md` is the user-facing product overview. It describes superRA as a PLAN -> IMPLEMENT -> INTEGRATE workflow with an implementer-reviewer pair, domain skills layered onto domain-neutral workflow phases, durable `.plan/` task files, and generated Codex named agents installed through `codex-superra-setup`. Keep product framing there; internal contributor rules stay in `AGENTS.md` / `CLAUDE.md`.
+
+No additional `AGENTS.md`, `CLAUDE.md`, or `README.md` files were found under the touched implementation paths (`agents/`, `skills/task-system/`, `skills/superplan/`, `skills/using-superRA/`, `.codex/`, `.plan/review-planning-protocol/`). The walk intentionally did not load unrelated guidance under `skills/theory-modeling/`, `skills/writing/`, or `tests/claude-code/` because this task does not touch those directories.
+
 ## Integration Notes
 
 - [task-system/planning-redesign/planmd-sweep](task-system/planning-redesign/planmd-sweep/task.md): researcher chose manual integration checks rather than drift/static tests for the protocol-level results; integration base for this worktree is `better-handoff`.
