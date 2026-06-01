@@ -1,6 +1,6 @@
 ---
 title: "Internal task-to-task links"
-status: implemented
+status: approved
 depends_on:
   - unify-static-export
 tags: []
@@ -24,10 +24,6 @@ Implementation lives in `renderMarkdown(text, sectionName, taskPath)`. For each 
 This is the navigation-behavior counterpart to the sibling `[hyperlink-styling](../hyperlink-styling/task.md)` task, which restyles link color/hover/visited states. Ensure internal task links still pick up the themed accent styling that task establishes (don't introduce a link variant that escapes the accent rule). Load `frontend-design` only if you add an in-app-link affordance (icon/class) that needs design judgment; the core change is the JS resolution-and-rewrite logic.
 
 Validation: in both themes, clicking an in-tree task citation navigates to that task's card inside the dashboard (URL hash becomes `#/<path>`, back/forward work) and does **not** launch VS Code; links to scripts/figures/out-of-tree files still open via `vscode://`; resolution handles same-dir (`task.md`), sibling (`../slug/task.md`), and deep/nested targets. Verify in both the live `serve` dashboard and the static `generate` export. Regenerate or serve the dashboard to confirm.
-
-## Revision Notes
-
-Updated 2026-05-31: added `depends_on: unify-static-export` and removed the "patch both render paths" framing. The static export previously had no `renderMarkdown` at all (separate `DASHBOARD_HTML` copy); once `unify-static-export` routes `generate` through `base.html`, this feature is implemented once in `base.html`'s `renderMarkdown` and inherited by both the live server and the static export. Sequenced after the cleanup per researcher decision. Substantive (dependency + single-source simplification).
 
 ## Results
 
