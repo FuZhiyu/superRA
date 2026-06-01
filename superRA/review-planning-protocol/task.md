@@ -1,6 +1,6 @@
 ---
 title: "Review and Planning Protocol"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -37,8 +37,3 @@ Avoid broad rewrites of domain skills. The domain skills own the specific gates;
 - Accepted the integration review's DRY/Necessity findings: planning-review dispatch shape now lives in `agent-orchestration`, while `superplan` and its thorough-planning reference point to that owner; the reviewer role no longer describes planning-review dispatch fields.
 
 **Final diff self-check:** `git diff 75a86ccebd0ec37a0a9e904f0fd5b824752cf6f1..HEAD`; surviving change classes are the approved review/planning protocol edits, optional `## Planner Guidance` support in task creation/tests, generated Codex/direct-mode role artifacts, and the `superRA/review-planning-protocol` task records. Suspicious hunks are justified as follows: instruction edits under `agents/*` and `skills/*` implement the approved objective/guidance contract, broad reviewer protocol, planning-review mode, and guidance-deviation rationale requirement; `skills/agent-orchestration/SKILL.md` owns the planning-review dispatch-shape exception after integration review; generated artifacts under `.codex/agents/` and `skills/using-superRA/references/direct-mode-*` were regenerated from canonical role specs; task-record additions under `superRA/review-planning-protocol/` preserve approved task evidence after the incoming task-root rename. No unrelated hunks identified.
-
-## Review Notes
-
-1. MAJOR: [../../skills/refactor-and-integrate/SKILL.md:54-55](../../skills/refactor-and-integrate/SKILL.md#L54-L55) requires a fresh final diff self-check trail in the assigned task's `## Results`, but this parent task's [task.md:31](task.md#L31) `## Results` section is empty. Fix by recording the current `git diff 75a86ccebd0ec37a0a9e904f0fd5b824752cf6f1..HEAD` self-check, surviving change classes, suspicious hunk justifications for the `skills/*` / `agents/*` instruction edits and generated artifacts, and any pruned/unjustified hunks.
-   → implemented: added the final diff self-check trail and suspicious-hunk justifications to `## Results` ([task.md](task.md)).

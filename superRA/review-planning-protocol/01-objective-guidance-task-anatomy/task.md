@@ -1,6 +1,6 @@
 ---
 title: "Objective vs Planner Guidance Task Anatomy"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -53,11 +53,3 @@ Keep `## Planner Guidance` optional. A validator warning for missing guidance is
 
 ### Notes
 - Root `superRA/task.md` conventions were read; they identify repo `AGENTS.md` / `CLAUDE.md` as the contributor-facing authority for internals and confirm no additional guidance files under the touched implementation paths.
-
-## Review Notes
-
-1. MAJOR: [../../../skills/superplan/SKILL.md:98-100](../../../skills/superplan/SKILL.md#L98-L100) fails the AGENTS.md DRY/Necessity gate because it immediately points to the task-system objective-writing guide and then restates the same `## Objective` / `## Planner Guidance` semantics already owned by [../../../skills/task-system/references/planning.md:7-30](../../../skills/task-system/references/planning.md#L7-L30) and already summarized at [../../../skills/superplan/SKILL.md:16](../../../skills/superplan/SKILL.md#L16). Remove the duplicate line or replace it with a pure pointer so the instruction lives at the smallest owning surface.
-   → implemented: removed the duplicate `## Objective` / `## Planner Guidance` semantics line from `superplan` and left the task-system planning reference as the owner ([../../../skills/superplan/SKILL.md](../../../skills/superplan/SKILL.md)).
-
-2. MAJOR: The approved task record still contains pre-rename `.plan` evidence after the branch was synced to the `superRA/` task root: [task.md:46](task.md#L46) records `task_check.py --plan-root .plan`, and [task.md:55](task.md#L55) says root `.plan/task.md` conventions were read. Refresh the Results to cite the current `superRA/` command and `superRA/task.md` conventions, or clearly state that the old `.plan` entries were historical and superseded by current post-sync validation.
-   → implemented: refreshed the task record to cite `--plan-root superRA` validation and `superRA/task.md` conventions ([task.md](task.md)).
