@@ -1,6 +1,6 @@
 ---
 title: "Self-contained export: embed figures and math"
-status: implemented
+status: approved
 depends_on:
   - subtree-export
 tags: []
