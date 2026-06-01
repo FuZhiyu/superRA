@@ -7,7 +7,6 @@ script: ""
 input: [hooks/hooks.json, hooks/hooks-cursor.json, hooks/ask-user-question-logger, README.md, docs/README.codex.md, tests/hooks/test-codex-hooks.sh]
 output: [hooks/hooks.json, hooks/hooks-cursor.json, README.md, docs/README.codex.md, tests/hooks/test-codex-hooks.sh]
 created: 2026-06-01
-updated: 2026-06-01
 ---
 
 ## Objective

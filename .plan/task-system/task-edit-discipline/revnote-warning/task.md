@@ -5,7 +5,6 @@ depends_on:
   - move-hook
 tags: []
 created: 2026-05-30
-updated: 2026-05-31
 ---
 
 ## Objective

@@ -21,7 +21,6 @@ class Task:
     input: list[str]
     output: list[str]
     created: str
-    updated: str
     body: str           # full body text after frontmatter
     objective: str      # extracted from ## Objective
     results: str        # extracted from ## Results

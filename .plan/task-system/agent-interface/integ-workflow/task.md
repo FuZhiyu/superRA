@@ -6,7 +6,6 @@ depends_on:
   - handoff-doc
 tags: []
 created: 2026-05-24
-updated: 2026-05-24
 ---
 
 ## Objective

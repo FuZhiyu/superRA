@@ -5,7 +5,6 @@ depends_on: []
 tags: []
 script: skills/task-system/scripts/_task_io.py
 created: 2026-05-23
-updated: 2026-05-24
 ---
 
 ## Objective

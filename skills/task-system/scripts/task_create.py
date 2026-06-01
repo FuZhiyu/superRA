@@ -48,7 +48,6 @@ status: not-started
 depends_on: {depends_on}
 tags: []
 {script_line}{input_line}{output_line}created: {today}
-updated: {today}
 ---
 
 ## Objective

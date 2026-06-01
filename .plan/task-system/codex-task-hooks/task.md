@@ -1,10 +1,9 @@
 ---
 title: "Codex Task Hooks and Decision-Reminder Deprecation"
-status: not-started
+status: in-progress
 depends_on: []
 tags: [hooks, codex, task-system]
 created: 2026-06-01
-updated: 2026-06-01
 ---
 
 ## Objective

@@ -10,7 +10,6 @@ script: ""
 input: [README.md, docs/README.codex.md, skills/task-system/SKILL.md, skills/task-system/references/internals.md, tests/check-harness-compatibility.sh, tests/hooks/test-codex-hooks.sh, tests/hooks/test-codex-e2e-cli.sh]
 output: [README.md, docs/README.codex.md, skills/task-system/SKILL.md, skills/task-system/references/internals.md, tests/check-harness-compatibility.sh, tests/hooks/test-codex-hooks.sh, tests/hooks/test-codex-e2e-cli.sh]
 created: 2026-06-01
-updated: 2026-06-01
 ---
 
 ## Objective

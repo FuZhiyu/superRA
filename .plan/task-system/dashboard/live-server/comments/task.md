@@ -7,7 +7,6 @@ depends_on:
   - live-reload
 tags: []
 created: 2026-05-24
-updated: 2026-05-26
 ---
 
 ## Objective

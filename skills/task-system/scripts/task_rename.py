@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import parse_task, today_str, write_task
+from _task_io import parse_task, write_task
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -51,7 +51,6 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
         task = parse_task(sibling_dir / "task.md")
         if old_slug in task.depends_on:
             task.depends_on = [new_slug if d == old_slug else d for d in task.depends_on]
-            task.updated = today_str()
             sibling_updates.append((sibling_dir, task))
 
     # All parsing succeeded — now perform the rename and writes.

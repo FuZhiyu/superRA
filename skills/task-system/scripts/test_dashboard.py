@@ -46,7 +46,6 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
     objective = kwargs.get("objective", "")
     results = kwargs.get("results", "")
     created = kwargs.get("created", "2026-01-01")
-    updated = kwargs.get("updated", "2026-01-01")
 
     if depends_on:
         deps_yaml = "\n" + "".join(f"  - {d}\n" for d in depends_on)
@@ -64,7 +63,7 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
     content = (
         f'---\ntitle: "{title}"\nstatus: {status}\n'
         f"depends_on:{deps_yaml}\n"
-        f"tags: {tags_yaml}\ncreated: {created}\nupdated: {updated}\n---\n\n{body}"
+        f"tags: {tags_yaml}\ncreated: {created}\n---\n\n{body}"
     )
     path.write_text(content, encoding="utf-8")
 

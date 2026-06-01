@@ -1428,7 +1428,6 @@ body {
     <span id="stat-tasks"></span>
     <span id="stat-approved"></span>
     <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-    <span id="stat-updated"></span>
   </div>
   <div class="header-spacer"></div>
   <div class="header-controls">
@@ -1576,10 +1575,6 @@ function renderSummary() {
   document.getElementById('stat-approved').innerHTML =
     '<strong>' + approved + '/' + activeLeaves + '</strong> approved';
   document.getElementById('progress-fill').style.width = pct + '%';
-  const dates = all.map(function(t) { return t.updated; }).filter(Boolean).sort();
-  if (dates.length) {
-    document.getElementById('stat-updated').textContent = dates[dates.length - 1];
-  }
 }
 
 /* ── Tree view (recursive expand/collapse) ── */

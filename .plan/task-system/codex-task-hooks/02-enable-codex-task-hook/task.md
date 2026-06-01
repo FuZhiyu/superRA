@@ -7,7 +7,6 @@ script: ""
 input: [hooks/hooks-codex.json, skills/task-system/scripts/task_hook.py, skills/task-system/scripts/test_task_system.py]
 output: [hooks/hooks-codex.json, skills/task-system/scripts/task_hook.py, skills/task-system/scripts/test_task_system.py]
 created: 2026-06-01
-updated: 2026-06-01
 ---
 
 ## Objective

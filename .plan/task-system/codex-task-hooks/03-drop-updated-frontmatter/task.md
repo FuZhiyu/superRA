@@ -1,13 +1,12 @@
 ---
 title: "Drop updated frontmatter field"
-status: not-started
+status: implemented
 depends_on: []
 tags: [task-system, schema, metadata]
 script: ""
 input: [skills/task-system/scripts/_task_io.py, skills/task-system/scripts/task_create.py, skills/task-system/scripts/task_update.py, skills/task-system/scripts/task_add_result.py, skills/task-system/scripts/task_link.py, skills/task-system/scripts/task_rename.py, skills/task-system/scripts/task_query.py, skills/task-system/scripts/task_read.py, skills/task-system/scripts/plan_dashboard.py, skills/task-system/scripts/templates/summary_bar.html, skills/task-system/SKILL.md, skills/task-system/references/internals.md, skills/task-system/scripts/test_task_system.py, skills/task-system/scripts/test_dashboard.py, skills/task-system/scripts/tests/test_state_preservation.py, .plan]
 output: [same files with active updated-field behavior removed]
 created: 2026-06-01
-updated: 2026-06-01
 ---
 
 ## Objective
@@ -28,3 +27,16 @@ Keep `created:` for this task unless the implementer records a stronger reason t
 Validation: run the task-system pytest suite and a grep over active task-system code/docs/tests for `updated:` and task `.updated` access. Remaining uses of the word "updated" as ordinary prose or variable names for function return values are acceptable when they do not represent the frontmatter field.
 
 ## Results
+
+Implemented the task metadata cleanup while keeping `created` as the stable task-inception date.
+
+- Removed `updated` from the `Task` dataclass, parser/writer field order, JSON outputs, task creation/migration templates, task mutation scripts, status propagation, and dashboard summary surfaces.
+- Updated task-system docs and internals references so the active schema documents `created` but no longer documents `updated`.
+- Updated task-system test fixtures and expectations to generate/read task files without `updated`.
+- Migrated this worktree's `.plan/**/task.md` files to remove `updated:` frontmatter lines.
+
+Validation:
+
+- `uv run pytest skills/task-system/scripts/test_task_system.py skills/task-system/scripts/test_dashboard.py skills/task-system/scripts/tests/test_state_preservation.py` passed: 280 tests.
+- `rg -n "updated:|\\.updated|\\\"updated\\\"|stat-updated|updated_date" skills/task-system .plan/task-system/codex-task-hooks` has no active schema hits; remaining hits are this task's own prose, the legacy-read stale-field suppression entry, and local status-propagation count variables.
+- `python3 skills/task-system/scripts/task_check.py --plan-root .plan` passed.

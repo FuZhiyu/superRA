@@ -5,7 +5,6 @@ depends_on:
   - core-data-layer
 tags: []
 created: 2026-05-23
-updated: 2026-05-24
 ---
 
 ## Objective

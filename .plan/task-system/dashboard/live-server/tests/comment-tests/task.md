@@ -4,7 +4,6 @@ status: implemented
 depends_on: []
 tags: []
 created: 2026-05-25
-updated: 2026-05-25
 ---
 
 ## Objective

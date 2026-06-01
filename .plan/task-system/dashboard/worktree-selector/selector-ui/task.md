@@ -5,7 +5,6 @@ depends_on:
   - server-routes
 tags: []
 created: 2026-05-26
-updated: 2026-05-26
 ---
 
 ## Objective

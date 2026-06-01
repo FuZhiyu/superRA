@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import parse_task, today_str, write_task
+from _task_io import parse_task, write_task
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -62,7 +62,6 @@ def link_task(
             print(f"Warning: {depends_on} is not in depends_on for {task_path}", file=sys.stderr)
             return
         task.depends_on.remove(depends_on)
-        task.updated = today_str()
         write_task(task)
         print(f"Removed dependency {depends_on} from {task_path}")
         try:
@@ -91,7 +90,6 @@ def link_task(
             sys.exit(1)
 
         task.depends_on.append(depends_on)
-        task.updated = today_str()
         write_task(task)
         print(f"Added dependency {depends_on} to {task_path}")
         try:

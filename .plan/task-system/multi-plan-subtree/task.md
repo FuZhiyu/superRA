@@ -6,7 +6,6 @@ depends_on:
   - dashboard
 tags: []
 created: 2026-05-24
-updated: 2026-05-24
 ---
 
 ## Objective

@@ -35,7 +35,7 @@ import task_update
 def _write_task_md(path: Path, title: str, status: str, **kwargs):
     """Write a task.md file (unified status format).
 
-    kwargs: depends_on, tags, objective, results, created, updated.
+    kwargs: depends_on, tags, objective, results, created.
     For legacy test scenarios, review_status and integration_status can be
     passed to produce old-format files.
     """
@@ -44,7 +44,6 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
     objective = kwargs.get("objective", "")
     results = kwargs.get("results", "")
     created = kwargs.get("created", "2026-01-01")
-    updated = kwargs.get("updated", "2026-01-01")
 
     if depends_on:
         deps_yaml = "\n" + "".join(f"  - {d}\n" for d in depends_on)
@@ -69,7 +68,6 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
         f"depends_on:{deps_yaml}",
         f"tags: {tags_yaml}",
         f"created: {created}",
-        f"updated: {updated}",
     ])
 
     content = "---\n" + "\n".join(fm_lines) + "\n---\n\n" + body
@@ -842,7 +840,7 @@ class TestMigrateV2:
         v1_content = (
             '---\ntitle: "Test Task"\nstatus: not-started\nreview_status: ~\n'
             "integration_status: ~\ndepends_on: []\ntags: []\n"
-            "created: 2026-01-01\nupdated: 2026-01-01\n---\n\n"
+            "created: 2026-01-01\n---\n\n"
             "# Test Task\n\n## Steps\n\n"
             "- [ ] Step 1: Do first thing\n"
             "- [x] Step 2: Do second thing\n\n"
@@ -870,7 +868,7 @@ class TestMigrateV2:
         v2_content = (
             '---\ntitle: "Test Task"\nstatus: not-started\nreview_status: ~\n'
             "integration_status: ~\ndepends_on: []\ntags: []\n"
-            "created: 2026-01-01\nupdated: 2026-01-01\n---\n\n"
+            "created: 2026-01-01\n---\n\n"
             "## Objective\n\nAlready in v2 format.\n\n"
             "## Results\n\n"
         )
@@ -953,7 +951,7 @@ class TestUpgradeStatus:
         content = (
             '---\ntitle: "Task A"\nstatus: approved\nreview_status: approved\n'
             "integration_status: ~\ndepends_on: []\ntags: []\n"
-            "created: 2026-01-01\nupdated: 2026-01-01\n---\n\n"
+            "created: 2026-01-01\n---\n\n"
             "## Objective\n\nDo the thing.\n\n"
             "## Workflow Status\n\nPhase: implementation\n\n"
             "## Results\n\nDone.\n"
@@ -1570,7 +1568,6 @@ def _task_md_text(title: str, status: str, *, objective: str = "Do the thing.",
         f"depends_on: []\n"
         f"tags: []\n"
         f"created: 2026-01-01\n"
-        f"updated: 2026-01-01\n"
     )
     return f"---\n{fm}---\n\n{body}"
 
@@ -1699,7 +1696,7 @@ class TestValidatePlanRevisionNotes:
         )
         fm = (
             'title: "Task"\nstatus: approved\ndepends_on: []\n'
-            "tags: []\ncreated: 2026-01-01\nupdated: 2026-01-01\n"
+            "tags: []\ncreated: 2026-01-01\n"
         )
         self._write(d / "task.md", f"---\n{fm}---\n\n{fenced}")
         warnings = _task_io.validate_plan(root)
@@ -1987,7 +1984,7 @@ class TestTaskCheck:
         content = (
             '---\ntitle: "Bad"\nstatus: completed\n'
             "depends_on: []\ntags: []\ncreated: 2026-01-01\n"
-            "updated: 2026-01-01\n---\n\n## Objective\n\nBad status.\n"
+            "---\n\n## Objective\n\nBad status.\n"
         )
         (d / "task.md").write_text(content, encoding="utf-8")
         findings = task_check.run_checks(root_dir, category="status")
