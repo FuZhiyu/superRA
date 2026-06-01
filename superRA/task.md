@@ -20,6 +20,34 @@ Walk date: 2026-06-01.
 
 No additional `AGENTS.md`, `CLAUDE.md`, or `README.md` files were found under the touched implementation paths (`agents/`, `skills/task-system/`, `skills/superplan/`, `skills/using-superRA/`, `.codex/`, `superRA/review-planning-protocol/`). The walk intentionally did not load unrelated guidance under `skills/theory-modeling/`, `skills/writing/`, or `tests/claude-code/` because this task does not touch those directories.
 
+## Sync Map
+
+**Base branch:** `better-handoff`
+**Pre-sync merge base:** `75a86ccebd0ec37a0a9e904f0fd5b824752cf6f1`
+**Synced base head:** `876178e32d22ef2643424a584809d782fce4dde9`
+**Incoming range:** `75a86ccebd0ec37a0a9e904f0fd5b824752cf6f1..876178e32d22ef2643424a584809d782fce4dde9`
+**Sync commits:** `76c2a9af14f93df2612fd34a6c6569ffb57870f2`
+**Sync review status:** `IMPLEMENTED`
+
+### Branch Summary
+
+**Incoming intent:** The base branch added the PR #29 review-planning follow-up plans (`b36d563f`: not-started `path-containment` plan plus a not-started `review-planning-protocol` plan nested under `planning-redesign/`, with `cli-scripts` and `planning-redesign` status set back to reflect the new pending child) and moved the `dynamic-workflows` workstream off the base branch (`876178e3`: deletes `superRA/dynamic-workflows/*` and removes its mentions from `tree-cleanup`).
+**Resolution thesis:** This branch already implemented and approved the same PR #29 follow-up work — `path-containment` and the recursive-context piece — but placed the latter at the top-level `superRA/review-planning-protocol/` tree rather than nested under `planning-redesign/`. The merge keeps this branch's implemented superset for the overlapping plans, accepts the incoming `dynamic-workflows` deletions and `tree-cleanup` edit wholesale, removes the incoming not-started nested `review-planning-protocol` duplicate, and restores the `cli-scripts` / `planning-redesign` statuses to this branch's approved rollup.
+
+### Sync Clusters
+
+> **Sync cluster `pr29-followup-plans` (2026-06-01):** commits `76c2a9af`; paths `superRA/task-system/cli-scripts/path-containment/task.md`, `superRA/task-system/cli-scripts/task.md`, `superRA/task-system/planning-redesign/task.md`, `superRA/task-system/planning-redesign/review-planning-protocol/task.md`; affects Tasks `task-system/cli-scripts/path-containment`, `task-system/cli-scripts`, `task-system/planning-redesign`.
+> **Incoming intent:** Seed the PR #29 follow-ups as not-started plans and mark `cli-scripts` (not-started) and `planning-redesign` (in-progress) as having pending follow-up work.
+> **Sync resolution:** Kept this branch's implemented superset of `path-containment` (`status: approved` + full `## Results`; Objective/Scope/Validation already identical to incoming, so only frontmatter + Results conflicted, resolved to ours). Verified the incoming nested `review-planning-protocol` objective/scope carried no refinement absent from this branch's top-level `05-recursive-context-conventions` task; removed the not-started nested duplicate. Restored `cli-scripts` and `planning-redesign` to `approved` since this branch completed and rolled up the work the incoming statuses treated as pending.
+> **Integration context:** None — no source-code change; task-record reconciliation only.
+> **User decision:** None.
+
+> **Sync cluster `dynamic-workflows-move` (2026-06-01):** commits `76c2a9af`; paths `superRA/dynamic-workflows/*`, `superRA/task-system/tree-cleanup/task.md`; affects Tasks `task-system/tree-cleanup`.
+> **Incoming intent:** Move the `dynamic-workflows` workstream off `better-handoff` (delete its task files) and drop its mentions from the `tree-cleanup` survey objective/results.
+> **Sync resolution:** Accepted the incoming deletions and `tree-cleanup` edit unchanged (this branch did not touch either). Stale-reference sweep: the only remaining `dynamic-workflows` mention is in `review-planning-protocol/task.md` §Integration Status prose, which accurately describes the incoming move and is not a dangling link.
+> **Integration context:** None.
+> **User decision:** None.
+
 ## Integration Notes
 
 - [task-system/task-root-rename](task-system/task-root-rename/task.md): researcher confirmed `better-handoff` as the Sync base for the task-root rename integration.

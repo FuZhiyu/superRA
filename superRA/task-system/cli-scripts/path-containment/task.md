@@ -30,6 +30,8 @@ PR #29 review flagged that `create_task()` builds `task_dir = plan_root / task_p
 
 ## Results
 
+**Sync impact:** Cluster `pr29-followup-plans` explains why this implemented/approved task was kept over the incoming not-started plan of the same objective. Source: root task.md `## Sync Map`.
+
 ### Fix
 
 Added containment check in [`task_create.py`](skills/task-system/scripts/task_create.py) inside `create_task()`, immediately after `task_dir` is constructed and before any filesystem read or write. The check resolves both `plan_root` and `task_dir` via `.resolve()`, then calls `resolved_task.relative_to(resolved_root)`. On `ValueError` it prints an error and calls `sys.exit(1)`.

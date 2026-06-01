@@ -25,3 +25,5 @@ Redesign the superRA planning workflow to be domain-neutral, harness-independent
 
 ## Results
 
+**Sync impact:** Cluster `pr29-followup-plans` explains why status was kept `approved` rather than the incoming `in-progress` — the incoming `in-progress` reflected a not-started nested `review-planning-protocol` child that this branch had already implemented (at top-level `review-planning-protocol/`) and that the sync removed as a duplicate. Source: root task.md `## Sync Map`.
+

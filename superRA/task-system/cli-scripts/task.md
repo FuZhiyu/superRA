@@ -13,6 +13,8 @@ Build 6 CLI scripts for task CRUD: `task_create.py` (template with `## Objective
 
 ## Results
 
+**Sync impact:** Cluster `pr29-followup-plans` explains why status was kept `approved` rather than the incoming `not-started` — the path-containment child this branch added is implemented and approved. Source: root task.md `## Sync Map`.
+
 ### Key Findings
 - 6 scripts, each 65–210 lines, all following argparse + function pattern
 - `task_create.py` validates parent exists, no duplicates, deps are existing siblings
