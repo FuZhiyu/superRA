@@ -93,7 +93,7 @@ Any `## Heading` is valid. Recommended defaults:
 |---|---|---|
 | `## Objective` | Authoritative implementation/review contract: goal, constraints, required decisions, researcher-required implementation details, fixed inputs/outputs, validation criteria | planner |
 | `## Planner Guidance` | Optional advisory route: suggested routes, candidate files, prior exploration notes, likely sequence, implementation hints | planner |
-| `## Results` | Key findings and notes | implementer |
+| `## Results` | Key findings, notes, verification evidence, caveats, and material deviations from `## Planner Guidance` with rationale | implementer |
 | `## Revision Notes` | Temporary delta signal when a task objective is updated (what changed, significance); reviewer removes it on approval (`validate_plan` only warns if an `approved` task still carries one) | planner / orchestrator |
 | `## Review Notes` | Reviewer feedback | reviewer |
 

@@ -28,6 +28,8 @@ The editing discipline you will need at the end of the task lives in §Handoff b
 
 Treat `## Objective` as the implementation contract. Treat `## Planner Guidance`, when present, as advisory context you may deviate from when a better route satisfies the objective.
 
+If you materially deviate from `## Planner Guidance`, list it in `## Results` with what guidance you did not follow, what you did instead, and why the chosen route still satisfies `## Objective`. Omit the deviation list when you followed the guidance or only made immaterial tactical adjustments.
+
 Follow the discipline of the domain skill you loaded for this Stage. Bad analysis is worse than no analysis — stop and report under §Escalation if the data does not look right.
 
 ### Self-Review Before Reporting
@@ -48,6 +50,7 @@ Then check:
 - Did I implement everything in the task spec?
 - Are outputs saved where specified?
 - Does my assigned task's `## Results` carry the primary summary of major outcomes, numbers, caveats, and verification evidence before I return DONE / DONE_WITH_CONCERNS?
+- If I materially deviated from `## Planner Guidance`, did I explain the deviation and objective fit in `## Results`?
 
 **Reproducibility:**
 - If the task uses scripts, notebooks, or rendered notes, do they follow the domain/project format convention?

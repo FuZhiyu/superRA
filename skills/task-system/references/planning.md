@@ -132,7 +132,7 @@ python3 <skill-dir>/scripts/task_link.py \
 - **`script` / `input` / `output`** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **`## Objective`** is planner-owned. Implementers read it but do not rewrite it.
 - **`## Planner Guidance`** is planner-owned and advisory. Implementers may deviate from it when another route satisfies `## Objective`; reviewers flag guidance only when it is misleading, contradicts the objective, or would fail to achieve it.
-- **`## Results`** is implementer-owned. Updated with findings during execution. See §Results Shape below.
+- **`## Results`** is implementer-owned. Updated with findings, verification evidence, caveats, and material `## Planner Guidance` deviations during execution. See §Results Shape below.
 - **`## Revision Notes`** carries the delta signal when a task objective is updated — what changed, why, and how significant (trivial/mechanical vs substantive). Temporary: the reviewer removes this section when approving the task. Same lifecycle as `## Review Notes`. `validate_plan` warns (it never mutates) when an `approved` task still carries a non-empty `## Revision Notes` section, so a leak surfaces through the `[task-hook]` channel; the reviewer remains responsible for removing it at approval.
 - **`## Review Notes`** is present only when there are active items. On `approved`, the section content is removed entirely.
 
@@ -163,6 +163,7 @@ Results live in each task's `## Results` section. The same section matures throu
 ### Two-Stage Lifecycle
 
 - **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record — terse, agent-facing. "Latest state only" — re-implementation replaces a task's results; it does not append history.
+- When implementation materially deviates from `## Planner Guidance`, `## Results` states the guidance not followed, the chosen route, and why it still satisfies `## Objective`.
 - **Stage 2 — Permanent record (INTEGRATE Document).** Results maturation keeps findings in task files and restructures selected `## Results` sections for reader-facing clarity. Child tasks carry task-level evidence and caveats; parent tasks summarize direct child findings with links when a researcher needs a higher-level monitoring view.
 
 ### Per-task results template

@@ -39,6 +39,8 @@ Review the task broadly against the task-local evidence: `## Objective`, scope-d
 
 Review against `## Objective`, not mere adherence to `## Planner Guidance`. Do not fail a task because the implementer ignored guidance; flag guidance only when it is misleading, contradicts the objective, or would fail to achieve it.
 
+If the implementation materially deviates from `## Planner Guidance`, verify `## Results` states what changed and why the chosen route still satisfies `## Objective`. An unexplained material deviation is a MAJOR evidence gap, not a failure to obey advisory guidance.
+
 ### Verify Claims Independently
 
 **DO NOT take the implementer's word.** Check the git diff, not just the status return — agents can report "success" for partial work, missing edits, or claims that do not match the committed state. The status return is a navigation aid; the diff is the evidence.
@@ -73,6 +75,7 @@ Return APPROVE or REVISE without editing task `status:`. On REVISE, write number
 **MAJOR** — likely problem or significant violation:
 - Missing description before major transformation
 - Missing definitions or assumptions before a derivation that relies on them
+- Unexplained material deviation from `## Planner Guidance`
 - No row count tracking for sample-changing operations when the task touches data
 - No independent validation for a headline symbolic or numerical result
 - Unreproducible outputs
