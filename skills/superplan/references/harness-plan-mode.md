@@ -6,9 +6,9 @@ Load when the harness activates plan mode AND you recognize you are in a superRA
 
 ## Core Principle
 
-**Harness plan mode is your exploration and approval environment; `.plan/` is the output.**
+**Harness plan mode is your exploration and approval environment; `superRA/` is the output.**
 
-The harness plan file is not the authoritative plan. It is a single-file flat representation of what `.plan/` will contain — written so the user can review and approve the task structure before you create the actual files. At exit from plan mode you create `.plan/` directly from your full understanding; no migration from the plan file is needed or correct.
+The harness plan file is not the authoritative plan. It is a single-file flat representation of what `superRA/` will contain — written so the user can review and approve the task structure before you create the actual files. At exit from plan mode you create `superRA/` directly from your full understanding; no migration from the plan file is needed or correct.
 
 ---
 
@@ -18,7 +18,7 @@ The read-only constraint applies to file creation, not to exploration. Use it.
 
 Run the superplan phases that do not require writing task files:
 
-- **Entry Assessment** — check for an existing `.plan/`, read the root `task.md` if present, determine placement in the tree, choose a depth tier, and identify the routing path (forward, retroactive, or consolidation). Depth tier selection happens here; the plan file reflects the chosen depth and placement decisions.
+- **Entry Assessment** — check for an existing `superRA/`, read the root `task.md` if present, determine placement in the tree, choose a depth tier, and identify the routing path (forward, retroactive, or consolidation). Depth tier selection happens here; the plan file reflects the chosen depth and placement decisions.
 - **Exploration** — read project files, load domain skill planning references, inventory data or model primitives as the domain requires, satisfy any domain hard gates that require researcher approval before task structure is drafted. Depth scales with the tier: quick skips deep exploration, standard explores relevant areas, thorough dispatches parallel exploration agents.
 - **Domain Setup & Scope** — identify the domain vertical, load the matching planning reference, present the domain inventory to the researcher, and get approval before drafting task structure.
 
@@ -28,7 +28,7 @@ Write the harness plan file last, after exploration is complete and any domain h
 
 ## What Goes in the Harness Plan File
 
-Write a flattened view of the planned `.plan/` changes. The user is reviewing the same information they would see after the task files are created — just in a single file instead of a directory tree.
+Write a flattened view of the planned `superRA/` changes. The user is reviewing the same information they would see after the task files are created — just in a single file instead of a directory tree.
 
 For each planned task, include:
 
@@ -89,8 +89,8 @@ task-b2 → task-c
 
 ## At Exit from Plan Mode
 
-When the user approves the plan and exits plan mode, you have full write access. Create the `.plan/` task tree directly from your conversation context — the exploration findings, domain inventory, and design decisions you accumulated in plan mode.
+When the user approves the plan and exits plan mode, you have full write access. Create the `superRA/` task tree directly from your conversation context — the exploration findings, domain inventory, and design decisions you accumulated in plan mode.
 
 Use `task_create.py` or create directories and write `task.md` files directly. The harness plan file provided the review vehicle; the task files are the output. Do not re-parse or "migrate" the plan file — write from your understanding.
 
-Commit the `.plan/` directory as the first action after exit, before any implementation work begins.
+Commit the `superRA/` directory as the first action after exit, before any implementation work begins.

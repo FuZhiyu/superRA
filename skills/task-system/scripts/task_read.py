@@ -10,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _task_io import (
+    TASK_ROOT_DIRNAMES,
     Task,
     parse_body_sections,
     parse_frontmatter,
@@ -32,6 +33,10 @@ def _autodetect_plan_root(start: Path) -> Path | None:
     """
     current = start.resolve()
     while True:
+        for dirname in TASK_ROOT_DIRNAMES:
+            candidate = current / dirname
+            if (candidate / "task.md").exists():
+                return candidate
         if (current / "task.md").exists():
             parent = current.parent
             if not (parent / "task.md").exists():

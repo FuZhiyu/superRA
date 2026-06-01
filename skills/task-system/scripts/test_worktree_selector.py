@@ -66,7 +66,7 @@ def _make_worktree(
     path: str = "/tmp/wt",
     branch: str | None = "main",
     head: str = "abc123",
-    plan_root: str | None = "/tmp/wt/.plan",
+    plan_root: str | None = "/tmp/wt/superRA",
     plan_title: str | None = "Test Plan",
     is_current: bool = False,
     is_locked: bool = False,
@@ -233,14 +233,14 @@ class TestDiscoverWorktrees:
     def test_discovers_worktrees_with_plans(
         self, mock_run, mock_current, mock_activity, tmp_path
     ):
-        # Set up two worktrees with .plan/ directories
+        # Set up two worktrees with superRA/ directories
         wt1 = tmp_path / "main"
         wt1.mkdir()
-        _write_task_md(wt1 / ".plan" / "task.md", "Main Plan")
+        _write_task_md(wt1 / "superRA" / "task.md", "Main Plan")
 
         wt2 = tmp_path / "feature"
         wt2.mkdir()
-        _write_task_md(wt2 / ".plan" / "task.md", "Feature Plan")
+        _write_task_md(wt2 / "superRA" / "task.md", "Feature Plan")
 
         porcelain = (
             f"worktree {wt1}\n"
@@ -281,7 +281,7 @@ class TestDiscoverWorktrees:
         """Prunable worktrees skip filesystem checks; plan_root remains None."""
         wt = tmp_path / "prunable-wt"
         wt.mkdir()
-        _write_task_md(wt / ".plan" / "task.md", "Should be skipped")
+        _write_task_md(wt / "superRA" / "task.md", "Should be skipped")
 
         porcelain = (
             f"worktree {wt}\n"
@@ -304,9 +304,9 @@ class TestDiscoverWorktrees:
     def test_no_plan_dir_sets_plan_root_none(
         self, mock_run, mock_current, mock_activity, tmp_path
     ):
-        """Worktree without .plan/ directory has plan_root=None."""
+        """Worktree without a task-root directory has plan_root=None."""
         wt = tmp_path / "no-plan"
-        wt.mkdir()  # no .plan/ inside
+        wt.mkdir()  # no task-root directory inside
 
         porcelain = (
             f"worktree {wt}\n"
@@ -325,13 +325,38 @@ class TestDiscoverWorktrees:
     @patch("_worktree_discovery._get_last_activity")
     @patch("_worktree_discovery._get_current_worktree_path")
     @patch("_worktree_discovery.subprocess.run")
+    def test_discovers_legacy_plan_root(
+        self, mock_run, mock_current, mock_activity, tmp_path
+    ):
+        """Legacy .plan/ worktrees remain visible during migration."""
+        wt = tmp_path / "legacy"
+        wt.mkdir()
+        _write_task_md(wt / ".plan" / "task.md", "Legacy Plan")
+
+        porcelain = (
+            f"worktree {wt}\n"
+            "HEAD abc123def456abc123def456abc123def456abc123\n"
+            "branch refs/heads/legacy\n"
+        )
+        mock_run.return_value = MagicMock(returncode=0, stdout=porcelain)
+        mock_current.return_value = None
+        mock_activity.return_value = 1000.0
+
+        result = discover_worktrees()
+        assert len(result) == 1
+        assert result[0].plan_root == str((wt / ".plan").resolve())
+        assert result[0].plan_title == "Legacy Plan"
+
+    @patch("_worktree_discovery._get_last_activity")
+    @patch("_worktree_discovery._get_current_worktree_path")
+    @patch("_worktree_discovery.subprocess.run")
     def test_broken_task_md_sets_plan_title_none(
         self, mock_run, mock_current, mock_activity, tmp_path
     ):
-        """Worktree with .plan/task.md but broken frontmatter has plan_root set, title None."""
+        """Worktree with superRA/task.md but broken frontmatter has plan_root set, title None."""
         wt = tmp_path / "broken"
         wt.mkdir()
-        plan_dir = wt / ".plan"
+        plan_dir = wt / "superRA"
         plan_dir.mkdir()
         (plan_dir / "task.md").write_text("No frontmatter here.\n", encoding="utf-8")
 
@@ -357,7 +382,7 @@ class TestDiscoverWorktrees:
     ):
         wt = tmp_path / "agent-wt"
         wt.mkdir()
-        _write_task_md(wt / ".plan" / "task.md", "Agent Plan")
+        _write_task_md(wt / "superRA" / "task.md", "Agent Plan")
 
         porcelain = (
             f"worktree {wt}\n"
@@ -380,7 +405,7 @@ class TestDiscoverWorktrees:
     ):
         wt = tmp_path / ".claude" / "worktrees" / "agent-task1"
         wt.mkdir(parents=True)
-        _write_task_md(wt / ".plan" / "task.md", "Agent Path Plan")
+        _write_task_md(wt / "superRA" / "task.md", "Agent Path Plan")
 
         porcelain = (
             f"worktree {wt}\n"
@@ -426,8 +451,8 @@ class TestDiscoverWorktrees:
 class TestFilterWorktrees:
     def test_default_excludes_prunable(self):
         wts = [
-            _make_worktree(path="/a", is_prunable=True, plan_root="/a/.plan"),
-            _make_worktree(path="/b", is_prunable=False, plan_root="/b/.plan"),
+            _make_worktree(path="/a", is_prunable=True, plan_root="/a/superRA"),
+            _make_worktree(path="/b", is_prunable=False, plan_root="/b/superRA"),
         ]
         result = filter_worktrees(wts)
         assert len(result) == 1
@@ -436,7 +461,7 @@ class TestFilterWorktrees:
     def test_default_excludes_no_plan(self):
         wts = [
             _make_worktree(path="/a", plan_root=None),
-            _make_worktree(path="/b", plan_root="/b/.plan"),
+            _make_worktree(path="/b", plan_root="/b/superRA"),
         ]
         result = filter_worktrees(wts)
         assert len(result) == 1
@@ -444,15 +469,15 @@ class TestFilterWorktrees:
 
     def test_default_keeps_agent_worktrees(self):
         wts = [
-            _make_worktree(path="/agent", is_agent=True, plan_root="/agent/.plan"),
-            _make_worktree(path="/normal", is_agent=False, plan_root="/normal/.plan"),
+            _make_worktree(path="/agent", is_agent=True, plan_root="/agent/superRA"),
+            _make_worktree(path="/normal", is_agent=False, plan_root="/normal/superRA"),
         ]
         result = filter_worktrees(wts)
         assert len(result) == 2
 
     def test_include_prunable_override(self):
         wts = [
-            _make_worktree(path="/prunable", is_prunable=True, plan_root="/p/.plan"),
+            _make_worktree(path="/prunable", is_prunable=True, plan_root="/p/superRA"),
         ]
         result = filter_worktrees(wts, include_prunable=True)
         assert len(result) == 1
@@ -520,8 +545,8 @@ class TestDefaultPort:
         """Same git_common_dir produces the same port regardless of plan root."""
         from plan_dashboard import _default_port
 
-        plan_root_a = tmp_path / "wt-a" / ".plan"
-        plan_root_b = tmp_path / "wt-b" / ".plan"
+        plan_root_a = tmp_path / "wt-a" / "superRA"
+        plan_root_b = tmp_path / "wt-b" / "superRA"
         plan_root_a.mkdir(parents=True)
         plan_root_b.mkdir(parents=True)
         common_dir = str(tmp_path / ".git")
@@ -534,7 +559,7 @@ class TestDefaultPort:
         """Without git_common_dir, port is derived from plan_root."""
         from plan_dashboard import _default_port
 
-        plan_root = tmp_path / ".plan"
+        plan_root = tmp_path / "superRA"
         plan_root.mkdir()
         port = _default_port(plan_root, git_common_dir=None)
         assert 8100 <= port <= 8999 or port == 0
@@ -542,7 +567,7 @@ class TestDefaultPort:
     def test_port_in_valid_range(self, tmp_path):
         from plan_dashboard import _default_port
 
-        plan_root = tmp_path / ".plan"
+        plan_root = tmp_path / "superRA"
         plan_root.mkdir()
         port = _default_port(plan_root, git_common_dir="/some/git/dir")
         assert 8100 <= port <= 8999 or port == 0
@@ -551,7 +576,7 @@ class TestDefaultPort:
         """Different git common dirs should produce different ports (probabilistic)."""
         from plan_dashboard import _default_port
 
-        plan_root = tmp_path / ".plan"
+        plan_root = tmp_path / "superRA"
         plan_root.mkdir()
         port_a = _default_port(plan_root, git_common_dir="/repo-a/.git")
         port_b = _default_port(plan_root, git_common_dir="/repo-b/.git")
@@ -573,7 +598,7 @@ class TestWorktreeRoutes:
         """Set up the FastAPI app with a temporary plan root before each test."""
         import plan_dashboard
 
-        self._plan_root = tmp_path / ".plan"
+        self._plan_root = tmp_path / "superRA"
         self._plan_root.mkdir()
         _write_task_md(self._plan_root / "task.md", "Test Dashboard")
 
@@ -678,7 +703,7 @@ class TestWorktreeRoutes:
         client = self._get_client()
         resp = client.post(
             "/api/worktree/switch",
-            json={"plan_root": "/nonexistent/.plan"},
+            json={"plan_root": "/nonexistent/superRA"},
         )
         assert resp.status_code == 404
 
@@ -689,7 +714,7 @@ class TestWorktreeRoutes:
                 path="/some/other/path",
                 branch="other",
                 head="abc",
-                plan_root="/some/other/.plan",
+                plan_root="/some/other/superRA",
                 plan_title="Other",
                 is_current=False,
                 is_locked=False,
@@ -701,7 +726,7 @@ class TestWorktreeRoutes:
         client = self._get_client()
         resp = client.post(
             "/api/worktree/switch",
-            json={"plan_root": "/nonexistent/.plan"},
+            json={"plan_root": "/nonexistent/superRA"},
         )
         assert resp.status_code == 404
 
@@ -709,10 +734,10 @@ class TestWorktreeRoutes:
     def test_switch_valid_worktree_success(self, mock_discover, tmp_path):
         import plan_dashboard
 
-        # Create a second worktree with a valid .plan/
+        # Create a second worktree with a valid superRA/
         wt2 = tmp_path / "wt2"
         wt2.mkdir()
-        wt2_plan = wt2 / ".plan"
+        wt2_plan = wt2 / "superRA"
         wt2_plan.mkdir()
         _write_task_md(wt2_plan / "task.md", "Second Worktree")
 
@@ -746,14 +771,14 @@ class TestWorktreeRoutes:
 
     @patch("plan_dashboard.discover_worktrees")
     def test_switch_invalid_plan_root_no_task_md_returns_400(self, mock_discover, tmp_path):
-        """Worktree exists but .plan/ has no task.md -> 400."""
+        """Worktree exists but superRA/ has no task.md -> 400."""
         import plan_dashboard
 
         wt = tmp_path / "bad-plan-wt"
         wt.mkdir()
-        bad_plan = wt / ".plan"
+        bad_plan = wt / "superRA"
         bad_plan.mkdir()
-        # No task.md inside .plan/
+        # No task.md inside superRA/
 
         mock_discover.return_value = [
             WorktreeInfo(
@@ -790,7 +815,7 @@ class TestSSEBroadcastOnSwitch:
     def setup_app(self, tmp_path):
         import plan_dashboard
 
-        self._plan_root = tmp_path / ".plan"
+        self._plan_root = tmp_path / "superRA"
         self._plan_root.mkdir()
         _write_task_md(self._plan_root / "task.md", "Main Plan")
 
@@ -823,7 +848,7 @@ class TestSSEBroadcastOnSwitch:
         # Create target worktree
         wt2 = tmp_path / "wt2"
         wt2.mkdir()
-        wt2_plan = wt2 / ".plan"
+        wt2_plan = wt2 / "superRA"
         wt2_plan.mkdir()
         _write_task_md(wt2_plan / "task.md", "Switched Plan")
 

@@ -9,11 +9,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _task_io import (
+    TASK_ROOT_DIRNAME,
     VALID_STATUSES,
     collect_all_tasks,
     compute_status,
     parse_task,
     propagate_parent_status,
+    resolve_plan_root_arg,
     walk_plan,
     write_task,
 )
@@ -24,8 +26,12 @@ _CASCADE_ALLOWED = ("approved", "not-started", "archived")
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Update task frontmatter fields.")
-    parser.add_argument("--plan-root", required=True, help="Path to the plan root directory")
-    parser.add_argument("--path", help="Task path relative to plan root")
+    parser.add_argument(
+        "--plan-root",
+        default=None,
+        help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
+    )
+    parser.add_argument("--path", help="Task path relative to task root")
     parser.add_argument("--status", choices=VALID_STATUSES, help="Set task status")
     parser.add_argument("--cascade", action="store_true",
                         help="When setting status on a branch task, cascade to all descendant leaves. "
@@ -249,9 +255,12 @@ def propagate_all(plan_root: Path) -> int:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+    plan_root = resolve_plan_root_arg(args.plan_root)
+    if plan_root is None:
+        print("Error: could not auto-detect task root. Use --plan-root.", file=sys.stderr)
+        sys.exit(1)
 
     if args.fix:
-        plan_root = Path(args.plan_root)
         print(f"Scanning {plan_root} for status consistency issues...")
         fixed = fix_status_consistency(plan_root)
         if fixed:
@@ -266,7 +275,6 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     if getattr(args, "propagate_all", False):
-        plan_root = Path(args.plan_root)
         print(f"Propagating parent statuses in {plan_root}...")
         updated = propagate_all(plan_root)
         if updated:
@@ -285,7 +293,7 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(1)
 
     update_task(
-        plan_root=Path(args.plan_root),
+        plan_root=plan_root,
         task_path=args.path,
         status=args.status,
         cascade=args.cascade,

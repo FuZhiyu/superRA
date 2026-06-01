@@ -29,7 +29,7 @@ case "$tool_name" in
     ;;
 esac
 
-context="<IMPORTANT>You just received an answer from the user. If it affects scope, methodology, task status, or later reproducibility, consider recording it in the relevant .plan/ task.md before relying on it.</IMPORTANT>"
+context="<IMPORTANT>You just received an answer from the user. If it affects scope, methodology, task status, or later reproducibility, consider recording it in the relevant superRA/task.md before relying on it.</IMPORTANT>"
 
 # Platform-appropriate output format (matches merge-guard / session-start pattern)
 if [ -n "${CURSOR_PLUGIN_ROOT:-}" ]; then

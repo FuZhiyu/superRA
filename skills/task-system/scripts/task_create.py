@@ -9,12 +9,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import today_str
+from _task_io import TASK_ROOT_DIRNAME, today_str
 
 
 SERVE_SCRIPT_TEMPLATE = """\
 #!/usr/bin/env bash
-# Launch the task-tree dashboard for this .plan/ directory.
+# Launch the task-tree dashboard for this task-root directory.
 PLAN_DIR="$(cd "$(dirname "$0")" && pwd)"
 DASHBOARD="$PLAN_DIR/{dashboard_relpath}"
 if [ ! -f "$DASHBOARD" ]; then
@@ -26,9 +26,9 @@ exec uv run "$DASHBOARD" serve --root "$PLAN_DIR" "$@"
 
 
 def _maybe_generate_serve_script(plan_root: Path) -> None:
-    """Generate .plan/serve if it does not already exist.
+    """Generate the task-root serve shortcut if it does not already exist.
 
-    Uses a relative path from .plan/ to the dashboard script in this repo.
+    Uses a relative path from the task root to the dashboard script in this repo.
     """
     serve_path = plan_root / "serve"
     if serve_path.exists():
@@ -61,7 +61,11 @@ tags: []
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Create a new task.")
-    parser.add_argument("--plan-root", required=True, help="Path to the plan root directory")
+    parser.add_argument(
+        "--plan-root",
+        default=TASK_ROOT_DIRNAME,
+        help=f"Path to the task root directory (default: {TASK_ROOT_DIRNAME})",
+    )
     parser.add_argument("--path", required=True, help="Task path relative to plan root (e.g., 01-data-prep/01-load)")
     parser.add_argument("--title", required=True, help="Task title")
     parser.add_argument("--objective", default="", help="Task objective (one-line description)")
@@ -132,7 +136,7 @@ def create_task(
 
     print(f"Created {task_md}")
 
-    # Generate .plan/serve shortcut when creating a root-level task in a fresh .plan/
+    # Generate the serve shortcut when creating a root-level task in a fresh task root.
     if "/" not in task_path:
         try:
             _maybe_generate_serve_script(plan_root)

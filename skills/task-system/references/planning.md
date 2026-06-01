@@ -1,8 +1,8 @@
 # Planning Reference
 
-Load this reference when you are an orchestrator or planner creating, restructuring, or maintaining a `.plan/` task tree.
+Load this reference when you are an orchestrator or planner creating, restructuring, or maintaining a `superRA/` task tree.
 
-**Terminology:** "Plan" is the verb (the planning process), not the noun. Everything in `.plan/` is a **task**. `.plan/` is "the task tree." See `CLAUDE.md` §Terminology for the full convention.
+**Terminology:** "Plan" is the verb (the planning process), not the noun. Everything in `superRA/` is a **task**. `superRA/` is "the task tree." See `CLAUDE.md` §Terminology for the full convention.
 
 ## Writing Objectives
 
@@ -66,7 +66,7 @@ The recursion handles all levels uniformly: start at the root, walk down through
 
 ## Root task.md Anatomy
 
-The root `.plan/task.md` frames the entire project. It carries:
+The root `superRA/task.md` frames the entire project. It carries:
 
 - **`## Objective`** — project-level goal, methodology summary, scope boundaries
 - **`## Conventions`** — naming conventions, paths, units, variable definitions that apply across all tasks
@@ -76,7 +76,7 @@ The root task does not carry `script`, `input`, or `output` — those belong on 
 
 ## Retroactive Plan Creation
 
-When creating `.plan/` from existing work (code already written, results already obtained):
+When creating `superRA/` from existing work (code already written, results already obtained):
 
 1. Read the existing code and results to understand what was done
 2. Create the root `task.md` with the project objective and conventions
@@ -92,7 +92,7 @@ When creating `.plan/` from existing work (code already written, results already
 
 ```bash
 python3 <skill-dir>/scripts/task_create.py \
-  --plan-root .plan --path 01-data/03-filter \
+  --plan-root superRA --path 01-data/03-filter \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
   --depends-on 02-merge
@@ -104,17 +104,17 @@ python3 <skill-dir>/scripts/task_create.py \
 
 ```bash
 python3 <skill-dir>/scripts/task_rename.py \
-  --plan-root .plan --from 01-data/01-load --to 01-data/01-load-raw
+  --plan-root superRA --from 01-data/01-load --to 01-data/01-load-raw
 ```
 
 ### Manage dependencies
 
 ```bash
 python3 <skill-dir>/scripts/task_link.py \
-  --plan-root .plan --path 01-data/03-filter --depends-on 02-merge
+  --plan-root superRA --path 01-data/03-filter --depends-on 02-merge
 
 python3 <skill-dir>/scripts/task_link.py \
-  --plan-root .plan --path 01-data/03-filter --depends-on 02-merge --remove
+  --plan-root superRA --path 01-data/03-filter --depends-on 02-merge --remove
 ```
 
 ## Field-by-Field Notes
@@ -194,7 +194,7 @@ Parent rollups summarize direct children for monitoring. Do not recursively copy
 
 ### Figure Embedding
 
-Figures committed to `attachments/` next to the task's `task.md` (e.g., `.plan/my-task/attachments/fig.png`). Embed with a path relative to the task file:
+Figures committed to `attachments/` next to the task's `task.md` (e.g., `superRA/my-task/attachments/fig.png`). Embed with a path relative to the task file:
 
 ```markdown
 ![Descriptive caption](attachments/fig_name.png)

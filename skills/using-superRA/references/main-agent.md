@@ -3,20 +3,20 @@
 ## MANDATORY: Session Start Actions
 
 Before your first substantive response, run these cross-session detection checks:
-1. Check for `.plan/task.md` in the working directory
+1. Check for `superRA/task.md` in the working directory
 2. Check for analysis worktrees (`git worktree list`)
 3. Check for analysis branches (`git branch --list 'analysis/*'`)
 4. If any exist, report to the user: "Found in-progress analysis work: [details]"
 
 Do NOT skip these because the user "jumped straight into a task." The checks take 5 seconds and prevent lost work.
 
-**If an incomplete task tree is found** (`.plan/task.md` exists with tasks in non-approved status):
+**If an incomplete task tree is found** (`superRA/task.md` exists with tasks in non-approved status):
 - Run `task_query.py --tree` to get the full status summary.
-- Summarize: "Found in-progress analysis: `.plan/` (N tasks approved, K with issues). Resume?"
-- If user confirms: read the `.plan/` task tree, check git log for latest state, run §Workflow Frontier Resolver, and continue from the returned frontier.
+- Summarize: "Found in-progress analysis: `superRA/` (N tasks approved, K with issues). Resume?"
+- If user confirms: read the `superRA/` task tree, check git log for latest state, run §Workflow Frontier Resolver, and continue from the returned frontier.
 - If user declines: proceed normally
 
-**Backward compatibility:** If `PLAN.md` is found without a `.plan/` directory, offer migration via `plan_migrate.py`.
+**Backward compatibility:** If `PLAN.md` is found without a `superRA/` directory, offer migration via `plan_migrate.py`.
 
 **If in a worktree with no task tree:**
 - Note: "You're in worktree `<path>` on branch `<branch>`. Continue working here?"
@@ -29,15 +29,15 @@ The resolver diagnoses and routes. It does not perform the task-tree edit, imple
 
 **Read facts first:**
 
-- Git: current branch/worktree, `git status`, recent commits relevant to `.plan/` task files, and any active merge/rebase/cherry-pick state.
-- Task tree: whether `.plan/task.md` exists, is tracked, and matches the committed state expected by the workflow about to run.
+- Git: current branch/worktree, `git status`, recent commits relevant to `superRA/` task files, and any active merge/rebase/cherry-pick state.
+- Task tree: whether `superRA/task.md` exists, is tracked, and matches the committed state expected by the workflow about to run.
 - Root task.md: `## Conventions`, `## Sync Map` when present, any logged superimplement Step 4 disposition, and any declared pipeline.
 - Per-task frontmatter: `status`, `depends_on`. Use `task_query.py --frontier` to find dispatchable tasks.
 - Per-task body: `## Results` sections for completed work, active `## Review Notes` blockquotes, `## Revision Notes` signaling recent changes.
 
 **Compute the affected frontier:**
 
-1. First check whether planning must run. If `.plan/task.md` is missing, untracked, structurally incomplete, or contradicted by a material user decision not yet reflected in task objectives, enter `superplan` before implementation or integration work. Material scope, objective, input, output, methodology, or task-graph changes use `superplan §User Feedback and Changing the Task Tree`; after that protocol updates the task files, run this resolver again.
+1. First check whether planning must run. If `superRA/task.md` is missing, untracked, structurally incomplete, or contradicted by a material user decision not yet reflected in task objectives, enter `superplan` before implementation or integration work. Material scope, objective, input, output, methodology, or task-graph changes use `superplan §User Feedback and Changing the Task Tree`; after that protocol updates the task files, run this resolver again.
 2. Identify the changed or untrusted starting points from the durable facts: explicit user scope change, dirty or recent task-file edits, omitted / placeholder / cleared task status, active review notes, revision notes signaling a scope change, failed or missing reproducibility evidence, or a requested final action.
 3. For each changed task, include downstream dependents (via `depends_on:` edges) whose inputs, outputs, or assumptions may have shifted. Preserve `status` for unrelated approved tasks. If a downstream task is unaffected, note the exemption in a revision note on the changed task.
 4. If durable facts disagree in a way you cannot repair mechanically, stop under §The Three Pause Classes and resolve before acting.
@@ -60,7 +60,7 @@ The resolver diagnoses and routes. It does not perform the task-tree edit, imple
 **Safety invariants:**
 
 - Do not add or trust a single global `Current state` field.
-- Do not act on a material user decision before it is reflected in `.plan/` task objectives.
+- Do not act on a material user decision before it is reflected in `superRA/` task objectives.
 - Do not clear unrelated task-local statuses when only a changed task's downstream is affected.
 - Do not advance past implementation work without reviewer approval or documented adjudication of blocking review items.
 - Do not enter integration before implementation reproducibility and the Step 4 disposition are current.
@@ -128,7 +128,7 @@ Subagent mode is the default — dispatch implementers and reviewers through `su
 
 - **Read the direct-mode role reference for the role you are playing.** `references/direct-mode-implementer.md` for an implementation step; `references/direct-mode-reviewer.md` for a review step. These are the skill-surface copies of the role protocol that direct mode can load across repos.
 - **The Skill-Load Manifest still drives loads.** Consult the manifest row for your Stage and load the listed skills/references in-session.
-- **Task context comes from `.plan/` task files** (via `task_read.py` or direct read of `task.md`) — there is no dispatch prompt.
+- **Task context comes from `superRA/` task files** (via `task_read.py` or direct read of `task.md`) — there is no dispatch prompt.
 - **Self-review gate, editing discipline, and verdict protocol all apply.** Walk the active domain skill's gated checklist before committing. Reviewer verdicts are still APPROVE / REVISE.
 - **Review is never skipped.** Either dispatch a reviewer subagent or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
 

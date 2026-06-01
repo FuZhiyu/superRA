@@ -18,6 +18,42 @@ from pathlib import Path
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---\n(.*)", re.DOTALL)
 
 VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved", "archived")
+TASK_ROOT_DIRNAME = "superRA"
+LEGACY_TASK_ROOT_DIRNAME = ".plan"
+TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
+
+
+def default_plan_root() -> Path:
+    return Path(TASK_ROOT_DIRNAME)
+
+
+def autodetect_plan_root(start: Path | None = None) -> Path | None:
+    """Walk up from *start* and find the active task root.
+
+    Prefers ``superRA/`` over the legacy ``.plan/`` when both are visible from
+    a repository directory, and also works when called from inside a task root.
+    """
+    current = (start or Path.cwd()).resolve()
+    while True:
+        for dirname in TASK_ROOT_DIRNAMES:
+            candidate = current / dirname
+            if (candidate / "task.md").exists():
+                return candidate
+        if (current / "task.md").exists():
+            parent = current.parent
+            if not (parent / "task.md").exists():
+                return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
+def resolve_plan_root_arg(plan_root: str | Path | None, start: Path | None = None) -> Path | None:
+    """Resolve an optional CLI task-root argument, auto-detecting when omitted."""
+    if plan_root is not None:
+        return Path(plan_root)
+    return autodetect_plan_root(start)
 
 
 @dataclass
@@ -306,10 +342,9 @@ def write_task(task: Task) -> None:
 def _find_plan_root(task_dir: Path) -> Path | None:
     """Walk up from a task directory to find the plan root.
 
-    The plan root is the directory that contains the top-level task.md
-    and is itself named with a dot-prefix (e.g., .plan) or is explicitly
-    passed. We detect it by walking up until we find a directory whose
-    parent does not contain a task.md.
+    The plan root is the directory that contains the top-level task.md.
+    We detect it by walking up until we find a directory whose parent does
+    not contain a task.md.
     """
     current = task_dir
     while True:

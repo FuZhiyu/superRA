@@ -6,7 +6,7 @@
 """Live-updating task dashboard server with backward-compatible static generation.
 
 Usage:
-    uv run plan_dashboard.py serve [--root .plan/] [--port 8080] [--no-open]
+    uv run plan_dashboard.py serve [--root superRA/] [--port 8080] [--no-open]
     uv run plan_dashboard.py generate --plan-root PATH [--output PATH]
 """
 
@@ -31,7 +31,7 @@ from typing import AsyncGenerator
 # ---------------------------------------------------------------------------
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _task_io import Task, _walk_children, collect_all_tasks, parse_task, walk_plan
+from _task_io import TASK_ROOT_DIRNAME, Task, _walk_children, collect_all_tasks, parse_task, walk_plan
 from _worktree_discovery import (
     WorktreeInfo,
     _parse_plan_title,
@@ -61,7 +61,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Module-level state (configured before uvicorn.run)
 # ---------------------------------------------------------------------------
-PLAN_ROOT: Path = Path(".plan")
+PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 
 # In-memory task tree and flat index
 _root_task: Task | None = None
@@ -761,7 +761,7 @@ async def switch_worktree(request: Request):
 
     new_plan_root = Path(plan_root_str).resolve()
 
-    # Validate: must be a known worktree with a valid .plan/
+    # Validate: must be a known worktree with a valid task root.
     all_wts = discover_worktrees()
     if not all_wts:
         raise HTTPException(status_code=404, detail="Not in a git repo; switching unavailable")
@@ -1311,8 +1311,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     serve_p = subparsers.add_parser("serve", help="Start the live dashboard server")
     serve_p.add_argument(
         "--root",
-        default=".plan/",
-        help="Path to the .plan/ directory (default: .plan/ in cwd)",
+        default=f"{TASK_ROOT_DIRNAME}/",
+        help=f"Path to the task root directory (default: {TASK_ROOT_DIRNAME}/ in cwd)",
     )
     serve_p.add_argument(
         "--port",

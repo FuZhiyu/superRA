@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Launch the task-tree dashboard for this task-root directory.
+PLAN_DIR="$(cd "$(dirname "$0")" && pwd)"
+DASHBOARD="$PLAN_DIR/../skills/task-system/scripts/plan_dashboard.py"
+if [ ! -f "$DASHBOARD" ]; then
+  echo "Error: plan_dashboard.py not found at $DASHBOARD" >&2
+  exit 1
+fi
+exec uv run "$DASHBOARD" serve --root "$PLAN_DIR" "$@"

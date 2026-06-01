@@ -9,12 +9,16 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import parse_task, write_task
+from _task_io import TASK_ROOT_DIRNAME, parse_task, resolve_plan_root_arg, write_task
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Rename a task and update sibling references.")
-    parser.add_argument("--plan-root", required=True, help="Path to the plan root directory")
+    parser.add_argument(
+        "--plan-root",
+        default=None,
+        help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
+    )
     parser.add_argument("--from", required=True, dest="from_path", help="Current task path")
     parser.add_argument("--to", required=True, dest="to_path", help="New task path")
     return parser.parse_args(argv)
@@ -70,7 +74,11 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    rename_task(Path(args.plan_root), args.from_path, args.to_path)
+    plan_root = resolve_plan_root_arg(args.plan_root)
+    if plan_root is None:
+        print("Error: could not auto-detect task root. Use --plan-root.", file=sys.stderr)
+        sys.exit(1)
+    rename_task(plan_root, args.from_path, args.to_path)
 
 
 if __name__ == "__main__":

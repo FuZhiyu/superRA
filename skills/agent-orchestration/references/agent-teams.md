@@ -65,7 +65,7 @@ Each teammate loads what the manifest specifies for its Stage. Do not duplicate 
 
 ## Task-Graph Construction
 
-Construct the full task graph from the `.plan/` task tree upfront so teammates see the whole scope. Each graph node is one stage of one task, assigned to the teammate whose `subagent_type` matches the stage's role.
+Construct the full task graph from the `superRA/` task tree upfront so teammates see the whole scope. Each graph node is one stage of one task, assigned to the teammate whose `subagent_type` matches the stage's role.
 
 **Dependency rules:**
 
@@ -164,9 +164,9 @@ When a team's work is complete:
 If context runs out or the session ends mid-team:
 
 - **Teammates are lost.** `/resume` and `/rewind` do not restore teammates.
-- **Completed work is safe.** All completed tasks are committed to git and recorded in `.plan/` task files.
-- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superra` `references/main-agent.md`) checks for incomplete `.plan/` task tree.
-- **Resume with new team.** New session reads the `.plan/` task tree to find last completed task, spawns a fresh team for remaining work.
+- **Completed work is safe.** All completed tasks are committed to git and recorded in `superRA/` task files.
+- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superra` `references/main-agent.md`) checks for incomplete `superRA/` task tree.
+- **Resume with new team.** New session reads the `superRA/` task tree to find last completed task, spawns a fresh team for remaining work.
 
 ### Checkpointing for Team Safety
 
@@ -174,9 +174,9 @@ Because teammates can be lost at any time, checkpointing discipline is critical:
 
 - Commit after each completed task (already required by superRA)
 - Update task files with status and result notes (already required)
-- **Additionally:** lead records active team phase in root `.plan/task.md` when spawning a team.
+- **Additionally:** lead records active team phase in root `superRA/task.md` when spawning a team.
 
-Example team status note in root `.plan/task.md`:
+Example team status note in root `superRA/task.md`:
 
 ```markdown
 ## Team Status

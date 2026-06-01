@@ -8,12 +8,16 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import parse_task, write_task
+from _task_io import TASK_ROOT_DIRNAME, parse_task, resolve_plan_root_arg, write_task
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Manage task dependencies.")
-    parser.add_argument("--plan-root", required=True, help="Path to the plan root directory")
+    parser.add_argument(
+        "--plan-root",
+        default=None,
+        help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
+    )
     parser.add_argument("--path", required=True, help="Task path (the task to modify)")
     parser.add_argument("--depends-on", required=True, help="Sibling dependency name to add or remove")
     parser.add_argument("--remove", action="store_true", help="Remove the dependency instead of adding it")
@@ -101,8 +105,12 @@ def link_task(
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+    plan_root = resolve_plan_root_arg(args.plan_root)
+    if plan_root is None:
+        print("Error: could not auto-detect task root. Use --plan-root.", file=sys.stderr)
+        sys.exit(1)
     link_task(
-        plan_root=Path(args.plan_root),
+        plan_root=plan_root,
         task_path=args.path,
         depends_on=args.depends_on,
         remove=args.remove,

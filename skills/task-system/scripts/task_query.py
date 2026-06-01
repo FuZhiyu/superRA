@@ -10,7 +10,15 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import Task, collect_all_tasks, compute_frontier, parse_body_sections, walk_plan
+from _task_io import (
+    TASK_ROOT_DIRNAME,
+    TASK_ROOT_DIRNAMES,
+    Task,
+    collect_all_tasks,
+    compute_frontier,
+    parse_body_sections,
+    walk_plan,
+)
 
 
 STATUS_ICONS = {
@@ -25,7 +33,11 @@ STATUS_ICONS = {
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Query the task tree.")
-    parser.add_argument("--plan-root", required=True, help="Path to the plan root directory")
+    parser.add_argument(
+        "--plan-root",
+        default=None,
+        help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
+    )
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--tree", action="store_true", help="Print the task tree")
@@ -36,6 +48,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tag", help="Filter by tag")
     parser.add_argument("--json", action="store_true", dest="as_json", help="Output as JSON")
     return parser.parse_args(argv)
+
+
+def _autodetect_plan_root(start: Path) -> Path | None:
+    current = start.resolve()
+    while True:
+        for dirname in TASK_ROOT_DIRNAMES:
+            candidate = current / dirname
+            if (candidate / "task.md").exists():
+                return candidate
+        if (current / "task.md").exists():
+            parent = current.parent
+            if not (parent / "task.md").exists():
+                return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
 
 
 def print_tree(task: Task, indent: int = 0, status_filter: str | None = None, tag_filter: str | None = None) -> None:
@@ -178,7 +207,10 @@ def tree_to_json(task: Task) -> dict:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    plan_root = Path(args.plan_root)
+    plan_root = Path(args.plan_root) if args.plan_root else _autodetect_plan_root(Path.cwd())
+    if plan_root is None:
+        print("Error: could not auto-detect task root. Use --plan-root.", file=sys.stderr)
+        sys.exit(1)
 
     if not plan_root.exists():
         print(f"Error: plan root not found: {plan_root}", file=sys.stderr)

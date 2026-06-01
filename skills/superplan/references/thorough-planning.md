@@ -12,7 +12,7 @@ During Phase 1, dispatch 2-4 exploration agents in parallel. Each agent covers a
 
 - **Project structure and conventions** — directory layout, build system, existing patterns, `CLAUDE.md` / `README.md` files, test infrastructure.
 - **Relevant code and data** — existing scripts, data files and their schemas, pipeline artifacts, intermediate outputs.
-- **History and prior work** — git log for the affected areas, past approaches, related tasks in `.plan/` if one exists.
+- **History and prior work** — git log for the affected areas, past approaches, related tasks in `superRA/` if one exists.
 - **Domain-specific survey** — data inventory for analysis work, existing model notes for theory work, manuscript structure for writing work.
 
 Two agents suffice when the work touches one codebase area. Four when the work spans independent areas or the project is unfamiliar. The orchestrator adapts — these are starting points, not rigid categories.
@@ -117,7 +117,7 @@ Keep it short — 3-5 files, one line each with a brief reason. This is a priori
 
 At thorough depth, Phase 4 gains an agent review step between self-review and user review (see `superplan §Agent Review (Thorough Depth Only)`). The main agent dispatches a reviewer agent that receives:
 
-1. The complete `.plan/` directory (the task tree as designed).
+1. The complete `superRA/` directory (the task tree as designed).
 2. The exploration synthesis from Phase 1 — the consolidated understanding of project context that informed the design.
 
 The exploration synthesis is essential input because the reviewer needs the same project context the main agent used to make design decisions. Without it, the reviewer cannot evaluate whether the task decomposition fits the actual codebase structure, data layout, and existing conventions discovered during exploration.

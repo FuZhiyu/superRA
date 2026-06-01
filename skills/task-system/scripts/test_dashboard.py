@@ -75,7 +75,7 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
 @pytest.fixture
 def plan_root(tmp_path):
     """Create a minimal plan tree for dashboard testing."""
-    root = tmp_path / ".plan"
+    root = tmp_path / "superRA"
     root.mkdir()
 
     _write_task_md(root / "task.md", "Test Project", "not-started",
@@ -128,7 +128,7 @@ def flow_plan_root(tmp_path):
 
     Statuses are deliberately varied so per-child fill colors are testable.
     """
-    root = tmp_path / ".plan"
+    root = tmp_path / "superRA"
     root.mkdir()
     _write_task_md(root / "task.md", "Test Project", "not-started",
                    objective="A test plan.")

@@ -22,12 +22,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _task_io import (
+    TASK_ROOT_DIRNAME,
     VALID_STATUSES,
     Task,
     compute_status,
     detect_cycles,
     parse_frontmatter,
     parse_task,
+    resolve_plan_root_arg,
 )
 
 
@@ -210,8 +212,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Diagnostic tool for task tree integrity (read-only)."
     )
     parser.add_argument(
-        "--plan-root", required=True,
-        help="Path to the plan root directory",
+        "--plan-root",
+        default=None,
+        help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
     )
     parser.add_argument(
         "--json", action="store_true", dest="as_json",
@@ -353,7 +356,10 @@ def format_json(findings: list[Finding]) -> str:
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
-    plan_root = Path(args.plan_root)
+    plan_root = resolve_plan_root_arg(args.plan_root)
+    if plan_root is None:
+        print("Error: could not auto-detect task root. Use --plan-root.", file=sys.stderr)
+        sys.exit(1)
 
     if not plan_root.exists():
         print(f"Error: plan root not found: {plan_root}", file=sys.stderr)

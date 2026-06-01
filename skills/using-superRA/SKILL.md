@@ -19,7 +19,7 @@ These defaults apply whenever you write, review, or refactor code.
 
 SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
 
-1. `superplan` creates or revises the `.plan/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a plan change invalidates.
+1. `superplan` creates or revises the `superRA/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a plan change invalidates.
 2. `superimplement` executes task blocks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
 3. `superintegrate` protects key results, syncs and refactors against the integration base, matures documentation, and performs the final merge / PR / cleanup action.
 

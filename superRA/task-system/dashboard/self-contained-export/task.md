@@ -9,7 +9,7 @@ created: 2026-06-01
 
 ## Objective
 
-Make the standalone HTML export **fully self-contained for figures and math**, so a shared/downloaded single file renders correctly when moved away from the repo and when opened with no network. Today the export embeds task *data* offline (no calls back to the dashboard server) but is neither figure-complete nor CDN-independent: figures are referenced by a relative path into the `.plan` tree (the `[subtree-export](../subtree-export/task.md)` "Known limitation" — figures break in a downloaded file), and all rendering libraries load from CDNs ([base.html:7–15](../../../../skills/task-system/scripts/templates/base.html#L7) — Google Fonts, htmx + sse, markdown-it, markdown-it-texmath, KaTeX CSS+JS). Bodies are raw markdown rendered **client-side** by markdown-it + markdown-it-texmath + KaTeX ([base.html:1267](../../../../skills/task-system/scripts/templates/base.html#L1267), delimiters `dollars`), so without those libs a moved/offline file shows unrendered markdown and unrendered math.
+Make the standalone HTML export **fully self-contained for figures and math**, so a shared/downloaded single file renders correctly when moved away from the repo and when opened with no network. Today the export embeds task *data* offline (no calls back to the dashboard server) but is neither figure-complete nor CDN-independent: figures are referenced by a relative path into the `superRA` task tree (the `[subtree-export](../subtree-export/task.md)` "Known limitation" — figures break in a downloaded file), and all rendering libraries load from CDNs ([base.html:7–15](../../../../skills/task-system/scripts/templates/base.html#L7) — Google Fonts, htmx + sse, markdown-it, markdown-it-texmath, KaTeX CSS+JS). Bodies are raw markdown rendered **client-side** by markdown-it + markdown-it-texmath + KaTeX ([base.html:1267](../../../../skills/task-system/scripts/templates/base.html#L1267), delimiters `dollars`), so without those libs a moved/offline file shows unrendered markdown and unrendered math.
 
 Approved scope decisions (do not re-litigate):
 - **Math:** keep the exact current renderer (markdown-it-texmath + KaTeX) and inline its JS/CSS plus the KaTeX **woff2 fonts** — output stays byte-identical to the live view; no MathML/SVG conversion, no new toolchain.
@@ -72,6 +72,6 @@ Vendored under [`skills/task-system/scripts/vendor/`](../../../../skills/task-sy
 
 ### Notes / caveats
 
-- The whole-tree default-output (`dashboard.html` written into `.plan`, gitignored) is not committed — regenerate-only.
+- The whole-tree default-output (`dashboard.html` written into `superRA`, gitignored) is not committed — regenerate-only.
 - The downloaded-file figure-portability limitation from `[subtree-export](../subtree-export/task.md)` is now **resolved** for embedded figures: figures travel as base64 data URIs, so a file moved to Downloads still shows them. The relative-path fallback only fires for srcs with no embedded bytes.
 - `plan_dashboard.py` and `base.html` are not in the generated-from-spec set; no `sync_codex_agents.py` run is needed.

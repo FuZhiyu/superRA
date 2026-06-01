@@ -1216,7 +1216,7 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
    ══════════════════════════════════════════════════════════════════════════ */
 window.STANDALONE = true;
 var STANDALONE_FRAGMENTS = {{ standalone_fragments | tojson }};
-/* Relative directory (from the dashboard file) holding the embedded .plan tree,
+/* Relative directory (from the dashboard file) holding the embedded task tree,
    used to resolve task-relative <img> sources to a file:// path that resolves
    offline. Empty string keeps image sources task-relative to the file. */
 var STANDALONE_PLAN_DIR = {{ standalone_plan_dir | tojson }};
@@ -1303,10 +1303,13 @@ function resolveInternalTaskPath(href, taskPath) {
   var clean = href.replace(/[?#].*$/, '');
   if (!clean) return null;
 
-  /* Base segments: the directory of the active task. An absolute `.plan/...`
-     href resolves from the tree root instead of the active task's dir. */
+  /* Base segments: the directory of the active task. An absolute `superRA/...`
+     href resolves from the tree root instead of the active task's dir. Legacy
+     `.plan/...` links resolve the same way for migrated task prose. */
   var segs;
-  if (clean.indexOf('.plan/') === 0) {
+  if (clean.indexOf('superRA/') === 0) {
+    segs = clean.slice('superRA/'.length).split('/');
+  } else if (clean.indexOf('.plan/') === 0) {
     segs = clean.slice('.plan/'.length).split('/');
   } else if (clean.charAt(0) === '/') {
     return null;  /* filesystem-absolute, not a tree path */
@@ -1346,7 +1349,7 @@ function renderMarkdown(text, sectionName, taskPath) {
   container.innerHTML = html;
 
   /* Base directory for resolving relative paths within a task */
-  var pathPrefix = taskPath ? '.plan/' + taskPath + '/' : '';
+  var pathPrefix = taskPath ? 'superRA/' + taskPath + '/' : '';
 
   /* Rewrite relative links. A relative href that resolves to a real task in
      this tree becomes an internal hash link (#/<task-path>) so it focuses that
@@ -1380,7 +1383,7 @@ function renderMarkdown(text, sectionName, taskPath) {
 
   /* Rewrite relative image sources. In server mode they resolve via the /files/
      route; in standalone mode there is no server, so resolve them relative to
-     the dashboard file (STANDALONE_PLAN_DIR points at the embedded .plan tree)
+     the dashboard file (STANDALONE_PLAN_DIR points at the embedded task tree)
      so figures load from a file:// open. */
   container.querySelectorAll('img[src]').forEach(function(img) {
     var src = img.getAttribute('src');

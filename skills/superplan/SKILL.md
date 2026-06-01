@@ -1,6 +1,6 @@
 ---
 name: superplan
-description: "Requires `superRA:using-superra` loaded first. Use when starting new research work, adding work to an existing task tree, or revising an existing task tree. Triggers include \"let's analyze X\", \"write me a plan for Y\", \"we're starting a new project on Z\", \"before writing any code\", an empty working directory for a new task, or an existing `.plan/` that needs new tasks or restructuring. Sits at the PLAN phase of the superRA PLAN -> IMPLEMENT -> INTEGRATE workflow; hands off to `superimplement` once the task tree is approved. Domain-agnostic: for implemented verticals such as data analysis or theory/modeling, invokes the matching domain skill and planning reference before task drafting."
+description: "Requires `superRA:using-superra` loaded first. Use when starting new research work, adding work to an existing task tree, or revising an existing task tree. Triggers include \"let's analyze X\", \"write me a plan for Y\", \"we're starting a new project on Z\", \"before writing any code\", an empty working directory for a new task, or an existing `superRA/` that needs new tasks or restructuring. Sits at the PLAN phase of the superRA PLAN -> IMPLEMENT -> INTEGRATE workflow; hands off to `superimplement` once the task tree is approved. Domain-agnostic: for implemented verticals such as data analysis or theory/modeling, invokes the matching domain skill and planning reference before task drafting."
 ---
 
 # Planning Workflow
@@ -11,15 +11,15 @@ description: "Requires `superRA:using-superra` loaded first. Use when starting n
 
 ## Overview
 
-Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of task-tree creation: discovery of existing work, exploration, domain setup, task decomposition, self-review, and execution handoff. Outputs a `.plan/` task tree for the superimplement to consume.
+Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of task-tree creation: discovery of existing work, exploration, domain setup, task decomposition, self-review, and execution handoff. Outputs a `superRA/` task tree for the superimplement to consume.
 
 Write comprehensive task objectives for a reader skilled at the craft but with zero context for this specific project — which files to create, what inputs to load, how to transform them, what to validate, and how to document results.
 
-**"Plan" is the verb, not the noun.** "Planning" refers to this workflow — the process of scoping and decomposing work. Everything in `.plan/` is a **task** — root-level tasks scope a workstream, nested tasks are dispatchable work. `.plan/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `.plan/` artifact, "planning" when referring to the process.
+**"Plan" is the verb, not the noun.** "Planning" refers to this workflow — the process of scoping and decomposing work. Everything in `superRA/` is a **task** — root-level tasks scope a workstream, nested tasks are dispatchable work. `superRA/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `superRA/` artifact, "planning" when referring to the process.
 
 **Announce at start:** "I'm using the superplan skill to create the task tree."
 
-**Output:** A `.plan/` directory at the project root (if in a worktree, the worktree root; otherwise, the project root or user-specified location) containing a root `task.md` and child task directories. User preferences for location override this default.
+**Output:** A `superRA/` directory at the project root (if in a worktree, the worktree root; otherwise, the project root or user-specified location) containing a root `task.md` and child task directories. User preferences for location override this default.
 
 Commit the task tree before proceeding to execution.
 
@@ -27,12 +27,12 @@ Commit the task tree before proceeding to execution.
 
 Before any exploration or task design, assess three independent dimensions of the incoming work. There is no procedural difference between creating a task tree and updating one — both pass through the same entry assessment.
 
-**1. Where it goes — Placement.** If `.plan/` exists, read the tree and walk it to find where the new work belongs, using the concern-first placement logic in `task-system/references/planning.md` §Placing Work in the Tree. If `.plan/` does not exist, check for a legacy `PLAN.md` (offer migration via `task-system` §Migration if found) and then the new work becomes the first root-level task.
+**1. Where it goes — Placement.** If `superRA/` exists, read the tree and walk it to find where the new work belongs, using the concern-first placement logic in `task-system/references/planning.md` §Placing Work in the Tree. If `superRA/` does not exist, check for a legacy `PLAN.md` (offer migration via `task-system` §Migration if found) and then the new work becomes the first root-level task.
 
 **2. How deep — Depth tier.** Choose a tier that modulates how deeply the subsequent phases execute. See §Depth Tiers below. Both placement and depth may need refinement after exploration — placement because the tree relationship was not clear upfront, depth because the work turned out more complex than expected.
 
 **3. What mode — Routing path.** Most work is forward planning (the default). Two alternatives:
-- **Retroactive documentation** — existing code/results need a `.plan/` record. Detected when the entry assessment finds code without task coverage. Routes through the same phases but sets `status: implemented` on created tasks. See §Retroactive Plan Creation.
+- **Retroactive documentation** — existing code/results need a `superRA/` record. Detected when the entry assessment finds code without task coverage. Routes through the same phases but sets `status: implemented` on created tasks. See §Retroactive Plan Creation.
 - **Consolidation** — tree cleanup requested or detected as needed. Routes to `references/consolidation.md`.
 
 **Placement and depth are independent dimensions.** Neither determines the other. Work can clearly belong under an existing task but still need thorough planning; uncertain tree location does not mean the work itself is hard to plan.
@@ -43,7 +43,7 @@ Before any exploration or task design, assess three independent dimensions of th
 
 Three tiers that modulate how deeply each subsequent phase executes. A spectrum, not rigid modes — escalate mid-planning if complexity warrants it.
 
-**Quick** — for minor updates, known additions, single-task changes. Light scan of existing `.plan/`, skip deep exploration, go directly to task design. The main agent does everything inline. Appropriate when: updating an objective after a scope revision, adding a well-understood subtask, adjusting dependencies.
+**Quick** — for minor updates, known additions, single-task changes. Light scan of existing `superRA/`, skip deep exploration, go directly to task design. The main agent does everything inline. Appropriate when: updating an objective after a scope revision, adding a well-understood subtask, adjusting dependencies.
 
 **Standard** — the default. Main agent explores project structure, loads domain skill, designs tasks. Appropriate when: new workstreams in familiar territory, adding a significant new branch to the tree, domain hard gates need satisfying.
 
@@ -87,7 +87,7 @@ Before defining tasks, map out the artifact pipeline:
 - What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 
-**Walk the project guidance docs and cache them in root task.md `## Conventions`.** Before drafting tasks, walk up from every directory the task tree will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the tasks will load from. Populate the root `.plan/task.md` `## Conventions` section (see `task-system/references/planning.md` §Conventions Section for format).
+**Walk the project guidance docs and cache them in root task.md `## Conventions`.** Before drafting tasks, walk up from every directory the task tree will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the tasks will load from. Populate the root `superRA/task.md` `## Conventions` section (see `task-system/references/planning.md` §Conventions Section for format).
 
 **Pipeline file (required for multi-artifact work):** If the work involves more than one script or executable artifact, include a pipeline file that runs all artifacts in the correct order — a single entry point that reproduces every output from source. The pipeline file must run scripts in dependency order, fail fast on errors (`set -e` or equivalent), be committed to version control, and be updated whenever a new script is added.
 
@@ -103,7 +103,7 @@ Use `task_create.py` to create tasks (auto-fills template with dates, frontmatte
 
 ```bash
 python3 <skill-dir>/scripts/task_create.py \
-  --plan-root .plan --path 01-data/03-filter \
+  --plan-root superRA --path 01-data/03-filter \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
   --depends-on 02-merge
@@ -130,10 +130,10 @@ Identify independent branches so the orchestrator can dispatch them in parallel 
 
 For the canonical task structure — root task.md anatomy, per-task anatomy, and field-by-field notes — see `task-system/references/planning.md`. Domain-specific root sections come from the domain skill's planning reference.
 
-### Create the `.plan/` Directory
+### Create the `superRA/` Directory
 
-1. Create `.plan/task.md` (root) with `## Objective` (project-level goal, methodology, scope) and `## Conventions` (cached project guidance).
-2. Generate `.plan/serve` — a short shell script that launches the dashboard. Resolve `<skill-dir>/scripts/plan_dashboard.py` to a relative path from `.plan/` and write it into the script. (If using `task_create.py` to create root-level tasks, this is handled automatically.)
+1. Create `superRA/task.md` (root) with `## Objective` (project-level goal, methodology, scope) and `## Conventions` (cached project guidance).
+2. Generate `superRA/serve` — a short shell script that launches the dashboard. Resolve `<skill-dir>/scripts/plan_dashboard.py` to a relative path from `superRA/` and write it into the script. (If using `task_create.py` to create root-level tasks, this is handled automatically.)
 3. Create child task directories with full objectives per §Task Structure above.
 
 ## Phase 4: Review & Commit
@@ -155,7 +155,7 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ### Agent Review (Thorough Depth Only)
 
-At thorough depth, dispatch a reviewer agent before presenting the tree to the user. The reviewer receives the complete `.plan/` directory and the exploration synthesis from Phase 1. It evaluates the self-review checklist above plus structural coherence across tasks: whether task boundaries make sense, dependencies are complete, and decomposition granularity is appropriate for the work scope.
+At thorough depth, dispatch a reviewer agent before presenting the tree to the user. The reviewer receives the complete `superRA/` directory and the exploration synthesis from Phase 1. It evaluates the self-review checklist above plus structural coherence across tasks: whether task boundaries make sense, dependencies are complete, and decomposition granularity is appropriate for the work scope.
 
 The reviewer returns APPROVE or REVISE with findings. REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
 
@@ -167,7 +167,7 @@ Verify the task tree aligns with the user's intent. Present the tree (via `task_
 
 ### Execution Handoff
 
-Commit the `.plan/` directory atomically. Then hand off to `superRA:superimplement`, which owns execution-mode selection, frontier-based dispatch, and review discipline.
+Commit the `superRA/` directory atomically. Then hand off to `superRA:superimplement`, which owns execution-mode selection, frontier-based dispatch, and review discipline.
 
 ## Substantive Questions
 
@@ -175,10 +175,10 @@ At any point during planning, surface questions when you are making assumptions 
 
 ## Retroactive Plan Creation
 
-When documenting existing exploratory work into `.plan/`:
+When documenting existing exploratory work into `superRA/`:
 
 1. Survey existing code, outputs, and notebooks
-2. Create `.plan/` structure with `task_create.py` — one task per logical unit of work done
+2. Create `superRA/` structure with `task_create.py` — one task per logical unit of work done
 3. Edit each `task.md`: set `status: implemented` in frontmatter, fill body sections with what was done (`## Objective`: what was the goal) and found (`## Results`: what was discovered)
 4. Hooks validate + rebuild dashboard. The task tree is now a retroactive record that can drive review, integration, and future work
 
@@ -192,21 +192,21 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 
 **Results:** Each task's `## Results` section is the live findings record. See `task-system/references/planning.md` §Results Shape for the template and two-stage lifecycle.
 
-### .plan/ Is the Task Tracker
+### `superRA/` Is the Task Tracker
 
-**`.plan/` is the primary task tracker** — not `Todo` tools, not chat, not status reports, not a session-internal scratchpad. The task files with their frontmatter `status:` field are the authoritative state of what is planned, what is in progress, and what is done.
+**`superRA/` is the primary task tracker** — not `Todo` tools, not chat, not status reports, not a session-internal scratchpad. The task files with their frontmatter `status:` field are the authoritative state of what is planned, what is in progress, and what is done.
 
-`TodoWrite` (or any equivalent harness-provided todo UI) has a narrower role: a transient view of what the agent is doing right now in this session. It is acceptable for ephemeral session-internal todos that do not represent analysis tasks. It is **not** acceptable as a substitute for a `.plan/` task. If the work is part of the analysis — a new task, a discovered subtask, a methodology check, a sensitivity run, a refactor pass — it lives in `.plan/` first.
+`TodoWrite` (or any equivalent harness-provided todo UI) has a narrower role: a transient view of what the agent is doing right now in this session. It is acceptable for ephemeral session-internal todos that do not represent analysis tasks. It is **not** acceptable as a substitute for a `superRA/` task. If the work is part of the analysis — a new task, a discovered subtask, a methodology check, a sensitivity run, a refactor pass — it lives in `superRA/` first.
 
-**Rule of thumb:** if losing this todo at session end would lose work the researcher cares about, it belongs in `.plan/`, not `TodoWrite`.
+**Rule of thumb:** if losing this todo at session end would lose work the researcher cares about, it belongs in `superRA/`, not `TodoWrite`.
 
 **Banned patterns:**
 
-- Tracking analysis tasks only in `TodoWrite` while leaving `.plan/` stale.
-- Discovering a new subtask, adding it to `TodoWrite`, completing it, and never reflecting it in `.plan/`.
+- Tracking analysis tasks only in `TodoWrite` while leaving `superRA/` stale.
+- Discovering a new subtask, adding it to `TodoWrite`, completing it, and never reflecting it in `superRA/`.
 - Using `TodoWrite` to coordinate work between sessions (it does not persist; the next session sees nothing).
 
-If `TodoWrite` and `.plan/` ever disagree about the state of analysis work, `.plan/` is right by definition.
+If `TodoWrite` and `superRA/` ever disagree about the state of analysis work, `superRA/` is right by definition.
 
 ## Revision Notes
 
@@ -236,7 +236,7 @@ When the task tree changes — task details updated, tasks added, removed, or re
 **Protocol:**
 
 1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change.
-2. **Update `.plan/` inline:**
+2. **Update `superRA/` inline:**
    - **Prefer modifying existing task.md files over adding new tasks.** Walk the task tree and identify every task whose objective or output is affected. Update each in place.
    - **New task** — Only when the change is genuinely independent of every existing task's scope.
    - **Modified task** — Rewrite the objective to be fully self-sufficient with the new scope (all planning context included, not just the changed part). Add a `## Revision Notes` section with the delta signal.
@@ -250,7 +250,7 @@ When the task tree changes — task details updated, tasks added, removed, or re
 
 **Banned shortcuts:**
 
-- Carrying the new task in chat or only in `TodoWrite` without writing it into `.plan/`.
+- Carrying the new task in chat or only in `TodoWrite` without writing it into `superRA/`.
 - Resuming the in-flight task before reflecting the change in the committed task files — the change is not real until it is committed.
 - Treating an invalidated workflow milestone as permission to clear unrelated approved tasks.
 

@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from _comments import load_comments, resolve_anchors, resolve_comment
-from _task_io import collect_all_tasks, resolve_path, walk_plan
+from _task_io import TASK_ROOT_DIRNAME, collect_all_tasks, resolve_path, walk_plan
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -25,8 +25,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--plan-root",
-        default=".plan",
-        help="Path to the plan root directory (default: .plan)",
+        default=TASK_ROOT_DIRNAME,
+        help=f"Path to the task root directory (default: {TASK_ROOT_DIRNAME})",
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
