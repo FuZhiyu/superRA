@@ -1,6 +1,6 @@
 ---
 title: "Drop updated frontmatter field"
-status: implemented
+status: approved
 depends_on: []
 tags: [task-system, schema, metadata]
 script: ""
