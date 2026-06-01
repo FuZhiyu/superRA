@@ -1,6 +1,6 @@
 ---
 title: "Objective-First Reviewer Protocol"
-status: implemented
+status: revise
 depends_on: [01-objective-guidance-task-anatomy]
 tags: []
 created: 2026-06-01
@@ -55,3 +55,7 @@ Potential reviewer failure modes to close:
 - `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 6 tests.
 - Manual dry run passed by assertion against the revised reviewer protocol text: a checklist-passing task missing a declared output produces REVISE as a blocking task-level finding, while an implementation that deviates from `## Planner Guidance` but satisfies `## Objective` is not a review failure.
 - DRY/Necessity self-check: added role lines change reviewer verdict behavior at the canonical role surface; workflow-skill edits only route to the role protocol and preserve `superimplement`'s ownership of dispatch and interim review scope.
+
+## Review Notes
+
+1. [MAJOR] [../../../skills/agent-orchestration/SKILL.md:195](../../../skills/agent-orchestration/SKILL.md#L195) still defines `status: revise` as "Reviewer found `[BLOCKING]` issue(s)," but the revised reviewer protocol now returns REVISE for either failed `[BLOCKING]` domain gates or blocking CRITICAL/MAJOR task-level findings that may not be labeled `[BLOCKING]` ([../../../agents/reviewer.md:86](../../../agents/reviewer.md#L86), [../../../agents/reviewer.md:90](../../../agents/reviewer.md#L90)). This is the wording conflict the objective says should trigger an `agent-orchestration` update; leaving it unchanged risks the orchestrator treating non-checklist task-level failures as outside the REVISE loop. Update the status reference, and any matching stale workflow shorthand such as [../../../skills/superimplement/SKILL.md:30](../../../skills/superimplement/SKILL.md#L30), to describe reviewer-found blocking findings rather than only `[BLOCKING]` checklist items.
