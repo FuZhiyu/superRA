@@ -1,6 +1,6 @@
 ---
 title: "Path Containment for Task Creation"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-01
