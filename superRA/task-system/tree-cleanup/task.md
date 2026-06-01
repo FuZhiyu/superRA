@@ -8,7 +8,7 @@ created: 2026-05-26
 
 ## Objective
 
-Proactive consolidation sweep over the current task tree to clear accumulated structural debt. The tree has grown through multi-session interactive work (the `live-server` subtree, the now-complete `status-consolidation` workstream, and the newly added `dynamic-workflows` workstream), and `task_check.py` currently reports 16 errors + 11 warnings. Run the survey-classify-propose-execute protocol in [`skills/superplan/references/consolidation.md`](skills/superplan/references/consolidation.md). The concrete debt as of this rewrite:
+Proactive consolidation sweep over the current task tree to clear accumulated structural debt. The tree has grown through multi-session interactive work (the `live-server` subtree and the now-complete `status-consolidation` workstream), and `task_check.py` currently reports 16 errors + 11 warnings. Run the survey-classify-propose-execute protocol in [`skills/superplan/references/consolidation.md`](skills/superplan/references/consolidation.md). The concrete debt as of this rewrite:
 
 **1. Fix dependency-resolution errors (16).** Every `depends_on` in the `live-server` subtree uses a `../`-prefixed path, which violates the sibling-only constraint and resolves to nothing. Strip the `../` prefix so each entry names a bare direct-sibling directory — every one resolves once stripped (e.g. `cli-entry: ../server → server`; `tests: ../server, ../templates, ../live-reload, ../cli-entry, ../comments`; `comments/agent-cli` and `comments/comment-ui: ../sidecar-format → sidecar-format`). Fix `live-server`'s own malformed bare `depends_on: ../` — `live-server` is a child of `dashboard`, so replace with the correct sibling dependency or remove it if there was no real dependency.
 
@@ -20,7 +20,7 @@ Proactive consolidation sweep over the current task tree to clear accumulated st
 
 **5. Flatten redundant nesting.** At survey time, `migration` had a single child that added no migration-task context beyond its child. Absorb such child work into the parent, or leave it if `migration` is intended as a grouping for future migration tasks — orchestrator's call at survey time.
 
-**Scope note.** The survey must cover the full current tree. The newly added `dynamic-workflows` workstream (4 tasks) has clean linear `depends_on` and needs no consolidation. The completed `status-consolidation` subtree's only residue is the stale fields in item 3.
+**Scope note.** The survey must cover the full current tree. The completed `status-consolidation` subtree's only residue is the stale fields in item 3.
 
 ## Validation
 
@@ -37,4 +37,3 @@ Executed in commit `501e43f`. `task_check.py --plan-root .plan`: 25 issues → *
 - **Collapsed 8 single-fix tasks** into a `### Fixes` log in `live-server`'s `## Results`, one line + commit ref each, then deleted their directories: `section-rendering-fixes`, `math-template-escaping`, `comment-badge-walkup-fix`, `relative-path-resolution`, `rebuild-discovers-children`, `status-consistency`, `root-task-rendering`, and the placeholder `section-expand-uncap` (whose fix had shipped in `4372f68` but was never written up). Repointed `status-rollup-propagation` off its now-deleted `status-consistency` dependency. Component subtasks (`server`, `templates`, `live-reload`, `cli-entry`, `comments`, `math-rendering`, `deterministic-port`, `status-rollup-propagation`, `state-preservation`, `tests`) preserved with their results intact.
 - **Stale fields removed** from the `state-preservation` subtree (`state-preservation` + `capture-restore`, `structural-reload`, `tests`) — residual `review_status`/`integration_status` the `status-consolidation` migration missed. Left `status` as-is (no auto-promotion); the `implemented` children correctly roll up to an `in-progress` parent.
 - **Restructure (revised from "flatten").** Survey found `migration` is a substantive *completed* task, not a hollow single-child parent. The follow-up PLAN.md/RESULTS.md deprecation work was first promoted out of `migration`, then later consolidated into the existing [planning-redesign/planmd-sweep](../planning-redesign/planmd-sweep/task.md) task.
-- **Scope confirmed clean:** the newly added `dynamic-workflows` workstream needed no consolidation.
