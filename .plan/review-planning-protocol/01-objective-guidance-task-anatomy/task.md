@@ -8,11 +8,15 @@ created: 2026-06-01
 
 ## Objective
 
-Introduce an optional `## Planner Guidance` task-body section and clarify that `## Objective` is the authoritative contract for implementation and review. Update the task-system planning reference and planning workflow text so planners put hard deliverables, validation criteria, constraints, user/methodology decisions, and fixed `script` / `input` / `output` expectations in `## Objective` or frontmatter, while placing suggested routes, candidate files, prior exploration notes, likely sequence, and implementation hints in `## Planner Guidance`.
+Introduce an optional `## Planner Guidance` task-body section and clarify that `## Objective` is the authoritative contract for implementation and review. Update the task-system planning reference and planning workflow text so planners put hard deliverables, validation criteria, constraints, user/methodology decisions, fixed `script` / `input` / `output` expectations, and any implementation detail the researcher specifically requires in `## Objective` or frontmatter, while placing suggested routes, candidate files, prior exploration notes, likely sequence, and implementation hints in `## Planner Guidance`.
 
 The change must keep existing task files valid. Do not bulk-migrate old objectives automatically; split objective/guidance opportunistically when a task is created or materially rewritten. Preserve the task system's free-form section behavior: arbitrary `##` sections are valid, rendered in order, and read through `task_read.py`.
 
 Update implementer/reviewer role specs only where the distinction changes behavior: implementers may deviate from `## Planner Guidance` when a better route satisfies `## Objective`; reviewers must not fail a task merely because guidance was not followed, but should flag guidance that is misleading, contradicts the objective, or would fail to achieve it.
+
+## Revision Notes
+
+- 2026-06-01: Clarified that user-requested implementation details are required and belong in `## Objective` / frontmatter, not advisory `## Planner Guidance`.
 
 ## Planner Guidance
 
