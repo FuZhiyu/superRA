@@ -1,6 +1,6 @@
 ---
 title: "CLI Scripts"
-status: approved
+status: not-started
 depends_on:
   - core-data-layer
 tags: []
