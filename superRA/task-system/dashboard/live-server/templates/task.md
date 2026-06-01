@@ -7,8 +7,6 @@ tags: []
 created: 2026-05-24
 ---
 
-**Sync impact:** Cluster `revnote-stale-cleanup` removed this task's stale `## Revision Notes` section (the merged-in `validate_revision_notes` rule flags revision notes on `approved` tasks). Source: root task.md `## Sync Map`.
-
 ## Results
 
 Created 6 Jinja2 templates under [`skills/task-system/scripts/templates/`](skills/task-system/scripts/templates/):
