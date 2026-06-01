@@ -1,6 +1,6 @@
 ---
 title: "Objective-First Reviewer Protocol"
-status: not-started
+status: implemented
 depends_on: [01-objective-guidance-task-anatomy]
 tags: []
 created: 2026-06-01
@@ -38,3 +38,20 @@ Potential reviewer failure modes to close:
 - Confirm an implementation that deviates from `## Planner Guidance` but satisfies `## Objective` is not a review failure.
 
 ## Results
+
+### Key Findings
+- Revised the canonical reviewer protocol so review is explicitly task-local and objective-first: reviewers evaluate `## Objective`, scope frontmatter, implementer `## Results`, reviewed git range, changed outputs, and active domain gates together; domain checklists remain mandatory gates but are no longer the review boundary ([../../../agents/reviewer.md:43](../../../agents/reviewer.md#L43)).
+- Updated reviewer verdict semantics so CRITICAL and MAJOR task-level findings block approval even when no domain checklist item names the issue, while failed `[BLOCKING]` domain gates still force REVISE ([../../../agents/reviewer.md:82](../../../agents/reviewer.md#L82), [../../../agents/reviewer.md:86](../../../agents/reviewer.md#L86), [../../../agents/reviewer.md:90](../../../agents/reviewer.md#L90)).
+- Updated first-review mechanics to check objective satisfaction, declared outputs, implementer results, reviewed diff, and active domain gates before setting `approved` or `revise` ([../../../agents/reviewer.md:131](../../../agents/reviewer.md#L131), [../../../agents/reviewer.md:134](../../../agents/reviewer.md#L134)).
+- Replaced `superimplement`'s checklist-only review description with pointers to `agents/reviewer.md` §Review Protocol and the task-local review boundary; `agent-orchestration` did not need changes because no adjudication wording conflict was found ([../../../skills/superimplement/SKILL.md:12](../../../skills/superimplement/SKILL.md#L12), [../../../skills/superimplement/SKILL.md:93](../../../skills/superimplement/SKILL.md#L93), [../../../skills/superimplement/SKILL.md:161](../../../skills/superimplement/SKILL.md#L161)).
+
+### Generated Artifacts
+- Regenerated with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`.
+- Generated outputs updated from `agents/reviewer.md`: [../../../skills/using-superRA/references/direct-mode-reviewer.md](../../../skills/using-superRA/references/direct-mode-reviewer.md), [../../../.codex/agents/superra_reviewer.toml](../../../.codex/agents/superra_reviewer.toml).
+
+### Validation
+- `python3 skills/task-system/scripts/task_check.py --plan-root .plan` passed: all checks passed, no issues found.
+- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` passed: generated agent files and direct-mode role references are up to date.
+- `python3 skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 6 tests.
+- Manual dry run passed by assertion against the revised reviewer protocol text: a checklist-passing task missing a declared output produces REVISE as a blocking task-level finding, while an implementation that deviates from `## Planner Guidance` but satisfies `## Objective` is not a review failure.
+- DRY/Necessity self-check: added role lines change reviewer verdict behavior at the canonical role surface; workflow-skill edits only route to the role protocol and preserve `superimplement`'s ownership of dispatch and interim review scope.

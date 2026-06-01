@@ -9,7 +9,7 @@ description: Requires `superRA:using-superra` loaded first. Use when you have a 
 
 Workflow skill for the **IMPLEMENT** and **VALIDATE** phases of the superRA workflow. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu.
 
-Default mode dispatches a fresh subagent per task. Each task gets one comprehensive review pass whose verdict is APPROVE / REVISE; the reviewer walks the active domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. Falls back to direct execution when the user requests it or tasks are trivial.
+Default mode dispatches a fresh subagent per task. Each task gets one comprehensive task-local review pass whose verdict is APPROVE / REVISE under `agents/reviewer.md` §Review Protocol. Falls back to direct execution when the user requests it or tasks are trivial.
 
 **Announce at start:** "I'm using the superimplement skill to implement this plan."
 
@@ -90,7 +90,7 @@ If the task tree exists, is tracked, and the worktree is clean, proceed to Step 
 
 1. **Dispatch implementer.** Subagent mode: dispatch agents following `superRA:agent-orchestration`. The `Task:` field uses the task path (e.g., `Task: data-preparation/merge`).
 2. **If NEEDS_CONTEXT or BLOCKED:** provide context and re-dispatch (see Handling Implementer Status below).
-3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + task.md (with `status: implemented`). **Dispatch the reviewer (one comprehensive pass).** The reviewer reads the task via `task_read.py --path <path>`, walks the active domain skill's gated checklist, writes findings in the task's `## Review Notes` section, and returns APPROVE or REVISE. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
+3. **Once DONE or DONE_WITH_CONCERNS:** the implementer has already committed code + task.md (with `status: implemented`). **Dispatch the reviewer (one comprehensive task-local pass).** The reviewer follows `agents/reviewer.md` §Review Protocol, writes findings in the task's `## Review Notes` section, and returns APPROVE or REVISE. On REVISE, adjudicate per §Handling Reviewer Feedback below and iterate until APPROVE.
 4. **Once APPROVE:** the reviewer has set `status: approved` in the task's frontmatter. Check whether the review report cites specific files and lines — a substantive APPROVE describes what was verified. A generic APPROVE with no file citations is a red flag: re-dispatch the reviewer with an instruction to cite the key code paths it examined. If the child produced a major result worth surfacing at the next level, update the immediate parent's `## Results` with a selective rollup and a link to the child task. If findings change upcoming tasks, update future task objectives in their `task.md` files and commit. Proceed to next task.
 
 When a downstream task would inherit a structurally messy or notation-incoherent derivation from a just-APPROVED task, the orchestrator may dispatch `Stage: integration` against that single task before advancing. This uses existing stage flexibility — no new mechanism.
@@ -158,7 +158,7 @@ Fold the researcher's answer into the relevant task objective (rewriting it to b
 
 Cross-stage orchestrator behavior lives in `superRA:agent-orchestration`.
 
-**Workflow-specific review scope at interim checkpoints:** Per-task correctness only (as defined by the active domain skill's gated checklist). Codebase integration review is deferred to `superintegrate` (dispatched at Step 4 when the user chooses Option 1 — Proceed with integration).
+**Workflow-specific review scope at interim checkpoints:** Task-local correctness under `agents/reviewer.md` §Review Protocol. Codebase integration review is deferred to `superintegrate` (dispatched at Step 4 when the user chooses Option 1 — Proceed with integration).
 
 ## Autonomy and Stop Points
 

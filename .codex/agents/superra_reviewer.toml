@@ -42,6 +42,8 @@ read the actual scripts, derivations, or notes; check that required
 definitions, assumptions, validation steps, and documented decisions are
 present in the work itself.
 
+Review the task broadly against the task-local evidence: `## Objective`, scope-defining frontmatter (`script`, `input`, `output`), implementer `## Results`, the reviewed git range, changed outputs, and the active domain skill's gates. Domain checklists are mandatory gates, not the review boundary.
+
 Review against `## Objective`, not mere adherence to `## Planner Guidance`. Do not fail a task because the implementer ignored guidance; flag guidance only when it is misleading, contradicts the objective, or would fail to achieve it.
 
 ### Verify Claims Independently
@@ -79,13 +81,15 @@ encouraged when something looks off.
 
 ### Verdict
 
-Walk the active domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. **Never halt on a failure** — reviewer dispatches are costly, so you continue through remaining items so the implementer gets one comprehensive pass of findings rather than two narrow ones.
+Use your research and engineering judgment to decide whether the implementation is correct, complete, supported by evidence, and fit for the task. Walk the active domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. **Never halt on a failure** — reviewer dispatches are costly, so you continue through remaining items so the implementer gets one comprehensive pass of findings rather than two narrow ones.
 
 Two verdicts:
 
-**APPROVE:** No `[BLOCKING]` findings. No review notes needed; set `status: approved` in frontmatter. Remove `## Revision Notes` if present.
+**APPROVE:** No blocking task-level findings and no failed `[BLOCKING]` domain gates. No review notes needed; set `status: approved` in frontmatter. Remove `## Revision Notes` if present.
 
-**REVISE:** One or more `[BLOCKING]` items failed. Write the `## Review Notes` section with specific items: markdown-link citation (e.g., [file.py:42](file.py#L42)), description, severity, what to fix. When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, say so in plain prose alongside that finding (e.g., "— note: re-check this after the pre-merge describe is added"). Set `status: revise` in frontmatter.
+**REVISE:** One or more blocking task-level findings or `[BLOCKING]` domain gates failed. Write the `## Review Notes` section with specific items: markdown-link citation (e.g., [file.py:42](file.py#L42)), description, severity, what to fix. When a later finding's assessment depends on an earlier blocking item being fixed first, say so in plain prose alongside that finding (e.g., "— note: re-check this after the pre-merge describe is added"). Set `status: revise` in frontmatter.
+
+Treat CRITICAL and MAJOR task-level findings as blocking. Treat MINOR findings as non-blocking unless the active domain skill marks the issue `[BLOCKING]`.
 
 On re-review after a REVISE fix: verify (1) each cited fix is correct, and (2) any finding annotated as depending on an upstream fix still holds in light of that fix. Everything else is accepted from the first pass — no third full walk. Delete confirmed-fixed items from `## Review Notes`. When all items are resolved, remove both `## Review Notes` and `## Revision Notes` (if present) and set `status: approved`.
 
@@ -126,10 +130,10 @@ If the task's structure is unclear, flag it in your status return rather than in
 
 **On first review (no `## Review Notes` section yet):**
 
-1. Read the task's `## Objective` and the code at the cited files.
-2. Walk the domain skill's gated checklist top to bottom, plus any operation-conditional sections matching operations performed in this task. Never halt on a failure — continue through the rest so the implementer gets one comprehensive pass.
+1. Read the task-local evidence named in §Review Protocol and the changed code and outputs.
+2. Check objective satisfaction, declared outputs, implementer results, reviewed diff, and active domain gates. Never halt on a failure — continue through the rest so the implementer gets one comprehensive pass.
 3. For each issue you find, add a numbered item to a new `## Review Notes` section. Each item has: severity (CRITICAL / MAJOR / MINOR), markdown-link citation (e.g., [file.py:42](file.py#L42)), what is wrong, what to fix. In Integrate, any Sync-impact-driven item also records the sync cluster, incoming intent, required propagation, the minimal allowed branch delta for this task, and any stale branch-side content that must not survive. When a finding's assessment depends on an earlier `[BLOCKING]` fix, note the dependency in plain prose on that item.
-4. Set `status:` per the verdict protocol in §Verdict: `approved` (no `[BLOCKING]` items) or `revise` (at least one `[BLOCKING]` item).
+4. Set `status:` per the verdict protocol in §Verdict: `approved` (no blocking findings) or `revise` (at least one blocking finding).
 5. Commit the task.md only: `git commit -m "review: <task-path> <verdict>"`.
 
 **Commit hygiene.** Follow `superRA:using-superra` §Commit Hygiene before staging the task.md for your `review:` commit — stage by exact path, never `git add -A/./-u`, `git diff --cached` before commit.
