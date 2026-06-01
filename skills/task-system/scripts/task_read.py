@@ -81,23 +81,27 @@ def _collect_ancestors(plan_root: Path, target_path: str) -> list[Task]:
     return unique
 
 
-def _first_body_excerpt(task: Task, max_lines: int = 10) -> str:
-    """Return the first body section content (trimmed), or first paragraph."""
+def _ancestor_objective(task: Task) -> str:
+    """Return an ancestor's full ``## Objective`` content, nested ``###`` and all.
+
+    Ancestor objectives carry the binding context an agent inherits — scoped
+    ``### Context`` / ``### Conventions`` / ``### Constraints`` subsections that
+    change what implementation or review does. Rendering the whole section keeps
+    that context intact instead of truncating it. Falls back to the first body
+    section, then the first paragraph, for tasks that predate the objective
+    convention.
+    """
     sections = parse_body_sections(task.body)
+    objective = sections.get("Objective", "").strip()
+    if objective:
+        return objective
     if sections:
         first_content = next(iter(sections.values())).strip()
         if first_content:
-            lines = first_content.splitlines()
-            if len(lines) > max_lines:
-                lines = lines[:max_lines] + ["..."]
-            return "\n".join(lines)
-    # Fallback: first non-empty paragraph from raw body
+            return first_content
     paragraphs = [p.strip() for p in task.body.strip().split("\n\n") if p.strip()]
     if paragraphs:
-        lines = paragraphs[0].splitlines()
-        if len(lines) > max_lines:
-            lines = lines[:max_lines] + ["..."]
-        return "\n".join(lines)
+        return paragraphs[0]
     return ""
 
 
@@ -182,9 +186,9 @@ def render_human(
             prefix = "#" * (depth + 1)
             status_note = f"  (status: {anc.effective_status()})" if not anc.is_root else ""
             parts.append(f"{prefix} {anc.title}{status_note}\n")
-            excerpt = _first_body_excerpt(anc)
-            if excerpt:
-                parts.append(excerpt)
+            objective = _ancestor_objective(anc)
+            if objective:
+                parts.append(objective)
             parts.append("")
 
     parts.append(f"=== Task: {target_task.title} ===\n")
@@ -234,14 +238,19 @@ def render_json(
     anc_data = []
     if show_ancestors:
         for anc in ancestors:
-            anc_sections = parse_body_sections(anc.body)
+            anc_sections = {k: v.strip() for k, v in parse_body_sections(anc.body).items()}
+            objective = _ancestor_objective(anc)
             anc_data.append({
                 "path": anc.path,
                 "title": anc.title,
                 "status": anc.status,
                 "effective_status": anc.effective_status(),
-                "first_section": _first_body_excerpt(anc),
-                "sections": {k: v.strip() for k, v in anc_sections.items()},
+                # `objective` is the explicit full ancestor ## Objective (nested
+                # ### subsections included); `first_section` is retained for
+                # backward compatibility and mirrors it.
+                "objective": objective,
+                "first_section": objective,
+                "sections": anc_sections,
             })
 
     task_data = {

@@ -19,6 +19,8 @@ Load this reference when you are an orchestrator or planner creating, restructur
 
 **Include enough context that an implementer with zero project context can work independently** after reading this task's objective plus the ancestor chain up to the root.
 
+**Scoped context lives on the lowest ancestor whose subtree it governs.** The task tree is recursive — any task can carry context for its subtree, and the top task is not a special semantic owner. When a convention, constraint, or piece of context changes what an implementation or review agent does, place it in the `## Objective` of the lowest task whose subtree it applies to, under a scoped `### Context`, `### Conventions`, or `### Constraints` subsection. Project-wide conventions belong on the top task's objective; conventions that govern only one data source, model, manuscript, or workstream belong on that subtree's objective. `task_read.py` renders each ancestor's full `## Objective` (nested `###` subsections included) into the dispatched agent's context, so an agent inherits exactly the scoped context above its task without re-walking the tree.
+
 `## Planner Guidance` is optional and advisory. Use it for suggested routes, candidate files, prior exploration notes, likely sequence, implementation hints, and other context the implementer may adapt or ignore while satisfying `## Objective`.
 
 **Steps vs subtasks vs suggestions:**
@@ -70,23 +72,22 @@ The recursion handles all levels uniformly: start at the root, walk down through
 
 **Anti-patterns:** creating a new task for what is really a scope extension of an existing task; nesting three or more levels deep when unnecessary; creating siblings with near-identical concerns.
 
-## Root task.md Anatomy
+## Task Anatomy
 
-The root `superRA/task.md` frames the entire project. It carries:
+Every `task.md` — root, branch, or leaf — uses the same body sections. The tree is recursive: a task frames its own subtree, and the top task frames the whole project only because its subtree is everything.
 
-- **`## Objective`** — project-level goal, methodology summary, scope boundaries
-- **`## Conventions`** — naming conventions, paths, units, variable definitions that apply across all tasks
-- **`## Planner Guidance`** — optional project-level suggestions or exploration notes that are useful but not binding
-- **`## Revision Notes`** — temporary delta signal when a task is updated (what changed, significance). The reviewer removes this section when approving the task — same lifecycle as `## Review Notes`
+- **`## Objective`** — the task's goal, plus the scoped context its subtree inherits. The top task's objective frames the project-level goal, methodology summary, and scope boundaries; a branch task's objective frames its subtree's goal. Scoped `### Context`, `### Conventions`, and `### Constraints` subsections carry naming conventions, paths, units, variable definitions, and constraints that govern the task's subtree (see §Writing Objectives). Place each at the lowest task whose subtree it governs — project-wide ones at the top, narrower ones deeper.
+- **`## Planner Guidance`** — optional advisory suggestions or exploration notes that are useful but not binding.
+- **`## Revision Notes`** — temporary delta signal when a task is updated (what changed, significance). The reviewer removes this section when approving the task — same lifecycle as `## Review Notes`.
 
-The root task does not carry `script`, `input`, or `output` — those belong on leaf tasks.
+Branch tasks (those with children) do not carry `script`, `input`, or `output` — those belong on leaf tasks.
 
 ## Retroactive Plan Creation
 
 When creating `superRA/` from existing work (code already written, results already obtained):
 
 1. Read the existing code and results to understand what was done
-2. Create the root `task.md` with the project objective and conventions
+2. Create the top `task.md` with the project objective and any project-wide scoped conventions
 3. Create child tasks that mirror the logical structure of the existing work — not the file layout
 4. Set status to `approved` for tasks whose work is complete and verified
 5. Set status to `implemented` for tasks whose work is done but not yet reviewed
@@ -136,15 +137,15 @@ python3 <skill-dir>/scripts/task_link.py \
 - **`## Revision Notes`** carries the delta signal when a task objective is updated — what changed, why, and how significant (trivial/mechanical vs substantive). Temporary: the reviewer removes this section when approving the task. Same lifecycle as `## Review Notes`. `validate_plan` warns (it never mutates) when an `approved` task still carries a non-empty `## Revision Notes` section, so a leak surfaces through the `[task-hook]` channel; the reviewer remains responsible for removing it at approval.
 - **`## Review Notes`** is present only when there are active items. On `approved`, the section content is removed entirely.
 
-## Conventions Section
+## Ancestor Context and Conventions
 
-The root task.md `## Conventions` section caches project guidance so dispatched agents need not re-walk the tree.
+Reusable context and conventions are captured once, on the objective of the task whose subtree they govern, so dispatched agents inherit them through `task_read.py`'s ancestor rendering instead of re-walking the project tree. The planner walks the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) during planning and distills what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections of the relevant task objective.
 
 **Discipline:**
-- Populated by the orchestrator. Subagents do not edit this section.
-- Entry format: one paragraph per doc — a summary, not an excerpt.
-- Stamp the walk date.
-- List the NOT-walked paths too — an empty section is ambiguous; explicitly naming out-of-scope directories removes the ambiguity.
+- Place each convention at the lowest task whose subtree it governs. Project-wide conventions go on the top task's objective; a convention that only governs one data source, model, manuscript, or workstream goes on that subtree's objective.
+- Captured by the planner in `## Objective`, which is planner-owned. Implementers and reviewers read inherited context but do not rewrite ancestor objectives.
+- Entry format: a summary that states the behavior to follow, not a verbatim excerpt of the source doc. Stamp the walk date when the distillation reflects a docs walk.
+- When the walk found no relevant convention for the subtree, say so explicitly — an absent subsection is ambiguous; naming the out-of-scope paths removes it.
 
 ## Stale Content Checklist
 

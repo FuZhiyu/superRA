@@ -1943,6 +1943,51 @@ class TestTaskRead:
         assert "" in paths
         assert "01-data-prep" in paths
 
+    def test_ancestor_objective_full_not_truncated(self, plan_root):
+        """Human output shows the full ancestor ## Objective, beyond 10 lines and
+        including nested ### subsections."""
+        long_objective = (
+            "\n".join(f"Objective line {i}." for i in range(1, 16))
+            + "\n\n### Conventions\n\nUse left joins throughout the subtree."
+        )
+        root_md = plan_root / "task.md"
+        _write_task_md(root_md, "Test Project", "not-started",
+                       objective=long_objective)
+        ancestors = task_read._collect_ancestors(plan_root, "02-second")
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        output = task_read.render_human(ancestors, target, dep_pairs)
+        assert "Objective line 15." in output  # past old 10-line cap
+        assert "..." not in output.split("=== Task:")[0]  # no truncation marker
+        assert "### Conventions" in output
+        assert "Use left joins throughout the subtree." in output
+
+    def test_ancestor_objective_field_in_json_preserves_keys(self, plan_root):
+        """JSON ancestors carry an explicit full `objective` field while keeping
+        the existing keys (first_section, sections, path, title, status)."""
+        long_objective = (
+            "\n".join(f"Objective line {i}." for i in range(1, 16))
+            + "\n\n### Constraints\n\nNever drop rows during the merge."
+        )
+        root_md = plan_root / "task.md"
+        _write_task_md(root_md, "Test Project", "not-started",
+                       objective=long_objective)
+        ancestors = task_read._collect_ancestors(plan_root, "02-second")
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        data = json.loads(task_read.render_json(ancestors, target, dep_pairs))
+        root_anc = next(a for a in data["ancestors"] if a["path"] == "")
+        # New explicit field carries the full objective including ### subsection.
+        assert "objective" in root_anc
+        assert "Objective line 15." in root_anc["objective"]
+        assert "### Constraints" in root_anc["objective"]
+        # Existing keys preserved.
+        for key in ("path", "title", "status", "effective_status",
+                    "first_section", "sections"):
+            assert key in root_anc
+
 
 # --- task_hook tests ---
 

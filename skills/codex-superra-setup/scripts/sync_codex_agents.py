@@ -310,7 +310,7 @@ In direct mode there is no dispatch prompt. Task context comes from the task's `
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references.
 2. **Read your task via `task_read.py --path <path>`.** This gives you the full task content with ancestor context and sibling dependency status automatically.
-3. **Read the root task.md's `## Conventions` section before editing any file.** If it is missing, empty, stale, or does not cover a convention you need, walk the directories on-demand, apply what you find, and flag the omission in your status return.
+3. **Apply the scoped conventions in your ancestor context before editing any file.** `task_read.py` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections — that inherited context is your convention source. If the ancestor chain does not cover a convention the touched files need, walk the relevant directories on-demand, apply what you find, and flag the omission in your status return.
 4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
 
 The editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update the task, not at dispatch time."""
@@ -323,7 +323,7 @@ In direct mode there is no dispatch prompt. Review scope comes from the task's `
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:` before opening any code, and follow each loaded skill's own stage/role load map for reviewer references. You walk the same `[BLOCKING]` / `[ADVISORY]` checklist the implementer walked as self-check — one source of truth, two perspectives.
 2. **Read your task via `task_read.py --path <path>`.** Read the task content, implementation results where applicable, and any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations).
-3. **Read the root task.md's `## Conventions` section** as the review standard for codebase-fit findings — code that ignores a documented convention is a MAJOR integration-review finding. If the section is missing, empty, stale, or does not cover a convention you need, walk on-demand starting from every touched directory and flag the omission in your status return.
+3. **Hold the work to the scoped conventions in your ancestor context** as the review standard for codebase-fit findings — code that ignores an inherited convention is a MAJOR integration-review finding. `task_read.py` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections. If the ancestor chain does not cover a convention the changed files need, walk on-demand starting from every touched directory and flag the omission in your status return.
 4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
 The editing discipline you will need when writing review notes lives in §Handoff below; read it when you are ready to update the task."""

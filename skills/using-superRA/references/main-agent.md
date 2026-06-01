@@ -31,7 +31,8 @@ The resolver diagnoses and routes. It does not perform the task-tree edit, imple
 
 - Git: current branch/worktree, `git status`, recent commits relevant to `superRA/` task files, and any active merge/rebase/cherry-pick state.
 - Task tree: whether `superRA/task.md` exists, is tracked, and matches the committed state expected by the workflow about to run.
-- Root task.md: `## Conventions`, `## Sync Map` when present, any logged superimplement Step 4 disposition, and any declared pipeline.
+- Scoped objective context: the `### Conventions` / `### Context` / `### Constraints` subsections on the active task and its ancestor chain (via `task_read.py`).
+- Top task.md: `## Sync Map` when present, any logged superimplement Step 4 disposition, and any declared pipeline.
 - Per-task frontmatter: `status`, `depends_on`. Use `task_query.py --frontier` to find dispatchable tasks.
 - Per-task body: `## Results` sections for completed work, active `## Review Notes` blockquotes, `## Revision Notes` signaling recent changes.
 

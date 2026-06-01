@@ -16,7 +16,7 @@ In direct mode there is no dispatch prompt. Task context comes from the task's `
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references.
 2. **Read your task via `task_read.py --path <path>`.** This gives you the full task content with ancestor context and sibling dependency status automatically.
-3. **Read the root task.md's `## Conventions` section before editing any file.** If it is missing, empty, stale, or does not cover a convention you need, walk the directories on-demand, apply what you find, and flag the omission in your status return.
+3. **Apply the scoped conventions in your ancestor context before editing any file.** `task_read.py` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections — that inherited context is your convention source. If the ancestor chain does not cover a convention the touched files need, walk the relevant directories on-demand, apply what you find, and flag the omission in your status return.
 4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
 
 The editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update the task, not at dispatch time.

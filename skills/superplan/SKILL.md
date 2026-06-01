@@ -3,7 +3,7 @@ name: superplan
 description: "Requires `superRA:using-superra` loaded first. Use when starting new research work, adding work to an existing task tree, or revising an existing task tree. Triggers include \"let's analyze X\", \"write me a plan for Y\", \"we're starting a new project on Z\", \"before writing any code\", an empty working directory for a new task, or an existing `superRA/` that needs new tasks or restructuring. Sits at the PLAN phase of the superRA PLAN -> IMPLEMENT -> INTEGRATE workflow; hands off to `superimplement` once the task tree is approved. Domain-agnostic: for implemented verticals such as data analysis or theory/modeling, invokes the matching domain skill and planning reference before task drafting."
 ---
 
-# Planning Workflow
+# superplan — the PLAN phase
 
 **First, load `superRA:using-superra` if not already loaded.**
 
@@ -14,8 +14,6 @@ description: "Requires `superRA:using-superra` loaded first. Use when starting n
 Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of task-tree creation: discovery of existing work, exploration, domain setup, task decomposition, self-review, and execution handoff. Outputs a `superRA/` task tree for the superimplement to consume.
 
 Write task objectives for a reader skilled at the craft but with zero context for this specific project. Put binding deliverables, constraints, decisions, fixed `script` / `input` / `output` expectations, and validation criteria in `## Objective`; put suggested routes, candidate files, prior exploration notes, likely sequence, and implementation hints in optional `## Planner Guidance`.
-
-**"Plan" is the verb, not the noun.** "Planning" refers to this workflow — the process of scoping and decomposing work. Everything in `superRA/` is a **task** — root-level tasks scope a workstream, nested tasks are dispatchable work. `superRA/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `superRA/` artifact, "planning" when referring to the process.
 
 **Announce at start:** "I'm using the superplan skill to create the task tree."
 
@@ -31,9 +29,10 @@ Before any exploration or task design, assess three independent dimensions of th
 
 **2. How deep — Depth tier.** Choose a tier that modulates how deeply the subsequent phases execute. See §Depth Tiers below. Both placement and depth may need refinement after exploration — placement because the tree relationship was not clear upfront, depth because the work turned out more complex than expected.
 
-**3. What mode — Routing path.** Most work is forward planning (the default). Two alternatives:
+**3. What mode — Routing path.** Most work is forward planning (the default). One alternative:
 - **Retroactive documentation** — existing code/results need a `superRA/` record. Detected when the entry assessment finds code without task coverage. Routes through the same phases but sets `status: implemented` on created tasks. See §Retroactive Plan Creation.
-- **Consolidation** — tree cleanup requested or detected as needed. Routes to `references/consolidation.md`.
+
+Structural cleanup of an existing tree (overlapping tasks, stale objectives, granularity mismatches) is not a planning routing mode — it is a separate pass owned by `references/consolidation.md`, loadable standalone when the user asks to clean up or routed in from superintegrate. Enter it when the tree has accumulated structural debt rather than when new work needs placing.
 
 **Placement and depth are independent dimensions.** Neither determines the other. Work can clearly belong under an existing task but still need thorough planning; uncertain tree location does not mean the work itself is hard to plan.
 
@@ -87,7 +86,7 @@ Before defining tasks, map out the artifact pipeline:
 - What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 
-**Walk the project guidance docs and cache them in root task.md `## Conventions`.** Before drafting tasks, walk up from every directory the task tree will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the tasks will load from. Populate the root `superRA/task.md` `## Conventions` section (see `task-system/references/planning.md` §Conventions Section for format).
+**Walk the project guidance docs and distill them into scoped objective context.** Before drafting tasks, walk up from every directory the task tree will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the tasks will load from. Distill what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections, placing each on the `## Objective` of the lowest task whose subtree it governs (see `task-system/references/planning.md` §Ancestor Context and Conventions). Dispatched agents inherit these through `task_read.py`'s ancestor rendering rather than re-walking the tree.
 
 **Pipeline file (required for multi-artifact work):** If the work involves more than one script or executable artifact, include a pipeline file that runs all artifacts in the correct order — a single entry point that reproduces every output from source. The pipeline file must run scripts in dependency order, fail fast on errors (`set -e` or equivalent), be committed to version control, and be updated whenever a new script is added.
 
@@ -127,13 +126,13 @@ Identify independent branches so the orchestrator can dispatch them in parallel 
 
 **After writing all tasks:** trace the dependency edges — no cycles, no references to nonexistent siblings; terminal task(s) produce the top-line results.
 
-### Root task.md and Task Anatomy
+### Task Anatomy
 
-For the canonical task structure — root task.md anatomy, per-task anatomy, and field-by-field notes — see `task-system/references/planning.md`. Domain-specific root sections come from the domain skill's planning reference.
+For the canonical task structure — recursive task anatomy and field-by-field notes — see `task-system/references/planning.md`. Domain-specific top-level objective context comes from the domain skill's planning reference.
 
 ### Create the `superRA/` Directory
 
-1. Create `superRA/task.md` (root) with `## Objective` (project-level goal, methodology, scope) and `## Conventions` (cached project guidance).
+1. Create `superRA/task.md` (top task) with `## Objective` carrying the project-level goal, methodology, scope, and any project-wide scoped `### Conventions` / `### Context` / `### Constraints` subsections.
 2. Generate `superRA/serve` — a short shell script that launches the dashboard. Resolve `<skill-dir>/scripts/plan_dashboard.py` to a relative path from `superRA/` and write it into the script. (If using `task_create.py` to create root-level tasks, this is handled automatically.)
 3. Create child task directories with full objectives per §Task Structure above.
 

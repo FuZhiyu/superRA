@@ -175,7 +175,7 @@ When a reviewer returns REVISE:
    ## Review Notes
 
    > 1. [MAJOR] Use log returns, not arithmetic. ([Code/03.py:42](Code/03.py#L42))
-   >    → orchestrator: rejected — methodology specifies arithmetic returns per root task § Conventions. Reviewer lacked methodology context.
+   >    → orchestrator: rejected — methodology specifies arithmetic returns per the ancestor objective's scoped conventions. Reviewer lacked methodology context.
    ```
    For items you are flagging for a second opinion, use `→ orchestrator: <second opinion requested> <reason>` instead. The implementer will see these annotations and leave those items alone; the reviewer will see them on re-review and either accept the override (by deleting the item) or escalate.
 
