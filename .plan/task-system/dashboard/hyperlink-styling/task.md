@@ -17,7 +17,9 @@ Style links to use the existing accent tokens (`--accent` / `--accent-hover`) wi
 
 Validation: links across the tree/task views render in the dashboard's accent style in both themes, with distinct normal/hover/visited states and no default-blue anywhere; regenerate or serve the dashboard to confirm.
 
-## Results
+## Revision Notes
+
+Updated 2026-05-31 (post-implementation, pre-review): a researcher-initiated scope change added `[unify-static-export](../unify-static-export/task.md)`, which deletes the `DASHBOARD_HTML` constant and renders the static export from `base.html` instead. The second copy of the `.rendered-md a` rule this task added to `DASHBOARD_HTML` (`plan_dashboard.py`) is therefore **superseded** — it will be removed wholesale when `unify-static-export` deletes that constant. The keeper is the `base.html` copy of the rule, which the unified static export then inherits automatically. Per researcher decision, the cleanup runs first; this task's review is sequenced **after** `unify-static-export` lands so it is reviewed against the single unified source. No re-implementation needed.
 
 ### Source of the blue links
 
