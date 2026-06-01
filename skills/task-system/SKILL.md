@@ -91,7 +91,8 @@ Any `## Heading` is valid. Recommended defaults:
 
 | Section | Purpose | Owner |
 |---|---|---|
-| `## Objective` | What success looks like — the goal, constraints, and validation criteria | planner |
+| `## Objective` | Authoritative implementation/review contract: goal, constraints, required decisions, fixed inputs/outputs, validation criteria | planner |
+| `## Planner Guidance` | Optional advisory route: candidate files, prior exploration notes, likely sequence, implementation hints | planner |
 | `## Results` | Key findings and notes | implementer |
 | `## Revision Notes` | Temporary delta signal when a task objective is updated (what changed, significance); reviewer removes it on approval (`validate_plan` only warns if an `approved` task still carries one) | planner / orchestrator |
 | `## Review Notes` | Reviewer feedback | reviewer |
@@ -123,6 +124,10 @@ created: 2026-05-24
 
 Left join holdings with fund characteristics on fund_id x date.
 Use CRSP-style merge conventions. Validate row counts post-merge.
+
+## Planner Guidance
+
+Consider starting from the existing holdings loader and checking whether quarterly characteristics need date alignment before the join.
 
 ## Results
 
@@ -159,6 +164,7 @@ python3 <skill-dir>/scripts/task_create.py \
   --plan-root .plan --path 01-data/03-filter \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
+  --guidance "Consider reusing Code/common_filters.py." \
   --depends-on 02-merge
 ```
 

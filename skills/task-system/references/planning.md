@@ -4,24 +4,30 @@ Load this reference when you are an orchestrator or planner creating, restructur
 
 **Terminology:** "Plan" is the verb (the planning process), not the noun. Everything in `.plan/` is a **task**. `.plan/` is "the task tree." See `CLAUDE.md` §Terminology for the full convention.
 
-## Writing Objectives
+## Writing Objectives and Planner Guidance
 
-An objective describes what success looks like, not how to get there.
+`## Objective` is the authoritative implementation and review contract. It describes what success looks like, not optional routes for getting there.
 
 **Include:**
 - The goal — what the task should produce or verify
 - Relevant conventions — naming, paths, units, variable definitions
 - Constraints — what NOT to do, what to preserve
+- User or methodology decisions the implementer must preserve
 - Input/output expectations — what data comes in, what form results take
+- Fixed `script` / `input` / `output` expectations when they define scope
 - Validation criteria — what must be true for the task to be complete
 
 **Include enough context that an implementer with zero project context can work independently** after reading this task's objective plus the ancestor chain up to the root.
 
+`## Planner Guidance` is optional and advisory. Use it for suggested routes, candidate files, prior exploration notes, likely sequence, implementation hints, and other context the implementer may adapt or ignore while satisfying `## Objective`.
+
 **Steps vs subtasks vs suggestions:**
 - Necessary steps that need independent tracking and review: create as **subtasks** (child directories with their own `task.md`)
-- Suggestive approaches the implementer may adapt: state as **suggestions in prose**, e.g. "Consider using a left join on fund_id x date"
+- Suggestive approaches the implementer may adapt: put them in `## Planner Guidance`, e.g. "Consider using a left join on fund_id x date"
 - Do NOT prescribe implementation steps — that is the implementer's job
 - DO prescribe validation criteria — what must be true for the task to be complete
+
+Existing task files without `## Planner Guidance` remain valid. Do not bulk-migrate old objectives automatically; split objective/guidance opportunistically when a task is created or materially rewritten.
 
 ## Splitting Tasks
 
@@ -70,6 +76,7 @@ The root `.plan/task.md` frames the entire project. It carries:
 
 - **`## Objective`** — project-level goal, methodology summary, scope boundaries
 - **`## Conventions`** — naming conventions, paths, units, variable definitions that apply across all tasks
+- **`## Planner Guidance`** — optional project-level suggestions or exploration notes that are useful but not binding
 - **`## Revision Notes`** — temporary delta signal when a task is updated (what changed, significance). The reviewer removes this section when approving the task — same lifecycle as `## Review Notes`
 
 The root task does not carry `script`, `input`, or `output` — those belong on leaf tasks.
@@ -95,10 +102,11 @@ python3 <skill-dir>/scripts/task_create.py \
   --plan-root .plan --path 01-data/03-filter \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
+  --guidance "Consider reusing the sample filter helper in Code/common.py." \
   --depends-on 02-merge
 ```
 
-`task_create.py` auto-fills the template with current dates and frontmatter defaults (`status: not-started`).
+`task_create.py` auto-fills the template with current dates and frontmatter defaults (`status: not-started`). `--guidance` is optional; omitted guidance creates no empty section.
 
 ### Rename a task (cascades to sibling depends_on)
 
@@ -123,6 +131,7 @@ python3 <skill-dir>/scripts/task_link.py \
 - **`depends_on`** lists sibling directory names. Dependencies are sibling-only; parent status rolls up from children automatically.
 - **`script` / `input` / `output`** are fixed at planning time and only the orchestrator may change them (they define task scope).
 - **`## Objective`** is planner-owned. Implementers read it but do not rewrite it.
+- **`## Planner Guidance`** is planner-owned and advisory. Implementers may deviate from it when another route satisfies `## Objective`; reviewers flag guidance only when it is misleading, contradicts the objective, or would fail to achieve it.
 - **`## Results`** is implementer-owned. Updated with findings during execution. See §Results Shape below.
 - **`## Revision Notes`** carries the delta signal when a task objective is updated — what changed, why, and how significant (trivial/mechanical vs substantive). Temporary: the reviewer removes this section when approving the task. Same lifecycle as `## Review Notes`. `validate_plan` warns (it never mutates) when an `approved` task still carries a non-empty `## Revision Notes` section, so a leak surfaces through the `[task-hook]` channel; the reviewer remains responsible for removing it at approval.
 - **`## Review Notes`** is present only when there are active items. On `approved`, the section content is removed entirely.

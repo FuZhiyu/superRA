@@ -13,7 +13,7 @@ description: "Requires `superRA:using-superra` loaded first. Use when starting n
 
 Workflow skill for the **PLAN** phase of the superRA workflow. Owns the procedural shape of task-tree creation: discovery of existing work, exploration, domain setup, task decomposition, self-review, and execution handoff. Outputs a `.plan/` task tree for the superimplement to consume.
 
-Write comprehensive task objectives for a reader skilled at the craft but with zero context for this specific project — which files to create, what inputs to load, how to transform them, what to validate, and how to document results.
+Write task objectives for a reader skilled at the craft but with zero context for this specific project. Put binding deliverables, constraints, decisions, fixed `script` / `input` / `output` expectations, and validation criteria in `## Objective`; put suggested routes, candidate files, prior exploration notes, likely sequence, and implementation hints in optional `## Planner Guidance`.
 
 **"Plan" is the verb, not the noun.** "Planning" refers to this workflow — the process of scoping and decomposing work. Everything in `.plan/` is a **task** — root-level tasks scope a workstream, nested tasks are dispatchable work. `.plan/` is "the task tree," not "the plan." There is no separate "plan" artifact type. Use "task tree" when referring to the `.plan/` artifact, "planning" when referring to the process.
 
@@ -97,6 +97,8 @@ Before defining tasks, map out the artifact pipeline:
 
 For the objective writing guide and task splitting heuristics, see `task-system/references/planning.md` §Writing Objectives and §Splitting Tasks.
 
+`## Objective` is the authoritative implementation and review contract. `## Planner Guidance` is optional and advisory; omit it when there is no useful hint.
+
 ### Creating Tasks
 
 Use `task_create.py` to create tasks (auto-fills template with dates, frontmatter defaults):
@@ -106,6 +108,7 @@ python3 <skill-dir>/scripts/task_create.py \
   --plan-root .plan --path 01-data/03-filter \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
+  --guidance "Consider reusing Code/common_filters.py." \
   --depends-on 02-merge
 ```
 
@@ -146,10 +149,11 @@ After writing the complete task tree:
 2. **Placeholder scan:** Search for vague objectives — "process the data", "clean up results", "finalize" without concrete success criteria. Fix them.
 3. **Pipeline consistency:** Do the artifact names in the pipeline file match the artifacts created in each task? Are they in the right order?
 4. **Validation coverage:** Does every transformative task have a corresponding validation criterion in its objective?
-5. **Handoff test:** If you stopped here and a new agent read the root task.md plus the ancestor chain of any leaf task, could they continue? Is there enough context?
-6. **Verification coverage (where applicable):** Does the task tree cover the active domain skill's verification / robustness requirements?
-7. **Dependency graph sanity:** Every task has `depends_on:` declared. No cycles. Independent branches are marked parallelizable.
-8. **Subtask coverage:** No task carries implicit sub-steps that should be separate subtasks.
+5. **Objective/guidance split:** Are binding deliverables, constraints, decisions, fixed file expectations, and validation criteria in `## Objective`, with non-binding hints in `## Planner Guidance`?
+6. **Handoff test:** If you stopped here and a new agent read the root task.md plus the ancestor chain of any leaf task, could they continue? Is there enough context?
+7. **Verification coverage (where applicable):** Does the task tree cover the active domain skill's verification / robustness requirements?
+8. **Dependency graph sanity:** Every task has `depends_on:` declared. No cycles. Independent branches are marked parallelizable.
+9. **Subtask coverage:** No task carries implicit sub-steps that should be separate subtasks.
 
 Fix issues inline. No need to re-review — just fix and move on.
 

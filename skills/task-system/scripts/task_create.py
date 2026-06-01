@@ -54,6 +54,7 @@ tags: []
 
 {objective}
 
+{guidance_section}\
 ## Results
 
 """
@@ -65,6 +66,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--path", required=True, help="Task path relative to plan root (e.g., 01-data-prep/01-load)")
     parser.add_argument("--title", required=True, help="Task title")
     parser.add_argument("--objective", default="", help="Task objective (one-line description)")
+    parser.add_argument("--guidance", default="", help="Optional advisory Planner Guidance section")
     parser.add_argument("--depends-on", nargs="*", default=[], help="Sibling dependency names")
     parser.add_argument("--script", default="", help="Script path")
     parser.add_argument("--input", nargs="*", default=[], help="Input file paths")
@@ -77,6 +79,7 @@ def create_task(
     task_path: str,
     title: str,
     objective: str = "",
+    guidance: str = "",
     depends_on: list[str] | None = None,
     script: str = "",
     input_files: list[str] | None = None,
@@ -119,6 +122,7 @@ def create_task(
     content = TASK_TEMPLATE.format(
         title=safe_title,
         objective=objective,
+        guidance_section=f"## Planner Guidance\n\n{guidance}\n\n" if guidance else "",
         depends_on=deps_yaml,
         script_line=script_line,
         input_line=input_line,
@@ -154,6 +158,7 @@ def main(argv: list[str] | None = None) -> None:
         task_path=args.path,
         title=args.title,
         objective=args.objective,
+        guidance=args.guidance,
         depends_on=args.depends_on,
         script=args.script,
         input_files=args.input,

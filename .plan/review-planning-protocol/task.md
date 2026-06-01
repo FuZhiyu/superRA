@@ -1,6 +1,6 @@
 ---
 title: "Review and Planning Protocol"
-status: not-started
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-06-01

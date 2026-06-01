@@ -35,6 +35,8 @@ read the actual scripts, derivations, or notes; check that required
 definitions, assumptions, validation steps, and documented decisions are
 present in the work itself.
 
+Review against `## Objective`, not mere adherence to `## Planner Guidance`. Do not fail a task because the implementer ignored guidance; flag guidance only when it is misleading, contradicts the objective, or would fail to achieve it.
+
 ### Verify Claims Independently
 
 **DO NOT take the implementer's word.** Check the git diff, not just the status return — agents can report "success" for partial work, missing edits, or claims that do not match the committed state. The status return is a navigation aid; the diff is the evidence.
@@ -108,7 +110,7 @@ If the task's structure is unclear, flag it in your status return rather than in
 
 **You may NOT edit:**
 
-- Any body section other than `## Review Notes` (and `## Revision Notes` removal at APPROVE) — even if you believe the results or objective is wrong. Raise the issue as a review item in `## Review Notes` and let the orchestrator decide.
+- Any body section other than `## Review Notes` (and `## Revision Notes` removal at APPROVE) — even if you believe the results, objective, or planner guidance is wrong. Raise the issue as a review item in `## Review Notes` and let the orchestrator decide.
 - Any other task's `task.md`.
 - **The root task.md** or any ancestor task body. If your review surfaces a project-level concern that belongs in those, raise it in your status report; do not edit the root task yourself.
 - **Rewrite** the prose of an implementer's `→ implemented: ...` annotation or an orchestrator's `→ orchestrator: ...` annotation. You read them. You are allowed to **delete an entire item** (including its annotations) when the fix is verified on re-review — that is a delete, not a rewrite.

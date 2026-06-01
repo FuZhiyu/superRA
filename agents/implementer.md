@@ -26,6 +26,8 @@ The editing discipline you will need at the end of the task lives in §Handoff b
 
 ## Execution Protocol
 
+Treat `## Objective` as the implementation contract. Treat `## Planner Guidance`, when present, as advisory context you may deviate from when a better route satisfies the objective.
+
 Follow the discipline of the domain skill you loaded for this Stage. Bad analysis is worse than no analysis — stop and report under §Escalation if the data does not look right.
 
 ### Self-Review Before Reporting
@@ -86,7 +88,7 @@ If the task's structure is unclear, flag it in your status return rather than in
 **You may NOT edit:**
 
 - Scope-defining frontmatter: `title`, `depends_on`, `script`, `input`, `output` — these are planner-owned.
-- The `## Objective` section — planner-owned; read it, do not rewrite it.
+- The `## Objective` and `## Planner Guidance` sections — planner-owned; read them, do not rewrite them.
 - Any other task's `task.md`.
 - **The reviewer's prose** inside a review item. You append `→ implemented: ...` annotations; you do not rewrite what the reviewer wrote.
 - **Any `→ orchestrator: ...` annotation** already present on a review item. Leave it intact.

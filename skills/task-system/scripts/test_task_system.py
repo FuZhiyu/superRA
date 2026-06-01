@@ -434,6 +434,34 @@ class TestTaskCreate:
         assert task.status == "not-started"
         assert task.depends_on == []
 
+    def test_create_with_planner_guidance(self, plan_root):
+        task_create.create_task(
+            plan_root=plan_root,
+            task_path="04-new-task",
+            title="New Task",
+            objective="A binding objective.",
+            guidance="Consider starting from Code/example.py.",
+        )
+        content = (plan_root / "04-new-task" / "task.md").read_text(
+            encoding="utf-8"
+        )
+        assert "## Objective\n\nA binding objective." in content
+        assert "## Planner Guidance\n\nConsider starting from Code/example.py." in content
+        assert content.index("## Objective") < content.index("## Planner Guidance")
+        assert content.index("## Planner Guidance") < content.index("## Results")
+
+    def test_create_without_guidance_omits_empty_section(self, plan_root):
+        task_create.create_task(
+            plan_root=plan_root,
+            task_path="04-new-task",
+            title="New Task",
+            objective="A binding objective.",
+        )
+        content = (plan_root / "04-new-task" / "task.md").read_text(
+            encoding="utf-8"
+        )
+        assert "## Planner Guidance" not in content
+
     def test_create_with_deps(self, plan_root):
         task_create.create_task(
             plan_root=plan_root,
@@ -778,6 +806,12 @@ class TestDashboard:
 
     def test_generate_embeds_fragments_inline(self, plan_root):
         """Every fragment the standalone client fetches is pre-rendered inline."""
+        second = plan_root / "02-second" / "task.md"
+        second.write_text(
+            second.read_text(encoding="utf-8")
+            + "\n## Planner Guidance\n\nTry the existing second-stage helper.\n",
+            encoding="utf-8",
+        )
         html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
         # Nav tree, per-node bodies, per-node child DAGs, and the kanban board.
         assert "/nav" in html
@@ -786,6 +820,8 @@ class TestDashboard:
         assert "/kanban" in html
         # The embedded data carries the section markdown payloads.
         assert "Found 100 rows" in html
+        assert "Planner Guidance" in html
+        assert "Try the existing second-stage helper." in html
 
     def test_generate_embeds_internal_task_link_resolver(self, plan_root):
         """In-tree task citations route to internal hash navigation: the resolver
@@ -955,6 +991,7 @@ class TestParseBodySections:
     def test_all_sections(self):
         body = (
             "## Objective\n\nDo the thing.\n\n"
+            "## Planner Guidance\n\nTry the obvious path.\n\n"
             "## Results\n\n### Key Findings\n- Found it\n\n"
             "## Decisions\n\n> Use method A\n\n"
             "## Revision Notes\n\nChanged scope to X.\n\n"
@@ -963,6 +1000,8 @@ class TestParseBodySections:
         sections = parse_body_sections(body)
         assert "Objective" in sections
         assert "Do the thing." in sections["Objective"]
+        assert "Planner Guidance" in sections
+        assert "Try the obvious path." in sections["Planner Guidance"]
         assert "Results" in sections
         assert "Decisions" in sections
         assert "Revision Notes" in sections
@@ -1513,6 +1552,31 @@ class TestTaskRead:
         assert "ancestors" in data
         assert "task" in data
         assert "dependencies" in data
+
+    def test_planner_guidance_rendered_in_human_output(self, plan_root):
+        task_md = plan_root / "02-second" / "task.md"
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8")
+            + "\n## Planner Guidance\n\nUse the current helper if it fits.\n",
+            encoding="utf-8",
+        )
+        target = _task_io.parse_task(task_md)
+        output = task_read.render_human([], target, [], show_ancestors=False)
+        assert "## Planner Guidance" in output
+        assert "Use the current helper if it fits." in output
+
+    def test_planner_guidance_rendered_in_json_sections(self, plan_root):
+        task_md = plan_root / "02-second" / "task.md"
+        task_md.write_text(
+            task_md.read_text(encoding="utf-8")
+            + "\n## Planner Guidance\n\nUse the current helper if it fits.\n",
+            encoding="utf-8",
+        )
+        target = _task_io.parse_task(task_md)
+        data = json.loads(task_read.render_json([], target, [], show_ancestors=False))
+        assert data["task"]["sections"]["Planner Guidance"] == (
+            "Use the current helper if it fits."
+        )
 
     def test_json_ancestors_list(self, plan_root):
         """ancestors in JSON output is a list of dicts with path/title fields."""
