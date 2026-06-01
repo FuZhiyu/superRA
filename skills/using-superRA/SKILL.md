@@ -84,11 +84,14 @@ Apply to every dispatch regardless of domain.
 
 | `Stage:` | Emitted by | Required skills |
 |---|---|---|
+| `planning-review` | `superplan` | — |
 | `implementation` | `superimplement` | — |
 | `protection` | `superintegrate` Protect | `result-protection` |
 | `sync` | `superintegrate` Sync | `semantic-merge` |
 | `integration` | `superintegrate` Integrate | `refactor-and-integrate` |
 | `documentation` | `superintegrate` Document | `report-in-markdown` |
+
+`Stage: planning-review` is a reviewer-only planning pass; `superplan` and `agents/reviewer.md` own its mode and task-status exceptions.
 
 `Stage: sync` is branch-level. `superintegrate` dispatches generic sync author / sync reviewer agents with the mode references named in that workflow; the canonical implementer/reviewer role specs do not carry Sync-specific exceptions.
 

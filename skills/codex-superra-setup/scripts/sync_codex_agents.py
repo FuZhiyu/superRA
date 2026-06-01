@@ -319,10 +319,10 @@ The editing discipline you will need at the end of the task lives in §Handoff b
 def render_reviewer_direct_mode_before_you_start() -> str:
     return """## Before You Start
 
-In direct mode there is no dispatch prompt. Review scope comes from the task's `task.md`, the current diff, and the current branch state.
+In direct mode there is no dispatch prompt. Review scope comes from the task's `task.md`, the current branch state, and, for planning review, the assigned task/subtree and context.
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:` before opening any code, and follow each loaded skill's own stage/role load map for reviewer references. You walk the same `[BLOCKING]` / `[ADVISORY]` checklist the implementer walked as self-check — one source of truth, two perspectives.
-2. **Read your task via `task_read.py --path <path>`.** Read the task content, the implementer's results, any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations).
+2. **Read your task via `task_read.py --path <path>`.** Read the task content, implementation results where applicable, and any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations).
 3. **Read the root task.md's `## Conventions` section** as the review standard for codebase-fit findings — code that ignores a documented convention is a MAJOR integration-review finding. If the section is missing, empty, stale, or does not cover a convention you need, walk on-demand starting from every touched directory and flag the omission in your status return.
 4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 

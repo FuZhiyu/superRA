@@ -1,6 +1,6 @@
 ---
 title: "Planning Review Mode"
-status: not-started
+status: implemented
 depends_on: [01-objective-guidance-task-anatomy, 02-objective-first-reviewer]
 tags: []
 created: 2026-06-01
@@ -46,3 +46,17 @@ Agent(subagent_type: "superRA:reviewer"):
 - Confirm quick/standard planning are not forced through planning review; thorough planning and explicit handoff review are the intended triggers.
 
 ## Results
+
+### Key Findings
+
+- Added `Stage: planning-review` to the manifest so staged reviewer dispatches no longer trip the unknown-stage guard, with no additional required skills beyond the always-loaded baseline ([../../../skills/using-superRA/SKILL.md](../../../skills/using-superRA/SKILL.md)).
+- Updated `superplan` and its thorough-planning reference so optional planning review is owned by planning, runs only for thorough depth or explicit handoff-review requests, supports `handoff-readiness` and `design-review`, uses assigned-target `## Review Notes`, and never changes implementation `status:` ([../../../skills/superplan/SKILL.md](../../../skills/superplan/SKILL.md), [../../../skills/superplan/references/thorough-planning.md](../../../skills/superplan/references/thorough-planning.md)).
+- Updated the reviewer role with the planning-review exception: task/subtree-scoped input, optional/no git range, `[BLOCKING]` / `[ADVISORY]` findings in the assigned target's `## Review Notes`, no child-note edits, and no `status:` / `## Revision Notes` edits ([../../../agents/reviewer.md](../../../agents/reviewer.md)).
+- Regenerated reviewer artifacts after the role-spec change with `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`: [../../../.codex/agents/superra_reviewer.toml](../../../.codex/agents/superra_reviewer.toml) and [../../../skills/using-superRA/references/direct-mode-reviewer.md](../../../skills/using-superRA/references/direct-mode-reviewer.md). The generator direct-mode preface was adjusted so the regenerated direct-mode reviewer does not describe planning review as diff-scoped ([../../../skills/codex-superra-setup/scripts/sync_codex_agents.py](../../../skills/codex-superra-setup/scripts/sync_codex_agents.py)).
+
+### Validation
+
+- `python3 skills/task-system/scripts/task_check.py --plan-root .plan` — passed.
+- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` — passed; generated project agents and direct-mode role references are up to date.
+- `uv run pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py` — passed, 6 tests.
+- Disposable fixture under `/private/tmp/superra-planning-review-fixture` — `task_check.py` passed after adding `[BLOCKING]` / `[ADVISORY]` `## Review Notes` to an assigned task with `status: not-started`, and passed again after simulating planner fixes and removing `## Review Notes`; `status:` remained `not-started` throughout.

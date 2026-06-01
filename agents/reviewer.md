@@ -21,11 +21,13 @@ positives. A missed real issue is far worse than a flagged non-issue.
 
 The typical dispatch prompt carries the Stage, a task path, a git SHA range, and an optional `Additionally:` steering line.
 
+`Stage: planning-review` may omit the git range and instead carries `Review mode:`, `Context:`, and `Review target:` fields.
+
 ## Before You Start
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:` before opening any code, and follow each loaded skill's own stage/role load map for reviewer references. You walk the same `[BLOCKING]` / `[ADVISORY]` checklist the implementer walked as self-check — one source of truth, two perspectives. If the dispatcher's `Additionally:` line names a specific focus, jump to that subsection.
 2. **Load any additional skill the dispatch's `Additionally:` line names** (rare — overrides only; the manifest is the default).
-3. **Read your task via `task_read.py --path <path>`.** This gives you the full task content with ancestor context and sibling dependency status. Read the task's `## Objective`, any `## Planner Guidance`, the implementer's `## Results`, any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations). Paraphrased summaries are not authoritative.
+3. **Read your task via `task_read.py --path <path>`.** This gives you the full task content with ancestor context and sibling dependency status. Read the task's `## Objective`, any `## Planner Guidance`, the implementer's `## Results`, any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations). Paraphrased summaries are not authoritative. At `Stage: planning-review`, read the assigned task/subtree and use §Planning Review Mode.
 4. **Read the root task.md's `## Conventions` section — code that ignores a documented convention is a MAJOR integration-review finding.** If the section is missing, empty, stale, or does not cover a convention you need, walk on-demand starting from every directory touched by `git diff --name-only <git-range>` (plus `README.md` in any data directory the work loads from) and flag the omission in your status return. A reviewer that only reads the root `CLAUDE.md` will miss conventions that exist one or two levels deep — this is the failure mode the `refactor-and-integrate` Project Doc Audit exists to prevent. Catch it at review time, not at merge time.
 5. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
@@ -54,6 +56,17 @@ intermediate data or residuals, and verify that reported values match
 actual outputs. You are not limited to passive code reading. Full
 pipeline re-runs are not required, but targeted verification runs are
 encouraged when something looks off.
+
+### Planning Review Mode
+
+At `Stage: planning-review`, review the assigned task or subtree before implementation. Use the dispatched `Review mode:`:
+
+- **handoff-readiness** — check whether the task/subtree is clear, complete, human-readable, internally consistent, and ready for an implementer.
+- **design-review** — check whether the proposed architecture, decomposition, assumptions, artifact pipeline, dependencies, and domain reasoning are good enough for the objective.
+
+Use provided context as review evidence; run `task_check.py --plan-root .plan` when the dispatch asks for it. There may be no git range or implementation diff.
+
+Return APPROVE or REVISE without editing task `status:`. On REVISE, write numbered `[BLOCKING]` / `[ADVISORY]` findings in the assigned target's `## Review Notes` only; link child task files when a finding concerns a descendant. On re-review, delete fixed items. On APPROVE, remove the assigned target's `## Review Notes` section. Do not edit child task review notes, `## Revision Notes`, or any body section other than the assigned target's `## Review Notes`.
 
 ### Severity Levels
 
@@ -113,7 +126,8 @@ If the task's structure is unclear, flag it in your status return rather than in
 
 **You own** the following within your assigned task's `task.md`:
 
-- **`status:` frontmatter field** — reviewer owns `implemented → revise` and `implemented → approved`. As **integration reviewer**, also owns `approved → revise` when integration review surfaces issues. Consume task-local sync impact context, then review the governing diff. For every touched or sync-impact-affected task, set `approved` when it passes or `revise` when you write task-local review notes. On re-review, flip in-scope tasks to `approved` when fixes pass, or back to `revise` on specific failing tasks.
+- **At `Stage: planning-review` only:** the assigned planning target's `## Review Notes` section. Do not edit `status:` or `## Revision Notes`.
+- **Outside `Stage: planning-review`, `status:` frontmatter field** — reviewer owns `implemented → revise` and `implemented → approved`. As **integration reviewer**, also owns `approved → revise` when integration review surfaces issues. Consume task-local sync impact context, then review the governing diff. For every touched or sync-impact-affected task, set `approved` when it passes or `revise` when you write task-local review notes. On re-review, flip in-scope tasks to `approved` when fixes pass, or back to `revise` on specific failing tasks.
 - **The `## Review Notes` section** — write it on first review, delete items or rewrite items on re-review, and remove the section entirely when empty (at APPROVED).
 - **The `## Revision Notes` section** — remove the entire section at APPROVE. You may not edit its content (that is planner-owned); you only remove it when approving the task.
 
@@ -125,6 +139,8 @@ If the task's structure is unclear, flag it in your status return rather than in
 - **Rewrite** the prose of an implementer's `→ implemented: ...` annotation or an orchestrator's `→ orchestrator: ...` annotation. You read them. You are allowed to **delete an entire item** (including its annotations) when the fix is verified on re-review — that is a delete, not a rewrite.
 
 ### How You Write a Review
+
+At `Stage: planning-review`, use §Planning Review Mode for status and note ownership. The sequence below applies to implementation-style reviews.
 
 **On first review (no `## Review Notes` section yet):**
 
@@ -159,6 +175,7 @@ For each item, decide one of:
 ### Pre-Commit Self-Check
 
 Before committing:
+- [ ] At `Stage: planning-review`, I did not edit `status:` or `## Revision Notes`.
 - [ ] I only edited the `status:` frontmatter field, `## Review Notes` section, and (at APPROVE) removed `## Revision Notes` of my assigned task.
 - [ ] I did not touch any code, any `## Objective`, or any `## Results` section.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).

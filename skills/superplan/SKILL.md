@@ -157,13 +157,13 @@ After writing the complete task tree:
 
 Fix issues inline. No need to re-review — just fix and move on.
 
-### Agent Review (Thorough Depth Only)
+### Agent Review
 
-At thorough depth, dispatch a reviewer agent before presenting the tree to the user. The reviewer receives the complete `.plan/` directory and the exploration synthesis from Phase 1. It evaluates the self-review checklist above plus structural coherence across tasks: whether task boundaries make sense, dependencies are complete, and decomposition granularity is appropriate for the work scope.
+At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Choose `Review mode: handoff-readiness` when the question is whether the task tree is clear, complete, internally consistent, and implementer-ready; choose `Review mode: design-review` when the question is whether the architecture, decomposition, assumptions, and domain reasoning are good enough for the objective. See `references/thorough-planning.md` §Planning Review for dispatch shape and note lifecycle.
 
-The reviewer returns APPROVE or REVISE with findings. REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
+The reviewer returns APPROVE or REVISE without changing task statuses. REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
 
-Skip this step at quick and standard depth — the self-review checklist is sufficient when the main agent designed the tree itself without parallel exploration.
+Skip this step at quick and standard depth unless the user explicitly asks for a handoff review — the self-review checklist is sufficient when the main agent designed the tree itself without parallel exploration.
 
 ### User Review
 

@@ -113,21 +113,31 @@ After the task tree is designed (Phase 3 complete), identify 3-5 files that are 
 
 Keep it short — 3-5 files, one line each with a brief reason. This is a prioritization aid for implementation agents, not a complete file inventory.
 
-## Agent Review
+## Planning Review
 
-At thorough depth, Phase 4 gains an agent review step between self-review and user review (see `superplan §Agent Review (Thorough Depth Only)`). The main agent dispatches a reviewer agent that receives:
+At thorough depth, Phase 4 gains a planning-review step between self-review and user review (see `superplan §Agent Review`). Explicit handoff-review requests use the same mechanism.
 
-1. The complete `.plan/` directory (the task tree as designed).
-2. The exploration synthesis from Phase 1 — the consolidated understanding of project context that informed the design.
+Dispatch a canonical reviewer with:
 
-The exploration synthesis is essential input because the reviewer needs the same project context the main agent used to make design decisions. Without it, the reviewer cannot evaluate whether the task decomposition fits the actual codebase structure, data layout, and existing conventions discovered during exploration.
+```text
+Agent(subagent_type: "superRA:reviewer"):
+  Stage: planning-review
+  Task: <task path or root>
+  Review mode: handoff-readiness | design-review
+  Context: <exploration synthesis, inline or path>
+  Review target: assigned task/subtree design, not implementation diff
+
+  Additionally: Run task_check.py --plan-root .plan. Review the assigned task/subtree under the requested mode and write findings only to the assigned task's ## Review Notes.
+```
+
+The reviewer needs the context used to make design decisions: the exploration synthesis for handoff-readiness, and the relevant design rationale or domain context for design-review. `task_check.py` is a structural preflight, not the semantic review.
 
 **What the reviewer evaluates:**
 
-- The self-review checklist from `superplan §Self-Review` — domain coverage, placeholder scan, pipeline consistency, validation coverage, handoff test, verification coverage, dependency graph sanity, subtask coverage.
-- **Structural coherence** — whether task boundaries align with the project structure found during exploration, dependencies are complete and correctly ordered, and decomposition granularity matches the complexity of each area.
+- **Handoff-readiness:** clarity, completeness, human readability, internal consistency, dependency sanity, objective/guidance split, and whether an implementer could execute the assigned task or subtree from the task files plus provided context.
+- **Design review:** objective fit of the proposed architecture, decomposition, assumptions, artifact pipeline, dependency structure, domain reasoning, and unresolved tradeoffs.
 
-The reviewer returns APPROVE or REVISE with findings. REVISE findings must be fixed before the tree is presented to the user.
+Use the assigned target's `## Review Notes`; do not create a new notes section. On REVISE, the reviewer writes numbered `[BLOCKING]` / `[ADVISORY]` findings there, linking child task files when a finding concerns a descendant. The planner fixes the task tree inline. On re-review, the reviewer deletes fixed items; on APPROVE, the reviewer removes `## Review Notes`. Planning review never changes task `status:`.
 
 ## Incremental Refinement
 
