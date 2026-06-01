@@ -789,6 +789,14 @@ class TestDashboard:
         # The embedded data carries the section markdown payloads.
         assert "Found 100 rows" in html
 
+    def test_generate_embeds_internal_task_link_resolver(self, plan_root):
+        """In-tree task citations route to internal hash navigation: the resolver
+        and its task-path membership set must survive into the embedded output so
+        a future refactor can't silently drop the feature from the static export."""
+        html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
+        assert "resolveInternalTaskPath" in html
+        assert "TASK_PATHS" in html
+
     def test_dashboard_html_constant_removed(self):
         """The duplicate hand-maintained template is gone — one source remains."""
         src = (SCRIPTS_DIR / "plan_dashboard.py").read_text("utf-8")

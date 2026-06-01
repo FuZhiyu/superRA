@@ -41,8 +41,8 @@ The `task-link` class is a non-visual hook only; no separate CSS rule was added,
 
 ### Verification
 
-- `~/.venv/bin/python -m pytest skills/task-system/scripts/test_task_system.py -q` → **179 passed**.
+- `uv run pytest skills/task-system/scripts/test_task_system.py -q` → **180 passed** (includes `test_generate_embeds_internal_task_link_resolver`, a regression guard asserting `resolveInternalTaskPath` + `TASK_PATHS` survive into the embedded static export).
 - A node harness over the actual resolver covered 15 cases — same-dir (`task.md`), sibling (`../slug/task.md`), deep/nested (`../slug/child/task.md`), directory refs with and without a trailing slash, `.plan/`-absolute, ancestor, `#fragment`/`?query` stripping, and root-task citations (empty `taskPath`) all resolve to internal paths; scripts, figures, nonexistent `task.md`, filesystem-absolute, root-escaping `..`, and out-of-tree paths all return `null` (keeping `vscode://`). A second harness over the full rewrite branch confirmed the internal case sets `#/<path>`, removes `target`, and adds `task-link`, while the file/external/`#`-anchor cases are left on their existing behavior.
-- The root `task.md` citation `[planning-redesign/planmd-sweep/task.md](planning-redesign/planmd-sweep/task.md)` renders from the root task (`data-path=""`), so it resolves to `task-system/planning-redesign/planmd-sweep`, a known task → internal link. This is the real sibling-citation case the objective called for.
+- The root `task.md` citation `[task-system/planning-redesign/planmd-sweep](task-system/planning-redesign/planmd-sweep/task.md)` renders from the root task (`data-path=""`), so it resolves to `task-system/planning-redesign/planmd-sweep`, a known task → internal link. This is the real sibling-citation case the objective called for.
 - Regenerated `.plan/dashboard.html` (`plan_dashboard.py generate`) and rendered the live `serve` index in-process: both embed `resolveInternalTaskPath` and a 100-entry `TASK_PATHS` set. Because both paths render from `base.html`, the static export and the live server are identical by construction.
 
