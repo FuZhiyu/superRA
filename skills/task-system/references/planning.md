@@ -142,7 +142,7 @@ python3 <skill-dir>/scripts/task_link.py \
 Reusable context and conventions are captured once, on the objective of the task whose subtree they govern, so dispatched agents inherit them through `task_read.py`'s ancestor rendering instead of re-walking the project tree. The planner walks the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) during planning and distills what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections of the relevant task objective.
 
 **Discipline:**
-- Place each convention at the lowest task whose subtree it governs. Project-wide conventions go on the top task's objective; a convention that only governs one data source, model, manuscript, or workstream goes on that subtree's objective.
+- Place each convention at the lowest task whose subtree it governs (see §Writing Objectives).
 - Captured by the planner in `## Objective`, which is planner-owned. Implementers and reviewers read inherited context but do not rewrite ancestor objectives.
 - Entry format: a summary that states the behavior to follow, not a verbatim excerpt of the source doc. Stamp the walk date when the distillation reflects a docs walk.
 - When the walk found no relevant convention for the subtree, say so explicitly — an absent subsection is ambiguous; naming the out-of-scope paths removes it.
