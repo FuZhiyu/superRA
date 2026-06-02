@@ -1845,8 +1845,68 @@ class TestTaskRead:
             dep_pairs=dep_pairs,
             show_ancestors=False,
         )
+        assert "=== Context ===" not in output
         assert "Ancestor Context" not in output
         assert "Second Task" in output
+
+    def test_context_header_renamed(self, plan_root):
+        """The Context block uses the `=== Context ===` header, not the old name."""
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        ancestors = task_read._collect_ancestors(plan_root, target.path)
+        siblings = task_read._sibling_map(plan_root, target)
+        dep_pairs = task_read._dep_tasks(target, siblings)
+        root = _task_io.walk_plan(plan_root)
+        tree = task_query.format_focused_tree(root, target.path)
+        output = task_read.render_human(
+            ancestors, target, dep_pairs, show_ancestors=True, focused_tree=tree
+        )
+        assert "=== Context ===" in output
+        assert "Ancestor Context" not in output
+
+    def test_focused_tree_marks_current_and_shows_siblings(self, plan_root):
+        """Focused tree marks the current node and lists its siblings."""
+        target = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        root = _task_io.walk_plan(plan_root)
+        tree = task_query.format_focused_tree(root, target.path)
+        # Current node is marked.
+        marked = [ln for ln in tree.splitlines() if "← this task" in ln]
+        assert len(marked) == 1
+        assert "02-second" in marked[0]
+        # Siblings appear, unmarked.
+        assert "01-first" in tree
+        assert "03-third" in tree
+        assert tree.count("← this task") == 1
+
+    def test_focused_tree_shows_children_not_unrelated_branches(self, plan_with_branches):
+        """Focused tree shows the target's direct children but not unrelated ancestor branches."""
+        root = _task_io.walk_plan(plan_with_branches)
+        # Target is the branch task 01-data-prep, which has children 01-load, 02-merge.
+        tree = task_query.format_focused_tree(root, "01-data-prep")
+        assert "← this task" in tree
+        # Direct children of the target are shown.
+        assert "01-load" in tree
+        assert "02-merge" in tree
+        # The sibling branch 02-estimation is shown (it is a sibling of the target)...
+        assert "02-estimation" in tree
+        # ...but its descendants are NOT expanded (unrelated branch).
+        for line in tree.splitlines():
+            assert "estimation" not in line or "02-estimation" in line
+
+    def test_focused_tree_deep_leaf_no_ancestor_sibling_branches(self, plan_with_branches):
+        """For a deep leaf, ancestor-sibling branches are not expanded."""
+        root = _task_io.walk_plan(plan_with_branches)
+        # Target 01-data-prep/02-merge: its parent's sibling (02-estimation)
+        # must appear (it is an ancestor sibling) but unexpanded; the target's
+        # own siblings (01-load) must appear.
+        tree = task_query.format_focused_tree(root, "01-data-prep/02-merge")
+        assert "← this task" in tree
+        marked = [ln for ln in tree.splitlines() if "← this task" in ln]
+        assert "02-merge" in marked[0]
+        assert "01-load" in tree  # target sibling
+        # 02-estimation is a sibling of the target's parent. It is NOT on the
+        # spine and NOT a sibling of the target, so the focused form does not
+        # show it at all.
+        assert "02-estimation" not in tree
 
     def test_json_output_keys(self, plan_root):
         """render_json returns valid JSON with ancestors, task, dependencies keys."""

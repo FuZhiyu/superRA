@@ -12,6 +12,6 @@ This skill is deprecated. Its concerns are now owned by:
 - **Results format and two-stage lifecycle:** `skills/task-system/references/planning.md` §Results Shape
 - **User decisions:** fold into task objectives directly (see `agents/implementer.md` §Editing Etiquette)
 - **Stale-content checklist:** `skills/task-system/references/planning.md` §Stale Content Checklist
-- **Ancestor context and conventions discipline:** `skills/task-system/references/planning.md` §Ancestor Context and Conventions
+- **Context and conventions discipline:** `skills/task-system/references/planning.md` §Context and Conventions
 
 Load `superRA:task-system` (with `references/planning.md`) instead of this skill.

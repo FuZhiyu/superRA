@@ -137,9 +137,9 @@ python3 <skill-dir>/scripts/task_link.py \
 - **`## Revision Notes`** carries the delta signal when a task objective is updated — what changed, why, and how significant (trivial/mechanical vs substantive). Temporary: the reviewer removes this section when approving the task. Same lifecycle as `## Review Notes`. `validate_plan` warns (it never mutates) when an `approved` task still carries a non-empty `## Revision Notes` section, so a leak surfaces through the `[task-hook]` channel; the reviewer remains responsible for removing it at approval.
 - **`## Review Notes`** is present only when there are active items. On `approved`, the section content is removed entirely.
 
-## Ancestor Context and Conventions
+## Context and Conventions
 
-Reusable context and conventions are captured once, on the objective of the task whose subtree they govern, so dispatched agents inherit them through `task_read.py`'s ancestor rendering instead of re-walking the project tree. The planner walks the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) during planning and distills what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections of the relevant task objective.
+Reusable context and conventions are captured once, on the objective of the task whose subtree they govern, so dispatched agents inherit them through `task_read.py`'s Context block — a focused tree (the task's position, siblings, and direct children) followed by the ancestor objectives — instead of re-walking the project tree. The planner walks the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) during planning and distills what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections of the relevant task objective.
 
 **Discipline:**
 - Place each convention at the lowest task whose subtree it governs (see §Writing Objectives).
