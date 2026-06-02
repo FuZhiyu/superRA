@@ -273,9 +273,14 @@ def split_top_level_sections(body: str) -> tuple[str, dict[str, str]]:
     current_heading: str | None = None
     current_lines: list[str] = []
     preface_lines: list[str] = []
+    in_code_fence = False
 
     for line in body.splitlines(keepends=True):
-        if line.startswith("## "):
+        stripped = line.rstrip()
+        if stripped.startswith("```"):
+            in_code_fence = not in_code_fence
+
+        if not in_code_fence and line.startswith("## "):
             if current_heading is None:
                 if not sections:
                     preface = "".join(preface_lines).strip()
@@ -301,27 +306,27 @@ def split_top_level_sections(body: str) -> tuple[str, dict[str, str]]:
 def render_implementer_direct_mode_before_you_start() -> str:
     return """## Before You Start
 
-In direct mode there is no dispatch prompt. Task context comes from `PLAN.md`, `RESULTS.md`, the current session, and the current branch state.
+In direct mode there is no dispatch prompt. Task context comes from the task's `task.md`, the current session, and the current branch state.
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references.
-2. **Read your task source directly from `PLAN.md`** (the task block plus the relevant header context). If resuming, also read the matching `RESULTS.md` section.
-3. **Read `PLAN.md`'s `## Project Conventions` section before editing any file.** If it is missing, empty, stale, or does not cover a convention you need, walk the directories on-demand, apply what you find, and flag the omission in your status return.
+2. **Read your task via `task_read.py --path <path>`.** This gives you the full task content with ancestor context and sibling dependency status automatically.
+3. **Apply the scoped conventions in your ancestor context before editing any file.** `task_read.py` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections — that inherited context is your convention source. If the ancestor chain does not cover a convention the touched files need, walk the relevant directories on-demand, apply what you find, and flag the omission in your status return.
 4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
 
-The handoff-doc editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update `PLAN.md` / `RESULTS.md`."""
+The editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update the task, not at dispatch time."""
 
 
 def render_reviewer_direct_mode_before_you_start() -> str:
     return """## Before You Start
 
-In direct mode there is no dispatch prompt. Review scope comes from the task block in `PLAN.md`, the matching section in `RESULTS.md`, the current diff, and the current branch state.
+In direct mode there is no dispatch prompt. Review scope comes from the task's `task.md`, the current branch state, and, for planning review, the assigned task/subtree and context.
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:` before opening any code, and follow each loaded skill's own stage/role load map for reviewer references. You walk the same `[BLOCKING]` / `[ADVISORY]` checklist the implementer walked as self-check — one source of truth, two perspectives.
-2. **Read your task source directly from `PLAN.md`.** Read the task block, the implementer's step notes, any existing review-notes blockquote (with `→ implemented:` and `→ orchestrator:` annotations), and the corresponding `RESULTS.md` section.
-3. **Read `PLAN.md`'s `## Project Conventions` section** as the review standard for codebase-fit findings — code that ignores a documented convention is a MAJOR integration-review finding. If the section is missing, empty, stale, or does not cover a convention you need, walk on-demand starting from every touched directory and flag the omission in your status return.
+2. **Read your task via `task_read.py --path <path>`.** Read the task content, implementation results where applicable, and any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations).
+3. **Hold the work to the scoped conventions in your ancestor context** as the review standard for codebase-fit findings — code that ignores an inherited convention is a MAJOR integration-review finding. `task_read.py` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections. If the ancestor chain does not cover a convention the changed files need, walk on-demand starting from every touched directory and flag the omission in your status return.
 4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
 
-The handoff-doc editing discipline you will need when writing the review blockquote lives in §Handoff below; read it when you are ready to update `PLAN.md`."""
+The editing discipline you will need when writing review notes lives in §Handoff below; read it when you are ready to update the task."""
 
 
 def cleanup_implementer_handoff(section: str) -> str:
@@ -330,18 +335,18 @@ def cleanup_implementer_handoff(section: str) -> str:
     # wording references "first dispatch", "re-dispatch prompt", and a
     # one-line delta, none of which exist in direct mode.
     source_opener = (
-        "On a first dispatch there is no review-notes blockquote yet; you just "
-        "implement the steps, update the docs, and commit. On a REVISE round "
-        "the blockquote exists — the reviewer wrote it, and the orchestrator "
-        "may have rewritten some steps (for accepted items) or appended "
+        "On a first dispatch there are no review notes yet; you just "
+        "implement the objective, update the task, and commit. On a REVISE round "
+        "the `## Review Notes` section exists — the reviewer wrote it, and the "
+        "orchestrator may have appended "
         "`→ orchestrator: ...` notes to items it is rejecting or flagging for "
         "a second opinion. Your re-dispatch prompt carries a one-line delta "
         "pointing at what changed."
     )
     direct_opener = (
-        "On a first pass there is no review-notes blockquote yet; you just "
-        "implement the steps, update the docs, and commit. On a REVISE round "
-        "the blockquote exists — it was written previously, and items may "
+        "On a first pass there are no review notes yet; you just "
+        "implement the objective, update the task, and commit. On a REVISE round "
+        "the `## Review Notes` section exists — it was written previously, and items may "
         "carry `→ orchestrator: ...` notes rejecting them or flagging them for "
         "a second opinion."
     )

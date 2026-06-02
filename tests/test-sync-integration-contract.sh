@@ -293,7 +293,7 @@ assert_contains \
 assert_contains \
   "Writing planning reference declares PLAN-only retrofit marker" \
   "skills/writing/references/planning.md" \
-  "**Writing workflow:** Long-form review retrofit (PLAN-only; no RESULTS.md)"
+  "**Writing workflow:** Long-form review retrofit (review-only; no ## Results)"
 
 assert_absent \
   "Planning workflow does not own writing PLAN-only retrofit marker" \

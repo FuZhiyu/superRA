@@ -65,7 +65,7 @@ Each teammate loads what the manifest specifies for its Stage. Do not duplicate 
 
 ## Task-Graph Construction
 
-Construct the full task graph from `PLAN.md` upfront so teammates see the whole scope. Each graph node is one stage of one task, assigned to the teammate whose `subagent_type` matches the stage's role.
+Construct the full task graph from the `superRA/` task tree upfront so teammates see the whole scope. Each graph node is one stage of one task, assigned to the teammate whose `subagent_type` matches the stage's role.
 
 **Dependency rules:**
 
@@ -126,7 +126,7 @@ Do not hand-roll worktree setup or data-copy scripts.
      Additionally: <focus: a different independent domain>
    ```
 
-   All dispatches go out in one message so they run concurrently. No per-dispatch recitation of `PLAN.md` content or manifest loads — the agent reads those itself.
+   All dispatches go out in one message so they run concurrently. No per-dispatch recitation of task-tree content or manifest loads — the agent reads those itself.
 
 4. **Review and integrate.** When agents return, read each status report, verify fixes don't conflict, run the full test suite (or pipeline), and integrate all changes.
 
@@ -164,24 +164,23 @@ When a team's work is complete:
 If context runs out or the session ends mid-team:
 
 - **Teammates are lost.** `/resume` and `/rewind` do not restore teammates.
-- **Completed work is safe.** All completed tasks are committed to git and recorded in `PLAN.md` / `RESULTS.md`.
-- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superra` `references/main-agent.md`) checks for incomplete `PLAN.md`.
-- **Resume with new team.** New session reads `PLAN.md` to find last completed task, spawns a fresh team for remaining work.
+- **Completed work is safe.** All completed tasks are committed to git and recorded in `superRA/` task files.
+- **New session detects in-progress work.** superRA's cross-session detection (in `superRA:using-superra` `references/main-agent.md`) checks for incomplete `superRA/` task tree.
+- **Resume with new team.** New session reads the `superRA/` task tree to find last completed task, spawns a fresh team for remaining work.
 
 ### Checkpointing for Team Safety
 
 Because teammates can be lost at any time, checkpointing discipline is critical:
 
 - Commit after each completed task (already required by superRA)
-- Update `PLAN.md` and mark tasks `- [x]` with result notes (already required)
-- Update `RESULTS.md` with findings (already required)
-- **Additionally:** lead records active team phase in `PLAN.md` when spawning a team.
+- Update task files with status and result notes (already required)
+- **Additionally:** lead records active team phase in root `superRA/task.md` when spawning a team.
 
-Example `PLAN.md` team status note:
+Example team status note in root `superRA/task.md`:
 
 ```markdown
 ## Team Status
-Analysis team active. Tasks 1-3 of 5 complete. Reviewer reviewing task 4.
+Analysis team active. 3 of 5 tasks approved. Reviewer reviewing data-prep/merge.
 ```
 
 On session resume, this tells the new lead exactly where to pick up.

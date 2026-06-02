@@ -3,7 +3,7 @@
 # Injects a reminder to use superRA:semantic-merge for research-aware integration.
 # Does NOT block — the discipline system handles enforcement.
 
-# Test vectors for regression (from RESULTS.md Task 4)
+# Test vectors for regression
 # - `git merge foo-agent/parallel/a` → emit `{}` (exempt: parallel branch)
 # - `git merge --no-ff feat-agent/parallel/b` → emit `{}` (exempt: parallel branch with flag)
 # - `git merge main` → emit STOP reminder (require semantic-merge)

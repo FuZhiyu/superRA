@@ -18,7 +18,7 @@ The four-gate ordering encodes the trust-chain dependency: a reader cannot evalu
 
 ## Per-task ledger and user-gated canonical Notation Conventions
 
-A subtle but load-bearing choice: `PLAN.md`'s **Notation Conventions** table is canonical and **user-gated**. Implementers do NOT inline-edit it during implementation. Symbols introduced during implementation are logged to a per-task **Notation & Assumptions Ledger** in `RESULTS.md`, with the structured slot template in Gate 1 / Gate 2. Promotion from per-task ledger to canonical table happens at `superimplement` Step 4, where the orchestrator surfaces ledger candidates for the researcher's explicit confirmation.
+A subtle but load-bearing choice: the root task.md's **Notation Conventions** table is canonical and **user-gated**. Implementers do NOT inline-edit it during implementation. Symbols introduced during implementation are logged to a per-task **Notation & Assumptions Ledger** in the task's `## Results`, with the structured slot template in Gate 1 / Gate 2. Promotion from per-task ledger to canonical table happens at `superimplement` Step 4, where the orchestrator surfaces ledger candidates for the researcher's explicit confirmation.
 
 Why: notation conventions in a paper are a researcher decision, not a per-task implementer decision. Letting an implementer edit the canonical table mid-derivation lets locally-convenient names spread silently across the project. The ledger discipline forces every implementer to walk a structured slot set per symbol — which surfaces near-duplicates against canonical names before they propagate.
 

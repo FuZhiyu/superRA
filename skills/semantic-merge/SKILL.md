@@ -1,6 +1,6 @@
 ---
 name: semantic-merge
-description: "Use when about to run `git merge`, `git rebase`, or `git cherry-pick`; when syncing a feature, analysis, or work branch with a current base branch before integration; or when incoming changes may touch results-bearing files, source scripts, PLAN.md, RESULTS.md, drift tests, or domain-discipline artifacts. Triggers include: bare `git merge` / `git rebase` / `git cherry-pick` (the merge-guard hook flags these automatically), \"sync with main\", \"pull main into this branch\", \"rebase onto main\", \"cherry-pick commit X\", or any branch integration where conflict resolution must preserve the intent behind each side. Invoked by `superintegrate` during Sync and usable standalone by any agent or human doing an intent-aware branch integration."
+description: "Use when about to run `git merge`, `git rebase`, or `git cherry-pick`; when syncing a feature, analysis, or work branch with a current base branch before integration; or when incoming changes may touch results-bearing files, source scripts, task files, drift tests, or domain-discipline artifacts. Triggers include: bare `git merge` / `git rebase` / `git cherry-pick` (the merge-guard hook flags these automatically), \"sync with main\", \"pull main into this branch\", \"rebase onto main\", \"cherry-pick commit X\", or any branch integration where conflict resolution must preserve the intent behind each side. Invoked by `superintegrate` during Sync and usable standalone by any agent or human doing an intent-aware branch integration."
 ---
 
 # Semantic Merge
@@ -35,7 +35,7 @@ If the worktree is dirty with unrelated changes, preserve them reversibly with a
 
 ### 2. Investigate intent on both sides
 
-Read commit messages, diffs, and handoff docs for each side. For workflow mode, current-branch intent comes from `PLAN.md` / `RESULTS.md`; for standalone mode, it comes from the branch name, commits, any present handoff docs, and diffs. Incoming intent comes from the commit range on the other side of the merge base.
+Read commit messages, diffs, and handoff docs for each side. For workflow mode, current-branch intent comes from the `superRA/` task tree; for standalone mode, it comes from the branch name, commits, any present handoff docs, and diffs. Incoming intent comes from the commit range on the other side of the merge base.
 
 **Classify each cluster of changes by role.** The role drives how the cluster is resolved:
 
@@ -66,10 +66,10 @@ Ask the user before resolving — with intent and consequences, not raw diff chu
 
 - both sides imply different valid intents,
 - a conflict changes data contracts, inputs, test expectations, program outputs, or the meaning of a published result,
-- task structure in `PLAN.md` would change (routed through `superplan §User Feedback and Changing Plans`),
+- task structure would change (routed through `superplan §User Feedback and Changing the Task Tree`),
 - drift-test or result-level expectations would move because outputs meaningfully changed.
 
-Log every answer per `handoff-doc` §User Decisions Log before committing the resolution. When `PLAN.md` is absent, record the decision in the standalone merge record and the sync commit body.
+Fold every answer into the relevant task objective (rewriting it to be self-sufficient with the new context) before committing the resolution. When no task tree is present, record the decision in the standalone merge record and the sync commit body.
 
 ### 5. Resolve and land
 
@@ -115,16 +115,16 @@ Shared gated checklist. All modes walk it: the implementer as pre-handoff self-c
 
 **Intent integrity:**
 
-- `[BLOCKING]` Intent-changing choices were escalated, logged per `handoff-doc §User Decisions Log`, and implemented as stated.
+- `[BLOCKING]` Intent-changing choices were escalated, folded into the relevant task objective, and implemented as stated.
 - `[BLOCKING]` Data-discipline artifacts and drift tests were preserved.
 - `[BLOCKING]` Meaningful result changes were not silently accepted or re-expected.
 
 **Handoff docs and merge records:**
 
-- `[BLOCKING]` PLAN.md and RESULTS.md remain coherent after the sync when present.
-- `[BLOCKING]` Task-structure changes were routed through `superplan §User Feedback and Changing Plans` before adaptation proceeded.
+- `[BLOCKING]` Task files remain coherent after the sync when present.
+- `[BLOCKING]` Task-structure changes were routed through `superplan §User Feedback and Changing the Task Tree` before adaptation proceeded.
 - `[BLOCKING]` Affected task blocks have task-local `**Sync impact:**` annotations when workflow Sync leaves task-specific context needed to understand the post-sync diff.
-- `[ADVISORY]` Routine handoff-doc conflict resolutions are summarized in the Sync Map.
+- `[ADVISORY]` Routine task-file conflict resolutions are summarized in the Sync Map.
 
 **Verification:**
 

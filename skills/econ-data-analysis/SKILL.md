@@ -117,7 +117,7 @@ Numbers must make economic sense. Sanity-check against priors, literature, cross
 - `[BLOCKING]` **Distribution shift vs pre-transformation values.** Re-run describe on affected variables (Describe applied a second time) and compare. Unexpected shifts flag silent corruption.
 - `[BLOCKING]` **Economic sense.** Magnitudes plausible (GDP growth of 300% is wrong); signs correct; correlations match known stylized facts.
 - `[BLOCKING]` **Spot-check a few observations by hand** — especially for constructed variables and growth rates.
-- `[BLOCKING]` **PLAN.md expectations comparison.** When the plan states Expected Results or Hypotheses, findings compared explicitly and divergences flagged before moving on.
+- `[BLOCKING]` **Task objective expectations comparison.** When the task objective states Expected Results or Hypotheses, findings compared explicitly and divergences flagged before moving on.
 
 If something looks unexpected, STOP and investigate before proceeding.
 
@@ -142,16 +142,16 @@ If something looks unexpected, STOP and investigate before proceeding.
 
 ### Implementation standards
 
-- `[BLOCKING]` Each step implements what `PLAN.md` specifies; deviations are rewritten into the step text, not layered on top.
+- `[BLOCKING]` Each step implements what the task objective specifies; deviations are rewritten into the step text, not layered on top.
 - `[BLOCKING]` Analysis scripts follow the notebook-compatible format per `references/notebook-format.md`.
 - `[BLOCKING]` Major decisions (filter threshold, join type, variable definition, sample period) carry a markdown-cell justification; minor decisions carry an inline comment.
 - `[BLOCKING]` Outputs (tables, figures) are generated from committed code, not ad-hoc REPL state.
 
 ### Documentation and handoff
 
-- `[BLOCKING]` `RESULTS.md` updated in place for this task's section. The doc is the record — findings live there before they appear in any status report.
+- `[BLOCKING]` Task `## Results` updated in place. The task file is the record — findings live there before they appear in any status report.
 - `[BLOCKING]` Markdown cells explain what each block does and why; reasoning for major decisions sits alongside the code.
-- `[BLOCKING]` Figures saved under `results_attachments/` and embedded in `RESULTS.md` via relative paths per `superRA:report-in-markdown`.
+- `[BLOCKING]` Figures saved under the task's `attachments/` directory and embedded in task `## Results` as `attachments/fig.png` per `superRA:report-in-markdown`.
 - `[BLOCKING]` No dangling TODO / placeholder / `XXX` strings shipped.
 
 ### Stage-scoped discipline (not walked at every implementation dispatch)

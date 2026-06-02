@@ -1,0 +1,136 @@
+{#- Jinja2 macros for rendering task nodes.
+
+    render_task_body(task, project_root)
+      The body half of a task: collapsible `## ` sections (each a data-section
+      block with its lazy <script type="text/x-markdown"> payload) plus the
+      metadata pills.  Shared by the full node render below and the
+      GET /node/{path} active-node partial so body markup has one source.
+
+    render_task_node(task, project_root, depth=0)
+      A full task node: row (toggle/slug/title/badge/progress) + body (via
+      render_task_body) + recursive children container.
+
+    Usage:
+      {% from "task_node.html" import render_task_node, render_task_body %}
+      {{ render_task_node(task, project_root, depth=0) }}
+      {{ render_task_body(task, project_root) }}
+-#}
+
+{% macro render_task_body(task, project_root) %}
+  {#- Parse ALL ## sections from task.body in document order -#}
+  {% set body_lines = task.body.split('\n') if task.body else [] %}
+  {% set ns = namespace(current_name=None, current_lines=[], all_sections=[]) %}
+  {% for line in body_lines %}
+    {% if line.startswith('## ') %}
+      {% if ns.current_name %}
+        {% set _ = ns.all_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
+      {% endif %}
+      {% set ns.current_name = line[3:] %}
+      {% set ns.current_lines = [] %}
+    {% elif ns.current_name is not none %}
+      {% set ns.current_lines = ns.current_lines + [line] %}
+    {% endif %}
+  {% endfor %}
+  {% if ns.current_name %}
+    {% set _ = ns.all_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
+  {% endif %}
+
+  {#- Render sections in document order -#}
+  {% for name, content in ns.all_sections %}
+  {% if content.strip() %}
+  <div data-section="{{ name }}">
+    <div class="section-toggle" onclick="toggleSection(this, event)">
+      <span class="section-icon">&#9656;</span>
+      <span class="section-label">{{ name }}</span>
+      <span class="section-preview">{{ content | replace('\n', ' ') | replace('#', '') | replace('*', '') | replace('`', '') | replace('>', '') | replace('-', '') | truncate(80) }}</span>
+    </div>
+    <div class="section-content">
+      <div class="rendered-md">
+        <script type="text/x-markdown">{{ content | replace('</script>', '<\\/script>') }}</script>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  {#- Metadata pills -#}
+  {% if task.depends_on or task.script or task.tags or task.input or task.output %}
+  <div class="task-meta">
+    {% if task.depends_on %}
+    <span class="meta-pill"><strong>depends:</strong> {{ task.depends_on | join(', ') }}</span>
+    {% endif %}
+    {% if task.script %}
+    <span class="meta-pill"><strong>script:</strong> {{ task.script }}</span>
+    {% endif %}
+    {% if task.tags %}
+    <span class="meta-pill"><strong>tags:</strong> {{ task.tags | join(', ') }}</span>
+    {% endif %}
+    {% if task.input %}
+    <span class="meta-pill"><strong>in:</strong> {{ task.input | join(', ') }}</span>
+    {% endif %}
+    {% if task.output %}
+    <span class="meta-pill"><strong>out:</strong> {{ task.output | join(', ') }}</span>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro render_task_node(task, project_root, depth=0) %}
+{% set eff_status = task.effective_status() %}
+{% set path_id = (task.path | replace('/', '-')) or 'root' %}
+{% set has_children = task.children | length > 0 %}
+{% set has_body = task.body and task.body.strip() %}
+{% set has_expandable = has_children or has_body %}
+
+<div class="task-node"
+     data-path="{{ task.path }}"
+     data-status="{{ eff_status }}"
+     id="task-{{ path_id }}"
+     sse-swap="task:{{ task.path }}"
+     hx-swap="outerHTML">
+
+  {#- Task row (always visible) -#}
+  <div class="task-row" onclick="toggleTask(this)">
+    <span class="task-toggle{{ '' if has_expandable else ' leaf' }}">&#9656;</span>
+    {% if task.slug %}
+    <span class="task-slug">{{ task.slug }}</span>
+    {% endif %}
+    <span class="task-title-text">{{ task.title }}</span>
+    <span class="badge badge-{{ eff_status }}">{{ eff_status }}</span>
+    {% if not task.is_leaf and has_children %}
+    {% set approved_count = [] %}
+    {% for c in task.children %}
+      {% if c.effective_status() == 'approved' %}{% set _ = approved_count.append(1) %}{% endif %}
+    {% endfor %}
+    <span class="task-progress">({{ approved_count | length }}/{{ task.children | length }})</span>
+    {% endif %}
+  </div>
+
+  {#- Task body (hidden by default, toggled on click) -#}
+  <div class="task-body">
+    {{ render_task_body(task, project_root) }}
+  </div>
+
+  {#- Children container -#}
+  {% if has_children %}
+  <div class="task-children" id="{{ path_id }}-children" style="display:none;">
+    {% if depth < 3 %}
+      {#- Render children inline for depth 0, 1, and 2 -#}
+      {% for child in task.children %}
+        {{ render_task_node(child, project_root, depth + 1) }}
+      {% endfor %}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {#- htmx lazy-load for deeper children -#}
+  {% if has_children and depth >= 3 %}
+  <script>
+    (function() {
+      var node = document.getElementById('task-{{ path_id }}');
+      if (node) node.dataset.needsLoad = 'true';
+    })();
+  </script>
+  {% endif %}
+</div>
+{% endmacro %}

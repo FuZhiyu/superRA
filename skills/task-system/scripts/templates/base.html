@@ -1,0 +1,3540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ root_task.title or 'Plan Dashboard' }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/htmx.org@2/dist/htmx.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2/sse.js"></script>
+{% if standalone %}
+{# Standalone export: inline the vendored render libraries + font-inlined KaTeX
+   CSS so markdown and math render from a moved/offline file with no CDN fetch.
+   Server mode keeps the CDN tags (the {% else %} branch). #}
+<style>{{ standalone_assets.katex_css }}</style>
+<script>{{ standalone_assets.markdown_it_js }}</script>
+<script>{{ standalone_assets.katex_js }}</script>
+<script>{{ standalone_assets.texmath_js }}</script>
+{% else %}
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@14/dist/markdown-it.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markdown-it-texmath@1/texmath.min.js"></script>
+{% endif %}
+<style>
+/* ── Light / Dark tokens ── */
+:root {
+  --font-display: 'Source Serif 4', 'Georgia', serif;
+  --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
+
+  --bg:        #faf9f7;
+  --bg-alt:    #f2f0ec;
+  --bg-card:   #ffffff;
+  --bg-hover:  #edeae4;
+  --text:      #2c2a25;
+  --text-mid:  #6b6560;
+  --text-mute: #9e9890;
+  --border:    #ddd8d0;
+  --border-lt: #eae6df;
+  --accent:    #b44d2d;
+  --accent-hover: #953f24;
+  --accent-soft: rgba(180,77,45,0.08);
+
+  --tree-line: #d4cfc7;
+
+  --st-ns:     #e8e5df;  --st-ns-t:   #8a857d;
+  --st-ip:     #d6e6f5;  --st-ip-t:   #2a6496;
+  --st-impl:   #f5edd4;  --st-impl-t: #8a6d1b;
+  --st-rev:    #f5d9d4;  --st-rev-t:  #9b3228;
+  --st-ok:     #d4e8d4;  --st-ok-t:   #2d6a30;
+  --st-arch:   #e8e5df;  --st-arch-t: #9e9890;
+  --st-post:   #dde3ea;  --st-post-t: #4a5a6a;
+
+  --progress-bg:    #e8e5df;
+  --progress-fill:  #6b9e6d;
+
+  --kanban-bg: var(--bg-alt);
+  --kanban-card-bg: var(--bg-card);
+  --kanban-card-border: var(--border);
+
+  --shadow-sm: 0 1px 2px rgba(44,42,37,0.06);
+  --shadow-md: 0 2px 8px rgba(44,42,37,0.08);
+}
+
+[data-theme="dark"] {
+  --bg:        #1c1b19;
+  --bg-alt:    #252320;
+  --bg-card:   #2c2a27;
+  --bg-hover:  #353330;
+  --text:      #e0ddd7;
+  --text-mid:  #a09b93;
+  --text-mute: #706b63;
+  --border:    #3d3a35;
+  --border-lt: #33302c;
+  --accent:    #e07850;
+  --accent-hover: #f09070;
+  --accent-soft: rgba(224,120,80,0.10);
+
+  --tree-line: #3d3a35;
+
+  --st-ns:     #33312e;  --st-ns-t:   #9e9890;
+  --st-ip:     #1f3248;  --st-ip-t:   #7ab0e0;
+  --st-impl:   #3a3018;  --st-impl-t: #d4b64a;
+  --st-rev:    #3e201c;  --st-rev-t:  #e08070;
+  --st-ok:     #1e3320;  --st-ok-t:   #7ec080;
+  --st-arch:   #2a2925;  --st-arch-t: #706b63;
+  --st-post:   #28323e;  --st-post-t: #8fa6bd;
+
+  --progress-bg:    #33312e;
+  --progress-fill:  #5a9a5c;
+
+  --kanban-bg: var(--bg-alt);
+  --kanban-card-bg: var(--bg-card);
+  --kanban-card-border: var(--border);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ── KaTeX theme integration ── */
+.katex { color: var(--text); }
+.katex-display { margin: 0.75em 0; }
+
+/* ── Reset + base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header bar ── */
+.header {
+  flex: 0 0 auto; z-index: 100;
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 24px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.header-title {
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  white-space: nowrap;
+}
+.header-stats {
+  display: flex; align-items: center; gap: 14px;
+  margin-left: 8px;
+  font-size: 12px; color: var(--text-mute);
+}
+.header-stats strong { color: var(--text-mid); font-weight: 600; }
+
+/* Progress bar */
+.progress-track {
+  width: 120px; height: 6px;
+  background: var(--progress-bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--progress-fill);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.header-spacer { flex: 1; }
+
+/* Controls */
+.header-controls {
+  display: flex; align-items: center; gap: 6px;
+}
+.hc-btn, .hc-select {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.hc-btn:hover, .hc-select:hover { background: var(--bg-hover); color: var(--text); }
+
+/* Worktree selector */
+.worktree-selector {
+  display: none;  /* shown by JS when multiple worktrees */
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+.worktree-selector .wt-icon {
+  font-size: 14px;
+  color: var(--text-mute);
+  line-height: 1;
+}
+.worktree-selector .hc-select {
+  max-width: 240px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.hc-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.hc-search {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  width: 180px;
+  transition: border-color 0.15s ease;
+}
+.hc-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.hc-search::placeholder { color: var(--text-mute); }
+.theme-toggle {
+  font-size: 16px; line-height: 1;
+  background: none; border: none;
+  color: var(--text-mute); cursor: pointer;
+  padding: 4px;
+  transition: color 0.15s ease;
+}
+.theme-toggle:hover { color: var(--text); }
+
+/* ── Main content area ── */
+/* The body is a flex column (header + main-content); main-content fills the
+   rest of the viewport. In Workspace the sidebar + detail panel each scroll
+   independently (main-content itself does not overflow); when Kanban shows,
+   main-content scrolls the centered board. */
+.main-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Master-detail workspace ──────────────────────────────────────────────
+   Sidebar chrome model. The sidebar (#nav-tree) is always an absolutely
+   positioned element inside the relatively-positioned .workspace; a separate
+   .sidebar-spacer reserves the layout width the detail panel flows beside, and
+   the sidebar slides over that reservation with a GPU-friendly `transform`.
+   Only `transform` and the spacer width animate, so pin/unpin and drawer
+   open/close stay smooth. Three modes, set by classes on .workspace:
+     .sb-pinned    — spacer = full width, sidebar flush at translateX(0).
+     .sb-unpinned  — spacer = rail width, sidebar retracted so only a thin
+                     hover-rail peeks; hover slides the full sidebar out as an
+                     overlay above the detail panel; auto-hides on mouse-leave.
+     .sb-drawer    — (narrow screens) spacer = 0, sidebar is a fixed off-canvas
+                     drawer toggled by the header hamburger, with backdrop +
+                     focus trap, regardless of pin state.
+   --sidebar-width is the user-resizable width (drag handle / keyboard), clamped
+   and persisted; --rail-width is the retracted hover strip. */
+.workspace {
+  --sidebar-width: 280px;
+  --rail-width: 16px;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  height: 100%;
+  min-height: 0;
+}
+.workspace.hidden { display: none !important; }
+
+/* Layout spacer the detail panel flows beside; the sidebar overlays it. */
+.sidebar-spacer {
+  flex: 0 0 auto;
+  transition: width 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sb-pinned   .sidebar-spacer { width: var(--sidebar-width); }
+.sb-unpinned .sidebar-spacer { width: var(--rail-width); }
+.sb-drawer   .sidebar-spacer { width: 0; }
+
+/* Left rail — persistent navigation sidebar (the moving element). A flex
+   column: a fixed header chrome strip on top, the scrolling tree region below. */
+.nav-tree {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  padding: 14px 10px 0;
+  border-right: 1px solid var(--border);
+  background: var(--bg-alt);
+  z-index: 30;
+  transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.26s ease;
+  outline: none;
+}
+/* The scrolling tree region (role="tree"); the header above it stays fixed. */
+.nav-tree-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0 40px;
+}
+.sb-pinned .nav-tree { transform: translateX(0); }
+/* Unpinned: retract so only --rail-width peeks at the screen edge. */
+.sb-unpinned .nav-tree {
+  transform: translateX(calc(-1 * (var(--sidebar-width) - var(--rail-width))));
+}
+/* Hover (or kept open during keyboard focus) slides the full sidebar out as
+   an overlay above the detail panel, with a lifting shadow. Driven by a single
+   .sb-revealed class on the workspace. */
+.sb-unpinned.sb-revealed .nav-tree {
+  transform: translateX(0);
+  box-shadow: var(--shadow-md), 6px 0 24px rgba(0,0,0,0.10);
+}
+
+/* Thin hover-rail affordance shown only when unpinned: a slim decorative strip
+   at the screen edge with a grip cue that invites the hover-reveal. It is
+   pointer-transparent — the retracted sidebar's own visible edge underneath is
+   the hover target (sidebar mouseenter reveals), so the rail is pure chrome and
+   never competes for the pointer. */
+.sidebar-rail {
+  display: none;
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 0;
+  width: var(--rail-width);
+  pointer-events: none;
+  z-index: 31;
+  background: linear-gradient(to right, var(--bg-alt), var(--bg-alt) 60%, transparent);
+  border-right: 1px solid var(--border);
+}
+.sb-unpinned .sidebar-rail { display: block; transition: opacity 0.2s ease; }
+.sb-unpinned.sb-revealed .sidebar-rail { opacity: 0; pointer-events: none; }
+/* Grip dots centered on the rail to read as an affordance, not a void. */
+.sidebar-rail::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px; height: 26px;
+  border-radius: 2px;
+  background: var(--text-mute);
+  opacity: 0.5;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+/* The sidebar's own hover (its visible edge is the hover target) lights the
+   grip cue, since the rail itself is pointer-transparent. */
+.sb-unpinned .nav-tree:hover ~ .sidebar-rail::before { opacity: 1; background: var(--accent); }
+
+/* Resize drag handle on the sidebar's right edge. A 7px hit area straddling
+   the border; a visible grip line on hover/focus/active. role="separator",
+   keyboard-operable (←/→). Hidden in drawer mode (width is fixed there). */
+.sidebar-resizer {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: calc(var(--sidebar-width) - 3px);
+  width: 7px;
+  z-index: 32;
+  cursor: col-resize;
+  background: transparent;
+  border: none;
+  padding: 0;
+  transition: background 0.12s ease;
+}
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+.sidebar-resizer:hover::after,
+.sidebar-resizer:focus-visible::after,
+.workspace.sb-resizing .sidebar-resizer::after {
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+.sidebar-resizer:focus-visible { outline: none; }
+.sb-drawer .sidebar-resizer { display: none; }
+/* While dragging: kill the slide transitions so the sidebar tracks the cursor
+   1:1 (no lag/rubber-banding), and disable text selection page-wide. */
+.workspace.sb-resizing .nav-tree,
+.workspace.sb-resizing .sidebar-spacer { transition: none; }
+body.sb-resizing-active { cursor: col-resize; user-select: none; }
+
+/* ── Narrow-screen overlay drawer ── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  z-index: 28;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.sb-drawer .nav-tree {
+  position: fixed;
+  top: 0; bottom: 0; left: 0;
+  width: min(var(--sidebar-width), 86vw);
+  transform: translateX(-100%);
+  box-shadow: none;
+  z-index: 130;
+}
+.sb-drawer .sidebar-rail { display: none; }
+.sb-drawer.sb-drawer-open .nav-tree {
+  transform: translateX(0);
+  box-shadow: var(--shadow-md), 8px 0 32px rgba(0,0,0,0.22);
+}
+.sb-drawer.sb-drawer-open .sidebar-backdrop {
+  display: block;
+  opacity: 1;
+}
+
+/* Header hamburger — visible only on narrow screens (toggles the drawer). */
+.nav-hamburger {
+  display: none;
+  font-size: 18px; line-height: 1;
+  background: none; border: none;
+  color: var(--text-mid); cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nav-hamburger:hover { background: var(--bg-hover); color: var(--text); }
+
+/* Pin toggle in the sidebar header (desktop chrome). */
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-lt);
+}
+.sidebar-head-label {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-mid);   /* >=5:1 on --bg-alt in both themes (WCAG AA) */
+  text-transform: uppercase;
+}
+.sidebar-head-spacer { flex: 1; }
+.pin-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  font-size: 13px; line-height: 1;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: var(--text-mute);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.2s ease;
+}
+.pin-toggle:hover { background: var(--bg-hover); color: var(--text); }
+.pin-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Pinned state: accent pin, upright. Unpinned: muted, tilted. */
+.sb-pinned .pin-toggle { color: var(--accent); }
+.sb-unpinned .pin-toggle { transform: rotate(45deg); }
+/* Drawer mode (narrow): pin state doesn't drive the layout, so the toggle would
+   be inert — hide it to avoid a no-op control. */
+.sb-drawer .pin-toggle { display: none; }
+
+/* Right — drill-down detail panel (breadcrumb + active node + children DAG) */
+.detail-panel {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 28px 60px;
+}
+.detail-panel > * {
+  max-width: 860px;
+}
+.children-dag { overflow-x: auto; }
+
+/* ── Narrow breakpoint: force drawer mode regardless of pin state ── */
+@media (max-width: 860px) {
+  .nav-hamburger { display: inline-flex; }
+  /* JS adds .sb-drawer below this width; this guard keeps the layout sane even
+     before the resize handler runs (e.g. first paint at a narrow width). */
+  .workspace:not(.sb-drawer) .sidebar-spacer { width: 0; }
+  .detail-panel { padding: 16px 18px 60px; }
+  /* Tighten the header so it never forces a horizontal scrollbar: trim the
+     padding/gaps and let the controls wrap under the title row. */
+  .header { padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
+  .header-controls { flex-wrap: wrap; gap: 4px; }
+}
+
+/* Phone width: drop the verbose summary stats + free-text search; the title,
+   drawer hamburger, view toggle, and theme control are what stay essential.
+   Filtering/search remain reachable on wider screens. */
+@media (max-width: 620px) {
+  .header-stats { display: none; }
+  .hc-search { display: none; }
+  #filter-status { display: none; }
+  .worktree-selector .hc-select { max-width: 140px; }
+}
+
+/* ── Breadcrumb ── */
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 0 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-lt);
+}
+.crumb {
+  font-family: inherit;
+  font-size: inherit;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.crumb:hover { background: var(--bg-hover); color: var(--text); }
+.crumb.active {
+  color: var(--text);
+  font-weight: 600;
+  cursor: default;
+}
+.crumb.active:hover { background: none; }
+.crumb-sep {
+  color: var(--text-mute);
+  user-select: none;
+  padding: 0 1px;
+}
+
+/* ── Active-node card (the focused detail view) ── */
+.active-node-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.active-node-title {
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text);
+  margin: 0;
+}
+.active-node-head .badge { align-self: center; }
+/* Share/Export control — pushed to the trailing edge of the card header. */
+.share-btn {
+  margin-left: auto;
+  align-self: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.share-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* The card body reuses the tree-body section/comment chrome, but it is always
+   shown (no collapse animation gating its height like a tree row). */
+.active-node-body { display: block; }
+
+/* ── Children subtask cards (flat grid + layered dependency flow) ── */
+.children-dag { margin-top: 26px; }
+.children-dag:empty { margin-top: 0; }
+
+.child-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+.child-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+.child-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.child-card-slug {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+.child-card-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.25;
+}
+/* Direct-sibling-dependency footer on a card in the layered flow. */
+.child-card-deps {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-mute);
+  margin-top: 2px;
+}
+.child-card-deps .dep-arrow { color: var(--accent); margin-right: 3px; }
+.child-card-deps .dep-label { color: var(--text-mid); }
+.child-card-deps .dep-slug { color: var(--text-mid); }
+
+/* ── Layered dependency flow: topological tiers stacked in execution order ──
+   Cards reuse .child-card; tiers stack top->bottom, each a wrapping row. A
+   subtle downward spine + chevron between tiers signals flow direction without
+   drawing node-to-node connectors. */
+.child-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 4px;
+}
+.flow-tier {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+/* Inter-tier cue: a centered vertical spine capped by a downward chevron,
+   sitting in the gap between consecutive tiers. */
+.flow-sep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 26px;
+  margin: 2px 0;
+  pointer-events: none;
+}
+.flow-sep::before {
+  content: "";
+  flex: 1;
+  width: 0;
+  border-left: 2px dashed var(--border);
+}
+.flow-sep::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(45deg);
+  opacity: 0.75;
+}
+/* The card knows its tier (for a faint left accent on dependent tiers). */
+.child-card.has-deps { border-left: 3px solid var(--accent-soft); }
+.child-card.has-deps:hover { border-left-color: var(--accent); }
+
+/* When Workspace is showing, the Kanban container is hidden via .hidden;
+   when Kanban shows, it keeps the legacy centered layout. */
+#view-kanban:not(.hidden) {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+}
+
+/* ── Tree View ── */
+.task-tree { }
+.task-node {
+  position: relative;
+}
+.task-node + .task-node { margin-top: 1px; }
+
+/* Tree connector lines */
+.task-children {
+  position: relative;
+  margin-left: 20px;
+  padding-left: 16px;
+  border-left: 1px solid var(--tree-line);
+}
+
+/* ── Task row (always visible) ── */
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease;
+}
+.task-row:hover { background: var(--bg-hover); }
+
+/* Active row in the sidebar nav-tree — exactly one at a time. Left accent bar
+   + soft accent wash; theme-aware via --accent / --accent-soft tokens. */
+.nav-tree .task-row.nav-active {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.nav-tree .task-row.nav-active:hover { background: var(--accent-soft); }
+.nav-tree .task-row.nav-active .task-title-text { color: var(--text); }
+
+/* Keyboard focus ring for the roving-tabindex tree row (one row focusable at a
+   time). Distinct from .nav-active (the activePath highlight) so a keyboard
+   user can see where focus is even before they hit Enter. */
+.nav-tree .task-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.nav-tree .task-row { scroll-margin: 8px; }
+
+.task-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  font-size: 10px;
+  color: var(--text-mute);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.task-toggle.expanded { transform: rotate(90deg); }
+.task-toggle.leaf { visibility: hidden; }
+
+.task-slug {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+}
+.task-title-text {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Status badge */
+.badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  padding: 1px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.badge-not-started  { background: var(--st-ns);   color: var(--st-ns-t);   }
+.badge-in-progress  { background: var(--st-ip);   color: var(--st-ip-t);   }
+.badge-implemented  { background: var(--st-impl); color: var(--st-impl-t); }
+.badge-revise       { background: var(--st-rev);  color: var(--st-rev-t);  }
+.badge-approved     { background: var(--st-ok);   color: var(--st-ok-t);   }
+.badge-archived     { background: var(--st-arch); color: var(--st-arch-t); opacity: 0.7; }
+.badge-postponed    { background: var(--st-post); color: var(--st-post-t); }
+
+.task-progress {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-mute);
+  flex-shrink: 0;
+}
+
+/* ── Task body (expanded) ── */
+.task-body {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.2s ease;
+  padding: 0 8px 0 30px;
+}
+.task-body.open {
+  max-height: 5000px;
+  opacity: 1;
+  padding: 4px 8px 8px 30px;
+}
+.task-body.uncapped {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Section toggles inside task body */
+.section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  margin: 2px 0;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease;
+}
+.section-toggle:hover { background: var(--bg-hover); }
+.section-icon {
+  font-size: 9px;
+  color: var(--text-mute);
+  transition: transform 0.2s ease;
+  width: 12px;
+  text-align: center;
+}
+.section-icon.expanded { transform: rotate(90deg); }
+.section-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-mid);
+}
+.section-preview {
+  font-size: 11px;
+  color: var(--text-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+.section-comment-badge,
+.tree-comment-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  flex-shrink: 0;
+}
+.section-comment-badge { margin-left: auto; }
+.tree-comment-badge { margin-left: 4px; }
+
+.section-content {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.2s ease;
+  padding-left: 4px;
+}
+.section-content.open {
+  max-height: 8000px;
+  opacity: 1;
+  padding-bottom: 4px;
+}
+.section-content.uncapped {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Rendered markdown inside sections */
+.rendered-md {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+  padding: 6px 0;
+}
+.rendered-md h1, .rendered-md h2, .rendered-md h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 12px 0 6px;
+}
+.rendered-md h1 { font-size: 16px; }
+.rendered-md h2 { font-size: 14px; }
+.rendered-md h3 { font-size: 13px; }
+.rendered-md p { margin: 4px 0; }
+.rendered-md ul, .rendered-md ol { padding-left: 18px; margin: 4px 0; }
+.rendered-md li { margin: 2px 0; }
+.rendered-md pre {
+  background: var(--bg-alt);
+  padding: 10px 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 6px 0;
+  border: 1px solid var(--border-lt);
+}
+.rendered-md code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.rendered-md p code, .rendered-md li code {
+  background: var(--bg-alt);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+.rendered-md blockquote {
+  border-left: 3px solid var(--accent);
+  padding: 4px 12px;
+  margin: 6px 0;
+  background: var(--accent-soft);
+  border-radius: 0 3px 3px 0;
+}
+.rendered-md table {
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.rendered-md th, .rendered-md td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  text-align: left;
+}
+.rendered-md th { background: var(--bg-alt); font-weight: 600; }
+/* Links inherit the warm accent palette instead of browser default blue/purple.
+   Restrained 1px underline at reduced opacity that solidifies on hover; visited
+   stays on-theme (the accent, never default purple). Accent tokens are
+   theme-aware, so one rule covers both light and dark. */
+.rendered-md a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-soft);
+  text-underline-offset: 2px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+.rendered-md a:hover {
+  color: var(--accent-hover);
+  text-decoration-color: var(--accent-hover);
+}
+.rendered-md a:visited { color: var(--accent); }
+.rendered-md a:visited:hover { color: var(--accent-hover); }
+
+/* Metadata pills inside task body */
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-lt);
+}
+.meta-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-mute);
+  background: var(--bg-alt);
+  padding: 2px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.meta-pill strong { color: var(--text-mid); font-weight: 600; }
+
+/* ── DAG view ── */
+.dag-container {
+  padding: 16px 0;
+}
+.dag-controls {
+  font-family: var(--font-display);
+  font-size: 14px;
+  margin-bottom: 12px;
+  color: var(--text-mid);
+}
+.dag-controls strong { color: var(--text); }
+.dag-hint { color: var(--text-mute); font-size: 13px; }
+
+/* ── Kanban view ── */
+.kanban {
+  display: flex;
+  gap: 14px;
+  padding: 16px 0;
+  overflow-x: auto;
+  min-height: 400px;
+}
+.kanban-col {
+  min-width: 200px;
+  flex: 1;
+  background: var(--kanban-bg);
+  border-radius: 6px;
+  padding: 10px;
+}
+.kanban-col-header {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid var(--border);
+  color: var(--text-mid);
+}
+.kanban-col-header .count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-mute);
+  font-weight: 400;
+}
+.kanban-card {
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: var(--kanban-card-bg);
+  border: 1px solid var(--kanban-card-border);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.kanban-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+.kanban-card-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text);
+}
+.kanban-card-path {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-mute);
+  margin-top: 3px;
+}
+
+/* ── Comment gutter and threads ── */
+.commentable-block { position: relative; padding-left: 24px; }
+.commentable-block:hover .comment-gutter-btn { opacity: 1; }
+.comment-gutter-btn {
+  position: absolute; left: 2px; top: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 12px; line-height: 20px; text-align: center;
+  cursor: pointer; opacity: 0; transition: opacity 0.15s;
+  border: none; z-index: 1;
+}
+.comment-thread {
+  margin: 4px 0 8px; padding: 8px 12px;
+  background: var(--accent-soft); border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0; font-size: 12px;
+}
+.comment-item { margin: 4px 0; }
+.comment-meta { color: var(--text-mute); font-size: 11px; }
+.comment-body { margin-top: 2px; white-space: pre-wrap; }
+.comment-resolved { opacity: 0.5; }
+.comment-form textarea {
+  width: 100%; min-height: 60px; margin: 4px 0;
+  font-family: var(--font-mono); font-size: 12px;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 6px 8px; resize: vertical;
+}
+.comment-form button {
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 3px 10px; background: var(--accent); color: #fff;
+  border: none; border-radius: 3px; cursor: pointer;
+}
+.comment-orphan-warning {
+  color: var(--st-rev-t); font-size: 11px; font-style: italic;
+}
+
+/* ── Utility ── */
+.hidden { display: none !important; }
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Brief highlight when a task is revealed via navigation (Kanban/DAG click) */
+@keyframes revealPulse {
+  0%   { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+  100% { background: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
+.task-row.reveal-flash { animation: revealPulse 1.6s ease-out; }
+.task-node { animation: fadeIn 0.15s ease both; }
+.task-tree > .task-node:nth-child(1)  { animation-delay: 0.02s; }
+.task-tree > .task-node:nth-child(2)  { animation-delay: 0.04s; }
+.task-tree > .task-node:nth-child(3)  { animation-delay: 0.06s; }
+.task-tree > .task-node:nth-child(4)  { animation-delay: 0.08s; }
+.task-tree > .task-node:nth-child(5)  { animation-delay: 0.10s; }
+.task-tree > .task-node:nth-child(6)  { animation-delay: 0.12s; }
+.task-tree > .task-node:nth-child(7)  { animation-delay: 0.14s; }
+.task-tree > .task-node:nth-child(8)  { animation-delay: 0.16s; }
+.task-tree > .task-node:nth-child(9)  { animation-delay: 0.18s; }
+.task-tree > .task-node:nth-child(10) { animation-delay: 0.20s; }
+
+/* ── Reduced motion ──
+   Honor prefers-reduced-motion across the whole UI: kill the reveal-flash,
+   node fade-in, expand/collapse and section transitions, and the sidebar
+   chrome's slide/auto-hide/drawer/resize animations. Pin/unpin and drawer
+   open/close still work — they just snap instead of sliding. Scroll behavior
+   is left to scrollIntoView (called with default behavior, not 'smooth'). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .task-node { animation: none; }
+  .task-row.reveal-flash { animation: none; }
+}
+</style>
+</head>
+<body>
+<!-- ── Header ── -->
+<div class="header">
+  <button class="nav-hamburger" id="nav-hamburger" type="button"
+          aria-label="Open navigation" aria-controls="nav-tree" aria-expanded="false"
+          onclick="toggleDrawer()">&#9776;</button>
+  <span class="header-title" id="header-title">{{ root_task.title or 'Plan Dashboard' }}</span>
+  {% if not standalone %}
+  <div class="worktree-selector" id="worktree-selector">
+    <span class="wt-icon" title="Switch worktree">&#9095;</span>
+    <select class="hc-select" id="worktree-select" onchange="switchWorktree(this.value)">
+    </select>
+  </div>
+  {% endif %}
+  <div class="header-stats" id="summary-bar"
+       sse-swap="summary-updated"
+       hx-swap="innerHTML">
+    {% include "summary_bar.html" %}
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-controls">
+    <input type="text" class="hc-search" id="search-box" placeholder="Search tasks..." oninput="applyFilters()">
+    <select class="hc-select" id="filter-status" onchange="applyFilters()">
+      <option value="">All statuses</option>
+      <option value="not-started">not-started</option>
+      <option value="in-progress">in-progress</option>
+      <option value="implemented">implemented</option>
+      <option value="revise">revise</option>
+      <option value="approved">approved</option>
+      <option value="archived">archived</option>
+      <option value="postponed">postponed</option>
+    </select>
+    <button class="hc-btn active" id="btn-workspace" onclick="showView('workspace')">Workspace</button>
+    <button class="hc-btn" id="btn-kanban" onclick="showView('kanban')">Kanban</button>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">&#9681;</button>
+  </div>
+</div>
+
+<!-- ── Content ── -->
+<div class="main-content"{% if not standalone %} hx-ext="sse" sse-connect="/events"{% endif %}>
+  {% if not standalone %}
+  {#- Hidden element to catch full-reload SSE events -#}
+  <div id="sse-full-reload" sse-swap="full-reload" hx-swap="none" style="display:none;"></div>
+  {% endif %}
+
+  {#- Master-detail workspace: persistent sidebar nav-tree + drill-down main panel.
+      Region content is loaded client-side by the activePath router (sidebar-nav
+      fills #nav-tree; main-panel fills #active-node / #children-dag). -#}
+  <div id="workspace" class="workspace sb-pinned">
+    {#- Layout spacer the detail panel flows beside; the sidebar overlays it. -#}
+    <div class="sidebar-spacer" aria-hidden="true"></div>
+    {#- Persistent navigation sidebar (absolutely positioned; slides over the
+        spacer). The .nav-tree box holds a header chrome strip (pin toggle) and
+        the scrolling #nav-tree region, which is the role="tree". The header is
+        aria-hidden so it stays out of the tree's accessibility model. -#}
+    <aside class="nav-tree" id="sidebar">
+      <div class="sidebar-head" aria-hidden="true">
+        <span class="sidebar-head-label">Tasks</span>
+        <span class="sidebar-head-spacer"></span>
+        <button class="pin-toggle" id="pin-toggle" type="button"
+                aria-pressed="true" aria-label="Unpin sidebar (auto-hide)"
+                title="Pinned — click to auto-hide" onclick="toggleSidebarPin()">
+          {#- Pushpin icon; inherits currentColor so it tints with the accent
+              token (theme-aware). The .sb-unpinned rotate gives the "unpinned"
+              tilt. -#}
+          <svg class="pin-icon" width="15" height="15" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="17" x2="12" y2="22"></line>
+            <path d="M9 9V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4l2 3v2H7v-2l2-3z"></path>
+          </svg>
+        </button>
+      </div>
+      <div id="nav-tree" class="nav-tree-scroll" role="tree"
+           aria-label="Task navigation" tabindex="-1"></div>
+    </aside>
+    <button class="sidebar-resizer" id="sidebar-resizer" type="button"
+            role="separator" aria-orientation="vertical"
+            aria-label="Resize sidebar" aria-valuemin="200" aria-valuemax="480"
+            aria-valuenow="280" aria-controls="nav-tree"></button>
+    <div class="sidebar-rail" id="sidebar-rail" aria-hidden="true"></div>
+    <main class="detail-panel">
+      <nav id="crumbs" class="crumbs" aria-label="Breadcrumb"></nav>
+      <div id="active-node" class="active-node"></div>
+      <div id="children-dag" class="children-dag"></div>
+    </main>
+    {#- Drawer backdrop (narrow screens): inside the workspace so the
+        .sb-drawer-open mode class reaches it; fixed-position covers the page. -#}
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeDrawer()"></div>
+  </div>
+
+  <div id="view-kanban" class="kanban hidden"></div>
+</div>
+
+<script>
+{% if standalone %}
+/* ══════════════════════════════════════════════════════════════════════════
+   STANDALONE MODE — server-less single-file export.
+   ──────────────────────────────────────────────────────────────────────────
+   The live dashboard fetches HTML/JSON fragments from the FastAPI server
+   (/nav, /nav/<path>, /node/<path>, /dag?root=<path>, /kanban, /api/*). A file
+   opened via file:// has no server, so generate_dashboard() pre-renders every
+   one of those fragments with the SAME Jinja partials the server uses and
+   embeds them here as a {url -> fragment} map. The fetch shim below resolves
+   the client's fetch() calls from that map (and no-ops the server-only /api/*
+   writes), so navigation, view-switching, lazy nav loads, and markdown/figure
+   rendering all work offline with zero network calls for task data. Server-only
+   affordances (comments, worktree switch, SSE auto-refresh) are degraded: their
+   controls are hidden in the template and their fetches resolve to empty.
+   ══════════════════════════════════════════════════════════════════════════ */
+window.STANDALONE = true;
+var STANDALONE_FRAGMENTS = {{ standalone_fragments | tojson }};
+/* Relative directory (from the dashboard file) holding the embedded task tree,
+   used to resolve task-relative <img> sources to a file:// path that resolves
+   offline. Empty string keeps image sources task-relative to the file. */
+var STANDALONE_PLAN_DIR = {{ standalone_plan_dir | tojson }};
+/* { client-key -> data:URI } for every relative figure referenced in a task body,
+   base64-embedded at build time so figures render from a moved/offline file. The
+   key matches the string the img[src] loop computes (taskPath + '/' + src, or bare
+   src for the root body). The img loop consults this before its relative fallback. */
+var STANDALONE_IMAGES = {{ standalone_images | tojson }};
+
+/* Build a fake Response that yields a pre-rendered fragment (or [] for the
+   comment/summary JSON endpoints). Mirrors just enough of the fetch Response
+   contract for the existing loaders: ok, status, text(), json(). */
+function _standaloneResponse(payload, found) {
+  return Promise.resolve({
+    ok: found,
+    status: found ? 200 : 404,
+    text: function () { return Promise.resolve(found ? payload : ''); },
+    json: function () { return Promise.resolve(found ? payload : null); },
+  });
+}
+
+/* Resolve a fetch URL against the embedded data instead of the network.
+   - Exact fragment hits (/nav, /node/<path>, /dag?root=<path>, /kanban,
+     /nav/<path>) return their pre-rendered HTML. The map is keyed by the raw
+     (decoded) path, but the /dag loader builds its URL with
+     encodeURIComponent(path), which escapes the '/' in multi-segment paths to
+     %2F. We decode before the lookup so an encoded request
+     (/dag?root=a%2Fb) and a raw request (/node/a/b) both match the map.
+   - Comment GETs return [] / {} so loadComments + the summary badge no-op.
+   - Worktree GET returns a single-entry payload so the selector stays hidden.
+   - Server-only writes (POST/PATCH/DELETE /api/*) resolve ok with no effect;
+     their UI controls are hidden in standalone mode, so they are never reached
+     in normal use — this only keeps a stray call from throwing. */
+function standaloneFetch(url) {
+  if (STANDALONE_FRAGMENTS.hasOwnProperty(url)) {
+    return _standaloneResponse(STANDALONE_FRAGMENTS[url], true);
+  }
+  var decoded = decodeURIComponent(url);
+  if (decoded !== url && STANDALONE_FRAGMENTS.hasOwnProperty(decoded)) {
+    return _standaloneResponse(STANDALONE_FRAGMENTS[decoded], true);
+  }
+  if (/\/comments($|\?)/.test(url)) return _standaloneResponse([], true);
+  if (url.indexOf('/api/comments/summary') !== -1) return _standaloneResponse({}, true);
+  if (url.indexOf('/api/worktrees') !== -1) {
+    return _standaloneResponse({ current: '', worktrees: [] }, true);
+  }
+  return _standaloneResponse(null, false);
+}
+
+/* Replace window.fetch wholesale in standalone mode. Every task-data load in
+   this page goes through fetch(); routing them here guarantees zero network
+   calls for task content from a file:// open. */
+window.fetch = function (input) {
+  var url = typeof input === 'string' ? input : (input && input.url) || '';
+  return standaloneFetch(url);
+};
+{% else %}
+window.STANDALONE = false;
+{% endif %}
+
+/* ── Markdown-it setup ── */
+var md = window.markdownit({ html: false, linkify: true });
+md.use(texmath, { engine: katex, delimiters: 'dollars' });
+var PROJECT_ROOT = {{ project_root | tojson }};
+
+/* Membership oracle for in-tree task references. Every task's tree path, as a
+   set, so renderMarkdown can decide whether a relative body link points at a
+   real task in this tree (-> internal navigation) or at a plain file (-> the
+   vscode:// rewrite). Built from the full tree both render paths pass in, so it
+   is complete even though the sidebar nav lazy-loads deep branches. */
+var TASK_PATHS = (function () {
+  var set = {};
+  {% for t in all_tasks %}set[{{ t.path | tojson }}] = true;
+  {% endfor %}return set;
+})();
+
+/* Resolve a task-relative href (`task.md`, `../merge/task.md`, `sibling/task.md`)
+   against the active task's tree path and, if it names a real task, return that
+   task's canonical tree path; otherwise null (caller keeps the vscode:// path).
+   A target is an in-tree task when, after dropping a trailing `/task.md` or a
+   bare trailing `/`, the normalized tree path is in TASK_PATHS. */
+function resolveInternalTaskPath(href, taskPath) {
+  /* Strip any #fragment / ?query — they don't affect which task is referenced. */
+  var clean = href.replace(/[?#].*$/, '');
+  if (!clean) return null;
+
+  /* Base segments: the directory of the active task. An absolute `superRA/...`
+     href resolves from the tree root instead of the active task's dir. Legacy
+     `.plan/...` links resolve the same way for migrated task prose. */
+  var segs;
+  if (clean.indexOf('superRA/') === 0) {
+    segs = clean.slice('superRA/'.length).split('/');
+  } else if (clean.indexOf('.plan/') === 0) {
+    segs = clean.slice('.plan/'.length).split('/');
+  } else if (clean.charAt(0) === '/') {
+    return null;  /* filesystem-absolute, not a tree path */
+  } else {
+    segs = (taskPath ? taskPath.split('/') : []).concat(clean.split('/'));
+  }
+
+  /* Normalize . / .. segments into a clean tree path. */
+  var out = [];
+  for (var i = 0; i < segs.length; i++) {
+    var s = segs[i];
+    if (s === '' || s === '.') continue;
+    if (s === '..') { if (out.length) out.pop(); else return null; continue; }
+    out.push(s);
+  }
+
+  /* Drop a trailing `task.md` (or bare trailing slash already handled by the
+     empty-segment skip) so a directory ref and a task.md ref both canonicalize
+     to the same tree path. */
+  if (out.length && out[out.length - 1] === 'task.md') out.pop();
+
+  var path = out.join('/');
+  return TASK_PATHS[path] ? path : null;
+}
+
+/**
+ * Render markdown text via markdown-it, then post-process:
+ * - In-tree task references -> internal hash navigation (#/<task-path>)
+ * - Other relative file paths -> vscode://file/{project_root}/{path}
+ * - Image src -> /files/{src}
+ * - Wrap each block-level element in a .commentable-block container
+ *   with data-section and data-block attributes (when sectionName given)
+ */
+function renderMarkdown(text, sectionName, taskPath) {
+  var html = md.render(text);
+  var container = document.createElement('div');
+  container.innerHTML = html;
+
+  /* Base directory for resolving relative paths within a task */
+  var pathPrefix = taskPath ? 'superRA/' + taskPath + '/' : '';
+
+  /* Rewrite relative links. A relative href that resolves to a real task in
+     this tree becomes an internal hash link (#/<task-path>) so it focuses that
+     card via the existing hashchange/setActive router; everything else (scripts,
+     figures, paths outside the tree) keeps the vscode://file rewrite. */
+  container.querySelectorAll('a[href]').forEach(function(a) {
+    var href = a.getAttribute('href');
+    if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('#')) {
+      var internal = resolveInternalTaskPath(href, taskPath);
+      if (internal !== null) {
+        a.setAttribute('href', '#/' + internal);
+        a.removeAttribute('target');
+        a.classList.add('task-link');
+      } else {
+        /* Genuine file link. Translate a trailing GitHub-style line anchor
+           (#L42, #L42C5 column, #L42-L50 range) into VS Code's path:line[:col]
+           form so the editor jumps to the cited line — vscode://file ignores a
+           #L... fragment. Hrefs without such an anchor are left unchanged. */
+        var filePath = pathPrefix + href;
+        var loc = '';
+        var lm = filePath.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
+        if (lm) {
+          loc = ':' + lm[1] + (lm[2] ? ':' + lm[2] : '');
+          filePath = filePath.slice(0, lm.index);
+        }
+        a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + filePath + loc);
+        a.setAttribute('target', '_blank');
+      }
+    }
+  });
+
+  /* Rewrite relative image sources. In server mode they resolve via the /files/
+     route; in standalone mode there is no server, so resolve them relative to
+     the dashboard file (STANDALONE_PLAN_DIR points at the embedded task tree)
+     so figures load from a file:// open. */
+  container.querySelectorAll('img[src]').forEach(function(img) {
+    var src = img.getAttribute('src');
+    if (src && !src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/')) {
+      if (window.STANDALONE) {
+        /* Prefer the base64 data URI embedded at build time (figure-portable in a
+           moved/offline file). Key it exactly as the build helper does: taskPath +
+           '/' + src for a task body, bare src for the root body. Fall back to the
+           relative-path rewrite when no embedded bytes exist for this src. */
+        var key = taskPath ? taskPath + '/' + src : src;
+        if (STANDALONE_IMAGES.hasOwnProperty(key)) {
+          img.setAttribute('src', STANDALONE_IMAGES[key]);
+        } else {
+          var rel = taskPath ? STANDALONE_PLAN_DIR + taskPath + '/' + src : STANDALONE_PLAN_DIR + src;
+          img.setAttribute('src', rel);
+        }
+      } else {
+        img.setAttribute('src', '/files/' + pathPrefix + src);
+      }
+    }
+  });
+
+  /* Wrap top-level block elements in commentable containers */
+  if (sectionName) {
+    var blockTags = ['P','UL','OL','PRE','BLOCKQUOTE','TABLE','H1','H2','H3','H4','H5','H6'];
+    var children = Array.from(container.childNodes);
+    var blockIndex = 0;
+    for (var i = 0; i < children.length; i++) {
+      var child = children[i];
+      if (child.nodeType === 1 && blockTags.indexOf(child.tagName) >= 0) {
+        var wrapper = document.createElement('div');
+        wrapper.className = 'commentable-block';
+        wrapper.setAttribute('data-section', sectionName);
+        wrapper.setAttribute('data-block', blockIndex);
+        container.insertBefore(wrapper, child);
+        /* The comment "+" gutter button needs the server to persist a comment;
+           in standalone mode there is no server, so omit it — no dead control. */
+        if (!window.STANDALONE) {
+          var btn = document.createElement('button');
+          btn.className = 'comment-gutter-btn';
+          btn.textContent = '+';
+          btn.setAttribute('onclick', 'showCommentForm(this)');
+          wrapper.appendChild(btn);
+        }
+        wrapper.appendChild(child);
+        blockIndex++;
+      }
+    }
+  }
+
+  return container.innerHTML;
+}
+
+/* ── Theme toggle ── */
+(function() {
+  var saved = localStorage.getItem('dashboard-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme() {
+  var html = document.documentElement;
+  var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('dashboard-theme', next);
+}
+
+/* ── View switching ── Workspace (master-detail drill-down) vs Kanban board ── */
+var currentView = 'workspace';
+
+function showView(view) {
+  currentView = view;
+  document.querySelectorAll('.header-controls .hc-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  document.getElementById('btn-' + view).classList.add('active');
+  document.getElementById('workspace').classList.toggle('hidden', view !== 'workspace');
+  document.getElementById('view-kanban').classList.toggle('hidden', view !== 'kanban');
+  if (view === 'kanban') renderKanbanView();
+}
+
+/* ── Uncap helper: remove max-height after expand transition finishes ── */
+function uncapAfterTransition(el) {
+  function handler(e) {
+    if (e.propertyName === 'max-height' && el.classList.contains('open')) {
+      el.classList.add('uncapped');
+    }
+    el.removeEventListener('transitionend', handler);
+  }
+  el.addEventListener('transitionend', handler);
+}
+
+function recapForCollapse(el) {
+  el.classList.remove('uncapped');
+  el.style.maxHeight = el.scrollHeight + 'px';
+  el.offsetHeight; /* force layout */
+  el.classList.remove('open');
+  el.style.maxHeight = '';
+}
+
+/* ── Task expand/collapse ── */
+function toggleTask(rowEl) {
+  var node = rowEl.closest('.task-node');
+  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+  var body = node.querySelector(':scope > .task-body');
+  var children = node.querySelector(':scope > .task-children');
+
+  if (!toggle || toggle.classList.contains('leaf')) return;
+
+  var isExpanded = toggle.classList.contains('expanded');
+
+  if (isExpanded) {
+    /* Collapse */
+    toggle.classList.remove('expanded');
+    if (body) recapForCollapse(body);
+    if (children) children.style.display = 'none';
+  } else {
+    /* Expand */
+    toggle.classList.add('expanded');
+    if (body) {
+      body.classList.add('open');
+      uncapAfterTransition(body);
+    }
+    if (children) {
+      children.style.display = '';
+      /* Lazy-load children via htmx if needed */
+      if (node.dataset.needsLoad === 'true') {
+        var path = node.dataset.path;
+        var pathId = path.replace(/\//g, '-');
+        htmx.ajax('GET', '/task/' + path, {
+          target: '#' + pathId + '-children',
+          swap: 'innerHTML'
+        });
+        node.dataset.needsLoad = 'false';
+      }
+    }
+    /* Load comment counts for section badges */
+    if (node.dataset.path) {
+      loadComments(node.dataset.path);
+    }
+  }
+
+  /* Recalculate tree-level comment badges after expand/collapse */
+  updateTreeCommentBadges();
+}
+
+/* ── Section expand/collapse (inside task body) ── */
+function toggleSection(toggleEl, event) {
+  event.stopPropagation();
+  var content = toggleEl.nextElementSibling;
+  var icon = toggleEl.querySelector('.section-icon');
+  var preview = toggleEl.querySelector('.section-preview');
+
+  var wasOpen = content.classList.contains('open');
+
+  if (wasOpen) {
+    /* Collapse */
+    icon.classList.remove('expanded');
+    recapForCollapse(content);
+    if (preview) preview.style.display = '';
+  } else {
+    /* Expand */
+    content.classList.add('open');
+    icon.classList.add('expanded');
+    uncapAfterTransition(content);
+
+    /* Determine section name from parent's data-section or the label */
+    var sectionWrapper = toggleEl.closest('[data-section]');
+    var sectionName = sectionWrapper ? sectionWrapper.getAttribute('data-section') : '';
+
+    /* Get the task path for resolving relative paths */
+    var taskNode = toggleEl.closest('.task-node');
+    var taskPath = taskNode ? taskNode.dataset.path : '';
+
+    /* Lazy-render markdown on first expand */
+    var renderedMd = content.querySelector('.rendered-md');
+    if (renderedMd && !renderedMd.dataset.rendered) {
+      var tmpl = renderedMd.querySelector('script[type="text/x-markdown"]');
+      if (tmpl) {
+        renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
+        renderedMd.dataset.rendered = 'true';
+      }
+    }
+    if (preview) preview.style.display = 'none';
+
+    /* Load comments for this task's section */
+    if (taskNode) {
+      loadComments(taskNode.dataset.path);
+    }
+  }
+}
+
+/* ── Search/Filter (client-side, descendant-aware) ── */
+function nodeMatchesStatus(el, status) {
+  if (!status) return true;
+  if (el.dataset.status === status) return true;
+  var children = el.querySelectorAll(':scope > .task-children > .task-node');
+  for (var i = 0; i < children.length; i++) {
+    if (nodeMatchesStatus(children[i], status)) return true;
+  }
+  return false;
+}
+
+function nodeMatchesSearch(el, search) {
+  if (!search) return true;
+  var titleEl = el.querySelector(':scope > .task-row > .task-title-text');
+  var slugEl = el.querySelector(':scope > .task-row > .task-slug');
+  var title = titleEl ? titleEl.textContent.toLowerCase() : '';
+  var slug = slugEl ? slugEl.textContent.toLowerCase() : '';
+  var path = (el.dataset.path || '').toLowerCase();
+  if (title.includes(search) || slug.includes(search) || path.includes(search)) return true;
+  var children = el.querySelectorAll(':scope > .task-children > .task-node');
+  for (var i = 0; i < children.length; i++) {
+    if (nodeMatchesSearch(children[i], search)) return true;
+  }
+  return false;
+}
+
+/* Fold-state snapshot captured the moment a filter becomes active (from the
+   no-filter state), so clearing the filter restores the user's prior folds
+   instead of leaving the tree force-expanded. Null whenever no filter is
+   active. Keyed by data-path -> expanded?(bool). */
+var preFilterFoldState = null;
+
+function applyFilters() {
+  var status = document.getElementById('filter-status').value;
+  var search = document.getElementById('search-box').value.toLowerCase();
+  var active = !!status || !!search;
+
+  if (active && preFilterFoldState === null) {
+    preFilterFoldState = snapshotNavFolds();  /* entering filter mode */
+  }
+
+  document.querySelectorAll('#nav-tree > .task-node').forEach(function(el) {
+    applyFiltersToNode(el, status, search);
+  });
+
+  if (active) {
+    /* Matching rows live behind collapsed ancestors (the whole sidebar is
+       folded by default), so `.hidden` removal alone leaves them invisible.
+       Expand the ancestor chain of every still-visible match so matches are
+       actually revealed. Scoped to rows already in the DOM — deep, not-yet
+       lazy-loaded branches are intentionally not eagerly loaded to search. */
+    revealFilterMatches(status, search);
+  } else if (preFilterFoldState !== null) {
+    restoreNavFolds(preFilterFoldState);  /* leaving filter mode */
+    preFilterFoldState = null;
+  }
+
+  /* Visibility of rows changed -> keep exactly one row tab-focusable. */
+  refreshRovingTabindex();
+}
+
+function applyFiltersToNode(el, status, search) {
+  var visible = nodeMatchesStatus(el, status) && nodeMatchesSearch(el, search);
+  el.classList.toggle('hidden', !visible);
+  if (visible) {
+    el.querySelectorAll(':scope > .task-children > .task-node').forEach(function(child) {
+      applyFiltersToNode(child, status, search);
+    });
+  }
+}
+
+/* Record each loaded non-leaf nav node's expanded state by path, so it can be
+   restored verbatim when the filter clears. */
+function snapshotNavFolds() {
+  var state = {};
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+    if (!toggle || toggle.classList.contains('leaf')) return;
+    var p = node.dataset.path;
+    if (p === undefined) return;
+    state[p] = toggle.classList.contains('expanded');
+  });
+  return state;
+}
+
+/* Set one node's fold open/closed without lazy-loading (search must not pull
+   in deep branches). Mirrors expandNavNode's class/display contract. */
+function setNavFold(node, open) {
+  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+  var children = node.querySelector(':scope > .task-children');
+  if (!toggle || toggle.classList.contains('leaf') || !children) return;
+  toggle.classList.toggle('expanded', open);
+  children.style.display = open ? '' : 'none';
+  var row = node.querySelector(':scope > .task-row');
+  if (row) row.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+/* Restore folds from a snapshot; any node that appeared since (e.g. a branch
+   the user lazy-loaded while searching) defaults to collapsed. */
+function restoreNavFolds(state) {
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    var p = node.dataset.path;
+    if (p === undefined) return;
+    setNavFold(node, state[p] === true);
+  });
+}
+
+/* After filtering, expand the ancestor chain of every still-visible matching
+   row so matches are on screen. A node is a "match anchor" if it is not hidden
+   and its own row matches (independent of descendants); we expand all of its
+   ancestors. Operates only on rows already in the DOM. */
+function revealFilterMatches(status, search) {
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    if (node.classList.contains('hidden')) return;
+    if (!nodeOwnRowMatches(node, status, search)) return;
+    /* Walk up through ancestor .task-node containers, expanding each. */
+    var parent = node.parentElement
+      ? node.parentElement.closest('.task-node') : null;
+    while (parent) {
+      setNavFold(parent, true);
+      parent = parent.parentElement
+        ? parent.parentElement.closest('.task-node') : null;
+    }
+  });
+}
+
+/* Whether this node's OWN row (not its descendants) satisfies the filter. */
+function nodeOwnRowMatches(el, status, search) {
+  if (status && el.dataset.status !== status) return false;
+  if (search) {
+    var titleEl = el.querySelector(':scope > .task-row > .task-title-text');
+    var slugEl = el.querySelector(':scope > .task-row > .task-slug');
+    var title = titleEl ? titleEl.textContent.toLowerCase() : '';
+    var slug = slugEl ? slugEl.textContent.toLowerCase() : '';
+    var path = (el.dataset.path || '').toLowerCase();
+    if (!(title.includes(search) || slug.includes(search) || path.includes(search))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/* ── Kanban rendering ── */
+async function renderKanbanView() {
+  var container = document.getElementById('view-kanban');
+  try {
+    var resp = await fetch('/kanban');
+    if (resp.ok) {
+      container.innerHTML = await resp.text();
+    } else {
+      container.innerHTML = '<p style="color:var(--text-mute)">Could not load kanban view.</p>';
+    }
+  } catch(e) {
+    container.innerHTML = '<p style="color:var(--st-rev-t)">Kanban render error: ' + e.message + '</p>';
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   activePath hash router — the single source of truth for navigation.
+   ──────────────────────────────────────────────────────────────────────
+   `activePath` names the task currently shown in the main panel. Everything
+   else (sidebar highlight, breadcrumb, active-node body, children DAG) is a
+   pure function of it. The URL hash mirrors it verbatim: `#/<task/path>`,
+   `#/` (or empty) = the root. setActive() is the one entry point; the
+   browser's own back/forward stack drives navigation via popstate.
+   ════════════════════════════════════════════════════════════════════════ */
+
+var activePath = '';        /* '' = root */
+var restoring = false;      /* true while applying a load/popstate hash — suppress pushState */
+var _moveFocusOnLoad = false; /* set per user-nav so loadActiveNode lands focus on the new heading */
+
+/* A path -> display-title lookup. sidebar-nav populates this from /nav; until
+   then the breadcrumb falls back to the path slug. */
+var pathTitles = {};
+
+/* Read location.hash as `#/<task/path>` -> the path verbatim ('' for root). */
+function parseHash() {
+  var h = location.hash || '';
+  if (h.charAt(0) === '#') h = h.slice(1);   /* strip leading # */
+  if (h.charAt(0) === '/') h = h.slice(1);   /* strip leading / */
+  return h;
+}
+
+/* The one navigation entry point. Sets activePath, writes history (unless
+   restoring), then refreshes every derived region. */
+function setActive(path) {
+  path = path || '';
+  activePath = path;
+
+  if (!restoring) {
+    var hash = '#/' + path;
+    if (location.hash !== hash) history.pushState({ path: path }, '', hash);
+    /* User-initiated navigation: land focus on the new card heading once it
+       paints (a11y — SR users follow focus to the new content). Suppressed on
+       initial load / popstate restores (restoring=true), which must not steal
+       focus from the page. */
+    _moveFocusOnLoad = true;
+  }
+
+  /* A node click always means "show me the workspace." */
+  if (currentView !== 'workspace') showView('workspace');
+
+  updateBreadcrumb(path);
+  updateSidebar(path);
+  loadActiveNode(path);
+  loadChildrenDag(path);
+
+  /* Chrome: a selection means "done navigating" — auto-hide the unpinned
+     overlay and close the narrow-screen drawer. Defined in the sidebar-chrome
+     module below; guard so the router still works if it ever loads first. */
+  if (typeof onNavigationChrome === 'function') onNavigationChrome();
+}
+
+/* Rebuild the breadcrumb from the active path: root › seg › … › active.
+   Each non-active crumb is a button that ascends by setting that ancestor
+   active; the active crumb is inert. */
+function updateBreadcrumb(path) {
+  var crumbs = document.getElementById('crumbs');
+  if (!crumbs) return;
+  crumbs.innerHTML = '';
+
+  var segs = path ? path.split('/') : [];
+
+  function addCrumb(label, crumbPath, isActive) {
+    var btn = document.createElement('button');
+    btn.className = 'crumb' + (isActive ? ' active' : '');
+    btn.textContent = label;
+    if (isActive) {
+      btn.setAttribute('aria-current', 'page');
+      btn.disabled = true;
+    } else {
+      btn.addEventListener('click', function() { setActive(crumbPath); });
+    }
+    crumbs.appendChild(btn);
+  }
+
+  function addSep() {
+    var sep = document.createElement('span');
+    sep.className = 'crumb-sep';
+    sep.textContent = '›';
+    crumbs.appendChild(sep);
+  }
+
+  /* Root crumb (active when at the root). */
+  addCrumb('root', '', segs.length === 0);
+
+  var accumulated = '';
+  for (var i = 0; i < segs.length; i++) {
+    accumulated = i === 0 ? segs[i] : accumulated + '/' + segs[i];
+    addSep();
+    /* Prefer the real title once the sidebar supplies it; fall back to slug. */
+    var label = pathTitles[accumulated] || segs[i];
+    addCrumb(label, accumulated, i === segs.length - 1);
+  }
+}
+
+/* ── Region content loaders ──
+   updateSidebar is implemented below (sidebar-nav); loadActiveNode and
+   loadChildrenDag fill the main panel (this task). The active node's body and
+   the children DAG are pure functions of activePath, refetched on every nav. */
+
+/* Active-node card: the focused detail view for the current task. Fetch the
+   body-only /node/<path> partial and wrap it in a `.task-node[data-path]` so
+   the existing section + comment pipeline (toggleSection, loadComments,
+   updateSectionBadges, the comment forms) works byte-for-byte as in the old
+   tree body — every one of those walks up to `.task-node[data-path]`. The
+   breadcrumb already shows the path, so the card header is just title + status.
+   Sections default to EXPANDED here (this is the detail view, not a tree row). */
+async function loadActiveNode(path) {
+  var region = document.getElementById('active-node');
+  if (!region) return;
+
+  /* Guard against a slow fetch landing after the user has navigated away. */
+  var token = (loadActiveNode._token = (loadActiveNode._token || 0) + 1);
+
+  var slug = path ? path.split('/').pop() : '';
+
+  try {
+    var resp = await fetch('/node/' + path);
+    if (token !== loadActiveNode._token) return;  /* superseded */
+    if (!resp.ok) {
+      region.innerHTML = '<p style="color:var(--text-mute)">Could not load this task.</p>';
+      return;
+    }
+    var body = await resp.text();
+    if (token !== loadActiveNode._token) return;  /* superseded */
+
+    /* Read title + status after the fetch resolves: updateSidebar (started in
+       the same setActive tick) has had time to materialize the row, so its
+       data-status and the indexed title are usually available even on a fresh
+       descent. Both fall back gracefully when the sidebar row isn't in yet. */
+    var title = pathTitles[path] || slug || 'root';
+    var status = navRowStatus(path);
+
+    region.innerHTML =
+      '<header class="active-node-head">'
+      + '<h2 class="active-node-title" tabindex="-1"></h2>'
+      + (status ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
+      /* Share/Export: download this node's subtree as a standalone HTML file.
+         Server-backed (/export), so it is omitted in standalone mode — a
+         downloaded file has no server to re-export from. */
+      + (window.STANDALONE ? '' :
+         '<button class="share-btn" type="button" title="Download this subtree as a standalone HTML file">Share</button>')
+      + '</header>'
+      /* Wrap the body in a real .task-node so the comment/section helpers,
+         which all resolve via `.task-node[data-path]`, find their context. */
+      + '<div class="task-node active-node-body" data-path="' + path + '">' + body + '</div>';
+
+    /* Set the title via textContent (avoids HTML injection from titles). */
+    var titleEl = region.querySelector('.active-node-title');
+    if (titleEl) titleEl.textContent = slug ? (slug + ' · ' + title) : title;
+
+    /* Wire the Share button via a closure over `path` — an inline onclick can't
+       carry the path safely (a quoted path breaks the double-quoted attribute). */
+    var shareBtn = region.querySelector('.share-btn');
+    if (shareBtn) shareBtn.onclick = function() { shareSubtree(path); };
+
+    /* a11y: on a user-initiated navigation, move focus to the new heading so
+       keyboard/SR users land on the freshly-loaded content. Consume the flag so
+       SSE-driven re-renders of the same card never yank focus. */
+    if (_moveFocusOnLoad && titleEl) {
+      _moveFocusOnLoad = false;
+      titleEl.focus({ preventScroll: true });
+    }
+
+    /* Expand every section by default and render its markdown + comments.
+       Scope to the card's own top-level section wrappers — renderMarkdown adds
+       nested [data-section] commentable-blocks, which must not be re-revealed. */
+    var taskNode = region.querySelector('.task-node[data-path]');
+    if (taskNode) {
+      taskNode.querySelectorAll(':scope > [data-section]').forEach(function(wrapper) {
+        revealCardSection(wrapper, path);
+      });
+      loadComments(path);
+    }
+
+    /* If the sidebar row hadn't landed yet, the status badge is missing. The
+       deep-descent ancestor-walk in updateSidebar can outlast this fetch, so
+       patch the badge once the row materializes (best-effort, single retry). */
+    if (!status) patchCardBadgeWhenReady(path, token);
+  } catch (e) {
+    if (token !== loadActiveNode._token) return;
+    region.innerHTML = '<p style="color:var(--st-rev-t)">Load error: ' + e.message + '</p>';
+  }
+}
+
+/* Share/Export: hand off to the server's /export route, which returns the
+   subtree's standalone HTML with Content-Disposition: attachment so the browser
+   saves it directly. A bare-path root exports the whole tree; a task path scopes
+   to that subtree. We navigate a hidden anchor (not location.href) so the
+   attachment download never replaces the dashboard page. Server-only — the
+   button is omitted in standalone mode. */
+function shareSubtree(path) {
+  var url = '/export' + (path ? '?root=' + encodeURIComponent(path) : '');
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '';   /* let Content-Disposition pick the filename */
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/* Open one section in the active-node card: mirror toggleSection's expand
+   branch (open + uncap + lazy-render the x-markdown payload) without the toggle
+   event, since the card opens sections programmatically rather than on click. */
+function revealCardSection(wrapper, taskPath) {
+  var content = wrapper.querySelector(':scope > .section-content');
+  var toggle = wrapper.querySelector(':scope > .section-toggle');
+  if (!content) return;
+  var icon = toggle ? toggle.querySelector('.section-icon') : null;
+  var preview = toggle ? toggle.querySelector('.section-preview') : null;
+  var sectionName = wrapper.getAttribute('data-section') || '';
+
+  content.classList.add('open');
+  if (icon) icon.classList.add('expanded');
+  uncapAfterTransition(content);
+  if (preview) preview.style.display = 'none';
+
+  var renderedMd = content.querySelector('.rendered-md');
+  if (renderedMd && !renderedMd.dataset.rendered) {
+    var tmpl = renderedMd.querySelector('script[type="text/x-markdown"]');
+    if (tmpl) {
+      renderedMd.innerHTML = renderMarkdown(tmpl.textContent, sectionName, taskPath);
+      renderedMd.dataset.rendered = 'true';
+    }
+  }
+}
+
+/* Status of a task from its sidebar row, when that row is in the DOM (the
+   nav rows carry data-status). Falls back to '' so the caller omits the badge
+   for a deep-link target whose row hasn't materialized yet. */
+function navRowStatus(path) {
+  var row = document.getElementById(navNodeId(path));
+  return row ? (row.dataset.status || '') : '';
+}
+
+/* Poll briefly for the sidebar row to land, then inject the status badge into
+   the card header. Bails if the card has since navigated away (token mismatch)
+   or the row never appears. Best-effort cosmetic fill for fresh deep descents. */
+function patchCardBadgeWhenReady(path, token) {
+  var tries = 0;
+  (function attempt() {
+    if (token !== loadActiveNode._token) return;        /* navigated away */
+    var status = navRowStatus(path);
+    var head = document.querySelector('#active-node .active-node-head');
+    if (status && head && !head.querySelector('.badge')) {
+      var badge = document.createElement('span');
+      badge.className = 'badge badge-' + status;
+      badge.textContent = status;
+      head.appendChild(badge);
+      return;
+    }
+    if (status || tries >= 10) return;                  /* done or gave up */
+    tries++;
+    setTimeout(attempt, 60);
+  })();
+}
+
+/* Children panel: the active node's direct children, rendered as clickable
+   `.child-card`s — never a mermaid graph (the key inversion: subtasks live in
+   the main panel). A single GET /dag?root=<path> supplies the child set, their
+   per-child status, and the inter-child dependency edges; the root is
+   special-cased (empty root would return the global graph). Children with no
+   inter-dependency get a flat grid; children with at least one inter-child
+   dependency get the same cards in a layered topological flow with per-card
+   `↳ after:` footers. Output is cached per (path, child-status+edge-signature)
+   so navigating back to an unchanged node restores the built HTML; a child
+   whose status or sibling deps changed busts the cache and re-renders. */
+var _childrenDagCache = {};   /* path -> { sig, html } */
+
+async function loadChildrenDag(path) {
+  var region = document.getElementById('children-dag');
+  if (!region) return;
+
+  var token = (loadChildrenDag._token = (loadChildrenDag._token || 0) + 1);
+
+  /* The root's children aren't reachable via /dag?root='' (empty root selects
+     the global graph), and the root never has inter-child deps — read its
+     direct children straight off the top-level nav rows, always in the DOM. */
+  if (!path) {
+    var rootKids = rootChildrenFromNav();
+    var rootSig = childrenSig(rootKids, {});
+    renderChildren(region, path, rootSig, function() {
+      return rootKids.length ? buildChildGrid(rootKids) : '';
+    });
+    return;
+  }
+
+  var resp, dagSrc;
+  try {
+    resp = await fetch('/dag?root=' + encodeURIComponent(path));
+    if (token !== loadChildrenDag._token) return;  /* superseded */
+    if (!resp.ok) { region.innerHTML = ''; return; }
+    dagSrc = await resp.text();
+    if (token !== loadChildrenDag._token) return;  /* superseded */
+  } catch (e) {
+    region.innerHTML = '<p style="color:var(--st-rev-t)">Subtasks error: ' + e.message + '</p>';
+    return;
+  }
+
+  var info = parseChildrenDag(dagSrc);
+
+  /* Leaf node: no children -> render nothing (card-only view). */
+  if (info.children.length === 0) {
+    _childrenDagCache[path] = { sig: '', html: '' };
+    region.innerHTML = '';
+    return;
+  }
+
+  var sig = childrenSig(info.children, info.edges);
+  renderChildren(region, path, sig, function() {
+    return info.hasEdges
+      ? buildChildFlow(info.children, info.edges)
+      : buildChildGrid(info.children);
+  });
+}
+
+/* Cache signature: child paths + status + their direct-sibling deps, so a
+   status change or a dependency change forces a re-render. */
+function childrenSig(children, edges) {
+  return children.map(function(c) {
+    var deps = (edges[c.path] || []).slice().sort().join(',');
+    return c.path + ':' + c.status + ':' + deps;
+  }).join('|');
+}
+
+/* Restore from cache when (path, sig) is unchanged; otherwise build, cache,
+   and inject. The cards' delegated click handler is the static markup's
+   onclick, so cached HTML stays clickable with no re-wiring. */
+function renderChildren(region, path, sig, build) {
+  var cached = _childrenDagCache[path];
+  if (cached && cached.sig === sig) {
+    region.innerHTML = cached.html;
+    return;
+  }
+  var html = build();
+  region.innerHTML = html;
+  _childrenDagCache[path] = { sig: sig, html: html };
+}
+
+/* Parse a /dag?root=<path> fragment into the direct-children set plus the
+   inter-child dependency edges. The fragment carries an authoritative
+   node_id->path map on .dag-controls[data-node-paths]; per-node status comes
+   from the `style <id> fill:#<color>` lines (the color->status map is the
+   fixed one in dag.html). Edges come from the `<dep_id> --> <child_id>` lines
+   (dag.html emits prerequisite --> dependent), mapped back through nodePaths;
+   `edges[childPath]` is the list of sibling paths that child directly depends
+   on. Titles prefer the shared pathTitles lookup. `hasEdges` is true when at
+   least one edge resolved. */
+var DAG_FILL_STATUS = {
+  '#e0e0e0': 'not-started', '#bbdefb': 'in-progress', '#fff9c4': 'implemented',
+  '#ffcdd2': 'revise', '#c8e6c9': 'approved', '#f5f5f5': 'archived',
+  '#cfd8e3': 'postponed',
+};
+function parseChildrenDag(src) {
+  var children = [];
+  var mapEl = document.createElement('div');
+  mapEl.innerHTML = src;
+  var controls = mapEl.querySelector('.dag-controls[data-node-paths]');
+  var nodePaths = {};
+  if (controls) {
+    try { nodePaths = JSON.parse(controls.getAttribute('data-node-paths')); } catch (e) { nodePaths = {}; }
+  }
+  /* node_id -> fill color, from `style <id> fill:#color` lines. */
+  var fills = {};
+  src.replace(/style\s+(\S+)\s+fill:(#[0-9a-fA-F]{3,6})/g, function(_, id, color) {
+    fills[id] = color.toLowerCase(); return '';
+  });
+  for (var nodeId in nodePaths) {
+    var p = nodePaths[nodeId];
+    children.push({
+      path: p,
+      slug: p.split('/').pop(),
+      title: pathTitles[p] || p.split('/').pop(),
+      status: DAG_FILL_STATUS[fills[nodeId]] || '',
+    });
+  }
+  /* Dependency edges: `<dep_id> --> <child_id>` => child depends on dep. */
+  var edges = {};   /* childPath -> [depPath, …] (direct sibling deps only) */
+  var hasEdges = false;
+  src.replace(/^\s*(\S+)\s*-->\s*(\S+)\s*$/gm, function(_, depId, childId) {
+    var depPath = nodePaths[depId], childPath = nodePaths[childId];
+    if (depPath && childPath) {
+      (edges[childPath] = edges[childPath] || []).push(depPath);
+      hasEdges = true;
+    }
+    return '';
+  });
+  return { children: children, edges: edges, hasEdges: hasEdges };
+}
+
+/* Root's direct children, read off the top-level nav rows (always inlined). */
+function rootChildrenFromNav() {
+  var out = [];
+  var rootNode = document.getElementById('task-root');
+  var container = rootNode
+    ? rootNode.querySelector(':scope > .task-children')
+    : document.getElementById('nav-tree');
+  if (!container) return out;
+  container.querySelectorAll(':scope > .task-node').forEach(function(node) {
+    var p = node.dataset.path;
+    if (!p) return;
+    out.push({
+      path: p,
+      slug: p.split('/').pop(),
+      title: pathTitles[p] || p.split('/').pop(),
+      status: node.dataset.status || '',
+    });
+  });
+  return out;
+}
+
+/* One clickable child card: slug + title + status badge, descending via the
+   delegated onChildCardClick on the enclosing container. `depPaths` (optional)
+   appends a `↳ after: <slug…>` footer naming the card's direct sibling deps. */
+function childCardHTML(c, depPaths) {
+  var deps = '';
+  if (depPaths && depPaths.length) {
+    var slugs = depPaths.map(function(d) {
+      return '<span class="dep-slug">' + escapeHtml(d.split('/').pop()) + '</span>';
+    }).join('<span class="dep-label">, </span>');
+    deps = '<span class="child-card-deps"><span class="dep-arrow">↳</span>'
+      + '<span class="dep-label">after: </span>' + slugs + '</span>';
+  }
+  return '<button class="child-card' + (depPaths && depPaths.length ? ' has-deps' : '')
+    + '" data-path="' + escapeAttr(c.path) + '">'
+    + (c.slug ? '<span class="child-card-slug">' + escapeHtml(c.slug) + '</span>' : '')
+    + '<span class="child-card-title">' + escapeHtml(c.title) + '</span>'
+    + (c.status ? '<span class="badge badge-' + c.status + '">' + c.status + '</span>' : '')
+    + deps
+    + '</button>';
+}
+
+var SUBTASK_HEADER = '<div class="dag-controls"><strong>Subtasks</strong>'
+  + '<span class="dag-hint">— click to drill in</span></div>';
+
+/* Flat clickable grid for children with no inter-dependency. */
+function buildChildGrid(children) {
+  var cards = children.map(function(c) { return childCardHTML(c, null); }).join('');
+  return SUBTASK_HEADER
+    + '<div class="child-grid" onclick="onChildCardClick(event)">' + cards + '</div>';
+}
+
+/* Layered dependency flow: the same cards grouped into topological tiers in
+   execution order (tier 0 = children depending on no sibling; tier k = children
+   whose sibling deps all sit in earlier tiers), stacked top->bottom with a
+   subtle inter-tier flow cue. Each dependent card footers `↳ after:` with its
+   direct sibling deps. Cycle-safe: a pass that places no remaining child drops
+   the leftovers into the final tier instead of looping. */
+function buildChildFlow(children, edges) {
+  var byPath = {};
+  children.forEach(function(c) { byPath[c.path] = c; });
+  /* Keep only deps that point at an actual sibling in this child set. */
+  var deps = {};
+  children.forEach(function(c) {
+    deps[c.path] = (edges[c.path] || []).filter(function(d) { return byPath[d]; });
+  });
+
+  var placed = {};
+  var remaining = children.map(function(c) { return c.path; });
+  var tiers = [];
+  while (remaining.length) {
+    var tier = remaining.filter(function(p) {
+      return deps[p].every(function(d) { return placed[d]; });
+    });
+    if (tier.length === 0) tier = remaining.slice();   /* cycle -> flush rest */
+    tier.forEach(function(p) { placed[p] = true; });
+    tiers.push(tier);
+    remaining = remaining.filter(function(p) { return !placed[p]; });
+  }
+
+  var tierHTML = tiers.map(function(tier, i) {
+    var cards = tier.map(function(p) {
+      return childCardHTML(byPath[p], deps[p]);
+    }).join('');
+    var sep = i < tiers.length - 1 ? '<div class="flow-sep" aria-hidden="true"></div>' : '';
+    return '<div class="flow-tier">' + cards + '</div>' + sep;
+  }).join('');
+
+  return SUBTASK_HEADER
+    + '<div class="child-flow" onclick="onChildCardClick(event)">' + tierHTML + '</div>';
+}
+
+/* Delegated click for both the grid and the flow: descend to the clicked child. */
+function onChildCardClick(event) {
+  var card = event.target.closest('.child-card');
+  if (card && card.dataset.path !== undefined) setActive(card.dataset.path);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, function(c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
+
+/* popstate (back/forward): re-apply the hash without writing new history. */
+window.addEventListener('popstate', function() {
+  restoring = true;
+  setActive(parseHash());
+  restoring = false;
+});
+
+/* hashchange (manual address-bar hash edit): navigate to the new hash without
+   writing new history. setActive's own pushState mutates location.hash and
+   re-fires this event, so no-op when the hash already matches activePath;
+   otherwise apply it in restoring mode (no extra pushState/history entry). */
+window.addEventListener('hashchange', function() {
+  if (parseHash() === activePath) return;
+  restoring = true;
+  setActive(parseHash());
+  restoring = false;
+});
+
+/* Resolve the initial hash on load (default the root), normalize it with
+   replaceState so reload/back land cleanly, then activate it. */
+function initRouter() {
+  var path = parseHash();
+  restoring = true;
+  history.replaceState({ path: path }, '', '#/' + path);
+  setActive(path);
+  restoring = false;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Sidebar navigation tree — fills #nav-tree and is the only place the sidebar's
+   fold state and active highlight live.
+   ──────────────────────────────────────────────────────────────────────
+   The sidebar is navigation-only: rows carry no task body. Two affordances per
+   row — the disclosure caret folds children *in the sidebar only* (a local
+   state independent of activePath), and the row label calls setActive(). The
+   active highlight, ancestor auto-expand, and scroll-into-view are derived
+   from activePath via updateSidebar(), so there is no second source of truth.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Fetch the body-free nav tree, populate #nav-tree, then index its titles so
+   the breadcrumb can show real titles. Resolves once the inline rows exist;
+   deeper (>=3) branches stay lazy until their caret first opens. */
+async function loadNavTree() {
+  var container = document.getElementById('nav-tree');
+  if (!container) return;
+  try {
+    var resp = await fetch('/nav');
+    if (!resp.ok) return;
+    container.innerHTML = await resp.text();
+    markLazyNodes();
+    indexNavTitles(container);
+    applyTreeAria();   /* tree roles + roving tabindex on the freshly-injected rows */
+    /* Bind the freshly-injected rows' declarative sse-swap="task:<path>" to the
+       live EventSource. htmx only wires sse-swap elements it has processed, and
+       innerHTML injection bypasses that — so process the new subtree explicitly.
+       Without this the sidebar never live-updates on a task:<path> event. */
+    if (window.htmx) htmx.process(container);
+  } catch (e) { /* best-effort: a failed sidebar must not block the router */ }
+}
+
+/* nav_node.html marks depth>=3 children for lazy load via an inline <script>
+   that sets dataset.needsLoad. Those scripts do NOT run when the fragment is
+   injected via innerHTML, so flag them here instead: a node carrying an empty
+   .task-children container (children exist server-side but weren't inlined) is
+   exactly a lazy branch. Leaf nodes have no .task-children at all, so they are
+   never flagged. Idempotent; re-run after every nav fragment injection. */
+function markLazyNodes() {
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    var kids = node.querySelector(':scope > .task-children');
+    if (kids && kids.children.length === 0 && node.dataset.needsLoad !== 'false') {
+      node.dataset.needsLoad = 'true';
+    }
+  });
+}
+
+/* Harvest path -> title from every nav row currently in the DOM into the
+   shared pathTitles map (used by updateBreadcrumb). Idempotent; re-run after
+   lazy loads bring more rows in. */
+function indexNavTitles(scope) {
+  (scope || document).querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    var p = node.dataset.path;
+    if (!p) return;
+    var titleEl = node.querySelector(':scope > .task-row > .task-title-text');
+    if (titleEl) pathTitles[p] = titleEl.textContent;
+  });
+}
+
+/* DOM id of a nav row, mirroring nav_node.html's
+   `id="task-{{ (path|replace('/','-')) or 'root' }}"` — the root task (empty
+   path) is `task-root`, not `task-`. */
+function navNodeId(path) {
+  return 'task-' + ((path || '').replace(/\//g, '-') || 'root');
+}
+
+/* Caret/label click handling, delegated from #nav-tree so it survives the
+   innerHTML swaps from /nav and lazy /nav/{path} loads. */
+function initSidebarEvents() {
+  var container = document.getElementById('nav-tree');
+  if (!container) return;
+  container.addEventListener('click', function(ev) {
+    var toggle = ev.target.closest('.task-toggle');
+    if (toggle && container.contains(toggle) && !toggle.classList.contains('leaf')) {
+      ev.stopPropagation();
+      toggleNavCaret(toggle.closest('.task-node'));
+      return;
+    }
+    var row = ev.target.closest('.task-row');
+    if (row && container.contains(row)) {
+      var node = row.closest('.task-node');
+      if (node && node.dataset.path !== undefined) setActive(node.dataset.path);
+    }
+  });
+}
+
+/* Fold/unfold one node's children in the sidebar only — never touches
+   activePath. On first open of a lazy (>=3 depth) branch, fetch its children
+   via /nav/{path} and index the new titles. */
+async function toggleNavCaret(node) {
+  if (!node) return;
+  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+  var children = node.querySelector(':scope > .task-children');
+  if (!toggle || !children) return;
+
+  var row = node.querySelector(':scope > .task-row');
+
+  if (toggle.classList.contains('expanded')) {
+    toggle.classList.remove('expanded');
+    children.style.display = 'none';
+    if (row) row.setAttribute('aria-expanded', 'false');
+    refreshRovingTabindex();   /* rows just hidden may have held the tabbable row */
+    return;
+  }
+
+  toggle.classList.add('expanded');
+  children.style.display = '';
+  if (row) row.setAttribute('aria-expanded', 'true');
+  if (node.dataset.needsLoad === 'true') {
+    node.dataset.needsLoad = 'false';
+    await loadNavChildren(node);
+  }
+  refreshRovingTabindex();
+}
+
+/* Lazily fetch a node's body-free children into its .task-children container.
+   Returns true on success. Best-effort: a failed branch leaves the caret open
+   but empty and never throws. */
+async function loadNavChildren(node) {
+  var path = node.dataset.path;
+  var children = node.querySelector(':scope > .task-children');
+  if (!path || !children) return false;
+  try {
+    var resp = await fetch('/nav/' + path);
+    if (!resp.ok) return false;
+    children.innerHTML = await resp.text();
+    markLazyNodes();
+    indexNavTitles(children);
+    applyTreeAria();   /* tree roles + roving tabindex on the newly-loaded rows */
+    /* Wire the lazily-loaded rows' sse-swap to the EventSource (see loadNavTree). */
+    if (window.htmx) htmx.process(children);
+    return true;
+  } catch (e) { return false; }
+}
+
+/* Expand a node's children in the sidebar (no toggle of activePath). Loads
+   lazily if needed so the next segment of an ancestor walk is present. */
+async function expandNavNode(node) {
+  if (!node) return;
+  var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+  var children = node.querySelector(':scope > .task-children');
+  if (!toggle || toggle.classList.contains('leaf') || !children) return;
+  toggle.classList.add('expanded');
+  children.style.display = '';
+  var row = node.querySelector(':scope > .task-row');
+  if (row) row.setAttribute('aria-expanded', 'true');
+  if (node.dataset.needsLoad === 'true') {
+    node.dataset.needsLoad = 'false';
+    await loadNavChildren(node);
+  }
+}
+
+/* updateSidebar(path): the activePath-derived sidebar refresh. Highlights
+   exactly the matching row, expands its full ancestor chain (lazy-loading any
+   branch not yet in the DOM via the proven ancestor-walk-and-await loop), and
+   scrolls it into view. Entirely best-effort — a failed sidebar branch never
+   throws and never blocks the main panel, which fetches by full path. */
+async function updateSidebar(path) {
+  var container = document.getElementById('nav-tree');
+  if (!container) return;
+
+  /* Exactly one active row: clear the previous highlight + aria-selected. */
+  container.querySelectorAll('.task-row.nav-active').forEach(function(r) {
+    r.classList.remove('nav-active');
+    r.removeAttribute('aria-selected');
+  });
+
+  try {
+    /* Walk root -> target, expanding (and lazy-loading) each ancestor so the
+       next segment's node is in the DOM before we reach it. */
+    var segs = path ? path.split('/') : [];
+    var accumulated = '';
+    for (var i = 0; i < segs.length - 1; i++) {
+      accumulated = i === 0 ? segs[i] : accumulated + '/' + segs[i];
+      var ancestor = document.getElementById(navNodeId(accumulated));
+      if (!ancestor) break;  /* branch unresolvable in the current tree */
+      await expandNavNode(ancestor);
+    }
+  } catch (e) { /* swallow: sidebar reveal is best-effort */ }
+
+  var target = document.getElementById(navNodeId(path));
+  if (!target) return;
+
+  var row = target.querySelector(':scope > .task-row');
+  if (row) {
+    row.classList.add('nav-active');
+    row.setAttribute('aria-selected', 'true');
+    /* Roving tabindex follows the active row so a subsequent Tab into the tree
+       lands on it. (applyTreeAria also keeps roles current after any lazy load
+       the ancestor walk just triggered.) */
+    applyTreeAria();
+    requestAnimationFrame(function() {
+      row.scrollIntoView({ block: 'nearest' });
+    });
+  }
+}
+
+/* ── Back-compat alias ──
+   revealTask(path)/showTreeAndExpand(path) were the giant-tree reveal
+   primitive; Kanban cards still call it to drill to the task in the Workspace.
+   The deep-link ancestor-walk that expands the sidebar lives in updateSidebar
+   above. */
+function revealTask(path) { showView('workspace'); setActive(path); }
+function showTreeAndExpand(path) { return revealTask(path); }
+
+/* ════════════════════════════════════════════════════════════════════════
+   Sidebar chrome — pin/unpin auto-hide, resizable width, narrow-screen drawer.
+   ──────────────────────────────────────────────────────────────────────
+   Pure presentation: none of this touches activePath. The workspace carries
+   the mode class (.sb-pinned / .sb-unpinned / .sb-drawer) and the live
+   --sidebar-width custom property; the sidebar slides via transform so pin and
+   reveal stay smooth. Pin state + chosen width persist in localStorage.
+   ════════════════════════════════════════════════════════════════════════ */
+var SB_WIDTH_MIN = 200, SB_WIDTH_MAX = 480, SB_WIDTH_DEFAULT = 280;
+var SB_NARROW = 860;                 /* px: below this the sidebar is a drawer */
+var sbPinned = true;                 /* set from localStorage on init */
+var sbWidth = SB_WIDTH_DEFAULT;
+var _sbHideTimer = null;             /* auto-hide grace-delay timer (unpinned) */
+
+function workspaceEl() { return document.getElementById('workspace'); }
+
+/* Whether the current viewport forces drawer mode (overrides pin state). */
+function sbIsNarrow() { return window.innerWidth <= SB_NARROW; }
+
+/* Apply the chosen width as the workspace custom property + sync the resizer's
+   aria-valuenow. Clamped by the caller. */
+function applySidebarWidth(w) {
+  sbWidth = w;
+  var ws = workspaceEl();
+  if (ws) ws.style.setProperty('--sidebar-width', w + 'px');
+  var rz = document.getElementById('sidebar-resizer');
+  if (rz) rz.setAttribute('aria-valuenow', String(w));
+}
+
+function clampSidebarWidth(w) {
+  if (isNaN(w)) return SB_WIDTH_DEFAULT;
+  return Math.max(SB_WIDTH_MIN, Math.min(SB_WIDTH_MAX, Math.round(w)));
+}
+
+/* Set the workspace mode class from (pin state, viewport). Narrow always wins:
+   the sidebar is the overlay drawer regardless of pin. */
+function applySidebarMode() {
+  var ws = workspaceEl();
+  if (!ws) return;
+  var narrow = sbIsNarrow();
+  ws.classList.toggle('sb-drawer', narrow);
+  ws.classList.toggle('sb-pinned', !narrow && sbPinned);
+  ws.classList.toggle('sb-unpinned', !narrow && !sbPinned);
+  if (narrow || sbPinned) {
+    /* Leaving unpinned/drawer-reveal context: clear any reveal state. */
+    ws.classList.remove('sb-revealed');
+    clearTimeout(_sbHideTimer);
+  }
+  if (!narrow) closeDrawer();   /* a resize up from narrow drops the drawer */
+  syncPinToggle();
+}
+
+function syncPinToggle() {
+  var btn = document.getElementById('pin-toggle');
+  if (!btn) return;
+  btn.setAttribute('aria-pressed', sbPinned ? 'true' : 'false');
+  if (sbPinned) {
+    btn.setAttribute('aria-label', 'Unpin sidebar (auto-hide)');
+    btn.title = 'Pinned — click to auto-hide';
+  } else {
+    btn.setAttribute('aria-label', 'Pin sidebar (keep open)');
+    btn.title = 'Auto-hide — click to pin';
+  }
+}
+
+/* Pin toggle: flip pinned/unpinned, persist, re-apply mode. No-op on narrow
+   screens (drawer mode owns the layout there) beyond persisting the choice. */
+function toggleSidebarPin() {
+  sbPinned = !sbPinned;
+  try { localStorage.setItem('dashboard-sidebar-pinned', sbPinned ? '1' : '0'); } catch (e) {}
+  applySidebarMode();
+}
+
+/* ── Unpinned auto-hide: hover the rail/edge to reveal, mouse-leave to hide ── */
+function revealSidebar() {
+  var ws = workspaceEl();
+  if (!ws || !ws.classList.contains('sb-unpinned')) return;
+  clearTimeout(_sbHideTimer);
+  ws.classList.add('sb-revealed');
+}
+/* Hide after a short grace delay so a brief cursor slip off the edge doesn't
+   snap it shut. A navigation selection calls this with delay=0. */
+function hideSidebar(delay) {
+  var ws = workspaceEl();
+  if (!ws || !ws.classList.contains('sb-unpinned')) return;
+  clearTimeout(_sbHideTimer);
+  _sbHideTimer = setTimeout(function() {
+    ws.classList.remove('sb-revealed');
+  }, delay == null ? 220 : delay);
+}
+
+function initSidebarChrome() {
+  /* Restore persisted pin + width. */
+  try {
+    var savedPin = localStorage.getItem('dashboard-sidebar-pinned');
+    if (savedPin !== null) sbPinned = savedPin === '1';
+    var savedW = parseInt(localStorage.getItem('dashboard-sidebar-width'), 10);
+    if (!isNaN(savedW)) sbWidth = clampSidebarWidth(savedW);
+  } catch (e) {}
+  applySidebarWidth(sbWidth);
+  applySidebarMode();
+
+  var sidebar = document.getElementById('sidebar');
+
+  /* Hover-reveal: the retracted sidebar's visible edge is the hover target (the
+     rail is pure decoration above it). Entering reveals; leaving starts the
+     grace-delay hide. */
+  if (sidebar) {
+    sidebar.addEventListener('mouseenter', revealSidebar);
+    sidebar.addEventListener('mouseleave', function() { hideSidebar(); });
+  }
+
+  initSidebarResizer();
+
+  /* Re-evaluate mode on viewport changes (debounced via rAF). */
+  var rafPending = false;
+  window.addEventListener('resize', function() {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(function() { rafPending = false; applySidebarMode(); });
+  });
+}
+
+/* ── Resizable width: pointer drag + keyboard (←/→) on the separator handle ── */
+function initSidebarResizer() {
+  var rz = document.getElementById('sidebar-resizer');
+  var ws = workspaceEl();
+  if (!rz || !ws) return;
+
+  var dragging = false;
+
+  function onMove(ev) {
+    if (!dragging) return;
+    /* Width = cursor X relative to the workspace's left edge. */
+    var rect = ws.getBoundingClientRect();
+    applySidebarWidth(clampSidebarWidth(ev.clientX - rect.left));
+  }
+  function onUp() {
+    if (!dragging) return;
+    dragging = false;
+    ws.classList.remove('sb-resizing');
+    document.body.classList.remove('sb-resizing-active');
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    persistSidebarWidth();
+  }
+  rz.addEventListener('pointerdown', function(ev) {
+    /* Drag only makes sense when the sidebar is laid out (not drawer mode). */
+    if (sbIsNarrow()) return;
+    ev.preventDefault();
+    dragging = true;
+    ws.classList.add('sb-resizing');
+    document.body.classList.add('sb-resizing-active');
+    /* Unpinned + drag: keep the sidebar revealed so the user sees the resize. */
+    revealSidebar();
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  });
+
+  /* Keyboard: ←/← nudge by 16px, Home/End jump to clamp bounds. */
+  rz.addEventListener('keydown', function(ev) {
+    var step = ev.shiftKey ? 48 : 16;
+    var next = null;
+    if (ev.key === 'ArrowLeft')       next = sbWidth - step;
+    else if (ev.key === 'ArrowRight') next = sbWidth + step;
+    else if (ev.key === 'Home')       next = SB_WIDTH_MIN;
+    else if (ev.key === 'End')        next = SB_WIDTH_MAX;
+    if (next === null) return;
+    ev.preventDefault();
+    revealSidebar();
+    applySidebarWidth(clampSidebarWidth(next));
+    persistSidebarWidth();
+  });
+}
+
+function persistSidebarWidth() {
+  try { localStorage.setItem('dashboard-sidebar-width', String(sbWidth)); } catch (e) {}
+}
+
+/* ── Narrow-screen overlay drawer ──
+   Toggled by the header hamburger. Open: show backdrop, trap focus inside the
+   sidebar, Esc closes, and any navigation (setActive) closes it. Works only in
+   drawer mode (narrow); on desktop the hamburger is hidden. */
+var _drawerLastFocus = null;       /* element to restore focus to on close */
+
+function toggleDrawer() {
+  var ws = workspaceEl();
+  if (!ws) return;
+  if (ws.classList.contains('sb-drawer-open')) closeDrawer();
+  else openDrawer();
+}
+
+function openDrawer() {
+  var ws = workspaceEl();
+  if (!ws || !ws.classList.contains('sb-drawer')) return;
+  _drawerLastFocus = document.activeElement;
+  ws.classList.add('sb-drawer-open');
+  var ham = document.getElementById('nav-hamburger');
+  if (ham) { ham.setAttribute('aria-expanded', 'true'); ham.setAttribute('aria-label', 'Close navigation'); }
+  /* Move focus into the drawer so SR/keyboard users land inside it. */
+  var first = drawerFocusables()[0];
+  if (first) first.focus();
+  document.addEventListener('keydown', drawerKeydown, true);
+}
+
+function closeDrawer() {
+  var ws = workspaceEl();
+  if (!ws || !ws.classList.contains('sb-drawer-open')) return;
+  ws.classList.remove('sb-drawer-open');
+  var ham = document.getElementById('nav-hamburger');
+  if (ham) { ham.setAttribute('aria-expanded', 'false'); ham.setAttribute('aria-label', 'Open navigation'); }
+  document.removeEventListener('keydown', drawerKeydown, true);
+  /* Restore focus to the opener (hamburger) for keyboard continuity. */
+  if (_drawerLastFocus && document.contains(_drawerLastFocus)) _drawerLastFocus.focus();
+  else if (ham) ham.focus();
+  _drawerLastFocus = null;
+}
+
+/* Focusable elements inside the open drawer, for the focus trap. */
+function drawerFocusables() {
+  var sidebar = document.getElementById('sidebar');
+  if (!sidebar) return [];
+  return Array.prototype.filter.call(
+    sidebar.querySelectorAll('button, [href], [tabindex]:not([tabindex="-1"]), .task-row[tabindex="0"]'),
+    function(el) { return el.offsetParent !== null || el === document.activeElement; }
+  );
+}
+
+/* Esc closes; Tab/Shift+Tab cycle within the drawer (focus trap). */
+function drawerKeydown(ev) {
+  var ws = workspaceEl();
+  if (!ws || !ws.classList.contains('sb-drawer-open')) return;
+  if (ev.key === 'Escape') {
+    ev.preventDefault();
+    closeDrawer();
+    return;
+  }
+  if (ev.key !== 'Tab') return;
+  var f = drawerFocusables();
+  if (f.length === 0) return;
+  var first = f[0], last = f[f.length - 1];
+  if (ev.shiftKey && document.activeElement === first) {
+    ev.preventDefault(); last.focus();
+  } else if (!ev.shiftKey && document.activeElement === last) {
+    ev.preventDefault(); first.focus();
+  }
+}
+
+/* Called from setActive after a navigation: auto-hide the unpinned overlay and
+   close the drawer (a selection is a "done navigating" signal). */
+function onNavigationChrome() {
+  hideSidebar(0);
+  closeDrawer();
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Keyboard navigation for the sidebar tree (role="tree", roving tabindex).
+   ──────────────────────────────────────────────────────────────────────
+   Exactly one row is tab-focusable at a time (roving tabindex); arrows move
+   focus among the *visible* rows, →/← expand/collapse (or move in/out), and
+   Enter/Space activate via setActive. ARIA (role, aria-expanded, aria-level,
+   aria-selected) is applied to the injected rows after every nav load.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Apply tree ARIA + roving tabindex to every nav row currently in the DOM.
+   Idempotent; re-run after each /nav and lazy /nav/{path} injection. Rows are
+   treeitems, their .task-children containers are groups, depth -> aria-level. */
+function applyTreeAria() {
+  var root = document.getElementById('nav-tree');
+  if (!root) return;
+  root.querySelectorAll('.task-node').forEach(function(node) {
+    var row = node.querySelector(':scope > .task-row');
+    if (!row) return;
+    row.setAttribute('role', 'treeitem');
+    row.setAttribute('aria-level', String(nodeDepth(node)));
+    /* Label: "<slug> — <title>, <status>" for a meaningful SR announcement. */
+    if (!row.getAttribute('aria-label')) {
+      var slug = node.dataset.path ? node.dataset.path.split('/').pop() : 'root';
+      var titleEl = row.querySelector('.task-title-text');
+      var title = titleEl ? titleEl.textContent.trim() : '';
+      var label = (slug ? slug : 'root') + (title ? ' — ' + title : '');
+      if (node.dataset.status) label += ', ' + node.dataset.status;
+      row.setAttribute('aria-label', label);
+    }
+    var toggle = row.querySelector(':scope > .task-toggle');
+    var children = node.querySelector(':scope > .task-children');
+    if (toggle && !toggle.classList.contains('leaf') && children) {
+      children.setAttribute('role', 'group');
+      row.setAttribute('aria-expanded',
+        toggle.classList.contains('expanded') ? 'true' : 'false');
+    } else {
+      row.removeAttribute('aria-expanded');
+    }
+    /* Roving tabindex: default every row out of the tab order; the active row
+       (or the first row) is made tabbable by refreshRovingTabindex. */
+    if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '-1');
+  });
+  refreshRovingTabindex();
+}
+
+/* 1-based aria-level from the number of .task-children ancestors. */
+function nodeDepth(node) {
+  var level = 1, p = node.parentElement;
+  while (p) {
+    if (p.classList && p.classList.contains('task-children')) level++;
+    p = p.parentElement;
+  }
+  return level;
+}
+
+/* Ensure exactly one row is tabbable (tabindex=0): the active row if present,
+   else the first visible row. Everything else is tabindex=-1. */
+function refreshRovingTabindex() {
+  var root = document.getElementById('nav-tree');
+  if (!root) return;
+  var rows = root.querySelectorAll('.task-row');
+  rows.forEach(function(r) { r.setAttribute('tabindex', '-1'); });
+  var active = root.querySelector('.task-row.nav-active');
+  var target = (active && isRowVisible(active)) ? active : firstVisibleRow();
+  if (target) target.setAttribute('tabindex', '0');
+}
+
+/* Visible = the row's node and all ancestor groups are displayed (not folded,
+   not filtered out). */
+function isRowVisible(row) {
+  var el = row;
+  while (el && el.id !== 'nav-tree') {
+    if (el.nodeType === 1) {
+      var cs = el.style && el.style.display === 'none';
+      if (cs || (el.classList && el.classList.contains('hidden'))) return false;
+    }
+    el = el.parentElement;
+  }
+  return true;
+}
+
+function firstVisibleRow() {
+  var root = document.getElementById('nav-tree');
+  if (!root) return null;
+  var rows = root.querySelectorAll('.task-row');
+  for (var i = 0; i < rows.length; i++) {
+    if (isRowVisible(rows[i])) return rows[i];
+  }
+  return null;
+}
+
+/* Ordered list of currently-visible rows (document order = visual order). */
+function visibleRows() {
+  var root = document.getElementById('nav-tree');
+  if (!root) return [];
+  return Array.prototype.filter.call(
+    root.querySelectorAll('.task-row'), isRowVisible);
+}
+
+/* Move roving focus to a row: make it the only tabbable row and focus it. */
+function focusRow(row) {
+  if (!row) return;
+  var root = document.getElementById('nav-tree');
+  if (root) root.querySelectorAll('.task-row').forEach(function(r) {
+    r.setAttribute('tabindex', '-1');
+  });
+  row.setAttribute('tabindex', '0');
+  row.focus();
+  row.scrollIntoView({ block: 'nearest' });
+}
+
+/* Keyboard handler for the tree, delegated from #nav-tree (survives row swaps).
+   ↑/↓ move among visible rows; →/← expand/collapse or move in/out; Enter/Space
+   activate; Home/End jump to first/last visible row. */
+function initTreeKeyboard() {
+  var root = document.getElementById('nav-tree');
+  if (!root) return;
+  root.addEventListener('keydown', function(ev) {
+    var row = ev.target.closest ? ev.target.closest('.task-row') : null;
+    if (!row || !root.contains(row)) return;
+    var node = row.closest('.task-node');
+    var toggle = row.querySelector(':scope > .task-toggle');
+    var isParent = toggle && !toggle.classList.contains('leaf');
+    var expanded = isParent && toggle.classList.contains('expanded');
+    var rows = visibleRows();
+    var idx = rows.indexOf(row);
+
+    switch (ev.key) {
+      case 'ArrowDown':
+        ev.preventDefault();
+        if (idx >= 0 && idx < rows.length - 1) focusRow(rows[idx + 1]);
+        break;
+      case 'ArrowUp':
+        ev.preventDefault();
+        if (idx > 0) focusRow(rows[idx - 1]);
+        break;
+      case 'ArrowRight':
+        ev.preventDefault();
+        if (isParent && !expanded) {
+          /* Expand (may lazy-load); focus stays on the row. */
+          toggleNavCaret(node).then(function() {
+            applyTreeAria();
+          });
+        } else if (isParent && expanded) {
+          /* Already open: move into the first visible child. */
+          var after = visibleRows();
+          var ai = after.indexOf(row);
+          if (ai >= 0 && ai < after.length - 1) focusRow(after[ai + 1]);
+        }
+        break;
+      case 'ArrowLeft':
+        ev.preventDefault();
+        if (isParent && expanded) {
+          toggleNavCaret(node);                 /* collapse */
+          applyTreeAria();
+        } else {
+          /* Move to parent row. */
+          var parentNode = node.parentElement
+            ? node.parentElement.closest('.task-node') : null;
+          var prow = parentNode
+            ? parentNode.querySelector(':scope > .task-row') : null;
+          if (prow) focusRow(prow);
+        }
+        break;
+      case 'Enter':
+      case ' ':
+        ev.preventDefault();
+        if (node && node.dataset.path !== undefined) setActive(node.dataset.path);
+        break;
+      case 'Home':
+        ev.preventDefault();
+        if (rows.length) focusRow(rows[0]);
+        break;
+      case 'End':
+        ev.preventDefault();
+        if (rows.length) focusRow(rows[rows.length - 1]);
+        break;
+    }
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Live reload — the single-active-node SSE model.
+   ──────────────────────────────────────────────────────────────────────
+   Under master-detail the only open, detailed node is `activePath`; every
+   other node is a body-free sidebar row. So the heavy capture/restore tree
+   machinery is gone — the only state to preserve across a `task:<path>` echo
+   is "is this the active card?" (re-fetch /node and re-render) and "is its
+   parent the active node?" (re-render the children-DAG). htmx still owns the
+   declarative `sse-swap="task:<path>"` outerHTML swap on each sidebar row and
+   the summary bar; nothing here calls setActive from the server channel.
+
+   Three watcher events (plan_dashboard.py): `task:<path>` (content edit,
+   payload = body-free nav row), `summary-updated` (header bar, htmx-only),
+   and `full-reload` (structural add/delete or worktree switch).
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* parent('a/b/c') -> 'a/b'; parent('a') -> '' (root); parent('') -> null. */
+function parentPath(path) {
+  if (!path) return null;
+  var i = path.lastIndexOf('/');
+  return i === -1 ? '' : path.slice(0, i);
+}
+
+/* A task:<path> content edit arrived (dispatched from sseBeforeMessage, i.e. just
+   *before* htmx swaps that path's body-free sidebar row). The fresh nav fragment
+   carries no nav-active class, so the active highlight is wiped when the active
+   row is the one swapped. Refresh only the detail-panel parts that depend on the
+   changed task:
+     - path === activePath  -> re-render the active card by re-running
+       loadActiveNode (same /node fetch + section render + loadComments pipeline
+       as a fresh navigation, without touching activePath / history), and re-assert
+       the nav-active highlight the imminent row swap will clear. The highlight
+       reads the row htmx is about to replace, so defer it past the swap.
+     - parent(path) === activePath -> re-render the children panel (the changed
+       task is a sibling card). loadChildrenDag's own (path, child-status+edge
+       signature) cache makes this a no-op when nothing card-relevant changed.
+       The panel re-renders from a fresh /dag fetch, so it is safe to start
+       immediately. */
+function onTaskUpdate(path) {
+  if (path === activePath) {
+    loadActiveNode(path);
+    /* Run after htmx's outerHTML row swap detaches the current row, so the
+       highlight lands on the freshly-swapped (unhighlighted) replacement row. */
+    setTimeout(function() { if (path === activePath) updateSidebar(path); }, 0);
+  } else if (parentPath(path) === activePath) {
+    loadChildrenDag(activePath);
+  }
+}
+
+/* ── full-reload: structural add/delete, or worktree switch ──
+   The tree shape changed, so rebuild the whole sidebar from /nav, then re-run
+   setActive(activePath) to restore highlight + breadcrumb + main panel + folds.
+   If activePath no longer exists, fall back to its nearest surviving ancestor
+   and replaceState the corrected hash (no new history entry — this is a server
+   signal, not a user navigation). */
+async function onFullReload() {
+  var wanted = activePath;
+  await loadNavTree();
+  var target = resolveSurvivingPath(wanted);
+  restoring = true;
+  if (target !== wanted) {
+    history.replaceState({ path: target }, '', '#/' + target);
+  }
+  setActive(target);
+  restoring = false;
+}
+
+/* Nearest still-present path at or above `path`, by walking up until a nav row
+   exists; '' (root) always survives. The sidebar tree has just been reloaded,
+   so a missing row means that task dir was deleted. */
+function resolveSurvivingPath(path) {
+  var p = path;
+  while (p) {
+    if (document.getElementById(navNodeId(p))) return p;
+    p = parentPath(p);
+  }
+  return '';  /* root */
+}
+
+/* ── Comment UI: suppress SSE node-swap after local comment changes ── */
+var _commentEditPaths = {};  /* taskPath -> timestamp of last local comment op */
+var _activeCommentEdit = null; /* { save: fn, cancel: fn, textarea: el } — at most one open editor */
+
+/* ── htmx SSE pre-message: the single dispatch point for task:<path> edits ──
+   htmx owns the declarative `sse-swap="task:<path>"` swap of the body-free
+   sidebar row. We hook sseBeforeMessage (not sseMessage) because the row swap is
+   `hx-swap="outerHTML"`: htmx fires sseMessage on the *old* element AFTER it has
+   been detached by the swap, so a body-level sseMessage listener never sees it.
+   sseBeforeMessage fires on the still-attached row, before the swap, and bubbles
+   to body — so it's the reliable place to react.
+
+   event.target is the matched sidebar row (data-path); event.data is the new
+   body-free fragment. Two responsibilities:
+     1. Comment-edit suppression: a local comment write records a timestamp in
+        _commentEditPaths; when the watcher's own echo for that path lands within
+        3s, preventDefault so htmx doesn't clobber the freshly-edited row, clear
+        the window, and skip the detail-panel refresh (re-fetching /node mid-edit
+        would clobber the open editor).
+     2. Detail-panel refresh: otherwise dispatch onTaskUpdate. The active-card and
+        children-DAG refreshes are independent fetches, but re-asserting the
+        nav-active highlight reads the row the swap is about to replace, so that
+        part is deferred to after the swap (see onTaskUpdate). */
+function withinCommentEditWindow(taskPath) {
+  var ts = _commentEditPaths[taskPath];
+  return !!(ts && (Date.now() - ts) < 3000);
+}
+document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
+  var taskPath = event.target && event.target.dataset ? event.target.dataset.path : undefined;
+  if (taskPath === undefined) return;  /* not a sidebar row (summary bar / full-reload) */
+  if (withinCommentEditWindow(taskPath)) {
+    event.preventDefault();
+    delete _commentEditPaths[taskPath];
+    return;
+  }
+  onTaskUpdate(taskPath);
+  /* Recompute the sidebar comment-count badges after the row swap settles. */
+  setTimeout(updateTreeCommentBadges, 100);
+});
+
+/* ── Worktree selector ── */
+var _wtPreviousValue = '';  /* track previous selection for revert on error */
+
+function populateWorktreeSelector(data) {
+  var selector = document.getElementById('worktree-selector');
+  var select = document.getElementById('worktree-select');
+  if (!selector || !select) return;
+
+  /* Hide if single worktree or no data */
+  if (!data || !data.worktrees || data.worktrees.length <= 1) {
+    selector.style.display = 'none';
+    return;
+  }
+
+  /* Build options */
+  select.innerHTML = '';
+  data.worktrees.forEach(function(wt) {
+    var opt = document.createElement('option');
+    opt.value = wt.plan_root || wt.path;
+    var label = wt.branch || wt.path.split('/').pop();
+    if (wt.plan_title) label += ' — ' + wt.plan_title;
+    if (wt.is_agent) label = '[agent] ' + label;
+    opt.textContent = label;
+    if (wt.is_agent) opt.style.opacity = '0.6';
+    if (wt.is_current) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  _wtPreviousValue = select.value;
+  selector.style.display = 'flex';
+}
+
+function fetchWorktrees() {
+  fetch('/api/worktrees')
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(data) { if (data) populateWorktreeSelector(data); })
+    .catch(function() { /* graceful: hide selector */ });
+}
+
+function switchWorktree(planRoot) {
+  if (!planRoot || planRoot === _wtPreviousValue) return;
+  fetch('/api/worktree/switch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plan_root: planRoot })
+  })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(e) { throw new Error(e.detail || 'Switch failed'); });
+      /* Success — the SSE full-reload event drives onFullReload(), which rebuilds
+         the sidebar in place and re-runs setActive (no full page reload). */
+      _wtPreviousValue = planRoot;
+    })
+    .catch(function(err) {
+      alert('Worktree switch failed: ' + err.message);
+      /* Revert dropdown to previous selection */
+      var select = document.getElementById('worktree-select');
+      if (select) select.value = _wtPreviousValue;
+    });
+}
+
+/* Fetch worktrees on page load */
+fetchWorktrees();
+
+/* ── SSE full-reload: structural changes (task added/deleted, worktree switch) ──
+   #sse-full-reload carries hx-swap="none", so htmx never mutates the DOM for this
+   event — the sse extension calls api.swap with a none-spec and fires no
+   htmx:beforeSwap. The reliable signal is htmx:sseBeforeMessage on the element
+   itself (the same hook task:<path> rows use); use it purely as a trigger to
+   rebuild the sidebar and restore activePath. */
+var fullReloadEl = document.getElementById('sse-full-reload');
+if (fullReloadEl) {
+  fullReloadEl.addEventListener('htmx:sseBeforeMessage', function() { onFullReload(); });
+}
+
+/* ── Comment UI functions ── */
+
+function showCommentForm(btn) {
+  var block = btn.closest('.commentable-block');
+  /* If a form already exists in this block, just focus it */
+  var existing = block.querySelector('.comment-form');
+  if (existing) { existing.querySelector('textarea').focus(); return; }
+
+  var form = document.createElement('div');
+  form.className = 'comment-form';
+  var ta = document.createElement('textarea');
+  ta.placeholder = 'Add a comment...';
+  var submitBtn = document.createElement('button');
+  submitBtn.textContent = 'Comment';
+
+  function submitComment() {
+    var body = ta.value.trim();
+    if (!body) return;
+
+    var section = block.getAttribute('data-section');
+    var blockIndex = parseInt(block.getAttribute('data-block'), 10);
+    /* Extract text preview: first 60 chars of the block's text */
+    var blockContent = block.querySelector('p, ul, ol, pre, blockquote, table, h1, h2, h3, h4, h5, h6');
+    var textPreview = blockContent ? blockContent.textContent.substring(0, 60) : '';
+
+    var taskNode = block.closest('.task-node');
+    var taskPath = taskNode ? taskNode.dataset.path : '';
+
+    /* Remember which sections are open before reloading comments */
+    var openSections = [];
+    taskNode.querySelectorAll('.section-content.open').forEach(function(sec) {
+      var toggle = sec.previousElementSibling;
+      var label = toggle ? toggle.querySelector('.section-label') : null;
+      if (label) openSections.push(label.textContent);
+    });
+
+    _commentEditPaths[taskPath] = Date.now();
+    fetch('/api/task/' + taskPath + '/comment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        section: section,
+        block_index: blockIndex,
+        text_preview: textPreview,
+        body: body
+      })
+    }).then(function(resp) {
+      if (resp.ok) {
+        form.remove();
+        loadComments(taskPath);
+      }
+    });
+  }
+
+  submitBtn.onclick = submitComment;
+  var cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.background = 'var(--bg-alt)';
+  cancelBtn.style.color = 'var(--text-mid)';
+  cancelBtn.style.marginLeft = '4px';
+  cancelBtn.onclick = function() { form.remove(); };
+  ta.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submitComment();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      form.remove();
+    }
+  });
+  form.appendChild(ta);
+  form.appendChild(submitBtn);
+  form.appendChild(cancelBtn);
+  block.appendChild(form);
+  ta.focus();
+}
+
+/* Resolve the task node that holds a task's commentable blocks + sections.
+   Those live in the active-node card (#active-node), not the body-free sidebar
+   rows — and both carry `.task-node[data-path]`, with the sidebar row first in
+   the DOM. So prefer the card; fall back to a global match for any caller that
+   runs before the card exists. */
+function commentTaskNode(taskPath) {
+  var card = document.querySelector('#active-node .task-node[data-path="' + taskPath + '"]');
+  return card || document.querySelector('.task-node[data-path="' + taskPath + '"]');
+}
+
+function loadComments(taskPath) {
+  fetch('/api/task/' + taskPath + '/comments')
+    .then(function(resp) { return resp.ok ? resp.json() : []; })
+    .then(function(comments) {
+      /* Find the task node holding this task's commentable blocks (the card). */
+      var taskNode = commentTaskNode(taskPath);
+      if (!taskNode) return;
+
+      /* Remove existing comment threads in this task */
+      taskNode.querySelectorAll('.comment-thread').forEach(function(t) { t.remove(); });
+      taskNode.querySelectorAll('.comment-orphan-warning').forEach(function(w) { w.remove(); });
+
+      /* Group comments by section + block_index */
+      var grouped = {};
+      var orphaned = [];
+      for (var i = 0; i < comments.length; i++) {
+        var c = comments[i];
+        var key = c.anchor.section + '::' + c.anchor.block_index;
+        /* Check if the target block exists */
+        var block = taskNode.querySelector(
+          '.commentable-block[data-section="' + c.anchor.section + '"][data-block="' + c.anchor.block_index + '"]'
+        );
+        if (block) {
+          if (!grouped[key]) grouped[key] = { block: block, comments: [] };
+          grouped[key].comments.push(c);
+        } else {
+          orphaned.push(c);
+        }
+      }
+
+      /* Render grouped comments below their blocks */
+      for (var key in grouped) {
+        var entry = grouped[key];
+        var thread = renderCommentThread(entry.comments, taskPath);
+        entry.block.appendChild(thread);
+      }
+
+      /* Render orphaned comments at the section level */
+      if (orphaned.length > 0) {
+        var orphanBySection = {};
+        for (var j = 0; j < orphaned.length; j++) {
+          var sec = orphaned[j].anchor.section;
+          if (!orphanBySection[sec]) orphanBySection[sec] = [];
+          orphanBySection[sec].push(orphaned[j]);
+        }
+        for (var secName in orphanBySection) {
+          var sectionDiv = taskNode.querySelector('[data-section="' + secName + '"] .section-content');
+          if (sectionDiv && sectionDiv.classList.contains('open')) {
+            var warning = document.createElement('div');
+            warning.className = 'comment-orphan-warning';
+            warning.textContent = 'Orphaned comments (anchor lost):';
+            sectionDiv.appendChild(warning);
+            var thread2 = renderCommentThread(orphanBySection[secName], taskPath);
+            sectionDiv.appendChild(thread2);
+          }
+        }
+      }
+
+      /* Update section header badges with unresolved counts */
+      updateSectionBadges(taskPath, comments);
+    });
+}
+
+function renderCommentThread(comments, taskPath) {
+  var thread = document.createElement('div');
+  thread.className = 'comment-thread';
+  for (var i = 0; i < comments.length; i++) {
+    (function(c) {
+      var item = document.createElement('div');
+      item.className = 'comment-item' + (c.resolved ? ' comment-resolved' : '');
+
+      var meta = document.createElement('div');
+      meta.className = 'comment-meta';
+      var ts = c.timestamp.substring(0, 16).replace('T', ' ');
+      meta.textContent = (c.author || 'anonymous') + ' · ' + ts;
+
+      var body = document.createElement('div');
+      body.className = 'comment-body';
+      body.textContent = c.body;
+
+      var actions = document.createElement('div');
+      actions.style.marginTop = '2px';
+
+      var actionBtnStyle = 'font-size:10px;padding:1px 6px;background:var(--bg-alt);border:1px solid var(--border);border-radius:3px;cursor:pointer;';
+
+      var editBtn = document.createElement('button');
+      editBtn.textContent = 'Edit';
+      editBtn.style.cssText = actionBtnStyle + 'color:var(--text-mid);';
+      editBtn.onclick = function() { startEditComment(item, body, c, taskPath); };
+
+      var resolveBtn = document.createElement('button');
+      resolveBtn.textContent = c.resolved ? 'Unresolve' : 'Resolve';
+      resolveBtn.style.cssText = actionBtnStyle + 'color:var(--text-mid);margin-left:4px;';
+      resolveBtn.onclick = function() { resolveComment(taskPath, c.id, resolveBtn); };
+
+      var deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.style.cssText = actionBtnStyle + 'color:var(--st-rev-t);margin-left:4px;';
+      deleteBtn.onclick = function() { deleteComment(taskPath, c.id, deleteBtn); };
+
+      actions.appendChild(editBtn);
+      actions.appendChild(resolveBtn);
+      actions.appendChild(deleteBtn);
+      item.appendChild(meta);
+      item.appendChild(body);
+      item.appendChild(actions);
+      thread.appendChild(item);
+    })(comments[i]);
+  }
+  return thread;
+}
+
+function updateSectionBadges(taskPath, comments) {
+  var taskNode = commentTaskNode(taskPath);
+  if (!taskNode) return;
+
+  /* Count unresolved comments per section */
+  var counts = {};
+  for (var i = 0; i < comments.length; i++) {
+    var c = comments[i];
+    if (!c.resolved) {
+      var sec = c.anchor.section;
+      counts[sec] = (counts[sec] || 0) + 1;
+    }
+  }
+
+  /* Update or create badges on each section-toggle */
+  taskNode.querySelectorAll('[data-section]').forEach(function(wrapper) {
+    var sectionName = wrapper.getAttribute('data-section');
+    var toggle = wrapper.querySelector('.section-toggle');
+    if (!toggle) return;
+
+    var badge = toggle.querySelector('.section-comment-badge');
+    var count = counts[sectionName] || 0;
+
+    if (count > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'section-comment-badge';
+        toggle.appendChild(badge);
+      }
+      badge.textContent = count;
+      badge.title = count + ' unresolved comment' + (count > 1 ? 's' : '');
+    } else if (badge) {
+      badge.remove();
+    }
+  });
+}
+
+/* ── Tree-level comment badges (bubble up through collapsed ancestors) ── */
+function updateTreeCommentBadges() {
+  /* Clear existing tree-level badges */
+  document.querySelectorAll('.tree-comment-badge').forEach(function(b) { b.remove(); });
+
+  fetch('/api/comments/summary')
+    .then(function(resp) { return resp.ok ? resp.json() : {}; })
+    .then(function(summary) {
+      /* Build a map: target task-row element -> aggregated count */
+      var targetCounts = new Map();
+
+      for (var taskPath in summary) {
+        var count = summary[taskPath];
+        if (count <= 0) continue;
+
+        var node = document.querySelector('.task-node[data-path="' + taskPath + '"]');
+        if (!node) {
+          /* Node not in DOM (lazy-loaded children). Walk up path segments
+             until we find an ancestor that IS rendered. */
+          var parts = taskPath.split('/');
+          while (parts.length > 1 && !node) {
+            parts.pop();
+            node = document.querySelector('.task-node[data-path="' + parts.join('/') + '"]');
+          }
+          if (!node) continue;
+        }
+
+        /* Check if this task's body is expanded (open).
+           If it is, section-level badges handle it — skip. */
+        var body = node.querySelector(':scope > .task-body');
+        if (body && body.classList.contains('open')) continue;
+
+        /* Walk up ancestors: if an ancestor's children container is hidden,
+           the current node isn't visible — bubble the badge to that ancestor.
+           Stop as soon as we reach an ancestor whose children are shown. */
+        var target = node;
+        var parent = node.parentElement;
+        while (parent) {
+          var ancestorNode = parent.closest('.task-node');
+          if (!ancestorNode) break;
+          var ancestorChildren = ancestorNode.querySelector(':scope > .task-children');
+          if (ancestorChildren && ancestorChildren.style.display === 'none') {
+            target = ancestorNode;
+          } else {
+            break;
+          }
+          parent = ancestorNode.parentElement;
+        }
+
+        var targetRow = target.querySelector(':scope > .task-row');
+        if (!targetRow) continue;
+
+        var prev = targetCounts.get(targetRow) || 0;
+        targetCounts.set(targetRow, prev + count);
+      }
+
+      /* Render badges on the target rows — insert after the last
+         badge/progress element so the badge sits near visible content
+         rather than at the far end of the flex row */
+      targetCounts.forEach(function(count, row) {
+        var badge = document.createElement('span');
+        badge.className = 'tree-comment-badge';
+        badge.textContent = count;
+        badge.title = count + ' unresolved comment' + (count > 1 ? 's' : '');
+        var anchor = row.querySelector('.task-progress') || row.querySelector('.badge');
+        if (anchor && anchor.nextSibling) {
+          row.insertBefore(badge, anchor.nextSibling);
+        } else if (anchor) {
+          anchor.after(badge);
+        } else {
+          row.appendChild(badge);
+        }
+      });
+    });
+}
+
+function _dismissActiveEdit() {
+  /* Close the currently-open comment editor if any.
+     Auto-saves if content changed, otherwise cancels.
+     Does NOT call loadComments — caller can safely set up a new editor on any task. */
+  if (!_activeCommentEdit) return;
+  var prev = _activeCommentEdit;
+  _activeCommentEdit = null;
+  var newBody = prev.textarea.value.trim();
+  var changed = newBody && newBody !== prev.originalText;
+  /* Restore DOM: show original body + actions, remove textarea + controls */
+  prev.bodyEl.textContent = changed ? newBody : prev.originalText;
+  prev.bodyEl.style.display = '';
+  prev.controls.remove();
+  prev.textarea.remove();
+  prev.actionsDiv.style.display = '';
+  /* Fire-and-forget API save if content changed */
+  if (changed) {
+    _commentEditPaths[prev.taskPath] = Date.now();
+    fetch('/api/task/' + prev.taskPath + '/comment/' + prev.commentId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: newBody })
+    });
+  }
+}
+
+function startEditComment(item, bodyEl, comment, taskPath) {
+  /* Single-edit mode: close any already-open editor first */
+  _dismissActiveEdit();
+
+  /* Replace body text with an editable textarea + Save/Cancel */
+  var originalText = comment.body;
+  var actionsDiv = item.querySelector('div:last-child'); /* Edit/Resolve/Delete container */
+  actionsDiv.style.display = 'none';
+
+  var ta = document.createElement('textarea');
+  ta.value = originalText;
+  ta.style.cssText = 'width:100%;min-height:60px;margin:4px 0;font-family:var(--font-mono);font-size:12px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 8px;resize:vertical;';
+
+  var controls = document.createElement('div');
+  controls.style.marginTop = '2px';
+
+  var saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save';
+  saveBtn.style.cssText = 'font-family:var(--font-mono);font-size:11px;padding:3px 10px;background:var(--accent);color:#fff;border:none;border-radius:3px;cursor:pointer;';
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.cssText = 'font-family:var(--font-mono);font-size:11px;padding:3px 10px;background:var(--bg-alt);color:var(--text-mid);border:none;border-radius:3px;cursor:pointer;margin-left:4px;';
+
+  function saveEdit() {
+    _activeCommentEdit = null;
+    var newBody = ta.value.trim();
+    if (!newBody || newBody === originalText) { cancelEdit(); return; }
+    _commentEditPaths[taskPath] = Date.now();
+    fetch('/api/task/' + taskPath + '/comment/' + comment.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: newBody })
+    }).then(function(resp) {
+      if (resp.ok) loadComments(taskPath);
+    });
+  }
+
+  function cancelEdit() {
+    _activeCommentEdit = null;
+    bodyEl.textContent = originalText;
+    bodyEl.style.display = '';
+    controls.remove();
+    ta.remove();
+    actionsDiv.style.display = '';
+  }
+
+  saveBtn.onclick = saveEdit;
+  cancelBtn.onclick = cancelEdit;
+
+  ta.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEdit();
+    }
+  });
+
+  controls.appendChild(saveBtn);
+  controls.appendChild(cancelBtn);
+
+  bodyEl.style.display = 'none';
+  bodyEl.parentNode.insertBefore(ta, bodyEl.nextSibling);
+  ta.parentNode.insertBefore(controls, ta.nextSibling);
+  ta.focus();
+  ta.selectionStart = ta.selectionEnd = ta.value.length;
+
+  _activeCommentEdit = {
+    save: saveEdit, cancel: cancelEdit, textarea: ta, controls: controls,
+    bodyEl: bodyEl, actionsDiv: actionsDiv, originalText: originalText,
+    taskPath: taskPath, commentId: comment.id
+  };
+}
+
+function resolveComment(taskPath, commentId, btn) {
+  _commentEditPaths[taskPath] = Date.now();
+  fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'PATCH' })
+    .then(function(resp) { if (resp.ok) loadComments(taskPath); });
+}
+
+function deleteComment(taskPath, commentId, btn) {
+  _commentEditPaths[taskPath] = Date.now();
+  fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'DELETE' })
+    .then(function(resp) { if (resp.ok) loadComments(taskPath); });
+}
+
+/* ── Page load: populate the sidebar, then start the hash router ──
+   The nav rows must exist before initRouter's first setActive so the active
+   highlight lands on a real row (deep hashes still lazy-load their ancestors
+   inside updateSidebar). Sidebar load is awaited but best-effort. */
+document.addEventListener('DOMContentLoaded', async function() {
+  initSidebarChrome();    /* pin/resize/drawer chrome — pure presentation */
+  initSidebarEvents();
+  initTreeKeyboard();      /* roving-tabindex keyboard nav on #nav-tree */
+  await loadNavTree();
+  initRouter();
+  updateTreeCommentBadges();
+});
+</script>
+</body>
+</html>

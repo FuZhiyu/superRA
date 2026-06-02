@@ -18,14 +18,14 @@ Required inputs:
 - incoming range `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`
 - operation direction, defaulting to merging the confirmed base into the current branch
 
-Current-branch intent comes from `PLAN.md` header, `## Decisions`, and `RESULTS.md`; existing `## Sync Map` content supplies prior sync context. Incoming intent comes from commits, diffs, and docs in `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
+Current-branch intent comes from the `superRA/` task tree (root task.md header and task objectives); existing `## Sync Map` content supplies prior sync context. Incoming intent comes from commits, diffs, and docs in `PRE_SYNC_BASE_SHA..BASE_HEAD_SHA`.
 
 ## Mode-Specific Process
 
 1. Run the requested sync operation after intent investigation. For the normal workflow path, merge `BASE_REF` into the current branch.
-2. Write the branch-level `## Sync Map` in `PLAN.md` when there is material overlap, a conflict, a user decision, sync-review carryover, or post-sync context worth preserving. Omit it for no-op or trivial syncs with no context.
+2. Write the branch-level `## Sync Map` in root `superRA/task.md` when there is material overlap, a conflict, a user decision, sync-review carryover, or post-sync context worth preserving. Omit it for no-op or trivial syncs with no context.
 3. Add task-local `**Sync impact:**` annotations only to task blocks whose post-sync diff needs task-specific context during Integrate. Keep them short and point back to the relevant Sync Map cluster.
-4. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** Include conflict resolution, resolved docs, `PLAN.md` Sync Map, and task-local Sync impact annotations with the commits that produce them. Before returning, update `**Sync commits:**` to list the full commit chain this mode landed. Every commit must leave the tree passing existing protection (drift tests + key-result coverage established in `superintegrate` Protect); per-commit protection-pass is the lower bound, `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule.
+4. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** Include conflict resolution, resolved docs, root task.md Sync Map, and task-local Sync impact annotations with the commits that produce them. Before returning, update `**Sync commits:**` to list the full commit chain this mode landed. Every commit must leave the tree passing existing protection (drift tests + key-result coverage established in `superintegrate` Protect); per-commit protection-pass is the lower bound, `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule.
 
 ## Workflow Sync Map Format
 
@@ -56,14 +56,14 @@ Current-branch intent comes from `PLAN.md` header, `## Decisions`, and `RESULTS.
 > 1. [MAJOR] <specific unresolved sync issue, with file/path evidence>.
 ```
 
-`## Sync Map` carries the big picture. In workflow mode, do not restate current-branch intent already present in `PLAN.md` / `RESULTS.md`. It is temporary scaffolding for the active Sync / Integrate round.
+`## Sync Map` carries the big picture. In workflow mode, do not restate current-branch intent already present in the `superRA/` task tree. It is temporary scaffolding for the active Sync / Integrate round.
 
 ## Task-Local Sync Impact Format
 
 When a cluster affects a task, add a compact field to that task block, directly after `**Integration status:**`:
 
 ```markdown
-**Sync impact:** Cluster `<cluster-id>` explains <task-specific post-sync context>. Source: `PLAN.md ## Sync Map`.
+**Sync impact:** Cluster `<cluster-id>` explains <task-specific post-sync context>. Source: root task.md `## Sync Map`.
 ```
 
 The task-local impact is not a second Sync Map and not an Integrate to-do list. It gives task-scoped integration implementers and reviewers the context needed to understand the approved post-sync diff without reconstructing branch history.
