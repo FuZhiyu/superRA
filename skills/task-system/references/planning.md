@@ -165,7 +165,7 @@ Results live in each task's `## Results` section. The same section matures throu
 
 - **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record — terse, agent-facing. "Latest state only" — re-implementation replaces a task's results; it does not append history.
 - When implementation materially deviates from `## Planner Guidance`, `## Results` states the guidance not followed, the chosen route, and why it still satisfies `## Objective`.
-- **Stage 2 — Permanent record (INTEGRATE Document).** Results maturation keeps findings in task files and restructures selected `## Results` sections for reader-facing clarity. Child tasks carry task-level evidence and caveats; parent tasks summarize direct child findings with links when a researcher needs a higher-level monitoring view.
+- **Stage 2 — Permanent record (INTEGRATE Document).** Results maturation keeps findings in task files and synthesizes the matured reader-facing narrative **upward into the highest-level task the integration actually touched, per affected subtree** — for each subtree the work touched, the top task of that subtree's affected frontier carries the matured summary, with links down to the leaf tasks that hold the per-task evidence. This is the front door, not the global root and not a separate report document. Leaf `## Results` stay as lightly-cleaned evidence and caveats (so drift tests and key-result selections that reference leaf task paths still resolve); maturation promotes the narrative one level up rather than rewriting each leaf into reader-facing prose in place. An integration that touched two independent subtrees lands two matured narratives, one at each subtree's highest touched task.
 
 ### Per-task results template
 
@@ -198,10 +198,10 @@ Omit subsections that do not apply.
 - **Planner** — creates task.md with `## Results` section (empty or with placeholder text).
 - **Implementer** — fills and updates `## Results` during execution. On subsequent iterations, replaces the section's prior content in place.
 - **Reviewer** — verifies the assigned task's `## Results` are substantive enough before approval. Concerns are raised in `## Review Notes`.
-- **Orchestrator** — after child approval, updates the immediate parent's `## Results` when the child produced a major result worth surfacing; at subtree closeout, summarizes selectively upward.
+- **Orchestrator** — during IMPLEMENT, updates the immediate parent's `## Results` when an approved child produced a major result worth surfacing for monitoring; at INTEGRATE Document, synthesizes the matured narrative into the highest touched task per affected subtree (Stage 2 above).
 - **Standalone author** — everything.
 
-Parent rollups summarize direct children for monitoring. Do not recursively copy every finding up the tree; link to child task files for full evidence and caveats.
+Summaries that ride higher than a leaf — monitoring rollups during IMPLEMENT and the matured narrative at Document — link down to the leaf task files for full evidence and caveats; they do not recursively copy every finding up the tree.
 
 ### Figure Embedding
 

@@ -123,6 +123,6 @@ After approval:
 
 **Standalone:** The user asks to clean up the tree at any time. Load this reference, run the survey, propose, and execute.
 
-**During integration:** The orchestrator or user identifies tree complexity during the superintegrate. Route here for the cleanup pass, then return to integration. Consolidation during integration is optional — triggered by assessment, not mandatory.
+**During integration:** The `superintegrate` consolidation gate, run once just before Document, is the concrete trigger. Its mandatory assessment routes here for the cleanup pass only on a needs-a-pass verdict; a clean-enough verdict skips it. Run the protocol, then return to Document on the consolidated tree.
 
 In both cases, the same protocol applies: survey, classify, propose, get approval, execute atomically.

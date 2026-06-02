@@ -13,6 +13,7 @@ Workflow skill for the **INTEGRATE** phase of the superRA workflow. It takes a r
 Protect   -> protect key results (default: drift tests)
 Sync      -> bring the branch onto the current base via semantic-merge
 Integrate -> refactor with Sync context and pass integration review
+           -> [consolidation gate] judge the tree clean-enough vs needs-a-pass before Document
 Document  -> mature task.md ## Results sections for reader-facing clarity
 Finish    -> final freshness check, PR or fast-forward, and cleanup
 
@@ -238,25 +239,32 @@ Run the full drift-test suite again. When it passes and integration review is AP
 - flip `Integrated` in root task.md §Workflow Status
 - commit the closeout doc edit
 
+## Consolidation Gate
+
+Once per integration, between closing Integrate and entering Document, the orchestrator surveys the tree and decides whether it is clean enough to mature or needs a consolidation pass first. This is orchestrator inline work, not a dispatched stage. The gate forces the look; the pass stays conditional.
+
+1. Run `task_query.py --tree` and `--dag` and judge the affected frontier against the consolidation symptom list in `superplan/references/consolidation.md §When to Consolidate`.
+2. Record the verdict — clean-enough or needs-a-pass, one line — in the durable integration record in root task.md §Workflow Status so a later session sees the judgment was made.
+3. On needs-a-pass, load `superplan/references/consolidation.md` and run its survey → classify → propose → approve → execute protocol (atomic commit), then enter Document on the consolidated tree. Changes that materially restructure the tree (Merge/Prune/Restructure that alter scope or `approved` status) still route through `superplan §User Feedback and Changing the Task Tree` — the gate triggers the assessment, it does not grant authority to restructure approved work unilaterally.
+
 ## Document
 
 Document matures selected task.md `## Results` sections from live dev log to reader-facing permanent record (Stage 2 maturation per `task-system/references/planning.md` §Results Shape).
 
 ### Step 1: Identify maturation scope
 
-Walk the `superRA/` tree and identify tasks whose `## Results` sections need maturation or summary rollups — those with substantive findings that would benefit from restructuring, polish, parent/root summaries, or figure materialization. Trivial results (e.g., "renamed variable, no findings") need no maturation. If project guidance is silent on where summaries should be updated, ask:
+Walk the `superRA/` tree and identify the highest-level task this integration touched per affected subtree — those are the homes that carry the matured narrative — plus any leaf tasks whose `## Results` still need light evidence cleanup. Trivial results (e.g., "renamed variable, no findings") need no maturation. The default home for each affected subtree is its highest touched task; ask only when project guidance is silent on whether to confirm a different home:
 
 ```text
-These tasks have substantive results that could benefit from maturation
-or parent/root summary updates:
-- [task-path-1: one-line summary]
-- [task-path-2: one-line summary]
+This integration touched these subtrees; the matured narrative defaults
+to each subtree's highest touched task:
+- [highest-touched-task-1: one-line summary]
+- [highest-touched-task-2: one-line summary]
 
-Where should I update summaries: leaf tasks only, specific parent tasks,
-the root task, all listed workstreams, or a subset?
+Confirm these as the maturation homes, or name a different home per subtree?
 ```
 
-Fold the answer into the relevant root or parent task `## Results` / `## Revision Notes` before dispatching.
+Fold the answer into the relevant highest-touched task's `## Results` / `## Revision Notes` before dispatching.
 
 ### Step 2: Dispatch doc-writer
 
@@ -285,7 +293,8 @@ Agent(subagent_type: "superRA:reviewer"):
 
   Additionally: Review each in-scope task's `## Results` section per
     `task-system/references/planning.md` §Results Shape, including Stage 2
-    maturation, parent rollups, and task-local figure attachments.
+    maturation at the highest-touched-task narrative homes, retained leaf
+    evidence, and task-local figure attachments.
     <prior-round adjudication notes if re-dispatching>
 ```
 
@@ -346,7 +355,7 @@ Report what was published or landed and what was cleaned up.
 - **Standalone analysis:** Protect still runs. Sync may be a no-op. Integrate often collapses to a short reviewer pass.
 - **Small changes:** Keep the same five steps, but dispatch fewer agents and keep `## Sync Map` absent from root task.md when there is no material sync context.
 - **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
-- **Task tree consolidation:** When the tree has accumulated structural debt (overlapping tasks, stale objectives, hidden dependencies, granularity mismatches) — whether noticed during integration review or flagged by the user — load `superplan/references/consolidation.md` for a consolidation pass before or during Integrate. Consolidation is optional and orchestrator- or user-triggered, not a mandatory step.
+- **Task tree consolidation:** The consolidation *assessment* is a mandatory gate just before Document (see §Consolidation Gate); the consolidation *pass* is the optional action that gate triggers when the tree carries structural debt. A clean-enough verdict skips the pass.
 
 ## Red Flags
 
