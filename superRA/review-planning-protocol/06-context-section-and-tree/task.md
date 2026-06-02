@@ -1,6 +1,6 @@
 ---
 title: "Context section rename + visible task tree"
-status: implemented
+status: approved
 depends_on: 
   - 05-recursive-context-conventions
 
