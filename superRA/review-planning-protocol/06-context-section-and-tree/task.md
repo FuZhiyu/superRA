@@ -1,6 +1,6 @@
 ---
 title: "Context section rename + visible task tree"
-status: not-started
+status: implemented
 depends_on: 
   - 05-recursive-context-conventions
 
@@ -54,3 +54,23 @@ Review and Planning Protocol
 - `grep -ri "ancestor context"` across `skills/` and `agents/` returns only intentional historical references (if any); generated files are regenerated, not hand-edited.
 
 ## Results
+
+Both refinements implemented and verified.
+
+**Header rename.** [`task_read.py`](../../../skills/task-system/scripts/task_read.py) human render now emits `=== Context ===` (was `=== Ancestor Context ===`). Module docstring, the argparse `description`, and the `--no-ancestors` help string updated to the context framing; the `--no-ancestors` flag name is unchanged.
+
+**Focused tree.** Added `format_focused_tree(root, target_path)` to [`task_query.py`](../../../skills/task-system/scripts/task_query.py) — a string-returning, bounded renderer that reuses the same `STATUS_ICONS` and indentation as the CLI `print_tree`. It walks the root→target spine, lists the target's siblings (unexpanded), shows the target's direct children, and marks the current node with `▶ ... ← this task`. Ancestor-sibling branches are **not** expanded. `task_read.py` imports this helper (no duplicate rendering logic) and injects the tree at the top of the Context block, above the ancestor objective excerpts. Rendered output on this very task matches the target shape in the objective.
+
+**JSON.** `render_json` gains a new `tree` key (the focused-tree string) placed alongside the unchanged `ancestors` / `task` / `dependencies` keys, preserving 05's compatibility rule. With `--no-ancestors`, `tree` is `""`.
+
+**Prose echoes.** Updated every "ancestor context" site to the recursive-context framing, pointing at authoritative sources rather than paraphrasing: [`task-system/SKILL.md`](../../../skills/task-system/SKILL.md), [`planning.md`](../../../skills/task-system/references/planning.md) (§ heading renamed `Ancestor Context and Conventions` → `Context and Conventions`, with the three cross-references in [`superimplement`](../../../skills/superimplement/SKILL.md), [`superplan`](../../../skills/superplan/SKILL.md), [`handoff-doc`](../../../skills/handoff-doc/SKILL.md) updated), [`agent-orchestration/SKILL.md`](../../../skills/agent-orchestration/SKILL.md), [`agents/implementer.md`](../../../agents/implementer.md), [`agents/reviewer.md`](../../../agents/reviewer.md). The convention-source instructions keep the accurate "ancestor objective" wording (conventions live in ancestor objectives; the focused tree adds position, not conventions); only the render/block name and the "ancestor context" label changed.
+
+**Generated artifacts.** Edited the source strings in [`sync_codex_agents.py`](../../../skills/codex-superra-setup/scripts/sync_codex_agents.py) (`render_*_direct_mode_before_you_start`), then ran `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project`. The direct-mode references and `.codex/agents/*.toml` were regenerated, not hand-edited; `--check` reports no drift.
+
+**Verification (commands run this session):**
+- `task_read.py --path review-planning-protocol/06-context-section-and-tree` → `=== Context ===` + focused tree (spine, all siblings, `▶ ... ← this task` marker), then ancestor objectives.
+- `--json` → keys `['tree', 'ancestors', 'task', 'dependencies']`; `--no-ancestors --json` → `tree=''`.
+- `--no-ancestors` → Context block suppressed entirely.
+- `pytest test_task_system.py` → **214 passed** (added 4 focused-tree/header tests; updated the old-header negative assertions).
+- `grep -ri "ancestor context" skills/ agents/` → only the two intentional negative test assertions (verifying the old header is absent); no remaining prose echoes.
+- `sync_codex_agents.py --scope project --check` → all generated files up to date.

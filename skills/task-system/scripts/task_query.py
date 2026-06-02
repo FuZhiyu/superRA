@@ -100,6 +100,55 @@ def print_tree(task: Task, indent: int = 0, status_filter: str | None = None, ta
         print_tree(child, indent + 1, status_filter, tag_filter)
 
 
+def _tree_node_line(task: Task, indent: int, marker: str = "") -> str:
+    """Format a single tree node line with status icon and optional marker."""
+    icon = STATUS_ICONS.get(task.effective_status(), "?")
+    prefix = "  " * indent
+    if task.is_root:
+        label = task.title or "(root)"
+        return f"{prefix}{marker}{icon} {label}"
+    label = task.title or task.slug
+    return f"{prefix}{marker}{icon} {task.slug}: {label}"
+
+
+def format_focused_tree(root: Task, target_path: str) -> str:
+    """Render a bounded tree focused on ``target_path``.
+
+    Shows the root → target spine, the target's siblings, and the target's
+    direct children, with the target node marked. Unrelated branches of
+    ancestor tasks are not expanded, so a large shared root does not bury the
+    signal. Returns a string (the CLI tree renderer in ``print_tree`` walks the
+    whole tree; this is the focused form ``task_read.py`` injects as context).
+    """
+    spine_slugs = target_path.split("/") if target_path else []
+    lines: list[str] = [_tree_node_line(root, 0)]
+
+    def _walk(node: Task, depth: int, remaining: list[str]) -> None:
+        if not remaining:
+            # ``node`` is the target — show its direct children.
+            for child in node.children:
+                lines.append(_tree_node_line(child, depth + 1))
+            return
+        head, *rest = remaining
+        # At the target's parent level, list every sibling (head == target slug
+        # when rest is empty); otherwise descend only along the spine.
+        for child in node.children:
+            if child.slug == head:
+                is_target = not rest
+                marker = "▶ " if is_target else ""
+                line = _tree_node_line(child, depth + 1, marker=marker)
+                if is_target:
+                    line += "   ← this task"
+                lines.append(line)
+                _walk(child, depth + 1, rest)
+            elif not rest:
+                # Sibling of the target — show it but do not expand.
+                lines.append(_tree_node_line(child, depth + 1))
+
+    _walk(root, 0, spine_slugs)
+    return "\n".join(lines)
+
+
 def print_frontier(frontier: list[Task], as_json: bool = False) -> None:
     """Print the dispatch frontier."""
     if as_json:

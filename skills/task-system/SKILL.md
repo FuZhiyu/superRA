@@ -28,13 +28,13 @@ A directory-tree task system where the filesystem hierarchy is the task hierarch
 
 ## How to Read a Task
 
-Use `task_read.py` to read a task with its full ancestor context injected:
+Use `task_read.py` to read a task with its full context injected — a focused tree (the root→task spine with siblings and direct children, current node marked) plus the ancestor objectives:
 
 ```bash
-# Read a task with ancestor chain and dependency status
+# Read a task with its context block and dependency status
 python3 <skill-dir>/scripts/task_read.py --path task-system/agent-interface/skill-restructure
 
-# Without ancestor context (just the task itself)
+# Without the context block (just the task itself)
 python3 <skill-dir>/scripts/task_read.py --path task-system/agent-interface/skill-restructure --no-ancestors
 
 # Structured JSON output

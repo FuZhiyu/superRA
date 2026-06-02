@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Context-aware task reading: shows ancestor chain, full task content, and sibling dependency status."""
+"""Context-aware task reading: shows a focused tree + ancestor objectives, full task content, and sibling dependency status."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from _task_io import (
     resolve_path,
     walk_plan,
 )
+from task_query import format_focused_tree
 
 
 # ---------------------------------------------------------------------------
@@ -176,11 +177,15 @@ def render_human(
     target_task: Task,
     dep_pairs: list[tuple[str, Task | None]],
     show_ancestors: bool = True,
+    focused_tree: str = "",
 ) -> str:
     parts: list[str] = []
 
     if show_ancestors and ancestors:
-        parts.append("=== Ancestor Context ===\n")
+        parts.append("=== Context ===\n")
+        if focused_tree:
+            parts.append(focused_tree)
+            parts.append("")
         for i, anc in enumerate(ancestors):
             depth = i  # root is 0 -> #, next is 1 -> ##, etc.
             prefix = "#" * (depth + 1)
@@ -229,6 +234,7 @@ def render_json(
     target_task: Task,
     dep_pairs: list[tuple[str, Task | None]],
     show_ancestors: bool = True,
+    focused_tree: str = "",
 ) -> str:
     fm, _ = parse_frontmatter(
         (target_task.dir_path / "task.md").read_text(encoding="utf-8")
@@ -281,6 +287,10 @@ def render_json(
             deps_data.append({"slug": slug, "path": None, "title": None, "status": "NOT FOUND", "effective_status": "NOT FOUND"})
 
     data = {
+        # `tree` is the focused root→target spine (siblings + direct children,
+        # current node marked); a new key added alongside the prior ones so
+        # existing consumers of `ancestors`/`task`/`dependencies` are unaffected.
+        "tree": focused_tree if show_ancestors else "",
         "ancestors": anc_data,
         "task": task_data,
         "dependencies": deps_data,
@@ -294,7 +304,7 @@ def render_json(
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Read a task with ancestor context, full content, and sibling dependency status."
+        description="Read a task with its context (focused tree + ancestor objectives), full content, and sibling dependency status."
     )
     parser.add_argument(
         "--plan-root",
@@ -309,7 +319,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--no-ancestors",
         action="store_true",
-        help="Skip the ancestor context chain; show only the current task.",
+        help="Skip the Context block (focused tree + ancestor spine); show only the current task.",
     )
     parser.add_argument(
         "--json",
@@ -362,11 +372,17 @@ def main(argv: list[str] | None = None) -> None:
     siblings = _sibling_map(plan_root, target_task)
     dep_pairs = _dep_tasks(target_task, siblings)
 
+    # Build the focused tree (root → target spine, siblings, direct children).
+    focused_tree = ""
+    if show_ancestors:
+        root = walk_plan(plan_root)
+        focused_tree = format_focused_tree(root, target_task.path)
+
     # Render
     if args.as_json:
-        print(render_json(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors))
+        print(render_json(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree))
     else:
-        print(render_human(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors))
+        print(render_human(ancestors, target_task, dep_pairs, show_ancestors=show_ancestors, focused_tree=focused_tree))
 
 
 if __name__ == "__main__":
