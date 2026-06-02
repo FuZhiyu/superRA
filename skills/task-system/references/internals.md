@@ -14,7 +14,7 @@ class Task:
     path: str           # relative path from plan root (empty string for root)
     dir_path: Path      # absolute path to the task directory
     title: str
-    status: str         # not-started | in-progress | implemented | revise | approved | archived
+    status: str         # not-started | in-progress | implemented | revise | approved | archived | postponed
     depends_on: list[str]
     tags: list[str]
     script: str
@@ -47,7 +47,7 @@ Key properties:
 | `write_task(task)` | Write a `Task` back to disk, preserving body content. |
 | `walk_plan(plan_root)` | Recursively walk plan directory, return root `Task` with populated children. |
 | `resolve_path(plan_root, task_path)` | Resolve a relative task path to its directory. Rejects paths that escape the root. |
-| `compute_status(task)` | Roll up status from children: all approved -> approved; any revise -> revise; any in-progress/implemented -> in-progress; else not-started. |
+| `compute_status(task)` | Roll up status from children, excluding parked (`archived` / `postponed`) children from the active set: all (active) approved -> approved; any revise -> revise; any in-progress/implemented -> in-progress; else not-started. When *every* child is parked the branch rolls up to `postponed` if any child is `postponed`, else `archived`. |
 | `compute_frontier(root)` | Return leaf tasks ready for dispatch — status is not-started/in-progress and all sibling deps are approved. |
 | `collect_all_tasks(root)` | Flatten the tree depth-first (excluding root). |
 | `validate_frontmatter(task)` | Validate status enums, title non-empty, list types. Returns list of warning strings. |
@@ -58,7 +58,7 @@ Key properties:
 ### Enum constants
 
 ```python
-VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved", "archived")
+VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved", "archived", "postponed")
 ```
 
 ### Child ordering

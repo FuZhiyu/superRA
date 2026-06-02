@@ -28,6 +28,7 @@ STATUS_ICONS = {
     "revise": "✗",
     "approved": "●",
     "archived": "▪",
+    "postponed": "⏸",
 }
 
 
@@ -142,6 +143,7 @@ def render_dag(task: Task, subtree_path: str = "") -> str:
         "revise": ":::revise",
         "approved": ":::approved",
         "archived": ":::archived",
+        "postponed": ":::postponed",
     }
 
     lines = ["graph LR"]
@@ -165,6 +167,7 @@ def render_dag(task: Task, subtree_path: str = "") -> str:
     lines.append("    classDef revise fill:#ffcdd2,stroke:#e53935,color:#b71c1c")
     lines.append("    classDef approved fill:#c8e6c9,stroke:#43a047,color:#1b5e20")
     lines.append("    classDef archived fill:#f5f5f5,stroke:#bdbdbd,color:#9e9e9e")
+    lines.append("    classDef postponed fill:#cfd8e3,stroke:#78909c,color:#37474f")
 
     return "\n".join(lines)
 

@@ -204,6 +204,7 @@ Implementer and reviewer agents own their commits and document updates (see `age
 | `implemented` | Code committed and ready for review | Dispatch reviewer |
 | `revise` | Reviewer found blocking issue(s) | Adjudicate (see Handling Reviewer Feedback), re-dispatch implementer, then re-dispatch reviewer for a narrow re-review (cited fixes + dependent findings) |
 | `approved` | Review passed | Proceed to next task |
+| `postponed` | Deferred and parked off the frontier; not deleted | Not dispatchable; its dependents are blocked until resumed. Set back to `not-started` to resume. |
 
 **A task is complete only when its `status` is `approved`.** Do not proceed to the next task while any review has open issues that you have not adjudicated.
 

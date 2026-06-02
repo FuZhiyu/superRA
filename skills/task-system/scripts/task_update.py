@@ -21,7 +21,7 @@ from _task_io import (
 )
 
 # Statuses with clear recursive semantics, allowed with --cascade.
-_CASCADE_ALLOWED = ("approved", "not-started", "archived")
+_CASCADE_ALLOWED = ("approved", "not-started", "archived", "postponed")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -35,7 +35,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--status", choices=VALID_STATUSES, help="Set task status")
     parser.add_argument("--cascade", action="store_true",
                         help="When setting status on a branch task, cascade to all descendant leaves. "
-                             "Only valid for: approved, not-started, archived.")
+                             "Only valid for: approved, not-started, archived, postponed.")
     parser.add_argument("--title", help="Set task title")
     parser.add_argument("--add-tag", action="append", default=[], help="Add a tag")
     parser.add_argument("--remove-tag", action="append", default=[], help="Remove a tag")

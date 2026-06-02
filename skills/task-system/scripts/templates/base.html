@@ -50,6 +50,7 @@
   --st-rev:    #f5d9d4;  --st-rev-t:  #9b3228;
   --st-ok:     #d4e8d4;  --st-ok-t:   #2d6a30;
   --st-arch:   #e8e5df;  --st-arch-t: #9e9890;
+  --st-post:   #dde3ea;  --st-post-t: #4a5a6a;
 
   --progress-bg:    #e8e5df;
   --progress-fill:  #6b9e6d;
@@ -84,6 +85,7 @@
   --st-rev:    #3e201c;  --st-rev-t:  #e08070;
   --st-ok:     #1e3320;  --st-ok-t:   #7ec080;
   --st-arch:   #2a2925;  --st-arch-t: #706b63;
+  --st-post:   #28323e;  --st-post-t: #8fa6bd;
 
   --progress-bg:    #33312e;
   --progress-fill:  #5a9a5c;
@@ -766,6 +768,7 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
 .badge-revise       { background: var(--st-rev);  color: var(--st-rev-t);  }
 .badge-approved     { background: var(--st-ok);   color: var(--st-ok-t);   }
 .badge-archived     { background: var(--st-arch); color: var(--st-arch-t); opacity: 0.7; }
+.badge-postponed    { background: var(--st-post); color: var(--st-post-t); }
 
 .task-progress {
   font-family: var(--font-mono);
@@ -1135,6 +1138,7 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
       <option value="revise">revise</option>
       <option value="approved">approved</option>
       <option value="archived">archived</option>
+      <option value="postponed">postponed</option>
     </select>
     <button class="hc-btn active" id="btn-workspace" onclick="showView('workspace')">Workspace</button>
     <button class="hc-btn" id="btn-kanban" onclick="showView('kanban')">Kanban</button>
@@ -2087,6 +2091,7 @@ function renderChildren(region, path, sig, build) {
 var DAG_FILL_STATUS = {
   '#e0e0e0': 'not-started', '#bbdefb': 'in-progress', '#fff9c4': 'implemented',
   '#ffcdd2': 'revise', '#c8e6c9': 'approved', '#f5f5f5': 'archived',
+  '#cfd8e3': 'postponed',
 };
 function parseChildrenDag(src) {
   var children = [];

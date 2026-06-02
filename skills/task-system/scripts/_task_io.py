@@ -17,7 +17,7 @@ from pathlib import Path
 
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---\n(.*)", re.DOTALL)
 
-VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved", "archived")
+VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved", "archived", "postponed")
 TASK_ROOT_DIRNAME = "superRA"
 LEGACY_TASK_ROOT_DIRNAME = ".plan"
 TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
@@ -448,8 +448,10 @@ def resolve_path(plan_root: Path, task_path: str) -> Path:
 def compute_status(task: Task) -> str:
     """Compute rolled-up status for a branch task from its children.
 
-    Archived children are excluded from rollup.  Rules checked in order:
-    1. No non-archived children remain -> archived
+    Parked children (archived and postponed) are excluded from rollup.
+    Rules checked in order:
+    1. No active children remain (all parked) -> postponed if any child is
+       postponed, else archived (a deferred child dominates an abandoned one)
     2. All children approved -> approved
     3. Any child revise -> revise
     4. Any child in-progress or implemented -> in-progress
@@ -460,10 +462,10 @@ def compute_status(task: Task) -> str:
         return task.status
 
     all_statuses = [c.effective_status() for c in task.children]
-    child_statuses = [s for s in all_statuses if s != "archived"]
+    child_statuses = [s for s in all_statuses if s not in ("archived", "postponed")]
 
     if not child_statuses:
-        return "archived"
+        return "postponed" if any(s == "postponed" for s in all_statuses) else "archived"
 
     if all(s == "approved" for s in child_statuses):
         return "approved"
@@ -536,8 +538,8 @@ def compute_frontier(root: Task) -> list[Task]:
 def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -> None:
     """Recursively collect frontier tasks."""
     if task.is_leaf:
-        if task.status == "archived":
-            return  # archived tasks never appear on the frontier
+        if task.status in ("archived", "postponed"):
+            return  # parked tasks never appear on the frontier
         if ancestors_ready and task.status in ("not-started", "in-progress"):
             frontier.append(task)
         return
@@ -545,8 +547,8 @@ def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -
     sibling_map = {c.slug: c for c in task.children}
 
     for child in task.children:
-        # Skip archived children entirely
-        if child.effective_status() == "archived":
+        # Skip parked (archived/postponed) children entirely
+        if child.effective_status() in ("archived", "postponed"):
             continue
 
         deps_met = True
@@ -560,7 +562,9 @@ def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -
                 )
                 deps_met = False
                 break
-            # Archived dependencies are treated as satisfied
+            # Archived dependencies are treated as satisfied; postponed ones
+            # are NOT — postponing a task deliberately blocks its dependents
+            # until it is resumed and approved.
             dep_status = dep_task.effective_status()
             if dep_status not in ("approved", "archived"):
                 deps_met = False

@@ -77,7 +77,7 @@ Move a task with a plain `mv` of its directory — it carries its `task.md`, `co
 | Field | Type | Values | Owner |
 |---|---|---|---|
 | `title` | string | descriptive name | planner |
-| `status` | enum | `not-started` \| `in-progress` \| `implemented` \| `revise` \| `approved` \| `archived` | implementer / reviewer |
+| `status` | enum | `not-started` \| `in-progress` \| `implemented` \| `revise` \| `approved` \| `archived` \| `postponed` | implementer / reviewer; `archived` / `postponed` set by orchestrator / researcher |
 | `depends_on` | list | sibling directory names | planner |
 | `tags` | list | free-form | planner |
 | `script` | string | path to primary script | planner |
@@ -111,7 +111,7 @@ On an assigned task, implementers own `## Results` and their allowed `status` tr
 ```yaml
 ---
 title: "Merge with Fund Characteristics"
-status: not-started           # not-started | in-progress | implemented | revise | approved | archived
+status: not-started           # not-started | in-progress | implemented | revise | approved | archived | postponed
 depends_on:                   # sibling directory names only
   - 01-load-raw-data
 tags: [data-merge]            # both inline [x] and multi-line list forms are accepted

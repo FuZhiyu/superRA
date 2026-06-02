@@ -2429,6 +2429,124 @@ class TestArchivedInRollup:
         assert parent_task.effective_status() == "in-progress"
 
 
+class TestPostponedSemantics:
+    def test_postponed_in_valid_statuses(self):
+        """'postponed' is a member of the canonical status enum."""
+        assert "postponed" in _task_io.VALID_STATUSES
+
+    def test_parse_task_accepts_postponed(self, tmp_path):
+        """parse_task accepts a task.md with status 'postponed'."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Parked", "postponed")
+        task = _task_io.parse_task(root_dir / "task.md")
+        assert task.status == "postponed"
+
+    def test_validate_frontmatter_accepts_postponed(self, tmp_path):
+        """validate_frontmatter raises no status warning for 'postponed'."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Parked", "postponed")
+        task = _task_io.parse_task(root_dir / "task.md")
+        warnings_out = _task_io.validate_frontmatter(task)
+        assert not any("status" in w for w in warnings_out)
+
+    def test_postponed_leaf_excluded_from_frontier(self, tmp_path):
+        """A leaf task with status 'postponed' never appears on the frontier."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-active"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "Active", "not-started")
+        d2 = root_dir / "02-postponed"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "Postponed", "postponed")
+        root = _task_io.walk_plan(root_dir)
+        frontier = _task_io.compute_frontier(root)
+        paths = [t.path for t in frontier]
+        assert "01-active" in paths
+        assert "02-postponed" not in paths
+
+    def test_postponed_dependency_blocks_dependent(self, tmp_path):
+        """A task depending on a postponed sibling is blocked from the frontier."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-dep"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "Dep", "postponed")
+        d2 = root_dir / "02-downstream"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "Downstream", "not-started",
+                       depends_on=["01-dep"])
+        root = _task_io.walk_plan(root_dir)
+        frontier = _task_io.compute_frontier(root)
+        paths = [t.path for t in frontier]
+        assert "02-downstream" not in paths, (
+            "postponed dependency should block the dependent"
+        )
+
+    def test_archived_vs_postponed_dependency_differ(self, tmp_path):
+        """Regression guard: an archived dependency satisfies, postponed does not.
+
+        Same tree shape as the postponed case above, but with the dependency
+        'archived' — the dependent should be on the frontier here.
+        """
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-dep"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "Dep", "archived")
+        d2 = root_dir / "02-downstream"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "Downstream", "not-started",
+                       depends_on=["01-dep"])
+        root = _task_io.walk_plan(root_dir)
+        frontier = _task_io.compute_frontier(root)
+        paths = [t.path for t in frontier]
+        assert "02-downstream" in paths, (
+            "archived dependency should be treated as satisfied (unlike postponed)"
+        )
+
+
+class TestPostponedInRollup:
+    def _build_parent(self, tmp_path, child_statuses):
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        parent = root_dir / "01-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started")
+        for i, status in enumerate(child_statuses, start=1):
+            d = parent / f"{i:02d}-c"
+            d.mkdir()
+            _write_task_md(d / "task.md", f"c{i}", status)
+        root = _task_io.walk_plan(root_dir)
+        return root.children[0]
+
+    def test_approved_plus_postponed_rolls_up_approved(self, tmp_path):
+        """Parent with an approved child + a postponed child computes as approved."""
+        parent_task = self._build_parent(tmp_path, ["approved", "postponed"])
+        assert parent_task.effective_status() == "approved"
+
+    def test_all_postponed_rolls_up_postponed(self, tmp_path):
+        """When all children are postponed, parent computes as postponed."""
+        parent_task = self._build_parent(tmp_path, ["postponed", "postponed"])
+        assert parent_task.effective_status() == "postponed"
+
+    def test_archived_plus_postponed_rolls_up_postponed(self, tmp_path):
+        """All-parked branch with a postponed child rolls up to postponed."""
+        parent_task = self._build_parent(tmp_path, ["archived", "postponed"])
+        assert parent_task.effective_status() == "postponed"
+
+    def test_all_archived_rolls_up_archived(self, tmp_path):
+        """Unchanged: an all-archived branch (no postponed) rolls up to archived."""
+        parent_task = self._build_parent(tmp_path, ["archived", "archived"])
+        assert parent_task.effective_status() == "archived"
+
+
 # --- Cascade tests ---
 
 
@@ -2484,6 +2602,51 @@ class TestCascade:
         b = _task_io.parse_task(self.plan_root / "01-branch" / "02-leaf-b" / "task.md")
         assert a.status == "archived"
         assert b.status == "archived"
+
+    def test_cascade_postponed(self):
+        """--cascade postponed parks all non-archived descendant leaves."""
+        task_update.update_task(
+            self.plan_root, "01-branch",
+            status="postponed", cascade=True,
+        )
+        a = _task_io.parse_task(self.plan_root / "01-branch" / "01-leaf-a" / "task.md")
+        b = _task_io.parse_task(self.plan_root / "01-branch" / "02-leaf-b" / "task.md")
+        assert a.status == "postponed"
+        assert b.status == "postponed"
+
+    def test_cascade_postponed_leaves_archived_untouched(self):
+        """--cascade postponed parks non-archived leaves but leaves archived leaves archived."""
+        # Archive one leaf first
+        leaf_a = _task_io.parse_task(
+            self.plan_root / "01-branch" / "01-leaf-a" / "task.md"
+        )
+        leaf_a.status = "archived"
+        _task_io.write_task(leaf_a)
+        task_update.update_task(
+            self.plan_root, "01-branch",
+            status="postponed", cascade=True,
+        )
+        a = _task_io.parse_task(self.plan_root / "01-branch" / "01-leaf-a" / "task.md")
+        b = _task_io.parse_task(self.plan_root / "01-branch" / "02-leaf-b" / "task.md")
+        assert a.status == "archived", "archived leaf should not be parked by cascade postponed"
+        assert b.status == "postponed"
+
+    def test_cascade_not_started_resumes_postponed(self):
+        """--cascade not-started resumes postponed leaves (overwrites them)."""
+        # Park the subtree first
+        task_update.update_task(
+            self.plan_root, "01-branch",
+            status="postponed", cascade=True,
+        )
+        # Resume
+        task_update.update_task(
+            self.plan_root, "01-branch",
+            status="not-started", cascade=True,
+        )
+        a = _task_io.parse_task(self.plan_root / "01-branch" / "01-leaf-a" / "task.md")
+        b = _task_io.parse_task(self.plan_root / "01-branch" / "02-leaf-b" / "task.md")
+        assert a.status == "not-started"
+        assert b.status == "not-started"
 
     def test_cascade_rejected_for_in_progress(self):
         """--cascade with in-progress errors out."""
@@ -2706,6 +2869,25 @@ class TestTaskCheck:
         assert any(
             f.category == "dependency" and f.severity == "warning"
             and "archived" in f.message
+            for f in findings
+        )
+
+    def test_warns_postponed_dependency(self, tmp_path):
+        """Warns when a task depends on a postponed sibling (blocked until resumed)."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d1 = root_dir / "01-dep"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", "Dep", "postponed")
+        d2 = root_dir / "02-consumer"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "Consumer", "not-started",
+                       depends_on=["01-dep"])
+        findings = task_check.run_checks(root_dir, category="dependency")
+        assert any(
+            f.category == "dependency" and f.severity == "warning"
+            and "postponed" in f.message
             for f in findings
         )
 

@@ -154,6 +154,13 @@ def _check_deps_recursive(task: Task, findings: list[Finding]) -> None:
                         severity="warning",
                         message=f"depends on archived task '{dep}'",
                     ))
+                elif dep_task.effective_status() == "postponed":
+                    findings.append(Finding(
+                        task_path=child.path,
+                        category="dependency",
+                        severity="warning",
+                        message=f"depends on postponed task '{dep}' (blocked until resumed)",
+                    ))
 
     # Cycle detection at this sibling level
     cycle_warnings = detect_cycles(task.children)

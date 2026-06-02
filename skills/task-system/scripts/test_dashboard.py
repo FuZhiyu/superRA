@@ -104,6 +104,45 @@ def plan_root(tmp_path):
 
 
 @pytest.fixture
+def postponed_plan_root(tmp_path):
+    """Plan tree exercising postponed rendering: a postponed leaf, a sibling
+    blocked by a postponed dependency, an approved leaf, and a branch whose
+    children are all postponed (rolls up to postponed)."""
+    root = tmp_path / "superRA"
+    root.mkdir()
+    _write_task_md(root / "task.md", "Postponed Fixture Root", "in-progress",
+                   objective="Fixture tree for postponed rendering.")
+
+    leaf = root / "01-postponed-leaf"
+    leaf.mkdir()
+    _write_task_md(leaf / "task.md", "A postponed leaf", "postponed",
+                   objective="Parked leaf.")
+
+    blocked = root / "02-blocked-by-postponed"
+    blocked.mkdir()
+    _write_task_md(blocked / "task.md", "Blocked by postponed dep", "not-started",
+                   depends_on=["01-postponed-leaf"],
+                   objective="Depends on the postponed leaf.")
+
+    approved = root / "03-approved-leaf"
+    approved.mkdir()
+    _write_task_md(approved / "task.md", "An approved leaf", "approved",
+                   objective="Done work.")
+
+    branch = root / "04-postponed-branch"
+    branch.mkdir()
+    _write_task_md(branch / "task.md", "A postponed branch", "in-progress",
+                   objective="Branch with all children postponed.")
+    for child in ("a", "b"):
+        cd = branch / child
+        cd.mkdir()
+        _write_task_md(cd / "task.md", f"branch child {child}", "postponed",
+                       objective="Postponed child.")
+
+    return root
+
+
+@pytest.fixture
 def client(plan_root):
     """Create a TestClient with the dashboard server pointed at plan_root."""
     from starlette.testclient import TestClient
@@ -227,11 +266,11 @@ class TestServerRoutes:
         assert "mermaid" in resp.text
         assert "graph LR" in resp.text
 
-    def test_kanban_returns_6_columns(self, client):
+    def test_kanban_returns_7_columns(self, client):
         resp = client.get("/kanban")
         assert resp.status_code == 200
-        # Each column has a kanban-col-header; count those for the 6 statuses
-        assert resp.text.count("kanban-col-header") == 6
+        # Each column has a kanban-col-header; count those for the 7 statuses
+        assert resp.text.count("kanban-col-header") == 7
 
     def test_export_returns_attachment(self, client):
         """The Share route returns standalone HTML as a file download."""
@@ -776,6 +815,42 @@ class TestTemplateRendering:
         # 3 leaf tasks, 1 approved
         assert "1/3" in html
 
+    def test_postponed_excluded_from_summary_denominator(self, postponed_plan_root):
+        """Postponed leaves drop out of the active denominator, like archived,
+        and surface as a visible count pill."""
+        plan_dashboard.PLAN_ROOT = postponed_plan_root
+        plan_dashboard._project_root = str(postponed_plan_root.parent)
+        plan_dashboard.rebuild_tree()
+        html = plan_dashboard._render_summary()
+        # Leaves: 01 postponed, 02 not-started, 03 approved, branch a/b postponed.
+        # active = 5 - 3 postponed = 2; approved = 1 -> 1/2.
+        assert "1/2" in html
+        assert "<strong>3</strong> postponed" in html
+
+    def test_postponed_kanban_column_holds_postponed_leaves(self, postponed_plan_root):
+        plan_dashboard.PLAN_ROOT = postponed_plan_root
+        plan_dashboard._project_root = str(postponed_plan_root.parent)
+        plan_dashboard.rebuild_tree()
+        env = plan_dashboard._get_jinja_env()
+        template = env.get_template("kanban.html")
+        all_tasks = _task_io.collect_all_tasks(plan_dashboard._root_task)
+        html = template.render(all_tasks=all_tasks)
+        # The Postponed column exists and carries the postponed leaf + branch children.
+        post_col = html.split('<div class="kanban-col">')
+        post_col = next(p for p in post_col if p.lstrip().startswith("<div class=\"kanban-col-header\">\n      Postponed"))
+        assert "01-postponed-leaf" in post_col
+        assert "04-postponed-branch/a" in post_col
+        assert "04-postponed-branch/b" in post_col
+
+    def test_postponed_renders_badge_and_status(self, postponed_plan_root):
+        plan_dashboard.PLAN_ROOT = postponed_plan_root
+        plan_dashboard._project_root = str(postponed_plan_root.parent)
+        plan_dashboard.rebuild_tree()
+        task = plan_dashboard._task_index["01-postponed-leaf"]
+        html = plan_dashboard._render_task_node(task)
+        assert "badge-postponed" in html
+        assert 'data-status="postponed"' in html
+
     def test_vscode_link_filter(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard._project_root = str(plan_root.parent)
@@ -814,7 +889,7 @@ class TestTemplateRendering:
         # not prematurely close the payload container.
         assert "<\\/script>" in html
 
-    def test_kanban_has_6_status_columns(self, plan_root):
+    def test_kanban_has_7_status_columns(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
         plan_dashboard._project_root = str(plan_root.parent)
         plan_dashboard.rebuild_tree()
@@ -822,7 +897,7 @@ class TestTemplateRendering:
         template = env.get_template("kanban.html")
         all_tasks = _task_io.collect_all_tasks(plan_dashboard._root_task)
         html = template.render(all_tasks=all_tasks)
-        assert html.count("kanban-col-header") == 6
+        assert html.count("kanban-col-header") == 7
 
     def test_dag_has_dependency_arrows(self, plan_root):
         plan_dashboard.PLAN_ROOT = plan_root
