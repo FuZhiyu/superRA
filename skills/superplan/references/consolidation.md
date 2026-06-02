@@ -21,8 +21,8 @@ Consolidation is warranted when the tree has grown through ad-hoc additions, sco
 
 Read every `task.md` in the tree and build a structural picture:
 
-1. **Run `task_query.py --tree`** to see the current structure and status distribution.
-2. **Run `task_query.py --dag`** to see the dependency graph.
+1. **Run `superra task tree`** to see the current structure and status distribution.
+2. **Run `superra task dag`** to see the dependency graph.
 3. **Map each task's scope:** objective, declared inputs/outputs, `depends_on`, status.
 4. **Build a relationship matrix:** For each pair of tasks at the same level, note shared inputs, shared outputs, sequential logic, and overlapping scope.
 5. **Identify issues** from the list below and classify each.
@@ -45,7 +45,7 @@ For each identified issue, classify the action:
 
 **Merge:** Rewrite the surviving task's objective to cover both scopes (self-sufficient, not patched). Use the more conservative status of the two tasks. Update all sibling `depends_on` references that pointed to the removed task. Delete the absorbed task's directory.
 
-**Link:** Update `depends_on` frontmatter via `task_link.py`. No objective rewrite needed unless the dependency changes the task's scope.
+**Link:** Update `depends_on` frontmatter via `superra task dep add` / `superra task dep remove`. No objective rewrite needed unless the dependency changes the task's scope.
 
 **Prune:** Delete the task directory entirely. Update siblings whose `depends_on` referenced the pruned task. If the pruned task had dependents, reassess whether those dependents' objectives still make sense.
 
@@ -61,7 +61,7 @@ Consolidation changes the tree structure. Present a proposal before executing.
 
 **Proposal format:**
 
-1. Show the current tree (`task_query.py --tree`).
+1. Show the current tree (`superra task tree`).
 2. Show the proposed tree (text sketch of the new structure).
 3. For each change: state the action (merge/link/prune/split/flatten/restructure), identify which tasks are affected, and explain why.
 4. Ask for user approval before executing any changes.
@@ -72,7 +72,7 @@ Example:
 The task tree has accumulated some structural debt. Here is my consolidation proposal:
 
 Current tree:
-<output of task_query.py --tree>
+<output of superra task tree>
 
 Proposed changes:
 1. [Merge] "01-load-raw" + "02-load-clean" -> "01-load" — both load the same
@@ -93,7 +93,7 @@ Wait for explicit approval. A passing remark is not authorization — confirm in
 
 After approval:
 
-1. **Apply changes** using the task-system CLI tools (`task_create.py`, `task_rename.py`, `task_link.py`) and direct file edits for objective rewrites. Apply in dependency order: links and restructures first, then merges and splits, then prunes last (so `depends_on` references are updated before the referenced tasks disappear).
+1. **Apply changes** using the task-system CLI tools (`superra task create`, `superra task rename`, `superra task dep add` / `superra task dep remove`) and direct file edits for objective rewrites. Apply in dependency order: links and restructures first, then merges and splits, then prunes last (so `depends_on` references are updated before the referenced tasks disappear).
 
 2. **Status cascading:**
    - Merge: use the more conservative status of the two tasks.
@@ -104,9 +104,9 @@ After approval:
 3. **Verify the result:**
    ```bash
    # Check tree structure
-   python3 <skill-dir>/scripts/task_query.py --plan-root superRA --tree
+   superra task tree --root superRA
    # Check for cycles and broken dependencies
-   python3 <skill-dir>/scripts/task_query.py --plan-root superRA --dag
+   superra task dag --root superRA
    ```
    Confirm: no cycles, no broken `depends_on`, no orphans with missing links, structure matches the approved proposal.
 
@@ -117,7 +117,7 @@ After approval:
    plan: consolidate task tree — <one-line summary of changes>
    ```
 
-6. **Rebuild dashboard** if one exists (`plan_dashboard.py`).
+6. **Launch the dashboard** if needed (`superra dashboard --root superRA`).
 
 ## Standalone vs Integration Use
 

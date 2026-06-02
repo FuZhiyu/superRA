@@ -2,6 +2,20 @@
 
 Load this reference when modifying the task-system skill itself — scripts, data layer, hooks, or migration logic.
 
+## Setup: the `superra` CLI
+
+The scripts here are packaged as `superra-task-system` (`pyproject.toml` in the skill directory), exposing one `superra` console entry point (`[project.scripts]` → `superra_task_system.cli:main`).
+
+Install it as a standalone command on PATH:
+
+```bash
+uv tool install ./skills/task-system           # installs the `superra` executable (~/.local/bin/superra)
+uv tool install --force ./skills/task-system   # reinstall to pick up source edits
+uv tool uninstall superra-task-system          # remove
+```
+
+`uv tool install` installs a snapshot, so while iterating on the source, skip the install and run from the live checkout instead — see `CLAUDE.md §Local Task-System CLI Development` (the `uv run --project skills/task-system superra …` form), which always uses the edited source.
+
 ## Data Layer: `_task_io.py`
 
 All scripts share `_task_io.py` as the data layer. It provides:
@@ -80,7 +94,7 @@ It does not use a YAML library — the parser is minimal and purpose-built.
 `task_hook.py` is the task system's PostToolUse hook, wired in `hooks/hooks.json` under two matchers:
 
 - **`Edit|Write`** — fires when a `task.md` is edited directly, reconciling from the edited file's plan root.
-- **`Bash`** — fires when a shell command both references `superRA` and contains a filesystem-mutating verb (`mv`, `git mv`, `rm`, `rmdir`, `cp`, `mkdir`), so a plain `mv` reorganization of the tree stays validated. Read-only `superRA` commands (`task_query.py`, `grep superRA`, `superRA/serve`) fail the verb test and early-exit.
+- **`Bash`** — fires when a shell command both references `superRA` and contains a filesystem-mutating verb (`mv`, `git mv`, `rm`, `rmdir`, `cp`, `mkdir`), so a plain `mv` reorganization of the tree stays validated. Read-only `superRA` commands (`superra task tree`, `grep superRA`) fail the verb test and early-exit.
 
 On a match the hook runs the same best-effort reconcile — `validate_plan` (warnings to stderr), `propagate_parent_status`, `generate_dashboard` — each in its own try/except, never blocking, always exit 0. See `task_hook.py` for the gating regexes and plan-root discovery, and `hooks/hooks.json` for the wiring.
 
@@ -93,7 +107,7 @@ The Codex and Cursor hook configs (`hooks/hooks-codex.json`, `hooks/hooks-cursor
 ### From legacy PLAN.md + RESULTS.md to superRA/
 
 ```bash
-python3 <skill-dir>/scripts/plan_migrate.py \
+superra task migrate from-plan \
   --plan-md PLAN.md --results-md RESULTS.md --output superRA
 ```
 
@@ -153,21 +167,52 @@ Checkbox variants like `- [~]`, `- [-]`, or `- [X ]` (with extra space) are not 
 
 **Slugification** — `slugify()` lowercases, strips non-word characters, replaces whitespace/underscores with hyphens, and truncates to 60 characters. Directory names are `NN-slug` (zero-padded task number prefix).
 
-**Normalization vs manual migration:** When the PLAN.md structure diverges significantly (no numbered task headings, deeply nested prose, ≤3 tasks), manual migration using `task_create.py` is faster than reformatting the file to match parser expectations. See `SKILL.md` §Preparing a PLAN.md for migration for the normalization checklist and manual procedure.
+### Preparing a legacy PLAN.md for migration
+
+Before running the migrator, verify compatibility.
+
+**Quick check — does the script see your tasks?**
+
+```bash
+grep -c '^### Task [0-9]*:' PLAN.md
+```
+
+If the count does not match the number of tasks in the file, the PLAN.md needs normalization or manual migration.
+
+**Normalization checklist** (for files that diverge from the parser expectations above):
+
+1. Renumber task headings to `### Task 1: Title`, `### Task 2: Title`, etc.
+2. Fix heading levels — tasks must be `###` (not `##` or `####`).
+3. Add missing metadata fields with safe defaults: `**Depends on:** *(none)*`, `**Script:** *(none)*`.
+4. Standardize checkboxes to `- [x]` (done) or `- [ ]` (not done) — markers like `[~]` or `[-]` are not recognized.
+5. If RESULTS.md exists, ensure headings match: `## Task N: Title` with the same numbering.
+
+**Normalization vs manual migration:** When the PLAN.md structure diverges significantly (no numbered task headings, deeply nested prose, ≤3 tasks), manual migration is faster than reformatting the file to match parser expectations:
+
+1. Create `superRA/` and its root `task.md` (or use `superra task create` for children).
+2. For each logical task, create a child directory and write `task.md` directly — see `SKILL.md §Task File Format` for the template.
+3. Run `superra dashboard --root superRA` to launch the dashboard.
 
 ### Upgrade from v1 to v2 format
 
 ```bash
-python3 <skill-dir>/scripts/plan_migrate.py --upgrade --plan-root superRA
+superra task migrate upgrade --root superRA
 ```
 
 Converts `## Steps` (checkboxes) to `## Objective` (prose), removes redundant `# Title` headings. Idempotent — safe to run multiple times.
 
 ## Dashboard: `plan_dashboard.py`
 
-The dashboard is a live-updating server (FastAPI + SSE), not a static HTML file. The primary launch method is `bash superRA/serve`; agents use `uv run <skill-dir>/scripts/plan_dashboard.py serve --root superRA/`. The static `generate` subcommand is deprecated.
+The dashboard is a live-updating server (FastAPI + SSE), not a static HTML file.
 
-For CLI usage, view options, and `superRA/serve` details, see `SKILL.md` §Dashboard — that section is authoritative.
+```bash
+superra dashboard --root superRA                                     # installed package
+uv run --project skills/task-system superra dashboard --root superRA  # local checkout
+```
+
+Task trees no longer carry a committed `serve` launcher script; the packaged `superra dashboard` command resolves `plan_dashboard.py` itself. Use the `uv run --project skills/task-system` form against a local checkout so edits are picked up from the live source, and the installed `superra dashboard` form for installed plugin/package sources.
+
+The server provides SSE hot-reload — it auto-updates when task files change. Port is derived deterministically from the plan root path (range 8100–8999), so multiple worktrees can each run their own dashboard without conflicts. Use `--port N` to override. The static `generate` subcommand is deprecated — use the live `superra dashboard`, or `superra dashboard export --output dashboard.html` for a one-off static file.
 
 **Auto-rebuild.** Mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) trigger dashboard regeneration after completing their mutation. The SSE-based live server also watches for file changes and pushes updates to connected browsers.
 

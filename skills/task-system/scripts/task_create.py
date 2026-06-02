@@ -4,41 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import TASK_ROOT_DIRNAME, today_str
-
-
-SERVE_SCRIPT_TEMPLATE = """\
-#!/usr/bin/env bash
-# Launch the task-tree dashboard for this task-root directory.
-PLAN_DIR="$(cd "$(dirname "$0")" && pwd)"
-DASHBOARD="$PLAN_DIR/{dashboard_relpath}"
-if [ ! -f "$DASHBOARD" ]; then
-  echo "Error: plan_dashboard.py not found at $DASHBOARD" >&2
-  exit 1
-fi
-exec uv run "$DASHBOARD" serve --root "$PLAN_DIR" "$@"
-"""
-
-
-def _maybe_generate_serve_script(plan_root: Path) -> None:
-    """Generate the task-root serve shortcut if it does not already exist.
-
-    Uses a relative path from the task root to the dashboard script in this repo.
-    """
-    serve_path = plan_root / "serve"
-    if serve_path.exists():
-        return
-    dashboard = Path(__file__).parent / "plan_dashboard.py"
-    dashboard_relpath = os.path.relpath(dashboard.resolve(), plan_root.resolve())
-    content = SERVE_SCRIPT_TEMPLATE.format(dashboard_relpath=dashboard_relpath)
-    serve_path.write_text(content, encoding="utf-8")
-    serve_path.chmod(0o755)
-    print(f"Created {serve_path}")
+from _task_io import TASK_ROOT_DIRNAME, propagate_parent_status, today_str
 
 
 TASK_TEMPLATE = """\
@@ -151,12 +121,9 @@ def create_task(
 
     print(f"Created {task_md}")
 
-    # Generate the serve shortcut when creating a root-level task in a fresh task root.
-    if "/" not in task_path:
-        try:
-            _maybe_generate_serve_script(plan_root)
-        except Exception:
-            pass
+    # Propagate parent chain status now that a new not-started child exists.
+    # This mirrors the same call in task_update.py and task_hook.py.
+    propagate_parent_status(plan_root, task_path)
 
     try:
         from plan_dashboard import generate_dashboard

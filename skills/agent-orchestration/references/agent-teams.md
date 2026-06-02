@@ -141,7 +141,7 @@ Do not hand-roll worktree setup or data-copy scripts.
 
 After agents return:
 
-1. Read each `**Doc edits:**` line and summary to understand what changed.
+1. Read each agent's commit body to understand what changed.
 2. Check for conflicts — did agents edit the same code?
 3. Run the full pipeline to verify fixes work together.
 4. Spot check — agents can make systematic errors.

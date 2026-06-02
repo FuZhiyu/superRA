@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Stable PostToolUse entry point for task-tree reconciliation.
+#
+# Prefer the packaged CLI so hook manifests do not point at source scripts.
+# Fall back to the direct script path for transition compatibility and for
+# environments where uv is not available yet.
+
+set -uo pipefail
+
+input=$(cat)
+
+case "$0" in
+  */*) SCRIPT_DIR=${0%/*} ;;
+  *) SCRIPT_DIR=. ;;
+esac
+SCRIPT_DIR="$(cd "$SCRIPT_DIR" && pwd)"
+PLUGIN_ROOT_VALUE="${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${SCRIPT_DIR%/hooks}}}"
+TASK_SYSTEM_SOURCE="$PLUGIN_ROOT_VALUE/skills/task-system"
+DIRECT_HOOK="$TASK_SYSTEM_SOURCE/scripts/task_hook.py"
+
+if command -v uvx >/dev/null 2>&1 && [ -f "$TASK_SYSTEM_SOURCE/pyproject.toml" ]; then
+  uv_stderr=$(mktemp 2>/dev/null || printf '')
+  if [ -n "$uv_stderr" ]; then
+    printf '%s' "$input" | uvx --from "$TASK_SYSTEM_SOURCE" superra task hook post-tool-use 2>"$uv_stderr"
+  else
+    printf '%s' "$input" | uvx --from "$TASK_SYSTEM_SOURCE" superra task hook post-tool-use 2>/dev/null
+  fi
+  rc=$?
+  if [ $rc -eq 0 ]; then
+    [ -n "$uv_stderr" ] && cat "$uv_stderr" >&2
+    [ -n "$uv_stderr" ] && rm -f "$uv_stderr"
+    exit 0
+  fi
+  [ -n "$uv_stderr" ] && rm -f "$uv_stderr"
+fi
+
+if command -v python3 >/dev/null 2>&1 && [ -f "$DIRECT_HOOK" ]; then
+  printf '%s' "$input" | python3 "$DIRECT_HOOK"
+  exit 0
+fi
+
+printf '{}\n'
+exit 0

@@ -169,21 +169,19 @@ def render_direct_mode_ref(repo_root: Path, spec: RoleSpec) -> str:
     _, _, body = read_agent_markdown(source_path)
     preface, sections = split_top_level_sections(body)
 
-    # `## Dispatch Inputs` in the source describes the subagent dispatch
-    # contract; direct mode has no dispatch, so we drop that section and
-    # substitute a direct-mode-specific `## Before You Start`. Other
-    # subagent-only fragments (dispatch prompts, re-dispatch deltas,
-    # Worktree: fields) leak into the retained sections and are rewritten
-    # below by `cleanup_*_handoff` before being spliced in.
+    # The source `## Before You Start` opens with a one-line note on the
+    # subagent dispatch prompt; direct mode has no dispatch, so we substitute
+    # a direct-mode-specific `## Before You Start`. The §How You Fix opener also
+    # references subagent-only dispatch wording (first dispatch, re-dispatch
+    # delta) and is rewritten below by `cleanup_implementer_handoff` before the
+    # section is spliced in.
     if "implementer" in spec.codex_name:
         before_you_start = render_implementer_direct_mode_before_you_start()
-        handoff = cleanup_implementer_handoff(
-            sections["## Handoff — Unified Across Stages"]
-        )
+        handoff = cleanup_implementer_handoff(sections["## Handoff"])
         tail_sections = (
             sections["## Execution Protocol"],
+            sections["## Self-Check"],
             handoff,
-            sections["## Pre-Commit Self-Check"],
             sections["## Escalation"],
         )
     else:
@@ -191,13 +189,17 @@ def render_direct_mode_ref(repo_root: Path, spec: RoleSpec) -> str:
         review_protocol = sections["## Review Protocol"].replace(
             "reviewer dispatches are costly", "review passes are costly"
         )
-        role_section = sections["## Handoff — Unified Across Stages"].replace(
-            "\n\nIf your dispatch prompt does not specify a stage, default to "
+        handoff = sections["## Handoff"].replace(
+            " If your dispatch prompt does not specify a stage, default to "
             "**ad-hoc** (report-only).",
             "",
         )
-        role_section = strip_subsection(role_section, "### Report Format")
-        tail_sections = (review_protocol, role_section)
+        tail_sections = (
+            review_protocol,
+            sections["## Self-Check"],
+            handoff,
+            sections["## Report Format"],
+        )
 
     header = "\n".join(
         [
@@ -309,8 +311,8 @@ def render_implementer_direct_mode_before_you_start() -> str:
 In direct mode there is no dispatch prompt. Task context comes from the task's `task.md`, the current session, and the current branch state.
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references.
-2. **Read your task via `task_read.py --path <path>`.** This gives you the full task content with its context (a focused tree showing your position plus the ancestor objectives) and sibling dependency status automatically.
-3. **Apply the scoped conventions in your inherited context before editing any file.** `task_read.py` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections — that inherited context is your convention source. If the ancestor chain does not cover a convention the touched files need, walk the relevant directories on-demand, apply what you find, and flag the omission in your status return.
+2. **Read your task via `superra task read <path>`.** This gives you the full task content with its context (a focused tree showing your position plus the ancestor objectives) and sibling dependency status automatically.
+3. **Apply the scoped conventions in your inherited context before editing any file.** `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections — that inherited context is your convention source. If the ancestor chain does not cover a convention the touched files need, walk the relevant directories on-demand, apply what you find, and flag the omission in your status return.
 4. **Ask questions** before starting if anything is unclear about data sources, methodology, repo conventions, or upstream dependencies.
 
 The editing discipline you will need at the end of the task lives in §Handoff below; read it when you are ready to update the task, not at dispatch time."""
@@ -322,9 +324,11 @@ def render_reviewer_direct_mode_before_you_start() -> str:
 In direct mode there is no dispatch prompt. Review scope comes from the task's `task.md`, the current branch state, and, for planning review, the assigned task/subtree and context.
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:` before opening any code, and follow each loaded skill's own stage/role load map for reviewer references. You walk the same `[BLOCKING]` / `[ADVISORY]` checklist the implementer walked as self-check — one source of truth, two perspectives.
-2. **Read your task via `task_read.py --path <path>`.** Read the task content, implementation results where applicable, and any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations).
-3. **Hold the work to the scoped conventions in your inherited context** as the review standard for codebase-fit findings — code that ignores an inherited convention is a MAJOR integration-review finding. `task_read.py` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections. If the ancestor chain does not cover a convention the changed files need, walk on-demand starting from every touched directory and flag the omission in your status return.
+2. **Read your task via `superra task read <path>`.** Read the task content, implementation results where applicable, and any existing `## Review Notes` (with `→ implemented:` and `→ orchestrator:` annotations).
+3. **Hold the work to the scoped conventions in your inherited context** as the review standard for codebase-fit findings — code that ignores an inherited convention is a MAJOR integration-review finding. `superra task read` renders each ancestor objective, including its `### Conventions` / `### Context` / `### Constraints` subsections. If the ancestor chain does not cover a convention the changed files need, walk on-demand starting from every touched directory and flag the omission in your status return.
 4. **Read the actual code.** Do not trust summaries, reports, or claims from the implementer. Verify independently.
+
+At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of the implementation protocol below.
 
 The editing discipline you will need when writing review notes lives in §Handoff below; read it when you are ready to update the task."""
 
@@ -357,50 +361,7 @@ def cleanup_implementer_handoff(section: str) -> str:
         )
     section = section.replace(source_opener, direct_opener)
 
-    # Drop the Parallel worktree dispatch paragraph entirely — Worktree: is
-    # a subagent dispatch field.
-    worktree_block = (
-        "\n\n**Parallel worktree dispatch (`Worktree:` field set).** Return the "
-        "`<current-branch>-agent/parallel/<slug>` branch name and HEAD SHA in your status "
-        "report. Do not merge, rebase, push, or touch worktree lifecycle — the "
-        "orchestrator owns harvest-out."
-    )
-    if worktree_block not in section:
-        raise ValueError(
-            "cleanup_implementer_handoff: expected Parallel worktree dispatch "
-            "paragraph not found; source may have been reworded."
-        )
-    section = section.replace(worktree_block, "")
     return section
-
-
-def strip_subsection(section: str, heading: str) -> str:
-    lines = section.splitlines(keepends=True)
-    start = find_heading_line(lines, heading)
-    if start is None:
-        return section
-
-    level = heading_level(heading)
-    end = len(lines)
-    for index in range(start + 1, len(lines)):
-        line = lines[index]
-        if line.startswith("#") and heading_level(line.rstrip()) <= level:
-            end = index
-            break
-
-    stripped = "".join(lines[:start] + lines[end:]).rstrip()
-    return re.sub(r"\n{3,}", "\n\n", stripped)
-
-
-def find_heading_line(lines: list[str], heading: str) -> int | None:
-    for index, line in enumerate(lines):
-        if line.rstrip() == heading:
-            return index
-    return None
-
-
-def heading_level(line: str) -> int:
-    return len(line) - len(line.lstrip("#"))
 
 
 def escape_toml_basic_string(value: str) -> str:

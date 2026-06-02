@@ -119,14 +119,14 @@ At thorough depth, Phase 4 gains a planning-review step between self-review and 
 
 Dispatch a canonical reviewer using `agent-orchestration` §Dispatch Templates.
 
-The reviewer needs the context used to make design decisions: the exploration synthesis for handoff-readiness, and the relevant design rationale or domain context for design-review. `task_check.py` is a structural preflight, not the semantic review.
+The reviewer needs the context used to make design decisions: the exploration synthesis for handoff-readiness, and the relevant design rationale or domain context for design-review. `superra task check` is a structural preflight, not the semantic review.
 
 **What the reviewer evaluates:**
 
 - **Handoff-readiness:** clarity, completeness, human readability, internal consistency, dependency sanity, objective/guidance split, and whether an implementer could execute the assigned task or subtree from the task files plus provided context.
 - **Design review:** objective fit of the proposed architecture, decomposition, assumptions, artifact pipeline, dependency structure, domain reasoning, and unresolved tradeoffs.
 
-Use the assigned target's `## Review Notes`; do not create a new notes section. On REVISE, the reviewer writes numbered `[BLOCKING]` / `[ADVISORY]` findings there, linking child task files when a finding concerns a descendant. The planner fixes the task tree inline. On re-review, the reviewer deletes fixed items; on APPROVE, the reviewer removes `## Review Notes`. Planning review never changes task `status:`.
+The planner fixes the task tree inline against the reviewer's findings. The reviewer's own execution mechanics — verdict, note ownership, what it may and may not edit — live in [planning-review.md](planning-review.md), loaded by the reviewer at `Stage: planning-review`.
 
 ## Incremental Refinement
 

@@ -12,6 +12,17 @@ When modifying superRA itself — skills, hooks, agents, harness adapters, or in
 - **Verify behavior, not just prose.** For skill or workflow changes, run at least one realistic harness session or script-level verification that exercises the changed path.
 - **Preserve user-facing/internal separation.** `README.md` explains what superRA is and why a researcher would use it. This file explains how contributors keep the internals coherent.
 
+## Local Task-System CLI Development
+
+When developing this checkout, run the task-system CLI from the live package source:
+
+```bash
+uv run --project skills/task-system superra task frontier
+uv run --project skills/task-system superra dashboard
+```
+
+This keeps agents on the edited checkout instead of a cached or installed package. Use `uvx --refresh --from ./skills/task-system ...` only for install-style smoke tests. The optional repo-local wrapper `./superRA/superra` follows the same rule and dispatches to `uv run --project "$(repo-root)/skills/task-system" superra "$@"`.
+
 ## Internal Design Philosophy
 
 superRA should be adaptive and composable rather than rigid. It gives agents mechanisms and protocols they can assemble for the current research situation; it should not encode a scenario tree for every contingency.
@@ -65,16 +76,19 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Concern | Owner |
 | --- | --- |
 | Phase choreography, stop points, task/status transitions | `superplan`, `superimplement`, `superintegrate` |
+| Planning-review reviewer mechanics (mode, verdict, note ownership at `Stage: planning-review`) | `skills/superplan/references/planning-review.md` (planner-facing dispatch context stays in `thorough-planning.md` §Planning Review) |
 | Cross-stage orchestration, dispatch-prompt shape, relay protocol, verdict adjudication | `agent-orchestration` |
 | Execution modes and Skill-Load Manifest | `using-superra` |
 | Domain discipline, domain gates, pitfalls, stage-scoped domain references — including, for `theory-modeling`, both creation-time four-gate discipline and task-level rewriting and document-internal coherence (objective-first structural rewriting, per-step local obviousness, notation/prior-result reuse, reader-perspective discipline) | The relevant domain skill, e.g. `econ-data-analysis` or `theory-modeling` |
 | Semantic-coherence techniques — intent investigation, role classification, conflict resolution, intent-changing escalation, stale-reference sweep, workflow/standalone sync modes, Sync Map + task-local Sync impact formats | `semantic-merge` |
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
-| Task anatomy, field notes, results shape, stale-content rules | `task-system` (references/planning.md) |
+| Universal task read/edit interface — read a task with injected context, edit body sections, shared editing principles, ownership-boundary principle | `using-superra` (§Task Interface) |
+| Tree tooling — concepts, query/frontier/DAG, dashboard, migration; full mutation command surface | `task-system/SKILL.md` (load-on-demand), commands in `references/commands.md` |
+| Task anatomy, field notes, results shape, status enum/lifecycle, body-section vocabulary, stale-content rules, planner-owned fields | `task-system` (references/planning.md) |
 | Markdown style guide rules — file-link citations plus figures, math, and tables | `report-in-markdown` |
 | Harness-specific tool names and runtime differences | Adapter references under `skills/using-superRA/references/` |
-| Canonical role behavior | `agents/implementer.md` and `agents/reviewer.md` |
+| Canonical role behavior, including each role's concrete task ownership (what it owns + status transitions) | `agents/implementer.md` and `agents/reviewer.md` |
 
 ## Architectural Patterns
 

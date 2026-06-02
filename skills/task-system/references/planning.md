@@ -19,7 +19,7 @@ Load this reference when you are an orchestrator or planner creating, restructur
 
 **Include enough context that an implementer with zero project context can work independently** after reading this task's objective plus the ancestor chain up to the root.
 
-**Scoped context lives on the lowest ancestor whose subtree it governs.** The task tree is recursive — any task can carry context for its subtree, and the top task is not a special semantic owner. When a convention, constraint, or piece of context changes what an implementation or review agent does, place it in the `## Objective` of the lowest task whose subtree it applies to, under a scoped `### Context`, `### Conventions`, or `### Constraints` subsection. Project-wide conventions belong on the top task's objective; conventions that govern only one data source, model, manuscript, or workstream belong on that subtree's objective. `task_read.py` renders each ancestor's full `## Objective` (nested `###` subsections included) into the dispatched agent's context, so an agent inherits exactly the scoped context above its task without re-walking the tree.
+**Scoped context lives on the lowest ancestor whose subtree it governs.** The task tree is recursive — any task can carry context for its subtree, and the top task is not a special semantic owner. When a convention, constraint, or piece of context changes what an implementation or review agent does, place it in the `## Objective` of the lowest task whose subtree it applies to, under a scoped `### Context`, `### Conventions`, or `### Constraints` subsection. Project-wide conventions belong on the top task's objective; conventions that govern only one data source, model, manuscript, or workstream belong on that subtree's objective. `superra task read` renders each ancestor's full `## Objective` (nested `###` subsections included) into the dispatched agent's context, so an agent inherits exactly the scoped context above its task without re-walking the tree.
 
 `## Planner Guidance` is optional and advisory. Use it for suggested routes, candidate files, prior exploration notes, likely sequence, implementation hints, and other context the implementer may adapt or ignore while satisfying `## Objective`.
 
@@ -92,38 +92,35 @@ When creating `superRA/` from existing work (code already written, results alrea
 4. Set status to `approved` for tasks whose work is complete and verified
 5. Set status to `implemented` for tasks whose work is done but not yet reviewed
 6. Populate `## Results` from existing findings
-7. Run `plan_dashboard.py` to generate the dashboard
+7. Run `superra dashboard --root superRA` to launch the dashboard
 
 ## Hierarchy Management Commands
 
 ### Create a task
 
 ```bash
-python3 <skill-dir>/scripts/task_create.py \
-  --plan-root superRA --path 01-data/03-filter \
+superra task create 01-data/03-filter \
+  --root superRA \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
   --guidance "Consider reusing the sample filter helper in Code/common.py." \
   --depends-on 02-merge
 ```
 
-`task_create.py` auto-fills the template with current dates and frontmatter defaults (`status: not-started`). `--guidance` is optional; omitted guidance creates no empty section.
+`superra task create` auto-fills the template with current dates and frontmatter defaults (`status: not-started`). `--guidance` is optional; omitted guidance creates no empty section.
 
 ### Rename a task (cascades to sibling depends_on)
 
 ```bash
-python3 <skill-dir>/scripts/task_rename.py \
-  --plan-root superRA --from 01-data/01-load --to 01-data/01-load-raw
+superra task rename 01-data/01-load 01-data/01-load-raw --root superRA
 ```
 
 ### Manage dependencies
 
 ```bash
-python3 <skill-dir>/scripts/task_link.py \
-  --plan-root superRA --path 01-data/03-filter --depends-on 02-merge
+superra task dep add 01-data/03-filter 02-merge --root superRA
 
-python3 <skill-dir>/scripts/task_link.py \
-  --plan-root superRA --path 01-data/03-filter --depends-on 02-merge --remove
+superra task dep remove 01-data/03-filter 02-merge --root superRA
 ```
 
 ## Field-by-Field Notes
@@ -139,7 +136,7 @@ python3 <skill-dir>/scripts/task_link.py \
 
 ## Context and Conventions
 
-Reusable context and conventions are captured once, on the objective of the task whose subtree they govern, so dispatched agents inherit them through `task_read.py`'s Context block — a focused tree (the task's position, siblings, and direct children) followed by the ancestor objectives — instead of re-walking the project tree. The planner walks the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) during planning and distills what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections of the relevant task objective.
+Reusable context and conventions are captured once, on the objective of the task whose subtree they govern, so dispatched agents inherit them through `superra task read` — a focused tree (the task's position, siblings, and direct children) followed by the ancestor objectives — instead of re-walking the project tree. The planner walks the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) during planning and distills what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections of the relevant task objective.
 
 **Discipline:**
 - Place each convention at the lowest task whose subtree it governs (see §Writing Objectives).

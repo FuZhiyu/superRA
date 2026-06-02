@@ -86,7 +86,7 @@ Before defining tasks, map out the artifact pipeline:
 - What files are inputs? Where do outputs go?
 - Follow existing project conventions for directory structure.
 
-**Walk the project guidance docs and distill them into scoped objective context.** Before drafting tasks, walk up from every directory the task tree will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the tasks will load from. Distill what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections, placing each on the `## Objective` of the lowest task whose subtree it governs (see `task-system/references/planning.md` §Context and Conventions). Dispatched agents inherit these through `task_read.py`'s Context block rather than re-walking the tree.
+**Walk the project guidance docs and distill them into scoped objective context.** Before drafting tasks, walk up from every directory the task tree will touch and `Read` every `CLAUDE.md` / `AGENTS.md` / `README.md` you encounter along the path; also read the repo-root `CLAUDE.md` and every `README.md` in a data directory the tasks will load from. Distill what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections, placing each on the `## Objective` of the lowest task whose subtree it governs (see `task-system/references/planning.md` §Context and Conventions). Dispatched agents inherit these through `superra task read` rather than re-walking the tree.
 
 **Pipeline file (required for multi-artifact work):** If the work involves more than one script or executable artifact, include a pipeline file that runs all artifacts in the correct order — a single entry point that reproduces every output from source. The pipeline file must run scripts in dependency order, fail fast on errors (`set -e` or equivalent), be committed to version control, and be updated whenever a new script is added.
 
@@ -98,11 +98,11 @@ For the objective writing guide and task splitting heuristics, see `task-system/
 
 ### Creating Tasks
 
-Use `task_create.py` to create tasks (auto-fills template with dates, frontmatter defaults):
+Use `superra task create` to create tasks (auto-fills template with dates, frontmatter defaults):
 
 ```bash
-python3 <skill-dir>/scripts/task_create.py \
-  --plan-root superRA --path 01-data/03-filter \
+superra task create 01-data/03-filter \
+  --root superRA \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
   --guidance "Consider reusing Code/common_filters.py." \
@@ -133,8 +133,7 @@ For the canonical task structure — recursive task anatomy and field-by-field n
 ### Create the `superRA/` Directory
 
 1. Create `superRA/task.md` (top task) with `## Objective` carrying the project-level goal, methodology, scope, and any project-wide scoped `### Conventions` / `### Context` / `### Constraints` subsections.
-2. Generate `superRA/serve` — a short shell script that launches the dashboard. Resolve `<skill-dir>/scripts/plan_dashboard.py` to a relative path from `superRA/` and write it into the script. (If using `task_create.py` to create root-level tasks, this is handled automatically.)
-3. Create child task directories with full objectives per §Task Structure above.
+2. Create child task directories with full objectives per §Task Structure above.
 
 ## Phase 4: Review & Commit
 
@@ -164,7 +163,7 @@ Skip this step at quick and standard depth unless the user explicitly asks for a
 
 ### User Review
 
-Verify the task tree aligns with the user's intent. Present the tree (via `task_query.py --tree`) and surface remaining open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way. Present tradeoffs as options, not assertions. If you have no genuine questions, the tree presentation itself is the review.
+Verify the task tree aligns with the user's intent. Present the tree (via `superra task tree`) and surface remaining open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way. Present tradeoffs as options, not assertions. If you have no genuine questions, the tree presentation itself is the review.
 
 ### Execution Handoff
 
@@ -179,7 +178,7 @@ At any point during planning, surface questions when you are making assumptions 
 When documenting existing exploratory work into `superRA/`:
 
 1. Survey existing code, outputs, and notebooks
-2. Create `superRA/` structure with `task_create.py` — one task per logical unit of work done
+2. Create `superRA/` structure with `superra task create` — one task per logical unit of work done
 3. Edit each `task.md`: set `status: implemented` in frontmatter, fill body sections with what was done (`## Objective`: what was the goal) and found (`## Results`: what was discovered)
 4. Hooks validate + rebuild dashboard. The task tree is now a retroactive record that can drive review, integration, and future work
 

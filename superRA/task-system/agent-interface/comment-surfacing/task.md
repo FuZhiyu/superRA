@@ -1,0 +1,29 @@
+---
+title: "Surface Task Comments to the Agent Loop"
+status: in-progress
+depends_on: []
+tags: []
+created: 2026-06-01
+---
+
+## Objective
+
+Make the task-system **comment feature visible to the agent loop**. Today a researcher pins comments to `task.md` blocks via the dashboard, but agents never see them: `task_read.py` (the canonical agent read path) has zero comment handling, no role spec or workflow skill references `task_comment.py`, and the CLI is undocumented. Comments are a dashboard-only human feature. This subtree closes the discovery gap (surface unresolved comments on the read path + document the CLI) and the context-richness gap (show the *full anchored block*, not the ≤60-char preview).
+
+**Design source.** A planning agent verified both gaps and the mechanics against the code (see each child objective for cited `file:line`). Placement is a sibling of `lean-interface` under `task-system/agent-interface/` (same concern: the agent-facing interface to the task system).
+
+**Researcher decisions (confirmed, load-bearing):**
+- **Reliability:** comment surfacing in `task_read.py` MUST work under the documented `python3 task_read.py` invocation. In this environment bare `python3` has no `pyyaml` (the existing `_comments.py` does `import yaml` at module top and fails under `python3`; it only runs under `uv`/`~/.venv`). A best-effort "optional import, skip if missing" would silently surface nothing on the common path — not acceptable. The read path must not hard-depend on `pyyaml`.
+- **Dispatch-injection (rec #2):** dropped to a single pointer line in `agent-orchestration` (folded into `03-document-cli`), not a separate mechanism — because `task_read` (which every dispatched agent runs) now surfaces comments, so a second injection path is redundant.
+- **Minor defaults:** surface **unresolved** comments only (matches `task_comment.py list` default); emit the **full block** (no length cap) in both human and `--json` output; **also enrich `task_comment.py list`** to show the full block so the standalone CLI matches `task_read` (the accessor is cheap to reuse).
+
+**Sequencing / coordination with the in-flight `lean-interface` subtree** (cross-parent, so not expressible via `depends_on` — enforced by orchestrator ordering):
+- `01-block-accessor` and `02-surface-in-task-read` touch only `_comments.py` and `task_read.py` — no overlap with `lean-interface` — and may run as soon as ready.
+- `02` adds a one-clause cross-edit to `using-superRA/SKILL.md §Task Interface` (just authored by `lean-interface/01`, approved) noting `task_read` also surfaces open comments. Coordinate: land it only after `lean-interface/01` is approved (it is), and flag it for `lean-interface/05-coverage-audit` so its git-snapshot baseline accounts for the added clause.
+- `03-document-cli` documents the comment CLI in `task-system/SKILL.md` / its references — which `lean-interface/02` is concurrently redesigning into a lean router. **Run `03` after `lean-interface/02` is approved** so the doc lands in the new structure (a reference, e.g. `references/commands.md`, with a one-line body pointer) instead of being clobbered. Flag the added command surface for `lean-interface/05`.
+
+**Contributor gates (every child):** apply the repo `CLAUDE.md` "Teach the Protocol" DRY/Necessity gate to any prose; scope all edits/commits to this worktree (`/Users/zhiyufu/Dropbox/package_dev/superRA.worktrees/better-handoff-skill-instruction`; a sibling `better-handoff` worktree exists — do not touch it); `skill-creator` is not registered in this harness, so do not attempt to load it. Run tests with `~/.venv/bin/python` (it has `pyyaml`); the *runtime* read path, however, must not require it.
+
+**Success criterion:** an agent that runs the documented `python3 task_read.py --path <t>` on a task with unresolved comments sees each comment together with the full block it is pinned to (orphaned comments degrade to preview + an orphaned note); the comment read/resolve CLI is discoverable in the docs; and no existing behavior or invocation contract is broken.
+
+## Results

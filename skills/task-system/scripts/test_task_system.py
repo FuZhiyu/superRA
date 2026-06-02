@@ -517,31 +517,14 @@ class TestTaskCreate:
             )
         assert exc_info.value.code == 1
 
-    def test_create_root_task_generates_serve_script(self, plan_root):
+    def test_create_root_task_does_not_generate_serve_script(self, plan_root):
         task_create.create_task(
             plan_root=plan_root,
             task_path="04-new-task",
             title="New Task",
         )
         serve = plan_root / "serve"
-        assert serve.exists()
-        content = serve.read_text(encoding="utf-8")
-        assert "plan_dashboard.py" in content
-        assert "uv run" in content
-        assert 'exec uv run' in content
-        # DASHBOARD= line must use a relative path (no leading '/')
-        for line in content.splitlines():
-            if line.startswith("DASHBOARD="):
-                # Extract the path after $PLAN_DIR/
-                assert "$PLAN_DIR/" in line
-                after_prefix = line.split("$PLAN_DIR/", 1)[1].rstrip('"')
-                assert not after_prefix.startswith("/"), (
-                    f"DASHBOARD path should be relative, got: {after_prefix}"
-                )
-                break
-        # Verify it's executable
-        import stat
-        assert serve.stat().st_mode & stat.S_IXUSR
+        assert not serve.exists()
 
     def test_create_root_task_does_not_overwrite_serve(self, plan_root):
         serve = plan_root / "serve"
@@ -604,6 +587,32 @@ class TestTaskCreate:
         assert task_md.exists()
         task = _task_io.parse_task(task_md)
         assert task.title == "Child Task"
+
+    def test_create_child_under_approved_parent_rolls_up(self, plan_root):
+        """Creating a not-started child under an approved parent must demote the parent.
+
+        Regression test for the missing propagate_parent_status call in create_task.
+        """
+        parent = plan_root / "04-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "approved")
+
+        # Verify precondition: parent starts approved
+        before = _task_io.parse_task(parent / "task.md")
+        assert before.status == "approved"
+
+        task_create.create_task(
+            plan_root=plan_root,
+            task_path="04-parent/01-child",
+            title="Child Task",
+        )
+
+        # After creating the child, parent must no longer be approved
+        after = _task_io.parse_task(parent / "task.md")
+        assert after.status != "approved", (
+            f"parent still has status={after.status!r} after adding a not-started child; "
+            "propagate_parent_status was not called"
+        )
 
 
 class TestTaskUpdate:

@@ -1,7 +1,7 @@
 ---
 title: "Document the postponed status"
 status: approved
-depends_on: 
+depends_on:
   - 01-core-semantics
 
 tags: []

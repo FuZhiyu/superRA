@@ -49,7 +49,7 @@ Result protection guards key results during Sync, Integrate, Finish, and future 
 
 ### Steps
 
-1. **Extract key results from task.md `## Results` sections.** Walk the `superRA/` tree (`task_query.py --tree`) and identify main findings across tasks. Protect main findings, not every intermediate number. Reference tasks by path (e.g., `data-preparation/merge`).
+1. **Extract key results from task.md `## Results` sections.** Walk the `superRA/` tree (`superra task tree`) and identify main findings across tasks. Protect main findings, not every intermediate number. Reference tasks by path (e.g., `data-preparation/merge`).
 2. **Confirm coverage with the researcher.** Stop point:
    ```text
    These results seem like the key findings to protect:
@@ -243,7 +243,7 @@ Run the full drift-test suite again. When it passes and integration review is AP
 
 Once per integration, between closing Integrate and entering Document, the orchestrator surveys the tree and decides whether it is clean enough to mature or needs a consolidation pass first. This is orchestrator inline work, not a dispatched stage. The gate forces the look; the pass stays conditional.
 
-1. Run `task_query.py --tree` and `--dag` and judge the affected frontier against the consolidation symptom list in `superplan/references/consolidation.md §When to Consolidate`.
+1. Run `superra task tree` and `superra task dag` and judge the affected frontier against the consolidation symptom list in `superplan/references/consolidation.md §When to Consolidate`.
 2. Record the verdict — clean-enough or needs-a-pass, one line — in the durable integration record in root task.md §Workflow Status so a later session sees the judgment was made.
 3. On needs-a-pass, load `superplan/references/consolidation.md` and run its survey → classify → propose → approve → execute protocol (atomic commit), then enter Document on the consolidated tree. Changes that materially restructure the tree (Merge/Prune/Restructure that alter scope or `approved` status) still route through `superplan §User Feedback and Changing the Task Tree` — the gate triggers the assessment, it does not grant authority to restructure approved work unilaterally.
 

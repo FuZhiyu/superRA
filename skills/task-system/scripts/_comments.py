@@ -13,8 +13,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-import yaml
-
 from _task_io import parse_body_sections
 
 
@@ -160,6 +158,8 @@ def split_into_blocks(section_content: str) -> list[str]:
 
 def load_comments(task_dir: Path) -> list[Comment]:
     """Read ``comments.yaml`` from *task_dir*. Return [] if absent."""
+    import yaml
+
     path = task_dir / "comments.yaml"
     if not path.exists():
         return []
@@ -171,6 +171,8 @@ def load_comments(task_dir: Path) -> list[Comment]:
 
 def save_comments(task_dir: Path, comments: list[Comment]) -> None:
     """Write *comments* to ``comments.yaml`` in *task_dir*."""
+    import yaml
+
     path = task_dir / "comments.yaml"
     data = [_comment_to_dict(c) for c in comments]
     path.write_text(
@@ -273,6 +275,43 @@ def delete_comment(task_dir: Path, comment_id: int) -> bool:
 # Anchor resolution
 # ---------------------------------------------------------------------------
 
+def _reanchor(comment: Comment, sections: dict[str, str]) -> tuple[list[str], int] | None:
+    """Re-resolve a single comment's anchor against parsed *sections*.
+
+    Mutates ``comment.anchor.block_index`` (re-anchoring after the block
+    moved) and ``comment.orphaned``.  Returns ``(blocks, block_index)`` of
+    the section the comment resolves into, or ``None`` if the comment is
+    orphaned (section gone, or preview matched no block).
+    """
+    anchor = comment.anchor
+    section_content = sections.get(anchor.section)
+
+    if section_content is None:
+        comment.orphaned = True
+        return None
+
+    blocks = split_into_blocks(section_content)
+    preview = anchor.text_preview.strip()
+
+    # Check current index
+    if (
+        0 <= anchor.block_index < len(blocks)
+        and preview in blocks[anchor.block_index]
+    ):
+        comment.orphaned = False
+        return blocks, anchor.block_index
+
+    # Scan for the preview elsewhere in the section
+    for idx, block in enumerate(blocks):
+        if preview in block:
+            anchor.block_index = idx
+            comment.orphaned = False
+            return blocks, idx
+
+    comment.orphaned = True
+    return None
+
+
 def resolve_anchors(comments: list[Comment], body: str) -> list[Comment]:
     """Re-resolve comment anchors against the current *body*.
 
@@ -285,36 +324,23 @@ def resolve_anchors(comments: list[Comment], body: str) -> list[Comment]:
     5. If not found, set ``orphaned = True`` (runtime flag, not persisted).
     """
     sections = parse_body_sections(body)
-
     for comment in comments:
-        anchor = comment.anchor
-        section_content = sections.get(anchor.section)
-
-        if section_content is None:
-            comment.orphaned = True
-            continue
-
-        blocks = split_into_blocks(section_content)
-        preview = anchor.text_preview.strip()
-
-        # Check current index
-        if (
-            0 <= anchor.block_index < len(blocks)
-            and preview in blocks[anchor.block_index]
-        ):
-            comment.orphaned = False
-            continue
-
-        # Scan for the preview elsewhere in the section
-        found = False
-        for idx, block in enumerate(blocks):
-            if preview in block:
-                anchor.block_index = idx
-                comment.orphaned = False
-                found = True
-                break
-
-        if not found:
-            comment.orphaned = True
-
+        _reanchor(comment, sections)
     return comments
+
+
+def anchored_block(comment: Comment, body: str) -> str | None:
+    """Return the full text of the block *comment* is anchored to in *body*.
+
+    Re-anchors against the live *body* using the same block-splitting and
+    re-anchoring logic as :func:`resolve_anchors` (including after the block
+    moved).  Returns ``None`` for an orphaned comment (section gone, or
+    preview matched no block); does not raise.  Stdlib-only — usable without
+    ``pyyaml`` since it operates on the body string.
+    """
+    sections = parse_body_sections(body)
+    resolved = _reanchor(comment, sections)
+    if resolved is None:
+        return None
+    blocks, idx = resolved
+    return blocks[idx]

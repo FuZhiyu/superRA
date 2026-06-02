@@ -1,0 +1,5 @@
+# uv packaging outputs — produced by `uv build`, `uv tool install`, `uv run`
+build/
+dist/
+*.egg-info/
+uv.lock

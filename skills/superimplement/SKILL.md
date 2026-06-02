@@ -69,7 +69,7 @@ If the task tree exists, is tracked, and the worktree is clean, proceed to Step 
 
 ### Step 1: Load and Review Plan
 
-1. Read the root `superRA/task.md` and run `task_query.py --tree` to see the full task tree with statuses.
+1. Read the root `superRA/task.md` and run `superra task tree` to see the full task tree with statuses.
 2. **Resolve entry.** If the main agent has not already done so, run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver. Continue here only when the resolver selects implementation, review, reproducibility verification, or the Step 4 completion disposition; otherwise follow the resolver's selected owner. If all tasks are already `approved`, skip task dispatch and start at Step 3 / Step 4 so approved work is verified and disposition-logged before integration.
 3. **Load the active domain skill(s) following the manifest.** Also load any task-specific helper skills named in the active task or its ancestor chain.
 4. **Read the scoped `### Conventions` / `### Context` / `### Constraints` context in the active task's objective and its ancestor chain** (anatomy: `task-system/references/planning.md` §Context and Conventions). When a task the frontier will touch lacks the inherited convention context an agent needs, walk the relevant docs and distill it into the objective of the lowest governing task now — commit before dispatching subagents.
@@ -84,7 +84,7 @@ If the task tree exists, is tracked, and the worktree is clean, proceed to Step 
 
 ### Step 2: Execute Tasks
 
-**Compute the frontier with `task_query.py --frontier`.** This returns leaf tasks whose dependencies are all `approved`. Tasks on the frontier may be dispatched as a single parallel Agent-tool batch (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each task completes.
+**Compute the frontier with `superra task frontier`.** This returns leaf tasks whose dependencies are all `approved`. Tasks on the frontier may be dispatched as a single parallel Agent-tool batch (subject to `agent-orchestration` §Workload Balancing). Serialize only when no parallel batch is available. Re-compute the frontier after each task completes.
 
 #### Task Execution Steps
 
@@ -114,7 +114,7 @@ After every task is `approved`, verify the work end-to-end before presenting com
    ```
    If uncommitted changes exist: investigate (probably an agent missed an inline-edit), commit, or ask the user.
 
-2. **Task tree up to date?** Run `task_query.py --tree` and confirm all tasks show `approved`. No tasks stuck in `implemented` or `revise`. Major outcomes are captured in task `## Results` sections, with parent rollups where a higher-level monitoring view needs them.
+2. **Task tree up to date?** Run `superra task tree` and confirm all tasks show `approved`. No tasks stuck in `implemented` or `revise`. Major outcomes are captured in task `## Results` sections, with parent rollups where a higher-level monitoring view needs them.
 
 3. **Results recorded?** Read the completed task files. Treat missing, thin, or status-report-only major results as a failed gate: every completed task with substantive work needs findings, key numbers, caveats, and verification evidence in `## Results`. Parent `## Results` sections should summarize direct children selectively, not recursively copy every finding. Figure attachments in each task's `attachments/` directory are committed.
 
@@ -181,7 +181,7 @@ This workflow runs the `implementation` Stage for both roles (see `superRA:using
 - Skip review — even in direct mode
 - Proceed with unfixed blocking findings (a REVISE task is not complete until the re-review promotes it to APPROVED)
 - Dispatch multiple implementers in parallel on the same worktree — when parallel-dispatching ≥2 implementers, each must run in its own worktree per `superRA:agent-orchestration` §Parallelization and Worktree Isolation
-- Paraphrase the task into the dispatch instead of pointing the subagent at the task path (the pointer-based convention is mandatory — subagents read the task via `task_read.py` so the dispatch and task.md cannot drift)
+- Paraphrase the task into the dispatch instead of pointing the subagent at the task path (the pointer-based convention is mandatory — subagents read the task via `superra task read` so the dispatch and task.md cannot drift)
 - Ignore implementer input-quality or methodology concerns
 - Accept "looks fine" without verification
 - Move to the next task while the current task's review has open issues or status is not `approved`

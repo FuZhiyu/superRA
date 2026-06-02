@@ -1,7 +1,7 @@
 ---
 title: "Render postponed in CLI and dashboard"
 status: approved
-depends_on: 
+depends_on:
   - 01-core-semantics
 
 tags: []

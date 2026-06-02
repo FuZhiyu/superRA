@@ -16,6 +16,7 @@ import argparse
 import asyncio
 import base64
 import hashlib
+import importlib.resources as resources
 import json
 import re
 import socket
@@ -297,11 +298,15 @@ def _get_jinja_env():
     if _jinja_env is not None:
         return _jinja_env
 
-    from jinja2 import Environment, FileSystemLoader
+    from jinja2 import Environment, FileSystemLoader, PackageLoader
 
-    templates_dir = Path(__file__).parent / "templates"
+    if __package__:
+        loader = PackageLoader(__package__, "templates")
+    else:
+        templates_dir = Path(__file__).parent / "templates"
+        loader = FileSystemLoader(str(templates_dir))
     env = Environment(
-        loader=FileSystemLoader(str(templates_dir)),
+        loader=loader,
         autoescape=False,
     )
 
@@ -1026,7 +1031,13 @@ def _set_module_state(root_task: Task | None, index: dict[str, Task], project_ro
 # Standalone embedding — figures (base64 data URIs) and vendored render libs
 # ---------------------------------------------------------------------------
 
-_VENDOR_DIR = Path(__file__).parent / "vendor"
+def _resource_dir(name: str):
+    if __package__:
+        return resources.files(__package__).joinpath(name)
+    return Path(__file__).parent / name
+
+
+_VENDOR_DIR = _resource_dir("vendor")
 
 # Image extension -> MIME, for the data: URI of an embedded figure.
 _IMG_MIME = {

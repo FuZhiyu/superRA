@@ -1,0 +1,11 @@
+- id: 1
+  author: Julie Zhiyu Fu
+  timestamp: '2026-06-01T16:43:32.712473'
+  resolved: true
+  anchor:
+    section: Objective
+    block_index: 0
+    text_preview: Restructure skills/task-system/SKILL.md so it is purely load
+  body: 'redesign this task. we want progressively reveal: use references files for
+    details. think through who would use it under what situation, and hence what needs
+    to be in the main skill'

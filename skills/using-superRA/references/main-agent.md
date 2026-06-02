@@ -11,12 +11,12 @@ Before your first substantive response, run these cross-session detection checks
 Do NOT skip these because the user "jumped straight into a task." The checks take 5 seconds and prevent lost work.
 
 **If an incomplete task tree is found** (`superRA/task.md` exists with tasks in non-approved status):
-- Run `task_query.py --tree` to get the full status summary.
+- Run `superra task tree` to get the full status summary.
 - Summarize: "Found in-progress analysis: `superRA/` (N tasks approved, K with issues). Resume?"
 - If user confirms: read the `superRA/` task tree, check git log for latest state, run §Workflow Frontier Resolver, and continue from the returned frontier.
 - If user declines: proceed normally
 
-**Backward compatibility:** If `PLAN.md` is found without a `superRA/` directory, offer migration via `plan_migrate.py`.
+**Backward compatibility:** If `PLAN.md` is found without a `superRA/` directory, offer migration via `superra task migrate from-plan`.
 
 **If in a worktree with no task tree:**
 - Note: "You're in worktree `<path>` on branch `<branch>`. Continue working here?"
@@ -31,9 +31,9 @@ The resolver diagnoses and routes. It does not perform the task-tree edit, imple
 
 - Git: current branch/worktree, `git status`, recent commits relevant to `superRA/` task files, and any active merge/rebase/cherry-pick state.
 - Task tree: whether `superRA/task.md` exists, is tracked, and matches the committed state expected by the workflow about to run.
-- Scoped objective context: the `### Conventions` / `### Context` / `### Constraints` subsections on the active task and its ancestor chain (via `task_read.py`).
+- Scoped objective context: the `### Conventions` / `### Context` / `### Constraints` subsections on the active task and its ancestor chain (via `superra task read`).
 - Top task.md: `## Sync Map` when present, any logged superimplement Step 4 disposition, and any declared pipeline.
-- Per-task frontmatter: `status`, `depends_on`. Use `task_query.py --frontier` to find dispatchable tasks.
+- Per-task frontmatter: `status`, `depends_on`. Use `superra task frontier` to find dispatchable tasks.
 - Per-task body: `## Results` sections for completed work, active `## Review Notes` blockquotes, `## Revision Notes` signaling recent changes.
 
 **Compute the affected frontier:**
@@ -129,7 +129,7 @@ Subagent mode is the default — dispatch implementers and reviewers through `su
 
 - **Read the direct-mode role reference for the role you are playing.** `references/direct-mode-implementer.md` for an implementation step; `references/direct-mode-reviewer.md` for a review step. These are the skill-surface copies of the role protocol that direct mode can load across repos.
 - **The Skill-Load Manifest still drives loads.** Consult the manifest row for your Stage and load the listed skills/references in-session.
-- **Task context comes from `superRA/` task files** (via `task_read.py` or direct read of `task.md`) — there is no dispatch prompt.
+- **Task context comes from `superRA/` task files** (via `superra task read` or direct read of `task.md`) — there is no dispatch prompt.
 - **Self-review gate, editing discipline, and verdict protocol all apply.** Walk the active domain skill's gated checklist before committing. Reviewer verdicts are still APPROVE / REVISE.
 - **Review is never skipped.** Either dispatch a reviewer subagent or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
 

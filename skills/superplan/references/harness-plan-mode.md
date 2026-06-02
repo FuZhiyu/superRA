@@ -91,6 +91,6 @@ task-b2 → task-c
 
 When the user approves the plan and exits plan mode, you have full write access. Create the `superRA/` task tree directly from your conversation context — the exploration findings, domain inventory, and design decisions you accumulated in plan mode.
 
-Use `task_create.py` or create directories and write `task.md` files directly. The harness plan file provided the review vehicle; the task files are the output. Do not re-parse or "migrate" the plan file — write from your understanding.
+Use `superra task create` or create directories and write `task.md` files directly. The harness plan file provided the review vehicle; the task files are the output. Do not re-parse or "migrate" the plan file — write from your understanding.
 
 Commit the `superRA/` directory as the first action after exit, before any implementation work begins.

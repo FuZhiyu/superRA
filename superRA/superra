@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Repo-local task-system CLI wrapper for this checkout's superRA/ task tree.
+
+set -euo pipefail
+
+case "$0" in
+  */*) SCRIPT_DIR=${0%/*} ;;
+  *) SCRIPT_DIR=. ;;
+esac
+
+SCRIPT_DIR="$(cd "$SCRIPT_DIR" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$REPO_ROOT"
+exec uv run --project "$REPO_ROOT/skills/task-system" superra "$@"

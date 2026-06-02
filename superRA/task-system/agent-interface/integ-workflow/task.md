@@ -23,8 +23,6 @@ Own the design of the INTEGRATE workflow skill (`skills/superintegrate/SKILL.md`
 
 ## Results
 
-**Sync impact:** Cluster `planning-md-overlap` explains that this task's shipped `skills/task-system/references/planning.md` §Results Shape maturation redefinition now coexists with base's recursive scoped-context / `## Planner Guidance` refactor in the same file; our Stage-2/Section-Ownership edits survived and the line refs above were re-anchored after the merge shifted them. Source: root task.md `## Sync Map`.
-
 `skills/superintegrate/SKILL.md` is `.plan/`-native across all phases and now carries the consolidation gate and the highest-touched-task maturation home. Two change-sets landed: the original `.plan/`-native migration, then the `integrate-cleanup` redesign merged in here.
 
 ### `.plan/`-native migration (across all five phases)
