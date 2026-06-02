@@ -89,6 +89,33 @@ run_codex_manifest_hook_no_root() {
   env -i PATH="$SPARSE_BIN" /bin/sh -c "$command" <<<"$input"
 }
 
+write_minimal_task_md() {
+  local path="$1"
+  local title="$2"
+  local status="$3"
+  mkdir -p "$(dirname "$path")"
+  cat >"$path" <<EOF
+---
+title: $title
+status: $status
+depends_on: []
+tags: []
+script:
+input: []
+output: []
+created: 2026-06-01
+---
+
+## Objective
+
+Test task.
+
+## Results
+
+(empty)
+EOF
+}
+
 assert_json() {
   local name="$1"
   local out="$2"
@@ -163,24 +190,40 @@ case_codex_manifest_plan_stop_execution() {
   out=$(run_codex_manifest_hook codex-plan-stop "$input" plugin)
   assert_json "$name" "$out" || return
   reason=$(printf '%s' "$out" | json_get 'print(d.get("reason", ""))')
-  if printf '%s' "$reason" | grep -Fq 'PLAN.md + RESULTS.md'; then
+  if printf '%s' "$reason" | grep -Fq 'superRA/ task tree'; then
     record_pass "$name"
   else
     record_fail "$name" "missing Stop reminder through manifest command: $out"
   fi
 }
 
-case_request_user_input_logger() {
-  local name="decision logger accepts request_user_input"
-  local input out context
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"PostToolUse","tool_name":"request_user_input","tool_input":{},"tool_response":{}}))')
-  out=$(run_hook ask-user-question-logger "$input")
-  assert_json "$name" "$out" || return
-  context=$(printf '%s' "$out" | json_get 'print(d.get("hookSpecificOutput", {}).get("additionalContext", d.get("additionalContext", "")))')
-  if printf '%s' "$context" | grep -Fq 'consider recording it in PLAN.md'; then
+case_codex_manifest_task_hook_apply_patch() {
+  local name="Codex manifest command executes task PostToolUse hook"
+  local work input out status
+  work="$TMPROOT/task-hook-apply-patch"
+  mkdir -p "$work/.plan"
+  write_minimal_task_md "$work/.plan/task.md" "Root" "not-started"
+  write_minimal_task_md "$work/.plan/01-child/task.md" "Child" "approved"
+
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"PostToolUse","tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Update File: .plan/01-child/task.md\n@@\n*** End Patch\n"}}))')
+  out=$(cd "$work" && run_codex_manifest_hook task-hook "$input" plugin 2>"$work/stderr")
+  if [ -n "$out" ]; then
+    record_fail "$name" "expected no stdout from task-hook, got $out"
+    return
+  fi
+
+  status=$(python3 - "$work/.plan/task.md" <<'PY'
+from pathlib import Path
+for line in Path(__import__("sys").argv[1]).read_text(encoding="utf-8").splitlines():
+    if line.startswith("status:"):
+        print(line.split(":", 1)[1].strip())
+        break
+PY
+)
+  if [ "$status" = "approved" ]; then
     record_pass "$name"
   else
-    record_fail "$name" "missing decision-log reminder: $context"
+    record_fail "$name" "expected approved root; status=$status stderr=$(cat "$work/stderr")"
   fi
 }
 
@@ -197,19 +240,6 @@ case_codex_manifest_missing_root_fails_open() {
   fi
 }
 
-case_request_user_input_silent_other_tool() {
-  local name="decision logger silent on unrelated tool"
-  local input out
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"PostToolUse","tool_name":"Bash","tool_input":{},"tool_response":{}}))')
-  out=$(run_hook ask-user-question-logger "$input")
-  assert_json "$name" "$out" || return
-  if [ "$out" = "{}" ]; then
-    record_pass "$name"
-  else
-    record_fail "$name" "expected {}, got $out"
-  fi
-}
-
 case_plan_stop_reminder() {
   local name="codex plan Stop emits materialization reminder"
   local input out decision reason
@@ -218,7 +248,7 @@ case_plan_stop_reminder() {
   assert_json "$name" "$out" || return
   decision=$(printf '%s' "$out" | json_get 'print(d.get("decision", ""))')
   reason=$(printf '%s' "$out" | json_get 'print(d.get("reason", ""))')
-  if [ "$decision" = "block" ] && printf '%s' "$reason" | grep -Fq 'PLAN.md + RESULTS.md'; then
+  if [ "$decision" = "block" ] && printf '%s' "$reason" | grep -Fq 'superRA/ task tree'; then
     record_pass "$name"
   else
     record_fail "$name" "missing Stop continuation decision/reason: $out"
@@ -231,7 +261,7 @@ case_plan_stop_accepts_proposed_plan_tag() {
   input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"<proposed_plan>plan</proposed_plan>"}))')
   out=$(run_hook codex-plan-stop "$input")
   assert_json "$name" "$out" || return
-  if printf '%s' "$out" | grep -Fq 'PLAN.md + RESULTS.md'; then
+  if printf '%s' "$out" | grep -Fq 'superRA/ task tree'; then
     record_pass "$name"
   else
     record_fail "$name" "missing proposed_plan reminder: $out"
@@ -280,7 +310,7 @@ case_plan_stop_silent_without_plan() {
 case_plan_stop_silent_for_non_plan_output_in_plan_mode() {
   local name="codex plan Stop silent for non-plan output in plan mode"
   local input out
-  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"Verdict: APPROVE\n\nNo critical findings. PLAN.md was not changed."}))')
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"Stop","permission_mode":"plan","last_assistant_message":"Verdict: APPROVE\n\nNo critical findings. The .plan/ task tree was not changed."}))')
   out=$(run_hook codex-plan-stop "$input")
   assert_json "$name" "$out" || return
   if [ "$out" = "{}" ]; then
@@ -308,9 +338,8 @@ case_merge_guard_codex_bash
 case_codex_manifest_sparse_path
 case_codex_manifest_claude_root_fallback
 case_codex_manifest_plan_stop_execution
+case_codex_manifest_task_hook_apply_patch
 case_codex_manifest_missing_root_fails_open
-case_request_user_input_logger
-case_request_user_input_silent_other_tool
 case_plan_stop_reminder
 case_plan_stop_accepts_proposed_plan_tag
 case_plan_stop_silent_for_quoted_tag_outside_plan_mode

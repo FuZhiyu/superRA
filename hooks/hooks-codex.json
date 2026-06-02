@@ -21,6 +21,26 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" task-hook; else printf '{}\\n'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" task-hook; else printf '{}\\n'; fi"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

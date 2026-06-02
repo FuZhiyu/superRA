@@ -1,6 +1,6 @@
 ---
 title: "Enable Codex task-system PostToolUse hook"
-status: not-started
+status: approved
 depends_on: []
 tags: [hooks, codex, task-system]
 script: ""
@@ -25,3 +25,14 @@ Adapt `task_hook.py` for Codex `PostToolUse` edit events. Codex reports file edi
 Validation: extend `skills/task-system/scripts/test_task_system.py` or add a focused hook test so synthetic Codex `PostToolUse` payloads cover both `apply_patch` edits of `.plan/**/task.md` and Bash structural mutations. Confirm the hook exits 0 on irrelevant apply-patch payloads and no-root manifest execution.
 
 ## Results
+
+### Key Findings
+
+- Added Codex `PostToolUse` task-system hook registrations for `Edit|Write` and `Bash` in [hooks/hooks-codex.json:24](../../../../hooks/hooks-codex.json#L24). Both commands resolve `PLUGIN_ROOT` first, fall back to `CLAUDE_PLUGIN_ROOT`, invoke `skills/task-system/scripts/task_hook.py`, and fail open with `{}` when no plugin root is set.
+- Extended [task_hook.py:255](../../../../skills/task-system/scripts/task_hook.py#L255) so Codex `tool_name: "apply_patch"` events parse filenames from `tool_input.command`, detect `.plan/**/task.md` edits, de-duplicate affected plan roots, and run the existing reconcile path once per root. Claude `Edit`/`Write` and existing `Bash` behavior remain in place.
+- Added focused regression coverage in [test_task_system.py:2125](../../../../skills/task-system/scripts/test_task_system.py#L2125) for Codex apply-patch task edits, irrelevant apply-patch payloads, Codex-style `.plan` Bash mutations, and no-root Codex manifest fallback execution.
+
+### Verification
+
+- `python3 -m json.tool hooks/hooks-codex.json` — passed.
+- `~/.venv/bin/python -m pytest skills/task-system/scripts/test_task_system.py -q` — passed: 232 tests. Pytest reported one cache warning because `/Users/zhiyufu/.pytest_cache` is not writable under the sandbox; no test failed.

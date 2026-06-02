@@ -1,6 +1,6 @@
 ---
 title: "Codex Task Hooks and Decision-Reminder Deprecation"
-status: in-progress
+status: approved
 depends_on: []
 tags: [hooks, codex, task-system]
 created: 2026-06-01
@@ -28,3 +28,35 @@ Official Codex hook reference consulted during planning: `https://developers.ope
 Date-field policy: `updated` is dropped because it duplicates git history and creates noisy metadata churn. Keep `created` for now unless the implementer finds it causes comparable churn or ambiguity; its main value is a stable human-facing task inception date, especially before the first commit or after task moves.
 
 ## Results
+
+Codex task hooks are now coherent with the current supported hook set:
+the decision-reminder hook is removed from active packaging, Codex
+installs task-system `PostToolUse` reconciliation hooks for documented edit
+and shell paths, `updated` frontmatter is removed from task metadata, and
+active docs/tests describe the supported Codex hooks without advertising
+inactive decision-reminder behavior.
+
+Validation across the child tasks covered hook manifests, Codex-shaped hook
+payloads, task-system tests, task metadata cleanup, and targeted
+compatibility checks. The optional live Codex CLI smoke test remains opt-in
+because it requires logged-in Codex auth and spends model turns.
+
+**Final diff self-check:** `git diff 9ca25479f7cb588aec3d758f0bb27d66e4c8aded..HEAD`;
+surviving hunks are limited to the approved hook-packaging scope:
+removing the active decision-reminder hook and manifest entries, adding
+Codex task-system `PostToolUse` manifest wiring, adapting `task_hook.py`
+and regression tests for Codex `apply_patch`/`Bash` payloads, removing
+`updated` metadata behavior from task-system code/tests/docs, refreshing
+active README/Codex/task-system hook documentation, updating compatibility
+tests, and recording approved task/sync/protect/review status in the
+codex-task-hooks task tree. Suspicious hunks are justified as follows:
+`skills/task-system/SKILL.md` and `skills/task-system/references/internals.md`
+only state the Codex-specific direct-edit/shell-hook boundary needed by
+task 04 and pass the DRY/Necessity gate; `hooks/hooks*.json` and deleted
+`hooks/ask-user-question-logger` implement tasks 01/02's active hook-set
+changes; `tests/hooks/*` and `tests/check-harness-compatibility.sh` protect
+the installed hook contract; `superRA/task.md` and this subtree's task
+files are workflow evidence for sync, protection, review, and approved
+results. No unrelated cleanup, broad reformatting, generated-agent changes,
+or exporter/share/dashboard implementation hunks survive in the governing
+diff.

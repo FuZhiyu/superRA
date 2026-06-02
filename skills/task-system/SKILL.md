@@ -84,7 +84,7 @@ Field-by-field anatomy and body-section ownership live in `references/planning.m
 | Objective writing, task splitting, placement, results shape, stale-content, retroactive plans | `references/planning.md` |
 | Migrate legacy `PLAN.md` + `RESULTS.md`, or upgrade `superRA/` v1 → v2 | `references/internals.md §Migration` |
 | View the dashboard | `superra dashboard --root superRA` (local checkout: `uv run --project skills/task-system superra dashboard --root superRA`); mechanics in `references/internals.md §Dashboard` |
-| Modify the skill itself (data layer, hooks, scripts) | `references/internals.md` |
+| Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
 A plain `mv` of a task directory carries the whole subtree; a move that crosses a dependency boundary strands a sibling `depends_on` reference, which validation flags for re-wiring. See `references/commands.md` for the full mutation surface.
 <!-- no need to route back to using superra -->

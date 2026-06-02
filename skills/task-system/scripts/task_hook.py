@@ -7,9 +7,9 @@ In both cases it runs the same best-effort reconcile — validate the tree,
 propagate parent status, rebuild the dashboard. Always exits 0 — never blocks
 the agent.
 
-Claude Code PostToolUse stdin format:
+PostToolUse stdin format:
   {
-    "tool_name": "Edit" | "Write" | "Bash" | ...,
+    "tool_name": "Edit" | "Write" | "Bash" | "apply_patch" | ...,
     "tool_input": {"file_path": "/abs/path/to/file", "command": "...", ...},
     "tool_response": {...}
   }
@@ -113,6 +113,9 @@ _MUTATING_RE = re.compile(
 # Path-like tokens that mention a task-root directory.
 _PLAN_TOKEN_RE = re.compile(
     r"(?:^|[\s'\"=])((?:[^\s'\"=]*/)?(?:superRA(?=$|/|[\s'\";|&])(?:/[^\s'\";|&]*)?|\.plan[^\s'\";|&]*))"
+)
+_APPLY_PATCH_FILE_RE = re.compile(
+    r"^\*\*\* (?:Add|Update|Delete) File: (?P<path>.+)$|^\*\*\* Move to: (?P<move_to>.+)$"
 )
 
 
@@ -227,6 +230,72 @@ def _handle_edit_write(data: dict) -> None:
     sys.exit(0)
 
 
+def _task_path_from_file_path(file_path: Path) -> tuple[Path, str] | None:
+    """Return (plan_root, task_path) when file_path names a task.md in a task tree."""
+    if file_path.name != "task.md":
+        return None
+
+    parts = file_path.parts
+    if not any(p == TASK_ROOT_DIRNAME or p == LEGACY_TASK_ROOT_DIRNAME or p.startswith(f"{LEGACY_TASK_ROOT_DIRNAME}.") for p in parts):
+        return None
+
+    _ensure_scripts_on_path()
+    import _task_io as task_io
+
+    plan_root = task_io._find_plan_root(file_path.parent)
+    if plan_root is None:
+        return None
+
+    task_path = str(file_path.parent.relative_to(plan_root))
+    if task_path == ".":
+        task_path = ""
+    return plan_root, task_path
+
+
+def _apply_patch_paths(command: str) -> list[str]:
+    """Extract file paths from an apply_patch command payload."""
+    paths: list[str] = []
+    for line in command.splitlines():
+        match = _APPLY_PATCH_FILE_RE.match(line)
+        if not match:
+            continue
+        path = match.group("path") or match.group("move_to") or ""
+        path = path.strip()
+        if path:
+            paths.append(path)
+    return paths
+
+
+def _handle_apply_patch(data: dict) -> None:
+    """Reconcile task trees touched by Codex apply_patch file edits."""
+    tool_input = data.get("tool_input", {}) or {}
+    command = tool_input.get("command", "") or ""
+    if not command:
+        sys.exit(0)
+
+    cwd = Path.cwd()
+    roots: list[Path] = []
+    seen: set[Path] = set()
+
+    for raw_path in _apply_patch_paths(command):
+        path = Path(raw_path)
+        file_path = path if path.is_absolute() else cwd / path
+        match = _task_path_from_file_path(file_path)
+        if match is None:
+            continue
+        plan_root, _task_path = match
+        resolved = plan_root.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        roots.append(plan_root)
+
+    for plan_root in roots:
+        _reconcile(plan_root, task_path=None)
+
+    sys.exit(0)
+
+
 def main() -> None:
     # Read tool call info from stdin (Claude Code PostToolUse protocol)
     try:
@@ -239,6 +308,8 @@ def main() -> None:
 
     if tool_name == "Bash":
         _handle_bash(data)
+    elif tool_name == "apply_patch":
+        _handle_apply_patch(data)
     elif tool_name in ("Edit", "Write"):
         _handle_edit_write(data)
 

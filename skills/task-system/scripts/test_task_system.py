@@ -2131,6 +2131,63 @@ class TestTaskHook:
         assert code == 0
         assert "WARNING" in stderr or "warning" in stderr.lower()
 
+    def test_codex_apply_patch_task_md_reconciles_plan_once(self, tmp_path):
+        """Codex apply_patch payloads reconcile .plan task.md edits."""
+        root = tmp_path / ".plan"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Codex Project", "not-started",
+                       objective="A Codex plan.")
+        child = root / "01-child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "approved",
+                       objective="Complete child.")
+
+        dashboard = root / "dashboard.html"
+        payload = {
+            "tool_name": "apply_patch",
+            "tool_input": {
+                "command": """*** Begin Patch
+*** Update File: .plan/01-child/task.md
+@@
+-status: not-started
++status: approved
+*** End Patch
+"""
+            },
+        }
+        code, _ = self._run_hook(payload, cwd=tmp_path)
+        assert code == 0
+        assert dashboard.exists(), "dashboard should be regenerated after apply_patch"
+
+        after = _task_io.parse_task(root / "task.md")
+        assert after.status == "approved", (
+            "apply_patch should run whole-tree status propagation for the plan root once"
+        )
+
+    def test_codex_apply_patch_irrelevant_payload_exits_zero(self, tmp_path):
+        """Codex apply_patch payloads that do not touch task.md are ignored."""
+        root = tmp_path / ".plan"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Codex Project", "not-started",
+                       objective="A Codex plan.")
+
+        payload = {
+            "tool_name": "apply_patch",
+            "tool_input": {
+                "command": """*** Begin Patch
+*** Update File: README.md
+@@
+-old
++new
+*** End Patch
+"""
+            },
+        }
+        code, stderr = self._run_hook(payload, cwd=tmp_path)
+        assert code == 0
+        assert stderr == ""
+        assert not (root / "dashboard.html").exists()
+
     def test_empty_stdin_exits_zero(self):
         """Hook exits 0 on empty or invalid stdin (resilient to harness edge cases)."""
         import subprocess
@@ -2254,6 +2311,62 @@ class TestTaskHook:
         code, stderr = self._run_hook(payload, cwd=tmp_path)
         assert code == 0
         assert stderr == ""
+
+    def test_codex_bash_plan_mv_triggers_rebuild(self, tmp_path):
+        """Codex Bash payloads structurally mutating .plan trigger reconcile."""
+        root = tmp_path / ".plan"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Codex Project", "not-started",
+                       objective="A Codex plan.")
+        parent = root / "01-parent"
+        parent.mkdir()
+        _write_task_md(parent / "task.md", "Parent", "not-started",
+                       objective="Parent task.")
+        remaining = parent / "00-remaining"
+        remaining.mkdir()
+        _write_task_md(remaining / "task.md", "Remaining", "approved",
+                       objective="Remaining child.")
+        child = parent / "01-child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "approved",
+                       objective="Child task.")
+
+        dst = root / "01-child"
+        shutil.move(str(child), str(dst))
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": "mv .plan/01-parent/01-child .plan/01-child"},
+        }
+        code, _ = self._run_hook(payload, cwd=tmp_path)
+        assert code == 0
+        assert (root / "dashboard.html").exists()
+        assert _task_io.parse_task(parent / "task.md").status == "approved"
+
+    def test_codex_manifest_task_hook_no_root_fails_open(self):
+        """Codex PostToolUse task-hook commands emit {} when no plugin root is set."""
+        import subprocess
+
+        manifest_path = SCRIPTS_DIR.parents[2] / "hooks" / "hooks-codex.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        post_tool = manifest["hooks"]["PostToolUse"]
+        commands = [
+            entry["hooks"][0]["command"]
+            for entry in post_tool
+            if entry.get("matcher") in {"Edit|Write", "Bash"}
+        ]
+        assert len(commands) == 2
+
+        payload = {"tool_name": "apply_patch", "tool_input": {"command": ""}}
+        for command in commands:
+            result = subprocess.run(
+                ["/bin/sh", "-c", command],
+                input=json.dumps(payload),
+                capture_output=True,
+                text=True,
+                env={},
+            )
+            assert result.returncode == 0
+            assert result.stdout.strip() == "{}"
 
 
 # --- Revision-note stale-leak validation tests ---
