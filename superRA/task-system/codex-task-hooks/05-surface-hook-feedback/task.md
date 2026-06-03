@@ -1,7 +1,7 @@
 ---
 title: "Surface Hook Feedback to Agents"
 status: approved
-depends_on: 
+depends_on:
   - 04-docs-tests-and-compat
 
 tags: []
