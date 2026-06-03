@@ -2,7 +2,10 @@
 title: "Codex Task Hooks and Decision-Reminder Deprecation"
 status: approved
 depends_on: []
-tags: [hooks, codex, task-system]
+tags:
+  - hooks
+  - codex
+  - task-system
 created: 2026-06-01
 ---
 

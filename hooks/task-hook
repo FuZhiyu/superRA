@@ -27,7 +27,6 @@ if command -v uvx >/dev/null 2>&1 && [ -f "$TASK_SYSTEM_SOURCE/pyproject.toml" ]
   fi
   rc=$?
   if [ $rc -eq 0 ]; then
-    [ -n "$uv_stderr" ] && cat "$uv_stderr" >&2
     [ -n "$uv_stderr" ] && rm -f "$uv_stderr"
     exit 0
   fi
@@ -39,5 +38,4 @@ if command -v python3 >/dev/null 2>&1 && [ -f "$DIRECT_HOOK" ]; then
   exit 0
 fi
 
-printf '{}\n'
 exit 0
