@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -2064,17 +2065,20 @@ class TestTaskRead:
 class TestTaskHook:
     def _run_hook(self, payload: dict, cwd: Path | None = None) -> int:
         """Run task_hook.main() with the given payload via stdin, return exit code."""
-        import io
+        result = self._run_hook_result(payload, cwd=cwd)
+        return result.returncode, result.stderr
+
+    def _run_hook_result(self, payload: dict, cwd: Path | None = None):
+        """Run task_hook.py with the given payload and return the process result."""
         import subprocess
         hook_path = SCRIPTS_DIR / "task_hook.py"
-        result = subprocess.run(
+        return subprocess.run(
             [sys.executable, str(hook_path)],
             input=json.dumps(payload),
             capture_output=True,
             text=True,
             cwd=cwd,
         )
-        return result.returncode, result.stderr
 
     def test_ignores_non_task_md(self, plan_root):
         """Hook exits 0 immediately for non-task.md files."""
@@ -2100,8 +2104,10 @@ class TestTaskHook:
             "tool_name": "Edit",
             "tool_input": {"file_path": str(plan_root / "01-first" / "task.md")},
         }
-        code, _ = self._run_hook(payload)
-        assert code == 0
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        assert result.stdout == ""
+        assert result.stderr == ""
 
     def test_exits_zero_on_validation_failure(self, plan_root):
         """Hook exits 0 even when validation fails (non-blocking)."""
@@ -2117,8 +2123,8 @@ class TestTaskHook:
         code, _ = self._run_hook(payload)
         assert code == 0
 
-    def test_outputs_warnings_to_stderr(self, plan_root):
-        """Hook emits validation warnings to stderr for the agent to see."""
+    def test_claude_edit_outputs_warnings_as_context_json(self, plan_root):
+        """Claude Edit payloads inject validation warnings as model-visible JSON."""
         bad_dir = plan_root / "04-bad"
         bad_dir.mkdir()
         _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
@@ -2127,9 +2133,39 @@ class TestTaskHook:
             "tool_name": "Edit",
             "tool_input": {"file_path": str(bad_dir / "task.md")},
         }
-        code, stderr = self._run_hook(payload)
-        assert code == 0
-        assert "WARNING" in stderr or "warning" in stderr.lower()
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        assert result.stderr == ""
+        data = json.loads(result.stdout)
+        context = data["additionalContext"]
+        assert data["hookSpecificOutput"]["hookEventName"] == "PostToolUse"
+        assert data["hookSpecificOutput"]["additionalContext"] == context
+        assert "Validation warning" in context
+        assert "99-nonexistent" in context
+
+    def test_claude_write_invalid_status_outputs_context_json(self, plan_root):
+        """Claude Write payloads surface invalid enum edits without blocking."""
+        bad_md = plan_root / "01-first" / "task.md"
+        bad_md.write_text(
+            re.sub(
+                r"^status: .+$",
+                "status: banana",
+                bad_md.read_text(encoding="utf-8"),
+                count=1,
+                flags=re.MULTILINE,
+            ),
+            encoding="utf-8",
+        )
+        payload = {
+            "tool_name": "Write",
+            "tool_input": {"file_path": str(bad_md)},
+        }
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        assert result.stderr == ""
+        context = json.loads(result.stdout)["additionalContext"]
+        assert "Invalid status 'banana'" in context
+        assert "Dashboard rebuild failed" in context
 
     def test_codex_apply_patch_task_md_reconciles_plan_once(self, tmp_path):
         """Codex apply_patch payloads reconcile .plan task.md edits."""
@@ -2155,14 +2191,46 @@ class TestTaskHook:
 """
             },
         }
-        code, _ = self._run_hook(payload, cwd=tmp_path)
-        assert code == 0
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stdout == ""
+        assert result.stderr == ""
         assert dashboard.exists(), "dashboard should be regenerated after apply_patch"
 
         after = _task_io.parse_task(root / "task.md")
         assert after.status == "approved", (
             "apply_patch should run whole-tree status propagation for the plan root once"
         )
+
+    def test_codex_apply_patch_invalid_status_outputs_context_json(self, tmp_path):
+        """Codex apply_patch payloads inject warnings for invalid task statuses."""
+        root = tmp_path / ".plan"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Codex Project", "not-started",
+                       objective="A Codex plan.")
+        child = root / "01-child"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Child", "bogus",
+                       objective="Invalid child.")
+
+        payload = {
+            "tool_name": "apply_patch",
+            "tool_input": {
+                "command": """*** Begin Patch
+*** Update File: .plan/01-child/task.md
+@@
+*** End Patch
+"""
+            },
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stderr == ""
+        data = json.loads(result.stdout)
+        context = data["additionalContext"]
+        assert data["hookSpecificOutput"]["additionalContext"] == context
+        assert "Invalid status 'bogus'" in context
+        assert "Dashboard rebuild failed" in context
 
     def test_codex_apply_patch_irrelevant_payload_exits_zero(self, tmp_path):
         """Codex apply_patch payloads that do not touch task.md are ignored."""
@@ -2183,9 +2251,10 @@ class TestTaskHook:
 """
             },
         }
-        code, stderr = self._run_hook(payload, cwd=tmp_path)
-        assert code == 0
-        assert stderr == ""
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stdout == ""
+        assert result.stderr == ""
         assert not (root / "dashboard.html").exists()
 
     def test_empty_stdin_exits_zero(self):
@@ -2262,9 +2331,11 @@ class TestTaskHook:
             "tool_name": "Bash",
             "tool_input": {"command": f"mv {src} {dst}"},
         }
-        code, stderr = self._run_hook(payload)
-        assert code == 0
-        assert "01-load" in stderr and "WARNING" in stderr, (
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        assert result.stderr == ""
+        context = json.loads(result.stdout)["additionalContext"]
+        assert "01-load" in context and "Validation warning" in context, (
             "dangling dependency should surface as a validation warning"
         )
         # The hook must NOT rewrite the dependency — it stays as authored.
@@ -2366,7 +2437,7 @@ class TestTaskHook:
                 env={},
             )
             assert result.returncode == 0
-            assert result.stdout.strip() == "{}"
+            assert result.stdout == ""
 
 
 # --- Revision-note stale-leak validation tests ---

@@ -1,6 +1,6 @@
 ---
 title: "Surface Hook Feedback to Agents"
-status: not-started
+status: implemented
 depends_on: 
   - 04-docs-tests-and-compat
 
@@ -14,3 +14,16 @@ Fix the task-system PostToolUse hook so validation warnings and non-fatal reconc
 
 ## Results
 
+Implemented the task-system PostToolUse hook feedback surface. `task_hook.py` now collects validation warnings plus non-fatal status-propagation and dashboard-rebuild failures, emits a single PostToolUse JSON payload only when feedback exists, and keeps passive reconcile exit code 0. The payload carries both top-level `additionalContext` and Claude-compatible `hookSpecificOutput.additionalContext`, so invalid task statuses and dashboard failures become model-visible without depending on stderr ([task_hook.py:45](../../../../skills/task-system/scripts/task_hook.py#L45), [task_hook.py:69](../../../../skills/task-system/scripts/task_hook.py#L69)).
+
+Silent paths remain silent: valid edits suppress dashboard-generator stdout while still propagating parent status and rebuilding dashboards, ignored payloads emit nothing, and the stable shell wrapper no longer replays `uvx` stderr or prints `{}` when it has no feedback to inject ([task_hook.py:99](../../../../skills/task-system/scripts/task_hook.py#L99), [hooks/task-hook:21](../../../../hooks/task-hook#L21), [hooks/hooks-codex.json:24](../../../../hooks/hooks-codex.json#L24)).
+
+Updated the active task-hook internals documentation to describe the JSON feedback contract and added focused coverage for Claude Edit/Write, Codex `apply_patch`, Codex manifest wrapper execution, invalid enum feedback, dashboard-failure feedback, and valid apply_patch propagation ([internals.md:92](../../../../skills/task-system/references/internals.md#L92), [test_task_system.py:2126](../../../../skills/task-system/scripts/test_task_system.py#L2126), [test_task_system.py:2146](../../../../skills/task-system/scripts/test_task_system.py#L2146), [test_task_system.py:2170](../../../../skills/task-system/scripts/test_task_system.py#L2170), [test-codex-hooks.sh:200](../../../../tests/hooks/test-codex-hooks.sh#L200), [test-codex-hooks.sh:234](../../../../tests/hooks/test-codex-hooks.sh#L234)).
+
+Verification passed:
+
+| Command | Result |
+|---|---|
+| `uv run --with pytest --project skills/task-system pytest skills/task-system/scripts/test_task_system.py -q` | 224 passed, 11 skipped |
+| `bash tests/hooks/test-codex-hooks.sh` | 15 passed, 0 failed |
+| `python3 -m json.tool hooks/hooks-codex.json` | valid JSON |

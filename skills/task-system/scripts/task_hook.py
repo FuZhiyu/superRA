@@ -5,7 +5,8 @@ Fires after Edit/Write tool calls (targeting a task.md) and after Bash tool
 calls that structurally mutate a task tree (mv, rm, cp, mkdir, ...).
 In both cases it runs the same best-effort reconcile — validate the tree,
 propagate parent status, rebuild the dashboard. Always exits 0 — never blocks
-the agent.
+the agent. Validation warnings and non-fatal reconcile failures are injected
+through PostToolUse JSON on stdout; successful/ignored paths stay silent.
 
 PostToolUse stdin format:
   {
@@ -20,7 +21,9 @@ from __future__ import annotations
 import json
 import re
 import sys
+from contextlib import redirect_stdout
 from pathlib import Path
+from io import StringIO
 
 
 TASK_ROOT_DIRNAME = "superRA"
@@ -39,7 +42,31 @@ def _ensure_scripts_on_path() -> None:
         sys.path.insert(0, scripts)
 
 
-def _reconcile(plan_root: Path, task_path: str | None) -> None:
+def _feedback_json(feedback: list[str]) -> str:
+    context = (
+        "<IMPORTANT>Task-system hook feedback:\n"
+        + "\n".join(f"- {line}" for line in feedback)
+        + "\n\nThe hook stayed non-blocking; fix the task tree before proceeding."
+        + "</IMPORTANT>"
+    )
+    return json.dumps(
+        {
+            "additionalContext": context,
+            "hookSpecificOutput": {
+                "hookEventName": "PostToolUse",
+                "additionalContext": context,
+            },
+        },
+        separators=(",", ":"),
+    )
+
+
+def _emit_feedback(feedback: list[str]) -> None:
+    if feedback:
+        print(_feedback_json(feedback))
+
+
+def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
     """Validate, propagate parent status, and rebuild the dashboard for a plan tree.
 
     Each step is best-effort in its own try/except so a failure in one never
@@ -49,34 +76,35 @@ def _reconcile(plan_root: Path, task_path: str | None) -> None:
     """
     _ensure_scripts_on_path()
     import _task_io as task_io
+    feedback: list[str] = []
 
-    # Validate — print warnings to stderr so the agent sees them.
+    # Validate — collect warnings for model-visible JSON feedback.
     try:
         warnings = task_io.validate_plan(plan_root)
         if warnings:
-            print(f"[task-hook] Validation warnings for {plan_root}:", file=sys.stderr)
             for w in warnings:
-                print(f"  WARNING: {w}", file=sys.stderr)
+                feedback.append(f"Validation warning in {plan_root}: {w}")
     except Exception as exc:
-        print(f"[task-hook] Validation error: {exc}", file=sys.stderr)
+        feedback.append(f"Validation failed for {plan_root}: {exc}")
 
     # Propagate parent status up the tree — best-effort, never fail.
     try:
         if task_path is None:
-            updated = _propagate_whole_tree(task_io, plan_root)
+            _propagate_whole_tree(task_io, plan_root)
         else:
-            updated = task_io.propagate_parent_status(plan_root, task_path)
-        if updated:
-            print(f"[task-hook] Propagated status to {updated} ancestor(s).", file=sys.stderr)
+            task_io.propagate_parent_status(plan_root, task_path)
     except Exception as exc:
-        print(f"[task-hook] Status propagation failed (non-fatal): {exc}", file=sys.stderr)
+        feedback.append(f"Status propagation failed for {plan_root} (non-fatal): {exc}")
 
     # Regenerate dashboard — best-effort, never fail.
     try:
         import plan_dashboard
-        plan_dashboard.generate_dashboard(plan_root)
+        with redirect_stdout(StringIO()):
+            plan_dashboard.generate_dashboard(plan_root)
     except Exception as exc:
-        print(f"[task-hook] Dashboard rebuild failed (non-fatal): {exc}", file=sys.stderr)
+        feedback.append(f"Dashboard rebuild failed for {plan_root} (non-fatal): {exc}")
+
+    return feedback
 
 
 def _propagate_whole_tree(task_io, plan_root: Path) -> int:
@@ -190,11 +218,13 @@ def _handle_bash(data: dict) -> None:
                 plan_roots.append(candidate)
                 break
 
+    feedback: list[str] = []
     for plan_root in plan_roots:
         if not (plan_root / "task.md").exists() and not plan_root.is_dir():
             continue
-        _reconcile(plan_root, task_path=None)
+        feedback.extend(_reconcile(plan_root, task_path=None))
 
+    _emit_feedback(feedback)
     sys.exit(0)
 
 
@@ -226,7 +256,7 @@ def _handle_edit_write(data: dict) -> None:
     if task_path == ".":
         task_path = ""
 
-    _reconcile(plan_root, task_path=task_path)
+    _emit_feedback(_reconcile(plan_root, task_path=task_path))
     sys.exit(0)
 
 
@@ -290,9 +320,11 @@ def _handle_apply_patch(data: dict) -> None:
         seen.add(resolved)
         roots.append(plan_root)
 
+    feedback: list[str] = []
     for plan_root in roots:
-        _reconcile(plan_root, task_path=None)
+        feedback.extend(_reconcile(plan_root, task_path=None))
 
+    _emit_feedback(feedback)
     sys.exit(0)
 
 

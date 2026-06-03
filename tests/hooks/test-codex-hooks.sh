@@ -199,7 +199,7 @@ case_codex_manifest_plan_stop_execution() {
 
 case_codex_manifest_task_hook_apply_patch() {
   local name="Codex manifest command executes task PostToolUse hook"
-  local work input out status
+  local work input out status context
   work="$TMPROOT/task-hook-apply-patch"
   mkdir -p "$work/.plan"
   write_minimal_task_md "$work/.plan/task.md" "Root" "not-started"
@@ -208,8 +208,12 @@ case_codex_manifest_task_hook_apply_patch() {
   input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"PostToolUse","tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Update File: .plan/01-child/task.md\n@@\n*** End Patch\n"}}))')
   out=$(cd "$work" && run_codex_manifest_hook task-hook "$input" plugin 2>"$work/stderr")
   if [ -n "$out" ]; then
-    record_fail "$name" "expected no stdout from task-hook, got $out"
-    return
+    assert_json "$name" "$out" || return
+    context=$(printf '%s' "$out" | json_get 'print(d.get("hookSpecificOutput", {}).get("additionalContext", d.get("additionalContext", "")))')
+    if ! printf '%s' "$context" | grep -Fq "Dashboard rebuild failed"; then
+      record_fail "$name" "unexpected stdout from task-hook: $out"
+      return
+    fi
   fi
 
   status=$(python3 - "$work/.plan/task.md" <<'PY'
@@ -224,6 +228,27 @@ PY
     record_pass "$name"
   else
     record_fail "$name" "expected approved root; status=$status stderr=$(cat "$work/stderr")"
+  fi
+}
+
+case_codex_manifest_task_hook_invalid_status_feedback() {
+  local name="Codex manifest task hook injects invalid-status feedback"
+  local work input out context
+  work="$TMPROOT/task-hook-invalid-status"
+  mkdir -p "$work/.plan"
+  write_minimal_task_md "$work/.plan/task.md" "Root" "not-started"
+  write_minimal_task_md "$work/.plan/01-child/task.md" "Child" "invalid-status"
+
+  input=$(python3 -c 'import json; print(json.dumps({"session_id":"s","transcript_path":"","cwd":".","hook_event_name":"PostToolUse","tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Update File: .plan/01-child/task.md\n@@\n*** End Patch\n"}}))')
+  out=$(cd "$work" && run_codex_manifest_hook task-hook "$input" plugin 2>"$work/stderr")
+  assert_json "$name" "$out" || return
+  context=$(printf '%s' "$out" | json_get 'print(d.get("hookSpecificOutput", {}).get("additionalContext", d.get("additionalContext", "")))')
+  if printf '%s' "$context" | grep -Fq "Invalid status 'invalid-status'" \
+     && printf '%s' "$context" | grep -Fq "Dashboard rebuild failed" \
+     && [ ! -s "$work/stderr" ]; then
+    record_pass "$name"
+  else
+    record_fail "$name" "missing invalid-status feedback: stdout=$out stderr=$(cat "$work/stderr")"
   fi
 }
 
@@ -339,6 +364,7 @@ case_codex_manifest_sparse_path
 case_codex_manifest_claude_root_fallback
 case_codex_manifest_plan_stop_execution
 case_codex_manifest_task_hook_apply_patch
+case_codex_manifest_task_hook_invalid_status_feedback
 case_codex_manifest_missing_root_fails_open
 case_plan_stop_reminder
 case_plan_stop_accepts_proposed_plan_tag
