@@ -55,9 +55,9 @@ Key properties:
 | Function | Purpose |
 |---|---|
 | `parse_frontmatter(text)` | Parse YAML frontmatter and body from task.md text. Returns `(dict, body_str)`. |
-| `parse_body_sections(body)` | Split body on `## ` headers into `{section_name: content}`. |
+| `parse_body_sections(body)` | Split body on `## ` headers into `{section_name: content}`. Fence-aware: `## ` lines inside a ``` ``` ``` / `~~~` block are body content, not headers. |
 | `serialize_frontmatter(fm)` | Serialize frontmatter dict back to YAML (without `---` delimiters). Field order is fixed. |
-| `parse_task(path)` | Parse a `task.md` file into a `Task` object. Validates status enums. |
+| `parse_task(path)` | Parse a `task.md` file into a `Task` object. Tolerates an unknown status (warns, preserves raw value); strict status validation lives in `task check`. |
 | `write_task(task)` | Write a `Task` back to disk, preserving body content. |
 | `walk_plan(plan_root)` | Recursively walk plan directory, return root `Task` with populated children. |
 | `resolve_path(plan_root, task_path)` | Resolve a relative task path to its directory. Rejects paths that escape the root. |
@@ -98,7 +98,7 @@ It does not use a YAML library — the parser is minimal and purpose-built.
 
 On a match the hook runs the same best-effort reconcile — `validate_plan`, `propagate_parent_status`, `generate_dashboard` — each in its own try/except, never blocking, always exit 0. Validation warnings and non-fatal reconcile failures are collected into a PostToolUse JSON payload with both top-level `additionalContext` and Claude-style `hookSpecificOutput.additionalContext`, emitted on stdout only when there is feedback for the agent; valid edits and ignored fast paths stay silent. See `task_hook.py` for the gating regexes and plan-root discovery, and `hooks/hooks.json` / `hooks/hooks-codex.json` for the wiring.
 
-Frontmatter validation also happens inside `parse_task()` at parse time, independent of the hook — invalid enum values raise `ValueError`. The mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) still rebuild the dashboard themselves after their mutation, so the dashboard stays current whether a task is changed by direct edit, by `mv`, or through a CLI.
+`parse_task()` is lenient at parse time: an invalid status enum is **warned** (via `warnings.warn`) and the raw value is preserved, so a single malformed `task.md` never crashes a reader's tree walk (dashboard, `task query`, `task read`). Strict status validation is owned by `task check` (`check_status_validity`), which reports an invalid enum as an `[ERROR]` finding. The mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) still rebuild the dashboard themselves after their mutation, so the dashboard stays current whether a task is changed by direct edit, by `mv`, or through a CLI.
 
 Codex shell interception remains incomplete, so Codex `Bash` coverage is best-effort reconcile support rather than a complete enforcement boundary. Cursor does not wire `task_hook.py`.
 
