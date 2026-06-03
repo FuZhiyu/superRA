@@ -463,7 +463,7 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   padding: 16px 28px 60px;
 }
 .detail-panel > * {
-  max-width: 860px;
+  max-width: 1200px;
 }
 .children-dag { overflow-x: auto; }
 
@@ -542,9 +542,10 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   margin: 0;
 }
 .active-node-head .badge { align-self: center; }
-/* Share/Export control — pushed to the trailing edge of the card header. */
+/* Share/Export control — sits at the trailing edge beside the VS Code button.
+   The VS Code button (rendered just before it) carries the margin-left:auto that
+   claims the free space; both then group together, spaced by the header gap. */
 .share-btn {
-  margin-left: auto;
   align-self: center;
   font-family: var(--font-mono);
   font-size: 12px;
