@@ -1,6 +1,6 @@
 ---
 title: "Parser robustness: tolerate unknown status, fence-aware section parsing"
-status: implemented
+status: approved
 depends_on:  []
 tags: []
 created: 2026-06-03
@@ -46,19 +46,3 @@ The shared task.md parser now degrades gracefully on edge-case content instead o
 ### Follow-up
 
 `task_check._walk_plan_tolerant` ([task_check.py:238](../../../skills/task-system/scripts/task_check.py#L238)) wraps `parse_task` in `try/except ValueError` to survive the old hard-raise on bad status. Now that `parse_task` is lenient, that branch is dead for the status case and the wrapper can be collapsed to a plain `walk_plan`. Out of this task's scope (`task_check.py` is not touched here); flagged for a future task-check cleanup.
-
-## Review Notes
-
-Both code fixes are correct and independently verified: fence-aware `parse_body_sections` and the dashboard `render_task_body` macro agree (no phantom `Foo` section, Objective not truncated); `parse_task` warns-and-preserves on `status: done` so `walk_plan` no longer raises; `superra task check` reaches and reports `[ERROR] [status] child: invalid status 'done'`; full suite 422 passed. The findings below are record-accuracy and adjacent-cleanliness, not defects in the two fixes.
-
-1. **MAJOR — factual inaccuracy in the permanent record.** Both `## Objective` (Fix 1) and `## Results` (Fix 1, "now that parsing no longer aborts first — actually reaches its own check") assert that `task_check` "could never reach that check — `parse_task` blew up first." This is false. `task_check._walk_plan_tolerant` ([task_check.py:238](../../../skills/task-system/scripts/task_check.py#L238)) wraps `parse_task` in `try/except ValueError` ([task_check.py:246-286](../../../skills/task-system/scripts/task_check.py#L246)) precisely so that, under the old hard-raise, the walk continued with the raw status preserved and `check_status_validity` still flagged it — i.e. `task check` already reached its check before this change. The genuine and correctly-stated justification for Fix 1 is the dashboard lifespan crash (`walk_plan` in `rebuild_tree` has no such wrapper); the `task_check` "never reached" claim is wrong and should be removed/corrected so the permanent record does not misdescribe the prior behavior.
-   → implemented: Correct — confirmed `_walk_plan_tolerant` (`task_check.py:238`) wrapped `parse_task` so `task check` always reached its status check. Rewrote the false "could never reach" claim in both `## Objective` (Fix 1) and `## Results` (Fix 1): the justification is now the unguarded `walk_plan` path used by the dashboard / `task query` / `task read`, and the record explicitly notes `task check` already coped via its own wrapper (now redundant).
-
-2. **MINOR — stale docstring now contradicting the new behavior, and it is in-scope.** `_has_nonempty_section`'s docstring ([_task_io.py:204](../../../skills/task-system/scripts/_task_io.py#L204)) still reads "Unlike `parse_body_sections` (which is fence-blind), this skips `## ` lines that appear inside a fenced block." After Fix 2, `parse_body_sections` is fence-aware, so this line is now false. `_task_io.py` is an in-scope file; update the docstring so the two functions are described consistently (both fence-aware now).
-   → implemented: Rewrote the `_has_nonempty_section` docstring to "Like `parse_body_sections`, this is fence-aware …" so both functions are described consistently.
-
-3. **MINOR (out of scope to fix here) — dead defensive branch surfaced by Fix 1.** Because `parse_task` no longer raises `ValueError` on bad status, the `except ValueError` branch in `_walk_plan_tolerant` ([task_check.py:248-286](../../../skills/task-system/scripts/task_check.py#L248)) is now unreachable for the status case it was written for (its own comment: "The status check will flag the bad value"). `task_check.py` is outside this task's stated scope, so do not edit it here; flag it for a follow-up cleanup so the dead branch does not linger.
-   → implemented: Agreed; left `task_check.py` untouched per scope. Recorded as a `### Follow-up` in `## Results` so the redundant wrapper does not linger.
-
-4. **MINOR (advisory) — new behaviors lack regression tests.** The `## Validation` checks were run manually and pass, but neither new behavior is locked in by a test: `TestParseBodySections` ([test_task_system.py:1306](../../../skills/task-system/scripts/test_task_system.py#L1306)) has no fence case, and no test asserts `parse_task` warns-and-preserves an unknown status (existing `test_detects_invalid_status` exercises `task_check`, not `parse_task`'s lenience). Adding a fence test for `parse_body_sections` and a warn-and-preserve test for `parse_task` would protect both robustness fixes. The task scoped touched files to `_task_io.py` and `task_node.html`; if a test is added it belongs to the test suite, so confirm the scope intent before doing so.
-   → implemented: Scope intentionally expanded to the test suite. Added `TestParseTask::test_unknown_status_warns_and_preserves` (asserts warn + raw-value preservation) and `TestParseBodySections::test_fenced_header_not_a_section` (asserts no phantom section and no truncation). Full suite now 424 passed.
