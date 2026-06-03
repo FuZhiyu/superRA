@@ -1,6 +1,6 @@
 ---
 title: "Surface Hook Feedback to Agents"
-status: implemented
+status: approved
 depends_on: 
   - 04-docs-tests-and-compat
 
