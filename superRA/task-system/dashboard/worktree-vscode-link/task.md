@@ -1,6 +1,6 @@
 ---
 title: "Worktree-aware VS Code task links in the dashboard"
-status: implemented
+status: approved
 depends_on: [worktree-selector, vscode-line-anchors]
 tags: []
 created: 2026-06-02
