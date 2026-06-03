@@ -17,11 +17,19 @@
 -#}
 
 {% macro render_task_body(task, project_root) %}
-  {#- Parse ALL ## sections from task.body in document order -#}
+  {#- Parse ALL ## sections from task.body in document order. Fence-aware: a
+      ``## `` line inside a ``` ``` ``` / ``~~~`` block is body content (e.g. a
+      quoted template), not a section header, so it neither starts a phantom
+      section nor truncates the section that contains the fence. -#}
   {% set body_lines = task.body.split('\n') if task.body else [] %}
-  {% set ns = namespace(current_name=None, current_lines=[], all_sections=[]) %}
+  {% set ns = namespace(current_name=None, current_lines=[], all_sections=[], in_fence=False) %}
   {% for line in body_lines %}
-    {% if line.startswith('## ') %}
+    {% if line.lstrip().startswith('```') or line.lstrip().startswith('~~~') %}
+      {% set ns.in_fence = not ns.in_fence %}
+      {% if ns.current_name is not none %}
+        {% set ns.current_lines = ns.current_lines + [line] %}
+      {% endif %}
+    {% elif line.startswith('## ') and not ns.in_fence %}
       {% if ns.current_name %}
         {% set _ = ns.all_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
       {% endif %}

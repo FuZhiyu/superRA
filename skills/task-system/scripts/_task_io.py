@@ -168,12 +168,24 @@ def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
 
 
 def parse_body_sections(body: str) -> dict[str, str]:
-    """Split a task body on ``## `` headers into {section_name: content} pairs."""
+    """Split a task body on ``## `` headers into {section_name: content} pairs.
+
+    Fence-aware: a ``## `` line inside a ``` ``` ``` / ``~~~`` fenced code block is
+    treated as body content, not a section header, so a header quoted inside an
+    Objective/Results template does not start a spurious section (mirrors
+    ``_has_nonempty_section``).
+    """
     sections: dict[str, str] = {}
     current_name: str | None = None
     current_lines: list[str] = []
+    in_fence = False
     for line in body.split("\n"):
-        m = re.match(r"^## (.+)$", line)
+        if re.match(r"^[ \t]*(```|~~~)", line):
+            in_fence = not in_fence
+            if current_name is not None:
+                current_lines.append(line)
+            continue
+        m = None if in_fence else re.match(r"^## (.+)$", line)
         if m:
             if current_name is not None:
                 sections[current_name] = "\n".join(current_lines)
@@ -280,10 +292,17 @@ def parse_task(task_md_path: Path) -> Task:
     title = str(fm.get("title", ""))
     status = str(fm.get("status", "not-started"))
 
+    # Tolerate unknown status values: keep the raw string so readers (dashboard,
+    # query, read) degrade gracefully instead of crashing the whole tree walk on
+    # one malformed file. `task_check` is the strict validator that reports an
+    # invalid status as a finding; downstream rollup/icon lookups already fall
+    # back safely on unrecognized values.
     if status not in VALID_STATUSES:
-        raise ValueError(
-            f"Invalid status {status!r} in {task_md_path}. "
-            f"Valid values: {VALID_STATUSES}"
+        warnings.warn(
+            f"Invalid status {status!r} in {task_md_path}; "
+            f"expected one of {list(VALID_STATUSES)}. "
+            f"Treating as-is; run `superra task check` to fix.",
+            stacklevel=2,
         )
     # Silently ignore review_status / integration_status if present in old files
 
