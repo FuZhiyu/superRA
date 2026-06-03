@@ -191,6 +191,19 @@ class TestParseTask:
         assert task.title == "Test Project"
         assert task.is_root
 
+    def test_unknown_status_warns_and_preserves(self, tmp_path):
+        # An unknown status must NOT crash the reader; parse_task warns and keeps
+        # the raw value so the dashboard/query/read tree walk survives one bad
+        # file. task_check remains the strict validator.
+        task_md = tmp_path / "task.md"
+        task_md.write_text(
+            "---\ntitle: T\nstatus: done\n---\n## Objective\n\nx\n",
+            encoding="utf-8",
+        )
+        with pytest.warns(UserWarning, match="Invalid status 'done'"):
+            task = _task_io.parse_task(task_md)
+        assert task.status == "done"  # raw value preserved, not coerced
+
 
 class TestWalkPlan:
     def test_walk_flat(self, plan_root):
@@ -1338,6 +1351,25 @@ class TestParseBodySections:
         body = "## Custom Section\n\nContent here.\n"
         sections = parse_body_sections(body)
         assert "Custom Section" in sections
+
+    def test_fenced_header_not_a_section(self):
+        # A `## ` line quoted inside a code fence is body content, not a header:
+        # it must neither start a phantom section nor truncate the section that
+        # contains the fence.
+        body = (
+            "## Objective\n\n"
+            "Embed a template:\n\n"
+            "```\n"
+            "## Results\n"
+            "fake\n"
+            "```\n\n"
+            "Real objective tail.\n\n"
+            "## Results\n\nActual results.\n"
+        )
+        sections = parse_body_sections(body)
+        assert "Real objective tail." in sections["Objective"]
+        assert "fake" in sections["Objective"]  # fenced content stays in Objective
+        assert sections["Results"].strip() == "Actual results."
 
 
 # --- Auto-rebuild tests ---

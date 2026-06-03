@@ -201,10 +201,10 @@ def parse_body_sections(body: str) -> dict[str, str]:
 def _has_nonempty_section(body: str, section: str) -> bool:
     """True if ``body`` has a non-empty ``## <section>`` header outside fenced code.
 
-    Unlike ``parse_body_sections`` (which is fence-blind), this skips ``## ``
-    lines that appear inside a ``` ``` ``` fenced block, so a section header that
-    is merely quoted inside an Objective/Results code block does not count. A
-    section is non-empty when at least one non-blank line follows its header
+    Like ``parse_body_sections``, this is fence-aware: ``## `` lines that appear
+    inside a ``` ``` ``` / ``~~~`` fenced block are skipped, so a section header
+    that is merely quoted inside an Objective/Results code block does not count.
+    A section is non-empty when at least one non-blank line follows its header
     before the next top-level header or end of file.
     """
     lines = body.split("\n")
