@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import warnings
 from contextlib import redirect_stdout
 from pathlib import Path
 from io import StringIO
@@ -80,27 +81,33 @@ def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
 
     # Validate — collect warnings for model-visible JSON feedback.
     try:
-        warnings = task_io.validate_plan(plan_root)
-        if warnings:
-            for w in warnings:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            validation_warnings = task_io.validate_plan(plan_root)
+        if validation_warnings:
+            for w in validation_warnings:
                 feedback.append(f"Validation warning in {plan_root}: {w}")
     except Exception as exc:
         feedback.append(f"Validation failed for {plan_root}: {exc}")
 
     # Propagate parent status up the tree — best-effort, never fail.
     try:
-        if task_path is None:
-            _propagate_whole_tree(task_io, plan_root)
-        else:
-            task_io.propagate_parent_status(plan_root, task_path)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            if task_path is None:
+                _propagate_whole_tree(task_io, plan_root)
+            else:
+                task_io.propagate_parent_status(plan_root, task_path)
     except Exception as exc:
         feedback.append(f"Status propagation failed for {plan_root} (non-fatal): {exc}")
 
     # Regenerate dashboard — best-effort, never fail.
     try:
         import plan_dashboard
-        with redirect_stdout(StringIO()):
-            plan_dashboard.generate_dashboard(plan_root)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with redirect_stdout(StringIO()):
+                plan_dashboard.generate_dashboard(plan_root)
     except Exception as exc:
         feedback.append(f"Dashboard rebuild failed for {plan_root} (non-fatal): {exc}")
 

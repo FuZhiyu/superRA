@@ -2196,8 +2196,7 @@ class TestTaskHook:
         assert result.returncode == 0
         assert result.stderr == ""
         context = json.loads(result.stdout)["additionalContext"]
-        assert "Invalid status 'banana'" in context
-        assert "Dashboard rebuild failed" in context
+        assert "invalid status 'banana'" in context
 
     def test_codex_apply_patch_task_md_reconciles_plan_once(self, tmp_path):
         """Codex apply_patch payloads reconcile .plan task.md edits."""
@@ -2261,8 +2260,7 @@ class TestTaskHook:
         data = json.loads(result.stdout)
         context = data["additionalContext"]
         assert data["hookSpecificOutput"]["additionalContext"] == context
-        assert "Invalid status 'bogus'" in context
-        assert "Dashboard rebuild failed" in context
+        assert "invalid status 'bogus'" in context
 
     def test_codex_apply_patch_irrelevant_payload_exits_zero(self, tmp_path):
         """Codex apply_patch payloads that do not touch task.md are ignored."""

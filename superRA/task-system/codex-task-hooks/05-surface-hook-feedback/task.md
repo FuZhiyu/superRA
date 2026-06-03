@@ -24,6 +24,6 @@ Verification passed:
 
 | Command | Result |
 |---|---|
-| `uv run --with pytest --project skills/task-system pytest skills/task-system/scripts/test_task_system.py -q` | 224 passed, 11 skipped |
+| `uv run --with pytest --project skills/task-system pytest skills/task-system/scripts/test_task_system.py -q` | 226 passed, 11 skipped |
 | `bash tests/hooks/test-codex-hooks.sh` | 15 passed, 0 failed |
 | `python3 -m json.tool hooks/hooks-codex.json` | valid JSON |

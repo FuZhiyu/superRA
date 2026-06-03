@@ -243,7 +243,7 @@ case_codex_manifest_task_hook_invalid_status_feedback() {
   out=$(cd "$work" && run_codex_manifest_hook task-hook "$input" plugin 2>"$work/stderr")
   assert_json "$name" "$out" || return
   context=$(printf '%s' "$out" | json_get 'print(d.get("hookSpecificOutput", {}).get("additionalContext", d.get("additionalContext", "")))')
-  if printf '%s' "$context" | grep -Fq "Invalid status 'invalid-status'" \
+  if printf '%s' "$context" | grep -Fq "invalid status 'invalid-status'" \
      && printf '%s' "$context" | grep -Fq "Dashboard rebuild failed" \
      && [ ! -s "$work/stderr" ]; then
     record_pass "$name"
