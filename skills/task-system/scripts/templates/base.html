@@ -920,6 +920,11 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   text-align: left;
 }
 .rendered-md th { background: var(--bg-alt); font-weight: 600; }
+/* Scale oversized figures down to the content width; never overflow the panel. */
+.rendered-md img {
+  max-width: 100%;
+  height: auto;
+}
 /* Links inherit the warm accent palette instead of browser default blue/purple.
    Restrained 1px underline at reduced opacity that solidifies on hover; visited
    stays on-theme (the accent, never default purple). Accent tokens are
@@ -1470,13 +1475,25 @@ function showView(view) {
 
 /* ── Uncap helper: remove max-height after expand transition finishes ── */
 function uncapAfterTransition(el) {
-  function handler(e) {
-    if (e.propertyName === 'max-height' && el.classList.contains('open')) {
-      el.classList.add('uncapped');
-    }
+  var done = false;
+  function finish() {
+    if (done) return;
+    done = true;
     el.removeEventListener('transitionend', handler);
+    if (el.classList.contains('open')) el.classList.add('uncapped');
+  }
+  /* Wait for el's OWN max-height transition (0.3s) — not the shorter opacity/
+     padding transitions (0.2s), and not a child's bubbled transitionend.
+     Removing the listener on the first event of any property would fire before
+     max-height finishes and leave content clipped at the animated cap. */
+  function handler(e) {
+    if (e.target === el && e.propertyName === 'max-height') finish();
   }
   el.addEventListener('transitionend', handler);
+  /* Fallback: transitionend can be missed (interrupted/reduced-motion, or
+     content shorter than the animated cap). Uncap unconditionally after the
+     transition window so long bodies are never left capped. */
+  setTimeout(finish, 400);
 }
 
 function recapForCollapse(el) {
