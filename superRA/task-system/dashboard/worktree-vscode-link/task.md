@@ -1,6 +1,6 @@
 ---
 title: "Worktree-aware VS Code task links in the dashboard"
-status: not-started
+status: implemented
 depends_on: [worktree-selector, vscode-line-anchors]
 tags: []
 created: 2026-06-02
@@ -33,4 +33,26 @@ Work in this project worktree only: `/Users/zhiyufu/Dropbox/package_dev/superRA.
 - The inline `<script>` in the generated page parses (no JS syntax error) and the dashboard test suite passes: `uv run --project skills/task-system --with pytest --with httpx python -m pytest skills/task-system/scripts/test_dashboard.py -q`.
 
 ## Results
+
+Every `vscode://file/` link the dashboard emits now resolves against the **currently active worktree**, and a per-task "Open in VS Code" button jumps to that task's `task.md`. All edits are in the single dashboard source template [base.html](../../../../skills/task-system/scripts/templates/base.html).
+
+### What changed
+
+**Worktree-sync fix (the bug).** `PROJECT_ROOT` was baked once at render ([base.html:1318](../../../../skills/task-system/scripts/templates/base.html#L1318)) and never refreshed when the worktree selector rebinds the page, so after a switch both emit sites pointed at the *original* worktree's absolute path. Two edits close this:
+
+- `fetchWorktrees()` ([base.html:3128](../../../../skills/task-system/scripts/templates/base.html#L3128)) now assigns `PROJECT_ROOT = data.current` when the `/api/worktrees` response carries a non-empty `current` (the active worktree's project root, refreshed server-side on every switch), and returns its fetch promise.
+- `onFullReload()` ([base.html:3032](../../../../skills/task-system/scripts/templates/base.html#L3032)) now `await fetchWorktrees()` **before** `setActive(target)`, landing the switched-to root before the active card (and its VS Code button) re-render. This closes the race where the card could render with the pre-switch root.
+
+Both emit sites read this one constant, so the fix repairs both: the per-task button via `taskFileVscodeHref` ([base.html:1907](../../../../skills/task-system/scripts/templates/base.html#L1907)) and the in-body file-link rewrite ([base.html:1413](../../../../skills/task-system/scripts/templates/base.html#L1413)).
+
+**Standalone export preserved.** In `file://` mode the fetch shim's `/api/worktrees` branch returns `{ current: '', worktrees: [] }` ([base.html:1299](../../../../skills/task-system/scripts/templates/base.html#L1299)). The `if (data.current)` guard therefore leaves the baked `PROJECT_ROOT` untouched, so an exported snapshot keeps the project root it was generated with.
+
+**The button (groundwork committed together).** `.vscode-btn` CSS, the `VSCODE_ICON` constant, the `taskFileVscodeHref(path)` helper, the active-card header button markup, and its href wiring in `loadActiveNode` are committed as one coherent change with the sync fix. The helper builds `vscode://file/' + PROJECT_ROOT + '/superRA/' + (path ? path + '/' : '') + 'task.md'`, mirroring the `superRA/<path>/` prefix the in-body rewrite uses.
+
+### Verification
+
+- **Real user path (server).** Served the dashboard, then drove a worktree switch via the live API. Before the switch `/api/worktrees` reported `current = …/better-handoff`; `POST /api/worktree/switch` to `…/codex-task-hooks-impl/superRA` returned HTTP 200 and `current` flipped to `…/codex-task-hooks-impl`. `fetchWorktrees()` assigns that exact value to `PROJECT_ROOT`, and `/node/` then served from the switched tree. Switched back cleanly to restore state.
+- **Rendered href inspection.** Ran both emit-site expressions through a worktree switch driven by the guarded `if (data.current) PROJECT_ROOT = data.current` assignment. The button href and in-body href both flip from `vscode://file//…/better-handoff/superRA/…/task.md` to `vscode://file//…/codex-task-hooks-impl/superRA/…/task.md`. With `current=''` (standalone), `PROJECT_ROOT` is preserved unchanged.
+- **JS parse.** Generated a static dashboard and `node --check`'d all four inline `<script>` blocks (incl. the 1.75 MB app script carrying these changes) — all parse with no syntax error.
+- **Test suite.** `python -m pytest skills/task-system/scripts/test_dashboard.py -q` → 81 passed.
 

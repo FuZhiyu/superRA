@@ -561,6 +561,32 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   border-color: var(--accent);
   color: var(--accent);
 }
+/* Open-in-VS-Code control — jumps the active task's task.md into the editor.
+   Sits beside Share at the trailing edge (margin-left:auto claims the free
+   space; the header's gap spaces it from the Share button that follows). */
+.vscode-btn {
+  margin-left: auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text-mid);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.vscode-btn svg { width: 14px; height: 14px; display: block; }
+.vscode-btn:hover {
+  background: rgba(0, 122, 204, 0.12);
+  border-color: #007acc;
+  color: #007acc;
+}
 /* The card body reuses the tree-body section/comment chrome, but it is always
    shown (no collapse animation gating its height like a tree row). */
 .active-node-body { display: block; }
@@ -1864,6 +1890,23 @@ function updateBreadcrumb(path) {
    tree body — every one of those walks up to `.task-node[data-path]`. The
    breadcrumb already shows the path, so the card header is just title + status.
    Sections default to EXPANDED here (this is the detail view, not a tree row). */
+/* VS Code wordmark, inline so it inherits the button's currentColor (mid-grey
+   at rest, VS Code blue on hover). */
+var VSCODE_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true">'
+  + '<path fill="currentColor" d="M23.15 2.587 18.21.21a1.494 1.494 0 0 0-1.705.29'
+  + 'l-9.46 8.63-4.12-3.128a.999.999 0 0 0-1.276.057L.327 7.261A1 1 0 0 0 .326 8.74'
+  + 'L3.899 12 .326 15.26a1 1 0 0 0 .001 1.479L1.65 17.94a.999.999 0 0 0 1.276.057'
+  + 'l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06'
+  + 'V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448z"/></svg>';
+
+/* vscode://file deep-link to a task's task.md. Mirrors renderMarkdown's
+   `superRA/<path>/` prefix so it points at the same on-disk file the body's
+   relative links resolve against. */
+function taskFileVscodeHref(path) {
+  return 'vscode://file/' + PROJECT_ROOT + '/superRA/' + (path ? path + '/' : '') + 'task.md';
+}
+
 async function loadActiveNode(path) {
   var region = document.getElementById('active-node');
   if (!region) return;
@@ -1894,6 +1937,11 @@ async function loadActiveNode(path) {
       '<header class="active-node-head">'
       + '<h2 class="active-node-title" tabindex="-1"></h2>'
       + (status ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
+      /* Open in VS Code: jump straight to this task's task.md via vscode://file.
+         A plain editor deep-link, so it works in both server and standalone
+         (file://) mode — the href resolves to an on-disk absolute path. */
+      + '<a class="vscode-btn" target="_blank" title="Open task.md in VS Code">'
+      + VSCODE_ICON + '<span>VS Code</span></a>'
       /* Share/Export: download this node's subtree as a standalone HTML file.
          Server-backed (/export), so it is omitted in standalone mode — a
          downloaded file has no server to re-export from. */
@@ -1907,6 +1955,11 @@ async function loadActiveNode(path) {
     /* Set the title via textContent (avoids HTML injection from titles). */
     var titleEl = region.querySelector('.active-node-title');
     if (titleEl) titleEl.textContent = slug ? (slug + ' · ' + title) : title;
+
+    /* Point the VS Code button at this task's task.md. Set the href as a
+       property (not an attribute string) so the path needs no escaping. */
+    var vsBtn = region.querySelector('.vscode-btn');
+    if (vsBtn) vsBtn.href = taskFileVscodeHref(path);
 
     /* Wire the Share button via a closure over `path` — an inline onclick can't
        carry the path safely (a quoted path breaks the double-quoted attribute). */
@@ -2979,6 +3032,11 @@ function onTaskUpdate(path) {
 async function onFullReload() {
   var wanted = activePath;
   await loadNavTree();
+  /* Refresh PROJECT_ROOT before re-rendering the active card. A worktree switch
+     fires this reload; awaiting the worktree fetch lands the switched-to root
+     before setActive re-renders the card and its VS Code button, closing the
+     race where the card could render with the pre-switch root. */
+  await fetchWorktrees();
   var target = resolveSurvivingPath(wanted);
   restoring = true;
   if (target !== wanted) {
@@ -3073,9 +3131,21 @@ function populateWorktreeSelector(data) {
 }
 
 function fetchWorktrees() {
-  fetch('/api/worktrees')
+  /* Returns the fetch promise so onFullReload can await the refreshed root
+     before re-rendering the active card (whose VS Code button bakes in
+     PROJECT_ROOT). */
+  return fetch('/api/worktrees')
     .then(function(r) { return r.ok ? r.json() : null; })
-    .then(function(data) { if (data) populateWorktreeSelector(data); })
+    .then(function(data) {
+      if (!data) return;
+      /* Keep PROJECT_ROOT pointed at the live worktree. `current` is the active
+         worktree's project root, refreshed by the server on every switch, so
+         every vscode://file/ href resolves against the worktree the page is now
+         bound to. The non-empty guard preserves the baked-in root in standalone
+         (file://) mode, where the fetch shim returns current:''. */
+      if (data.current) PROJECT_ROOT = data.current;
+      populateWorktreeSelector(data);
+    })
     .catch(function() { /* graceful: hide selector */ });
 }
 
