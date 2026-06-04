@@ -1,6 +1,6 @@
 ---
 title: "Migrate Paper Reading Workflow"
-status: not-started
+status: implemented
 depends_on:
   - 02-pyzotero-tooling
 tags: [zotero, pdf, markdown]
@@ -27,7 +27,23 @@ Include examples for exact command invocations and JSON fields an agent should i
 
 ## Results
 
-### Key Findings
+### What was done
 
-- Pending.
+Rewrote the paper-reading workflow in two files:
+
+**[skills/zotero-paper-reader/SKILL.md](../../skills/zotero-paper-reader/SKILL.md)** — slimmed the workflow section to a 7-step summary and routes detailed procedure to the new reference. The `mistral-pdf-to-markdown` skill is referenced by capability name only (no hardcoded plugin path). The `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py` invocation pattern is preserved for install-location independence.
+
+**[skills/zotero-paper-reader/references/paper-reading.md](../../skills/zotero-paper-reader/references/paper-reading.md)** — new detailed reference containing:
+
+- Exact command invocations for all 7 steps, each with annotated JSON output showing the fields an agent must inspect (`data.itemType`, `data.parentItem`, `data.contentType`, `key`, `path`, `source`).
+- **Attachment-parent hydration** (Step 2): full-text search returns items where `data.itemType == "attachment"` with `data.parentItem` pointing to the top-level key; the reference shows the exact hydration pattern (`item PARENT_KEY`) and an example payload.
+- **Disambiguation** (Step 3): concise display format for multiple matches; asks the user only when the intended paper cannot be inferred from context.
+- **Reading discipline** (Step 7): offset/limit pattern, grep-for-section pattern, abstract-first rule.
+- **Troubleshooting** covering all six specified cases: local API disabled (distinguishes Zotero not running vs. API option off), no PDF child, missing local file (linked-file vs. missing-credentials sub-cases), missing Web API credentials, full-text attachment hits needing hydration, full-text requiring Web API.
+
+### Constraints check
+
+- Output path convention `Notes/PaperInMarkdown/Author_Year_Title.md` preserved.
+- PDF conversion details not duplicated — reference delegates to `mistral-pdf-to-markdown` skill by name.
+- Large-paper reading discipline enforced: abstract/introduction first, grep-then-offset for sections, no whole-file load.
 

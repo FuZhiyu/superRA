@@ -10,60 +10,25 @@ Search, retrieve, and analyze papers from a Zotero library using pyzotero. Defau
 
 ## Access Model
 
-Load [`references/access-modes.md`](references/access-modes.md) before the first `zotero_tool.py` call if you are unsure which mode applies or need fallback rules and credential details.
-
 The bundled tool (`scripts/zotero_tool.py`) detects which mode to use automatically. Run it with `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py` so it resolves correctly regardless of where the skill is installed.
+
+Load [`references/access-modes.md`](references/access-modes.md) if you need fallback rules, credential setup details, or troubleshooting for access-mode issues.
 
 ## Paper-Reading Workflow
 
-### Step 1: Search the library
+Load [`references/paper-reading.md`](references/paper-reading.md) for the full step-by-step workflow with exact command invocations, JSON field names, disambiguation logic, parent-item hydration for full-text search hits, and troubleshooting.
 
-```bash
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "title or author or keywords"
-# For full-text search (matches indexed PDF content), Web API mode:
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "term" --fulltext
-```
+**Summary of steps:**
 
-Full-text search (`--fulltext`) matches against indexed content and routes to the Web API; local-API support for it is unverified, so `--fulltext` always uses the Web API (see [`references/access-modes.md`](references/access-modes.md)). Plain `search` matches title/creator/year metadata in both modes.
-
-Present results when multiple papers match. Note the `item_key` of the chosen paper.
-
-### Step 2: Get the PDF attachment key
-
-```bash
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py children ITEM_KEY
-```
-
-Find the attachment with `contentType: application/pdf` and note its `key` (the attachment key).
-
-### Step 3: Get the PDF file path
-
-```bash
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py pdf ATTACHMENT_KEY
-```
-
-The command tries local Zotero storage first (`~/Zotero/storage/ATTACHMENT_KEY/`). If the PDF is absent locally, it downloads from the Web API to `/tmp/`. Prints the resolved path on stdout.
-
-### Step 4: Convert to markdown
-
-Invoke the `mistral-pdf-to-markdown` skill (a separate installed plugin). Pass the PDF path from Step 3 and save the output to `Notes/PaperInMarkdown/CLEAN_FILENAME.md`.
-
-**Filename convention:** `Author_Year_ShortTitle.md` — replace spaces with underscores, remove special characters.
-Example: `Du_et_al_2023_Are_Intermediary_Constraints_Priced.md`
-
-The conversion skill places extracted images in an `images/` subfolder next to the markdown file.
-
-### Step 5: Read and analyze
-
-```python
-Read(file_path="Notes/PaperInMarkdown/FILENAME.md", offset=1, limit=500)
-```
-
-Academic papers are often large. Read strategically: start with abstract and introduction, then target sections by interest. Provide the user with: paper metadata, abstract summary, main findings, and an offer to explore specific sections.
+1. Search: `zotero_tool.py search "query"` — plain metadata search; `--fulltext` for indexed content (Web API only).
+2. Identify top-level item: inspect `data.itemType` on each hit; attachment hits from `--fulltext` need parent hydration via `data.parentItem`.
+3. Choose: present concise metadata when multiple top-level papers match; ask the user only if the intended paper cannot be inferred.
+4. Get PDF attachment key: `zotero_tool.py children ITEM_KEY` → find child with `data.contentType == "application/pdf"`.
+5. Get PDF path: `zotero_tool.py pdf ATTACHMENT_KEY` → emits `{"source": ..., "path": ...}`.
+6. Convert to markdown: invoke the `mistral-pdf-to-markdown` skill with the PDF path; save to `Notes/PaperInMarkdown/Author_Year_ShortTitle.md`.
+7. Read and analyze: read the converted file in sections — abstract and introduction first, then targeted sections.
 
 ## Library Query Commands
-
-Beyond the paper-reading workflow, you can answer broader library questions:
 
 | Goal | Command |
 |---|---|
@@ -82,9 +47,10 @@ All commands emit JSON. Add `--help` to any subcommand for parameter details.
 
 ## Configuration
 
-Credentials are read from environment variables or, when present, from `Notes/.env`. They are never printed to the agent transcript. Required variables for Web API mode: `ZOTERO_LIBRARY_ID`, `ZOTERO_LIBRARY_TYPE` (default `user`), `ZOTERO_API_KEY`. Local mode needs no credentials. See [`references/access-modes.md`](references/access-modes.md) for full details including how to enable the local API in Zotero Desktop.
+Credentials are read from environment variables or, when present, from `Notes/.env`. They are never printed to the agent transcript. Required variables for Web API mode: `ZOTERO_LIBRARY_ID`, `ZOTERO_LIBRARY_TYPE` (default `user`), `ZOTERO_API_KEY`. Local mode needs no credentials. See [`references/access-modes.md`](references/access-modes.md) for full details.
 
 ## Resources
 
+- [`references/paper-reading.md`](references/paper-reading.md) — full workflow with command examples, JSON field guide, disambiguation, and troubleshooting
 - [`references/access-modes.md`](references/access-modes.md) — local vs. web access rules, credential setup, fallback logic, troubleshooting
-- [`scripts/zotero_tool.py`](scripts/zotero_tool.py) — unified pyzotero command surface (pinned to pyzotero 1.13.0 via PEP 723 inline metadata; locked in `scripts/zotero_tool.py.lock`)
+- [`scripts/zotero_tool.py`](scripts/zotero_tool.py) — unified pyzotero command surface (pinned to pyzotero 1.13.0 via PEP 723 inline metadata)
