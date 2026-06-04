@@ -2,7 +2,7 @@
 
 ## Local API (default)
 
-Pyzotero can connect to Zotero Desktop over localhost when the local API is enabled. No credentials are required. This mode supports all read operations: search, item lookup, children, collections, tags, full-text, and file retrieval.
+Pyzotero can connect to Zotero Desktop over localhost when the local API is enabled. No credentials are required. This mode supports metadata search, item lookup, children, collections, tags, attachment full-text retrieval, and local file retrieval. Library-wide full-text *search* may not be served by the local API — see Capability Boundaries below.
 
 **How to enable:** In Zotero Desktop → Settings → Advanced → enable "Allow other applications on this computer to communicate with Zotero."
 
@@ -41,18 +41,21 @@ Credentials are read by the tool script and never echoed to the agent transcript
 
 | Capability | Local API | Web API |
 |---|---|---|
-| Metadata search | yes | yes |
-| Full-text search | yes (via `fulltext_item`) | yes (indexed content only) |
+| Metadata search (`items(q=..., qmode="titleCreatorYear")`) | yes | yes |
+| Full-text search (`items(q=..., qmode="everything")`) | verify in task 02 | yes (indexed content only) |
 | Item lookup | yes | yes |
 | Child-item lookup | yes | yes |
 | Collection listing | yes | yes |
 | Tag listing | yes | yes |
 | DOI-to-key index | yes | yes |
-| Attachment full-text retrieval | yes | yes (indexed content only) |
+| Attachment full-text retrieval (`fulltext_item(attachment_key)`) | yes | yes (indexed content only) |
 | PDF file retrieval (local path) | yes (local storage) | download to `/tmp/` |
 | Write operations | not supported | yes (with write-access API key) |
 
-Full-text content returned by `fulltext_item` reflects what Zotero has already indexed. If a PDF has not been indexed, the field will be absent or empty.
+Two distinct full-text operations are easy to conflate:
+
+- **Full-text *search*** finds items across the library by content. It is `items(q="term", qmode="everything")`, which expands matching beyond title/metadata to indexed full-text. On the Web API this returns only content Zotero has already indexed. Whether pyzotero's local mode (a thin proxy to Zotero Desktop's local HTTP server) serves the `qmode=everything` path is uncertain — historically the local server has not exposed full-text search the way the Web API does. Task 02 must verify this against a running local instance; until verified, treat full-text *search* as Web-API-only and have `search --fulltext` fall back to the Web API when local cannot serve it.
+- **Attachment full-text *retrieval*** returns the indexed text of one known attachment. It is `fulltext_item(attachment_key)` and is available in both modes. It reflects what Zotero has already indexed; if a PDF has not been indexed, the field will be absent or empty.
 
 ## PDF Retrieval Logic
 
