@@ -2,18 +2,18 @@
 
 ## Local API (default)
 
-Pyzotero can connect to Zotero Desktop over localhost when the local API is enabled. No credentials are required. This mode supports metadata search, item lookup, children, collections, tags, attachment full-text retrieval, and local file retrieval. Library-wide full-text *search* may not be served by the local API — see Capability Boundaries below.
+Pyzotero connects to Zotero Desktop over localhost when the local API is enabled. No credentials are required. This mode supports metadata search, item lookup, children, collections, tags, attachment full-text retrieval, and local file retrieval. Library-wide full-text *search* is **not** served by the local API — see Capability Boundaries below.
 
 **How to enable:** In Zotero Desktop → Settings → Advanced → enable "Allow other applications on this computer to communicate with Zotero."
 
-Construct with `local=True`:
+Construct with `local=True`. Pyzotero 1.13.0 still requires both `library_id` and `library_type` in local mode; the local API serves the desktop's default user library at id `0`:
 
 ```python
 from pyzotero import zotero
-zot = zotero.Zotero(library_id=None, library_type="user", local=True)
+zot = zotero.Zotero(library_id=0, library_type="user", local=True)
 ```
 
-The tool script detects local API availability at startup (via `health` check against `http://localhost:23119/`) and uses it automatically when Zotero Desktop is running. If the local API is unavailable, the tool falls back to the Web API if credentials are configured.
+The tool script detects local API availability via a probe of `http://localhost:23119/api/users/0/items` and uses local mode automatically when it returns a successful response. Note that the Zotero connector port can answer (`Zotero is running`) while the local API itself is disabled — in that case the `/api` path returns `403 Local API is not enabled`, which the probe treats as unavailable. When local is unavailable, the tool falls back to the Web API if credentials are configured.
 
 ## Web API (fallback)
 
@@ -35,14 +35,16 @@ ZOTERO_LIBRARY_ID=12345678
 ZOTERO_LIBRARY_TYPE=user
 ```
 
-Credentials are read by the tool script and never echoed to the agent transcript.
+The tool resolves each variable from the environment first, then from `Notes/.env` in the current working directory. Environment values win on conflict. Credentials are read by the tool script and never echoed to the agent transcript.
+
+**Optional override:** `pdf --out-dir DIR` changes the Web-API download directory (default `/tmp`). There is no local-storage-path override — local PDFs are resolved from the standard `~/Zotero/storage/` location.
 
 ## Capability Boundaries
 
 | Capability | Local API | Web API |
 |---|---|---|
 | Metadata search (`items(q=..., qmode="titleCreatorYear")`) | yes | yes |
-| Full-text search (`items(q=..., qmode="everything")`) | verify in task 02 | yes (indexed content only) |
+| Full-text search (`items(q=..., qmode="everything")`) | no | yes (indexed content only) |
 | Item lookup | yes | yes |
 | Child-item lookup | yes | yes |
 | Collection listing | yes | yes |
@@ -54,23 +56,23 @@ Credentials are read by the tool script and never echoed to the agent transcript
 
 Two distinct full-text operations are easy to conflate:
 
-- **Full-text *search*** finds items across the library by content. It is `items(q="term", qmode="everything")`, which expands matching beyond title/metadata to indexed full-text. On the Web API this returns only content Zotero has already indexed. Whether pyzotero's local mode (a thin proxy to Zotero Desktop's local HTTP server) serves the `qmode=everything` path is uncertain — historically the local server has not exposed full-text search the way the Web API does. Task 02 must verify this against a running local instance; until verified, treat full-text *search* as Web-API-only and have `search --fulltext` fall back to the Web API when local cannot serve it.
+- **Full-text *search*** finds items across the library by content. It is `items(q="term", qmode="everything")`, which expands matching beyond title/metadata to indexed full-text. On the Web API this returns only content Zotero has already indexed. The Zotero Desktop local API does **not** serve full-text search — its `qmode=everything` path is not exposed the way the Web API's is. The tool therefore routes `search --fulltext` to the Web API unconditionally and reports a clear error when Web API credentials are absent. (Resolution recorded in task 02: the local API on the verification machine was reachable on the connector port but the `/api` path returned `403 Local API is not enabled`, so a live local full-text probe was not possible; the boundary is set conservatively to Web-API-only, matching pyzotero's documented local-mode capability surface.)
 - **Attachment full-text *retrieval*** returns the indexed text of one known attachment. It is `fulltext_item(attachment_key)` and is available in both modes. It reflects what Zotero has already indexed; if a PDF has not been indexed, the field will be absent or empty.
 
 ## PDF Retrieval Logic
 
-The `pdf` command in `zotero_tool.py`:
+The `pdf` command in `zotero_tool.py` (uses pyzotero, not raw HTTP calls):
 
 1. Checks `~/Zotero/storage/ATTACHMENT_KEY/` for a `.pdf` file.
-2. If found, returns that path immediately (local, no network).
-3. If not found, queries the item's metadata via the Web API to recover the original filename, then downloads the file to `/tmp/ORIGINAL_FILENAME` and returns that path.
+2. If found, emits `{"source": "local-storage", "path": ...}` immediately (local, no network).
+3. If not found, builds a Web API client, recovers the original filename from item metadata (`zot.item`), downloads the file bytes (`zot.file`) to the download directory (`/tmp` by default, or `--out-dir`), and emits `{"source": "web-download", "path": ...}`.
 4. Fails with a non-zero exit code if neither path yields a valid PDF (minimum 1 KB).
 
 Web API download requires `ZOTERO_API_KEY` and `ZOTERO_LIBRARY_ID`.
 
 ## Troubleshooting
 
-**Local API not available:** Confirm Zotero Desktop is running and the local API option is enabled under Settings → Advanced. The `health` command reports the detected mode.
+**Local API not available:** Confirm Zotero Desktop is running and the local API option is enabled under Settings → Advanced. A running Zotero with the option *off* still answers the connector port but returns `403 Local API is not enabled` on the `/api` path, which the tool treats as unavailable. The `health` command reports `local_api_available` and the detected mode.
 
 **API key errors:** Verify the key at zotero.org/settings/keys. Ensure the key has at least read access to the target library.
 

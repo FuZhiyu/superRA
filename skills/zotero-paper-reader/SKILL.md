@@ -24,7 +24,7 @@ uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "title or auth
 uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "term" --fulltext
 ```
 
-Full-text search (`--fulltext`) matches against indexed content and is served by the Web API; whether the local API serves it is verified in task 02 (see [`references/access-modes.md`](references/access-modes.md)). Plain `search` matches title/creator/year metadata in both modes.
+Full-text search (`--fulltext`) matches against indexed content and is served only by the Web API; the Zotero Desktop local API does not expose it, so `--fulltext` always routes to the Web API (see [`references/access-modes.md`](references/access-modes.md)). Plain `search` matches title/creator/year metadata in both modes.
 
 Present results when multiple papers match. Note the `item_key` of the chosen paper.
 
@@ -68,7 +68,7 @@ Beyond the paper-reading workflow, you can answer broader library questions:
 | Goal | Command |
 |---|---|
 | Metadata search (title/creator/year) | `search "query"` |
-| Full-text search (indexed content; Web API, local TBD task 02) | `search "query" --fulltext` |
+| Full-text search (indexed content; Web API only) | `search "query" --fulltext` |
 | Single item | `item ITEM_KEY` |
 | Child items / attachments | `children ITEM_KEY` |
 | Attachment full-text retrieval (one attachment) | `fulltext ATTACHMENT_KEY` |
@@ -87,4 +87,4 @@ Credentials are read from environment variables or, when present, from `Notes/.e
 ## Resources
 
 - [`references/access-modes.md`](references/access-modes.md) — local vs. web access rules, credential setup, fallback logic, troubleshooting
-- [`scripts/zotero_tool.py`](scripts/zotero_tool.py) — unified pyzotero command surface (implemented in task 02)
+- [`scripts/zotero_tool.py`](scripts/zotero_tool.py) — unified pyzotero command surface (pinned to pyzotero 1.13.0 via PEP 723 inline metadata; locked in `scripts/zotero_tool.py.lock`)
