@@ -1,6 +1,6 @@
 ---
 title: "Background-by-default launch, --foreground flag, idempotent reuse, stop"
-status: implemented
+status: approved
 depends_on:
   - 01-idle-shutdown
 tags: []
@@ -92,3 +92,11 @@ Manual end-to-end (real `superra dashboard` CLI, this repo's `superRA/` tree): d
 - [SKILL.md §Dashboard routing](../../../../../skills/task-system/SKILL.md) — the dashboard row now states background-by-default, reuse, `--foreground`, and `stop`.
 - [internals.md §Dashboard](../../../../../skills/task-system/references/internals.md) — added a **Lifecycle** paragraph (returns immediately, reuses a running server, self-exits on idle, PID/log under the git common dir) and the `--foreground` / `stop` command forms.
 - [README.md](../../../../../README.md) — the one-line dashboard mention now notes it launches in the background, reuses a running server, and self-exits when idle.
+
+## Review Notes
+
+Approved — objective met and verified end-to-end (real CLI: background launch returns immediately printing URL + PID + log path under the git common dir; second launch reuses the same PID without spawning a duplicate; `stop` terminates and removes the PID file; second `stop` is a clean no-op; `--foreground` blocks and serves). Full suite re-run independently: 484 passed. The two items below are non-blocking cleanups for whoever next edits this test module.
+
+1. MINOR — dead test helpers. [test_task_system.py:4022-4030](../../../../../skills/task-system/scripts/test_task_system.py#L4022-L4030): `TestBackgroundLaunch._spawn` and `._port` are defined but never called — every test in the class re-derives `TestIdleShutdownLifespan()._free_port()` inline and calls `serve_background` directly. Remove the unused helpers (and the class docstring's "via IDLE_TIMEOUT in its environment-independent default" phrasing, which no longer matches how `idle_timeout` is actually passed).
+
+2. MINOR — redundant global mutation in the supervisor branch. [plan_dashboard.py:2040-2042](../../../../../skills/task-system/scripts/plan_dashboard.py#L2040-L2042): when `--idle-timeout` is set without `--foreground`, `main` sets the module-global `IDLE_TIMEOUT` and then calls `serve_background(..., idle_timeout=args.idle_timeout)`. The supervisor parent never calls `serve()`, so the parent's global mutation has no effect (the child receives the value via its `--idle-timeout` CLI arg). Harmless but dead; the global set can be scoped to the `--foreground` branch.
