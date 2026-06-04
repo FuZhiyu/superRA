@@ -345,7 +345,7 @@ class TestTreeRoute:
 class TestWatcherDecisionLogic:
     """Test the watcher's broadcast event classification.
 
-    The watcher (_watch_plan_root) is async and uses watchfiles.awatch(),
+    The watcher (_watch_worktree) is async and uses watchfiles.awatch(),
     which is impractical to unit test directly. Instead, we test the decision
     logic by simulating the change classification and broadcast calls that
     the watcher makes.
@@ -357,7 +357,7 @@ class TestWatcherDecisionLogic:
         Takes a list of (change_type, file_path_str) tuples and returns
         a list of (event_name, data_snippet) broadcast calls.
 
-        This mirrors the logic in _watch_plan_root() without depending on
+        This mirrors the logic in _watch_worktree() without depending on
         watchfiles.awatch().
 
         When *skip_init* is True, the caller is responsible for having called
@@ -412,7 +412,7 @@ class TestWatcherDecisionLogic:
                 changed_paths.add(task_path)
 
         # Simulate the broadcast decisions — matches production logic in
-        # _watch_plan_root() (plan_dashboard.py lines 226-283).
+        # _watch_worktree() (plan_dashboard.py).
         broadcasts: list[tuple[str, str]] = []
 
         if structural_parent_paths:
