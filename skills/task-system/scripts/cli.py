@@ -87,12 +87,16 @@ def _run_dashboard(args: argparse.Namespace) -> None:
         argv = ["generate", "--plan-root", root]
         _append_optional(argv, "--output", args.output)
         _append_optional(argv, "--root", args.subtree)
+    elif args.dashboard_command == "stop":
+        argv = ["stop", "--root", root]
     else:
         argv = ["serve", "--root", root]
         if args.port is not None:
             argv.extend(["--port", str(args.port)])
         if args.no_open:
             argv.append("--no-open")
+        if args.foreground:
+            argv.append("--foreground")
     _module_main("plan_dashboard", argv)
 
 
@@ -246,6 +250,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     dashboard.add_argument("--port", type=int, default=None, help="Server port")
     dashboard.add_argument("--no-open", action="store_true", help="Skip auto-opening the browser")
+    dashboard.add_argument(
+        "--foreground",
+        action="store_true",
+        help="Run blocking in this terminal with logs on stdout (default: background)",
+    )
     dash_sub = dashboard.add_subparsers(dest="dashboard_command")
     export = dash_sub.add_parser("export", help="Export a static dashboard HTML file")
     export.add_argument(
@@ -255,6 +264,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     export.add_argument("--output", default="", help="Output HTML path")
     export.add_argument("--subtree", default="", help="Task path to scope the export")
+    stop = dash_sub.add_parser("stop", help="Stop the background dashboard server for this repo")
+    stop.add_argument(
+        "--root",
+        default=None,
+        help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
+    )
     _set_runner(dashboard, _run_dashboard)
 
     task = sub.add_parser("task", help="Read, query, and mutate task trees")

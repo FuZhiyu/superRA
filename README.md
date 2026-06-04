@@ -51,7 +51,7 @@ flowchart TB
 
 To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, `implement according to the plan`, `integrate it with the update on the main`, ... — or name a phase skill directly: `superplan`, `superimplement`, `superintegrate`.
 
-Run `superra dashboard --root superRA` to open the live dashboard with tree, DAG, and kanban views that auto-update as tasks progress.
+Run `superra dashboard --root superRA` to open the live dashboard with tree, DAG, and kanban views that auto-update as tasks progress; it launches in the background and returns immediately, reuses an already-running server, and self-exits once idle.
 
 ### Key principles of the workflow
 

@@ -208,9 +208,13 @@ The dashboard is a live-updating server (FastAPI + SSE), not a static HTML file.
 ```bash
 superra dashboard --root superRA                                     # installed package
 uv run --project skills/task-system superra dashboard --root superRA  # local checkout
+superra dashboard --foreground --root superRA                         # block in this terminal
+superra dashboard stop --root superRA                                 # stop the background server
 ```
 
 Task trees no longer carry a committed `serve` launcher script; the packaged `superra dashboard` command resolves `plan_dashboard.py` itself. Use the `uv run --project skills/task-system` form against a local checkout so edits are picked up from the live source, and the installed `superra dashboard` form for installed plugin/package sources.
+
+**Lifecycle.** `superra dashboard` is fire-and-forget: it launches the server detached in the background, waits for it to bind, prints the URL + PID + log path, and returns the terminal. A second launch for the same repo reuses the running server (opens a tab, does not spawn a duplicate) rather than starting a second. The server self-exits after 5 continuous minutes with zero open tabs (a live `/events` SSE connection is one open tab, summed across all worktrees; periodic heartbeats prune connections dropped by sleep/network loss), so a detached server always self-cleans within the idle window. `--foreground` runs it blocking in the current terminal with logs on stdout (it also self-exits on idle); `superra dashboard stop` terminates the background server (a clean no-op when nothing is running). The PID and log files (`superra-dashboard.pid` / `.log`) live under the git common dir alongside the port key, so they are repo-scoped and shared across the repo's worktrees.
 
 The server provides SSE hot-reload — it auto-updates when the task files of the worktree you are viewing change. Port is derived deterministically from the repository's git common directory (range 8100–8999; the plan-root path is the fallback when there is no git), so all of a repository's worktrees map to one shared server rather than each running its own. That single server resolves any of the repo's worktrees on demand per request: the active worktree is carried in the browser URL as `?wt=<worktree-basename>` (absent means the worktree the server was launched in), and switching worktrees via the selector is in-page navigation, not a server-wide switch — so two tabs can view different worktrees on the same port without interfering. Use `--port N` to override. The static `generate` subcommand is deprecated — use the live `superra dashboard`, or `superra dashboard export --output dashboard.html` for a one-off static file.
 

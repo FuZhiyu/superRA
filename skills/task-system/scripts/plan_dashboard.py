@@ -6,7 +6,8 @@
 """Live-updating task dashboard server with backward-compatible static generation.
 
 Usage:
-    uv run plan_dashboard.py serve [--root superRA/] [--port 8080] [--no-open]
+    uv run plan_dashboard.py serve [--root superRA/] [--port 8080] [--no-open] [--foreground]
+    uv run plan_dashboard.py stop [--root superRA/]
     uv run plan_dashboard.py generate --plan-root PATH [--output PATH]
 """
 
@@ -18,9 +19,13 @@ import base64
 import hashlib
 import importlib.resources as resources
 import json
+import os
 import re
+import signal
 import socket
+import subprocess
 import sys
+import time
 import webbrowser
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
@@ -64,7 +69,9 @@ except ImportError:
 PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 
 # Default idle timeout: exit after this many continuous seconds with zero open
-# SSE connections.  Tests override this via _idle_timeout before calling serve().
+# SSE connections.  Tests inject a sub-second value either by passing ``timeout``
+# straight to ``_idle_monitor`` or by setting ``IDLE_TIMEOUT`` before launch (it is
+# read by ``lifespan`` when it creates the monitor task).
 IDLE_TIMEOUT: float = 300.0  # 5 minutes
 
 # Heartbeat interval for periodic SSE keep-alive messages.  Must be well under
@@ -1632,8 +1639,9 @@ def serve(port: int) -> None:
     """Run the dashboard server on *port*, blocking until it exits.
 
     Uses ``uvicorn.Server`` so the idle monitor can request shutdown via
-    ``_server.should_exit = True``.  This is the single serve path for both
-    foreground and (once task 02 lands) background launch.
+    ``_server.should_exit = True``.  This is the single in-process serve path:
+    both ``serve --foreground`` and the detached background child call it, so
+    their lifecycle (idle self-exit included) is identical.
     """
     import uvicorn
 
@@ -1644,6 +1652,303 @@ def serve(port: int) -> None:
         asyncio.run(_server.serve())
     finally:
         _server = None
+
+
+# ---------------------------------------------------------------------------
+# Background supervisor: PID/log files, idempotent launch, stop
+# ---------------------------------------------------------------------------
+#
+# The default ``serve`` is a thin supervisor: it spawns the in-process server
+# (``serve()``) as a detached child, waits for the port to bind, writes a PID
+# file, prints URL + PID + log path, and returns.  A second launch reuses a
+# healthy running server instead of spawning a duplicate; ``stop`` terminates
+# it.  PID and log files are keyed to the same repo identity as the port (the
+# git common dir), so they are repo-scoped and shared across the repo's
+# worktrees — matching one-server-per-repo.
+
+
+def _runtime_dir(plan_root: Path, git_common_dir: str | None = None) -> Path:
+    """Directory holding the PID and log files for this repo's dashboard.
+
+    Keyed to the same repo identity as the port: the git common dir when there
+    is one (so all worktrees of a repo share it), else the plan root — mirroring
+    ``_default_port``.
+    """
+    return Path(git_common_dir) if git_common_dir else plan_root.resolve()
+
+
+def _pid_file(plan_root: Path, git_common_dir: str | None = None) -> Path:
+    return _runtime_dir(plan_root, git_common_dir) / "superra-dashboard.pid"
+
+
+def _log_file(plan_root: Path, git_common_dir: str | None = None) -> Path:
+    return _runtime_dir(plan_root, git_common_dir) / "superra-dashboard.log"
+
+
+def _read_pid_port(pid_path: Path) -> tuple[int | None, int | None]:
+    """Return ``(pid, port)`` recorded in *pid_path*.
+
+    The PID file stores ``"<pid> <port>"`` (port lets a reuse check probe the
+    port the running server actually bound, which can differ from a freshly
+    derived port when the deterministic port was occupied at its launch).  A
+    legacy single-int file (pid only) returns ``(pid, None)``.  Returns
+    ``(None, None)`` when absent or unparseable.
+    """
+    try:
+        text = pid_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None, None
+    parts = text.split()
+    try:
+        pid = int(parts[0])
+    except (IndexError, ValueError):
+        return None, None
+    port: int | None = None
+    if len(parts) > 1:
+        try:
+            port = int(parts[1])
+        except ValueError:
+            port = None
+    return pid, port
+
+
+def _read_pid(pid_path: Path) -> int | None:
+    """Return the PID recorded in *pid_path*, or None if absent/unreadable."""
+    return _read_pid_port(pid_path)[0]
+
+
+def _write_pid_port(pid_path: Path, pid: int, port: int) -> None:
+    """Record ``"<pid> <port>"`` to *pid_path*."""
+    pid_path.write_text(f"{pid} {port}", encoding="utf-8")
+
+
+def _pid_alive(pid: int) -> bool:
+    """Return True if a process with *pid* exists and is not a reaped zombie.
+
+    Uses a signal-0 probe.  When *pid* is a child of this process (e.g. a
+    background server launched and stopped in the same interpreter, as in
+    tests), a terminated child lingers as a zombie that the probe still reports
+    as existing; a non-blocking ``waitpid`` reaps it first so the probe is
+    accurate.  In normal CLI use launch and stop are separate processes, so the
+    background server is never this process's child and ``waitpid`` is a no-op.
+    """
+    try:
+        reaped, _ = os.waitpid(pid, os.WNOHANG)
+        if reaped == pid:
+            return False
+    except ChildProcessError:
+        # Not our child — nothing to reap; fall through to the signal probe.
+        pass
+    except OSError:
+        pass
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # Exists but owned by another user — still alive for our purposes.
+        return True
+    return True
+
+
+def _port_serving(port: int) -> bool:
+    """Return True if something is accepting connections on *port* locally."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)
+        return s.connect_ex(("localhost", port)) == 0
+
+
+def _running_pid(pid_path: Path, port: int) -> tuple[int, int] | None:
+    """Return ``(pid, port)`` of a healthy running dashboard, else None.
+
+    Healthy = the PID file names a live process *and* its recorded port is
+    serving.  The port a running server bound is read from the PID file (it can
+    differ from a freshly derived *port* when the deterministic port was
+    occupied at launch); *port* is the fallback for a legacy pid-only file.  A
+    stale PID file (process gone, or port not actually serving) is cleaned up
+    and None is returned so the caller can spawn a fresh server.
+    """
+    pid, recorded_port = _read_pid_port(pid_path)
+    if pid is None:
+        return None
+    probe_port = recorded_port if recorded_port is not None else port
+    if _pid_alive(pid) and _port_serving(probe_port):
+        return pid, probe_port
+    # Stale PID file — remove it so a fresh launch is not blocked.
+    pid_path.unlink(missing_ok=True)
+    return None
+
+
+def _wait_for_bind(port: int, timeout: float = 10.0, poll: float = 0.1) -> bool:
+    """Poll *port* until it accepts connections or *timeout* elapses."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if _port_serving(port):
+            return True
+        time.sleep(poll)
+    return _port_serving(port)
+
+
+def _open_browser_async(url: str) -> None:
+    """Open *url* in a browser without blocking the caller."""
+    import threading
+
+    def _open():
+        time.sleep(1.0)
+        webbrowser.open(url)
+
+    threading.Thread(target=_open, daemon=True).start()
+
+
+def serve_background(
+    plan_root: Path,
+    port: int,
+    git_common_dir: str | None = None,
+    *,
+    open_browser: bool = True,
+    bind_timeout: float = 10.0,
+    idle_timeout: float | None = None,
+) -> int:
+    """Launch (or reuse) a detached background dashboard server for this repo.
+
+    Returns a process exit code: 0 on success (spawned or already running), non-
+    zero when a freshly spawned child fails to bind within *bind_timeout*.
+
+    Idempotent: if a healthy server is already serving this repo's port, opens a
+    browser tab (unless *open_browser* is False) and reports "already running"
+    without spawning a second process.  Otherwise spawns ``serve()`` in a new
+    session (``start_new_session=True``) with stdout/stderr redirected to the log
+    file so it survives the launching shell, waits for the port to bind, writes
+    the PID file, and prints URL + PID + log path.  On bind failure it prints the
+    tail of the log so a startup error surfaces instead of leaving a dead child.
+    """
+    pid_path = _pid_file(plan_root, git_common_dir)
+    log_path = _log_file(plan_root, git_common_dir)
+
+    existing = _running_pid(pid_path, port)
+    if existing is not None:
+        # Reuse the live server.  Report (and open) the port it actually bound,
+        # which may differ from the freshly derived *port* if the deterministic
+        # port was occupied when that server launched.
+        existing_pid, existing_port = existing
+        existing_url = f"http://localhost:{existing_port}"
+        print(f"Dashboard already running at {existing_url} (PID {existing_pid})")
+        if open_browser:
+            _open_browser_async(existing_url)
+        return 0
+
+    url = f"http://localhost:{port}"
+
+    # Spawn the in-process server as a detached child running the foreground
+    # path.  ``start_new_session`` puts it in its own session so it outlives the
+    # launching shell; stdio is redirected to the log file (no inherited TTY).
+    cmd = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "serve",
+        "--foreground",
+        "--root",
+        str(plan_root),
+        "--port",
+        str(port),
+        "--no-open",
+    ]
+    if idle_timeout is not None:
+        cmd += ["--idle-timeout", str(idle_timeout)]
+    pid_path.parent.mkdir(parents=True, exist_ok=True)
+    log_fh = open(log_path, "ab")
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=log_fh,
+            stderr=log_fh,
+            start_new_session=True,
+            cwd=str(Path.cwd()),
+        )
+    finally:
+        log_fh.close()
+
+    if not _wait_for_bind(port, timeout=bind_timeout):
+        # Surface the startup error rather than silently backgrounding a dead
+        # process.  The child may have exited already (port conflict, traceback).
+        if proc.poll() is None:
+            _terminate(proc.pid)
+        print(
+            f"Error: dashboard failed to bind {url} within {bind_timeout:.0f}s",
+            file=sys.stderr,
+        )
+        tail = _log_tail(log_path)
+        if tail:
+            print("--- log tail ---", file=sys.stderr)
+            print(tail, file=sys.stderr)
+        return 1
+
+    _write_pid_port(pid_path, proc.pid, port)
+    print(f"Dashboard running at {url} (PID {proc.pid})")
+    print(f"Logs: {log_path}")
+    if open_browser:
+        _open_browser_async(url)
+    return 0
+
+
+def _log_tail(log_path: Path, lines: int = 20) -> str:
+    """Return the last *lines* lines of the log file, or '' if unreadable."""
+    try:
+        text = log_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    return "\n".join(text.splitlines()[-lines:])
+
+
+def _terminate(pid: int, timeout: float = 5.0) -> bool:
+    """Terminate *pid* (SIGTERM, then SIGKILL) and wait for it to exit.
+
+    Returns True if the process is gone afterward.
+    """
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return True
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not _pid_alive(pid):
+            return True
+        time.sleep(0.1)
+    # Escalate.
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        return True
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if not _pid_alive(pid):
+            return True
+        time.sleep(0.1)
+    return not _pid_alive(pid)
+
+
+def stop_background(plan_root: Path, git_common_dir: str | None = None) -> int:
+    """Terminate the background dashboard server for this repo.
+
+    Reads the PID file and terminates the process, then removes the PID file.
+    A clean no-op (exit 0) when nothing is running or the PID file is stale.
+    """
+    pid_path = _pid_file(plan_root, git_common_dir)
+    pid = _read_pid(pid_path)
+    if pid is None:
+        print("No dashboard server is running.")
+        return 0
+    if not _pid_alive(pid):
+        print("No dashboard server is running (stale PID file removed).")
+        pid_path.unlink(missing_ok=True)
+        return 0
+    if _terminate(pid):
+        print(f"Stopped dashboard server (PID {pid}).")
+        pid_path.unlink(missing_ok=True)
+        return 0
+    print(f"Error: could not stop dashboard server (PID {pid}).", file=sys.stderr)
+    return 1
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -1669,6 +1974,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--no-open",
         action="store_true",
         help="Skip auto-opening the browser",
+    )
+    serve_p.add_argument(
+        "--foreground",
+        action="store_true",
+        help="Run blocking in this terminal with logs on stdout (default: background)",
+    )
+    serve_p.add_argument(
+        "--idle-timeout",
+        type=float,
+        default=None,
+        # Override the idle self-exit window (seconds).  Internal/testing knob:
+        # the supervisor passes a sub-second value to a spawned child so a
+        # background self-exit can be observed deterministically.
+        help=argparse.SUPPRESS,
+    )
+
+    # --- stop ---
+    stop_p = subparsers.add_parser(
+        "stop", help="Stop the background dashboard server for this repo"
+    )
+    stop_p.add_argument(
+        "--root",
+        default=f"{TASK_ROOT_DIRNAME}/",
+        help=f"Path to the task root directory (default: {TASK_ROOT_DIRNAME}/ in cwd)",
     )
 
     # --- generate (backward compat) ---
@@ -1706,29 +2035,39 @@ def main(argv: list[str] | None = None) -> None:
 
         git_common_dir = get_git_common_dir()
         port = args.port if args.port is not None else _default_port(PLAN_ROOT, git_common_dir)
-
-        import uvicorn
-
         url = f"http://localhost:{port}"
-        if args.port is None:
-            source = git_common_dir if git_common_dir else str(PLAN_ROOT)
-            print(f"Starting dashboard at {url} (port derived from {source})")
+
+        if args.idle_timeout is not None:
+            global IDLE_TIMEOUT
+            IDLE_TIMEOUT = args.idle_timeout
+
+        if args.foreground:
+            # Blocking console mode: logs on stdout, Ctrl+C or idle self-exit.
+            if args.port is None:
+                source = git_common_dir if git_common_dir else str(PLAN_ROOT)
+                print(f"Starting dashboard at {url} (port derived from {source})")
+            else:
+                print(f"Starting dashboard at {url}")
+            print(f"Watching: {PLAN_ROOT}")
+            if not args.no_open:
+                _open_browser_async(url)
+            serve(port)
         else:
-            print(f"Starting dashboard at {url}")
-        print(f"Watching: {PLAN_ROOT}")
+            # Default: detach a background server, wait for bind, return.
+            rc = serve_background(
+                PLAN_ROOT,
+                port,
+                git_common_dir,
+                open_browser=not args.no_open,
+                idle_timeout=args.idle_timeout,
+            )
+            sys.exit(rc)
 
-        if not args.no_open:
-            # Open browser after a short delay to let the server start
-            import threading
-
-            def _open_browser():
-                import time
-                time.sleep(1.0)
-                webbrowser.open(url)
-
-            threading.Thread(target=_open_browser, daemon=True).start()
-
-        serve(port)
+    elif args.command == "stop":
+        plan_root = Path(args.root).resolve()
+        git_common_dir = get_git_common_dir()
+        rc = stop_background(plan_root, git_common_dir)
+        sys.exit(rc)
 
     elif args.command == "generate":
         plan_root = Path(args.plan_root)
