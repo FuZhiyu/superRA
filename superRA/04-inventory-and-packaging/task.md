@@ -1,6 +1,6 @@
 ---
 title: "Update Skill Inventory and Packaging Surfaces"
-status: not-started
+status: implemented
 depends_on:
   - 03-paper-reading-workflow
 tags: [docs, packaging, skill-creation]
@@ -27,7 +27,19 @@ Keep descriptions trigger-focused: reading, searching, retrieving, converting, a
 
 ## Results
 
-### Key Findings
+### Placement decision
 
-- Pending.
+`zotero-paper-reader` is user-invocable standalone and not loaded by any workflow stage or the Skill-Load Manifest. The `using-superra` Skill Inventory already contains standalone-invocable entries (`task-system`, `codex-superra-setup`) so including `zotero-paper-reader` there is consistent and keeps it discoverable to agents that might suggest it to users. The entry explicitly states it is not loaded by workflow agents, so no Manifest change is needed and no workflow choreography is touched.
+
+### Changes
+
+Three inventory surfaces updated; Manifest and generated agent files are untouched.
+
+- [skills/using-superRA/SKILL.md:65](../../skills/using-superRA/SKILL.md#L65) — added `zotero-paper-reader` row to the Skill Inventory table under Utility, with an explicit "not loaded by workflow agents or the Manifest" note.
+- [skills/CATEGORIES.md:47](../../skills/CATEGORIES.md#L47) — added `zotero-paper-reader` row to the Utility table with a trigger-focused description matching the skill's frontmatter.
+- [README.md:89](../../README.md#L89) — added `zotero-paper-reader` row to the Utility Skills table; description covers trigger conditions (reading, finding, summarizing, analyzing by title/author/DOI/topic) and lists library query capabilities, consistent with the skill's frontmatter.
+
+### Verification
+
+All three entries confirmed present via grep. Skill-Load Manifest (Generic and Domain add-on tables in `using-superra`) is unchanged.
 
