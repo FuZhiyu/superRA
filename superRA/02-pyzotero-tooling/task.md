@@ -6,7 +6,8 @@ depends_on:
 tags: [python, uv, pyzotero]
 script: skills/zotero-paper-reader/scripts/zotero_tool.py
 input:
-  - skills/zotero-paper-reader/scripts/zotero_tool.py
+  - skills/zotero-paper-reader/references/access-modes.md
+  - skills/zotero-paper-reader/SKILL.md
 output:
   - skills/zotero-paper-reader/scripts/zotero_tool.py
 created: 2026-06-04
@@ -19,6 +20,8 @@ Implement a skill-owned Python command surface that agents can run with `uv` to 
 ### Required Commands
 
 The command surface must cover at least: health/check-access, search metadata, search full text, get item, get children, list collections, list tags, DOI index, get attachment full text, and get PDF path or download path. The PDF command must preserve the old local-storage-first behavior and use pyzotero/web API rather than raw MCP calls.
+
+Build against the capability contract in `references/access-modes.md` (approved task 01): library full-text *search* is `items(q=..., qmode="everything")` and is distinct from attachment full-text *retrieval* (`fulltext_item(attachment_key)`) — they are separate subcommands. The contract leaves one boundary for this task to resolve: whether Zotero's *local* API actually serves `qmode="everything"` full-text search. Verify it against a running local instance if available; if local search is unavailable or unreliable, route `search --fulltext` to the Web API and document the boundary in `access-modes.md` (replacing its "verify in task 02" marker with the verified answer).
 
 ### Configuration Contract
 
