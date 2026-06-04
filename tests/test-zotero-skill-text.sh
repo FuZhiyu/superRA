@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# Text-regression checks for skills/zotero-paper-reader/.
+# Blocks MCP regressions (mcp__zotero / mcp_zotero) and stale setup
+# instructions (old hardcoded paths, uv run --project, get_zotero_pdf.py).
+# Also asserts positive invariants: every uv invocation uses --script, and
+# all command examples reference ${CLAUDE_SKILL_DIR}.
+#
+# Run from the repo root: bash tests/test-zotero-skill-text.sh
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+SKILL_DIR="skills/zotero-paper-reader"
+
+pass=0
+fail=0
+failed_names=()
+
+record_pass() { printf 'PASS  %s\n' "$1"; pass=$((pass + 1)); }
+record_fail() { printf 'FAIL  %s\n' "$1"; fail=$((fail + 1)); failed_names+=("$1"); }
+
+# assert_absent: pattern must not appear anywhere under SKILL_DIR.
+assert_absent() {
+  local name="$1" pattern="$2"
+  if rg -rl --fixed-strings -- "$pattern" "$SKILL_DIR" >/dev/null 2>&1; then
+    printf '      pattern present (must be absent): %s\n' "$pattern"
+    record_fail "$name"
+  else
+    record_pass "$name"
+  fi
+}
+
+# assert_present_in: pattern must appear in the given file.
+assert_present_in() {
+  local name="$1" file="$2" pattern="$3"
+  if rg -q --fixed-strings -- "$pattern" "$file" 2>/dev/null; then
+    record_pass "$name"
+  else
+    printf '      pattern absent in %s: %s\n' "$file" "$pattern"
+    record_fail "$name"
+  fi
+}
+
+# --------------------------------------------------------------------------- #
+# MCP regression guards                                                        #
+# --------------------------------------------------------------------------- #
+
+assert_absent "no mcp__zotero reference"          "mcp__zotero"
+assert_absent "no mcp_zotero reference"           "mcp_zotero"
+# Guard against any instruction that tells the agent to call an MCP tool for
+# Zotero (e.g. "call mcp" / "use mcp" in a Zotero-specific context).
+# We check for the literal token in a tool-call context, not every prose
+# occurrence of the acronym (the architecture discussion in access-modes.md
+# is fine; a tool-call instruction is not).
+assert_absent "no call_mcp_zotero instruction"    "call_mcp"
+assert_absent "no use_mcp_tool instruction"       "use_mcp_tool"
+
+# --------------------------------------------------------------------------- #
+# Stale setup-instruction guards                                               #
+# --------------------------------------------------------------------------- #
+
+# Old hardcoded install path that predates CLAUDE_SKILL_DIR support.
+assert_absent "no .claude/skills/mistral hardcoded path"   ".claude/skills/mistral"
+assert_absent "no .claude/skills/ hardcoded path"          ".claude/skills/"
+
+# Legacy script name replaced by zotero_tool.py.
+assert_absent "no get_zotero_pdf.py reference"             "get_zotero_pdf.py"
+
+# PEP 723 inline-script runner must be --script, never --project.
+assert_absent "no uv run --project invocation"             "uv run --project"
+
+# The old Zotero MCP server package name.
+assert_absent "no zotero-mcp-server reference"             "zotero-mcp-server"
+assert_absent "no zotero_mcp reference"                    "zotero_mcp"
+
+# --------------------------------------------------------------------------- #
+# Positive invariants                                                          #
+# --------------------------------------------------------------------------- #
+
+# SKILL.md must tell agents to use ${CLAUDE_SKILL_DIR} so the path is
+# install-location independent.
+assert_present_in \
+  "SKILL.md references CLAUDE_SKILL_DIR" \
+  "$SKILL_DIR/SKILL.md" \
+  'CLAUDE_SKILL_DIR'
+
+# paper-reading.md must show the full uv run --script form with CLAUDE_SKILL_DIR.
+assert_present_in \
+  "paper-reading.md uses uv run --script with CLAUDE_SKILL_DIR" \
+  "$SKILL_DIR/references/paper-reading.md" \
+  'uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py'
+
+# access-modes.md must document the local API probe behavior (connector port
+# vs. /api path distinction — key for the 403 edge case).
+assert_present_in \
+  "access-modes.md documents 403 local-API-not-enabled edge case" \
+  "$SKILL_DIR/references/access-modes.md" \
+  '403'
+
+# The script's PEP 723 metadata must pin pyzotero 1.13.0 exactly.
+assert_present_in \
+  "script pins pyzotero==1.13.0" \
+  "$SKILL_DIR/scripts/zotero_tool.py" \
+  '"pyzotero==1.13.0"'
+
+# SKILL.md must not direct agents to the MCP approach; the description field
+# must reference pyzotero (the new approach), not MCP.
+assert_present_in \
+  "SKILL.md description mentions pyzotero" \
+  "$SKILL_DIR/SKILL.md" \
+  'pyzotero'
+
+echo
+echo "Passed: $pass    Failed: $fail"
+if [ $fail -gt 0 ]; then
+  echo "Failing cases: ${failed_names[*]}"
+  exit 1
+fi
+exit 0
