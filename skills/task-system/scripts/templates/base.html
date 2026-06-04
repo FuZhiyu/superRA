@@ -1179,7 +1179,7 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
 </div>
 
 <!-- ── Content ── -->
-<div class="main-content"{% if not standalone %} hx-ext="sse" sse-connect="/events"{% endif %}>
+<div class="main-content"{% if not standalone %} hx-ext="sse" sse-connect="/events{% if wt_id %}?wt={{ wt_id | urlencode }}{% endif %}"{% endif %}>
   {% if not standalone %}
   {#- Hidden element to catch full-reload SSE events -#}
   <div id="sse-full-reload" sse-swap="full-reload" hx-swap="none" style="display:none;"></div>
@@ -1297,7 +1297,7 @@ function standaloneFetch(url) {
   if (/\/comments($|\?)/.test(url)) return _standaloneResponse([], true);
   if (url.indexOf('/api/comments/summary') !== -1) return _standaloneResponse({}, true);
   if (url.indexOf('/api/worktrees') !== -1) {
-    return _standaloneResponse({ current: '', worktrees: [] }, true);
+    return _standaloneResponse({ launch_wt_id: '', worktrees: [] }, true);
   }
   return _standaloneResponse(null, false);
 }
@@ -1317,6 +1317,30 @@ window.STANDALONE = false;
 var md = window.markdownit({ html: false, linkify: true });
 md.use(texmath, { engine: katex, delimiters: 'dollars' });
 var PROJECT_ROOT = {{ project_root | tojson }};
+
+/* ── Active worktree (the ?wt= dimension of the URL) ──
+   The active worktree is carried in location.search as `?wt=<id>`, separate from
+   the task path in location.hash. ACTIVE_WT is the resolved id ('' = the launch
+   worktree, which the server serves by default and keeps out of the URL). Every
+   server fetch goes through wtUrl() so all panels render this worktree; the SSE
+   connect and PROJECT_ROOT follow it too. In standalone (file://) mode there is
+   no server and ?wt= is meaningless: ACTIVE_WT stays '' and wtUrl() returns the
+   URL untouched so the exact-string fetch shim still matches. */
+function readActiveWt() {
+  if (window.STANDALONE) return '';
+  try { return new URLSearchParams(location.search).get('wt') || ''; }
+  catch (e) { return ''; }
+}
+var ACTIVE_WT = readActiveWt();
+
+/* Append the active `?wt=` to a same-origin server URL, merging with any query
+   string the URL already carries (e.g. /dag?root=<path>, /export?root=<path>).
+   No-op when ACTIVE_WT is '' (launch worktree) or in standalone mode. */
+function wtUrl(url) {
+  if (!ACTIVE_WT) return url;
+  var sep = url.indexOf('?') === -1 ? '?' : '&';
+  return url + sep + 'wt=' + encodeURIComponent(ACTIVE_WT);
+}
 
 /* Membership oracle for in-tree task references. Every task's tree path, as a
    set, so renderMarkdown can decide whether a relative body link points at a
@@ -1560,7 +1584,7 @@ function toggleTask(rowEl) {
       if (node.dataset.needsLoad === 'true') {
         var path = node.dataset.path;
         var pathId = path.replace(/\//g, '-');
-        htmx.ajax('GET', '/task/' + path, {
+        htmx.ajax('GET', wtUrl('/task/' + path), {
           target: '#' + pathId + '-children',
           swap: 'innerHTML'
         });
@@ -1769,7 +1793,7 @@ function nodeOwnRowMatches(el, status, search) {
 async function renderKanbanView() {
   var container = document.getElementById('view-kanban');
   try {
-    var resp = await fetch('/kanban');
+    var resp = await fetch(wtUrl('/kanban'));
     if (resp.ok) {
       container.innerHTML = await resp.text();
     } else {
@@ -1814,7 +1838,9 @@ function setActive(path) {
 
   if (!restoring) {
     var hash = '#/' + path;
-    if (location.hash !== hash) history.pushState({ path: path }, '', hash);
+    /* Relative '#/...' keeps location.search (the ?wt=) intact, so a task-path
+       navigation never drops the active worktree from the URL. */
+    if (location.hash !== hash) history.pushState({ path: path, wt: ACTIVE_WT }, '', hash);
     /* User-initiated navigation: land focus on the new card heading once it
        paints (a11y — SR users follow focus to the new content). Suppressed on
        initial load / popstate restores (restoring=true), which must not steal
@@ -1918,7 +1944,7 @@ async function loadActiveNode(path) {
   var slug = path ? path.split('/').pop() : '';
 
   try {
-    var resp = await fetch('/node/' + path);
+    var resp = await fetch(wtUrl('/node/' + path));
     if (token !== loadActiveNode._token) return;  /* superseded */
     if (!resp.ok) {
       region.innerHTML = '<p style="color:var(--text-mute)">Could not load this task.</p>';
@@ -2003,7 +2029,7 @@ async function loadActiveNode(path) {
    attachment download never replaces the dashboard page. Server-only — the
    button is omitted in standalone mode. */
 function shareSubtree(path) {
-  var url = '/export' + (path ? '?root=' + encodeURIComponent(path) : '');
+  var url = wtUrl('/export' + (path ? '?root=' + encodeURIComponent(path) : ''));
   var a = document.createElement('a');
   a.href = url;
   a.download = '';   /* let Content-Disposition pick the filename */
@@ -2100,7 +2126,7 @@ async function loadChildrenDag(path) {
 
   var resp, dagSrc;
   try {
-    resp = await fetch('/dag?root=' + encodeURIComponent(path));
+    resp = await fetch(wtUrl('/dag?root=' + encodeURIComponent(path)));
     if (token !== loadChildrenDag._token) return;  /* superseded */
     if (!resp.ok) { region.innerHTML = ''; return; }
     dagSrc = await resp.text();
@@ -2306,8 +2332,17 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) { return escapeHtml(s).replace(/'/g, '&#39;'); }
 
-/* popstate (back/forward): re-apply the hash without writing new history. */
+/* popstate (back/forward): re-apply the URL without writing new history.
+   The worktree lives in location.search and the task path in location.hash, so a
+   single back/forward step can cross a ?wt= boundary. Detect that first: if the
+   active worktree changed, re-point everything to the new worktree (sidebar, SSE,
+   PROJECT_ROOT) before applying the hash; otherwise it's a plain task-path step. */
 window.addEventListener('popstate', function() {
+  var urlWt = readActiveWt();
+  if (urlWt !== ACTIVE_WT) {
+    applyWorktree(urlWt, parseHash());
+    return;
+  }
   restoring = true;
   setActive(parseHash());
   restoring = false;
@@ -2329,7 +2364,7 @@ window.addEventListener('hashchange', function() {
 function initRouter() {
   var path = parseHash();
   restoring = true;
-  history.replaceState({ path: path }, '', '#/' + path);
+  history.replaceState({ path: path, wt: ACTIVE_WT }, '', '#/' + path);
   setActive(path);
   restoring = false;
 }
@@ -2352,7 +2387,7 @@ async function loadNavTree() {
   var container = document.getElementById('nav-tree');
   if (!container) return;
   try {
-    var resp = await fetch('/nav');
+    var resp = await fetch(wtUrl('/nav'));
     if (!resp.ok) return;
     container.innerHTML = await resp.text();
     markLazyNodes();
@@ -2457,7 +2492,7 @@ async function loadNavChildren(node) {
   var children = node.querySelector(':scope > .task-children');
   if (!path || !children) return false;
   try {
-    var resp = await fetch('/nav/' + path);
+    var resp = await fetch(wtUrl('/nav/' + path));
     if (!resp.ok) return false;
     children.innerHTML = await resp.text();
     markLazyNodes();
@@ -3024,24 +3059,25 @@ function onTaskUpdate(path) {
   }
 }
 
-/* ── full-reload: structural add/delete, or worktree switch ──
+/* ── full-reload: a structural add/delete within the active worktree ──
    The tree shape changed, so rebuild the whole sidebar from /nav, then re-run
    setActive(activePath) to restore highlight + breadcrumb + main panel + folds.
    If activePath no longer exists, fall back to its nearest surviving ancestor
    and replaceState the corrected hash (no new history entry — this is a server
-   signal, not a user navigation). */
+   signal, not a user navigation). A worktree switch is a client navigation now
+   (applyWorktree), not a server full-reload, so this only fires for in-worktree
+   structural edits and never crosses worktrees. */
 async function onFullReload() {
   var wanted = activePath;
   await loadNavTree();
-  /* Refresh PROJECT_ROOT before re-rendering the active card. A worktree switch
-     fires this reload; awaiting the worktree fetch lands the switched-to root
-     before setActive re-renders the card and its VS Code button, closing the
-     race where the card could render with the pre-switch root. */
+  /* Refresh PROJECT_ROOT/selector before re-rendering the active card so the VS
+     Code button bakes in the current worktree's root. */
   await fetchWorktrees();
   var target = resolveSurvivingPath(wanted);
   restoring = true;
   if (target !== wanted) {
-    history.replaceState({ path: target }, '', '#/' + target);
+    /* Relative '#/...' preserves the ?wt= in location.search. */
+    history.replaceState({ path: target, wt: ACTIVE_WT }, '', '#/' + target);
   }
   setActive(target);
   restoring = false;
@@ -3099,8 +3135,20 @@ document.body.addEventListener('htmx:sseBeforeMessage', function(event) {
   setTimeout(updateTreeCommentBadges, 100);
 });
 
-/* ── Worktree selector ── */
-var _wtPreviousValue = '';  /* track previous selection for revert on error */
+/* ── Worktree selector ──
+   "Switching" is a navigation, not a server mutation: the selector pushes a new
+   ?wt= into the URL and re-renders this tab's panels against that worktree. No
+   POST, no all-clients SSE reload — other tabs viewing other worktrees are
+   untouched. The option value is the worktree's ?wt= token (wt_id); the launch
+   worktree's token is '' so its URL stays clean (`/` with no ?wt=). The current
+   selection follows the URL (ACTIVE_WT), falling back to the launch worktree. */
+
+/* The launch worktree's id from the last /api/worktrees fetch, used to map the
+   empty (default) selector value <-> the launch worktree. */
+var _launchWtId = '';
+/* path (project root) of each worktree by its wt_id, so PROJECT_ROOT can follow
+   the active ?wt= without another round-trip. */
+var _wtProjectRoots = {};
 
 function populateWorktreeSelector(data) {
   var selector = document.getElementById('worktree-selector');
@@ -3113,62 +3161,107 @@ function populateWorktreeSelector(data) {
     return;
   }
 
+  /* The active worktree = the URL's ?wt=, defaulting to the launch worktree when
+     the URL names none. Match the option whose token equals that id. */
+  var activeId = ACTIVE_WT || _launchWtId;
+
   /* Build options */
   select.innerHTML = '';
   data.worktrees.forEach(function(wt) {
     var opt = document.createElement('option');
-    opt.value = wt.plan_root || wt.path;
+    /* Value is the ?wt= token. The launch worktree carries '' so selecting it
+       navigates to a clean `/` (handled in switchWorktree). */
+    var token = (wt.wt_id === data.launch_wt_id) ? '' : (wt.wt_id || '');
+    opt.value = token;
     var label = wt.branch || wt.path.split('/').pop();
     if (wt.plan_title) label += ' — ' + wt.plan_title;
     if (wt.is_agent) label = '[agent] ' + label;
     opt.textContent = label;
     if (wt.is_agent) opt.style.opacity = '0.6';
-    if (wt.is_current) opt.selected = true;
+    if ((wt.wt_id || '') === activeId) opt.selected = true;
     select.appendChild(opt);
   });
 
-  _wtPreviousValue = select.value;
   selector.style.display = 'flex';
 }
 
 function fetchWorktrees() {
-  /* Returns the fetch promise so onFullReload can await the refreshed root
-     before re-rendering the active card (whose VS Code button bakes in
-     PROJECT_ROOT). */
-  return fetch('/api/worktrees')
+  /* Returns the fetch promise so onFullReload / applyWorktree can await the
+     refreshed worktree metadata before re-rendering the active card (whose VS
+     Code button bakes in PROJECT_ROOT). */
+  return fetch(wtUrl('/api/worktrees'))
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(data) {
       if (!data) return;
-      /* Keep PROJECT_ROOT pointed at the live worktree. `current` is the active
-         worktree's project root, refreshed by the server on every switch, so
-         every vscode://file/ href resolves against the worktree the page is now
-         bound to. The non-empty guard preserves the baked-in root in standalone
-         (file://) mode, where the fetch shim returns current:''. */
-      if (data.current) PROJECT_ROOT = data.current;
+      _launchWtId = data.launch_wt_id || '';
+      /* Index each worktree's project root by its ?wt= token so PROJECT_ROOT can
+         follow the active worktree. */
+      _wtProjectRoots = {};
+      data.worktrees.forEach(function(wt) {
+        _wtProjectRoots[wt.wt_id || ''] = wt.path;
+      });
+      /* Point PROJECT_ROOT at the URL's worktree so every vscode://file/ href
+         resolves against the worktree this tab is bound to. The non-empty guard
+         preserves the baked-in root in standalone (file://) mode, where the
+         fetch shim returns an empty worktree list. */
+      var activeId = ACTIVE_WT || _launchWtId;
+      var root = _wtProjectRoots[activeId];
+      if (root) PROJECT_ROOT = root;
       populateWorktreeSelector(data);
     })
     .catch(function() { /* graceful: hide selector */ });
 }
 
-function switchWorktree(planRoot) {
-  if (!planRoot || planRoot === _wtPreviousValue) return;
-  fetch('/api/worktree/switch', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ plan_root: planRoot })
-  })
-    .then(function(r) {
-      if (!r.ok) return r.json().then(function(e) { throw new Error(e.detail || 'Switch failed'); });
-      /* Success — the SSE full-reload event drives onFullReload(), which rebuilds
-         the sidebar in place and re-runs setActive (no full page reload). */
-      _wtPreviousValue = planRoot;
-    })
-    .catch(function(err) {
-      alert('Worktree switch failed: ' + err.message);
-      /* Revert dropdown to previous selection */
-      var select = document.getElementById('worktree-select');
-      if (select) select.value = _wtPreviousValue;
-    });
+/* Selector onchange: navigate this tab to the chosen worktree. The empty value
+   is the launch worktree (clean `/`); a non-empty value sets ?wt=<token>. We
+   keep the current task path (location.hash) so the same task opens in the new
+   worktree when it exists; applyWorktree's sidebar rebuild falls back to the
+   nearest surviving ancestor when it does not. */
+function switchWorktree(token) {
+  token = token || '';
+  if (token === ACTIVE_WT) return;
+  var hash = location.hash || '';
+  var search = token ? ('?wt=' + encodeURIComponent(token)) : '';
+  history.pushState({ path: parseHash(), wt: token }, '', location.pathname + search + hash);
+  applyWorktree(token, parseHash());
+}
+
+/* Re-point the whole tab at worktree *wtId* (the ?wt= token) without a full page
+   reload: update ACTIVE_WT, reconnect the live-reload stream to the new
+   worktree, refresh PROJECT_ROOT + the selector, then rebuild the sidebar and
+   re-render the panels for *path* (or its nearest surviving ancestor). Used by
+   the selector and by back/forward across a ?wt= boundary. */
+async function applyWorktree(wtId, path) {
+  ACTIVE_WT = wtId || '';
+  reconnectSse();
+  await loadNavTree();
+  await fetchWorktrees();
+  var target = resolveSurvivingPath(path || '');
+  restoring = true;
+  if (target !== (path || '')) {
+    history.replaceState({ path: target, wt: ACTIVE_WT }, '', location.pathname + location.search + '#/' + target);
+  }
+  setActive(target);
+  restoring = false;
+}
+
+/* Re-point the htmx SSE stream at the active worktree's /events. The htmx sse
+   extension caches its EventSource in the connect element's internalData; close
+   the old one, rewrite sse-connect to carry the new ?wt=, then re-process the
+   element so the extension opens a fresh source and re-binds every sse-swap
+   listener under it (summary bar, full-reload sentinel, and — after the sidebar
+   rebuild re-runs htmx.process — the nav rows). No-op in standalone mode. */
+function reconnectSse() {
+  if (window.STANDALONE || !window.htmx) return;
+  var main = document.querySelector('.main-content');
+  if (!main) return;
+  var data = htmx.getInternalData ? htmx.getInternalData(main) : null;
+  if (data && data.sseEventSource) {
+    try { data.sseEventSource.close(); } catch (e) {}
+    data.sseEventSource = null;
+  }
+  main.setAttribute('sse-connect', wtUrl('/events'));
+  htmx.process(main);
 }
 
 /* Fetch worktrees on page load */
@@ -3222,7 +3315,7 @@ function showCommentForm(btn) {
     });
 
     _commentEditPaths[taskPath] = Date.now();
-    fetch('/api/task/' + taskPath + '/comment', {
+    fetch(wtUrl('/api/task/' + taskPath + '/comment'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3273,7 +3366,7 @@ function commentTaskNode(taskPath) {
 }
 
 function loadComments(taskPath) {
-  fetch('/api/task/' + taskPath + '/comments')
+  fetch(wtUrl('/api/task/' + taskPath + '/comments'))
     .then(function(resp) { return resp.ok ? resp.json() : []; })
     .then(function(comments) {
       /* Find the task node holding this task's commentable blocks (the card). */
@@ -3426,7 +3519,7 @@ function updateTreeCommentBadges() {
   /* Clear existing tree-level badges */
   document.querySelectorAll('.tree-comment-badge').forEach(function(b) { b.remove(); });
 
-  fetch('/api/comments/summary')
+  fetch(wtUrl('/api/comments/summary'))
     .then(function(resp) { return resp.ok ? resp.json() : {}; })
     .then(function(summary) {
       /* Build a map: target task-row element -> aggregated count */
@@ -3515,7 +3608,7 @@ function _dismissActiveEdit() {
   /* Fire-and-forget API save if content changed */
   if (changed) {
     _commentEditPaths[prev.taskPath] = Date.now();
-    fetch('/api/task/' + prev.taskPath + '/comment/' + prev.commentId, {
+    fetch(wtUrl('/api/task/' + prev.taskPath + '/comment/' + prev.commentId), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: newBody })
@@ -3552,7 +3645,7 @@ function startEditComment(item, bodyEl, comment, taskPath) {
     var newBody = ta.value.trim();
     if (!newBody || newBody === originalText) { cancelEdit(); return; }
     _commentEditPaths[taskPath] = Date.now();
-    fetch('/api/task/' + taskPath + '/comment/' + comment.id, {
+    fetch(wtUrl('/api/task/' + taskPath + '/comment/' + comment.id), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: newBody })
@@ -3601,13 +3694,13 @@ function startEditComment(item, bodyEl, comment, taskPath) {
 
 function resolveComment(taskPath, commentId, btn) {
   _commentEditPaths[taskPath] = Date.now();
-  fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'PATCH' })
+  fetch(wtUrl('/api/task/' + taskPath + '/comment/' + commentId), { method: 'PATCH' })
     .then(function(resp) { if (resp.ok) loadComments(taskPath); });
 }
 
 function deleteComment(taskPath, commentId, btn) {
   _commentEditPaths[taskPath] = Date.now();
-  fetch('/api/task/' + taskPath + '/comment/' + commentId, { method: 'DELETE' })
+  fetch(wtUrl('/api/task/' + taskPath + '/comment/' + commentId), { method: 'DELETE' })
     .then(function(resp) { if (resp.ok) loadComments(taskPath); });
 }
 

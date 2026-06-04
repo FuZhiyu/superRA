@@ -1,6 +1,6 @@
 ---
 title: "Worktree-in-URL routing (?wt=) + selector navigation"
-status: not-started
+status: implemented
 depends_on: 
   - 01-per-worktree-state
 
@@ -40,3 +40,32 @@ Work in this project worktree only: `/Users/zhiyufu/Dropbox/package_dev/superRA.
 - The existing worktree-aware VS Code work (`worktree-vscode-link`, approved) already syncs `PROJECT_ROOT` from `/api/worktrees`' `current`; here `PROJECT_ROOT` instead follows the URL's `?wt=`. Reconcile the two so the link base has one source of truth (the resolved worktree), and keep the standalone guard that leaves the baked root untouched when `current`/`?wt=` is empty.
 - `?wt=` lives in `location.search`; the task path stays in `location.hash`. Read both in `initRouter` ([base.html:2329](../../../../../skills/task-system/scripts/templates/base.html#L2329)); write both together in `pushState`/`replaceState` so history entries carry the pair.
 - Confirm whether anything besides the selector calls `POST /api/worktree/switch` before deleting it.
+
+## Results
+
+The active worktree is now a dimension of the browser URL (`?wt=<id>` in `location.search`), orthogonal to the task path (`#/<task>` in `location.hash`). Switching worktrees is a client navigation, not a server mutation: it touches only the navigating tab, leaving other tabs on other worktrees untouched. The `POST /api/worktree/switch` global-mutation route is gone.
+
+### How it works
+
+The server renders the same page for any worktree, bound at render time to the worktree the request resolved via task 01's `resolve_worktree`. The index route ([plan_dashboard.py](../../../../../skills/task-system/scripts/plan_dashboard.py)) now passes `wt_id` to the template (empty for the launch worktree, so its URL stays a clean `/`). That id is baked into the `sse-connect` attribute (`/events?wt=<id>`) and read client-side from `location.search` into `ACTIVE_WT`. A single `wtUrl(url)` helper appends `?wt=<ACTIVE_WT>` (merging with any existing query string) and is applied at every server fetch — `/nav`, `/nav/{path}`, `/node/{path}`, `/task/{path}`, `/dag`, `/kanban`, `/export`, `/api/worktrees`, and all comment APIs — so every panel renders the URL's worktree. In standalone (`file://`) mode `ACTIVE_WT` stays `''` and `wtUrl` returns the URL untouched, so the exact-string fetch shim still matches and the snapshot renders its single baked worktree.
+
+`PROJECT_ROOT` (the VS Code link base) follows the URL's worktree: the server bakes the resolved worktree's project root on initial load, and `fetchWorktrees` re-points it to the active worktree's `path` after a client-side switch. The old "sync from `current`" coupling is replaced — there is no server-global current worktree anymore.
+
+**Selector = navigation.** The option value is the worktree's `?wt=` token (`wt_id`; `''` for the launch worktree). `switchWorktree(token)` `pushState`s the new `?wt=` (keeping the current task hash) and calls `applyWorktree`, which updates `ACTIVE_WT`, reconnects the SSE stream to the new worktree (`reconnectSse`), refreshes `PROJECT_ROOT` + the selector, rebuilds the sidebar from the new `/nav`, and re-renders the panels for the same task path (falling back to the nearest surviving ancestor when that task does not exist in the new worktree). Back/forward across a `?wt=` boundary is handled in `popstate`: when the URL's worktree differs from `ACTIVE_WT` it routes through `applyWorktree`, otherwise it is a plain task-path step. History `pushState`/`replaceState` use relative `#/...` URLs that preserve `location.search`, so task navigation never drops the worktree, and the state object carries `{path, wt}`.
+
+**SSE reconnection** (`reconnectSse`) closes the htmx-cached `EventSource` on `.main-content`, rewrites `sse-connect` to the new `?wt=`, and re-processes the element so the htmx sse extension opens a fresh source and re-binds every `sse-swap` listener (summary bar, full-reload sentinel, and — after the sidebar rebuild re-runs `htmx.process` — the nav rows). This makes an in-place worktree switch live-reloadable against the switched-to worktree.
+
+**`/api/worktrees`** now returns per-entry `wt_id` (task 01's basename map with longest-unique-suffix disambiguation) and a top-level `launch_wt_id`; the stale server-global `current`/`is_current` fields are removed (under per-request resolution they would only drift). The client marks the current selection from the URL, defaulting to `launch_wt_id`.
+
+**Launch-id canonicalization** (advisory 2 from task 01's review). `_worktree_id_for_plan_root` now returns the same key `_discovered_worktree_map()` uses for the launch worktree's plan root — so on a basename collision the launch worktree caches under its disambiguated suffix key (e.g. `a/feature`), not redundantly under both the bare basename and the suffix. Its cache key, `?wt=` selector token, and the resolver's default short-circuit all agree, so the selector's current-selection round-trips through the resolver. Non-colliding and no-git cases fall back to the bare basename unchanged.
+
+### Verification
+
+- **Dashboard test suite:** 237 passed (`~/.venv/bin/python -m pytest skills/task-system/scripts/test_task_system.py`), including the standalone-generation and fragment-parity tests.
+- **Real user path (browser-driven, headless Chromium, 27 checks across two scripts, zero JS errors):** served the dashboard over this repo (≥6 worktrees with task trees) on one port. Two tabs at `/` (launch worktree `better-handoff`) and `/?wt=task-hook-agent-feedback` each rendered their own tree and stayed isolated; a node present only in `better-handoff` (`task-system/dashboard/multi-worktree-serving`) was present in the launch tab and absent in the other (server-side: same path returns 200 under default and 404 under `?wt=task-hook-agent-feedback`). Address bar carried the right `?wt=`; `PROJECT_ROOT` and the per-task "Open in VS Code" href resolved against the URL's worktree. Selector navigation switched the tab in place (address bar + tree + `PROJECT_ROOT` updated, no global reload), back restored the launch worktree and tree, forward returned to the other worktree, and a deep-link `/?wt=X#/<task>` bookmark reopened to the same worktree + task.
+- **Live-reload after in-place switch + cross-worktree SSE isolation:** after switching a tab to worktree B via the selector, editing B's `task.md` live-updated that tab (confirming `reconnectSse` re-binds the stream); the same edit did not touch a tab on the launch worktree, and a launch-worktree edit updated only the launch tab — isolation holds in both directions.
+- **Canonicalization:** unit-checked `_worktree_id_for_plan_root` against a simulated basename collision (launch resolves to the disambiguated map key, not the bare basename), a non-colliding worktree (bare basename), and an unknown plan root (bare-basename fallback).
+
+### Deviation from Planner Guidance
+
+The guidance suggested reading both `?wt=` and the hash in `initRouter`. `?wt=` is instead read once at load into `ACTIVE_WT` (the server already binds the page to that worktree and bakes `sse-connect`/`project_root`), and `initRouter` keeps owning only the task path. This keeps the hash router as the single source of truth for the task path while the worktree dimension is established server-side at render and re-applied client-side only on an actual switch (`applyWorktree`) — satisfying the objective's "read `?wt=` on load, default to launch, include it on every fetch" without overloading the hash router.

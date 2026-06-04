@@ -34,7 +34,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from _task_io import TASK_ROOT_DIRNAME, Task, _walk_children, collect_all_tasks, parse_task, walk_plan
 from _worktree_discovery import (
-    WorktreeInfo,
     _parse_plan_title,
     discover_worktrees,
     filter_worktrees,
@@ -71,12 +70,6 @@ PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 _root_task: Task | None = None
 _task_index: dict[str, Task] = {}
 _project_root: str = ""
-
-# Active worktree path (absolute); set from PLAN_ROOT at startup
-_current_worktree_path: str = ""
-
-# Concurrency guard for worktree switch sequence
-_switch_lock: asyncio.Lock = asyncio.Lock()
 
 # Per-worktree SSE delivery and watcher lifecycle (task 02).
 #
@@ -122,11 +115,22 @@ _launch_wt_id: str = ""
 
 
 def _worktree_id_for_plan_root(plan_root: Path) -> str:
-    """Worktree id for a plan root = the worktree directory basename.
+    """Canonical worktree id for a plan root = the id the selector addresses it by.
 
-    The worktree dir is the plan root's parent (the plan root is ``<wt>/superRA``).
+    The worktree dir is the plan root's parent (the plan root is ``<wt>/superRA``),
+    so the id is normally that directory's basename.  But when two discovered
+    worktrees share a basename, ``_discovered_worktree_map()`` registers each under
+    a disambiguated longest-unique-suffix key instead of the bare basename.  To
+    keep the launch worktree's cache key, its ``?wt=`` selector token, and the
+    resolver's default-short-circuit all in agreement, return the same key the map
+    uses for this plan root when discovery knows it; fall back to the bare basename
+    when discovery has no entry (no git repo / standalone).
     """
-    return plan_root.resolve().parent.name
+    resolved = plan_root.resolve()
+    for wt_id, mapped in _discovered_worktree_map().items():
+        if mapped.resolve() == resolved:
+            return wt_id
+    return resolved.parent.name
 
 
 def _build_worktree_state(wt_id: str, plan_root: Path) -> WorktreeState:
@@ -604,8 +608,6 @@ async def lifespan(app: FastAPI):
     its first ``/events`` client and stops when the last leaves.  Shutdown cancels
     every per-worktree watcher still running, not just one.
     """
-    global _current_worktree_path
-    _current_worktree_path = str(PLAN_ROOT.resolve().parent)
     rebuild_tree()
     yield
     for wt in list(_worktree_watchers):
@@ -697,10 +699,16 @@ async def index(request: Request):
     env = _get_jinja_env()
     template = env.get_template("base.html")
     all_tasks = collect_all_tasks(state.root_task)
+    # The page is bound to the resolved worktree: the client carries ``wt_id`` as
+    # ``?wt=`` on every server fetch and on its SSE connect, and PROJECT_ROOT
+    # (the VS Code link base) follows it.  Empty for the launch worktree so the
+    # default URL stays clean (``/`` with no ``?wt=``).
+    wt_id = "" if state.wt_id == _launch_wt_id else state.wt_id
     html = template.render(
         root_task=state.root_task,
         all_tasks=all_tasks,
         project_root=state.project_root,
+        wt_id=wt_id,
     )
     return HTMLResponse(content=html)
 
@@ -987,7 +995,16 @@ async def remove_comment(path: str, comment_id: int, request: Request):
 
 @app.get("/api/worktrees")
 async def list_worktrees():
-    """Return discovered worktrees with plan info, ordered by last activity."""
+    """Return discovered worktrees with plan info, ordered by last activity.
+
+    Each entry carries the ``wt_id`` selector token (the worktree's ``?wt=`` name,
+    matching task 01's basename map with longest-unique-suffix disambiguation).
+    ``launch_wt_id`` names the default worktree (the one the server launched in);
+    the client marks the *current* selection from the URL's ``?wt=`` and falls
+    back to ``launch_wt_id`` when the URL names none.  There is no server-global
+    "current worktree": under per-request resolution it would only drift.
+    """
+    launch_dir = str(PLAN_ROOT.resolve().parent)
     all_wts = discover_worktrees()
     if not all_wts:
         # Not in a git repo — return a single-entry fallback
@@ -999,13 +1016,13 @@ async def list_worktrees():
             except Exception:
                 pass
         return {
-            "current": _current_worktree_path,
+            "launch_wt_id": _launch_wt_id,
             "worktrees": [
                 {
-                    "path": _current_worktree_path,
+                    "path": launch_dir,
+                    "wt_id": _launch_wt_id,
                     "branch": None,
                     "plan_title": plan_title,
-                    "is_current": True,
                     "has_plan": True,
                     "is_agent": False,
                     "last_activity": None,
@@ -1016,18 +1033,24 @@ async def list_worktrees():
     filtered = filter_worktrees(all_wts)
     ordered = sort_worktrees(filtered)
 
+    # Reverse the basename map so each worktree carries its ?wt= selector token.
+    wt_id_by_plan_root: dict[str, str] = {
+        str(pr.resolve()): wt_id for wt_id, pr in _discovered_worktree_map().items()
+    }
+
     entries = []
     for w in ordered:
-        is_current = (
-            w.plan_root is not None
-            and str(Path(w.plan_root).resolve()) == str(PLAN_ROOT.resolve())
+        wt_id = (
+            wt_id_by_plan_root.get(str(Path(w.plan_root).resolve()))
+            if w.plan_root is not None
+            else None
         )
         entries.append(
             {
                 "path": w.path,
+                "wt_id": wt_id,
                 "branch": w.branch,
                 "plan_title": w.plan_title,
-                "is_current": is_current,
                 "has_plan": w.plan_root is not None,
                 "plan_root": w.plan_root,
                 "is_agent": w.is_agent,
@@ -1036,86 +1059,15 @@ async def list_worktrees():
         )
 
     return {
-        "current": _current_worktree_path,
+        "launch_wt_id": _launch_wt_id,
         "worktrees": entries,
     }
 
 
-@app.post("/api/worktree/switch")
-async def switch_worktree(request: Request):
-    """Hot-swap the active plan root to a different worktree.
-
-    The global "current worktree" switch is retired in favor of per-request
-    ``?wt=`` resolution (task 03); this endpoint stays only for any non-URL
-    consumer until then.  Per-worktree watchers are self-managing (spawned on
-    first client, stopped on last), so the switch no longer cancels or respawns a
-    watcher — it only re-points the legacy globals and signals a full reload.
-    """
-    global PLAN_ROOT, _project_root, _current_worktree_path
-
-    body = await request.json()
-    plan_root_str = body.get("plan_root")
-    if not plan_root_str:
-        raise HTTPException(status_code=400, detail="Missing 'plan_root' field")
-
-    new_plan_root = Path(plan_root_str).resolve()
-
-    # Validate: must be a known worktree with a valid task root.
-    all_wts = discover_worktrees()
-    if not all_wts:
-        raise HTTPException(status_code=404, detail="Not in a git repo; switching unavailable")
-
-    # Find matching worktree
-    target_wt: WorktreeInfo | None = None
-    for w in all_wts:
-        if w.plan_root is not None and str(Path(w.plan_root).resolve()) == str(new_plan_root):
-            target_wt = w
-            break
-
-    if target_wt is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No worktree found with plan root: {new_plan_root}",
-        )
-
-    if not new_plan_root.is_dir() or not (new_plan_root / "task.md").is_file():
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid plan root (missing task.md): {new_plan_root}",
-        )
-
-    # --- Atomic switch sequence (serialized via lock) ---
-    async with _switch_lock:
-        # Save previous state for rollback
-        prev_plan_root = PLAN_ROOT
-        prev_project_root = _project_root
-        prev_worktree_path = _current_worktree_path
-
-        try:
-            # Re-point the legacy globals at the target worktree.
-            PLAN_ROOT = new_plan_root
-            rebuild_tree()
-            _project_root = str(PLAN_ROOT.resolve().parent)
-            _current_worktree_path = target_wt.path
-        except Exception:
-            # Roll back to previous state
-            PLAN_ROOT = prev_plan_root
-            _project_root = prev_project_root
-            _current_worktree_path = prev_worktree_path
-            rebuild_tree()
-            raise HTTPException(
-                status_code=500,
-                detail="Switch failed; rolled back to previous worktree",
-            )
-
-        # Signal a full reload to clients viewing the (new) launch worktree.
-        await _broadcast("full-reload", "{}", _launch_wt_id)
-
-    return {
-        "ok": True,
-        "plan_root": str(PLAN_ROOT),
-        "branch": target_wt.branch,
-    }
+# The former ``POST /api/worktree/switch`` is retired.  "Switching" is now a
+# client navigation to a different ``?wt=`` URL (per-request resolution, task 03);
+# there is no global mutation and no all-clients full-reload broadcast.  The
+# selector's onchange pushes a new ``?wt=`` and re-renders that worktree in place.
 
 
 # --- Route: GET /task/{path} -----------------------------------------------
