@@ -72,17 +72,24 @@ _root_task: Task | None = None
 _task_index: dict[str, Task] = {}
 _project_root: str = ""
 
-# Watcher task (stored for cancellation on worktree switch)
-_watcher_task: asyncio.Task | None = None
-
 # Active worktree path (absolute); set from PLAN_ROOT at startup
 _current_worktree_path: str = ""
 
 # Concurrency guard for worktree switch sequence
 _switch_lock: asyncio.Lock = asyncio.Lock()
 
-# SSE broadcast: one asyncio.Queue per connected client
-_sse_clients: set[asyncio.Queue[str]] = set()
+# Per-worktree SSE delivery and watcher lifecycle (task 02).
+#
+# Live-reload is scoped per worktree: a client viewing worktree A registers its
+# queue under A and a watcher for A runs only while A has at least one client.
+# ``_worktree_clients`` maps worktree id -> the queues of clients viewing it;
+# ``_worktree_watchers`` maps worktree id -> the awatch task feeding that set;
+# ``_worktree_locks`` serializes each worktree's spawn/teardown so a connect and
+# a disconnect cannot race the watcher in or out from under each other.  These
+# locks are separate from task 01's per-state build lock.
+_worktree_clients: dict[str, set[asyncio.Queue[str]]] = {}
+_worktree_watchers: dict[str, asyncio.Task] = {}
+_worktree_locks: dict[str, asyncio.Lock] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -256,21 +263,26 @@ def _find_task(state: WorktreeState, path: str) -> Task | None:
 # ---------------------------------------------------------------------------
 
 
-async def _broadcast(event: str, data: str) -> None:
-    """Send an SSE-formatted message to every connected client.
+async def _broadcast(event: str, data: str, wt: str) -> None:
+    """Send an SSE-formatted message to every client viewing worktree *wt*.
 
     Multi-line data is handled per SSE spec: each line gets a ``data:`` prefix.
+    Scoped to *wt*'s client set: a broadcast for one worktree never reaches a
+    client viewing another.  A broadcast for a worktree with no current clients
+    (e.g. the last client left between the watcher firing and this call) is a
+    safe no-op via ``dict.get(wt, set())``.
     """
     data_lines = "".join(f"data: {line}\n" for line in data.split("\n"))
     message = f"event: {event}\n{data_lines}\n"
+    clients = _worktree_clients.get(wt, set())
     dead: list[asyncio.Queue[str]] = []
-    for q in _sse_clients:
+    for q in clients:
         try:
             q.put_nowait(message)
         except asyncio.QueueFull:
             dead.append(q)
     for q in dead:
-        _sse_clients.discard(q)
+        clients.discard(q)
 
 
 # ---------------------------------------------------------------------------
@@ -332,10 +344,10 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
         # correct and the simplest signal here — no per-parent fragment
         # juggling, no descendant fold/highlight to preserve by hand.
         rebuild_worktree_state(state.wt_id)
-        await _broadcast("full-reload", "{}")
+        await _broadcast("full-reload", "{}", state.wt_id)
         if state.root_task is not None:
             summary_html = _render_summary(state.root_task)
-            await _broadcast("summary-updated", summary_html)
+            await _broadcast("summary-updated", summary_html, state.wt_id)
 
     # Process content-only changes (skip paths already covered by the
     # structural full-reload above).
@@ -355,15 +367,15 @@ async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
                 # event name, not this fragment, so a nav (no-body) row is
                 # the cheap, correct payload for the declarative sse-swap.
                 fragment = _render_nav_node(updated)
-                await _broadcast(f"task:{task_path}", fragment)
+                await _broadcast(f"task:{task_path}", fragment, state.wt_id)
 
         if any_children_changed:
             rebuild_worktree_state(state.wt_id)
-            await _broadcast("full-reload", "{}")
+            await _broadcast("full-reload", "{}", state.wt_id)
 
         if content_paths and state.root_task is not None:
             summary_html = _render_summary(state.root_task)
-            await _broadcast("summary-updated", summary_html)
+            await _broadcast("summary-updated", summary_html, state.wt_id)
 
 
 def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
@@ -393,16 +405,18 @@ def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
 # ---------------------------------------------------------------------------
 
 
-async def _watch_plan_root() -> None:
-    """Background coroutine: watch the launch worktree for task.md changes.
+async def _watch_worktree(wt: str) -> None:
+    """Background coroutine: watch worktree *wt* for task.md changes.
 
-    Task 02 generalizes this to one watcher per connected worktree; this task
-    keeps the single launch watcher and routes its changes through the
-    worktree-scoped ``_rebuild_and_broadcast`` hook.
+    Watches that worktree's ``plan_root`` and routes each change batch through
+    the worktree-scoped ``_rebuild_and_broadcast`` hook, which rebuilds *wt*'s
+    WorktreeState and broadcasts the fragments to *wt*'s clients only.  The
+    change-detection logic itself lives in ``_rebuild_and_broadcast``; this
+    coroutine only parameterizes which worktree's root it watches.
     """
     import watchfiles
 
-    state = _worktree_cache.get(_launch_wt_id)
+    state = _worktree_cache.get(wt)
     if state is None:
         return
 
@@ -411,6 +425,52 @@ async def _watch_plan_root() -> None:
         # short extra window so rapid back-to-back writes coalesce.
         await asyncio.sleep(0.2)
         await _rebuild_and_broadcast(state, changes)
+
+
+# ---------------------------------------------------------------------------
+# Per-worktree watcher lifecycle
+# ---------------------------------------------------------------------------
+# A watcher for a worktree runs only while that worktree has at least one
+# connected client.  ``_ensure_watcher`` is called by ``/events`` after the new
+# client's queue is registered (so no early change event is lost to a
+# watcher-init race); ``_stop_watcher`` is called when the last client leaves.
+# Both run under that worktree's ``_worktree_locks`` entry so a concurrent
+# connect and disconnect cannot spawn a duplicate watcher or tear a live one
+# down.
+
+
+def _worktree_lock(wt: str) -> asyncio.Lock:
+    """Return (creating on first use) the spawn/teardown lock for *wt*."""
+    lock = _worktree_locks.get(wt)
+    if lock is None:
+        lock = asyncio.Lock()
+        _worktree_locks[wt] = lock
+    return lock
+
+
+async def _ensure_watcher(wt: str) -> None:
+    """Start the watcher for *wt* if one is not already running.
+
+    A present-but-``done()`` task (a watcher that finished or crashed) is treated
+    as absent and respawned, so a dead watcher is never silently reused.
+    """
+    async with _worktree_lock(wt):
+        existing = _worktree_watchers.get(wt)
+        if existing is not None and not existing.done():
+            return
+        _worktree_watchers[wt] = asyncio.create_task(_watch_worktree(wt))
+
+
+async def _stop_watcher(wt: str) -> None:
+    """Cancel and remove the watcher for *wt* (last client disconnected)."""
+    async with _worktree_lock(wt):
+        task = _worktree_watchers.pop(wt, None)
+    if task is not None:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -538,18 +598,18 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: seed the launch worktree; spawn watcher.  Shutdown: cancel."""
-    global _current_worktree_path, _watcher_task
+    """Startup: seed the launch worktree.  Shutdown: cancel every watcher.
+
+    Watchers are no longer spawned at startup — each worktree's watcher starts on
+    its first ``/events`` client and stops when the last leaves.  Shutdown cancels
+    every per-worktree watcher still running, not just one.
+    """
+    global _current_worktree_path
     _current_worktree_path = str(PLAN_ROOT.resolve().parent)
     rebuild_tree()
-    _watcher_task = asyncio.create_task(_watch_plan_root())
     yield
-    if _watcher_task is not None:
-        _watcher_task.cancel()
-        try:
-            await _watcher_task
-        except asyncio.CancelledError:
-            pass
+    for wt in list(_worktree_watchers):
+        await _stop_watcher(wt)
 
 
 app = FastAPI(lifespan=lifespan)
@@ -701,12 +761,23 @@ async def nav_fragment(request: Request):
 # --- Route: GET /events (SSE) ---------------------------------------------
 
 @app.get("/events")
-async def sse_events():
-    """Server-Sent Events endpoint for live updates."""
+async def sse_events(request: Request):
+    """Server-Sent Events endpoint for live updates, scoped to one worktree.
+
+    The worktree is resolved from ``?wt=`` (task 01's resolver; default = launch
+    worktree).  The client's queue is registered under that worktree *before* its
+    watcher is ensured, so no change emitted during watcher startup is lost.  On
+    disconnect the queue is removed and, if it was the worktree's last client,
+    its watcher is stopped.
+    """
+    wt = resolve_worktree(request).wt_id
 
     async def event_generator() -> AsyncGenerator[str, None]:
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
-        _sse_clients.add(queue)
+        # Register before ensuring the watcher so the queue cannot miss an early
+        # event (watcher-init race).
+        _worktree_clients.setdefault(wt, set()).add(queue)
+        await _ensure_watcher(wt)
         try:
             # Send an initial heartbeat so the connection is established
             yield ": heartbeat\n\n"
@@ -716,7 +787,12 @@ async def sse_events():
         except asyncio.CancelledError:
             pass
         finally:
-            _sse_clients.discard(queue)
+            clients = _worktree_clients.get(wt)
+            if clients is not None:
+                clients.discard(queue)
+                if not clients:
+                    _worktree_clients.pop(wt, None)
+                    await _stop_watcher(wt)
 
     return StreamingResponse(
         event_generator(),
@@ -967,8 +1043,15 @@ async def list_worktrees():
 
 @app.post("/api/worktree/switch")
 async def switch_worktree(request: Request):
-    """Hot-swap the active plan root to a different worktree."""
-    global PLAN_ROOT, _project_root, _watcher_task, _current_worktree_path
+    """Hot-swap the active plan root to a different worktree.
+
+    The global "current worktree" switch is retired in favor of per-request
+    ``?wt=`` resolution (task 03); this endpoint stays only for any non-URL
+    consumer until then.  Per-worktree watchers are self-managing (spawned on
+    first client, stopped on last), so the switch no longer cancels or respawns a
+    watcher — it only re-points the legacy globals and signals a full reload.
+    """
+    global PLAN_ROOT, _project_root, _current_worktree_path
 
     body = await request.json()
     plan_root_str = body.get("plan_root")
@@ -1008,42 +1091,25 @@ async def switch_worktree(request: Request):
         prev_project_root = _project_root
         prev_worktree_path = _current_worktree_path
 
-        # 1. Cancel existing watcher
-        if _watcher_task is not None:
-            _watcher_task.cancel()
-            try:
-                await _watcher_task
-            except asyncio.CancelledError:
-                pass
-            _watcher_task = None
-
         try:
-            # 2. Update PLAN_ROOT
+            # Re-point the legacy globals at the target worktree.
             PLAN_ROOT = new_plan_root
-
-            # 3. Rebuild tree
             rebuild_tree()
-
-            # 4. Update project root and current worktree path
             _project_root = str(PLAN_ROOT.resolve().parent)
             _current_worktree_path = target_wt.path
-
-            # 5. Spawn new watcher
-            _watcher_task = asyncio.create_task(_watch_plan_root())
         except Exception:
             # Roll back to previous state
             PLAN_ROOT = prev_plan_root
             _project_root = prev_project_root
             _current_worktree_path = prev_worktree_path
-            # Re-spawn watcher on the old root
-            _watcher_task = asyncio.create_task(_watch_plan_root())
+            rebuild_tree()
             raise HTTPException(
                 status_code=500,
                 detail="Switch failed; rolled back to previous worktree",
             )
 
-        # 6. Broadcast full-reload
-        await _broadcast("full-reload", "{}")
+        # Signal a full reload to clients viewing the (new) launch worktree.
+        await _broadcast("full-reload", "{}", _launch_wt_id)
 
     return {
         "ok": True,

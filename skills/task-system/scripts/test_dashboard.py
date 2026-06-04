@@ -347,34 +347,46 @@ class TestServerRoutes:
         resp = client.get("/files/no_such_file.txt")
         assert resp.status_code == 404
 
-    def test_events_sse_generator_yields_heartbeat(self):
+    def test_events_sse_generator_yields_heartbeat(self, client):
         """The SSE event_generator yields a heartbeat as its first message.
 
-        We test the generator directly rather than through the HTTP layer
-        to avoid blocking on the long-lived stream.
+        We drive the generator directly rather than through the HTTP layer to
+        avoid blocking on the long-lived stream.  ``/events`` now resolves the
+        worktree from the request and registers/unregisters the client's queue
+        per worktree, so we pass a real Request and check it cleaned up.  The
+        ``client`` fixture seeds the launch worktree state the resolver needs.
         """
+        from starlette.requests import Request
+
         loop = asyncio.new_event_loop()
-        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
+
+        def _req() -> Request:
+            return Request({
+                "type": "http", "method": "GET", "path": "/events",
+                "query_string": b"", "headers": [],
+            })
 
         async def _test():
-            # Simulate what the /events endpoint does
-            plan_dashboard._sse_clients.add(queue)
-            try:
-                # The generator yields heartbeat first, then blocks on queue
-                gen = plan_dashboard.sse_events()
-                resp = await gen
-                # resp is a StreamingResponse; get the body iterator
-                body_iter = resp.body_iterator
-                first = await body_iter.__anext__()
-                assert "heartbeat" in first
-                # Verify content type
-                assert resp.media_type == "text/event-stream"
-            finally:
-                plan_dashboard._sse_clients.discard(queue)
+            wt = plan_dashboard._launch_wt_id
+            gen = plan_dashboard.sse_events(_req())
+            resp = await gen
+            body_iter = resp.body_iterator
+            first = await body_iter.__anext__()
+            assert "heartbeat" in first
+            assert resp.media_type == "text/event-stream"
+            # The client registered itself and started the launch watcher.
+            assert wt in plan_dashboard._worktree_clients
+            assert wt in plan_dashboard._worktree_watchers
+            # Closing the stream removes the queue and stops the watcher.
+            await body_iter.aclose()
+            assert wt not in plan_dashboard._worktree_clients
+            assert wt not in plan_dashboard._worktree_watchers
 
         try:
             loop.run_until_complete(_test())
         finally:
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_watchers.clear()
             loop.close()
 
     def test_comment_api_crud(self, client, plan_root):
@@ -847,28 +859,38 @@ class TestComments:
 
 
 class TestSSEBroadcast:
+    """Broadcast framing, scoped to a worktree's client set (task 02)."""
+
+    @staticmethod
+    def _register(wt: str, queue: asyncio.Queue) -> None:
+        plan_dashboard._worktree_clients.setdefault(wt, set()).add(queue)
+
+    @staticmethod
+    def _cleanup(wt: str) -> None:
+        plan_dashboard._worktree_clients.pop(wt, None)
+
     def test_broadcast_single_line(self):
         """Single-line data gets proper SSE framing."""
         loop = asyncio.new_event_loop()
         queue: asyncio.Queue[str] = asyncio.Queue()
-        plan_dashboard._sse_clients.add(queue)
+        self._register("wt-a", queue)
         try:
-            loop.run_until_complete(plan_dashboard._broadcast("test-event", "hello"))
+            loop.run_until_complete(plan_dashboard._broadcast("test-event", "hello", "wt-a"))
             msg = loop.run_until_complete(asyncio.wait_for(queue.get(), timeout=1))
             assert msg.startswith("event: test-event\n")
             assert "data: hello\n" in msg
         finally:
-            plan_dashboard._sse_clients.discard(queue)
+            self._cleanup("wt-a")
             loop.close()
 
     def test_broadcast_multiline(self):
         """Multi-line data gets per-line data: prefix per SSE spec."""
         loop = asyncio.new_event_loop()
         queue: asyncio.Queue[str] = asyncio.Queue()
-        plan_dashboard._sse_clients.add(queue)
+        self._register("wt-a", queue)
         try:
             loop.run_until_complete(
-                plan_dashboard._broadcast("task:foo", "line1\nline2\nline3")
+                plan_dashboard._broadcast("task:foo", "line1\nline2\nline3", "wt-a")
             )
             msg = loop.run_until_complete(asyncio.wait_for(queue.get(), timeout=1))
             assert "event: task:foo\n" in msg
@@ -876,22 +898,22 @@ class TestSSEBroadcast:
             assert "data: line2\n" in msg
             assert "data: line3\n" in msg
         finally:
-            plan_dashboard._sse_clients.discard(queue)
+            self._cleanup("wt-a")
             loop.close()
 
     def test_event_naming_task_path(self):
         """Per-task events use event: task:{path} naming."""
         loop = asyncio.new_event_loop()
         queue: asyncio.Queue[str] = asyncio.Queue()
-        plan_dashboard._sse_clients.add(queue)
+        self._register("wt-a", queue)
         try:
             loop.run_until_complete(
-                plan_dashboard._broadcast("task:my/nested/path", "<div>html</div>")
+                plan_dashboard._broadcast("task:my/nested/path", "<div>html</div>", "wt-a")
             )
             msg = loop.run_until_complete(asyncio.wait_for(queue.get(), timeout=1))
             assert msg.startswith("event: task:my/nested/path\n")
         finally:
-            plan_dashboard._sse_clients.discard(queue)
+            self._cleanup("wt-a")
             loop.close()
 
     def test_broadcast_drops_full_queue(self):
@@ -900,13 +922,228 @@ class TestSSEBroadcast:
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=1)
         # Fill the queue
         queue.put_nowait("filler")
-        plan_dashboard._sse_clients.add(queue)
+        self._register("wt-a", queue)
         try:
             # This should not raise; the full queue gets dropped
-            loop.run_until_complete(plan_dashboard._broadcast("e", "data"))
-            assert queue not in plan_dashboard._sse_clients
+            loop.run_until_complete(plan_dashboard._broadcast("e", "data", "wt-a"))
+            assert queue not in plan_dashboard._worktree_clients.get("wt-a", set())
         finally:
-            plan_dashboard._sse_clients.discard(queue)
+            self._cleanup("wt-a")
+            loop.close()
+
+    def test_broadcast_scoped_to_worktree(self):
+        """A broadcast to worktree A reaches only A's queues, never B's."""
+        loop = asyncio.new_event_loop()
+        qa: asyncio.Queue[str] = asyncio.Queue()
+        qb: asyncio.Queue[str] = asyncio.Queue()
+        self._register("wt-a", qa)
+        self._register("wt-b", qb)
+        try:
+            loop.run_until_complete(
+                plan_dashboard._broadcast("task:01-first", "<div>a</div>", "wt-a")
+            )
+            msg = loop.run_until_complete(asyncio.wait_for(qa.get(), timeout=1))
+            assert "task:01-first" in msg
+            # B's queue saw nothing.
+            assert qb.empty()
+        finally:
+            self._cleanup("wt-a")
+            self._cleanup("wt-b")
+            loop.close()
+
+    def test_broadcast_to_empty_worktree_is_noop(self):
+        """A broadcast after the last client left does not raise."""
+        loop = asyncio.new_event_loop()
+        try:
+            # No clients registered for this worktree at all.
+            loop.run_until_complete(
+                plan_dashboard._broadcast("full-reload", "{}", "gone")
+            )
+        finally:
+            loop.close()
+
+
+# ---------------------------------------------------------------------------
+# TestWatcherLifecycle
+# ---------------------------------------------------------------------------
+
+
+class TestWatcherLifecycle:
+    """Per-worktree watcher spawn/teardown (task 02).
+
+    These exercise ``_ensure_watcher`` / ``_stop_watcher`` and the ``/events``
+    register-then-ensure ordering directly, since TestClient disables lifespan
+    and a live HTTP stream would block.  Each test runs on a fresh event loop and
+    seeds a real on-disk plan root so ``watchfiles.awatch`` has a valid dir to
+    watch; the watcher is cancelled before it ever needs a real fs event.
+    """
+
+    def _seed(self, tmp_path, wt_id: str):
+        """Create a minimal plan tree and cache a WorktreeState for *wt_id*."""
+        root = tmp_path / wt_id / "superRA"
+        root.mkdir(parents=True)
+        _write_task_md(root / "task.md", f"Root {wt_id}", "not-started",
+                       objective="seed")
+        plan_dashboard._worktree_cache[wt_id] = plan_dashboard._build_worktree_state(
+            wt_id, root
+        )
+
+    def _reset(self):
+        plan_dashboard._worktree_cache.clear()
+        plan_dashboard._worktree_clients.clear()
+        plan_dashboard._worktree_watchers.clear()
+        plan_dashboard._worktree_locks.clear()
+
+    def test_first_client_starts_exactly_one_watcher(self, tmp_path):
+        loop = asyncio.new_event_loop()
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+
+        async def _test():
+            await plan_dashboard._ensure_watcher("wt-a")
+            task = plan_dashboard._worktree_watchers.get("wt-a")
+            assert task is not None and not task.done()
+            # A second ensure for the same worktree does not start a second.
+            await plan_dashboard._ensure_watcher("wt-a")
+            assert plan_dashboard._worktree_watchers["wt-a"] is task
+            await plan_dashboard._stop_watcher("wt-a")
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_last_disconnect_stops_watcher(self, tmp_path):
+        loop = asyncio.new_event_loop()
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+
+        async def _test():
+            await plan_dashboard._ensure_watcher("wt-a")
+            assert "wt-a" in plan_dashboard._worktree_watchers
+            await plan_dashboard._stop_watcher("wt-a")
+            # Popped, not left as a zombie entry.
+            assert "wt-a" not in plan_dashboard._worktree_watchers
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_crashed_watcher_is_respawned(self, tmp_path):
+        loop = asyncio.new_event_loop()
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+
+        async def _test():
+            # A present-but-done() task stands in for a crashed/finished watcher.
+            async def _noop():
+                return None
+            dead = asyncio.create_task(_noop())
+            await dead
+            assert dead.done()
+            plan_dashboard._worktree_watchers["wt-a"] = dead
+            # ensure_watcher must treat the done task as absent and respawn.
+            await plan_dashboard._ensure_watcher("wt-a")
+            fresh = plan_dashboard._worktree_watchers["wt-a"]
+            assert fresh is not dead
+            assert not fresh.done()
+            await plan_dashboard._stop_watcher("wt-a")
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            loop.close()
+
+    def test_content_edit_under_a_is_scoped_to_a(self, tmp_path):
+        """A content edit under worktree A broadcasts a task:<path> event to A's
+        clients and nothing to B's."""
+        import watchfiles
+
+        loop = asyncio.new_event_loop()
+        self._reset()
+        # Two worktrees, each with a child task to edit.
+        for wt in ("wt-a", "wt-b"):
+            root = tmp_path / wt / "superRA"
+            root.mkdir(parents=True)
+            _write_task_md(root / "task.md", f"Root {wt}", "not-started",
+                           objective="seed")
+            child = root / "01-first"
+            child.mkdir()
+            _write_task_md(child / "task.md", f"First {wt}", "approved",
+                           objective="step")
+            plan_dashboard._worktree_cache[wt] = (
+                plan_dashboard._build_worktree_state(wt, root)
+            )
+        plan_dashboard._jinja_env = None
+
+        qa: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
+        qb: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
+        plan_dashboard._worktree_clients["wt-a"] = {qa}
+        plan_dashboard._worktree_clients["wt-b"] = {qb}
+
+        async def _test():
+            state_a = plan_dashboard._worktree_cache["wt-a"]
+            edited = state_a.plan_root / "01-first" / "task.md"
+            # A pure content edit (no child-set change) -> task:<path> fragment.
+            changes = {(watchfiles.Change.modified, str(edited))}
+            await plan_dashboard._rebuild_and_broadcast(state_a, changes)
+            # A saw a task-scoped event; B's queue stayed empty.
+            assert not qa.empty()
+            msg = qa.get_nowait()
+            assert "event: task:01-first" in msg
+            assert qb.empty()
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
+            plan_dashboard._jinja_env = None
+            loop.close()
+
+    def test_events_registers_queue_before_ensuring_watcher(self, tmp_path):
+        """No event-loss on the init race: the client's queue is in the
+        worktree's client set before its watcher can emit.
+
+        We patch ``_ensure_watcher`` to capture whether the queue is already
+        registered at the moment the watcher would be ensured.
+        """
+        from starlette.requests import Request
+
+        loop = asyncio.new_event_loop()
+        self._reset()
+        self._seed(tmp_path, "wt-a")
+        plan_dashboard._launch_wt_id = "wt-a"
+
+        seen = {}
+
+        async def _spy(wt):
+            seen["clients_at_ensure"] = len(plan_dashboard._worktree_clients.get(wt, set()))
+
+        def _req() -> Request:
+            return Request({
+                "type": "http", "method": "GET", "path": "/events",
+                "query_string": b"wt=wt-a", "headers": [],
+            })
+
+        async def _test():
+            with patch.object(plan_dashboard, "_ensure_watcher", _spy):
+                gen = plan_dashboard.sse_events(_req())
+                resp = await gen
+                body_iter = resp.body_iterator
+                first = await body_iter.__anext__()
+                assert "heartbeat" in first
+                # The watcher (spy) ran only after the queue was registered.
+                assert seen["clients_at_ensure"] == 1
+                await body_iter.aclose()
+
+        try:
+            loop.run_until_complete(_test())
+        finally:
+            self._reset()
             loop.close()
 
 

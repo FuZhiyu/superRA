@@ -824,7 +824,7 @@ class TestSSEBroadcastOnSwitch:
         self._orig_current_wt = plan_dashboard._current_worktree_path
         self._orig_root_task = plan_dashboard._root_task
         self._orig_task_index = plan_dashboard._task_index
-        self._orig_sse_clients = plan_dashboard._sse_clients.copy()
+        self._orig_clients = dict(plan_dashboard._worktree_clients)
 
         plan_dashboard.PLAN_ROOT = self._plan_root
         plan_dashboard._project_root = str(tmp_path)
@@ -838,7 +838,8 @@ class TestSSEBroadcastOnSwitch:
         plan_dashboard._current_worktree_path = self._orig_current_wt
         plan_dashboard._root_task = self._orig_root_task
         plan_dashboard._task_index = self._orig_task_index
-        plan_dashboard._sse_clients = self._orig_sse_clients
+        plan_dashboard._worktree_clients.clear()
+        plan_dashboard._worktree_clients.update(self._orig_clients)
 
     @patch("plan_dashboard.discover_worktrees")
     def test_switch_broadcasts_full_reload(self, mock_discover, tmp_path):
@@ -867,9 +868,12 @@ class TestSSEBroadcastOnSwitch:
             ),
         ]
 
-        # Register a mock SSE client
+        # Register a mock SSE client under the post-switch launch worktree id.
+        # The switch re-points the launch worktree to wt2 and broadcasts the
+        # full-reload to that worktree's client set.
+        wt2_id = plan_dashboard._worktree_id_for_plan_root(wt2_plan)
         queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
-        plan_dashboard._sse_clients.add(queue)
+        plan_dashboard._worktree_clients[wt2_id] = {queue}
 
         from fastapi.testclient import TestClient
         client = TestClient(plan_dashboard.app, raise_server_exceptions=False)

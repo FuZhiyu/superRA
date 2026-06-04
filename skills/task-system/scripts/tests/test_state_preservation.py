@@ -674,47 +674,47 @@ class TestBroadcastIntegration:
         """_broadcast produces SSE frames with event: task:{path} naming."""
         loop = asyncio.new_event_loop()
         queue: asyncio.Queue[str] = asyncio.Queue()
-        plan_dashboard._sse_clients.add(queue)
+        plan_dashboard._worktree_clients["wt"] = {queue}
         try:
             loop.run_until_complete(
-                plan_dashboard._broadcast("task:01-first", "<div>fragment</div>")
+                plan_dashboard._broadcast("task:01-first", "<div>fragment</div>", "wt")
             )
             msg = loop.run_until_complete(asyncio.wait_for(queue.get(), timeout=1))
             assert msg.startswith("event: task:01-first\n")
             assert "data: <div>fragment</div>\n" in msg
         finally:
-            plan_dashboard._sse_clients.discard(queue)
+            plan_dashboard._worktree_clients.pop("wt", None)
             loop.close()
 
     def test_broadcast_full_reload_event(self):
         """full-reload event is properly formatted."""
         loop = asyncio.new_event_loop()
         queue: asyncio.Queue[str] = asyncio.Queue()
-        plan_dashboard._sse_clients.add(queue)
+        plan_dashboard._worktree_clients["wt"] = {queue}
         try:
             loop.run_until_complete(
-                plan_dashboard._broadcast("full-reload", "{}")
+                plan_dashboard._broadcast("full-reload", "{}", "wt")
             )
             msg = loop.run_until_complete(asyncio.wait_for(queue.get(), timeout=1))
             assert msg.startswith("event: full-reload\n")
             assert "data: {}\n" in msg
         finally:
-            plan_dashboard._sse_clients.discard(queue)
+            plan_dashboard._worktree_clients.pop("wt", None)
             loop.close()
 
     def test_summary_updated_event(self):
         """summary-updated event is properly formatted."""
         loop = asyncio.new_event_loop()
         queue: asyncio.Queue[str] = asyncio.Queue()
-        plan_dashboard._sse_clients.add(queue)
+        plan_dashboard._worktree_clients["wt"] = {queue}
         try:
             loop.run_until_complete(
-                plan_dashboard._broadcast("summary-updated", "<span>3 tasks</span>")
+                plan_dashboard._broadcast("summary-updated", "<span>3 tasks</span>", "wt")
             )
             msg = loop.run_until_complete(asyncio.wait_for(queue.get(), timeout=1))
             assert msg.startswith("event: summary-updated\n")
         finally:
-            plan_dashboard._sse_clients.discard(queue)
+            plan_dashboard._worktree_clients.pop("wt", None)
             loop.close()
 
 
