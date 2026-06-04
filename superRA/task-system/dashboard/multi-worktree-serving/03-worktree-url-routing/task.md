@@ -1,6 +1,6 @@
 ---
 title: "Worktree-in-URL routing (?wt=) + selector navigation"
-status: implemented
+status: revise
 depends_on: 
   - 01-per-worktree-state
 
@@ -69,3 +69,14 @@ The server renders the same page for any worktree, bound at render time to the w
 ### Deviation from Planner Guidance
 
 The guidance suggested reading both `?wt=` and the hash in `initRouter`. `?wt=` is instead read once at load into `ACTIVE_WT` (the server already binds the page to that worktree and bakes `sse-connect`/`project_root`), and `initRouter` keeps owning only the task path. This keeps the hash router as the single source of truth for the task path while the worktree dimension is established server-side at render and re-applied client-side only on an actual switch (`applyWorktree`) — satisfying the objective's "read `?wt=` on load, default to launch, include it on every fetch" without overloading the hash router.
+
+## Review Notes
+
+1. **MAJOR — the required test suite is red: 9 errors in `test_worktree_selector.py` from this task's own deletions.** The dispatch and `## Validation` require the dashboard suite to pass; running it from live source (`python -m pytest skills/task-system/scripts -q`) gives `431 passed, 9 errors`. Both erroring classes test behavior this task deliberately retired but whose tests were not updated:
+   - `TestWorktreeRoutes` and `TestSSEBroadcastOnSwitch` setup fixtures reference the removed global at [test_worktree_selector.py:608](../../../../../skills/task-system/scripts/test_worktree_selector.py#L608), [:615](../../../../../skills/task-system/scripts/test_worktree_selector.py#L615), [:625](../../../../../skills/task-system/scripts/test_worktree_selector.py#L625), [:824](../../../../../skills/task-system/scripts/test_worktree_selector.py#L824), [:831](../../../../../skills/task-system/scripts/test_worktree_selector.py#L831), [:838](../../../../../skills/task-system/scripts/test_worktree_selector.py#L838) — `plan_dashboard._current_worktree_path`, deleted at [plan_dashboard.py:71-75](../../../../../skills/task-system/scripts/plan_dashboard.py#L71). The fixture raises `AttributeError` at collection, erroring every test in the class.
+   - `test_get_worktrees_returns_json` / `test_get_worktrees_fields` / `test_get_worktrees_fallback_no_git` ([:636](../../../../../skills/task-system/scripts/test_worktree_selector.py#L636), [:662](../../../../../skills/task-system/scripts/test_worktree_selector.py#L662), [:686](../../../../../skills/task-system/scripts/test_worktree_selector.py#L686)) assert the `current` / `is_current` response fields this task removed (Deliverable 3, [plan_dashboard.py:1019](../../../../../skills/task-system/scripts/plan_dashboard.py#L1019)). They must be rewritten to assert the new `launch_wt_id` / per-entry `wt_id` contract.
+   - `test_switch_*` and `test_switch_broadcasts_full_reload` ([:695](../../../../../skills/task-system/scripts/test_worktree_selector.py#L695)–[:881](../../../../../skills/task-system/scripts/test_worktree_selector.py#L881)) exercise `POST /api/worktree/switch`, deleted at [plan_dashboard.py:1067](../../../../../skills/task-system/scripts/plan_dashboard.py#L1067) (Deliverable 5). They test retired behavior and should be removed (or replaced with the navigation model, though new `?wt=` integration coverage is task 04's scope).
+
+   Fix: update/remove these tests so the full `skills/task-system/scripts` suite is green. Adding brand-new cross-worktree integration tests stays task 04's job, but the suite cannot be left red by this task's own removals. (The `_get_current_worktree_path` function in `_worktree_discovery.py` is unrelated and untouched — do not confuse it with the removed global.)
+
+2. **MINOR — `## Results` "237 passed" reflects only `test_task_system.py`, not the suite the task requires.** `## Validation` and the dispatch call for the dashboard suite; the verification ran a single file and so missed finding 1. Update the verification claim to the full `skills/task-system/scripts` run once green.
