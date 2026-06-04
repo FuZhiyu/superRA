@@ -479,6 +479,139 @@ class TestServerRoutes:
 
 
 # ---------------------------------------------------------------------------
+# Per-worktree state + request resolution
+#
+# The dashboard serves any discovered worktree on demand, resolved per request
+# from the ``?wt=<name>`` query param (worktree id = directory basename).  A
+# request with no ``?wt=`` resolves to the launch worktree; an unknown ``?wt=``
+# is a 404.  These tests build two distinct trees, seed both into the worktree
+# cache, and assert each request renders from the matching tree's state.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def two_worktree_client(tmp_path):
+    """A TestClient with two worktree trees ('wt-a', 'wt-b') seeded in the
+    worktree cache, the first as the launch (default) worktree.
+
+    Each worktree's plan root lives at ``tmp_path/<wt-id>/superRA`` so the
+    directory basename (the worktree id) is distinct and stable.  Yields
+    ``(client, wt_a_id, wt_b_id)``.
+    """
+    from starlette.testclient import TestClient
+
+    def _make_tree(wt_id: str, title_suffix: str):
+        wt_dir = tmp_path / wt_id
+        wt_dir.mkdir()
+        root = wt_dir / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", f"Project {title_suffix}", "not-started",
+                       objective=f"Plan {title_suffix}.")
+        d1 = root / "01-first"
+        d1.mkdir()
+        _write_task_md(d1 / "task.md", f"First {title_suffix}", "approved",
+                       objective=f"Step one in {title_suffix}.")
+        return root
+
+    root_a = _make_tree("wt-a", "A")
+    root_b = _make_tree("wt-b", "B")
+
+    plan_dashboard._jinja_env = None
+    plan_dashboard._worktree_cache.clear()
+
+    # Launch worktree = wt-a (the default when no ?wt= is given).
+    plan_dashboard.PLAN_ROOT = root_a
+    plan_dashboard.rebuild_tree()
+    wt_a_id = plan_dashboard._launch_wt_id
+
+    # Seed wt-b into the cache directly (a second discovered worktree).
+    wt_b_id = plan_dashboard._worktree_id_for_plan_root(root_b)
+    plan_dashboard._worktree_cache[wt_b_id] = plan_dashboard._build_worktree_state(
+        wt_b_id, root_b
+    )
+
+    # Run without the lifespan watcher (no need; cache is seeded manually).
+    c = TestClient(plan_dashboard.app, raise_server_exceptions=True)
+    try:
+        yield c, wt_a_id, wt_b_id
+    finally:
+        plan_dashboard._worktree_cache.clear()
+
+
+class TestPerWorktreeResolution:
+    def test_node_resolves_by_wt_param(self, two_worktree_client):
+        client, wt_a, wt_b = two_worktree_client
+        a = client.get(f"/node/01-first?wt={wt_a}")
+        b = client.get(f"/node/01-first?wt={wt_b}")
+        assert a.status_code == 200 and b.status_code == 200
+        assert "Step one in A." in a.text
+        assert "Step one in B." in b.text
+        assert "Step one in B." not in a.text
+
+    def test_nav_resolves_by_wt_param(self, two_worktree_client):
+        client, wt_a, wt_b = two_worktree_client
+        a = client.get(f"/nav?wt={wt_a}").text
+        b = client.get(f"/nav?wt={wt_b}").text
+        # Both trees have a single '01-first' child; titles differ per tree.
+        assert "First A" in a
+        assert "First B" in b
+        assert "First B" not in a
+
+    def test_index_resolves_by_wt_param(self, two_worktree_client):
+        client, wt_a, wt_b = two_worktree_client
+        assert "Project A" in client.get(f"/?wt={wt_a}").text
+        assert "Project B" in client.get(f"/?wt={wt_b}").text
+
+    def test_no_wt_param_returns_launch_worktree(self, two_worktree_client):
+        client, wt_a, wt_b = two_worktree_client
+        # Launch worktree is wt-a; a request with no ?wt= must render it.
+        assert "Step one in A." in client.get("/node/01-first").text
+        assert "Project A" in client.get("/").text
+
+    def test_comments_summary_resolves_by_wt_param(self, two_worktree_client):
+        client, wt_a, wt_b = two_worktree_client
+        a_state = plan_dashboard._worktree_cache[wt_a]
+        b_state = plan_dashboard._worktree_cache[wt_b]
+        add_comment(a_state.plan_root / "01-first", "Objective", 0, "p", "ba", author="u")
+        add_comment(b_state.plan_root / "01-first", "Objective", 0, "p", "bb", author="u")
+        add_comment(b_state.plan_root / "01-first", "Objective", 1, "p2", "bb2", author="u")
+        assert client.get(f"/api/comments/summary?wt={wt_a}").json() == {"01-first": 1}
+        assert client.get(f"/api/comments/summary?wt={wt_b}").json() == {"01-first": 2}
+
+    def test_unknown_wt_returns_404(self, two_worktree_client):
+        client, wt_a, wt_b = two_worktree_client
+        # A ?wt= that is neither the launch worktree nor a discovered one. The
+        # tmp trees are not git worktrees, so discovery yields no match -> 404.
+        assert client.get("/node/01-first?wt=no-such-worktree").status_code == 404
+        assert client.get("/nav?wt=no-such-worktree").status_code == 404
+
+    def test_state_cached_and_rebuilt_on_invalidation(self, two_worktree_client):
+        client, wt_a, wt_b = two_worktree_client
+        # Cache hit: resolving the launch worktree twice returns the same object.
+        from starlette.requests import Request
+
+        def _req(qs: str) -> Request:
+            scope = {
+                "type": "http", "method": "GET", "path": "/",
+                "query_string": qs.encode(), "headers": [],
+            }
+            return Request(scope)
+
+        first = plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
+        second = plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
+        assert first is second  # cache hit, not rebuilt
+
+        # Edit the launch worktree's task on disk, then invalidate via the hook.
+        task_md = first.plan_root / "01-first" / "task.md"
+        task_md.write_text(task_md.read_text().replace("First A", "Edited A"))
+        # Pre-invalidation: cached state still shows the old title.
+        assert first.task_index["01-first"].title == "First A"
+        rebuilt = plan_dashboard.rebuild_worktree_state(wt_a)
+        assert rebuilt is first  # same object, refreshed in place
+        assert first.task_index["01-first"].title == "Edited A"
+
+
+# ---------------------------------------------------------------------------
 # TestDataLayer
 # ---------------------------------------------------------------------------
 

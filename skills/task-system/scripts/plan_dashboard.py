@@ -23,7 +23,7 @@ import socket
 import sys
 import webbrowser
 from contextlib import asynccontextmanager
-from dataclasses import replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import AsyncGenerator
 
@@ -64,7 +64,10 @@ except ImportError:
 # ---------------------------------------------------------------------------
 PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 
-# In-memory task tree and flat index
+# In-memory task tree and flat index.  These are a compatibility view over the
+# *default* (launch) worktree's WorktreeState — read by /export's snapshot path
+# and the standalone renderer.  Per-request handlers resolve a WorktreeState
+# instead of reading these.
 _root_task: Task | None = None
 _task_index: dict[str, Task] = {}
 _project_root: str = ""
@@ -83,6 +86,67 @@ _sse_clients: set[asyncio.Queue[str]] = set()
 
 
 # ---------------------------------------------------------------------------
+# Per-worktree state model
+# ---------------------------------------------------------------------------
+# The dashboard serves any discovered worktree on demand.  Each worktree's
+# render state (its task tree, flat index, project root, and plan root) lives in
+# a WorktreeState; a request resolves to one via its ``?wt=<name>`` query param,
+# defaulting to the launch worktree.  ``_worktree_cache`` is keyed by worktree id
+# (the worktree directory basename, per the root task's design decision 2).
+
+
+@dataclass
+class WorktreeState:
+    """Per-worktree render state, replacing the former module singletons."""
+
+    wt_id: str
+    plan_root: Path
+    project_root: str
+    root_task: Task | None = None
+    task_index: dict[str, Task] = field(default_factory=dict)
+
+
+# worktree id -> WorktreeState, built lazily on first request for a worktree.
+_worktree_cache: dict[str, WorktreeState] = {}
+
+# The launch worktree id: the worktree the server started in, used as the
+# default when a request carries no ``?wt=``.
+_launch_wt_id: str = ""
+
+
+def _worktree_id_for_plan_root(plan_root: Path) -> str:
+    """Worktree id for a plan root = the worktree directory basename.
+
+    The worktree dir is the plan root's parent (the plan root is ``<wt>/superRA``).
+    """
+    return plan_root.resolve().parent.name
+
+
+def _build_worktree_state(wt_id: str, plan_root: Path) -> WorktreeState:
+    """Walk *plan_root* and return a fully populated WorktreeState."""
+    state = WorktreeState(
+        wt_id=wt_id,
+        plan_root=plan_root,
+        project_root=str(plan_root.resolve().parent),
+    )
+    state.root_task = walk_plan(plan_root)
+    _build_index(state.root_task, state.task_index)
+    return state
+
+
+def _sync_default_globals() -> None:
+    """Mirror the launch worktree's state into the legacy module globals.
+
+    ``/export`` snapshots these globals around a standalone render, and the
+    standalone renderer drives them directly; the test suite also reads them.
+    Keeping them as a view over the default WorktreeState preserves that path.
+    """
+    state = _worktree_cache.get(_launch_wt_id)
+    if state is not None:
+        _set_module_state(state.root_task, state.task_index, state.project_root)
+
+
+# ---------------------------------------------------------------------------
 # Data layer
 # ---------------------------------------------------------------------------
 
@@ -95,40 +159,43 @@ def _build_index(task: Task, index: dict[str, Task]) -> None:
 
 
 def rebuild_tree() -> None:
-    """Full re-walk of the plan directory.  Updates root and index."""
-    global _root_task, _task_index
-    _root_task = walk_plan(PLAN_ROOT)
-    _task_index = {}
-    _build_index(_root_task, _task_index)
+    """Full re-walk of the launch plan directory; (re)seed the default worktree.
+
+    Rebuilds the launch worktree's WorktreeState from ``PLAN_ROOT`` and mirrors
+    it into the legacy globals.  Tests and the CLI seed the cache through here.
+    """
+    global _launch_wt_id
+    _launch_wt_id = _worktree_id_for_plan_root(PLAN_ROOT)
+    _worktree_cache[_launch_wt_id] = _build_worktree_state(_launch_wt_id, PLAN_ROOT)
+    _sync_default_globals()
 
 
-def rebuild_task(task_path: str) -> tuple[Task | None, bool]:
-    """Re-parse a single task.md and update it in the index.
+def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | None, bool]:
+    """Re-parse a single task.md within *state* and update its index.
 
     Returns ``(updated_task, children_changed)``.  *updated_task* is ``None``
     when the file no longer exists.  *children_changed* is ``True`` when child
     directories were added or removed since the last index snapshot, signalling
     the caller to broadcast a full-reload instead of a single-task fragment.
     """
-    global _root_task
-    task_dir = PLAN_ROOT / task_path if task_path else PLAN_ROOT
+    task_dir = state.plan_root / task_path if task_path else state.plan_root
     task_md = task_dir / "task.md"
     if not task_md.exists():
-        _task_index.pop(task_path, None)
+        state.task_index.pop(task_path, None)
         return None, False
     try:
         updated = parse_task(task_md)
     except Exception:
-        return _task_index.get(task_path), False
+        return state.task_index.get(task_path), False
 
     # --- Re-discover children from the filesystem ---
-    existing = _task_index.get(task_path)
+    existing = state.task_index.get(task_path)
     old_child_paths: set[str] = set()
     if existing is not None:
         old_child_paths = {c.path for c in existing.children}
 
     # Walk current child subdirectories that contain a task.md
-    new_children = _walk_children(task_dir, PLAN_ROOT)
+    new_children = _walk_children(task_dir, state.plan_root)
     new_child_paths = {c.path for c in new_children}
 
     children_changed = new_child_paths != old_child_paths
@@ -137,23 +204,33 @@ def rebuild_task(task_path: str) -> tuple[Task | None, bool]:
 
     # Update the flat index: register the task itself and all discovered
     # children; remove entries for children that no longer exist.
-    _task_index[task_path] = updated
+    state.task_index[task_path] = updated
     for gone_path in old_child_paths - new_child_paths:
-        _remove_from_index(gone_path)
+        _remove_from_index(state.task_index, gone_path)
     for child in new_children:
-        _build_index(child, _task_index)
+        _build_index(child, state.task_index)
 
     # Patch the node inside the tree so the parent's reference stays valid
-    _replace_node_in_tree(_root_task, task_path, updated)
+    _replace_node_in_tree(state.root_task, task_path, updated)
     return updated, children_changed
 
 
-def _remove_from_index(task_path: str) -> None:
-    """Remove a task and all its descendants from the flat index."""
-    task = _task_index.pop(task_path, None)
+def rebuild_task(task_path: str) -> tuple[Task | None, bool]:
+    """Re-parse a single task.md in the launch worktree (legacy-globals view)."""
+    state = _worktree_cache.get(_launch_wt_id)
+    if state is None:
+        return None, False
+    result = rebuild_state_task(state, task_path)
+    _sync_default_globals()
+    return result
+
+
+def _remove_from_index(index: dict[str, Task], task_path: str) -> None:
+    """Remove a task and all its descendants from a flat index."""
+    task = index.pop(task_path, None)
     if task is not None:
         for child in task.children:
-            _remove_from_index(child.path)
+            _remove_from_index(index, child.path)
 
 
 def _replace_node_in_tree(node: Task | None, target_path: str, replacement: Task) -> bool:
@@ -169,9 +246,9 @@ def _replace_node_in_tree(node: Task | None, target_path: str, replacement: Task
     return False
 
 
-def _find_task(path: str) -> Task | None:
-    """O(1) task lookup by path."""
-    return _task_index.get(path)
+def _find_task(state: WorktreeState, path: str) -> Task | None:
+    """O(1) task lookup by path within a worktree state."""
+    return state.task_index.get(path)
 
 
 # ---------------------------------------------------------------------------
@@ -197,92 +274,143 @@ async def _broadcast(event: str, data: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Watcher rebuild-and-render-fragment hook (per-worktree)
+# ---------------------------------------------------------------------------
+# The watcher rebuilds/evicts a worktree's WorktreeState and renders the
+# broadcast fragments from that state, not from module globals.  Task 02 owns
+# the per-worktree watcher lifecycle and delivery; it reuses this body and just
+# parameterizes which worktree it operates on.
+
+
+async def _rebuild_and_broadcast(state: WorktreeState, changes) -> None:
+    """Apply a batch of filesystem *changes* to *state* and broadcast fragments.
+
+    *changes* is a ``watchfiles`` change set scoped to ``state.plan_root``.
+    Renders the ``full-reload`` / ``summary-updated`` / ``task:<path>`` fragments
+    from *state* so the rebuild-and-render path is worktree-scoped throughout.
+    """
+    import watchfiles
+
+    # Paths of tasks whose parent needs re-rendering (structural changes)
+    structural_parent_paths: set[str] = set()
+    changed_paths: set[str] = set()
+
+    for change_type, file_path_str in changes:
+        fp = Path(file_path_str)
+        name = fp.name
+
+        if name not in ("task.md", "comments.yaml"):
+            continue
+
+        task_dir = fp.parent
+        try:
+            rel = task_dir.relative_to(state.plan_root)
+            task_path = str(rel) if str(rel) != "." else ""
+        except ValueError:
+            continue
+
+        if change_type == watchfiles.Change.added:
+            if name == "task.md":
+                # Parent of the new task needs re-rendering
+                parent_path = str(Path(task_path).parent) if task_path else ""
+                if parent_path == ".":
+                    parent_path = ""
+                structural_parent_paths.add(parent_path)
+        elif change_type == watchfiles.Change.deleted:
+            if name == "task.md":
+                parent_path = str(Path(task_path).parent) if task_path else ""
+                if parent_path == ".":
+                    parent_path = ""
+                structural_parent_paths.add(parent_path)
+        else:
+            changed_paths.add(task_path)
+
+    if structural_parent_paths:
+        # A task dir was added or deleted: the tree shape changed. The
+        # master-detail client rebuilds its whole sidebar and restores
+        # activePath on full-reload, so a single full-reload is both the
+        # correct and the simplest signal here — no per-parent fragment
+        # juggling, no descendant fold/highlight to preserve by hand.
+        rebuild_worktree_state(state.wt_id)
+        await _broadcast("full-reload", "{}")
+        if state.root_task is not None:
+            summary_html = _render_summary(state.root_task)
+            await _broadcast("summary-updated", summary_html)
+
+    # Process content-only changes (skip paths already covered by the
+    # structural full-reload above).
+    content_paths = changed_paths - structural_parent_paths
+    if content_paths:
+        any_children_changed = False
+
+        for task_path in content_paths:
+            updated, children_changed = rebuild_state_task(state, task_path)
+            if children_changed:
+                # A task.md edit that changes this task's own child set is
+                # structural too — let the client rebuild the sidebar.
+                any_children_changed = True
+            elif updated is not None and state.root_task is not None:
+                # Pure content edit: swap the body-free sidebar row. The
+                # client's active-card / children-DAG refresh keys off the
+                # event name, not this fragment, so a nav (no-body) row is
+                # the cheap, correct payload for the declarative sse-swap.
+                fragment = _render_nav_node(updated)
+                await _broadcast(f"task:{task_path}", fragment)
+
+        if any_children_changed:
+            rebuild_worktree_state(state.wt_id)
+            await _broadcast("full-reload", "{}")
+
+        if content_paths and state.root_task is not None:
+            summary_html = _render_summary(state.root_task)
+            await _broadcast("summary-updated", summary_html)
+
+
+def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
+    """Rebuild (or evict) the cached WorktreeState for *wt_id*.
+
+    Re-walks the worktree's plan root and refreshes its cached state in place so
+    handlers and the watcher see the new tree.  Returns the refreshed state, or
+    ``None`` when the worktree is no longer cached.  Mirrors the launch worktree
+    into the legacy globals so ``/export`` and the standalone renderer stay
+    consistent.  This is the cache-invalidation hook task 02's watcher calls.
+    """
+    existing = _worktree_cache.get(wt_id)
+    if existing is None:
+        return None
+    refreshed = _build_worktree_state(wt_id, existing.plan_root)
+    # Refresh in place so any handler/watcher holding the same object sees it.
+    existing.root_task = refreshed.root_task
+    existing.task_index = refreshed.task_index
+    existing.project_root = refreshed.project_root
+    if wt_id == _launch_wt_id:
+        _sync_default_globals()
+    return existing
+
+
+# ---------------------------------------------------------------------------
 # Filesystem watcher (watchfiles + debounce)
 # ---------------------------------------------------------------------------
 
 
 async def _watch_plan_root() -> None:
-    """Background coroutine: watch plan_root for task.md / comments.yaml changes."""
+    """Background coroutine: watch the launch worktree for task.md changes.
+
+    Task 02 generalizes this to one watcher per connected worktree; this task
+    keeps the single launch watcher and routes its changes through the
+    worktree-scoped ``_rebuild_and_broadcast`` hook.
+    """
     import watchfiles
 
-    async for changes in watchfiles.awatch(PLAN_ROOT):
+    state = _worktree_cache.get(_launch_wt_id)
+    if state is None:
+        return
+
+    async for changes in watchfiles.awatch(state.plan_root):
         # watchfiles already debounces (default 1600ms); the sleep adds a
         # short extra window so rapid back-to-back writes coalesce.
         await asyncio.sleep(0.2)
-
-        # Paths of tasks whose parent needs re-rendering (structural changes)
-        structural_parent_paths: set[str] = set()
-        changed_paths: set[str] = set()
-
-        for change_type, file_path_str in changes:
-            fp = Path(file_path_str)
-            name = fp.name
-
-            if name not in ("task.md", "comments.yaml"):
-                continue
-
-            task_dir = fp.parent
-            try:
-                rel = task_dir.relative_to(PLAN_ROOT)
-                task_path = str(rel) if str(rel) != "." else ""
-            except ValueError:
-                continue
-
-            if change_type == watchfiles.Change.added:
-                if name == "task.md":
-                    # Parent of the new task needs re-rendering
-                    parent_path = str(Path(task_path).parent) if task_path else ""
-                    if parent_path == ".":
-                        parent_path = ""
-                    structural_parent_paths.add(parent_path)
-            elif change_type == watchfiles.Change.deleted:
-                if name == "task.md":
-                    parent_path = str(Path(task_path).parent) if task_path else ""
-                    if parent_path == ".":
-                        parent_path = ""
-                    structural_parent_paths.add(parent_path)
-            else:
-                changed_paths.add(task_path)
-
-        if structural_parent_paths:
-            # A task dir was added or deleted: the tree shape changed. The
-            # master-detail client rebuilds its whole sidebar and restores
-            # activePath on full-reload, so a single full-reload is both the
-            # correct and the simplest signal here — no per-parent fragment
-            # juggling, no descendant fold/highlight to preserve by hand.
-            rebuild_tree()
-            await _broadcast("full-reload", "{}")
-            if _root_task is not None:
-                summary_html = _render_summary()
-                await _broadcast("summary-updated", summary_html)
-
-        # Process content-only changes (skip paths already covered by the
-        # structural full-reload above).
-        content_paths = changed_paths - structural_parent_paths
-        if content_paths:
-            any_children_changed = False
-
-            for task_path in content_paths:
-                updated, children_changed = rebuild_task(task_path)
-                if children_changed:
-                    # A task.md edit that changes this task's own child set is
-                    # structural too — let the client rebuild the sidebar.
-                    any_children_changed = True
-                elif updated is not None and _root_task is not None:
-                    # Pure content edit: swap the body-free sidebar row. The
-                    # client's active-card / children-DAG refresh keys off the
-                    # event name, not this fragment, so a nav (no-body) row is
-                    # the cheap, correct payload for the declarative sse-swap.
-                    fragment = _render_nav_node(updated)
-                    await _broadcast(f"task:{task_path}", fragment)
-
-            if any_children_changed:
-                rebuild_tree()
-                await _broadcast("full-reload", "{}")
-
-            if content_paths and _root_task is not None:
-                summary_html = _render_summary()
-                await _broadcast("summary-updated", summary_html)
+        await _rebuild_and_broadcast(state, changes)
 
 
 # ---------------------------------------------------------------------------
@@ -326,11 +454,11 @@ def _get_jinja_env():
     return env
 
 
-def _render_task_fragment(task: Task) -> str:
+def _render_task_fragment(task: Task, project_root: str) -> str:
     """Render the task_children.html template for a single task."""
     env = _get_jinja_env()
     template = env.get_template("task_children.html")
-    return template.render(task=task, project_root=_project_root)
+    return template.render(task=task, project_root=project_root)
 
 
 def _task_depth(task_path: str) -> int:
@@ -340,7 +468,7 @@ def _task_depth(task_path: str) -> int:
     return task_path.count("/")
 
 
-def _render_task_node(task: Task, depth: int | None = None) -> str:
+def _render_task_node(task: Task, project_root: str | None = None, depth: int | None = None) -> str:
     """Render a single task node via the task_node macro (for SSE swap).
 
     *depth* controls how many levels of children are rendered inline vs
@@ -349,12 +477,14 @@ def _render_task_node(task: Task, depth: int | None = None) -> str:
     """
     if depth is None:
         depth = _task_depth(task.path)
+    if project_root is None:
+        project_root = _project_root
     env = _get_jinja_env()
     template = env.from_string(
         '{%- from "task_node.html" import render_task_node -%}'
         '{{ render_task_node(task, project_root, depth=depth) }}'
     )
-    return template.render(task=task, project_root=_project_root, depth=depth)
+    return template.render(task=task, project_root=project_root, depth=depth)
 
 
 def _render_nav_node(task: Task, depth: int | None = None) -> str:
@@ -380,19 +510,23 @@ def _render_nav_children(task: Task) -> str:
     return template.render(task=task)
 
 
-def _render_node_body(task: Task) -> str:
+def _render_node_body(task: Task, project_root: str | None = None) -> str:
     """Render the node_body.html fragment (body-only) for a single task."""
+    if project_root is None:
+        project_root = _project_root
     env = _get_jinja_env()
     template = env.get_template("node_body.html")
-    return template.render(task=task, project_root=_project_root)
+    return template.render(task=task, project_root=project_root)
 
 
-def _render_summary() -> str:
-    """Render the summary_bar.html template."""
+def _render_summary(root_task: Task | None = None) -> str:
+    """Render the summary_bar.html template for *root_task*'s tree."""
+    if root_task is None:
+        root_task = _root_task
     env = _get_jinja_env()
     template = env.get_template("summary_bar.html")
-    all_tasks = collect_all_tasks(_root_task) if _root_task else []
-    return template.render(root_task=_root_task, all_tasks=all_tasks)
+    all_tasks = collect_all_tasks(root_task) if root_task else []
+    return template.render(root_task=root_task, all_tasks=all_tasks)
 
 
 # ---------------------------------------------------------------------------
@@ -404,10 +538,9 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: build task tree; spawn watcher.  Shutdown: cancel watcher."""
-    global _project_root, _watcher_task, _current_worktree_path
-    _project_root = str(PLAN_ROOT.resolve().parent)
-    _current_worktree_path = _project_root
+    """Startup: seed the launch worktree; spawn watcher.  Shutdown: cancel."""
+    global _current_worktree_path, _watcher_task
+    _current_worktree_path = str(PLAN_ROOT.resolve().parent)
     rebuild_tree()
     _watcher_task = asyncio.create_task(_watch_plan_root())
     yield
@@ -422,20 +555,92 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+# ---------------------------------------------------------------------------
+# Per-request worktree resolution
+# ---------------------------------------------------------------------------
+
+
+def _discovered_worktree_map() -> dict[str, Path]:
+    """Map worktree id (directory basename) -> plan root Path for every
+    discovered worktree that has a task tree.
+
+    On a basename collision between two discovered worktrees, neither bare
+    basename is registered; the longest-unique-suffix forms are registered
+    instead so a caller can still name each unambiguously.
+    """
+    plan_roots: list[Path] = []
+    for w in discover_worktrees():
+        if w.plan_root is not None:
+            plan_roots.append(Path(w.plan_root))
+
+    by_id: dict[str, list[Path]] = {}
+    for pr in plan_roots:
+        by_id.setdefault(pr.resolve().parent.name, []).append(pr)
+
+    result: dict[str, Path] = {}
+    for wt_id, roots in by_id.items():
+        if len(roots) == 1:
+            result[wt_id] = roots[0]
+        else:
+            # Basename collision: register each by its longest-unique-suffix of
+            # path segments so every colliding worktree stays addressable.
+            for pr in roots:
+                segments = pr.resolve().parent.parts
+                for depth in range(1, len(segments) + 1):
+                    suffix = "/".join(segments[-depth:])
+                    if not any(
+                        other is not pr
+                        and "/".join(other.resolve().parent.parts).endswith(suffix)
+                        for other in roots
+                    ):
+                        result[suffix] = pr
+                        break
+    return result
+
+
+def resolve_worktree(request: Request) -> WorktreeState:
+    """Resolve the WorktreeState a request targets via its ``?wt=<name>`` param.
+
+    Falls back to the launch worktree when ``?wt=`` is absent (preserving today's
+    behavior and standalone export).  Builds and caches a worktree's state lazily
+    on first use.  Raises 404 only when ``?wt=`` names a value that is neither the
+    launch worktree nor any discovered worktree.
+    """
+    wt_name = request.query_params.get("wt")
+    if not wt_name or wt_name == _launch_wt_id:
+        state = _worktree_cache.get(_launch_wt_id)
+        if state is None:
+            raise HTTPException(status_code=500, detail="Task tree not initialized")
+        return state
+
+    cached = _worktree_cache.get(wt_name)
+    if cached is not None:
+        return cached
+
+    plan_root = _discovered_worktree_map().get(wt_name)
+    if plan_root is None:
+        raise HTTPException(status_code=404, detail=f"Unknown worktree: {wt_name}")
+
+    state = _build_worktree_state(wt_name, plan_root)
+    _worktree_cache[wt_name] = state
+    return state
+
+
 # --- Route: GET / ----------------------------------------------------------
 
 @app.get("/", response_class=HTMLResponse)
-async def index():
+async def index(request: Request):
     """Serve the full dashboard page."""
-    if _root_task is None:
+    state = resolve_worktree(request)
+    if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
     template = env.get_template("base.html")
-    all_tasks = collect_all_tasks(_root_task)
+    all_tasks = collect_all_tasks(state.root_task)
     html = template.render(
-        root_task=_root_task,
+        root_task=state.root_task,
         all_tasks=all_tasks,
-        project_root=_project_root,
+        project_root=state.project_root,
     )
     return HTMLResponse(content=html)
 
@@ -443,9 +648,10 @@ async def index():
 # --- Route: GET /tree (tree HTML fragment for AJAX full-reload fallback) ----
 
 @app.get("/tree", response_class=HTMLResponse)
-async def tree_fragment():
+async def tree_fragment(request: Request):
     """Return just the task tree HTML nodes (no page chrome)."""
-    if _root_task is None:
+    state = resolve_worktree(request)
+    if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
     # Re-use the same rendering logic as base.html: if root has body, render
@@ -460,21 +666,22 @@ async def tree_fragment():
         '{% endfor %}'
         '{% endif %}'
     )
-    html = template.render(root_task=_root_task, project_root=_project_root)
+    html = template.render(root_task=state.root_task, project_root=state.project_root)
     return HTMLResponse(content=html)
 
 
 # --- Route: GET /nav (navigation-only tree fragment) -----------------------
 
 @app.get("/nav", response_class=HTMLResponse)
-async def nav_fragment():
+async def nav_fragment(request: Request):
     """Return the navigation-only tree (rows, no task bodies) for the sidebar.
 
     Mirrors /tree's root-or-children logic but renders nav_node (body-free).
     Children are inlined to depth 2; depth >=3 children are lazy-load stubs
     fetched via /nav/{path}.
     """
-    if _root_task is None:
+    state = resolve_worktree(request)
+    if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
     template = env.from_string(
@@ -487,7 +694,7 @@ async def nav_fragment():
         '{% endfor %}'
         '{% endif %}'
     )
-    html = template.render(root_task=_root_task)
+    html = template.render(root_task=state.root_task)
     return HTMLResponse(content=html)
 
 
@@ -525,49 +732,52 @@ async def sse_events():
 # --- Route: GET /dag ---------------------------------------------------------
 
 @app.get("/dag", response_class=HTMLResponse)
-async def dag_view(root: str | None = None):
+async def dag_view(request: Request, root: str | None = None):
     """Render the DAG mermaid diagram partial.
 
     Without ``root``: the global view over the whole tree, clustered by subtree.
     With ``root=<task path>``: an inline per-subtree panel scoped to that task's
     direct children (their sibling dependency graph), reusing the same template.
     """
-    if _root_task is None:
+    state = resolve_worktree(request)
+    if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
     template = env.get_template("dag.html")
     if root:
-        sub_root = _find_task(root)
+        sub_root = _find_task(state, root)
         if sub_root is None:
             raise HTTPException(status_code=404, detail=f"Task not found: {root}")
         # Scope to the parent's direct children — the sibling-only graph.
         sub_tasks = list(sub_root.children)
         return HTMLResponse(content=template.render(root_task=sub_root, all_tasks=sub_tasks))
-    all_tasks = collect_all_tasks(_root_task)
-    return HTMLResponse(content=template.render(root_task=_root_task, all_tasks=all_tasks))
+    all_tasks = collect_all_tasks(state.root_task)
+    return HTMLResponse(content=template.render(root_task=state.root_task, all_tasks=all_tasks))
 
 
 # --- Route: GET /kanban ------------------------------------------------------
 
 @app.get("/kanban", response_class=HTMLResponse)
-async def kanban_view():
+async def kanban_view(request: Request):
     """Render the kanban board partial."""
-    if _root_task is None:
+    state = resolve_worktree(request)
+    if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
     env = _get_jinja_env()
     template = env.get_template("kanban.html")
-    all_tasks = collect_all_tasks(_root_task)
+    all_tasks = collect_all_tasks(state.root_task)
     return HTMLResponse(content=template.render(all_tasks=all_tasks))
 
 
 # --- Route: GET /files/{path} ----------------------------------------------
 
 @app.get("/files/{path:path}")
-async def serve_file(path: str):
+async def serve_file(path: str, request: Request):
     """Serve files from the project root (for image embeds in markdown)."""
-    file_path = Path(_project_root) / path
+    state = resolve_worktree(request)
+    file_path = Path(state.project_root) / path
     resolved = file_path.resolve()
-    project_resolved = Path(_project_root).resolve()
+    project_resolved = Path(state.project_root).resolve()
 
     # Security: prevent path traversal outside project root
     if not resolved.is_relative_to(project_resolved):
@@ -584,11 +794,12 @@ async def serve_file(path: str):
 # as path="x/comments".  Templates should call /api/task/PATH/comments etc.
 
 @app.get("/api/comments/summary")
-async def comments_summary():
+async def comments_summary(request: Request):
     """Return ``{taskPath: unresolvedCount}`` for all tasks with unresolved comments."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    if _root_task is None:
+    state = resolve_worktree(request)
+    if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
 
     result: dict[str, int] = {}
@@ -601,7 +812,7 @@ async def comments_summary():
         for child in task.children:
             _walk(child)
 
-    _walk(_root_task)
+    _walk(state.root_task)
     return result
 
 
@@ -610,7 +821,7 @@ async def create_comment(path: str, request: Request):
     """Create a comment on a task."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(path)
+    task = _find_task(resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     body = await request.json()
@@ -626,11 +837,11 @@ async def create_comment(path: str, request: Request):
 
 
 @app.get("/api/task/{path:path}/comments")
-async def list_comments(path: str):
+async def list_comments(path: str, request: Request):
     """List comments for a task."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(path)
+    task = _find_task(resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     comments = load_comments(task.dir_path)
@@ -660,7 +871,7 @@ async def toggle_comment(path: str, comment_id: int, request: Request):
     """
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(path)
+    task = _find_task(resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
 
@@ -683,11 +894,11 @@ async def toggle_comment(path: str, comment_id: int, request: Request):
 
 
 @app.delete("/api/task/{path:path}/comment/{comment_id}")
-async def remove_comment(path: str, comment_id: int):
+async def remove_comment(path: str, comment_id: int, request: Request):
     """Delete a comment."""
     if not _COMMENTS_AVAILABLE:
         raise HTTPException(status_code=501, detail="Comments module not available")
-    task = _find_task(path)
+    task = _find_task(resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     deleted = delete_comment(task.dir_path, comment_id)
@@ -846,12 +1057,13 @@ async def switch_worktree(request: Request):
 # suffixes like /comments or /comment/123.
 
 @app.get("/task/{path:path}", response_class=HTMLResponse)
-async def get_task(path: str):
+async def get_task(path: str, request: Request):
     """Return an HTML fragment with the children of the task at *path*."""
-    task = _find_task(path)
+    state = resolve_worktree(request)
+    task = _find_task(state, path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
-    html = _render_task_fragment(task)
+    html = _render_task_fragment(task, state.project_root)
     return HTMLResponse(content=html)
 
 
@@ -861,9 +1073,9 @@ async def get_task(path: str):
 # without pulling task bodies.
 
 @app.get("/nav/{path:path}", response_class=HTMLResponse)
-async def get_nav(path: str):
+async def get_nav(path: str, request: Request):
     """Return a navigation-only fragment with the children of the task at *path*."""
-    task = _find_task(path)
+    task = _find_task(resolve_worktree(request), path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
     html = _render_nav_children(task)
@@ -877,12 +1089,13 @@ async def get_nav(path: str):
 # unchanged.
 
 @app.get("/node/{path:path}", response_class=HTMLResponse)
-async def get_node(path: str):
+async def get_node(path: str, request: Request):
     """Return the body-only HTML fragment for the task at *path*."""
-    task = _find_task(path)
+    state = resolve_worktree(request)
+    task = _find_task(state, path)
     if task is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {path}")
-    html = _render_node_body(task)
+    html = _render_node_body(task, state.project_root)
     return HTMLResponse(content=html)
 
 
@@ -892,29 +1105,32 @@ async def get_node(path: str):
 # it with Content-Disposition: attachment so the browser saves a portable file.
 
 @app.get("/export")
-async def export_subtree(root: str = ""):
+async def export_subtree(request: Request, root: str = ""):
     """Return a self-contained standalone HTML dashboard scoped to *root*'s
     subtree as a file download.
 
     Empty *root* exports the whole tree.  The rendered HTML is identical to
     ``plan_dashboard.py generate [--root <path>]``: server-less, all fragments
-    embedded inline, opens via ``file://``.  Restores live module state after
-    rendering so the running server is unaffected.
+    embedded inline, opens via ``file://``.  Resolves the worktree per request
+    (defaulting to the launch worktree) and exports exactly that one worktree;
+    restores live module state after rendering so the running server is
+    unaffected.
     """
-    if _root_task is None:
+    state = resolve_worktree(request)
+    if state.root_task is None:
         raise HTTPException(status_code=500, detail="Task tree not initialized")
-    if root and _find_task(root) is None:
+    if root and _find_task(state, root) is None:
         raise HTTPException(status_code=404, detail=f"Task not found: {root}")
 
     # render_standalone_html drives module state (_root_task/_task_index) the way
     # generate_dashboard does, so snapshot and restore the live server's state.
     saved_root, saved_index, saved_project = _root_task, _task_index, _project_root
     try:
-        html = render_standalone_html(PLAN_ROOT, root=root or None)
+        html = render_standalone_html(state.plan_root, root=root or None)
     finally:
         _set_module_state(saved_root, saved_index, saved_project)
 
-    slug = root.rsplit("/", 1)[-1] if root else (_root_task.slug or "plan")
+    slug = root.rsplit("/", 1)[-1] if root else (state.root_task.slug or "plan")
     filename = f"{slug or 'plan'}-dashboard.html"
     return HTMLResponse(
         content=html,
