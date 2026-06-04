@@ -1,6 +1,6 @@
 ---
 title: "Per-worktree SSE scoping + on-demand watchers"
-status: implemented
+status: approved
 depends_on: 
   - 01-per-worktree-state
 
@@ -76,6 +76,13 @@ SSE delivery and the file-watcher lifecycle are now per-worktree in [plan_dashbo
 **Deviation:** none material — followed the planner guidance (lifecycle tests, per-worktree lock, watcher body unchanged). One note: `_render_summary` / `_render_nav_node` already took explicit `WorktreeState`-sourced arguments (task 01 had already routed the fragment render off module globals), so no route-back to task 01 was needed.
 
 **Caveat:** macOS resolves `/tmp` to `/private/tmp`, so task 01's `relative_to(plan_root)` in `_rebuild_and_broadcast` skips fs-event paths when the watched root is under `/tmp` (the smoke run therefore used a `~`-rooted tree). This is pre-existing task-01 behavior left unchanged per the scope boundary and does not affect real worktrees under `/Users/...`.
+
+## Review Notes
+
+Approved. The four async-lifecycle hazards were each verified independently — not just confirmed from the summary, but by reverting the guard and watching the matching test go red:
+
+1. **(MINOR, advisory)** Stale `_watch_plan_root` references in [tests/test_state_preservation.py:348](../../../../../skills/task-system/scripts/tests/test_state_preservation.py#L348), [:360](../../../../../skills/task-system/scripts/tests/test_state_preservation.py#L360), [:415](../../../../../skills/task-system/scripts/tests/test_state_preservation.py#L415) — comments/docstring in `TestWatcherDecisionLogic` still name the watcher `_watch_plan_root`, now renamed to `_watch_worktree`. These lines were not touched by this task and the class re-implements the classification logic inline (it does not call the renamed function), so behavior is unaffected; this is a cosmetic naming drift a future cleanup or task 03 can sweep. Non-blocking.
+2. **(MINOR, advisory)** The macOS `/tmp`→`/private/tmp` `relative_to` skip flagged in `## Results` is confirmed **pre-existing task-01 behavior** at [plan_dashboard.py:319](../../../../../skills/task-system/scripts/plan_dashboard.py#L319), inside `_rebuild_and_broadcast` — a function this task did not modify except for adding the `wt` broadcast argument. Leaving it unchanged is correct scope discipline; it is not a defect this task introduced or owns. If it ever needs fixing it belongs to task 01 (resolve both `plan_root` and the watched path before `relative_to`). Non-blocking.
 
 ## Planner Guidance
 
