@@ -2037,12 +2037,11 @@ def main(argv: list[str] | None = None) -> None:
         port = args.port if args.port is not None else _default_port(PLAN_ROOT, git_common_dir)
         url = f"http://localhost:{port}"
 
-        if args.idle_timeout is not None:
-            global IDLE_TIMEOUT
-            IDLE_TIMEOUT = args.idle_timeout
-
         if args.foreground:
             # Blocking console mode: logs on stdout, Ctrl+C or idle self-exit.
+            if args.idle_timeout is not None:
+                global IDLE_TIMEOUT
+                IDLE_TIMEOUT = args.idle_timeout
             if args.port is None:
                 source = git_common_dir if git_common_dir else str(PLAN_ROOT)
                 print(f"Starting dashboard at {url} (port derived from {source})")

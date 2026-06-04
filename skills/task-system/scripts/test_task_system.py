@@ -4013,21 +4013,11 @@ class TestPidHelpers:
 class TestBackgroundLaunch:
     """End-to-end process-management tests for serve_background / stop_background.
 
-    Each spawns a real detached server with a sub-second idle timeout (passed to
-    the child via IDLE_TIMEOUT in its environment-independent default) so the
-    test is self-cleaning even if an assertion bails early.  Kept few and
-    deterministic per planner guidance.
+    Each test launches a real detached server with a sub-second idle timeout
+    (passed to the child via its ``--idle-timeout`` arg) so the test is
+    self-cleaning even if an assertion bails early.  Kept few and deterministic
+    per planner guidance.
     """
-
-    def _spawn(self, plan_root, git_common_dir, **kw):
-        return plan_dashboard.serve_background(
-            plan_root, self._port(), git_common_dir, open_browser=False, **kw
-        )
-
-    def _port(self):
-        if not hasattr(self, "_p"):
-            self._p = TestIdleShutdownLifespan()._free_port()
-        return self._p
 
     def test_background_launch_returns_and_writes_pid(self, tmp_path):
         pytest.importorskip("uvicorn")
