@@ -38,7 +38,7 @@ Use `pyzotero`, not a Zotero MCP server. Pyzotero 1.13.0 is the planning baselin
 - Base branch: `main` (GitHub default; researcher decision 2026-06-04). Branch forked from `main` HEAD `3e0de358`; `main` has not advanced, so Sync is a no-op (clean fast-forward).
 - Protect: drift/regression tests are `tests/test-zotero-tool.sh` (21 checks) and `tests/test-zotero-skill-text.sh` (15 checks); full suite passes.
 - Integrate: work is purely additive (new skill + 3 one-line inventory rows + tests) onto an unchanged base; each task passed substantive per-task review.
-- Finish: integrate via PR to `main`.
+- Finish: integrated via PR [#31](https://github.com/FuZhiyu/superRA/pull/31) to `main` (2026-06-04). Freshness re-checked before push: `origin/main` unchanged at `3e0de358`.
 
 ## Results
 
