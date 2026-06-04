@@ -1,6 +1,6 @@
 ---
 title: "Cross-worktree isolation + SSE-scoping integration tests"
-status: implemented
+status: approved
 depends_on: 
   - 01-per-worktree-state
   - 02-per-worktree-sse
