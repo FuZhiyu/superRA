@@ -33,9 +33,22 @@ Use `pyzotero`, not a Zotero MCP server. Pyzotero 1.13.0 is the planning baselin
 - `skills/using-superRA/SKILL.md`
 - tests or script-level verification artifacts under the repo's existing test structure if a durable test harness is practical
 
+## Workflow Status
+
+- Base branch: `main` (GitHub default; researcher decision 2026-06-04). Branch forked from `main` HEAD `3e0de358`; `main` has not advanced, so Sync is a no-op (clean fast-forward).
+- Protect: drift/regression tests are `tests/test-zotero-tool.sh` (21 checks) and `tests/test-zotero-skill-text.sh` (15 checks); full suite passes.
+- Integrate: work is purely additive (new skill + 3 one-line inventory rows + tests) onto an unchanged base; each task passed substantive per-task review.
+- Finish: integrate via PR to `main`.
+
 ## Results
 
 ### Key Findings
 
-- Pending.
+The MCP-free `zotero-paper-reader` skill is complete and verified across five approved tasks:
+
+- **Contract** ([01-skill-contract](01-skill-contract/task.md)) — `SKILL.md` + `references/access-modes.md` define a local-first / Web-API-fallback contract with a capability matrix; full-text *search* (`items(q=..., qmode="everything")`) is kept distinct from attachment full-text *retrieval* (`fulltext_item`).
+- **Tooling** ([02-pyzotero-tooling](02-pyzotero-tooling/task.md)) — `scripts/zotero_tool.py` (PEP 723, `pyzotero==1.13.0` pinned + sidecar lock) exposes 9 JSON subcommands, local-first with Web fallback, local-storage-first PDF retrieval, and no secret leakage. Local-API full-text search was found unavailable (local API disabled on this machine) and routes to the Web API; the boundary is documented as unverified pending a live probe.
+- **Workflow** ([03-paper-reading-workflow](03-paper-reading-workflow/task.md)) — `references/paper-reading.md` migrates the search → locate PDF → convert via `mistral-pdf-to-markdown` → save `Notes/PaperInMarkdown/Author_Year_ShortTitle.md` → section-by-section read workflow onto the new tooling, with no MCP.
+- **Inventory** ([04-inventory-and-packaging](04-inventory-and-packaging/task.md)) — registered in `README.md`, `skills/CATEGORIES.md`, and `skills/using-superRA/SKILL.md` as a standalone Utility skill (not loaded by the Skill-Load Manifest); workflow choreography and generated agent files untouched.
+- **Verification** ([05-verification](05-verification/task.md)) — two credential-free deterministic suites (36 checks total) cover behavior, the no-secret-leak invariant, `.env` parsing, and MCP/stale-instruction regression guards; all pass.
 
