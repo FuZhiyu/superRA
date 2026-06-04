@@ -1,6 +1,6 @@
 ---
 title: "Build UV-Managed Pyzotero Tooling"
-status: implemented
+status: approved
 depends_on:
   - 01-skill-contract
 tags: [python, uv, pyzotero]
@@ -60,7 +60,3 @@ Config resolves from environment variables first, then a project-local `Notes/.e
 ### Deviation from Planned Files
 
 The root task's "Planned Files" listed `pyproject.toml` and `uv.lock`. I did not create those, because the planner's Revision Note explicitly prohibits a project-style `uv run --project` layout (plugin-installed users lack the repo-relative path). The correct lock artifact for a self-contained PEP 723 script is the `uv lock --script` sidecar `zotero_tool.py.lock`, which `uv run --script` uses automatically from any install location. This satisfies the pinning/reproducibility intent of those planned files without the prohibited project dependency.
-
-## Revision Notes
-
-Planner update on 2026-06-04: the command surface must not rely on `uv run --project skills/zotero-paper-reader` because plugin-installed users will not have that repo-relative path. Use a bundled script that resolves from the skill installation path instead.
