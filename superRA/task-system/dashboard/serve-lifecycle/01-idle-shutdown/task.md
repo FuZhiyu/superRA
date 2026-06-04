@@ -43,7 +43,7 @@ Three changes to [plan_dashboard.py](../../../../../skills/task-system/scripts/p
 
 Three additions:
 
-- `IDLE_TIMEOUT = 300.0` and `HEARTBEAT_INTERVAL = 20.0` module constants; tests override `IDLE_TIMEOUT` before calling `serve()`.
+- `IDLE_TIMEOUT = 300.0` and `HEARTBEAT_INTERVAL = 20.0` module constants; tests drive `_idle_monitor(timeout=…)` directly, and `lifespan` reads `IDLE_TIMEOUT` at launch.
 - `_open_connection_count()` — `sum(len(s) for s in _worktree_clients.values())`.
 - `_should_idle_exit(open_count, idle_seconds, timeout)` — pure function, no side effects; returns True when `open_count == 0` and `idle_seconds >= timeout`. Tests drive this directly without sleeping.
 - `_idle_monitor(timeout, poll)` — coroutine that polls every `poll` seconds; accumulates `idle_elapsed` while count is zero, resets when non-zero, sets `_server.should_exit = True` and returns once the threshold is crossed.
@@ -67,6 +67,8 @@ New tests in `TestIdleShutdown` cover: `_should_idle_exit` (5 cases), `_open_con
 ## Review Notes
 
 Approved — core mechanism is correct and verified end-to-end (drove the real `lifespan` with a sub-second `IDLE_TIMEOUT`: monitor starts, sets `should_exit` while idle, stays up with a client present, exits after the last client leaves, and the exit path drains watchers cleanly; full suite 461 passed). The items below are non-blocking cleanups; fold them into the next pass on this file (task 02 touches the same `serve()`/`main()` code).
+
+→ orchestrator: all three carried to [02-background-launch](../02-background-launch/task.md) §Planner Guidance for in-lane fix (same file/test module); the Results echo flagged in item 1 is corrected above in this commit. Step 3 verifies these are cleared when 02 is approved.
 
 1. MINOR — Stale comment references a nonexistent symbol. [plan_dashboard.py:67](../../../../../skills/task-system/scripts/plan_dashboard.py#L67) says "Tests override this via `_idle_timeout` before calling `serve()`", but there is no `_idle_timeout` symbol (the constant is `IDLE_TIMEOUT`) and no committed test overrides it before calling `serve()` — the tests drive `_idle_monitor(timeout=…)` directly. The Results note ("tests override `IDLE_TIMEOUT` before calling `serve()`") repeats the same inaccuracy. Fix: reword the comment to describe the actual injection (`_idle_monitor`'s `timeout` parameter; `IDLE_TIMEOUT` is also picked up by `lifespan` at call time if set before launch) and correct the Results line.
 
