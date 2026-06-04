@@ -1,8 +1,11 @@
 ---
 title: "Replace Zotero MCP with Zotero Skills"
-status: not-started
+status: in-progress
 depends_on: []
-tags: [skill-creation, zotero, pyzotero]
+tags:
+  - skill-creation
+  - zotero
+  - pyzotero
 created: 2026-06-04
 ---
 

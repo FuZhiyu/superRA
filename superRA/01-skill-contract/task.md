@@ -1,6 +1,6 @@
 ---
 title: "Define Zotero Skill Contract"
-status: not-started
+status: implemented
 depends_on: []
 tags: [planning, skill-creation, zotero]
 output:
@@ -23,7 +23,15 @@ Use the existing personal skill at `/Users/zhiyufu/Dropbox/app_settings/dotfiles
 
 ## Results
 
-### Key Findings
+Both output files are written. The contract is complete for task 02 (tooling implementation) and task 03 (paper-reading workflow) to build on.
 
-- Pending.
+**[`skills/zotero-paper-reader/SKILL.md`](../../skills/zotero-paper-reader/SKILL.md)** — five-step paper-reading workflow (search → children → pdf → mistral-pdf-to-markdown → read/analyze) plus a library-query command table covering all capabilities the objective requires. The PDF-to-Markdown handoff names the skill (`mistral-pdf-to-markdown`) and delegates conversion entirely to it, with no hardcoded script path. The `zotero_tool.py` invocation uses `${CLAUDE_SKILL_DIR}` throughout so the skill is install-location-independent. No MCP tools appear anywhere.
 
+**[`skills/zotero-paper-reader/references/access-modes.md`](../../skills/zotero-paper-reader/references/access-modes.md)** — local vs. web access rules: how to enable the local API in Zotero Desktop, Web API credential variables (`ZOTERO_LIBRARY_ID`, `ZOTERO_LIBRARY_TYPE`, `ZOTERO_API_KEY`) and where to set them, a capability boundary table (read/write, local/web, full-text indexed vs. not), the PDF retrieval fallback logic, and troubleshooting for the four most common failure modes.
+
+Key design decisions made during implementation:
+
+- **Local API as default, Web API as fallback** — matches planner guidance and root task constraint. The tool script's `health` command detects availability and the reference documents the detection boundary.
+- **PDF-to-Markdown pointer only** — `SKILL.md` instructs agents to invoke the `mistral-pdf-to-markdown` skill by name (not by script path), satisfying the install-location-independence constraint from the task dispatch and the root task.
+- **`${CLAUDE_SKILL_DIR}` for script invocation** — consistent with the pattern already established in the `agent-contract` plugin's version of this skill and in the `mistral-pdf-to-markdown` skill itself.
+- **All expanded pyzotero capabilities covered** — the command table in `SKILL.md` and the capability matrix in `access-modes.md` enumerate: metadata search, full-text search, item lookup, child-item lookup, collection listing, tag listing, DOI-to-key index, attachment full-text, and PDF retrieval. This maps directly to the objective's expanded-capability list.
