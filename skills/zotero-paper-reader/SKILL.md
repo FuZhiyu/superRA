@@ -24,7 +24,7 @@ uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "title or auth
 uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "term" --fulltext
 ```
 
-Full-text search (`--fulltext`) matches against indexed content and is served only by the Web API; the Zotero Desktop local API does not expose it, so `--fulltext` always routes to the Web API (see [`references/access-modes.md`](references/access-modes.md)). Plain `search` matches title/creator/year metadata in both modes.
+Full-text search (`--fulltext`) matches against indexed content and routes to the Web API; local-API support for it is unverified, so `--fulltext` always uses the Web API (see [`references/access-modes.md`](references/access-modes.md)). Plain `search` matches title/creator/year metadata in both modes.
 
 Present results when multiple papers match. Note the `item_key` of the chosen paper.
 
