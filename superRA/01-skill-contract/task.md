@@ -1,6 +1,6 @@
 ---
 title: "Define Zotero Skill Contract"
-status: implemented
+status: revise
 depends_on: []
 tags: [planning, skill-creation, zotero]
 output:
@@ -35,3 +35,7 @@ Key design decisions made during implementation:
 - **PDF-to-Markdown pointer only** — `SKILL.md` instructs agents to invoke the `mistral-pdf-to-markdown` skill by name (not by script path), satisfying the install-location-independence constraint from the task dispatch and the root task.
 - **`${CLAUDE_SKILL_DIR}` for script invocation** — consistent with the pattern already established in the `agent-contract` plugin's version of this skill and in the `mistral-pdf-to-markdown` skill itself.
 - **All expanded pyzotero capabilities covered** — the command table in `SKILL.md` and the capability matrix in `access-modes.md` enumerate: metadata search, full-text search, item lookup, child-item lookup, collection listing, tag listing, DOI-to-key index, attachment full-text, and PDF retrieval. This maps directly to the objective's expanded-capability list.
+
+## Review Notes
+
+1. **MAJOR** — [access-modes.md:45](../../skills/zotero-paper-reader/references/access-modes.md#L45) misattributes the local full-text *search* mechanism. The capability table cell reads `Full-text search | yes (via fulltext_item)`, but `fulltext_item(itemkey)` is a per-attachment full-text *retrieval* call (correctly the basis for row 51, "Attachment full-text retrieval"), not a library-wide search. Library full-text search is `items(q="term", qmode="everything")` on the Web API. This conflation is a contract/spec defect: task 02 builds `zotero_tool.py search --fulltext` against this capability table, and an implementer reading row 45 may wire the search subcommand to `fulltext_item` (which cannot search). Separately, whether the Zotero *local* API actually serves the `qmode=everything` full-text-search path is uncertain — pyzotero's local mode is a thin proxy to Zotero's local HTTP server, which has historically not exposed full-text search the way the Web API does. The contract asserts local full-text search as a flat "yes" without that caveat. Fix: (a) describe the correct search mechanism (`q` + `qmode=everything`) rather than `fulltext_item` in the full-text-search row, and (b) state the local-vs-web boundary for full-text *search* honestly — if local full-text search is not reliably available, mark it as web-only or "verify in task 02" rather than an unqualified "yes". The matching `--fulltext` claim in [SKILL.md:23-24](../../skills/zotero-paper-reader/SKILL.md#L23) and Library-Query row [SKILL.md:69](../../skills/zotero-paper-reader/SKILL.md#L69) should reflect the corrected boundary.
