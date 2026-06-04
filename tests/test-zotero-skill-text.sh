@@ -104,10 +104,9 @@ assert_present_in \
   "$SKILL_DIR/scripts/zotero_tool.py" \
   '"pyzotero==1.13.0"'
 
-# SKILL.md must not direct agents to the MCP approach; the description field
-# must reference pyzotero (the new approach), not MCP.
+# SKILL.md must reference pyzotero (the new approach), not the old MCP server.
 assert_present_in \
-  "SKILL.md description mentions pyzotero" \
+  "SKILL.md mentions pyzotero" \
   "$SKILL_DIR/SKILL.md" \
   'pyzotero'
 

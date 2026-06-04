@@ -2,7 +2,7 @@
 
 Complete step-by-step reference for reading and analyzing academic papers from a Zotero library. Covers command invocations, JSON fields, disambiguation, parent-item hydration, and troubleshooting.
 
-All commands below are abbreviated. Full form: `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py <subcommand>`.
+Commands below are shown in full form: `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py <subcommand>`. The SKILL.md quick-reference table abbreviates them to just the `<subcommand>` part.
 
 ---
 
@@ -243,7 +243,7 @@ uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py health
 
 If `local_api_available` is `false` and `web_api_configured` is `false`, no access mode is available. Ask the user to either (a) start Zotero Desktop and enable the local API under Settings → Advanced → "Allow other applications on this computer to communicate with Zotero", or (b) configure Web API credentials.
 
-Note: Zotero may be running but the local API off — the connector port answers but the `/api` path returns `403 Local API is not enabled`. The `health` command distinguishes this from Zotero not running at all.
+Note: Zotero may be running but the local API off — the connector port answers but the `/api` path returns `403 Local API is not enabled`. The `health` command distinguishes this from Zotero not running at all. See [`access-modes.md`](access-modes.md) for the enable path and the full local-vs-web fallback rules.
 
 ### No PDF child attachment
 

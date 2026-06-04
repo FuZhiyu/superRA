@@ -43,7 +43,7 @@ Rewrote the paper-reading workflow in two files:
 
 ### Constraints check
 
-- Output path convention `Notes/PaperInMarkdown/Author_Year_Title.md` preserved.
+- Output path convention `Notes/PaperInMarkdown/Author_Year_ShortTitle.md` preserved (matching the prior skill's actual `ShortTitle` pattern; the task constraint's `Author_Year_Title.md` was a paraphrase of the same convention).
 - PDF conversion details not duplicated — reference delegates to `mistral-pdf-to-markdown` skill by name.
 - Large-paper reading discipline enforced: abstract/introduction first, grep-then-offset for sections, no whole-file load.
 

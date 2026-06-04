@@ -9,6 +9,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SCRIPT="skills/zotero-paper-reader/scripts/zotero_tool.py"
+SCRIPT_ABS="$(pwd)/$SCRIPT"
 RUN=(uv run --quiet --script "$SCRIPT")
 
 pass=0
@@ -97,6 +98,32 @@ SECRET="ZT_TEST_SECRET_DO_NOT_LEAK"
 ZOTERO_LIBRARY_ID=99999 ZOTERO_API_KEY="$SECRET" ZOTERO_LIBRARY_TYPE=user \
   run_tool search "anything" --mode web
 assert_combined_absent "API key never appears in output" "$SECRET"
+
+# 6. Notes/.env parsing: with env vars unset, load_env_file must pick up a
+#    project-local Notes/.env (resolved from cwd). Uses fake non-secret values;
+#    the .env-sourced key must still never leak.
+ENV_TMP="$(mktemp -d)"
+mkdir -p "$ENV_TMP/Notes"
+DOTENV_SECRET="ZT_DOTENV_SECRET_DO_NOT_LEAK"
+cat >"$ENV_TMP/Notes/.env" <<EOF
+ZOTERO_LIBRARY_ID=4242424
+ZOTERO_API_KEY=$DOTENV_SECRET
+ZOTERO_LIBRARY_TYPE=user
+EOF
+DOTENV_OUT="$(cd "$ENV_TMP" && uv run --quiet --script "$SCRIPT_ABS" health 2>/tmp/zt_dotenv_err)" || true
+DOTENV_ERR="$(cat /tmp/zt_dotenv_err)"
+printf '%s' "$DOTENV_OUT" | rg -q --fixed-strings -- '"ZOTERO_LIBRARY_ID": true' \
+  && record_pass "Notes/.env library_id is read" \
+  || record_fail "Notes/.env library_id is read"
+printf '%s' "$DOTENV_OUT" | rg -q --fixed-strings -- '"ZOTERO_API_KEY": true' \
+  && record_pass "Notes/.env api_key is read" \
+  || record_fail "Notes/.env api_key is read"
+if printf '%s%s' "$DOTENV_OUT" "$DOTENV_ERR" | rg -q --fixed-strings -- "$DOTENV_SECRET"; then
+  record_fail ".env API key never appears in output"
+else
+  record_pass ".env API key never appears in output"
+fi
+rm -rf "$ENV_TMP"
 
 echo
 echo "Passed: $pass    Failed: $fail"

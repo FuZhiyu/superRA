@@ -29,7 +29,7 @@ Keep descriptions trigger-focused: reading, searching, retrieving, converting, a
 
 ### Placement decision
 
-`zotero-paper-reader` is user-invocable standalone and not loaded by any workflow stage or the Skill-Load Manifest. The `using-superra` Skill Inventory already contains standalone-invocable entries (`task-system`, `codex-superra-setup`) so including `zotero-paper-reader` there is consistent and keeps it discoverable to agents that might suggest it to users. The entry explicitly states it is not loaded by workflow agents, so no Manifest change is needed and no workflow choreography is touched.
+`zotero-paper-reader` is user-invocable standalone and not loaded by any workflow stage or the Skill-Load Manifest. The `using-superra` Skill Inventory already contains a standalone-invocable entry (`codex-superra-setup`) so including `zotero-paper-reader` there is consistent and keeps it discoverable to agents that might suggest it to users. The entry explicitly states it is not loaded by workflow agents, so no Manifest change is needed and no workflow choreography is touched.
 
 ### Changes
 
