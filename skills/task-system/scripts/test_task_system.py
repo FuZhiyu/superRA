@@ -3577,3 +3577,159 @@ class TestMasterDetailPartials:
         with self._client(self._deep_plan(tmp_path)) as c:
             for route in ("/", "/tree", "/dag", "/kanban"):
                 assert c.get(route).status_code == 200
+
+
+class TestIdleShutdown:
+    """Unit tests for the idle-shutdown mechanism (task 01).
+
+    Tests drive the pure decision function and the monitor coroutine with
+    sub-second timeouts so no test sleeps for real wall-clock seconds.
+    """
+
+    # ------------------------------------------------------------------
+    # _should_idle_exit — pure function, no side effects
+    # ------------------------------------------------------------------
+
+    def test_should_exit_when_zero_connections_and_timeout_reached(self):
+        assert plan_dashboard._should_idle_exit(0, 5.0, 5.0) is True
+
+    def test_should_not_exit_when_connections_present(self):
+        assert plan_dashboard._should_idle_exit(3, 999.0, 5.0) is False
+
+    def test_should_not_exit_before_timeout(self):
+        assert plan_dashboard._should_idle_exit(0, 4.9, 5.0) is False
+
+    def test_should_exit_exactly_at_timeout(self):
+        assert plan_dashboard._should_idle_exit(0, 5.0, 5.0) is True
+
+    def test_should_exit_after_timeout(self):
+        assert plan_dashboard._should_idle_exit(0, 10.0, 5.0) is True
+
+    # ------------------------------------------------------------------
+    # _open_connection_count — reads _worktree_clients
+    # ------------------------------------------------------------------
+
+    def test_connection_count_empty(self):
+        saved = plan_dashboard._worktree_clients.copy()
+        plan_dashboard._worktree_clients.clear()
+        try:
+            assert plan_dashboard._open_connection_count() == 0
+        finally:
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_clients.update(saved)
+
+    def test_connection_count_with_clients(self):
+        import asyncio
+
+        saved = plan_dashboard._worktree_clients.copy()
+        plan_dashboard._worktree_clients.clear()
+        try:
+            q1: asyncio.Queue[str] = asyncio.Queue()
+            q2: asyncio.Queue[str] = asyncio.Queue()
+            q3: asyncio.Queue[str] = asyncio.Queue()
+            plan_dashboard._worktree_clients["wt-a"] = {q1, q2}
+            plan_dashboard._worktree_clients["wt-b"] = {q3}
+            assert plan_dashboard._open_connection_count() == 3
+        finally:
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_clients.update(saved)
+
+    # ------------------------------------------------------------------
+    # _idle_monitor coroutine — driven with sub-second timeout
+    # ------------------------------------------------------------------
+
+    def test_monitor_exits_when_no_clients(self):
+        """Monitor sets should_exit after idle timeout with zero connections."""
+        import asyncio
+
+        class FakeServer:
+            should_exit = False
+
+        saved_clients = plan_dashboard._worktree_clients.copy()
+        saved_server = plan_dashboard._server
+        plan_dashboard._worktree_clients.clear()
+
+        fake = FakeServer()
+        plan_dashboard._server = fake  # type: ignore[assignment]
+        try:
+            asyncio.run(plan_dashboard._idle_monitor(timeout=0.05, poll=0.01))
+        finally:
+            plan_dashboard._server = saved_server
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_clients.update(saved_clients)
+
+        assert fake.should_exit is True
+
+    def test_monitor_does_not_exit_while_clients_present(self):
+        """Monitor resets its timer while connections are open and does not fire."""
+        import asyncio
+
+        class FakeServer:
+            should_exit = False
+
+        saved_clients = plan_dashboard._worktree_clients.copy()
+        saved_server = plan_dashboard._server
+
+        q: asyncio.Queue[str] = asyncio.Queue()
+        plan_dashboard._worktree_clients.clear()
+        plan_dashboard._worktree_clients["wt-a"] = {q}
+
+        fake = FakeServer()
+        plan_dashboard._server = fake  # type: ignore[assignment]
+
+        async def _run():
+            task = asyncio.create_task(
+                plan_dashboard._idle_monitor(timeout=0.05, poll=0.01)
+            )
+            # Let several poll cycles pass with a client present.
+            await asyncio.sleep(0.12)
+            assert not fake.should_exit, "should not have exited with a client"
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        try:
+            asyncio.run(_run())
+        finally:
+            plan_dashboard._server = saved_server
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_clients.update(saved_clients)
+
+    def test_monitor_exits_after_last_client_leaves(self):
+        """Timer starts (or restarts) once the last client disconnects."""
+        import asyncio
+
+        class FakeServer:
+            should_exit = False
+
+        saved_clients = plan_dashboard._worktree_clients.copy()
+        saved_server = plan_dashboard._server
+
+        q: asyncio.Queue[str] = asyncio.Queue()
+        plan_dashboard._worktree_clients.clear()
+        plan_dashboard._worktree_clients["wt-a"] = {q}
+
+        fake = FakeServer()
+        plan_dashboard._server = fake  # type: ignore[assignment]
+
+        async def _run():
+            task = asyncio.create_task(
+                plan_dashboard._idle_monitor(timeout=0.05, poll=0.01)
+            )
+            # Remove the client mid-run; monitor should now count down.
+            await asyncio.sleep(0.02)
+            plan_dashboard._worktree_clients.clear()
+            # Wait for idle window to complete.
+            await asyncio.sleep(0.12)
+            await task  # monitor coroutine should have returned normally
+
+        try:
+            asyncio.run(_run())
+        finally:
+            plan_dashboard._server = saved_server
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_clients.update(saved_clients)
+
+        assert fake.should_exit is True

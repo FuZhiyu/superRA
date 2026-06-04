@@ -63,6 +63,18 @@ except ImportError:
 # ---------------------------------------------------------------------------
 PLAN_ROOT: Path = Path(TASK_ROOT_DIRNAME)
 
+# Default idle timeout: exit after this many continuous seconds with zero open
+# SSE connections.  Tests override this via _idle_timeout before calling serve().
+IDLE_TIMEOUT: float = 300.0  # 5 minutes
+
+# Heartbeat interval for periodic SSE keep-alive messages.  Must be well under
+# IDLE_TIMEOUT so dead connections are pruned before they hold the server open.
+HEARTBEAT_INTERVAL: float = 20.0  # seconds
+
+# Handle to the running uvicorn.Server instance so the idle monitor can request
+# shutdown by setting server.should_exit = True.  Set in serve().
+_server: "uvicorn.Server | None" = None  # type: ignore[name-defined]
+
 # In-memory task tree and flat index.  These are a compatibility view over the
 # *default* (launch) worktree's WorktreeState — read by /export's snapshot path
 # and the standalone renderer.  Per-request handlers resolve a WorktreeState
@@ -478,6 +490,52 @@ async def _stop_watcher(wt: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Idle-shutdown monitor
+# ---------------------------------------------------------------------------
+
+
+def _open_connection_count() -> int:
+    """Return the total number of live SSE connections across all worktrees."""
+    return sum(len(s) for s in _worktree_clients.values())
+
+
+def _should_idle_exit(open_count: int, idle_seconds: float, timeout: float) -> bool:
+    """Return True when the server should shut down due to idleness.
+
+    Keeps the shutdown decision separable from wall-clock so tests can drive
+    it with a synthetic elapsed value.
+    """
+    return open_count == 0 and idle_seconds >= timeout
+
+
+async def _idle_monitor(timeout: float = IDLE_TIMEOUT, poll: float = 1.0) -> None:
+    """Monitor coroutine: request server shutdown after *timeout* idle seconds.
+
+    "Idle" means zero open SSE connections summed across all worktrees.  The
+    timer starts immediately (the server has zero connections at launch) and
+    resets whenever at least one connection is open.  Once the elapsed-zero
+    duration reaches *timeout*, sets ``_server.should_exit = True`` to trigger
+    uvicorn's normal graceful shutdown, which runs the lifespan exit path and
+    cancels all watchers.
+
+    *poll* controls how often the count is sampled; it does not affect the
+    timer's resolution beyond that granularity.
+    """
+    idle_elapsed: float = 0.0
+    while True:
+        await asyncio.sleep(poll)
+        count = _open_connection_count()
+        if count > 0:
+            idle_elapsed = 0.0
+        else:
+            idle_elapsed += poll
+        if _should_idle_exit(count, idle_elapsed, timeout):
+            if _server is not None:
+                _server.should_exit = True
+            return
+
+
+# ---------------------------------------------------------------------------
 # Jinja2 rendering helpers
 # ---------------------------------------------------------------------------
 
@@ -602,16 +660,30 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: seed the launch worktree.  Shutdown: cancel every watcher.
+    """Startup: seed the launch worktree and start the idle monitor.
+    Shutdown: cancel the monitor and every watcher.
 
     Watchers are no longer spawned at startup — each worktree's watcher starts on
     its first ``/events`` client and stops when the last leaves.  Shutdown cancels
     every per-worktree watcher still running, not just one.
+
+    The idle monitor runs as a single background coroutine for the whole process;
+    it sets ``_server.should_exit`` once the server has been idle for
+    ``IDLE_TIMEOUT`` seconds, triggering uvicorn's normal graceful shutdown (which
+    re-enters this context at the ``yield`` and cancels all watchers).
     """
     rebuild_tree()
-    yield
-    for wt in list(_worktree_watchers):
-        await _stop_watcher(wt)
+    monitor_task = asyncio.create_task(_idle_monitor(timeout=IDLE_TIMEOUT))
+    try:
+        yield
+    finally:
+        monitor_task.cancel()
+        try:
+            await monitor_task
+        except asyncio.CancelledError:
+            pass
+        for wt in list(_worktree_watchers):
+            await _stop_watcher(wt)
 
 
 app = FastAPI(lifespan=lifespan)
@@ -787,11 +859,21 @@ async def sse_events(request: Request):
         _worktree_clients.setdefault(wt, set()).add(queue)
         await _ensure_watcher(wt)
         try:
-            # Send an initial heartbeat so the connection is established
+            # Send an initial heartbeat so the connection is established.
             yield ": heartbeat\n\n"
             while True:
-                message = await queue.get()
-                yield message
+                try:
+                    # Wait up to HEARTBEAT_INTERVAL for an event; if none
+                    # arrives, send a periodic heartbeat.  Writing to a dead
+                    # connection raises so the generator falls through to
+                    # ``finally`` and removes the queue, keeping the count
+                    # accurate for the idle monitor.
+                    message = await asyncio.wait_for(
+                        queue.get(), timeout=HEARTBEAT_INTERVAL
+                    )
+                    yield message
+                except asyncio.TimeoutError:
+                    yield ": heartbeat\n\n"
         except asyncio.CancelledError:
             pass
         finally:
@@ -1546,6 +1628,24 @@ def _default_port(plan_root: Path, git_common_dir: str | None = None) -> int:
     return 0
 
 
+def serve(port: int) -> None:
+    """Run the dashboard server on *port*, blocking until it exits.
+
+    Uses ``uvicorn.Server`` so the idle monitor can request shutdown via
+    ``_server.should_exit = True``.  This is the single serve path for both
+    foreground and (once task 02 lands) background launch.
+    """
+    import uvicorn
+
+    global _server
+    config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
+    _server = uvicorn.Server(config)
+    try:
+        asyncio.run(_server.serve())
+    finally:
+        _server = None
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Task dashboard: live server or static HTML generation.",
@@ -1628,12 +1728,7 @@ def main(argv: list[str] | None = None) -> None:
 
             threading.Thread(target=_open_browser, daemon=True).start()
 
-        uvicorn.run(
-            app,
-            host="0.0.0.0",
-            port=port,
-            log_level="info",
-        )
+        serve(port)
 
     elif args.command == "generate":
         plan_root = Path(args.plan_root)

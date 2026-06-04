@@ -1,6 +1,6 @@
 ---
 title: "Server self-exits after idle timeout"
-status: not-started
+status: implemented
 depends_on: []
 tags: []
 created: 2026-06-04
@@ -32,3 +32,34 @@ This is the server-internal half of the [parent](../task.md) feature and ships f
 - `should_exit` triggers uvicorn's normal graceful shutdown, which runs the `lifespan` exit path; do not add a second teardown for the watchers.
 
 ## Results
+
+Three changes to [plan_dashboard.py](../../../../../skills/task-system/scripts/plan_dashboard.py) implement the idle-shutdown mechanism; 10 new tests verify it.
+
+**1. `uvicorn.Server` handle** ([plan_dashboard.py:1648-1662](../../../../../skills/task-system/scripts/plan_dashboard.py#L1648-L1662))
+
+`uvicorn.run(…)` is replaced by a new `serve(port)` function that instantiates `uvicorn.Server(uvicorn.Config(…))`, stores the handle in the module-level `_server` variable, and runs it via `asyncio.run(_server.serve())`. The idle monitor sets `_server.should_exit = True` through this handle to trigger uvicorn's normal graceful shutdown.
+
+**2. Idle monitor** ([plan_dashboard.py:497-537](../../../../../skills/task-system/scripts/plan_dashboard.py#L497-L537))
+
+Three additions:
+
+- `IDLE_TIMEOUT = 300.0` and `HEARTBEAT_INTERVAL = 20.0` module constants; tests override `IDLE_TIMEOUT` before calling `serve()`.
+- `_open_connection_count()` — `sum(len(s) for s in _worktree_clients.values())`.
+- `_should_idle_exit(open_count, idle_seconds, timeout)` — pure function, no side effects; returns True when `open_count == 0` and `idle_seconds >= timeout`. Tests drive this directly without sleeping.
+- `_idle_monitor(timeout, poll)` — coroutine that polls every `poll` seconds; accumulates `idle_elapsed` while count is zero, resets when non-zero, sets `_server.should_exit = True` and returns once the threshold is crossed.
+
+`lifespan` ([plan_dashboard.py:651-677](../../../../../skills/task-system/scripts/plan_dashboard.py#L651-L677)) creates the monitor task at startup and cancels it in a `finally` block on shutdown (so uvicorn's graceful shutdown, which re-enters the lifespan context, always cleans up the monitor before cancelling watchers).
+
+**3. Periodic heartbeats** ([plan_dashboard.py:852-877](../../../../../skills/task-system/scripts/plan_dashboard.py#L852-L877))
+
+The SSE event loop wraps `queue.get()` in `asyncio.wait_for(…, timeout=HEARTBEAT_INTERVAL)`; on `TimeoutError` it yields `: heartbeat\n\n`. Writing to a dead connection raises `BrokenPipeError` / `ConnectionResetError`, which falls through to the `finally` block where the queue is removed from `_worktree_clients` — keeping the open-connection count accurate for the idle monitor.
+
+**Validation:** 461 passed, 2 warnings (451 pre-existing + 10 new).
+
+```
+uv run --project skills/task-system --with pytest --with httpx \
+    python -m pytest skills/task-system/scripts -q
+# 461 passed, 2 warnings in 31.34s
+```
+
+New tests in `TestIdleShutdown` cover: `_should_idle_exit` (5 cases), `_open_connection_count` (2 cases), `_idle_monitor` exits with zero connections, monitor does not exit while client present, monitor fires after last client leaves.

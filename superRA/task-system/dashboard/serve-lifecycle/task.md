@@ -1,6 +1,6 @@
 ---
 title: "Background-by-default serving with idle auto-shutdown"
-status: not-started
+status: in-progress
 depends_on:
   - multi-worktree-serving
 tags: []
