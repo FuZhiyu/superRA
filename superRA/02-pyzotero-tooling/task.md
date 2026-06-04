@@ -6,11 +6,9 @@ depends_on:
 tags: [python, uv, pyzotero]
 script: skills/zotero-paper-reader/scripts/zotero_tool.py
 input:
-  - skills/zotero-paper-reader/pyproject.toml
+  - skills/zotero-paper-reader/scripts/zotero_tool.py
 output:
   - skills/zotero-paper-reader/scripts/zotero_tool.py
-  - skills/zotero-paper-reader/pyproject.toml
-  - skills/zotero-paper-reader/uv.lock
 created: 2026-06-04
 ---
 
@@ -28,7 +26,7 @@ Read configuration from environment variables and, when present, a project-local
 
 ## Planner Guidance
 
-Prefer a single script with subcommands over multiple small scripts if that keeps invocation stable. Consider `uv run --project skills/zotero-paper-reader zotero-tool ...` or an equivalent console script. Pin pyzotero in the skill-local `pyproject.toml` to the selected minor/patch version and commit `uv.lock` so the shipped dependency is inspectable.
+Prefer a single self-contained script with subcommands over multiple small scripts if that keeps invocation stable. Use PEP 723 inline script metadata so agents can run the bundled file from wherever the skill is installed, for example `uv run --script <skill-root>/scripts/zotero_tool.py ...`. Pin pyzotero in that script metadata and make the `version` or health command print the resolved package version so drift is visible.
 
 ## Results
 
@@ -36,3 +34,6 @@ Prefer a single script with subcommands over multiple small scripts if that keep
 
 - Pending.
 
+## Revision Notes
+
+Planner update on 2026-06-04: the command surface must not rely on `uv run --project skills/zotero-paper-reader` because plugin-installed users will not have that repo-relative path. Use a bundled script that resolves from the skill installation path instead.
