@@ -1,6 +1,6 @@
 ---
 title: "Update Skill Inventory and Packaging Surfaces"
-status: implemented
+status: approved
 depends_on:
   - 03-paper-reading-workflow
 tags: [docs, packaging, skill-creation]
