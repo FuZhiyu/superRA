@@ -1,6 +1,6 @@
 ---
 title: "Server self-exits after idle timeout"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-04
@@ -63,3 +63,13 @@ uv run --project skills/task-system --with pytest --with httpx \
 ```
 
 New tests in `TestIdleShutdown` cover: `_should_idle_exit` (5 cases), `_open_connection_count` (2 cases), `_idle_monitor` exits with zero connections, monitor does not exit while client present, monitor fires after last client leaves.
+
+## Review Notes
+
+Approved — core mechanism is correct and verified end-to-end (drove the real `lifespan` with a sub-second `IDLE_TIMEOUT`: monitor starts, sets `should_exit` while idle, stays up with a client present, exits after the last client leaves, and the exit path drains watchers cleanly; full suite 461 passed). The items below are non-blocking cleanups; fold them into the next pass on this file (task 02 touches the same `serve()`/`main()` code).
+
+1. MINOR — Stale comment references a nonexistent symbol. [plan_dashboard.py:67](../../../../../skills/task-system/scripts/plan_dashboard.py#L67) says "Tests override this via `_idle_timeout` before calling `serve()`", but there is no `_idle_timeout` symbol (the constant is `IDLE_TIMEOUT`) and no committed test overrides it before calling `serve()` — the tests drive `_idle_monitor(timeout=…)` directly. The Results note ("tests override `IDLE_TIMEOUT` before calling `serve()`") repeats the same inaccuracy. Fix: reword the comment to describe the actual injection (`_idle_monitor`'s `timeout` parameter; `IDLE_TIMEOUT` is also picked up by `lifespan` at call time if set before launch) and correct the Results line.
+
+2. MINOR — Dead import. [plan_dashboard.py:1710](../../../../../skills/task-system/scripts/plan_dashboard.py#L1710) keeps `import uvicorn` in `main()`, but this change moved the only uvicorn use into `serve()` (which has its own local import), leaving line 1710 unused. Remove it.
+
+3. MINOR — Two stated Validation criteria have no committed test. The real `serve`/`lifespan` self-exit path and the heartbeat-prunes-a-dead-connection path are asserted in Results but covered only by isolated `_idle_monitor`/`_should_idle_exit` unit tests (the existing `/events` test consumes just the initial heartbeat and never reaches the new `wait_for`/periodic-heartbeat branch). This is consistent with planner guidance (unit-test the decision, avoid wall-clock), and I confirmed the wiring manually, so it is non-blocking — but a small lifespan-level test (sub-second `IDLE_TIMEOUT`, assert `should_exit` fires and watchers are drained) would lock in the linchpin behavior against regression.
