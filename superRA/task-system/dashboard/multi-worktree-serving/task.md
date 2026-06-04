@@ -77,3 +77,7 @@ The task dashboard now serves every worktree of a repository from one process on
 **Doc updated.** Integration's Project Doc Audit caught `references/internals.md` §Dashboard still describing the retired one-server-per-worktree model ("port from the plan-root path, so each worktree runs its own dashboard"); rewritten (commit `8964044d`) to the new model — port from the repo's git common directory so a repo's worktrees share one server, selected per request by `?wt=`, with per-worktree on-demand SSE/watchers.
 
 **Scope notes.** No `superintegrate` Sync ran (work is on the trunk `better-handoff`; nothing to merge). One pre-existing limitation left in place by scope: a macOS `/tmp`→`/private/tmp` symlink quirk in `relative_to` that predates this feature (task 01) and does not affect real worktrees under `/Users/...`.
+
+## Review Notes
+
+1. **(MINOR, non-blocking)** The Verification paragraph says "14 of 17 `test_multi_worktree.py` tests go red" on the neutralized-resolver injection. The child task 04's own Results document says "13 of 16 tests failed" for the same injection. The current file has 17 tests (all added in one commit), so the "14" was extrapolated as 17−3=14 rather than re-run; the underlying "3 tests survive, each driving `_rebuild_and_broadcast` directly" is consistent between the two accounts. No architecture or correctness claim is affected. A future edit can align the number with child 04's evidence (13 of 16) or note the re-counted baseline.
