@@ -591,7 +591,12 @@ class TestDefaultPort:
 
 
 class TestWorktreeRoutes:
-    """Tests for GET /api/worktrees and POST /api/worktree/switch."""
+    """Tests for GET /api/worktrees.
+
+    Under per-request ``?wt=`` resolution the route reports a per-entry ``wt_id``
+    selector token and a top-level ``launch_wt_id``; there is no server-global
+    ``current`` / ``is_current`` field, and ``POST /api/worktree/switch`` is
+    retired (switching is a client navigation now)."""
 
     @pytest.fixture(autouse=True)
     def setup_app(self, tmp_path):
@@ -605,14 +610,12 @@ class TestWorktreeRoutes:
         # Save original module state
         self._orig_plan_root = plan_dashboard.PLAN_ROOT
         self._orig_project_root = plan_dashboard._project_root
-        self._orig_current_wt = plan_dashboard._current_worktree_path
         self._orig_root_task = plan_dashboard._root_task
         self._orig_task_index = plan_dashboard._task_index
 
         # Set module-level state
         plan_dashboard.PLAN_ROOT = self._plan_root
         plan_dashboard._project_root = str(tmp_path)
-        plan_dashboard._current_worktree_path = str(tmp_path)
 
         # Build the task tree
         plan_dashboard.rebuild_tree()
@@ -622,7 +625,6 @@ class TestWorktreeRoutes:
         # Restore original state
         plan_dashboard.PLAN_ROOT = self._orig_plan_root
         plan_dashboard._project_root = self._orig_project_root
-        plan_dashboard._current_worktree_path = self._orig_current_wt
         plan_dashboard._root_task = self._orig_root_task
         plan_dashboard._task_index = self._orig_task_index
 
@@ -634,8 +636,6 @@ class TestWorktreeRoutes:
 
     @patch("plan_dashboard.discover_worktrees")
     def test_get_worktrees_returns_json(self, mock_discover):
-        import plan_dashboard
-
         mock_discover.return_value = [
             WorktreeInfo(
                 path=str(self._plan_root.parent),
@@ -654,14 +654,14 @@ class TestWorktreeRoutes:
         resp = client.get("/api/worktrees")
         assert resp.status_code == 200
         data = resp.json()
-        assert "current" in data
+        # New contract: a top-level launch_wt_id (not a server-global "current").
+        assert "launch_wt_id" in data
+        assert "current" not in data
         assert "worktrees" in data
         assert len(data["worktrees"]) >= 1
 
     @patch("plan_dashboard.discover_worktrees")
     def test_get_worktrees_fields(self, mock_discover):
-        import plan_dashboard
-
         mock_discover.return_value = [
             WorktreeInfo(
                 path=str(self._plan_root.parent),
@@ -679,211 +679,20 @@ class TestWorktreeRoutes:
         client = self._get_client()
         data = client.get("/api/worktrees").json()
         wt = data["worktrees"][0]
-        for key in ("path", "branch", "plan_title", "is_current", "has_plan", "is_agent", "last_activity"):
+        # Each entry carries the wt_id selector token; the retired is_current is gone.
+        for key in ("path", "wt_id", "branch", "plan_title", "has_plan", "is_agent", "last_activity"):
             assert key in wt, f"Missing key: {key}"
+        assert "is_current" not in wt
 
     @patch("plan_dashboard.discover_worktrees")
     def test_get_worktrees_fallback_no_git(self, mock_discover):
-        """When not in a git repo, returns single-entry fallback."""
+        """When not in a git repo, returns a single-entry fallback for the launch
+        worktree, keyed by launch_wt_id with that entry's wt_id matching it."""
         mock_discover.return_value = []
         client = self._get_client()
         data = client.get("/api/worktrees").json()
         assert len(data["worktrees"]) == 1
-        assert data["worktrees"][0]["is_current"] is True
-        assert data["worktrees"][0]["has_plan"] is True
-
-    def test_switch_missing_plan_root_returns_400(self):
-        client = self._get_client()
-        resp = client.post("/api/worktree/switch", json={})
-        assert resp.status_code == 400
-
-    @patch("plan_dashboard.discover_worktrees")
-    def test_switch_no_git_returns_404(self, mock_discover):
-        mock_discover.return_value = []
-        client = self._get_client()
-        resp = client.post(
-            "/api/worktree/switch",
-            json={"plan_root": "/nonexistent/superRA"},
-        )
-        assert resp.status_code == 404
-
-    @patch("plan_dashboard.discover_worktrees")
-    def test_switch_nonexistent_worktree_returns_404(self, mock_discover, tmp_path):
-        mock_discover.return_value = [
-            WorktreeInfo(
-                path="/some/other/path",
-                branch="other",
-                head="abc",
-                plan_root="/some/other/superRA",
-                plan_title="Other",
-                is_current=False,
-                is_locked=False,
-                is_prunable=False,
-                is_agent=False,
-                last_activity=1000.0,
-            ),
-        ]
-        client = self._get_client()
-        resp = client.post(
-            "/api/worktree/switch",
-            json={"plan_root": "/nonexistent/superRA"},
-        )
-        assert resp.status_code == 404
-
-    @patch("plan_dashboard.discover_worktrees")
-    def test_switch_valid_worktree_success(self, mock_discover, tmp_path):
-        import plan_dashboard
-
-        # Create a second worktree with a valid superRA/
-        wt2 = tmp_path / "wt2"
-        wt2.mkdir()
-        wt2_plan = wt2 / "superRA"
-        wt2_plan.mkdir()
-        _write_task_md(wt2_plan / "task.md", "Second Worktree")
-
-        mock_discover.return_value = [
-            WorktreeInfo(
-                path=str(wt2),
-                branch="feature",
-                head="def456",
-                plan_root=str(wt2_plan),
-                plan_title="Second Worktree",
-                is_current=False,
-                is_locked=False,
-                is_prunable=False,
-                is_agent=False,
-                last_activity=2000.0,
-            ),
-        ]
-
-        client = self._get_client()
-        resp = client.post(
-            "/api/worktree/switch",
-            json={"plan_root": str(wt2_plan)},
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["ok"] is True
-        assert data["branch"] == "feature"
-
-        # Verify the module state was updated
-        assert str(plan_dashboard.PLAN_ROOT) == str(wt2_plan.resolve())
-
-    @patch("plan_dashboard.discover_worktrees")
-    def test_switch_invalid_plan_root_no_task_md_returns_400(self, mock_discover, tmp_path):
-        """Worktree exists but superRA/ has no task.md -> 400."""
-        import plan_dashboard
-
-        wt = tmp_path / "bad-plan-wt"
-        wt.mkdir()
-        bad_plan = wt / "superRA"
-        bad_plan.mkdir()
-        # No task.md inside superRA/
-
-        mock_discover.return_value = [
-            WorktreeInfo(
-                path=str(wt),
-                branch="bad",
-                head="aaa",
-                plan_root=str(bad_plan),
-                plan_title=None,
-                is_current=False,
-                is_locked=False,
-                is_prunable=False,
-                is_agent=False,
-                last_activity=100.0,
-            ),
-        ]
-
-        client = self._get_client()
-        resp = client.post(
-            "/api/worktree/switch",
-            json={"plan_root": str(bad_plan)},
-        )
-        assert resp.status_code == 400
-
-
-# ===========================================================================
-# SSE broadcast on switch
-# ===========================================================================
-
-
-class TestSSEBroadcastOnSwitch:
-    """Verify that a successful worktree switch triggers a full-reload SSE event."""
-
-    @pytest.fixture(autouse=True)
-    def setup_app(self, tmp_path):
-        import plan_dashboard
-
-        self._plan_root = tmp_path / "superRA"
-        self._plan_root.mkdir()
-        _write_task_md(self._plan_root / "task.md", "Main Plan")
-
-        self._orig_plan_root = plan_dashboard.PLAN_ROOT
-        self._orig_project_root = plan_dashboard._project_root
-        self._orig_current_wt = plan_dashboard._current_worktree_path
-        self._orig_root_task = plan_dashboard._root_task
-        self._orig_task_index = plan_dashboard._task_index
-        self._orig_clients = dict(plan_dashboard._worktree_clients)
-
-        plan_dashboard.PLAN_ROOT = self._plan_root
-        plan_dashboard._project_root = str(tmp_path)
-        plan_dashboard._current_worktree_path = str(tmp_path)
-        plan_dashboard.rebuild_tree()
-
-        yield
-
-        plan_dashboard.PLAN_ROOT = self._orig_plan_root
-        plan_dashboard._project_root = self._orig_project_root
-        plan_dashboard._current_worktree_path = self._orig_current_wt
-        plan_dashboard._root_task = self._orig_root_task
-        plan_dashboard._task_index = self._orig_task_index
-        plan_dashboard._worktree_clients.clear()
-        plan_dashboard._worktree_clients.update(self._orig_clients)
-
-    @patch("plan_dashboard.discover_worktrees")
-    def test_switch_broadcasts_full_reload(self, mock_discover, tmp_path):
-        import asyncio
-        import plan_dashboard
-
-        # Create target worktree
-        wt2 = tmp_path / "wt2"
-        wt2.mkdir()
-        wt2_plan = wt2 / "superRA"
-        wt2_plan.mkdir()
-        _write_task_md(wt2_plan / "task.md", "Switched Plan")
-
-        mock_discover.return_value = [
-            WorktreeInfo(
-                path=str(wt2),
-                branch="feature",
-                head="def456",
-                plan_root=str(wt2_plan),
-                plan_title="Switched Plan",
-                is_current=False,
-                is_locked=False,
-                is_prunable=False,
-                is_agent=False,
-                last_activity=2000.0,
-            ),
-        ]
-
-        # Register a mock SSE client under the post-switch launch worktree id.
-        # The switch re-points the launch worktree to wt2 and broadcasts the
-        # full-reload to that worktree's client set.
-        wt2_id = plan_dashboard._worktree_id_for_plan_root(wt2_plan)
-        queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
-        plan_dashboard._worktree_clients[wt2_id] = {queue}
-
-        from fastapi.testclient import TestClient
-        client = TestClient(plan_dashboard.app, raise_server_exceptions=False)
-        resp = client.post(
-            "/api/worktree/switch",
-            json={"plan_root": str(wt2_plan)},
-        )
-        assert resp.status_code == 200
-
-        # The queue should have received a full-reload event
-        assert not queue.empty(), "SSE client should have received a broadcast"
-        msg = queue.get_nowait()
-        assert "full-reload" in msg
+        entry = data["worktrees"][0]
+        assert entry["wt_id"] == data["launch_wt_id"]
+        assert entry["has_plan"] is True
+        assert "is_current" not in entry
