@@ -1210,6 +1210,7 @@ class TestDashboardArtifactWorkflow:
             artifact_prefix="custom-dashboard",
             retention_days=3,
             fail_on_missing_task_root=False,
+            branch_patterns=("main", "analysis/**"),
         )
         workflow = dashboard_artifact_workflow.render_workflow(config)
         assert 'uv run --project skills/task-system superra dashboard export --root "customRA"' in workflow
@@ -1217,6 +1218,8 @@ class TestDashboardArtifactWorkflow:
         assert "custom-dashboard-$slug-$ref_hash" in workflow
         assert "retention-days: 3" in workflow
         assert "skipping dashboard artifact" in workflow
+        assert '      - "main"' in workflow
+        assert '      - "analysis/**"' in workflow
 
     def test_install_workflow_creates_default_managed_file(self, tmp_path):
         result = dashboard_artifact_workflow.install_workflow(
@@ -1272,6 +1275,10 @@ class TestDashboardArtifactWorkflow:
             "custom-dashboard",
             "--retention-days",
             "5",
+            "--branch",
+            "main",
+            "--branch",
+            "analysis/**",
             "--skip-missing-task-root",
             "--preview-ref",
             "Feature/Foo",
@@ -1282,10 +1289,26 @@ class TestDashboardArtifactWorkflow:
         assert '--output "build/dashboard.html"' in content
         assert "custom-dashboard-$slug-$ref_hash" in content
         assert "retention-days: 5" in content
+        assert '      - "main"' in content
+        assert '      - "analysis/**"' in content
         assert "skipping dashboard artifact" in content
         out = capsys.readouterr().out
         assert "Created" in out
         assert "custom-dashboard-feature-foo-" in out
+
+    def test_cli_dashboard_artifact_setup_reports_guard_errors(self, tmp_path, capsys):
+        with pytest.raises(SystemExit) as excinfo:
+            cli.main([
+                "dashboard",
+                "artifact",
+                "setup",
+                "--repo-root",
+                str(tmp_path),
+                "--workflow-path",
+                "../escape.yml",
+            ])
+        assert excinfo.value.code == 1
+        assert "Error: Workflow path escapes repository root" in capsys.readouterr().err
 
 
 class TestStandaloneSelfContained:

@@ -124,14 +124,19 @@ def _run_dashboard_artifact(args: argparse.Namespace) -> None:
         artifact_prefix=args.artifact_prefix,
         retention_days=args.retention_days,
         fail_on_missing_task_root=not args.skip_missing_task_root,
+        branch_patterns=tuple(args.branch or ["**"]),
     )
-    result = install_workflow(
-        Path(args.repo_root),
-        workflow_path=args.workflow_path,
-        config=config,
-        force=args.force,
-        preview_ref=args.preview_ref,
-    )
+    try:
+        result = install_workflow(
+            Path(args.repo_root),
+            workflow_path=args.workflow_path,
+            config=config,
+            force=args.force,
+            preview_ref=args.preview_ref,
+        )
+    except (FileExistsError, ValueError) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
     action = "Created" if result.created else "Updated"
     print(f"{action} {result.path}")
     print(f"Artifact name pattern: {args.artifact_prefix}-<branch-slug>-<ref-hash>")
@@ -329,6 +334,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_RETENTION_DAYS,
         help=f"Artifact retention in days (default: {DEFAULT_RETENTION_DAYS})",
+    )
+    artifact_setup.add_argument(
+        "--branch",
+        action="append",
+        default=[],
+        help='Push branch pattern to include in the workflow trigger; repeatable (default: "**")',
     )
     artifact_setup.add_argument(
         "--skip-missing-task-root",

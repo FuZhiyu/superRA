@@ -31,6 +31,7 @@ class WorkflowConfig:
     artifact_prefix: str = DEFAULT_ARTIFACT_PREFIX
     retention_days: int = DEFAULT_RETENTION_DAYS
     fail_on_missing_task_root: bool = True
+    branch_patterns: tuple[str, ...] = ("**",)
 
 
 @dataclass(frozen=True)
@@ -78,6 +79,7 @@ def render_workflow(config: WorkflowConfig | None = None) -> str:
             "__ARTIFACT_PREFIX__": config.artifact_prefix,
             "__RETENTION_DAYS__": str(config.retention_days),
             "__MISSING_ROOT_GUARD__": _missing_root_guard(config),
+            "__BRANCH_PATTERNS__": _branch_patterns_yaml(config.branch_patterns),
         }
     )
     for token, value in replacements.items():
@@ -132,3 +134,8 @@ def _missing_root_guard(config: WorkflowConfig) -> str:
         "  exit 0\n"
         "fi"
     )
+
+
+def _branch_patterns_yaml(branch_patterns: tuple[str, ...]) -> str:
+    patterns = branch_patterns or ("**",)
+    return "\n".join(f'      - "{pattern}"' for pattern in patterns)

@@ -4,7 +4,7 @@ name: __WORKFLOW_NAME__
 on:
   push:
     branches:
-      - "**"
+__BRANCH_PATTERNS__
   workflow_dispatch:
 
 permissions:
