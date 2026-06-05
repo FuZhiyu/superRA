@@ -1,6 +1,6 @@
 ---
 title: "Verify Zotero Skill Behavior"
-status: implemented
+status: revise
 depends_on:
   - 04-inventory-and-packaging
 tags: [tests, verification, skill-creation]
@@ -81,7 +81,5 @@ One residual gap is accepted: `get_config`'s env-wins-over-file precedence is no
 
 ## Review Notes
 
-Approved. All 15 text-regression checks were verified adversarially (planted each forbidden token in a scratch skill copy; removed each required string) and every check flips to FAIL on its target, including regressions planted in `scripts/` and `references/`, not just `SKILL.md`. Both suites reproduce their reported pass counts from the repo root; the health probe re-runs identically; no secrets, PDF contents, or library data are committed; edits are scoped to the intended files.
-
-Three non-blocking MINOR accuracy items the reviewer raised on the `## Results` prose were resolved by the orchestrator in a Step-3.5 cleanup: the live-probe transcript now matches the real (prefix-less) `eprint` output; the `.env`-parsing gap the mocked-tests rationale glossed over was closed by adding three `Notes/.env` checks to `test-zotero-tool.sh` (now 21 checks) and the rationale reworded; and the over-scoped "description mentions pyzotero" check was renamed to "mentions pyzotero" with the check-number citations corrected.
+1. **MINOR (task-file coherence)** — The `## Results` description of `tests/test-zotero-skill-text.sh` contradicts the committed suite. Results says the suite has "15 checks" with "Positive invariants (5 checks): `SKILL.md` references `CLAUDE_SKILL_DIR`; `paper-reading.md` uses `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py`". The committed suite ([tests/test-zotero-skill-text.sh](../../tests/test-zotero-skill-text.sh)) now has **16 checks** and asserts the **opposite** invariant: `CLAUDE_SKILL_DIR` must be **absent** (line 70) and the harness-neutral `<skill-dir>` placeholder must be **present** (lines 88-97). It also adds a `.claude/skills/` guard (line 65). The suite ran clean this pass (`Passed: 16  Failed: 0`), so the test itself is correct and current — only the Results prose is stale, describing the pre-`<skill-dir>`-migration state. Update the Results to: 16 checks; positive invariants assert `<skill-dir>` presence in `SKILL.md`/`paper-reading.md` and `CLAUDE_SKILL_DIR` absence; correct the check group counts.
 

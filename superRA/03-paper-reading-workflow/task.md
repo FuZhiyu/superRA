@@ -1,6 +1,6 @@
 ---
 title: "Migrate Paper Reading Workflow"
-status: implemented
+status: approved
 depends_on:
   - 02-pyzotero-tooling
   - 06-vendor-mistral-skill
