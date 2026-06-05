@@ -237,7 +237,7 @@ superra dashboard artifact setup \
   --output .superra-dashboard/dashboard.html
 ```
 
-At runtime the workflow checks out the pushed branch, exports that branch's `superRA/` tree with `uv run --project skills/task-system superra dashboard export`, deletes older artifacts with the same branch-derived artifact name, then uploads the new HTML artifact. Artifact names are `superra-dashboard-<branch-slug>-<ref-hash>` by default; the hash prevents collisions between refs such as `feature/foo` and `feature-foo`.
+At runtime the workflow checks out the pushed branch, exports that branch's `superRA/` tree with `uv run --project skills/task-system superra dashboard export`, passes a GitHub blob URL for the triggering commit as the export's file-link base, deletes older artifacts with the same branch-derived artifact name, then uploads the new HTML artifact. Artifact names are `superra-dashboard-<branch-slug>-<ref-hash>` by default; the hash prevents collisions between refs such as `feature/foo` and `feature-foo`.
 
 This mode is repo-access-gated by GitHub Actions artifact permissions but is not a hosted webpage. Collaborators download the artifact from the workflow run and open the HTML locally.
 

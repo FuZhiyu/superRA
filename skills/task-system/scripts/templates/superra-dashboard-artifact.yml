@@ -47,7 +47,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$(dirname "__OUTPUT_PATH__")"
-          uv run --project skills/task-system superra dashboard export --root "__TASK_ROOT__" --output "__OUTPUT_PATH__"
+          uv run --project skills/task-system superra dashboard export --root "__TASK_ROOT__" --output "__OUTPUT_PATH__" --repo-file-base "https://github.com/${{ github.repository }}/blob/${{ github.sha }}"
 
       - name: Delete previous artifact for this branch
         uses: actions/github-script@v7

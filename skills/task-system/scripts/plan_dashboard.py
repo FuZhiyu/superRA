@@ -1510,6 +1510,7 @@ def render_standalone_html(
     plan_root: Path,
     output_path: Path | None = None,
     root: str | None = None,
+    repo_file_base: str = "",
 ) -> str:
     """Render the self-contained standalone dashboard HTML and return it.
 
@@ -1522,6 +1523,9 @@ def render_standalone_html(
     fragments / nav cover exactly that subtree.  Whole-tree export (``root=None``)
     is unchanged.  *output_path* (when given) only fixes where ``<img>`` sources
     resolve from a ``file://`` open; the HTML itself is not written here.
+    *repo_file_base* optionally points file links at a repository browser base
+    such as ``https://github.com/owner/repo/blob/sha`` instead of local editor
+    links.
     """
     full_root = walk_plan(plan_root)
     project_root = str(plan_root.resolve().parent)
@@ -1584,6 +1588,7 @@ def render_standalone_html(
         standalone_plan_dir=standalone_plan_dir,
         standalone_images=standalone_images,
         standalone_assets=standalone_assets,
+        repo_file_base=repo_file_base.rstrip("/"),
     )
 
 
@@ -1591,6 +1596,7 @@ def generate_dashboard(
     plan_root: Path,
     output_path: Path | None = None,
     root: str | None = None,
+    repo_file_base: str = "",
 ) -> Path:
     """Generate a self-contained static HTML dashboard from base.html.
 
@@ -1604,7 +1610,7 @@ def generate_dashboard(
     if output_path is None:
         output_path = plan_root / "dashboard.html"
 
-    html = render_standalone_html(plan_root, output_path, root)
+    html = render_standalone_html(plan_root, output_path, root, repo_file_base=repo_file_base)
     output_path.write_text(html, encoding="utf-8")
     print(f"Dashboard written to {output_path}")
     return output_path
@@ -2018,6 +2024,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="",
         help="Task path to scope the export to (default: whole tree)",
     )
+    gen_p.add_argument(
+        "--repo-file-base",
+        default="",
+        help="Repository browser base for file links, e.g. https://github.com/owner/repo/blob/sha",
+    )
 
     return parser.parse_args(argv)
 
@@ -2076,7 +2087,7 @@ def main(argv: list[str] | None = None) -> None:
         output = Path(args.output) if args.output else None
         subtree_root = args.subtree_root or None
         try:
-            generate_dashboard(plan_root, output, root=subtree_root)
+            generate_dashboard(plan_root, output, root=subtree_root, repo_file_base=args.repo_file_base)
         except KeyError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)

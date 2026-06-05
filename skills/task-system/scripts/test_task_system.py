@@ -1026,6 +1026,49 @@ class TestDashboard:
         assert "resolveInternalTaskPath" in html
         assert "TASK_PATHS" in html
 
+    def test_generate_accepts_repo_file_base_for_static_links(self, plan_root):
+        """GitHub artifact exports carry a repository blob base so standalone
+        file links and the task-file button open GitHub instead of local editor
+        links."""
+        out = plan_root / "dashboard.html"
+        plan_dashboard.generate_dashboard(
+            plan_root,
+            out,
+            repo_file_base="https://github.com/owner/repo/blob/abc123/",
+        )
+        html = out.read_text("utf-8")
+        assert 'var REPO_FILE_BASE = "https://github.com/owner/repo/blob/abc123";' in html
+        assert "function repoFileHref(path)" in html
+        assert "Open task.md on GitHub" in html
+
+    def test_cli_dashboard_export_forwards_repo_file_base(self, plan_root, monkeypatch):
+        calls = []
+
+        def fake_module_main(module_name, argv=None, *, pass_argv=True):
+            calls.append((module_name, argv, pass_argv))
+
+        monkeypatch.setattr(cli, "_module_main", fake_module_main)
+        cli.main([
+            "dashboard",
+            "export",
+            "--root",
+            str(plan_root),
+            "--repo-file-base",
+            "https://github.com/owner/repo/blob/abc123",
+        ])
+
+        assert calls == [(
+            "plan_dashboard",
+            [
+                "generate",
+                "--plan-root",
+                str(plan_root),
+                "--repo-file-base",
+                "https://github.com/owner/repo/blob/abc123",
+            ],
+            True,
+        )]
+
     def test_dashboard_html_constant_removed(self):
         """The duplicate hand-maintained template is gone — one source remains."""
         src = (SCRIPTS_DIR / "plan_dashboard.py").read_text("utf-8")
@@ -1037,6 +1080,7 @@ class TestDashboard:
         Guards the renderMarkdown anchor-translation logic against removal."""
         src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
         assert "match(/#L" in src
+        assert "repoFileHref(filePath)" in src
 
     def test_build_standalone_fragments_match_server_routes(self, plan_root):
         """Pre-rendered fragments are byte-identical to the live route output."""
@@ -1207,6 +1251,7 @@ class TestDashboardArtifactWorkflow:
         assert "shasum -a 256" in workflow
         assert 'artifact_name=__ARTIFACT_PREFIX__-$slug-$ref_hash' not in workflow
         assert "uv run --project skills/task-system superra dashboard export --root \"superRA\"" in workflow
+        assert '--repo-file-base "https://github.com/${{ github.repository }}/blob/${{ github.sha }}"' in workflow
         assert "github.rest.actions.listArtifactsForRepo" in workflow
         assert "github.rest.actions.deleteArtifact" in workflow
         assert "actions/upload-artifact@v4" in workflow

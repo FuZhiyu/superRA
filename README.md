@@ -59,7 +59,7 @@ To share a branch snapshot through GitHub Actions artifacts, install the managed
 superra dashboard artifact setup
 ```
 
-After pushing a branch, open the workflow run in GitHub Actions and download the artifact named `superra-dashboard-<branch-slug>-<ref-hash>`. The artifact contains the branch's exported `superRA/` dashboard HTML. GitHub artifacts require repository read access, but they are downloads rather than hosted webpages; the workflow deletes older artifacts with the same branch-derived name before uploading the replacement.
+After pushing a branch, open the workflow run in GitHub Actions and download the artifact named `superra-dashboard-<branch-slug>-<ref-hash>`. The artifact contains the branch's exported `superRA/` dashboard HTML; file links in that export point to the triggering commit on GitHub. GitHub artifacts require repository read access, but they are downloads rather than hosted webpages; the workflow deletes older artifacts with the same branch-derived name before uploading the replacement.
 
 ### Key principles of the workflow
 

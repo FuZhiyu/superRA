@@ -105,6 +105,7 @@ def _run_dashboard(args: argparse.Namespace) -> None:
         argv = ["generate", "--plan-root", root]
         _append_optional(argv, "--output", args.output)
         _append_optional(argv, "--root", args.subtree)
+        _append_optional(argv, "--repo-file-base", args.repo_file_base)
     elif args.dashboard_command == "artifact":
         _run_dashboard_artifact(args)
         return
@@ -311,6 +312,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     export.add_argument("--output", default="", help="Output HTML path")
     export.add_argument("--subtree", default="", help="Task path to scope the export")
+    export.add_argument(
+        "--repo-file-base",
+        default="",
+        help="Repository browser base for file links, e.g. https://github.com/owner/repo/blob/sha",
+    )
     artifact = dash_sub.add_parser("artifact", help="Set up dashboard artifact publishing")
     artifact_sub = artifact.add_subparsers(dest="artifact_command", required=True)
     artifact_setup = artifact_sub.add_parser(

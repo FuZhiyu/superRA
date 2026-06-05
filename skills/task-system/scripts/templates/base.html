@@ -1317,6 +1317,7 @@ window.STANDALONE = false;
 var md = window.markdownit({ html: false, linkify: true });
 md.use(texmath, { engine: katex, delimiters: 'dollars' });
 var PROJECT_ROOT = {{ project_root | tojson }};
+var REPO_FILE_BASE = {{ repo_file_base | default('') | tojson }};
 
 /* ── Active worktree (the ?wt= dimension of the URL) ──
    The active worktree is carried in location.search as `?wt=<id>`, separate from
@@ -1340,6 +1341,20 @@ function wtUrl(url) {
   if (!ACTIVE_WT) return url;
   var sep = url.indexOf('?') === -1 ? '?' : '&';
   return url + sep + 'wt=' + encodeURIComponent(ACTIVE_WT);
+}
+
+function encodeRepoPath(path) {
+  var splitAt = path.search(/[?#]/);
+  var body = splitAt === -1 ? path : path.slice(0, splitAt);
+  var suffix = splitAt === -1 ? '' : path.slice(splitAt);
+  return body.split('/').map(function(part) {
+    return encodeURIComponent(part);
+  }).join('/') + suffix;
+}
+
+function repoFileHref(path) {
+  if (REPO_FILE_BASE) return REPO_FILE_BASE.replace(/\/+$/, '') + '/' + encodeRepoPath(path);
+  return '';
 }
 
 /* Membership oracle for in-tree task references. Every task's tree path, as a
@@ -1424,18 +1439,21 @@ function renderMarkdown(text, sectionName, taskPath) {
         a.removeAttribute('target');
         a.classList.add('task-link');
       } else {
-        /* Genuine file link. Translate a trailing GitHub-style line anchor
-           (#L42, #L42C5 column, #L42-L50 range) into VS Code's path:line[:col]
-           form so the editor jumps to the cited line — vscode://file ignores a
-           #L... fragment. Hrefs without such an anchor are left unchanged. */
+        /* Genuine file link. GitHub artifact exports keep GitHub-style anchors;
+           local/editor links translate those anchors to VS Code's path:line[:col]
+           form because vscode://file ignores a #L... fragment. */
         var filePath = pathPrefix + href;
-        var loc = '';
-        var lm = filePath.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
-        if (lm) {
-          loc = ':' + lm[1] + (lm[2] ? ':' + lm[2] : '');
-          filePath = filePath.slice(0, lm.index);
+        if (REPO_FILE_BASE) {
+          a.setAttribute('href', repoFileHref(filePath));
+        } else {
+          var loc = '';
+          var lm = filePath.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
+          if (lm) {
+            loc = ':' + lm[1] + (lm[2] ? ':' + lm[2] : '');
+            filePath = filePath.slice(0, lm.index);
+          }
+          a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + filePath + loc);
         }
-        a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + filePath + loc);
         a.setAttribute('target', '_blank');
       }
     }
@@ -1931,6 +1949,9 @@ var VSCODE_ICON =
    `superRA/<path>/` prefix so it points at the same on-disk file the body's
    relative links resolve against. */
 function taskFileVscodeHref(path) {
+  if (REPO_FILE_BASE) {
+    return repoFileHref('superRA/' + (path ? path + '/' : '') + 'task.md');
+  }
   return 'vscode://file/' + PROJECT_ROOT + '/superRA/' + (path ? path + '/' : '') + 'task.md';
 }
 
@@ -1959,16 +1980,16 @@ async function loadActiveNode(path) {
        descent. Both fall back gracefully when the sidebar row isn't in yet. */
     var title = pathTitles[path] || slug || 'root';
     var status = navRowStatus(path);
+    var fileButtonTitle = REPO_FILE_BASE ? 'Open task.md on GitHub' : 'Open task.md in VS Code';
+    var fileButtonLabel = REPO_FILE_BASE ? 'GitHub' : 'VS Code';
 
     region.innerHTML =
       '<header class="active-node-head">'
       + '<h2 class="active-node-title" tabindex="-1"></h2>'
       + (status ? '<span class="badge badge-' + status + '">' + status + '</span>' : '')
-      /* Open in VS Code: jump straight to this task's task.md via vscode://file.
-         A plain editor deep-link, so it works in both server and standalone
-         (file://) mode — the href resolves to an on-disk absolute path. */
-      + '<a class="vscode-btn" target="_blank" title="Open task.md in VS Code">'
-      + VSCODE_ICON + '<span>VS Code</span></a>'
+      /* Open this task's task.md in the configured file target. */
+      + '<a class="vscode-btn" target="_blank" title="' + fileButtonTitle + '">'
+      + VSCODE_ICON + '<span>' + fileButtonLabel + '</span></a>'
       /* Share/Export: download this node's subtree as a standalone HTML file.
          Server-backed (/export), so it is omitted in standalone mode — a
          downloaded file has no server to re-export from. */
