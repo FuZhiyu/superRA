@@ -1,6 +1,6 @@
 ---
 title: "Workflow Template and Artifact Contract"
-status: implemented
+status: revise
 depends_on:  []
 tags: []
 created: 2026-06-04
@@ -31,3 +31,7 @@ Consider a template file under skills/task-system/scripts/templates or a task-sy
 
 - `uv run --project skills/task-system --with pytest python -m pytest skills/task-system/scripts/test_task_system.py -k DashboardArtifactWorkflow` — 4 passed.
 - `uv run --project skills/task-system --with pytest python -m pytest skills/task-system/scripts/test_task_system.py` — 240 passed, 11 skipped, 1 expected invalid-status warning from the existing diagnostic test.
+
+## Review Notes
+
+1. [MAJOR] The branch-scoped artifact name can collide across distinct legal branch names. The helper builds names as prefix plus a sanitized slug [dashboard_artifact_workflow.py:47-49](../../../../../skills/task-system/scripts/dashboard_artifact_workflow.py#L47-L49), and the workflow deletes every repository artifact whose name equals that value before upload [superra-dashboard-artifact.yml:51-68](../../../../../skills/task-system/scripts/templates/superra-dashboard-artifact.yml#L51-L68). Because the sanitizer maps both `feature/foo` and `feature-foo` to `feature-foo`, a successful run on one branch can delete the other branch artifact and upload with the same name. That violates the task contract of one current artifact per branch. Make the branch-stable name collision-resistant for distinct refs, for example by including a stable hash of the original ref in addition to the readable slug, and add a test covering a slash-vs-hyphen branch collision.
