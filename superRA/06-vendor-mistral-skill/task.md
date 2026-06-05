@@ -1,6 +1,6 @@
 ---
 title: "Vendor mistral-pdf-to-markdown as In-Repo PDF->Markdown Skill"
-status: not-started
+status: implemented
 depends_on: []
 tags: [skill-creation, pdf, markdown, vendoring]
 input:
@@ -42,11 +42,18 @@ Migrated `mistral-pdf-to-markdown` into `skills/mistral-pdf-to-markdown/` as the
 - **Discovery surfaces** — added a Utility row in [README.md](../../README.md), [skills/CATEGORIES.md](../../skills/CATEGORIES.md), and the [using-superRA Skill Inventory](../../skills/using-superRA/SKILL.md), each describing it as a user-invocable standalone skill (needs `MISTRAL_API_KEY`), the conversion step behind `zotero-paper-reader`, and explicitly **not** loaded by workflow agents or the Manifest. Manifest and generated agent files untouched.
 - **Wiring** — `zotero-paper-reader`'s Step 6 note now points at the bundled in-repo skill rather than an external plugin path, closing the conversion dead end (see [03-paper-reading-workflow](../03-paper-reading-workflow/task.md)).
 
-The `mistralai` v2 dependency fix is pending re-implementation (see Revision Notes); this Results section will be extended once that increment is approved.
+**mistralai v2 dependency fix (2026-06-05 increment).** `mistralai` 2.0 (2026-06-03) dropped the top-level `Mistral` export, so the unpinned converter broke with `ImportError: cannot import name 'Mistral' from 'mistralai'` on every fresh `uv run --script`. Fixed import-and-pin only, OCR behavior untouched:
+
+- **PEP 723 pin** — `convert_pdf_to_markdown.py` now declares `"mistralai>=2,<3"` (was unpinned), so `uv run --script` resolves a v2 release and a future major cannot silently break it again.
+- **v2 client import** — `from mistralai import Mistral` → `from mistralai.client import Mistral`, with a one-line comment recording why. Verified against `mistralai` 2.4.9: `Mistral(api_key=...)` and `client.ocr.process(model=..., document=..., include_image_base64=...)` are unchanged from v1, so conversion logic, image extraction, and `--pages` handling are byte-for-byte identical.
+- **Doc example** — the v1 `from mistralai import Mistral` snippet in `references/reference.md` (API-key smoke test) updated to the v2 client path.
+- **Regression lock** — `tests/test-mistral-skill-text.sh` now asserts the `"mistralai>=2,<3"` pin and the `from mistralai.client import Mistral` line are present, and that the broken top-level form is absent anywhere under the skill dir.
 
 ### Verification
 
-[tests/test-mistral-skill-text.sh](../../tests/test-mistral-skill-text.sh) — a credential-free text-regression suite locking the migration: it confirms the `<skill-dir>` invocation (no Claude-only `${CLAUDE_SKILL_DIR}`), the PEP 723 script header and converter integrity, and the presence of the skill files. Run with `bash tests/test-mistral-skill-text.sh` from the repo root.
+[tests/test-mistral-skill-text.sh](../../tests/test-mistral-skill-text.sh) — a credential-free text-regression suite locking the migration: it confirms the `<skill-dir>` invocation (no Claude-only `${CLAUDE_SKILL_DIR}`), the PEP 723 script header and converter integrity, and (since the v2 fix) the `mistralai>=2,<3` pin and v2 client import. Run with `bash tests/test-mistral-skill-text.sh` from the repo root — passes 11/11.
+
+mistralai v2 fix verified live: `uv run --script .../convert_pdf_to_markdown.py --help` resolves the isolated PEP 723 env, installs `mistralai` 2.4.9, and runs all top-level imports (including `from mistralai.client import Mistral`) before printing help — confirmed to stay isolated even with `~/.venv` (mistralai 1.9.11) active, since `uv run --script` ignores the ambient venv. The live-OCR conversion path was not exercised in this session (`MISTRAL_API_KEY` not set); the OCR call signature is unchanged from the working v1 code, so conversion output is preserved by construction.
 
 ## Revision Notes
 

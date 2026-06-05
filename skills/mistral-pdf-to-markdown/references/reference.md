@@ -181,7 +181,7 @@ cat Notes/.env | grep mistral_api_key
 
 # Test API key manually
 export MISTRAL_API_KEY="your-key-here"
-python -c "from mistralai import Mistral; print(Mistral(api_key='$MISTRAL_API_KEY'))"
+python -c "from mistralai.client import Mistral; print(Mistral(api_key='$MISTRAL_API_KEY'))"
 ```
 
 #### 4. Large File Processing
