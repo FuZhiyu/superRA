@@ -34,6 +34,8 @@ Reuse existing theme tokens and transitions; add only what these behaviors requi
 
 ## Results
 
+> **Superseded for touch (2026-06-04):** the unpinned hover-reveal rail and the width-only (`innerWidth <= 860`) mode selection described below were desktop-mouse-centric and unreachable/incorrect on touch devices. They are reworked into a capability- and orientation-aware model (pinned-or-drawer, never hover on touch) by [`task-system/dashboard/mobile-ipad-ui`](../../mobile-ipad-ui/task.md). The desktop mouse behavior recorded here is unchanged.
+
 All work is in [`base.html`](../../../../../skills/task-system/scripts/templates/base.html) (live server only; +783/-11). Every addition is presentation/a11y layered on top of the existing router, sidebar load/fold/search, main-panel loaders, and SSE model — none of that working navigation logic was touched. The five prior tasks' code is untouched; the only behavioral edits to existing functions are additive hooks (a chrome auto-hide call in `setActive`, ARIA syncing in the nav fold/expand/load helpers, a focus-to-heading line in `loadActiveNode`).
 
 ### Sidebar chrome — pin/unpin auto-hide + resizable width (the user-priority piece)

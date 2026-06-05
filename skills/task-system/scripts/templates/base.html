@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>{{ root_task.title or 'Plan Dashboard' }}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -120,7 +120,13 @@ body {
 .header {
   flex: 0 0 auto; z-index: 100;
   display: flex; align-items: center; gap: 16px;
-  padding: 10px 24px;
+  /* Pad past the notch / rounded corners on iOS (env() is 0 elsewhere, so the
+     10px/24px minimum is unchanged on a desktop). top + left + right per the
+     touch UI brief; the header is in normal flow at the very top of the page. */
+  padding-top: max(10px, env(safe-area-inset-top));
+  padding-right: max(24px, env(safe-area-inset-right));
+  padding-bottom: 10px;
+  padding-left: max(24px, env(safe-area-inset-left));
   background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
@@ -220,6 +226,101 @@ body {
 }
 .theme-toggle:hover { color: var(--text); }
 
+/* Inline search + status filter group; flattened into a row beside the view
+   toggle on desktop, adopted into the phone sheet at narrow width. */
+.hc-search-host {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Phone-only trigger for the search/filter sheet (hidden on desktop; the
+   @media (max-width: 620px) block flips it to inline-flex). */
+.hc-search-trigger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-mid);
+  cursor: pointer;
+  padding: 4px;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.hc-search-trigger:hover { background: var(--bg-hover); color: var(--text); }
+.hc-search-trigger svg { display: block; }
+
+/* ── Phone search/filter sheet ── */
+.search-sheet-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  z-index: 140;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.search-sheet-backdrop.open { display: block; opacity: 1; }
+.search-sheet {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 150;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.22);
+  /* Bottom-anchored sheet: clear the home indicator / rounded corners on iOS
+     (env() resolves to 0 elsewhere, so the 16px/14px floor is the default). */
+  padding-top: 14px;
+  padding-right: max(16px, env(safe-area-inset-right));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+  transform: translateY(100%);
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.search-sheet.open { display: flex; transform: translateY(0); }
+.search-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.search-sheet-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+}
+.search-sheet-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  font-size: 22px; line-height: 1;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-mute);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.search-sheet-close:hover { background: var(--bg-hover); color: var(--text); }
+.search-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Inside the sheet the search + filter fill the width and grow to a comfortable
+   tap height (the coarse-pointer block enlarges the controls further). */
+.search-sheet-body .hc-search-host { flex-direction: column; align-items: stretch; }
+.search-sheet-body .hc-search,
+.search-sheet-body .hc-select { width: 100%; }
+
 /* ── Main content area ── */
 /* The body is a flex column (header + main-content); main-content fills the
    rest of the viewport. In Workspace the sidebar + detail panel each scroll
@@ -242,9 +343,16 @@ body {
      .sb-unpinned  — spacer = rail width, sidebar retracted so only a thin
                      hover-rail peeks; hover slides the full sidebar out as an
                      overlay above the detail panel; auto-hides on mouse-leave.
-     .sb-drawer    — (narrow screens) spacer = 0, sidebar is a fixed off-canvas
-                     drawer toggled by the header hamburger, with backdrop +
-                     focus trap, regardless of pin state.
+                     MOUSE ONLY — a touch device never enters this state.
+     .sb-drawer    — (narrow screens, or any touch portrait/narrow viewport)
+                     spacer = 0, sidebar is a fixed off-canvas drawer toggled by
+                     the header hamburger, with backdrop + focus trap, regardless
+                     of pin state.
+   A fourth class, .sb-touch, is added on coarse-pointer / no-hover devices
+   (matchMedia('(hover: none), (pointer: coarse)')). It disables the mouse-only
+   chrome (hover-rail, drag-resizer) and the JS picks pinned-vs-drawer from
+   orientation/room instead of width; the pin toggle then maps pinned <-> drawer
+   (never the unreachable hover auto-hide). The fine-pointer path is untouched.
    --sidebar-width is the user-resizable width (drag handle / keyboard), clamped
    and persisted; --rail-width is the retracted hover strip. */
 .workspace {
@@ -289,6 +397,9 @@ body {
   min-height: 0;
   overflow-y: auto;
   padding: 4px 0 40px;
+  /* Reaching the top/bottom of the tree must not scroll-chain to the body or
+     fire pull-to-refresh — important inside the off-canvas drawer on a phone. */
+  overscroll-behavior: contain;
 }
 .sb-pinned .nav-tree { transform: translateX(0); }
 /* Unpinned: retract so only --rail-width peeks at the screen edge. */
@@ -321,6 +432,8 @@ body {
 }
 .sb-unpinned .sidebar-rail { display: block; transition: opacity 0.2s ease; }
 .sb-unpinned.sb-revealed .sidebar-rail { opacity: 0; pointer-events: none; }
+/* Touch never enters .sb-unpinned, but guard the decorative hover-rail anyway. */
+.sb-touch .sidebar-rail { display: none; }
 /* Grip dots centered on the rail to read as an affordance, not a void. */
 .sidebar-rail::before {
   content: "";
@@ -369,6 +482,9 @@ body {
 }
 .sidebar-resizer:focus-visible { outline: none; }
 .sb-drawer .sidebar-resizer { display: none; }
+/* Touch: the 7px drag-resizer is a fine-pointer affordance; hide it on touch
+   (the pinned landscape sidebar keeps its persisted/default width, not drag). */
+.sb-touch .sidebar-resizer { display: none; }
 /* While dragging: kill the slide transitions so the sidebar tracks the cursor
    1:1 (no lag/rubber-banding), and disable text selection page-wide. */
 .workspace.sb-resizing .nav-tree,
@@ -392,6 +508,13 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   transform: translateX(-100%);
   box-shadow: none;
   z-index: 130;
+  /* The off-canvas drawer is fixed to the viewport edges, so pad past the
+     notch (top), home indicator (bottom), and rounded/left-edge corners (left).
+     The base .nav-tree padding is 14px 10px 0; add the safe-area floor on top of
+     it so content clears the system chrome on iOS (env() is 0 elsewhere). */
+  padding-top: max(14px, env(safe-area-inset-top));
+  padding-left: max(10px, env(safe-area-inset-left));
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .sb-drawer .sidebar-rail { display: none; }
 .sb-drawer.sb-drawer-open .nav-tree {
@@ -414,6 +537,14 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   transition: background 0.15s ease, color 0.15s ease;
 }
 .nav-hamburger:hover { background: var(--bg-hover); color: var(--text); }
+/* The hamburger is the only way into the drawer, so show it whenever the
+   workspace is in drawer mode — including a touch landscape iPad (width > 860)
+   that collapsed its persistent sidebar, which the narrow-width media query
+   below would miss. The hamburger lives in the header (a sibling of the
+   workspace), so a `.sb-drawer .nav-hamburger` descendant selector can't reach
+   it; applySidebarMode() mirrors the drawer mode onto <body> instead. Hidden
+   again when a touch sidebar is pinned side-by-side. */
+body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
 
 /* Pin toggle in the sidebar header (desktop chrome). */
 .sidebar-head {
@@ -451,9 +582,13 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
 /* Pinned state: accent pin, upright. Unpinned: muted, tilted. */
 .sb-pinned .pin-toggle { color: var(--accent); }
 .sb-unpinned .pin-toggle { transform: rotate(45deg); }
-/* Drawer mode (narrow): pin state doesn't drive the layout, so the toggle would
-   be inert — hide it to avoid a no-op control. */
-.sb-drawer .pin-toggle { display: none; }
+/* Desktop drawer (narrow): pin state doesn't drive the layout, so the toggle is
+   inert — hide it to avoid a no-op control. */
+.sb-drawer:not(.sb-touch) .pin-toggle { display: none; }
+/* Touch drawer: the toggle is the way back to the persistent pinned layout
+   (landscape with room), so keep it reachable inside the open drawer. It is
+   inert when the viewport can only carry a drawer (portrait / too narrow);
+   re-pinning then simply persists the preference for the next landscape session. */
 
 /* Right — drill-down detail panel (breadcrumb + active node + children DAG) */
 .detail-panel {
@@ -461,11 +596,20 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px 28px 60px;
+  /* Scrolling to the end of the detail panel must not chain to the page body or
+     trigger pull-to-refresh on a touch device (env() is inert on desktop). */
+  overscroll-behavior: contain;
 }
 .detail-panel > * {
   max-width: 1200px;
 }
-.children-dag { overflow-x: auto; }
+/* Horizontally scrollable regions inside the detail panel: keep the body from
+   scroll-chaining and give an edge-fade affordance on touch (added below under
+   (pointer: coarse)) so a clipped DAG/table reads as scrollable. */
+.children-dag {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
 
 /* ── Narrow breakpoint: force drawer mode regardless of pin state ── */
 @media (max-width: 860px) {
@@ -473,21 +617,170 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   /* JS adds .sb-drawer below this width; this guard keeps the layout sane even
      before the resize handler runs (e.g. first paint at a narrow width). */
   .workspace:not(.sb-drawer) .sidebar-spacer { width: 0; }
-  .detail-panel { padding: 16px 18px 60px; }
+  /* The detail panel is the full-width content area in drawer mode, so its own
+     left/right/bottom must clear the notch (landscape) and home indicator. This
+     complements 01's header/drawer *chrome* insets; together no content sits
+     under the system UI. env() is 0 on a non-notched device, so the 18px/60px
+     floor is unchanged there. */
+  .detail-panel {
+    padding-top: 16px;
+    padding-right: max(18px, env(safe-area-inset-right));
+    padding-bottom: max(60px, calc(60px + env(safe-area-inset-bottom)));
+    padding-left: max(18px, env(safe-area-inset-left));
+  }
   /* Tighten the header so it never forces a horizontal scrollbar: trim the
-     padding/gaps and let the controls wrap under the title row. */
-  .header { padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
+     padding/gaps and let the controls wrap under the title row. Keep the
+     safe-area floor so the notch/rounded corners stay clear on a phone. */
+  .header {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: 8px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    gap: 8px; flex-wrap: wrap;
+  }
   .header-controls { flex-wrap: wrap; gap: 4px; }
 }
 
-/* Phone width: drop the verbose summary stats + free-text search; the title,
-   drawer hamburger, view toggle, and theme control are what stay essential.
-   Filtering/search remain reachable on wider screens. */
+/* Phone width: drop the verbose summary stats and pull the free-text search +
+   status filter out of the header row into a tappable sheet (reachable via the
+   search-trigger icon). The title, drawer hamburger, view toggle, and theme
+   control stay inline; search/filter stay inline on wider screens. */
 @media (max-width: 620px) {
   .header-stats { display: none; }
-  .hc-search { display: none; }
-  #filter-status { display: none; }
+  /* Hide the inline search host (it is adopted into the sheet on open); show the
+     phone-only trigger icon. The host's children keep their ids, so applyFilters
+     reads #search-box / #filter-status whether they sit here or in the sheet. */
+  .hc-search-host { display: none; }
+  .hc-search-trigger { display: inline-flex; }
   .worktree-selector .hc-select { max-width: 140px; }
+}
+/* When the sheet has adopted the search host, it must show regardless of the
+   phone-width hide rule above (the host moves into .search-sheet-body, so this
+   descendant override re-reveals it inside the sheet). */
+.search-sheet-body .hc-search-host { display: flex; }
+
+/* ── Touch tap targets (coarse pointer only) ──────────────────────────────
+   iOS HIG asks for >=44x44px hit areas. Gated behind (pointer: coarse) so the
+   desktop mouse density is untouched. Two techniques: grow the box with padding
+   / min-height where the control can be larger, or hang an invisible ::before
+   hit-slop that extends the tappable area past a control that must stay visually
+   small (the rendered glyph size is unchanged). A control already padded to >=44
+   gets a min-height floor; the pseudo-slop is only for the icon-sized ones. */
+@media (pointer: coarse) {
+  /* Kill the gray flash on tap; the :active / :focus-visible rules below give a
+     real, intentional affordance instead. */
+  .hc-btn, .hc-select, .theme-toggle, .nav-hamburger, .pin-toggle,
+  .crumb, .task-row, .hc-search-trigger, .search-sheet-close,
+  .child-card, .kanban-card, .share-btn, .vscode-btn, .worktree-selector .hc-select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Enlarging the inline header controls below would push the row past the
+     viewport on a wide touch iPad (768–1366px, above the 620px phone breakpoint
+     where search/filter move into the sheet). Let the header wrap so the taller
+     controls flow onto a second line instead of forcing horizontal page scroll —
+     same mechanism the 860px width block already uses. */
+  .header { flex-wrap: wrap; }
+  .header-controls { flex-wrap: wrap; }
+
+  /* View toggle + status/worktree selects + free-text search: roomy text
+     controls — pad up to 44px tall. */
+  .hc-btn, .hc-select, .hc-search {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  /* Icon-sized controls that must stay visually compact (hamburger, theme):
+     center the glyph and hang a 44x44 hit-slop behind it so the tappable area
+     meets HIG without scaling the icon. position:relative anchors the slop;
+     overflow stays visible so the slop isn't clipped. The search trigger is
+     phone-only (its display is owned by the (max-width: 620px) block) so its
+     hit-slop sizing lives in the phone+coarse block below, NOT here — forcing
+     display:inline-flex on it for all coarse devices would leak the redundant
+     trigger onto iPad next to the still-inline search box. */
+  .nav-hamburger, .theme-toggle {
+    position: relative;
+    min-width: 44px; min-height: 44px;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+  }
+
+  /* The pin toggle keeps its 24px visual chip but gains a centered 44x44 hit
+     area via a pseudo-element (the chip stays small inside the sidebar header). */
+  .pin-toggle { position: relative; }
+  .pin-toggle::before {
+    content: "";
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 44px; height: 44px;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Breadcrumb crumbs: small inline text — extend the hit area to >=44x44 with
+     padding + a min-width/height floor (a short slug crumb is otherwise too
+     narrow to tap), keeping the text itself the same size. */
+  .crumb {
+    padding-top: 11px; padding-bottom: 11px;
+    min-height: 44px; min-width: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  /* The "active" (current) crumb and separators are not tappable, so they keep
+     the compact inline metrics — only the clickable crumbs need the floor. */
+  .crumb.active { min-width: 0; }
+  .crumb-sep { min-width: 0; }
+
+  /* Sidebar tree rows: the primary navigation target on touch. Grow each row's
+     height so a fingertip lands reliably (the compact 5px desktop padding is
+     too tight). The roving-tabindex + nav-active styling is unchanged. */
+  .task-row {
+    padding-top: 11px; padding-bottom: 11px;
+    min-height: 44px;
+  }
+  /* The toggle caret inside a row is a distinct tap target (expand/collapse vs.
+     navigate); give it a 28px-wide, 44px-tall hit area without enlarging the
+     caret glyph. The selector is `.task-row > .task-toggle` (specificity 0,0,2,0)
+     so it beats the later unconditional `.task-toggle { width:16px; height:16px }`
+     base rule regardless of source order — a bare `.task-toggle` here loses on
+     source order and the caret would stay 16x16. */
+  .task-row > .task-toggle {
+    width: 28px; height: 44px;
+    margin: -11px 0;   /* absorb the row's new vertical padding so height is exact */
+  }
+
+  /* Sheet close button: already 32px; floor it to 44. */
+  .search-sheet-close { min-width: 44px; min-height: 44px; }
+
+  /* Tap feedback: a brief, intentional press state replacing the suppressed gray
+     box. focus-visible keeps keyboard rings (an iPad with a keyboard attached). */
+  .hc-btn:active, .crumb:active, .nav-hamburger:active, .theme-toggle:active,
+  .hc-search-trigger:active, .pin-toggle:active, .search-sheet-close:active {
+    background: var(--bg-hover);
+  }
+  .task-row:active { background: var(--accent-soft); }
+
+  /* Horizontal-scroll affordance: a trailing-edge fade on the children-DAG and
+     the kanban so a clipped, scrollable region reads as scrollable on touch (no
+     hover scrollbar to hint it). A mask-image fades the right edge of the scroll
+     container's viewport; paired with scroll-snap on the kanban columns so
+     swipes settle cleanly on a column rather than mid-card. */
+  .children-dag, .kanban {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+            mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  }
+  .kanban { scroll-snap-type: x proximity; }
+  .kanban-col { scroll-snap-align: start; }
+}
+
+/* Phone + touch: the search trigger is the only one shown here (the inline
+   search host is hidden), so its 44x44 hit-slop sizing is scoped to phone width
+   AND coarse pointer — keeping it off iPad (where the inline search stays) and
+   leaving a narrow fine-pointer desktop window with the compact trigger. */
+@media (max-width: 620px) and (pointer: coarse) {
+  .hc-search-trigger {
+    position: relative;
+    min-width: 44px; min-height: 44px;
+    align-items: center; justify-content: center;
+  }
 }
 
 /* ── Breadcrumb ── */
@@ -1009,6 +1302,7 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   gap: 14px;
   padding: 16px 0;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   min-height: 400px;
 }
 .kanban-col {
@@ -1161,21 +1455,55 @@ body.sb-resizing-active { cursor: col-resize; user-select: none; }
   </div>
   <div class="header-spacer"></div>
   <div class="header-controls">
-    <input type="text" class="hc-search" id="search-box" placeholder="Search tasks..." oninput="applyFilters()">
-    <select class="hc-select" id="filter-status" onchange="applyFilters()">
-      <option value="">All statuses</option>
-      <option value="not-started">not-started</option>
-      <option value="in-progress">in-progress</option>
-      <option value="implemented">implemented</option>
-      <option value="revise">revise</option>
-      <option value="approved">approved</option>
-      <option value="archived">archived</option>
-      <option value="postponed">postponed</option>
-    </select>
+    {#- Phone-only trigger for the search/filter sheet. The actual search input
+        and status <select> below are MOVED into the sheet at phone width (their
+        ids travel with them, so applyFilters() is unchanged); on wider screens
+        they stay inline here and this button is hidden. -#}
+    <button class="hc-search-trigger" id="search-trigger" type="button"
+            aria-label="Search and filter tasks" aria-haspopup="dialog"
+            aria-expanded="false" title="Search & filter"
+            onclick="toggleSearchSheet()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round"
+           stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+    </button>
+    {#- Search + status filter live in this host inline on desktop; the sheet
+        adopts them on phone and returns them here on close. -#}
+    <span class="hc-search-host" id="search-host">
+      <input type="text" class="hc-search" id="search-box" placeholder="Search tasks..." oninput="applyFilters()">
+      <select class="hc-select" id="filter-status" onchange="applyFilters()">
+        <option value="">All statuses</option>
+        <option value="not-started">not-started</option>
+        <option value="in-progress">in-progress</option>
+        <option value="implemented">implemented</option>
+        <option value="revise">revise</option>
+        <option value="approved">approved</option>
+        <option value="archived">archived</option>
+        <option value="postponed">postponed</option>
+      </select>
+    </span>
     <button class="hc-btn active" id="btn-workspace" onclick="showView('workspace')">Workspace</button>
     <button class="hc-btn" id="btn-kanban" onclick="showView('kanban')">Kanban</button>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">&#9681;</button>
   </div>
+</div>
+
+{#- Phone search/filter sheet: a bottom sheet that adopts the existing #search-box
+    and #filter-status (moved in by openSearchSheet, returned by closeSearchSheet),
+    so search/filter logic is reused verbatim. Backdrop + focus trap + Esc mirror
+    the drawer pattern. Hidden (display:none) until opened; phone-width only. -#}
+<div class="search-sheet-backdrop" id="search-sheet-backdrop" onclick="closeSearchSheet()"></div>
+<div class="search-sheet" id="search-sheet" role="dialog" aria-modal="true"
+     aria-label="Search and filter tasks">
+  <div class="search-sheet-head">
+    <span class="search-sheet-title">Search &amp; filter</span>
+    <button class="search-sheet-close" id="search-sheet-close" type="button"
+            aria-label="Close search" onclick="closeSearchSheet()">&times;</button>
+  </div>
+  <div class="search-sheet-body" id="search-sheet-body"></div>
 </div>
 
 <!-- ── Content ── -->
@@ -2584,14 +2912,39 @@ function showTreeAndExpand(path) { return revealTask(path); }
    ════════════════════════════════════════════════════════════════════════ */
 var SB_WIDTH_MIN = 200, SB_WIDTH_MAX = 480, SB_WIDTH_DEFAULT = 280;
 var SB_NARROW = 860;                 /* px: below this the sidebar is a drawer */
+/* px: a touch device in landscape needs at least this much width to carry the
+   side-by-side pinned layout; below it (or in portrait) touch falls to drawer. */
+var SB_TOUCH_PIN_MIN = 860;
 var sbPinned = true;                 /* set from localStorage on init */
 var sbWidth = SB_WIDTH_DEFAULT;
 var _sbHideTimer = null;             /* auto-hide grace-delay timer (unpinned) */
 
 function workspaceEl() { return document.getElementById('workspace'); }
 
+/* Capability detection: a coarse-pointer / no-hover device (phone, tablet) has
+   no usable hover, so the hover-reveal .sb-unpinned mode is unreachable by tap.
+   Cached matchMedia, re-evaluated when an iPad gains/loses a trackpad keyboard
+   (the `change` listener in initSidebarChrome re-applies the mode). */
+var _sbTouchMQ = (typeof window.matchMedia === 'function')
+  ? window.matchMedia('(hover: none), (pointer: coarse)') : null;
+function sbIsTouch() { return !!(_sbTouchMQ && _sbTouchMQ.matches); }
+
+/* Portrait orientation (touch tablets in portrait always get the drawer, so a
+   12.9" iPad at 1024×1366 portrait is treated as a tablet, not a desktop). */
+var _sbPortraitMQ = (typeof window.matchMedia === 'function')
+  ? window.matchMedia('(orientation: portrait)') : null;
+function sbIsPortrait() { return !!(_sbPortraitMQ && _sbPortraitMQ.matches); }
+
 /* Whether the current viewport forces drawer mode (overrides pin state). */
 function sbIsNarrow() { return window.innerWidth <= SB_NARROW; }
+
+/* Touch drawer trigger: portrait, or narrow, or the user collapsed the pinned
+   sidebar to the drawer (sbPinned=false maps to drawer on touch, not auto-hide).
+   Landscape + enough room + pinned keeps the side-by-side persistent layout. */
+function sbTouchWantsDrawer() {
+  return sbIsPortrait() || sbIsNarrow()
+    || window.innerWidth < SB_TOUCH_PIN_MIN || !sbPinned;
+}
 
 /* Apply the chosen width as the workspace custom property + sync the resizer's
    aria-valuenow. Clamped by the caller. */
@@ -2608,21 +2961,42 @@ function clampSidebarWidth(w) {
   return Math.max(SB_WIDTH_MIN, Math.min(SB_WIDTH_MAX, Math.round(w)));
 }
 
-/* Set the workspace mode class from (pin state, viewport). Narrow always wins:
-   the sidebar is the overlay drawer regardless of pin. */
+/* Set the workspace mode class from capability, pin state, and viewport.
+   Two disjoint paths, never mixed:
+   - Touch (coarse pointer / no hover): pinned-or-drawer only, never the
+     hover-reveal .sb-unpinned (unreachable by tap). Drawer when portrait /
+     narrow / not enough room / collapsed; persistent pinned otherwise.
+   - Mouse/desktop: the original model — narrow wins (drawer), else
+     pinned/unpinned per the stored pin state, hover-reveal intact. */
 function applySidebarMode() {
   var ws = workspaceEl();
   if (!ws) return;
-  var narrow = sbIsNarrow();
-  ws.classList.toggle('sb-drawer', narrow);
-  ws.classList.toggle('sb-pinned', !narrow && sbPinned);
-  ws.classList.toggle('sb-unpinned', !narrow && !sbPinned);
-  if (narrow || sbPinned) {
-    /* Leaving unpinned/drawer-reveal context: clear any reveal state. */
+  var touch = sbIsTouch();
+  var drawer, pinned, unpinned;
+  if (touch) {
+    drawer = sbTouchWantsDrawer();
+    pinned = !drawer;
+    unpinned = false;             /* never hover-reveal on touch */
+  } else {
+    var narrow = sbIsNarrow();
+    drawer = narrow;
+    pinned = !narrow && sbPinned;
+    unpinned = !narrow && !sbPinned;
+  }
+  ws.classList.toggle('sb-touch', touch);
+  ws.classList.toggle('sb-drawer', drawer);
+  ws.classList.toggle('sb-pinned', pinned);
+  ws.classList.toggle('sb-unpinned', unpinned);
+  /* Mirror drawer mode onto <body>: the hamburger lives in the header (outside
+     the workspace), so the header chrome keys off the body class to show it
+     above the 860px width breakpoint (touch landscape collapsed to drawer). */
+  document.body.classList.toggle('sb-drawer-mode', drawer);
+  if (!unpinned) {
+    /* Leaving the unpinned hover context: clear any reveal state. */
     ws.classList.remove('sb-revealed');
     clearTimeout(_sbHideTimer);
   }
-  if (!narrow) closeDrawer();   /* a resize up from narrow drops the drawer */
+  if (!drawer) closeDrawer();   /* a resize/rotate out of drawer drops it */
   syncPinToggle();
 }
 
@@ -2630,7 +3004,17 @@ function syncPinToggle() {
   var btn = document.getElementById('pin-toggle');
   if (!btn) return;
   btn.setAttribute('aria-pressed', sbPinned ? 'true' : 'false');
-  if (sbPinned) {
+  if (sbIsTouch()) {
+    /* On touch the two pin states map to persistent-pinned <-> drawer, not
+       pinned <-> auto-hide (there is no hover to reveal an auto-hidden bar). */
+    if (sbPinned) {
+      btn.setAttribute('aria-label', 'Collapse sidebar to drawer');
+      btn.title = 'Pinned — tap to collapse to a drawer';
+    } else {
+      btn.setAttribute('aria-label', 'Pin sidebar (keep open)');
+      btn.title = 'Drawer — tap to pin open';
+    }
+  } else if (sbPinned) {
     btn.setAttribute('aria-label', 'Unpin sidebar (auto-hide)');
     btn.title = 'Pinned — click to auto-hide';
   } else {
@@ -2639,8 +3023,9 @@ function syncPinToggle() {
   }
 }
 
-/* Pin toggle: flip pinned/unpinned, persist, re-apply mode. No-op on narrow
-   screens (drawer mode owns the layout there) beyond persisting the choice. */
+/* Pin toggle: flip pinned/unpinned, persist, re-apply mode. On touch this maps
+   pinned <-> drawer; on desktop pinned <-> auto-hide. A no-op on viewports that
+   force the drawer regardless (narrow / portrait) beyond persisting the choice. */
 function toggleSidebarPin() {
   sbPinned = !sbPinned;
   try { localStorage.setItem('dashboard-sidebar-pinned', sbPinned ? '1' : '0'); } catch (e) {}
@@ -2695,6 +3080,16 @@ function initSidebarChrome() {
     rafPending = true;
     requestAnimationFrame(function() { rafPending = false; applySidebarMode(); });
   });
+
+  /* Re-evaluate when input capability changes (an iPad gains/loses a pointer
+     when a trackpad keyboard attaches/detaches) or the device is rotated —
+     a portrait iPad must drop the persistent sidebar for the drawer. */
+  function onCapabilityChange() { applySidebarMode(); }
+  [_sbTouchMQ, _sbPortraitMQ].forEach(function(mq) {
+    if (!mq) return;
+    if (mq.addEventListener) mq.addEventListener('change', onCapabilityChange);
+    else if (mq.addListener) mq.addListener(onCapabilityChange);  /* older Safari */
+  });
 }
 
 /* ── Resizable width: pointer drag + keyboard (←/→) on the separator handle ── */
@@ -2721,8 +3116,9 @@ function initSidebarResizer() {
     persistSidebarWidth();
   }
   rz.addEventListener('pointerdown', function(ev) {
-    /* Drag only makes sense when the sidebar is laid out (not drawer mode). */
-    if (sbIsNarrow()) return;
+    /* Drag only makes sense for a fine pointer with the sidebar laid out
+       (not drawer mode, not touch — the resizer is hidden there anyway). */
+    if (sbIsNarrow() || sbIsTouch()) return;
     ev.preventDefault();
     dragging = true;
     ws.classList.add('sb-resizing');
@@ -2827,6 +3223,115 @@ function drawerKeydown(ev) {
 function onNavigationChrome() {
   hideSidebar(0);
   closeDrawer();
+  closeSearchSheet();
+}
+
+/* ── Phone search/filter sheet ────────────────────────────────────────────
+   On phone the inline #search-box + #filter-status are hidden; the sheet adopts
+   them (so search/filter logic is reused unchanged), shows them at a tappable
+   size, and returns them to the header on close. Backdrop + Esc + focus trap
+   mirror the drawer. The sheet closes on a status selection (a "done filtering"
+   signal); free-text search keeps it open so typing isn't interrupted. */
+var _searchSheetLastFocus = null;
+
+function toggleSearchSheet() {
+  var sheet = document.getElementById('search-sheet');
+  if (sheet && sheet.classList.contains('open')) closeSearchSheet();
+  else openSearchSheet();
+}
+
+function openSearchSheet() {
+  var sheet = document.getElementById('search-sheet');
+  var backdrop = document.getElementById('search-sheet-backdrop');
+  var body = document.getElementById('search-sheet-body');
+  var host = document.getElementById('search-host');
+  var trigger = document.getElementById('search-trigger');
+  if (!sheet || !backdrop || !body || !host) return;
+  if (sheet.classList.contains('open')) return;
+  _searchSheetLastFocus = document.activeElement;
+  body.appendChild(host);              /* adopt the live search/filter elements */
+  backdrop.classList.add('open');
+  sheet.classList.add('open');
+  if (trigger) trigger.setAttribute('aria-expanded', 'true');
+  var search = document.getElementById('search-box');
+  if (search) search.focus();
+  document.addEventListener('keydown', searchSheetKeydown, true);
+}
+
+function closeSearchSheet() {
+  var sheet = document.getElementById('search-sheet');
+  if (!sheet || !sheet.classList.contains('open')) return;
+  var backdrop = document.getElementById('search-sheet-backdrop');
+  var host = document.getElementById('search-host');
+  var controls = document.querySelector('.header-controls');
+  var trigger = document.getElementById('search-trigger');
+  sheet.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+  /* Return the search/filter host to the header (just after the trigger button)
+     so it is inline again when the viewport widens. */
+  if (host && controls && trigger) controls.insertBefore(host, trigger.nextSibling);
+  else if (host && controls) controls.appendChild(host);
+  if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  document.removeEventListener('keydown', searchSheetKeydown, true);
+  if (_searchSheetLastFocus && document.contains(_searchSheetLastFocus)) _searchSheetLastFocus.focus();
+  else if (trigger) trigger.focus();
+  _searchSheetLastFocus = null;
+}
+
+/* Focusable controls inside the open sheet, for the focus trap. */
+function searchSheetFocusables() {
+  var sheet = document.getElementById('search-sheet');
+  if (!sheet) return [];
+  return Array.prototype.filter.call(
+    sheet.querySelectorAll('button, input, select, [href], [tabindex]:not([tabindex="-1"])'),
+    function(el) { return el.offsetParent !== null || el === document.activeElement; }
+  );
+}
+
+/* Esc closes; Tab/Shift+Tab cycle within the sheet (focus trap). */
+function searchSheetKeydown(ev) {
+  var sheet = document.getElementById('search-sheet');
+  if (!sheet || !sheet.classList.contains('open')) return;
+  if (ev.key === 'Escape') { ev.preventDefault(); closeSearchSheet(); return; }
+  if (ev.key !== 'Tab') return;
+  var f = searchSheetFocusables();
+  if (f.length === 0) return;
+  var first = f[0], last = f[f.length - 1];
+  if (ev.shiftKey && document.activeElement === first) {
+    ev.preventDefault(); last.focus();
+  } else if (!ev.shiftKey && document.activeElement === last) {
+    ev.preventDefault(); first.focus();
+  }
+}
+
+/* Close the sheet when the user commits a status filter (a "done filtering"
+   signal). Wired as a separate listener so applyFilters / the inline onchange
+   stay unchanged; free-text typing in the search box leaves the sheet open.
+   Also close it when the viewport widens past the 620px phone breakpoint while
+   open (e.g. an iPhone rotated to landscape): the inline search returns to the
+   header instead of stranding the adopted host inside the bottom sheet —
+   mirrors the drawer's resize-up drop. */
+function initSearchSheet() {
+  var filter = document.getElementById('filter-status');
+  if (filter) {
+    filter.addEventListener('change', function() {
+      var sheet = document.getElementById('search-sheet');
+      if (sheet && sheet.classList.contains('open')) closeSearchSheet();
+    });
+  }
+  var phoneMQ = window.matchMedia
+    ? window.matchMedia('(max-width: 620px)') : null;
+  if (phoneMQ) {
+    /* Fires when crossing 620px in either direction; act only on widening out
+       of phone width (no longer matches) while the sheet is open. */
+    var onPhoneChange = function() {
+      if (phoneMQ.matches) return;
+      var sheet = document.getElementById('search-sheet');
+      if (sheet && sheet.classList.contains('open')) closeSearchSheet();
+    };
+    if (phoneMQ.addEventListener) phoneMQ.addEventListener('change', onPhoneChange);
+    else if (phoneMQ.addListener) phoneMQ.addListener(onPhoneChange);  /* older Safari */
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -3711,6 +4216,7 @@ function deleteComment(taskPath, commentId, btn) {
 document.addEventListener('DOMContentLoaded', async function() {
   initSidebarChrome();    /* pin/resize/drawer chrome — pure presentation */
   initSidebarEvents();
+  initSearchSheet();       /* phone search/filter sheet close-on-selection wiring */
   initTreeKeyboard();      /* roving-tabindex keyboard nav on #nav-tree */
   await loadNavTree();
   initRouter();

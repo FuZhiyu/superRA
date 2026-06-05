@@ -1476,6 +1476,274 @@ class TestMermaidRemoval:
 
 
 # ---------------------------------------------------------------------------
+# Touch-aware sidebar + iPad breakpoints (cheap template-level regression)
+#
+# The behavioral gate is the Playwright touch drive (see the task file); these
+# assert the rendered template still carries the touch primitives so a future
+# edit that drops one fails here cheaply, without a browser.
+# ---------------------------------------------------------------------------
+
+
+class TestTouchSidebar:
+    def test_viewport_fit_cover(self):
+        """viewport-fit=cover is required for env(safe-area-inset-*) to resolve
+        to non-zero values inside the notch/home-indicator region on iOS."""
+        m = re.search(r'<meta name="viewport" content="([^"]*)"', BASE_HTML)
+        assert m and "viewport-fit=cover" in m.group(1)
+
+    def test_capability_detection_media_queries(self):
+        """Mode is chosen by input capability, not raw width: the coarse-pointer
+        / no-hover query and the portrait query must both be present."""
+        assert "(hover: none), (pointer: coarse)" in BASE_HTML
+        assert "(orientation: portrait)" in BASE_HTML
+        assert "function sbIsTouch" in BASE_HTML
+        assert "function sbIsPortrait" in BASE_HTML
+
+    def test_touch_never_enters_hover_reveal(self):
+        """On touch the unpinned hover-reveal state is unreachable by tap, so
+        applySidebarMode must hard-set unpinned=false on the touch path."""
+        assert "unpinned = false;" in BASE_HTML
+
+    def test_mouse_only_chrome_disabled_on_touch(self):
+        """The hover-rail and the drag-resizer are fine-pointer affordances;
+        both are hidden under the .sb-touch guard."""
+        assert ".sb-touch .sidebar-rail { display: none; }" in BASE_HTML
+        assert ".sb-touch .sidebar-resizer { display: none; }" in BASE_HTML
+
+    def test_hamburger_shown_in_drawer_mode_above_breakpoint(self):
+        """A touch landscape iPad collapsed to the drawer sits above the 860px
+        width media query, so the hamburger is driven by the body drawer-mode
+        class (the hamburger is outside the workspace, so a descendant selector
+        on .sb-drawer cannot reach it)."""
+        assert "body.sb-drawer-mode .nav-hamburger { display: inline-flex; }" in BASE_HTML
+        assert "sb-drawer-mode" in BASE_HTML
+
+    def test_safe_area_insets_present(self):
+        """The fixed header and the off-canvas drawer pad past the notch / home
+        indicator with env(safe-area-inset-*)."""
+        assert "env(safe-area-inset-top)" in BASE_HTML
+        assert "env(safe-area-inset-left)" in BASE_HTML
+        assert "env(safe-area-inset-right)" in BASE_HTML
+        assert "env(safe-area-inset-bottom)" in BASE_HTML
+
+    def test_served_page_carries_touch_primitives(self, client):
+        """The same primitives survive the live render (server path), not just
+        the raw template."""
+        text = client.get("/").text
+        assert "viewport-fit=cover" in text
+        assert "(hover: none), (pointer: coarse)" in text
+        assert "env(safe-area-inset-top)" in text
+        assert "body.sb-drawer-mode .nav-hamburger" in text
+
+
+class TestTouchPolish:
+    """Cheap template-level regression assertions for the 02-touch-polish layer
+    (tap targets, phone search sheet, content safe-areas, scroll ergonomics).
+    The behavioral gate is the Playwright drive; these guard against accidental
+    deletion of the load-bearing primitives."""
+
+    def test_tap_targets_gated_behind_coarse_pointer(self):
+        """Tap-target enlargement must be gated behind (pointer: coarse) so the
+        desktop mouse density is untouched."""
+        assert "@media (pointer: coarse)" in BASE_HTML
+        # The enlargement floor (>=44px) lives inside the coarse-pointer block.
+        coarse = BASE_HTML.split("@media (pointer: coarse)", 1)[1]
+        assert "min-height: 44px" in coarse
+        assert "width: 44px; height: 44px;" in coarse  # pin-toggle ::before slop
+
+    def test_caret_coarse_rule_outweighs_base_rule(self):
+        """The coarse `.task-toggle` hit-area override must out-specify the later
+        unconditional `.task-toggle { width:16px; height:16px }` base rule, or
+        source order shadows it and the caret stays 16x16 on touch.  The fix uses
+        the child selector `.task-row > .task-toggle` (specificity 0,0,2,0) which
+        wins regardless of source order.  (The behavioral gate is the rendered
+        assertion in TestTouchPolishRendered; this cheap check catches a
+        regression even where a browser is unavailable.)"""
+        coarse = BASE_HTML.split("@media (pointer: coarse)", 1)[1].split("}\n}", 1)[0]
+        # The coarse caret override must use the higher-specificity child selector,
+        # not a bare `.task-toggle` (which would tie the base rule and lose).
+        assert ".task-row > .task-toggle {" in coarse
+        # And it must still set the 28x44 box.
+        m = re.search(r"\.task-row > \.task-toggle \{[^}]*?"
+                      r"width:\s*28px;\s*height:\s*44px;", coarse, re.S)
+        assert m, "coarse `.task-row > .task-toggle` must set width:28px; height:44px"
+
+    def test_search_trigger_not_forced_visible_on_all_coarse(self):
+        """The phone-only search trigger must NOT be forced `display:inline-flex`
+        for all coarse-pointer devices (that leaks the redundant icon onto iPad
+        next to the still-inline search box).  Its display stays owned by the
+        (max-width: 620px) phone block; its coarse hit-slop sizing is scoped to
+        phone width AND coarse pointer."""
+        # The icon-slop group that forces display must not include the trigger.
+        m = re.search(r"\.nav-hamburger,\s*\.theme-toggle\s*\{[^}]*display:\s*inline-flex",
+                      BASE_HTML, re.S)
+        assert m, "hamburger/theme display group should exist without the trigger"
+        assert ".nav-hamburger, .theme-toggle, .hc-search-trigger {" not in BASE_HTML
+        # The trigger's coarse sizing is gated on phone width too.
+        assert "@media (max-width: 620px) and (pointer: coarse)" in BASE_HTML
+
+    def test_tap_highlight_suppressed_with_active_feedback(self):
+        """The default gray tap flash is suppressed and replaced by a real
+        :active affordance (so taps still give feedback)."""
+        assert "-webkit-tap-highlight-color: transparent;" in BASE_HTML
+        assert ".task-row:active" in BASE_HTML
+
+    def test_phone_search_sheet_present(self):
+        """The phone search/filter sheet, its trigger, and the JS that adopts the
+        existing #search-box / #filter-status into it are all present."""
+        assert 'id="search-sheet"' in BASE_HTML
+        assert 'id="search-trigger"' in BASE_HTML
+        assert 'id="search-sheet-backdrop"' in BASE_HTML
+        assert "function toggleSearchSheet" in BASE_HTML
+        assert "function openSearchSheet" in BASE_HTML
+        assert "function closeSearchSheet" in BASE_HTML
+        # The sheet adopts the live elements rather than duplicating inputs.
+        assert 'id="search-host"' in BASE_HTML
+        assert "body.appendChild(host)" in BASE_HTML
+
+    def test_search_sheet_closed_by_navigation(self):
+        """A navigation selection closes the sheet alongside the drawer."""
+        assert "closeSearchSheet();" in BASE_HTML
+
+    def test_content_safe_area_insets(self):
+        """The detail panel and the bottom sheet pad past the home indicator /
+        notch with env(safe-area-inset-*) (complements 01's chrome insets)."""
+        assert "env(safe-area-inset-bottom)" in BASE_HTML
+        assert "env(safe-area-inset-right)" in BASE_HTML
+
+    def test_scroll_ergonomics(self):
+        """overscroll containment on the scroll regions, plus a horizontal-scroll
+        affordance (mask edge-fade + kanban scroll-snap) under coarse pointer."""
+        assert "overscroll-behavior: contain;" in BASE_HTML
+        assert "overscroll-behavior-x: contain;" in BASE_HTML
+        coarse = BASE_HTML.split("@media (pointer: coarse)", 1)[1]
+        assert "mask-image: linear-gradient(to right" in coarse
+        assert "scroll-snap-type: x proximity;" in coarse
+
+    def test_served_page_carries_polish_primitives(self, client):
+        """The polish primitives survive the live render (server path)."""
+        text = client.get("/").text
+        assert "@media (pointer: coarse)" in text
+        assert 'id="search-sheet"' in text
+        assert "function toggleSearchSheet" in text
+        assert "-webkit-tap-highlight-color: transparent;" in text
+
+
+def _have_chromium() -> bool:
+    """True only if Playwright AND a launchable Chromium are both available, so
+    the rendered touch tests are skipped (not errored) on a bare CI box."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except Exception:
+        return False
+    try:
+        with sync_playwright() as p:
+            b = p.chromium.launch()
+            b.close()
+        return True
+    except Exception:
+        return False
+
+
+@pytest.mark.skipif(not _have_chromium(), reason="playwright+chromium unavailable")
+class TestTouchPolishRendered:
+    """Rendered-behavior regressions for the two control surfaces the
+    string-level tests can't fully pin: the coarse-pointer caret hit box must
+    actually measure >=44px tall (not be shadowed by the later base rule), and
+    the phone-only search trigger must not render on iPad alongside the inline
+    search.  Drives the real server in a thread with Playwright touch contexts;
+    skipped where a browser is unavailable."""
+
+    def _serve(self, plan_root):
+        import threading
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard._project_root = str(plan_root.resolve().parent)
+        plan_dashboard._jinja_env = None
+        plan_dashboard.rebuild_tree()
+        # Pick a free port the same way the lifespan tests do.
+        import socket
+        s = socket.socket()
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+        s.close()
+        t = threading.Thread(target=plan_dashboard.serve, args=(port,), daemon=True)
+        t.start()
+        assert plan_dashboard._wait_for_bind(port, timeout=5.0), "server did not bind"
+        return port, t
+
+    def _stop(self, t):
+        if plan_dashboard._server is not None:
+            plan_dashboard._server.should_exit = True
+        t.join(timeout=5.0)
+
+    def test_caret_hit_box_is_44_tall_on_touch(self, plan_root):
+        """On a coarse/touch render the non-leaf `.task-toggle` caret must measure
+        >=44px tall — the regression that caught the shadowed coarse rule (the
+        caret was stuck at 16x16 because the later base rule won on source
+        order)."""
+        from playwright.sync_api import sync_playwright
+        port, t = self._serve(plan_root)
+        try:
+            with sync_playwright() as p:
+                b = p.chromium.launch()
+                # iPad landscape: coarse pointer, pinned sidebar, tree visible.
+                ctx = b.new_context(viewport={"width": 1024, "height": 768},
+                                    device_scale_factor=2, is_mobile=True, has_touch=True)
+                pg = ctx.new_page()
+                pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
+                pg.wait_for_selector(".task-row > .task-toggle:not(.leaf)", timeout=5000)
+                box = pg.evaluate(
+                    """() => {
+                        const el = document.querySelector('.task-row > .task-toggle:not(.leaf)');
+                        if (!el) return null;
+                        const r = el.getBoundingClientRect();
+                        return {w: r.width, h: r.height};
+                    }""")
+                b.close()
+            assert box is not None, "no non-leaf caret found in the rendered tree"
+            assert box["h"] >= 44 - 0.5, f"caret height {box['h']:.1f}px < 44 (rule shadowed)"
+            assert box["w"] >= 28 - 0.5, f"caret width {box['w']:.1f}px < 28"
+        finally:
+            self._stop(t)
+
+    def test_only_one_search_affordance_on_ipad(self, plan_root):
+        """On every iPad size exactly ONE search affordance is visible: the
+        inline search box, NOT the phone-only trigger.  iPhone is the inverse
+        (trigger only).  Catches the trigger leaking onto coarse iPad."""
+        from playwright.sync_api import sync_playwright
+        port, t = self._serve(plan_root)
+        try:
+            with sync_playwright() as p:
+                b = p.chromium.launch()
+                # iPad sizes — inline search shown, trigger hidden.
+                for w, h in [(768, 1024), (1024, 768), (1366, 1024)]:
+                    ctx = b.new_context(viewport={"width": w, "height": h},
+                                        device_scale_factor=2, is_mobile=True, has_touch=True)
+                    pg = ctx.new_page()
+                    pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
+                    pg.wait_for_timeout(300)
+                    trig = pg.locator("#search-trigger").is_visible()
+                    inline = pg.locator("#search-box").is_visible()
+                    ctx.close()
+                    assert not trig, f"trigger visible on iPad {w}x{h} (should be inline only)"
+                    assert inline, f"inline search hidden on iPad {w}x{h}"
+                # iPhone — trigger shown, inline search hidden.
+                ctx = b.new_context(viewport={"width": 390, "height": 844},
+                                    device_scale_factor=3, is_mobile=True, has_touch=True)
+                pg = ctx.new_page()
+                pg.goto(f"http://127.0.0.1:{port}/", wait_until="domcontentloaded")
+                pg.wait_for_timeout(300)
+                trig = pg.locator("#search-trigger").is_visible()
+                inline = pg.locator("#search-box").is_visible()
+                ctx.close()
+                b.close()
+            assert trig, "trigger hidden on iPhone (should be shown)"
+            assert not inline, "inline search visible on iPhone (should be in sheet/hidden)"
+        finally:
+            self._stop(t)
+
+
+# ---------------------------------------------------------------------------
 # Children-panel client logic (node-backed)
 #
 # The flat-grid-vs-layered-flow decision and the topological tiering live only
