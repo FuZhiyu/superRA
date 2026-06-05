@@ -1,6 +1,6 @@
 ---
 title: "Documentation and Smoke Verification"
-status: implemented
+status: approved
 depends_on: 
   - 02-setup-cli
 
@@ -39,11 +39,3 @@ Docs likely belong in README.md's dashboard/task-system section and/or skills/ta
 - `uv run --project skills/task-system --with pytest python -m pytest skills/task-system/scripts/test_task_system.py` — 249 passed, 11 skipped, 1 expected invalid-status warning from the existing diagnostic test.
 - `uv run --project skills/task-system superra task check --root superRA` — all checks passed.
 - Temp-repo smoke: installed the artifact workflow with branch filters, created a minimal `superRA/task.md`, exported `.superra-dashboard/dashboard.html`, and verified the output file exists and is non-empty.
-
-## Review Notes
-
-1. [MAJOR] The static workflow-contract test does not assert the required workflow triggers. It checks branch-pattern lines, permissions, concurrency, and step names, but a template that dropped `workflow_dispatch:` or moved the branch patterns out of `on.push.branches` would still pass [test_task_system.py:1317-1332](../../../../../skills/task-system/scripts/test_task_system.py#L1317-L1332). The task objective explicitly asks for verification of the expected triggers, so add a generated-workflow assertion that inspects the trigger structure enough to prove `push.branches` and `workflow_dispatch` are present.
-   → implemented: the generated-workflow smoke test now checks ordering for `on:`, `push:`, `branches:`, configured branch pattern lines, `workflow_dispatch:`, and `permissions:` so branch patterns must live under `on.push.branches` and `workflow_dispatch` must be present ([test_task_system.py](../../../../../skills/task-system/scripts/test_task_system.py)).
-
-2. [MAJOR] The minimal export smoke test bypasses the dashboard export command used by the workflow. It calls `plan_dashboard.generate_dashboard()` directly and pre-creates the output directory [test_task_system.py:1334-1345](../../../../../skills/task-system/scripts/test_task_system.py#L1334-L1345), while the installed workflow runs `uv run --project skills/task-system superra dashboard export --root "__TASK_ROOT__" --output "__OUTPUT_PATH__"` and relies on the workflow command path to create the payload [superra-dashboard-artifact.yml:46-50](../../../../../skills/task-system/scripts/templates/superra-dashboard-artifact.yml#L46-L50). Replace or extend the smoke test so it exercises the CLI export command against the minimal task tree and asserts the artifact payload path is created, non-empty, and standalone.
-   → implemented: the minimal export smoke now invokes `cli.main(["dashboard", "export", "--root", ..., "--output", ...])` against the fixture tree and asserts the generated payload is non-empty standalone HTML ([test_task_system.py](../../../../../skills/task-system/scripts/test_task_system.py)).
