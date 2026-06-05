@@ -1,6 +1,6 @@
 ---
 title: "Replace Zotero MCP with Zotero Skills"
-status: approved
+status: in-progress
 depends_on: []
 tags:
   - skill-creation
