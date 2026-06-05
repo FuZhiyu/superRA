@@ -66,31 +66,51 @@ assert_combined_absent() {
 # 1. Help works and lists every required subcommand.
 run_tool --help
 assert_rc "help exits 0" 0
-for cmd in health search item children collections tags fulltext doiindex pdf; do
+for cmd in health libraries search item children collections tags fulltext doiindex pdf; do
   assert_stdout_contains "help lists '$cmd'" "$cmd"
 done
 
 # 2. Health reports the pinned pyzotero version and structured mode info.
+#    The exit code depends on the real environment: 0 when a local Zotero API
+#    is actually running on this machine, 1 when no access mode is available.
+#    Branch so the check is deterministic either way.
 unset ZOTERO_LIBRARY_ID ZOTERO_API_KEY ZOTERO_LIBRARY_TYPE
 run_tool health
 assert_stdout_contains "health reports pyzotero version" '"pyzotero_version": "1.13.0"'
 assert_stdout_contains "health reports active_mode field" '"active_mode"'
-# No usable mode without local API or credentials.
-assert_rc "health exits non-zero with no access mode" 1
+if printf '%s' "$TOOL_OUT" | rg -q --fixed-strings '"local_api_available": true'; then
+  assert_rc "health exits 0 when local API is available" 0
+else
+  assert_rc "health exits non-zero with no access mode" 1
+fi
 
-# 3. Clean error (not a stack trace) when no mode is available.
-run_tool search "anything"
-assert_rc "search without access exits 1" 1
+# 3. Clean error (not a stack trace) when no mode is available. Force --mode web
+#    with no credentials so the no-access path is deterministic even when a local
+#    Zotero API is running on the test machine.
+run_tool search "anything" --mode web
+assert_rc "web search without creds exits 1" 1
 [ -n "$TOOL_ERR" ] && grep -q '^error:' <<<"$TOOL_ERR" \
   && record_pass "search emits a clean 'error:' line" \
   || record_fail "search emits a clean 'error:' line"
 
-# 4. Full-text search states its Web API requirement when web is unconfigured.
-run_tool search "anything" --fulltext
-assert_rc "fulltext search without web creds exits 1" 1
+# 4. Full-text search reaches the same access-mode resolution as plain search
+#    (it is NOT web-only — the local API serves qmode=everything, verified live
+#    in task 05). With --mode web and no credentials it errors naming the Web
+#    API requirement. The local full-text path needs a live library and is
+#    covered by task 05's smoke test, not this credential-free suite.
+run_tool search "anything" --fulltext --mode web
+assert_rc "web fulltext without creds exits 1" 1
 grep -q 'Web API' <<<"$TOOL_ERR" \
-  && record_pass "fulltext error names Web API requirement" \
-  || record_fail "fulltext error names Web API requirement"
+  && record_pass "web fulltext error names Web API requirement" \
+  || record_fail "web fulltext error names Web API requirement"
+
+# 4b. An invalid --library spec is rejected deterministically (parse_library
+#     raises before any access attempt — no local API or credentials needed).
+run_tool search "anything" --library notanid
+assert_rc "invalid --library exits 1" 1
+grep -q 'invalid --library' <<<"$TOOL_ERR" \
+  && record_pass "invalid --library names the problem" \
+  || record_fail "invalid --library names the problem"
 
 # 5. No-secret-leak invariant: a forced web call with fake creds must error
 #    without echoing the API key anywhere in stdout or stderr.

@@ -30,7 +30,7 @@ Consider adding tests that mock pyzotero responses and filesystem storage. Also 
 
 Two deterministic test suites now cover the skill. Both run from the repo root without credentials, a live library, or network access.
 
-**[tests/test-zotero-tool.sh](../../tests/test-zotero-tool.sh)** (task 02, extended here) — 21 checks: subcommand presence, health/version JSON, no-access error paths, the no-secret-leak invariant, and `Notes/.env` credential parsing. Three `.env` checks were added in this task: with environment variables unset, `load_env_file` must pick up `ZOTERO_LIBRARY_ID` and `ZOTERO_API_KEY` from a project-local `Notes/.env` (using fake non-secret values), and a `.env`-sourced key must still never leak to stdout/stderr. All 21 pass.
+**[tests/test-zotero-tool.sh](../../tests/test-zotero-tool.sh)** (task 02, extended here) — 24 checks: subcommand presence (incl. `libraries`), health/version JSON, no-access error paths, deterministic `--library` validation (an invalid spec is rejected before any access attempt), the no-secret-leak invariant, and `Notes/.env` credential parsing. The `.env` checks confirm that with environment variables unset, `load_env_file` picks up `ZOTERO_LIBRARY_ID` and `ZOTERO_API_KEY` from a project-local `Notes/.env` (fake non-secret values) and that a `.env`-sourced key never leaks to stdout/stderr. All 24 pass.
 
 **[tests/test-zotero-skill-text.sh](../../tests/test-zotero-skill-text.sh)** (new, this task) — 15 checks in two groups:
 
@@ -44,37 +44,31 @@ All 15 pass.
 
 ```
 $ bash tests/test-zotero-tool.sh
-Passed: 21    Failed: 0
+Passed: 24    Failed: 0
 
 $ bash tests/test-zotero-skill-text.sh
 Passed: 15    Failed: 0
 ```
 
-### Live Smoke Test (health probe)
+### Live Smoke Test (local API enabled, 2026-06-04)
 
-Attempted live `health` probe with no credentials set:
+The researcher enabled the Zotero Desktop local API; a full live smoke test was then run against the real library with no Web API credentials (local mode throughout). All commands succeeded. Results are reported generically below — no private library contents (titles, item keys, group names/ids, counts, file paths) are recorded here.
 
-```
-$ unset ZOTERO_LIBRARY_ID ZOTERO_API_KEY ZOTERO_LIBRARY_TYPE
-$ uv run --quiet --script skills/zotero-paper-reader/scripts/zotero_tool.py health
-{
-  "pyzotero_version": "1.13.0",
-  "local_api_available": false,
-  "web_api_configured": false,
-  "library_type": "user",
-  "active_mode": null,
-  "config_present": {
-    "ZOTERO_LIBRARY_ID": false,
-    "ZOTERO_API_KEY": false
-  }
-}
-no usable access mode: enable the Zotero Desktop local API or configure Web API credentials (see references/access-modes.md)
-exit: 1
-```
+| Command | Outcome |
+|---|---|
+| `health` | `local_api_available: true`, `active_mode: "local"`, `pyzotero_version: 1.13.0`, exit 0 |
+| `collections` / `tags` | returned the library's collections and tags as JSON (mode local) |
+| `search "<term>" --limit 3` | returned matching items (mode local); fields `data.itemType/title/creators/date/DOI` present |
+| `children <ITEM_KEY>` | listed children; a PDF attachment was identified by `data.contentType == "application/pdf"` |
+| `pdf <ATTACHMENT_KEY>` | `{"source": "local-storage", "path": ...}` — resolved straight from local storage, no network |
+| `libraries` | listed "My Library" plus the user's group libraries, each with `library_id` / `library_type` / `name` |
+| `search "<term>" --library <GROUP_ID>` | returned hits from a group library (group `items(qmode=...)`); `--library group:<id>` alias verified; invalid `--library` value rejected with a clean error |
 
-(The "no usable access mode" line is written to stderr via `eprint` with no `error:` prefix — only `fail()` prefixes `error:`, and `health` does not call it.)
+### Deferred Boundary Resolved (corrected): local full-text search WORKS
 
-`local_api_available: false` — the Zotero Desktop local API is disabled on this machine (connector port answers but `/api` returns `403 Local API is not enabled`, consistent with the finding recorded in task 02). No Web API credentials are present. The full live smoke test (search, children, PDF-path retrieval, local full-text-search boundary probe) could not run; deterministic checks stand in. The `references/access-modes.md` conservative "unverified / Web-API-only" default for local full-text search is unchanged — a live probe was not possible.
+The task-01/02 deferred question — whether the *local* API serves `qmode="everything"` full-text search — is now resolved **live, and the earlier conservative "no" was wrong** (it was set only because the local API was *disabled* during task 02). Direct probes of the local API returned substantially more hits for `qmode=everything` than `qmode=titleCreatorYear` on body-only terms (terms that appear in PDF text but not in titles/metadata), confirming the local API performs full-text content matching.
+
+This exposed a behavioral bug: `cmd_search` previously routed `--fulltext` to the Web API *unconditionally*, so on a local-only machine (local API enabled, no Web credentials — exactly this setup) `search --fulltext` failed with "requires Web API access" even though the local API serves it. **Fix:** `cmd_search` now uses `qmode="everything"` against the active access mode (local-first under `--mode auto`), identical mode-resolution to plain search. Verified live: `search "<term>" --fulltext` now runs in local mode (exit 0) and returns full-text matches (far more than the metadata-only `search`). Full-text hits are frequently attachment items, handled by the existing parent-item hydration step in `paper-reading.md`. The contract (`references/access-modes.md` capability matrix), `SKILL.md`, and `paper-reading.md` were updated to mark local full-text search as supported.
 
 ### Mocked Tests
 

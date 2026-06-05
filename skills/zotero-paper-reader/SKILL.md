@@ -1,6 +1,6 @@
 ---
 name: zotero-paper-reader
-description: Read and analyze academic papers from the user's Zotero library. Use proactively when the user asks to read, find, access, summarize, or analyze a paper by title, author, DOI, or topic from their Zotero library. Handles the complete workflow: search Zotero, locate the PDF, convert to markdown via the mistral-pdf-to-markdown skill, save under Notes/PaperInMarkdown, and analyze in sections. Also use for library queries: metadata search, full-text search, collection listing, tag listing, DOI-to-key lookup, and attachment retrieval.
+description: Read and analyze academic papers from the user's Zotero library. Use proactively when the user asks to read, find, access, summarize, or analyze a paper by title, author, DOI, or topic from their Zotero library. Handles the complete workflow: search Zotero, locate the PDF, convert to markdown via the mistral-pdf-to-markdown skill, save under Notes/PaperInMarkdown, and analyze in sections. Also use for library queries: listing libraries (user and group), metadata search, full-text search, collection listing, tag listing, DOI-to-key lookup, and attachment retrieval — in the user's own library or any group library.
 user-invocable: true
 ---
 
@@ -20,7 +20,7 @@ Load [`references/paper-reading.md`](references/paper-reading.md) for the full s
 
 **Summary of steps:**
 
-1. Search: `zotero_tool.py search "query"` — plain metadata search; `--fulltext` for indexed content (Web API only).
+1. Search: `zotero_tool.py search "query"` — plain metadata search; `--fulltext` for indexed content (local or web).
 2. Identify top-level item: inspect `data.itemType` on each hit; attachment hits from `--fulltext` need parent hydration via `data.parentItem`.
 3. Choose: present concise metadata when multiple top-level papers match; ask the user only if the intended paper cannot be inferred.
 4. Get PDF attachment key: `zotero_tool.py children ITEM_KEY` → find child with `data.contentType == "application/pdf"`.
@@ -32,8 +32,9 @@ Load [`references/paper-reading.md`](references/paper-reading.md) for the full s
 
 | Goal | Command |
 |---|---|
+| List libraries (user + groups) | `libraries` |
 | Metadata search (title/creator/year) | `search "query"` |
-| Full-text search (indexed content; Web API only) | `search "query" --fulltext` |
+| Full-text search (indexed content; local or web) | `search "query" --fulltext` |
 | Single item | `item ITEM_KEY` |
 | Child items / attachments | `children ITEM_KEY` |
 | Attachment full-text retrieval (one attachment) | `fulltext ATTACHMENT_KEY` |
@@ -44,6 +45,8 @@ Load [`references/paper-reading.md`](references/paper-reading.md) for the full s
 | Health / access check | `health` |
 
 All commands emit JSON. Add `--help` to any subcommand for parameter details.
+
+**Targeting a library.** By default commands act on the user's own library ("My Library"). To act on a group library instead, run `libraries` first to get the group ids, then pass `--library <group-id>` (or `--library group:<id>`) — e.g. `search "your query" --library <group-id>`. Works on `search`, `item`, `children`, `collections`, `tags`, `fulltext`, `doiindex`, and `pdf`.
 
 ## Configuration
 

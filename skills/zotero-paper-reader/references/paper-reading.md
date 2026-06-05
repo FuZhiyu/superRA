@@ -10,11 +10,16 @@ Commands below are shown in full form: `uv run --script ${CLAUDE_SKILL_DIR}/scri
 
 ```bash
 # Metadata search — title, creator, year (local or web API)
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "Du intermediary constraints"
+uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "author or title keywords"
 
-# Full-text search — indexed PDF content (Web API only)
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "factor zoo" --fulltext
+# Full-text search — indexed PDF content (local or web)
+uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "a phrase from the body text" --fulltext
+
+# Search a specific group library (get ids from the `libraries` command)
+uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "your topic" --library <group-id>
 ```
+
+Searches default to the user's own library. To search a group library, first run `libraries` to list the user library and all groups with their ids, then pass `--library <group-id>` (or `--library group:<id>`) to `search` (and the other read commands). If the user names a project/group, resolve its id via `libraries` rather than guessing.
 
 **Output shape:**
 
@@ -27,10 +32,10 @@ uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "factor zoo" -
       "key": "ABC12345",
       "data": {
         "itemType": "journalArticle",
-        "title": "Are Intermediary Constraints Priced?",
-        "creators": [{"lastName": "Du", "firstName": "Wenxin", "creatorType": "author"}, ...],
-        "date": "2023",
-        "DOI": "10.1093/rfs/hhad008",
+        "title": "A Representative Paper Title",
+        "creators": [{"lastName": "Author", "firstName": "First", "creatorType": "author"}, ...],
+        "date": "2020",
+        "DOI": "10.1234/example.doi",
         "abstractNote": "..."
       }
     }
@@ -100,10 +105,10 @@ When the search returns multiple distinct top-level items, present a concise lis
 **Format for disambiguation:**
 
 ```
-Found 3 papers matching "intermediary":
-1. Du et al. (2023) — "Are Intermediary Constraints Priced?" (RFS) [key: ABC12345]
-2. He & Krishnamurthy (2013) — "Intermediary Asset Pricing" (AER) [key: DEF67890]
-3. Adrian et al. (2014) — "Financial Intermediaries and the Cross-Section of Asset Returns" (JF) [key: GHI11223]
+Found 3 papers matching "<query>":
+1. Author A et al. (YYYY) — "First Matching Title" (Journal) [key: ABC12345]
+2. Author B & Author C (YYYY) — "Second Matching Title" (Journal) [key: DEF67890]
+3. Author D et al. (YYYY) — "Third Matching Title" (Journal) [key: GHI11223]
 
 Which paper did you mean? (reply with number or key)
 ```
@@ -189,9 +194,9 @@ Notes/PaperInMarkdown/Author_Year_ShortTitle.md
 **Filename convention:** `Author_Year_ShortTitle.md` — replace spaces with underscores, remove special characters, truncate long titles to ~5 words.
 
 Examples:
-- `Du_et_al_2023_Are_Intermediary_Constraints_Priced.md`
-- `He_Krishnamurthy_2013_Intermediary_Asset_Pricing.md`
-- `Fama_French_1993_Common_Risk_Factors.md`
+- `Smith_2021_Short_Descriptive_Title.md`
+- `Jones_Lee_2019_Another_Paper_Title.md`
+- `AuthorA_et_al_2020_Truncated_Long_Title.md`
 
 The `mistral-pdf-to-markdown` skill currently ships in the `pdf2markdown-converter` plugin but reference it by capability name only — it may be installed from a different plugin on different machines.
 
@@ -261,7 +266,7 @@ Note: Zotero may be running but the local API off — the connector port answers
 
 ### Missing Web API credentials
 
-**Symptom:** A command requires Web API mode (e.g., `search --fulltext`, or local API unavailable) and fails with "Web API mode needs ZOTERO_LIBRARY_ID and ZOTERO_API_KEY".
+**Symptom:** No access mode is available — the local API is disabled/unreachable and no Web API credentials are set — and a command fails with "Web API mode needs ZOTERO_LIBRARY_ID and ZOTERO_API_KEY".
 
 **Action:** Inform the user. They need to set environment variables `ZOTERO_LIBRARY_ID` and `ZOTERO_API_KEY` (and optionally `ZOTERO_LIBRARY_TYPE`). These can go in the shell profile/`secrets.sh` or in `Notes/.env`. See [`access-modes.md`](access-modes.md) for where to find these values.
 
@@ -270,9 +275,3 @@ Note: Zotero may be running but the local API off — the connector port answers
 **Symptom:** `search "query" --fulltext` returns items where `data.itemType == "attachment"` instead of journal articles or books.
 
 **Action:** For each attachment hit, read `data.parentItem` and call `item PARENT_KEY` to retrieve the parent item metadata. Use the parent's `key` as ITEM_KEY for all subsequent steps. This is expected behavior — full-text search indexes attachment content, and the match is reported on the attachment rather than the parent. See Step 2 above for the exact pattern.
-
-### Full-text search requires Web API
-
-**Symptom:** `search "query" --fulltext` fails with "full-text search requires Web API access".
-
-**Action:** The `--fulltext` flag always routes to the Web API (local API support is unverified). Configure Web API credentials. Plain `search "query"` (without `--fulltext`) uses the local API and matches on title/creator/year metadata — use it as a fallback when Web API credentials are unavailable.
