@@ -10,7 +10,7 @@ Search, retrieve, and analyze papers from a Zotero library using pyzotero. Defau
 
 ## Access Model
 
-The bundled tool (`scripts/zotero_tool.py`) detects which mode to use automatically. Run it with `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py` so it resolves correctly regardless of where the skill is installed.
+The bundled tool (`scripts/zotero_tool.py`) detects which mode to use automatically. Run it with `uv run --script <skill-dir>/scripts/zotero_tool.py`, where `<skill-dir>` is the directory containing this `SKILL.md` — substitute the real path. This resolves correctly regardless of which harness loaded the skill or where it is installed.
 
 Load [`references/access-modes.md`](references/access-modes.md) if you need fallback rules, credential setup details, or troubleshooting for access-mode issues.
 

@@ -3,7 +3,7 @@
 # Blocks MCP regressions (mcp__zotero / mcp_zotero) and stale setup
 # instructions (old hardcoded paths, uv run --project, get_zotero_pdf.py).
 # Also asserts positive invariants: every uv invocation uses --script, and
-# all command examples reference ${CLAUDE_SKILL_DIR}.
+# all command examples use the harness-neutral <skill-dir> placeholder.
 #
 # Run from the repo root: bash tests/test-zotero-skill-text.sh
 
@@ -60,9 +60,14 @@ assert_absent "no use_mcp_tool instruction"       "use_mcp_tool"
 # Stale setup-instruction guards                                               #
 # --------------------------------------------------------------------------- #
 
-# Old hardcoded install path that predates CLAUDE_SKILL_DIR support.
+# Old hardcoded install path.
 assert_absent "no .claude/skills/mistral hardcoded path"   ".claude/skills/mistral"
 assert_absent "no .claude/skills/ hardcoded path"          ".claude/skills/"
+
+# Claude-only env var: undefined under Codex/superRA, where it expands to
+# /scripts/zotero_tool.py and every command fails before pyzotero runs. The
+# install-location-independent invocation uses the <skill-dir> placeholder.
+assert_absent "no CLAUDE_SKILL_DIR (Claude-only path)"     "CLAUDE_SKILL_DIR"
 
 # Legacy script name replaced by zotero_tool.py.
 assert_absent "no get_zotero_pdf.py reference"             "get_zotero_pdf.py"
@@ -78,18 +83,18 @@ assert_absent "no zotero_mcp reference"                    "zotero_mcp"
 # Positive invariants                                                          #
 # --------------------------------------------------------------------------- #
 
-# SKILL.md must tell agents to use ${CLAUDE_SKILL_DIR} so the path is
-# install-location independent.
+# SKILL.md must tell agents to use the harness-neutral <skill-dir> placeholder
+# so the path is install-location and harness independent.
 assert_present_in \
-  "SKILL.md references CLAUDE_SKILL_DIR" \
+  "SKILL.md uses <skill-dir> placeholder" \
   "$SKILL_DIR/SKILL.md" \
-  'CLAUDE_SKILL_DIR'
+  '<skill-dir>/scripts/zotero_tool.py'
 
-# paper-reading.md must show the full uv run --script form with CLAUDE_SKILL_DIR.
+# paper-reading.md must show the full uv run --script form with <skill-dir>.
 assert_present_in \
-  "paper-reading.md uses uv run --script with CLAUDE_SKILL_DIR" \
+  "paper-reading.md uses uv run --script with <skill-dir>" \
   "$SKILL_DIR/references/paper-reading.md" \
-  'uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py'
+  'uv run --script <skill-dir>/scripts/zotero_tool.py'
 
 # access-modes.md must document the local API probe behavior (connector port
 # vs. /api path distinction — key for the 403 edge case).

@@ -2,7 +2,7 @@
 
 Complete step-by-step reference for reading and analyzing academic papers from a Zotero library. Covers command invocations, JSON fields, disambiguation, parent-item hydration, and troubleshooting.
 
-Commands below are shown in full form: `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py <subcommand>`. The SKILL.md quick-reference table abbreviates them to just the `<subcommand>` part.
+Commands below are shown in full form: `uv run --script <skill-dir>/scripts/zotero_tool.py <subcommand>`, where `<skill-dir>` is the directory containing the skill's `SKILL.md` (substitute the real path before running). The SKILL.md quick-reference table abbreviates them to just the `<subcommand>` part.
 
 ---
 
@@ -10,13 +10,13 @@ Commands below are shown in full form: `uv run --script ${CLAUDE_SKILL_DIR}/scri
 
 ```bash
 # Metadata search — title, creator, year (local or web API)
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "author or title keywords"
+uv run --script <skill-dir>/scripts/zotero_tool.py search "author or title keywords"
 
 # Full-text search — indexed PDF content (local or web)
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "a phrase from the body text" --fulltext
+uv run --script <skill-dir>/scripts/zotero_tool.py search "a phrase from the body text" --fulltext
 
 # Search a specific group library (get ids from the `libraries` command)
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py search "your topic" --library <group-id>
+uv run --script <skill-dir>/scripts/zotero_tool.py search "your topic" --library <group-id>
 ```
 
 Searches default to the user's own library. To search a group library, first run `libraries` to list the user library and all groups with their ids, then pass `--library <group-id>` (or `--library group:<id>`) to `search` (and the other read commands). If the user names a project/group, resolve its id via `libraries` rather than guessing.
@@ -55,7 +55,7 @@ Full-text search (`--fulltext`) can return **attachment items** (`data.itemType 
 
 ```bash
 # When data.itemType == "attachment", read data.parentItem:
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py item PARENT_KEY
+uv run --script <skill-dir>/scripts/zotero_tool.py item PARENT_KEY
 ```
 
 ```json
@@ -120,7 +120,7 @@ Once the user selects (or if only one match exists), note the ITEM_KEY and conti
 ## Step 4: Get the PDF attachment key
 
 ```bash
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py children ITEM_KEY
+uv run --script <skill-dir>/scripts/zotero_tool.py children ITEM_KEY
 ```
 
 **Output shape:**
@@ -156,7 +156,7 @@ Find the child where `data.contentType == "application/pdf"`. Note its `key` as 
 ## Step 5: Get the PDF file path
 
 ```bash
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py pdf ATTACHMENT_KEY
+uv run --script <skill-dir>/scripts/zotero_tool.py pdf ATTACHMENT_KEY
 ```
 
 **Output shape — local storage hit:**
@@ -243,7 +243,7 @@ Read(file_path="Notes/PaperInMarkdown/FILENAME.md", offset=LINE_NUMBER, limit=30
 **Check:** Run `zotero_tool.py health` and read `active_mode`.
 
 ```bash
-uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py health
+uv run --script <skill-dir>/scripts/zotero_tool.py health
 ```
 
 If `local_api_available` is `false` and `web_api_configured` is `false`, no access mode is available. Ask the user to either (a) start Zotero Desktop and enable the local API under Settings → Advanced → "Allow other applications on this computer to communicate with Zotero", or (b) configure Web API credentials.
