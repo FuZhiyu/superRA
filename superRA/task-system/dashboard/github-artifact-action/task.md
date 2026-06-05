@@ -1,9 +1,8 @@
 ---
 title: "GitHub Actions Dashboard Artifact Publisher"
-status: not-started
-depends_on: 
+status: in-progress
+depends_on:
   - self-contained-export
-
 tags: []
 created: 2026-06-04
 ---

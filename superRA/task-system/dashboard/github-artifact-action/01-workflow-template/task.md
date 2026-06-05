@@ -1,6 +1,6 @@
 ---
 title: "Workflow Template and Artifact Contract"
-status: not-started
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-06-04
@@ -19,3 +19,15 @@ Validation: add unit-level or script-level checks that render the template with 
 Consider a template file under skills/task-system/scripts/templates or a task-system resource path. For deletion, use either actions/github-script or gh api to list repository artifacts and delete entries matching the computed artifact name before actions/upload-artifact runs. Do not depend on upload-artifact overwrite for old workflow runs.
 
 ## Results
+
+### Key Findings
+
+- Added `dashboard_artifact_workflow.py` with the managed workflow marker, default artifact naming config, branch/ref slug sanitizer, and template renderer.
+- Added `templates/superra-dashboard-artifact.yml`, a GitHub Actions workflow template that checks out the triggering ref, exports `superRA/` through `uv run --project skills/task-system superra dashboard export`, deletes older artifacts with the same branch-stable name through `github.rest.actions.deleteArtifact`, and uploads the new artifact with `actions/upload-artifact@v4`.
+- Updated package data so the YAML workflow template is included with the task-system package.
+- Added focused tests for slugging, branch-stable artifact naming, cleanup-before-upload, upload contract, configurable export paths, retention days, and missing-root behavior.
+
+### Verification
+
+- `uv run --project skills/task-system --with pytest python -m pytest skills/task-system/scripts/test_task_system.py -k DashboardArtifactWorkflow` — 4 passed.
+- `uv run --project skills/task-system --with pytest python -m pytest skills/task-system/scripts/test_task_system.py` — 240 passed, 11 skipped, 1 expected invalid-status warning from the existing diagnostic test.

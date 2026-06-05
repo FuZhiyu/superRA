@@ -25,6 +25,7 @@ package-dir = {superra_task_system = "scripts"}
 [tool.setuptools.package-data]
 superra_task_system = [
   "templates/*.html",
+  "templates/*.yml",
   "vendor/*.css",
   "vendor/*.js",
   "vendor/*.md",

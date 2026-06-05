@@ -16,6 +16,7 @@ SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import _task_io
+import dashboard_artifact_workflow
 from _task_io import parse_body_sections
 import plan_dashboard
 import plan_migrate
@@ -1164,6 +1165,48 @@ class TestDashboard:
             plan_root, plan_root / "b.html", root=None
         )
         assert a.read_text("utf-8") == b.read_text("utf-8")
+
+
+class TestDashboardArtifactWorkflow:
+    def test_sanitize_artifact_slug_matches_workflow_contract(self):
+        assert dashboard_artifact_workflow.sanitize_artifact_slug("Feature/Foo Bar") == "feature-foo-bar"
+        assert dashboard_artifact_workflow.sanitize_artifact_slug("analysis/task_system.v2") == "analysis-task_system.v2"
+        assert dashboard_artifact_workflow.sanitize_artifact_slug("!!!") == "ref"
+
+    def test_artifact_name_for_ref_uses_branch_stable_prefix(self):
+        assert (
+            dashboard_artifact_workflow.artifact_name_for_ref("Plan/GitHub Dashboard")
+            == "superra-dashboard-plan-github-dashboard"
+        )
+
+    def test_render_workflow_has_cleanup_upload_and_export_contract(self):
+        workflow = dashboard_artifact_workflow.render_workflow()
+        assert dashboard_artifact_workflow.MANAGED_MARKER in workflow
+        assert "permissions:\n  contents: read\n  actions: write" in workflow
+        assert "concurrency:" in workflow
+        assert "superra-dashboard-artifact-${{ github.ref }}" in workflow
+        assert "uv run --project skills/task-system superra dashboard export --root \"superRA\"" in workflow
+        assert "github.rest.actions.listArtifactsForRepo" in workflow
+        assert "github.rest.actions.deleteArtifact" in workflow
+        assert "actions/upload-artifact@v4" in workflow
+        assert "name: ${{ steps.artifact.outputs.artifact_name }}" in workflow
+        assert "retention-days: 14" in workflow
+        assert "upload-artifact" not in workflow.split("Delete previous artifact for this branch", 1)[0]
+
+    def test_render_workflow_applies_configurable_paths_and_retention(self):
+        config = dashboard_artifact_workflow.WorkflowConfig(
+            task_root="customRA",
+            output_path="build/custom-dashboard.html",
+            artifact_prefix="custom-dashboard",
+            retention_days=3,
+            fail_on_missing_task_root=False,
+        )
+        workflow = dashboard_artifact_workflow.render_workflow(config)
+        assert 'uv run --project skills/task-system superra dashboard export --root "customRA"' in workflow
+        assert '--output "build/custom-dashboard.html"' in workflow
+        assert "custom-dashboard-$slug" in workflow
+        assert "retention-days: 3" in workflow
+        assert "skipping dashboard artifact" in workflow
 
 
 class TestStandaloneSelfContained:

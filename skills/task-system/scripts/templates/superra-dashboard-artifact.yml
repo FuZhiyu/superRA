@@ -1,0 +1,77 @@
+__MANAGED_MARKER__
+name: __WORKFLOW_NAME__
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: superra-dashboard-artifact-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  export-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out triggering ref
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Compute branch artifact name
+        id: artifact
+        shell: bash
+        run: |
+          raw_ref="${GITHUB_REF_NAME:-${GITHUB_REF#refs/heads/}}"
+          slug="$(printf '%s' "$raw_ref" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//')"
+          if [ -z "$slug" ]; then
+            slug="$(printf '%s' "$GITHUB_SHA" | cut -c1-12)"
+          fi
+          echo "branch_slug=$slug" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=__ARTIFACT_PREFIX__-$slug" >> "$GITHUB_OUTPUT"
+
+      - name: Verify task tree exists
+        shell: bash
+        run: |
+          __MISSING_ROOT_GUARD__
+
+      - name: Export dashboard
+        shell: bash
+        run: |
+          mkdir -p "$(dirname "__OUTPUT_PATH__")"
+          uv run --project skills/task-system superra dashboard export --root "__TASK_ROOT__" --output "__OUTPUT_PATH__"
+
+      - name: Delete previous artifact for this branch
+        uses: actions/github-script@v7
+        env:
+          ARTIFACT_NAME: ${{ steps.artifact.outputs.artifact_name }}
+        with:
+          script: |
+            const artifactName = process.env.ARTIFACT_NAME;
+            const { owner, repo } = context.repo;
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner, repo, per_page: 100 }
+            );
+            for (const artifact of artifacts.filter((item) => item.name === artifactName)) {
+              await github.rest.actions.deleteArtifact({
+                owner,
+                repo,
+                artifact_id: artifact.id,
+              });
+            }
+
+      - name: Upload branch dashboard artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.artifact_name }}
+          path: __OUTPUT_PATH__
+          if-no-files-found: error
+          retention-days: __RETENTION_DAYS__
