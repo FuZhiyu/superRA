@@ -47,7 +47,7 @@ $ bash tests/test-zotero-tool.sh
 Passed: 24    Failed: 0
 
 $ bash tests/test-zotero-skill-text.sh
-Passed: 15    Failed: 0
+Passed: 16    Failed: 0
 ```
 
 ### Live Smoke Test (local API enabled, 2026-06-04)
