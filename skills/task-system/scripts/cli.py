@@ -10,9 +10,27 @@ from typing import Callable
 
 if __package__:
     from ._task_io import TASK_ROOT_DIRNAME, resolve_path, resolve_plan_root_arg
+    from .dashboard_artifact_workflow import (
+        DEFAULT_ARTIFACT_PREFIX,
+        DEFAULT_OUTPUT_PATH,
+        DEFAULT_RETENTION_DAYS,
+        DEFAULT_TASK_ROOT,
+        DEFAULT_WORKFLOW_PATH,
+        WorkflowConfig,
+        install_workflow,
+    )
 else:  # pragma: no cover - exercised by direct script users, not package imports
     sys.path.insert(0, str(Path(__file__).parent))
     from _task_io import TASK_ROOT_DIRNAME, resolve_path, resolve_plan_root_arg
+    from dashboard_artifact_workflow import (
+        DEFAULT_ARTIFACT_PREFIX,
+        DEFAULT_OUTPUT_PATH,
+        DEFAULT_RETENTION_DAYS,
+        DEFAULT_TASK_ROOT,
+        DEFAULT_WORKFLOW_PATH,
+        WorkflowConfig,
+        install_workflow,
+    )
 
 
 def _module_main(module_name: str, argv: list[str] | None = None, *, pass_argv: bool = True) -> None:
@@ -87,6 +105,9 @@ def _run_dashboard(args: argparse.Namespace) -> None:
         argv = ["generate", "--plan-root", root]
         _append_optional(argv, "--output", args.output)
         _append_optional(argv, "--root", args.subtree)
+    elif args.dashboard_command == "artifact":
+        _run_dashboard_artifact(args)
+        return
     else:
         argv = ["serve", "--root", root]
         if args.port is not None:
@@ -94,6 +115,27 @@ def _run_dashboard(args: argparse.Namespace) -> None:
         if args.no_open:
             argv.append("--no-open")
     _module_main("plan_dashboard", argv)
+
+
+def _run_dashboard_artifact(args: argparse.Namespace) -> None:
+    config = WorkflowConfig(
+        task_root=args.task_root,
+        output_path=args.output,
+        artifact_prefix=args.artifact_prefix,
+        retention_days=args.retention_days,
+        fail_on_missing_task_root=not args.skip_missing_task_root,
+    )
+    result = install_workflow(
+        Path(args.repo_root),
+        workflow_path=args.workflow_path,
+        config=config,
+        force=args.force,
+        preview_ref=args.preview_ref,
+    )
+    action = "Created" if result.created else "Updated"
+    print(f"{action} {result.path}")
+    print(f"Artifact name pattern: {args.artifact_prefix}-<branch-slug>-<ref-hash>")
+    print(f"Preview for {args.preview_ref!r}: {result.artifact_name_preview}")
 
 
 def _run_read(args: argparse.Namespace) -> None:
@@ -255,6 +297,54 @@ def build_parser() -> argparse.ArgumentParser:
     )
     export.add_argument("--output", default="", help="Output HTML path")
     export.add_argument("--subtree", default="", help="Task path to scope the export")
+    artifact = dash_sub.add_parser("artifact", help="Set up dashboard artifact publishing")
+    artifact_sub = artifact.add_subparsers(dest="artifact_command", required=True)
+    artifact_setup = artifact_sub.add_parser(
+        "setup",
+        help="Install the managed GitHub Actions workflow for dashboard artifacts",
+    )
+    artifact_setup.add_argument("--repo-root", default=".", help="Repository root to write into")
+    artifact_setup.add_argument(
+        "--workflow-path",
+        default=DEFAULT_WORKFLOW_PATH,
+        help="Workflow path relative to the repository root",
+    )
+    artifact_setup.add_argument(
+        "--task-root",
+        default=DEFAULT_TASK_ROOT,
+        help=f"Task root path the workflow exports (default: {DEFAULT_TASK_ROOT})",
+    )
+    artifact_setup.add_argument(
+        "--output",
+        default=DEFAULT_OUTPUT_PATH,
+        help=f"Dashboard HTML output path inside the workflow (default: {DEFAULT_OUTPUT_PATH})",
+    )
+    artifact_setup.add_argument(
+        "--artifact-prefix",
+        default=DEFAULT_ARTIFACT_PREFIX,
+        help=f"Artifact name prefix (default: {DEFAULT_ARTIFACT_PREFIX})",
+    )
+    artifact_setup.add_argument(
+        "--retention-days",
+        type=int,
+        default=DEFAULT_RETENTION_DAYS,
+        help=f"Artifact retention in days (default: {DEFAULT_RETENTION_DAYS})",
+    )
+    artifact_setup.add_argument(
+        "--skip-missing-task-root",
+        action="store_true",
+        help="Make the workflow exit successfully when the task root is absent",
+    )
+    artifact_setup.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing non-superRA-managed workflow file",
+    )
+    artifact_setup.add_argument(
+        "--preview-ref",
+        default="current-branch",
+        help="Reference name used only for printing an artifact-name preview",
+    )
     _set_runner(dashboard, _run_dashboard)
 
     task = sub.add_parser("task", help="Read, query, and mutate task trees")

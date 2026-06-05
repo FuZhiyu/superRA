@@ -29,6 +29,7 @@ import task_query
 import task_read
 import task_rename
 import task_update
+import cli
 
 
 # --- Helpers ---
@@ -1216,6 +1217,75 @@ class TestDashboardArtifactWorkflow:
         assert "custom-dashboard-$slug-$ref_hash" in workflow
         assert "retention-days: 3" in workflow
         assert "skipping dashboard artifact" in workflow
+
+    def test_install_workflow_creates_default_managed_file(self, tmp_path):
+        result = dashboard_artifact_workflow.install_workflow(
+            tmp_path,
+            preview_ref="feature/foo",
+        )
+        assert result.created is True
+        assert result.path == tmp_path / ".github/workflows/superra-dashboard-artifact.yml"
+        content = result.path.read_text(encoding="utf-8")
+        assert dashboard_artifact_workflow.MANAGED_MARKER in content
+        assert result.artifact_name_preview.startswith("superra-dashboard-feature-foo-")
+
+    def test_install_workflow_is_idempotent_for_managed_file(self, tmp_path):
+        first = dashboard_artifact_workflow.install_workflow(tmp_path)
+        second = dashboard_artifact_workflow.install_workflow(tmp_path)
+        assert first.created is True
+        assert second.created is False
+        assert first.path.read_text(encoding="utf-8") == second.path.read_text(encoding="utf-8")
+
+    def test_install_workflow_refuses_unmanaged_overwrite(self, tmp_path):
+        target = tmp_path / ".github/workflows/superra-dashboard-artifact.yml"
+        target.parent.mkdir(parents=True)
+        target.write_text("name: existing\n", encoding="utf-8")
+        with pytest.raises(FileExistsError):
+            dashboard_artifact_workflow.install_workflow(tmp_path)
+
+    def test_install_workflow_force_overwrites_unmanaged_file(self, tmp_path):
+        target = tmp_path / ".github/workflows/custom.yml"
+        target.parent.mkdir(parents=True)
+        target.write_text("name: existing\n", encoding="utf-8")
+        result = dashboard_artifact_workflow.install_workflow(
+            tmp_path,
+            workflow_path=".github/workflows/custom.yml",
+            force=True,
+        )
+        assert result.created is False
+        assert dashboard_artifact_workflow.MANAGED_MARKER in target.read_text(encoding="utf-8")
+
+    def test_cli_dashboard_artifact_setup_writes_configured_workflow(self, tmp_path, capsys):
+        cli.main([
+            "dashboard",
+            "artifact",
+            "setup",
+            "--repo-root",
+            str(tmp_path),
+            "--workflow-path",
+            ".github/workflows/custom.yml",
+            "--task-root",
+            "customRA",
+            "--output",
+            "build/dashboard.html",
+            "--artifact-prefix",
+            "custom-dashboard",
+            "--retention-days",
+            "5",
+            "--skip-missing-task-root",
+            "--preview-ref",
+            "Feature/Foo",
+        ])
+        target = tmp_path / ".github/workflows/custom.yml"
+        content = target.read_text(encoding="utf-8")
+        assert '--root "customRA"' in content
+        assert '--output "build/dashboard.html"' in content
+        assert "custom-dashboard-$slug-$ref_hash" in content
+        assert "retention-days: 5" in content
+        assert "skipping dashboard artifact" in content
+        out = capsys.readouterr().out
+        assert "Created" in out
+        assert "custom-dashboard-feature-foo-" in out
 
 
 class TestStandaloneSelfContained:

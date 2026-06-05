@@ -14,6 +14,7 @@ DEFAULT_TASK_ROOT = "superRA"
 DEFAULT_OUTPUT_PATH = ".superra-dashboard/dashboard.html"
 DEFAULT_ARTIFACT_PREFIX = "superra-dashboard"
 DEFAULT_RETENTION_DAYS = 14
+DEFAULT_WORKFLOW_PATH = ".github/workflows/superra-dashboard-artifact.yml"
 
 _TOKEN_REPLACEMENTS = {
     "__MANAGED_MARKER__": MANAGED_MARKER,
@@ -30,6 +31,15 @@ class WorkflowConfig:
     artifact_prefix: str = DEFAULT_ARTIFACT_PREFIX
     retention_days: int = DEFAULT_RETENTION_DAYS
     fail_on_missing_task_root: bool = True
+
+
+@dataclass(frozen=True)
+class InstallResult:
+    """Result of installing the managed workflow."""
+
+    path: Path
+    artifact_name_preview: str
+    created: bool
 
 
 def sanitize_artifact_slug(ref_name: str) -> str:
@@ -73,6 +83,39 @@ def render_workflow(config: WorkflowConfig | None = None) -> str:
     for token, value in replacements.items():
         template = template.replace(token, value)
     return template
+
+
+def install_workflow(
+    repo_root: Path,
+    workflow_path: str = DEFAULT_WORKFLOW_PATH,
+    config: WorkflowConfig | None = None,
+    *,
+    force: bool = False,
+    preview_ref: str = "current-branch",
+) -> InstallResult:
+    """Install the managed dashboard artifact workflow into *repo_root*."""
+    config = config or WorkflowConfig()
+    target = (repo_root / workflow_path).resolve()
+    root = repo_root.resolve()
+    if not target.is_relative_to(root):
+        raise ValueError(f"Workflow path escapes repository root: {workflow_path}")
+
+    workflow = render_workflow(config)
+    created = not target.exists()
+    if target.exists():
+        existing = target.read_text(encoding="utf-8")
+        if MANAGED_MARKER not in existing and not force:
+            raise FileExistsError(
+                f"{target} exists and is not managed by superRA; pass --force to overwrite"
+            )
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(workflow, encoding="utf-8")
+    return InstallResult(
+        path=target,
+        artifact_name_preview=artifact_name_for_ref(preview_ref, config.artifact_prefix),
+        created=created,
+    )
 
 
 def _missing_root_guard(config: WorkflowConfig) -> str:

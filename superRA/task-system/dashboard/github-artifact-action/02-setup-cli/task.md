@@ -1,6 +1,6 @@
 ---
 title: "Setup CLI for Dashboard Artifact Workflow"
-status: not-started
+status: implemented
 depends_on: 
   - 01-workflow-template
 
@@ -21,3 +21,15 @@ Validation: add CLI tests that install into a temporary repository directory, ve
 A likely command name is superra dashboard setup-artifact-action or superra dashboard artifact setup. Keep implementation small: template rendering plus managed-file marker plus CLI wiring. Avoid adding a GitHub API client to the setup tool; the generated workflow can own runtime artifact cleanup.
 
 ## Results
+
+### Key Findings
+
+- Added `install_workflow()` and `InstallResult` to the dashboard artifact workflow helper, including repository-root containment, managed-file overwrite protection, force overwrite support, and artifact-name preview output.
+- Added the packaged CLI command `superra dashboard artifact setup`. It writes `.github/workflows/superra-dashboard-artifact.yml` by default and exposes flags for repository root, workflow path, task root, dashboard output path, artifact prefix, retention days, missing-task-root behavior, force overwrite, and preview ref.
+- Added tests for default install, idempotent managed-file reinstall, unmanaged overwrite refusal, force overwrite, and CLI flag propagation into the generated workflow.
+
+### Verification
+
+- `uv run --project skills/task-system --with pytest python -m pytest skills/task-system/scripts/test_task_system.py -k DashboardArtifactWorkflow` — 10 passed.
+- `uv run --project skills/task-system --with pytest python -m pytest skills/task-system/scripts/test_task_system.py` — 246 passed, 11 skipped, 1 expected invalid-status warning from the existing diagnostic test.
+- `tmpdir=$(mktemp -d); uv run --project skills/task-system superra dashboard artifact setup --repo-root "$tmpdir" --preview-ref Feature/Foo; test -f "$tmpdir/.github/workflows/superra-dashboard-artifact.yml"` — passed and printed the installed workflow path plus branch artifact preview.
