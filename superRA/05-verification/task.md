@@ -32,13 +32,13 @@ Two deterministic test suites now cover the skill. Both run from the repo root w
 
 **[tests/test-zotero-tool.sh](../../tests/test-zotero-tool.sh)** (task 02, extended here) — 24 checks: subcommand presence (incl. `libraries`), health/version JSON, no-access error paths, deterministic `--library` validation (an invalid spec is rejected before any access attempt), the no-secret-leak invariant, and `Notes/.env` credential parsing. The `.env` checks confirm that with environment variables unset, `load_env_file` picks up `ZOTERO_LIBRARY_ID` and `ZOTERO_API_KEY` from a project-local `Notes/.env` (fake non-secret values) and that a `.env`-sourced key never leaks to stdout/stderr. All 24 pass.
 
-**[tests/test-zotero-skill-text.sh](../../tests/test-zotero-skill-text.sh)** (new, this task) — 15 checks in two groups:
+**[tests/test-zotero-skill-text.sh](../../tests/test-zotero-skill-text.sh)** (new, this task) — 16 checks in three groups:
 
 - MCP regression guards (4 checks): `mcp__zotero`, `mcp_zotero`, `call_mcp`, `use_mcp_tool` must be absent from the entire skill tree.
-- Stale-instruction guards (6 checks): `.claude/skills/mistral` hardcoded path, `.claude/skills/` prefix, `get_zotero_pdf.py`, `uv run --project`, `zotero-mcp-server`, `zotero_mcp` must all be absent.
-- Positive invariants (5 checks): `SKILL.md` references `CLAUDE_SKILL_DIR`; `paper-reading.md` uses `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py`; `access-modes.md` documents the `403` edge case; script pins `pyzotero==1.13.0`; `SKILL.md` mentions `pyzotero`.
+- Stale/hardcoded-path guards (7 checks): `.claude/skills/mistral`, the `.claude/skills/` prefix, the Claude-only `CLAUDE_SKILL_DIR` env var, `get_zotero_pdf.py`, `uv run --project`, `zotero-mcp-server`, and `zotero_mcp` must all be absent.
+- Positive invariants (5 checks): `SKILL.md` and `paper-reading.md` use the harness-neutral `<skill-dir>` placeholder for the `zotero_tool.py` invocation; `access-modes.md` documents the `403` edge case; the script pins `pyzotero==1.13.0`; `SKILL.md` mentions `pyzotero`.
 
-All 15 pass.
+All 16 pass.
 
 ### Verification Commands and Outcomes
 
@@ -82,4 +82,5 @@ One residual gap is accepted: `get_config`'s env-wins-over-file precedence is no
 ## Review Notes
 
 1. **MINOR (task-file coherence)** — The `## Results` description of `tests/test-zotero-skill-text.sh` contradicts the committed suite. Results says the suite has "15 checks" with "Positive invariants (5 checks): `SKILL.md` references `CLAUDE_SKILL_DIR`; `paper-reading.md` uses `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py`". The committed suite ([tests/test-zotero-skill-text.sh](../../tests/test-zotero-skill-text.sh)) now has **16 checks** and asserts the **opposite** invariant: `CLAUDE_SKILL_DIR` must be **absent** (line 70) and the harness-neutral `<skill-dir>` placeholder must be **present** (lines 88-97). It also adds a `.claude/skills/` guard (line 65). The suite ran clean this pass (`Passed: 16  Failed: 0`), so the test itself is correct and current — only the Results prose is stale, describing the pre-`<skill-dir>`-migration state. Update the Results to: 16 checks; positive invariants assert `<skill-dir>` presence in `SKILL.md`/`paper-reading.md` and `CLAUDE_SKILL_DIR` absence; correct the check group counts.
+   → implemented: Results rewritten to 16 checks in three groups — MCP regression guards (4), stale/hardcoded-path guards (7, incl. `CLAUDE_SKILL_DIR` absence), positive invariants (5, now asserting the `<skill-dir>` placeholder). "All 16 pass."
 

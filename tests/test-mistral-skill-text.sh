@@ -62,6 +62,24 @@ assert_present_in \
   '<skill-dir>/scripts'
 
 # --------------------------------------------------------------------------- #
+# PEP 723 invocation form                                                      #
+# --------------------------------------------------------------------------- #
+
+# The converter declares its deps inline (PEP 723), so it MUST be run with
+# `uv run --script`, which installs them. `uv run python <script>` and bare
+# `python <script>` both IGNORE PEP 723 deps and fail with ModuleNotFoundError
+# on a fresh machine — the exact conversion dead-end the in-repo vendoring
+# closes. Lock the documented invocation to the working form.
+assert_absent "no 'uv run python <skill-dir>' (ignores PEP 723 deps)"        "uv run python <skill-dir>"
+assert_absent "no bare 'python <skill-dir>/scripts' (ignores PEP 723 deps)"  "python <skill-dir>/scripts"
+assert_absent "no 'uv,run,python' subprocess list (ignores PEP 723 deps)"    '"uv", "run", "python"'
+
+assert_present_in \
+  "SKILL.md runs converter via 'uv run --script' (PEP 723)" \
+  "$SKILL_DIR/SKILL.md" \
+  'uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py'
+
+# --------------------------------------------------------------------------- #
 # Script integrity                                                             #
 # --------------------------------------------------------------------------- #
 

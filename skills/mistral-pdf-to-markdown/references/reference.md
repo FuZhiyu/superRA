@@ -98,7 +98,7 @@ for pdf_file in pdf_dir.glob("*.pdf"):
     output_file = output_dir / f"{pdf_file.stem}.md"
 
     subprocess.run([
-        "python",
+        "uv", "run", "--script",
         "<skill-dir>/scripts/convert_pdf_to_markdown.py",
         str(pdf_file),
         str(output_file)
@@ -244,7 +244,7 @@ print(f"Model: {ocr_response.model}")
 # Assume figures are on pages 15, 18, 22, 25
 
 # Step 2: Extract those pages
-python <skill-dir>/scripts/convert_pdf_to_markdown.py \
+uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py \
   "paper.pdf" \
   "Output/PDFConversions/paper_figures.md" \
   --pages "15,18,22,25"
@@ -257,7 +257,7 @@ python <skill-dir>/scripts/convert_pdf_to_markdown.py \
 
 ```bash
 # Chapter 3 is pages 45-78
-python <skill-dir>/scripts/convert_pdf_to_markdown.py \
+uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py \
   "book.pdf" \
   "Output/PDFConversions/chapter3.md" \
   --pages "45-78"
@@ -267,7 +267,7 @@ python <skill-dir>/scripts/convert_pdf_to_markdown.py \
 
 ```bash
 # Scanned documents benefit most from OCR
-python <skill-dir>/scripts/convert_pdf_to_markdown.py \
+uv run --script <skill-dir>/scripts/convert_pdf_to_markdown.py \
   "scanned_contract.pdf" \
   "Output/PDFConversions/contract.md"
 ```
