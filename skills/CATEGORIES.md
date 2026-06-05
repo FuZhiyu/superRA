@@ -44,6 +44,8 @@ Agent-facing and standalone-invokable. Called by workflow skills and agent files
 | `report-in-markdown` | Markdown style guide for any agent writing markdown, with progressive-reveal references for figures, LaTeX math, and tables. |
 | `semantic-merge` | Tools for **semantic coherence** in branch integration. Provides mode references for workflow sync authoring, workflow sync review, and standalone merge; resolves conflicts by intent, escalates intent-changing decisions to the user, detects and resolves stale references within the merge's reach, lands a merge commit plus propagation commits as needed to reach semantic coherence (every commit leaves existing protection passing), and records branch-level / task-local / file-local context explaining the approved post-sync diff. Loaded by Sync / `Stage: sync` agents. |
 | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle is in `agent-orchestration/references/worktree-harness-fallback.md`. |
+| `zotero-paper-reader` | Read and analyze academic papers from a Zotero library. Handles search, PDF retrieval, markdown conversion via `mistral-pdf-to-markdown`, and section-by-section analysis. User-invocable standalone; not loaded by workflow agents. |
+| `mistral-pdf-to-markdown` | Convert a PDF to Markdown with image extraction via the Mistral OCR API. The conversion step behind `zotero-paper-reader`; also usable standalone for any scanned or complex-layout PDF. Needs a `MISTRAL_API_KEY`. User-invocable standalone; not loaded by workflow agents. |
 
 ## Meta — system-level
 
