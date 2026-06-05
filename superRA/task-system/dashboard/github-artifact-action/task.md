@@ -1,6 +1,6 @@
 ---
 title: "GitHub Actions Dashboard Artifact Publisher"
-status: in-progress
+status: approved
 depends_on:
   - self-contained-export
 tags: []
