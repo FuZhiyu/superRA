@@ -69,7 +69,7 @@ print(result.stdout)
 
 The script requires:
 - Mistral API key (see API Key Setup below)
-- Python packages: `mistralai`, `python-dotenv`, `pypdf`
+- Python packages: `mistralai`, `python-dotenv`, `pypdf`, `pyyaml` (declared inline in the script's PEP 723 header)
 
 ## API Key Setup
 

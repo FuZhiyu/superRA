@@ -2,6 +2,8 @@
 
 Advanced usage, API details, and troubleshooting for the Mistral OCR PDF converter.
 
+In the path and command examples below, `<skill-dir>` is the directory containing this skill's `SKILL.md` — substitute the real path.
+
 ## API Details
 
 ### Mistral OCR API
