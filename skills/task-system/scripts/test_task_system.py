@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
+import socket
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
@@ -3928,3 +3931,434 @@ class TestIdleShutdown:
             plan_dashboard._worktree_clients.update(saved_clients)
 
         assert fake.should_exit is True
+
+
+def _serve_plan(tmp_path):
+    """Build a minimal task tree under tmp_path/superRA and return its plan root."""
+    plan_root = tmp_path / "superRA"
+    plan_root.mkdir()
+    a = plan_root / "01-a"
+    a.mkdir()
+    _write_task_md(a / "task.md", "A", "not-started", objective="A obj.")
+    return plan_root
+
+
+class TestIdleShutdownLifespan:
+    """Drive the real serve()/lifespan/SSE path with a sub-second idle timeout.
+
+    These lock in the linchpin behavior the task-01 unit tests verify in
+    isolation: the actual ``uvicorn.Server`` self-exits while idle, stays up
+    while a client is connected, and the periodic heartbeat prunes a dead SSE
+    connection from the open-connection count.
+    """
+
+    def _free_port(self):
+        import socket as _socket
+
+        s = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+        s.bind(("localhost", 0))
+        port = s.getsockname()[1]
+        s.close()
+        return port
+
+    def test_server_self_exits_when_idle(self, tmp_path):
+        """A real serve() with a sub-second IDLE_TIMEOUT and no clients exits."""
+        pytest.importorskip("uvicorn")
+        import threading
+
+        plan_root = _serve_plan(tmp_path)
+        plan_dashboard.PLAN_ROOT = plan_root
+        port = self._free_port()
+
+        saved_timeout = plan_dashboard.IDLE_TIMEOUT
+        saved_hb = plan_dashboard.HEARTBEAT_INTERVAL
+        plan_dashboard.IDLE_TIMEOUT = 0.3
+        plan_dashboard.HEARTBEAT_INTERVAL = 0.1
+        t = threading.Thread(target=plan_dashboard.serve, args=(port,), daemon=True)
+        try:
+            t.start()
+            # Server must come up, then self-exit within the idle window.
+            assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+            t.join(timeout=5.0)
+            assert not t.is_alive(), "server did not self-exit while idle"
+            assert not plan_dashboard._port_serving(port)
+        finally:
+            plan_dashboard.IDLE_TIMEOUT = saved_timeout
+            plan_dashboard.HEARTBEAT_INTERVAL = saved_hb
+            if plan_dashboard._server is not None:
+                plan_dashboard._server.should_exit = True
+            t.join(timeout=5.0)
+
+    def test_server_stays_up_while_client_connected(self, tmp_path):
+        """An open /events client holds the server past several idle windows."""
+        pytest.importorskip("uvicorn")
+        pytest.importorskip("httpx")
+        import threading
+
+        import httpx
+
+        plan_root = _serve_plan(tmp_path)
+        plan_dashboard.PLAN_ROOT = plan_root
+        port = self._free_port()
+        url = f"http://localhost:{port}"
+
+        saved_timeout = plan_dashboard.IDLE_TIMEOUT
+        saved_hb = plan_dashboard.HEARTBEAT_INTERVAL
+        plan_dashboard.IDLE_TIMEOUT = 0.3
+        plan_dashboard.HEARTBEAT_INTERVAL = 0.1
+        t = threading.Thread(target=plan_dashboard.serve, args=(port,), daemon=True)
+        try:
+            t.start()
+            assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+
+            # Hold an SSE connection open across multiple idle windows.
+            with httpx.Client(timeout=5.0) as client:
+                with client.stream("GET", f"{url}/events") as resp:
+                    assert resp.status_code == 200
+                    it = resp.iter_lines()
+                    next(it)  # initial heartbeat — connection established
+                    time.sleep(1.0)  # >3 idle windows
+                    assert t.is_alive(), "server exited while a client was connected"
+                    assert plan_dashboard._port_serving(port)
+
+            # Client gone — server now self-exits within an idle window.
+            t.join(timeout=5.0)
+            assert not t.is_alive(), "server did not exit after client left"
+        finally:
+            plan_dashboard.IDLE_TIMEOUT = saved_timeout
+            plan_dashboard.HEARTBEAT_INTERVAL = saved_hb
+            if plan_dashboard._server is not None:
+                plan_dashboard._server.should_exit = True
+            t.join(timeout=5.0)
+
+    def test_heartbeat_prunes_dead_connection(self, tmp_path):
+        """A dropped SSE connection is removed from the count after a heartbeat.
+
+        Opens a streaming /events request, abandons it, and asserts the periodic
+        heartbeat write fails and the generator's finally drops the queue so the
+        open-connection count returns to zero.
+        """
+        pytest.importorskip("uvicorn")
+        pytest.importorskip("httpx")
+        import threading
+
+        import httpx
+
+        plan_root = _serve_plan(tmp_path)
+        plan_dashboard.PLAN_ROOT = plan_root
+        port = self._free_port()
+        url = f"http://localhost:{port}"
+
+        saved_timeout = plan_dashboard.IDLE_TIMEOUT
+        saved_hb = plan_dashboard.HEARTBEAT_INTERVAL
+        # Keep the server alive long enough to observe the prune, but use a tiny
+        # heartbeat so the dead-connection write happens quickly.
+        plan_dashboard.IDLE_TIMEOUT = 5.0
+        plan_dashboard.HEARTBEAT_INTERVAL = 0.1
+        t = threading.Thread(target=plan_dashboard.serve, args=(port,), daemon=True)
+        try:
+            t.start()
+            assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+
+            client = httpx.Client(timeout=5.0)
+            stream_cm = client.stream("GET", f"{url}/events")
+            resp = stream_cm.__enter__()
+            assert resp.status_code == 200
+            next(resp.iter_lines())  # establish, registering the queue
+
+            # The connection is registered server-side.
+            deadline = time.monotonic() + 3.0
+            while plan_dashboard._open_connection_count() == 0 and time.monotonic() < deadline:
+                time.sleep(0.05)
+            assert plan_dashboard._open_connection_count() >= 1
+
+            # Abandon the connection hard, then wait for a heartbeat to prune it.
+            try:
+                resp.close()
+            except Exception:
+                pass
+            try:
+                stream_cm.__exit__(None, None, None)
+            except Exception:
+                pass
+            client.close()
+
+            deadline = time.monotonic() + 3.0
+            while plan_dashboard._open_connection_count() > 0 and time.monotonic() < deadline:
+                time.sleep(0.05)
+            assert plan_dashboard._open_connection_count() == 0, (
+                "dead connection was not pruned from the count"
+            )
+        finally:
+            plan_dashboard.IDLE_TIMEOUT = saved_timeout
+            plan_dashboard.HEARTBEAT_INTERVAL = saved_hb
+            if plan_dashboard._server is not None:
+                plan_dashboard._server.should_exit = True
+            t.join(timeout=5.0)
+
+
+class TestRuntimeFileKeying:
+    """PID/log files are keyed to the same repo identity as the port."""
+
+    def test_runtime_dir_uses_git_common_dir(self, tmp_path):
+        common = tmp_path / "common.git"
+        common.mkdir()
+        plan_root = tmp_path / "wt" / "superRA"
+        plan_root.mkdir(parents=True)
+        assert plan_dashboard._runtime_dir(plan_root, str(common)) == common
+        assert plan_dashboard._pid_file(plan_root, str(common)) == (
+            common / "superra-dashboard.pid"
+        )
+        assert plan_dashboard._log_file(plan_root, str(common)) == (
+            common / "superra-dashboard.log"
+        )
+
+    def test_runtime_dir_falls_back_to_plan_root(self, tmp_path):
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        assert plan_dashboard._runtime_dir(plan_root, None) == plan_root.resolve()
+        assert plan_dashboard._pid_file(plan_root, None) == (
+            plan_root.resolve() / "superra-dashboard.pid"
+        )
+
+    def test_shared_across_worktrees_of_one_repo(self, tmp_path):
+        """Two worktrees of the same repo resolve to one PID file."""
+        common = tmp_path / "common.git"
+        common.mkdir()
+        wt_a = tmp_path / "a" / "superRA"
+        wt_b = tmp_path / "b" / "superRA"
+        wt_a.mkdir(parents=True)
+        wt_b.mkdir(parents=True)
+        assert plan_dashboard._pid_file(wt_a, str(common)) == plan_dashboard._pid_file(
+            wt_b, str(common)
+        )
+
+
+class TestPidHelpers:
+    """PID-file read/health helpers used by idempotent launch and stop."""
+
+    def test_read_pid_missing_file(self, tmp_path):
+        assert plan_dashboard._read_pid(tmp_path / "nope.pid") is None
+
+    def test_read_pid_garbage(self, tmp_path):
+        p = tmp_path / "x.pid"
+        p.write_text("not-a-number", encoding="utf-8")
+        assert plan_dashboard._read_pid(p) is None
+
+    def test_read_pid_valid(self, tmp_path):
+        p = tmp_path / "x.pid"
+        p.write_text("12345\n", encoding="utf-8")
+        assert plan_dashboard._read_pid(p) == 12345
+
+    def test_read_pid_port_roundtrip(self, tmp_path):
+        p = tmp_path / "x.pid"
+        plan_dashboard._write_pid_port(p, 12345, 8123)
+        assert plan_dashboard._read_pid_port(p) == (12345, 8123)
+        assert plan_dashboard._read_pid(p) == 12345
+
+    def test_read_pid_port_legacy_pid_only(self, tmp_path):
+        """A legacy pid-only file parses as (pid, None)."""
+        p = tmp_path / "x.pid"
+        p.write_text("12345\n", encoding="utf-8")
+        assert plan_dashboard._read_pid_port(p) == (12345, None)
+
+    def test_pid_alive_self(self):
+        assert plan_dashboard._pid_alive(os.getpid()) is True
+
+    def test_pid_alive_dead(self):
+        # A very high PID is almost certainly not in use.
+        assert plan_dashboard._pid_alive(2_000_000_000) is False
+
+    def test_running_pid_stale_file_cleaned(self, tmp_path):
+        """A PID file naming a dead process is removed and None returned."""
+        p = tmp_path / "x.pid"
+        p.write_text("2000000000", encoding="utf-8")
+        port = TestIdleShutdownLifespan()._free_port()  # nothing serving here
+        assert plan_dashboard._running_pid(p, port) is None
+        assert not p.exists(), "stale PID file should be cleaned up"
+
+    def test_running_pid_alive_but_port_dead(self, tmp_path):
+        """A live PID whose port is not serving is treated as stale."""
+        p = tmp_path / "x.pid"
+        p.write_text(str(os.getpid()), encoding="utf-8")
+        port = TestIdleShutdownLifespan()._free_port()
+        assert plan_dashboard._running_pid(p, port) is None
+        assert not p.exists()
+
+    def test_running_pid_probes_recorded_port(self, tmp_path):
+        """Reuse probes the PID file's recorded port, not the passed-in port.
+
+        Mirrors the real case where a server bound a different port than a fresh
+        derivation would pick (the deterministic port was occupied at launch).
+        """
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.bind(("localhost", 0))
+        listener.listen(1)
+        recorded_port = listener.getsockname()[1]
+        try:
+            p = tmp_path / "x.pid"
+            plan_dashboard._write_pid_port(p, os.getpid(), recorded_port)
+            other_port = TestIdleShutdownLifespan()._free_port()  # nothing serving
+            result = plan_dashboard._running_pid(p, other_port)
+            assert result == (os.getpid(), recorded_port)
+        finally:
+            listener.close()
+
+
+class TestBackgroundLaunch:
+    """End-to-end process-management tests for serve_background / stop_background.
+
+    Each test launches a real detached server with a sub-second idle timeout
+    (passed to the child via its ``--idle-timeout`` arg) so the test is
+    self-cleaning even if an assertion bails early.  Kept few and deterministic
+    per planner guidance.
+    """
+
+    def test_background_launch_returns_and_writes_pid(self, tmp_path):
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        try:
+            rc = plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            )
+            assert rc == 0
+            assert pid_path.exists(), "PID file should be written"
+            pid = plan_dashboard._read_pid(pid_path)
+            assert pid is not None and plan_dashboard._pid_alive(pid)
+            assert plan_dashboard._port_serving(port)
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_idempotent_second_launch_reuses_server(self, tmp_path):
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        try:
+            assert plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            ) == 0
+            pid1 = plan_dashboard._read_pid(pid_path)
+            # Second launch must reuse, not spawn a duplicate.
+            assert plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            ) == 0
+            pid2 = plan_dashboard._read_pid(pid_path)
+            assert pid1 == pid2, "second launch spawned a different process"
+            assert plan_dashboard._pid_alive(pid1)
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_stop_terminates_and_removes_pid(self, tmp_path):
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        assert plan_dashboard.serve_background(
+            plan_root, port, str(common), open_browser=False
+        ) == 0
+        pid = plan_dashboard._read_pid(pid_path)
+        rc = plan_dashboard.stop_background(plan_root, str(common))
+        assert rc == 0
+        assert not pid_path.exists(), "PID file should be removed on stop"
+        # Process should be gone.
+        deadline = time.monotonic() + 5.0
+        while plan_dashboard._pid_alive(pid) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert not plan_dashboard._pid_alive(pid)
+        assert not plan_dashboard._port_serving(port)
+
+    def test_stop_noop_when_nothing_running(self, tmp_path):
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        # No server, no PID file — clean no-op.
+        assert plan_dashboard.stop_background(plan_root, str(common)) == 0
+
+    def test_stale_pid_file_does_not_block_launch(self, tmp_path):
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        # Plant a stale PID file (dead process).
+        pid_path.write_text("2000000000", encoding="utf-8")
+        try:
+            rc = plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            )
+            assert rc == 0, "stale PID file should not block a fresh launch"
+            pid = plan_dashboard._read_pid(pid_path)
+            assert pid is not None and pid != 2000000000
+            assert plan_dashboard._pid_alive(pid)
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_bind_failure_surfaces_nonzero(self, tmp_path):
+        """A child that cannot bind its port → non-zero exit, no PID file.
+
+        Occupies a port with a bound-but-not-listening socket: uvicorn cannot
+        bind it (address in use) and the child exits, while TCP connects are
+        refused so the supervisor's bind poll never sees a false "serving".  The
+        supervisor must time out, surface the error, and return non-zero rather
+        than leaving a dead background process.
+        """
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        # Bind but do not listen → port is occupied, connects are refused.
+        blocker = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        blocker.bind(("0.0.0.0", 0))
+        port = blocker.getsockname()[1]
+        assert not plan_dashboard._port_serving(port), "blocker should refuse connects"
+        try:
+            rc = plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False, bind_timeout=3.0
+            )
+            assert rc != 0, "bind failure should produce a non-zero exit code"
+            # No PID file left naming a dead background process.
+            assert not plan_dashboard._pid_file(plan_root, str(common)).exists()
+        finally:
+            blocker.close()
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_background_server_self_exits_when_idle(self, tmp_path):
+        """A backgrounded server with no clients self-exits within the idle window.
+
+        Launches a real detached child with a short ``idle_timeout`` so the
+        self-exit happens in a couple of seconds, then asserts the process and
+        port are gone without an explicit stop.  This proves background-default
+        is safe to leak: the detached server self-cleans like any other.
+        """
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        try:
+            assert plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False, idle_timeout=0.5
+            ) == 0
+            pid = plan_dashboard._read_pid(pid_path)
+            assert pid is not None
+            # Genuinely detached and reachable from the parent process.
+            assert plan_dashboard._port_serving(port)
+            # No client opened — it self-exits within the (shrunk) idle window.
+            deadline = time.monotonic() + 10.0
+            while plan_dashboard._pid_alive(pid) and time.monotonic() < deadline:
+                time.sleep(0.1)
+            assert not plan_dashboard._pid_alive(pid), "background server did not self-exit"
+            assert not plan_dashboard._port_serving(port)
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))

@@ -24,3 +24,7 @@ The generated workflow must not publish to GitHub Pages or any public URL. It mu
 Likely implementation shape: add a packaged workflow template under skills/task-system, add a CLI subcommand under superra dashboard for installing it, and include a cleanup step using GitHub API before actions/upload-artifact. Keep the artifact name branch-stable after sanitizing the ref name, e.g. superra-dashboard-<branch-slug>.
 
 ## Results
+
+## Sync Impact
+
+Synced with `better-handoff` after the dashboard serve-lifecycle work landed there. The artifact publisher remains a static-export workflow installer under `superra dashboard artifact setup`; plain `superra dashboard` keeps the incoming background server lifecycle and still auto-opens by default unless `--no-open` is used.
