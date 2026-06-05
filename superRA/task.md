@@ -40,7 +40,8 @@ Use `pyzotero`, not a Zotero MCP server. Pyzotero 1.13.0 is the planning baselin
 - **Second increment (post-PR)** — after PR #31, the branch gained: the vendored `mistral-pdf-to-markdown` skill (task 06), multi-library support and the local-API full-text-search fix in `zotero_tool.py`, harness-neutral `<skill-dir>` paths, and expanded tests. Captured as task 06 plus refreshed Results in tasks 02–05; all of tasks 02–06 re-reviewed and re-approved in this second integration pass.
 - Protect: drift/regression suite is `tests/test-zotero-tool.sh` (24), `tests/test-zotero-skill-text.sh` (16), and `tests/test-mistral-skill-text.sh` (9) — full suite passes.
 - Integrate: integration review APPROVED over `3e0de358..HEAD`; one MAJOR (vendored converter must run via `uv run --script`, not `uv run python`/bare `python`, or PEP 723 deps are ignored) and one MINOR (stale verification prose) found and fixed. Minimum-net-diff sweep clean: every hunk is net-new and ties to an approved objective. Consolidation gate: clean-enough (6 coherent tasks, no structural debt) — no pass needed.
-- Finish: pending; the existing PR [#31](https://github.com/FuZhiyu/superRA/pull/31) will be updated (push the branch), not re-created.
+- Document: Results are reader-facing and reviewer-confirmed across all six tasks; no separate maturation pass needed.
+- Finish: second increment pushed to update the existing open PR [#31](https://github.com/FuZhiyu/superRA/pull/31) to `main` (fast-forward, no re-create). Freshness re-checked before push: `origin/main` unchanged at `3e0de358`.
 
 ## Results
 
