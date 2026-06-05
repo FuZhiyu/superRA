@@ -1,6 +1,6 @@
 ---
 title: "Vendor mistral-pdf-to-markdown as In-Repo PDF->Markdown Skill"
-status: implemented
+status: approved
 depends_on: []
 tags: [skill-creation, pdf, markdown, vendoring]
 input:
@@ -54,7 +54,3 @@ Migrated `mistral-pdf-to-markdown` into `skills/mistral-pdf-to-markdown/` as the
 [tests/test-mistral-skill-text.sh](../../tests/test-mistral-skill-text.sh) — a credential-free text-regression suite locking the migration: it confirms the `<skill-dir>` invocation (no Claude-only `${CLAUDE_SKILL_DIR}`), the PEP 723 script header and converter integrity, and (since the v2 fix) the `mistralai>=2,<3` pin and v2 client import. Run with `bash tests/test-mistral-skill-text.sh` from the repo root — passes 11/11.
 
 mistralai v2 fix verified live: `uv run --script .../convert_pdf_to_markdown.py --help` resolves the isolated PEP 723 env, installs `mistralai` 2.4.9, and runs all top-level imports (including `from mistralai.client import Mistral`) before printing help — confirmed to stay isolated even with `~/.venv` (mistralai 1.9.11) active, since `uv run --script` ignores the ambient venv. The live-OCR conversion path was not exercised in this session (`MISTRAL_API_KEY` not set); the OCR call signature is unchanged from the working v1 code, so conversion output is preserved by construction.
-
-## Revision Notes
-
-2026-06-05 — Substantive scope addition (researcher request). `mistralai` 2.x (released 2026-06-03) removed the top-level `Mistral` export, breaking the vendored converter's `from mistralai import Mistral` on every fresh `uv run --script`. Added a requirement to migrate the import to the v2 client path (`from mistralai.client import Mistral`), pin the PEP 723 dependency to the v2 major (`mistralai>=2,<3`), and extend `tests/test-mistral-skill-text.sh` to lock both. The original vendoring work (skill files, harness-neutral paths, discovery surfaces, wiring) is unchanged; this increment only touches `scripts/convert_pdf_to_markdown.py` and `tests/test-mistral-skill-text.sh`. Status reset to `not-started` for this increment.
