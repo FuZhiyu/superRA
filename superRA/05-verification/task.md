@@ -1,6 +1,6 @@
 ---
 title: "Verify Zotero Skill Behavior"
-status: approved
+status: implemented
 depends_on:
   - 04-inventory-and-packaging
 tags: [tests, verification, skill-creation]

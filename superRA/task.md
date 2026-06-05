@@ -1,6 +1,6 @@
 ---
 title: "Replace Zotero MCP with Zotero Skills"
-status: approved
+status: in-progress
 depends_on: []
 tags:
   - skill-creation
@@ -36,19 +36,21 @@ Use `pyzotero`, not a Zotero MCP server. Pyzotero 1.13.0 is the planning baselin
 ## Workflow Status
 
 - Base branch: `main` (GitHub default; researcher decision 2026-06-04). Branch forked from `main` HEAD `3e0de358`; `main` has not advanced, so Sync is a no-op (clean fast-forward).
-- Protect: drift/regression tests are `tests/test-zotero-tool.sh` (21 checks) and `tests/test-zotero-skill-text.sh` (15 checks); full suite passes.
-- Integrate: work is purely additive (new skill + 3 one-line inventory rows + tests) onto an unchanged base; each task passed substantive per-task review.
-- Finish: integrated via PR [#31](https://github.com/FuZhiyu/superRA/pull/31) to `main` (2026-06-04). Freshness re-checked before push: `origin/main` unchanged at `3e0de358`.
+- **First increment** — the MCP-free `zotero-paper-reader` skill (tasks 01–05) was integrated via PR [#31](https://github.com/FuZhiyu/superRA/pull/31) to `main` (2026-06-04). The PR is still open (main unchanged at `3e0de358`).
+- **Second increment (post-PR, now under integration)** — after PR #31, the branch gained: the vendored `mistral-pdf-to-markdown` skill (task 06), multi-library support and the local-API full-text-search fix in `zotero_tool.py`, harness-neutral `<skill-dir>` paths, and expanded tests. Tasks 02–06 are re-opened to `implemented` for this second integration pass; task 01 stays `approved` (untouched by the increment).
+- Protect: drift/regression suite is `tests/test-zotero-tool.sh`, `tests/test-zotero-skill-text.sh`, and `tests/test-mistral-skill-text.sh`.
+- Integrate / Finish: pending this pass; PR #31 will be updated rather than re-created.
 
 ## Results
 
 ### Key Findings
 
-The MCP-free `zotero-paper-reader` skill is complete and verified across five approved tasks:
+The MCP-free `zotero-paper-reader` skill is complete and verified, and now self-contained in-repo, across six tasks:
 
 - **Contract** ([01-skill-contract](01-skill-contract/task.md)) — `SKILL.md` + `references/access-modes.md` define a local-first / Web-API-fallback contract with a capability matrix; full-text *search* (`items(q=..., qmode="everything")`) is kept distinct from attachment full-text *retrieval* (`fulltext_item`).
 - **Tooling** ([02-pyzotero-tooling](02-pyzotero-tooling/task.md)) — `scripts/zotero_tool.py` (PEP 723, `pyzotero==1.13.0` pinned + sidecar lock) exposes 9 JSON subcommands, local-first with Web fallback, local-storage-first PDF retrieval, and no secret leakage. Local full-text search (`qmode="everything"`) was later verified live (task 05, after the local API was enabled) to work in local mode; an early bug that forced `--fulltext` to the Web API was fixed so it honors the active access mode.
 - **Workflow** ([03-paper-reading-workflow](03-paper-reading-workflow/task.md)) — `references/paper-reading.md` migrates the search → locate PDF → convert via `mistral-pdf-to-markdown` → save `Notes/PaperInMarkdown/Author_Year_ShortTitle.md` → section-by-section read workflow onto the new tooling, with no MCP.
 - **Inventory** ([04-inventory-and-packaging](04-inventory-and-packaging/task.md)) — registered in `README.md`, `skills/CATEGORIES.md`, and `skills/using-superRA/SKILL.md` as a standalone Utility skill (not loaded by the Skill-Load Manifest); workflow choreography and generated agent files untouched.
-- **Verification** ([05-verification](05-verification/task.md)) — two credential-free deterministic suites (36 checks total) cover behavior, the no-secret-leak invariant, `.env` parsing, and MCP/stale-instruction regression guards; all pass.
+- **Verification** ([05-verification](05-verification/task.md)) — credential-free deterministic suites cover behavior, the no-secret-leak invariant, `.env` parsing, and MCP/stale-instruction regression guards; plus a live local-mode smoke test (after the researcher enabled the Zotero local API) that confirmed health/search/children/pdf and the corrected local full-text-search boundary.
+- **Vendored conversion skill** ([06-vendor-mistral-skill](06-vendor-mistral-skill/task.md)) — `mistral-pdf-to-markdown` was migrated into `skills/mistral-pdf-to-markdown/` as the canonical in-repo home for the PDF→Markdown step behind `zotero-paper-reader`, removing the external-plugin dependency that previously left conversion as a dead end. Registered as a standalone Utility skill (not loaded by the Manifest) and locked with a text-regression test.
 

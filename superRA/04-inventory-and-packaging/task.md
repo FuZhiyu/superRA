@@ -1,6 +1,6 @@
 ---
 title: "Update Skill Inventory and Packaging Surfaces"
-status: approved
+status: implemented
 depends_on:
   - 03-paper-reading-workflow
 tags: [docs, packaging, skill-creation]
@@ -39,7 +39,15 @@ Three inventory surfaces updated; Manifest and generated agent files are untouch
 - [skills/CATEGORIES.md:47](../../skills/CATEGORIES.md#L47) — added `zotero-paper-reader` row to the Utility table with a trigger-focused description matching the skill's frontmatter.
 - [README.md:89](../../README.md#L89) — added `zotero-paper-reader` row to the Utility Skills table; description covers trigger conditions (reading, finding, summarizing, analyzing by title/author/DOI/topic) and lists library query capabilities, consistent with the skill's frontmatter.
 
+### mistral-pdf-to-markdown rows
+
+When the conversion step behind `zotero-paper-reader` was vendored in-repo (see [06-vendor-mistral-skill](../06-vendor-mistral-skill/task.md)), a matching Utility row was added to the same three surfaces, each describing it as a user-invocable standalone skill needing `MISTRAL_API_KEY`, the conversion step behind `zotero-paper-reader`, and not loaded by workflow agents or the Manifest:
+
+- [skills/using-superRA/SKILL.md:66](../../skills/using-superRA/SKILL.md#L66)
+- [skills/CATEGORIES.md:48](../../skills/CATEGORIES.md#L48)
+- [README.md:90](../../README.md#L90)
+
 ### Verification
 
-All three entries confirmed present via grep. Skill-Load Manifest (Generic and Domain add-on tables in `using-superra`) is unchanged.
+All entries confirmed present via grep. Skill-Load Manifest (Generic and Domain add-on tables in `using-superra`) is unchanged.
 

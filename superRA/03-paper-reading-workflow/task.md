@@ -1,8 +1,9 @@
 ---
 title: "Migrate Paper Reading Workflow"
-status: approved
+status: implemented
 depends_on:
   - 02-pyzotero-tooling
+  - 06-vendor-mistral-skill
 tags: [zotero, pdf, markdown]
 input:
   - skills/zotero-paper-reader/scripts/zotero_tool.py
@@ -31,7 +32,7 @@ Include examples for exact command invocations and JSON fields an agent should i
 
 Rewrote the paper-reading workflow in two files:
 
-**[skills/zotero-paper-reader/SKILL.md](../../skills/zotero-paper-reader/SKILL.md)** — slimmed the workflow section to a 7-step summary and routes detailed procedure to the new reference. The `mistral-pdf-to-markdown` skill is referenced by capability name only (no hardcoded plugin path). The `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py` invocation pattern is preserved for install-location independence.
+**[skills/zotero-paper-reader/SKILL.md](../../skills/zotero-paper-reader/SKILL.md)** — slimmed the workflow section to a 7-step summary and routes detailed procedure to the new reference. The `mistral-pdf-to-markdown` conversion step (Step 6) points at the in-repo skill vendored in [06-vendor-mistral-skill](../06-vendor-mistral-skill/task.md), so the capability is self-contained with no external-plugin dependency. The `uv run --script <skill-dir>/scripts/zotero_tool.py` invocation uses the harness-neutral `<skill-dir>` placeholder (replacing the earlier Claude-only `${CLAUDE_SKILL_DIR}`) for install-location and cross-harness independence.
 
 **[skills/zotero-paper-reader/references/paper-reading.md](../../skills/zotero-paper-reader/references/paper-reading.md)** — new detailed reference containing:
 

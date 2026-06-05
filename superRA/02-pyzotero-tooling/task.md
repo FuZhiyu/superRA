@@ -1,6 +1,6 @@
 ---
 title: "Build UV-Managed Pyzotero Tooling"
-status: approved
+status: implemented
 depends_on:
   - 01-skill-contract
 tags: [python, uv, pyzotero]
