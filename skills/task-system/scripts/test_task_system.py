@@ -19,6 +19,7 @@ SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import _task_io
+import dashboard_artifact_workflow
 from _task_io import parse_body_sections
 import plan_dashboard
 import plan_migrate
@@ -31,6 +32,15 @@ import task_query
 import task_read
 import task_rename
 import task_update
+import cli
+
+
+def _workflow_lines(content: str) -> list[str]:
+    return [line.rstrip() for line in content.splitlines()]
+
+
+def _line_index(lines: list[str], text: str) -> int:
+    return lines.index(text)
 
 
 # --- Helpers ---
@@ -1016,6 +1026,49 @@ class TestDashboard:
         assert "resolveInternalTaskPath" in html
         assert "TASK_PATHS" in html
 
+    def test_generate_accepts_repo_file_base_for_static_links(self, plan_root):
+        """GitHub artifact exports carry a repository blob base so standalone
+        file links and the task-file button open GitHub instead of local editor
+        links."""
+        out = plan_root / "dashboard.html"
+        plan_dashboard.generate_dashboard(
+            plan_root,
+            out,
+            repo_file_base="https://github.com/owner/repo/blob/abc123/",
+        )
+        html = out.read_text("utf-8")
+        assert 'var REPO_FILE_BASE = "https://github.com/owner/repo/blob/abc123";' in html
+        assert "function repoFileHref(path)" in html
+        assert "Open task.md on GitHub" in html
+
+    def test_cli_dashboard_export_forwards_repo_file_base(self, plan_root, monkeypatch):
+        calls = []
+
+        def fake_module_main(module_name, argv=None, *, pass_argv=True):
+            calls.append((module_name, argv, pass_argv))
+
+        monkeypatch.setattr(cli, "_module_main", fake_module_main)
+        cli.main([
+            "dashboard",
+            "export",
+            "--root",
+            str(plan_root),
+            "--repo-file-base",
+            "https://github.com/owner/repo/blob/abc123",
+        ])
+
+        assert calls == [(
+            "plan_dashboard",
+            [
+                "generate",
+                "--plan-root",
+                str(plan_root),
+                "--repo-file-base",
+                "https://github.com/owner/repo/blob/abc123",
+            ],
+            True,
+        )]
+
     def test_dashboard_html_constant_removed(self):
         """The duplicate hand-maintained template is gone — one source remains."""
         src = (SCRIPTS_DIR / "plan_dashboard.py").read_text("utf-8")
@@ -1027,6 +1080,7 @@ class TestDashboard:
         Guards the renderMarkdown anchor-translation logic against removal."""
         src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
         assert "match(/#L" in src
+        assert "repoFileHref(filePath)" in src
 
     def test_build_standalone_fragments_match_server_routes(self, plan_root):
         """Pre-rendered fragments are byte-identical to the live route output."""
@@ -1167,6 +1221,192 @@ class TestDashboard:
             plan_root, plan_root / "b.html", root=None
         )
         assert a.read_text("utf-8") == b.read_text("utf-8")
+
+
+class TestDashboardArtifactWorkflow:
+    def test_sanitize_artifact_slug_matches_workflow_contract(self):
+        assert dashboard_artifact_workflow.sanitize_artifact_slug("Feature/Foo Bar") == "feature-foo-bar"
+        assert dashboard_artifact_workflow.sanitize_artifact_slug("analysis/task_system.v2") == "analysis-task_system.v2"
+        assert dashboard_artifact_workflow.sanitize_artifact_slug("!!!") == "ref"
+
+    def test_artifact_name_for_ref_uses_branch_stable_prefix(self):
+        assert (
+            dashboard_artifact_workflow.artifact_name_for_ref("Plan/GitHub Dashboard")
+            == "superra-dashboard-plan-github-dashboard-e5f9ea141877"
+        )
+
+    def test_artifact_name_resists_slug_collisions(self):
+        slash = dashboard_artifact_workflow.artifact_name_for_ref("feature/foo")
+        hyphen = dashboard_artifact_workflow.artifact_name_for_ref("feature-foo")
+        assert slash.startswith("superra-dashboard-feature-foo-")
+        assert hyphen.startswith("superra-dashboard-feature-foo-")
+        assert slash != hyphen
+
+    def test_render_workflow_has_cleanup_upload_and_export_contract(self):
+        workflow = dashboard_artifact_workflow.render_workflow()
+        assert dashboard_artifact_workflow.MANAGED_MARKER in workflow
+        assert "permissions:\n  contents: read\n  actions: write" in workflow
+        assert "concurrency:" in workflow
+        assert "superra-dashboard-artifact-${{ github.ref }}" in workflow
+        assert "shasum -a 256" in workflow
+        assert 'artifact_name=__ARTIFACT_PREFIX__-$slug-$ref_hash' not in workflow
+        assert "uv run --project skills/task-system superra dashboard export --root \"superRA\"" in workflow
+        assert '--repo-file-base "https://github.com/${{ github.repository }}/blob/${{ github.sha }}"' in workflow
+        assert "github.rest.actions.listArtifactsForRepo" in workflow
+        assert "github.rest.actions.deleteArtifact" in workflow
+        assert "actions/upload-artifact@v4" in workflow
+        assert "name: ${{ steps.artifact.outputs.artifact_name }}" in workflow
+        assert "retention-days: 14" in workflow
+        assert "upload-artifact" not in workflow.split("Delete previous artifact for this branch", 1)[0]
+
+    def test_render_workflow_applies_configurable_paths_and_retention(self):
+        config = dashboard_artifact_workflow.WorkflowConfig(
+            task_root="customRA",
+            output_path="build/custom-dashboard.html",
+            artifact_prefix="custom-dashboard",
+            retention_days=3,
+            fail_on_missing_task_root=False,
+            branch_patterns=("main", "analysis/**"),
+        )
+        workflow = dashboard_artifact_workflow.render_workflow(config)
+        assert 'uv run --project skills/task-system superra dashboard export --root "customRA"' in workflow
+        assert '--output "build/custom-dashboard.html"' in workflow
+        assert "custom-dashboard-$slug-$ref_hash" in workflow
+        assert "retention-days: 3" in workflow
+        assert "skipping dashboard artifact" in workflow
+        assert '      - "main"' in workflow
+        assert '      - "analysis/**"' in workflow
+
+    def test_install_workflow_creates_default_managed_file(self, tmp_path):
+        result = dashboard_artifact_workflow.install_workflow(
+            tmp_path,
+            preview_ref="feature/foo",
+        )
+        assert result.created is True
+        assert result.path == tmp_path / ".github/workflows/superra-dashboard-artifact.yml"
+        content = result.path.read_text(encoding="utf-8")
+        assert dashboard_artifact_workflow.MANAGED_MARKER in content
+        assert result.artifact_name_preview.startswith("superra-dashboard-feature-foo-")
+
+    def test_install_workflow_is_idempotent_for_managed_file(self, tmp_path):
+        first = dashboard_artifact_workflow.install_workflow(tmp_path)
+        second = dashboard_artifact_workflow.install_workflow(tmp_path)
+        assert first.created is True
+        assert second.created is False
+        assert first.path.read_text(encoding="utf-8") == second.path.read_text(encoding="utf-8")
+
+    def test_install_workflow_refuses_unmanaged_overwrite(self, tmp_path):
+        target = tmp_path / ".github/workflows/superra-dashboard-artifact.yml"
+        target.parent.mkdir(parents=True)
+        target.write_text("name: existing\n", encoding="utf-8")
+        with pytest.raises(FileExistsError):
+            dashboard_artifact_workflow.install_workflow(tmp_path)
+
+    def test_install_workflow_force_overwrites_unmanaged_file(self, tmp_path):
+        target = tmp_path / ".github/workflows/custom.yml"
+        target.parent.mkdir(parents=True)
+        target.write_text("name: existing\n", encoding="utf-8")
+        result = dashboard_artifact_workflow.install_workflow(
+            tmp_path,
+            workflow_path=".github/workflows/custom.yml",
+            force=True,
+        )
+        assert result.created is False
+        assert dashboard_artifact_workflow.MANAGED_MARKER in target.read_text(encoding="utf-8")
+
+    def test_cli_dashboard_artifact_setup_writes_configured_workflow(self, tmp_path, capsys):
+        cli.main([
+            "dashboard",
+            "artifact",
+            "setup",
+            "--repo-root",
+            str(tmp_path),
+            "--workflow-path",
+            ".github/workflows/custom.yml",
+            "--task-root",
+            "customRA",
+            "--output",
+            "build/dashboard.html",
+            "--artifact-prefix",
+            "custom-dashboard",
+            "--retention-days",
+            "5",
+            "--branch",
+            "main",
+            "--branch",
+            "analysis/**",
+            "--skip-missing-task-root",
+            "--preview-ref",
+            "Feature/Foo",
+        ])
+        target = tmp_path / ".github/workflows/custom.yml"
+        content = target.read_text(encoding="utf-8")
+        assert '--root "customRA"' in content
+        assert '--output "build/dashboard.html"' in content
+        assert "custom-dashboard-$slug-$ref_hash" in content
+        assert "retention-days: 5" in content
+        assert '      - "main"' in content
+        assert '      - "analysis/**"' in content
+        assert "skipping dashboard artifact" in content
+        out = capsys.readouterr().out
+        assert "Created" in out
+        assert "custom-dashboard-feature-foo-" in out
+
+    def test_cli_dashboard_artifact_setup_reports_guard_errors(self, tmp_path, capsys):
+        with pytest.raises(SystemExit) as excinfo:
+            cli.main([
+                "dashboard",
+                "artifact",
+                "setup",
+                "--repo-root",
+                str(tmp_path),
+                "--workflow-path",
+                "../escape.yml",
+            ])
+        assert excinfo.value.code == 1
+        assert "Error: Workflow path escapes repository root" in capsys.readouterr().err
+
+    def test_generated_workflow_static_contract(self, tmp_path):
+        result = dashboard_artifact_workflow.install_workflow(
+            tmp_path,
+            config=dashboard_artifact_workflow.WorkflowConfig(branch_patterns=("main", "feature/**")),
+        )
+        content = result.path.read_text(encoding="utf-8")
+        lines = _workflow_lines(content)
+        on_idx = _line_index(lines, "on:")
+        push_idx = _line_index(lines, "  push:")
+        branches_idx = _line_index(lines, "    branches:")
+        workflow_dispatch_idx = _line_index(lines, "  workflow_dispatch:")
+        permissions_idx = _line_index(lines, "permissions:")
+        assert on_idx < push_idx < branches_idx < workflow_dispatch_idx < permissions_idx
+        assert "permissions:" in lines
+        assert "  contents: read" in lines
+        assert "  actions: write" in lines
+        assert branches_idx < _line_index(lines, '      - "main"') < workflow_dispatch_idx
+        assert branches_idx < _line_index(lines, '      - "feature/**"') < workflow_dispatch_idx
+        assert "concurrency:" in lines
+        assert "      - name: Delete previous artifact for this branch" in lines
+        assert "      - name: Upload branch dashboard artifact" in lines
+        assert content.index("Delete previous artifact for this branch") < content.index("Upload branch dashboard artifact")
+
+    def test_dashboard_export_payload_path_from_minimal_tree(self, tmp_path):
+        repo = tmp_path / "repo"
+        task_root = repo / "superRA"
+        task_root.mkdir(parents=True)
+        _write_task_md(task_root / "task.md", "Artifact Smoke", "not-started", objective="Smoke tree.")
+        output = repo / ".superra-dashboard" / "dashboard.html"
+        output.parent.mkdir(parents=True)
+        cli.main([
+            "dashboard",
+            "export",
+            "--root",
+            str(task_root),
+            "--output",
+            str(output),
+        ])
+        html = output.read_text(encoding="utf-8")
+        assert "Artifact Smoke" in html
+        assert "window.STANDALONE = true" in html
 
 
 class TestStandaloneSelfContained:

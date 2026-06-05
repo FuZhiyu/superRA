@@ -53,6 +53,14 @@ To invoke the workflow, use the keywords: `using superRA`, `make a plan on...`, 
 
 Run `superra dashboard --root superRA` to open the live dashboard with tree, DAG, and kanban views that auto-update as tasks progress; it launches in the background and returns immediately, reuses an already-running server, and self-exits once idle.
 
+To share a branch snapshot through GitHub Actions artifacts, install the managed workflow:
+
+```bash
+superra dashboard artifact setup
+```
+
+After pushing a branch, open the workflow run in GitHub Actions and download the artifact named `superra-dashboard-<branch-slug>-<ref-hash>`. The artifact contains the branch's exported `superRA/` dashboard HTML; file links in that export point to the triggering commit on GitHub. GitHub artifacts require repository read access, but they are downloads rather than hosted webpages; the workflow deletes older artifacts with the same branch-derived name before uploading the replacement.
+
 ### Key principles of the workflow
 
 1. **Implementer–reviewer pair at every step.** An adversarial reviewer inspects every implementation; work only advances after `APPROVE`. Review is never skipped, regardless of how trivial a step looks.
