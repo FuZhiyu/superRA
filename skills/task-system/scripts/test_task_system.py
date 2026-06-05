@@ -36,6 +36,10 @@ def _workflow_lines(content: str) -> list[str]:
     return [line.rstrip() for line in content.splitlines()]
 
 
+def _line_index(lines: list[str], text: str) -> int:
+    return lines.index(text)
+
+
 # --- Helpers ---
 
 
@@ -1321,11 +1325,17 @@ class TestDashboardArtifactWorkflow:
         )
         content = result.path.read_text(encoding="utf-8")
         lines = _workflow_lines(content)
+        on_idx = _line_index(lines, "on:")
+        push_idx = _line_index(lines, "  push:")
+        branches_idx = _line_index(lines, "    branches:")
+        workflow_dispatch_idx = _line_index(lines, "  workflow_dispatch:")
+        permissions_idx = _line_index(lines, "permissions:")
+        assert on_idx < push_idx < branches_idx < workflow_dispatch_idx < permissions_idx
         assert "permissions:" in lines
         assert "  contents: read" in lines
         assert "  actions: write" in lines
-        assert '      - "main"' in lines
-        assert '      - "feature/**"' in lines
+        assert branches_idx < _line_index(lines, '      - "main"') < workflow_dispatch_idx
+        assert branches_idx < _line_index(lines, '      - "feature/**"') < workflow_dispatch_idx
         assert "concurrency:" in lines
         assert "      - name: Delete previous artifact for this branch" in lines
         assert "      - name: Upload branch dashboard artifact" in lines
@@ -1338,8 +1348,14 @@ class TestDashboardArtifactWorkflow:
         _write_task_md(task_root / "task.md", "Artifact Smoke", "not-started", objective="Smoke tree.")
         output = repo / ".superra-dashboard" / "dashboard.html"
         output.parent.mkdir(parents=True)
-        generated = plan_dashboard.generate_dashboard(task_root, output)
-        assert generated == output
+        cli.main([
+            "dashboard",
+            "export",
+            "--root",
+            str(task_root),
+            "--output",
+            str(output),
+        ])
         html = output.read_text(encoding="utf-8")
         assert "Artifact Smoke" in html
         assert "window.STANDALONE = true" in html
