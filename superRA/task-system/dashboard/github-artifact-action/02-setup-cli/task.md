@@ -1,7 +1,7 @@
 ---
 title: "Setup CLI for Dashboard Artifact Workflow"
 status: approved
-depends_on: 
+depends_on:
   - 01-workflow-template
 
 tags: []

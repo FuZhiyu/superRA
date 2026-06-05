@@ -1,7 +1,7 @@
 ---
 title: "Documentation and Smoke Verification"
 status: approved
-depends_on: 
+depends_on:
   - 02-setup-cli
 
 tags: []
