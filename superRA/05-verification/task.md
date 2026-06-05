@@ -1,6 +1,6 @@
 ---
 title: "Verify Zotero Skill Behavior"
-status: revise
+status: approved
 depends_on:
   - 04-inventory-and-packaging
 tags: [tests, verification, skill-creation]
@@ -78,9 +78,3 @@ Mocked-pyzotero tests were considered for two categories of logic: `load_env_fil
 - The `load_env_file` `Notes/.env` parsing branch is now exercised by the three `.env` checks added to `test-zotero-tool.sh` (a temp `Notes/.env` with environment variables unset, asserting both keys are read and that a `.env`-sourced key does not leak). Mocking is unnecessary — a real temp `.env` is deterministic and credential-free.
 
 One residual gap is accepted: `get_config`'s env-wins-over-file precedence is not asserted, because `health`'s observable surface is only booleans (`config_present`), so both an env value and a `.env` value present as `true` and the source cannot be distinguished from the JSON output. The logic is a one-line `os.environ.get(name) or file_values.get(name)`; the security-critical property (no leak from either source) is covered. No `pyzotero`-response mocks were added — they would duplicate the already-passing deterministic error-path coverage without new signal.
-
-## Review Notes
-
-1. **MINOR (task-file coherence)** — The `## Results` description of `tests/test-zotero-skill-text.sh` contradicts the committed suite. Results says the suite has "15 checks" with "Positive invariants (5 checks): `SKILL.md` references `CLAUDE_SKILL_DIR`; `paper-reading.md` uses `uv run --script ${CLAUDE_SKILL_DIR}/scripts/zotero_tool.py`". The committed suite ([tests/test-zotero-skill-text.sh](../../tests/test-zotero-skill-text.sh)) now has **16 checks** and asserts the **opposite** invariant: `CLAUDE_SKILL_DIR` must be **absent** (line 70) and the harness-neutral `<skill-dir>` placeholder must be **present** (lines 88-97). It also adds a `.claude/skills/` guard (line 65). The suite ran clean this pass (`Passed: 16  Failed: 0`), so the test itself is correct and current — only the Results prose is stale, describing the pre-`<skill-dir>`-migration state. Update the Results to: 16 checks; positive invariants assert `<skill-dir>` presence in `SKILL.md`/`paper-reading.md` and `CLAUDE_SKILL_DIR` absence; correct the check group counts.
-   → implemented: Results rewritten to 16 checks in three groups — MCP regression guards (4), stale/hardcoded-path guards (7, incl. `CLAUDE_SKILL_DIR` absence), positive invariants (5, now asserting the `<skill-dir>` placeholder). "All 16 pass."
-
