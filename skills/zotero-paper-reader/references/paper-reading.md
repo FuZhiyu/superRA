@@ -198,7 +198,7 @@ Examples:
 - `Jones_Lee_2019_Another_Paper_Title.md`
 - `AuthorA_et_al_2020_Truncated_Long_Title.md`
 
-The `mistral-pdf-to-markdown` skill currently ships in the `pdf2markdown-converter` plugin but reference it by capability name only — it may be installed from a different plugin on different machines.
+The `mistral-pdf-to-markdown` skill is bundled in this repo (`skills/mistral-pdf-to-markdown`); invoke it by capability name. It needs a Mistral API key (`MISTRAL_API_KEY`) — see that skill's "API Key Setup".
 
 The conversion skill places extracted images in an `images/` subfolder next to the markdown file. A project-local `Notes/PaperInMarkdown/` convention overrides this default if the project has one.
 
