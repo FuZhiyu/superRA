@@ -1176,8 +1176,15 @@ class TestDashboardArtifactWorkflow:
     def test_artifact_name_for_ref_uses_branch_stable_prefix(self):
         assert (
             dashboard_artifact_workflow.artifact_name_for_ref("Plan/GitHub Dashboard")
-            == "superra-dashboard-plan-github-dashboard"
+            == "superra-dashboard-plan-github-dashboard-e5f9ea141877"
         )
+
+    def test_artifact_name_resists_slug_collisions(self):
+        slash = dashboard_artifact_workflow.artifact_name_for_ref("feature/foo")
+        hyphen = dashboard_artifact_workflow.artifact_name_for_ref("feature-foo")
+        assert slash.startswith("superra-dashboard-feature-foo-")
+        assert hyphen.startswith("superra-dashboard-feature-foo-")
+        assert slash != hyphen
 
     def test_render_workflow_has_cleanup_upload_and_export_contract(self):
         workflow = dashboard_artifact_workflow.render_workflow()
@@ -1185,6 +1192,8 @@ class TestDashboardArtifactWorkflow:
         assert "permissions:\n  contents: read\n  actions: write" in workflow
         assert "concurrency:" in workflow
         assert "superra-dashboard-artifact-${{ github.ref }}" in workflow
+        assert "shasum -a 256" in workflow
+        assert 'artifact_name=__ARTIFACT_PREFIX__-$slug-$ref_hash' not in workflow
         assert "uv run --project skills/task-system superra dashboard export --root \"superRA\"" in workflow
         assert "github.rest.actions.listArtifactsForRepo" in workflow
         assert "github.rest.actions.deleteArtifact" in workflow
@@ -1204,7 +1213,7 @@ class TestDashboardArtifactWorkflow:
         workflow = dashboard_artifact_workflow.render_workflow(config)
         assert 'uv run --project skills/task-system superra dashboard export --root "customRA"' in workflow
         assert '--output "build/custom-dashboard.html"' in workflow
-        assert "custom-dashboard-$slug" in workflow
+        assert "custom-dashboard-$slug-$ref_hash" in workflow
         assert "retention-days: 3" in workflow
         assert "skipping dashboard artifact" in workflow
 

@@ -32,10 +32,11 @@ jobs:
           raw_ref="${GITHUB_REF_NAME:-${GITHUB_REF#refs/heads/}}"
           slug="$(printf '%s' "$raw_ref" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//')"
           if [ -z "$slug" ]; then
-            slug="$(printf '%s' "$GITHUB_SHA" | cut -c1-12)"
+            slug="ref"
           fi
+          ref_hash="$(printf '%s' "$raw_ref" | shasum -a 256 | awk '{print substr($1, 1, 12)}')"
           echo "branch_slug=$slug" >> "$GITHUB_OUTPUT"
-          echo "artifact_name=__ARTIFACT_PREFIX__-$slug" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=__ARTIFACT_PREFIX__-$slug-$ref_hash" >> "$GITHUB_OUTPUT"
 
       - name: Verify task tree exists
         shell: bash

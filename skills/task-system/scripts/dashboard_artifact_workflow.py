@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -46,7 +47,8 @@ def sanitize_artifact_slug(ref_name: str) -> str:
 
 def artifact_name_for_ref(ref_name: str, prefix: str = DEFAULT_ARTIFACT_PREFIX) -> str:
     """Return the dashboard artifact name for *ref_name*."""
-    return f"{prefix}-{sanitize_artifact_slug(ref_name)}"
+    ref_hash = hashlib.sha256(ref_name.encode("utf-8")).hexdigest()[:12]
+    return f"{prefix}-{sanitize_artifact_slug(ref_name)}-{ref_hash}"
 
 
 def _template_path() -> Path:
