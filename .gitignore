@@ -4,9 +4,10 @@
 .claude/
 .DS_Store
 node_modules/
+__pycache__/
 inspo
 triage/
-__pycache__/
 **.pyc
 .plan/**/dashboard.html
 .plan/dashboard.html
+superRA/dashboard.html

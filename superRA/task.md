@@ -1,5 +1,5 @@
 ---
-title: "Better Handoff"
+title: "superRA"
 status: in-progress
 depends_on: []
 tags: []
@@ -8,7 +8,9 @@ created: 2026-05-23
 
 ## Objective
 
-Improve the superRA handoff system — task tracking, planning artifacts, and human-readable visualization.
+Develop and maintain the superRA repository: the PLAN -> IMPLEMENT -> INTEGRATE research workflow, its task-system tooling and dashboard, handoff artifacts, and the domain/utility skill library. Active workstreams nest as subtrees under this root.
+
+The largest in-progress workstream is the handoff system — task tracking, planning artifacts, and human-readable visualization — whose integration history is recorded under ## Integration Notes and ## Sync Map below. Separate skill-development workstreams nest alongside it, including [zotero-skills](zotero-skills/task.md) (the MCP-free Zotero paper-reading skill plus the vendored `mistral-pdf-to-markdown` conversion skill).
 
 ## Conventions
 
@@ -44,3 +46,4 @@ No additional `AGENTS.md`, `CLAUDE.md`, or `README.md` files were found under th
 ## Sync Map
 
 - [task-system/dashboard/github-artifact-action](task-system/dashboard/github-artifact-action/task.md): synced against local `better-handoff` on 2026-06-04. Feature-branch pre-sync merge base = `35feea5f`; artifact branch head = `73212f9b`; first incoming `better-handoff` head = `6b6d4d30`; final integration base head = `1069da5f`. Material code overlap was the dashboard command surface and docs/tests: incoming made `superra dashboard` background-by-default with `--foreground` and `superra dashboard stop`, while this branch added `superra dashboard artifact setup`. Resolution keeps both command paths, preserves browser auto-open for plain `superra dashboard` unless `--no-open` is passed, routes artifact setup without invoking the dashboard server, and preserves the base-side mobile/iPad dashboard integration record from `1069da5f`.
+- [zotero-skills](zotero-skills/task.md): synced `origin/main` (PR #31, commit `5dfe928b`) into the trunk on 2026-06-05. Incoming is purely additive — the MCP-free `zotero-paper-reader` skill, the vendored `mistral-pdf-to-markdown` skill, their tests, and `README.md` / `skills/CATEGORIES.md` / `skills/using-superRA/SKILL.md` inventory entries. Two conflicts: `.gitignore` resolved by union (kept the trunk's `.plan/` + `**.pyc` entries, added `superRA/dashboard.html`); `superRA/task.md` was an add/add collision of two unrelated roots. Per researcher decision the trunk root was reframed from "Better Handoff" to the repo-level "superRA" root, and the incoming zotero workstream root + its 01–06 task subdirs were relocated as the `zotero-skills/` subtree (no content loss). Dashboard regenerated to reflect the new tree.

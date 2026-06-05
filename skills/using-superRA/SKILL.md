@@ -74,6 +74,8 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
 | Utility | `task-system` | Load-on-demand tree tooling for the `superRA/` hierarchy — query/frontier/DAG, scaffolding and restructuring, dashboard, and legacy `PLAN.md` / `RESULTS.md` migration. The executing-agent read/edit interface is §Task Interface above, not this skill. |
 | Utility | `codex-superra-setup` | Generate and install the named `superra_implementer` / `superra_reviewer` Codex custom agents into `~/.codex/agents/` (global) or `.codex/agents/` (project). |
+| Utility | `zotero-paper-reader` | User-invocable standalone skill — search, retrieve, and analyze papers from a Zotero library. Not loaded by workflow agents or the Manifest; invoke directly when reading, finding, or analyzing a paper by title, author, DOI, or topic. |
+| Utility | `mistral-pdf-to-markdown` | User-invocable standalone skill — convert a PDF to Markdown with image extraction via the Mistral OCR API (needs `MISTRAL_API_KEY`). The conversion step behind `zotero-paper-reader`; not loaded by workflow agents or the Manifest. |
 | Meta | `using-superra` | This skill — the master skill every agent reads. |
 
 **Composable design:** Workflow skills own sequencing; domain skills own vertical discipline; utility skills are called on demand. One source of truth per concern.
