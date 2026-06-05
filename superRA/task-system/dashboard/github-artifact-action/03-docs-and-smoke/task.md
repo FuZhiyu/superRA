@@ -1,6 +1,6 @@
 ---
 title: "Documentation and Smoke Verification"
-status: not-started
+status: implemented
 depends_on: 
   - 02-setup-cli
 
@@ -21,3 +21,21 @@ Validation: run the targeted task-system tests covering the setup command/templa
 Docs likely belong in README.md's dashboard/task-system section and/or skills/task-system/SKILL.md / references/internals.md depending on whether the text is user-facing command usage or contributor internals. Keep README focused on the user flow; keep workflow mechanics in task-system references.
 
 ## Results
+
+### Key Findings
+
+- Documented the artifact workflow user flow in `README.md`: install the managed workflow, push a branch, download the repo-access-gated artifact from GitHub Actions, and open the exported dashboard HTML locally.
+- Added task-system internals documentation for the artifact setup command, branch-pattern options, artifact naming, cleanup behavior, access model, and download-oriented limitation.
+- Added static workflow-contract smoke tests for triggers, permissions, cleanup-before-upload ordering, and upload step presence.
+- Added a minimal task-tree export smoke test proving the artifact payload path produces a standalone dashboard HTML file.
+
+### Notes
+
+- No live GitHub API run was performed in this task. The artifact cleanup behavior is covered by static assertions against the generated workflow's `github.rest.actions.listArtifactsForRepo` / `deleteArtifact` steps and by the tested template renderer.
+
+### Verification
+
+- `uv run --project skills/task-system --with pytest python -m pytest skills/task-system/scripts/test_task_system.py -k 'DashboardArtifactWorkflow or test_generate_dashboard or test_generate_is_standalone'` — 15 passed.
+- `uv run --project skills/task-system --with pytest python -m pytest skills/task-system/scripts/test_task_system.py` — 249 passed, 11 skipped, 1 expected invalid-status warning from the existing diagnostic test.
+- `uv run --project skills/task-system superra task check --root superRA` — all checks passed.
+- Temp-repo smoke: installed the artifact workflow with branch filters, created a minimal `superRA/task.md`, exported `.superra-dashboard/dashboard.html`, and verified the output file exists and is non-empty.

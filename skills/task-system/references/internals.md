@@ -214,6 +214,29 @@ Task trees no longer carry a committed `serve` launcher script; the packaged `su
 
 The server provides SSE hot-reload — it auto-updates when the task files of the worktree you are viewing change. Port is derived deterministically from the repository's git common directory (range 8100–8999; the plan-root path is the fallback when there is no git), so all of a repository's worktrees map to one shared server rather than each running its own. That single server resolves any of the repo's worktrees on demand per request: the active worktree is carried in the browser URL as `?wt=<worktree-basename>` (absent means the worktree the server was launched in), and switching worktrees via the selector is in-page navigation, not a server-wide switch — so two tabs can view different worktrees on the same port without interfering. Use `--port N` to override. The static `generate` subcommand is deprecated — use the live `superra dashboard`, or `superra dashboard export --output dashboard.html` for a one-off static file.
 
+### GitHub Actions artifact sharing
+
+Install the managed artifact workflow from the repository root:
+
+```bash
+superra dashboard artifact setup
+```
+
+The command writes `.github/workflows/superra-dashboard-artifact.yml` and refuses to overwrite a non-superRA-managed workflow unless `--force` is passed. Useful options:
+
+```bash
+superra dashboard artifact setup \
+  --branch main \
+  --branch 'analysis/**' \
+  --retention-days 14 \
+  --task-root superRA \
+  --output .superra-dashboard/dashboard.html
+```
+
+At runtime the workflow checks out the pushed branch, exports that branch's `superRA/` tree with `uv run --project skills/task-system superra dashboard export`, deletes older artifacts with the same branch-derived artifact name, then uploads the new HTML artifact. Artifact names are `superra-dashboard-<branch-slug>-<ref-hash>` by default; the hash prevents collisions between refs such as `feature/foo` and `feature-foo`.
+
+This mode is repo-access-gated by GitHub Actions artifact permissions but is not a hosted webpage. Collaborators download the artifact from the workflow run and open the HTML locally.
+
 **Auto-rebuild.** Mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) trigger dashboard regeneration after completing their mutation. The SSE-based live server also watches for file changes and pushes updates to connected browsers.
 
 ## Script Inventory

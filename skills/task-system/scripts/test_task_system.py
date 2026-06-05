@@ -32,6 +32,10 @@ import task_update
 import cli
 
 
+def _workflow_lines(content: str) -> list[str]:
+    return [line.rstrip() for line in content.splitlines()]
+
+
 # --- Helpers ---
 
 
@@ -1309,6 +1313,36 @@ class TestDashboardArtifactWorkflow:
             ])
         assert excinfo.value.code == 1
         assert "Error: Workflow path escapes repository root" in capsys.readouterr().err
+
+    def test_generated_workflow_static_contract(self, tmp_path):
+        result = dashboard_artifact_workflow.install_workflow(
+            tmp_path,
+            config=dashboard_artifact_workflow.WorkflowConfig(branch_patterns=("main", "feature/**")),
+        )
+        content = result.path.read_text(encoding="utf-8")
+        lines = _workflow_lines(content)
+        assert "permissions:" in lines
+        assert "  contents: read" in lines
+        assert "  actions: write" in lines
+        assert '      - "main"' in lines
+        assert '      - "feature/**"' in lines
+        assert "concurrency:" in lines
+        assert "      - name: Delete previous artifact for this branch" in lines
+        assert "      - name: Upload branch dashboard artifact" in lines
+        assert content.index("Delete previous artifact for this branch") < content.index("Upload branch dashboard artifact")
+
+    def test_dashboard_export_payload_path_from_minimal_tree(self, tmp_path):
+        repo = tmp_path / "repo"
+        task_root = repo / "superRA"
+        task_root.mkdir(parents=True)
+        _write_task_md(task_root / "task.md", "Artifact Smoke", "not-started", objective="Smoke tree.")
+        output = repo / ".superra-dashboard" / "dashboard.html"
+        output.parent.mkdir(parents=True)
+        generated = plan_dashboard.generate_dashboard(task_root, output)
+        assert generated == output
+        html = output.read_text(encoding="utf-8")
+        assert "Artifact Smoke" in html
+        assert "window.STANDALONE = true" in html
 
 
 class TestStandaloneSelfContained:
