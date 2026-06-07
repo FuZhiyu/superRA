@@ -42,7 +42,7 @@ If you see unfamiliar uncommitted changes and cannot tell whether they are legit
 
 Handoff runs through the `superRA/` task tree — `task.md` files with YAML frontmatter and `##` body sections. Reading and editing your assigned task needs only this section.
 
-**Read** with `superra task read <path>`, not a bare `Read` of the file — it injects the inherited ancestor context and sibling dependency status that a standalone `task.md` lacks.
+**Read** with `superra task read <path>`, not a bare `Read` of the file — it injects the inherited ancestor context and sibling dependency status that a standalone `task.md` lacks. Every `<path>` argument is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-system/planning-redesign`, not `superRA/task-system/planning-redesign`).
 
 **Edit** the `task.md` directly with Read/Edit tools. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own.
 

@@ -52,25 +52,42 @@ A task should be the right size for independent dispatch and review.
 
 ## Placing Work in the Tree
 
-A two-step decision: first find which task's **concern** covers the new work, then decide **granularity** (how big is the extension?).
+This is the authoritative placement procedure for the whole repo. It is a **cross-stage** concern, not a planning-only step: planning uses it to place new work, the consolidation survey uses it to judge whether existing tasks sit under the right parent, and the superintegrate Consolidation Gate uses it to flag misplacement before Document. Every stage that decides where a task belongs loads this section.
 
-### Step 1 — Find the concern
+The presumption is **MODIFY or MERGE the task that already owns the concern**; creating a new task — and especially a new root-level task — is the justified exception that must clear a burden of proof. Most "new improvement" work is an update to the task that owns the artifact it improves, not a fresh task.
 
-Walk the tree recursively. At each level, ask: does an existing task's topic or concern cover this work? If yes, descend into that task and repeat. If no task at this level covers it, create a sibling at this level.
+### Recursive descent
 
-### Step 2 — Decide granularity
+Walk from the root. The invariant is that you descend into `node` only because the work relates to `node`'s concern, so at every node the question is never *whether* the work belongs here but *how deep* it lands. Split on **leaf vs branch first**.
 
-Once you have found the right task:
+**Branch** (a node with children — a concern container that holds no deliverable work of its own):
 
-- **Update** — the extension is simple enough that the task stays right-sized for a single dispatch. Rewrite its objective to include both old and new scope. Example: a merge task that handled fund data now also needs to handle CRSP data — same concern, extended scope, still one task.
+- A child's concern covers the work → **descend** into that child and recurse.
+- No child covers it → **add a new child subtask** under this node. At the root, that new child is a new root-level workstream — the last-resort, highest-stakes move; record which existing child's concern you read and why it does not cover the work.
 
-- **Nest** — the extension is complex enough to warrant its own dispatch and review cycle. Add as a child subtask. The parent's objective may also be broadened to reflect the expanded scope. Example: a data-preparation task that now needs a whole new cleaning pipeline for a second data source — same concern, but the new work needs independent implementation.
+**Leaf** (a node with no children — a unit of work):
 
-- **Create sibling** — the work does not belong under any existing task's concern at this level. Applied at the root level, this creates a new root-level task.
+- *Simple extension* → **update it in place** and flip its status `approved` → `revise` (status semantics per §Field-by-Field Notes). No new task. Rewrite its objective to be self-sufficient with both old and new scope. Example: a merge task that handled fund data now also handles CRSP data — same concern, extended scope, still one task.
+- *Complex extension* → **nest a subtask** under it. Example: a data-preparation leaf that now needs a whole new cleaning pipeline for a second source — same concern, but the new work warrants its own dispatch and review.
 
-The recursion handles all levels uniformly: start at the root, walk down through the tree, land the work at the right depth.
+"Create a sibling / new root-level task" is **not** a separate operation. A sibling is just a new child of the shared parent, so it falls out of the branch rule's "add a new child" evaluated at that parent — at the root, it is a new root-level workstream. Root misuse is therefore controlled by the same rule, not a special case: the justification requirement on adding a child at the root cannot be satisfied without doing the walk, which forces the read and surfaces the owner. There is no "unrelated at the leaf" case — you only reach a leaf by descending through related concerns, so at a leaf the work is related by construction.
 
-**Anti-patterns:** creating a new task for what is really a scope extension of an existing task; nesting three or more levels deep when unnecessary; creating siblings with near-identical concerns.
+### Root-task definition
+
+A root-level task is a **whole workstream or project**, and the single root frames the entire repo. A narrow feature related to an existing workstream nests by the descent above and therefore cannot land at root unless it is genuinely unrelated to everything already in the tree. Root-task misuse is a *consequence* of skipping the ladder, not a separate rule to police.
+
+### The update-task lifecycle
+
+An *update task* — a task whose purpose is to improve or modify an existing task or artifact — has a **stage-dependent** disposition. The governing principle is **asymmetric aggressiveness**: planning is lenient (a complex fix may be spun out as its own task), consolidation and integration are strict (the fix folds back into the task it modified). This is the "the tree represents latest state, not a log" rule — enforced *within* a task body — applied to the tree *structure*: a standalone "fix/update task X" is a delta, the structural equivalent of a log entry, and must be squashed into its target at integration.
+
+**Tradeoff.** Merging the change into the target keeps one source of truth, but done *prematurely* — before the change is built and validated — it overwrites the target's nuance and conflates unsettled work with settled work. Spinning out a separate self-contained subtask preserves a clear, independently reviewable objective, but proliferates tasks that are harder to clean up later. Weigh by complexity, validation maturity, and reviewability.
+
+- **Planning stage (pre-implementation):** for a substantial update, CREATE a self-contained subtask under the owning concern with a full, dispatchable objective. Do not merge into the target yet — premature merge loses nuance before the change exists.
+- **Consolidation / Integration stage:** MERGE the update task into the task it updates — fold the matured result into the target or parent and remove the update-task directory. An update task does not survive integration as a standalone artifact. This is the create-then-merge lifecycle: spin out during planning/implementation, merge back at consolidation/integration.
+
+*Worked example.* An integration-workflow redesign was first created as a misplaced root-level `integrate-cleanup` task, then merged into the existing `integ-workflow` task at integration — its objective and Results refreshed to the shipped design, stale content dropped, and the standalone task removed. The update task did not survive integration as a separate tree.
+
+**Anti-patterns:** creating a new task for what is really a scope extension of an existing task; landing a narrow improvement at the root instead of descending to the task that owns its concern; nesting three or more levels deep when unnecessary; leaving an update task standing as a separate tree after the change has shipped.
 
 ## Task Anatomy
 

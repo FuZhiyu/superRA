@@ -358,6 +358,31 @@ def write_task(task: Task) -> None:
     task_md.write_text(content, encoding="utf-8")
 
 
+def cascade_depends_on_rename(parent_dir: Path, old_slug: str, new_slug: str) -> list[str]:
+    """Re-point every sibling `depends_on: old_slug` to `new_slug` in ``parent_dir``.
+
+    This is the lossless same-parent rename cascade shared by ``task_rename.py``
+    (explicit CLI) and ``task_hook.py`` (post-hoc raw ``mv``). It rewrites only
+    the ``depends_on`` YAML metadata — never task content — and only for siblings
+    in the directory that holds both the old and new slug, which is what makes it
+    safe to auto-apply: the rename is fully expressible in the sibling-only model.
+
+    Returns the slugs of the siblings whose ``depends_on`` was updated.
+    """
+    updated: list[str] = []
+    siblings = [
+        d for d in parent_dir.iterdir()
+        if d.is_dir() and (d / "task.md").exists() and d.name != new_slug
+    ]
+    for sibling_dir in siblings:
+        task = parse_task(sibling_dir / "task.md")
+        if old_slug in task.depends_on:
+            task.depends_on = [new_slug if d == old_slug else d for d in task.depends_on]
+            write_task(task)
+            updated.append(sibling_dir.name)
+    return updated
+
+
 def _find_plan_root(task_dir: Path) -> Path | None:
     """Walk up from a task directory to find the plan root.
 
@@ -451,10 +476,20 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
 def resolve_path(plan_root: Path, task_path: str) -> Path:
     """Resolve a task ID (relative path) to its directory on disk.
 
+    Task paths are relative to the task root and omit the root prefix (e.g.
+    ``task-system/planning-redesign``). As an ergonomic tolerance, a redundant
+    leading segment equal to the task-root basename (``superRA``, or legacy
+    ``.plan``) is stripped before joining, so an agent that passes the
+    fully-prefixed form (``superRA/task-system/planning-redesign``) resolves to
+    the same task instead of a doubled ``superRA/superRA/...`` path.
+
     Raises ValueError if the resolved path escapes the plan root.
     """
     if not task_path:
         return plan_root
+    segments = task_path.strip("/").split("/")
+    if len(segments) > 1 and segments[0] == plan_root.name and segments[0] in TASK_ROOT_DIRNAMES:
+        task_path = "/".join(segments[1:])
     resolved = (plan_root / task_path).resolve()
     root_resolved = plan_root.resolve()
     if not resolved.is_relative_to(root_resolved):

@@ -148,6 +148,73 @@ def _command_mentions_task_root(command: str) -> bool:
     return _PLAN_TOKEN_RE.search(command) is not None
 
 
+# A bare `mv`/`git mv SRC DST` with exactly two task-root path operands — the
+# shape of a directory rename. Flags and extra operands fall through to the
+# generic reconcile path (no auto-cascade) rather than being mis-parsed.
+_MV_RE = re.compile(r"(?:^|[\s;&|(])(?:git\s+mv|mv)(\s+.*)$")
+
+
+def _detect_same_parent_rename(command: str, cwd: Path) -> tuple[Path, str, str] | None:
+    """Return (parent_dir, old_slug, new_slug) for a same-parent task rename.
+
+    Detects the lossless case `mv superRA/a/x superRA/a/y` (or `git mv`): a
+    two-operand move whose source and destination share a parent and differ only
+    in the final slug, with both inside a task root. Returns None for anything
+    else (flags, >2 operands, cross-parent move, non-task-root paths) so those
+    fall through to the warn-only reconcile path. Slugs are resolved from the
+    command text (the hook fires post-move, so the source no longer exists), but
+    the move-into-dir vs. rename disambiguation reads post-move filesystem state:
+    after a clean rename `dst/<src basename>` does not exist, whereas after a
+    move-into-existing-dir the moved task is sitting at `dst/<src basename>/task.md`.
+    """
+    match = _MV_RE.search(command)
+    if match is None:
+        return None
+    operands = match.group(1).split()
+    # A flag (e.g. -f, --verbose) means we cannot trust the two-operand shape.
+    if any(op.startswith("-") for op in operands):
+        return None
+    if len(operands) != 2:
+        return None
+
+    src_raw, dst_raw = (op.strip("'\"") for op in operands)
+    src = Path(src_raw)
+    dst = Path(dst_raw)
+    src_abs = src if src.is_absolute() else (cwd / src)
+    dst_abs = dst if dst.is_absolute() else (cwd / dst)
+
+    # `mv x y/` (trailing slash) means "move into the directory y", i.e. a
+    # re-parent whose result is y/x — not a rename. This is the explicit
+    # move-into-dir spelling; reject it from the command text up front.
+    if dst_raw.endswith("/"):
+        return None
+
+    if src_abs.parent != dst_abs.parent:
+        return None
+    if src_abs.name == dst_abs.name:
+        return None
+
+    parent = dst_abs.parent
+    # Both operands must sit inside a task root for this to be a task rename.
+    parts = parent.parts
+    if not any(p in TASK_ROOT_DIRNAMES or p.startswith(f"{LEGACY_TASK_ROOT_DIRNAME}.")
+               for p in parts):
+        return None
+    # The renamed directory must itself be a task (have a task.md post-move).
+    if not (dst_abs / "task.md").exists():
+        return None
+    # A bare `mv x existing-task` where the destination is a pre-existing task
+    # directory is a move-INTO-dir, not a rename: `mv` lands the source at
+    # `existing-task/x`, so `dst/<src basename>/task.md` exists post-move. That is
+    # a cross-parent re-parent (warn-only), and reading it as a rename would
+    # silently re-point dependents to the wrong task. A clean rename never leaves
+    # `dst/<src basename>/task.md` behind, so this rejects only the re-parent.
+    if (dst_abs / src_abs.name / "task.md").exists():
+        return None
+
+    return parent, src_abs.name, dst_abs.name
+
+
 def _find_plan_root_for_token(task_io, token: str, cwd: Path) -> Path | None:
     """Resolve a task-root-containing command token to its plan root directory.
 
@@ -192,6 +259,30 @@ def _handle_bash(data: dict) -> None:
     import _task_io as task_io
 
     cwd = Path.cwd()
+
+    # Lossless same-parent rename: auto-cascade sibling depends_on before
+    # reconcile, the same class of YAML-metadata maintenance the hook already
+    # does for status rollups. Runs first so validate_plan sees the rewired
+    # edges and emits no spurious dangling-dependency warning. Cross-parent
+    # moves, deletes, and merges are deliberately left to warn (handled below in
+    # the generic reconcile) — those need a human decision, never a silent guess.
+    rewire_feedback: list[str] = []
+    rename = _detect_same_parent_rename(command, cwd)
+    if rename is not None:
+        parent_dir, old_slug, new_slug = rename
+        try:
+            updated = task_io.cascade_depends_on_rename(parent_dir, old_slug, new_slug)
+            if updated:
+                rewire_feedback.append(
+                    f"Auto-rewired depends_on '{old_slug}' -> '{new_slug}' in "
+                    f"sibling task(s): {', '.join(sorted(updated))}."
+                )
+        except Exception as exc:
+            rewire_feedback.append(
+                f"depends_on rewire failed for rename {old_slug} -> {new_slug} "
+                f"(non-fatal): {exc}"
+            )
+
     plan_roots: list[Path] = []
     seen: set[Path] = set()
 
@@ -215,7 +306,7 @@ def _handle_bash(data: dict) -> None:
                 plan_roots.append(candidate)
                 break
 
-    feedback: list[str] = []
+    feedback: list[str] = list(rewire_feedback)
     for plan_root in plan_roots:
         if not (plan_root / "task.md").exists() and not plan_root.is_dir():
             continue

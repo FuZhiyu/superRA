@@ -86,5 +86,5 @@ Field-by-field anatomy and body-section ownership live in `references/planning.m
 | View the dashboard | `superra dashboard --root superRA` runs the server in the background and returns (reuses a running one; `--foreground` to block in this terminal; `superra dashboard stop` to stop it). Local checkout: `uv run --project skills/task-system superra dashboard --root superRA`; mechanics in `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
-A plain `mv` of a task directory carries the whole subtree; a move that crosses a dependency boundary strands a sibling `depends_on` reference, which validation flags for re-wiring. See `references/commands.md` for the full mutation surface.
+A plain `mv` of a task directory carries the whole subtree. A **same-parent rename** auto-cascades sibling `depends_on` (the hook re-points dependents — expect this silent edit, surfaced in its feedback); a **cross-parent move** or a **delete** of a depended-on task strands the reference instead, which validation flags for re-wiring. See `references/commands.md` for the full mutation surface.
 <!-- no need to route back to using superra -->
