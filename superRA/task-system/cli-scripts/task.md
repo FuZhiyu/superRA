@@ -1,6 +1,6 @@
 ---
 title: "CLI Scripts"
-status: approved
+status: in-progress
 depends_on:
   - core-data-layer
 tags: []

@@ -21,7 +21,7 @@ uv run --project skills/task-system superra task frontier
 uv run --project skills/task-system superra dashboard
 ```
 
-This keeps agents on the edited checkout instead of a cached or installed package. Use `uvx --refresh --from ./skills/task-system ...` only for install-style smoke tests. The optional repo-local wrapper `./superRA/superra` follows the same rule and dispatches to `uv run --project "$(repo-root)/skills/task-system" superra "$@"`.
+This keeps agents on the edited checkout instead of a cached or installed package. Use `uvx --refresh --from ./skills/task-system ...` only for install-style smoke tests. The optional repo-local wrapper `./superRA/superra` follows the same rule by resolving the task-system source — preferring this checkout's `skills/task-system`, then an installed Claude/Codex plugin, then GitHub — and running it via `uvx --from "$source" superra "$@"`; the resolution chain is single-sourced in `skills/task-system/scripts/wrapper_resolver.py`.
 
 ## Internal Design Philosophy
 
