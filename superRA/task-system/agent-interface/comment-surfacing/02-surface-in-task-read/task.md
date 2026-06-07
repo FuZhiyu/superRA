@@ -1,6 +1,6 @@
 ---
 title: "Surface Unresolved Comments in task_read.py"
-status: implemented
+status: revise
 depends_on:
   - 01-block-accessor
 tags: []
@@ -53,3 +53,23 @@ Make `skills/task-system/scripts/task_read.py` surface a task's **unresolved com
 - `task_comment.py list` under `python3` shows full blocks with the orphaned fallback.
 - Legacy block-YAML sidecar: loads via fallback under `~/.venv` (pyyaml present); raises the loud `RuntimeError` under bare `python3` rather than silently skipping.
 - Full suite green: `test_task_system.py` + `test_cli.py` = 303 passed; `test_dashboard.py` = 113 passed (JSON-format sidecar is transparent to the dashboard's YAML reader).
+
+## Review Notes
+
+1. **CRITICAL** — [`_comments.py:177-194`](../../../../../skills/task-system/scripts/_comments.py#L177): the documented `python3 task_read.py` invocation now **hard-crashes (traceback, exit 1)** on every existing task that has a legacy block-YAML `comments.yaml`, regressing a path that worked before this task.
+
+   Three such legacy sidecars already exist in the repo: `superRA/review-planning-protocol/03-planning-review-mode/comments.yaml`, `superRA/task-system/agent-interface/lean-interface/01-core-in-using-superra/comments.yaml`, and `.../lean-interface/02-task-system-slim/comments.yaml`. They are written in PyYAML block style (multi-line folded, escaped unicode), so `json.loads` fails and the code falls into the `except` branch; under bare `python3` (no `pyyaml`) it raises `RuntimeError`. Because `task_read.py:246 → _open_comments → load_comments` runs on **every** read, the whole `task read` for those tasks dies — not just the comment section.
+
+   Verified empirically with the true bare interpreter `/usr/bin/python3` (Python 3.9.6, `import yaml` → `ModuleNotFoundError`; the shell's `python3` is aliased to `uv run python` and is NOT representative):
+   - New code: `/usr/bin/python3 task_read.py --path review-planning-protocol/03-planning-review-mode` → `RuntimeError: ... is legacy YAML and pyyaml is unavailable`, exit 1.
+   - Base code (a3e3ecd5): same command, same task → full output, exit 0. (Base `task_read.py` never called `load_comments`, so legacy sidecars were irrelevant to reads.)
+
+   The `## Results` rationalization "the three existing files are all fully-resolved, so they never surface regardless" is incorrect: `load_comments` raises at **load time**, before the `if not c.resolved` filter ever runs. The resolved-state of the comments is never reached. This also means the success criterion "no existing behavior or invocation contract is broken" is violated, and the Objective's own "Verify: ... with **no** `uv`/`~/.venv`" fails on real tasks.
+
+   The "loud RuntimeError instead of silent skip" was justified as honoring the researcher's reliability decision, but that decision was "do not silently surface nothing for unresolved comments that exist" — it was not license to crash the entire read path on tasks whose comments are all resolved (or to crash before knowing whether any are unresolved). A crash is strictly worse than the previous working read.
+
+   Fix: make legacy block-YAML sidecars readable under bare `python3` on the read path. Options: (a) one-time migrate the three existing files to the JSON format now (and any tooling that could still emit block-YAML), so no legacy file remains; combine with a stdlib-readable guarantee for any future file; or (b) provide a stdlib loader that handles the actual legacy on-disk schema (the Objective's first suggested route — note the implementer's valid concern that block-YAML with folded/escaped multi-line bodies is risky to hand-parse, which is why migrating the known files is likely the cleaner route). The end state must be: `python3 task_read.py` on any current repo task succeeds and surfaces unresolved comments where present. Whatever route, add a regression test that exercises a legacy-format (or post-migration) sidecar through `load_comments`/`task_read` in an environment without `pyyaml` — the current suite runs only under `uv` (pyyaml present) so it structurally cannot catch this (the `04-tests` sibling will own broader coverage, but this specific regression must be guarded as part of the fix, not deferred).
+
+2. **MAJOR** — [`_comments.py:197-211`](../../../../../skills/task-system/scripts/_comments.py#L197) / `## Results` line 41, 44: the format change (writer now emits JSON-in-`.yaml`) is a load-bearing deviation from the Planner Guidance's suggested route ("a small stdlib loader for the flat comment sidecar schema"). The deviation note in `## Results` argues the JSON route is lossless and YAML-compatible, which is a reasonable engineering tradeoff for *new* files — but the note does not acknowledge the consequence for *legacy* files (finding 1) and asserts "nothing downstream breaks," which is false for the bare-`python3` read path. Update `## Results` to state the legacy consequence honestly once finding 1 is resolved, and confirm whether the chosen route still satisfies the Objective (it does only if legacy files are handled). The dashboard write/read path is fine: the dashboard runs under `uv` (pyyaml present), and JSON is valid YAML so `yaml.safe_load` reads both formats; the `comments_summary` endpoint iterating all tasks would also hit the legacy branch but succeeds because pyyaml is available there.
+
+3. **MINOR** — `## Results` Verification line 54 documents the legacy-file `RuntimeError`-under-bare-`python3` as if it were acceptable intended behavior. After fixing finding 1, rewrite this line so the Results read as an accurate account of the final state (legacy files surface/read correctly under bare `python3`).
