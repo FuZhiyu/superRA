@@ -247,7 +247,9 @@ This mode is repo-access-gated by GitHub Actions artifact permissions but is not
 | Script | Purpose |
 |---|---|
 | `_task_io.py` | Shared data layer (not invoked directly) |
-| `task_read.py` | Context-aware task reading with ancestor chain and dependency status |
+| `_comments.py` | Comment sidecar data layer — load, re-anchor, resolve, and full-block extraction (not invoked directly) |
+| `task_read.py` | Context-aware task reading with ancestor chain, dependency status, and unresolved comments |
+| `task_comment.py` | Read and resolve task comments: `list`, `list-tree`, `resolve` |
 | `task_create.py` | Create a new task directory with template `task.md` |
 | `task_update.py` | Update frontmatter fields on an existing task |
 | `task_add_result.py` | Append a finding to a task's `## Results` section |

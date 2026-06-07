@@ -55,3 +55,16 @@ superra task rename 01-data/01-load 01-data/01-load-raw --root superRA
 ```
 
 A plain `mv` of the task directory also works — it carries the `task.md`, `comments.yaml`, and whole subtree, and the PostToolUse hook revalidates the tree and propagates status. For a **same-parent rename** (`mv superRA/a/x superRA/a/y`) the hook also **auto-cascades sibling `depends_on: x` → `y`** — the lossless case, the same class of YAML-metadata upkeep it already does for status rollups — so an in-place rename leaves no dangling edge and you do not need `superra task rename` for consistency. Expect this re-point: a rename silently re-wires its dependents (the change is surfaced in the hook feedback). The hook does **not** auto-cascade for a **cross-parent move** (a cross-tree edge is inexpressible in the sibling-only model) or a **delete** of a depended-on task (dropping a real edge changes execution ordering) — both strand the reference, which validation flags as a dangling dependency for you to re-wire with `superra task dep add` / `superra task dep remove` or a direct edit. `superra task rename` remains the convenience for the atomic same-parent case.
+
+## Comments
+
+A researcher pins comments to `task.md` blocks via the dashboard. Unresolved comments already surface on the read path — `superra task read <path>` shows each with its full anchored block (see `using-superRA/SKILL.md §Task Interface`) — so the orchestrator and the dispatched agent see them without a separate command. These commands are for the standalone read/resolve loop:
+
+```bash
+superra task comment list <task>           # unresolved comments on a task, each with its full anchored block
+superra task comment list <task> --all     # include resolved comments
+superra task comment tree                  # unresolved-comment counts across the whole tree
+superra task comment resolve <task> <id>   # toggle a comment's resolved state
+```
+
+A comment is **unresolved** until toggled; `resolve` flips it (and back). Comments whose anchored block was edited or moved away render `[ORPHANED]` with the stored preview instead of a live block. Add `--json` to `list` / `tree` for scripted consumption.

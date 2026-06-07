@@ -17,6 +17,21 @@ from _task_io import parse_body_sections
 
 
 # ---------------------------------------------------------------------------
+# Errors
+# ---------------------------------------------------------------------------
+
+class LegacyCommentFormatError(RuntimeError):
+    """Raised when a legacy block-YAML ``comments.yaml`` cannot be read.
+
+    Only reachable when the sidecar predates the JSON switch *and* ``pyyaml``
+    is unavailable (bare ``python3``). Callers on the read path catch this and
+    degrade gracefully (a visible note) so a single legacy sidecar never kills
+    the whole read; mutation callers run under ``uv`` (pyyaml present) and never
+    hit it.
+    """
+
+
+# ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
 
@@ -157,26 +172,59 @@ def split_into_blocks(section_content: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def load_comments(task_dir: Path) -> list[Comment]:
-    """Read ``comments.yaml`` from *task_dir*. Return [] if absent."""
-    import yaml
+    """Read ``comments.yaml`` from *task_dir*. Return [] if absent.
+
+    The sidecar is written as JSON (a strict subset of YAML), so the common
+    read path — including ``python3 task_read.py`` in an environment without
+    ``pyyaml`` — parses it with the stdlib ``json`` module and never depends on
+    a YAML library. Legacy block-style YAML files (written before the JSON
+    switch) are still read via ``pyyaml`` when it is importable; the next
+    ``save_comments`` rewrites them as JSON. A legacy file under bare
+    ``python3`` (no ``pyyaml``) raises :class:`LegacyCommentFormatError`, which
+    read-path callers catch to degrade gracefully rather than crash the read.
+    """
+    import json
 
     path = task_dir / "comments.yaml"
     if not path.exists():
         return []
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    if not text.strip():
+        return []
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        # Legacy block-style YAML: only reachable with pyyaml present (the
+        # environment that wrote it). Surface the failure rather than skip
+        # silently so a legacy sidecar under bare python3 is never mistaken
+        # for "no comments".
+        try:
+            import yaml
+        except ModuleNotFoundError:
+            raise LegacyCommentFormatError(
+                f"{path} is legacy block-YAML and pyyaml is unavailable; "
+                "re-save it (any comment mutation, or run once under uv) to "
+                "upgrade it to JSON."
+            )
+        data = yaml.safe_load(text)
     if not data:
         return []
     return [_dict_to_comment(d) for d in data]
 
 
 def save_comments(task_dir: Path, comments: list[Comment]) -> None:
-    """Write *comments* to ``comments.yaml`` in *task_dir*."""
-    import yaml
+    """Write *comments* to ``comments.yaml`` in *task_dir* as JSON.
+
+    JSON is a strict subset of YAML, so the file stays a valid ``*.yaml`` for
+    every existing reader while becoming parseable by the stdlib ``json``
+    module (no ``pyyaml`` dependency on the read path).
+    """
+    import json
 
     path = task_dir / "comments.yaml"
     data = [_comment_to_dict(c) for c in comments]
     path.write_text(
-        yaml.dump(data, default_flow_style=False, sort_keys=False),
+        json.dumps(data, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
 
