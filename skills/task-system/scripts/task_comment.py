@@ -53,13 +53,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _comment_to_json(c) -> dict:
+def _comment_to_json(c, body: str) -> dict:
+    block = anchored_block(c, body) if body else None
     return {
         "id": c.id,
         "author": c.author,
         "timestamp": c.timestamp,
         "resolved": c.resolved,
-        "orphaned": c.orphaned,
+        "orphaned": block is None,
+        "block": block,  # full anchored block text, or null if orphaned
         "anchor": {
             "section": c.anchor.section,
             "block_index": c.anchor.block_index,
@@ -98,7 +100,7 @@ def cmd_list(args: argparse.Namespace) -> None:
         comments = [c for c in comments if not c.resolved]
 
     if args.as_json:
-        print(json.dumps([_comment_to_json(c) for c in comments], indent=2))
+        print(json.dumps([_comment_to_json(c, body) for c in comments], indent=2))
         return
 
     if not comments:

@@ -81,6 +81,7 @@ Field-by-field anatomy and body-section ownership live in `references/planning.m
 | To do X | See |
 |---|---|
 | Create / rename / link / move tasks; bulk status propagation; append results programmatically | `references/commands.md` |
+| Read or resolve task comments (the read/resolve loop; comments also surface via `superra task read`) | `references/commands.md §Comments` |
 | Objective writing, task splitting, placement, results shape, stale-content, retroactive plans | `references/planning.md` |
 | Migrate legacy `PLAN.md` + `RESULTS.md`, or upgrade `superRA/` v1 → v2 | `references/internals.md §Migration` |
 | View the dashboard | `superra dashboard --root superRA` runs the server in the background and returns (reuses a running one; `--foreground` to block in this terminal; `superra dashboard stop` to stop it). Local checkout: `uv run --project skills/task-system superra dashboard --root superRA`; mechanics in `references/internals.md §Dashboard` |

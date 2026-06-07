@@ -55,3 +55,16 @@ superra task rename 01-data/01-load 01-data/01-load-raw --root superRA
 ```
 
 A plain `mv` of the task directory also works — it carries the `task.md`, `comments.yaml`, and whole subtree, and the PostToolUse hook revalidates the tree and propagates status. One caveat: `depends_on` references sibling slugs, so a move that crosses a dependency boundary strands the reference — validation flags the now-dangling dependency and you re-wire it with `superra task dep add` / `superra task dep remove` or a direct edit (the hook does not auto-cascade). `superra task rename` is no longer required to keep the tree consistent after a manual move; it is the convenience for the atomic same-parent case.
+
+## Comments
+
+A researcher pins comments to `task.md` blocks via the dashboard. Unresolved comments already surface on the read path — `superra task read <path>` shows each with its full anchored block (see `using-superRA/SKILL.md §Task Interface`) — so the orchestrator and the dispatched agent see them without a separate command. These commands are for the standalone read/resolve loop:
+
+```bash
+superra task comment list <task>           # unresolved comments on a task, each with its full anchored block
+superra task comment list <task> --all     # include resolved comments
+superra task comment tree                  # unresolved-comment counts across the whole tree
+superra task comment resolve <task> <id>   # toggle a comment's resolved state
+```
+
+A comment is **unresolved** until toggled; `resolve` flips it (and back). Comments whose anchored block was edited or moved away render `[ORPHANED]` with the stored preview instead of a live block. Add `--json` to `list` / `tree` for scripted consumption.
