@@ -1,6 +1,6 @@
 ---
 title: "Keep the current page expanded and preserve open branches across reload"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-07
