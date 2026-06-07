@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from _comments import anchored_block, load_comments
 from _task_io import (
     TASK_ROOT_DIRNAMES,
     Task,
@@ -131,6 +132,35 @@ def _dep_tasks(target_task: Task, siblings: dict[str, Task]) -> list[tuple[str, 
 
 
 # ---------------------------------------------------------------------------
+# Open-comment helpers
+# ---------------------------------------------------------------------------
+
+def _open_comments(target_task: Task) -> list[dict]:
+    """Return unresolved comments for *target_task*, each with its full block.
+
+    Each entry is ``{author, section, block, body, orphaned}``. ``block`` is the
+    full anchored block text (no length cap), or ``None`` for an orphaned comment
+    (its anchored block moved/was edited away); orphaned entries carry the stored
+    ``text_preview`` under ``preview`` instead. Resolved comments are excluded.
+    """
+    comments = [c for c in load_comments(target_task.dir_path) if not c.resolved]
+    if not comments:
+        return []
+    entries: list[dict] = []
+    for c in comments:
+        block = anchored_block(c, target_task.body)
+        entries.append({
+            "author": c.author,
+            "section": c.anchor.section,
+            "block": block,
+            "preview": c.anchor.text_preview,
+            "body": c.body,
+            "orphaned": block is None,
+        })
+    return entries
+
+
+# ---------------------------------------------------------------------------
 # Human-readable rendering
 # ---------------------------------------------------------------------------
 
@@ -212,6 +242,24 @@ def render_human(
         parts.append(content.strip() if content.strip() else "(empty)")
         parts.append("")
 
+    # Unresolved comments anchored to this task, with their full blocks.
+    open_comments = _open_comments(target_task)
+    if open_comments:
+        parts.append("=== Open Comments ===\n")
+        for c in open_comments:
+            parts.append(f"[{c['author']}] on ## {c['section']}")
+            if c["orphaned"]:
+                parts.append(f'  block: "{c["preview"]}"')
+                parts.append("  [ORPHANED — block moved/edited away]")
+            else:
+                parts.append("  block:")
+                for line in c["block"].split("\n"):
+                    parts.append(f"    {line}")
+            parts.append("  comment:")
+            for line in c["body"].split("\n"):
+                parts.append(f"    {line}")
+            parts.append("")
+
     if dep_pairs:
         parts.append("=== Sibling Dependencies ===\n")
         for slug, dep_task in dep_pairs:
@@ -286,6 +334,19 @@ def render_json(
         else:
             deps_data.append({"slug": slug, "path": None, "title": None, "status": "NOT FOUND", "effective_status": "NOT FOUND"})
 
+    # Unresolved comments with full block text (parity with human output).
+    open_comments = [
+        {
+            "author": c["author"],
+            "section": c["section"],
+            "block": c["block"],          # full block text, or null if orphaned
+            "preview": c["preview"],      # stored anchor preview (retained for orphans)
+            "body": c["body"],
+            "orphaned": c["orphaned"],
+        }
+        for c in _open_comments(target_task)
+    ]
+
     data = {
         # `tree` is the focused root→target spine (siblings + direct children,
         # current node marked); a new key added alongside the prior ones so
@@ -293,6 +354,7 @@ def render_json(
         "tree": focused_tree if show_ancestors else "",
         "ancestors": anc_data,
         "task": task_data,
+        "open_comments": open_comments,
         "dependencies": deps_data,
     }
     return json.dumps(data, indent=2)

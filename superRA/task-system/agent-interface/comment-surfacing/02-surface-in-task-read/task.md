@@ -1,6 +1,6 @@
 ---
 title: "Surface Unresolved Comments in task_read.py"
-status: not-started
+status: implemented
 depends_on:
   - 01-block-accessor
 tags: []
@@ -32,3 +32,24 @@ Make `skills/task-system/scripts/task_read.py` surface a task's **unresolved com
 **Output:** `skills/task-system/scripts/task_read.py`; one-clause edit to `skills/using-superRA/SKILL.md`.
 
 ## Results
+
+`task_read.py` now surfaces a task's unresolved comments with their full anchored block on every read path, and the surfacing works reliably under bare `python3` (no `pyyaml`).
+
+**What changed**
+
+- [`task_read.py`](../../../../../skills/task-system/scripts/task_read.py): added a shared `_open_comments(target_task)` helper that loads the sidecar, keeps only unresolved comments, and resolves each one's full block via task 01's `anchored_block` accessor (block `None` ⇒ orphaned). `render_human` emits an `=== Open Comments ===` section after the body-sections loop and before Sibling Dependencies; each entry shows `[author] on ## section`, the full block (indented) or the stored preview + `[ORPHANED — block moved/edited away]`, then the comment body. The section is omitted entirely when there are no unresolved comments. `render_json` mirrors this under an `open_comments` key placed after `task` and before `dependencies`, as `{author, section, block, preview, body, orphaned}` with the full block text (no length cap) and `block: null` + preserved `preview` for orphans.
+- [`_comments.py`](../../../../../skills/task-system/scripts/_comments.py): resolved the `pyyaml` hard-dependency at the source. `save_comments` now writes the sidecar as **JSON** (`json.dumps`, stdlib) — JSON is a strict subset of YAML, so the file stays a valid `comments.yaml` for every existing reader (dashboard `yaml.safe_load`, tests) while becoming parseable with no third-party library. `load_comments` parses with stdlib `json.loads` first (the reliable `python3` path), and only falls back to `yaml.safe_load` for legacy block-style YAML files written before this switch. The fallback under bare `python3` (legacy file + no `pyyaml`) raises a loud `RuntimeError` telling the user to re-save, rather than silently returning `[]` — honoring the researcher decision that missing-pyyaml must never silently show nothing. The first comment mutation upgrades a legacy file to JSON. (The three existing in-repo `comments.yaml` files are all fully-resolved, so they never surface as open comments regardless.)
+- [`task_comment.py`](../../../../../skills/task-system/scripts/task_comment.py): enriched `list` to show the **full anchored block** (parity with `task_read`) instead of the ≤60-char preview, using the same `anchored_block` accessor; orphaned comments fall back to the stored preview + orphaned note. This is the researcher's "also enrich the standalone CLI" minor default.
+
+**Reliability design choice (deviation note).** The Planner Guidance suggested "a small stdlib loader for the flat comment sidecar schema … (follow the `_task_io.py` frontmatter precedent)." I did not hand-roll a block-YAML parser. PyYAML's real on-disk output for this schema uses single-quoted block folding and double-quoted escape sequences (`—`, line-continuation) for multi-line/unicode comment bodies and previews — a hand parser would risk silently corrupting comment text. Instead I made the *writer* emit JSON (a strict YAML subset, so nothing downstream breaks) and the *reader* use stdlib `json.loads`. This satisfies the objective's stated alternative ("or otherwise factor the load path to be stdlib-reachable") and is lossless for all unicode/multiline content, which a bespoke YAML parser would not guarantee.
+
+**Coordination — cross-edit for `lean-interface/05-coverage-audit`.** Added one clause to [`skills/using-superRA/SKILL.md §Task Interface`](../../../../../skills/using-superRA/SKILL.md) line 45 (the `task_read` read-path mandate authored by `lean-interface/01`): it now ends "… and surfaces any unresolved comments anchored to the task so you act on them." `lean-interface/05-coverage-audit` should account for this added clause in its git-snapshot baseline. The clause lives only in the source `SKILL.md`; no generated role reference duplicates it.
+
+**Verification (all run fresh this session)**
+
+- Bare `python3 task_read.py --path <task-with-comments>` (confirmed no `pyyaml` importable): prints the `=== Open Comments ===` section with the full block for an unresolved comment, shows an orphaned comment as preview + `[ORPHANED …]`, and excludes a resolved comment. Exit 0.
+- `--json`: carries `open_comments` (after `task`, before `dependencies`) with full `block` text, `block: null` + preserved `preview` for the orphan, `orphaned` flag, and resolved comments excluded.
+- A no-comment task emits no Open Comments section (no empty header) and is otherwise unchanged — context, frontmatter, sections, sibling deps intact.
+- `task_comment.py list` under `python3` shows full blocks with the orphaned fallback.
+- Legacy block-YAML sidecar: loads via fallback under `~/.venv` (pyyaml present); raises the loud `RuntimeError` under bare `python3` rather than silently skipping.
+- Full suite green: `test_task_system.py` + `test_cli.py` = 303 passed; `test_dashboard.py` = 113 passed (JSON-format sidecar is transparent to the dashboard's YAML reader).

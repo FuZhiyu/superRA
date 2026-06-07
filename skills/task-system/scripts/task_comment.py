@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _comments import load_comments, resolve_anchors, resolve_comment
+from _comments import anchored_block, load_comments, resolve_anchors, resolve_comment
 from _task_io import TASK_ROOT_DIRNAME, collect_all_tasks, resolve_path, walk_plan
 
 
@@ -84,6 +84,7 @@ def cmd_list(args: argparse.Namespace) -> None:
     comments = load_comments(task_dir)
 
     # Re-anchor against current body
+    body = ""
     task_md = task_dir / "task.md"
     if task_md.exists():
         body_text = task_md.read_text(encoding="utf-8")
@@ -106,17 +107,20 @@ def cmd_list(args: argparse.Namespace) -> None:
 
     for c in comments:
         status = "resolved" if c.resolved else "unresolved"
-        orphan_tag = " [ORPHANED]" if c.orphaned else ""
-        preview = c.anchor.text_preview
-        if len(preview) > 60:
-            preview = preview[:57] + "..."
-        print(
-            f'[#{c.id}] ({status}) {c.anchor.section}, '
-            f'block {c.anchor.block_index}: "{preview}..."{orphan_tag}'
-        )
-        # Indent body lines under the header
+        block = anchored_block(c, body) if body else None
+        orphan_tag = " [ORPHANED — block moved/edited away]" if block is None else ""
+        print(f'[#{c.id}] ({status}) {c.anchor.section}{orphan_tag}')
+        # Full anchored block (parity with task_read), or the stored preview
+        # when the block is orphaned.
+        if block is None:
+            print(f'  block: "{c.anchor.text_preview}"')
+        else:
+            print("  block:")
+            for line in block.split("\n"):
+                print(f"    {line}")
+        print("  comment:")
         for line in c.body.split("\n"):
-            print(f"  > {line}")
+            print(f"    {line}")
         print()
 
 
