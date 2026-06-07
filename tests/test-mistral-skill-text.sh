@@ -84,11 +84,21 @@ assert_present_in \
 # --------------------------------------------------------------------------- #
 
 # The converter must arrive as a self-contained PEP 723 script with its OCR
-# dependency declared inline.
+# dependency declared inline. mistralai 2.0 (2026-06-03) dropped the top-level
+# `Mistral` export, so the dep is pinned to the v2 major and the import uses the
+# v2 client path. Both are locked here so a future edit cannot silently
+# reintroduce the broken `from mistralai import Mistral` form.
 assert_present_in \
-  "converter declares mistralai dependency (PEP 723)" \
+  "converter pins mistralai to the v2 major (PEP 723)" \
   "$SKILL_DIR/scripts/convert_pdf_to_markdown.py" \
-  '"mistralai"'
+  '"mistralai>=2,<3"'
+
+assert_present_in \
+  "converter imports Mistral from the v2 client path" \
+  "$SKILL_DIR/scripts/convert_pdf_to_markdown.py" \
+  'from mistralai.client import Mistral'
+
+assert_absent "no broken v1 top-level 'from mistralai import Mistral'"  "from mistralai import Mistral"
 
 # Secret hygiene: the API key is resolved at runtime, never hardcoded.
 assert_present_in \

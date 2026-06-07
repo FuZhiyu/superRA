@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#     "mistralai",
+#     "mistralai>=2,<3",
 #     "pypdf",
 #     "python-dotenv",
 #     "pyyaml",
@@ -23,7 +23,9 @@ import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
-from mistralai import Mistral
+# mistralai 2.0 moved the client off the top level (the old top-level import
+# raises ImportError on v2+). The PEP 723 header pins the v2 major.
+from mistralai.client import Mistral
 from pypdf import PdfReader, PdfWriter
 
 # Config loader: use local copy (works when installed as plugin)
