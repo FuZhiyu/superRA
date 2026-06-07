@@ -71,3 +71,7 @@ Dashboard serves the template without errors (HTTP 200). All functions (`capture
 ### Design note on event choice
 
 Used `htmx:sseBeforeMessage` (not `htmx:beforeSwap`) for capture because `sseBeforeMessage` fires before htmx processes the SSE data, guaranteeing the old DOM is intact. The existing comment suppression logic was already using this event, so the state capture integrates naturally alongside it.
+
+### Superseded (2026-06-07)
+
+This entire mechanism was retired by the master-detail migration. There is no longer a single inline tree whose task nodes carry bodies, so a `task:{path}` event no longer swaps an expandable/section-bearing node — it swaps a body-free **sidebar row** (label + status badge), which has no expanded-section/scroll/markdown/comment state to capture. `captureNodeState`, `restoreNodeState`, and `_pendingSwapState` no longer exist in `base.html`. The content-edit state that does survive in the new UI is handled directly: the active-row highlight is re-asserted after the row swap (`onTaskUpdate` → deferred `updateSidebar`), the detail panel re-renders via a fresh `/node/{path}` fetch (`loadActiveNode`, sections default to expanded there), and an open comment editor is protected by the 3-second `_commentEditPaths` suppression window — the one piece of this task's design that carried forward. Sidebar tree-shape preservation moved to the `sidebar-current-page` child.

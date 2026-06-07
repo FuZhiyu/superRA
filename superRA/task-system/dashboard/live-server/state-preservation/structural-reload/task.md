@@ -66,3 +66,7 @@ Implemented incremental tree updates for structural changes across three areas.
 
 **Testing:** All 56 existing dashboard tests pass (1 pre-existing failure in `test_template_escapes_closing_template_tag` unrelated to this change). Python syntax and Jinja2 template parsing verified.
 
+### Superseded (2026-06-07)
+
+The master-detail migration replaced this task's `/tree` + `captureNodeState`/`restoreNodeState` AJAX swap. A `full-reload` now rebuilds the body-free **sidebar** from `/nav`: `onFullReload` ([base.html](skills/task-system/scripts/templates/base.html)) calls `loadNavTree` (innerHTML on `#nav-tree`) and then re-derives highlight + breadcrumb + detail panel from `activePath` via `setActive`. The server side also changed shape: the watcher (`_watch_worktree` in [plan_dashboard.py](skills/task-system/scripts/plan_dashboard.py)) no longer emits per-parent `task:{parent_path}` fragments for structural edits — it emits a single `full-reload` and lets the client rebuild, since the sidebar rebuild + `activePath` restore is both correct and simpler than per-parent fragment juggling. `_render_task_node` and the `/tree` route still exist as legacy/export helpers but are off the live structural-change path. What this task got right and kept: a structural change is a client-side rebuild, never a `location.reload()`. The gap it left — the rebuild folds away every manually-opened branch — is closed in the `sidebar-current-page` child, which captures the open branches before `loadNavTree` and restores them after.
+

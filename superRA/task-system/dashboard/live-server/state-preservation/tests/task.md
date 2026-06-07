@@ -45,3 +45,7 @@ Created [`skills/task-system/scripts/tests/test_state_preservation.py`](skills/t
 
 All 36 tests pass. Tests use `tmp_path` fixtures for temporary `.plan/` directories and `starlette.testclient.TestClient` for route tests; no running server required.
 
+### Superseded (2026-06-07)
+
+These tests target the old watcher contract (per-parent `task:{parent_path}` fragments on structural change, `_render_task_node` depth, the `/tree` route) that the master-detail migration retired — the live structural path now emits a single `full-reload` and the client rebuilds the sidebar from `/nav` (see the `structural-reload` child's Superseded note). `test_state_preservation.py` still passes against the surviving legacy helpers (`_render_task_node`, `/tree`), but it no longer characterizes the live state-preservation path. Current-architecture regression coverage lives in `test_dashboard.py::TestSidebarStatePreservation` and `TestWorktreeSelectorLiveRefresh`, added with the `sidebar-current-page` child.
+

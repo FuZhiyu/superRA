@@ -1,6 +1,6 @@
 ---
 title: "Serve multiple worktrees on demand (per-request worktree resolution)"
-status: approved
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-06-03
