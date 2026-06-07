@@ -125,11 +125,6 @@ def create_task(
     # This mirrors the same call in task_update.py and task_hook.py.
     propagate_parent_status(plan_root, task_path)
 
-    try:
-        from plan_dashboard import generate_dashboard
-        generate_dashboard(plan_root)
-    except Exception:
-        pass
     return task_dir
 
 

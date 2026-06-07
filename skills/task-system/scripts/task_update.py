@@ -132,11 +132,6 @@ def update_task(
                 write_task(leaf)
                 n_updated += 1
         print(f"Cascaded status={status!r} to {n_updated} descendant leaf(s).")
-        try:
-            from plan_dashboard import generate_dashboard
-            generate_dashboard(plan_root)
-        except Exception:
-            pass
         return
 
     # --- Normal (non-cascade) update -----------------------------------------
@@ -168,11 +163,6 @@ def update_task(
         propagated = propagate_parent_status(plan_root, task_path)
         if propagated:
             print(f"Propagated status to {propagated} ancestor(s).")
-        try:
-            from plan_dashboard import generate_dashboard
-            generate_dashboard(plan_root)
-        except Exception:
-            pass
     else:
         print("No changes.")
 
@@ -265,11 +255,6 @@ def main(argv: list[str] | None = None) -> None:
         fixed = fix_status_consistency(plan_root)
         if fixed:
             print(f"Fixed {fixed} task(s).")
-            try:
-                from plan_dashboard import generate_dashboard
-                generate_dashboard(plan_root)
-            except Exception:
-                pass
         else:
             print("No inconsistencies found.")
         return
@@ -279,11 +264,6 @@ def main(argv: list[str] | None = None) -> None:
         updated = propagate_all(plan_root)
         if updated:
             print(f"Updated {updated} parent task(s).")
-            try:
-                from plan_dashboard import generate_dashboard
-                generate_dashboard(plan_root)
-            except Exception:
-                pass
         else:
             print("All parent statuses already consistent.")
         return

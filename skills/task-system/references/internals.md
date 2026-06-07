@@ -96,9 +96,9 @@ It does not use a YAML library — the parser is minimal and purpose-built.
 - **`Edit|Write` / `apply_patch`** — fires when a `task.md` is edited directly, reconciling from the edited file's plan root. Codex's `Edit|Write` matcher covers `apply_patch`, and `task_hook.py` also accepts `tool_name: "apply_patch"` payloads.
 - **`Bash`** — fires when a shell command both references `superRA` or `.plan` and contains a filesystem-mutating verb (`mv`, `git mv`, `rm`, `rmdir`, `cp`, `mkdir`), so a plain `mv` reorganization of the tree stays validated. Read-only task-tree commands (`superra task tree`, `grep superRA`) fail the verb test and early-exit.
 
-On a match the hook runs the same best-effort reconcile — `validate_plan`, `propagate_parent_status`, `generate_dashboard` — each in its own try/except, never blocking, always exit 0. Validation warnings and non-fatal reconcile failures are collected into a PostToolUse JSON payload with both top-level `additionalContext` and Claude-style `hookSpecificOutput.additionalContext`, emitted on stdout only when there is feedback for the agent; valid edits and ignored fast paths stay silent. See `task_hook.py` for the gating regexes and plan-root discovery, and `hooks/hooks.json` / `hooks/hooks-codex.json` for the wiring.
+On a match the hook runs the same best-effort reconcile — `validate_plan`, `propagate_parent_status` — each in its own try/except, never blocking, always exit 0. It does not regenerate the dashboard; that happens only on explicit `superra dashboard export`. Validation warnings and non-fatal reconcile failures are collected into a PostToolUse JSON payload with both top-level `additionalContext` and Claude-style `hookSpecificOutput.additionalContext`, emitted on stdout only when there is feedback for the agent; valid edits and ignored fast paths stay silent. See `task_hook.py` for the gating regexes and plan-root discovery, and `hooks/hooks.json` / `hooks/hooks-codex.json` for the wiring.
 
-`parse_task()` is lenient at parse time: an invalid status enum is **warned** (via `warnings.warn`) and the raw value is preserved, so a single malformed `task.md` never crashes a reader's tree walk (dashboard, `task query`, `task read`). Strict status validation is owned by `task check` (`check_status_validity`), which reports an invalid enum as an `[ERROR]` finding. The mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) still rebuild the dashboard themselves after their mutation, so the dashboard stays current whether a task is changed by direct edit, by `mv`, or through a CLI.
+`parse_task()` is lenient at parse time: an invalid status enum is **warned** (via `warnings.warn`) and the raw value is preserved, so a single malformed `task.md` never crashes a reader's tree walk (dashboard, `task query`, `task read`). Strict status validation is owned by `task check` (`check_status_validity`), which reports an invalid enum as an `[ERROR]` finding.
 
 Codex shell interception remains incomplete, so Codex `Bash` coverage is best-effort reconcile support rather than a complete enforcement boundary. Cursor does not wire `task_hook.py`.
 
@@ -116,7 +116,6 @@ The migrator:
 2. Extracts frontmatter fields from task-block metadata (status, review notes, steps)
 3. Matches `RESULTS.md` sections to tasks by heading
 4. Creates the directory hierarchy with `task.md` files
-5. Generates the initial dashboard
 
 ### Parser Expectations and Preparation
 
@@ -241,7 +240,7 @@ At runtime the workflow checks out the pushed branch, exports that branch's `sup
 
 This mode is repo-access-gated by GitHub Actions artifact permissions but is not a hosted webpage. Collaborators download the artifact from the workflow run and open the HTML locally.
 
-**Auto-rebuild.** Mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) trigger dashboard regeneration after completing their mutation. The SSE-based live server also watches for file changes and pushes updates to connected browsers.
+**On-demand export.** Neither the mutation scripts (`task_create`, `task_update`, `task_add_result`, `task_link`, `task_rename`) nor the PostToolUse hook write `superRA/dashboard.html`; a static dashboard is produced only when `superra dashboard export` is run explicitly (including the GitHub Actions workflow above). For interactive viewing, the SSE-based live server renders on demand and pushes updates to connected browsers without ever writing a file.
 
 ## Script Inventory
 

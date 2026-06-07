@@ -68,11 +68,6 @@ def link_task(
         task.depends_on.remove(depends_on)
         write_task(task)
         print(f"Removed dependency {depends_on} from {task_path}")
-        try:
-            from plan_dashboard import generate_dashboard
-            generate_dashboard(plan_root)
-        except Exception:
-            pass
     else:
         parent_dir = (plan_root / task_path).parent
         dep_dir = parent_dir / depends_on
@@ -96,11 +91,6 @@ def link_task(
         task.depends_on.append(depends_on)
         write_task(task)
         print(f"Added dependency {depends_on} to {task_path}")
-        try:
-            from plan_dashboard import generate_dashboard
-            generate_dashboard(plan_root)
-        except Exception:
-            pass
 
 
 def main(argv: list[str] | None = None) -> None:

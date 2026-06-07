@@ -180,7 +180,7 @@ When documenting existing exploratory work into `superRA/`:
 1. Survey existing code, outputs, and notebooks
 2. Create `superRA/` structure with `superra task create` — one task per logical unit of work done
 3. Edit each `task.md`: set `status: implemented` in frontmatter, fill body sections with what was done (`## Objective`: what was the goal) and found (`## Results`: what was discovered)
-4. Hooks validate + rebuild dashboard. The task tree is now a retroactive record that can drive review, integration, and future work
+4. Hooks validate the tree and propagate status. The task tree is now a retroactive record that can drive review, integration, and future work
 
 See `task-system/references/planning.md` §Retroactive Plan Creation for the full workflow.
 

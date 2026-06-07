@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""PostToolUse hook: validate task.md and rebuild dashboard on edit/write/move.
+"""PostToolUse hook: validate task.md and propagate status on edit/write/move.
 
 Fires after Edit/Write tool calls (targeting a task.md) and after Bash tool
 calls that structurally mutate a task tree (mv, rm, cp, mkdir, ...).
-In both cases it runs the same best-effort reconcile — validate the tree,
-propagate parent status, rebuild the dashboard. Always exits 0 — never blocks
-the agent. Validation warnings and non-fatal reconcile failures are injected
-through PostToolUse JSON on stdout; successful/ignored paths stay silent.
+In both cases it runs the same best-effort reconcile — validate the tree and
+propagate parent status. It does not write the dashboard; a static dashboard is
+produced only on explicit `superra dashboard export`. Always exits 0 — never
+blocks the agent. Validation warnings and non-fatal reconcile failures are
+injected through PostToolUse JSON on stdout; successful/ignored paths stay silent.
 
 PostToolUse stdin format:
   {
@@ -22,9 +23,7 @@ import json
 import re
 import sys
 import warnings
-from contextlib import redirect_stdout
 from pathlib import Path
-from io import StringIO
 
 
 TASK_ROOT_DIRNAME = "superRA"
@@ -37,7 +36,7 @@ def _scripts_dir() -> Path:
 
 
 def _ensure_scripts_on_path() -> None:
-    """Add the scripts directory to sys.path so _task_io and plan_dashboard are importable."""
+    """Add the scripts directory to sys.path so _task_io is importable."""
     scripts = str(_scripts_dir())
     if scripts not in sys.path:
         sys.path.insert(0, scripts)
@@ -68,12 +67,13 @@ def _emit_feedback(feedback: list[str]) -> None:
 
 
 def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
-    """Validate, propagate parent status, and rebuild the dashboard for a plan tree.
+    """Validate and propagate parent status for a plan tree.
 
     Each step is best-effort in its own try/except so a failure in one never
     aborts the others or the process. When task_path is None (a structural move
     whose precise location is unknown), parent status is recomputed across the
-    whole tree rather than along a single ancestor chain.
+    whole tree rather than along a single ancestor chain. The dashboard is not
+    regenerated here; it is produced only on explicit `superra dashboard export`.
     """
     _ensure_scripts_on_path()
     import _task_io as task_io
@@ -100,16 +100,6 @@ def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
                 task_io.propagate_parent_status(plan_root, task_path)
     except Exception as exc:
         feedback.append(f"Status propagation failed for {plan_root} (non-fatal): {exc}")
-
-    # Regenerate dashboard — best-effort, never fail.
-    try:
-        import plan_dashboard
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            with redirect_stdout(StringIO()):
-                plan_dashboard.generate_dashboard(plan_root)
-    except Exception as exc:
-        feedback.append(f"Dashboard rebuild failed for {plan_root} (non-fatal): {exc}")
 
     return feedback
 

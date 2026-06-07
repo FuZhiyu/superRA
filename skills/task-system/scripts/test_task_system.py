@@ -1616,37 +1616,35 @@ class TestParseBodySections:
         assert sections["Results"].strip() == "Actual results."
 
 
-# --- Auto-rebuild tests ---
+# --- No-auto-rebuild tests ---
+#
+# The dashboard is produced only on explicit `superra dashboard export`; task
+# mutations must never create or refresh superRA/dashboard.html on their own.
 
 
-class TestAutoRebuild:
+class TestNoAutoRebuild:
     def setup_method(self):
         self.tmpdir = tempfile.mkdtemp()
         self.plan_root = Path(self.tmpdir) / "superRA"
         self.plan_root.mkdir()
-        # Create root task.md
+        # Create root task.md — but no dashboard.
         _write_task_md(self.plan_root / "task.md", "Root", "not-started")
-        # Create initial dashboard
-        plan_dashboard.generate_dashboard(self.plan_root)
         self.dashboard = self.plan_root / "dashboard.html"
-        assert self.dashboard.exists()
-        self.initial_content = self.dashboard.read_text()
 
     def teardown_method(self):
         shutil.rmtree(self.tmpdir)
 
-    def test_create_triggers_rebuild(self):
+    def test_create_does_not_generate_dashboard(self):
         task_create.create_task(self.plan_root, "01-first", "First Task")
-        new_content = self.dashboard.read_text()
-        assert "First Task" in new_content
-        assert new_content != self.initial_content
+        assert not self.dashboard.exists()
 
-    def test_update_triggers_rebuild(self):
+    def test_update_does_not_touch_existing_dashboard(self):
+        # An export produced a dashboard earlier; a later mutation leaves it as-is.
         task_create.create_task(self.plan_root, "01-first", "First Task")
-        content_after_create = self.dashboard.read_text()
+        plan_dashboard.generate_dashboard(self.plan_root)
+        exported_content = self.dashboard.read_text()
         task_update.update_task(self.plan_root, "01-first", status="in-progress")
-        content_after_update = self.dashboard.read_text()
-        assert content_after_update != content_after_create
+        assert self.dashboard.read_text() == exported_content
 
 
 # --- v1-to-v2 upgrade tests ---
@@ -2452,7 +2450,6 @@ class TestTaskHook:
         _write_task_md(child / "task.md", "Child", "approved",
                        objective="Complete child.")
 
-        dashboard = root / "dashboard.html"
         payload = {
             "tool_name": "apply_patch",
             "tool_input": {
@@ -2469,7 +2466,9 @@ class TestTaskHook:
         assert result.returncode == 0
         assert result.stdout == ""
         assert result.stderr == ""
-        assert dashboard.exists(), "dashboard should be regenerated after apply_patch"
+        assert not (root / "dashboard.html").exists(), (
+            "the hook must not auto-generate a dashboard"
+        )
 
         after = _task_io.parse_task(root / "task.md")
         assert after.status == "approved", (
@@ -2556,18 +2555,14 @@ class TestTaskHook:
 
     # --- Bash (manual move) branch ---
 
-    def test_bash_mv_triggers_rebuild_and_propagation(self, plan_with_branches):
-        """A Bash mv that re-parents a task rebuilds the dashboard and rolls up status.
+    def test_bash_mv_triggers_propagation(self, plan_with_branches):
+        """A Bash mv that re-parents a task rolls up parent status (no dashboard).
 
         Moving the lone not-started child out from under 01-data-prep (leaving
         only the approved 01-load) should let the parent roll up to approved
         once the post-move reconcile runs.
         """
         root = plan_with_branches
-        # Remove the stale dashboard so we can assert it gets regenerated.
-        dashboard = root / "dashboard.html"
-        if dashboard.exists():
-            dashboard.unlink()
 
         src = root / "01-data-prep" / "02-merge"
         dst = root / "02-merge"
@@ -2584,7 +2579,9 @@ class TestTaskHook:
         }
         code, _ = self._run_hook(payload)
         assert code == 0
-        assert dashboard.exists(), "dashboard should be regenerated after the move"
+        assert not (root / "dashboard.html").exists(), (
+            "the hook must not auto-generate a dashboard"
+        )
 
         after = _task_io.parse_task(root / "01-data-prep" / "task.md")
         assert after.status == "approved", (
@@ -2656,7 +2653,7 @@ class TestTaskHook:
         assert code == 0
         assert stderr == ""
 
-    def test_codex_bash_plan_mv_triggers_rebuild(self, tmp_path):
+    def test_codex_bash_plan_mv_triggers_reconcile(self, tmp_path):
         """Codex Bash payloads structurally mutating .plan trigger reconcile."""
         root = tmp_path / ".plan"
         root.mkdir()
@@ -2683,7 +2680,9 @@ class TestTaskHook:
         }
         code, _ = self._run_hook(payload, cwd=tmp_path)
         assert code == 0
-        assert (root / "dashboard.html").exists()
+        assert not (root / "dashboard.html").exists(), (
+            "the hook must not auto-generate a dashboard"
+        )
         assert _task_io.parse_task(parent / "task.md").status == "approved"
 
     def test_codex_manifest_task_hook_no_root_fails_open(self):
