@@ -1,6 +1,6 @@
 ---
 name: zotero-paper-reader
-description: Read and analyze academic papers from the user's Zotero library. Use proactively when the user asks to read, find, access, summarize, or analyze a paper by title, author, DOI, or topic from their Zotero library. Handles the complete workflow: search Zotero, locate the PDF, convert to markdown via the mistral-pdf-to-markdown skill, save under Notes/PaperInMarkdown, and analyze in sections. Also use for library queries: listing libraries (user and group), metadata search, full-text search, collection listing, tag listing, DOI-to-key lookup, and attachment retrieval — in the user's own library or any group library.
+description: "Read and analyze academic papers from the user's Zotero library. Use proactively when the user asks to read, find, access, summarize, or analyze a paper by title, author, DOI, or topic from their Zotero library. Handles the complete workflow: search Zotero, locate the PDF, convert to markdown via the mistral-pdf-to-markdown skill, save under Notes/PaperInMarkdown, and analyze in sections. Also use for library queries: listing libraries (user and group), metadata search, full-text search, collection listing, tag listing, DOI-to-key lookup, and attachment retrieval — in the user's own library or any group library."
 user-invocable: true
 ---
 
