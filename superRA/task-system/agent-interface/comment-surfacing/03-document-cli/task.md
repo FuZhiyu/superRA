@@ -1,6 +1,6 @@
 ---
 title: "Document the Comment CLI + Dispatch Pointer"
-status: implemented
+status: approved
 depends_on:
   - 01-block-accessor
 tags: []
