@@ -1,6 +1,6 @@
 ---
 title: "Drift-free, install-free CLI source resolution"
-status: implemented
+status: approved
 depends_on: 
   - wrappers-and-hooks
   - unified-command-surface
