@@ -1563,10 +1563,11 @@ class TestTouchPolish:
         # The coarse caret override must use the higher-specificity child selector,
         # not a bare `.task-toggle` (which would tie the base rule and lose).
         assert ".task-row > .task-toggle {" in coarse
-        # And it must still set the 28x44 box.
+        # And it must set the square 44x44 box (rotation-safe: an expanded caret
+        # rotates the whole hit box, so a 28x44 box would become 44x28 = 28px tall).
         m = re.search(r"\.task-row > \.task-toggle \{[^}]*?"
-                      r"width:\s*28px;\s*height:\s*44px;", coarse, re.S)
-        assert m, "coarse `.task-row > .task-toggle` must set width:28px; height:44px"
+                      r"width:\s*44px;\s*height:\s*44px;", coarse, re.S)
+        assert m, "coarse `.task-row > .task-toggle` must set width:44px; height:44px"
 
     def test_search_trigger_not_forced_visible_on_all_coarse(self):
         """The phone-only search trigger must NOT be forced `display:inline-flex`

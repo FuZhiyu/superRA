@@ -737,13 +737,16 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
     min-height: 44px;
   }
   /* The toggle caret inside a row is a distinct tap target (expand/collapse vs.
-     navigate); give it a 28px-wide, 44px-tall hit area without enlarging the
-     caret glyph. The selector is `.task-row > .task-toggle` (specificity 0,0,2,0)
-     so it beats the later unconditional `.task-toggle { width:16px; height:16px }`
-     base rule regardless of source order — a bare `.task-toggle` here loses on
-     source order and the caret would stay 16x16. */
+     navigate); give it a 44x44 hit area (full iOS HIG) without enlarging the
+     caret glyph. Square so it stays >=44px in BOTH states: an expanded caret
+     gets `transform: rotate(90deg)`, which rotates the whole hit box — a 28x44
+     box would become 44x28 (only 28px tall) once expanded. The selector is
+     `.task-row > .task-toggle` (specificity 0,0,2,0) so it beats the later
+     unconditional `.task-toggle { width:16px; height:16px }` base rule
+     regardless of source order — a bare `.task-toggle` here loses on source
+     order and the caret would stay 16x16. */
   .task-row > .task-toggle {
-    width: 28px; height: 44px;
+    width: 44px; height: 44px;
     margin: -11px 0;   /* absorb the row's new vertical padding so height is exact */
   }
 
