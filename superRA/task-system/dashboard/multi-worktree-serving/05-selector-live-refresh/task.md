@@ -1,6 +1,6 @@
 ---
 title: "Refresh the worktree dropdown on open (no page reload)"
-status: implemented
+status: approved
 depends_on:
   - 03-worktree-url-routing
 
