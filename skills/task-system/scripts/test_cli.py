@@ -264,3 +264,213 @@ def test_task_dashboard_is_not_registered(capsys: pytest.CaptureFixture[str]) ->
 
     assert excinfo.value.code == 2
     assert "invalid choice" in capsys.readouterr().err
+
+
+# --- wrapper / source-resolver surface ----------------------------------
+
+
+import os
+
+import wrapper_resolver
+
+
+def test_wrapper_init_writes_executable_resolver_wrapper(
+    task_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(task_root)
+
+    cli.main(["wrapper", "init"])
+
+    wrapper = task_root / "superra"
+    assert wrapper.exists()
+    assert os.access(wrapper, os.X_OK)
+    content = wrapper.read_text(encoding="utf-8")
+    assert content.startswith("#!/usr/bin/env bash")
+    # Carries the shared resolver chain, not a baked install path.
+    assert "_superra_resolve_source" in content
+    assert "uvx --from" in content
+    # No baked plugin/cache/version path: the only literal path is the GitHub
+    # fallback subdirectory and the runtime "skills/task-system" suffix.
+    assert str(task_root) not in content
+
+
+def test_wrapper_init_is_idempotent(
+    task_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(task_root)
+
+    cli.main(["wrapper", "init"])
+    first = (task_root / "superra").read_text(encoding="utf-8")
+    cli.main(["wrapper", "init"])
+    second = (task_root / "superra").read_text(encoding="utf-8")
+
+    assert first == second
+
+
+def test_generated_wrapper_and_hook_are_valid_bash() -> None:
+    if shutil.which("bash") is None:
+        pytest.skip("bash required for syntax check")
+    for content in (wrapper_resolver.render_wrapper(), wrapper_resolver.render_hook_shim()):
+        result = subprocess.run(
+            ["bash", "-n", "/dev/stdin"],
+            input=content,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert result.returncode == 0, result.stderr
+
+
+def test_committed_hook_shim_matches_generator() -> None:
+    committed = (SKILL_DIR.parent.parent / "hooks" / "task-hook")
+    if not committed.exists():
+        pytest.skip("committed hooks/task-hook not present in this layout")
+    assert committed.read_text(encoding="utf-8") == wrapper_resolver.render_hook_shim()
+
+
+def _resolver_probe_script() -> str:
+    """Bash that sources the resolver chain and prints _superra_resolve_source."""
+    snippet = wrapper_resolver.render_resolver_snippet()
+    return "set -uo pipefail\n" + snippet + "\n_superra_resolve_source\n"
+
+
+def _run_resolver_probe(env: dict[str, str], cwd: Path) -> str:
+    result = subprocess.run(
+        ["bash", "-c", _resolver_probe_script()],
+        env=env,
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    return result.stdout.strip()
+
+
+@pytest.fixture
+def resolver_env(tmp_path: Path) -> dict[str, str]:
+    """A clean env with HOME pointed at an empty fake home (no caches)."""
+    home = tmp_path / "home"
+    home.mkdir()
+    env = {k: v for k, v in os.environ.items()}
+    for var in ("CLAUDE_PLUGIN_ROOT", "PLUGIN_ROOT", "SUPERRA_REPO_ROOT"):
+        env.pop(var, None)
+    env["HOME"] = str(home)
+    return env
+
+
+def test_resolver_env_var_outranks_everything(
+    tmp_path: Path,
+    resolver_env: dict[str, str],
+) -> None:
+    if shutil.which("bash") is None:
+        pytest.skip("bash required")
+    plugin = tmp_path / "envplugin"
+    (plugin / "skills" / "task-system").mkdir(parents=True)
+    (plugin / "skills" / "task-system" / "pyproject.toml").touch()
+    resolver_env["CLAUDE_PLUGIN_ROOT"] = str(plugin)
+
+    out = _run_resolver_probe(resolver_env, tmp_path)
+    assert out == f"DIR:{plugin}/skills/task-system"
+
+
+def test_resolver_falls_back_to_github_when_no_source(
+    tmp_path: Path,
+    resolver_env: dict[str, str],
+) -> None:
+    if shutil.which("bash") is None:
+        pytest.skip("bash required")
+
+    out = _run_resolver_probe(resolver_env, tmp_path)
+    assert out.startswith("GIT:git+https://github.com/FuZhiyu/superRA.git@")
+    assert "subdirectory=skills/task-system" in out
+
+
+def test_resolver_picks_claude_manifest_over_codex(
+    tmp_path: Path,
+    resolver_env: dict[str, str],
+) -> None:
+    if shutil.which("bash") is None or shutil.which("python3") is None:
+        pytest.skip("bash + python3 required")
+    home = Path(resolver_env["HOME"])
+    claude_install = tmp_path / "claude-install"
+    (claude_install / "skills" / "task-system").mkdir(parents=True)
+    (claude_install / "skills" / "task-system" / "pyproject.toml").touch()
+    (home / ".claude" / "plugins").mkdir(parents=True)
+    manifest = home / ".claude" / "plugins" / "installed_plugins.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "plugins": {
+                    "superRA@superRA": [
+                        {"scope": "user", "installPath": str(claude_install), "projectPath": None}
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    # Also lay down a codex cache; the Claude manifest must still win.
+    codex = home / ".codex" / "plugins" / "cache" / "superRA" / "superra" / "0.9.0" / "skills" / "task-system"
+    codex.mkdir(parents=True)
+    (codex / "pyproject.toml").touch()
+
+    out = _run_resolver_probe(resolver_env, tmp_path)
+    assert out == f"DIR:{claude_install}/skills/task-system"
+
+
+def test_resolver_codex_picks_highest_semver_within_depth_bound(
+    tmp_path: Path,
+    resolver_env: dict[str, str],
+) -> None:
+    if shutil.which("bash") is None:
+        pytest.skip("bash required")
+    home = Path(resolver_env["HOME"])
+    cache = home / ".codex" / "plugins" / "cache" / "superRA" / "superra"
+    for ver in ("0.1.0", "0.10.0", "0.2.0"):
+        d = cache / ver / "skills" / "task-system"
+        d.mkdir(parents=True)
+        (d / "pyproject.toml").touch()
+    # Decoy nested too deep for the depth-3 glob; must be ignored.
+    deep = cache / "extra" / "deep" / "0.99.0" / "skills" / "task-system"
+    deep.mkdir(parents=True)
+    (deep / "pyproject.toml").touch()
+
+    out = _run_resolver_probe(resolver_env, tmp_path)
+    assert out == f"DIR:{cache}/0.10.0/skills/task-system"
+
+
+def test_resolver_skips_cache_lacking_pyproject(
+    tmp_path: Path,
+    resolver_env: dict[str, str],
+) -> None:
+    if shutil.which("bash") is None or shutil.which("python3") is None:
+        pytest.skip("bash + python3 required")
+    home = Path(resolver_env["HOME"])
+    # Claude manifest points at an install dir missing the packaged pyproject.
+    stale = tmp_path / "stale-claude"
+    (stale / "skills" / "task-system").mkdir(parents=True)  # no pyproject.toml
+    (home / ".claude" / "plugins").mkdir(parents=True)
+    (home / ".claude" / "plugins" / "installed_plugins.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "plugins": {
+                    "superRA@superRA": [
+                        {"scope": "user", "installPath": str(stale), "projectPath": None}
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    # Codex cache has a usable package; resolution must fall through to it.
+    codex = home / ".codex" / "plugins" / "cache" / "superRA" / "superra" / "0.3.0" / "skills" / "task-system"
+    codex.mkdir(parents=True)
+    (codex / "pyproject.toml").touch()
+
+    out = _run_resolver_probe(resolver_env, tmp_path)
+    assert out == f"DIR:{codex}"

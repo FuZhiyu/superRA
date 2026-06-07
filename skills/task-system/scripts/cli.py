@@ -282,6 +282,19 @@ def _run_hook(args: argparse.Namespace) -> None:
     _module_main("task_hook", pass_argv=False)
 
 
+def _run_wrapper(args: argparse.Namespace) -> None:
+    if args.wrapper_command == "init":
+        _module_main("wrapper_resolver", ["init"] + _root_args_wrapper(args.root))
+    elif args.wrapper_command == "render-hook":
+        argv = ["render-hook"]
+        _append_optional(argv, "--output", args.output)
+        _module_main("wrapper_resolver", argv)
+
+
+def _root_args_wrapper(root: str | None) -> list[str]:
+    return ["--root", root] if root is not None else []
+
+
 def _set_runner(parser: argparse.ArgumentParser, runner: Callable[[argparse.Namespace], None]) -> None:
     parser.set_defaults(runner=runner)
 
@@ -591,6 +604,25 @@ def build_parser() -> argparse.ArgumentParser:
     hook_sub = hook.add_subparsers(dest="hook_command", required=True)
     post_tool_use = hook_sub.add_parser("post-tool-use", help="Run the PostToolUse hook")
     _set_runner(post_tool_use, _run_hook)
+
+    wrapper = sub.add_parser("wrapper", help="Generate the resolver-carrying task-tree CLI wrapper")
+    wrapper_sub = wrapper.add_subparsers(dest="wrapper_command", required=True)
+    wrapper_init = wrapper_sub.add_parser(
+        "init", help="Write an executable resolver wrapper into the task root"
+    )
+    wrapper_init.add_argument(
+        "--root",
+        default=None,
+        help=f"Task root to write the wrapper into (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
+    )
+    _set_runner(wrapper_init, _run_wrapper)
+    wrapper_render_hook = wrapper_sub.add_parser(
+        "render-hook", help="Print or write the generated hooks/task-hook shim"
+    )
+    wrapper_render_hook.add_argument(
+        "--output", default="", help="Write the shim to PATH (and chmod +x) instead of stdout"
+    )
+    _set_runner(wrapper_render_hook, _run_wrapper)
 
     return parser
 

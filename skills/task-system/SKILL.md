@@ -28,19 +28,21 @@ The common on-demand path is inspecting tree state. Use `superra task`:
 
 ```bash
 # Print tree with status badges
-superra task tree --root superRA
+superra task tree
 
 # List dispatchable leaf tasks (the frontier)
-superra task frontier --root superRA
+superra task frontier
 
 # Render dependency DAG for a subtree (Mermaid format)
-superra task dag 01-data --root superRA
+superra task dag 01-data
 
 # JSON output
-superra task tree --root superRA --json
+superra task tree --json
 ```
 
-The `--root` flag is optional — auto-detected from the current working directory.
+`--root` auto-detects the task root (preferring `superRA/`) from the current working directory, so the canonical form omits it; pass `--root <path>` only to point at a non-default location.
+
+The `superra` command resolves the task-system package from the installed plugin at runtime via `uvx` — it installs nothing and never creates a venv in your project. A task tree carries a generated `superra` wrapper (`./superRA/superra task tree`); create or refresh it with `superra wrapper init`. Never run bare `uv run superra` from a research project: `uv` would try to provision that project's environment, which is wrong and can fail.
 
 ## Task File Format
 
@@ -83,7 +85,7 @@ Field-by-field anatomy and body-section ownership live in `references/planning.m
 | Create / rename / link / move tasks; bulk status propagation; append results programmatically | `references/commands.md` |
 | Objective writing, task splitting, placement, results shape, stale-content, retroactive plans | `references/planning.md` |
 | Migrate legacy `PLAN.md` + `RESULTS.md`, or upgrade `superRA/` v1 → v2 | `references/internals.md §Migration` |
-| View the dashboard | `superra dashboard --root superRA` runs the server in the background and returns (reuses a running one; `--foreground` to block in this terminal; `superra dashboard stop` to stop it). Local checkout: `uv run --project skills/task-system superra dashboard --root superRA`; mechanics in `references/internals.md §Dashboard` |
+| View the dashboard | `superra dashboard` runs the server in the background and returns (reuses a running one; `--foreground` to block in this terminal; `superra dashboard stop` to stop it). Local checkout: `uv run --project skills/task-system superra dashboard`; mechanics in `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
 A plain `mv` of a task directory carries the whole subtree; a move that crosses a dependency boundary strands a sibling `depends_on` reference, which validation flags for re-wiring. See `references/commands.md` for the full mutation surface.

@@ -12,7 +12,6 @@ Creates the directory, fills the template with current dates, and sets frontmatt
 
 ```bash
 superra task create 01-data/03-filter \
-  --root superRA \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
   --guidance "Consider reusing Code/common_filters.py." \
@@ -24,15 +23,14 @@ superra task create 01-data/03-filter \
 ## Bulk status operations
 
 ```bash
-superra task status propagate --root superRA
-superra task status cascade 01-data --root superRA --status approved
+superra task status propagate
+superra task status cascade 01-data --status approved
 ```
 
 ## Append a result programmatically
 
 ```bash
 superra task result add 01-data/01-load \
-  --root superRA \
   --finding "Loaded 4.7M rows across 12K funds"
 ```
 
@@ -41,9 +39,9 @@ superra task result add 01-data/01-load \
 Also fixes a dangling `depends_on` after a manual move:
 
 ```bash
-superra task dep add 01-data/03-filter 02-merge --root superRA
+superra task dep add 01-data/03-filter 02-merge
 
-superra task dep remove 01-data/03-filter 02-merge --root superRA
+superra task dep remove 01-data/03-filter 02-merge
 ```
 
 ## Rename / move a task
@@ -51,7 +49,7 @@ superra task dep remove 01-data/03-filter 02-merge --root superRA
 `superra task rename` is an atomic same-parent rename that cascades sibling `depends_on`:
 
 ```bash
-superra task rename 01-data/01-load 01-data/01-load-raw --root superRA
+superra task rename 01-data/01-load 01-data/01-load-raw
 ```
 
 A plain `mv` of the task directory also works — it carries the `task.md`, `comments.yaml`, and whole subtree, and the PostToolUse hook revalidates the tree and propagates status. One caveat: `depends_on` references sibling slugs, so a move that crosses a dependency boundary strands the reference — validation flags the now-dangling dependency and you re-wire it with `superra task dep add` / `superra task dep remove` or a direct edit (the hook does not auto-cascade). `superra task rename` is no longer required to keep the tree consistent after a manual move; it is the convenience for the atomic same-parent case.

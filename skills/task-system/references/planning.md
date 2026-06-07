@@ -92,7 +92,7 @@ When creating `superRA/` from existing work (code already written, results alrea
 4. Set status to `approved` for tasks whose work is complete and verified
 5. Set status to `implemented` for tasks whose work is done but not yet reviewed
 6. Populate `## Results` from existing findings
-7. Run `superra dashboard --root superRA` to launch the dashboard
+7. Run `superra dashboard` to launch the dashboard
 
 ## Hierarchy Management Commands
 
@@ -100,7 +100,6 @@ When creating `superRA/` from existing work (code already written, results alrea
 
 ```bash
 superra task create 01-data/03-filter \
-  --root superRA \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
   --guidance "Consider reusing the sample filter helper in Code/common.py." \
@@ -112,15 +111,15 @@ superra task create 01-data/03-filter \
 ### Rename a task (cascades to sibling depends_on)
 
 ```bash
-superra task rename 01-data/01-load 01-data/01-load-raw --root superRA
+superra task rename 01-data/01-load 01-data/01-load-raw
 ```
 
 ### Manage dependencies
 
 ```bash
-superra task dep add 01-data/03-filter 02-merge --root superRA
+superra task dep add 01-data/03-filter 02-merge
 
-superra task dep remove 01-data/03-filter 02-merge --root superRA
+superra task dep remove 01-data/03-filter 02-merge
 ```
 
 ## Field-by-Field Notes

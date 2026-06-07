@@ -102,7 +102,6 @@ Use `superra task create` to create tasks (auto-fills template with dates, front
 
 ```bash
 superra task create 01-data/03-filter \
-  --root superRA \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
   --guidance "Consider reusing Code/common_filters.py." \

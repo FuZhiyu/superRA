@@ -11,7 +11,7 @@ The dispatch carries a `Review mode:`:
 - **handoff-readiness** — is the task/subtree clear, complete, human-readable, internally consistent, and ready for an implementer to execute from the task files plus provided context?
 - **design-review** — are the proposed architecture, decomposition, assumptions, artifact pipeline, dependency structure, and domain reasoning good enough for the objective?
 
-Use the provided context as review evidence. Run `superra task check --root superRA` when the dispatch asks for it — it is a structural preflight, not the semantic review.
+Use the provided context as review evidence. Run `superra task check` when the dispatch asks for it — it is a structural preflight, not the semantic review.
 
 ## Verdict and Note Ownership
 

@@ -104,9 +104,9 @@ After approval:
 3. **Verify the result:**
    ```bash
    # Check tree structure
-   superra task tree --root superRA
+   superra task tree
    # Check for cycles and broken dependencies
-   superra task dag --root superRA
+   superra task dag
    ```
    Confirm: no cycles, no broken `depends_on`, no orphans with missing links, structure matches the approved proposal.
 
@@ -117,7 +117,7 @@ After approval:
    plan: consolidate task tree — <one-line summary of changes>
    ```
 
-6. **Launch the dashboard** if needed (`superra dashboard --root superRA`).
+6. **Launch the dashboard** if needed (`superra dashboard`).
 
 ## Standalone vs Integration Use
 
