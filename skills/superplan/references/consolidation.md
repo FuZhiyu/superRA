@@ -24,8 +24,8 @@ Read every `task.md` in the tree and build a structural picture:
 1. **Run `superra task tree`** to see the current structure and status distribution.
 2. **Run `superra task dag`** to see the dependency graph.
 3. **Map each task's scope:** objective, declared inputs/outputs, `depends_on`, status.
-4. **Build a relationship matrix:** For each pair of tasks at the same level, note shared inputs, shared outputs, sequential logic, and overlapping scope.
-5. **Identify issues** from the list below and classify each.
+4. **Build a relationship matrix:** For each pair of tasks, note shared inputs, shared outputs, sequential logic, and overlapping scope. Compare across levels, not only same-level pairs — misplacement (a task under the wrong parent) and update tasks that should fold into the artifact they modify are inherently whole-tree, so test each task's and each subtree's concern against its parent and against other subtrees, using the recursive-descent procedure in `task-system/references/planning.md` §Placing Work in the Tree.
+5. **Identify issues** from the list below and classify each. Treat any *update task* in the frontier — a task whose purpose is to improve or modify an existing task or artifact — as a **Merge** candidate by default, per the create-then-merge lifecycle in §Placing Work: it folds into the task it updates and does not survive integration as a standalone tree.
 
 ## Issue Classification
 
@@ -33,7 +33,8 @@ For each identified issue, classify the action:
 
 | Issue | Action | What it means |
 |---|---|---|
-| Two tasks with overlapping objectives or outputs | **Merge** | Combine into one task. Rewrite the objective to cover both scopes. |
+| Two or more tasks with overlapping objectives or outputs | **Merge** | Combine into one task; or, when several tasks cluster on one concern with distinct deliverables, fold them into a single parent concern with the survivors as children (N-way merge into a subtree). |
+| An update task that improves an existing task or artifact | **Merge** | Fold the matured update into the task it modifies and remove the update-task directory (create-then-merge lifecycle). |
 | Task A reads task B's output but no `depends_on` declared | **Link** | Add the missing dependency. |
 | Objective superseded by another task's results or a scope change | **Prune** | Delete the stale task directory. |
 | Task too large for independent dispatch and review | **Split** | Create subtasks under the current task. |
@@ -43,7 +44,10 @@ For each identified issue, classify the action:
 
 ### Action Details
 
-**Merge:** Rewrite the surviving task's objective to cover both scopes (self-sufficient, not patched). Use the more conservative status of the two tasks. Update all sibling `depends_on` references that pointed to the removed task. Delete the absorbed task's directory.
+**Merge:** Two forms, both kept manual so the human controls how the combined tasks' nuance is integrated — there is no `task merge` command.
+
+- *Pairwise.* Rewrite the surviving task's objective to cover both scopes (self-sufficient, not patched). Use the more conservative status of the two tasks. Update all sibling `depends_on` references that pointed to the removed task. Delete the absorbed task's directory.
+- *N-way into a subtree.* When several tasks cluster on one concern but carry distinct deliverables, create (or designate) one parent concern and make the distinct survivors its children — a Merge+Split composite. Roll the parent's status up conservatively from the children, and rewire every `depends_on` across the cluster (the same-parent rename rewire is provided by the `restructuring-tooling` hook; cross-parent edges are fixed by hand). For an *update task*, the merge target is the task it modifies: fold the matured result into that target or parent and remove the update-task directory.
 
 **Link:** Update `depends_on` frontmatter via `superra task dep add` / `superra task dep remove`. No objective rewrite needed unless the dependency changes the task's scope.
 

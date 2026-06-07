@@ -1,6 +1,6 @@
 ---
 title: "Surface Task Comments to the Agent Loop"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -22,8 +22,20 @@ Make the task-system **comment feature visible to the agent loop**. Today a rese
 - `02` adds a one-clause cross-edit to `using-superRA/SKILL.md §Task Interface` (just authored by `lean-interface/01`, approved) noting `task_read` also surfaces open comments. Coordinate: land it only after `lean-interface/01` is approved (it is), and flag it for `lean-interface/05-coverage-audit` so its git-snapshot baseline accounts for the added clause.
 - `03-document-cli` documents the comment CLI in `task-system/SKILL.md` / its references — which `lean-interface/02` is concurrently redesigning into a lean router. **Run `03` after `lean-interface/02` is approved** so the doc lands in the new structure (a reference, e.g. `references/commands.md`, with a one-line body pointer) instead of being clobbered. Flag the added command surface for `lean-interface/05`.
 
-**Contributor gates (every child):** apply the repo `CLAUDE.md` "Teach the Protocol" DRY/Necessity gate to any prose; scope all edits/commits to this worktree (`/Users/zhiyufu/Dropbox/package_dev/superRA.worktrees/better-handoff-skill-instruction`; a sibling `better-handoff` worktree exists — do not touch it); `skill-creator` is not registered in this harness, so do not attempt to load it. Run tests with `~/.venv/bin/python` (it has `pyyaml`); the *runtime* read path, however, must not require it.
+**Contributor gates (every child):** apply the repo `CLAUDE.md` "Teach the Protocol" DRY/Necessity gate to any prose; scope all edits/commits to your assigned worktree (its absolute path is supplied in the dispatch `Worktree:` field — sibling worktrees of this repo exist, do not touch them); `skill-creator` is not registered in this harness, so do not attempt to load it. Run tests with `~/.venv/bin/python` (it has `pyyaml`); the *runtime* read path, however, must not require it.
 
 **Success criterion:** an agent that runs the documented `python3 task_read.py --path <t>` on a task with unresolved comments sees each comment together with the full block it is pinned to (orphaned comments degrade to preview + an orphaned note); the comment read/resolve CLI is discoverable in the docs; and no existing behavior or invocation contract is broken.
 
 ## Results
+
+The task-system comment feature is now visible to the agent loop. Previously a researcher could pin comments to `task.md` blocks via the dashboard, but agents never saw them — `task_read.py` (the canonical read path) had no comment handling and the CLI was undocumented. This subtree closed both the discovery gap and the context-richness gap.
+
+**What an agent sees now.** `task_read` emits an `=== Open Comments ===` section listing each *unresolved* comment together with the **full text of the block it is anchored to** — not a "block N" coordinate or a ≤60-char preview — followed by the comment body. Resolved comments are excluded; orphaned comments (block moved or deleted) degrade to the stored preview plus an `[ORPHANED]` note. `--json` mirrors this under an `open_comments` key. See [02-surface-in-task-read](02-surface-in-task-read/task.md).
+
+**Reliability under bare `python3`.** The read path must work under the documented `python3 task_read.py` invocation, where `pyyaml` is unavailable. The comment sidecar is now written as JSON-in-`.yaml` — a strict YAML subset that is lossless, still valid for the dashboard's YAML reader, and parseable by stdlib `json` with no third-party library. The three pre-existing legacy block-YAML sidecars were migrated losslessly; any stray future legacy file degrades gracefully (visible note, read still exits 0) instead of crashing the whole read. See [02-surface-in-task-read](02-surface-in-task-read/task.md).
+
+**Discoverability.** The read/resolve loop is documented as `superra task comment list/tree/resolve` in [`references/commands.md` §Comments](../../../../skills/task-system/references/commands.md), the scripts (`_comments.py`, `task_comment.py`) are in the internals Script Inventory, and `agent-orchestration` carries a one-line pointer noting comments surface automatically via `task read`. See [03-document-cli](03-document-cli/task.md).
+
+**Test coverage.** 17 tests in `skills/task-system/scripts/tests/test_comments.py` cover the block accessor, `task_read` human + `--json` surfacing, the enriched CLI, and the load-bearing no-`pyyaml` reliability path (a `sys.meta_path` finder genuinely disables `import yaml`; mutation-verified to fail if the behavior regresses). The full task-system suite stays green (534 passed). See [04-tests](04-tests/task.md).
+
+**Format-change decision (load-bearing).** Meeting the no-`pyyaml` requirement required changing the on-disk comment sidecar format from PyYAML block-style to JSON-in-`.yaml`, repo-wide; confirmed with the researcher during integration. The format is lossless and backward-readable, and the alternative — a hand-rolled stdlib YAML parser — was rejected as risking silent corruption of multi-line/unicode comment bodies.

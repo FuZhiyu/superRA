@@ -83,10 +83,11 @@ Field-by-field anatomy and body-section ownership live in `references/planning.m
 | To do X | See |
 |---|---|
 | Create / rename / link / move tasks; bulk status propagation; append results programmatically | `references/commands.md` |
+| Read or resolve task comments (the read/resolve loop; comments also surface via `superra task read`) | `references/commands.md §Comments` |
 | Objective writing, task splitting, placement, results shape, stale-content, retroactive plans | `references/planning.md` |
 | Migrate legacy `PLAN.md` + `RESULTS.md`, or upgrade `superRA/` v1 → v2 | `references/internals.md §Migration` |
 | View the dashboard | `superra dashboard` runs the server in the background and returns (reuses a running one; `--foreground` to block in this terminal; `superra dashboard stop` to stop it). Local checkout: `uv run --project skills/task-system superra dashboard`; mechanics in `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
-A plain `mv` of a task directory carries the whole subtree; a move that crosses a dependency boundary strands a sibling `depends_on` reference, which validation flags for re-wiring. See `references/commands.md` for the full mutation surface.
+A plain `mv` of a task directory carries the whole subtree. A **same-parent rename** auto-cascades sibling `depends_on` (the hook re-points dependents — expect this silent edit, surfaced in its feedback); a **cross-parent move** or a **delete** of a depended-on task strands the reference instead, which validation flags for re-wiring. See `references/commands.md` for the full mutation surface.
 <!-- no need to route back to using superra -->

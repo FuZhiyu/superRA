@@ -9,7 +9,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import TASK_ROOT_DIRNAME, parse_task, resolve_plan_root_arg, write_task
+from _task_io import (
+    TASK_ROOT_DIRNAME,
+    cascade_depends_on_rename,
+    parse_task,
+    resolve_plan_root_arg,
+)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -44,26 +49,27 @@ def rename_task(plan_root: Path, from_path: str, to_path: str) -> None:
     old_slug = from_dir.name
     new_slug = to_dir.name
 
-    # Parse and validate all sibling files BEFORE renaming, so a parse
-    # failure does not leave the directory renamed with stale references.
-    siblings = [
-        d for d in from_parent.iterdir()
-        if d.is_dir() and (d / "task.md").exists() and d != from_dir
-    ]
-    sibling_updates: list[tuple[Path, "Task"]] = []  # type: ignore[name-defined]
-    for sibling_dir in siblings:
-        task = parse_task(sibling_dir / "task.md")
-        if old_slug in task.depends_on:
-            task.depends_on = [new_slug if d == old_slug else d for d in task.depends_on]
-            sibling_updates.append((sibling_dir, task))
+    # Validate every sibling task.md parses before mutating the filesystem, so a
+    # malformed sibling aborts here rather than leaving the directory renamed with
+    # the cascade half-applied. (cascade_depends_on_rename re-parses these, but
+    # that runs after the rename; the pre-check keeps rename + cascade atomic.)
+    for sibling_dir in from_parent.iterdir():
+        if sibling_dir == from_dir or not sibling_dir.is_dir():
+            continue
+        sibling_md = sibling_dir / "task.md"
+        if not sibling_md.exists():
+            continue
+        try:
+            parse_task(sibling_md)
+        except Exception as exc:
+            print(f"Error: cannot parse sibling {sibling_md}: {exc}", file=sys.stderr)
+            sys.exit(1)
 
-    # All parsing succeeded — now perform the rename and writes.
     from_dir.rename(to_dir)
     print(f"Renamed {from_dir} -> {to_dir}")
 
-    for sibling_dir, task in sibling_updates:
-        write_task(task)
-        print(f"  Updated depends_on in {sibling_dir.name}")
+    for sibling_name in cascade_depends_on_rename(to_parent, old_slug, new_slug):
+        print(f"  Updated depends_on in {sibling_name}")
 
 
 def main(argv: list[str] | None = None) -> None:

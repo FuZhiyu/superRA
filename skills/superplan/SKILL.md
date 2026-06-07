@@ -36,7 +36,7 @@ Structural cleanup of an existing tree (overlapping tasks, stale objectives, gra
 
 **Placement and depth are independent dimensions.** Neither determines the other. Work can clearly belong under an existing task but still need thorough planning; uncertain tree location does not mean the work itself is hard to plan.
 
-**Ask when unclear.** When the existing tree and project context do not make placement or depth obvious, ask the user rather than guessing silently. Present the concrete options under consideration — e.g., "nest under task X vs. create a new root-level task" or "standard vs. thorough depth" — with a one-line rationale for each. Wrong placement creates rework; wrong depth wastes effort or misses complexity.
+**Ask when unclear.** When the existing tree and project context do not make placement or depth obvious, ask the user rather than guessing silently. Present the concrete options under consideration — the candidate placements surfaced by the descent in §Placing Work, or "standard vs. thorough depth" — with a one-line rationale for each. Wrong placement creates rework; wrong depth wastes effort or misses complexity.
 
 ## Depth Tiers
 
@@ -74,7 +74,7 @@ Identify the domain of the work and load the matching domain skill's planning re
 
 If the task is in a domain without an implemented vertical: proceed to Phase 3, but flag the gap to the researcher.
 
-**Scope check:** If the work covers multiple independent workstreams, suggest splitting into separate root-level tasks — one per workstream. Each should produce complete, documented results on its own.
+**Scope check:** A root-level task is a whole workstream (see §Placing Work). If the work covers multiple genuinely independent workstreams, suggest a separate root-level task for each, producing complete results on its own; work related to an existing workstream nests under it by the placement descent rather than landing at root.
 
 ## Phase 3: Design & Task Decomposition
 
@@ -164,6 +164,8 @@ Skip this step at quick and standard depth unless the user explicitly asks for a
 
 Verify the task tree aligns with the user's intent. Present the tree (via `superra task tree`) and surface remaining open questions — design tradeoffs, unresolved ambiguities, choices that could reasonably go another way. Present tradeoffs as options, not assertions. If you have no genuine questions, the tree presentation itself is the review.
 
+For each newly created task — especially a root-level one — state the existing concern you considered and why it does not cover the work, so the placement decision is visible for a human catch without enforcement machinery.
+
 ### Execution Handoff
 
 Commit the `superRA/` directory atomically. Then hand off to `superRA:superimplement`, which owns execution-mode selection, frontier-based dispatch, and review discipline.
@@ -235,10 +237,9 @@ When the task tree changes — task details updated, tasks added, removed, or re
 **Protocol:**
 
 1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change.
-2. **Update `superRA/` inline:**
-   - **Prefer modifying existing task.md files over adding new tasks.** Walk the task tree and identify every task whose objective or output is affected. Update each in place.
-   - **New task** — Only when the change is genuinely independent of every existing task's scope.
-   - **Modified task** — Rewrite the objective to be fully self-sufficient with the new scope (all planning context included, not just the changed part). Add a `## Revision Notes` section with the delta signal.
+2. **Update `superRA/` inline:** Place the change by the recursive descent in `task-system/references/planning.md` §Placing Work in the Tree — the presumption is MODIFY/MERGE the task that owns the concern; a new task, especially at root, is the justified exception.
+   - **Modified task** — Walk the tree, identify every task whose objective or output is affected, and update each in place. Rewrite each objective to be fully self-sufficient with the new scope (all planning context included, not just the changed part). Add a `## Revision Notes` section with the delta signal.
+   - **New task** — Only when the descent reaches a branch no child covers; record which concern you read and why it does not cover the work.
    - **Removed task** — Delete the directory entirely.
    - **Root task.md** — After the task edits above, rewrite any field in root task.md that no longer matches the new tree.
 

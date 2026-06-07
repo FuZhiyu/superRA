@@ -1563,10 +1563,11 @@ class TestTouchPolish:
         # The coarse caret override must use the higher-specificity child selector,
         # not a bare `.task-toggle` (which would tie the base rule and lose).
         assert ".task-row > .task-toggle {" in coarse
-        # And it must still set the 28x44 box.
+        # And it must set the square 44x44 box (rotation-safe: an expanded caret
+        # rotates the whole hit box, so a 28x44 box would become 44x28 = 28px tall).
         m = re.search(r"\.task-row > \.task-toggle \{[^}]*?"
-                      r"width:\s*28px;\s*height:\s*44px;", coarse, re.S)
-        assert m, "coarse `.task-row > .task-toggle` must set width:28px; height:44px"
+                      r"width:\s*44px;\s*height:\s*44px;", coarse, re.S)
+        assert m, "coarse `.task-row > .task-toggle` must set width:44px; height:44px"
 
     def test_search_trigger_not_forced_visible_on_all_coarse(self):
         """The phone-only search trigger must NOT be forced `display:inline-flex`
@@ -1889,3 +1890,75 @@ class TestChildFlowClientLogic:
             "  busted: childrenSig(kids,e1)!==childrenSig(kids,e2)}));"
         )
         assert out["busted"]
+
+
+# ---------------------------------------------------------------------------
+# Sidebar state preservation: the active page stays expanded to its children,
+# and manually-opened branches survive a structural full-reload instead of
+# folding back to the root. Wiring-level regression checks (the functions are
+# DOM-bound, so we assert their presence + the call sites that drive them, in
+# the style of TestTouchSidebar above).
+# ---------------------------------------------------------------------------
+class TestSidebarStatePreservation:
+    def test_capture_restore_helpers_present(self):
+        """The snapshot/restore pair the full-reload path relies on must exist."""
+        assert "function getExpandedNavPaths()" in BASE_HTML
+        assert "async function restoreExpandedNavPaths(paths)" in BASE_HTML
+
+    def test_restore_is_shallow_to_deep(self):
+        """Restoring must expand parents before descendants so each lazy branch
+        is in the DOM by the time its children are re-opened — i.e. sort by
+        path depth before walking."""
+        m = re.search(
+            r"async function restoreExpandedNavPaths\(paths\)\s*\{.*?\n\}",
+            BASE_HTML, re.S,
+        )
+        assert m, "restoreExpandedNavPaths not found"
+        body = m.group(0)
+        assert ".sort(" in body and "split('/').length" in body
+
+    def test_full_reload_captures_before_rebuild_and_restores_after(self):
+        """onFullReload must snapshot the open branches before loadNavTree wipes
+        them, then restore them — otherwise the tree folds to the root."""
+        m = re.search(r"async function onFullReload\(\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert m, "onFullReload not found"
+        body = m.group(0)
+        cap = body.index("getExpandedNavPaths()")
+        reload_ = body.index("await loadNavTree()")
+        restore = body.index("restoreExpandedNavPaths(expanded)")
+        assert cap < reload_ < restore
+
+    def test_active_page_expands_to_its_children(self):
+        """updateSidebar must open the current page's own caret (expandNavNode on
+        the target), not just its ancestor chain."""
+        m = re.search(r"async function updateSidebar\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert m, "updateSidebar not found"
+        body = m.group(0)
+        assert "await expandNavNode(target)" in body
+
+
+class TestWorktreeSelectorLiveRefresh:
+    def test_refresh_on_open_wiring_present(self):
+        """Opening the dropdown re-fetches the worktree list so a worktree added
+        since page load appears without a manual page refresh."""
+        assert "function initWorktreeSelectorRefresh()" in BASE_HTML
+        assert "initWorktreeSelectorRefresh();" in BASE_HTML
+        m = re.search(
+            r"function initWorktreeSelectorRefresh\(\)\s*\{.*?\n\}", BASE_HTML, re.S
+        )
+        assert m
+        body = m.group(0)
+        assert "'mousedown'" in body and "'focus'" in body
+        assert "fetchWorktrees()" in body
+
+    def test_signature_guard_prevents_popup_flicker(self):
+        """populateWorktreeSelector must short-circuit when the option set is
+        unchanged, so a refresh-on-open does not rewrite options under the open
+        native picker."""
+        assert "_wtSignature" in BASE_HTML
+        m = re.search(
+            r"function populateWorktreeSelector\(data\)\s*\{.*?\n\}", BASE_HTML, re.S
+        )
+        assert m
+        body = m.group(0)
+        assert "signature === _wtSignature" in body

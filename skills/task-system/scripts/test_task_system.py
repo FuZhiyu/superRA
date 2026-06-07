@@ -83,6 +83,12 @@ def _write_task_md(path: Path, title: str, status: str, **kwargs):
         f"tags: {tags_yaml}",
         f"created: {created}",
     ])
+    if "script" in kwargs:
+        fm_lines.append(f"script: {kwargs['script']}")
+    for list_field in ("input", "output"):
+        if list_field in kwargs:
+            items = kwargs[list_field]
+            fm_lines.append(f"{list_field}: [" + ", ".join(items) + "]")
 
     content = "---\n" + "\n".join(fm_lines) + "\n---\n\n" + body
     path.write_text(content, encoding="utf-8")
@@ -217,6 +223,54 @@ class TestParseTask:
         with pytest.warns(UserWarning, match="Invalid status 'done'"):
             task = _task_io.parse_task(task_md)
         assert task.status == "done"  # raw value preserved, not coerced
+
+
+class TestResolvePath:
+    def test_plan_root_relative_path_resolves(self, plan_root):
+        resolved = _task_io.resolve_path(plan_root, "01-first")
+        assert resolved == (plan_root / "01-first").resolve()
+
+    def test_redundant_root_prefix_is_stripped(self, plan_root):
+        # An agent that passes the fully-prefixed form (root basename first)
+        # must resolve to the same task, not a doubled superRA/superRA/... path.
+        prefixed = _task_io.resolve_path(plan_root, f"{plan_root.name}/01-first")
+        plain = _task_io.resolve_path(plan_root, "01-first")
+        assert prefixed == plain
+        assert (prefixed / "task.md").exists()
+
+    def test_legacy_root_prefix_is_stripped(self, tmp_path):
+        root = tmp_path / ".plan"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        child = root / "01-first"
+        child.mkdir()
+        _write_task_md(child / "task.md", "First", "not-started")
+        prefixed = _task_io.resolve_path(root, ".plan/01-first")
+        assert prefixed == (root / "01-first").resolve()
+
+    def test_prefix_only_stripped_when_it_matches_root_basename(self, tmp_path):
+        # A path whose first segment happens to equal a real task slug but not
+        # the root basename must not be stripped.
+        root = tmp_path / "tree"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        sub = root / "superRA"
+        sub.mkdir()
+        _write_task_md(sub / "task.md", "Sub", "not-started")
+        resolved = _task_io.resolve_path(root, "superRA")
+        assert resolved == (root / "superRA").resolve()
+        assert (resolved / "task.md").exists()
+
+    def test_nonexistent_path_resolves_but_does_not_exist(self, plan_root):
+        # resolve_path stays a pure path operation; existence is the caller's
+        # check (each verb exits 1 with a not-found message). Prefix tolerance
+        # must not invent a directory.
+        resolved = _task_io.resolve_path(plan_root, "99-missing")
+        assert not (resolved / "task.md").exists()
+
+    def test_traversal_escape_still_rejected(self, plan_root):
+        with pytest.raises(ValueError, match="escapes plan root"):
+            _task_io.resolve_path(plan_root, "../../etc")
 
 
 class TestWalkPlan:
@@ -704,6 +758,28 @@ class TestTaskRename:
         assert "01-first-renamed" in task2.depends_on
         assert "01-first" not in task2.depends_on
 
+    def test_rename_aborts_before_mutation_on_malformed_sibling(self, plan_root):
+        """A malformed sibling task.md aborts the rename before any FS mutation.
+
+        Validation runs before `from_dir.rename(...)`, so a sibling that fails to
+        parse stops the rename with the directory still in place and no cascade
+        half-applied — the validate-then-rename atomicity property.
+        """
+        # Make a sibling's task.md unreadable so parse_task raises (the parser is
+        # tolerant of malformed YAML, so use a hard read failure: task.md a dir).
+        sibling_md = plan_root / "03-third" / "task.md"
+        sibling_md.unlink()
+        sibling_md.mkdir()
+        with pytest.raises(SystemExit) as excinfo:
+            task_rename.rename_task(plan_root, "01-first", "01-first-renamed")
+        assert excinfo.value.code == 1
+        # No FS mutation: source still in place, destination not created.
+        assert (plan_root / "01-first" / "task.md").exists()
+        assert not (plan_root / "01-first-renamed").exists()
+        # No partial cascade: 02-second's edge is untouched.
+        task2 = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        assert task2.depends_on == ["01-first"]
+
 
 class TestTaskAddResult:
     def test_add_finding(self, plan_root):
@@ -801,6 +877,10 @@ class TestReviewedCliTaskRootDefaults:
         child = legacy_root / "01-child"
         child.mkdir()
         _write_task_md(child / "task.md", "Child", "not-started")
+        # Second child so the placement check does not flag a single-child root.
+        child2 = legacy_root / "02-child"
+        child2.mkdir()
+        _write_task_md(child2 / "task.md", "Child Two", "not-started")
 
         monkeypatch.chdir(tmp_path)
         with pytest.raises(SystemExit) as excinfo:
@@ -2685,6 +2765,157 @@ class TestTaskHook:
         )
         assert _task_io.parse_task(parent / "task.md").status == "approved"
 
+    # --- Bash same-parent rename: lossless depends_on auto-cascade ---
+
+    def test_bash_same_parent_rename_cascades_depends_on(self, plan_root):
+        """A same-parent `mv` of a depended-on task auto-rewires sibling deps.
+
+        02-second depends_on 01-first. Renaming 01-first -> 01-first-renamed in
+        place must leave no dangling edge: the hook cascades the YAML metadata,
+        the same lossless class it already auto-writes for status rollups.
+        """
+        root = plan_root
+        src = root / "01-first"
+        dst = root / "01-first-renamed"
+        shutil.move(str(src), str(dst))
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv {src} {dst}"},
+        }
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        assert result.stderr == ""
+
+        moved = _task_io.parse_task(root / "02-second" / "task.md")
+        assert moved.depends_on == ["01-first-renamed"], (
+            "same-parent rename must auto-cascade the sibling depends_on"
+        )
+        # The cascade is surfaced to the agent so the silent edit is expected.
+        context = json.loads(result.stdout)["additionalContext"]
+        assert "Auto-rewired depends_on" in context
+        assert "01-first-renamed" in context
+        # No dangling-dependency validation warning should remain.
+        assert "does not resolve" not in context
+
+    def test_bash_git_mv_same_parent_rename_cascades(self, plan_root):
+        """`git mv` of a depended-on task cascades sibling deps like plain mv."""
+        root = plan_root
+        src = root / "01-first"
+        dst = root / "01-first-renamed"
+        shutil.move(str(src), str(dst))
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"git mv {src} {dst}"},
+        }
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        moved = _task_io.parse_task(root / "02-second" / "task.md")
+        assert moved.depends_on == ["01-first-renamed"]
+
+    def test_bash_cross_parent_move_does_not_cascade(self, plan_with_branches):
+        """A cross-parent move warns and never auto-rewires (not a rename)."""
+        root = plan_with_branches
+        # 02-merge depends_on 01-load, both under 01-data-prep. Move 02-merge up
+        # to the top level — a re-parent, not a same-parent rename.
+        src = root / "01-data-prep" / "02-merge"
+        dst = root / "02-merge"
+        shutil.move(str(src), str(dst))
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv {src} {dst}"},
+        }
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        moved = _task_io.parse_task(dst / "task.md")
+        # Edge left untouched; surfaced as a dangling-dependency warning instead.
+        assert moved.depends_on == ["01-load"]
+        context = json.loads(result.stdout)["additionalContext"]
+        assert "Auto-rewired" not in context
+        assert "01-load" in context and "Validation warning" in context
+
+    def test_bash_delete_depended_on_task_warns_no_silent_drop(self, plan_root):
+        """Deleting a depended-on task leaves a visible warning, not a silent drop.
+
+        02-second depends_on 01-first. Removing 01-first must not auto-drop the
+        edge (that changes execution ordering — closer to content loss than
+        mechanical YAML upkeep); it surfaces as a dangling-dependency warning.
+        """
+        root = plan_root
+        target = root / "01-first"
+        shutil.rmtree(str(target))
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"rm -rf {target}"},
+        }
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        # The dependent's edge is untouched (no silent drop).
+        consumer = _task_io.parse_task(root / "02-second" / "task.md")
+        assert consumer.depends_on == ["01-first"]
+        context = json.loads(result.stdout)["additionalContext"]
+        assert "Auto-rewired" not in context
+        assert "01-first" in context and "Validation warning" in context
+
+    def test_bash_rename_with_flag_does_not_cascade(self, plan_root):
+        """A flagged mv (e.g. `mv -f`) falls through to warn, never silent rewire.
+
+        Flags break the two-operand rename shape, so the detector declines and
+        the generic reconcile path handles it — a same-parent rename via flagged
+        mv simply does not get the auto-cascade (the depend-on edge would dangle
+        and be surfaced as a warning), which is the safe default.
+        """
+        root = plan_root
+        src = root / "01-first"
+        dst = root / "01-first-renamed"
+        shutil.move(str(src), str(dst))
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv -f {src} {dst}"},
+        }
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        moved = _task_io.parse_task(root / "02-second" / "task.md")
+        assert moved.depends_on == ["01-first"], (
+            "flagged mv must not be parsed as a clean rename"
+        )
+
+    def test_bash_mv_into_existing_task_dir_does_not_cascade(self, plan_root):
+        """A bare `mv x existing-task` (dest is a pre-existing task) is a re-parent.
+
+        `mv 01-first 03-third` with no trailing slash lands 01-first at
+        03-third/01-first (move-INTO-dir, a cross-parent re-parent), NOT a rename
+        of 01-first to 03-third. The detector must NOT read it as a rename, which
+        would silently re-point 02-second's depends_on to the wrong task (03-third).
+        It must stay warn-only: 02-second's edge to the now-stranded 01-first is
+        left untouched and surfaced as a dangling-dependency warning.
+        """
+        root = plan_root
+        src = root / "01-first"
+        dst = root / "03-third"  # a pre-existing sibling task directory
+        # Replicate `mv`'s real semantics: source lands inside the existing dir.
+        shutil.move(str(src), str(dst / "01-first"))
+
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"mv {src} {dst}"},
+        }
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        # No silent rewire: 02-second still points at 01-first, not 03-third.
+        consumer = _task_io.parse_task(root / "02-second" / "task.md")
+        assert consumer.depends_on == ["01-first"], (
+            "move-into-existing-task-dir must not be parsed as a rename"
+        )
+        context = json.loads(result.stdout)["additionalContext"]
+        assert "Auto-rewired" not in context
+        # The stranded edge is surfaced as a dangling-dependency warning.
+        assert "01-first" in context and "Validation warning" in context
+
     def test_codex_manifest_task_hook_no_root_fails_open(self):
         """Codex PostToolUse task-hook commands emit {} when no plugin root is set."""
         import subprocess
@@ -3445,6 +3676,10 @@ class TestTaskCheck:
         d = root_dir / "01-a"
         d.mkdir()
         _write_task_md(d / "task.md", "A", "not-started")
+        # Second child so the placement check does not flag a single-child root.
+        d2 = root_dir / "02-b"
+        d2.mkdir()
+        _write_task_md(d2 / "task.md", "B", "not-started")
         findings = task_check.run_checks(root_dir)
         json_str = task_check.format_json(findings)
         data = json.loads(json_str)
@@ -3515,6 +3750,132 @@ class TestTaskCheck:
         # Only dependency findings
         dep_findings = task_check.run_checks(root_dir, category="dependency")
         assert all(f.category == "dependency" for f in dep_findings)
+
+    # --- Advisory placement / structure category ---
+
+    def _placement(self, root_dir: Path):
+        return task_check.run_checks(root_dir, category="placement")
+
+    def test_placement_flags_root_with_leaf_fields(self, tmp_path):
+        """A root carrying script/input/output is a leaf masquerading as project."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started",
+                       script="run.py", output=["out.csv"])
+        for slug in ("01-a", "02-b"):
+            d = root_dir / slug
+            d.mkdir()
+            _write_task_md(d / "task.md", slug, "not-started")
+        findings = self._placement(root_dir)
+        assert any(
+            f.category == "placement" and f.severity == "warning"
+            and "leaf-only field" in f.message
+            for f in findings
+        )
+
+    def test_placement_flags_single_child_root(self, tmp_path):
+        """A single-child root is a wrapper around one narrow task."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        d = root_dir / "01-only"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Only", "not-started")
+        findings = self._placement(root_dir)
+        assert any(
+            f.category == "placement" and "single-child root" in f.message
+            for f in findings
+        )
+
+    def test_placement_flags_root_leaf_beside_branch(self, tmp_path):
+        """A root-level leaf beside root-level branches is a hoisted feature."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        # A branch (has a child) ...
+        branch = root_dir / "01-workstream"
+        branch.mkdir()
+        _write_task_md(branch / "task.md", "Workstream", "not-started")
+        child = branch / "01-step"
+        child.mkdir()
+        _write_task_md(child / "task.md", "Step", "not-started")
+        # ... beside a root-level leaf.
+        leaf = root_dir / "02-feature"
+        leaf.mkdir()
+        _write_task_md(leaf / "task.md", "Feature", "not-started")
+        findings = self._placement(root_dir)
+        assert any(
+            f.category == "placement" and f.task_path == "02-feature"
+            and "beside root-level branch" in f.message
+            for f in findings
+        )
+
+    def test_placement_flat_all_leaf_root_is_clean(self, tmp_path):
+        """An all-leaf flat plan is not flagged (no branch to sit beside)."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        for slug in ("01-a", "02-b", "03-c"):
+            d = root_dir / slug
+            d.mkdir()
+            _write_task_md(d / "task.md", slug, "not-started")
+        findings = self._placement(root_dir)
+        assert findings == []
+
+    def test_placement_flags_cross_subtree_output_overlap(self, tmp_path):
+        """An identical output owned by two subtrees signals split concern."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        # Two top-level branches, each with a leaf declaring the same output.
+        for branch_slug, leaf_slug in (("01-alpha", "01-build"), ("02-beta", "01-build")):
+            branch = root_dir / branch_slug
+            branch.mkdir()
+            _write_task_md(branch / "task.md", branch_slug, "not-started")
+            leaf = branch / leaf_slug
+            leaf.mkdir()
+            _write_task_md(leaf / "task.md", leaf_slug, "not-started",
+                           output=["shared.csv"])
+        findings = self._placement(root_dir)
+        overlap = [
+            f for f in findings
+            if "is also produced by another subtree" in f.message
+        ]
+        assert len(overlap) == 2  # one finding per owning task
+        assert all(f.severity == "warning" for f in overlap)
+
+    def test_placement_ignores_generic_output_overlap(self, tmp_path):
+        """A shared generic basename (README.md) is not a split-concern signal."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        for branch_slug, leaf_slug in (("01-alpha", "01-a"), ("02-beta", "01-b")):
+            branch = root_dir / branch_slug
+            branch.mkdir()
+            _write_task_md(branch / "task.md", branch_slug, "not-started")
+            leaf = branch / leaf_slug
+            leaf.mkdir()
+            _write_task_md(leaf / "task.md", leaf_slug, "not-started",
+                           output=["README.md"])
+        findings = self._placement(root_dir)
+        assert not any(
+            "is also produced by another subtree" in f.message for f in findings
+        )
+
+    def test_placement_never_mutates(self, tmp_path):
+        """task check is read-only — a placement smell does not auto-fix."""
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started",
+                       script="run.py")
+        d = root_dir / "01-only"
+        d.mkdir()
+        _write_task_md(d / "task.md", "Only", "not-started")
+        before = (root_dir / "task.md").read_text(encoding="utf-8")
+        findings = self._placement(root_dir)
+        assert findings  # smells detected
+        after = (root_dir / "task.md").read_text(encoding="utf-8")
+        assert before == after, "task check must not mutate the tree"
 
 
 # --- Status rollup propagation tests (from better-handoff, adapted for unified status) ---

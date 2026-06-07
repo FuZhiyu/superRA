@@ -42,7 +42,7 @@ class Finding:
     """A single diagnostic finding."""
 
     task_path: str
-    category: str  # "status" | "dependency" | "rollup"
+    category: str  # "status" | "dependency" | "rollup" | "placement"
     severity: str  # "error" | "warning"
     message: str
 
@@ -211,6 +211,133 @@ def _check_rollup_recursive(task: Task, findings: list[Finding]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Check 4: Placement / structure (advisory)
+# ---------------------------------------------------------------------------
+
+def check_placement(root: Task) -> list[Finding]:
+    """Advisory structural smells the placement ladder forbids.
+
+    All findings are ``warning`` severity — surfaced, never auto-corrected, per
+    the "hooks warn, not auto-mutate" principle. These encode the positive
+    root-task definition (root = whole workstream; branches carry no
+    script/input/output) and the misplacement signal from the placement task in
+    `task-system/references/planning.md §Placing Work in the Tree`.
+    """
+    findings: list[Finding] = []
+
+    # Smell 1: the root carries leaf-only frontmatter (a leaf masquerading as
+    # the project). A root frames a whole workstream and holds no deliverable
+    # work of its own, so script/input/output belong on its leaves.
+    leaf_fields = [
+        name for name in ("script", "input", "output")
+        if getattr(root, name)
+    ]
+    if leaf_fields:
+        findings.append(Finding(
+            task_path=root.path,
+            category="placement",
+            severity="warning",
+            message=(
+                f"root carries leaf-only field(s) {leaf_fields}; a root frames a "
+                f"whole workstream and holds no deliverable work — move "
+                f"script/input/output down to a leaf task"
+            ),
+        ))
+
+    # Smell 2: a single-child root is a wrapper around one narrow task — the
+    # child should be the root, or the root should host the broader workstream.
+    if len(root.children) == 1:
+        findings.append(Finding(
+            task_path=root.path,
+            category="placement",
+            severity="warning",
+            message=(
+                "single-child root wraps one narrow task; promote the child to "
+                "root or broaden the root to a whole workstream"
+            ),
+        ))
+
+    # Smell 3: a root-level leaf sitting beside root-level branches — a narrow
+    # feature hoisted to root instead of nesting under the workstream it relates
+    # to. Only smells when branches coexist (an all-leaf root is a flat plan).
+    root_leaves = [c for c in root.children if c.is_leaf]
+    root_branches = [c for c in root.children if not c.is_leaf]
+    if root_leaves and root_branches:
+        for leaf in root_leaves:
+            findings.append(Finding(
+                task_path=leaf.path,
+                category="placement",
+                severity="warning",
+                message=(
+                    "root-level leaf sits beside root-level branch(es); a narrow "
+                    "feature should nest under the workstream it relates to, not "
+                    "hoist to root"
+                ),
+            ))
+
+    # Smell 4: substantial concern overlap across subtrees — a misplacement /
+    # duplicate candidate. Detectable signal: two tasks in different top-level
+    # subtrees declare an identical output artifact, meaning one concern is
+    # split across two places. Conservative (exact output match only) to keep
+    # false positives low; deeper objective overlap is left to the human survey.
+    _check_cross_subtree_output_overlap(root, findings)
+
+    return findings
+
+
+# Ubiquitous output filenames that many unrelated tasks legitimately produce —
+# a shared basename here signals "common file", not "split concern", so they are
+# excluded from the cross-subtree overlap signal to keep false positives low.
+_GENERIC_OUTPUT_BASENAMES = frozenset({
+    "readme.md", "readme", "skill.md", "index.html", "dashboard.html",
+    "task.md", "__init__.py", "notes.md", "summary.md", "output.csv",
+})
+
+
+def _is_generic_output(artifact: str) -> bool:
+    return Path(artifact).name.lower() in _GENERIC_OUTPUT_BASENAMES
+
+
+def _check_cross_subtree_output_overlap(
+    root: Task, findings: list[Finding]
+) -> None:
+    """Flag identical declared outputs owned by tasks in different subtrees.
+
+    Generic basenames (README.md, SKILL.md, ...) are excluded — a shared common
+    filename is not a split-concern signal, only a shared specific artifact is.
+    """
+    # Map each output artifact -> list of (top_subtree_slug, task_path) owning it.
+    output_owners: dict[str, list[tuple[str, str]]] = {}
+
+    def _collect(task: Task, top_slug: str) -> None:
+        for artifact in task.output:
+            if _is_generic_output(artifact):
+                continue
+            output_owners.setdefault(artifact, []).append((top_slug, task.path))
+        for child in task.children:
+            _collect(child, top_slug)
+
+    for child in root.children:
+        _collect(child, child.slug)
+
+    for artifact, owners in output_owners.items():
+        subtrees = {top_slug for top_slug, _ in owners}
+        if len(subtrees) > 1:
+            paths = ", ".join(sorted(path for _, path in owners))
+            for _, path in owners:
+                findings.append(Finding(
+                    task_path=path,
+                    category="placement",
+                    severity="warning",
+                    message=(
+                        f"output {artifact!r} is also produced by another subtree "
+                        f"({paths}); one concern may be split across subtrees — "
+                        f"consider consolidating"
+                    ),
+                ))
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -229,7 +356,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--category",
-        choices=["status", "dependency", "rollup"],
+        choices=["status", "dependency", "rollup", "placement"],
         help="Only run a specific check category",
     )
     return parser.parse_args(argv)
@@ -325,6 +452,8 @@ def run_checks(
         findings.extend(check_dependency_integrity(root))
     if category is None or category == "rollup":
         findings.extend(check_rollup_consistency(root))
+    if category is None or category == "placement":
+        findings.extend(check_placement(root))
 
     return findings
 

@@ -737,13 +737,16 @@ body.sb-drawer-mode .nav-hamburger { display: inline-flex; }
     min-height: 44px;
   }
   /* The toggle caret inside a row is a distinct tap target (expand/collapse vs.
-     navigate); give it a 28px-wide, 44px-tall hit area without enlarging the
-     caret glyph. The selector is `.task-row > .task-toggle` (specificity 0,0,2,0)
-     so it beats the later unconditional `.task-toggle { width:16px; height:16px }`
-     base rule regardless of source order — a bare `.task-toggle` here loses on
-     source order and the caret would stay 16x16. */
+     navigate); give it a 44x44 hit area (full iOS HIG) without enlarging the
+     caret glyph. Square so it stays >=44px in BOTH states: an expanded caret
+     gets `transform: rotate(90deg)`, which rotates the whole hit box — a 28x44
+     box would become 44x28 (only 28px tall) once expanded. The selector is
+     `.task-row > .task-toggle` (specificity 0,0,2,0) so it beats the later
+     unconditional `.task-toggle { width:16px; height:16px }` base rule
+     regardless of source order — a bare `.task-toggle` here loses on source
+     order and the caret would stay 16x16. */
   .task-row > .task-toggle {
-    width: 28px; height: 44px;
+    width: 44px; height: 44px;
     margin: -11px 0;   /* absorb the row's new vertical padding so height is exact */
   }
 
@@ -2870,11 +2873,41 @@ async function expandNavNode(node) {
   }
 }
 
+/* Snapshot every currently-expanded nav node's path, so a sidebar rebuild can
+   put the tree back the way the user left it instead of folding to the root.
+   Returns data-path values for nodes whose own caret is open. */
+function getExpandedNavPaths() {
+  var paths = [];
+  document.querySelectorAll('#nav-tree .task-node').forEach(function(node) {
+    var toggle = node.querySelector(':scope > .task-row > .task-toggle');
+    if (toggle && toggle.classList.contains('expanded') && node.dataset.path !== undefined) {
+      paths.push(node.dataset.path);
+    }
+  });
+  return paths;
+}
+
+/* Re-open the given paths after a fresh /nav rebuild. Shallow-to-deep so each
+   parent is expanded (lazy-loading its children into the DOM) before its
+   descendants are reached. Best-effort: paths whose task was deleted are simply
+   absent and skipped. */
+async function restoreExpandedNavPaths(paths) {
+  if (!paths || !paths.length) return;
+  var ordered = paths.slice().sort(function(a, b) {
+    return (a ? a.split('/').length : 0) - (b ? b.split('/').length : 0);
+  });
+  for (var i = 0; i < ordered.length; i++) {
+    var node = document.getElementById(navNodeId(ordered[i]));
+    if (node) await expandNavNode(node);
+  }
+}
+
 /* updateSidebar(path): the activePath-derived sidebar refresh. Highlights
-   exactly the matching row, expands its full ancestor chain (lazy-loading any
-   branch not yet in the DOM via the proven ancestor-walk-and-await loop), and
-   scrolls it into view. Entirely best-effort — a failed sidebar branch never
-   throws and never blocks the main panel, which fetches by full path. */
+   exactly the matching row, expands its full ancestor chain AND the current
+   page's own children (lazy-loading any branch not yet in the DOM via the
+   proven ancestor-walk-and-await loop), and scrolls it into view. Entirely
+   best-effort — a failed sidebar branch never throws and never blocks the main
+   panel, which fetches by full path. */
 async function updateSidebar(path) {
   var container = document.getElementById('nav-tree');
   if (!container) return;
@@ -2900,6 +2933,12 @@ async function updateSidebar(path) {
 
   var target = document.getElementById(navNodeId(path));
   if (!target) return;
+
+  /* Show the current page's own children too: a selected branch reads more
+     naturally expanded one level than as a closed caret the user must re-open
+     to see what they just navigated into. Leaf nodes are a no-op (guarded in
+     expandNavNode). */
+  await expandNavNode(target);
 
   var row = target.querySelector(':scope > .task-row');
   if (row) {
@@ -3595,7 +3634,11 @@ function onTaskUpdate(path) {
    structural edits and never crosses worktrees. */
 async function onFullReload() {
   var wanted = activePath;
+  /* Capture the open branches before the rebuild wipes them, so the tree
+     reopens where the user left it instead of folding back to the root. */
+  var expanded = getExpandedNavPaths();
   await loadNavTree();
+  await restoreExpandedNavPaths(expanded);
   /* Refresh PROJECT_ROOT/selector before re-rendering the active card so the VS
      Code button bakes in the current worktree's root. */
   await fetchWorktrees();
@@ -3676,6 +3719,11 @@ var _launchWtId = '';
    the active ?wt= without another round-trip. */
 var _wtProjectRoots = {};
 
+/* Signature of the last-rendered worktree option set (ids + labels + active
+   id). Lets a refresh-on-open re-fetch skip the innerHTML rebuild when nothing
+   changed, so reopening the dropdown never flickers the native popup. */
+var _wtSignature = '';
+
 function populateWorktreeSelector(data) {
   var selector = document.getElementById('worktree-selector');
   var select = document.getElementById('worktree-select');
@@ -3684,12 +3732,25 @@ function populateWorktreeSelector(data) {
   /* Hide if single worktree or no data */
   if (!data || !data.worktrees || data.worktrees.length <= 1) {
     selector.style.display = 'none';
+    _wtSignature = '';
     return;
   }
 
   /* The active worktree = the URL's ?wt=, defaulting to the launch worktree when
      the URL names none. Match the option whose token equals that id. */
   var activeId = ACTIVE_WT || _launchWtId;
+
+  /* Skip the rebuild when the option set and selection are unchanged — a
+     refresh-on-open fires this on every dropdown click, and rewriting the
+     options under an open native picker would collapse it. */
+  var signature = activeId + '|' + data.worktrees.map(function(wt) {
+    return (wt.wt_id || '') + ':' + (wt.branch || '') + ':' + (wt.plan_title || '') + ':' + (wt.is_agent ? 1 : 0);
+  }).join('|');
+  if (signature === _wtSignature && select.options.length) {
+    selector.style.display = 'flex';
+    return;
+  }
+  _wtSignature = signature;
 
   /* Build options */
   select.innerHTML = '';
@@ -3790,8 +3851,22 @@ function reconnectSse() {
   htmx.process(main);
 }
 
+/* Refresh the worktree list whenever the user reaches for the dropdown, so a
+   worktree created or removed since page load shows up without a manual page
+   refresh. The signature guard in populateWorktreeSelector makes this a no-op
+   when nothing changed, so reopening never flickers the popup. focus covers
+   keyboard; mousedown covers the click that opens the native picker. */
+function initWorktreeSelectorRefresh() {
+  var select = document.getElementById('worktree-select');
+  if (!select) return;
+  var refresh = function() { fetchWorktrees(); };
+  select.addEventListener('mousedown', refresh);
+  select.addEventListener('focus', refresh);
+}
+
 /* Fetch worktrees on page load */
 fetchWorktrees();
+initWorktreeSelectorRefresh();
 
 /* ── SSE full-reload: structural changes (task added/deleted, worktree switch) ──
    #sse-full-reload carries hx-swap="none", so htmx never mutates the DOM for this

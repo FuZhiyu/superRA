@@ -141,7 +141,7 @@ Agent(subagent_type: "superRA:reviewer"):
   Review target: assigned task/subtree design, not implementation diff
 ```
 
-The implementer/reviewer find their task by running `superra task read <task-path>`, which injects the task's context (focused tree + ancestor objectives) and sibling dependency status automatically.
+The implementer/reviewer find their task by running `superra task read <task-path>`, which injects the task's context (focused tree + ancestor objectives), sibling dependency status, and any unresolved researcher comments (each with its full anchored block) automatically; you can additionally run `superra task comment list <task-path>` to fold those comments into `Additionally:` steering when useful.
 
 **Optional steering is strictly additive.** If your `Additionally:` line only paraphrases the default protocol, the skill-load manifest, or task content, delete it — the agent reads those itself. Never include `Work from:` (cwd is implicit) or restate task content / manifest loads.
 
