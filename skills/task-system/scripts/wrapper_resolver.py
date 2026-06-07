@@ -49,6 +49,10 @@ GITHUB_REPO = "https://github.com/FuZhiyu/superRA.git"
 GITHUB_SUBDIR = "skills/task-system"
 # Pin lives only here. It may lag the installed version; it is a last resort
 # used only when no local checkout and no installed plugin cache exist.
+# Deliberately tracks `main`, the eventual public default branch: this work
+# merges there later. Until then `main` does not yet carry skills/task-system,
+# which is acceptable because the fallback only fires when no local install
+# exists at all. Do NOT repoint to a feature/trunk branch.
 GITHUB_REF = "main"
 
 # The canonical resolution chain. `_resolve_task_system_source` prints the
