@@ -1,6 +1,6 @@
 ---
 title: "Drift-free, install-free CLI source resolution"
-status: implemented
+status: approved
 depends_on: 
   - wrappers-and-hooks
   - unified-command-surface
@@ -117,13 +117,3 @@ All checks ran in this session:
 ### Generated-artifact note
 
 `hooks/task-hook` is now a generated file — regenerate with `superra wrapper render-hook --output hooks/task-hook` rather than hand-editing. No canonical agent specs were touched, so the Codex/role generated artifacts under `skills/using-superRA/references/` and `.codex/agents/` are out of scope and untouched.
-
-## Review Notes
-
-Integration + sync review over `git diff 1a9f2916..HEAD` (BASE_HEAD_SHA `1a9f2916`). Sync correctness of trunk merge `5de74de9` was verified independently: the 7 overlapping task-system files (`cli.py`, `SKILL.md`, `references/commands.md`/`internals.md`/`planning.md`, `superplan/SKILL.md`/`references/consolidation.md`) auto-merged with no silent loss on either side — our uvx-resolver/wrapper/`--root` cleanup and the incoming task-read fix / placement ladder / update-task lifecycle / comment-surfacing CLI all coexist in the merged result. Sync Map entry is accurate. Byte-identity (`render-hook` == committed `hooks/task-hook`) and wrapper self-containedness invariants hold post-merge; full `skills/task-system/scripts/` suite 569 passed. No conflict markers, no `serve` artifacts, no debug artifacts.
-
-1. **MAJOR — stale contributor-doc claim contradicted by the diff.** [CLAUDE.md:24](../../../../../CLAUDE.md#L24) still states the repo-local wrapper `./superRA/superra` "dispatches to `uv run --project "$(repo-root)/skills/task-system" superra "$@"`". This task changed that wrapper: it now runs the resolution chain and `exec uvx --from "$source" superra "$@"` (checkout branch resolves to `DIR:<repo>/skills/task-system`). The described dispatch command no longer exists in the wrapper. The Results justify leaving CLAUDE.md unchanged on the grounds that the *contributor invocation form* (lines 20–21, `uv run --project skills/task-system superra …`) is unchanged — that is correct and should stay — but the sentence describing the wrapper's *internal dispatch mechanism* was missed. Fix: update line 24 to describe the wrapper as resolving the installed/checkout source and running it via `uvx --from`, single-sourced from `scripts/wrapper_resolver.py` (the Project Doc Audit walk-up for this file was not fully executed).
-   → implemented: rewrote CLAUDE.md:24 to describe the wrapper as resolving the source (checkout → Claude/Codex plugin → GitHub) and running it via `uvx --from "$source"`, pointing to `wrapper_resolver.py` as the single source; AGENTS.md/AGENT.md are symlinks so the one edit covers all three. Results §Docs-cleanup updated to stop claiming CLAUDE.md was left unchanged.
-
-2. **MINOR — missing Final Diff Self-Check trail.** `## Results` has no `**Final diff self-check:**` line naming the governing range and surviving-change classes, which `refactor-and-integrate` asks the integration handoff to leave for the reviewer. The substantive minimum-net-diff requirement is satisfied — every surviving hunk (`wrapper_resolver.py`, `cli.py` wrapper subcommand, regenerated `hooks/task-hook` and `superRA/superra`, `test_cli.py`, doc `--root`/uvx cleanup, `task.md` Results, root `superRA/task.md` Sync Map line) ties to a task scope item, with no unrelated churn — but the trail is absent. This task was approved at implementation stage before the inline sync, so no integration-implementer pass produced the trail; add the one-line trail to `## Results` when addressing item 1.
-   → implemented: added a `**Final diff self-check**` paragraph to `## Results` naming the governing range `1a9f2916..HEAD` and mapping each surviving hunk class to its scope item.
