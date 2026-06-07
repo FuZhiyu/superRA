@@ -1,6 +1,6 @@
 ---
 title: "Test Coverage for Comment Surfacing"
-status: implemented
+status: approved
 depends_on:
   - 02-surface-in-task-read
   - 03-document-cli
