@@ -40,8 +40,6 @@ superra task dag 01-data
 superra task tree --json
 ```
 
-`--root` auto-detects the task root (preferring `superRA/`) from the current working directory, so the canonical form omits it; pass `--root <path>` only to point at a non-default location.
-
 The `superra` command resolves the task-system package from the installed plugin at runtime via `uvx` — it installs nothing and never creates a venv in your project. A task tree carries a generated `superra` wrapper (`./superRA/superra task tree`); create or refresh it with `superra wrapper init`. Never run bare `uv run superra` from a research project: `uv` would try to provision that project's environment, which is wrong and can fail.
 
 ## Task File Format
