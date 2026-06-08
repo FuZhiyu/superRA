@@ -22,30 +22,34 @@ The mental model for reasoning about the tree:
 - **Parent task status rolls up** from children automatically — a parent is `approved` only when all children are `approved`.
 - **DAG-derived ordering vs. display order.** The dependency DAG controls execution order. Numeric prefixes on directory names (e.g. `01-load`, `02-merge`) control display order only — these are independent.
 
-## Reading the Tree
+## CLI Setup
 
-The common on-demand path is inspecting tree state. Use `superra task`:
-
-```bash
-# Print tree with status badges
-superra task tree
-
-# List dispatchable leaf tasks (the frontier)
-superra task frontier
-
-# Render dependency DAG for a subtree (Mermaid format)
-superra task dag 01-data
-
-# JSON output
-superra task tree --json
-```
-
-The `superra` command resolves the task-system source from the installed plugin at runtime and runs the loose entry scripts with `uv run --script` (falling back to `python3`) — it installs nothing, creates no venv in your project, and always reflects the live source. A task tree carries a generated `superra` wrapper (`./superRA/superra task tree`). In a fresh project, bootstrap the wrapper with the loaded skill directory (`<skill-dir>` = the directory containing this `SKILL.md`; substitute the real path), then use the wrapper for everything after:
+In a fresh project, bootstrap the wrapper with the loaded skill directory (`<skill-dir>` = the directory containing this `SKILL.md`; substitute the real path), then use the wrapper for everything after:
 
 ```bash
 uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/superra (planner/main bootstrap)
 ./superRA/superra wrapper init                             # refresh an existing wrapper; idempotent
 ```
+
+## Reading the Tree
+
+The common on-demand path is inspecting tree state. Run the committed `./superRA/superra` wrapper (created above — there is no PATH `superra`; contributors in the superRA checkout can substitute `uv run --script skills/task-system/scripts/cli.py`). Every `superra …` example below and in the references denotes this wrapper:
+
+```bash
+# Print tree with status badges
+./superRA/superra task tree
+
+# List dispatchable leaf tasks (the frontier)
+./superRA/superra task frontier
+
+# Render dependency DAG for a subtree (Mermaid format)
+./superRA/superra task dag 01-data
+
+# JSON output
+./superRA/superra task tree --json
+```
+
+The `superra` command resolves the task-system source from the installed plugin at runtime and runs the loose entry scripts with `uv run --script` (falling back to `python3`) — it installs nothing, creates no venv in your project, and always reflects the live source. A task tree carries a generated `superra` wrapper (`./superRA/superra task tree`). 
 
 Never run bare `uv run superra` from a research project: with no package there is no `superra` to discover, and `uv run` (without `--script`) would try to provision that project's environment, which is wrong and can fail.
 
@@ -91,7 +95,7 @@ Field-by-field anatomy and body-section ownership live in `references/planning.m
 | Read or resolve task comments (the read/resolve loop; comments also surface via `superra task read`) | `references/commands.md §Comments` |
 | Objective writing, task splitting, placement, results shape, stale-content, retroactive plans | `references/planning.md` |
 | Migrate legacy `PLAN.md` + `RESULTS.md`, or upgrade `superRA/` v1 → v2 | `references/internals.md §Migration` |
-| View the dashboard | `superra dashboard` runs the server in the background and returns (reuses a running one; `--foreground` to block in this terminal; `superra dashboard stop` to stop it). Local checkout: `uv run --script skills/task-system/scripts/plan_dashboard.py dashboard`; mechanics in `references/internals.md §Dashboard` |
+| View the dashboard | `./superRA/superra dashboard` runs the server in the background and returns (reuses a running one; `--foreground` to block in this terminal; `./superRA/superra dashboard stop` to stop it). Local checkout: `uv run --script skills/task-system/scripts/plan_dashboard.py dashboard`; mechanics in `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
 A plain `mv` of a task directory carries the whole subtree. A **same-parent rename** auto-cascades sibling `depends_on` (the hook re-points dependents — expect this silent edit, surfaced in its feedback); a **cross-parent move** or a **delete** of a depended-on task strands the reference instead, which validation flags for re-wiring. See `references/commands.md` for the full mutation surface.

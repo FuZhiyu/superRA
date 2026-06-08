@@ -2,7 +2,7 @@
 
 Load this reference when you are an orchestrator or planner mutating a `superRA/` tree — scaffolding new tasks, restructuring, re-wiring dependencies, or running bulk status operations.
 
-All commands below use the packaged `superra` CLI. The `--root` flag is optional — auto-detected from the current working directory.
+All commands below run through the committed `./superRA/superra` wrapper (there is no PATH `superra`; in the superRA checkout, substitute `uv run --script skills/task-system/scripts/cli.py`). Bare `superra …` in the examples denotes that wrapper.
 
 **Single-field edits go through direct edit, not these CLIs.** To set one field on one task — including `status` — edit its `task.md` directly with Read/Edit (see `using-superRA/SKILL.md §Task Interface`); the PostToolUse hook validates and propagates. The commands below are convenience scaffolding for creating tasks from a template and for bulk or scripted changes — reach for them when direct edit would be tedious or error-prone.
 

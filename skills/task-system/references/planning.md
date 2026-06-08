@@ -4,6 +4,8 @@ Load this reference when you are an orchestrator or planner creating, restructur
 
 **Terminology:** "Plan" is the verb (the planning process), not the noun. Everything in `superRA/` is a **task**. `superRA/` is "the task tree." See `CLAUDE.md` §Terminology for the full convention.
 
+**Invocation:** bare `superra …` in the examples denotes the committed `./superRA/superra` wrapper (there is no PATH `superra`; in the superRA checkout, substitute `uv run --script skills/task-system/scripts/cli.py`).
+
 ## Writing Objectives and Planner Guidance
 
 `## Objective` is the authoritative implementation and review contract. It describes what success looks like, not optional routes for getting there.
