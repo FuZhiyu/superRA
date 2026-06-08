@@ -1,6 +1,6 @@
-# Rich content: figures, math, tables
+# Figures
 
-Load when writing markdown that contains figures, LaTeX math, or tables. Rules apply at every stage.
+Load when writing markdown that contains figures. Rules apply at every stage.
 
 ## Figures
 

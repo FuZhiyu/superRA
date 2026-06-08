@@ -74,8 +74,6 @@ Two verdicts:
 
 **REVISE:** One or more blocking task-level findings or `[BLOCKING]` domain gates failed. Set `status: revise`. Treat CRITICAL and MAJOR task-level findings as blocking; treat MINOR findings as non-blocking unless the active domain skill marks the issue `[BLOCKING]`.
 
-Note that flipping the status of a child task will be cascaded up to every ancestor automatically. Commit the cascaded changes as well. 
-
 ## Self-Check
 
 Before you commit:
@@ -117,7 +115,7 @@ Each item may have been annotated since you last saw it — `→ implemented: ..
 
 For each item, decide one of:
 
-- **Fix confirmed** → **delete the entire item.** No "resolved" marker, no strikethrough — the item is gone.
+- **Fix confirmed** → **delete the entire item from the review note.** 
 - **Fix incomplete or wrong** → rewrite the item to describe the current problem. Leave the `→ implemented: ...` annotation in place so the orchestrator sees the history of attempts.
 - **Orchestrator override accepted** → delete the item. The orchestrator's rejection is sufficient.
 - **Orchestrator override you disagree with** → leave the item in place and append a counter-argument as a fresh sub-bullet below the annotation. **Also surface the disagreement in your status return**, so the orchestrator sees it before the next dispatch decision and can escalate to the human partner.

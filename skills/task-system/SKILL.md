@@ -49,9 +49,7 @@ The common on-demand path is inspecting tree state. Run the committed `./superRA
 ./superRA/superra task tree --json
 ```
 
-The `superra` command resolves the task-system source from the installed plugin at runtime and runs the loose entry scripts with `uv run --script` (falling back to `python3`) — it installs nothing, creates no venv in your project, and always reflects the live source. A task tree carries a generated `superra` wrapper (`./superRA/superra task tree`). 
-
-Never run bare `uv run superra` from a research project: with no package there is no `superra` to discover, and `uv run` (without `--script`) would try to provision that project's environment, which is wrong and can fail.
+The wrapper installs nothing, creates no venv in your project, and always runs the live source.
 
 ## Task File Format
 

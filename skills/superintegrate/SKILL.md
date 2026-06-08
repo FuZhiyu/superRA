@@ -241,7 +241,7 @@ Run the full drift-test suite again. When it passes and integration review is AP
 
 ## Consolidation Gate
 
-Once per integration, between closing Integrate and entering Document, the orchestrator surveys the tree and decides whether it is clean enough to mature or needs a consolidation pass first. This is orchestrator inline work, not a dispatched stage. The gate forces the look; the pass stays conditional.
+Once per integration, between closing Integrate and entering Document, the orchestrator surveys the tree and decides whether it is clean enough to mature or needs a consolidation pass first. This is orchestrator inline work, not a dispatched stage.
 
 1. Run `superra task tree` and `superra task dag` and judge the affected frontier against the consolidation symptom list in `superplan/references/consolidation.md §When to Consolidate`. The placement / wrong-parent check is **whole-tree**, not frontier-internal — test each task's concern against its parent and other subtrees using `task-system/references/planning.md` §Placing Work in the Tree, so a misplaced task created elsewhere is caught here. Any *update task* in the frontier is a Merge candidate by default: fold its matured result into the task it modifies and remove the standalone directory, per the create-then-merge lifecycle in §Placing Work.
 2. Record the verdict — clean-enough or needs-a-pass, one line — in the durable integration record in root task.md §Workflow Status so a later session sees the judgment was made.
@@ -355,7 +355,7 @@ Report what was published or landed and what was cleaned up.
 - **Standalone analysis:** Protect still runs. Sync may be a no-op. Integrate often collapses to a short reviewer pass.
 - **Small changes:** Keep the same five steps, but dispatch fewer agents and keep `## Sync Map` absent from root task.md when there is no material sync context.
 - **Writing-vertical tasks:** Most writing work runs as standalone Review / Polish / Draft per `skills/writing/SKILL.md` and does not enter this workflow. Only large work (whole-section drafts, whole-paper revisions, R&R passes) reaches Integrate; for those, Protect substitutes build + outline-stability for drift tests, and the Integrate reviewer additionally walks `skills/writing/references/integration.md`.
-- **Task tree consolidation:** The consolidation *assessment* is a mandatory gate just before Document (see §Consolidation Gate); the consolidation *pass* is the optional action that gate triggers when the tree carries structural debt. A clean-enough verdict skips the pass.
+- **Task tree consolidation:** The assessment gate always runs, but a clean-enough tree skips the consolidation pass entirely — see §Consolidation Gate.
 
 ## Red Flags
 

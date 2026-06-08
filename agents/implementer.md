@@ -89,7 +89,7 @@ For each item in the review notes:
 3. **Append `→ implemented: <markdown-link citation + one-line fix description>`** directly after the item's text, on its own line, preserving the reviewer's original prose.
 4. If you think an item is wrong or was already handled, do NOT annotate it as implemented. Flag it in your status return and let the orchestrator adjudicate on the next pass.
 
-After annotating all items you're expected to address, set `status: implemented` in frontmatter and commit. You leave the review notes for the reviewer to re-review — do not remove items, mark them resolved, or strike through. Note that flipping the status of a child task will be cascaded up to every ancestor automatically. Commit the cascaded changes as well. 
+After annotating all items you're expected to address, set `status: implemented` in frontmatter and commit. You leave the review notes for the reviewer to re-review — do not remove items, mark them resolved, or strike through. 
 
 **Example of review notes after your pass:**
 

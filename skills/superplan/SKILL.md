@@ -160,9 +160,9 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ### Agent Review
 
-At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Choose `Review mode: handoff-readiness` when the question is whether the task tree is clear, complete, internally consistent, and implementer-ready; choose `Review mode: design-review` when the question is whether the architecture, decomposition, assumptions, and domain reasoning are good enough for the objective. See `references/thorough-planning.md` §Planning Review for mode details; use `agent-orchestration` §Dispatch Templates for the dispatch shape.
+At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Choose between `Review mode: handoff-readiness` and `Review mode: design-review` per `references/thorough-planning.md` §Planning Review; use `agent-orchestration` §Dispatch Templates for the dispatch shape.
 
-The reviewer returns APPROVE or REVISE without changing task statuses. REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
+REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
 
 Skip this step at quick and standard depth unless the user explicitly asks for a handoff review — the self-review checklist is sufficient when the main agent designed the tree itself without parallel exploration.
 

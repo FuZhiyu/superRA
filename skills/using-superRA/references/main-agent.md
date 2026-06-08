@@ -2,24 +2,12 @@
 
 ## MANDATORY: Session Start Actions
 
-Before your first substantive response, run these cross-session detection checks:
-1. Check for `superRA/task.md` in the working directory
-2. Check for analysis worktrees (`git worktree list`)
-3. Check for analysis branches (`git branch --list 'analysis/*'`)
-4. If any exist, report to the user: "Found in-progress analysis work: [details]"
+Before your first substantive response, check whether the CLI wrapper `./superRA/superra` exists. If not, bootstrap it following `superRA:task-system` §CLI Setup.
 
-Do NOT skip these because the user "jumped straight into a task." The checks take 5 seconds and prevent lost work.
-
-**If an incomplete task tree is found** (`superRA/task.md` exists with tasks in non-approved status):
-- Run `superra task tree` to get the full status summary.
-- Summarize: "Found in-progress analysis: `superRA/` (N tasks approved, K with issues). Resume?"
-- If user confirms: read the `superRA/` task tree, check git log for latest state, run §Workflow Frontier Resolver, and continue from the returned frontier.
-- If user declines: proceed normally
+- Run `./superRA/superra task tree` to get the full status summary.
 
 **Backward compatibility:** If `PLAN.md` is found without a `superRA/` directory, offer migration via `superra task migrate from-plan`.
 
-**If in a worktree with no task tree:**
-- Note: "You're in worktree `<path>` on branch `<branch>`. Continue working here?"
 
 ## Workflow Frontier Resolver
 

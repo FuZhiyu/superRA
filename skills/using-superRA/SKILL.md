@@ -42,9 +42,9 @@ If you see unfamiliar uncommitted changes and cannot tell whether they are legit
 
 Handoff runs through the `superRA/` task tree — `task.md` files with YAML frontmatter and `##` body sections. Reading and editing your assigned task needs only this section.
 
-**Read** with the committed task-tree wrapper — `./superRA/superra task read <path>` — not a bare `Read` of the file. The wrapper self-resolves the task-system source and runs it with `uv run --script`; it needs no skill load, no plugin path, and no PATH install, so every agent (main, implementer, reviewer) reads and edits tasks through it without loading `task-system`. The read injects the inherited ancestor context and sibling dependency status that a standalone `task.md` lacks, and surfaces any unresolved comments anchored to the task so you act on them. Every `<path>` argument is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-system/planning-redesign`, not `superRA/task-system/planning-redesign`).
+**Read** with the committed task-tree wrapper — `./superRA/superra task read <path>` — not a bare `Read` of the file. The read injects the inherited ancestor context and sibling dependency status that a standalone `task.md` lacks, and surfaces any unresolved comments anchored to the task so you act on them. Every `<path>` argument is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-system/planning-redesign`, not `superRA/task-system/planning-redesign`).
 
-**Edit** the `task.md` directly with Read/Edit tools. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own.
+**Edit** the `task.md` directly with Read/Edit tools. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own. Note that flipping the status of a child task will be cascaded up to every ancestor automatically by hooks. This is the intended behavior. 
 
 **Editing principles:**
 

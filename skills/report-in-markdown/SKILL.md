@@ -1,12 +1,12 @@
 ---
 name: report-in-markdown
-description: Markdown style guide for agents writing task files, status reports, or standalone markdown reports, with optional references for figures, LaTeX math, and tables.
+description: Markdown style guide for agents writing task files, status reports, or standalone markdown reports, with inline rules for source-file citations, LaTeX math, and tables, plus optional references for figures and standalone-report IO.
 user-invocable: true
 ---
 
 # Report in Markdown
 
-The markdown style guide for any agent writing markdown. Use the rule below for source-file citations; load references only when the output needs figures, LaTeX math, tables, or standalone-report IO.
+The markdown style guide for any agent writing markdown. Use the rules below for source-file citations, LaTeX math, and tables; load references only when the output needs figures or standalone-report IO.
 
 ## File-reference rule
 
@@ -34,7 +34,7 @@ $$
 ```
 
 - Use `\text{...}` for words inside math mode.
-- Do not use 
+- Prefer LaTeX math over Unicode for any expression that includes subscripts, superscripts, fractions, sums, or integrals.
 
 ## Tables
 
