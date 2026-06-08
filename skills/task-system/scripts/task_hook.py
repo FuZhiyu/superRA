@@ -46,6 +46,54 @@ def _ensure_scripts_on_path() -> None:
         sys.path.insert(0, scripts)
 
 
+def _is_markdown_under_task_root(file_path: Path) -> bool:
+    """True when file_path is a `.md` file somewhere inside a task root.
+
+    Cheap gate for the hot path: a suffix check plus a path-parts scan, no file
+    read. The common non-markdown edit short-circuits here before anything else.
+    """
+    if file_path.suffix.lower() != ".md":
+        return False
+    return any(
+        p == TASK_ROOT_DIRNAME
+        or p == LEGACY_TASK_ROOT_DIRNAME
+        or p.startswith(f"{LEGACY_TASK_ROOT_DIRNAME}.")
+        for p in file_path.parts
+    )
+
+
+def _markdown_integrity_feedback(file_path: Path) -> list[str]:
+    """Run the render-integrity checker on a `.md` under a task root.
+
+    The detection logic lives in the sibling report-in-markdown skill; this only
+    imports and calls it. Resolves the checker relative to this file's own
+    location (skills/task-system/scripts -> skills/report-in-markdown/scripts) so
+    it works across local checkout, plugin cache, and GitHub-clone installs where
+    the whole skills/ tree ships together. Best-effort: any failure (gate miss,
+    unreadable file, import or check error) returns no feedback rather than
+    breaking the hook.
+    """
+    if not _is_markdown_under_task_root(file_path):
+        return []
+    try:
+        text = file_path.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    try:
+        md_scripts = _scripts_dir().parent.parent / "report-in-markdown" / "scripts"
+        if str(md_scripts) not in sys.path:
+            sys.path.insert(0, str(md_scripts))
+        import md_integrity
+        issues = md_integrity.check(text)
+    except Exception:
+        return []
+    return [
+        f"Markdown render-integrity issue in {file_path}:{it.line} "
+        f"[{it.rule}] {it.message}"
+        for it in issues
+    ]
+
+
 def _feedback_json(feedback: list[str]) -> str:
     context = (
         "<IMPORTANT>Task-system hook feedback:\n"
@@ -321,7 +369,15 @@ def _handle_bash(data: dict) -> None:
 
 
 def _handle_edit_write(data: dict) -> None:
-    """Reconcile the plan tree for an Edit/Write of a task.md."""
+    """Handle an Edit/Write: reconcile task.md edits and render-integrity-check
+    any .md edited under a task root.
+
+    Two branches that merge into one feedback emission: the task.md-only
+    reconcile (validate + status propagation) and the broader render-integrity
+    check that runs on any .md under a task root (including task.md). The cheap
+    .md-under-task-root gate short-circuits the common non-markdown edit before
+    any file read.
+    """
     tool_input = data.get("tool_input", {}) or {}
     file_path_str = tool_input.get("file_path", "")
     if not file_path_str:
@@ -329,26 +385,27 @@ def _handle_edit_write(data: dict) -> None:
 
     file_path = Path(file_path_str)
 
-    # Must be named task.md
-    if file_path.name != "task.md":
+    # Cheap gate: only a .md under a task root is of interest to either branch.
+    if not _is_markdown_under_task_root(file_path):
         sys.exit(0)
 
-    # Must be inside a task-root directory somewhere in the path
-    parts = file_path.parts
-    if not any(p == TASK_ROOT_DIRNAME or p == LEGACY_TASK_ROOT_DIRNAME or p.startswith(f"{LEGACY_TASK_ROOT_DIRNAME}.") for p in parts):
-        sys.exit(0)
+    feedback: list[str] = []
 
-    _ensure_scripts_on_path()
-    import _task_io as task_io
-    plan_root = task_io._find_plan_root(file_path.parent)
-    if plan_root is None:
-        sys.exit(0)
+    # task.md-only branch: validate the tree and propagate parent status.
+    if file_path.name == "task.md":
+        _ensure_scripts_on_path()
+        import _task_io as task_io
+        plan_root = task_io._find_plan_root(file_path.parent)
+        if plan_root is not None:
+            task_path = str(file_path.parent.relative_to(plan_root))
+            if task_path == ".":
+                task_path = ""
+            feedback.extend(_reconcile(plan_root, task_path=task_path))
 
-    task_path = str(file_path.parent.relative_to(plan_root))
-    if task_path == ".":
-        task_path = ""
+    # Broader branch: render-integrity-check any .md under a task root.
+    feedback.extend(_markdown_integrity_feedback(file_path))
 
-    _emit_feedback(_reconcile(plan_root, task_path=task_path))
+    _emit_feedback(feedback)
     sys.exit(0)
 
 
@@ -398,10 +455,17 @@ def _handle_apply_patch(data: dict) -> None:
     cwd = Path.cwd()
     roots: list[Path] = []
     seen: set[Path] = set()
+    feedback: list[str] = []
 
     for raw_path in _apply_patch_paths(command):
         path = Path(raw_path)
         file_path = path if path.is_absolute() else cwd / path
+
+        # Render-integrity-check any .md under a task root (including task.md);
+        # the cheap gate inside short-circuits everything else.
+        feedback.extend(_markdown_integrity_feedback(file_path))
+
+        # task.md-only branch: reconcile the touched plan tree once.
         match = _task_path_from_file_path(file_path)
         if match is None:
             continue
@@ -412,7 +476,6 @@ def _handle_apply_patch(data: dict) -> None:
         seen.add(resolved)
         roots.append(plan_root)
 
-    feedback: list[str] = []
     for plan_root in roots:
         feedback.extend(_reconcile(plan_root, task_path=None))
 

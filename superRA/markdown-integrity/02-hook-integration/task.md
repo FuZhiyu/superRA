@@ -1,6 +1,6 @@
 ---
 title: "Wire Checker into PostToolUse Hook (task-system, warn-only)"
-status: not-started
+status: implemented
 depends_on: 
   - 01-checker-and-rules
 
@@ -32,3 +32,15 @@ Wire the `01-checker-and-rules` checker into the existing PostToolUse hook so an
 
 ## Results
 
+The `01-checker-and-rules` checker is now wired into the existing PostToolUse hook ([skills/task-system/scripts/task_hook.py](../../../skills/task-system/scripts/task_hook.py)) as a warn-only, broader branch alongside the unchanged `task.md`-only reconcile branch. No new hook script, wrapper, or `hooks/hooks*.json` registration was added; the generated `hooks/task-hook` shim already invokes `task_hook.py` and needed no regeneration.
+
+**How it works.**
+
+- A cheap gate, [`_is_markdown_under_task_root`](../../../skills/task-system/scripts/task_hook.py#L49-L62), short-circuits the hot path: a `.md` suffix check plus a path-parts scan for `superRA`/`.plan`, no file read. The common non-markdown edit returns before any work.
+- [`_markdown_integrity_feedback`](../../../skills/task-system/scripts/task_hook.py#L65-L94) resolves the sibling checker relative to `task_hook.py`'s own location (`skills/task-system/scripts` → `skills/report-in-markdown/scripts`), imports `md_integrity`, and calls `check()`. The whole `skills/` tree ships together, so this resolves identically across local checkout, Claude plugin cache, Codex cache, and GitHub-clone installs. The import and check are wrapped in best-effort `try/except` (mirroring the existing reconcile steps) — any failure returns no feedback rather than breaking the hook.
+- Both edit paths call it. The Claude path [`_handle_edit_write`](../../../skills/task-system/scripts/task_hook.py#L371-L409) merges render-integrity findings into the same feedback list as the `task.md` reconcile, emitting one `_feedback_json` per tool call. The Codex path [`_handle_apply_patch`](../../../skills/task-system/scripts/task_hook.py#L448-L483) runs the check on every touched `.md` path extracted from the patch payload.
+- Findings reuse the existing `_feedback_json` / `_emit_feedback` channel — the model-visible `additionalContext` JSON shape both harnesses inject as context. No second feedback format was introduced. The hook always exits 0; clean `.md` files and non-`.md` edits stay silent.
+
+**Tests.** Six new cases extend `TestTaskHook` in [skills/task-system/scripts/test_task_system.py](../../../skills/task-system/scripts/test_task_system.py): an Edit of a task `.md` with an adjacent `$$` block surfaces a `display-math-not-separated` warning naming the file; a `\diag`-class macro surfaces a `tex-only-macro` warning; a non-`task.md` `.md` under a task root is still checked (the render branch is broader than the reconcile); a clean `.md` and a non-`.md` edit both stay silent; and a Codex `apply_patch` payload touching a `.md` surfaces the warning. These assert on the real emitted `additionalContext` JSON parsed from subprocess stdout, not just a function return.
+
+**Verification.** `uv run --with pytest --with pyyaml python -m pytest skills/task-system/scripts/test_task_system.py` — 325 passed, 0 failures (TestTaskHook: 30 passed, including the 6 new cases).

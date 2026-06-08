@@ -2942,6 +2942,111 @@ class TestTaskHook:
             assert result.returncode == 0
             assert result.stdout == ""
 
+    # --- markdown render-integrity (md_integrity checker) branch ---
+
+    # An adjacent display-$$ block: the `$$` fence directly touches the text
+    # line above with no blank line, so it gets swallowed into the paragraph.
+    _ADJACENT_DD = (
+        "## Objective\n\nThe estimator is defined as\n"
+        "$$\n\\hat\\beta = (X'X)^{-1}X'y\n$$\n\nDo the thing.\n"
+    )
+
+    def _md_task_with_body(self, path: Path, body: str) -> None:
+        """Write a task.md whose body section carries `body` verbatim."""
+        fm = (
+            'title: "MD Task"\nstatus: not-started\n'
+            "depends_on: []\ntags: []\ncreated: 2026-01-01\n"
+        )
+        path.write_text(f"---\n{fm}---\n\n{body}", encoding="utf-8")
+
+    def test_edit_md_with_adjacent_dd_warns(self, plan_root):
+        """An Edit of a task .md with an adjacent $$ block surfaces a render
+        warning naming the file and line via the feedback channel."""
+        target = plan_root / "01-first" / "task.md"
+        self._md_task_with_body(target, self._ADJACENT_DD)
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": str(target)}}
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        assert result.stderr == ""
+        context = json.loads(result.stdout)["additionalContext"]
+        assert "render-integrity issue" in context
+        assert "display-math-not-separated" in context
+        assert str(target) in context
+
+    def test_edit_md_with_tex_only_macro_warns(self, plan_root):
+        """A \\diag-class macro (KaTeX-undefined) surfaces a render warning."""
+        target = plan_root / "01-first" / "task.md"
+        self._md_task_with_body(
+            target, "## Objective\n\nLet $D = \\diag(a, b)$ be the matrix.\n"
+        )
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": str(target)}}
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["additionalContext"]
+        assert "tex-only-macro" in context
+        assert "\\operatorname" in context
+
+    def test_edit_non_task_md_under_root_still_checked(self, plan_root):
+        """The render check is broader than the reconcile: any .md under a task
+        root is checked, not only task.md."""
+        target = plan_root / "01-first" / "notes.md"
+        target.write_text(self._ADJACENT_DD, encoding="utf-8")
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": str(target)}}
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        context = json.loads(result.stdout)["additionalContext"]
+        assert "display-math-not-separated" in context
+
+    def test_edit_clean_md_is_silent(self, plan_root):
+        """A clean .md produces no output."""
+        target = plan_root / "01-first" / "task.md"
+        self._md_task_with_body(
+            target,
+            "## Objective\n\nThe estimator is\n\n$$\n\\hat\\beta = 1\n$$\n\nDone.\n",
+        )
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": str(target)}}
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        assert result.stdout == ""
+        assert result.stderr == ""
+
+    def test_edit_non_md_file_is_silent(self, plan_root):
+        """A non-.md edit under a task root produces no markdown feedback and
+        short-circuits the cheap gate."""
+        target = plan_root / "01-first" / "script.py"
+        target.write_text("x = 1\n", encoding="utf-8")
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": str(target)}}
+        result = self._run_hook_result(payload)
+        assert result.returncode == 0
+        assert result.stdout == ""
+
+    def test_apply_patch_md_with_adjacent_dd_warns(self, tmp_path):
+        """A Codex apply_patch touching a .md with an adjacent $$ block surfaces
+        the render warning."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        self._md_task_with_body(root / "task.md", "## Objective\n\nA plan.\n")
+        child = root / "01-child"
+        child.mkdir()
+        self._md_task_with_body(child / "task.md", self._ADJACENT_DD)
+        payload = {
+            "tool_name": "apply_patch",
+            "tool_input": {
+                "command": (
+                    "*** Begin Patch\n"
+                    "*** Update File: superRA/01-child/task.md\n"
+                    "@@\n"
+                    "*** End Patch\n"
+                )
+            },
+        }
+        result = self._run_hook_result(payload, cwd=tmp_path)
+        assert result.returncode == 0
+        assert result.stderr == ""
+        context = json.loads(result.stdout)["additionalContext"]
+        assert "display-math-not-separated" in context
+        assert "01-child/task.md" in context
+
 
 # --- Revision-note stale-leak validation tests ---
 
