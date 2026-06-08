@@ -1,6 +1,6 @@
 ---
 name: report-in-markdown
-description: Markdown style guide for agents writing task files, status reports, or standalone markdown reports, with inline rules for source-file citations, LaTeX math, and tables, plus optional references for figures and standalone-report IO.
+description: Markdown style guide for agents writing task files, status reports, or standalone markdown reports, with inline rules for source-file citations, LaTeX math, and tables, plus optional references for figures and standalone-report IO. Ships a render-integrity self-diagnose CLI (scripts/check_markdown.py) that flags display-math blocks not blank-line separated and TeX-only macros KaTeX cannot render.
 user-invocable: true
 ---
 
