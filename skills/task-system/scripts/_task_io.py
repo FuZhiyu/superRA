@@ -30,7 +30,10 @@ def default_plan_root() -> Path:
 def _has_child_task_dir(directory: Path) -> bool:
     """True if *directory* holds at least one immediate subdir with a ``task.md``."""
     try:
-        children = directory.iterdir()
+        # Materialize inside the guard: `iterdir()` is lazy, so a missing/racing
+        # directory raises FileNotFoundError (an OSError) only on consumption,
+        # which would escape a bare `try` wrapping just the `iterdir()` call.
+        children = list(directory.iterdir())
     except OSError:
         return False
     return any(d.is_dir() and (d / "task.md").is_file() for d in children)

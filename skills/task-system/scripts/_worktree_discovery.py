@@ -157,7 +157,10 @@ def _is_task_root(candidate: Path) -> bool:
     if (candidate / "task.md").is_file():
         return True
     try:
-        children = candidate.iterdir()
+        # Materialize inside the guard: `iterdir()` is lazy, so a missing/racing
+        # directory raises FileNotFoundError (an OSError) only on consumption,
+        # which would escape a bare `try` wrapping just the `iterdir()` call.
+        children = list(candidate.iterdir())
     except OSError:
         return False
     return any(d.is_dir() and (d / "task.md").is_file() for d in children)
