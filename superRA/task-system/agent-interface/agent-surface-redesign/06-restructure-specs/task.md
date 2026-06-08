@@ -1,7 +1,8 @@
 ---
 title: "Restructure Both Role Specs + Relocate Planning-Review + Reconcile Generator"
 status: approved
-depends_on: []
+depends_on:
+  - 03-role-spec-slim
 tags: []
 created: 2026-06-01
 ---

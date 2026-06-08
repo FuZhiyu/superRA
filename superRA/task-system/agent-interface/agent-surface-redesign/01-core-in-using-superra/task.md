@@ -31,7 +31,7 @@ Add a single authoritative **Task Interface** section to `skills/using-superRA/S
 - A reader who loads only `using-superRA/SKILL.md` can, from this section alone, correctly read their task, edit it inline, set their status, and stay within ownership bounds — without loading `task-system`.
 - No line duplicates content that `planning.md` or the role specs own; pointers are used instead.
 - The old `## Handoff Docs` pointer paragraph is gone (absorbed), with no dangling references to it elsewhere in `using-superRA`.
-- **No knowledge lost:** any interface guidance you remove from its old location must already be present in this new section (or another reachable owner). You are only de-duplicating and relocating, never dropping the last copy — task `05-coverage-audit` will check this against a git snapshot.
+- **No knowledge lost:** any interface guidance you remove from its old location must already be present in this new section (or another reachable owner). You are only de-duplicating and relocating, never dropping the last copy — task `09-coverage-audit` will check this against a git snapshot.
 
 **Output:** `skills/using-superRA/SKILL.md`.
 

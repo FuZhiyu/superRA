@@ -34,7 +34,7 @@ Generated targets (never hand-edit): `skills/using-superRA/references/direct-mod
 - Each role spec still fully specifies its own ownership, annotation mechanics, and (reviewer) verdict protocol — no role behavior is lost.
 - `sync_codex_agents.py` was run; the four generated files are regenerated, committed, and consistent with the slimmed sources (verify with `git status` that they changed and were not hand-edited).
 - Step 4 is unchanged.
-- **No knowledge lost:** the only thing removed from the role specs is the *shared* editing-principles block (now in `using-superRA §Task Interface`); every role-specific protocol line survives. Task `05-coverage-audit` verifies this against a git snapshot.
+- **No knowledge lost:** the only thing removed from the role specs is the *shared* editing-principles block (now in `using-superRA §Task Interface`); every role-specific protocol line survives. Task `09-coverage-audit` verifies this against a git snapshot.
 
 **Output:** `agents/implementer.md`, `agents/reviewer.md`, and the four regenerated files above.
 

@@ -1,9 +1,8 @@
 ---
 title: "Collapse Reporting onto Commit = Summary, Return = Status + SHA"
 status: approved
-depends_on: 
-  - 01-restructure-specs
-
+depends_on:
+  - 06-restructure-specs
 tags: []
 created: 2026-06-01
 ---

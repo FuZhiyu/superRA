@@ -44,7 +44,7 @@ The body should serve the common case inline and route the situational cases to 
 - No "self-contained `task.md`" claim remains in this skill; read/edit mechanics and ownership are not restated here (only pointed to `using-superRA §Task Interface`).
 - No dangling internal references to moved sections (grep `task-system/SKILL.md §` mentions across `skills/` and `agents/`).
 - The skill still works standalone via its pointers.
-- **No knowledge lost:** every command, concept, and migration detail you remove from the body still exists in a reachable reference; nothing is dropped, only relocated and de-duplicated. Task `05-coverage-audit` verifies this against a git snapshot.
+- **No knowledge lost:** every command, concept, and migration detail you remove from the body still exists in a reachable reference; nothing is dropped, only relocated and de-duplicated. Task `09-coverage-audit` verifies this against a git snapshot.
 
 **Output:** `skills/task-system/SKILL.md`; `skills/task-system/references/planning.md` and/or a new `skills/task-system/references/commands.md`; `skills/task-system/references/internals.md` (migration/dashboard consolidation as needed).
 
@@ -85,4 +85,4 @@ Rewrote the `**Role-scoped references:**` block to the new map: executing agent 
 - `task_query.py`/`task_read.py` run cleanly in this env (used during task read). `test_task_system.py` requires `pytest` (absent here); no script was modified, so this is doc-only and not load-bearing.
 - DRY/Necessity gate applied line-by-line: dropped the redundant body `mv` prose paragraph that duplicated commands.md; the body now routes rather than restates, with single-task read/edit pointed (not copied) to `using-superRA §Task Interface`.
 
-**No knowledge lost (within this task's scope):** every command, concept, migration step, and dashboard detail removed from the body now lives in `references/commands.md` or `references/internals.md` (or was already in `planning.md`), reachable via the body's routing table. Task `05-coverage-audit` verifies this against a git snapshot.
+**No knowledge lost (within this task's scope):** every command, concept, migration step, and dashboard detail removed from the body now lives in `references/commands.md` or `references/internals.md` (or was already in `planning.md`), reachable via the body's routing table. Task `09-coverage-audit` verifies this against a git snapshot.

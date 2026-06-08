@@ -2,8 +2,7 @@
 title: "Finalize Coupled Agent-Facing Surfaces"
 status: approved
 depends_on:
-  - 01-restructure-specs
-
+  - 06-restructure-specs
 tags: []
 created: 2026-06-01
 ---
