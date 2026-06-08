@@ -1717,7 +1717,9 @@ def serve(port: int) -> None:
     Uses ``uvicorn.Server`` so the idle monitor can request shutdown via
     ``_server.should_exit = True``.  This is the single in-process serve path:
     both ``serve --foreground`` and the detached background child call it, so
-    their lifecycle (idle self-exit included) is identical.
+    their lifecycle (idle self-exit included) is identical.  Run through
+    ``Server.run()`` so uvicorn installs its configured event-loop factory
+    (``auto`` uses uvloop when available) before serving.
     """
     import uvicorn
 
@@ -1725,7 +1727,7 @@ def serve(port: int) -> None:
     config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
     _server = uvicorn.Server(config)
     try:
-        asyncio.run(_server.serve())
+        _server.run()
     finally:
         _server = None
 
