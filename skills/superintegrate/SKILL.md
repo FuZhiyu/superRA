@@ -5,9 +5,7 @@ description: Requires `superRA:using-superra` loaded first. Use when a plan is c
 
 # superintegrate — the INTEGRATE phase
 
-**First, load `superRA:using-superra` if not already loaded.**
-
-Workflow skill for the **INTEGRATE** phase of the superRA workflow. It takes a reproducibility-verified analysis branch through five steps:
+Workflow skill for the **INTEGRATE** phase. It takes a reproducibility-verified analysis branch through five steps:
 
 ```
 Protect   -> protect key results (default: drift tests)
@@ -25,7 +23,7 @@ Any step -> superplan §User Feedback and Changing the Task Tree
 
 ## Stop Points
 
-The main agent's Workflow Frontier Resolver chooses where to enter this workflow. Once entered, run the selected step's local gates exactly; do not redo task-local approvals outside the affected frontier simply because a rollup milestone was unchecked.
+The Workflow Frontier Resolver chooses where to enter. Once entered, run the selected step's local gates; do not redo task-local approvals outside the affected frontier just because a rollup milestone was unchecked.
 
 Legitimate stop points (fold every answer into the relevant task objective **before** acting):
 
@@ -43,7 +41,7 @@ Sync uses `Stage: sync` with generic sync author / sync reviewer agents and the 
 
 ## Protect
 
-Result protection guards key results during Sync, Integrate, Finish, and future work. Drift tests are the current/default protection mechanism. For the writing vertical, "key results" are the manuscript artifacts; protection is satisfied by document-build success plus outline stability across the merged state — see `skills/writing/references/integration.md`.
+Drift tests are the default protection mechanism, guarding key results through Sync, Integrate, Finish, and future work. For the writing vertical, "key results" are the manuscript artifacts; protection is satisfied by document-build success plus outline stability across the merged state — see `skills/writing/references/integration.md`.
 
 **Always run the full drift-test suite on every integration pass.** Authoring new drift tests is scoped to tasks with `status:` not `approved` plus orchestrator-declared related tasks from `superplan §User Feedback and Changing the Task Tree`; running the suite is not scoped.
 
@@ -359,15 +357,6 @@ Report what was published or landed and what was cleaned up.
 
 ## Red Flags
 
-**Never:**
-- Refactor before Sync when the base has advanced.
-- Use `PRE_SYNC_BASE_SHA` as the post-sync minimum-net-diff baseline.
-- Skip the integration reviewer after Sync.
-- Leave `## Sync Map` in root task.md after Integrate closes.
-- Enter Finish without checking whether the base advanced again.
-
-**Always:**
-- Run the full drift-test suite on every integration pass (new drift tests scoped to tasks not yet `status: approved`; running the suite is not scoped).
-- Use semantic-merge for intent-aware branch syncs.
-- Keep Sync serialized and refactor parallelizable only after Sync lands.
-- Fold user decisions into task objectives before acting.
+- Refactoring before Sync when the base has advanced, or using `PRE_SYNC_BASE_SHA` (not `BASE_HEAD_SHA`) as the post-sync minimum-net-diff baseline.
+- Parallelizing Sync, or parallelizing refactor before Sync lands.
+- Entering Finish without re-checking whether the base advanced since Integrate.

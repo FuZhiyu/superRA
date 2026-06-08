@@ -2,9 +2,9 @@
 
 > Load when Draft mode runs, or when Polish mode is authorized to restructure (per the Mode routing table in `SKILL.md`). Loading this file is the authority grant for structural edits.
 
-Sources: Minto, B., *The Pyramid Principle* (governing idea, MECE, horizontal/vertical logic, SCQ / SCQA framing). Chaubey, V. (2018), *The Little Book on Research Writing* (RAP = Research question + Answer + Positioning, three-layer building: argument → outline → paragraphs, two-part introduction). Little Red Schoolhouse plan summaries (LRS 5, 6, Arg 1–3 — pending source verification; PDFs were unavailable at drafting time). Supporting: Brandeis, CGDev, IZA DP15057, Bellemare, Conversable Economist guidance on economics-paper structure.
+Sources: Minto, *The Pyramid Principle* (governing idea, MECE, horizontal/vertical logic, SCQ/SCQA). Chaubey (2018), *The Little Book on Research Writing* (RAP, three-layer building, two-part introduction).
 
-The rules below describe how a well-structured research paper reads to its audience. Structural changes beyond the requested scope are *proposed*, not performed unilaterally (`SKILL.md §Preserve substance, polish prose`).
+Structural changes beyond the requested scope are *proposed*, not performed unilaterally (`SKILL.md §Preserve substance, polish prose`).
 
 ## How-To
 

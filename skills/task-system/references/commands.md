@@ -2,7 +2,7 @@
 
 Load this reference when you are an orchestrator or planner mutating a `superRA/` tree — scaffolding new tasks, restructuring, re-wiring dependencies, or running bulk status operations.
 
-All commands below run through the committed `./superRA/superra` wrapper (there is no PATH `superra`; in the superRA checkout, substitute `uv run --script skills/task-system/scripts/cli.py`). Bare `superra …` in the examples denotes that wrapper.
+All commands below run through the committed `./superRA/superra` wrapper. Bare `superra …` in the examples denotes that wrapper.
 
 **Single-field edits go through direct edit, not these CLIs.** To set one field on one task — including `status` — edit its `task.md` directly with Read/Edit (see `using-superRA/SKILL.md §Task Interface`); the PostToolUse hook validates and propagates. The commands below are convenience scaffolding for creating tasks from a template and for bulk or scripted changes — reach for them when direct edit would be tedious or error-prone.
 
@@ -52,11 +52,11 @@ superra task dep remove 01-data/03-filter 02-merge
 superra task rename 01-data/01-load 01-data/01-load-raw
 ```
 
-A plain `mv` of the task directory also works — it carries the `task.md`, `comments.yaml`, and whole subtree, and the PostToolUse hook revalidates the tree and propagates status. For a **same-parent rename** (`mv superRA/a/x superRA/a/y`) the hook also **auto-cascades sibling `depends_on: x` → `y`**, so an in-place rename leaves no dangling edge and you do not need `superra task rename` for consistency. Expect this re-point: a rename silently re-wires its dependents (the change is surfaced in the hook feedback). The hook does **not** auto-cascade for a **cross-parent move** or a **delete** of a depended-on task — both strand the reference, which validation flags as a dangling dependency for you to re-wire with `superra task dep add` / `superra task dep remove` or a direct edit. `superra task rename` remains the convenience for the atomic same-parent case.
+A plain `mv` of the task directory also works — it carries the `task.md`, `comments.yaml`, and whole subtree, and the PostToolUse hook revalidates and propagates status. For a **same-parent rename** (`mv superRA/a/x superRA/a/y`) the hook also auto-cascades sibling `depends_on: x` → `y` (surfaced in the hook feedback), so it needs no follow-up; `superra task rename` is just the explicit convenience for this case. A **cross-parent move** or a **delete** of a depended-on task is not auto-cascaded — both strand the reference, which validation flags as a dangling dependency to re-wire with `superra task dep add` / `dep remove` or a direct edit. Why the boundary stops at same-parent renames: `internals.md §Hook Architecture`.
 
 ## Comments
 
-A researcher pins comments to `task.md` blocks via the dashboard. Unresolved comments already surface on the read path — `superra task read <path>` shows each with its full anchored block (see `using-superRA/SKILL.md §Task Interface`) — so the orchestrator and the dispatched agent see them without a separate command. These commands are for the standalone read/resolve loop:
+A researcher pins comments to `task.md` blocks via the dashboard. `superra task read <path>` already shows unresolved comments with their anchored blocks (see `using-superRA/SKILL.md §Task Interface`), so use these commands only for the standalone read/resolve loop:
 
 ```bash
 superra task comment list <task>           # unresolved comments on a task, each with its full anchored block

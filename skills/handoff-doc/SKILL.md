@@ -5,12 +5,12 @@ description: "DEPRECATED. Redirects to task-system and agent role specs."
 
 # Handoff Doc — DEPRECATED
 
-This skill is deprecated. Its concerns are now owned by:
+Its concerns are now owned by:
 
-- **Editing discipline (four principles, inline-edit rule):** `agents/implementer.md` §Editing Etiquette, `agents/reviewer.md` §Editing Etiquette
+- **Editing discipline (inline-edit rule):** `skills/using-superRA` §Task Interface editing principles; role deltas in `agents/implementer.md` §Self-Check (Editing hygiene)/§Handoff and `agents/reviewer.md` §Editing Etiquette
 - **Task anatomy, field notes, ownership rules:** `skills/task-system/` (`references/planning.md`)
 - **Results format and two-stage lifecycle:** `skills/task-system/references/planning.md` §Results Shape
-- **User decisions:** fold into task objectives directly (see `agents/implementer.md` §Editing Etiquette)
+- **User decisions:** fold into task objectives directly (see `skills/task-system/references/planning.md` §Writing Objectives and Planner Guidance)
 - **Stale-content checklist:** `skills/task-system/references/planning.md` §Stale Content Checklist
 - **Context and conventions discipline:** `skills/task-system/references/planning.md` §Context and Conventions
 

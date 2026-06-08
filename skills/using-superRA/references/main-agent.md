@@ -1,19 +1,19 @@
 # Main Agent — Session Start and Autonomy Contract
 
-## MANDATORY: Session Start Actions
+## Session Start Actions
 
-Before your first substantive response, check whether the CLI wrapper `./superRA/superra` exists. If not, bootstrap it following `superRA:task-system` §CLI Setup.
+Before your first substantive response:
 
-- Run `./superRA/superra task tree` to get the full status summary.
-
-**Backward compatibility:** If `PLAN.md` is found without a `superRA/` directory, offer migration via `superra task migrate from-plan`.
+- Check whether the CLI wrapper `./superRA/superra` exists; if not, bootstrap it following `superRA:task-system` §CLI Setup.
+- Run `./superRA/superra task tree` for the full status summary.
+- If `PLAN.md` exists without a `superRA/` directory, offer migration via `superra task migrate from-plan`.
 
 
 ## Workflow Frontier Resolver
 
-Before entering a workflow, resuming after interruption, or reacting to a changed task tree, resolve the next safe entry point from durable facts. Mixed state is normal: some tasks may remain approved while changed tasks and their downstream dependents roll back.
+Before entering a workflow, resuming after interruption, or reacting to a changed task tree, resolve the next safe entry point from durable facts. Mixed state is normal: some tasks stay approved while changed tasks and their downstream dependents roll back.
 
-The resolver diagnoses and routes. It does not perform the task-tree edit, implementation pass, integration pass, or merge itself; the workflow that owns the selected layer runs its local protocol.
+The resolver only diagnoses and routes — the workflow owning the selected layer runs the actual edit, implementation, integration, or merge.
 
 **Read facts first:**
 
@@ -57,24 +57,24 @@ The resolver diagnoses and routes. It does not perform the task-tree edit, imple
 
 ## Changes of the Task Tree
 
-Whenever the task tree meaningfully changes — a new task, a removed or restructured task, a material update to an existing task's objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `superplan` and follow the §User Feedback and Changing the Task Tree protocol (confirm → update task files inline → clear affected statuses → sweep for stale content → atomic commit). Then run §Workflow Frontier Resolver to decide where to resume. Rewording an objective to match what the data forced is not a material change and stays an inline discovery edit. See `superplan §User Feedback and Changing the Task Tree` for the full material-vs-not-material list and protocol.
+Whenever the task tree meaningfully changes — a new, removed, or restructured task, a material update to an objective / input / output / methodology, or a scope addition surfaced after integration or merge — re-enter `superplan §User Feedback and Changing the Task Tree` (which owns the full material-vs-not-material list and the confirm/update/clear/sweep/commit protocol), then run §Workflow Frontier Resolver to decide where to resume. Rewording an objective to match what the data forced is not material and stays an inline discovery edit.
 
 
 ## The Three Pause Classes
 
-This contract applies across every workflow step — planning, execution, integration, semantic sync, and finishing — not just execution. Workflow skills carry step-specific stop points; those plug into the three classes below.
+This contract applies across every workflow step, not just execution. Workflow skills carry step-specific stop points; those plug into the three classes below.
 
-Stop and use `AskUserQuestion` (plain text if the harness does not expose the tool) for exactly three classes of pause. Fold the researcher's answer into the relevant task objective (rewriting it to be self-sufficient with the new context) **before** acting on it:
+Stop and use `AskUserQuestion` (plain text if the harness lacks the tool) for exactly three classes of pause. Fold the researcher's answer into the relevant task objective — rewritten to be self-sufficient — **before** acting on it:
 
 1. **Hard blocker the RA cannot resolve from code and data.** Unexpected input-quality issues, missing or corrupted inputs, ambiguous upstream dependency the agent cannot trace, a transformation that produces an unexpected scope change (row count shift on a merge, date range change after a filter), validation failure against domain expectation, plan with critical gaps that prevent the next step, pipeline file missing for a multi-script analysis, required dependency unavailable.
 2. **Decision beyond the RA's authority.** Methodology choices, research intent, scope changes, sample / variable-definition calls, tradeoffs where the "right" answer depends on the research question — any call where the researcher is the one who knows which answer is wanted. Also: methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope change that would affect tasks not yet reached.
 3. **User-defined workflow milestone.** Stops baked into a workflow because the researcher wants a decision at that point. The 4-option completion menu at `superimplement` Step 4; drift-test selection at `superintegrate` Protect; doc disposition at `superintegrate` Document; intent-changing conflict escalation in `semantic-merge`. These are intentional stops, not check-ins.
 
-All three classes have one thing in common: the agent cannot answer the question from the code and data alone, and the answer will shape downstream work in a way another agent could not reconstruct without it.
+The common test: the agent cannot answer from code and data alone, and the answer shapes downstream work another agent could not reconstruct without it.
 
 ## Proceed Without Asking
 
-The autonomy principle is load-bearing in the other direction too — when there is no pause-class question on the table, the agent drives the workflow forward on its own power. Common patterns:
+When no pause-class question is on the table, drive the workflow forward on your own power. Common patterns:
 
 - Task just moved to `APPROVED` → immediately dispatch the implementer for the next not-started task (or the next `REVISE` task you have already adjudicated).
 - Reviewer feedback already adjudicated in the review-notes blockquote → re-dispatch the implementer; do not ask the researcher to confirm the adjudication.
@@ -96,9 +96,9 @@ When nothing has changed since the last approved state, these phrasings are bann
 - "Let me know if you want me to..."
 - "Would you like me to dispatch the next implementer?"
 
-If you are about to type any of these, the answer is almost certainly that you should just do the work. If the work legitimately needs a decision, use `AskUserQuestion` with a specific pause-class question; fold the answer into the task objective; and then proceed.
+If you are about to type any of these, just do the work. If the work legitimately needs a decision, use `AskUserQuestion` with a specific pause-class question, fold the answer into the task objective, then proceed.
 
-**Ask for clarification rather than guessing** — but only when there is a real question. Fabricating a question to create a check-in violates this principle.
+**Ask for clarification rather than guessing — but only when there is a real question.** Fabricating a question to manufacture a check-in violates this principle.
 
 ## One Question at a Time
 
@@ -106,7 +106,7 @@ When a pause is legitimate, ask a single focused question and wait for the answe
 
 ## Log Before You Act
 
-Every user decision produced at a stop point is folded into the relevant task objective — rewritten to be self-sufficient with the new context — **before** the agent acts on it, and committed atomically with the work it unblocks. Add a `## Revision Notes` entry when the change is non-obvious. The task file is the record; the chat message is the pointer.
+Commit the folded-in decision atomically with the work it unblocks. Add a `## Revision Notes` entry when the change is non-obvious. The task file is the record; the chat message is the pointer.
 
 
 ## Execution Modes
@@ -115,10 +115,10 @@ Subagent mode is the default — dispatch implementers and reviewers through `su
 
 **Direct mode protocol:**
 
-- **Read the direct-mode role reference for the role you are playing.** `references/direct-mode-implementer.md` for an implementation step; `references/direct-mode-reviewer.md` for a review step. These are the skill-surface copies of the role protocol that direct mode can load across repos.
-- **The Skill-Load Manifest still drives loads.** Consult the manifest row for your Stage and load the listed skills/references in-session.
-- **Task context comes from `superRA/` task files** (via `superra task read` or direct read of `task.md`) — there is no dispatch prompt.
-- **Self-review gate, editing discipline, and verdict protocol all apply.** Walk the active domain skill's gated checklist before committing. Reviewer verdicts are still APPROVE / REVISE.
-- **Review is never skipped.** Either dispatch a reviewer subagent or play the reviewer role in-session against the same discipline. Self-approval without walking the checklist is not a review.
+- **Read the direct-mode role reference for the role you play** — `references/direct-mode-implementer.md` or `references/direct-mode-reviewer.md`. These are the cross-repo-loadable copies of the role protocol.
+- **The Skill-Load Manifest still drives loads**, in-session per your Stage row.
+- **Task context comes from `superRA/` task files** (`superra task read`) — there is no dispatch prompt.
+- **The self-review gate, editing discipline, and APPROVE / REVISE verdict protocol all apply.** Walk the active domain skill's gated checklist before committing.
+- **Review is never skipped.** Either dispatch a reviewer subagent or play the reviewer role in-session against the same discipline; self-approval without walking the checklist is not a review.
 
-**Codex agents: MUST load `references/codex-instructions.md` immediately.** Codex-specific delegation, warm-agent lifecycle, and named-agent rules live there.
+**Codex agents:** load `references/codex-instructions.md` immediately — Codex-specific delegation, warm-agent lifecycle, and named-agent rules live there.

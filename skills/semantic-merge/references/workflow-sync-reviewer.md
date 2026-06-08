@@ -24,7 +24,7 @@ Required inputs:
 5. Walk `SKILL.md §Semantic Coherence Checklist` top to bottom.
 6. Check the Sync Map against the diff and incoming intent. It should explain the branch-level thesis, not bury everything in task-local notes.
 7. Check each affected task block has a compact `**Sync impact:**` pointer when Integrate needs task-specific context to understand the post-sync diff.
-8. Confirm scope boundary at the semantic-vs-codebase-coherence line. Generated outputs within the merge's semantic reach should be regenerated (or escalated per `SKILL.md §Shared Steps` step 4 and recorded) — flag if the author skipped regeneration or silently re-expected drift-test results. Codebase-coherence work — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — should not be performed in the sync commit chain; Sync notes may explain context but must not present unresolved semantic work as an Integrate target.
+8. Confirm the scope boundary. Generated outputs within the merge's semantic reach should be regenerated (or escalated per `SKILL.md §Shared Steps` step 4 and recorded) — flag if the author skipped regeneration or silently re-expected drift-test results. Flag any codebase-coherence work performed in the sync commit chain, and any Sync note that presents unresolved semantic work as an Integrate target.
 9. Confirm the stale-reference sweep covered labels, paths, docs, and generated outputs — not just absence of conflict markers.
 
 ## Verdict

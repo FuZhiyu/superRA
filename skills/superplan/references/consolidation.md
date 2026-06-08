@@ -2,10 +2,10 @@
 
 Load this reference when the task tree has accumulated structural debt — overlapping tasks, stale objectives, hidden dependencies, granularity mismatches — and needs a proactive cleanup pass. Loadable standalone (user asks to clean up) or via superintegrate routing.
 
-Consolidation is structure-level cleanup. It complements but does not replace:
-- `superplan §User Feedback and Changing the Task Tree` — individual reactive changes to the tree.
-- `superplan §Splitting Tasks` / `task-system/references/planning.md §Splitting Tasks` — structural heuristics applied during planning; consolidation applies them retroactively.
-- `task-system/references/planning.md §Stale Content Checklist` — content-level cleanup within existing tasks.
+Consolidation is structure-level cleanup, distinct from:
+- `superplan §User Feedback and Changing the Task Tree` — individual reactive changes.
+- `task-system/references/planning.md §Splitting Tasks` — splitting heuristics, which consolidation applies retroactively.
+- `task-system/references/planning.md §Stale Content Checklist` — content-level cleanup within a task.
 
 ## When to Consolidate
 
@@ -19,13 +19,12 @@ Consolidation is warranted when the tree has grown through ad-hoc additions, sco
 
 ## Survey Protocol
 
-Read every `task.md` in the tree and build a structural picture:
+Read every `task.md` and build a structural picture:
 
-1. **Run `superra task tree`** to see the current structure and status distribution.
-2. **Run `superra task dag`** to see the dependency graph.
-3. **Map each task's scope:** objective, declared inputs/outputs, `depends_on`, status.
-4. **Build a relationship matrix:** For each pair of tasks, note shared inputs, shared outputs, sequential logic, and overlapping scope. Compare across levels, not only same-level pairs — misplacement (a task under the wrong parent) and update tasks that should fold into the artifact they modify are inherently whole-tree, so test each task's and each subtree's concern against its parent and against other subtrees, using the recursive-descent procedure in `task-system/references/planning.md` §Placing Work in the Tree.
-5. **Identify issues** from the list below and classify each. Treat any *update task* in the frontier — a task whose purpose is to improve or modify an existing task or artifact — as a **Merge** candidate by default, per the create-then-merge lifecycle in §Placing Work: it folds into the task it updates and does not survive integration as a standalone tree.
+1. **Run `superra task tree`** and **`superra task dag`** for the structure, status distribution, and dependency graph.
+2. **Map each task's scope:** objective, declared inputs/outputs, `depends_on`, status.
+3. **Build a relationship matrix.** For each task pair, note shared inputs, shared outputs, sequential logic, and overlapping scope. Compare across levels, not only same-level pairs — misplacement and update tasks that should fold into the artifact they modify are inherently whole-tree, so test each task's and each subtree's concern against its parent and other subtrees via the recursive descent in `task-system/references/planning.md` §Placing Work in the Tree.
+4. **Identify and classify issues** from the list below. Treat any *update task* in the frontier — one whose purpose is to improve an existing task or artifact — as a **Merge** candidate by default (create-then-merge lifecycle): it folds into the task it updates rather than surviving as a standalone tree.
 
 ## Issue Classification
 
@@ -44,10 +43,10 @@ For each identified issue, classify the action:
 
 ### Action Details
 
-**Merge:** Two forms, both kept manual so the human controls how the combined tasks' nuance is integrated — there is no `task merge` command.
+**Merge:** Two forms, both manual (there is no `task merge` command) so the human controls how the combined nuance integrates.
 
-- *Pairwise.* Rewrite the surviving task's objective to cover both scopes (self-sufficient, not patched). Use the more conservative status of the two tasks. Update all sibling `depends_on` references that pointed to the removed task. Delete the absorbed task's directory.
-- *N-way into a subtree.* When several tasks cluster on one concern but carry distinct deliverables, create (or designate) one parent concern and make the distinct survivors its children — a Merge+Split composite. Roll the parent's status up conservatively from the children, and rewire every `depends_on` across the cluster (the same-parent rename rewire is provided by the `restructuring-tooling` hook; cross-parent edges are fixed by hand). For an *update task*, the merge target is the task it modifies: fold the matured result into that target or parent and remove the update-task directory.
+- *Pairwise.* Rewrite the surviving task's objective to cover both scopes (self-sufficient, not patched). Use the more conservative of the two statuses. Repoint every sibling `depends_on` that referenced the removed task. Delete the absorbed directory.
+- *N-way into a subtree.* When several tasks cluster on one concern with distinct deliverables, designate one parent concern and make the survivors its children (a Merge+Split composite). Roll the parent's status up conservatively from the children, and rewire every `depends_on` across the cluster — the same-parent rename rewire comes from the `restructuring-tooling` hook; fix cross-parent edges by hand. For an *update task*, the merge target is the task it modifies: fold the matured result in and remove the update-task directory.
 
 **Link:** Update `depends_on` frontmatter via `superra task dep add` / `superra task dep remove`. No objective rewrite needed unless the dependency changes the task's scope.
 
@@ -97,36 +96,18 @@ Wait for explicit approval. A passing remark is not authorization — confirm in
 
 After approval:
 
-1. **Apply changes** using the task-system CLI tools (`superra task create`, `superra task rename`, `superra task dep add` / `superra task dep remove`) and direct file edits for objective rewrites. Apply in dependency order: links and restructures first, then merges and splits, then prunes last (so `depends_on` references are updated before the referenced tasks disappear).
+1. **Apply changes** with the task-system CLI (`superra task create` / `rename` / `dep add` / `dep remove`) plus direct edits for objective rewrites, in dependency order: links and restructures first, then merges and splits, then prunes last — so `depends_on` references are repointed before their targets disappear. Status cascading follows each action's rule in §Action Details.
 
-2. **Status cascading:**
-   - Merge: use the more conservative status of the two tasks.
-   - Restructure / Flatten: preserve statuses where possible.
-   - Prune: clear `depends_on` references in siblings; reassess dependent tasks' objectives.
-   - Split: parent status becomes the rollup of its new children.
+2. **Verify** with `superra task tree` and `superra task dag`: no cycles, no broken `depends_on`, no orphans, structure matches the approved proposal.
 
-3. **Verify the result:**
-   ```bash
-   # Check tree structure
-   superra task tree
-   # Check for cycles and broken dependencies
-   superra task dag
-   ```
-   Confirm: no cycles, no broken `depends_on`, no orphans with missing links, structure matches the approved proposal.
+3. **Sweep for stale content** per `task-system/references/planning.md §Stale Content Checklist` — consolidation often strands references in objectives and results.
 
-4. **Sweep for stale content** per `task-system/references/planning.md §Stale Content Checklist`. Consolidation often creates stale references in objectives and results — rewrite them in place.
-
-5. **Commit atomically** — all changed task files in one commit:
-   ```
-   plan: consolidate task tree — <one-line summary of changes>
-   ```
-
-6. **Launch the dashboard** if needed (`superra dashboard`).
+4. **Commit atomically** — all changed task files in one commit titled `plan: consolidate task tree — <summary>`.
 
 ## Standalone vs Integration Use
 
-**Standalone:** The user asks to clean up the tree at any time. Load this reference, run the survey, propose, and execute.
+The same protocol (survey, classify, propose, approve, execute atomically) applies in both entry paths:
 
-**During integration:** The `superintegrate` consolidation gate, run once just before Document, is the concrete trigger. Its mandatory assessment routes here for the cleanup pass only on a needs-a-pass verdict; a clean-enough verdict skips it. Run the protocol, then return to Document on the consolidated tree.
+**Standalone:** The user asks to clean up the tree.
 
-In both cases, the same protocol applies: survey, classify, propose, get approval, execute atomically.
+**During integration:** The `superintegrate` consolidation gate (run once just before Document) routes here on a needs-a-pass verdict; a clean-enough verdict skips it. Return to Document on the consolidated tree.

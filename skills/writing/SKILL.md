@@ -10,7 +10,7 @@ Three working modes — **Review**, **Polish**, **Draft** — share a knowledge 
 
 ## These rules are additive
 
-You already know how to write, proofread, replace awkward wording, fix grammar and typos, and calibrate tone to context. This skill does not retrain that — it adds the discipline academic writing on shared author drafts needs: what counts as substance vs prose, how to read the author's in-flight signals (TODOs, DO NOT EDIT, intent comments), the eight consistency dimensions, when to ask vs propose vs perform. Apply both. The rules below constrain or redirect edits where they apply; everywhere else, polish, proofread, and adjust as you normally would. **Silence on a concern is not permission to ignore it** — anything not named here is your call, made with your general writing competence.
+This skill adds the discipline shared author drafts need on top of your baseline writing competence: what counts as substance vs prose, how to read in-flight author signals (TODOs, DO NOT EDIT, intent comments), the eight consistency dimensions, when to ask vs propose vs perform. The rules below constrain or redirect edits where they apply; everywhere else, polish and proofread as you normally would.
 
 ## Preserve substance, polish prose
 
@@ -22,22 +22,20 @@ You already know how to write, proofread, replace awkward wording, fix grammar a
 
 ## Write to the reader, not the conversation
 
-Every document this skill touches has an audience that is distinct from the editing conversation. The audience has access to the document itself, plus the background knowledge appropriate to the venue — a journal reader knows the field's standard methods, a slide-deck audience knows the talk's framing, a replication-package reader knows the paper. They have not seen the editing conversation, the codebase, prior drafts, the project's working vocabulary, or any artifact the author and the agent are using to coordinate. Anything that addresses a different audience, references the editing process, or names artifacts outside the audience's reach does not belong in the document. This holds for academic papers (the primary case for this skill) and for any other audience-bound document the skill polishes, drafts, or reviews — working-paper notes, slide decks, replication READMEs, referee responses.
+The document's audience has the document itself plus venue-appropriate background knowledge — never the editing conversation, the repo, prior drafts, or the project's working vocabulary. Anything that addresses a different audience, references the editing process, or names artifacts outside the audience's reach does not belong in the document.
 
-**Before any edit, build the audience model.** Two questions answered explicitly, in your head or in the conversation, before the first character changes:
+**Before any edit, build the audience model** — answer two questions explicitly before the first character changes:
 
-1. **Who is the audience?** Match the venue: a top-five finance journal reader, a working-paper reader on SSRN, a conference talk audience, the replication-package user, the editor reading a response letter. The venue fixes the conventions — tolerated jargon, expected formality, cite density, level of detail.
-2. **What is in the audience's information set?** Concretely: the document itself, in its current draft state; works the document cites (which the audience can look up); background knowledge appropriate to the venue. *Not* in the set: the editing conversation, the repo, the project's working vocabulary, prior drafts the audience has not seen, any classification or label that exists only in the author's or agent's working files.
+1. **Who is the audience?** The venue fixes conventions (tolerated jargon, formality, cite density, detail): a top-five finance journal reader, an SSRN working-paper reader, a conference audience, a replication-package user, an editor reading a response letter.
+2. **What is in their information set?** The current draft, works it cites, venue background knowledge — not the conversation, repo, working vocabulary, or unseen prior drafts.
 
-**Then write or edit against the set.** As each sentence is drafted or polished, check: every term used is either in the set or is defined in the document at first use; every reference (artifact, table, citation, section pointer) resolves from the set; every temporal cue is internal to the document's narrative ("we next turn to robustness"), not external to the editing process ("the table now defines"). A term that fails this check is conversation vocabulary, not document vocabulary — either define it in the document or replace it with the standard term the audience knows.
-
-The line-level marker families and replacement patterns that operationalize this principle for sentence-level editing live in `references/style.md §Audience: write to the reader, not the conversation`. They are the safety net; the audience model is the primary discipline.
+Then check each sentence against the set: every term is in the set or defined at first use; every reference resolves from the set; every temporal cue is internal to the document's narrative ("we next turn to robustness"), not external to the editing process ("the table now defines"). The line-level markers and replacements that operationalize this are the safety net in `references/style.md §Audience: write to the reader, not the conversation`; the audience model is the primary discipline.
 
 ## Project Conventions in the handoff doc / CLAUDE.md
 
-A paper's writing-side conventions are paper-specific choices among defensible alternatives — choices a fresh agent would get wrong if not written down. Recording them once prevents re-inference and silent re-decision every session.
+A paper's writing-side conventions are paper-specific choices among defensible alternatives that a fresh agent would otherwise re-infer and silently re-decide each session.
 
-**Where they live (lifecycle ladder, ordered by permanence).** `## Project Conventions` on the manuscript-governing task (workflow-scoped) → `CLAUDE.md` (project-permanent). Place the `## Project Conventions` surface on the `## Objective` of the task whose subtree is the manuscript — the top `superRA/task.md` for a single-manuscript project, or the root of the writing subtree within a larger project — so every writing agent reading that task inherits it via the ancestor chain rather than reading a root file separately. Long-form review retrofits a task tree around the user's existing draft; reviewers then write findings as task-local review notes. When no task tree is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability — same pattern as theory-modeling's per-task ledger → Notation Conventions promotion (`theory-modeling/SKILL.md §Documentation and handoff`).
+**Where they live (lifecycle ladder, ordered by permanence).** `## Project Conventions` on the manuscript-governing task (workflow-scoped) → `CLAUDE.md` (project-permanent). Place the surface on the `## Objective` of the task whose subtree is the manuscript — the top `superRA/task.md` for a single-manuscript project, or the root of the writing subtree within a larger project — so every writing agent inherits it via the ancestor chain. When no task tree is in play, return the inventory as a conversation reply. Promote up the ladder when the user signals durability.
 
 **What writing contributes (rows alongside data and modeling contributions).**
 
@@ -61,8 +59,8 @@ A paper's writing-side conventions are paper-specific choices among defensible a
 
 1. **Classify the request into a mode** before reading the file — the mode determines what to load (see Mode routing).
 2. **Inspect in-flight author work** with `git status` / `git diff` before editing; an unstaged diff often *is* the polish target.
-3. **Inline-directive convention.** `TODO`, `% TODO:`, `\todo{...}`, `[fill in]`, `??`, `XXX`, and crude or placeholder phrasing in the author's draft are **work assigned to the agent** — clean them up inside scope. The author signals leave-alone with an explicit `DO NOT EDIT` (or equivalent hands-off marker) on the line or block; lines so marked are off-limits even within scope.
-4. **Intent comments.** Paragraphs in `.tex` / `.md` / `.qmd` carry their purpose as a comment on the line above (`% intent: …` / `<!-- intent: … -->`). Draft mode writes them first from the user's request; polish mode preserves them but never invents them — intent comes from the author, not from agent inference. Full convention in `polish.md §Intent comments` and `draft.md §Intent comments`.
+3. **Inline-directive convention.** `TODO`, `% TODO:`, `\todo{...}`, `[fill in]`, `??`, `XXX`, and crude or placeholder phrasing are **work assigned to the agent** — clean them up inside scope. An explicit `DO NOT EDIT` (or equivalent) marks a line or block off-limits even within scope.
+4. **Intent comments** (`% intent: …` / `<!-- intent: … -->` above a paragraph) are author-owned: Draft writes them from the request, Polish preserves but never invents them. Full convention in `polish.md §Intent comments` and `draft.md §Intent comments`.
 
 ## Mode routing
 
@@ -89,4 +87,4 @@ Loading the listed reference is the authority grant — if `structure.md` is not
 
 ## Coupling to superRA workflows
 
-Most writing work is standalone — terminate at edit + commit, or at findings + commit. Larger work routes through `superplan` with `references/planning.md`. Whole-section drafts, whole-paper revisions, and R&R passes continue through the full workflow. Long-form review retrofit uses the task tree only: the draft already exists, reviewers inspect it through `superimplement`, and findings live in task-local `## Review Notes` sections.
+Most writing work is standalone — terminate at edit + commit, or findings + commit. Larger work (whole-section drafts, whole-paper revisions, R&R passes) routes through `superplan` with `references/planning.md`. Long-form review retrofit uses the task tree only: the draft already exists, reviewers inspect it through `superimplement`, findings live in task-local `## Review Notes` (`references/long-form-review.md`).

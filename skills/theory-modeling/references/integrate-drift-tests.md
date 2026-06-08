@@ -43,7 +43,7 @@ If a tolerance needs to be looser than this table suggests, justify it in the te
 
 ## Theory-Modeling-Specific Failure Modes
 
-When a drift test fails after a refactor or merge, four common causes in modeling code and notes are:
+When a drift test fails after a refactor or merge, four common causes in modeling work:
 
 1. **Hidden-assumption drift.** The result now needs a stronger positivity, boundedness, interiority, or regularity assumption than the assumption map currently states. Fix: update the map and the derivation together, or revert the step that introduced the stronger requirement.
 

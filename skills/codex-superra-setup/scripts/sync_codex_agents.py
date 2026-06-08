@@ -171,13 +171,11 @@ def render_direct_mode_ref(repo_root: Path, spec: RoleSpec) -> str:
 
     # The source `## Before You Start` opens with a one-line note on the
     # subagent dispatch prompt; direct mode has no dispatch, so we substitute
-    # a direct-mode-specific `## Before You Start`. The §How You Fix opener also
-    # references subagent-only dispatch wording (first dispatch, re-dispatch
-    # delta) and is rewritten below by `cleanup_implementer_handoff` before the
-    # section is spliced in.
+    # a direct-mode-specific `## Before You Start`. §Handoff no longer carries
+    # dispatch-only wording, so it splices in unchanged.
     if "implementer" in spec.codex_name:
         before_you_start = render_implementer_direct_mode_before_you_start()
-        handoff = cleanup_implementer_handoff(sections["## Handoff"])
+        handoff = sections["## Handoff"]
         tail_sections = (
             sections["## Execution Protocol"],
             sections["## Self-Check"],
@@ -331,37 +329,6 @@ In direct mode there is no dispatch prompt. Review scope comes from the task's `
 At `Stage: planning-review`, follow the manifest-loaded planning-review reference instead of the implementation protocol below.
 
 The editing discipline you will need when writing review notes lives in §Handoff below; read it when you are ready to update the task."""
-
-
-def cleanup_implementer_handoff(section: str) -> str:
-    """Strip subagent-dispatch-only wording from the implementer handoff section."""
-    # Rewrite the §How You Fix Review Items opening paragraph. The source
-    # wording references "first dispatch", "re-dispatch prompt", and a
-    # one-line delta, none of which exist in direct mode.
-    source_opener = (
-        "On a first dispatch there are no review notes yet; you just "
-        "implement the objective, update the task, and commit. On a REVISE round "
-        "the `## Review Notes` section exists — the reviewer wrote it, and the "
-        "orchestrator may have appended "
-        "`→ orchestrator: ...` notes to items it is rejecting or flagging for "
-        "a second opinion. Your re-dispatch prompt carries a one-line delta "
-        "pointing at what changed."
-    )
-    direct_opener = (
-        "On a first pass there are no review notes yet; you just "
-        "implement the objective, update the task, and commit. On a REVISE round "
-        "the `## Review Notes` section exists — it was written previously, and items may "
-        "carry `→ orchestrator: ...` notes rejecting them or flagging them for "
-        "a second opinion."
-    )
-    if source_opener not in section:
-        raise ValueError(
-            "cleanup_implementer_handoff: expected dispatch-only opener not found "
-            "in implementer §How You Fix Review Items; source may have been reworded."
-        )
-    section = section.replace(source_opener, direct_opener)
-
-    return section
 
 
 def escape_toml_basic_string(value: str) -> str:

@@ -43,12 +43,8 @@ Long-form review treats the user's existing draft as the implementation under re
 - `status:` starts `not-started`, then reviewers set it to `revise` with task-local review notes or `approved`;
 - no `## Results` sections are created; findings belong in task-local `## Review Notes`.
 
-This path uses superimplement for reviewer dispatch and status handling, but not for implementer output production.
-
-Because superimplement's generic entry check expects `## Results`, the writing orchestrator handles this retrofit as a writing-owned exception: do not modify superimplement; instead, enter with the task tree that carries the exact review-only rows above and treat task-local `## Review Notes` as the sole durable findings surface for this writing mode.
+This path uses superimplement for reviewer dispatch and status handling, not for implementer output production. It is a writing-owned exception: do not modify superimplement — enter with a task tree carrying the exact review-only rows above, and treat task-local `## Review Notes` as the sole durable findings surface.
 
 ## Project Conventions
 
-Populate `## Project Conventions` with writing-side conventions already visible in the target: terminology, abbreviations, citation style, numerical formatting, cross-reference phrasing, voice/tense, and prose typography around notation. Record only choices a fresh agent would otherwise re-infer.
-
-When durable project guidance exists, summarize it in `## Project Conventions` rather than duplicating it in task blocks.
+Populate `## Project Conventions` with the writing-side conventions visible in the target, using the categories and acid tests in `SKILL.md §Project Conventions in the handoff doc / CLAUDE.md`. Summarize durable project guidance here rather than duplicating it in task blocks.

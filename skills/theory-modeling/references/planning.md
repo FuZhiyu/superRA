@@ -122,4 +122,4 @@ Every theory/modeling plan should include explicit verification tasks. At the pl
 
 ## Handoff to Implementation
 
-After the Model Inventory / Assumption Map is approved, the verification plan is agreed, and tasks are drafted, `superplan` commits the plan and hands off to `superimplement`. The main `theory-modeling` skill body carries the cross-cutting discipline that applies at every implementation step: the Iron Law and the intuition + interpretability + stated reason through-line running across the four gates (Objects & Notation, Assumptions, Derivations, Verification & Rendering), verification, and documentation.
+Once the Model Inventory / Assumption Map is approved, the verification plan agreed, and tasks drafted, `superplan` commits and hands off to `superimplement`. Implementation-step discipline lives in the `theory-modeling` SKILL.md body (Iron Law and the four gates).
