@@ -20,7 +20,7 @@ A shared apply-discipline vocabulary used at two call sites: review-mode finding
 
 **Sequence/set/force test.** This is the rule that draws the conventional/authorial line. If sequence + set + force are all preserved, the edit is `conventional` regardless of how aggressive the rewrite is. If any one shifts, it is `authorial`. Worked examples across the boundary: a sentence-break is `conventional` (one proposition becomes two clauses, set unchanged); a sentence-reorder is `authorial` (sequence shifts). A nominalization fix is `conventional` (action moves into the verb, force unchanged); a hedge strengthening — "may" → "does" — is `authorial` (force shifts). A coordinate sentence merge is `conventional` (two equal-weight clauses joined, force unchanged); subordinating one to the other is `authorial` (the subordinated clause loses standalone force). A topic-sentence move is `authorial` (sequence shifts; the paragraph's governing idea changes position).
 
-The tier replaces the earlier `Auto-fixable: Yes / No` flag. The prior tier names were `judgment` (now `conventional`) and `decision` (now `authorial`); commit messages on this branch before 2026-05-08 use the older names. Each `consistency/<dim>.md` output block names this section as the source of legal values.
+Each `consistency/<dim>.md` output block names this section as the source of legal values.
 
 ## Thoroughness
 
@@ -36,9 +36,7 @@ When the scope spans more than one lane (language/style, structure, or any consi
 
 ## Review-as-planning
 
-When the review's findings will drive subsequent edits (the typical case for a section-level proofread), the natural shape of the report is a task list: each finding becomes a task the implementer can pick up. Use the standard task format (see `task-system/references/planning.md`) when the findings will survive across sessions or dispatches; a chat-only findings report suffices for same-session iteration.
-
-The boundary between "findings report" and "plan" is fluid. If the requester says "now go fix these", the findings list becomes the implementer's task list directly — don't re-author.
+When findings will drive subsequent edits, shape the report as a task list — each finding a task an implementer can pick up. Use the standard task format (`task-system/references/planning.md`) when findings survive across sessions or dispatches; a chat-only report suffices for same-session iteration. If the requester says "now go fix these", the findings list becomes the implementer's task list directly — don't re-author.
 
 ## Intent comments as yardstick
 

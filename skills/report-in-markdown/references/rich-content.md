@@ -2,17 +2,13 @@
 
 Load when writing markdown that contains figures. Rules apply at every stage.
 
-## Figures
+## The attachments directory (`ATTACH_DIR`)
 
-### The attachments directory is a caller parameter
+The caller supplies the target `attachments/` directory; substitute the actual path when embedding. If the caller specifies none, default to `attachments/` next to the output file:
 
-The target `attachments/` directory is supplied by the caller, not hard-coded in this skill. Common cases:
-
-- Stage 1 task `## Results` → `attachments/` next to the task's `task.md` (superRA convention, see `task-system/references/planning.md` §Figure Embedding).
-- Matured task results → `attachments/` next to the task's `task.md` unless the caller specifies another directory.
-- Standalone report → `attachments/` next to the report file.
-
-If the invoking skill did not specify a directory, default to `attachments/` next to the output file. Refer to the target as `ATTACH_DIR` in your head; substitute the actual path when embedding.
+- Stage 1 task `## Results` → next to the task's `task.md` (see `task-system/references/planning.md` §Figure Embedding).
+- Matured task results → next to the task's `task.md`.
+- Standalone report → next to the report file.
 
 ### Create the directory
 
@@ -22,9 +18,7 @@ mkdir -p "${ATTACH_DIR}"
 
 ### Materialize figures
 
-Stage 1 typically *saves* figures directly into the task's `attachments/` directory (written there by the analysis script). No copying needed.
-
-Permanent and standalone reports typically *copy* figures into a new attachments folder so the artifact is self-contained:
+Stage 1 figures are written directly into the task's `attachments/` by the analysis script — no copying. Permanent and standalone reports copy figures into a new attachments folder so the artifact is self-contained:
 
 **PDF figures:** convert to PNG first, then save:
 
@@ -50,10 +44,8 @@ cp path/to/figure.png "${ATTACH_DIR}/description.png"
 Source: [Original](relative/path/to/original/figure.pdf)
 ```
 
-Substitute `ATTACH_DIR` with the actual path for your context (see §The attachments directory is a caller parameter above).
+Use a **descriptive caption** — not "Figure 1" — since it is the figure's documentation for readers who skim.
 
-Use a **descriptive caption** — not "Figure 1". The caption is the figure's documentation for readers who skim.
-
-Cite the **original source path** beneath the embed so a future reader can regenerate the figure from the analysis script. The source path is the file the analysis script produced, not the copied version in `ATTACH_DIR`.
+Cite the **original source path** (the file the analysis script produced, not the copy in `ATTACH_DIR`) beneath the embed so a future reader can regenerate the figure.
 
 

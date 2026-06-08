@@ -34,15 +34,7 @@ Load per stage; do not load them all at every dispatch:
 NO TRANSFORMATION WITHOUT PRIOR DESCRIPTION
 ```
 
-Transformed data without describing it first? Undo the transformation. Start over.
-
-**No exceptions:**
-- Don't keep the merged result as "it looks fine"
-- Don't "check it later at the end"
-- Don't rely on a description from a previous session
-- Undo means undo
-
-Describe fresh from the current data state. Period.
+Transformed data without describing it first? Undo the transformation and describe fresh from the current data state — not from a previous session, not "later at the end." (The excuses that precede this violation are catalogued in §Common Rationalizations.)
 
 ---
 
@@ -50,23 +42,12 @@ Describe fresh from the current data state. Period.
 
 Three disciplines underpin rigorous data work. They are **concurrent, not sequential** — every analysis step exercises all three. Documentation runs continuously alongside them, not as a fourth phase.
 
-This section is both teaching content and the shared checklist walked by implementer (before DONE) and reviewer (as verification). Items apply to every analysis task; operation-conditional items live in §Pitfalls and are walked only when the task performs the operation.
+Shared checklist walked by implementer (before DONE) and reviewer (as verification). Items apply to every analysis task; operation-conditional items live in §Pitfalls, walked only when the task performs the operation. Walk this section top to bottom, plus any §Pitfalls subsections matching operations performed.
 
 - `[BLOCKING]` — must fix to earn APPROVE.
 - `[ADVISORY]` — best-practice; reviewer MAY flag as MINOR; does not block APPROVE.
 
-### Reviewer verdict protocol
-
-**Walk §Three Concurrent Disciplines top to bottom, plus any §Pitfalls subsections matching operations performed in this task. Never halt on a failure** — one comprehensive pass every time; halting early forces a full re-review on the next pass.
-
-Two verdicts:
-
-- **APPROVE** — no `[BLOCKING]` findings.
-- **REVISE** — at least one `[BLOCKING]` finding.
-
-**Handling dependent findings.** When a later finding's assessment depends on an earlier `[BLOCKING]` item being fixed first, say so in plain prose alongside the finding. No separate verdict, no formal tag.
-
-**Re-review after REVISE.** The reviewer (1) verifies each fix is correct, and (2) re-checks any finding annotated as depending on an upstream fix. Everything else is accepted from the first pass. APPROVE once all `[BLOCKING]` findings are resolved.
+The APPROVE/REVISE verdict mechanics, the one-comprehensive-pass rule, and re-review handling are owned by the active reviewer role spec (`agents/reviewer.md`).
 
 ### Describe
 

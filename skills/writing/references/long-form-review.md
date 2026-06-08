@@ -14,15 +14,7 @@ Review lanes are:
 
 ## Task Tree Retrofit
 
-Long-form review treats the user's existing draft as the implementation under review. The orchestrator creates the task tree from the target document, then dispatches reviewers through superimplement.
-
-The manuscript-governing task — the top `superRA/task.md` of the retrofitted tree — must carry the writing planning rows from `planning.md`, including:
-
-```markdown
-**Writing workflow:** Long-form review retrofit (review-only; no ## Results)
-```
-
-Task files follow the standard task.md anatomy (see `task-system/references/planning.md`), with one task per review lane or deep-review perspective. Each task names the target file/section and the lane reference to load.
+Long-form review treats the user's existing draft as the implementation under review. The orchestrator creates the task tree from the target document (header rows and retrofit mechanics in `planning.md §Retrofitting a Review Plan`), then dispatches reviewers through superimplement. One task per review lane or deep-review perspective; each task names the target file/section and the lane reference to load.
 
 ## Task Granularity
 
@@ -36,19 +28,9 @@ Task files follow the standard task.md anatomy (see `task-system/references/plan
 
 Dispatch through `agent-orchestration`'s canonical reviewer template. Keep `Stage: implementation`; long-form review changes the artifact under review, not the superRA stage model.
 
-Reviewers do not append to a shared findings section. They write task-local review notes and set `status: revise` or `approved` using the normal reviewer protocol.
-
-Consistency-lane reviewers use the relevant `consistency/<dim>.md` output format inside the review-notes item. Language/style and structure reviewers use `review.md`'s finding format and add `Fix: mechanical | conventional | authorial` using `review.md §Fix tiers`.
+Reviewers write task-local review notes (not a shared findings section) and set `status: revise` or `approved`. Consistency-lane reviewers use the relevant `consistency/<dim>.md` output format; language/style and structure reviewers use `review.md`'s finding format with `Fix:` per `review.md §Fix tiers`.
 
 Do not dispatch a reviewer-of-reviewer pass over assembled findings. If a summary is needed, the orchestrator writes it from current task-local review notes.
-
-## Workflow Status
-
-Use the task-system status rollup. For review-only long-form review:
-
-- All tasks start with `status: not-started`.
-- `status` rolls up to `approved` when every review task is `approved`.
-- Integration uses the same `status` field — tasks stay at `approved` unless integration review sets them back to `revise`.
 
 ## Review-Time Indices
 

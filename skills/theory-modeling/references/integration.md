@@ -1,10 +1,10 @@
 # Integration Discipline for Theory Modeling — the Rewriting Reference
 
-> Loaded at `Stage: integration` for theory-modeling tasks. The readability layer for theory-modeling work: ex-post structural rewriting (Section A), per-step local obviousness (Section B), cross-document coherence (Section C), and refactor-survival of correctness artifacts (Section D).
+> Loaded at `Stage: integration` for theory-modeling tasks. The readability layer: ex-post structural rewriting (Section A), per-step local obviousness (Section B), cross-document coherence (Section C), refactor-survival of correctness artifacts (Section D).
 >
-> **Scope.** Document-internal coherence and ex-post rewriting. If a structural rewrite surfaces a correctness fix, halt and re-dispatch as `Stage: implementation`. Generic codebase-coherence concerns belong to `refactor-and-integrate/SKILL.md` — load both at this stage.
+> **Scope.** Document-internal coherence and ex-post rewriting. If a structural rewrite surfaces a correctness fix, halt and re-dispatch as `Stage: implementation`. Generic codebase-coherence concerns belong to `refactor-and-integrate` — load both at this stage.
 
-Each section follows **principle → identification protocol → checklist**. Verdict adjudication follows the standard reviewer protocol in `agent-orchestration`.
+Each section follows principle → identification protocol → checklist. Verdict adjudication follows the standard reviewer protocol in `agent-orchestration`.
 
 ---
 
@@ -12,11 +12,9 @@ Each section follows **principle → identification protocol → checklist**. Ve
 
 ### Principle
 
-A derivation is read forward but built backward. **Start from the object the proof needs, then expand only the terms required to evaluate it.** Forward writing runs along a backward dependency walk: name the target; identify what the target requires; recurse only into terms that are not already known.
+A derivation is read forward but built backward. **Start from the object the proof needs, then expand only the terms required to evaluate it.** Name the target; identify what it requires; recurse only into terms not already known. This makes the proof linear in the reader's experience. Local placeholders introduced before the target is named force the reader to hold a symbol with no purpose — the dominant structural failure mode.
 
-This makes the proof linear in the reader's experience: target named, needed pieces named, structural cancellations performed, canonical objects substituted, conclusion reached. Local placeholders introduced before the target is named force the reader to hold a symbol with no purpose; they are the dominant structural failure mode.
-
-The discipline is **recursive**. A multi-step proof signposts its top-level strategy in one sentence; each non-trivial sub-argument signposts its own local strategy in the same form; transition prose at major joins names where we are in the parent plan ("having established $Y$, we turn to $Z$"). A reader entering at any point should be able to recover the local goal from the surrounding signposts.
+The discipline is **recursive**. A multi-step proof signposts its top-level strategy in one sentence; each non-trivial sub-argument signposts its own local strategy the same way; transition prose at major joins names where we are in the parent plan ("having established $Y$, we turn to $Z$"). A reader entering at any point should recover the local goal from the surrounding signposts.
 
 A worked bad/good walkthrough plus identification-training drills lives in `references/objective-first.md`; load on demand for the canonical example before applying the checklist.
 
@@ -43,9 +41,9 @@ Walk the existing derivation top-to-bottom in the reader's order:
 
 ### Principle
 
-Every displayed equation should be **obvious** from a roughly half-page reading window above it. "Derivable in principle" is too weak — a reader who has to reconstruct missing definitions, recall a 10-page-back assumption, or unpack three substitutions collapsed into "therefore" loses the thread. The author's job is to make each transition obvious within the local window.
+Every displayed equation should be **obvious** from a roughly half-page reading window above it. "Derivable in principle" is too weak — a reader who has to reconstruct missing definitions, recall a 10-page-back assumption, or unpack three substitutions collapsed into "therefore" loses the thread.
 
-When a step is not obvious, exactly one of six fixes applies:
+When a step is not obvious, one of six fixes applies:
 
 1. **Define inline.** If a symbol is not defined in the local window, give its definition at first use in this region (one phrase or one displayed line — the canonical entry stays in the task's `## Results`).
 2. **Restate the assumption.** If a step depends on an assumption stated far above, restate it in scope at the point of use ("Under the bounded-risk-aversion assumption (§2), …").

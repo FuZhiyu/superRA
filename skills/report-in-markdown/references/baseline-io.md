@@ -4,10 +4,9 @@ Load when producing a **permanent** markdown artifact — one that will be commi
 
 ## Resolve output path
 
-1. Check project guidance (`CLAUDE.md`, `AGENTS.md`, project `README.md`, `.claude/` docs) for a documentation or report path.
-2. If project guidance specifies a location, use it.
-3. If the skill invoking you (e.g., `superintegrate`) specifies a location, use that.
-4. Otherwise, fall back to `./scratch/` (create if needed). Use `scratch/` for transient output only.
+1. Use a documentation or report path from project guidance (`CLAUDE.md`, `AGENTS.md`, project `README.md`, `.claude/` docs) if one is specified.
+2. Else use a location the invoking skill (e.g., `superintegrate`) specifies.
+3. Else fall back to `./scratch/` (create if needed) — transient output only.
 
 Define:
 - `REPORT_DIR` = resolved directory
@@ -53,8 +52,8 @@ Field notes:
 - `author`: wiki-link format `[[Name]]` if the project uses wiki links (e.g., Obsidian-style notes). Otherwise a plain name.
 - `tags`: caller can add more (e.g., `"results"`, `"integration"`, `"30-minute"`).
 - `project`: include if known from context or project guidance.
-- `git_message`: human-readable HEAD commit subject — pairs with `git_commit` for quick identification without a separate git lookup.
-- `git_dirty`: record honestly. For a committed report, the expected state is `false` at commit time. If you are drafting before committing, `true` is fine — the record is for auditability, not gating.
+- `git_message`: HEAD commit subject — pairs with `git_commit` for identification without a separate lookup.
+- `git_dirty`: record honestly; it is for auditability, not gating. `false` is expected at commit time, `true` while drafting.
 - `permalink`: project-relative path with no extension. Example: `analyses/bop/RESULTS` or `notes/2026-03-07-report-analysis`.
 
 ## Write the file
@@ -69,4 +68,4 @@ After writing, print:
 Report saved: [REPORT_DIR/FILENAME.md](REPORT_DIR/FILENAME.md)
 ```
 
-Use the relative path from the current working directory so the link resolves in the terminal.
+Use the path relative to the current working directory so the link resolves in the terminal.

@@ -4,7 +4,7 @@ Standalone mode uses `semantic-merge/SKILL.md` §Shared Steps and §Semantic Coh
 
 ## Boundary
 
-Standalone semantic-merge carries the merge through to **semantic coherence** using the Shared Steps, landing the merge commit plus any propagation commits needed, and captures the approved resolution in `SEMANTIC_MERGE.md`. `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule; every commit must leave existing tests and drift tests passing. When **codebase coherence** is also wanted — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — the caller invokes `refactor-and-integrate` after this skill returns, or handles that review manually.
+Standalone semantic-merge carries the merge through to **semantic coherence** using the Shared Steps, landing the merge commit plus any propagation commits needed, and captures the approved resolution in `SEMANTIC_MERGE.md`. The stopping rule and per-commit protection-pass come from `SKILL.md §Semantic Coherence Checklist §Scope boundary`, with existing tests and drift tests as the protection here. **Codebase coherence**, when wanted, is the caller's job via `refactor-and-integrate` after this skill returns.
 
 ## Inputs
 
@@ -16,14 +16,14 @@ Caller supplies (or the agent infers from the session):
 - governing baseline (merge base, or caller-declared baseline)
 - direction — ask when direction is ambiguous and affects results, scope, or architecture
 
-Current-branch intent comes from branch name, commits, `superRA/` task tree if present, project docs, and diffs. Incoming intent comes from commits, diffs, docs, and any caller-supplied context.
+Intent sources are per `SKILL.md §Shared Steps` step 2.
 
 ## Mode-Specific Process
 
 1. Create or update `SEMANTIC_MERGE.md` when the operation is material, lacks `superRA/` task structure, or needs durable file/script-level context. When no task tree is present, record user decisions in `SEMANTIC_MERGE.md` and the relevant commit body.
 2. Run the requested merge / rebase / cherry-pick after intent investigation.
-3. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the checklist. Every commit must leave existing tests and drift tests passing — per-commit protection-pass is the lower bound. Do not silently re-expect drift tests after meaningful result changes; escalate per `SKILL.md §Shared Steps` step 4. Include conflict resolution, resolved docs, and `SEMANTIC_MERGE.md` with the commits that produce them.
-4. Record any **codebase-coherence** context useful for later review — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — in the `SEMANTIC_MERGE.md` File / Script Impact Map. The record explains the approved post-merge diff; it is not a backlog of unresolved semantic work.
+3. **Land the merge commit plus any propagation commits needed to reach semantic coherence** per `SKILL.md §Shared Steps` step 5, recording the resolution in `SEMANTIC_MERGE.md`.
+4. Record codebase-coherence context useful for later review in the `SEMANTIC_MERGE.md` File / Script Impact Map. The record explains the approved post-merge diff; it is not a backlog of unresolved semantic work.
 
 ## Semantic Merge Record Format
 

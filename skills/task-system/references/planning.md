@@ -2,9 +2,7 @@
 
 Load this reference when you are an orchestrator or planner creating, restructuring, or maintaining a `superRA/` task tree.
 
-**Terminology:** "Plan" is the verb (the planning process), not the noun. Everything in `superRA/` is a **task**. `superRA/` is "the task tree." See `CLAUDE.md` §Terminology for the full convention.
-
-**Invocation:** bare `superra …` in the examples denotes the committed `./superRA/superra` wrapper (there is no PATH `superra`; in the superRA checkout, substitute `uv run --script skills/task-system/scripts/cli.py`).
+**Invocation:** bare `superra …` in the examples denotes the committed `./superRA/superra` wrapper (in the superRA checkout, substitute `uv run --script skills/task-system/scripts/cli.py`).
 
 ## Writing Objectives and Planner Guidance
 
@@ -72,15 +70,15 @@ Walk from the root. The invariant is that you descend into `node` only because t
 - *Simple extension* → **update it in place** and flip its status `approved` → `revise` (status semantics per §Field-by-Field Notes). No new task. Rewrite its objective to be self-sufficient with both old and new scope. Example: a merge task that handled fund data now also handles CRSP data — same concern, extended scope, still one task.
 - *Complex extension* → **nest a subtask** under it. Example: a data-preparation leaf that now needs a whole new cleaning pipeline for a second source — same concern, but the new work warrants its own dispatch and review.
 
-"Create a sibling / new root-level task" is **not** a separate operation. A sibling is just a new child of the shared parent, so it falls out of the branch rule's "add a new child" evaluated at that parent — at the root, it is a new root-level workstream. Root misuse is therefore controlled by the same rule, not a special case: the justification requirement on adding a child at the root cannot be satisfied without doing the walk, which forces the read and surfaces the owner. There is no "unrelated at the leaf" case — you only reach a leaf by descending through related concerns, so at a leaf the work is related by construction.
+"Create a sibling / new root-level task" is **not** a separate operation: a sibling is just a new child of the shared parent, so it falls out of the branch rule's "add a new child" — at the root, a new root-level workstream. There is no "unrelated at the leaf" case: you reach a leaf only by descending through related concerns, so a leaf's work is related by construction.
 
 ### Root-task definition
 
-A root-level task is a **whole workstream or project**, and the single root frames the entire repo. A narrow feature related to an existing workstream nests by the descent above and therefore cannot land at root unless it is genuinely unrelated to everything already in the tree. Root-task misuse is a *consequence* of skipping the ladder, not a separate rule to police.
+A root-level task is a **whole workstream or project**; the single root frames the entire repo. A narrow feature related to an existing workstream nests by the descent above and cannot land at root unless it is genuinely unrelated to everything in the tree.
 
 ### The update-task lifecycle
 
-An *update task* — a task whose purpose is to improve or modify an existing task or artifact — has a **stage-dependent** disposition. The governing principle is **asymmetric aggressiveness**: planning is lenient (a complex fix may be spun out as its own task), consolidation and integration are strict (the fix folds back into the task it modified). This is the "the tree represents latest state, not a log" rule — enforced *within* a task body — applied to the tree *structure*: a standalone "fix/update task X" is a delta, the structural equivalent of a log entry, and must be squashed into its target at integration.
+An *update task* — one whose purpose is to improve or modify an existing task or artifact — has a **stage-dependent** disposition. The governing principle is **asymmetric aggressiveness**: planning is lenient (a complex fix may be spun out as its own task), consolidation and integration are strict (the fix folds back into the task it modified). A standalone "fix/update task X" is a delta — the structural equivalent of a log entry — and must be squashed into its target at integration.
 
 **Tradeoff.** Merging the change into the target keeps one source of truth, but done *prematurely* — before the change is built and validated — it overwrites the target's nuance and conflates unsettled work with settled work. Spinning out a separate self-contained subtask preserves a clear, independently reviewable objective, but proliferates tasks that are harder to clean up later. Weigh by complexity, validation maturity, and reviewability.
 
@@ -95,9 +93,9 @@ An *update task* — a task whose purpose is to improve or modify an existing ta
 
 Every `task.md` — root, branch, or leaf — uses the same body sections. The tree is recursive: a task frames its own subtree, and the top task frames the whole project only because its subtree is everything.
 
-- **`## Objective`** — the task's goal, plus the scoped context its subtree inherits. The top task's objective frames the project-level goal, methodology summary, and scope boundaries; a branch task's objective frames its subtree's goal. Scoped `### Context`, `### Conventions`, and `### Constraints` subsections carry naming conventions, paths, units, variable definitions, and constraints that govern the task's subtree (see §Writing Objectives). Place each at the lowest task whose subtree it governs — project-wide ones at the top, narrower ones deeper.
-- **`## Planner Guidance`** — optional advisory suggestions or exploration notes that are useful but not binding.
-- **`## Revision Notes`** — temporary delta signal when a task is updated (what changed, significance). The reviewer removes this section when approving the task — same lifecycle as `## Review Notes`.
+- **`## Objective`** — the task's goal plus the scoped `### Context` / `### Conventions` / `### Constraints` its subtree inherits (see §Writing Objectives). The top task's objective frames the project-level goal and scope; a branch task's frames its subtree's goal.
+- **`## Planner Guidance`** — optional advisory suggestions or exploration notes, useful but not binding.
+- **`## Revision Notes`** — temporary delta signal when a task is updated; the reviewer removes it at approval (see §Field-by-Field Notes).
 
 Branch tasks (those with children) do not carry `script`, `input`, or `output` — those belong on leaf tasks.
 
@@ -115,31 +113,7 @@ When creating `superRA/` from existing work (code already written, results alrea
 
 ## Hierarchy Management Commands
 
-### Create a task
-
-```bash
-superra task create 01-data/03-filter \
-  --title "Filter Sample" \
-  --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
-  --guidance "Consider reusing the sample filter helper in Code/common.py." \
-  --depends-on 02-merge
-```
-
-`superra task create` auto-fills the template with current dates and frontmatter defaults (`status: not-started`). `--guidance` is optional; omitted guidance creates no empty section.
-
-### Rename a task (cascades to sibling depends_on)
-
-```bash
-superra task rename 01-data/01-load 01-data/01-load-raw
-```
-
-### Manage dependencies
-
-```bash
-superra task dep add 01-data/03-filter 02-merge
-
-superra task dep remove 01-data/03-filter 02-merge
-```
+The mutation command surface — `task create`, `task rename`, `task dep add/remove`, bulk status ops, and the move/rename cascade rules — lives in `references/commands.md`. Single-field edits (including `status`) go through direct edit per `using-superRA/SKILL.md §Task Interface`, not these CLIs.
 
 ## Field-by-Field Notes
 
@@ -154,13 +128,11 @@ superra task dep remove 01-data/03-filter 02-merge
 
 ## Context and Conventions
 
-Reusable context and conventions are captured once, on the objective of the task whose subtree they govern, so dispatched agents inherit them through `superra task read` — a focused tree (the task's position, siblings, and direct children) followed by the ancestor objectives — instead of re-walking the project tree. The planner walks the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) during planning and distills what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections of the relevant task objective.
+During planning, walk the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `README.md`, and data-directory `README.md`s) and distill what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections of the relevant task objective (placement and inheritance per §Writing Objectives).
 
 **Discipline:**
-- Place each convention at the lowest task whose subtree it governs (see §Writing Objectives).
-- Captured by the planner in `## Objective`, which is planner-owned. Implementers and reviewers read inherited context but do not rewrite ancestor objectives.
-- Entry format: a summary that states the behavior to follow, not a verbatim excerpt of the source doc. Stamp the walk date when the distillation reflects a docs walk.
-- When the walk found no relevant convention for the subtree, say so explicitly — an absent subsection is ambiguous; naming the out-of-scope paths removes it.
+- Entry format: a summary stating the behavior to follow, not a verbatim excerpt of the source doc. Stamp the walk date when the distillation reflects a docs walk.
+- When the walk found no relevant convention for the subtree, say so explicitly — name the out-of-scope paths, since an absent subsection is ambiguous.
 
 ## Stale Content Checklist
 
@@ -180,7 +152,7 @@ Results live in each task's `## Results` section. The same section matures throu
 
 - **Stage 1 — Dev log (IMPLEMENT phase).** Each task's `## Results` is the live findings record — terse, agent-facing. "Latest state only" — re-implementation replaces a task's results; it does not append history.
 - When implementation materially deviates from `## Planner Guidance`, `## Results` states the guidance not followed, the chosen route, and why it still satisfies `## Objective`.
-- **Stage 2 — Permanent record (INTEGRATE Document).** Results maturation keeps findings in task files and synthesizes the matured reader-facing narrative **upward into the highest-level task the integration actually touched, per affected subtree** — for each subtree the work touched, the top task of that subtree's affected frontier carries the matured summary, with links down to the leaf tasks that hold the per-task evidence. This is the front door, not the global root and not a separate report document. Leaf `## Results` stay as lightly-cleaned evidence and caveats (so drift tests and key-result selections that reference leaf task paths still resolve); maturation promotes the narrative one level up rather than rewriting each leaf into reader-facing prose in place. An integration that touched two independent subtrees lands two matured narratives, one at each subtree's highest touched task.
+- **Stage 2 — Permanent record (INTEGRATE Document).** Findings stay in task files; the matured reader-facing narrative is synthesized **upward into the highest task the integration actually touched, per affected subtree** — not the global root, not a separate report doc — with links down to the leaf tasks holding per-task evidence. Leaf `## Results` stay as lightly-cleaned evidence and caveats (so drift tests and key-result selections referencing leaf paths still resolve). Two independent touched subtrees land two matured narratives, one at each subtree's highest touched task.
 
 ### Per-task results template
 
@@ -216,16 +188,8 @@ Omit subsections that do not apply.
 - **Orchestrator** — during IMPLEMENT, updates the immediate parent's `## Results` when an approved child produced a major result worth surfacing for monitoring; at INTEGRATE Document, synthesizes the matured narrative into the highest touched task per affected subtree (Stage 2 above).
 - **Standalone author** — everything.
 
-Summaries that ride higher than a leaf — monitoring rollups during IMPLEMENT and the matured narrative at Document — link down to the leaf task files for full evidence and caveats; they do not recursively copy every finding up the tree.
+Summaries riding higher than a leaf — monitoring rollups and the matured narrative — link down to leaf task files rather than copying every finding up the tree.
 
 ### Figure Embedding
 
-Figures committed to `attachments/` next to the task's `task.md` (e.g., `superRA/my-task/attachments/fig.png`). Embed with a path relative to the task file:
-
-```markdown
-![Descriptive caption](attachments/fig_name.png)
-```
-
-This keeps tasks self-contained — moving a task moves its figures, and the dashboard resolves these paths correctly via the task's `pathPrefix`.
-
-Full figure-embedding mechanics — PDF→PNG conversion, caption discipline, file-reference conventions — live in `skills/report-in-markdown/references/rich-content.md`.
+Commit figures to `attachments/` next to the task's `task.md` and embed with a path relative to the task file (e.g. `![caption](attachments/fig_name.png)`), so moving a task moves its figures and the dashboard resolves them via the task's `pathPrefix`. Full mechanics — PDF→PNG conversion, caption discipline, file-reference conventions — live in `skills/report-in-markdown/references/rich-content.md`.

@@ -8,16 +8,6 @@ For the implementation-level quality checklist (coverage, independence, clarity,
 
 ---
 
-## Why Drift Tests Are Part of Data-Analysis Discipline
-
-Econ results are fragile. A coefficient can drift because floating-point sums reorder after a merge, a winsorization cutoff is recomputed on a slightly different sample, a join key is cleaned more aggressively, or an unrelated refactor changes the order a panel is sorted in. None of these are "bugs" per se, and most review steps will not catch them. Drift tests catch them, and they catch the worst failure mode — silent result drift that looks like it was always that way.
-
-The Iron Law protects the analysis from unknown data during implementation. Drift tests protect the finalized analysis from unknown transformations (refactors, merges, future edits) after implementation is complete. They are the integration-phase analogue.
-
-Drift tests are not a substitute for the one-pass review or the describe-analyze-validate discipline. They are a safety net that guards the specific numbers the researcher has chosen as the headline results.
-
----
-
 ## Identifying Key Results from Task Results
 
 Drift tests should protect **headline findings**, not every number in the analysis. Before writing tests, read task `## Results` sections and extract candidates:
@@ -33,7 +23,7 @@ Drift tests should protect **headline findings**, not every number in the analys
 - Descriptive statistics on raw inputs (upstream, not load-bearing for conclusions)
 - Sensitivity-analysis numbers (these are already robustness themselves — testing a robustness check against itself adds little)
 
-**Always ask the researcher to confirm the candidate list** before writing tests. Drift-test coverage is a researcher-owned decision because it encodes what counts as a "key result." `superintegrate` Protect bakes this question into the workflow via `AskUserQuestion`.
+**Confirm the candidate list with the researcher before writing tests** — coverage encodes what counts as a "key result." Key-result selection mechanics are owned by `result-protection`.
 
 ---
 

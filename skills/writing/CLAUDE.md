@@ -16,21 +16,7 @@ Mode determines the loaded references and therefore the authority grant. Do not 
 
 ## Governing principle
 
-`SKILL.md` owns the unconditional writing principle:
-
-- Preserve substance: argument, logic, structure, technical claims, author intent, and tone.
-- Polish prose: wording, sentence shape, clarity, parallelism, hedging, flow, and mechanical correctness.
-- Ask before changing substance or restructuring unless the request explicitly authorizes that scope.
-
-Writing rules are additive to baseline writing competence. Add only constraints that redirect behavior a strong general editor would otherwise get wrong on shared academic drafts.
-
-## Current conventions
-
-- Inline TODOs, placeholders, crude draft phrasing, `??`, and `XXX` are work assigned to the agent inside scope.
-- Explicit `DO NOT EDIT` or equivalent hands-off markers are off-limits.
-- Intent comments live in source files (`% intent: ...` or `<!-- intent: ... -->`): Draft writes them from the user's brief; Polish preserves existing comments and does not invent new author intent; Review can use them as a yardstick.
-- Audience discipline is unconditional: document prose is written for the document's reader, not for the editing conversation or repository context.
-- Writing-side project conventions live in the active `## Project Conventions` surface: the `## Objective` of the manuscript-governing task for workflow-scoped work (inherited via the ancestor chain) and project `CLAUDE.md` for durable project rules.
+`SKILL.md` owns the unconditional writing principle (preserve substance, polish prose, ask before changing substance or restructuring). Writing rules are additive to baseline competence: add only constraints that redirect behavior a strong general editor would otherwise get wrong on shared academic drafts.
 
 ## Reference ownership
 
@@ -57,11 +43,7 @@ The PLAN-only long-form review retrofit (`references/long-form-review.md` + `ref
 
 ## Extension rules
 
-- Add sentence-level rules to `references/style.md`.
-- Add structure-level rules to `references/structure.md`.
-- Add dimension-specific checks to the relevant `references/consistency/*.md`.
-- Add build or document-wide refactor rules to `references/refactor-and-compile.md`.
-- Add integration-only writing behavior to `references/integration.md`.
+- Add a rule to the reference that owns its concern (see Reference ownership above).
 - Add a new knowledge file only when it has a distinct load condition that existing references cannot cover.
 - Add a new mode only when Review, Polish, and Draft cannot describe the request shape and the new mode needs a distinct workflow plus a distinct loaded reference set.
 - When changing writing-side project conventions, keep math notation owned by `theory-modeling`; writing owns prose typography, terminology, citation, numerical, cross-reference, voice, tense, and abbreviation choices.

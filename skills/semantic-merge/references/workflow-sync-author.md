@@ -6,7 +6,7 @@ Workflow sync author mode uses `semantic-merge/SKILL.md` §Shared Steps and §Se
 
 In `superintegrate`, semantic-merge owns Sync and sync review. The workflow computes `BASE_REF`, `PRE_SYNC_BASE_SHA`, and `BASE_HEAD_SHA`, then dispatches a generic sync author and a generic sync reviewer that load this skill's mode references.
 
-Workflow Sync lands the merge commit plus any propagation commits needed to reach **semantic coherence**, records branch-level `## Sync Map` clusters, and annotates affected task blocks with compact `**Sync impact:**` pointers. `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule. **Codebase coherence** — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff against the host — is handled later by Integrate; Sync notes only explain the approved post-sync diff.
+Workflow Sync lands the merge commit plus any propagation commits needed to reach **semantic coherence**, records branch-level `## Sync Map` clusters, and annotates affected task blocks with compact `**Sync impact:**` pointers. `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule. Codebase coherence is handled later by Integrate; Sync notes only explain the approved post-sync diff.
 
 ## Inputs
 
@@ -25,7 +25,7 @@ Current-branch intent comes from the `superRA/` task tree (root task.md header a
 1. Run the requested sync operation after intent investigation. For the normal workflow path, merge `BASE_REF` into the current branch.
 2. Write the branch-level `## Sync Map` in root `superRA/task.md` when there is material overlap, a conflict, a user decision, sync-review carryover, or post-sync context worth preserving. Omit it for no-op or trivial syncs with no context.
 3. Add task-local `**Sync impact:**` annotations only to task blocks whose post-sync diff needs task-specific context during Integrate. Keep them short and point back to the relevant Sync Map cluster.
-4. **Land the merge commit plus any propagation commits needed to reach semantic coherence.** Include conflict resolution, resolved docs, root task.md Sync Map, and task-local Sync impact annotations with the commits that produce them. Before returning, update `**Sync commits:**` to list the full commit chain this mode landed. Every commit must leave the tree passing existing protection (drift tests + key-result coverage established in `superintegrate` Protect); per-commit protection-pass is the lower bound, `SKILL.md §Semantic Coherence Checklist §Scope boundary` is the stopping rule.
+4. **Land the merge commit plus any propagation commits needed to reach semantic coherence** per `SKILL.md §Shared Steps` step 5, including the root task.md Sync Map and task-local Sync impact annotations with the commits that produce them. Before returning, update `**Sync commits:**` to list the full commit chain this mode landed.
 
 ## Workflow Sync Map Format
 

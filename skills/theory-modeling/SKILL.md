@@ -16,11 +16,11 @@ user-invocable: true
 
 # Theory Modeling
 
-Domain skill for rigorous mathematical-modeling work; body carries Stage-Scoped References, the Iron Law, the four-gate checklist (Objects & Notation / Assumptions / Derivations / Verification & Rendering), and Common Rationalizations.
+Domain skill for rigorous mathematical-modeling work.
 
 ## Stage-Scoped References
 
-Companion reference files carry content that applies at a specific phase. Load per stage; do not load them all at every dispatch:
+Load per stage; do not load them all at every dispatch.
 
 | Reference | Load when |
 |---|---|
@@ -29,7 +29,7 @@ Companion reference files carry content that applies at a specific phase. Load p
 | `references/integration.md` | `integration` stage - readability layer for reader-ready output: ex-post structural rewriting (objective-first), per-step local obviousness, cross-document coherence, prose-to-math precision, rendering legibility, and refactor-survival of correctness artifacts. |
 | `references/objective-first.md` | `integration` stage - worked bad/good walkthrough and identification-training drills for objective-first structural rewriting; loaded on demand from `references/integration.md` Section A. |
 
-The four gates below are the creation-time correctness floor — walk at every implementation dispatch, including rough exploratory work. `references/integration.md` is the readability layer — load when the document needs to be polished for a human reader.
+The four gates below are the creation-time correctness floor: walk at every implementation dispatch, including rough exploratory work. `references/integration.md` is the readability layer: load when the document needs polishing for a human reader.
 
 ## The Iron Law
 
@@ -51,13 +51,13 @@ If a symbol appears without a stated meaning, an assumption is written only as a
 
 ## The Four Gates
 
-Four gates underpin trustworthy modeling work, organized around the reader's trust chain: **Objects & Notation → Assumptions → Derivations → Verification & Rendering**. Each gate has an **artifact** the implementer produces and a **checklist** of quality items walked while producing it. The gates are **concurrent, not sequential** — every modeling step exercises all four. Documentation is built into the artifact definitions, not handled as a separate phase.
+Four gates underpin trustworthy modeling work, ordered by the reader's trust chain: **Objects & Notation → Assumptions → Derivations → Verification & Rendering** (a reader cannot evaluate an assumption that uses an undefined symbol, a derivation without the active assumption set, or a verification claim without an auditable derivation). Each gate has an **artifact** the implementer produces and a **checklist** walked while producing it. The gates are **concurrent** — every modeling step exercises all four; documentation is built into the artifact, not a separate phase.
 
-`[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items the reviewer MAY flag as MINOR. Verdict adjudication follows the standard reviewer protocol in `agent-orchestration`.
+`[BLOCKING]` items must be fixed for APPROVE; `[ADVISORY]` items may be flagged as MINOR. Verdict adjudication follows the standard reviewer protocol in `agent-orchestration`.
 
 ### Falsification tests (per ledger entry in Gates 1 and 2)
 
-Both tests are diagnostic moves the reviewer runs against a slot they suspect is not pulling its weight. The point is to detect text that *looks* like a justification but would survive any small change to the object it claims to justify.
+Both tests are diagnostic moves the reviewer runs against a slot suspected of not pulling its weight: they catch text that *looks* like a justification but would survive any small change to the object it claims to justify.
 
 - **Substitution test.** Read the entry's "What the name carries" / "What this assumption carries" slot, then mentally replace the symbol (or assumption) with a hypothetical sibling — a different symbol $\mathbf{z}_q$ from the same proof, or a different assumption on the same primitive. **Re-read the slot under the swap.** If the slot is still true for the substituted object, the slot is generic and pins nothing down → BLOCKING. The slot must contain something that would be *false* of any other object — a specific sign meaning, a specific structural role, a named scalar cited at a specific site.
 
@@ -209,7 +209,7 @@ Symbolic work still needs verification. A derivation is not complete until it ha
 
 ### Documentation and handoff
 
-The ledger artifacts for Gates 1 and 2 already live in the task's `## Results`; the items below are the cross-cutting documentation rules that apply beyond the per-symbol / per-assumption ledgers.
+Cross-cutting documentation rules beyond the per-symbol / per-assumption ledgers:
 
 - `[BLOCKING]` Task `## Results` is updated in place. The task file is the record — findings live there before they appear in any status report.
 - `[BLOCKING]` Root task.md's Notation Conventions table is **canonical and user-gated**. Implementers do NOT inline-edit it during implementation. A symbol is promoted from the task-level ledger to the Notation Conventions table only when the user confirms it should become a canonical project-wide symbol; until then the ledger entry is the source of truth for that task.
@@ -220,7 +220,7 @@ The ledger artifacts for Gates 1 and 2 already live in the task's `## Results`; 
 
 ## Common Rationalizations
 
-LLM-specific excuses that the gate checklists alone do not catch — each row names a behavior pattern, not a restatement of an existing `[BLOCKING]` item.
+LLM-specific excuses the gate checklists alone do not catch.
 
 | Excuse | Reality |
 |---|---|

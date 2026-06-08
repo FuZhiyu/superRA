@@ -14,8 +14,6 @@ user-invocable: true
 
 ## Core Concepts
 
-The mental model for reasoning about the tree:
-
 - Everything is a **task**. A leaf task is a directory with `task.md` but no subdirectories containing `task.md`.
 - The **filesystem hierarchy is the task hierarchy**. `walk_plan()` discovers children by scanning subdirectories.
 - **Dependencies are sibling-only.** `depends_on` values are sibling directory names within the same parent.
@@ -33,23 +31,14 @@ uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/super
 
 ## Reading the Tree
 
-The common on-demand path is inspecting tree state. Run the committed `./superRA/superra` wrapper (created above — there is no PATH `superra`; contributors in the superRA checkout can substitute `uv run --script skills/task-system/scripts/cli.py`). Every `superra …` example below and in the references denotes this wrapper:
+Run the committed `./superRA/superra` wrapper (created above; contributors in the superRA checkout substitute `uv run --script skills/task-system/scripts/cli.py`). Every `superra …` example below and in the references denotes this wrapper:
 
 ```bash
-# Print tree with status badges
-./superRA/superra task tree
-
-# List dispatchable leaf tasks (the frontier)
-./superRA/superra task frontier
-
-# Render dependency DAG for a subtree (Mermaid format)
-./superRA/superra task dag 01-data
-
-# JSON output
-./superRA/superra task tree --json
+./superRA/superra task tree            # tree with status badges
+./superRA/superra task frontier        # dispatchable leaf tasks
+./superRA/superra task dag 01-data     # dependency DAG for a subtree (Mermaid)
+./superRA/superra task tree --json     # JSON output
 ```
-
-The wrapper installs nothing, creates no venv in your project, and always runs the live source.
 
 ## Task File Format
 
@@ -93,8 +82,8 @@ Field-by-field anatomy and body-section ownership live in `references/planning.m
 | Read or resolve task comments (the read/resolve loop; comments also surface via `superra task read`) | `references/commands.md §Comments` |
 | Objective writing, task splitting, placement, results shape, stale-content, retroactive plans | `references/planning.md` |
 | Migrate legacy `PLAN.md` + `RESULTS.md`, or upgrade `superRA/` v1 → v2 | `references/internals.md §Migration` |
-| View the dashboard | `./superRA/superra dashboard` runs the server in the background and returns (reuses a running one; `--foreground` to block in this terminal; `./superRA/superra dashboard stop` to stop it). Local checkout: `uv run --script skills/task-system/scripts/plan_dashboard.py dashboard`; mechanics in `references/internals.md §Dashboard` |
+| View the dashboard | `./superRA/superra dashboard` (background server, reuses a running one; `--foreground`, `dashboard stop`). Mechanics in `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
-A plain `mv` of a task directory carries the whole subtree. A **same-parent rename** auto-cascades sibling `depends_on` (the hook re-points dependents — expect this silent edit, surfaced in its feedback); a **cross-parent move** or a **delete** of a depended-on task strands the reference instead, which validation flags for re-wiring. See `references/commands.md` for the full mutation surface.
+A plain `mv` of a task directory carries the whole subtree, and the PostToolUse hook revalidates and propagates status. The rules for which moves auto-cascade `depends_on` versus strand a reference for re-wiring live in `references/commands.md §Rename / move a task`.
 <!-- no need to route back to using superra -->
