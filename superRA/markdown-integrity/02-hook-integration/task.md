@@ -1,6 +1,6 @@
 ---
 title: "Wire Checker into PostToolUse Hook (task-system, warn-only)"
-status: implemented
+status: approved
 depends_on: 
   - 01-checker-and-rules
 
