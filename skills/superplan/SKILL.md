@@ -98,10 +98,16 @@ For the objective writing guide and task splitting heuristics, see `task-system/
 
 ### Creating Tasks
 
-Use `superra task create` to create tasks (auto-fills template with dates, frontmatter defaults):
+**First, create the task-tree wrapper.** Every downstream agent reads and edits tasks through the committed `<task-root>/superra` wrapper, so it must exist before any subagent is dispatched. In a fresh project there is no `superra` yet, so the first call uses the loaded task-system skill directory (`<skill-dir>` = the directory containing its `SKILL.md`; substitute the real path) and is committed with the tree:
 
 ```bash
-superra task create 01-data/03-filter \
+uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/superra
+```
+
+After the wrapper exists, every call uses `./superRA/superra …`. Use it to create tasks (auto-fills template with dates, frontmatter defaults):
+
+```bash
+./superRA/superra task create 01-data/03-filter \
   --title "Filter Sample" \
   --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
   --guidance "Consider reusing Code/common_filters.py." \

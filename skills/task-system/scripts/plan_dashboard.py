@@ -2106,6 +2106,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> None:
+    raw = sys.argv[1:] if argv is None else argv
+    if raw and raw[0] == "dashboard":
+        # The task-tree wrapper routes the user-facing `dashboard …` surface
+        # here (so the web stack stays off cli.py's hot path) but the surface
+        # translation (export→generate, default→serve, artifact, root
+        # auto-detect) is single-sourced in cli.py. Delegate to it; cli's
+        # dashboard handler re-enters this module in-process with the
+        # serve/stop/generate argv it speaks.
+        import cli
+
+        cli.main(raw)
+        return
+
     args = parse_args(argv)
 
     if args.command == "serve":

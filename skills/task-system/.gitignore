@@ -1,5 +1,6 @@
-# uv packaging outputs — produced by `uv build`, `uv tool install`, `uv run`
-build/
-dist/
+# Incidental uv / Python artifacts under skills/task-system (no installable
+# package here — scripts run via `uv run --script`).
+.venv/
+__pycache__/
 *.egg-info/
 uv.lock

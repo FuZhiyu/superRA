@@ -1,6 +1,6 @@
 ---
 title: "Drift-free, install-free CLI source resolution via uv run --script"
-status: not-started
+status: implemented
 depends_on: 
   - wrappers-and-hooks
   - unified-command-surface
@@ -86,7 +86,50 @@ Generated role/Codex artifacts are out of scope unless a change touches canonica
 
 ## Results
 
-(Pending re-implementation under the `uv run --script` design. The prior `uvx`-based implementation is in git history — commits `5de74de9` through `76473463` — and is being reworked per ## Revision Notes; reuse the surviving infrastructure listed in ## Planner Guidance.)
+Reworked the task-system CLI to a single, install-free execution model: resolve the source dir from disk, then run the relevant loose entry script with `uv run --script <file>` (falling back to `python3 <file>`). There is no installable package and no `pyproject.toml` — PEP 723 inline-metadata blocks in each entry script are the single dependency source of truth. The agent-facing entry is the committed self-resolving `superRA/superra` wrapper; subagents read/edit tasks through it without loading `task-system`.
+
+### Execution model and entry scripts
+
+- **`scripts/cli.py`** ([../../../../skills/task-system/scripts/cli.py:1-14](../../../../skills/task-system/scripts/cli.py#L1-L14)) carries a PEP 723 block with deps `["pyyaml"]` (core is stdlib; pyyaml is the lazy comment-parser import in `_comments.py`).
+- **`scripts/task_hook.py`** ([../../../../skills/task-system/scripts/task_hook.py:1-7](../../../../skills/task-system/scripts/task_hook.py#L1-L7)) carries a stdlib-only block (`dependencies = []`).
+- **`scripts/plan_dashboard.py`** already carried the full web-stack block and was already loose-script-ready (flat sibling imports, `__file__`-relative `FileSystemLoader`/`_resource_dir` for templates and vendor when `__package__ is None`). It now accepts the user-facing `dashboard …` surface ([../../../../skills/task-system/scripts/plan_dashboard.py:2108-2122](../../../../skills/task-system/scripts/plan_dashboard.py#L2108-L2122)): a leading `dashboard` token delegates to `cli.py`'s dashboard handler so the surface translation (`export`→`generate`, default→`serve`, `stop`, `artifact`) keeps its single home in `cli.py`, while the web stack stays off `cli.py`'s PEP 723 block.
+
+### Resolver and run-line (single-sourced in `wrapper_resolver.py`)
+
+[../../../../skills/task-system/scripts/wrapper_resolver.py](../../../../skills/task-system/scripts/wrapper_resolver.py) renders both committed shell artifacts from one bash resolver string. Changes vs. the prior `uvx` design:
+
+- **Cache-branch existence test** is now `scripts/cli.py` (the package's `pyproject.toml` no longer exists).
+- **Terminal exec** is `_superra_run_entry`: `uv run --script <dir>/scripts/<entry>` with a `python3 <file>` fallback, routed by first argument — `dashboard` → `plan_dashboard.py`; the hook → `task_hook.py`; everything else → `cli.py`.
+- **GitHub fallback** is now a shallow clone: `_superra_resolve_source` emits `GIT:<repo>@<ref>`, and `_superra_github_clone` clones (or fetch-resets an existing clone) to `${XDG_CACHE_HOME:-~/.cache}/superra/superRA-<ref>`, then runs the loose `cli.py` from inside the clone (since `uv run --script` cannot fetch a git subdirectory). Fires only when env var, checkout, and installed caches all miss.
+- The bounded resolution chain (env var → checkout → Claude manifest → Codex depth-3 glob → GitHub) and the speed gate (one file test + one manifest read + one fixed-depth glob, no full-disk walk) are preserved. The pin (ref `main`) lives only in `wrapper_resolver.py`.
+
+The committed `superRA/superra` ([../../../../superRA/superra](../../../../superRA/superra)) and `hooks/task-hook` ([../../../../hooks/task-hook](../../../../hooks/task-hook)) were regenerated to this run-line and are byte-identical to the generator (a regression test pins the hook).
+
+### Package framing dropped
+
+Removed `skills/task-system/pyproject.toml` and `scripts/__init__.py` (the version-stub package namespace). The dashboard's `if __package__` branches stay as harmless fallbacks; only the loose-script (`__package__ is None`) path is exercised. The `.gitignore` ([../../../../skills/task-system/.gitignore](../../../../skills/task-system/.gitignore)) was rewritten from package-build outputs to incidental uv/Python artifacts. This supersedes the `uv-package` sibling's build-manifest deliverable.
+
+### Agent interface and bootstrap
+
+- `using-superRA §Task Interface` ([../../../../skills/using-superRA/SKILL.md:45](../../../../skills/using-superRA/SKILL.md#L45)) now names the committed `./superRA/superra task read <path>` wrapper as the canonical read/edit form for every agent (main/implementer/reviewer), explicitly noting it needs no skill load, plugin path, or PATH install — verified by reading this very task through the wrapper with only that interface.
+- `superplan §Creating Tasks` ([../../../../skills/superplan/SKILL.md:99-117](../../../../skills/superplan/SKILL.md#L99-L117)) creates the wrapper first at tree-creation time via the planner-only bootstrap `uv run --script <skill-dir>/scripts/cli.py wrapper init`, then uses `./superRA/superra …` for all subsequent calls, so every downstream agent finds a working wrapper.
+- The bootstrap form and the `<skill-dir>` substitution convention are documented in `task-system/SKILL.md` ([../../../../skills/task-system/SKILL.md:43](../../../../skills/task-system/SKILL.md#L43)) and `references/internals.md §Setup`.
+
+### Docs
+
+`references/internals.md` §Setup / §Hook Architecture / §Dashboard / §GitHub-Actions, `task-system/SKILL.md`, and root `CLAUDE.md §Local Task-System CLI Development` were rewritten to the `uv run --script` model (no `uvx`/`uv tool install`/`uv run --project`/console-entry framing). The GitHub Actions workflow template ([../../../../skills/task-system/scripts/templates/superra-dashboard-artifact.yml:50](../../../../skills/task-system/scripts/templates/superra-dashboard-artifact.yml#L50)) and its two render tests now use `uv run --script skills/task-system/scripts/plan_dashboard.py dashboard export`.
+
+### Verification (empirical, not code-reading)
+
+- **No caller venv (root-cause fix a).** Ran `uv run --script .../cli.py task tree` from a scratch project carrying both a `pyproject.toml` and a pre-existing empty `.venv`. The CLI read the scratch tree and exited 0; the `.venv` stayed empty and no `pyvenv.cfg`/dist-info appeared anywhere in the project. Pinned by `test_uv_run_script_creates_no_caller_venv_with_conflicting_project` ([../../../../skills/task-system/scripts/test_cli.py](../../../../skills/task-system/scripts/test_cli.py)).
+- **Live source, no cache-bust (root-cause fix b).** Injected a unique marker into `cli.py`'s parser help and re-ran `uv run --script cli.py --help` with no `--refresh`/`--no-cache`/version bump — the marker appeared on the very next run, proving no version-keyed build cache sits between source and execution.
+- **python3 fallback / stdlib-only core.** `python3 cli.py task tree` ran the core successfully under a system `python3` that has no `pyyaml` installed, proving the lazy import and the uv-free fallback. Pinned by `test_python3_fallback_runs_core_without_third_party_deps`.
+- **Dashboard route.** `./superRA/superra dashboard export` and `uv run --script plan_dashboard.py dashboard export` both rendered a standalone HTML (markdown-it + `window.STANDALONE = true`) with templates/vendor loaded from `__file__`-relative paths. Pinned by `test_uv_run_script_exports_dashboard_from_file_relative_assets`.
+- **Resolver order + GitHub clone.** Bash probes of the rendered resolver confirm env var → `DIR:`, empty environment → `GIT:https://github.com/FuZhiyu/superRA.git@main`, Claude-manifest-over-codex, codex highest-semver within depth bound, and skip-cache-lacking-`cli.py`. The GitHub branch was driven against a local bare remote (no network): it shallow-cloned to the user cache and resolved to `<clone>/skills/task-system`, which `python3 cli.py` then ran. Pinned by the `test_resolver_*` suite incl. `test_resolver_github_branch_clones_then_resolves_loose_script`.
+- **Subagent read.** Read this task through `./superRA/superra task read …` with only the `using-superRA` interface — no `task-system` load.
+- **Byte-identity.** Regenerated `superRA/superra` and `hooks/task-hook`; both diff-clean against the generator. `test_committed_hook_shim_matches_generator` and `test_generated_wrapper_and_hook_are_valid_bash` pass.
+
+**Test suite:** full task-system suite green from live source — `uv run --isolated --python 3.14 --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx --no-project python -m pytest skills/task-system/scripts -q` → **596 passed, 2 skipped**. (Note: under Python 3.12, seven cwd-autodetect tests in `test_cli.py` fail on a pre-existing latent `iterdir` generator race in `_task_io._has_child_task_dir` — the lazy `iterdir()` is outside its `try/except OSError`. This reproduces identically on the unmodified baseline under 3.12 and is unrelated to this task; it does not occur under the project's 3.14 toolchain. Flagged as an out-of-scope pre-existing bug.)
 
 ## Revision Notes
 

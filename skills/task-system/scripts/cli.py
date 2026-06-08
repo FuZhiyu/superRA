@@ -1,4 +1,19 @@
-"""Console entry point for the packaged task-system command surface."""
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["pyyaml"]
+# ///
+"""Console entry point for the task-system command surface.
+
+Run via `uv run --script cli.py …` (or `python3 cli.py …`). The core is
+stdlib-only; pyyaml is declared for the lazy comment-sidecar parsing in
+`_comments.py`. The `dashboard` subcommand is NOT routed here at the wrapper
+level — the wrapper sends `dashboard` straight to `plan_dashboard.py` so the
+web stack never lands on this task hot path. The in-process `dashboard` handler
+below stays the single home for the user-facing-surface translation;
+`plan_dashboard.py` delegates back to it when the wrapper routes `dashboard`
+there, so the translation has one home.
+"""
 
 from __future__ import annotations
 

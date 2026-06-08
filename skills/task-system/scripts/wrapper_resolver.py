@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Single source of truth for the task-system CLI source-resolution chain.
 
-Both committed artifacts that need to find and run the task-system package
+Both committed artifacts that need to find and run the task-system scripts
 without installing anything embed the *same* bash resolver emitted here:
 
 - ``hooks/task-hook`` — the in-plugin PostToolUse shim (generated, committed).
@@ -15,9 +15,18 @@ and is *embedded* into each artifact rather than sourced. Keeping one copy in
 Python and rendering both artifacts from it is what prevents the two shells
 from drifting.
 
-Resolution priority (returns the dir containing ``pyproject.toml``):
+Execution model: ``uv run --script <dir>/scripts/<entry>`` with a
+``python3 <dir>/scripts/<entry>`` fallback when ``uv`` is unavailable. Each
+entry script carries a PEP 723 inline-metadata block as the single source of
+truth for its dependencies; there is no installable package and no
+``pyproject.toml``. ``uv run --script`` is script-scoped (no project discovery,
+so it never provisions the caller's ``.venv``) and reads the file live each run
+(no version-keyed build cache), so a source edit is reflected on the next call
+with no cache-bust flag.
+
+Resolution priority (returns the dir containing ``scripts/cli.py``):
   1. ``CLAUDE_PLUGIN_ROOT`` / ``PLUGIN_ROOT`` env var → ``$VAR/skills/task-system``.
-  2. Local checkout — ``$REPO_ROOT/skills/task-system/pyproject.toml`` if present.
+  2. Local checkout — ``$REPO_ROOT/skills/task-system/scripts/cli.py`` if present.
      Ordered above the caches on purpose: a contributor in a checkout gets live
      edits, not the stale copied cache snapshot.
   3. Claude cache — ``~/.claude/plugins/installed_plugins.json`` records the
@@ -25,7 +34,9 @@ Resolution priority (returns the dir containing ``pyproject.toml``):
      user-scope record; append ``/skills/task-system``.
   4. Codex cache — bounded depth-3 glob of ``~/.codex/plugins/cache``; highest
      semver wins; no plugin-slug casing assumption.
-  5. GitHub fallback — ``uvx --from git+…#subdirectory=skills/task-system``.
+  5. GitHub fallback — shallow-clone the repo to a user-cache dir and run
+     ``uv run --script <clone>/skills/task-system/scripts/cli.py``. This is the
+     only network step and only fires when nothing local resolves.
 
 Speed gate: env read + one file test + one manifest read + one fixed-depth
 glob. No full-disk search.
@@ -55,15 +66,18 @@ GITHUB_SUBDIR = "skills/task-system"
 # exists at all. Do NOT repoint to a feature/trunk branch.
 GITHUB_REF = "main"
 
-# The canonical resolution chain. `_resolve_task_system_source` prints the
-# resolved local package dir on stdout and exits 0, OR prints the git+ spec for
-# the GitHub fallback prefixed with "GIT:" and exits 0, OR exits 1 if nothing
-# resolves. The embedding artifact decides how to invoke `uvx --from` with it.
+# The canonical resolution chain. `_superra_resolve_source` prints the resolved
+# local package dir on stdout prefixed with "DIR:" and exits 0, OR prints the
+# "GIT:<repo>@<ref>" spec for the GitHub fallback and exits 0. The embedding
+# artifact then runs the resolved scripts with `uv run --script` (or shallow-
+# clones first, for the GIT branch). The run-line is single-sourced in
+# `_superra_run_entry` below so the wrapper and hook cannot drift.
 RESOLVER_SNIPPET = r'''
 # ---- superRA task-system source resolver (generated; edit wrapper_resolver.py) ----
 # Resolves the task-system package dir from the already-installed plugin on disk
-# and runs it with `uvx --from`, so the CLI never installs anything, never
-# creates a cwd venv, and always matches the installed plugin version.
+# and runs its scripts with `uv run --script` (python3 fallback), so the CLI
+# never installs anything, never creates a cwd venv, and always reflects the
+# live source (no version-keyed build cache).
 _superra_pick_highest_semver() {
   # stdin: one candidate dir per line whose parent name is a version.
   # stdout: the dir whose version sorts highest (sort -V).
@@ -117,13 +131,13 @@ PYEOF
 _superra_resolve_source() {
   # 1. Explicit harness env var.
   local env_root="${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-}}"
-  if [ -n "$env_root" ] && [ -f "$env_root/skills/task-system/pyproject.toml" ]; then
+  if [ -n "$env_root" ] && [ -f "$env_root/skills/task-system/scripts/cli.py" ]; then
     printf 'DIR:%s\n' "$env_root/skills/task-system"
     return 0
   fi
 
   # 2. Local checkout (preferred over caches so dev edits win).
-  if [ -n "${SUPERRA_REPO_ROOT:-}" ] && [ -f "$SUPERRA_REPO_ROOT/skills/task-system/pyproject.toml" ]; then
+  if [ -n "${SUPERRA_REPO_ROOT:-}" ] && [ -f "$SUPERRA_REPO_ROOT/skills/task-system/scripts/cli.py" ]; then
     printf 'DIR:%s\n' "$SUPERRA_REPO_ROOT/skills/task-system"
     return 0
   fi
@@ -131,7 +145,7 @@ _superra_resolve_source() {
   # 3. Claude cache (authoritative manifest).
   local claude_path
   claude_path="$(_superra_claude_install_path 2>/dev/null || true)"
-  if [ -n "$claude_path" ] && [ -f "$claude_path/skills/task-system/pyproject.toml" ]; then
+  if [ -n "$claude_path" ] && [ -f "$claude_path/skills/task-system/scripts/cli.py" ]; then
     printf 'DIR:%s\n' "$claude_path/skills/task-system"
     return 0
   fi
@@ -142,7 +156,7 @@ _superra_resolve_source() {
     local picked
     picked="$(
       for d in "$codex_cache"/*/*/*/skills/task-system; do
-        [ -f "$d/pyproject.toml" ] && printf '%s\n' "$d"
+        [ -f "$d/scripts/cli.py" ] && printf '%s\n' "$d"
       done | _superra_pick_highest_semver
     )"
     if [ -n "$picked" ]; then
@@ -151,21 +165,78 @@ _superra_resolve_source() {
     fi
   fi
 
-  # 5. GitHub fallback (the only pin; needs network on first build).
-  printf 'GIT:git+%s@%s#subdirectory=%s\n' "__GITHUB_REPO__" "__GITHUB_REF__" "__GITHUB_SUBDIR__"
+  # 5. GitHub fallback (the only pin; needs network on first clone).
+  printf 'GIT:%s@%s\n' "__GITHUB_REPO__" "__GITHUB_REF__"
   return 0
 }
 
-_superra_run() {
-  if ! command -v uvx >/dev/null 2>&1; then
-    echo "superra: uvx (uv) is required but not found on PATH" >&2
-    return 127
+_superra_github_clone() {
+  # Shallow-clone the GitHub fallback to a stable user-cache dir and print the
+  # task-system source dir inside it. `uv run --script` cannot fetch a git
+  # subdirectory, so the clone is the carrier for the loose scripts. Reuses an
+  # existing clone (one fetch to refresh the pinned ref) so repeat calls do not
+  # re-clone. Prints the dir on stdout; returns non-zero on failure.
+  command -v git >/dev/null 2>&1 || return 1
+  local cache_root="${XDG_CACHE_HOME:-$HOME/.cache}/superra"
+  local clone="$cache_root/superRA-__GITHUB_REF__"
+  mkdir -p "$cache_root" || return 1
+  if [ -d "$clone/.git" ]; then
+    git -C "$clone" fetch --depth 1 origin "__GITHUB_REF__" >/dev/null 2>&1 || true
+    git -C "$clone" reset --hard "origin/__GITHUB_REF__" >/dev/null 2>&1 || true
+  else
+    rm -rf "$clone"
+    git clone --depth 1 --branch "__GITHUB_REF__" "__GITHUB_REPO__" "$clone" >/dev/null 2>&1 || return 1
   fi
-  local resolved kind source
+  [ -f "$clone/__GITHUB_SUBDIR__/scripts/cli.py" ] || return 1
+  printf '%s\n' "$clone/__GITHUB_SUBDIR__"
+}
+
+_superra_resolve_dir() {
+  # Resolve to a concrete on-disk task-system dir, cloning the GitHub fallback
+  # if that is the only branch that resolves. Prints the dir; returns non-zero
+  # if nothing resolves.
+  local resolved kind value
   resolved="$(_superra_resolve_source)"
   kind="${resolved%%:*}"
-  source="${resolved#*:}"
-  exec uvx --from "$source" superra "$@"
+  value="${resolved#*:}"
+  if [ "$kind" = "DIR" ]; then
+    printf '%s\n' "$value"
+    return 0
+  fi
+  _superra_github_clone
+}
+
+_superra_run_entry() {
+  # $1: entry script basename under <dir>/scripts (e.g. cli.py, plan_dashboard.py,
+  #     task_hook.py). Remaining args are forwarded to the script.
+  # Runs via `uv run --script` (script-scoped: no project discovery, no cwd
+  # venv, live source) and falls back to `python3` when uv is unavailable.
+  local entry="$1"; shift
+  local dir script
+  dir="$(_superra_resolve_dir)" || {
+    echo "superra: could not resolve task-system source (no env var, checkout, installed plugin, or GitHub clone)" >&2
+    return 1
+  }
+  script="$dir/scripts/$entry"
+  if command -v uv >/dev/null 2>&1; then
+    exec uv run --script "$script" "$@"
+  elif command -v python3 >/dev/null 2>&1; then
+    exec python3 "$script" "$@"
+  else
+    echo "superra: neither uv nor python3 found on PATH" >&2
+    return 127
+  fi
+}
+
+_superra_run() {
+  # Route the first argument: `dashboard` → plan_dashboard.py (carries the web
+  # stack so the task hot path stays minimal); everything else → cli.py.
+  if [ "${1:-}" = "dashboard" ]; then
+    shift
+    _superra_run_entry plan_dashboard.py dashboard "$@"
+  else
+    _superra_run_entry cli.py "$@"
+  fi
 }
 # ---- end superRA task-system source resolver ----
 '''.replace("__GITHUB_REPO__", GITHUB_REPO).replace("__GITHUB_REF__", GITHUB_REF).replace(
@@ -188,9 +259,10 @@ def render_wrapper() -> str:
     return (
         "#!/usr/bin/env bash\n"
         "# superRA task-system CLI wrapper (generated by `superra wrapper init`).\n"
-        "# Resolves the task-system package from the installed plugin at runtime;\n"
-        "# never installs anything and never creates a cwd venv. Regenerate rather\n"
-        "# than hand-edit: `superra wrapper init`.\n"
+        "# Resolves the task-system scripts from the installed plugin at runtime and\n"
+        "# runs them with `uv run --script` (python3 fallback); never installs\n"
+        "# anything, never creates a cwd venv, always reflects the live source.\n"
+        "# Regenerate rather than hand-edit: `superra wrapper init`.\n"
         "\n"
         "set -euo pipefail\n"
         "\n"
@@ -202,7 +274,7 @@ def render_wrapper() -> str:
         "\n"
         "# If this wrapper sits inside a checkout (…/skills/task-system present one\n"
         "# level up), prefer that checkout so contributor edits win.\n"
-        "if [ -f \"$_superra_script_dir/../skills/task-system/pyproject.toml\" ]; then\n"
+        "if [ -f \"$_superra_script_dir/../skills/task-system/scripts/cli.py\" ]; then\n"
         "  SUPERRA_REPO_ROOT=\"$(cd \"$_superra_script_dir/..\" && pwd)\"\n"
         "  export SUPERRA_REPO_ROOT\n"
         "fi\n"
@@ -216,16 +288,17 @@ def render_wrapper() -> str:
 def render_hook_shim() -> str:
     """Render the in-plugin `hooks/task-hook` PostToolUse shim.
 
-    The shim reads PostToolUse JSON on stdin and forwards it to
-    `superra task hook post-tool-use`. It prefers its own plugin checkout (its
-    location is inside the plugin) and otherwise resolves through the shared
-    chain. Never blocks: always exits 0.
+    The shim reads PostToolUse JSON on stdin and forwards it to the packaged
+    hook script. It prefers its own plugin checkout (its location is inside the
+    plugin) and otherwise resolves through the shared chain. Never blocks:
+    always exits 0.
     """
     return (
         "#!/usr/bin/env bash\n"
         "# Stable PostToolUse entry point for task-tree reconciliation (generated\n"
-        "# by wrapper_resolver.py). Resolves the task-system package from the\n"
-        "# installed plugin at runtime and forwards stdin to the packaged hook.\n"
+        "# by wrapper_resolver.py). Resolves the task-system scripts from the\n"
+        "# installed plugin at runtime and forwards stdin to the packaged hook via\n"
+        "# `uv run --script` (python3 fallback).\n"
         "# Regenerate rather than hand-edit: `superra wrapper render-hook`.\n"
         "\n"
         "set -uo pipefail\n"
@@ -239,25 +312,23 @@ def render_hook_shim() -> str:
         "_superra_script_dir=\"$(cd \"$_superra_script_dir\" && pwd)\"\n"
         "\n"
         "# The shim ships inside the plugin: its parent dir is the plugin root.\n"
-        "if [ -f \"${_superra_script_dir%/hooks}/skills/task-system/pyproject.toml\" ]; then\n"
+        "if [ -f \"${_superra_script_dir%/hooks}/skills/task-system/scripts/cli.py\" ]; then\n"
         "  SUPERRA_REPO_ROOT=\"${_superra_script_dir%/hooks}\"\n"
         "  export SUPERRA_REPO_ROOT\n"
         "fi\n"
         "\n"
         + render_resolver_snippet()
         + "\n"
-        "if ! command -v uvx >/dev/null 2>&1; then\n"
-        "  # uv unavailable: fall back to a direct python3 run of the packaged hook\n"
-        "  # if a local source dir is reachable, else no-op (never block).\n"
-        "  if [ -n \"${SUPERRA_REPO_ROOT:-}\" ] && command -v python3 >/dev/null 2>&1; then\n"
-        "    printf '%s' \"$input\" | python3 \"$SUPERRA_REPO_ROOT/skills/task-system/scripts/task_hook.py\" || true\n"
+        "# Resolve and run the packaged hook; never block (always exit 0).\n"
+        "_superra_dir=\"$(_superra_resolve_dir 2>/dev/null || true)\"\n"
+        "if [ -n \"$_superra_dir\" ]; then\n"
+        "  _superra_hook=\"$_superra_dir/scripts/task_hook.py\"\n"
+        "  if command -v uv >/dev/null 2>&1; then\n"
+        "    printf '%s' \"$input\" | uv run --script \"$_superra_hook\" 2>/dev/null || true\n"
+        "  elif command -v python3 >/dev/null 2>&1; then\n"
+        "    printf '%s' \"$input\" | python3 \"$_superra_hook\" 2>/dev/null || true\n"
         "  fi\n"
-        "  exit 0\n"
         "fi\n"
-        "\n"
-        "resolved=\"$(_superra_resolve_source)\"\n"
-        "source=\"${resolved#*:}\"\n"
-        "printf '%s' \"$input\" | uvx --from \"$source\" superra task hook post-tool-use 2>/dev/null || true\n"
         "exit 0\n"
     )
 

@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 """PostToolUse hook: validate task.md and propagate status on edit/write/move.
 
 Fires after Edit/Write tool calls (targeting a task.md) and after Bash tool

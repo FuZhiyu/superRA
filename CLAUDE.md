@@ -14,14 +14,14 @@ When modifying superRA itself — skills, hooks, agents, harness adapters, or in
 
 ## Local Task-System CLI Development
 
-When developing this checkout, run the task-system CLI from the live package source:
+When developing this checkout, run the task-system CLI from the live source via `uv run --script` on the loose entry scripts (there is no installable package; each entry script carries a PEP 723 dependency block):
 
 ```bash
-uv run --project skills/task-system superra task frontier
-uv run --project skills/task-system superra dashboard
+uv run --script skills/task-system/scripts/cli.py task frontier
+uv run --script skills/task-system/scripts/plan_dashboard.py dashboard
 ```
 
-This keeps agents on the edited checkout instead of a cached or installed package. Use `uvx --refresh --from ./skills/task-system ...` only for install-style smoke tests. The optional repo-local wrapper `./superRA/superra` follows the same rule by resolving the task-system source — preferring this checkout's `skills/task-system`, then an installed Claude/Codex plugin, then GitHub — and running it via `uvx --from "$source" superra "$@"`; the resolution chain is single-sourced in `skills/task-system/scripts/wrapper_resolver.py`.
+`uv run --script` is script-scoped: it never provisions this repo's environment and reflects source edits on the next run with no cache-bust. The core is stdlib-only (lazy `pyyaml`), so `python3 skills/task-system/scripts/cli.py …` works as a uv-free fallback. The optional repo-local wrapper `./superRA/superra` follows the same rule by resolving the task-system source — preferring this checkout's `skills/task-system`, then an installed Claude/Codex plugin, then a shallow GitHub clone — and running the resolved entry script via `uv run --script` (python3 fallback); the resolution chain and run-line are single-sourced in `skills/task-system/scripts/wrapper_resolver.py`. To run the test suite, supply its deps with `--with`, e.g. `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-system/scripts`.
 
 ## Internal Design Philosophy
 

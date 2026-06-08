@@ -1330,7 +1330,7 @@ class TestDashboardArtifactWorkflow:
         assert "superra-dashboard-artifact-${{ github.ref }}" in workflow
         assert "shasum -a 256" in workflow
         assert 'artifact_name=__ARTIFACT_PREFIX__-$slug-$ref_hash' not in workflow
-        assert "uv run --project skills/task-system superra dashboard export --root \"superRA\"" in workflow
+        assert "uv run --script skills/task-system/scripts/plan_dashboard.py dashboard export --root \"superRA\"" in workflow
         assert '--repo-file-base "https://github.com/${{ github.repository }}/blob/${{ github.sha }}"' in workflow
         assert "github.rest.actions.listArtifactsForRepo" in workflow
         assert "github.rest.actions.deleteArtifact" in workflow
@@ -1349,7 +1349,7 @@ class TestDashboardArtifactWorkflow:
             branch_patterns=("main", "analysis/**"),
         )
         workflow = dashboard_artifact_workflow.render_workflow(config)
-        assert 'uv run --project skills/task-system superra dashboard export --root "customRA"' in workflow
+        assert 'uv run --script skills/task-system/scripts/plan_dashboard.py dashboard export --root "customRA"' in workflow
         assert '--output "build/custom-dashboard.html"' in workflow
         assert "custom-dashboard-$slug-$ref_hash" in workflow
         assert "retention-days: 3" in workflow

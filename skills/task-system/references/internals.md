@@ -4,32 +4,34 @@ Load this reference when modifying the task-system skill itself — scripts, dat
 
 ## Setup: the `superra` CLI
 
-The scripts here are packaged as `superra-task-system` (`pyproject.toml` in the skill directory), exposing one `superra` console entry point (`[project.scripts]` → `superra_task_system.cli:main`).
+The scripts here run as loose files via `uv run --script <file>` — there is no installable package and no `pyproject.toml`. Each entry script (`scripts/cli.py`, `scripts/plan_dashboard.py`, `scripts/task_hook.py`) carries a PEP 723 inline-metadata block (`# /// script … # ///`) as the single source of truth for its dependencies. `uv run --script` is script-scoped: it never discovers or provisions the caller's project environment, and it reads the file live each run, so a source edit is reflected on the next call with no version bump or cache-bust. The core is effectively stdlib-only (the only third-party import, `pyyaml` in `_comments.py`, is lazy), so a `python3 <file>` fallback works almost everywhere; `cli.py` declares `pyyaml`, `plan_dashboard.py` declares the web stack, `task_hook.py` declares nothing.
 
-**Canonical end-user / agent form: the task-tree wrapper.** A `superRA/` task tree carries a generated `superra` wrapper. It resolves the task-system package from the plugin already installed on disk and runs it with `uvx --from <source>` — no install step, no `.venv` created in the research project, and it always matches the installed plugin version:
+**Canonical end-user / agent form: the task-tree wrapper.** A `superRA/` task tree carries a generated `superra` wrapper. It resolves the task-system source dir from the plugin already installed on disk and runs the relevant entry script with `uv run --script` (falling back to `python3`) — no install step, no `.venv` created in the research project, always the live source:
 
 ```bash
-./superRA/superra task tree          # resolves the installed plugin and runs
+./superRA/superra task tree          # resolves the installed plugin and runs cli.py
+./superRA/superra dashboard          # routes to plan_dashboard.py (carries the web stack)
 superra wrapper init                 # (re)write the wrapper into the task root; idempotent
 ```
 
-The resolver (single-sourced in `scripts/wrapper_resolver.py`, embedded identically into the generated wrapper and the `hooks/task-hook` shim) tries, in order: `CLAUDE_PLUGIN_ROOT` / `PLUGIN_ROOT` env var → a local checkout (so contributor edits win over a copied cache snapshot) → the Claude install recorded in `~/.claude/plugins/installed_plugins.json` → a bounded depth-3 glob of `~/.codex/plugins/cache` (highest semver) → a `git+https://…#subdirectory=skills/task-system` GitHub fallback (the only pinned reference). It is a fast bounded lookup, never a full-disk search.
+The resolver (single-sourced in `scripts/wrapper_resolver.py`, embedded identically into the generated wrapper and the `hooks/task-hook` shim) tries, in order: `CLAUDE_PLUGIN_ROOT` / `PLUGIN_ROOT` env var → a local checkout (so contributor edits win over a copied cache snapshot) → the Claude install recorded in `~/.claude/plugins/installed_plugins.json` → a bounded depth-3 glob of `~/.codex/plugins/cache` (highest semver) → a GitHub fallback that shallow-clones the repo to the user cache and runs the loose `cli.py` from inside the clone (the only pinned reference, fires only when nothing local resolves). Each candidate is tested for `scripts/cli.py`. It is a fast bounded lookup, never a full-disk search. The wrapper routes by first argument: `dashboard` → `plan_dashboard.py` (so the web stack never lands on the task hot path); everything else → `cli.py`.
 
-**Never run bare `uv run superra` from a research project.** `uv` discovers that project's `pyproject.toml` and tries to provision its environment, which is wrong (it must not touch the research env) and fails when a `.venv` already exists. Use the wrapper, or the explicit checkout form below.
-
-**Contributor form (local checkout):** run from the edited source so changes are picked up live — see `CLAUDE.md §Local Task-System CLI Development`:
+**Bootstrap (planner/main-only, fresh project).** The wrapper is what makes `superra` resolvable, so the first call — which creates the wrapper — cannot use a `superra` that does not exist yet. Run the loose entry script directly from the loaded skill directory (`<skill-dir>` = the directory containing `SKILL.md`; substitute the real path):
 
 ```bash
-uv run --project skills/task-system superra task tree
-uvx --refresh --from ./skills/task-system superra task tree   # install-style smoke test
+uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/superra
 ```
 
-**Optional convenience:** install `superra` as a standalone PATH command. This installs a *snapshot* (does not track source edits), so it is a convenience only, not the canonical path:
+After the wrapper exists, every call (including from subagents) uses `./superRA/superra …`.
+
+**Never run bare `uv run superra` from a research project.** With no package there is no `superra` console entry to discover, and `uv run` (without `--script`) would try to provision that project's environment, which is wrong. Use the wrapper, the bootstrap form above, or the explicit checkout form below.
+
+**Contributor form (local checkout):** run the loose entry script from the edited source so changes are picked up live — see `CLAUDE.md §Local Task-System CLI Development`:
 
 ```bash
-uv tool install ./skills/task-system           # installs the `superra` executable (~/.local/bin/superra)
-uv tool install --force ./skills/task-system   # reinstall to pick up source edits
-uv tool uninstall superra-task-system          # remove
+uv run --script skills/task-system/scripts/cli.py task tree
+uv run --script skills/task-system/scripts/plan_dashboard.py dashboard export --root superRA --output dashboard.html
+python3 skills/task-system/scripts/cli.py task tree   # uv-free fallback (stdlib core)
 ```
 
 ## Data Layer: `_task_io.py`
@@ -114,7 +116,7 @@ It does not use a YAML library — the parser is minimal and purpose-built.
 
 On a match the hook runs the same best-effort reconcile — `validate_plan`, `propagate_parent_status` — each in its own try/except, never blocking, always exit 0. **On a same-parent `mv`/`git mv` rename it also auto-cascades sibling `depends_on`** via `_task_io.cascade_depends_on_rename` (the shared helper `task_rename.py` uses), classified by `_detect_same_parent_rename`: a two-operand move, no flags, same parent, differing slug, both inside a task root, destination is a task. This is the lossless YAML-metadata class — the same kind the hook already auto-writes for status rollups — and it runs before reconcile so `validate_plan` sees the rewired edges and emits no spurious dangling-dependency warning. The auto-rewire is surfaced in the feedback payload so the silent edit is expected by the agent. The auto-cascade is **deliberately scoped to the lossless same-parent rename**: cross-parent moves (a cross-tree edge is inexpressible in the sibling-only model), deletes of a depended-on task (dropping a real edge changes execution ordering), and merges (human controls nuance integration — no `task merge` command) are left to warn via the normal dangling-dependency validation, never silently rewired. The boundary is YAML metadata only — never task content (objectives, results) — and display prefixes are never auto-renumbered. It does not regenerate the dashboard; that happens only on explicit `superra dashboard export`. Validation warnings and non-fatal reconcile failures are collected into a PostToolUse JSON payload with both top-level `additionalContext` and Claude-style `hookSpecificOutput.additionalContext`, emitted on stdout only when there is feedback for the agent; valid edits and ignored fast paths stay silent. See `task_hook.py` for the gating regexes and plan-root discovery, and `hooks/hooks.json` / `hooks/hooks-codex.json` for the wiring.
 
-`hooks/task-hook` is the stable shell entry point the manifests invoke. It is a **generated** file: it embeds the same source-resolution chain as the task-tree wrapper (see §Setup) so the two cannot drift, then forwards stdin to `superra task hook post-tool-use` via `uvx --from <resolved source>`. Both the shim and the wrapper render from `scripts/wrapper_resolver.py`; regenerate the committed shim with `superra wrapper render-hook --output hooks/task-hook` rather than hand-editing it. When `uvx` is unavailable it falls back to a direct `python3 scripts/task_hook.py` run if a local source dir is reachable, else no-ops — it never blocks.
+`hooks/task-hook` is the stable shell entry point the manifests invoke. It is a **generated** file: it embeds the same source-resolution chain as the task-tree wrapper (see §Setup) so the two cannot drift, then forwards stdin to the resolved `scripts/task_hook.py` via `uv run --script` (falling back to `python3 scripts/task_hook.py` when `uv` is unavailable, else no-op — it never blocks). Both the shim and the wrapper render from `scripts/wrapper_resolver.py`; regenerate the committed shim with `superra wrapper render-hook --output hooks/task-hook` rather than hand-editing it (a byte-identity test pins the committed shim to the generator).
 
 `parse_task()` is lenient at parse time: an invalid status enum is **warned** (via `warnings.warn`) and the raw value is preserved, so a single malformed `task.md` never crashes a reader's tree walk (dashboard, `task query`, `task read`). Strict status validation is owned by `task check` (`check_status_validity`), which reports an invalid enum as an `[ERROR]` finding.
 
@@ -223,13 +225,13 @@ Converts `## Steps` (checkboxes) to `## Objective` (prose), removes redundant `#
 The dashboard is a live-updating server (FastAPI + SSE), not a static HTML file.
 
 ```bash
-superra dashboard                                     # installed plugin (via the task-tree wrapper)
-uv run --project skills/task-system superra dashboard  # local checkout
-superra dashboard --foreground                         # block in this terminal
-superra dashboard stop                                 # stop the background server
+superra dashboard                                                       # installed plugin (via the task-tree wrapper)
+uv run --script skills/task-system/scripts/plan_dashboard.py dashboard   # local checkout (loose script)
+superra dashboard --foreground                                          # block in this terminal
+superra dashboard stop                                                  # stop the background server
 ```
 
-Task trees no longer carry a committed `serve` launcher script; the packaged `superra dashboard` command resolves `plan_dashboard.py` itself. Use the `uv run --project skills/task-system` form against a local checkout so edits are picked up from the live source, and the wrapper-resolved `superra dashboard` form for installed plugin sources.
+Task trees no longer carry a committed `serve` launcher script; the wrapper's `dashboard` subcommand routes straight to `plan_dashboard.py` via `uv run --script`. Against a local checkout, run the loose `plan_dashboard.py dashboard …` form so edits are picked up from live source; the wrapper-resolved `superra dashboard` form resolves installed plugin sources. The user-facing `dashboard` surface (`export` / `stop` / default-serve / `artifact`) is translated to `plan_dashboard.py`'s internal `serve` / `stop` / `generate` argv in `cli.py`, which `plan_dashboard.py` delegates to so the translation has one home.
 
 **Lifecycle.** `superra dashboard` is fire-and-forget: it launches the server detached in the background, waits for it to bind, prints the URL + PID + log path, and returns the terminal. A second launch for the same repo reuses the running server (opens a tab, does not spawn a duplicate) rather than starting a second. The server self-exits after 5 continuous minutes with zero open tabs (a live `/events` SSE connection is one open tab, summed across all worktrees; periodic heartbeats prune connections dropped by sleep/network loss), so a detached server always self-cleans within the idle window. `--foreground` runs it blocking in the current terminal with logs on stdout (it also self-exits on idle); `superra dashboard stop` terminates the background server (a clean no-op when nothing is running). The PID and log files (`superra-dashboard.pid` / `.log`) live under the git common dir alongside the port key, so they are repo-scoped and shared across the repo's worktrees.
 
@@ -254,7 +256,7 @@ superra dashboard artifact setup \
   --output .superra-dashboard/dashboard.html
 ```
 
-At runtime the workflow checks out the pushed branch, exports that branch's `superRA/` tree with `uv run --project skills/task-system superra dashboard export`, passes a GitHub blob URL for the triggering commit as the export's file-link base, deletes older artifacts with the same branch-derived artifact name, then uploads the new HTML artifact. Artifact names are `superra-dashboard-<branch-slug>-<ref-hash>` by default; the hash prevents collisions between refs such as `feature/foo` and `feature-foo`.
+At runtime the workflow checks out the pushed branch, exports that branch's `superRA/` tree with `uv run --script skills/task-system/scripts/plan_dashboard.py dashboard export`, passes a GitHub blob URL for the triggering commit as the export's file-link base, deletes older artifacts with the same branch-derived artifact name, then uploads the new HTML artifact. Artifact names are `superra-dashboard-<branch-slug>-<ref-hash>` by default; the hash prevents collisions between refs such as `feature/foo` and `feature-foo`.
 
 This mode is repo-access-gated by GitHub Actions artifact permissions but is not a hosted webpage. Collaborators download the artifact from the workflow run and open the HTML locally.
 
