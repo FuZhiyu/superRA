@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import threading
 from pathlib import Path
 from unittest.mock import patch
 
@@ -103,6 +104,7 @@ def two_worktrees(tmp_path):
     plan_dashboard._worktree_cache.clear()
     plan_dashboard._worktree_clients.clear()
     plan_dashboard._worktree_watchers.clear()
+    plan_dashboard._worktree_stop_events.clear()
     plan_dashboard._worktree_locks.clear()
 
     with patch.object(plan_dashboard, "discover_worktrees", return_value=infos):
@@ -120,6 +122,7 @@ def two_worktrees(tmp_path):
             plan_dashboard._worktree_cache.clear()
             plan_dashboard._worktree_clients.clear()
             plan_dashboard._worktree_watchers.clear()
+            plan_dashboard._worktree_stop_events.clear()
             plan_dashboard._worktree_locks.clear()
 
 
@@ -417,6 +420,80 @@ class TestWatcherLifecycleMultiplexed:
         finally:
             loop.close()
 
+    def test_stop_watcher_closes_native_watcher_thread(self, two_worktrees):
+        """``_stop_watcher`` must tear the watcher down *cooperatively* so
+        watchfiles closes its native ``notify-rs fsevents`` thread/fd on its own
+        terms, not leak it past a hard cancel.
+
+        Root cause of the post-disconnect CPU spin (orchestrator ``sample``
+        diagnostic): the old ``task.cancel()`` teardown unwound the Python
+        ``awatch`` generator without letting it reach its clean ``return``, so
+        ``RustNotify.__exit__`` never ran and the native fsevents source was
+        orphaned, keeping the event loop's kqueue perpetually readable and
+        spinning the loop at full CPU.
+
+        Deterministic gate (the orchestrator's preferred signal over flaky
+        wall-clock CPU): every ``watcher.watch`` call dispatched to the anyio
+        worker thread must have returned by the time ``_stop_watcher`` completes
+        (no lingering native watch call), and the ``awatch`` task must have
+        finished by a *clean return* rather than a cancellation -- a clean
+        return is exactly what runs ``RustNotify.__exit__``.  Under the old
+        ``task.cancel()`` teardown the task ends ``cancelled()``; this assertion
+        is red there and green after the cooperative-stop fix.
+        """
+        import anyio.to_thread
+
+        client, wt_a, wt_b = two_worktrees
+        plan_dashboard.resolve_worktree(_req(f"wt={wt_a}"))
+
+        orig_run_sync = anyio.to_thread.run_sync
+        active = {"n": 0}
+        lock = threading.Lock()
+
+        async def _counting_run_sync(func, *args, **kwargs):
+            is_watch = getattr(func, "__name__", "") == "watch"
+            if is_watch:
+                with lock:
+                    active["n"] += 1
+            try:
+                return await orig_run_sync(func, *args, **kwargs)
+            finally:
+                if is_watch:
+                    with lock:
+                        active["n"] -= 1
+
+        loop = asyncio.new_event_loop()
+
+        async def _test():
+            await plan_dashboard._ensure_watcher(wt_a)
+            task = plan_dashboard._worktree_watchers[wt_a]
+            # Let the native fsevents watch thread actually spin up.
+            await asyncio.sleep(0.8)
+            with lock:
+                assert active["n"] >= 1, "native watcher thread never started"
+
+            await plan_dashboard._stop_watcher(wt_a)
+
+            # Cooperative stop: the awatch task reached its clean return (running
+            # RustNotify.__exit__), so it is *done but not cancelled*, and no
+            # native watch() call is still running.  A hard task.cancel() teardown
+            # ends the task cancelled() and races the native cleanup -> red here.
+            assert task.done()
+            assert not task.cancelled(), (
+                "watcher was hard-cancelled instead of cooperatively stopped; "
+                "RustNotify.__exit__ did not run on its own terms"
+            )
+            with lock:
+                assert active["n"] == 0, "native watch() thread leaked past teardown"
+            assert wt_a not in plan_dashboard._worktree_watchers
+            assert wt_a not in plan_dashboard._worktree_stop_events
+
+        try:
+            with patch.object(anyio.to_thread, "run_sync", _counting_run_sync):
+                loop.run_until_complete(_test())
+        finally:
+            loop.close()
+
 
 # ---------------------------------------------------------------------------
 # 5. Discovery-driven resolve: lazy build + basename-collision disambiguation
@@ -497,6 +574,7 @@ class TestDiscoveryDrivenResolve:
         plan_dashboard._worktree_cache.clear()
         plan_dashboard._worktree_clients.clear()
         plan_dashboard._worktree_watchers.clear()
+        plan_dashboard._worktree_stop_events.clear()
         plan_dashboard._worktree_locks.clear()
 
         with patch.object(plan_dashboard, "discover_worktrees", return_value=infos):

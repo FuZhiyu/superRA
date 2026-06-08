@@ -96,11 +96,15 @@ _project_root: str = ""
 # queue under A and a watcher for A runs only while A has at least one client.
 # ``_worktree_clients`` maps worktree id -> the queues of clients viewing it;
 # ``_worktree_watchers`` maps worktree id -> the awatch task feeding that set;
+# ``_worktree_stop_events`` maps worktree id -> the cooperative-stop Event handed
+# to that task's ``awatch``; setting it lets watchfiles close its native
+# fsevents thread/fd on its own terms instead of leaking it past a hard cancel;
 # ``_worktree_locks`` serializes each worktree's spawn/teardown so a connect and
 # a disconnect cannot race the watcher in or out from under each other.  These
 # locks are separate from task 01's per-state build lock.
 _worktree_clients: dict[str, set[asyncio.Queue[str]]] = {}
 _worktree_watchers: dict[str, asyncio.Task] = {}
+_worktree_stop_events: dict[str, asyncio.Event] = {}
 _worktree_locks: dict[str, asyncio.Lock] = {}
 
 
@@ -428,7 +432,7 @@ def rebuild_worktree_state(wt_id: str) -> WorktreeState | None:
 # ---------------------------------------------------------------------------
 
 
-async def _watch_worktree(wt: str) -> None:
+async def _watch_worktree(wt: str, stop_event: asyncio.Event) -> None:
     """Background coroutine: watch worktree *wt* for task.md changes.
 
     Watches that worktree's ``plan_root`` and routes each change batch through
@@ -436,6 +440,14 @@ async def _watch_worktree(wt: str) -> None:
     WorktreeState and broadcasts the fragments to *wt*'s clients only.  The
     change-detection logic itself lives in ``_rebuild_and_broadcast``; this
     coroutine only parameterizes which worktree's root it watches.
+
+    ``stop_event`` is handed straight to ``awatch`` so teardown is cooperative:
+    setting it lets the watch loop reach its clean ``return``, which runs
+    watchfiles' ``RustNotify.__exit__`` and closes the native fsevents
+    thread/fd.  A hard ``task.cancel()`` instead unwinds the Python generator
+    without that exit, orphaning the native thread; the orphaned fsevents source
+    keeps the event loop's kqueue perpetually readable and spins the loop at
+    full CPU after every disconnect.
     """
     import watchfiles
 
@@ -443,7 +455,7 @@ async def _watch_worktree(wt: str) -> None:
     if state is None:
         return
 
-    async for changes in watchfiles.awatch(state.plan_root):
+    async for changes in watchfiles.awatch(state.plan_root, stop_event=stop_event):
         # watchfiles already debounces (default 1600ms); the sleep adds a
         # short extra window so rapid back-to-back writes coalesce.
         await asyncio.sleep(0.2)
@@ -481,19 +493,68 @@ async def _ensure_watcher(wt: str) -> None:
         existing = _worktree_watchers.get(wt)
         if existing is not None and not existing.done():
             return
-        _worktree_watchers[wt] = asyncio.create_task(_watch_worktree(wt))
+        # Fresh stop event per spawn: a respawn after a crashed/finished watcher
+        # must start with an unset event so the new watch loop is not torn down
+        # by a stale signal from the prior generation.
+        stop_event = asyncio.Event()
+        _worktree_stop_events[wt] = stop_event
+        _worktree_watchers[wt] = asyncio.create_task(_watch_worktree(wt, stop_event))
+
+
+def _is_benign_awatch_teardown_race(exc: BaseException) -> bool:
+    """True for watchfiles' benign ``awatch`` teardown-race artifact only.
+
+    When ``awatch`` is torn down by its ``stop_event`` while the awaiting
+    context is itself unwinding, watchfiles' own ``anyio`` task group can exit
+    with ``UnboundLocalError: ... 'raw_changes'`` (the loop's ``raw_changes`` is
+    unbound when the task group's ``__aexit__`` raises).  By the time this
+    surfaces the native fd is already closed, so it is safe to swallow — but
+    *only* this exact leaf, never a genuine watcher fault.
+    """
+    return isinstance(exc, UnboundLocalError) and "raw_changes" in str(exc)
 
 
 async def _stop_watcher(wt: str) -> None:
-    """Cancel and remove the watcher for *wt* (last client disconnected)."""
+    """Cooperatively stop and remove the watcher for *wt* (last client left).
+
+    Sets the worktree's ``awatch`` stop event instead of cancelling the task, so
+    the watch loop reaches its clean ``return`` and watchfiles closes the native
+    fsevents thread/fd.  Cancelling instead orphaned that native thread and left
+    the event loop spinning on a perpetually-readable kqueue (see
+    ``_watch_worktree``).
+
+    The stop event alone releases the native resources; awaiting the task then
+    just confirms it has unwound and surfaces any genuine watcher crash (a fault
+    in ``_rebuild_and_broadcast`` / tree-parse / disk error) — this ``await`` is
+    the only observer of the watcher task's exception, so it must stay
+    propagating.  The one thing swallowed is watchfiles' own *benign* teardown
+    race: when this runs from inside the disconnecting SSE generator's
+    ``finally`` (the common case), ``awatch`` raises
+    ``UnboundLocalError: ... 'raw_changes'`` from its ``anyio`` task group as it
+    exits (either bare or wrapped in a ``BaseExceptionGroup``).  By then the
+    watcher is gone and its native fd is closed, so that specific leaf is not
+    actionable; swallow only it (so it does not propagate into the ASGI response
+    teardown as a noisy 500-style traceback on every disconnect) and re-raise
+    anything else, so a real watcher crash is never hidden.
+    """
     async with _worktree_lock(wt):
         task = _worktree_watchers.pop(wt, None)
+        stop_event = _worktree_stop_events.pop(wt, None)
     if task is not None:
-        task.cancel()
+        if stop_event is not None:
+            stop_event.set()
         try:
             await task
         except asyncio.CancelledError:
+            # The loop itself is shutting down (e.g. lifespan teardown).
             pass
+        except BaseExceptionGroup as eg:
+            _, rest = eg.split(_is_benign_awatch_teardown_race)
+            if rest is not None:
+                raise rest
+        except BaseException as exc:  # noqa: BLE001 - re-raised unless benign
+            if not _is_benign_awatch_teardown_race(exc):
+                raise
 
 
 # ---------------------------------------------------------------------------
