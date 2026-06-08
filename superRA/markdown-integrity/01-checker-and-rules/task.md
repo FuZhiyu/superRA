@@ -1,6 +1,6 @@
 ---
 title: "Render-Integrity Checker + Rules + Self-Diagnose CLI (report-in-markdown)"
-status: implemented
+status: approved
 depends_on:  []
 tags: []
 created: 2026-06-08
