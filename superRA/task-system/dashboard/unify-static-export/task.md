@@ -30,10 +30,6 @@ Validation:
 - The live `serve` path is unchanged in behavior (its fetch-based partials still work against the server).
 - The dashboard/task-system test suite passes (`uv run pytest skills/task-system/scripts/test_task_system.py` and the live-server tests under `skills/task-system/scripts/tests/`); add or adjust tests so the unified `generate` path is covered (offline render, no `DASHBOARD_HTML`, data embedded inline).
 
-## Revision Notes
-
-Created 2026-05-31 from a researcher-initiated scope change: the duplicate-dashboard bug surfaced while implementing `[hyperlink-styling](../hyperlink-styling/task.md)` (the same CSS had to be patched in both base.html and DASHBOARD_HTML). Researcher chose to **unify onto base.html** (delete DASHBOARD_HTML) and to do this **cleanup before** the link tasks. This task builds the server-less standalone-from-base.html machinery; `[subtree-export](../subtree-export/task.md)` now depends on it for the subtree-scoping increment, and the link tasks are sequenced after it.
-
 ## Results
 
 The duplicate `DASHBOARD_HTML` constant is gone; the static `generate` path now renders the same [`base.html`](../../../../skills/task-system/scripts/templates/base.html) the live server serves, in a new **standalone mode**. There is exactly one dashboard source.
