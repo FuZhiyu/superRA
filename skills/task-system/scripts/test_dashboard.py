@@ -1962,3 +1962,237 @@ class TestWorktreeSelectorLiveRefresh:
         assert m
         body = m.group(0)
         assert "signature === _wtSignature" in body
+
+
+# ---------------------------------------------------------------------------
+# TestFileLinkConsistency — every task-path -> file href derives from the
+# resolved root's absolute path (not a hardcoded `superRA/` under PROJECT_ROOT),
+# so links are correct for a non-default --root, a rootless forest, and a
+# subtree export, while the conventional superRA/ layout stays unchanged.
+# ---------------------------------------------------------------------------
+
+
+def _injected_root_vars(html: str) -> dict[str, str]:
+    """Pull the resolved-root JS vars the page bakes in for the file-link builders."""
+    out = {}
+    for name in ("RESOLVED_ROOT", "ROOT_PREFIX", "PROJECT_ROOT"):
+        m = re.search(rf"var {name} = (.*?);", html)
+        assert m, f"{name} not injected"
+        out[name] = json.loads(m.group(1))
+    return out
+
+
+@pytest.fixture
+def nondefault_root(tmp_path):
+    """A task root NOT named `superRA`, nested one level under a project dir, with
+    an umbrella task.md and a deep child.  Exercises the non-default --root case."""
+    proj = tmp_path / "myproject"
+    root = proj / "tasks"
+    root.mkdir(parents=True)
+    _write_task_md(root / "task.md", "Umbrella", "in-progress",
+                   objective="See [code/main.py:5](code/main.py#L5).")
+    deep = root / "01-alpha" / "01-model"
+    deep.mkdir(parents=True)
+    _write_task_md(deep / "task.md", "Deep", "not-started",
+                   objective="Body link to [run.py:1](run.py#L1).")
+    return root
+
+
+@pytest.fixture
+def forest_root(tmp_path):
+    """A rootless forest: superRA/ with NO umbrella task.md, two top-level trees,
+    one with a deep descendant.  Exercises the synthetic-container (path == "")
+    render/route plus deep file-link resolution."""
+    root = tmp_path / "superRA"
+    (root / "01-alpha" / "01-model").mkdir(parents=True)
+    _write_task_md(root / "01-alpha" / "task.md", "Alpha", "in-progress",
+                   objective="Alpha root.")
+    _write_task_md(root / "01-alpha" / "01-model" / "task.md", "Alpha Model",
+                   "not-started", objective="See [x.py:1](x.py#L1).")
+    (root / "02-beta").mkdir(parents=True)
+    _write_task_md(root / "02-beta" / "task.md", "Beta", "not-started",
+                   objective="Beta root.")
+    assert not (root / "task.md").exists()  # truly rootless
+    return root
+
+
+def _client_for(plan_root):
+    """Build a TestClient pointed at *plan_root* (any basename), launch worktree."""
+    from starlette.testclient import TestClient
+
+    plan_dashboard.PLAN_ROOT = plan_root
+    plan_dashboard._project_root = str(plan_root.resolve().parent)
+    plan_dashboard._jinja_env = None
+    plan_dashboard._worktree_cache.clear()
+    plan_dashboard.rebuild_tree()
+    return TestClient(plan_dashboard.app, raise_server_exceptions=True)
+
+
+class TestFileLinkConsistency:
+    # --- Injected resolved-root template vars -----------------------------
+
+    def test_index_injects_resolved_root_for_nondefault_root(self, nondefault_root):
+        """The page bakes in the resolved root's absolute path and basename — the
+        single base every file-link builder prepends instead of a literal
+        `superRA/` under PROJECT_ROOT."""
+        with _client_for(nondefault_root) as c:
+            v = _injected_root_vars(c.get("/").text)
+        assert v["RESOLVED_ROOT"] == str(nondefault_root.resolve())
+        assert v["ROOT_PREFIX"] == "tasks"  # basename, NOT "superRA"
+        # PROJECT_ROOT is the parent, so the OLD `PROJECT_ROOT + '/superRA/'`
+        # reconstruction would have pointed at a nonexistent superRA/ dir.
+        assert v["PROJECT_ROOT"] == str(nondefault_root.resolve().parent)
+        assert not (Path(v["PROJECT_ROOT"]) / "superRA").exists()
+
+    def test_nondefault_root_task_link_resolves_on_disk(self, nondefault_root):
+        """taskFileVscodeHref(path) == RESOLVED_ROOT + '/' + path + '/task.md'
+        must name a real file for a non-default root (the deep task.md)."""
+        with _client_for(nondefault_root) as c:
+            v = _injected_root_vars(c.get("/").text)
+        built = Path(v["RESOLVED_ROOT"]) / "01-alpha/01-model" / "task.md"
+        assert built.resolve() == (nondefault_root / "01-alpha/01-model/task.md").resolve()
+        assert built.is_file()
+        # In-body relative-link base: RESOLVED_ROOT + '/' + taskPath + '/' + href.
+        body_target = Path(v["RESOLVED_ROOT"]) / "01-alpha/01-model" / "run.py"
+        assert body_target.parent.is_dir()  # the dir the relative link resolves into
+
+    def test_builders_use_resolved_root_not_hardcoded_superra(self):
+        """The link builders prepend RESOLVED_ROOT/ROOT_PREFIX, not a literal
+        `superRA/` under PROJECT_ROOT — guards the delink against regression."""
+        # taskFileVscodeHref: local link off RESOLVED_ROOT, GitHub off ROOT_PREFIX.
+        m = re.search(r"function taskFileVscodeHref\(path\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert m
+        fn = m.group(0)
+        assert "vscode://file/' + RESOLVED_ROOT + '/'" in fn
+        assert "ROOT_PREFIX ? ROOT_PREFIX + '/' : ''" in fn
+        assert "/superRA/" not in fn  # no hardcoded path segment
+        # renderMarkdown in-body base also derives from RESOLVED_ROOT/ROOT_PREFIX.
+        assert "vscode://file/' + RESOLVED_ROOT + '/' + filePath" in BASE_HTML
+        assert "var repoPathPrefix = rootRel + taskDirRel;" in BASE_HTML
+        # The old hardcoded prefixes are gone from the builders.
+        assert "'superRA/' + path + '/task.md'" not in BASE_HTML
+        assert "pathPrefix = taskPath ? 'superRA/'" not in BASE_HTML
+
+    # --- Forest render / route / link -------------------------------------
+
+    def test_forest_index_and_nav_render(self, forest_root):
+        """A rootless forest renders (synthetic container, path == "") and the nav
+        lists every independent top-level tree."""
+        with _client_for(forest_root) as c:
+            assert c.get("/").status_code == 200
+            nav = c.get("/nav")
+            assert nav.status_code == 200
+            assert "01-alpha" in nav.text and "02-beta" in nav.text
+
+    def test_forest_deep_node_routes_and_links_resolve(self, forest_root):
+        """A deep forest task routes by its resolved-root-relative path and its
+        task-file link resolves to a real on-disk file (the descended-path bug
+        would have dropped the `01-alpha` segment)."""
+        with _client_for(forest_root) as c:
+            assert c.get("/node/01-alpha/01-model").status_code == 200
+            v = _injected_root_vars(c.get("/").text)
+        built = Path(v["RESOLVED_ROOT"]) / "01-alpha/01-model" / "task.md"
+        assert built.resolve() == (forest_root / "01-alpha/01-model/task.md").resolve()
+        assert built.is_file()
+
+    def test_forest_synthetic_root_renders_and_routes(self, forest_root):
+        """The synthetic container root (no umbrella task.md, path == "") renders
+        as the empty-path root node and is reachable via /node/ so deep-linking /
+        setActive('') back to the container works."""
+        with _client_for(forest_root) as c:
+            html = c.get("/").text
+            # The empty-path root node is embedded (id falls back to `task-root`).
+            assert 'id="task-root"' in html
+            # The container's own /node/ (empty path) route resolves.
+            assert c.get("/node/").status_code == 200
+        # The breadcrumb builds a clickable `root` crumb that ascends via
+        # setActive('') — the entry point that returns to the container.
+        assert "addCrumb('root', '', segs.length === 0)" in BASE_HTML
+
+    # --- Subtree export resolved-root basis -------------------------------
+
+    def test_subtree_export_resolved_root_is_subtree_dir(self, plan_root):
+        """A --root subtree export re-bases paths to the subtree, so RESOLVED_ROOT
+        must be the subtree dir (not the full plan root) — else re-based links
+        drop the subtree segment and point at missing files."""
+        plan_dashboard._jinja_env = None
+        # Give the subtree a child so a re-based deep path exists.
+        sub = plan_root / "01-first" / "01-leaf"
+        sub.mkdir()
+        _write_task_md(sub / "task.md", "Leaf", "not-started", objective="x.")
+        html = plan_dashboard.render_standalone_html(plan_root, root="01-first")
+        v = _injected_root_vars(html)
+        assert v["RESOLVED_ROOT"] == str((plan_root / "01-first").resolve())
+        # Re-based "01-leaf/task.md" resolves under the subtree dir, on disk.
+        built = Path(v["RESOLVED_ROOT"]) / "01-leaf" / "task.md"
+        assert built.resolve() == (sub / "task.md").resolve()
+        assert built.is_file()
+
+    # --- Conventional layout unchanged ------------------------------------
+
+    def test_conventional_superra_layout_unchanged(self, plan_root):
+        """With an umbrella superRA/task.md, RESOLVED_ROOT is the superRA dir and
+        ROOT_PREFIX is `superRA` — the conventional links keep resolving exactly
+        as before the delink."""
+        with _client_for(plan_root) as c:
+            v = _injected_root_vars(c.get("/").text)
+        assert v["RESOLVED_ROOT"] == str(plan_root.resolve())
+        assert v["ROOT_PREFIX"] == "superRA"
+        built = Path(v["RESOLVED_ROOT"]) / "01-first" / "task.md"
+        assert built.is_file()
+
+    # --- Server vscode_link filter ----------------------------------------
+
+    def test_vscode_link_filter_joins_resolved_root(self, plan_root):
+        """The server vscode_link filter joins whatever base it is handed with the
+        path (no hardcoded `superRA/`): handed the resolved root, it yields a real
+        file URI; the conventional and non-default roots behave identically."""
+        plan_dashboard.PLAN_ROOT = plan_root
+        plan_dashboard._jinja_env = None
+        env = plan_dashboard._get_jinja_env()
+        vscode_link = env.filters["vscode_link"]
+        resolved = str(plan_root.resolve())
+        result = vscode_link("01-first/task.md", resolved)
+        assert result == f"vscode://file/{resolved}/01-first/task.md"
+        # Non-default root: same join, no `superRA/` assumption baked into the filter.
+        other = "/tmp/myproject/tasks"
+        assert vscode_link("01-alpha/task.md", other) == (
+            "vscode://file//tmp/myproject/tasks/01-alpha/task.md"
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestWorktreeRootFollowing — RESOLVED_ROOT / ROOT_PREFIX follow the active
+# worktree (each worktree's root may sit at a different path / basename), like
+# PROJECT_ROOT, so file links stay correct after a ?wt= switch.
+# ---------------------------------------------------------------------------
+
+
+class TestWorktreeRootFollowing:
+    def test_worktrees_endpoint_exposes_plan_root(self, two_worktree_client):
+        """/api/worktrees carries each plan-bearing worktree's absolute plan_root
+        so the client can re-point RESOLVED_ROOT per ?wt= (file links follow the
+        active tab).  The endpoint enumerates the real git worktrees; the contract
+        under test is the per-entry plan_root field, not the seeded fixture ids."""
+        client, _wt_a, _wt_b = two_worktree_client
+        data = client.get("/api/worktrees").json()
+        with_plan = [e for e in data["worktrees"] if e.get("has_plan")]
+        assert with_plan, "expected at least one plan-bearing worktree"
+        for e in with_plan:
+            assert "plan_root" in e, "each plan-bearing entry carries plan_root"
+            assert Path(e["plan_root"]).is_absolute()
+            # plan_root is the resolved task root, distinct from the worktree path.
+            assert e["plan_root"] != e["path"]
+
+    def test_fetch_worktrees_repoints_resolved_root(self):
+        """fetchWorktrees indexes plan_root per wt_id and re-points RESOLVED_ROOT /
+        ROOT_PREFIX to the active worktree, guarded for standalone (empty list)."""
+        m = re.search(r"function fetchWorktrees\(\)\s*\{.*?\n\}", BASE_HTML, re.S)
+        assert m
+        fn = m.group(0)
+        assert "_wtResolvedRoots[wt.wt_id || ''] = wt.plan_root || '';" in fn
+        assert "RESOLVED_ROOT = resolved;" in fn
+        # ROOT_PREFIX is recomputed from the active worktree's resolved root.
+        assert "ROOT_PREFIX = resolved.split('/')" in fn
+        # Non-empty guard preserves the baked-in roots in standalone mode.
+        assert "if (resolved) {" in fn

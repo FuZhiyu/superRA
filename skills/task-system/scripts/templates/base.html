@@ -1648,6 +1648,13 @@ window.STANDALONE = false;
 var md = window.markdownit({ html: false, linkify: true });
 md.use(texmath, { engine: katex, delimiters: 'dollars' });
 var PROJECT_ROOT = {{ project_root | tojson }};
+/* Absolute path of the resolved task root (the dir the CLI/dashboard resolved
+   via --root / auto-detect), and its basename. Every task-path -> file href is
+   built from these instead of a hardcoded `superRA/` under PROJECT_ROOT, so
+   links resolve for an arbitrary --root and a rootless forest. RESOLVED_ROOT
+   follows the active worktree in fetchWorktrees, like PROJECT_ROOT. */
+var RESOLVED_ROOT = {{ resolved_root | default('') | tojson }};
+var ROOT_PREFIX = {{ root_prefix | default('') | tojson }};
 var REPO_FILE_BASE = {{ repo_file_base | default('') | tojson }};
 
 /* ── Active worktree (the ?wt= dimension of the URL) ──
@@ -1709,14 +1716,21 @@ function resolveInternalTaskPath(href, taskPath) {
   var clean = href.replace(/[?#].*$/, '');
   if (!clean) return null;
 
-  /* Base segments: the directory of the active task. An absolute `superRA/...`
-     href resolves from the tree root instead of the active task's dir. Legacy
-     `.plan/...` links resolve the same way for migrated task prose. */
+  /* Base segments: the directory of the active task. An href rooted at the
+     resolved root's name (ROOT_PREFIX, e.g. `superRA/...`) resolves from the
+     tree root instead of the active task's dir. The literal `superRA/` and
+     legacy `.plan/` prefixes stay accepted for any root and migrated prose. */
   var segs;
-  if (clean.indexOf('superRA/') === 0) {
-    segs = clean.slice('superRA/'.length).split('/');
-  } else if (clean.indexOf('.plan/') === 0) {
-    segs = clean.slice('.plan/'.length).split('/');
+  var rootRoots = [];
+  if (ROOT_PREFIX) rootRoots.push(ROOT_PREFIX + '/');
+  if (rootRoots.indexOf('superRA/') === -1) rootRoots.push('superRA/');
+  if (rootRoots.indexOf('.plan/') === -1) rootRoots.push('.plan/');
+  var matchedRoot = null;
+  for (var ri = 0; ri < rootRoots.length; ri++) {
+    if (clean.indexOf(rootRoots[ri]) === 0) { matchedRoot = rootRoots[ri]; break; }
+  }
+  if (matchedRoot !== null) {
+    segs = clean.slice(matchedRoot.length).split('/');
   } else if (clean.charAt(0) === '/') {
     return null;  /* filesystem-absolute, not a tree path */
   } else {
@@ -1744,7 +1758,7 @@ function resolveInternalTaskPath(href, taskPath) {
 /**
  * Render markdown text via markdown-it, then post-process:
  * - In-tree task references -> internal hash navigation (#/<task-path>)
- * - Other relative file paths -> vscode://file/{project_root}/{path}
+ * - Other relative file paths -> vscode://file/{resolved_root}/{task-rel path}
  * - Image src -> /files/{src}
  * - Wrap each block-level element in a .commentable-block container
  *   with data-section and data-block attributes (when sectionName given)
@@ -1754,8 +1768,15 @@ function renderMarkdown(text, sectionName, taskPath) {
   var container = document.createElement('div');
   container.innerHTML = html;
 
-  /* Base directory for resolving relative paths within a task */
-  var pathPrefix = taskPath ? 'superRA/' + taskPath + '/' : '';
+  /* Base directory for resolving relative paths within a task, derived from the
+     resolved task root (any --root, not just `superRA`). Two bases:
+     - taskDirRel: the task's dir relative to the resolved root (`taskPath/`),
+       prepended to RESOLVED_ROOT (absolute) for the local vscode://file link.
+     - repoPathPrefix: the same path prefixed with the root's repo-relative name
+       (ROOT_PREFIX), passed to repoFileHref for the GitHub branch. */
+  var taskDirRel = taskPath ? taskPath + '/' : '';
+  var rootRel = ROOT_PREFIX ? ROOT_PREFIX + '/' : '';
+  var repoPathPrefix = rootRel + taskDirRel;
 
   /* Rewrite relative links. A relative href that resolves to a real task in
      this tree becomes an internal hash link (#/<task-path>) so it focuses that
@@ -1773,17 +1794,17 @@ function renderMarkdown(text, sectionName, taskPath) {
         /* Genuine file link. GitHub artifact exports keep GitHub-style anchors;
            local/editor links translate those anchors to VS Code's path:line[:col]
            form because vscode://file ignores a #L... fragment. */
-        var filePath = pathPrefix + href;
         if (REPO_FILE_BASE) {
-          a.setAttribute('href', repoFileHref(filePath));
+          a.setAttribute('href', repoFileHref(repoPathPrefix + href));
         } else {
+          var filePath = taskDirRel + href;
           var loc = '';
           var lm = filePath.match(/#L(\d+)(?:C(\d+))?(?:-L?\d+(?:C\d+)?)?$/);
           if (lm) {
             loc = ':' + lm[1] + (lm[2] ? ':' + lm[2] : '');
             filePath = filePath.slice(0, lm.index);
           }
-          a.setAttribute('href', 'vscode://file/' + PROJECT_ROOT + '/' + filePath + loc);
+          a.setAttribute('href', 'vscode://file/' + RESOLVED_ROOT + '/' + filePath + loc);
         }
         a.setAttribute('target', '_blank');
       }
@@ -2276,14 +2297,16 @@ var VSCODE_ICON =
   + 'l4.12-3.128 9.46 8.63a1.492 1.492 0 0 0 1.704.29l4.942-2.377A1.5 1.5 0 0 0 24 20.06'
   + 'V3.939a1.5 1.5 0 0 0-.85-1.352zm-5.146 14.861L10.826 12l7.178-5.448z"/></svg>';
 
-/* vscode://file deep-link to a task's task.md. Mirrors renderMarkdown's
-   `superRA/<path>/` prefix so it points at the same on-disk file the body's
-   relative links resolve against. */
+/* vscode://file deep-link to a task's task.md. Derives from the resolved task
+   root (RESOLVED_ROOT absolute for local links, ROOT_PREFIX repo-relative for
+   the GitHub branch) so it points at the same on-disk file the body's relative
+   links resolve against, for any root — not just a `superRA/` under PROJECT_ROOT. */
 function taskFileVscodeHref(path) {
+  var rel = (path ? path + '/' : '') + 'task.md';
   if (REPO_FILE_BASE) {
-    return repoFileHref('superRA/' + (path ? path + '/' : '') + 'task.md');
+    return repoFileHref((ROOT_PREFIX ? ROOT_PREFIX + '/' : '') + rel);
   }
-  return 'vscode://file/' + PROJECT_ROOT + '/superRA/' + (path ? path + '/' : '') + 'task.md';
+  return 'vscode://file/' + RESOLVED_ROOT + '/' + rel;
 }
 
 async function loadActiveNode(path) {
@@ -3718,6 +3741,9 @@ var _launchWtId = '';
 /* path (project root) of each worktree by its wt_id, so PROJECT_ROOT can follow
    the active ?wt= without another round-trip. */
 var _wtProjectRoots = {};
+/* resolved task-root absolute path of each worktree by its wt_id, so
+   RESOLVED_ROOT / ROOT_PREFIX (the file-link base) can follow the active ?wt=. */
+var _wtResolvedRoots = {};
 
 /* Signature of the last-rendered worktree option set (ids + labels + active
    id). Lets a refresh-on-open re-fetch skip the innerHTML rebuild when nothing
@@ -3781,19 +3807,28 @@ function fetchWorktrees() {
     .then(function(data) {
       if (!data) return;
       _launchWtId = data.launch_wt_id || '';
-      /* Index each worktree's project root by its ?wt= token so PROJECT_ROOT can
-         follow the active worktree. */
+      /* Index each worktree's project root and resolved task root by its ?wt=
+         token so PROJECT_ROOT / RESOLVED_ROOT / ROOT_PREFIX can follow the
+         active worktree (each worktree's root may sit at a different path and
+         even a different basename). */
       _wtProjectRoots = {};
+      _wtResolvedRoots = {};
       data.worktrees.forEach(function(wt) {
         _wtProjectRoots[wt.wt_id || ''] = wt.path;
+        _wtResolvedRoots[wt.wt_id || ''] = wt.plan_root || '';
       });
-      /* Point PROJECT_ROOT at the URL's worktree so every vscode://file/ href
-         resolves against the worktree this tab is bound to. The non-empty guard
-         preserves the baked-in root in standalone (file://) mode, where the
-         fetch shim returns an empty worktree list. */
+      /* Point PROJECT_ROOT / RESOLVED_ROOT at the URL's worktree so every
+         vscode://file/ href resolves against the worktree this tab is bound to.
+         The non-empty guard preserves the baked-in roots in standalone (file://)
+         mode, where the fetch shim returns an empty worktree list. */
       var activeId = ACTIVE_WT || _launchWtId;
       var root = _wtProjectRoots[activeId];
       if (root) PROJECT_ROOT = root;
+      var resolved = _wtResolvedRoots[activeId];
+      if (resolved) {
+        RESOLVED_ROOT = resolved;
+        ROOT_PREFIX = resolved.split('/').filter(function(s) { return s; }).pop() || '';
+      }
       populateWorktreeSelector(data);
     })
     .catch(function() { /* graceful: hide selector */ });

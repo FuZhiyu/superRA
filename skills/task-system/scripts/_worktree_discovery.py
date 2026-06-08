@@ -151,6 +151,18 @@ def _parse_porcelain(output: str) -> list[dict[str, str]]:
     return blocks
 
 
+def _is_task_root(candidate: Path) -> bool:
+    """True if *candidate* is a valid task root: it holds an umbrella ``task.md``
+    (single tree) or at least one immediate child task dir (a rootless forest)."""
+    if (candidate / "task.md").is_file():
+        return True
+    try:
+        children = candidate.iterdir()
+    except OSError:
+        return False
+    return any(d.is_dir() and (d / "task.md").is_file() for d in children)
+
+
 def _find_plan_root(worktree_path: str, preferred_dirname: str) -> tuple[Path, str | None] | tuple[None, None]:
     dirnames = [preferred_dirname]
     for dirname in (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME):
@@ -158,7 +170,7 @@ def _find_plan_root(worktree_path: str, preferred_dirname: str) -> tuple[Path, s
             dirnames.append(dirname)
     for dirname in dirnames:
         candidate = Path(worktree_path) / dirname
-        if (candidate / "task.md").is_file():
+        if _is_task_root(candidate):
             return candidate, dirname
     return None, None
 

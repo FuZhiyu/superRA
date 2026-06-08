@@ -1160,7 +1160,7 @@ class TestDashboard:
         Guards the renderMarkdown anchor-translation logic against removal."""
         src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
         assert "match(/#L" in src
-        assert "repoFileHref(filePath)" in src
+        assert "repoFileHref(repoPathPrefix + href)" in src
 
     def test_build_standalone_fragments_match_server_routes(self, plan_root):
         """Pre-rendered fragments are byte-identical to the live route output."""
@@ -2330,7 +2330,7 @@ class TestTaskRead:
 
     def test_autodetect_plan_root(self, plan_root):
         """Auto-detect plan root from a subdirectory inside the plan."""
-        detected = task_read._autodetect_plan_root(plan_root / "01-first")
+        detected = task_read.autodetect_plan_root(plan_root / "01-first")
         assert detected == plan_root
 
     def test_autodetect_plan_root_from_repo_subdirectory(self, plan_root):
@@ -2338,12 +2338,12 @@ class TestTaskRead:
         repo_dir = plan_root.parent
         nested = repo_dir / "skills" / "task-system"
         nested.mkdir(parents=True)
-        detected = task_read._autodetect_plan_root(nested)
+        detected = task_read.autodetect_plan_root(nested)
         assert detected == plan_root
 
     def test_autodetect_returns_none_outside_plan(self, tmp_path):
         """Returns None when called from a directory with no task.md ancestry."""
-        detected = task_read._autodetect_plan_root(tmp_path)
+        detected = task_read.autodetect_plan_root(tmp_path)
         assert detected is None
 
     def test_no_ancestors_in_json(self, plan_root):
@@ -4767,3 +4767,175 @@ class TestBackgroundLaunch:
             assert not plan_dashboard._port_serving(port)
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
+
+
+# ---------------------------------------------------------------------------
+# Canonical path basis: paths are relative to the resolved root, with forest
+# support (regression for the descend bug that dropped a leading segment when
+# <root>/task.md was absent).
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def forest_root(tmp_path):
+    """A rootless forest: a superRA/ dir with no umbrella task.md, holding two
+    independent top-level trees, each with descendants."""
+    root = tmp_path / "superRA"
+    root.mkdir()
+
+    # Tree A: 01-alpha with a child and grandchild.
+    a = root / "01-alpha"
+    a.mkdir()
+    _write_task_md(a / "task.md", "Alpha", "in-progress", objective="Alpha root.")
+    a1 = a / "01-model"
+    a1.mkdir()
+    _write_task_md(a1 / "task.md", "Alpha Model", "not-started", objective="Model.")
+    a1a = a1 / "01-derive"
+    a1a.mkdir()
+    _write_task_md(a1a / "task.md", "Derive", "not-started", objective="Derive it.")
+
+    # Tree B: 02-beta with a child.
+    b = root / "02-beta"
+    b.mkdir()
+    _write_task_md(b / "task.md", "Beta", "not-started", objective="Beta root.")
+    b1 = b / "01-data"
+    b1.mkdir()
+    _write_task_md(b1 / "task.md", "Beta Data", "not-started", objective="Data.")
+
+    return root
+
+
+class TestCanonicalPathBasisForest:
+    def test_parse_task_path_is_root_relative_with_known_root(self, forest_root):
+        """parse_task(plan_root=...) keeps the top-level segment for forest tasks."""
+        deep = forest_root / "01-alpha" / "01-model" / "01-derive" / "task.md"
+        t = _task_io.parse_task(deep, forest_root)
+        assert t.path == "01-alpha/01-model/01-derive"
+
+    def test_parse_task_path_is_root_relative_bare(self, forest_root):
+        """A bare parse (no plan_root) agrees with the known-root walk: the
+        corrected _find_plan_root stops at the superRA/ task-root dir."""
+        deep = forest_root / "01-alpha" / "01-model" / "01-derive" / "task.md"
+        t = _task_io.parse_task(deep)
+        assert t.path == "01-alpha/01-model/01-derive"
+
+    def test_walk_plan_no_collision_in_forest(self, forest_root):
+        """Both top-level trees retain distinct, non-empty root-relative paths --
+        the old descend made every top-level tree path == '' (a collision)."""
+        root = _task_io.walk_plan(forest_root)
+        assert root.path == ""  # synthetic container
+        top_paths = sorted(c.path for c in root.children)
+        assert top_paths == ["01-alpha", "02-beta"]
+        # Deep paths keep their full prefix.
+        all_paths = {t.path for t in _task_io.collect_all_tasks(root)}
+        assert "01-alpha/01-model" in all_paths
+        assert "01-alpha/01-model/01-derive" in all_paths
+        assert "02-beta/01-data" in all_paths
+
+    def test_resolve_path_round_trips_forest(self, forest_root):
+        """resolve_path(root, path) returns the on-disk dir for every task path."""
+        root = _task_io.walk_plan(forest_root)
+        for t in _task_io.collect_all_tasks(root):
+            resolved = _task_io.resolve_path(forest_root, t.path)
+            assert resolved == t.dir_path.resolve()
+
+    def test_conventional_layout_unchanged(self, plan_root):
+        """With an umbrella <root>/task.md, paths are exactly as before:
+        root '' and children carry their own slug."""
+        root = _task_io.walk_plan(plan_root)
+        assert root.path == ""
+        assert root.title == "Test Project"
+        assert sorted(c.path for c in root.children) == ["01-first", "02-second", "03-third"]
+        # Bare parse of a conventional child also stays correct.
+        t = _task_io.parse_task(plan_root / "01-first" / "task.md")
+        assert t.path == "01-first"
+
+
+class TestForestDetection:
+    def test_autodetect_resolves_forest_from_repo_root(self, forest_root):
+        """A rootless forest is auto-detected from its containing repo dir."""
+        repo = forest_root.parent
+        detected = _task_io.autodetect_plan_root(repo)
+        assert detected == forest_root
+
+    def test_autodetect_resolves_forest_from_inside_root(self, forest_root):
+        """Auto-detect also works when invoked from inside the forest root."""
+        detected = _task_io.autodetect_plan_root(forest_root / "01-alpha")
+        assert detected.resolve() == forest_root.resolve()
+
+    def test_worktree_discovery_keeps_forest_root(self, forest_root):
+        """_worktree_discovery._find_plan_root accepts a forest (no umbrella
+        task.md), so filter_worktrees keeps a forest-root worktree."""
+        import _worktree_discovery as wd
+
+        worktree_path = str(forest_root.parent)
+        found, dirname = wd._find_plan_root(worktree_path, "superRA")
+        assert found is not None
+        assert found.name == "superRA"
+        assert dirname == "superRA"
+
+        # A WorktreeInfo built around this root must survive filter_worktrees.
+        info = wd.WorktreeInfo(
+            path=worktree_path, branch="b", head="abc", plan_root=str(found),
+            plan_title=None, is_current=False, is_locked=False,
+            is_prunable=False, is_agent=False, last_activity=None,
+        )
+        kept = wd.filter_worktrees([info], require_plan=True)
+        assert kept == [info]
+
+    def test_task_check_clean_on_forest(self, forest_root):
+        """task_check runs and the single-child placement smell does not fire on
+        a legitimate multi-top-level forest."""
+        findings = task_check.run_checks(forest_root)
+        placement = [f for f in findings if f.category == "placement"]
+        assert all("single-child root" not in f.message for f in placement)
+
+    def test_task_check_single_top_level_forest_no_smell(self, tmp_path):
+        """A forest with exactly one top-level tree must not trip the
+        single-child-root wrapper smell (which targets real root tasks)."""
+        root = tmp_path / "superRA"
+        (root / "01-only").mkdir(parents=True)
+        _write_task_md(root / "01-only" / "task.md", "Only", "not-started",
+                       objective="Only tree.")
+        findings = task_check.run_checks(root, category="placement")
+        assert all("single-child root" not in f.message for f in findings)
+
+    def test_task_check_paths_root_relative_on_forest(self, forest_root):
+        """task_check's own walk reports root-relative paths (its happy path no
+        longer descends past the resolved root)."""
+        root = task_check._walk_plan_tolerant(forest_root)
+        all_paths = {t.path for t in _task_io.collect_all_tasks(root)}
+        assert "01-alpha/01-model/01-derive" in all_paths
+        assert "02-beta/01-data" in all_paths
+
+    def test_task_query_autodetect_resolves_forest(self, forest_root):
+        """task_query's auto-detect (shared with task_read after dedup) resolves a
+        rootless forest from the repo root and from inside the root -- the read
+        commands (tree/frontier/dag/list) all route through this."""
+        repo = forest_root.parent
+        assert task_query.autodetect_plan_root(repo) == forest_root
+        from_inside = task_query.autodetect_plan_root(forest_root / "01-alpha")
+        assert from_inside.resolve() == forest_root.resolve()
+
+    def test_task_query_main_tree_runs_on_forest(self, forest_root, monkeypatch, capsys):
+        """`task tree --json` drives the full CLI read path on a forest without
+        --plan-root: it must not error and must report root-relative top-level
+        paths (this is the path finding 1's stale copy broke)."""
+        monkeypatch.chdir(forest_root.parent)
+        task_query.main(["--tree", "--json"])
+        out = capsys.readouterr().out
+        data = json.loads(out)
+        top_paths = sorted(c["path"] for c in data["children"])
+        assert top_paths == ["01-alpha", "02-beta"]
+
+    def test_task_query_main_frontier_runs_on_forest_from_inside(self, forest_root, monkeypatch, capsys):
+        """`task frontier --json` auto-detects the forest even when invoked from
+        inside a top-level tree dir, with no --plan-root."""
+        monkeypatch.chdir(forest_root / "01-alpha")
+        task_query.main(["--frontier", "--json"])
+        out = capsys.readouterr().out
+        frontier = json.loads(out)
+        paths = {t["path"] for t in frontier}
+        # Frontier tasks keep their full root-relative prefix.
+        assert "01-alpha/01-model/01-derive" in paths
+        assert "02-beta/01-data" in paths

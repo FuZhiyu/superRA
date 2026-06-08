@@ -11,8 +11,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from _comments import LegacyCommentFormatError, anchored_block, load_comments
 from _task_io import (
-    TASK_ROOT_DIRNAMES,
     Task,
+    autodetect_plan_root,
     parse_body_sections,
     parse_frontmatter,
     parse_task,
@@ -20,36 +20,6 @@ from _task_io import (
     walk_plan,
 )
 from task_query import format_focused_tree
-
-
-# ---------------------------------------------------------------------------
-# Plan-root auto-detection
-# ---------------------------------------------------------------------------
-
-def _autodetect_plan_root(start: Path) -> Path | None:
-    """Walk up from *start* looking for the plan root.
-
-    The plan root is the highest directory in the chain that contains a
-    task.md whose *parent* does not contain a task.md (i.e. the root task
-    has no task.md above it).
-    """
-    current = start.resolve()
-    while True:
-        for dirname in TASK_ROOT_DIRNAMES:
-            candidate = current / dirname
-            if (candidate / "task.md").exists():
-                return candidate
-        if (current / "task.md").exists():
-            parent = current.parent
-            if not (parent / "task.md").exists():
-                return current
-            current = parent
-        else:
-            # Walk up until we find a task.md
-            parent = current.parent
-            if parent == current:
-                return None
-            current = parent
 
 
 # ---------------------------------------------------------------------------
@@ -67,11 +37,11 @@ def _collect_ancestors(plan_root: Path, target_path: str) -> list[Task]:
         current_dir = current_dir / parts[i]
         task_md = current_dir / "task.md"
         if task_md.exists():
-            ancestors.append(parse_task(task_md))
+            ancestors.append(parse_task(task_md, plan_root))
     # Also include root if it exists and target is not root
     root_md = plan_root / "task.md"
     if root_md.exists():
-        root_task = parse_task(root_md)
+        root_task = parse_task(root_md, plan_root)
         ancestors.insert(0, root_task)
     # deduplicate (root might have been added twice if parts[0] == plan_root)
     seen: list[str] = []
@@ -122,7 +92,7 @@ def _sibling_map(plan_root: Path, target_task: Task) -> dict[str, Task]:
         if subdir.is_dir() and (subdir / "task.md").exists():
             slug = subdir.name
             if slug != target_task.slug:
-                siblings[slug] = parse_task(subdir / "task.md")
+                siblings[slug] = parse_task(subdir / "task.md", plan_root)
     return siblings
 
 
@@ -425,7 +395,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.plan_root:
         plan_root = Path(args.plan_root).resolve()
     else:
-        detected = _autodetect_plan_root(Path.cwd())
+        detected = autodetect_plan_root(Path.cwd())
         if detected is None:
             print(
                 "Error: could not auto-detect plan root. Use --plan-root.",
@@ -450,7 +420,7 @@ def main(argv: list[str] | None = None) -> None:
         print(f"Error: task.md not found at {task_md}", file=sys.stderr)
         sys.exit(1)
 
-    target_task = parse_task(task_md)
+    target_task = parse_task(task_md, plan_root)
 
     # Collect ancestors
     show_ancestors = not args.no_ancestors

@@ -27,21 +27,45 @@ def default_plan_root() -> Path:
     return Path(TASK_ROOT_DIRNAME)
 
 
+def _has_child_task_dir(directory: Path) -> bool:
+    """True if *directory* holds at least one immediate subdir with a ``task.md``."""
+    try:
+        children = directory.iterdir()
+    except OSError:
+        return False
+    return any(d.is_dir() and (d / "task.md").is_file() for d in children)
+
+
+def _is_task_root_dir(directory: Path) -> bool:
+    """True if *directory* is a valid task root: a ``TASK_ROOT_DIRNAMES`` member
+    that either holds an umbrella ``task.md`` (single tree) or at least one child
+    task dir (a rootless forest). A forest needs no umbrella ``task.md``."""
+    if directory.name not in TASK_ROOT_DIRNAMES:
+        return False
+    return (directory / "task.md").is_file() or _has_child_task_dir(directory)
+
+
 def autodetect_plan_root(start: Path | None = None) -> Path | None:
     """Walk up from *start* and find the active task root.
 
-    Prefers ``superRA/`` over the legacy ``.plan/`` when both are visible from
-    a repository directory, and also works when called from inside a task root.
+    Recognizes both layouts: an umbrella ``<root>/task.md`` (single tree) and a
+    rootless forest (a ``superRA``/``.plan`` dir holding top-level task dirs with
+    no umbrella ``task.md``). Prefers ``superRA/`` over the legacy ``.plan/`` when
+    both are visible, and also works when called from inside a task root.
     """
     current = (start or Path.cwd()).resolve()
     while True:
         for dirname in TASK_ROOT_DIRNAMES:
             candidate = current / dirname
-            if (candidate / "task.md").exists():
+            if _is_task_root_dir(candidate):
                 return candidate
+        if _is_task_root_dir(current):
+            return current
         if (current / "task.md").exists():
             parent = current.parent
-            if not (parent / "task.md").exists():
+            # Keep climbing toward a task-root-dir ancestor (e.g. a forest root
+            # with no umbrella task.md); only stop here when there is none above.
+            if not (parent / "task.md").exists() and parent.name not in TASK_ROOT_DIRNAMES:
                 return current
         parent = current.parent
         if parent == current:
@@ -277,17 +301,28 @@ def _to_list(val: str | list[str]) -> list[str]:
     return [val]
 
 
-def parse_task(task_md_path: Path) -> Task:
-    """Parse a task.md file into a Task object."""
+def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
+    """Parse a task.md file into a Task object.
+
+    ``path`` is always relative to the *resolved task root*. Pass ``plan_root``
+    when the caller already resolved it (every tree walk and CLI command does) so
+    the path is computed as ``task_dir.relative_to(plan_root)`` — never re-derived
+    by descending the directory tree. When ``plan_root`` is omitted (a bare-path
+    parse), it is inferred via ``_find_plan_root``, which returns the nearest
+    task-root directory so a standalone parse agrees with a known-root walk.
+    """
     text = task_md_path.read_text(encoding="utf-8")
     fm, body = parse_frontmatter(text)
 
-    plan_root = _find_plan_root(task_md_path.parent)
-    if plan_root:
-        rel = task_md_path.parent.relative_to(plan_root)
+    task_dir = task_md_path.parent
+    root = plan_root if plan_root is not None else _find_plan_root(task_dir)
+    path = ""
+    if root is not None:
+        try:
+            rel = task_dir.resolve().relative_to(root.resolve())
+        except ValueError:
+            rel = Path(".")
         path = str(rel) if str(rel) != "." else ""
-    else:
-        path = ""
 
     title = str(fm.get("title", ""))
     status = str(fm.get("status", "not-started"))
@@ -384,12 +419,33 @@ def cascade_depends_on_rename(parent_dir: Path, old_slug: str, new_slug: str) ->
 
 
 def _find_plan_root(task_dir: Path) -> Path | None:
-    """Walk up from a task directory to find the plan root.
+    """Walk up from a task directory to find the resolved task root.
 
-    The plan root is the directory that contains the top-level task.md.
-    We detect it by walking up until we find a directory whose parent does
-    not contain a task.md.
+    The task root is the nearest ancestor (or ``task_dir`` itself) whose basename
+    is a ``TASK_ROOT_DIRNAMES`` member (``superRA`` / ``.plan``). For such a root a
+    bare-path parse agrees with a tree walk rooted at that same ``TASK_ROOT_DIRNAMES``
+    directory — including a forest root with no umbrella ``task.md``. It does **not**
+    agree with a walk rooted at a *nested* ``--root`` whose basename is not a
+    ``TASK_ROOT_DIRNAMES`` member (e.g. ``--root superRA/01-intermediary-cost``): a
+    bare parse climbs past it to ``superRA/`` and keeps the extra prefix, while the
+    known-root walk drops it. That divergence is harmless today because every
+    path-sensitive consumer threads ``plan_root`` into ``parse_task``/``walk_plan``
+    rather than relying on a bare parse.
+
+    Falls back to the legacy heuristic (topmost task-bearing ancestor) only when
+    the directory is not nested under a task-root dir at all, so trees built
+    outside a ``superRA``/``.plan`` container (e.g. ad-hoc fixtures) still resolve.
     """
+    current = task_dir
+    while True:
+        if current.name in TASK_ROOT_DIRNAMES:
+            return current
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+
+    # No task-root container ancestor: fall back to the topmost task-bearing dir.
     current = task_dir
     while True:
         parent = current.parent
@@ -406,7 +462,7 @@ def walk_plan(plan_root: Path) -> Task:
     """
     root_task_md = plan_root / "task.md"
     if root_task_md.exists():
-        root = parse_task(root_task_md)
+        root = parse_task(root_task_md, plan_root)
     else:
         root = Task(path="", dir_path=plan_root, title="(no root task.md)")
 
@@ -466,7 +522,7 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
     )
     parsed: list[Task] = []
     for subdir in subdirs:
-        child = parse_task(subdir / "task.md")
+        child = parse_task(subdir / "task.md", plan_root)
         child.children = _walk_children(subdir, plan_root)
         parsed.append(child)
 
@@ -556,7 +612,7 @@ def propagate_parent_status(plan_root: Path, task_path: str) -> int:
             continue
 
         # Re-walk this subtree to get current children
-        ancestor_task = parse_task(task_md)
+        ancestor_task = parse_task(task_md, plan_root)
         ancestor_task.children = _walk_children(ancestor_dir, plan_root)
 
         if ancestor_task.is_leaf:
@@ -772,7 +828,7 @@ def validate_plan(plan_root: Path) -> list[str]:
         tasks_at_level: list[Task] = []
         for subdir in subdirs:
             try:
-                task = parse_task(subdir / "task.md")
+                task = parse_task(subdir / "task.md", plan_root)
             except Exception as exc:
                 warnings_out.append(f"{subdir.name}: parse error: {exc}")
                 continue
@@ -802,7 +858,7 @@ def validate_plan(plan_root: Path) -> list[str]:
     root_task_md = plan_root / "task.md"
     if root_task_md.exists():
         try:
-            root_task = parse_task(root_task_md)
+            root_task = parse_task(root_task_md, plan_root)
             for w in validate_frontmatter(root_task):
                 warnings_out.append(f"(root): {w}")
             for w in validate_revision_notes(root_task):

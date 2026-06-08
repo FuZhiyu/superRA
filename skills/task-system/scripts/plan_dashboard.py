@@ -214,7 +214,7 @@ def rebuild_state_task(state: WorktreeState, task_path: str) -> tuple[Task | Non
         state.task_index.pop(task_path, None)
         return None, False
     try:
-        updated = parse_task(task_md)
+        updated = parse_task(task_md, state.plan_root)
     except Exception:
         return state.task_index.get(task_path), False
 
@@ -783,10 +783,13 @@ async def index(request: Request):
     # (the VS Code link base) follows it.  Empty for the launch worktree so the
     # default URL stays clean (``/`` with no ``?wt=``).
     wt_id = "" if state.wt_id == _launch_wt_id else state.wt_id
+    resolved_root = str(state.plan_root.resolve())
     html = template.render(
         root_task=state.root_task,
         all_tasks=all_tasks,
         project_root=state.project_root,
+        resolved_root=resolved_root,
+        root_prefix=Path(resolved_root).name,
         wt_id=wt_id,
     )
     return HTMLResponse(content=html)
@@ -1579,10 +1582,16 @@ def render_standalone_html(
     # XSS-safe: the embedded fragments and data are injected via Jinja's `| tojson`
     # filter, which escapes `<`, `>`, `&`, and line separators (so an embedded
     # `</script>` cannot prematurely close the <script> block).
+    # The resolved root every task-path -> file link resolves against is the dir
+    # paths are relative to: the subtree dir for a --root export (paths re-based
+    # to it), else the plan root.  ``subtree_dir`` is exactly that dir.
+    resolved_root = str(subtree_dir.resolve())
     return template.render(
         root_task=scoped_root,
         all_tasks=all_tasks,
         project_root=project_root,
+        resolved_root=resolved_root,
+        root_prefix=Path(resolved_root).name,
         standalone=True,
         standalone_fragments=fragments,
         standalone_plan_dir=standalone_plan_dir,

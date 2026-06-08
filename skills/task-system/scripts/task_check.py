@@ -214,7 +214,7 @@ def _check_rollup_recursive(task: Task, findings: list[Finding]) -> None:
 # Check 4: Placement / structure (advisory)
 # ---------------------------------------------------------------------------
 
-def check_placement(root: Task) -> list[Finding]:
+def check_placement(root: Task, is_forest: bool = False) -> list[Finding]:
     """Advisory structural smells the placement ladder forbids.
 
     All findings are ``warning`` severity — surfaced, never auto-corrected, per
@@ -222,17 +222,23 @@ def check_placement(root: Task) -> list[Finding]:
     root-task definition (root = whole workstream; branches carry no
     script/input/output) and the misplacement signal from the placement task in
     `task-system/references/planning.md §Placing Work in the Tree`.
+
+    When *is_forest* is true the root is a synthetic container (no umbrella
+    ``<root>/task.md``) holding independent top-level trees, not a root task —
+    the root-task smells (leaf-only frontmatter, single-child wrapper) do not
+    apply, so they are skipped to avoid spurious findings on a legitimate forest.
     """
     findings: list[Finding] = []
 
     # Smell 1: the root carries leaf-only frontmatter (a leaf masquerading as
     # the project). A root frames a whole workstream and holds no deliverable
-    # work of its own, so script/input/output belong on its leaves.
+    # work of its own, so script/input/output belong on its leaves. A forest
+    # container carries no frontmatter of its own, so this never applies there.
     leaf_fields = [
         name for name in ("script", "input", "output")
         if getattr(root, name)
     ]
-    if leaf_fields:
+    if not is_forest and leaf_fields:
         findings.append(Finding(
             task_path=root.path,
             category="placement",
@@ -246,7 +252,9 @@ def check_placement(root: Task) -> list[Finding]:
 
     # Smell 2: a single-child root is a wrapper around one narrow task — the
     # child should be the root, or the root should host the broader workstream.
-    if len(root.children) == 1:
+    # A single-top-level forest is legitimate (one independent tree under a
+    # container root), so this smell does not fire on a forest.
+    if not is_forest and len(root.children) == 1:
         findings.append(Finding(
             task_path=root.path,
             category="placement",
@@ -371,7 +379,7 @@ def _walk_plan_tolerant(plan_root: Path) -> Task:
 
     def _tolerant_parse(task_md: Path) -> Task | None:
         try:
-            return parse_task(task_md)
+            return parse_task(task_md, plan_root)
         except ValueError as exc:
             # Build a partial task from raw frontmatter so the tree walk
             # can continue.  The status check will flag the bad value.
@@ -453,7 +461,8 @@ def run_checks(
     if category is None or category == "rollup":
         findings.extend(check_rollup_consistency(root))
     if category is None or category == "placement":
-        findings.extend(check_placement(root))
+        is_forest = not (plan_root / "task.md").exists()
+        findings.extend(check_placement(root, is_forest=is_forest))
 
     return findings
 
