@@ -1,6 +1,6 @@
 ---
-title: "Drift-free, install-free CLI source resolution"
-status: approved
+title: "Drift-free, install-free CLI source resolution via uv run --script"
+status: not-started
 depends_on: 
   - wrappers-and-hooks
   - unified-command-surface
@@ -11,109 +11,83 @@ created: 2026-06-07
 
 ## Objective
 
-Resolve the task-system package from the locally installed plugin (Claude/Codex) at runtime so the `superra` CLI never installs anything, never creates a cwd venv, and always matches the installed plugin version; GitHub is a last-resort fallback.
+Make every task-system Python execution run through a single model: resolve the package source from whatever is on disk (installed plugin or local checkout) and run the relevant script with `uv run --script <file>` (falling back to `python3 <file>`). The `superra` CLI must never install anything, never create a venv in the caller's project, and always reflect the live source — no version-keyed build cache between the source and what runs. GitHub is a last-resort fallback. There is no installable package and no `pyproject.toml`: PEP 723 inline metadata in each entry script is the single source of truth for dependencies.
+
+The agent-facing entry point is the committed, self-resolving `<task-root>/superra` wrapper. Every agent — main, implementer, reviewer — invokes the CLI through that wrapper; no agent needs the task-system skill, the plugin path, or a PATH install to read or edit a task.
 
 ### Problem
 
-Running `uv run superra …` from a research project (not the superRA checkout) makes `uv` discover that project's `pyproject.toml` and try to provision its `.venv`, which fails when a `.venv` already exists (`File exists (os error 17)`) and is wrong in any case — the user's research environment must not be touched to run a task-tree CLI. The repo-local `superRA/superra` wrapper avoids this only because it hardcodes `uv run --project "$REPO_ROOT/skills/task-system"`, which assumes a checkout and so does not exist in a research project's task tree. Pinning the wrapper to a git tag instead would reintroduce drift: when the installed plugin advances, a pinned wrapper silently runs stale CLI against current task files.
+Three defects motivate this rework. The first is the original report; the second and third were found while verifying the shipped `uvx`-based design and are demonstrated below.
 
-The fix is to resolve the task-system package source from whatever plugin is **already installed on disk** and run it with `uvx --from <source>`, which builds an isolated env in uv's cache (no install step, no cwd venv) and always matches the installed version. Both harnesses install the plugin under a versioned cache path:
+1. **`uv run superra` provisions the caller's venv.** Running `uv run superra …` from a research project (not the superRA checkout) makes `uv` discover that project's `pyproject.toml` and try to provision its `.venv`, which fails when a `.venv` already exists (`File exists (os error 17)`) and is wrong regardless — the research environment must not be touched to run a task-tree CLI.
 
-- Claude: `~/.claude/plugins/cache/<marketplace>/superRA/<version>/skills/task-system`, with `~/.claude/plugins/installed_plugins.json` recording `superRA@superRA.installPath` authoritatively.
-- Codex: `~/.codex/plugins/cache/<marketplace>/superra/<version>/skills/task-system` (note lowercase plugin slug; no manifest file).
+2. **`uvx --from <dir>` serves stale builds.** `uvx` keys its build cache on the package **version** (`0.1.2`), not source content. Editing the source without bumping the version makes `uvx --from <path>` reuse the old cached build. Confirmed live: a freshly added `wrapper` subcommand was invisible through `uvx --from <local dir>`, and `--refresh` / `--refresh-package` / `--reinstall` did **not** bust it — only `--no-cache` or a fresh cache dir did. This silently breaks the "always matches the installed version" promise whenever source content changes under a fixed version (a contributor editing the resolved checkout; the hook firing on every edit; a marketplace overwriting a version dir).
+
+3. **Bootstrap is chicken-and-egg.** The agent-facing entry is the `<task-root>/superra` wrapper, but the docs told agents to create it with bare `superra wrapper init`, which presupposes a resolved `superra`. A fresh research project has none — the wrapper is the very thing that makes `superra` resolvable. `superplan` likewise bootstrapped trees with bare `superra task create`, so an agent in a fresh project gets "command not found" or falls back to `uv run superra` (defect 1).
+
+`uv run --script` fixes all three at the root: with a PEP 723 block it is script-scoped (no project discovery, no caller venv — verified: without the block it *still* provisioned `.venv`, so the block is load-bearing), it reads the script file live each run (no version-keyed build cache), and it runs straight from the resolved source directory so the first call needs only that directory, not a pre-existing `superra`. The task-system core is effectively stdlib-only (the only third-party import, `pyyaml` in `_comments.py`, is lazy), so the `python3` fallback works almost everywhere; only comment-sidecar YAML parsing and the dashboard need declared deps.
 
 ### Scope
 
-1. **Source resolver.** Implement a fast, bounded resolution chain returning the task-system package directory (the dir containing `pyproject.toml`), in priority order:
-   1. **Env var** `CLAUDE_PLUGIN_ROOT` / `PLUGIN_ROOT` (set inside the harness) → `$VAR/skills/task-system`. Explicit harness signal; outranks everything.
-   2. **Local checkout** — `$REPO_ROOT/skills/task-system/pyproject.toml` if present. Ordered above the installed caches *on purpose*: a contributor working in a checkout must get live edits, not the stale copied cache snapshot (see precedence rationale below). In a research project there is no checkout, so this branch is skipped and resolution falls through to the caches.
-   3. **Claude cache (manifest)** — read `~/.claude/plugins/installed_plugins.json` (shape `{"version", "plugins": {"superRA@superRA": [records]}}`); from the records list pick the one whose `projectPath` matches the current task-tree's project, else the `scope: user` record (`projectPath: null`); append `/skills/task-system` to its `installPath`.
-   4. **Codex cache** — bounded glob `~/.codex/plugins/cache/*/*/*/skills/task-system` (exactly three path segments — marketplace/plugin/version), pick the highest semver. Must not casing-assume the plugin slug (Codex uses lowercase `superra`, Claude uses `superRA`).
-   5. **GitHub fallback** — `uvx --from "git+https://github.com/FuZhiyu/superRA.git@<tag>#subdirectory=skills/task-system"`. The only place a pin lives; it may lag the installed version and needs network on first build.
-   - **Precedence rationale:** installs (Claude and Codex) are *copied* into versioned cache dirs (`…/cache/.../<version>/`), not symlinked to source, even for a local-directory (dev) marketplace — so a cache copy can lag a live working tree between updates. Hence checkout > caches for contributors; for end users (no checkout) the cache copy is the correct installed version.
-   - **Speed gate:** no full-disk search. Resolution is env read + one file-exists test + single manifest read + one shallow fixed-depth glob. Cap the glob depth so it cannot walk the tree.
-   - All local branches terminate in `uvx --from "<dir>" superra "$@"`.
+1. **Single execution model — `uv run --script` + `python3` fallback.** Every Python entry runs via `uv run --script <file>` with a `python3 <file>` fallback when `uv` is unavailable. Each entry script carries a PEP 723 block as the single source of truth for its dependencies:
+   - `scripts/cli.py` — task + `wrapper` subcommand surface; deps `["pyyaml"]` (core is stdlib; pyyaml only for comment parsing).
+   - `scripts/plan_dashboard.py` — dashboard; already carries the full web-stack block; already loose-script-ready (flat sibling imports, `if __package__` → `FileSystemLoader(Path(__file__).parent/…)` for templates/vendor).
+   - `scripts/task_hook.py` — PostToolUse hook; stdlib-only block (no deps).
+   `cli.py`'s `dashboard` subcommand must not pull the web stack onto the task hot path — the wrapper routes `dashboard` to `plan_dashboard.py` directly (see item 2), so `cli.py`'s block stays minimal.
 
-2. **Wrapper generation.** Make the resolving wrapper the artifact a research project's task tree carries (replacing the checkout-only `uv run --project` assumption). The repo's own `superRA/superra` keeps the local-checkout branch preferred (so dev edits win) but carries the same chain so it is the canonical template.
+2. **Resolver: keep the chain, change the terminal exec.** Preserve the bounded resolution chain (env var → local checkout → Claude cache → Codex cache → GitHub), single-sourced in `wrapper_resolver.py`. Changes:
+   - Cache-branch existence test becomes `scripts/cli.py` (not `pyproject.toml`, which no longer exists).
+   - Terminal exec becomes, per first argument: `dashboard` → `uv run --script <dir>/scripts/plan_dashboard.py …`; the hook entry → `uv run --script <dir>/scripts/task_hook.py`; everything else → `uv run --script <dir>/scripts/cli.py "$@"`. Each with a `python3 <file>` fallback.
+   - Keep the speed gate (env read + one file test + one manifest read + one fixed-depth glob; no full-disk walk) and the no-hardcoded-paths invariant.
 
-3. **Agent-facing wrapper command.** Add a `superra` subcommand so agents create/refresh the wrapper without hand-authoring bash (e.g. `superra wrapper init [--root superRA]`). Idempotent; overwrites with the current resolver; sets the executable bit.
+3. **Drop `pyproject.toml` and the package framing.** Remove `skills/task-system/pyproject.toml`, the `superra_task_system` console-entry/build manifest, and the `uv tool install` convenience guidance. PEP 723 blocks are now the only dependency declaration. The dashboard's `if __package__` branches stay (harmless) but the loose-script (`__package__ is None`) path is the only one exercised.
 
-4. **Hook-shim alignment.** Extend `hooks/task-hook` to the full chain (it currently does env → checkout only; add Claude manifest, Codex cache, GitHub fallback). Keep the resolution logic single-sourced between the hook shim and the generated wrapper so they cannot drift (shared snippet emitted by the generator, or a sourced resolver the in-plugin shim reads from its own dir — the generated wrapper must stay self-contained since it cannot source from the plugin before resolving it).
+4. **GitHub last-resort fallback without a package build.** Since `uv run --script` cannot fetch a git subdirectory, the GitHub branch becomes: shallow-clone the repo to a cache dir (e.g. under the user cache), then `uv run --script <clone>/skills/task-system/scripts/cli.py …`. The clone is the only network step and only fires when no env var, checkout, or installed cache exists. The pin (ref) lives only in `wrapper_resolver.py`.
 
-5. **`--root` docs cleanup.** `--root` already auto-detects and prefers `superRA` (verified). Drop the redundant `--root superRA` from canonical examples in instructions/docs so the canonical form is `superra task tree` / `superra dashboard`.
+5. **Agent interface — the committed wrapper is the universal entry; subagents never load task-system.**
+   - **Universal call form lives in `using-superRA §Task Interface`** (the only skill every agent — including implementer/reviewer subagents — preloads). Update it so the canonical read/edit invocation is the committed `<task-root>/superra` wrapper (e.g. `superRA/superra task read <path>`), which self-resolves and needs no skill load, no plugin path, and no PATH install. Subagents do **not** load `task-system`; tree-level tooling stays load-on-demand for orchestrators/planners only. Do not duplicate the call form into role specs — point to the universal interface.
+   - **The wrapper must exist before any subagent is dispatched.** `superplan` creates `<task-root>/superra` at tree-creation time (via the bootstrap form below) and commits it with the tree, so every downstream agent finds a working `superRA/superra`.
+   - **Bootstrap form is planner/main-only.** The first call in a fresh project — which creates the wrapper — uses the loaded task-system skill directory: `uv run --script <task-system skill-dir>/scripts/cli.py wrapper init`, following the `<skill-dir>` substitution convention already used by sibling skills. Documented in `task-system/SKILL.md` and wired into `superplan`'s tree-creation step. After the wrapper exists, everything uses `<task-root>/superra`.
 
-6. **Docs.** Rewrite `skills/task-system/references/internals.md §Setup` and the `skills/task-system/SKILL.md` invocation/dashboard rows to make `uvx`-resolved the canonical end-user/agent form; demote `uv tool install` to an optional convenience; add an explicit warning never to run bare `uv run superra` from a research directory. Update `CLAUDE.md`/`AGENTS.md`/`AGENT.md` local-dev guidance only if the canonical contributor form changes (it should remain the `uv run --project skills/task-system` checkout form).
+6. **Wrapper / hook generation.** `superra wrapper init` and `superra wrapper render-hook` stay; regenerate the committed `<task-root>/superra` and `hooks/task-hook` to the new run-line (uv run --script + python3 fallback). Keep the byte-identity regression test between the committed `hooks/task-hook` and the generator. The hook's existing `uvx → python3` fallback becomes `uv run --script → python3`.
+
+7. **Docs.** Rewrite `task-system/references/internals.md §Setup` and the `SKILL.md` invocation/dashboard rows to the `uv run --script` model: the committed wrapper is the canonical agent/end-user form, the skill-dir `uv run --script` form is the documented bootstrap, no package/console-entry/`uv tool install` framing. Add the bootstrap to `superplan`. (The `--root superRA` redundancy cleanup already landed and stays.)
+
+8. **Tests.** Update `scripts/test_cli.py`: replace `uvx`-build assertions with `uv run --script` resolution/run-line assertions; assert no caller `.venv` is created when run from a project carrying a conflicting `.venv`; assert the `python3` fallback runs the core; assert the GitHub branch emits a clone-then-script form; keep the wrapper/hook byte-identity and idempotency tests.
+
+### Constraints
+
+- **Subagents (implementer/reviewer) load only `using-superRA` and `report-in-markdown`, never `task-system`.** Any CLI knowledge an executing agent needs to read or edit its task must live in `using-superRA §Task Interface` and resolve through the committed wrapper — not through the task-system skill, a skill-dir form, or a PATH `superra`.
+- **No hardcoded plugin/cache/version paths in any committed artifact.** The wrapper and hook resolve at runtime from their own on-disk location.
+- **Single-source the resolution chain and run-line in `wrapper_resolver.py`.** Duplicated resolver/run logic between the wrapper and the hook is the primary drift risk.
 
 ### Validation
 
-- From a non-checkout dir with the plugin installed: the resolved command runs `superra task tree` with no cwd `.venv` created and no `uv tool install`.
-- Resolver picks the Claude install when `installed_plugins.json` is present; falls back to the Codex bounded glob when only `~/.codex` has it; falls back to GitHub when neither cache exists.
-- Resolution does not perform a full-disk search (assert glob depth bound; time the resolver).
-- `superra wrapper init` writes an executable, resolver-carrying `superRA/superra`; re-running it is idempotent.
-- `hooks/task-hook` still reconciles via the packaged entry point and now resolves through the same chain.
-- No active instruction or doc tells agents to run bare `uv run superra` or to pass `--root superRA` redundantly.
+- From a non-checkout project that already has a conflicting `.venv`: `superRA/superra task tree` runs and creates **no** `.venv` in the project.
+- Editing a resolved source script is reflected on the next wrapper call with no `--refresh` / cache-bust (proves no version-keyed staleness).
+- `python3 <dir>/scripts/cli.py task tree` runs the core with no third-party deps installed (proves the fallback and stdlib-only core).
+- `superRA/superra dashboard` launches via `uv run --script plan_dashboard.py` and renders templates/vendor from `__file__`-relative paths.
+- Resolver picks env var → checkout → Claude manifest → Codex glob → GitHub clone, in order; speed gate holds (no full-disk walk).
+- GitHub branch shallow-clones and runs `uv run --script <clone>/…/cli.py` when no local source exists.
+- A simulated subagent with only `using-superRA` loaded can read its task via `superRA/superra task read <path>`; no active doc tells a subagent to load `task-system` to read a task.
+- After `superplan` creates a tree, `<task-root>/superra` is present, executable, and committed.
+- `skills/task-system/pyproject.toml` is removed and nothing in `skills`/`hooks`/`README.md` references it or `uv tool install` as the normal path.
+- `superra wrapper init` writes an executable, resolver-carrying wrapper; re-run is byte-identical; committed `hooks/task-hook` is byte-identical to the generator.
 
 ## Planner Guidance
 
-This extends, and stays consistent with, the `wrappers-and-hooks` decision that task trees do not carry brittle *dashboard* launchers: the generated wrapper here is a runtime-**resolving** CLI entry point with no baked generation-time paths, which is what that decision objected to. Keep it that way — no hardcoded plugin/cache/version paths in any committed artifact.
+**What already exists and stays** (from the prior `uvx`-based implementation, commits `5de74de9..76473463`): `scripts/wrapper_resolver.py` as the single-source generator rendering both shell artifacts; the bounded resolution chain and its priority order; the `superra wrapper init` / `render-hook` subcommands; the byte-identity regression test; the `--root` auto-detect doc cleanup; `cli.py`'s flat-import fallback (`sys.path.insert` + package-or-flat `importlib`). Reuse all of it.
 
-Single-source the bash resolution chain. Duplicated resolver logic between the hook shim and the generated wrapper is the primary drift risk for this task.
+**What changes:** the terminal exec form (`uvx --from <dir> superra` → `uv run --script <dir>/scripts/<entry>` + `python3` fallback, routed by subcommand); the cache-branch existence test (`pyproject.toml` → `scripts/cli.py`); deletion of `pyproject.toml` and package framing; the GitHub branch (uvx-git → shallow-clone + script); PEP 723 blocks added to `cli.py` and `task_hook.py` (`plan_dashboard.py` already has one); and the agent-interface + bootstrap docs (items 5, 7).
 
-Generated role/Codex artifacts are not in scope unless a change touches canonical agent specs; if it does, regenerate via `skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` rather than hand-editing.
+Keep the resolver and run-line single-sourced in `wrapper_resolver.py` — render both the wrapper and the hook from it, embedded (not sourced), since the wrapper lives where it cannot source from the plugin before resolving it.
+
+Generated role/Codex artifacts are out of scope unless a change touches canonical agent specs. Item 5 edits `using-superRA §Task Interface` (a skill, not an agent spec) and `superplan` — these are not generated. If any edit reaches `agents/implementer.md` or `agents/reviewer.md`, regenerate via `skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` rather than hand-editing.
 
 ## Results
 
-The `superra` CLI now resolves the task-system package from whatever plugin is **already installed on disk** and runs it with `uvx --from <source>` — no install step, no project `.venv`, always the installed version. The resolution chain is single-sourced in one Python module and embedded identically into both committed shell artifacts so they cannot drift.
+(Pending re-implementation under the `uv run --script` design. The prior `uvx`-based implementation is in git history — commits `5de74de9` through `76473463` — and is being reworked per ## Revision Notes; reuse the surviving infrastructure listed in ## Planner Guidance.)
 
-### Single source of truth: `wrapper_resolver.py`
+## Revision Notes
 
-[scripts/wrapper_resolver.py](../../../../../skills/task-system/scripts/wrapper_resolver.py) holds the canonical bash resolution chain as one string constant (`RESOLVER_SNIPPET`) and renders the two artifacts that need it:
-
-- `render_wrapper()` → the self-contained `superRA/superra` wrapper a research project's task tree carries.
-- `render_hook_shim()` → the committed `hooks/task-hook` PostToolUse shim.
-
-The snippet is **embedded**, not sourced: the generated wrapper lives in a research project that cannot `source` anything from the plugin until *after* it has resolved the plugin, so a shared sourced file is impossible at the wrapper site. Keeping one Python copy and rendering both shells from it is what removes the drift risk the planner guidance flagged. A regression test ([scripts/test_cli.py](../../../../../skills/task-system/scripts/test_cli.py) `test_committed_hook_shim_matches_generator`) asserts the committed `hooks/task-hook` is byte-identical to `render_hook_shim()`, so the committed shim can never silently diverge from the generator.
-
-### Resolution chain (priority order)
-
-`_superra_resolve_source` prints `DIR:<pkg-dir>` for a local source or `GIT:<spec>` for the fallback, then `_superra_run` execs `uvx --from "<source>" superra "$@"`:
-
-1. `CLAUDE_PLUGIN_ROOT` / `PLUGIN_ROOT` env var → `$VAR/skills/task-system` (explicit harness signal).
-2. Local checkout (`SUPERRA_REPO_ROOT/skills/task-system/pyproject.toml`) — each artifact sets `SUPERRA_REPO_ROOT` from its **own** on-disk location (the wrapper from `../skills/task-system`, the hook from `${dir%/hooks}`), so a contributor's live edits win over a copied cache snapshot.
-3. Claude cache — `python3` reads `~/.claude/plugins/installed_plugins.json` (`{"plugins": {"superRA@superRA": [records]}}`), picks the record whose `projectPath` is a prefix of `$PWD`, else the user-scope (`projectPath: null`) record, and appends `/skills/task-system` to its `installPath`.
-4. Codex cache — bounded depth-3 glob `~/.codex/plugins/cache/*/*/*/skills/task-system` (slug-case agnostic), highest semver via `sort -V`.
-5. GitHub fallback — `git+https://github.com/FuZhiyu/superRA.git@main#subdirectory=skills/task-system` (the only pin; lives only in `wrapper_resolver.py`).
-
-Each cache branch is guarded by a `pyproject.toml` existence test, so a stale install that predates the task-system packaging (e.g. this machine's Claude `0.2.0` cache) is correctly skipped and resolution falls through to the next source rather than running a package-less dir.
-
-### Agent-facing command
-
-`superra wrapper init [--root superRA]` writes an executable, resolver-carrying wrapper into the task root (idempotent — re-running produces byte-identical output). `superra wrapper render-hook [--output PATH]` prints or writes the hook shim (used to regenerate the committed `hooks/task-hook`). Both are wired in [scripts/cli.py](../../../../../skills/task-system/scripts/cli.py).
-
-### Hook-shim alignment
-
-[hooks/task-hook](../../../../../hooks/task-hook) is now generated from the same chain (was env→checkout only). It forwards stdin to `superra task hook post-tool-use` via `uvx --from <resolved source>`, falling back to a direct `python3 scripts/task_hook.py` run when `uvx` is unavailable and a local source is reachable, else no-ops. It always exits 0 (never blocks).
-
-### Docs cleanup
-
-- `--root` already auto-detects (preferring `superRA/`, verified live), so the redundant `--root superRA` was dropped from every canonical example across `skills/task-system/SKILL.md`, `references/{internals,commands,planning}.md`, `skills/superplan/{SKILL.md,references/consolidation.md,references/planning-review.md}`, and `README.md`. The canonical form is now `superra task tree` / `superra dashboard`.
-- `internals.md §Setup` was rewritten to make the `uvx`-resolved task-tree wrapper the canonical end-user/agent form, demote `uv tool install` to an optional snapshot convenience, and add an explicit warning never to run bare `uv run superra` from a research project (also added to `SKILL.md`). The contributor *invocation* form stays `uv run --project skills/task-system superra …` (`CLAUDE.md` lines 20–21 unchanged); `CLAUDE.md`'s description of the `./superRA/superra` wrapper mechanism was updated to match its new resolve-source + `uvx --from` behavior (`AGENTS.md`/`AGENT.md` are symlinks to `CLAUDE.md`).
-
-### Verification
-
-All checks ran in this session:
-
-- **Real-user path, checkout:** `./superRA/superra task frontier` resolved `superra-task-system @ file:///…/cli-source-resolution/skills/task-system` via `uvx` and listed the frontier — checkout branch wins, isolated env built in uv's cache, no project `.venv` created.
-- **Resolver priority (bash-level, from non-checkout dirs):** env var outranks all; project-scope manifest record beats user-scope when `$PWD` matches; Claude manifest beats Codex cache; a manifest install lacking `pyproject.toml` is skipped and falls through to Codex; Codex glob picks highest semver (`0.10.0` > `0.2.0` > `0.1.0`) and ignores a decoy nested below the depth-3 bound; empty caches → GitHub `GIT:` spec.
-- **Speed gate:** resolver runs in ~0.01s (3 runs, `/usr/bin/time -p`) — env read + file test + one manifest read + one fixed-depth glob, no full-disk walk.
-- **`superra wrapper init`:** writes an executable `superRA/superra`; re-run is byte-identical (idempotent test).
-- **Hook shim:** with a `task.md`-write PostToolUse payload it resolved the package via `uvx`, ran the reconcile, and emitted PostToolUse feedback; on a non-matching payload it exits 0 silently.
-- **Generated shells are valid bash** (`bash -n` on both render outputs) and **committed `hooks/task-hook` matches the generator** byte-for-byte.
-- **Test suite:** `pytest skills/task-system/scripts/test_cli.py skills/task-system/scripts/test_task_system.py` → **312 passed** (27 in `test_cli.py`, including 9 new resolver/wrapper tests).
-- **Docs sweep:** no active instruction tells agents to run bare `uv run superra` (only the new explicit prohibitions) or pass `--root superRA` redundantly.
-
-**Final diff self-check** (governing range `1a9f2916..HEAD`): every surviving hunk maps to a scope item — `scripts/wrapper_resolver.py` (new resolver/generator), `scripts/cli.py` (`wrapper` subcommand), regenerated `hooks/task-hook` + `superRA/superra`, `scripts/test_cli.py` (resolver/wrapper tests), the `--root`/`uvx` doc cleanup across the task-system + superplan skills and `README.md`, the `CLAUDE.md` wrapper-mechanism description fix, this `task.md` Results, and the root `superRA/task.md` Sync Map line. No unrelated churn, no conflict markers, no `serve`/debug artifacts.
-
-### Generated-artifact note
-
-`hooks/task-hook` is now a generated file — regenerate with `superra wrapper render-hook --output hooks/task-hook` rather than hand-editing. No canonical agent specs were touched, so the Codex/role generated artifacts under `skills/using-superRA/references/` and `.codex/agents/` are out of scope and untouched.
+**Substantive rework (status reset to not-started).** The shipped design resolved the installed source on disk and ran it with `uvx --from <source> superra`. Verification surfaced two blocking defects: `uvx --from <dir>` serves **stale builds** (cache keyed on package version `0.1.2`; not bustable by `--refresh`/`--reinstall`, only `--no-cache`/fresh-cache — demonstrated by a new subcommand being invisible), which silently breaks the drift-free promise; and the **bootstrap was chicken-and-egg** (creating the wrapper required an already-resolved `superra`). Reworked to a single `uv run --script` model that reads source live (no version cache) and is project-independent given a PEP 723 block, with a `python3` fallback. `pyproject.toml` and the installable-package framing are dropped — PEP 723 blocks become the single dependency source of truth — which supersedes the `uv-package` sibling's build-manifest deliverable. Added an explicit agent-interface scope item: the committed `<task-root>/superra` wrapper is the universal entry for main/implementer/reviewer, taught in `using-superRA §Task Interface`; subagents never load `task-system`; the skill-dir bootstrap is planner-only and `superplan` creates the wrapper at tree-creation time. GitHub fallback reworked from uvx-git to shallow-clone + `uv run --script`.

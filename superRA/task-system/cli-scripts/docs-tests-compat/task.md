@@ -47,3 +47,7 @@ Apply the AGENTS.md DRY and Necessity gate to instruction edits. Replace path ex
 - `rg "superRA/serve|skills/task-system/scripts|plan_dashboard.py|task_read.py|task_query.py|task_check.py" skills agents hooks README.md` — remaining hits are intentional compatibility or implementation references: task-system internals inventory, script usage text, script/test comments, direct-script compatibility tests, and vendor/template implementation notes; no active normal-use instruction still teaches `superRA/serve` or `<skill-dir>/scripts/...`.
 - `python3 skills/task-system/scripts/task_check.py --plan-root superRA` — all checks passed.
 - `git diff --check` — no whitespace errors.
+
+## Revision Notes
+
+The "packaged CLI" framing this task taught is **superseded** by [cli-source-resolution](../cli-source-resolution/task.md): the normal interface becomes the committed `<task-root>/superra` wrapper (resolving via `uv run --script`), not an installed package, and the canonical read/edit call form moves into `using-superRA §Task Interface` so subagents — which never load `task-system` — can use it. The doc/test migration done here still stands; cli-source-resolution item 7 rewrites the residual package/`uvx`/`uv tool install` wording. Status stays `approved`.

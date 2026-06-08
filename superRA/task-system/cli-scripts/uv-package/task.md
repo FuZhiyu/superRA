@@ -53,3 +53,7 @@ Use `importlib.resources` or an equivalent package-data mechanism for dashboard 
 - `~/.venv/bin/python -m pytest skills/task-system/scripts/test_task_system.py::TestTaskCreate skills/task-system/scripts/test_task_system.py::TestTaskHook -v` passed 24 tests.
 - `uvx --from ./skills/task-system superra task hook post-tool-use`
 - `uvx --from ./skills/task-system superra task create root-task --root "$tmpdir/superRA" --title "Root Task"` on a fresh temporary task tree, followed by `test ! -e "$tmpdir/superRA/serve"`.
+
+## Revision Notes
+
+The installable-package deliverable here (the `superra_task_system` build manifest / `pyproject.toml` / console entry point) is **superseded** by [cli-source-resolution](../cli-source-resolution/task.md), which drops `pyproject.toml` and moves every execution to `uv run --script` with PEP 723 inline metadata as the single dependency source of truth. The package layout under `skills/task-system/` and the unified `superra` command surface still stand; only the build/install framing is removed. Status stays `approved` — the work happened; the removal is folded into cli-source-resolution's scope, not a reopening of this task.
