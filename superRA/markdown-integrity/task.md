@@ -43,3 +43,16 @@ Ship a fast, warn-only markdown **render-integrity** check that catches the mark
 - Run the test suite with deps supplied per the repo `CLAUDE.md`, e.g. `uv run --with pytest --with pyyaml python -m pytest skills/...`.
 
 ## Results
+
+Shipped a warn-only markdown render-integrity check on both surfaces, backed by a single checker. Verified end-to-end against the dashboard's real `markdown-it-texmath` `dollars` renderer and the live PostToolUse hook; 347 tests pass across the two subtasks.
+
+**What it catches** — the two patterns that render silently-broken in the dashboard, both grounded in the real renderer (not assumed):
+- *Display `$$` not blank-line separated* — a `$$` block touching the text line above it is swallowed into the open paragraph and never renders as block math. The live render confirmed the genuine break is the text-above case; the checker flags both above- and below-adjacency as the safe superset matching the documented "blank line above and below" convention.
+- *TeX-only operator macros* — `\diag`, `\cov`, `\var`, `\Cov`, `\E`, … are undefined in KaTeX and render as errors; the fix is `\operatorname{...}`. The macro set is one extensible named list.
+
+**Two surfaces, one checker** ([01-checker-and-rules](01-checker-and-rules/task.md)):
+- `skills/report-in-markdown/scripts/md_integrity.py` — stdlib-only, fence-aware `check(text) -> list[Issue]`, the single home of the detection logic.
+- `skills/report-in-markdown/scripts/check_markdown.py` — self-diagnose CLI (`uv run --script … <file>`, `python3` fallback, always exit 0) for an agent to check any markdown before committing.
+- The `$$`/`\operatorname` rules are documented under `## Math` in `report-in-markdown`.
+
+**Auto-enforcement** ([02-hook-integration](02-hook-integration/task.md)): the existing `task_hook.py` PostToolUse path now runs the same `check()` on any `.md` edited under a task root — both the Claude Edit/Write and Codex apply_patch paths — merging findings into the existing non-blocking `additionalContext` feedback channel. No new hook registration and no generated-shim edit were needed; the checker is imported relative to `task_hook.py` so it resolves across all install layouts. A cheap `.md`-under-task-root gate keeps the hot path fast; clean and non-markdown edits stay silent.
