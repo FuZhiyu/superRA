@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -31,6 +32,12 @@ LOCAL_API_BASE = "http://localhost:23119/api"
 # The local API exposes the desktop's default user library at id 0.
 LOCAL_LIBRARY_ID = "0"
 PDF_MIN_BYTES = 1024
+
+# Better BibTeX is a local-only Zotero plugin (not the Web API / pyzotero). Its
+# JSON-RPC endpoint resolves BBT citekeys and exports BBT-keyed BibTeX.
+BBT_RPC_URL = "http://127.0.0.1:23119/better-bibtex/json-rpc"
+# Better BibTeX numbers the user library 1; group libraries keep their group id.
+BBT_USER_LIBRARY_ID = 1
 
 
 def eprint(*args: object) -> None:
@@ -202,6 +209,284 @@ def pyzotero_version() -> str:
 
 
 # --------------------------------------------------------------------------- #
+# Better BibTeX client (local-only JSON-RPC) and key resolution               #
+# --------------------------------------------------------------------------- #
+
+
+class BBTError(RuntimeError):
+    """Better BibTeX is unreachable or returned an RPC error.
+
+    Callers treat this as the signal to fall back to the built-in translator.
+    """
+
+
+def bbt_library_id(library: str | None) -> int:
+    """Map a ``--library`` spec to a Better BibTeX ``libraryID``.
+
+    The user library is BBT ``libraryID`` 1; a group library uses its own
+    numeric id. Raises RuntimeError (via parse_library) on an unparseable spec.
+    """
+    lib_type, group_id = parse_library(library)
+    if lib_type == "group" and group_id is not None:
+        return int(group_id)
+    return BBT_USER_LIBRARY_ID
+
+
+def bbt_call(method: str, params: list, timeout: float = 15.0):
+    """Invoke one Better BibTeX JSON-RPC method, returning its ``result``.
+
+    Raises BBTError when the endpoint is unreachable or the response carries an
+    RPC error. BBT item abstracts can contain raw control characters, so the
+    response is parsed with ``strict=False``.
+    """
+    import urllib.error
+    import urllib.request
+
+    body = json.dumps(
+        {"jsonrpc": "2.0", "method": method, "params": params, "id": 1}
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        BBT_RPC_URL,
+        data=body,
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+            raw = resp.read().decode("utf-8")
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise BBTError(f"Better BibTeX endpoint unreachable: {exc}") from exc
+    try:
+        payload = json.loads(raw, strict=False)
+    except json.JSONDecodeError as exc:
+        raise BBTError(f"Better BibTeX returned non-JSON: {exc}") from exc
+    if payload.get("error"):
+        raise BBTError(f"Better BibTeX RPC error: {payload['error']}")
+    return payload.get("result")
+
+
+def bbt_available() -> bool:
+    """Report whether the Better BibTeX JSON-RPC endpoint is reachable."""
+    try:
+        bbt_call("item.citationkey", [[]], timeout=3.0)
+        return True
+    except BBTError:
+        return False
+
+
+def bbt_citekeys(item_keys: list[str], _library_id: int) -> dict[str, str | None]:
+    """Resolve Zotero item keys to Better BibTeX citekeys.
+
+    Returns a ``{item_key: citekey}`` map; an unknown item key maps to ``None``.
+    """
+    result = bbt_call("item.citationkey", [list(item_keys)])
+    return result if isinstance(result, dict) else {}
+
+
+def bbt_export(citekeys: list[str], library_id: int) -> str:
+    """Export BibTeX (with BBT citekeys) for the given citekeys via BBT."""
+    result = bbt_call("item.export", [list(citekeys), "better bibtex", library_id])
+    if not isinstance(result, str):
+        raise BBTError(f"Better BibTeX export returned {type(result).__name__}")
+    return result
+
+
+def bbt_bibliography(citekeys: list[str], style: str) -> list[str]:
+    """Render formatted reference entries for citekeys via Better BibTeX.
+
+    Calls ``item.bibliography([citekeys], {id: style, contentType: "text"})``,
+    which returns one ``text``-rendered entry per item joined by newlines.
+    Returns the list of non-empty entry strings, in citekey order.
+    """
+    result = bbt_call(
+        "item.bibliography", [list(citekeys), {"id": style, "contentType": "text"}]
+    )
+    if not isinstance(result, str):
+        raise BBTError(f"Better BibTeX bibliography returned {type(result).__name__}")
+    return [line.strip() for line in result.splitlines() if line.strip()]
+
+
+def builtin_bibliography(zot, item_keys: list[str], style: str) -> list[str]:
+    """Render formatted reference entries via Zotero's built-in CSL (fallback).
+
+    Uses pyzotero's ``include="bib"`` per item, which returns a dict carrying the
+    rendered reference under the ``bib`` key. Works in both local and Web mode.
+    """
+    entries: list[str] = []
+    for key in item_keys:
+        res = zot.item(key, include="bib", style=style)
+        rendered = res.get("bib") if isinstance(res, dict) else None
+        if rendered and rendered.strip():
+            entries.append(rendered.strip())
+    if not entries:
+        raise RuntimeError(
+            "built-in bibliography rendering produced no entries for the "
+            "requested items"
+        )
+    return entries
+
+
+def resolve_bibliography(
+    zot, item_keys: list[str], library: str | None, style: str
+) -> "tuple[bool, list[str]]":
+    """Render formatted references, preferring Better BibTeX.
+
+    Returns ``(bbt_used, entries)``. Tries BBT first (item-key -> citekey ->
+    ``item.bibliography``); on any BBTError falls back to the built-in CSL
+    renderer over the active pyzotero access mode, with ``bbt_used`` False.
+    """
+    lib_id = bbt_library_id(library)
+    try:
+        keymap = bbt_citekeys(item_keys, lib_id)
+        citekeys = [keymap.get(k) for k in item_keys]
+        missing = [k for k, c in zip(item_keys, citekeys) if not c]
+        if missing:
+            raise BBTError(
+                "Better BibTeX has no citekey for: " + ", ".join(missing)
+            )
+        resolved = [c for c in citekeys if c]
+        return True, bbt_bibliography(resolved, style)
+    except BBTError:
+        return False, builtin_bibliography(zot, item_keys, style)
+
+
+def resolve_keys(
+    zot, item_keys: list[str], library: str | None
+) -> "tuple[bool, list[str], str]":
+    """Resolve item keys to BibTeX, preferring Better BibTeX citekeys.
+
+    Returns ``(bbt_used, citekeys, bibtex_text)``. Tries BBT first (item-key ->
+    citekey -> export); on any BBTError falls back to the built-in translator
+    over the active pyzotero access mode, in which case ``bbt_used`` is False
+    and ``citekeys`` are read back from the emitted entries. Shared by the
+    ``bibtex`` command and the citation features in sibling tasks.
+    """
+    lib_id = bbt_library_id(library)
+    try:
+        keymap = bbt_citekeys(item_keys, lib_id)
+        citekeys = [keymap.get(k) for k in item_keys]
+        missing = [k for k, c in zip(item_keys, citekeys) if not c]
+        if missing:
+            raise BBTError(
+                "Better BibTeX has no citekey for: " + ", ".join(missing)
+            )
+        resolved = [c for c in citekeys if c]
+        text = bbt_export(resolved, lib_id)
+        return True, resolved, text
+    except BBTError:
+        text = builtin_bibtex(zot, item_keys)
+        return False, bib_entry_keys(text), text
+
+
+def builtin_bibtex(zot, item_keys: list[str]) -> str:
+    """Export BibTeX via Zotero's built-in translator (BBT fallback).
+
+    Uses pyzotero's ``format="bibtex"`` per item, which returns the raw BibTeX
+    body (text/plain) in both local and Web mode. The built-in translator's
+    citekeys differ from BBT's; callers must warn on this path.
+    """
+    chunks: list[str] = []
+    for key in item_keys:
+        raw = zot.item(key, format="bibtex")
+        text = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else str(raw)
+        text = text.strip()
+        if text:
+            chunks.append(text)
+    if not chunks:
+        raise RuntimeError(
+            "built-in BibTeX export produced no entries for the requested items"
+        )
+    return "\n\n".join(chunks) + "\n"
+
+
+# --------------------------------------------------------------------------- #
+# Master-.bib sync (dedup-append, minimal touch)                              #
+# --------------------------------------------------------------------------- #
+
+_BIB_ENTRY_RE = re.compile(r"@\s*\w+\s*\{\s*([^,\s]+)\s*,", re.IGNORECASE)
+
+
+def split_bib_entries(text: str) -> "list[tuple[str, str]]":
+    """Split BibTeX text into ``(citekey, entry_text)`` pairs, in order.
+
+    Only true entry starts count: an ``@type{key,`` is an entry opener only at
+    the top level (brace depth 0), so a ``@type{...,`` token embedded inside a
+    field value — e.g. an ``abstract`` quoting another BibTeX snippet — is part
+    of the enclosing entry, never a phantom entry of its own. The scanner tracks
+    brace depth so an entry's full body (through its matching closing ``}``) is
+    captured intact rather than split mid-field.
+    """
+    entries: list[tuple[str, str]] = []
+    pos = 0
+    n = len(text)
+    while pos < n:
+        m = _BIB_ENTRY_RE.search(text, pos)
+        if not m:
+            break
+        citekey = m.group(1)
+        # Walk from the opening brace of this entry, balancing braces to find
+        # the entry's matching close; field-internal "@type{...}" tokens sit at
+        # depth > 0 and never start a new entry.
+        brace = text.index("{", m.start())
+        depth = 0
+        i = brace
+        while i < n:
+            ch = text[i]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    i += 1
+                    break
+            i += 1
+        chunk = text[m.start():i].strip()
+        entries.append((citekey, chunk))
+        pos = i
+    return entries
+
+
+def bib_entry_keys(text: str) -> list[str]:
+    """Return the citekeys of every top-level ``@type{key, ...}`` entry."""
+    return [key for key, _ in split_bib_entries(text)]
+
+
+def sync_bib(bib_path: "Path", text: str) -> "tuple[list[str], list[str]]":
+    """Append new BibTeX entries into a master ``.bib``, deduped by citekey.
+
+    Existing entries are never reordered or rewritten (minimal touch); only
+    entries whose citekey is absent from the file are appended. Returns
+    ``(added, skipped)`` citekey lists. Shared with the citation features in
+    sibling tasks.
+    """
+    existing = set()
+    if bib_path.exists():
+        existing = set(bib_entry_keys(bib_path.read_text(encoding="utf-8")))
+    added: list[str] = []
+    skipped: list[str] = []
+    to_append: list[str] = []
+    seen = set(existing)
+    for citekey, entry in split_bib_entries(text):
+        if citekey in seen:
+            skipped.append(citekey)
+            continue
+        seen.add(citekey)
+        added.append(citekey)
+        to_append.append(entry)
+    if to_append:
+        bib_path.parent.mkdir(parents=True, exist_ok=True)
+        prefix = ""
+        if bib_path.exists():
+            current = bib_path.read_text(encoding="utf-8")
+            if current and not current.endswith("\n"):
+                prefix = "\n"
+            if current.strip():
+                prefix += "\n"
+        with bib_path.open("a", encoding="utf-8") as fh:
+            fh.write(prefix + "\n\n".join(to_append) + "\n")
+    return added, skipped
+
+
+# --------------------------------------------------------------------------- #
 # Subcommand handlers                                                          #
 # --------------------------------------------------------------------------- #
 
@@ -220,6 +505,7 @@ def cmd_health(args: argparse.Namespace) -> int:
         {
             "pyzotero_version": pyzotero_version(),
             "local_api_available": local_ok,
+            "better_bibtex_available": bbt_available(),
             "web_api_configured": web_configured,
             "library_type": cfg["library_type"],
             "active_mode": active,
@@ -378,6 +664,193 @@ def cmd_pdf(args: argparse.Namespace) -> int:
     return 0
 
 
+def select_item_keys(zot, args: argparse.Namespace) -> list[str]:
+    """Resolve the ``bibtex`` selection flags to a list of Zotero item keys.
+
+    Honors ``--item-key`` (repeatable), ``--query`` (metadata search, same path
+    as the ``search`` command), and ``--doi`` (DOI -> item-key via the same
+    index as ``doiindex``). Raises RuntimeError when nothing resolves.
+    """
+    keys: list[str] = list(args.item_key or [])
+    if args.query:
+        results = zot.items(q=args.query, qmode="titleCreatorYear", limit=args.limit)
+        for it in results:
+            data = it.get("data", {})
+            if data.get("itemType") in (None, "attachment", "note"):
+                continue
+            k = data.get("key") or it.get("key")
+            if k:
+                keys.append(k)
+    if args.doi:
+        items = zot.everything(zot.top())
+        index = {
+            data.get("DOI"): (data.get("key") or it.get("key"))
+            for it in items
+            for data in [it.get("data", {})]
+            if data.get("DOI")
+        }
+        for doi in args.doi:
+            if doi in index:
+                keys.append(index[doi])
+            else:
+                raise RuntimeError(f"no library item found for DOI {doi!r}")
+    # De-duplicate, preserving order.
+    seen: set[str] = set()
+    ordered = [k for k in keys if not (k in seen or seen.add(k))]
+    if not ordered:
+        raise RuntimeError(
+            "no items selected: pass --item-key, --query, and/or --doi"
+        )
+    return ordered
+
+
+def cmd_bibtex(args: argparse.Namespace) -> int:
+    """Emit BibTeX (BBT citekeys by default) and optionally sync a master .bib."""
+    if not (args.item_key or args.query or args.doi):
+        return fail("select items with --item-key, --query, and/or --doi")
+    zot, mode = make_client(prefer=args.mode, library=args.library)
+    item_keys = select_item_keys(zot, args)
+    bbt_used, citekeys, text = resolve_keys(zot, item_keys, args.library)
+
+    result: dict[str, object] = {
+        "mode": mode,
+        "library": args.library,
+        "bbt_used": bbt_used,
+        "bbt_fallback": not bbt_used,
+        "keys": citekeys,
+        "bib_path": None,
+        "added": [],
+        "skipped": [],
+    }
+    if not bbt_used:
+        bbt_fallback_warning()
+    if args.bib:
+        added, skipped = sync_bib(Path(args.bib), text)
+        result["bib_path"] = args.bib
+        result["added"] = added
+        result["skipped"] = skipped
+        emit(result)
+    else:
+        result["bibtex"] = text
+        emit(result)
+    return 0
+
+
+def bbt_fallback_warning() -> None:
+    eprint(
+        "warning: Better BibTeX unreachable — used Zotero's built-in "
+        "translator. The emitted citekeys may NOT match your "
+        "BBT-exported .bib (bbt_fallback=true)."
+    )
+
+
+def check_draft_target(draft: "Path", marker: str | None) -> None:
+    """Validate the draft target (and marker, if given) without mutating it.
+
+    Raises RuntimeError if the draft is absent or a given marker is not present.
+    Lets ``cmd_cite`` reject a bad target *before* it syncs the master ``.bib``,
+    so a typo'd ``--marker`` cannot pollute the user's `.bib`.
+    """
+    if not draft.exists():
+        raise RuntimeError(f"draft file not found: {draft}")
+    if marker is not None and marker not in draft.read_text(encoding="utf-8"):
+        raise RuntimeError(
+            f"marker {marker!r} not found in {draft} — nothing replaced"
+        )
+
+
+def insert_citation(draft: "Path", citation: str, marker: str | None) -> None:
+    """Insert ``citation`` into ``draft``: replace the first ``marker`` or append.
+
+    With ``marker`` given, the first occurrence is replaced in place; a missing
+    marker raises RuntimeError rather than appending. Without ``marker``, the
+    citation is appended on its own line. Raises RuntimeError if the draft is
+    absent (the citation targets an existing draft, not a fresh file).
+    """
+    check_draft_target(draft, marker)
+    text = draft.read_text(encoding="utf-8")
+    if marker is not None:
+        text = text.replace(marker, citation, 1)
+    else:
+        sep = "" if not text or text.endswith("\n") else "\n"
+        text = text + sep + citation + "\n"
+    draft.write_text(text, encoding="utf-8")
+
+
+def cmd_cite(args: argparse.Namespace) -> int:
+    """Insert a citation into a draft and sync its entry into the master .bib."""
+    if not (args.item_key or args.query or args.doi):
+        return fail("select an item with --item-key, --query, and/or --doi")
+    if bool(args.tex) == bool(args.markdown):
+        return fail("pass exactly one of --tex or --markdown")
+    zot, mode = make_client(prefer=args.mode, library=args.library)
+    item_keys = select_item_keys(zot, args)
+    bbt_used, citekeys, text = resolve_keys(zot, item_keys, args.library)
+    if not bbt_used:
+        bbt_fallback_warning()
+
+    # Cite the first resolved item; selection may match several, but a single
+    # insertion is unambiguous and the .bib still syncs every resolved entry.
+    key = citekeys[0]
+    if args.tex:
+        draft = Path(args.tex)
+        citation = f"\\cite{{{key}}}"
+    else:
+        draft = Path(args.markdown)
+        citation = f"[@{key}]"
+
+    # Validate the draft target / marker BEFORE mutating the master .bib, so a
+    # missing draft or typo'd --marker cannot leave a synced entry behind.
+    check_draft_target(draft, args.marker)
+    added, skipped = sync_bib(Path(args.bib), text)
+    insert_citation(draft, citation, args.marker)
+
+    emit(
+        {
+            "mode": mode,
+            "library": args.library,
+            "bbt_used": bbt_used,
+            "bbt_fallback": not bbt_used,
+            "edited_file": str(draft),
+            "citation_key": key,
+            "citation": citation,
+            "bib_path": args.bib,
+            "added": added,
+            "skipped": skipped,
+        }
+    )
+    return 0
+
+
+def cmd_bibliography(args: argparse.Namespace) -> int:
+    """Render formatted reference entries (default APA) for selected items."""
+    if not (args.item_key or args.query or args.doi):
+        return fail("select items with --item-key, --query, and/or --doi")
+    zot, mode = make_client(prefer=args.mode, library=args.library)
+    item_keys = select_item_keys(zot, args)
+    bbt_used, entries = resolve_bibliography(zot, item_keys, args.library, args.style)
+    if not bbt_used:
+        bbt_fallback_warning()
+
+    if args.text:
+        for entry in entries:
+            print(entry)
+        return 0
+
+    emit(
+        {
+            "mode": mode,
+            "library": args.library,
+            "style": args.style,
+            "bbt_used": bbt_used,
+            "bbt_fallback": not bbt_used,
+            "count": len(entries),
+            "entries": entries,
+        }
+    )
+    return 0
+
+
 # --------------------------------------------------------------------------- #
 # Argument parsing                                                            #
 # --------------------------------------------------------------------------- #
@@ -474,6 +947,109 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_library_arg(p)
     p.set_defaults(func=cmd_pdf)
+
+    p = sub.add_parser(
+        "bibtex",
+        help="emit BibTeX (Better BibTeX citekeys by default) and optionally "
+        "sync a master .bib",
+    )
+    p.add_argument(
+        "--item-key",
+        action="append",
+        metavar="KEY",
+        help="Zotero item key to export (repeatable)",
+    )
+    p.add_argument(
+        "--query", metavar="TEXT", help="select items by metadata search"
+    )
+    p.add_argument(
+        "--doi",
+        action="append",
+        metavar="DOI",
+        help="select an item by DOI (repeatable)",
+    )
+    p.add_argument(
+        "--limit",
+        type=int,
+        default=25,
+        help="max --query matches to include (default 25)",
+    )
+    p.add_argument(
+        "--bib",
+        metavar="PATH",
+        help="master .bib to dedup-append into (default: print to stdout)",
+    )
+    add_mode_arg(p)
+    add_library_arg(p)
+    p.set_defaults(func=cmd_bibtex)
+
+    p = sub.add_parser(
+        "cite",
+        help="insert a citation into a draft and sync its entry into a .bib",
+    )
+    p.add_argument(
+        "--item-key",
+        action="append",
+        metavar="KEY",
+        help="Zotero item key to cite (repeatable; the first is inserted)",
+    )
+    p.add_argument("--query", metavar="TEXT", help="select item by metadata search")
+    p.add_argument(
+        "--doi", action="append", metavar="DOI", help="select item by DOI (repeatable)"
+    )
+    p.add_argument(
+        "--limit", type=int, default=25, help="max --query matches (default 25)"
+    )
+    p.add_argument("--tex", metavar="FILE", help="draft .tex file (inserts \\cite{KEY})")
+    p.add_argument(
+        "--markdown", metavar="FILE", help="draft .md file (inserts [@KEY])"
+    )
+    p.add_argument(
+        "--marker",
+        metavar="STR",
+        help="replace the first occurrence of STR (default: append)",
+    )
+    p.add_argument(
+        "--bib",
+        required=True,
+        metavar="PATH",
+        help="master .bib to dedup-append the cited entry into",
+    )
+    add_mode_arg(p)
+    add_library_arg(p)
+    p.set_defaults(func=cmd_cite)
+
+    p = sub.add_parser(
+        "bibliography",
+        help="render formatted reference entries (default APA) for items",
+    )
+    p.add_argument(
+        "--item-key",
+        action="append",
+        metavar="KEY",
+        help="Zotero item key to render (repeatable)",
+    )
+    p.add_argument("--query", metavar="TEXT", help="select items by metadata search")
+    p.add_argument(
+        "--doi", action="append", metavar="DOI", help="select items by DOI (repeatable)"
+    )
+    p.add_argument(
+        "--limit", type=int, default=25, help="max --query matches (default 25)"
+    )
+    p.add_argument(
+        "--style",
+        default="apa",
+        metavar="ID",
+        help="CSL style id (default apa)",
+    )
+    p.add_argument(
+        "--text",
+        action="store_true",
+        help="print rendered entries as plain text (default: JSON)",
+    )
+    add_mode_arg(p)
+    add_library_arg(p)
+    p.set_defaults(func=cmd_bibliography)
 
     return parser
 

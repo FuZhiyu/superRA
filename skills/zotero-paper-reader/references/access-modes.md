@@ -39,6 +39,10 @@ The tool resolves each variable from the environment first, then from `Notes/.en
 
 **Optional override:** `pdf --out-dir DIR` changes the Web-API download directory (default `/tmp`). There is no local-storage-path override — local PDFs are resolved from the standard `~/Zotero/storage/` location.
 
+## Better BibTeX (BibTeX export, citation, bibliography)
+
+The `bibtex`, `cite`, and `bibliography` commands resolve citekeys and entries from **Better BibTeX (BBT)** by default (over BBT's local-only JSON-RPC endpoint, so the BBT-keyed path needs local Zotero plus the Better BibTeX plugin), falling back to Zotero's built-in translator/CSL renderer over the active pyzotero access mode when BBT is unreachable. `health` reports `better_bibtex_available`. The full key model, BBT method table, fallback semantics, and command flags live in [`bibtex-citations.md`](bibtex-citations.md); the rows below record only how these commands map onto the local-vs-web access modes.
+
 ## Capability Boundaries
 
 | Capability | Local API | Web API |
@@ -54,6 +58,11 @@ The tool resolves each variable from the environment first, then from `Notes/.en
 | PDF file retrieval (local path) | yes (local storage) | download to `/tmp/` |
 | List libraries (`libraries` → user + groups) | yes | yes |
 | Group-library access (`--library <id>`) | yes | yes (key must have group access) |
+| BibTeX export, BBT citekeys (`bibtex`) | yes (needs Better BibTeX) | no (built-in fallback only) |
+| BibTeX export, built-in translator (`bibtex` fallback) | yes | yes |
+| Cite into a draft + `.bib` sync (`cite`) | yes (BBT keys; built-in fallback) | yes (built-in fallback only) |
+| Formatted references, BBT (`bibliography`) | yes (needs Better BibTeX) | no (built-in fallback only) |
+| Formatted references, built-in CSL (`bibliography` fallback) | yes | yes |
 | Write operations | not supported | yes (with write-access API key) |
 
 Two distinct full-text operations are easy to conflate:

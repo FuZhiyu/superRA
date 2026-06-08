@@ -115,6 +115,71 @@ assert_present_in \
   "$SKILL_DIR/SKILL.md" \
   'pyzotero'
 
+# --------------------------------------------------------------------------- #
+# BibTeX / citation surface (tasks 07-09)                                      #
+# --------------------------------------------------------------------------- #
+
+# SKILL.md must surface the three new commands in its routing body so they are
+# discoverable without loading the reference.
+for cmd in bibtex cite bibliography; do
+  assert_present_in \
+    "SKILL.md surfaces the '$cmd' command" \
+    "$SKILL_DIR/SKILL.md" \
+    "$cmd"
+done
+
+# SKILL.md must state the key model (BBT keys by default) and point at the
+# depth reference rather than inlining it.
+assert_present_in \
+  "SKILL.md names the Better BibTeX key model" \
+  "$SKILL_DIR/SKILL.md" \
+  'Better BibTeX'
+assert_present_in \
+  "SKILL.md routes to the bibtex-citations reference" \
+  "$SKILL_DIR/SKILL.md" \
+  'references/bibtex-citations.md'
+
+# The depth reference must exist and document the three commands.
+BIBREF="$SKILL_DIR/references/bibtex-citations.md"
+for cmd in bibtex cite bibliography; do
+  assert_present_in \
+    "bibtex-citations.md documents the '$cmd' command" \
+    "$BIBREF" \
+    "$cmd"
+done
+
+# The reference must explain the BBT-default / built-in-fallback key model and
+# the key-mismatch warning, plus the master-.bib sync semantics.
+assert_present_in \
+  "bibtex-citations.md documents the BBT-default key model" \
+  "$BIBREF" \
+  'Better BibTeX'
+assert_present_in \
+  "bibtex-citations.md documents the built-in fallback" \
+  "$BIBREF" \
+  'fallback'
+assert_present_in \
+  "bibtex-citations.md documents the bbt_fallback flag" \
+  "$BIBREF" \
+  'bbt_fallback'
+assert_present_in \
+  "bibtex-citations.md documents the master-.bib sync" \
+  "$BIBREF" \
+  'master'
+assert_present_in \
+  "bibtex-citations.md documents dedup by citekey" \
+  "$BIBREF" \
+  'citekey'
+
+# Stale-claim guard: no surface may claim BBT is reachable over the Web API or
+# pyzotero (BBT is local-only — a contradiction would mislead web-mode users).
+assert_absent "no claim that BBT works over the Web API" "Better BibTeX over the Web API"
+assert_absent "no claim that pyzotero exposes Better BibTeX" "pyzotero exposes Better BibTeX"
+
+# Inventory consistency: the skill must NOT be described as Manifest-loaded on
+# any surface (it is a standalone Utility skill).
+assert_absent "SKILL.md does not claim Manifest loading" "loaded by the Skill-Load Manifest"
+
 echo
 echo "Passed: $pass    Failed: $fail"
 if [ $fail -gt 0 ]; then
