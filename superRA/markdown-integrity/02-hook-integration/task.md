@@ -1,6 +1,6 @@
 ---
 title: "Wire Checker into PostToolUse Hook (task-system, warn-only)"
-status: approved
+status: revise
 depends_on: 
   - 01-checker-and-rules
 
@@ -44,3 +44,14 @@ The `01-checker-and-rules` checker is now wired into the existing PostToolUse ho
 **Tests.** Six new cases extend `TestTaskHook` in [skills/task-system/scripts/test_task_system.py](../../../skills/task-system/scripts/test_task_system.py): an Edit of a task `.md` with an adjacent `$$` block surfaces a `display-math-not-separated` warning naming the file; a `\diag`-class macro surfaces a `tex-only-macro` warning; a non-`task.md` `.md` under a task root is still checked (the render branch is broader than the reconcile); a clean `.md` and a non-`.md` edit both stay silent; and a Codex `apply_patch` payload touching a `.md` surfaces the warning. These assert on the real emitted `additionalContext` JSON parsed from subprocess stdout, not just a function return.
 
 **Verification.** `uv run --with pytest --with pyyaml python -m pytest skills/task-system/scripts/test_task_system.py` — 325 passed, 0 failures (TestTaskHook: 30 passed, including the 6 new cases).
+
+## Review Notes
+
+Integration review (`de482ee4..649c46df`). Task-local correctness was already approved and re-verified working end-to-end (drove a real `{tool_name:"Edit", file_path:".../task.md"}` payload through `task_hook.py`: render-integrity findings merge into the existing `additionalContext` feedback JSON alongside the reconcile warning, in the shape both harnesses inject; a non-`task.md` `notes.md` under a task root also fires the render branch; `pytest -k TaskHook` → 30 passed). Code integration is clean: utility reuse (`TASK_ROOT_DIRNAME`/`LEGACY_TASK_ROOT_DIRNAME`, `_feedback_json`/`_emit_feedback`), stdlib-only, best-effort try/except, cheap hot-path gate, minimum net diff. The blocking gap is the **Project Doc Audit**.
+
+1. **MAJOR — stale hook-architecture reference (`[BLOCKING]` Documentation currency / Project Doc Audit).** [skills/task-system/references/internals.md:114](../../../skills/task-system/references/internals.md#L114) and [:117](../../../skills/task-system/references/internals.md#L117) are the contributor-facing single source for the PostToolUse hook's behavior, reachable from `task_hook.py` in the governing diff, and are now factually incomplete:
+   - Line 114 says the `Edit|Write` / `apply_patch` matcher "fires when a `task.md` is edited directly, reconciling from the edited file's plan root." After this diff the same path **also fires on any `.md` under a task root** (not just `task.md`) to run the render-integrity check — demonstrated above with `notes.md`. The "when a `task.md` is edited" framing now understates what fires.
+   - Line 117 says "On a match the hook runs the same best-effort reconcile — `validate_plan`, `propagate_parent_status`." It omits the new render-integrity check (`_markdown_integrity_feedback` → `report-in-markdown/scripts/md_integrity.check`) that now runs alongside reconcile, on the broader `.md`-under-task-root gate, and merges into the same feedback emission.
+   - Fix: update §Hook Architecture so the `Edit|Write` / `apply_patch` bullet and the "On a match…" paragraph describe both branches — the `task.md`-only reconcile and the broader warn-only render-integrity check on any `.md` under a task root, sourced from the sibling `report-in-markdown` checker — keeping the existing pointer/link discipline (link, do not duplicate the rule text from `report-in-markdown`).
+
+2. **MINOR (advisory) — inventory entries do not surface the new self-diagnose CLI.** `report-in-markdown` now ships its first bundled scripts ([skills/report-in-markdown/scripts/check_markdown.py](../../../skills/report-in-markdown/scripts/check_markdown.py) + `md_integrity.py`), but its one-line summaries still describe it only as a style guide: [skills/CATEGORIES.md:43](../../../skills/CATEGORIES.md#L43), [README.md:93](../../../README.md#L93), the `using-superRA` skill-inventory row, and the SKILL.md frontmatter `description` ([skills/report-in-markdown/SKILL.md:3](../../../skills/report-in-markdown/SKILL.md#L3)). None is factually contradicted (none claimed "no scripts"), and the CLI is documented in the SKILL body, so this is non-blocking. Orchestrator's call whether to add a brief "self-diagnose CLI" pointer in these inventory rows / frontmatter while fixing item 1 — consolidated here because both are the same doc-coherence pass.
