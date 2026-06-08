@@ -1,6 +1,6 @@
 ---
 title: "Drift-free, install-free CLI source resolution via uv run --script"
-status: implemented
+status: revise
 depends_on: 
   - wrappers-and-hooks
   - unified-command-surface
@@ -130,6 +130,14 @@ Removed `skills/task-system/pyproject.toml` and `scripts/__init__.py` (the versi
 - **Byte-identity.** Regenerated `superRA/superra` and `hooks/task-hook`; both diff-clean against the generator. `test_committed_hook_shim_matches_generator` and `test_generated_wrapper_and_hook_are_valid_bash` pass.
 
 **Test suite:** full task-system suite green from live source — `uv run --isolated --python 3.14 --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx --no-project python -m pytest skills/task-system/scripts -q` → **596 passed, 2 skipped**. (Note: under Python 3.12, seven cwd-autodetect tests in `test_cli.py` fail on a pre-existing latent `iterdir` generator race in `_task_io._has_child_task_dir` — the lazy `iterdir()` is outside its `try/except OSError`. This reproduces identically on the unmodified baseline under 3.12 and is unrelated to this task; it does not occur under the project's 3.14 toolchain. Flagged as an out-of-scope pre-existing bug.)
+
+## Review Notes
+
+1. **MAJOR — the documented fresh-project bootstrap crashes under uv's default interpreter.** Scope items 5 and 7 add a new documented bootstrap to `superplan §Creating Tasks`: `uv run --script <skill-dir>/scripts/cli.py wrapper init` (bare, no `--root`). In a fresh project this routes the first call through `write_wrapper(None)` → `resolve_plan_root_arg(None)` → `autodetect_plan_root`, whose upward walk builds a `<current>/superRA` candidate at each level and calls `_is_task_root_dir` → [`_has_child_task_dir`](../../../../skills/task-system/scripts/_task_io.py#L30) on it. When that candidate dir does not exist (the normal fresh-project case), the lazy `directory.iterdir()` generator raises `FileNotFoundError` (an `OSError` subclass) *inside* the `any(...)` generator, escaping the `try/except OSError` — so the documented bootstrap crashes with `rc=1`.
+
+   This is the same latent `iterdir` bug the Results flag as pre-existing/out-of-scope, and that framing is correct for the seven `test_cli.py` failures. But this task is what newly puts a primary user/agent path on top of it: the bare-autodetect bootstrap is a deliverable of items 5/7, and the task's own Validation asserts "After `superplan` creates a tree, `<task-root>/superra` is present" — which fails under the toolchain a user actually gets. Reproduced empirically: bare `uv run --script .../cli.py wrapper init` in a fresh `mktemp -d` returns `rc=1`; `wrapper init --root superRA` returns `rc=0`. uv's default `--script` selection picked Python 3.12 here (the PEP 723 block only pins `requires-python = ">=3.10"`), and the crash occurs on **3.12 and earlier**; 3.13/3.14 handle it because CPython changed `iterdir()` error timing. So the bootstrap is not robust on supported Python versions — it only works if uv happens to select ≥3.13.
+
+   Fix the root cause: materialize the listing inside the guard — `children = list(directory.iterdir())` inside the `try/except OSError` in `_has_child_task_dir`. Verified this one-line change makes all 30 `test_cli.py` tests pass under 3.12 *and* makes the bare bootstrap return `rc=0` under uv's default selection. (Alternatively, if you keep the latent bug strictly out of scope, the documented bootstrap and `superplan` step must use `wrapper init --root superRA` and the PEP 723 blocks must pin `requires-python = ">=3.13"` so uv cannot select a crashing interpreter — but the one-line fix is cleaner and also greens the suite on all supported versions.)
 
 ## Revision Notes
 
