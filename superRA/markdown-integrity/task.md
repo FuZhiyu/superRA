@@ -1,6 +1,6 @@
 ---
 title: "Markdown Render-Integrity Check: Hook + Self-Diagnose Tool"
-status: revise
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-08
