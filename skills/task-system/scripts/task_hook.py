@@ -11,7 +11,9 @@ In both cases it runs the same best-effort reconcile — validate the tree and
 propagate parent status. It does not write the dashboard; a static dashboard is
 produced only on explicit `superra dashboard export`. Always exits 0 — never
 blocks the agent. Validation warnings and non-fatal reconcile failures are
-injected through PostToolUse JSON on stdout; successful/ignored paths stay silent.
+injected through PostToolUse JSON on stdout; successful/ignored paths stay silent
+except in Codex empty-JSON mode, where no-feedback paths emit `{}` because
+Codex requires parseable hook JSON.
 
 PostToolUse stdin format:
   {
@@ -24,6 +26,7 @@ PostToolUse stdin format:
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import warnings
@@ -33,6 +36,8 @@ from pathlib import Path
 TASK_ROOT_DIRNAME = "superRA"
 LEGACY_TASK_ROOT_DIRNAME = ".plan"
 TASK_ROOT_DIRNAMES = (TASK_ROOT_DIRNAME, LEGACY_TASK_ROOT_DIRNAME)
+CODEX_EMPTY_JSON_ENV = "SUPERRA_TASK_HOOK_EMPTY_JSON"
+_CODEX_EMPTY_JSON_MODE = False
 
 
 def _scripts_dir() -> Path:
@@ -113,9 +118,23 @@ def _feedback_json(feedback: list[str]) -> str:
     )
 
 
-def _emit_feedback(feedback: list[str]) -> None:
+def _truthy_env(name: str) -> bool:
+    value = os.environ.get(name, "")
+    return value.lower() not in ("", "0", "false", "no", "off")
+
+
+def _emit_empty_json_if_needed() -> None:
+    if _CODEX_EMPTY_JSON_MODE or _truthy_env(CODEX_EMPTY_JSON_ENV):
+        print("{}")
+
+
+def _exit_success(feedback: list[str] | None = None) -> None:
+    feedback = feedback or []
     if feedback:
         print(_feedback_json(feedback))
+    else:
+        _emit_empty_json_if_needed()
+    sys.exit(0)
 
 
 def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
@@ -297,15 +316,15 @@ def _handle_bash(data: dict) -> None:
     tool_input = data.get("tool_input", {}) or {}
     command = tool_input.get("command", "") or ""
     if not command:
-        sys.exit(0)
+        _exit_success()
 
     # Gate: must reference a task root AND contain a mutating verb. A read-only
     # command that merely mentions a task root (task_query.py, grep, serve) is
     # not a structural change and must early-exit.
     if not _command_mentions_task_root(command):
-        sys.exit(0)
+        _exit_success()
     if not _MUTATING_RE.search(command):
-        sys.exit(0)
+        _exit_success()
 
     _ensure_scripts_on_path()
     import _task_io as task_io
@@ -364,8 +383,7 @@ def _handle_bash(data: dict) -> None:
             continue
         feedback.extend(_reconcile(plan_root, task_path=None))
 
-    _emit_feedback(feedback)
-    sys.exit(0)
+    _exit_success(feedback)
 
 
 def _handle_edit_write(data: dict) -> None:
@@ -381,13 +399,13 @@ def _handle_edit_write(data: dict) -> None:
     tool_input = data.get("tool_input", {}) or {}
     file_path_str = tool_input.get("file_path", "")
     if not file_path_str:
-        sys.exit(0)
+        _exit_success()
 
     file_path = Path(file_path_str)
 
     # Cheap gate: only a .md under a task root is of interest to either branch.
     if not _is_markdown_under_task_root(file_path):
-        sys.exit(0)
+        _exit_success()
 
     feedback: list[str] = []
 
@@ -405,8 +423,7 @@ def _handle_edit_write(data: dict) -> None:
     # Broader branch: render-integrity-check any .md under a task root.
     feedback.extend(_markdown_integrity_feedback(file_path))
 
-    _emit_feedback(feedback)
-    sys.exit(0)
+    _exit_success(feedback)
 
 
 def _task_path_from_file_path(file_path: Path) -> tuple[Path, str] | None:
@@ -450,7 +467,7 @@ def _handle_apply_patch(data: dict) -> None:
     tool_input = data.get("tool_input", {}) or {}
     command = tool_input.get("command", "") or ""
     if not command:
-        sys.exit(0)
+        _exit_success()
 
     cwd = Path.cwd()
     roots: list[Path] = []
@@ -479,11 +496,12 @@ def _handle_apply_patch(data: dict) -> None:
     for plan_root in roots:
         feedback.extend(_reconcile(plan_root, task_path=None))
 
-    _emit_feedback(feedback)
-    sys.exit(0)
+    _exit_success(feedback)
 
 
 def main() -> None:
+    global _CODEX_EMPTY_JSON_MODE
+
     # Read tool call info from stdin (Claude Code PostToolUse protocol)
     try:
         raw = sys.stdin.read()
@@ -492,6 +510,10 @@ def main() -> None:
         data = {}
 
     tool_name = data.get("tool_name", "") or data.get("tool", "")
+    _CODEX_EMPTY_JSON_MODE = (
+        _truthy_env(CODEX_EMPTY_JSON_ENV)
+        or tool_name == "apply_patch"
+    )
 
     if tool_name == "Bash":
         _handle_bash(data)
@@ -500,7 +522,7 @@ def main() -> None:
     elif tool_name in ("Edit", "Write"):
         _handle_edit_write(data)
 
-    sys.exit(0)
+    _exit_success()
 
 
 if __name__ == "__main__":

@@ -2416,22 +2416,40 @@ class TestTaskRead:
 
 
 class TestTaskHook:
-    def _run_hook(self, payload: dict, cwd: Path | None = None) -> int:
+    def _run_hook(
+        self,
+        payload: dict,
+        cwd: Path | None = None,
+        env: dict[str, str] | None = None,
+    ) -> int:
         """Run task_hook.main() with the given payload via stdin, return exit code."""
-        result = self._run_hook_result(payload, cwd=cwd)
+        result = self._run_hook_result(payload, cwd=cwd, env=env)
         return result.returncode, result.stderr
 
-    def _run_hook_result(self, payload: dict, cwd: Path | None = None):
+    def _run_hook_result(
+        self,
+        payload: dict,
+        cwd: Path | None = None,
+        env: dict[str, str] | None = None,
+    ):
         """Run task_hook.py with the given payload and return the process result."""
         import subprocess
         hook_path = SCRIPTS_DIR / "task_hook.py"
+        run_env = None
+        if env is not None:
+            run_env = os.environ.copy()
+            run_env.update(env)
         return subprocess.run(
             [sys.executable, str(hook_path)],
             input=json.dumps(payload),
             capture_output=True,
             text=True,
             cwd=cwd,
+            env=run_env,
         )
+
+    def _assert_empty_json(self, stdout: str) -> None:
+        assert json.loads(stdout) == {}
 
     def test_ignores_non_task_md(self, plan_root):
         """Hook exits 0 immediately for non-task.md files."""
@@ -2460,6 +2478,20 @@ class TestTaskHook:
         result = self._run_hook_result(payload)
         assert result.returncode == 0
         assert result.stdout == ""
+        assert result.stderr == ""
+
+    def test_codex_empty_json_mode_valid_task_md_outputs_object(self, plan_root):
+        """Codex no-feedback task.md paths emit parseable empty hook JSON."""
+        payload = {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": str(plan_root / "01-first" / "task.md")},
+        }
+        result = self._run_hook_result(
+            payload,
+            env={task_hook.CODEX_EMPTY_JSON_ENV: "1"},
+        )
+        assert result.returncode == 0
+        self._assert_empty_json(result.stdout)
         assert result.stderr == ""
 
     def test_exits_zero_on_validation_failure(self, plan_root):
@@ -2544,7 +2576,7 @@ class TestTaskHook:
         }
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
-        assert result.stdout == ""
+        self._assert_empty_json(result.stdout)
         assert result.stderr == ""
         assert not (root / "dashboard.html").exists(), (
             "the hook must not auto-generate a dashboard"
@@ -2605,7 +2637,7 @@ class TestTaskHook:
         }
         result = self._run_hook_result(payload, cwd=tmp_path)
         assert result.returncode == 0
-        assert result.stdout == ""
+        self._assert_empty_json(result.stdout)
         assert result.stderr == ""
         assert not (root / "dashboard.html").exists()
 
@@ -2620,6 +2652,22 @@ class TestTaskHook:
             text=True,
         )
         assert result.returncode == 0
+
+    def test_codex_empty_stdin_outputs_empty_json(self):
+        """Codex empty stdin fallback is a valid empty hook JSON object."""
+        import subprocess
+        hook_path = SCRIPTS_DIR / "task_hook.py"
+        env = os.environ.copy()
+        env[task_hook.CODEX_EMPTY_JSON_ENV] = "1"
+        result = subprocess.run(
+            [sys.executable, str(hook_path)],
+            input="",
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        assert result.returncode == 0
+        self._assert_empty_json(result.stdout)
 
     def test_file_not_in_plan_directory_exits_zero(self, tmp_path):
         """Hook exits 0 for task.md files not inside a superRA/ directory."""
@@ -2720,6 +2768,20 @@ class TestTaskHook:
         }
         code, _ = self._run_hook(payload)
         assert code == 0
+
+    def test_codex_bash_ignored_command_outputs_empty_json(self):
+        """Codex Bash ignored paths emit parseable empty hook JSON."""
+        payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": "mv /tmp/a.txt /tmp/b.txt"},
+        }
+        result = self._run_hook_result(
+            payload,
+            env={task_hook.CODEX_EMPTY_JSON_ENV: "1"},
+        )
+        assert result.returncode == 0
+        self._assert_empty_json(result.stdout)
+        assert result.stderr == ""
 
     def test_bash_command_with_superra_prefix_path_exits_zero(self, tmp_path):
         """A path segment like superRA.worktrees is not the superRA task root."""
@@ -2940,7 +3002,7 @@ class TestTaskHook:
                 env={},
             )
             assert result.returncode == 0
-            assert result.stdout == ""
+            self._assert_empty_json(result.stdout)
 
     # --- markdown render-integrity (md_integrity checker) branch ---
 

@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" task-hook; fi"
+            "command": "export SUPERRA_TASK_HOOK_EMPTY_JSON=1; root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" task-hook; else printf '{}\\n'; fi"
           }
         ]
       },
@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" task-hook; fi"
+            "command": "export SUPERRA_TASK_HOOK_EMPTY_JSON=1; root=\"${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-}}\"; if [ -n \"$root\" ]; then \"$root/hooks/run-hook.cmd\" task-hook; else printf '{}\\n'; fi"
           }
         ]
       }
