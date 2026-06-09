@@ -66,7 +66,7 @@ assert_combined_absent() {
 # 1. Help works and lists every required subcommand.
 run_tool --help
 assert_rc "help exits 0" 0
-for cmd in health libraries search item children collections tags fulltext doiindex pdf; do
+for cmd in health libraries search item children collections tags fulltext doiindex pdf bibtex cite bibliography; do
   assert_stdout_contains "help lists '$cmd'" "$cmd"
 done
 
@@ -78,6 +78,7 @@ unset ZOTERO_LIBRARY_ID ZOTERO_API_KEY ZOTERO_LIBRARY_TYPE
 run_tool health
 assert_stdout_contains "health reports pyzotero version" '"pyzotero_version": "1.13.0"'
 assert_stdout_contains "health reports active_mode field" '"active_mode"'
+assert_stdout_contains "health reports better_bibtex_available" '"better_bibtex_available"'
 if printf '%s' "$TOOL_OUT" | rg -q --fixed-strings '"local_api_available": true'; then
   assert_rc "health exits 0 when local API is available" 0
 else
@@ -144,6 +145,179 @@ else
   record_pass ".env API key never appears in output"
 fi
 rm -rf "$ENV_TMP"
+
+# 7. bibtex selection guard: with no --item-key/--query/--doi it errors cleanly
+#    before any library access (deterministic regardless of access mode).
+run_tool bibtex
+assert_rc "bibtex without a selection exits 1" 1
+grep -q '^error:' <<<"$TOOL_ERR" \
+  && grep -q -- '--item-key' <<<"$TOOL_ERR" \
+  && record_pass "bibtex names the missing selection flags" \
+  || record_fail "bibtex names the missing selection flags"
+
+# 7b. bibtex rejects an invalid --library before any access (parse_library).
+run_tool bibtex --item-key ABCD1234 --library notanid
+assert_rc "bibtex invalid --library exits 1" 1
+grep -q 'invalid --library' <<<"$TOOL_ERR" \
+  && record_pass "bibtex invalid --library names the problem" \
+  || record_fail "bibtex invalid --library names the problem"
+
+# 8. Unit-test the reusable bib-sync helpers (dedup-append, minimal touch) by
+#    importing the module — no Zotero/BBT/library access. These helpers back the
+#    --bib master sync and are reused by the citation features in sibling tasks.
+SYNC_TMP="$(mktemp -d)"
+SYNC_OUT="$(BIBDIR="$SYNC_TMP" uv run --quiet --with pyzotero==1.13.0 python - "$SCRIPT_ABS" <<'PY' 2>/tmp/zt_sync_err
+import importlib.util, os, sys
+from pathlib import Path
+spec = importlib.util.spec_from_file_location("zt", sys.argv[1])
+zt = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(zt)
+bib = Path(os.environ["BIBDIR"]) / "master.bib"
+entry = "@article{smith2020key,\n  title = {A Title},\n  author = {Smith, J.},\n}\n"
+added, skipped = zt.sync_bib(bib, entry)
+assert added == ["smith2020key"] and skipped == [], (added, skipped)
+# Idempotence: a second identical sync adds nothing.
+added2, skipped2 = zt.sync_bib(bib, entry)
+assert added2 == [] and skipped2 == ["smith2020key"], (added2, skipped2)
+# Existing entries untouched: exactly one @article block.
+text = bib.read_text()
+assert text.count("@article{") == 1, text
+# A new key appends; the old one stays skipped (minimal touch, order preserved).
+two = entry + "\n@book{jones2019other,\n  title = {Other},\n}\n"
+added3, skipped3 = zt.sync_bib(bib, two)
+assert added3 == ["jones2019other"] and skipped3 == ["smith2020key"], (added3, skipped3)
+keys = zt.bib_entry_keys(bib.read_text())
+assert keys == ["smith2020key", "jones2019other"], keys
+print("SYNC_OK")
+PY
+)"
+if printf '%s' "$SYNC_OUT" | rg -q --fixed-strings 'SYNC_OK'; then
+  record_pass "sync_bib dedup-appends and preserves existing entries"
+else
+  printf '      sync helper failed: %s\n' "$(cat /tmp/zt_sync_err)"
+  record_fail "sync_bib dedup-appends and preserves existing entries"
+fi
+rm -rf "$SYNC_TMP" /tmp/zt_sync_err
+
+# 9. cite selection / target guards (deterministic — argparse and the guard run
+#    before any library access).
+run_tool cite --bib /tmp/zt_cite_guard.bib
+assert_rc "cite without a selection exits 1" 1
+grep -q '^error:' <<<"$TOOL_ERR" \
+  && grep -q -- '--item-key' <<<"$TOOL_ERR" \
+  && record_pass "cite names the missing selection flags" \
+  || record_fail "cite names the missing selection flags"
+
+# Neither/both of --tex / --markdown is an error (the guard fires before access).
+run_tool cite --item-key ABCD1234 --bib /tmp/zt_cite_guard.bib
+assert_rc "cite without a target exits 1" 1
+grep -q 'exactly one' <<<"$TOOL_ERR" \
+  && record_pass "cite requires exactly one target (none given)" \
+  || record_fail "cite requires exactly one target (none given)"
+
+run_tool cite --item-key ABCD1234 --tex /tmp/a.tex --markdown /tmp/a.md --bib /tmp/zt_cite_guard.bib
+assert_rc "cite with both targets exits 1" 1
+grep -q 'exactly one' <<<"$TOOL_ERR" \
+  && record_pass "cite requires exactly one target (both given)" \
+  || record_fail "cite requires exactly one target (both given)"
+
+# bibliography selection guard.
+run_tool bibliography
+assert_rc "bibliography without a selection exits 1" 1
+grep -q -- '--item-key' <<<"$TOOL_ERR" \
+  && record_pass "bibliography names the missing selection flags" \
+  || record_fail "bibliography names the missing selection flags"
+
+# 10. Unit-test the citation-insertion + hardened entry-detection helpers by
+#     importing the module — no Zotero/BBT/library access. Covers \cite/[@key]
+#     insertion, marker replace-in-place, missing-marker error, and the
+#     hardened split_bib_entries (a "@type{...}" token inside a field value must
+#     NOT become a phantom entry — the helper backing every reused .bib write).
+UNIT_TMP="$(mktemp -d)"
+UNIT_OUT="$(WORKDIR="$UNIT_TMP" uv run --quiet --with pyzotero==1.13.0 python - "$SCRIPT_ABS" <<'PY' 2>/tmp/zt_unit_err
+import importlib.util, os, sys
+from pathlib import Path
+spec = importlib.util.spec_from_file_location("zt", sys.argv[1])
+zt = importlib.util.module_from_spec(spec); spec.loader.exec_module(zt)
+work = Path(os.environ["WORKDIR"])
+
+# Hardened entry detection: an @type{...,} token inside a field value is part of
+# the enclosing entry, not a phantom entry. The real entry is captured intact.
+phantom = (
+    "@article{real2020key,\n"
+    "  title = {A Real Paper},\n"
+    "  abstract = {We compare to @inproceedings{notakey, a prior approach}.},\n"
+    "}\n"
+)
+assert zt.bib_entry_keys(phantom) == ["real2020key"], zt.bib_entry_keys(phantom)
+ents = zt.split_bib_entries(phantom)
+assert len(ents) == 1 and "notakey" in ents[0][1] and "abstract" in ents[0][1], ents
+
+# Nested braces in a title are balanced into one entry; two real entries split.
+two = (
+    "@article{a2020,\n  title = {Nested {Brace} Title},\n}\n\n"
+    "@book{b2019,\n  title = {Other},\n}\n"
+)
+assert zt.bib_entry_keys(two) == ["a2020", "b2019"], zt.bib_entry_keys(two)
+
+# sync_bib over the phantom case adds exactly the one real key (no bogus key).
+added, skipped = zt.sync_bib(work / "p.bib", phantom)
+assert added == ["real2020key"] and skipped == [], (added, skipped)
+
+# insert_citation: append.
+tex = work / "draft.tex"
+tex.write_text("Intro.\n")
+zt.insert_citation(tex, "\\cite{k1}", None)
+assert "\\cite{k1}" in tex.read_text(), tex.read_text()
+
+# insert_citation: marker replace-in-place (marker gone, citation present once).
+texm = work / "marker.tex"
+texm.write_text("See CITEHERE for details.\n")
+zt.insert_citation(texm, "\\cite{k2}", "CITEHERE")
+out = texm.read_text()
+assert "CITEHERE" not in out and out.count("\\cite{k2}") == 1, out
+
+# insert_citation: missing marker errors and leaves the draft unchanged.
+texn = work / "nomarker.tex"
+texn.write_text("No marker.\n")
+try:
+    zt.insert_citation(texn, "\\cite{k3}", "NOPE")
+    raise SystemExit("missing marker did not raise")
+except RuntimeError:
+    pass
+assert texn.read_text() == "No marker.\n", texn.read_text()
+
+# check_draft_target validates without mutating: a missing draft and a missing
+# marker both raise, and it never writes. This is what lets cmd_cite reject a
+# bad target BEFORE syncing the master .bib (so a typo cannot pollute it).
+absent = work / "does_not_exist.tex"
+try:
+    zt.check_draft_target(absent, None)
+    raise SystemExit("missing draft did not raise")
+except RuntimeError:
+    pass
+assert not absent.exists(), "check_draft_target created the draft"
+texc = work / "checkmarker.tex"
+texc.write_text("No marker here.\n")
+try:
+    zt.check_draft_target(texc, "NOPE")
+    raise SystemExit("missing marker did not raise in check_draft_target")
+except RuntimeError:
+    pass
+assert texc.read_text() == "No marker here.\n", texc.read_text()
+zt.check_draft_target(texc, None)  # existing draft, no marker -> ok, no write
+assert texc.read_text() == "No marker here.\n", texc.read_text()
+
+print("UNIT_OK")
+PY
+)"
+if printf '%s' "$UNIT_OUT" | rg -q --fixed-strings 'UNIT_OK'; then
+  record_pass "cite/insert + hardened entry-detection helpers behave"
+else
+  printf '      unit helper failed: %s\n' "$(cat /tmp/zt_unit_err)"
+  record_fail "cite/insert + hardened entry-detection helpers behave"
+fi
+rm -rf "$UNIT_TMP" /tmp/zt_unit_err /tmp/zt_cite_guard.bib
 
 echo
 echo "Passed: $pass    Failed: $fail"
