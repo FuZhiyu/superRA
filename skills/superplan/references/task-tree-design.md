@@ -38,15 +38,17 @@ During planning, walk the project guidance docs (`CLAUDE.md` / `AGENTS.md` / `RE
 A task should be the right size for independent dispatch and review.
 
 **Split when:**
-- Different concerns, such as data cleaning vs. estimation vs. visualization.
-- Different data sources can be loaded independently.
-- Independent workstreams could run in parallel.
-- Different domain skills apply.
+- Each child has a meaningful objective, evidence trail, and review verdict.
+- Different concerns, data sources, artifact families, or domain skills apply.
+- Independent branches could run in parallel or be reviewed by different standards.
+- Serial work has peer review units where downstream correctness depends on a completed upstream output or finding.
 
 **Do not split when:**
 - Steps are trivially sequential with no independent review value.
 - The unit is too small to justify dispatch cost.
 - The split artificially decomposes one logical operation.
+
+`depends_on` records prerequisite order among sibling review units. It does not justify a split by itself: choose the split for review value, then add dependencies for execution order. A branch may be serial, parallel, or mixed.
 
 **Right-sizing test:** Can you describe the task's success criteria in one sentence? If yes, it is the right size. If the review would be trivial, it is too small. If the description needs three paragraphs, it may need splitting.
 
@@ -60,6 +62,8 @@ Branch for independent review value, then use `depends_on` only for prerequisite
 
 The presumption is modify or merge the task that already owns the concern. Creating a new task — especially a root-level task — is the justified exception.
 
+Use motivating cases as evidence for the general rule: a semantic `task move` command belongs under the CLI command surface that will maintain it, while its restructuring provenance belongs in context; a niche status-model update such as `postponed-status` belongs under the status model / task-system concern that owns it, not as a level-1 workstream.
+
 ### Recursive descent
 
 Walk from the root. Descend into a node only because the work relates to that node's concern, so at every node the question is not whether the work belongs there but how deep it lands. Split on leaf vs. branch first.
@@ -67,7 +71,9 @@ Walk from the root. Descend into a node only because the work relates to that no
 **Branch** (a node with children):
 
 - A child's concern covers the work: descend into that child and recurse.
-- No child covers it: add a new child under this node. At the root, that child is a new root-level workstream; record which existing child's concern you read and why it does not cover the work.
+- An existing child owns the durable concern but its objective is too narrow: widen that child objective, add `## Revision Notes` when the change is non-obvious, and recurse.
+- Existing and new work are peers under an unrepresented broader concern: create the broader parent, move both under it, and give the parent the shared objective context.
+- No child covers the work: add a new child under this node. At the root, that child is a new root-level workstream; record which existing child's concern you read and why it does not cover the work.
 
 **Leaf** (a node with no children):
 
@@ -76,9 +82,19 @@ Walk from the root. Descend into a node only because the work relates to that no
 
 A sibling is just a new child of the shared parent. There is no "unrelated at the leaf" case: you reach a leaf only by descending through related concerns.
 
+### Objective rewrites on scope expansion
+
+When scope expands, rewrite the owning `## Objective` as the current-state contract for the full widened concern. Include the original durable context still needed for implementation and review; do not leave the new scope as a patch note. Add `## Revision Notes` when the change is non-obvious, substantive, or invalidates approved work.
+
+For simple changes, reopen the existing owning task or affected tasks, rewrite objectives, add revision notes, and set affected approved tasks plus transitive downstream dependents to `revise` by orchestrator judgment. For complex changes, create a temporary child under the durable home so implementation and review have their own evidence trail.
+
 ### Root-task definition
 
 A root-level task is a whole workstream or project. A narrow feature related to an existing workstream nests by the descent above and cannot land at root unless it is genuinely unrelated to everything in the tree.
+
+### Parent and sibling context
+
+Put durable shared assumptions, conventions, and constraints on the lowest parent whose subtree inherits them. A dependent sibling is an ordered peer, not inherited context: write the downstream objective so it names the upstream output, finding, sample, variable, or decision it consumes.
 
 ## Update-Task Lifecycle
 
@@ -86,6 +102,8 @@ An update task — one whose purpose is to improve or modify an existing task or
 
 - **Planning stage:** for a substantial update, create a self-contained subtask under the owning concern with a full, dispatchable objective. Do not merge into the target before the change exists.
 - **Consolidation / Integration stage:** merge the update task into the task it updates — fold the matured result into the target or parent and remove the update-task directory.
+
+At integration, preserve validated findings in the durable owning task's `## Results`, update the owning objective if the scope changed, and remove the temporary update task. When an action-named parent such as "consolidation" becomes the long-lived owner of a concern, rename or rewrite it to the durable concern it now represents.
 
 Anti-patterns: creating a new task for a scope extension of an existing task; landing a narrow improvement at the root; nesting three or more levels deep without review value; leaving an update task standing as a separate tree after the change has shipped.
 

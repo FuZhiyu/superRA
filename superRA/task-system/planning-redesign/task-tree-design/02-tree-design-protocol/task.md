@@ -1,6 +1,6 @@
 ---
 title: "Author Superplan Task-Tree Design Protocol"
-status: not-started
+status: implemented
 depends_on: 
   - 01-reference-ownership
 
@@ -39,3 +39,13 @@ Incorporate the motivating examples as evidence without making them special-case
 - The wording is mostly positive, concise, and owner-local under the AGENTS.md DRY/Necessity gate.
 
 ## Results
+
+### Key Findings
+- Authored the superplan-owned task-tree design protocol in [task-tree-design.md](../../../../../skills/superplan/references/task-tree-design.md#L36-L108). It now covers durable-home placement, widening existing concerns before adding breadth, review-value task splits, prerequisite-only dependency semantics, direct objective revision versus temporary update tasks, parent/sibling context, broader-parent creation, update-task expiry at integration, and action-verb parent maturation.
+- Incorporated the motivating cases as examples of durable-home placement without special-case branching: semantic `task move` belongs to the CLI command surface, and a niche `postponed-status` update belongs under the task-system status-model concern ([task-tree-design.md:65](../../../../../skills/superplan/references/task-tree-design.md#L65)).
+- Repointed `superplan` to the reference for task-tree design judgment, entry placement, context distillation, splitting, revision notes, user-driven tree changes, and retroactive task-tree creation while removing duplicated mechanics from the top-level skill file ([SKILL.md:18](../../../../../skills/superplan/SKILL.md#L18), [SKILL.md:28](../../../../../skills/superplan/SKILL.md#L28), [SKILL.md:78](../../../../../skills/superplan/SKILL.md#L78), [SKILL.md:86](../../../../../skills/superplan/SKILL.md#L86), [SKILL.md:190](../../../../../skills/superplan/SKILL.md#L190), [SKILL.md:214](../../../../../skills/superplan/SKILL.md#L214)).
+
+### Verification
+- `python3 skills/report-in-markdown/scripts/check_markdown.py skills/superplan/SKILL.md skills/superplan/references/task-tree-design.md superRA/task-system/planning-redesign/task-tree-design/02-tree-design-protocol/task.md` passed: all three files reported `clean`.
+- `./superRA/superra task check` passed: `All checks passed. No issues found.`
+- `rg -n "task-system/references/planning|references/planning\\.md" skills/superplan skills/task-system skills/using-superRA agents README.md AGENTS.md -g '*.md' -g '*.toml'` returned no matches for the old task-system planning reference in the active ownership surfaces checked.
