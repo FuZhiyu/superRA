@@ -6,7 +6,7 @@ Load when writing markdown that contains figures. Rules apply at every stage.
 
 The caller supplies the target `attachments/` directory; substitute the actual path when embedding. If the caller specifies none, default to `attachments/` next to the output file:
 
-- Stage 1 task `## Results` → next to the task's `task.md` (see `task-system/references/planning.md` §Figure Embedding).
+- Stage 1 task `## Results` → next to the task's `task.md` (see `task-system/references/task-file-contract.md` §Figure Embedding).
 - Matured task results → next to the task's `task.md`.
 - Standalone report → next to the report file.
 
@@ -47,5 +47,4 @@ Source: [Original](relative/path/to/original/figure.pdf)
 Use a **descriptive caption** — not "Figure 1" — since it is the figure's documentation for readers who skim.
 
 Cite the **original source path** (the file the analysis script produced, not the copy in `ATTACH_DIR`) beneath the embed so a future reader can regenerate the figure.
-
 

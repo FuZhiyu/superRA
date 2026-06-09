@@ -241,13 +241,13 @@ Run the full drift-test suite again. When it passes and integration review is AP
 
 Once per integration, between closing Integrate and entering Document, the orchestrator surveys the tree and decides whether it is clean enough to mature or needs a consolidation pass first. This is orchestrator inline work, not a dispatched stage.
 
-1. Run `superra task tree` and `superra task dag` and judge the affected frontier against the consolidation symptom list in `superplan/references/consolidation.md §When to Consolidate`. The placement / wrong-parent check is **whole-tree**, not frontier-internal — test each task's concern against its parent and other subtrees using `task-system/references/planning.md` §Placing Work in the Tree, so a misplaced task created elsewhere is caught here. Any *update task* in the frontier is a Merge candidate by default: fold its matured result into the task it modifies and remove the standalone directory, per the create-then-merge lifecycle in §Placing Work.
+1. Run `superra task tree` and `superra task dag` and judge the affected frontier against the consolidation symptom list in `superplan/references/consolidation.md` §When to Consolidate. The placement / wrong-parent check is **whole-tree**, not frontier-internal — test each task's concern against its parent and other subtrees using `superplan/references/task-tree-design.md` §Placing Work by Durable Home, so a misplaced task created elsewhere is caught here. Any *update task* in the frontier is a Merge candidate by default: fold its matured result into the task it modifies and remove the standalone directory, per `superplan/references/task-tree-design.md` §Update-Task Lifecycle.
 2. Record the verdict — clean-enough or needs-a-pass, one line — in the durable integration record in root task.md §Workflow Status so a later session sees the judgment was made.
 3. On needs-a-pass, load `superplan/references/consolidation.md` and run its survey → classify → propose → approve → execute protocol (atomic commit), then enter Document on the consolidated tree. Changes that materially restructure the tree (Merge/Prune/Restructure that alter scope or `approved` status) still route through `superplan §User Feedback and Changing the Task Tree` — the gate triggers the assessment, it does not grant authority to restructure approved work unilaterally.
 
 ## Document
 
-Document matures selected task.md `## Results` sections from live dev log to reader-facing permanent record (Stage 2 maturation per `task-system/references/planning.md` §Results Shape).
+Document matures selected task.md `## Results` sections from live dev log to reader-facing permanent record (Stage 2 maturation per `task-system/references/task-file-contract.md` §Results Shape).
 
 ### Step 1: Identify maturation scope
 
@@ -273,7 +273,7 @@ Agent(subagent_type: "superRA:implementer"):
   Tasks in scope: <task paths whose results need maturation>
 
   Additionally: mature each in-scope task's `## Results` section per
-    `task-system/references/planning.md` §Results Shape: fact-check against
+    `task-system/references/task-file-contract.md` §Results Shape: fact-check against
     code outputs, restructure for reader clarity, materialize figures when
     needed using `report-in-markdown`, and ensure notation consistency across
     tasks. Edit task.md files in place. Land recoverable commits (one per
@@ -290,7 +290,7 @@ Agent(subagent_type: "superRA:reviewer"):
   Tasks in scope: <same task paths>
 
   Additionally: Review each in-scope task's `## Results` section per
-    `task-system/references/planning.md` §Results Shape, including Stage 2
+    `task-system/references/task-file-contract.md` §Results Shape, including Stage 2
     maturation at the highest-touched-task narrative homes, retained leaf
     evidence, and task-local figure attachments.
     <prior-round adjudication notes if re-dispatching>

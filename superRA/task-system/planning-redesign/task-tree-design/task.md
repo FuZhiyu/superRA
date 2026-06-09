@@ -1,9 +1,8 @@
 ---
 title: "Task Tree Design Protocol"
-status: not-started
-depends_on: 
+status: in-progress
+depends_on:
   - placement-and-update-lifecycle
-
 tags: []
 created: 2026-06-09
 ---

@@ -13,7 +13,7 @@ description: "Requires `superRA:using-superra` loaded first. Use when starting n
 
 Owns the procedural shape of the **PLAN** phase: discovery of existing work, exploration, domain setup, task decomposition, self-review, and handoff. Output is a `superRA/` task tree for superimplement to consume.
 
-Write task objectives for a reader skilled at the craft but with zero context for this project. The `## Objective` / `## Planner Guidance` split — binding vs. suggested content — is in `task-system/references/planning.md` §Writing Objectives.
+Write task objectives for a reader skilled at the craft but with zero context for this project. The `## Objective` / `## Planner Guidance` split — binding vs. suggested content — is in `references/task-tree-design.md` §Writing Objectives and Planner Guidance.
 
 **Announce at start:** "I'm using the superplan skill to create the task tree."
 
@@ -23,11 +23,11 @@ Write task objectives for a reader skilled at the craft but with zero context fo
 
 Before exploration or task design, assess three independent dimensions of the incoming work. Creating a task tree and updating one both pass through the same assessment.
 
-**1. Placement — where it goes.** If `superRA/` exists, walk the tree to find where the work belongs via the concern-first descent in `task-system/references/planning.md` §Placing Work in the Tree. If not, check for a legacy `PLAN.md` (offer migration via `task-system` §Migration) and otherwise make the work the first root-level task.
+**1. Placement — where it goes.** If `superRA/` exists, walk the tree to find where the work belongs via the concern-first descent in `references/task-tree-design.md` §Placing Work by Durable Home. If not, check for a legacy `PLAN.md` (offer migration via `task-system` §Migration) and otherwise make the work the first root-level task.
 
 **2. Depth tier — how deep.** Choose a tier (§Depth Tiers) that modulates how deeply the later phases run.
 
-**3. Routing path — what mode.** Forward planning is the default. The one alternative is **retroactive documentation** — existing code/results need a `superRA/` record, detected when the work has code without task coverage; it runs the same phases but sets `status: implemented` (see §Retroactive Plan Creation). Structural cleanup of an existing tree is not a routing mode — it is the separate `references/consolidation.md` pass, entered when the tree has structural debt rather than when new work needs placing.
+**3. Routing path — what mode.** Forward planning is the default. The one alternative is **retroactive documentation** — existing code/results need a `superRA/` record, detected when the work has code without task coverage; it runs the same phases but sets `status: implemented` (see `references/task-tree-design.md` §Retroactive Task-Tree Creation). Structural cleanup of an existing tree is not a routing mode — it is the separate `references/consolidation.md` pass, entered when the tree has structural debt rather than when new work needs placing.
 
 Placement and depth are independent: work can clearly belong under an existing task yet still need thorough planning, and an uncertain tree location does not make the work hard to plan. Exploration may force either to be revisited.
 
@@ -65,7 +65,7 @@ Identify the domain of the work and load the matching domain skill's planning re
 
 If the task is in a domain without an implemented vertical: proceed to Phase 3, but flag the gap to the researcher.
 
-**Scope check:** A root-level task is a whole workstream (see §Placing Work). If the work covers multiple genuinely independent workstreams, suggest a separate root-level task for each, producing complete results on its own; work related to an existing workstream nests under it by the placement descent rather than landing at root.
+**Scope check:** A root-level task is a whole workstream (see `references/task-tree-design.md` §Root-task definition). If the work covers multiple genuinely independent workstreams, suggest a separate root-level task for each, producing complete results on its own; work related to an existing workstream nests under it by the placement descent rather than landing at root.
 
 ## Phase 3: Design & Task Decomposition
 
@@ -73,7 +73,7 @@ If the task is in a domain without an implemented vertical: proceed to Phase 3, 
 
 Before defining tasks, map the artifact pipeline: which scripts/notebooks/documents will be created (one per logical phase, following any artifact-format guidance the domain skill loads), what their inputs are, and where outputs go. Follow existing project conventions for directory structure.
 
-**Walk the project guidance docs and distill them into scoped objective context.** Walk up from every directory the tree will touch, reading every `CLAUDE.md` / `AGENTS.md` / `README.md` on the path plus the repo-root `CLAUDE.md` and every data-directory `README.md` the tasks load from. Distill what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections on the `## Objective` of the lowest task whose subtree it governs (`task-system/references/planning.md` §Context and Conventions). Dispatched agents inherit these via `superra task read` instead of re-walking the tree.
+**Walk the project guidance docs and distill them into scoped objective context.** Walk up from every directory the tree will touch, reading every `CLAUDE.md` / `AGENTS.md` / `README.md` on the path plus the repo-root `CLAUDE.md` and every data-directory `README.md` the tasks load from. Distill what changes implementation or review behavior into scoped `### Conventions` / `### Context` / `### Constraints` subsections on the `## Objective` of the lowest task whose subtree it governs (`references/task-tree-design.md` §Context Distillation). Dispatched agents inherit these via `superra task read` instead of re-walking the tree.
 
 **Pipeline file (required for multi-artifact work):** When the work has more than one executable artifact, include a single committed entry point that reproduces every output from source — running scripts in dependency order, failing fast (`set -e` or equivalent), updated whenever a script is added.
 
@@ -81,7 +81,7 @@ Before defining tasks, map the artifact pipeline: which scripts/notebooks/docume
 
 **Each task is one logical unit of work with full discipline applied.** The active domain skill defines that discipline. Documentation is written continuously alongside the work, not as a separate task.
 
-For the objective writing guide and task splitting heuristics, see `task-system/references/planning.md` §Writing Objectives and §Splitting Tasks.
+For the objective writing guide and task splitting heuristics, see `references/task-tree-design.md` §Writing Objectives and Planner Guidance and §Splitting Tasks.
 
 ### Creating Tasks
 
@@ -107,7 +107,7 @@ Or create the directories and write `task.md` files directly (`task-system/SKILL
 
 ### Task Dependencies
 
-Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-system/references/planning.md` §Field-by-Field Notes for semantics.
+Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-system/references/task-file-contract.md` §Field-by-Field Notes for semantics.
 
 Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
 
@@ -120,7 +120,7 @@ Identify independent branches so the orchestrator can dispatch them in parallel 
 
 ### Task Anatomy
 
-For the canonical task structure — recursive task anatomy and field-by-field notes — see `task-system/references/planning.md`. Domain-specific top-level objective context comes from the domain skill's planning reference.
+For the canonical task structure — recursive task anatomy and field-by-field notes — see `task-system/references/task-file-contract.md`. Domain-specific top-level objective context comes from the domain skill's planning reference.
 
 ### Create the `superRA/` Directory
 
@@ -169,7 +169,7 @@ At any point during planning, when you hit a genuine design tradeoff with distin
 
 ## Retroactive Plan Creation
 
-Survey existing code, outputs, and notebooks, then create one task per logical unit of work done, each with `status: implemented` and its `## Objective` (the goal) and `## Results` (what was found) filled in. The full workflow is in `task-system/references/planning.md` §Retroactive Plan Creation.
+Survey existing code, outputs, and notebooks, then create one task per logical unit of work done, each with `status: implemented` and its `## Objective` (the goal) and `## Results` (what was found) filled in. The full workflow is in `references/task-tree-design.md` §Retroactive Task-Tree Creation.
 
 ## Living Task Tree
 
@@ -177,7 +177,7 @@ Survey existing code, outputs, and notebooks, then create one task per logical u
 
 Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a task's approach adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits to the task's body sections per the editing discipline in `agents/implementer.md` §Editing Etiquette; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §User Feedback and Changing the Task Tree below.
 
-**Results:** Each task's `## Results` section is the live findings record. See `task-system/references/planning.md` §Results Shape for the template and two-stage lifecycle.
+**Results:** Each task's `## Results` section is the live findings record. See `task-system/references/task-file-contract.md` §Results Shape for the template and two-stage lifecycle.
 
 ### `superRA/` Is the Task Tracker
 
@@ -209,14 +209,14 @@ When the task tree changes — details updated, tasks added/removed/restructured
 **Protocol:**
 
 1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change.
-2. **Update `superRA/` inline:** Place the change by the recursive descent in `task-system/references/planning.md` §Placing Work in the Tree — the presumption is MODIFY/MERGE the task that owns the concern; a new task, especially at root, is the justified exception.
+2. **Update `superRA/` inline:** Place the change by the recursive descent in `references/task-tree-design.md` §Placing Work by Durable Home — the presumption is MODIFY/MERGE the task that owns the concern; a new task, especially at root, is the justified exception.
    - **Modified task** — Walk the tree, identify every task whose objective or output is affected, and update each in place. Rewrite each objective to be fully self-sufficient with the new scope (all planning context included, not just the changed part). Add a `## Revision Notes` section with the delta signal.
    - **New task** — Only when the descent reaches a branch no child covers; record which concern you read and why it does not cover the work.
    - **Removed task** — Delete the directory entirely.
    - **Root task.md** — After the task edits above, rewrite any field in root task.md that no longer matches the new tree.
 
 3. **Update statuses** by orchestrator judgment. Reset `status` to `not-started` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `approved` tasks.
-4. **Sweep for stale content** per `task-system/references/planning.md` §Stale Content Checklist.
+4. **Sweep for stale content** per `task-system/references/task-file-contract.md` §Stale Content Checklist.
 5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
 6. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point.
 

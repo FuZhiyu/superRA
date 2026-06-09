@@ -72,7 +72,7 @@ Use CRSP-style merge conventions. Validate row counts post-merge.
 > [MAJOR] Inner join used instead of left join
 ```
 
-Field-by-field anatomy and body-section ownership live in `references/planning.md §Field-by-Field Notes`.
+Field-by-field anatomy and body-section ownership live in `references/task-file-contract.md` §Field-by-Field Notes.
 
 ## Routing — operate on the tree
 
@@ -80,7 +80,8 @@ Field-by-field anatomy and body-section ownership live in `references/planning.m
 |---|---|
 | Create / rename / link / move tasks; bulk status propagation; append results programmatically | `references/commands.md` |
 | Read or resolve task comments (the read/resolve loop; comments also surface via `superra task read`) | `references/commands.md §Comments` |
-| Objective writing, task splitting, placement, results shape, stale-content, retroactive plans | `references/planning.md` |
+| Task-file anatomy, fields, status/dependencies, inherited context, results shape, stale-content, figure embedding | `references/task-file-contract.md` |
+| Objective writing, task splitting, placement, durable homes, update-task lifecycle, retroactive task-tree creation | `../superplan/references/task-tree-design.md` |
 | Migrate legacy `PLAN.md` + `RESULTS.md`, or upgrade `superRA/` v1 → v2 | `references/internals.md §Migration` |
 | View the dashboard | `./superRA/superra dashboard` (background server, reuses a running one; `--foreground`, `dashboard stop`). Mechanics in `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |

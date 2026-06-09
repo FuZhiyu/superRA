@@ -4,8 +4,8 @@ Load this reference when the task tree has accumulated structural debt — overl
 
 Consolidation is structure-level cleanup, distinct from:
 - `superplan §User Feedback and Changing the Task Tree` — individual reactive changes.
-- `task-system/references/planning.md §Splitting Tasks` — splitting heuristics, which consolidation applies retroactively.
-- `task-system/references/planning.md §Stale Content Checklist` — content-level cleanup within a task.
+- `superplan/references/task-tree-design.md` §Splitting Tasks — splitting heuristics, which consolidation applies retroactively.
+- `task-system/references/task-file-contract.md` §Stale Content Checklist — content-level cleanup within a task.
 
 ## When to Consolidate
 
@@ -23,7 +23,7 @@ Read every `task.md` and build a structural picture:
 
 1. **Run `superra task tree`** and **`superra task dag`** for the structure, status distribution, and dependency graph.
 2. **Map each task's scope:** objective, declared inputs/outputs, `depends_on`, status.
-3. **Build a relationship matrix.** For each task pair, note shared inputs, shared outputs, sequential logic, and overlapping scope. Compare across levels, not only same-level pairs — misplacement and update tasks that should fold into the artifact they modify are inherently whole-tree, so test each task's and each subtree's concern against its parent and other subtrees via the recursive descent in `task-system/references/planning.md` §Placing Work in the Tree.
+3. **Build a relationship matrix.** For each task pair, note shared inputs, shared outputs, sequential logic, and overlapping scope. Compare across levels, not only same-level pairs — misplacement and update tasks that should fold into the artifact they modify are inherently whole-tree, so test each task's and each subtree's concern against its parent and other subtrees via the recursive descent in `superplan/references/task-tree-design.md` §Placing Work by Durable Home.
 4. **Identify and classify issues** from the list below. Treat any *update task* in the frontier — one whose purpose is to improve an existing task or artifact — as a **Merge** candidate by default (create-then-merge lifecycle): it folds into the task it updates rather than surviving as a standalone tree.
 
 ## Issue Classification
@@ -100,7 +100,7 @@ After approval:
 
 2. **Verify** with `superra task tree` and `superra task dag`: no cycles, no broken `depends_on`, no orphans, structure matches the approved proposal.
 
-3. **Sweep for stale content** per `task-system/references/planning.md §Stale Content Checklist` — consolidation often strands references in objectives and results.
+3. **Sweep for stale content** per `task-system/references/task-file-contract.md` §Stale Content Checklist — consolidation often strands references in objectives and results.
 
 4. **Commit atomically** — all changed task files in one commit titled `plan: consolidate task tree — <summary>`.
 

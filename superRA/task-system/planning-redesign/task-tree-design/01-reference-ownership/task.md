@@ -1,6 +1,6 @@
 ---
 title: "Split Tree Design from Task-File Contract"
-status: not-started
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-06-09
@@ -29,3 +29,17 @@ Use `skill-creator` before editing skill files. Apply the AGENTS.md DRY/Necessit
 - Historical task records may keep old citations unless they are active instructions; document any intentionally retained historical references in `## Results`.
 
 ## Results
+
+### Key Findings
+
+- Moved tree-design policy into the superplan-owned reference [task-tree-design.md:1](../../../../../skills/superplan/references/task-tree-design.md#L1). It now owns objective/guidance writing, context distillation, splitting, durable-home placement, scope expansion, update-task lifecycle, and retroactive task-tree creation.
+- Renamed the old task-system planning reference to the task-file contract [task-file-contract.md:1](../../../../../skills/task-system/references/task-file-contract.md#L1). It now owns task anatomy, frontmatter/status/dependency mechanics, inherited context rendering, stale-content cleanup, results shape, section ownership, and figure embedding.
+- Updated active ownership surfaces to point at the new owners, including the contributor ownership table [CLAUDE.md:87](../../../../../CLAUDE.md#L87), the task-system routing table [SKILL.md:81](../../../../../skills/task-system/SKILL.md#L81), and superplan's planning workflow references [SKILL.md:16](../../../../../skills/superplan/SKILL.md#L16).
+
+### Validation
+
+- `rg "task-system/references/planning.md|skills/task-system/references/planning.md|references/planning.md\\)" skills agents README.md AGENTS.md CLAUDE.md` returned no stale active references to the old task-system planning file.
+- `rg "task-system/references/planning.md|§Placing Work|§Splitting Tasks|§Writing Objectives|§Retroactive Plan Creation" skills agents README.md AGENTS.md` returned only references pointing to the new superplan tree-design owner where those section titles remain active.
+- `python3 skills/report-in-markdown/scripts/check_markdown.py skills/superplan/references/task-tree-design.md skills/task-system/references/task-file-contract.md superRA/task-system/planning-redesign/task-tree-design/01-reference-ownership/task.md` reported all three markdown files clean.
+- `./superRA/superra task read task-system/planning-redesign/task-tree-design/01-reference-ownership` rendered the updated task with `status: implemented`.
+- A full-repo `rg "task-system/references/planning.md|skills/task-system/references/planning.md" .` still finds old paths inside `superRA/` task records. I intentionally retained those task-record citations as historical provenance and did not edit other task files.

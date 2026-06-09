@@ -85,7 +85,8 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Codebase-coherence techniques — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
 | Universal task read/edit interface — read a task with injected context, edit body sections, shared editing principles, ownership-boundary principle | `using-superra` (§Task Interface) |
 | Tree tooling — concepts, query/frontier/DAG, dashboard, migration; full mutation command surface | `task-system/SKILL.md` (load-on-demand), commands in `references/commands.md` |
-| Task anatomy, field notes, results shape, status enum/lifecycle, body-section vocabulary, stale-content rules, planner-owned fields | `task-system` (references/planning.md) |
+| Task-tree design — objective/guidance writing, splitting, placement, durable homes, scope expansion, update-task lifecycle, context distillation, retroactive task-tree creation | `superplan` (references/task-tree-design.md) |
+| Task-file contract — anatomy, field notes, results shape, status enum/lifecycle, body-section vocabulary, stale-content rules, planner-owned fields | `task-system` (references/task-file-contract.md) |
 | Markdown style guide rules — file-link citations plus figures, math, and tables | `report-in-markdown` |
 | Harness-specific tool names and runtime differences | Adapter references under `skills/using-superRA/references/` |
 | Canonical role behavior, including each role's concrete task ownership (what it owns + status transitions) | `agents/implementer.md` and `agents/reviewer.md` |
