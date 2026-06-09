@@ -1,6 +1,6 @@
 ---
 title: "Redesign Consolidation and Integration Cleanup"
-status: implemented
+status: approved
 depends_on: 
   - 02-tree-design-protocol
 
