@@ -40,3 +40,18 @@ The redesign should make `superplan` own task-tree design and keep `task-system`
 - Cross-reference sweep leaves no active source surface pointing to `task-system/references/planning.md` for tree-design policy.
 
 ## Results
+
+The task-tree design redesign is implemented and reviewed across six approved child tasks.
+
+### Key Findings
+
+- `superplan` now owns task-tree design policy through [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md). The reference covers durable-home placement, depth over breadth, branching for review value, dependency edges as prerequisite ordering, parent context versus sibling results, temporary update tasks, update-task expiry, action-verb parent maturation, and broader-parent creation.
+- `task-system` now owns task-file mechanics through [task-file-contract.md](../../../../skills/task-system/references/task-file-contract.md). The old `skills/task-system/references/planning.md` path has been removed from active source references.
+- Dispatch instructions now support bundled simple tasks as spawn-cost amortization while preserving per-task reads, results, statuses, review notes, and approvals.
+- Planning review now evaluates tree-design quality directly, including durable ownership, branching, dependencies, parent/sibling context, update-task lifecycle, action-verb durability, and task clarity.
+- Consolidation and integration cleanup now apply the task-tree design protocol before Document, including whole-tree update-task checks, mature/rename handling, scope-expansion rewrites, and advisory use of placement diagnostics.
+
+### Verification
+
+- Each child task is approved after implementer/reviewer dispatch.
+- The final sweep recorded clean active-reference checks, generated-agent sync, targeted task-system tests, and retained historical task-record citations only as provenance.
