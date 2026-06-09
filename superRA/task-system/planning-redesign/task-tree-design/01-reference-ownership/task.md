@@ -1,6 +1,6 @@
 ---
 title: "Split Tree Design from Task-File Contract"
-status: revise
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-06-09
@@ -47,3 +47,4 @@ Use `skill-creator` before editing skill files. Apply the AGENTS.md DRY/Necessit
 ## Review Notes
 
 1. **MAJOR** — [task.md:19](../../../../task.md#L19) is not historical provenance: it is the current root task's `## Conventions` instruction for superRA-internals work, and it still says task anatomy belongs to `task-system/references/planning.md`. The implementation's historical-reference handling claim [task.md:45](task.md#L45) is therefore too broad. Update this active root convention to the new ownership split, pointing task-tree design to `skills/superplan/references/task-tree-design.md` and task-file mechanics to `skills/task-system/references/task-file-contract.md`, while leaving genuinely historical task-record citations alone.
+   → implemented: updated the active root convention to split task-tree design and task-file contract ownership while leaving historical task-record citations unchanged ([task.md:19](../../../../task.md#L19); [task-tree-design.md:1](../../../../../skills/superplan/references/task-tree-design.md#L1); [task-file-contract.md:1](../../../../../skills/task-system/references/task-file-contract.md#L1)).
