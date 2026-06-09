@@ -91,8 +91,8 @@ At thorough depth, Phase 4 gains a planning-review step between self-review and 
 
 **What each mode evaluates:**
 
-- **Handoff-readiness:** clarity, completeness, human readability, internal consistency, dependency sanity, objective/guidance split, and whether an implementer could execute the assigned task or subtree from the task files plus provided context.
-- **Design review:** objective fit of the proposed architecture, decomposition, assumptions, artifact pipeline, dependency structure, domain reasoning, and unresolved tradeoffs.
+- **Handoff-readiness:** clarity, completeness, human readability, internal consistency, parent/sibling context, dependency sanity, objective/guidance split, and whether an implementer could execute the assigned task or subtree from the task files plus provided context.
+- **Design review:** objective fit of the proposed architecture, decomposition, durable ownership, depth vs. breadth, branching quality, update-task lifecycle, action-verb durability, assumptions, artifact pipeline, domain reasoning, and unresolved tradeoffs. Use `task-tree-design.md` for the full policy.
 
 The planner fixes the tree inline against the findings. The reviewer's own mechanics (verdict, note ownership, edit scope) live in [planning-review.md](planning-review.md).
 

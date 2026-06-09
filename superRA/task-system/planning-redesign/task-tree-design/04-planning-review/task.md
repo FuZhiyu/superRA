@@ -1,6 +1,6 @@
 ---
 title: "Extend Planning Review to Task-Tree Design"
-status: not-started
+status: implemented
 depends_on: 
   - 02-tree-design-protocol
 
@@ -39,3 +39,14 @@ Teach planning reviewers to evaluate:
 - The instructions stay concise and point to `task-tree-design.md` for the full design policy instead of duplicating it.
 
 ## Results
+
+Updated the planning-review surfaces so a `Stage: planning-review` reviewer may block on task-tree design defects, not only handoff prose.
+
+- [planning-review.md](../../../../../skills/superplan/references/planning-review.md) now points reviewers to the superplan-owned task-tree design policy and names the design dimensions they should cover.
+- [thorough-planning.md](../../../../../skills/superplan/references/thorough-planning.md) now makes the planner-facing mode descriptions cover parent/sibling context, durable ownership, depth vs. breadth, branching quality, update-task lifecycle, action-verb durability, and the `task-tree-design.md` policy pointer.
+- No role specs or generated surfaces changed: [reviewer.md](../../../../../agents/reviewer.md) already delegates `Stage: planning-review` to the manifest-loaded planning-review reference.
+
+Verification:
+
+- `python3 skills/report-in-markdown/scripts/check_markdown.py skills/superplan/references/planning-review.md skills/superplan/references/thorough-planning.md superRA/task-system/planning-redesign/task-tree-design/04-planning-review/task.md`
+- `./superRA/superra task check`
