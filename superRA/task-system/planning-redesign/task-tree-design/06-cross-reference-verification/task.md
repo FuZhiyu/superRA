@@ -1,6 +1,6 @@
 ---
 title: "Cross-Reference Sweep and Verification"
-status: not-started
+status: implemented
 depends_on: 
   - 01-reference-ownership
   - 03-dispatch-bundles
@@ -31,3 +31,21 @@ Run the cross-reference, generated-artifact, and verification sweep after the re
 - Task-system checks still pass after any diagnostic or filename updates.
 
 ## Results
+
+### Cross-Reference Sweep
+
+- Active source/docs grep is clean: `rg -n "task-system/references/planning\.md|skills/task-system/references/planning\.md|references/planning\.md\)" skills agents README.md AGENTS.md CLAUDE.md .codex -g '!skills/task-system/scripts/vendor/**'` returned no matches.
+- The old task-system planning reference is gone from the active reference directory: [task-file-contract.md](../../../../../skills/task-system/references/task-file-contract.md) and [task-tree-design.md](../../../../../skills/superplan/references/task-tree-design.md) are the live owners, and `test -e skills/task-system/references/planning.md` exited 1.
+- Ownership and inventory surfaces already point at the split owners: [AGENTS.md](../../../../../AGENTS.md#L88), [CLAUDE.md](../../../../../CLAUDE.md#L88), [README.md](../../../../../README.md#L97), [CATEGORIES.md](../../../../../skills/CATEGORIES.md#L45), [task-system/SKILL.md](../../../../../skills/task-system/SKILL.md#L75), and [handoff-doc/SKILL.md](../../../../../skills/handoff-doc/SKILL.md#L11).
+- The task-system diagnostic placement reference already points at the superplan tree-design owner: [task_check.py](../../../../../skills/task-system/scripts/task_check.py#L224).
+
+### Generated Artifacts and Tests
+
+- `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` confirmed `.codex/agents/superra_implementer.toml`, `.codex/agents/superra_reviewer.toml`, `skills/using-superRA/references/direct-mode-implementer.md`, and `skills/using-superRA/references/direct-mode-reviewer.md` are in sync with [implementer.md](../../../../../agents/implementer.md) and [reviewer.md](../../../../../agents/reviewer.md).
+- `uv run --with pytest --with pyyaml python -m pytest skills/task-system/scripts/test_task_system.py -q -k task_check` passed: 4 tests passed, 321 deselected.
+- No generated artifacts, active skill files, role specs, or task-system scripts required edits in this final sweep.
+
+### Historical Records Retained
+
+- `rg -n "task-system/references/planning\.md|skills/task-system/references/planning\.md" . -g '!skills/task-system/scripts/vendor/**' -g '!.git/**'` still returns hits under `superRA/` task records. I intentionally retained those task-record citations as historical provenance, including prior tasks that implemented the old file and this task's own objective naming the obsolete path as the sweep target. They are not active source instruction paths.
+- The pre-existing unrelated deletion of `skills/task-system/.gitignore` was ignored as instructed: it was not restored, edited, staged, or committed.
