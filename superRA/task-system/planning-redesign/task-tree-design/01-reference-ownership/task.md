@@ -1,6 +1,6 @@
 ---
 title: "Split Tree Design from Task-File Contract"
-status: implemented
+status: approved
 depends_on:  []
 tags: []
 created: 2026-06-09
@@ -43,8 +43,3 @@ Use `skill-creator` before editing skill files. Apply the AGENTS.md DRY/Necessit
 - `python3 skills/report-in-markdown/scripts/check_markdown.py skills/superplan/references/task-tree-design.md skills/task-system/references/task-file-contract.md superRA/task-system/planning-redesign/task-tree-design/01-reference-ownership/task.md` reported all three markdown files clean.
 - `./superRA/superra task read task-system/planning-redesign/task-tree-design/01-reference-ownership` rendered the updated task with `status: implemented`.
 - A full-repo `rg "task-system/references/planning.md|skills/task-system/references/planning.md" .` still finds old paths inside `superRA/` task records. I intentionally retained those task-record citations as historical provenance and did not edit other task files.
-
-## Review Notes
-
-1. **MAJOR** — [task.md:19](../../../../task.md#L19) is not historical provenance: it is the current root task's `## Conventions` instruction for superRA-internals work, and it still says task anatomy belongs to `task-system/references/planning.md`. The implementation's historical-reference handling claim [task.md:45](task.md#L45) is therefore too broad. Update this active root convention to the new ownership split, pointing task-tree design to `skills/superplan/references/task-tree-design.md` and task-file mechanics to `skills/task-system/references/task-file-contract.md`, while leaving genuinely historical task-record citations alone.
-   → implemented: updated the active root convention to split task-tree design and task-file contract ownership while leaving historical task-record citations unchanged ([task.md:19](../../../../task.md#L19); [task-tree-design.md:1](../../../../../skills/superplan/references/task-tree-design.md#L1); [task-file-contract.md:1](../../../../../skills/task-system/references/task-file-contract.md#L1)).
