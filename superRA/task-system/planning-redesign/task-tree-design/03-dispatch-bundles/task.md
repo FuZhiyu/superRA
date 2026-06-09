@@ -1,6 +1,6 @@
 ---
 title: "Align Dispatch Bundles with Task-Local Review"
-status: implemented
+status: approved
 depends_on: 
   - 02-tree-design-protocol
 
