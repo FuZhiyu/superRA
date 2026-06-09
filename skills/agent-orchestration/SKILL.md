@@ -25,13 +25,13 @@ Dispatch cost > work content. Just do it.
 
 ### Tier 2 — Slightly involved: bundle and delegate
 
-Group multiple small-to-medium tasks that share context (same file, same skill load, same domain references) into one dispatch. One agent does the whole bundle in a single turn.
+Group multiple small-to-medium tasks that share context (same stage, same domain, same parent, shared files or references) into one dispatch. One agent does the whole bundle in a single turn.
 
 - Three edits in the same skill file.
 - A reviewer sweep over two sibling agent files.
 - Updating a template plus its one consumer.
 
-The agent pays the spawn cost once and amortizes it across the bundle.
+The agent pays the spawn cost once and amortizes it across the bundle. In a `superRA/` task tree, bundling is spawn-cost amortization only: each bundled task remains its own contract, status, results section, and review verdict.
 
 ### Tier 3 — Complicated: one dedicated agent per task
 
@@ -84,6 +84,12 @@ Every workflow skill that dispatches a task-scoped `implementer` or `reviewer` s
 
 Templates carry required fields plus an optional `Additionally:` line for task-specific steering: focus areas, prior-round adjudication notes, warnings, or non-default skill/reference overrides. Omit `Additionally:` when there is no extra steering; never use it to restate role protocol, manifest loads, or task content. Never include `Work from:` — cwd is implicit.
 
+Use a bundle only for same-stage, same-domain, same-parent frontier leaves that share context and are simple enough for one agent. Keep dependent siblings out of the same implementation bundle unless the upstream task is already `approved`; `depends_on` sequences tasks whose outputs or findings are prerequisites.
+
+Bundle dispatches use `Tasks:` instead of `Task:`. The assignee runs the role protocol separately for each listed task: `superra task read` per path, task-local `## Results` or `## Review Notes`, independent status transitions, and independent commit evidence. A reviewer may review a bundle in one dispatch, but cannot approve it as an aggregate; every listed task must reach its own verdict.
+
+At the dispatch boundary, parent objectives are inherited shared context. Dependency status does not inject sibling results; when a downstream task needs an upstream finding, output, sample, variable, or decision, dispatch steering or the downstream objective names the approved dependency `## Results` to read.
+
 **Implementer:**
 ```
 Agent(subagent_type: "superRA:implementer"):
@@ -92,6 +98,18 @@ Agent(subagent_type: "superRA:implementer"):
   Worktree: <absolute path>   # optional — parallel-dispatch only
 
   Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
+```
+
+**Bundled implementer:**
+```
+Agent(subagent_type: "superRA:implementer"):
+  Stage: <stage-name>
+  Tasks:
+    - <task path>
+    - <task path>
+  Worktree: <absolute path>   # optional — parallel-dispatch only
+
+  Additionally: <optional shared steering plus any per-task notes>
 ```
 
 **Reviewer:**
@@ -103,6 +121,19 @@ Agent(subagent_type: "superRA:reviewer"):
   Worktree: <absolute path>   # optional — parallel-reviewer pattern only
 
   Additionally: <optional steering — focus area, prior-round adjudication notes, warnings>
+```
+
+**Bundled reviewer:**
+```
+Agent(subagent_type: "superRA:reviewer"):
+  Stage: <stage-name>
+  Tasks:
+    - <task path>
+    - <task path>
+  Git range: <BASE_SHA>..<HEAD_SHA>
+  Worktree: <absolute path>   # optional — parallel-reviewer pattern only
+
+  Additionally: <optional shared steering plus any per-task notes>
 ```
 
 **Planning reviewer:**

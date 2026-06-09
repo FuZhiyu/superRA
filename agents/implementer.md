@@ -15,13 +15,15 @@ For Codex agents: Load `using-superra` and `report-in-markdown` skill.
 ## Before You Start
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references. Load any additional skill the dispatch's `Additionally:` line names.
-2. **Read your task via `superra task read <path>`.** This injects the task's context (focused tree, ancestor objectives, sibling dependency status).
+2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context (focused tree, ancestor objectives, sibling dependency status).
 
 ## Execution Protocol
 
 Treat `## Objective` as the implementation contract. Treat `## Planner Guidance`, when present, as advisory context you may deviate from when a better route satisfies the objective.
 
 If you materially deviate from `## Planner Guidance`, list it in `## Results` with what guidance you did not follow, what you did instead, and why the chosen route still satisfies `## Objective`. Omit the deviation list when you followed the guidance or only made immaterial tactical adjustments.
+
+For a bundle dispatch, run this protocol independently for each assigned task. Write separate `## Results`, move each `status:` independently, and cite task-local evidence for each path.
 
 Follow the discipline of the domain skill you loaded for this Stage. Bad analysis is worse than no analysis — stop and report under §Escalation if the data does not look right.
 
@@ -50,18 +52,18 @@ Skipping any step is lying, not verifying. **Run the command, read the output, t
 **4. Domain checklist walk.** Walk the active domain skill's gated checklist, including operation-conditional sections matching what you did. Every `[BLOCKING]` item must pass — a blocking failure is fix-first, not a handoff. Address `[ADVISORY]` items where reasonable; flag them in your status return otherwise.
 
 **5. Editing hygiene.**
-- [ ] Every edit is inside my assigned task's `task.md`.
+- [ ] Every task-file edit is inside an assigned task's `task.md`.
 - [ ] I did not delete any review item or rewrite reviewer prose — I only appended `→ implemented: ...` annotations.
 - [ ] Figures are embedded with `![caption](attachments/...)` and the image files are committed to the task's `attachments/` directory.
 - [ ] Every material finding I am about to report is already written into the task's `task.md`, not only in my status return.
 
 ## Handoff
 
-You hand off by updating your assigned task's `task.md` directly, following `superRA:using-superra` §Task Interface editing principles. Never edit another task's file; flag unclear task structure in your status return rather than inventing one.
+You hand off by updating assigned task files directly, following `superRA:using-superra` §Task Interface editing principles. Never edit another task's file; flag unclear task structure in your status return rather than inventing one.
 
 ### What You Own
 
-Within your assigned task's `task.md`:
+Within each assigned task's `task.md`:
 
 - **`## Results`** for the task; create it if it does not exist.
 - **`status:` frontmatter field** — you own transitions up to `implemented`, including `revise → implemented` on fix rounds. Set it after your atomic commit.
@@ -95,7 +97,7 @@ After annotating all items you're expected to address, set `status: implemented`
 
 ### Commit
 
-Stage code + task.md in a **single atomic commit**, following `superRA:using-superra` §Commit Hygiene:
+Stage code + assigned task.md files in a **single atomic commit**, following `superRA:using-superra` §Commit Hygiene:
 
 ```bash
 git add [code files] superRA/<task-path>/task.md

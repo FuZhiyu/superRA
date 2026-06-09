@@ -31,6 +31,8 @@ Do not take the implementer's word. The status return is a navigation aid; the c
 
 Review against the stated `## Objective`, not just the planned steps — steps written at planning may prove insufficient once implemented. If the implementation materially deviates from `## Planner Guidance`, verify `## Results` states what changed and why the chosen route still satisfies `## Objective`; an unexplained material deviation is a MAJOR evidence gap, not a failure to obey advisory guidance. Verify `## Results` reads as the self-contained account `using-superra` §Task Interface requires.
 
+For a bundle dispatch, run this protocol independently for each assigned task. Write `## Review Notes` and set `status:` in each task file separately; an aggregate bundle approval is invalid.
+
 You have full access to run code. For key results, check that output files exist, re-derive a number or identity when useful, inspect intermediate data or residuals, and confirm reported values match actual outputs. Full pipeline re-runs are not required, but run targeted verification when something looks off.
 
 ### Severity Levels
@@ -69,18 +71,18 @@ Two verdicts:
 ## Self-Check
 
 Before you commit:
-- [ ] I only edited the `status:` frontmatter field, `## Review Notes` section, and (at APPROVE) removed `## Revision Notes` of my assigned task. I touched no code, no `## Objective`, no `## Results`.
+- [ ] I only edited the `status:` frontmatter field, `## Review Notes` section, and (at APPROVE) removed `## Revision Notes` of assigned tasks. I touched no code, no `## Objective`, no `## Results`.
 - [ ] On re-review: I deleted confirmed-fixed items (no "resolved" markers, no stacking).
 - [ ] `## Review Notes` describes current issues only, in severity order. If empty, the section is removed entirely.
 - [ ] Every material review finding I am about to report is already written into `## Review Notes`, not only in my status return.
 
 ## Handoff
 
-When the review assigns a task, write feedback in that task's `## Review Notes` section. If no task is assigned, report only unless the dispatch says otherwise.
+When the review assigns task files, write feedback in each task's `## Review Notes` section. If no task is assigned, report only unless the dispatch says otherwise.
 
 ### What You Own
 
-Within your assigned task's `task.md`:
+Within each assigned task's `task.md`:
 
 - **`status:` frontmatter field** — you own `implemented/approved → revise` and `implemented → approved`. 
 - **`## Review Notes`** — write it on first review, delete or rewrite items on re-review, and remove the section entirely when empty (at APPROVE).
@@ -118,7 +120,7 @@ When `## Review Notes` is empty, remove the section entirely and (with `## Revis
 
 ### Commit
 
-Stage the task.md only, following `superRA:using-superra` §Commit Hygiene:
+Stage assigned task.md files only, following `superRA:using-superra` §Commit Hygiene:
 
 ```bash
 git commit -m "review task <task-path>: <delta>"
