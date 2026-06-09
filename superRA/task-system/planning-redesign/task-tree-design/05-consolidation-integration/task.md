@@ -1,6 +1,6 @@
 ---
 title: "Redesign Consolidation and Integration Cleanup"
-status: not-started
+status: implemented
 depends_on: 
   - 02-tree-design-protocol
 
@@ -34,3 +34,17 @@ Redesign consolidation and integration cleanup so the task tree is matured into 
 - The final path into `Document` assumes the tree already represents latest state.
 
 ## Results
+
+Implemented the consolidation/integration cleanup redesign on the owned surfaces.
+
+- [consolidation.md](../../../../../skills/superplan/references/consolidation.md#L12) now treats surviving temporary update scaffolding and action-verb parents as integration-blocking consolidation symptoms, with `status-consolidation` covered as a mature-or-merge example.
+- [consolidation.md](../../../../../skills/superplan/references/consolidation.md#L26) now runs `superra task check --category placement` as advisory evidence, then applies the superplan durable-home and update-task lifecycle rules whole-tree across task and subtree levels.
+- [consolidation.md](../../../../../skills/superplan/references/consolidation.md#L40) adds **Mature/Rename** for action-verb tasks that become stable durable concerns, and [consolidation.md](../../../../../skills/superplan/references/consolidation.md#L47) adds **Scope Expansion Rewrite** for current-state objective rewrites, scope-defining `script` / `input` / `output` updates, downstream status invalidation, and stale delta cleanup.
+- [consolidation.md](../../../../../skills/superplan/references/consolidation.md#L104) preserves the approval gate for material merge, prune, restructure, mature/rename, and status-invalidating scope-expansion changes, with the approved proposal as authority over advisory placement warnings.
+- [SKILL.md](../../../../../skills/superintegrate/SKILL.md#L244) routes the Consolidation Gate through `superplan/references/task-tree-design.md`, checks approved and in-flight update tasks across the affected tree, and makes a clean-enough verdict invalid while temporary update scaffolding or unmatured action-verb parents survive before Document.
+
+Verification:
+
+- `python3 skills/report-in-markdown/scripts/check_markdown.py skills/superplan/references/consolidation.md skills/superintegrate/SKILL.md` passed with both files reported clean.
+- `./superRA/superra task check --category placement` passed with no issues in the current task tree.
+- Targeted `rg` confirmed the required behaviors are present: `Mature/Rename`, `Scope Expansion Rewrite`, `task check --category placement`, `approved or in-flight`, `clean-enough verdict is invalid`, `latest state`, and `status-consolidation`.
