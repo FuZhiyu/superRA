@@ -1,6 +1,6 @@
 ---
 title: "Extend Planning Review to Task-Tree Design"
-status: implemented
+status: approved
 depends_on: 
   - 02-tree-design-protocol
 
