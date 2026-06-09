@@ -1,6 +1,6 @@
 ---
 title: "Author Superplan Task-Tree Design Protocol"
-status: implemented
+status: approved
 depends_on: 
   - 01-reference-ownership
 
