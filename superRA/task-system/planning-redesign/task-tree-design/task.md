@@ -1,6 +1,6 @@
 ---
 title: "Task Tree Design Protocol"
-status: in-progress
+status: approved
 depends_on:
   - placement-and-update-lifecycle
 tags: []

@@ -1,6 +1,6 @@
 ---
 title: "Cross-Reference Sweep and Verification"
-status: implemented
+status: approved
 depends_on: 
   - 01-reference-ownership
   - 03-dispatch-bundles
