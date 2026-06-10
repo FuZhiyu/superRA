@@ -1,6 +1,6 @@
 ---
 title: "Task-Tree Agent Interface"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-24
@@ -37,3 +37,8 @@ Make the task tree the primary handoff mechanism, replacing the monolithic PLAN.
 | Separate RESULTS.md | Gone — results in task.md body |
 
 ## Results
+
+## Review Notes
+
+> 1. [MAJOR] `## Results` is empty on the approved root of a finished workstream — the header is the last line of the file, so there is no rollup or matured narrative linking down to the eleven child tasks. Synthesize a short summary linking child `## Results` per the Results lifecycle in [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Results Shape.
+> 2. [MAJOR] `## Objective` and `## Design Decisions` present retired design as current: `.plan/` as the tree root, `review_status:` frontmatter (now a silently-ignored legacy field, [_task_io.py:345](../../../skills/task-tree/scripts/_task_io.py#L345)), and a `## Decisions` body-section vocabulary the contract does not carry (decisions now fold into objectives). Anyone reading this root for orientation is taught a dead schema. Rewrite in place to current terms or explicit historical framing per the stale-content rules.
