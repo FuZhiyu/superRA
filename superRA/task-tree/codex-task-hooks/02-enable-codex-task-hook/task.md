@@ -36,3 +36,7 @@ Validation: extend `skills/task-tree/scripts/test_task_tree.py` or add a focused
 
 - `python3 -m json.tool hooks/hooks-codex.json` — passed.
 - `~/.venv/bin/python -m pytest skills/task-tree/scripts/test_task_tree.py -q` — passed: 232 tests. Pytest reported one cache warning because `/Users/zhiyufu/.pytest_cache` is not writable under the sandbox; no test failed.
+
+## Review Notes
+
+> 1. [MINOR] Objective and Results phrase the hook contract in `.plan/**/task.md` terms stated as current; the tree root is now `superRA` with `.plan` legacy-only ([task_hook.py:36](../../../../skills/task-tree/scripts/task_hook.py#L36)). Phrase as historical or update to the current root name.
