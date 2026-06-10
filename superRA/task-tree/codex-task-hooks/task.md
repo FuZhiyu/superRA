@@ -1,6 +1,6 @@
 ---
 title: "Codex Task Hooks and Decision-Reminder Deprecation"
-status: revise
+status: implemented
 depends_on: []
 tags:
   - hooks
@@ -51,7 +51,12 @@ The `posttooluse-empty-json` follow-up folded into this durable task in June
 manifest task-hook commands export it and print `{}` when no plugin root is
 available, and regression coverage verifies parseable empty JSON for Codex
 Edit/Write, Bash, empty-stdin, and `apply_patch` no-feedback paths while
-preserving `additionalContext` feedback behavior.
+preserving `additionalContext` feedback behavior. The shim-level last resort
+(emit `{}` when the inner hook produced no stdout and
+`SUPERRA_TASK_HOOK_EMPTY_JSON` is set) lives in `render_hook_shim()` in
+[wrapper_resolver.py](../../../skills/task-tree/scripts/wrapper_resolver.py);
+the committed [hooks/task-hook](../../../hooks/task-hook) is regenerated from it
+and `test_committed_hook_shim_matches_generator` guards the match.
 
 **Final diff self-check:** `git diff 9ca25479f7cb588aec3d758f0bb27d66e4c8aded..HEAD`;
 surviving hunks are limited to the approved hook-packaging scope:
@@ -81,3 +86,4 @@ diff.
 >    → implemented: updated objective item 2 from `.plan/**/task.md` to `superRA/**/task.md` with a "(formerly `.plan/**/task.md` — the root was renamed to `superRA/`)" parenthetical; also updated item 3's reference from "this worktree's `.plan/` files" to "this worktree's `superRA/` files" ([codex-task-hooks/task.md](task.md))
 > 3. [CRITICAL] The empty-JSON fix was delivered by hand-editing [hooks/task-hook](../../../hooks/task-hook) instead of updating [wrapper_resolver.py:309](../../../skills/task-tree/scripts/wrapper_resolver.py#L309) and regenerating — the shim file carries the header "Regenerate rather than hand-edit: `superra wrapper render-hook`" and the generator contract is documented in repo `CLAUDE.md`. As a result `test_committed_hook_shim_matches_generator` fails (confirmed: 1 failed, 611 passed in full suite), and running `superra wrapper render-hook` would revert the fix. Fix: add the `_superra_hook_output` variable capture and the `SUPERRA_TASK_HOOK_EMPTY_JSON` last-resort block to `render_hook_shim()` in [wrapper_resolver.py](../../../skills/task-tree/scripts/wrapper_resolver.py), then regenerate the shim via `superra wrapper render-hook --output hooks/task-hook && chmod +x hooks/task-hook`, and confirm the test passes.
 >    → implemented: captured hook output in `_superra_hook_output` variable; when output is empty and `SUPERRA_TASK_HOOK_EMPTY_JSON` is set, emit `{}` as last resort ([hooks/task-hook](../../../hooks/task-hook))
+>    → implemented (round 2): applied the same capture + `SUPERRA_TASK_HOOK_EMPTY_JSON` last-resort block inside `render_hook_shim()` ([wrapper_resolver.py:343-360](../../../skills/task-tree/scripts/wrapper_resolver.py#L343-L360)) and regenerated the committed shim via `wrapper_resolver.py render-hook --output hooks/task-hook` — regenerated output is byte-identical to the committed shim (empty `git diff`); `test_committed_hook_shim_matches_generator` passes and full suite is green (612 passed, 2 skipped)
