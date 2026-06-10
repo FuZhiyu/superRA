@@ -1,6 +1,6 @@
 ---
 title: "Deprecate Handoff-Doc Skill"
-status: implemented
+status: approved
 depends_on:
   - skill-restructure
 tags: []
@@ -72,12 +72,3 @@ With .plan/ as the primary handoff mechanism:
 ### Notes
 - Historical plan files in `docs/plans/` were NOT updated — they are archival records of past work and their references to handoff-doc are accurate for the time they were written.
 - The `implementation-workflow/SKILL.md` "Step 0b: Handoff-Doc Existence Check" heading was not renamed — it still checks for plan file existence and the heading is descriptive of its legacy purpose.
-
-## Review Notes
-
-> 1. [MAJOR] Stale `## Review Notes` survived approval: both prior items are already fixed in the repo (no `handoff-doc` references remain in [sync_codex_agents.py](../../../../skills/codex-superra-setup/scripts/sync_codex_agents.py) or the generated tomls; no U+FFFD replacement characters in [using-superRA/SKILL.md](../../../../skills/using-superRA/SKILL.md) or [handoff-doc/SKILL.md](../../../../skills/handoff-doc/SKILL.md)), yet the section told readers an approved task had an open MAJOR defect. Replaced per the replace-don't-stack rule; remove this section at re-approval.
->    → implemented: note was already replaced by the audit reviewer; no additional code fix needed — section removal is a reviewer action at next APPROVE
-> 2. [MINOR] The deprecation sweep left "handoff docs" stated as a live artifact on two agent-facing surfaces: the master-skill trigger description ([using-superRA/SKILL.md:3](../../../../skills/using-superRA/SKILL.md#L3) — "before dispatching work or touching handoff docs") and [CATEGORIES.md:33](../../../../skills/CATEGORIES.md#L33) ("implementer + reviewer pair, handoff docs, …"). Per repo terminology the artifact is the task tree; update both phrasings.
->    → implemented: updated [using-superRA/SKILL.md:3](../../../../skills/using-superRA/SKILL.md#L3) to "task tree"; updated [CATEGORIES.md:33](../../../../skills/CATEGORIES.md#L33) to "task-tree handoff"
-> 3. [MINOR] `## Objective` and `## Results` cite `skills/task-tree/references/planning.md` as the merge destination; that file no longer exists — its content now lives in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) and `superplan/references/task-tree-design.md`. Lightly clean the citations to the current homes.
->    → implemented: updated Objective merge destinations and Results §Key Findings to cite [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) and [superplan/references/task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md)

@@ -1,6 +1,6 @@
 ---
 title: "Task Edit Discipline — Manual Move + Edit-Path Guidance"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-30
@@ -37,12 +37,3 @@ All three child workstream tasks implemented and approved:
 - **[move-hook](move-hook/task.md):** Generalized `task_hook.py` to handle Bash shell mutations of the `superRA/` tree (chiefly `mv`). Four new `TestTaskHook` Bash test cases added; full suite green at 147 passed. Manual move confirmed: dangling-dep warning prints, parent status propagates, exit 0.
 - **[skill-guidance](skill-guidance/task.md):** Rewrote `skills/task-tree/SKILL.md` §How to Edit a Task to name direct `task.md` edit as the canonical mutation path for status and all body sections, reframed CLIs as scaffolding tools, and documented manual `mv` as the supported re-parenting path.
 - **[revnote-warning](revnote-warning/task.md):** Removed the auto-mutation design (flip-to-`revise`/delete-on-approve) and replaced it with a stateless `validate_plan` warning rule: `approved` tasks carrying a `## Revision Notes` section produce a hook warning. Full suite green at 163 passed; `git grep` confirms no auto-mutation symbols remain.
-
-## Review Notes
-
-> 1. [MAJOR] This approved parent of a closed 3-child workstream has no `## Results` section at all (body is Objective / Context / Scope boundary only) — zero recorded outcome violates the Results lifecycle in [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Results Shape. Add a rollup linking the three children.
->    → implemented: added `## Results` rollup with links to the three child tasks ([task-edit-discipline/task.md](task.md))
-> 2. [MINOR] `## Context / Rationale` and `## Scope boundary` are top-level sections, so children never inherited them via `superra task read` (which injects only the ancestor `## Objective` and its nested `###` subsections); nest them as `###` under `## Objective` or fold them in.
->    → implemented: nested both as `###` subsections under `## Objective` ([task-edit-discipline/task.md](task.md))
-> 3. [MINOR] Stale claims stated as current: `.plan/` as the tree root; `skills/task-tree/SKILL.md` "How to Edit a Task" / command-surface sections that the later agent-surface redesign removed; "those variants do not wire `task_hook.py` at all today" — Codex now wires it ([hooks-codex.json](../../../hooks/hooks-codex.json)), only Cursor ([hooks-cursor.json](../../../hooks/hooks-cursor.json)) still lacks task-hook parity; and the objective's "validate → propagate-status → rebuild-dashboard reconcile" overstates the hook, which no longer rebuilds the dashboard ([task_hook.py:6](../../../skills/task-tree/scripts/task_hook.py#L6)). Rewrite in place.
->    → implemented: updated `superRA/` throughout (was `.plan/`); updated objective item 1 to "validate → propagate-status reconcile" (removed "rebuild-dashboard"); updated scope boundary to note Cursor lacks parity (Codex now wires hook); removed stale references to removed SKILL.md command-surface sections ([task-edit-discipline/task.md](task.md))

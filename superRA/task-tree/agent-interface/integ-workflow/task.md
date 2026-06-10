@@ -1,6 +1,6 @@
 ---
 title: "Integration Workflow: .plan/-Native, Consolidation Gate, Maturation Home"
-status: implemented
+status: approved
 depends_on:
   - agent-protocols
   - handoff-doc
@@ -48,8 +48,3 @@ The `superRA/` tree wears two hats — dispatch/decomposition structure and perm
 
 - `python3 skills/task-tree/scripts/task_check.py --plan-root superRA` clean; targeted suite green at integration close (247 passed); `git diff --check` clean over the integration range.
 - integrate-cleanup children correctness-reviewed and APPROVED (`afa70c6f`, `4e6a67ac`); sync review APPROVED (`728ab399`); post-sync integration review closed after the one finding above. The integration's own consolidation-gate verdict was **clean-enough — pass skipped**.
-
-## Review Notes
-
-> 1. [MAJOR] `## Objective` and `## Results` state `skills/task-tree/references/planning.md §Results Shape` as the lifecycle owner and cite `planning.md:168/:201/:204` as evidence; that file no longer exists — Results Shape now lives in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) §Results Shape — so the ownership claim is contradicted by the current repo and the evidence links 404. Repoint the claim and citations in place.
->    → implemented: updated both `## Objective` §Document and `## Results` §The integrate-cleanup redesign to cite [task-file-contract.md §Results Shape](../../../../skills/task-tree/references/task-file-contract.md#L48) instead of the removed planning.md

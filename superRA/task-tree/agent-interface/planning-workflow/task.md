@@ -1,6 +1,6 @@
 ---
 title: ".plan/-Native Planning"
-status: implemented
+status: approved
 depends_on:
   - agent-protocols
   - handoff-doc
@@ -68,10 +68,3 @@ Updated `skills/planning-workflow/SKILL.md` for `.plan/`-native output:
 - **Self-Review:** Added §8 Subtask Coverage check. Adapted existing checks for task tree structure instead of PLAN.md blocks.
 - **Execution Handoff:** Commits `.plan/` directory, hands off to implementation-workflow. Removed "check Plan approved box" (no checkboxes in `.plan/`).
 - **Removed:** "Plan Document Header and Task Structure" section (now just a pointer to planning.md), "Step Granularity" section (replaced by task-oriented guidance), all `- [ ]` / `- [x]` references.
-
-## Review Notes
-
-> 1. [MAJOR] Stale `## Review Notes` survived approval, with a doubly broken citation (`../../skills/planning-workflow/SKILL.md#L167` — wrong link depth, resolving under `superRA/task-tree/`, and the skill was renamed `superplan`); an approved task carried an unverifiable open item. Replaced per the replace-don't-stack rule; remove this section at re-approval.
->    → implemented: note was already replaced by the audit reviewer; no additional code fix needed — section removal is a reviewer action at next APPROVE
-> 2. [MINOR] `## Objective` targets `skills/planning-workflow/SKILL.md` as current; the skill is now [skills/superplan/SKILL.md](../../../../skills/superplan/SKILL.md). Add a "formerly planning-workflow" note (see `integ-workflow`'s pattern) or update the path.
->    → implemented: updated `## Objective` to cite `skills/superplan/SKILL.md` with the "formerly planning-workflow" parenthetical

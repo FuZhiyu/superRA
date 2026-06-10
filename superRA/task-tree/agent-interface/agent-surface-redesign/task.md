@@ -1,6 +1,6 @@
 ---
 title: "Agent-Facing Surface Redesign — Lean Relocation + Role-Spec Restructure"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -43,8 +43,3 @@ The agent-facing surfaces for the superRA workflow — `agents/implementer.md`, 
 - Universal task interface → `using-superRA/SKILL.md §Task Interface` (preloaded by all agents)
 - Tree tooling → `task-tree/SKILL.md`, load-on-demand
 - Role protocol → `agents/implementer.md` / `agents/reviewer.md`
-
-## Review Notes
-
-> 1. [MAJOR] `## Results` is empty on this approved 9-child redesign parent. The objective promises "one coherent net delta", but no rollup exists and readers must reverse-engineer the outcome from nine children. Add the matured narrative with links to child evidence per the Results lifecycle in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) §Results Shape.
->    → implemented: added matured rollup narrative with links to child tasks and Phase A / Phase B outcome summaries

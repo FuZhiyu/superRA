@@ -1,6 +1,6 @@
 ---
 title: "Finalize Coupled Agent-Facing Surfaces"
-status: implemented
+status: approved
 depends_on:
   - 06-restructure-specs
 tags: []
@@ -43,12 +43,3 @@ Three coupled surfaces updated.
 **Consumer reachability confirmed:** `task-tree/references/planning.md` references `rich-content.md` by path directly. `theory-modeling`, `writing`, and `superintegrate` reference `report-in-markdown` by skill name. The implementer §Self-Check figures line is intact. All consumers retain a load path to the correct reference.
 
 **Verification:** `task_check.py --plan-root superRA` → all checks passed. No generated artifacts depend on these files; no regen required.
-
-## Review Notes
-
-> 1. [MAJOR] The manifest baseline this task finalized claims `using-superra` and `report-in-markdown` are "the two skills every agent already loads (subagents via frontmatter preload, …)" ([using-superRA/SKILL.md:90](../../../../../skills/using-superRA/SKILL.md#L90)), but [reviewer.md:8](../../../../../agents/reviewer.md#L8) preloads only `using-superra` — the baseline is false for reviewer subagents, who write `## Review Notes` markdown without the style guide the inventory calls "always-loaded alongside using-superra". Add the preload to the reviewer spec (and regenerate) or correct the manifest baseline.
->    → implemented: added `superRA:report-in-markdown` to reviewer.md frontmatter `skills:` line ([reviewer.md:8](../../../../../agents/reviewer.md#L8)); regenerated all four artifacts; `--check` exits 0
-> 2. [MINOR] The `documentation` stage row lists `report-in-markdown` as an additional required skill ([using-superRA/SKILL.md:103](../../../../../skills/using-superRA/SKILL.md#L103)) although line 90 declares it always-loaded — internally contradictory; make the row `—` or drop the always-loaded claim.
->    → implemented: changed `documentation` row required skills to `—` ([using-superRA/SKILL.md:103](../../../../../skills/using-superRA/SKILL.md#L103))
-> 3. [MINOR] "`Stage: planning-review` is a reviewer-only planning pass; its mechanics live in `skills/superplan/references/planning-review.md`" ([using-superRA/SKILL.md:105](../../../../../skills/using-superRA/SKILL.md#L105)) restates the table row five lines above (line 98 names the same reference), and reviewer.md states the redirect a third time; one statement should own it per the DRY gate.
->    → implemented: removed the duplicate standalone note from [using-superRA/SKILL.md](../../../../../skills/using-superRA/SKILL.md) after the table (table row at line 98 is now the single statement); reviewer.md's single redirect line at line 22 remains as the role-spec's own pointer to the reference

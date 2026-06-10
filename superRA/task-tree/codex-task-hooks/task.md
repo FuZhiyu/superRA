@@ -1,6 +1,6 @@
 ---
 title: "Codex Task Hooks and Decision-Reminder Deprecation"
-status: implemented
+status: revise
 depends_on: []
 tags:
   - hooks
@@ -79,5 +79,5 @@ diff.
 >    → implemented: moved `## Conventions` to `### Conventions` nested inside `## Objective` ([codex-task-hooks/task.md](task.md))
 > 2. [MINOR] Objective and Results phrase the hook contract in `.plan/**/task.md` terms as current; the root is `superRA` with `.plan` legacy-only ([task_hook.py:36](../../../skills/task-tree/scripts/task_hook.py#L36)). Phrase as historical or update to the current root name (children 02/03 carry the same phrasing — items recorded there).
 >    → implemented: updated objective item 2 from `.plan/**/task.md` to `superRA/**/task.md` with a "(formerly `.plan/**/task.md` — the root was renamed to `superRA/`)" parenthetical; also updated item 3's reference from "this worktree's `.plan/` files" to "this worktree's `superRA/` files" ([codex-task-hooks/task.md](task.md))
-> 3. [MINOR] The empty-JSON guarantee folded into this task has a residual hole: [hooks/task-hook](../../../hooks/task-hook) pipes to the python hook with `2>/dev/null || true` and unconditionally exits 0, so if source resolution fails, both `uv` and `python3` are missing, or the hook crashes before printing, Codex receives empty stdout instead of `{}` — the manifest commands print `{}` only on the missing-plugin-root path ([hooks-codex.json](../../../hooks/hooks-codex.json)). Emit `{}` as a last resort in Codex mode when the inner hook produced no stdout.
+> 3. [CRITICAL] The empty-JSON fix was delivered by hand-editing [hooks/task-hook](../../../hooks/task-hook) instead of updating [wrapper_resolver.py:309](../../../skills/task-tree/scripts/wrapper_resolver.py#L309) and regenerating — the shim file carries the header "Regenerate rather than hand-edit: `superra wrapper render-hook`" and the generator contract is documented in repo `CLAUDE.md`. As a result `test_committed_hook_shim_matches_generator` fails (confirmed: 1 failed, 611 passed in full suite), and running `superra wrapper render-hook` would revert the fix. Fix: add the `_superra_hook_output` variable capture and the `SUPERRA_TASK_HOOK_EMPTY_JSON` last-resort block to `render_hook_shim()` in [wrapper_resolver.py](../../../skills/task-tree/scripts/wrapper_resolver.py), then regenerate the shim via `superra wrapper render-hook --output hooks/task-hook && chmod +x hooks/task-hook`, and confirm the test passes.
 >    → implemented: captured hook output in `_superra_hook_output` variable; when output is empty and `SUPERRA_TASK_HOOK_EMPTY_JSON` is set, emit `{}` as last resort ([hooks/task-hook](../../../hooks/task-hook))

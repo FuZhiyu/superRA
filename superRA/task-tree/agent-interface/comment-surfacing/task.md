@@ -1,6 +1,6 @@
 ---
 title: "Surface Task Comments to the Agent Loop"
-status: implemented
+status: revise
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -42,5 +42,5 @@ The task-tree comment feature is now visible to the agent loop. Previously a res
 
 ## Review Notes
 
-> 1. [MAJOR] The objective's placement and sequencing protocol references sibling `lean-interface` and its `05-coverage-audit`; no such sibling exists — it was renamed [agent-surface-redesign](../agent-surface-redesign/task.md) and the audit is `09-coverage-audit`. The stale-content checklist requires rewriting sibling references that assume a superseded structure; replace the `lean-interface/*` references with the current sibling paths.
+> 1. [MINOR] The Sequencing section was updated but the "Design source" paragraph ([task.md:13](task.md#L13)) still reads "Placement is a sibling of `lean-interface` under `task-tree/agent-interface/`" — the renamed sibling is `agent-surface-redesign`. Update that paragraph to match.
 >    → implemented: updated all `lean-interface` references to `agent-surface-redesign` and `05-coverage-audit` to `09-coverage-audit` in the Sequencing section

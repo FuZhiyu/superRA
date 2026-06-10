@@ -1,6 +1,6 @@
 ---
 title: "No-Knowledge-Lost Coverage Audit"
-status: implemented
+status: approved
 depends_on:
   - 01-core-in-using-superra
   - 02-task-tree-slim
@@ -226,8 +226,3 @@ Grepped `skills/ agents/ README.md CLAUDE.md` for `Handoff — Unified`, `Planni
 - `uv run pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py` → 7 passed.
 - `python3 skills/task-tree/scripts/task_check.py --plan-root superRA` → "All checks passed. No issues found."
 - Grep sweeps for removed report fields across `agent-orchestration/` and `superimplement/` → zero hits; dangling-anchor sweep across live surfaces → zero hits.
-
-## Review Notes
-
-> 1. [MAJOR] All 38 evidence links in the Round-1 coverage table use 4-up relative paths (`../../../../skills/...`) from this 5-deep task directory, resolving to nonexistent `superRA/skills/...`; Round 2's table correctly uses 5-up paths. The audit's load-bearing evidence citations are render-broken in the dashboard. Fix the link depth on the Round-1 table ([task.md](task.md)).
->    → implemented: updated all Round-1 table links from 4-up (`../../../../`) to 5-up (`../../../../../`) via replace_all; verified no 4-up paths remain with `grep -c "](../../../../[^.]" task.md` → 0
