@@ -22,9 +22,8 @@ Build `plan_migrate.py`: parse PLAN.md task blocks + RESULTS.md sections, genera
 - Mutually exclusive CLI: `--plan-md` vs `--upgrade`
 
 ## Review Notes
-> 1. [MAJOR] `_upgrade_task_body()` stripped checkboxes from entire body, not just `## Steps` section
->    → implemented: scoped stripping to Steps section only
-> 2. [MINOR] Uppercase `[X]` not handled
->    → implemented: character class changed to `[xX]`
-> 3. [MINOR] Blank line after `## Objective` lost during `--upgrade`
->    → implemented: fixed via section-boundary rewrite
+
+Retrospective audit notes (all MINOR; status unchanged per orchestrator instruction). The three previously annotated `→ implemented` items were verified in [plan_migrate.py](../../../skills/task-tree/scripts/plan_migrate.py) (Steps-scoped stripping, `[xX]` character class, section-boundary rewrite) and removed per re-review protocol.
+
+> 1. [MINOR] Objective ([task.md:13](task.md#L13)) still says "generate `.plan/` tree" and "existing `.plan/` directories", but the script's default output is the `superRA/` root ([plan_migrate.py:567](../../../skills/task-tree/scripts/plan_migrate.py#L567) uses `TASK_ROOT_DIRNAME`). Stale since the task-root rename; rewrite in place.
+> 2. [MINOR] Results ([task.md:22](task.md#L22)) say "Mutually exclusive CLI: `--plan-md` vs `--upgrade`", but the group is now three-way with `--upgrade-status` ([plan_migrate.py:55](../../../skills/task-tree/scripts/plan_migrate.py#L55)), which this task — the durable home for `plan_migrate.py` per its `script:` frontmatter — never mentions. Refresh the Results to the current command set.
