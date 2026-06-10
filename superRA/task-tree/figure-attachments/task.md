@@ -1,7 +1,7 @@
 ---
 title: "Refactor figure attachments to task-local storage"
-status: revise
-depends_on:  []
+status: implemented
+depends_on: []
 tags: []
 created: 2026-05-27
 ---
@@ -14,7 +14,7 @@ Migrate the figure attachment convention from a shared root-level `results_attac
 
 **Authoritative instruction files (current):**
 
-1. `skills/task-tree/references/planning.md` §Figure Embedding (lines 192–200) + example in results template (line 174) — rewrite to task-local `attachments/`
+1. `skills/task-tree/references/task-file-contract.md` §Figure Embedding + §Results Shape example — rewrite to task-local `attachments/` (this content was in the now-removed `planning.md` when the work was done; it has since moved to `task-file-contract.md`)
 2. `skills/report-in-markdown/references/rich-content.md` §caller-parameter table (lines 9–15) + §Materialize figures (line 25) + §Embed example (line 48) — update Stage 1 convention from `results_attachments/` to task-local `attachments/`, fix embed example to use `ATTACH_DIR` placeholder or show context-specific examples
 3. `skills/econ-data-analysis/SKILL.md` line 154 — update `[BLOCKING]` checklist from `results_attachments/` to task-local `attachments/`
 4. `skills/superimplement/SKILL.md` line 119 — update Step 3 verification gate
@@ -22,7 +22,7 @@ Migrate the figure attachment convention from a shared root-level `results_attac
 6. `skills/using-superRA/references/direct-mode-implementer.md` line 138 — update pre-commit checklist
 
 **Legacy authority removed by [task-tree/planning-redesign/planmd-sweep](../task-tree/planning-redesign/planmd-sweep/task.md):**
-- `skills/report-in-markdown/references/final-form.md` formerly owned Stage 2 final-results relocation. Current Stage 2 task-result maturation lives in `skills/task-tree/references/planning.md` §Results Shape; figure mechanics live in `skills/report-in-markdown/references/rich-content.md` §Figures.
+- `skills/report-in-markdown/references/final-form.md` formerly owned Stage 2 final-results relocation. Current Stage 2 task-result maturation lives in `skills/task-tree/references/task-file-contract.md` §Results Shape (the figure-embedding/results-shape content moved here from the removed `planning.md`); tree-design judgment lives in `skills/superplan/references/task-tree-design.md`; figure mechanics live in `skills/report-in-markdown/references/rich-content.md` §Figures.
 
 **Generated files (regenerate after source changes):**
 - `.codex/agents/superra_implementer.toml` line 149
@@ -33,7 +33,7 @@ Migrate the figure attachment convention from a shared root-level `results_attac
 
 - **Task-local over unified `.plan/attachments/`:** self-contained tasks survive moves; no depth-counting for relative paths.
 - **Embed syntax:** `attachments/fig.png` (relative to task.md). No `./` prefix needed.
-- **Maturation (Stage 2):** selected task `## Results` sections mature in place under `skills/task-tree/references/planning.md` §Results Shape. Task figures stay in task-local `attachments/` unless a caller explicitly chooses another directory per `skills/report-in-markdown/references/rich-content.md` §Figures.
+- **Maturation (Stage 2):** selected task `## Results` sections mature in place under `skills/task-tree/references/task-file-contract.md` §Results Shape. Task figures stay in task-local `attachments/` unless a caller explicitly chooses another directory per `skills/report-in-markdown/references/rich-content.md` §Figures.
 - **Dashboard:** no code changes needed — `pathPrefix` logic already prepends `.plan/{taskPath}/` to relative image `src`.
 
 ## Results
@@ -44,19 +44,21 @@ Current attachment guidance is task-local: task results embed figures from `atta
 
 | File | Change |
 |---|---|
-| [planning.md](../../skills/task-tree/references/planning.md) | §Figure Embedding + results template example → task-local `attachments/` |
-| [rich-content.md](../../skills/report-in-markdown/references/rich-content.md) | Caller-parameter table, Stage 1 description, embed example → `ATTACH_DIR` placeholder |
-| [SKILL.md (econ-data-analysis)](../../skills/econ-data-analysis/SKILL.md) | `[BLOCKING]` checklist → task-local `attachments/` |
-| [SKILL.md (superimplement)](../../skills/superimplement/SKILL.md) | Step 3 gate → task-local `attachments/` |
-| [implementer.md](../../agents/implementer.md) | Pre-commit checklist → `attachments/...` |
-| [direct-mode-implementer.md](../../skills/using-superRA/references/direct-mode-implementer.md) | Pre-commit checklist → `attachments/...` |
+| [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) | §Figure Embedding + §Results Shape example → task-local `attachments/` (content has since moved here from the removed `planning.md`) |
+| [rich-content.md](../../../skills/report-in-markdown/references/rich-content.md) | Caller-parameter table, Stage 1 description, embed example → `ATTACH_DIR` placeholder |
+| [SKILL.md (econ-data-analysis)](../../../skills/econ-data-analysis/SKILL.md) | `[BLOCKING]` checklist → task-local `attachments/` |
+| [SKILL.md (superimplement)](../../../skills/superimplement/SKILL.md) | Step 3 gate → task-local `attachments/` |
+| [implementer.md](../../../agents/implementer.md) | Pre-commit checklist → `attachments/...` |
+| [direct-mode-implementer.md](../../../skills/using-superRA/references/direct-mode-implementer.md) | Pre-commit checklist → `attachments/...` |
 | `.codex/agents/superra_implementer.toml` | Regenerated from source |
 
 ### Dashboard
 
-No code changes needed. `base.html` line 663 already computes `pathPrefix = '.plan/' + taskPath + '/'` and prepends it to relative image `src` attributes (line 678), so task-local `attachments/fig.png` resolves correctly to `/files/.plan/task-path/attachments/fig.png`.
+The dashboard resolves task-local figure embeds without any change to this task's convention. In served mode, `renderMarkdown` rewrites a relative image `src` to `/files/<ROOT_PREFIX>/<taskPath>/<src>` ([base.html:1834](../../../skills/task-tree/scripts/templates/base.html#L1834)) — built from the resolved-root basis (`rootRel` + `taskDirRel`), so `attachments/fig.png` next to a `task.md` resolves to e.g. `/files/superRA/<task-path>/attachments/fig.png` and is served by the `/files/` route. (This paragraph originally claimed a `pathPrefix = '.plan/' + taskPath + '/'` variable required no change; the task root was since renamed `.plan/` → `superRA/` and the path basis was reworked to the resolved-root delink — that delink also briefly shipped a dangling `pathPrefix` reference, fixed under [02-file-link-consistency](../dashboard/live-server/path-basis-consistency/02-file-link-consistency/task.md). The current resolution is the `/files/<ROOT_PREFIX>/<taskPath>/<src>` form above, covered by `TestRenderMarkdownImageRewrite`.)
 
 ## Review Notes
 
 1. **MAJOR** — the §Dashboard claim ("No code changes needed. `base.html` line 663 already computes `pathPrefix = '.plan/' + taskPath + '/'` … resolves correctly to `/files/.plan/…`") is stale twice over and currently false: the task root was renamed `.plan/` → `superRA/`, and the `pathPrefix` variable was deleted by the resolved-root delink (commit `44fcc469`), leaving a dangling reference at [base.html:1834](../../../skills/task-tree/scripts/templates/base.html#L1834) — so served-mode figure resolution, the exact behavior this task's verification rests on, is broken today (`ReferenceError`; see the Review Notes on [02-file-link-consistency](../dashboard/live-server/path-basis-consistency/02-file-link-consistency/task.md)). Once that CRITICAL is fixed, rewrite the §Dashboard paragraph in place to the current mechanism (`/files/<ROOT_PREFIX>/<taskPath>/<src>` via `rootRel`/`taskDirRel`) — this item's final wording depends on that upstream fix.
-2. **MAJOR** — dead authority links: the Objective and §Design decisions cite `skills/task-tree/references/planning.md` (§Figure Embedding, §Results Shape) and the Results table links [planning.md](../../skills/task-tree/references/planning.md), but that file no longer exists — the figure-embedding/results-shape content now lives in [task-file-contract.md](../../skills/task-tree/references/task-file-contract.md) (§Figure Embedding, §Results Shape) and tree-design judgment in `skills/superplan/references/task-tree-design.md`. The Results-table link paths are also one `../` short (they resolve to `superRA/skills/…`). Replace the dead/wrong links in place so this task's record points at the current owners.
+   → implemented: the upstream CRITICAL is fixed (the image rewrite now uses `'/files/' + repoPathPrefix + src`, see [02-file-link-consistency](../dashboard/live-server/path-basis-consistency/02-file-link-consistency/task.md)); rewrote §Dashboard to the current `/files/<ROOT_PREFIX>/<taskPath>/<src>` resolution with the historical note ([task.md:55](task.md)).
+2. **MAJOR** — dead authority links: the Objective and §Design decisions cite `skills/task-tree/references/planning.md` (§Figure Embedding, §Results Shape) and the Results table links [planning.md](../../skills/task-tree/references/planning.md), but that file no longer exists — the figure-embedding/results-shape content now lives in [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) (§Figure Embedding, §Results Shape) and tree-design judgment in `skills/superplan/references/task-tree-design.md`. The Results-table link paths are also one `../` short (they resolve to `superRA/skills/…`). Replace the dead/wrong links in place so this task's record points at the current owners.
+   → implemented: repointed the §Files-to-change item 1, the legacy-authority note, the §Design-decisions §Maturation line, and the Results table from the removed `planning.md` to `task-file-contract.md` §Figure Embedding / §Results Shape (and named `task-tree-design.md` for tree-design judgment); corrected the Results-table link depth `../../` → `../../../` so the paths resolve to repo-root `skills/`/`agents/` ([task.md:43](task.md)).

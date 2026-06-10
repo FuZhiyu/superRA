@@ -1,6 +1,6 @@
 ---
 title: "Live Server Dashboard"
-status: revise
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-05-24

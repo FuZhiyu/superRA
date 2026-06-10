@@ -1302,7 +1302,11 @@ async def export_subtree(request: Request, root: str = ""):
         _set_module_state(saved_root, saved_index, saved_project)
 
     slug = root.rsplit("/", 1)[-1] if root else (state.root_task.slug or "plan")
-    filename = f"{slug or 'plan'}-dashboard.html"
+    # Sanitize before interpolating into the quoted Content-Disposition value:
+    # keep only filename-safe chars so a stray `"` (or path/control char) in a
+    # slug cannot break out of the header. Falls back to "plan" if nothing left.
+    safe_slug = re.sub(r"[^A-Za-z0-9._-]", "-", slug or "").strip("-") or "plan"
+    filename = f"{safe_slug}-dashboard.html"
     return HTMLResponse(
         content=html,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
@@ -1711,8 +1715,15 @@ def _default_port(plan_root: Path, git_common_dir: str | None = None) -> int:
     return 0
 
 
-def serve(port: int) -> None:
+def serve(port: int, host: str = "127.0.0.1") -> None:
     """Run the dashboard server on *port*, blocking until it exits.
+
+    Binds *host*, defaulting to loopback (``127.0.0.1``).  The server is
+    unauthenticated and exposes the project's files (``/files/{path}``), the
+    full task tree (``/export``), and disk-writing comment routes; with
+    background-by-default serving this is a long-lived ambient surface, so it
+    must not be reachable off-host unless the operator deliberately opts in via
+    ``--host`` (e.g. ``--host 0.0.0.0`` for trusted-LAN serving).
 
     Uses ``uvicorn.Server`` so the idle monitor can request shutdown via
     ``_server.should_exit = True``.  This is the single in-process serve path:
@@ -1724,7 +1735,7 @@ def serve(port: int) -> None:
     import uvicorn
 
     global _server
-    config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="info")
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
     _server = uvicorn.Server(config)
     try:
         _server.run()
@@ -1883,6 +1894,7 @@ def serve_background(
     port: int,
     git_common_dir: str | None = None,
     *,
+    host: str = "127.0.0.1",
     open_browser: bool = True,
     bind_timeout: float = 10.0,
     idle_timeout: float | None = None,
@@ -1929,6 +1941,8 @@ def serve_background(
         str(plan_root),
         "--port",
         str(port),
+        "--host",
+        host,
         "--no-open",
     ]
     if idle_timeout is not None:
@@ -2049,6 +2063,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Server port (default: deterministic port derived from plan root)",
     )
     serve_p.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help=(
+            "Interface to bind (default: 127.0.0.1, loopback only). "
+            "The server is unauthenticated and serves project files; pass "
+            "--host 0.0.0.0 only to deliberately expose it on a trusted LAN."
+        ),
+    )
+    serve_p.add_argument(
         "--no-open",
         action="store_true",
         help="Skip auto-opening the browser",
@@ -2146,13 +2169,14 @@ def main(argv: list[str] | None = None) -> None:
             print(f"Watching: {PLAN_ROOT}")
             if not args.no_open:
                 _open_browser_async(url)
-            serve(port)
+            serve(port, host=args.host)
         else:
             # Default: detach a background server, wait for bind, return.
             rc = serve_background(
                 PLAN_ROOT,
                 port,
                 git_common_dir,
+                host=args.host,
                 open_browser=not args.no_open,
                 idle_timeout=args.idle_timeout,
             )
