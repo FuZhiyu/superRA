@@ -45,3 +45,7 @@ Edited [skills/task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md) only �
 ## Notes
 
 Depends on `move-hook` so the documented move behavior matches what shipped (the doc must not claim auto-cascade or any behavior the hook does not implement). This task changes documentation/instruction text only; no code, no generated artifacts.
+
+## Review Notes
+
+> 1. [MINOR] `## Results` cite `task-tree/SKILL.md §How to Edit a Task` and `references/planning.md` as the live edit-guidance surfaces; both were removed/dissolved by the later agent-surface redesign — the interface now lives in [using-superRA/SKILL.md](../../../../skills/using-superRA/SKILL.md) §Task Interface and the contract in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md). Lightly clean the citations.
