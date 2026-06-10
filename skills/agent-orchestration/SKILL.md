@@ -63,6 +63,8 @@ Harnesses expose multiple tiers of model capacity (Sonnet vs. Opus in Claude Cod
 - **Adversarial first-pass review.** The failure mode is *not noticing* — capacity buys thoroughness, and lower-tier agents tend to over-comply, which breaks adversarial review. Narrow re-review of a cited fix stays on Sonnet.
 - **Heavy context synthesis.** Many files/skills must be reconciled in one head; Sonnet degrades faster under context pressure.
 
+For Claude agents, Fable is reserved for the most challenging, expensive tasks; use it only when the task has substantial unknowns or very high complexity.
+
 These are defaults, not rules. Use your discretion and honor any explicit user preference.
 
 ### Rules of thumb
