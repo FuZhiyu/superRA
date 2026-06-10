@@ -516,6 +516,27 @@ def test_generated_wrapper_and_hook_are_valid_bash() -> None:
         assert result.returncode == 0, result.stderr
 
 
+def test_dashboard_missing_web_stack_reports_friendly_error(
+    task_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # When cli.py is run script-scoped (PEP 723 omits the web stack), importing
+    # plan_dashboard raises ModuleNotFoundError. The handler must catch it and
+    # point at the wrapper / entry script instead of leaking a raw traceback.
+    def _raise(*_args, **_kwargs):
+        raise ModuleNotFoundError("No module named 'fastapi'", name="fastapi")
+
+    monkeypatch.setattr(cli, "_module_main", _raise)
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["dashboard", "export", "--root", str(task_root)])
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert "fastapi" in err
+    assert "plan_dashboard.py" in err
+    assert "Traceback" not in err
+
+
 def test_committed_hook_shim_matches_generator() -> None:
     committed = (SKILL_DIR.parent.parent / "hooks" / "task-hook")
     if not committed.exists():
@@ -523,10 +544,33 @@ def test_committed_hook_shim_matches_generator() -> None:
     assert committed.read_text(encoding="utf-8") == wrapper_resolver.render_hook_shim()
 
 
+def test_committed_wrapper_matches_generator() -> None:
+    # Symmetric to the hook test: pin the committed superRA/superra wrapper to
+    # render_wrapper() so a resolver-chain edit that skips regeneration fails CI.
+    committed = (SKILL_DIR.parent.parent / "superRA" / "superra")
+    if not committed.exists():
+        pytest.skip("committed superRA/superra not present in this layout")
+    assert committed.read_text(encoding="utf-8") == wrapper_resolver.render_wrapper()
+
+
 def _resolver_probe_script() -> str:
     """Bash that sources the resolver chain and prints _superra_resolve_source."""
     snippet = wrapper_resolver.render_resolver_snippet()
     return "set -uo pipefail\n" + snippet + "\n_superra_resolve_source\n"
+
+
+def _render_resolver_with_subdir_flag(flag: str) -> str:
+    """Render the resolver snippet with the GitHub-subdir gate forced to *flag*.
+
+    The committed gate is ``[ "<GITHUB_REF_HAS_SUBDIR>" = "1" ]``; substituting
+    the embedded literal lets a test exercise the GIT branch (flag "1") without
+    flipping the source constant.
+    """
+    snippet = wrapper_resolver.render_resolver_snippet()
+    committed = f'[ "{wrapper_resolver.GITHUB_REF_HAS_SUBDIR}" = "1" ]'
+    forced = f'[ "{flag}" = "1" ]'
+    assert committed in snippet
+    return snippet.replace(committed, forced)
 
 
 def _run_resolver_probe(env: dict[str, str], cwd: Path) -> str:
@@ -569,18 +613,50 @@ def test_resolver_env_var_outranks_everything(
     assert out == f"DIR:{plugin}/skills/task-tree"
 
 
-def test_resolver_falls_back_to_github_when_no_source(
+def test_resolver_fails_fast_when_no_source_and_pin_lacks_subdir(
     tmp_path: Path,
     resolver_env: dict[str, str],
 ) -> None:
+    # While GITHUB_REF_HAS_SUBDIR is "0" the pinned ref does not yet carry
+    # skills/task-tree, so the GitHub branch fails fast (no `GIT:` spec, no
+    # shallow clone) rather than cloning the whole repo only to fail the cli.py
+    # existence test.
     if shutil.which("bash") is None:
         pytest.skip("bash required")
+    assert wrapper_resolver.GITHUB_REF_HAS_SUBDIR == "0"
 
-    out = _run_resolver_probe(resolver_env, tmp_path)
-    # GitHub fallback is now a shallow-clone target (repo@ref), not a uvx-git
-    # spec — `uv run --script` cannot fetch a git subdirectory, so the clone
-    # carries the loose scripts and the subdirectory is appended after cloning.
-    assert out == "GIT:https://github.com/FuZhiyu/superRA.git@main"
+    result = subprocess.run(
+        ["bash", "-c", _resolver_probe_script()],
+        env=resolver_env,
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode != 0
+    assert result.stdout.strip() == ""
+
+
+def test_resolver_emits_github_spec_when_pin_carries_subdir(
+    tmp_path: Path,
+    resolver_env: dict[str, str],
+) -> None:
+    # When the pin is flipped to carry the subdir, the GitHub branch resolves to
+    # the shallow-clone target (repo@ref); `uv run --script` cannot fetch a git
+    # subdirectory, so the clone carries the loose scripts.
+    if shutil.which("bash") is None:
+        pytest.skip("bash required")
+    snippet = _render_resolver_with_subdir_flag("1")
+    result = subprocess.run(
+        ["bash", "-c", "set -uo pipefail\n" + snippet + "\n_superra_resolve_source\n"],
+        env=resolver_env,
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "GIT:https://github.com/FuZhiyu/superRA.git@main"
 
 
 def test_resolver_github_branch_clones_then_resolves_loose_script(
@@ -612,8 +688,9 @@ def test_resolver_github_branch_clones_then_resolves_loose_script(
     ):
         subprocess.run(cmd, check=True, env=env, capture_output=True, timeout=60)
 
-    # Rewrite the resolver's GitHub repo to the local bare remote, then resolve.
-    snippet = wrapper_resolver.render_resolver_snippet().replace(
+    # Rewrite the resolver's GitHub repo to the local bare remote, force the
+    # subdir gate on (the pin does not yet carry the subdir), then resolve.
+    snippet = _render_resolver_with_subdir_flag("1").replace(
         "https://github.com/FuZhiyu/superRA.git", str(remote)
     )
     cache = tmp_path / "cache"

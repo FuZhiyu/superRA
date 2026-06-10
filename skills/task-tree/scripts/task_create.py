@@ -8,7 +8,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import TASK_ROOT_DIRNAME, propagate_parent_status, today_str
+from _task_io import (
+    TASK_ROOT_DIRNAME,
+    propagate_parent_status,
+    strip_root_prefix,
+    today_str,
+)
 
 
 TASK_TEMPLATE = """\
@@ -63,6 +68,8 @@ def create_task(
     input_files = input_files or []
     output_files = output_files or []
 
+    # Tolerate a redundant leading task-root segment regardless of entry surface.
+    task_path = strip_root_prefix(plan_root, task_path)
     task_dir = plan_root / task_path
     resolved_root = plan_root.resolve()
     resolved_task = task_dir.resolve()

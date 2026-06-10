@@ -598,23 +598,41 @@ def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
     return _topological_sort(parsed)
 
 
+def strip_root_prefix(plan_root: Path, task_path: str) -> str:
+    """Drop a redundant leading task-root segment from a task path.
+
+    Task paths are relative to the task root and omit the root prefix (e.g.
+    ``task-tree/planning-redesign``). As an ergonomic tolerance, a leading
+    segment equal to the task-root basename (``superRA``, or legacy ``.plan``)
+    is stripped, so the fully-prefixed form an agent naturally has in hand
+    (``superRA/task-tree/planning-redesign``) collapses to the canonical
+    task-root-relative form instead of doubling to ``superRA/superRA/...``.
+
+    Returns the canonical task-root-relative path string. Pure string op: no
+    filesystem access, no escape check — callers that join the result still
+    enforce containment via :func:`resolve_path`.
+    """
+    if not task_path:
+        return task_path
+    segments = task_path.strip("/").split("/")
+    if len(segments) > 1 and segments[0] == plan_root.name and segments[0] in TASK_ROOT_DIRNAMES:
+        return "/".join(segments[1:])
+    return task_path
+
+
 def resolve_path(plan_root: Path, task_path: str) -> Path:
     """Resolve a task ID (relative path) to its directory on disk.
 
-    Task paths are relative to the task root and omit the root prefix (e.g.
-    ``task-tree/planning-redesign``). As an ergonomic tolerance, a redundant
-    leading segment equal to the task-root basename (``superRA``, or legacy
-    ``.plan``) is stripped before joining, so an agent that passes the
-    fully-prefixed form (``superRA/task-tree/planning-redesign``) resolves to
-    the same task instead of a doubled ``superRA/superRA/...`` path.
+    Tolerates a redundant leading task-root segment via
+    :func:`strip_root_prefix` before joining, so the fully-prefixed form
+    (``superRA/task-tree/planning-redesign``) resolves to the same task as the
+    canonical task-root-relative form.
 
     Raises ValueError if the resolved path escapes the plan root.
     """
     if not task_path:
         return plan_root
-    segments = task_path.strip("/").split("/")
-    if len(segments) > 1 and segments[0] == plan_root.name and segments[0] in TASK_ROOT_DIRNAMES:
-        task_path = "/".join(segments[1:])
+    task_path = strip_root_prefix(plan_root, task_path)
     resolved = (plan_root / task_path).resolve()
     root_resolved = plan_root.resolve()
     if not resolved.is_relative_to(root_resolved):

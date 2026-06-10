@@ -299,6 +299,110 @@ class TestResolvePath:
             _task_io.resolve_path(plan_root, "../../etc")
 
 
+class TestStripRootPrefix:
+    def test_strips_matching_root_basename(self, plan_root):
+        assert (
+            _task_io.strip_root_prefix(plan_root, f"{plan_root.name}/01-first")
+            == "01-first"
+        )
+
+    def test_keeps_path_without_prefix(self, plan_root):
+        assert _task_io.strip_root_prefix(plan_root, "01-first/02-sub") == "01-first/02-sub"
+
+    def test_does_not_strip_when_segment_is_a_real_slug(self, tmp_path):
+        # First segment equals a task slug but not the root basename -> kept.
+        root = tmp_path / "tree"
+        assert _task_io.strip_root_prefix(root, "superRA/01-first") == "superRA/01-first"
+
+
+class TestCliPrefixTolerantMutations:
+    """End-to-end: every mutation verb accepts the redundant ``superRA/`` prefix.
+
+    These route through ``cli.main`` (not ``resolve_path`` directly), so they
+    catch the regression where ``_checked_task_root_args`` validated the stripped
+    path but forwarded the raw prefixed path to the delegated mutator, doubling
+    to ``superRA/superRA/...``.
+    """
+
+    def test_task_update_accepts_prefixed_path(self, plan_root):
+        cli.main([
+            "task", "update", f"{plan_root.name}/02-second",
+            "--root", str(plan_root), "--status", "in-progress",
+        ])
+        second = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        assert second.status == "in-progress"
+
+    def test_result_add_accepts_prefixed_path(self, plan_root):
+        cli.main([
+            "task", "result", "add", f"{plan_root.name}/02-second",
+            "--root", str(plan_root), "--finding", "prefixed result add works",
+        ])
+        second = _task_io.parse_task(plan_root / "02-second" / "task.md")
+        assert "prefixed result add works" in second.body
+
+    def test_dep_add_accepts_prefixed_path(self, plan_root):
+        cli.main([
+            "task", "dep", "add", f"{plan_root.name}/03-third",
+            "01-first", "--root", str(plan_root),
+        ])
+        third = _task_io.parse_task(plan_root / "03-third" / "task.md")
+        assert "01-first" in third.depends_on
+
+    def test_status_cascade_accepts_prefixed_path(self, plan_root):
+        # Make 01-first a branch so cascade has children to walk.
+        leaf = plan_root / "01-first" / "01-leaf"
+        leaf.mkdir()
+        _write_task_md(leaf / "task.md", "Leaf", "approved")
+        cli.main([
+            "task", "status", "cascade", f"{plan_root.name}/01-first",
+            "--root", str(plan_root), "--status", "archived",
+        ])
+        child = _task_io.parse_task(leaf / "task.md")
+        assert child.status == "archived"
+
+    def test_create_accepts_prefixed_path(self, plan_root):
+        cli.main([
+            "task", "create", f"{plan_root.name}/04-fourth",
+            "--root", str(plan_root), "--title", "Fourth",
+        ])
+        assert (plan_root / "04-fourth" / "task.md").exists()
+
+    def test_move_accepts_prefixed_paths(self, plan_root):
+        cli.main([
+            "task", "move", f"{plan_root.name}/03-third",
+            f"{plan_root.name}/03-renamed", "--root", str(plan_root),
+        ])
+        assert (plan_root / "03-renamed" / "task.md").exists()
+        assert not (plan_root / "03-third").exists()
+
+    def test_autodetect_failure_reports_cleanly_not_missing_superra_dir(self, tmp_path, monkeypatch, capsys):
+        # In a rootless directory the packaged mutation CLI must report the same
+        # clean autodetect failure as the direct scripts, not guess "superRA" and
+        # surface a downstream "directory does not exist".
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(SystemExit) as excinfo:
+            cli.main(["task", "update", "01-x", "--status", "approved"])
+        assert excinfo.value.code == 1
+        err = capsys.readouterr().err
+        assert "could not auto-detect task root" in err
+        assert "does not exist" not in err
+
+    def test_invalid_status_error_stays_on_public_surface(self, plan_root, capsys):
+        # The public command must not leak the legacy mutator's internal flags
+        # (--plan-root / --path / --cascade) in its usage/error output. Direct
+        # function calls (not argv round-tripping) keep the surface single.
+        with pytest.raises(SystemExit):
+            cli.main([
+                "task", "update", "02-second",
+                "--root", str(plan_root), "--status", "bogus",
+            ])
+        err = capsys.readouterr().err
+        assert "invalid choice: 'bogus'" in err
+        assert "--plan-root" not in err
+        assert "--path" not in err
+        assert "--cascade" not in err
+
+
 class TestWalkPlan:
     def test_walk_flat(self, plan_root):
         root = _task_io.walk_plan(plan_root)
@@ -815,6 +919,31 @@ class TestTaskUpdate:
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         assert "analysis" not in task.tags
 
+    def test_escaping_path_is_rejected_in_mutator(self, plan_root):
+        # Containment is enforced inside the mutator, not only the CLI shim, so a
+        # ``../outside`` path cannot rewrite a task.md outside the task root via
+        # the direct-script entry surface.
+        outside = plan_root.parent / "outside"
+        outside.mkdir()
+        _write_task_md(outside / "task.md", "Outside", "not-started")
+        with pytest.raises(SystemExit) as excinfo:
+            task_update.update_task(
+                plan_root=plan_root,
+                task_path="../outside",
+                status="approved",
+            )
+        assert excinfo.value.code == 1
+        # The outside task.md was not touched.
+        assert _task_io.parse_task(outside / "task.md").status == "not-started"
+
+    def test_prefixed_path_resolves_in_mutator(self, plan_root):
+        task_update.update_task(
+            plan_root=plan_root,
+            task_path=f"{plan_root.name}/02-second",
+            status="in-progress",
+        )
+        assert _task_io.parse_task(plan_root / "02-second" / "task.md").status == "in-progress"
+
 
 class TestTaskLink:
     def test_add_dependency(self, plan_root):
@@ -836,6 +965,31 @@ class TestTaskLink:
         )
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         assert "01-first" not in task.depends_on
+
+    def test_non_sibling_dependency_is_rejected_in_mutator(self, plan_root):
+        # A ``../outside`` dependency must not be written as a literal path edge
+        # through any entry surface; the sibling-only check lives in the mutator.
+        with pytest.raises(SystemExit) as excinfo:
+            task_link.link_task(
+                plan_root=plan_root,
+                task_path="03-third",
+                depends_on="../outside",
+            )
+        assert excinfo.value.code == 1
+        task = _task_io.parse_task(plan_root / "03-third" / "task.md")
+        assert "../outside" not in task.depends_on
+
+    def test_escaping_task_path_is_rejected_in_mutator(self, plan_root):
+        outside = plan_root.parent / "outside"
+        outside.mkdir()
+        _write_task_md(outside / "task.md", "Outside", "not-started")
+        with pytest.raises(SystemExit) as excinfo:
+            task_link.link_task(
+                plan_root=plan_root,
+                task_path="../outside",
+                depends_on="01-first",
+            )
+        assert excinfo.value.code == 1
 
 
 class TestTaskRename:
@@ -880,6 +1034,19 @@ class TestTaskAddResult:
         )
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         assert "Found 42 interesting rows" in task.body
+
+    def test_escaping_path_is_rejected_in_mutator(self, plan_root):
+        outside = plan_root.parent / "outside"
+        outside.mkdir()
+        _write_task_md(outside / "task.md", "Outside", "not-started")
+        with pytest.raises(SystemExit) as excinfo:
+            task_add_result.add_result(
+                plan_root=plan_root,
+                task_path="../outside",
+                finding="should not land outside the root",
+            )
+        assert excinfo.value.code == 1
+        assert "should not land outside" not in _task_io.parse_task(outside / "task.md").body
 
     def test_add_finding_with_preexisting_results(self, plan_root):
         """Adding a finding to a task that already has ## Results and ### Key Findings.

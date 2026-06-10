@@ -8,7 +8,13 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import TASK_ROOT_DIRNAME, parse_task, resolve_plan_root_arg, write_task
+from _task_io import (
+    TASK_ROOT_DIRNAME,
+    parse_task,
+    resolve_path,
+    resolve_plan_root_arg,
+    write_task,
+)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -49,7 +55,13 @@ def add_result(
     figure_caption: str = "",
     note: str | None = None,
 ) -> None:
-    task_md = plan_root / task_path / "task.md"
+    # Single containment + prefix-tolerance enforcement point (see task_update).
+    try:
+        task_dir = resolve_path(plan_root, task_path)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+    task_md = task_dir / "task.md"
     if not task_md.exists():
         print(f"Error: task not found: {task_md}", file=sys.stderr)
         sys.exit(1)
