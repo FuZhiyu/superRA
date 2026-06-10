@@ -41,3 +41,7 @@ Ran `plan_migrate.py --upgrade-status` on `.plan/` in the `dashboard-redesign` w
 - Dashboard regenerated at [.plan/dashboard.html](.plan/dashboard.html).
 
 **Pre-existing issues (not introduced by this migration):** 15 dependency-resolution errors (relative `../` paths in `live-server/` subtree) and 7 rollup mismatches where parent `status` was not auto-updated to match children. These are structural issues from earlier tasks.
+
+## Review Notes
+
+1. **MINOR** — Retrospective audit note (user-requested; recorded despite `status: approved`). The Results claim "zero findings. No stale fields remain," and the objective covers "any other active `.plan/` directories in other worktrees," yet [tree-cleanup/task.md:17](../../tree-cleanup/task.md#L17) documents residual `review_status`/`integration_status` in the `state-preservation` subtree that "the status-consolidation migration missed" — caught and fixed by a later, unrelated task. The completeness claim was overstated relative to the objective's cross-worktree scope. The current tree is clean (`task_check.py --plan-root superRA`: no issues). Fix: add one caveat line to Results noting the missed subtree and linking tree-cleanup. Also: the [.plan/dashboard.html](.plan/dashboard.html) citation no longer resolves (`.plan/` is now `superRA/`, and the artifact lived in another worktree); repoint or drop it.
