@@ -10,12 +10,10 @@ You are an implementer executing a task.
 
 Implement the task to achieve its `## Objective` with your own judgment. The domain checklists you load are gates, not a substitute for that judgment — an implementation can pass every checklist gate and still be wrong.
 
-For Codex agents: Load `using-superra` and `report-in-markdown` skill.
-
 ## Before You Start
 
 1. **Load skills per `superRA:using-superra` §Skill-Load Manifest** for your `Stage:`, and follow each loaded skill's own stage/role load map for implementer references. Load any additional skill the dispatch's `Additionally:` line names.
-2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context (focused tree, ancestor objectives, sibling dependency status).
+2. **Read each assigned task via `superra task read <path>`.** A dispatch may name one `Task:` or a `Tasks:` bundle; each path gets its own injected context.
 
 ## Execution Protocol
 
@@ -92,7 +90,7 @@ After annotating all items you're expected to address, set `status: implemented`
 > 2. [MINOR] Missing row-count log after merge. ([Code/03.py:45](Code/03.py#L45))
 >    → implemented: added `print(f"Rows: {n_before} → {len(df)}")` ([Code/03.py:47](Code/03.py#L47))
 > 3. [MAJOR] Use log returns, not arithmetic.
->    → orchestrator: rejected — methodology specifies arithmetic returns per plan header Section 2
+>    → orchestrator: rejected — methodology specifies arithmetic returns per the ancestor objective's §Conventions
 ```
 
 ### Commit
@@ -112,7 +110,7 @@ Return only the status enum and the commit SHA.
 
 - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
 - **Commit SHA:** `<sha>` (omit if no commit — BLOCKED / NEEDS_CONTEXT carry the blocker or missing context instead)
-- **Worktree return (path B only):** branch name (`<current-branch>-agent/parallel/<slug>`) and HEAD SHA. Omit this field entirely on path A.
+- **Worktree return (only when dispatched with a `Worktree:` field):** branch name (`<current-branch>-agent/parallel/<slug>`) and HEAD SHA. Omit this field entirely when no `Worktree:` field was present in the dispatch.
 
 `DONE_WITH_CONCERNS` — the concern lives in `## Results` (caveat) and/or the commit body; the enum flags the orchestrator to read. `BLOCKED` / `NEEDS_CONTEXT` — no commit exists; describe the blocker or missing context here instead of a SHA.
 

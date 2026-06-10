@@ -14,14 +14,14 @@ created: 2026-06-01
 Bring superRA's task-related hook behavior into a coherent Codex-compatible state while honoring the researcher decision to drop the user-decision log reminder and the `updated` frontmatter field. The durable hook contracts are:
 
 1. Deprecate and remove the active `ask-user-question-logger` reminder from supported hook surfaces. The task-file record remains the durable decision mechanism; the hook should no longer be installed, advertised, or tested as active behavior.
-2. Add Codex task-tree hook parity for `.plan/**/task.md` edits and structural `.plan/` shell mutations. Current official Codex hook documentation states that `PostToolUse` supports `Bash`, `apply_patch`, and `Edit|Write` matcher aliases for `apply_patch`; use that surface to run the existing task reconcile path after Codex edits.
-3. Remove `updated` from the task frontmatter schema, generated task templates, mutation scripts, dashboard summary, docs, tests, and this worktree's `.plan/` files. Git history is the source of truth for last modification time.
+2. Add Codex task-tree hook parity for `superRA/**/task.md` edits and structural `superRA/` shell mutations (formerly `.plan/**/task.md` — the root was renamed to `superRA/`). Current official Codex hook documentation states that `PostToolUse` supports `Bash`, `apply_patch`, and `Edit|Write` matcher aliases for `apply_patch`; use that surface to run the existing task reconcile path after Codex edits.
+3. Remove `updated` from the task frontmatter schema, generated task templates, mutation scripts, dashboard summary, docs, tests, and this worktree's `superRA/` files. Git history is the source of truth for last modification time.
 4. Update active docs and tests so they describe the supported hook set accurately: Codex should list autoload, merge-guard, codex-plan-stop, and the task-tree `PostToolUse` hooks; it should not list or imply the user-decision reminder.
 5. Keep Codex task-hook no-feedback paths parseable: successful or ignored Codex `PostToolUse` invocations should emit `{}` while feedback paths still emit `additionalContext`, and Claude-compatible no-feedback paths should remain silent.
 
 Scope boundary: do not redesign status rollup semantics, dashboard UI beyond removing `updated` display, or superRA decision logging protocol. This is hook packaging, hook input compatibility, task frontmatter cleanup, active documentation, and focused regression coverage.
 
-## Conventions
+### Conventions
 
 Repository guidance walk, 2026-06-01: root `CLAUDE.md` governs superRA internals. Treat skill, hook, agent, harness adapter, and internal-doc edits as skill creation; load `skill-creator` before editing any `skills/*/SKILL.md`; keep instructions DRY and necessary; isolate Codex-specific behavior in harness adapters or hook manifests; leave generated Codex agent artifacts alone unless canonical `agents/*.md` changes.
 
@@ -51,7 +51,12 @@ The `posttooluse-empty-json` follow-up folded into this durable task in June
 manifest task-hook commands export it and print `{}` when no plugin root is
 available, and regression coverage verifies parseable empty JSON for Codex
 Edit/Write, Bash, empty-stdin, and `apply_patch` no-feedback paths while
-preserving `additionalContext` feedback behavior.
+preserving `additionalContext` feedback behavior. The shim-level last resort
+(emit `{}` when the inner hook produced no stdout and
+`SUPERRA_TASK_HOOK_EMPTY_JSON` is set) lives in `render_hook_shim()` in
+[wrapper_resolver.py](../../../skills/task-tree/scripts/wrapper_resolver.py);
+the committed [hooks/task-hook](../../../hooks/task-hook) is regenerated from it
+and `test_committed_hook_shim_matches_generator` guards the match.
 
 **Final diff self-check:** `git diff 9ca25479f7cb588aec3d758f0bb27d66e4c8aded..HEAD`;
 surviving hunks are limited to the approved hook-packaging scope:
@@ -72,9 +77,3 @@ files are workflow evidence for sync, protection, review, and approved
 results. No unrelated cleanup, broad reformatting, generated-agent changes,
 or exporter/share/dashboard implementation hunks survive in the governing
 diff.
-
-## Review Notes
-
-> 1. [MAJOR] Scoped conventions live in a top-level `## Conventions` section; the contract nests them as `### Conventions` inside `## Objective`, and `superra task read` injects only the ancestor `## Objective` with its nested subsections ([task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Context Inheritance, [task_read.py](../../../skills/task-tree/scripts/task_read.py)) — so the children of this task never inherited these conventions at dispatch. Fold the section under `## Objective` as `### Conventions`.
-> 2. [MINOR] Objective and Results phrase the hook contract in `.plan/**/task.md` terms as current; the root is `superRA` with `.plan` legacy-only ([task_hook.py:36](../../../skills/task-tree/scripts/task_hook.py#L36)). Phrase as historical or update to the current root name (children 02/03 carry the same phrasing — items recorded there).
-> 3. [MINOR] The empty-JSON guarantee folded into this task has a residual hole: [hooks/task-hook](../../../hooks/task-hook) pipes to the python hook with `2>/dev/null || true` and unconditionally exits 0, so if source resolution fails, both `uv` and `python3` are missing, or the hook crashes before printing, Codex receives empty stdout instead of `{}` — the manifest commands print `{}` only on the missing-plugin-root path ([hooks-codex.json](../../../hooks/hooks-codex.json)). Emit `{}` as a last resort in Codex mode when the inner hook produced no stdout.

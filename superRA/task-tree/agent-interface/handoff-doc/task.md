@@ -1,6 +1,6 @@
 ---
 title: "Deprecate Handoff-Doc Skill"
-status: revise
+status: approved
 depends_on:
   - skill-restructure
 tags: []
@@ -28,18 +28,18 @@ With .plan/ as the primary handoff mechanism:
 ### What to do
 
 1. **Merge any remaining unique content** from `skills/handoff-doc/references/` into `skills/task-tree/references/`:
-   - Plan-anatomy content (root task.md anatomy, task.md anatomy, field-by-field notes) → merge into `task-tree/references/planning.md`
-   - Results-anatomy content (per-task results shape, figure embedding, Stage 2 maturation) → add as a section in `task-tree/references/planning.md` or a new `task-tree/references/results-guide.md`
+   - Plan-anatomy content (root task.md anatomy, task.md anatomy, field-by-field notes) → merge into `task-tree/references/task-file-contract.md` and `superplan/references/task-tree-design.md`
+   - Results-anatomy content (per-task results shape, figure embedding, Stage 2 maturation) → add as a section in `task-tree/references/task-file-contract.md`
    - Stale-content checklist → embed in `task-tree/SKILL.md` consumer tier
-   - User Decisions Log format (3-line blockquote) → embed in `task-tree/references/planning.md`
+   - User Decisions Log format → embed in `superplan/references/task-tree-design.md`
 
 2. **Replace SKILL.md body** with a deprecation redirect:
    ```
    This skill is deprecated. Its concerns are now owned by:
-   - Editing discipline: agents/implementer.md §Editing Etiquette
-   - Task anatomy and creation: skills/task-tree/ (references/planning.md)
-   - Results format: skills/task-tree/ (references/planning.md §Results)
-   - User Decisions Log: skills/task-tree/ (references/planning.md §Decisions)
+   - Editing discipline: agents/implementer.md §Handoff / agents/reviewer.md §Editing Etiquette
+   - Task anatomy and creation: skills/task-tree/ (references/task-file-contract.md) + superplan/references/task-tree-design.md
+   - Results format: skills/task-tree/references/task-file-contract.md §Results Shape
+   - User Decisions Log: superplan/references/task-tree-design.md
    ```
 
 3. **Update Skill-Load Manifest** in `skills/using-superRA/SKILL.md`:
@@ -62,7 +62,7 @@ With .plan/ as the primary handoff mechanism:
 ## Results
 
 ### Key Findings
-- Merged all unique content from `handoff-doc/references/` into `task-tree/references/planning.md`: field-by-field notes, User Decisions Log, Conventions section discipline, Workflow Status checkboxes, Stale Content Checklist, Results Shape (two-stage lifecycle, per-task template, section ownership, figure embedding).
+- Merged all unique content from `handoff-doc/references/` into `task-tree/references/` (content now lives in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) and [superplan/references/task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md)): field-by-field notes, User Decisions Log, Conventions section discipline, Workflow Status checkboxes, Stale Content Checklist, Results Shape (two-stage lifecycle, per-task template, section ownership, figure embedding).
 - Replaced `handoff-doc/SKILL.md` body with 12-line deprecation redirect.
 - Replaced both reference files with one-line redirects.
 - Removed handoff-doc from `using-superRA/SKILL.md`: inventory table, Stage: documentation row (replaced with `report-in-markdown`), "main agents additionally load" instruction, Skill-Load Manifest explanatory paragraph.
@@ -72,9 +72,3 @@ With .plan/ as the primary handoff mechanism:
 ### Notes
 - Historical plan files in `docs/plans/` were NOT updated — they are archival records of past work and their references to handoff-doc are accurate for the time they were written.
 - The `implementation-workflow/SKILL.md` "Step 0b: Handoff-Doc Existence Check" heading was not renamed — it still checks for plan file existence and the heading is descriptive of its legacy purpose.
-
-## Review Notes
-
-> 1. [MAJOR] Stale `## Review Notes` survived approval: both prior items are already fixed in the repo (no `handoff-doc` references remain in [sync_codex_agents.py](../../../../skills/codex-superra-setup/scripts/sync_codex_agents.py) or the generated tomls; no U+FFFD replacement characters in [using-superRA/SKILL.md](../../../../skills/using-superRA/SKILL.md) or [handoff-doc/SKILL.md](../../../../skills/handoff-doc/SKILL.md)), yet the section told readers an approved task had an open MAJOR defect. Replaced per the replace-don't-stack rule; remove this section at re-approval.
-> 2. [MINOR] The deprecation sweep left "handoff docs" stated as a live artifact on two agent-facing surfaces: the master-skill trigger description ([using-superRA/SKILL.md:3](../../../../skills/using-superRA/SKILL.md#L3) — "before dispatching work or touching handoff docs") and [CATEGORIES.md:33](../../../../skills/CATEGORIES.md#L33) ("implementer + reviewer pair, handoff docs, …"). Per repo terminology the artifact is the task tree; update both phrasings.
-> 3. [MINOR] `## Objective` and `## Results` cite `skills/task-tree/references/planning.md` as the merge destination; that file no longer exists — its content now lives in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) and `superplan/references/task-tree-design.md`. Lightly clean the citations to the current homes.

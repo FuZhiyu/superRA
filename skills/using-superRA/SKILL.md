@@ -1,6 +1,6 @@
 ---
 name: using-superra
-description: Master skill for superRA agents. Carries workflow principles, skill inventory, and the Stage → skill Load Manifest. Must invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching handoff docs.
+description: Master skill for superRA agents. Carries workflow principles, skill inventory, and the Stage → skill Load Manifest. Must invoke at the start of any superRA workflow (planning, execution, integration, merge) before dispatching work or touching the task tree.
 ---
 
 Loaded by all agents at dispatch time.
@@ -100,9 +100,7 @@ Apply to every dispatch regardless of domain.
 | `protection` | `superintegrate` Protect | `result-protection` |
 | `sync` | `superintegrate` Sync | `semantic-merge` |
 | `integration` | `superintegrate` Integrate | `refactor-and-integrate` |
-| `documentation` | `superintegrate` Document | `report-in-markdown` |
-
-`Stage: planning-review` is a reviewer-only planning pass; its mechanics live in `skills/superplan/references/planning-review.md`.
+| `documentation` | `superintegrate` Document | — |
 
 `Stage: sync` is branch-level: `superintegrate` dispatches generic sync author / sync reviewer agents with the mode references it names; the canonical role specs carry no Sync-specific exceptions.
 

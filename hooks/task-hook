@@ -209,12 +209,19 @@ _superra_run() {
 
 # Resolve and run the packaged hook; never block (always exit 0).
 _superra_dir="$(_superra_resolve_dir 2>/dev/null || true)"
+_superra_hook_output=""
 if [ -n "$_superra_dir" ]; then
   _superra_hook="$_superra_dir/scripts/task_hook.py"
   if command -v uv >/dev/null 2>&1; then
-    printf '%s' "$input" | uv run --script "$_superra_hook" 2>/dev/null || true
+    _superra_hook_output="$(printf '%s' "$input" | uv run --script "$_superra_hook" 2>/dev/null || true)"
   elif command -v python3 >/dev/null 2>&1; then
-    printf '%s' "$input" | python3 "$_superra_hook" 2>/dev/null || true
+    _superra_hook_output="$(printf '%s' "$input" | python3 "$_superra_hook" 2>/dev/null || true)"
   fi
+fi
+# In Codex mode, an empty response is unparseable; emit {} as a last resort.
+if [ -n "$_superra_hook_output" ]; then
+  printf '%s\n' "$_superra_hook_output"
+elif [ -n "${SUPERRA_TASK_HOOK_EMPTY_JSON:-}" ]; then
+  printf '{}\n'
 fi
 exit 0

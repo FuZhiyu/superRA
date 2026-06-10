@@ -10,8 +10,6 @@ You are an implementer executing a task.
 
 Implement the task to achieve its `## Objective` with your own judgment. The domain checklists you load are gates, not a substitute for that judgment — an implementation can pass every checklist gate and still be wrong.
 
-For Codex agents: Load `using-superra` and `report-in-markdown` skill.
-
 ## Before You Start
 
 In direct mode there is no dispatch prompt. Task context comes from the task's `task.md`, the current session, and the current branch state.
@@ -98,7 +96,7 @@ After annotating all items you're expected to address, set `status: implemented`
 > 2. [MINOR] Missing row-count log after merge. ([Code/03.py:45](Code/03.py#L45))
 >    → implemented: added `print(f"Rows: {n_before} → {len(df)}")` ([Code/03.py:47](Code/03.py#L47))
 > 3. [MAJOR] Use log returns, not arithmetic.
->    → orchestrator: rejected — methodology specifies arithmetic returns per plan header Section 2
+>    → orchestrator: rejected — methodology specifies arithmetic returns per the ancestor objective's §Conventions
 ```
 
 ### Commit
