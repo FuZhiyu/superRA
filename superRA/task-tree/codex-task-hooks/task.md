@@ -1,6 +1,6 @@
 ---
 title: "Codex Task Hooks and Decision-Reminder Deprecation"
-status: approved
+status: revise
 depends_on: []
 tags:
   - hooks
@@ -72,3 +72,9 @@ files are workflow evidence for sync, protection, review, and approved
 results. No unrelated cleanup, broad reformatting, generated-agent changes,
 or exporter/share/dashboard implementation hunks survive in the governing
 diff.
+
+## Review Notes
+
+> 1. [MAJOR] Scoped conventions live in a top-level `## Conventions` section; the contract nests them as `### Conventions` inside `## Objective`, and `superra task read` injects only the ancestor `## Objective` with its nested subsections ([task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Context Inheritance, [task_read.py](../../../skills/task-tree/scripts/task_read.py)) — so the children of this task never inherited these conventions at dispatch. Fold the section under `## Objective` as `### Conventions`.
+> 2. [MINOR] Objective and Results phrase the hook contract in `.plan/**/task.md` terms as current; the root is `superRA` with `.plan` legacy-only ([task_hook.py:36](../../../skills/task-tree/scripts/task_hook.py#L36)). Phrase as historical or update to the current root name (children 02/03 carry the same phrasing — items recorded there).
+> 3. [MINOR] The empty-JSON guarantee folded into this task has a residual hole: [hooks/task-hook](../../../hooks/task-hook) pipes to the python hook with `2>/dev/null || true` and unconditionally exits 0, so if source resolution fails, both `uv` and `python3` are missing, or the hook crashes before printing, Codex receives empty stdout instead of `{}` — the manifest commands print `{}` only on the missing-plugin-root path ([hooks-codex.json](../../../hooks/hooks-codex.json)). Emit `{}` as a last resort in Codex mode when the inner hook produced no stdout.
