@@ -59,3 +59,7 @@ The spec must cover:
 
 Design spec written in parent task's `## Design Spec` section. Covers all 9 items from the objective: field definition, status semantics table, state machine with transition ownership, rollup rules, frontier rules, parent-status computation policy, `--cascade` semantics, migration mapping, phase inference, and diagnostic tool spec.
 
+## Review Notes
+
+1. **MINOR** — Retrospective audit note (user-requested; recorded despite `status: approved`). The objective's enum and semantics table describe the six-value model without `postponed`, and the `--cascade` list omits it, diverging from the parent [Design Spec](../task.md) this task produced after `postponed` was folded in via [11-postponed-core-semantics](../11-postponed-core-semantics/task.md). The parent contract's stale-content checklist names "sibling task objectives that assume an earlier approach" as content to replace in place. Fix: either update the enum copies here to the seven-value model, or add one Results line stating the spec was later extended with `postponed` (tasks 11–13) so readers do not take the six-value table as current.
+
