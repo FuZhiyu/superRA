@@ -27,3 +27,9 @@ The diagnosis is that `_open_browser_async()` sleeps on a daemon thread in the s
 - `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts/test_task_tree.py::TestBackgroundLaunch -q` — 9 passed.
 - `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts -q` — 612 passed, 2 skipped.
 - Smoke launch from outside the git worktree with `--no-open --idle-timeout 2` returned `Dashboard running at http://localhost:8998`; the server self-exited and `stop` removed the stale PID file. Existing unrelated foreground dashboard processes on ports 8996 and 8576 were left running.
+
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR item only; status stays `approved`.)*
+
+1. **MINOR** — the Key Findings cite absolute paths into a *different* worktree (`/Users/…/superRA.worktrees/rename-task-tree/skills/task-tree/scripts/plan_dashboard.py:1915` etc.), which do not resolve from this tree and violate the relative file-link citation convention every sibling task follows. Replace with task-relative citations, e.g. [plan_dashboard.py:1915](../../../../../skills/task-tree/scripts/plan_dashboard.py#L1915) and [test_task_tree.py](../../../../../skills/task-tree/scripts/test_task_tree.py).
