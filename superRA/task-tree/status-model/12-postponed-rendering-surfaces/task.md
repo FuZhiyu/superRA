@@ -72,3 +72,7 @@ Built a fixture tree (postponed leaf, postponed branch with all children postpon
 - Updated the two kanban column-count tests for the new column (`test_kanban_returns_7_columns`, `test_kanban_has_7_status_columns`): 6 → 7.
 - Added a `postponed_plan_root` fixture and 3 tests: postponed excluded from the summary denominator + count-pill visible; the Postponed kanban column holds the postponed leaves; a postponed node renders the `badge-postponed`/`data-status="postponed"`.
 - `uv run pytest skills/task-tree/scripts/test_dashboard.py skills/task-tree/scripts/test_task_tree.py -q` → **295 passed** (292 prior + 3 new).
+
+## Review Notes
+
+1. **MINOR** — Retrospective audit note (user-requested; recorded despite `status: approved`). Every citation in `## Results` uses a 5-up `../../../../../skills/...` prefix, but this task sits 4 levels deep, so the evidence links resolve outside the repo (correct prefix is `../../../../`; same fold-in artifact as [11-postponed-core-semantics](../11-postponed-core-semantics/task.md) `## Review Notes`). The rendering work itself verifies in code ([task_query.py:31](../../../../skills/task-tree/scripts/task_query.py#L31), [kanban.html:15](../../../../skills/task-tree/scripts/templates/kanban.html#L15), [summary_bar.html:7](../../../../skills/task-tree/scripts/templates/summary_bar.html#L7)) and the dashboard tests pass. Fix: mechanically rewrite the citation prefixes to 4-up paths.
