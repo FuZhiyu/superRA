@@ -1,6 +1,6 @@
 ---
 title: "Create harness-plan-mode.md reference"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-24
@@ -45,7 +45,3 @@ Also added a load directive in [skills/superplan/SKILL.md](../../../../skills/su
 
 DRY/Necessity gate applied: every line either states a non-default constraint, provides a concrete format the agent needs, or scopes when to load. No restated defaults, no cross-skill pattern citations, no design essays.
 
-## Review Notes
-
-1. **[MAJOR]** Dead Results links: both citations target `skills/planning-workflow/references/harness-plan-mode.md` and `skills/planning-workflow/SKILL.md`, paths renamed to `skills/superplan/…` — the links no longer resolve and the durable record misleads about the live owner. Fix: repoint to [harness-plan-mode.md](../../../../skills/superplan/references/harness-plan-mode.md) and [superplan/SKILL.md](../../../../skills/superplan/SKILL.md), or annotate as historical.
-   → implemented: updated Results to use correct relative paths with historical annotation for renamed paths ([harness-reference/task.md](task.md))

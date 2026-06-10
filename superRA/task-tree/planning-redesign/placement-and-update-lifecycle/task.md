@@ -1,6 +1,6 @@
 ---
 title: "Cross-Stage Placement + the Update-Task Lifecycle"
-status: implemented
+status: approved
 depends_on:
   - entry-and-placement
   - consolidation
@@ -107,6 +107,4 @@ The safe-execution + detection substrate (lossless `depends_on` rewire hook, adv
 
 ## Review Notes
 
-1. **[MAJOR]** Stale Results authority: the headline finding cites [`task-tree/references/planning.md` §Placing Work](../../../../skills/task-tree/references/planning.md) as the "authoritative placement rewrite", but that file was deleted by `task-tree-design/01-reference-ownership`; the placement policy now lives in [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md). The durable record points readers at a dead owner with no historical annotation. Fix: annotate the citations as historical and name the current owner.
-   → implemented: annotated the headline finding with historical note and corrected owner pointer to [task-tree-design.md §Placing Work by Durable Home](../../../../skills/superplan/references/task-tree-design.md) ([placement-and-update-lifecycle/task.md](task.md))
-2. **[MINOR]** The Results promise "their fold-back happens at integration, per this task's own lifecycle rule" — that fold-back has not happened: this task and the superseded `entry-and-placement` sibling survive as standalone approved update tasks, the exact pattern this task's lifecycle rule expires at consolidation/integration. Fix: execute the merge/prune at the next consolidation gate.
+1. **[MINOR]** The Results promise "their fold-back happens at integration, per this task's own lifecycle rule" — that fold-back has not happened: this task and the superseded `entry-and-placement` sibling survive as standalone approved update tasks, the exact pattern this task's lifecycle rule expires at consolidation/integration. Fix: execute the merge/prune at the next consolidation gate.

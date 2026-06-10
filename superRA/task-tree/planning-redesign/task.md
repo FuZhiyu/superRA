@@ -1,6 +1,6 @@
 ---
 title: "Planning Workflow Redesign"
-status: in-progress
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-24
@@ -46,8 +46,4 @@ Twelve children across six concerns delivered the planning workflow redesign. Al
 
 ## Review Notes
 
-1. **[CRITICAL]** [task.md](task.md) — `## Results` is empty while all 12 children are approved. The rollup discipline this workstream itself codified ([superimplement completion gate #3](../../../skills/superimplement/SKILL.md), [task-file-contract.md §Section Ownership](../../../skills/task-tree/references/task-file-contract.md)) requires an orchestrator-written parent rollup; a reader landing on the workstream root learns nothing about what shipped. Fix: write a selective rollup of the six concerns with links down to child `## Results`.
-   → implemented: wrote 12-child rollup grouped by the six concerns with links to each child's task.md ([task-tree/planning-redesign/task.md](task.md))
-2. **[MAJOR]** [task.md](task.md) — `## Objective` is stale on every Stale Content Checklist axis: it still says `.plan/` throughout (the tree is `superRA/`), names `planning-workflow SKILL.md` (renamed `superplan`), describes concern 1 as "Task Tree Discovery" (replaced by Entry Assessment), and the Conventions block pins "Planning-workflow SKILL.md is the primary file". Objectives are current-state contracts. Fix: rewrite as the current-state contract, or trim once the Results rollup carries the record.
-   → implemented: rewrote `## Objective` as a current-state summary of what shipped across the six concerns, using `superRA/`, `skills/superplan`, and Entry Assessment; removed stale Conventions block ([task-tree/planning-redesign/task.md](task.md))
-3. **[MINOR]** Supersession chain left standing across children: `entry-and-placement` (two-step placement) superseded by `placement-and-update-lifecycle` (recursive descent in the since-deleted `task-tree/references/planning.md`), superseded by `task-tree-design/01+02` (policy now in [task-tree-design.md](../../../skills/superplan/references/task-tree-design.md)). Three layers of update tasks survive as approved siblings — the Merge/Prune symptom named in [consolidation.md](../../../skills/superplan/references/consolidation.md) — and `placement-and-update-lifecycle` Results promise a fold-back "at integration" that has not happened. Fix: merge/prune the superseded layers into durable owners at the next consolidation gate.
+1. **[MINOR]** Supersession chain left standing across children: `entry-and-placement` (two-step placement) superseded by `placement-and-update-lifecycle` (recursive descent in the since-deleted `task-tree/references/planning.md`), superseded by `task-tree-design/01+02` (policy now in [task-tree-design.md](../../../skills/superplan/references/task-tree-design.md)). Three layers of update tasks survive as approved siblings — the Merge/Prune symptom named in [consolidation.md](../../../skills/superplan/references/consolidation.md) — and `placement-and-update-lifecycle` Results promise a fold-back "at integration" that has not happened. Fix: merge/prune the superseded layers into durable owners at the next consolidation gate.

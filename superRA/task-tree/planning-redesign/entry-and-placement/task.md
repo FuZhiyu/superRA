@@ -1,6 +1,6 @@
 ---
 title: "Entry Assessment, Depth Tiers, and Task Placement"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-25
@@ -125,9 +125,3 @@ Update `references/harness-plan-mode.md` to align with the new entry logic. In p
 
 Criteria pass by code review of the shipped SKILL.md (no script-verifiable assertions in this task's scope; validation is by inspection of `superplan/SKILL.md` and `task-tree-design.md` against the 12 criteria).
 
-## Review Notes
-
-1. **[MAJOR]** Broken Results links: citations like `[skills/planning-workflow/SKILL.md](skills/planning-workflow/SKILL.md)` and `[skills/task-tree/references/planning.md](skills/task-tree/references/planning.md)` are task-dir-relative (never resolved) and point at renamed/deleted paths — the placement policy now lives in [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md), the skill at [superplan/SKILL.md](../../../../skills/superplan/SKILL.md). Fix: correct relativity and annotate dead targets as historical.
-   → implemented: updated Results with correct relative paths and historical annotations for renamed/deleted paths ([entry-and-placement/task.md](task.md))
-2. **[MINOR]** Overstated verification: "All 12 validation criteria pass — verified by line-by-line review of the modified files" asserts validation by self-attestation with no command output or artifact evidence. Fix: record the checks actually run, or soften the claim.
-   → implemented: softened claim to "Criteria pass by code review ... no script-verifiable assertions in this task's scope" ([entry-and-placement/task.md](task.md))

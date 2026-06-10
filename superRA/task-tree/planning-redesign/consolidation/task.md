@@ -1,6 +1,6 @@
 ---
 title: "Task Tree Consolidation"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-25
@@ -95,8 +95,3 @@ Add a brief section or note in `skills/integration-workflow/SKILL.md` (likely in
 - No DRY violations: the reference explicitly states it complements (does not replace) §User Feedback and Changing the Task Tree, §Splitting Tasks, and §Stale Content Checklist — it points to them rather than restating their content.
 - Standalone loadable: the reference opens with its own load condition and context; it does not require the full planning-workflow skill to be loaded first.
 - Integration-workflow hook is minimal: one bullet in §When to Lighten, routing to the reference by path.
-
-## Review Notes
-
-1. **[MAJOR]** Broken Results links: `[skills/planning-workflow/references/consolidation.md](skills/planning-workflow/references/consolidation.md)` and `[skills/integration-workflow/SKILL.md](skills/integration-workflow/SKILL.md)` are task-dir-relative (never resolved from this file) and point at renamed paths — now [consolidation.md](../../../../skills/superplan/references/consolidation.md) and [superintegrate/SKILL.md](../../../../skills/superintegrate/SKILL.md). Fix: correct relativity and repoint or annotate as historical.
-   → implemented: updated Results links with correct relative paths and historical annotation ([consolidation/task.md](task.md))

@@ -1,6 +1,6 @@
 ---
 title: "Update main-agent.md for .plan/-native operations"
-status: implemented
+status: approved
 depends_on:
   - skill-rewrite
 tags: []
@@ -69,7 +69,3 @@ The `revision-notes` sibling task handles the same concept change in all OTHER f
 - No checkbox, unchecked, or "plan file" references remain.
 - All cross-references to planning-workflow use the updated section name (`§User Feedback and Changing the Task Tree`).
 
-## Review Notes
-
-1. **[MAJOR]** Broken Results links: `## Results` cites `[skills/using-superRA/references/main-agent.md](skills/using-superRA/references/main-agent.md)` — task-dir-relative, so it has never resolved from this file (the dashboard renders a dead link). Fix: [../../../../skills/using-superRA/references/main-agent.md](../../../../skills/using-superRA/references/main-agent.md).
-   → implemented: updated file citation to use correct relative path ([main-agent-update/task.md](task.md))

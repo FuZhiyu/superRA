@@ -1,6 +1,6 @@
 ---
 title: "Thorough Planning Reference"
-status: implemented
+status: approved
 depends_on:
   - entry-and-placement
 tags: []
@@ -114,13 +114,4 @@ All 8 validation criteria pass:
 - Incremental refinement: explicitly composes with depth tiers (thorough initial, quick refinement)
 - Agent review step exists in both SKILL.md §Phase 4 and the thorough-planning reference
 - SKILL.md §Depth Tiers paragraph about Phase 4 being "the same at all tiers" is updated to note the thorough-only exception
-
-## Review Notes
-
-1. **[MAJOR]** Planning-review trigger stated twice on the surfaces this task created: [superplan/SKILL.md:152](../../../../skills/superplan/SKILL.md#L152) §Agent Review and [thorough-planning.md:90](../../../../skills/superplan/references/thorough-planning.md#L90) §Planning Review both carry "at thorough depth … explicit handoff-review requests enter/use the same step/mechanism", with mutual cross-pointers. Neither copy is authoritative and they can drift. Fix: SKILL §Agent Review keeps the choreography (trigger, REVISE-before-User-Review, skip rule) plus one pointer; delete the trigger restatement from thorough-planning.md.
-   → implemented: removed trigger restatement from [thorough-planning.md §Planning Review](../../../../skills/superplan/references/thorough-planning.md); section now carries only planner-side context provisioning with pointer to SKILL.md §Agent Review for choreography
-2. **[MAJOR]** Broken Results links: this task's `## Results` cite `[skills/planning-workflow/references/thorough-planning.md](skills/planning-workflow/references/thorough-planning.md)` and SKILL.md line anchors — task-dir-relative (never resolved) and pointing at the renamed `planning-workflow` path; the cited line numbers no longer match the live file. Fix: correct relativity to `../../../../skills/superplan/references/thorough-planning.md` and annotate stale anchors as historical.
-   → implemented: corrected Results links to `../../../../`-relative paths; annotated historical path and stale line anchors ([thorough-planning/task.md](task.md))
-3. **[MINOR]** [thorough-planning.md:16](../../../../skills/superplan/references/thorough-planning.md#L16) (and the second occurrence at L49) — `subagent_type: "Explore"` embeds a Claude-Code-specific agent name in a non-adapter reference; the Ownership Boundaries table puts harness-specific tool names in `using-superRA/references/` adapters, and the inline hedge ("other harnesses may name … differently") is the wrapper-instruction anti-pattern. Fix: name the capability ("a read-only exploration agent") and let the harness adapter map it.
-   → implemented: replaced `subagent_type: "Explore"` with "read-only exploration agent" capability description in [thorough-planning.md](../../../../skills/superplan/references/thorough-planning.md); added pointer to harness adapter for the specific agent type
 
