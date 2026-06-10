@@ -4,8 +4,8 @@
 **Current branch:** `better-handoff`
 **Incoming ref:** `better-handoff-impl/semantic-move-hook-json-agent/parallel/posttooluse-empty-json`
 **Governing baseline:** `8f5dd1d5b22954294b22651e41f95751a2e69466`
-**Merge commit:** Pending until commit
-**Propagation commits:** Task-tree fold and stale-reference fix included in the merge commit
+**Merge commit:** `1533d06a`
+**Propagation commits:** Record update containing this SHA
 
 ## Current Branch Intent
 
