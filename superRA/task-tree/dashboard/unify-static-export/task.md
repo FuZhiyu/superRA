@@ -59,3 +59,10 @@ Rather than re-implement the server's Jinja partials as a parallel client-side r
 ### Note on the committed dashboard
 
 The Objective asks to regenerate and commit `.plan/dashboard.html`. In *this* repo that file is **gitignored** (`.gitignore:11-12`: `.plan/**/dashboard.html`, `.plan/dashboard.html`) — the generated dashboard is a local build artifact, not a tracked file. I regenerated it from the new path and verified it (full-featured: renderMarkdown, KaTeX, all views; offline-clean), but did not force-add a gitignored file. The regeneration is reproducible via `uv run python skills/task-tree/scripts/plan_dashboard.py generate --plan-root .plan`.
+
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR items only; status stays `approved`.)*
+
+1. **MINOR** — design-debt follow-on of the (correct) one-template unification: ~2,700 lines of client JS now live inside the Jinja template, invisible to every linter (`node --check` accepts undefined identifiers; `eslint no-undef` would have caught the `pathPrefix` ReferenceError a later refactor shipped — see the Review Notes on [02-file-link-consistency](../live-server/path-basis-consistency/02-file-link-consistency/task.md)). Recommend extracting the client JS to a real `.js` asset, served live and inlined at export build exactly like the vendored render libraries — single source preserved, but lintable and unit-testable.
+2. **MINOR** — the "Note on the committed dashboard" cites `.gitignore:11-12` / `.plan/**/dashboard.html` and a `--plan-root .plan` command; after the root rename the active ignore is `superRA/dashboard.html` (.gitignore:13) and the root is `superRA/`. Refresh the references in place.
