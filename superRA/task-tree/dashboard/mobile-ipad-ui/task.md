@@ -46,3 +46,9 @@ The dashboard is now touch-correct on iPhone and iPad with the desktop mouse exp
 - **[`02-touch-polish`](02-touch-polish/task.md)** — ≥44px tap targets gated behind `@media (pointer: coarse)` (desktop density untouched); the phone search/filter sheet **adopts** the existing `#search-box`/`#filter-status` so `applyFilters()` stays single-sourced; content safe-area insets; overscroll containment, tap-highlight suppression, and DAG/Kanban scroll affordances. Two MAJOR cascade defects (the phone trigger leaking onto iPad via a coarse `display` group, and the caret's 44px hit area defeated by a later unconditional rule) were caught in review and fixed with red-green regression tests.
 
 **Verification:** Playwright touch drive across iPhone / iPad portrait 768 & 1024 / iPad landscape 1024 & 1366 / desktop mouse, plus rotation and reduced-motion cases; `pytest test_dashboard.py test_task_tree.py` green (orchestrator re-run: 381 passed locally, 2 playwright-rendered tests skip without a browser and were red-green-verified in the agent env); `node --check` on the extracted client JS passes.
+
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR item only; status stays `approved`.)*
+
+1. **MINOR** — the task names the behavioral Playwright drive as "the gate", but the two playwright-rendered tests skip silently when no browser is installed (already 2-skipped in the recorded runs), so in a browserless environment the gate degrades to template-string assertions without anyone noticing. Make the degradation loud: emit a skip reason that names the gate, or mark the tests required in whatever CI/verification environment is expected to carry a browser.
