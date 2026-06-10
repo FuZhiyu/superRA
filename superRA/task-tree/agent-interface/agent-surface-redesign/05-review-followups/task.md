@@ -1,6 +1,6 @@
 ---
 title: "Clean Up DRY Echoes and Meta-Commentary in Lean Task-Interface Surfaces"
-status: revise
+status: implemented
 depends_on:
   - 02-task-tree-slim
   - 03-role-spec-slim
@@ -55,7 +55,7 @@ Done in Direct mode (orchestrator implemented + self-reviewed against the `CLAUD
 5. Trimmed the `mv` paragraph to the non-obvious safety fact (cross-boundary move strands a sibling `depends_on`, flagged by validation) + a one-line pointer to `commands.md`.
 6. Dropped the redundant line-16 one-liner (Core Concepts states it).
 
-**Scope B — role specs:** Replaced the four-name editing-principles echo with a bare pointer to §Task Interface in [`agents/implementer.md`](../../../../../agents/implementer.md) and [`agents/reviewer.md`](../../../../../agents/reviewer.md) `### Editing Etiquette`; every role-specific line (the `Stay within your assigned task` rule, the reviewer remove-when-empty rule, the flag-unclear-structure line) is retained. Stripped all four `<!-- -->` researcher comments (3 implementer, 1 reviewer); the malformed nested reviewer comment is gone with the rewrite.
+**Scope B — role specs:** Replaced the four-name editing-principles echo with a bare pointer to §Task Interface in [`agents/implementer.md`](../../../../../agents/implementer.md) (pointer in the `## Handoff` lead) and [`agents/reviewer.md`](../../../../../agents/reviewer.md) (`### Editing Etiquette`); every role-specific line (the `Stay within your assigned task` rule, the reviewer remove-when-empty rule, the flag-unclear-structure line) is retained. Stripped all four `<!-- -->` researcher comments (3 implementer, 1 reviewer); the malformed nested reviewer comment is gone with the rewrite.
 
 **Regenerated** the four derived files via `sync_codex_agents.py --scope project`; `--check` reports all generated agent files and direct-mode references up to date.
 
@@ -68,6 +68,10 @@ Done in Direct mode (orchestrator implemented + self-reviewed against the `CLAUD
 ## Review Notes
 
 > 1. [MAJOR] The DRY/Necessity sweep this task owns left gate-failing lines in both role specs: "For Codex agents: Load `using-superra` and `report-in-markdown` skill." ([implementer.md:13](../../../../../agents/implementer.md#L13)) and "For Codex agents: Load `using-superra` skill." ([reviewer.md:13](../../../../../agents/reviewer.md#L13)) restate the frontmatter `skills:` preload and the manifest baseline inside the canonical specs, and place harness-specific behavior outside the adapter references (CLAUDE.md §Codex and Harness Design) — the generator or `codex-instructions.md` is the right carrier. Remove from the specs and regenerate.
+>    → implemented: removed both "For Codex agents:" lines from [implementer.md](../../../../../agents/implementer.md) and [reviewer.md](../../../../../agents/reviewer.md); regenerated all four derived artifacts ([direct-mode-implementer.md](../../../../../skills/using-superRA/references/direct-mode-implementer.md), [direct-mode-reviewer.md](../../../../../skills/using-superRA/references/direct-mode-reviewer.md), [superra_implementer.toml](../../../../../.codex/agents/superra_implementer.toml), [superra_reviewer.toml](../../../../../.codex/agents/superra_reviewer.toml)); `--check` exits 0
 > 2. [MAJOR] "Here is what you will receive" narration survives in both §Before You Start task-read steps: the parentheticals "(focused tree, ancestor objectives, sibling dependency status)" ([implementer.md:18](../../../../../agents/implementer.md#L18)) and "(its own injected context, objective, implementer results, and review notes)" ([reviewer.md:20](../../../../../agents/reviewer.md#L20)) duplicate `using-superra` §Task Interface's wrapper rationale and describe output the agent is about to read anyway. Delete the parentheticals; the load-bearing instruction ("read each assigned task via `superra task read`") stands alone.
+>    → implemented: deleted both parentheticals — implementer §Before You Start step 2 now ends at "each path gets its own injected context." ([implementer.md](../../../../../agents/implementer.md#L18)); reviewer ends at "each path gets its own injected context." ([reviewer.md](../../../../../agents/reviewer.md#L20)); regenerated
 > 3. [MINOR] The review-notes example annotation "rejected — methodology specifies arithmetic returns per plan header Section 2" ([implementer.md:95](../../../../../agents/implementer.md#L95)) uses retired "plan header" vocabulary; per repo terminology cite an ancestor objective's scoped conventions instead. Propagates into both generated surfaces.
+>    → implemented: updated to "methodology specifies arithmetic returns per the ancestor objective's §Conventions" ([implementer.md:95](../../../../../agents/implementer.md#L95)); regenerated
 > 4. [MINOR] `## Results` here claims `implementer.md §Editing Etiquette` carries the §Task Interface pointer; current implementer.md has no such heading (the pointer lives in the `## Handoff` lead; only reviewer.md retains `### Editing Etiquette`). Lightly clean the heading-level claim.
+>    → implemented: updated Results to reference `## Handoff` lead for implementer and `### Editing Etiquette` for reviewer — accurate to current structure

@@ -1,6 +1,6 @@
 ---
 title: "Agent-Facing Surface Redesign — Lean Relocation + Role-Spec Restructure"
-status: revise
+status: in-progress
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -31,6 +31,20 @@ Redesign the agent-facing surfaces — the two role specs (`agents/implementer.m
 
 ## Results
 
+The agent-facing surfaces for the superRA workflow — `agents/implementer.md`, `agents/reviewer.md`, `using-superRA/SKILL.md`, `task-tree/SKILL.md`, and the four generated `direct-mode-*` / `superra_*.toml` artifacts — were redesigned into a clean, deduplicated, load-on-demand structure across nine coordinated child tasks. The release diff vs merge-base `5dfe928b` is one coherent net delta (≈368 insertions / 375 deletions across six files) with no knowledge lost for any agent role.
+
+**Phase A — Lean relocation ([01](01-core-in-using-superra/task.md)–[05](05-review-followups/task.md)):** The universal task interface (read/edit a task, hook safety net, status enum, body-section vocabulary, shared editing principles, ownership-boundary principle) was folded into `using-superRA/SKILL.md §Task Interface` — preloaded by every subagent via frontmatter, so zero new mandatory loads were added. `task-tree/SKILL.md` was reduced to load-on-demand tree tooling. The editing-etiquette block that had been copy-pasted across four files now lives in one place; the mutation command surface was consolidated into `references/commands.md`. Task [05](05-review-followups/task.md) cleaned residual DRY/Necessity gate violations.
+
+**Phase B — Role-spec restructure ([06](06-restructure-specs/task.md)–[08](08-report-commit-model/task.md)):** Both role specs were rewritten to one parallel skeleton with planning-review mode relocated to `superplan/references/planning-review.md` (manifest-loaded), the generator reconciled to the new heading structure, and the reporting model collapsed onto *commit = change summary, return = status + SHA, `## Results` = latest state*. The `## Results` human-readability principle was stated once in `using-superRA §Task Interface` and referenced from the implementer §Self-Check and reviewer §Review Protocol.
+
+**[09-coverage-audit](09-coverage-audit/task.md)** proved the no-knowledge-lost invariant: 39 baseline units from Round 1 and 43 from Round 2 were all classified (K/R/D/ID/RA), zero LOST, zero dangling pointers in live surfaces.
+
+**Target ownership confirmed:**
+- Universal task interface → `using-superRA/SKILL.md §Task Interface` (preloaded by all agents)
+- Tree tooling → `task-tree/SKILL.md`, load-on-demand
+- Role protocol → `agents/implementer.md` / `agents/reviewer.md`
+
 ## Review Notes
 
 > 1. [MAJOR] `## Results` is empty on this approved 9-child redesign parent. The objective promises "one coherent net delta", but no rollup exists and readers must reverse-engineer the outcome from nine children. Add the matured narrative with links to child evidence per the Results lifecycle in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) §Results Shape.
+>    → implemented: added matured rollup narrative with links to child tasks and Phase A / Phase B outcome summaries

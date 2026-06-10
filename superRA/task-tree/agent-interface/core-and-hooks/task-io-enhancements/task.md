@@ -1,6 +1,6 @@
 ---
 title: "Core Library Enhancements"
-status: revise
+status: implemented
 depends_on: []
 tags: []
 created: 2026-05-24
@@ -50,3 +50,4 @@ All 53 existing tests pass.
 ## Review Notes
 
 > 1. [MAJOR] This approved task retained its prior `## Review Notes` (4 MINOR items) after approval, violating the contract rule that the reviewer removes the section content entirely at APPROVE ([task-file-contract.md](../../../../../skills/task-tree/references/task-file-contract.md)); the items were also stale — the missing test coverage item was later satisfied by the `tests` sibling. Replaced here per the replace-don't-stack rule; remove this section at re-approval.
+>    → implemented: note already replaced with this current item by the audit reviewer; no additional implementer action required — section removal is a reviewer action at next APPROVE

@@ -30,7 +30,7 @@ Carry the domain-specific knowledge that workflow skills invoke when a task touc
 - **Literature review** — citation integrity, claim-evidence mapping
 - **Simulation** — seed discipline, sensitivity to parameter grids, stochastic reproducibility
 
-Each future vertical plugs into the same workflow scaffolding — implementer + reviewer pair, handoff docs, autonomous-with-human-in-loop, semantic merges.
+Each future vertical plugs into the same workflow scaffolding — implementer + reviewer pair, task-tree handoff, autonomous-with-human-in-loop, semantic merges.
 
 ## Utility — reusable, domain-neutral tools
 

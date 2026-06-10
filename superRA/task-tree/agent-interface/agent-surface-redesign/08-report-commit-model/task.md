@@ -1,6 +1,6 @@
 ---
 title: "Collapse Reporting onto Commit = Summary, Return = Status + SHA"
-status: revise
+status: implemented
 depends_on:
   - 06-restructure-specs
 tags: []
@@ -65,3 +65,4 @@ This is a focused, surgical change to two sections per spec plus a small generat
 ## Review Notes
 
 > 1. [MAJOR] The worktree-return line this task kept references "path B" / "path A" ([implementer.md:115](../../../../../agents/implementer.md#L115)) — terms defined nowhere in the repo (a whole-tree grep finds no other occurrence, including `agent-orchestration` and its worktree reference), so an implementer reading its spec cannot resolve when the field applies. The dangling vocabulary propagates into both generated surfaces. Replace with the concrete condition (e.g. "only when dispatched with a `Worktree:` field") and regenerate.
+>    → implemented: replaced "path B only" / "path A" with "only when dispatched with a `Worktree:` field" / "when no `Worktree:` field was present" ([implementer.md:115](../../../../../agents/implementer.md#L115)); regenerated all four artifacts; `--check` exits 0

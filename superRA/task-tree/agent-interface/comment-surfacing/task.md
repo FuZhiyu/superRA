@@ -1,6 +1,6 @@
 ---
 title: "Surface Task Comments to the Agent Loop"
-status: revise
+status: implemented
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -17,10 +17,10 @@ Make the task-tree **comment feature visible to the agent loop**. Today a resear
 - **Dispatch-injection (rec #2):** dropped to a single pointer line in `agent-orchestration` (folded into `03-document-cli`), not a separate mechanism — because `task_read` (which every dispatched agent runs) now surfaces comments, so a second injection path is redundant.
 - **Minor defaults:** surface **unresolved** comments only (matches `task_comment.py list` default); emit the **full block** (no length cap) in both human and `--json` output; **also enrich `task_comment.py list`** to show the full block so the standalone CLI matches `task_read` (the accessor is cheap to reuse).
 
-**Sequencing / coordination with the in-flight `lean-interface` subtree** (cross-parent, so not expressible via `depends_on` — enforced by orchestrator ordering):
-- `01-block-accessor` and `02-surface-in-task-read` touch only `_comments.py` and `task_read.py` — no overlap with `lean-interface` — and may run as soon as ready.
-- `02` adds a one-clause cross-edit to `using-superRA/SKILL.md §Task Interface` (just authored by `lean-interface/01`, approved) noting `task_read` also surfaces open comments. Coordinate: land it only after `lean-interface/01` is approved (it is), and flag it for `lean-interface/05-coverage-audit` so its git-snapshot baseline accounts for the added clause.
-- `03-document-cli` documents the comment CLI in `task-tree/SKILL.md` / its references — which `lean-interface/02` is concurrently redesigning into a lean router. **Run `03` after `lean-interface/02` is approved** so the doc lands in the new structure (a reference, e.g. `references/commands.md`, with a one-line body pointer) instead of being clobbered. Flag the added command surface for `lean-interface/05`.
+**Sequencing / coordination with the in-flight `agent-surface-redesign` subtree** (cross-parent, so not expressible via `depends_on` — enforced by orchestrator ordering):
+- `01-block-accessor` and `02-surface-in-task-read` touch only `_comments.py` and `task_read.py` — no overlap with `agent-surface-redesign` — and may run as soon as ready.
+- `02` adds a one-clause cross-edit to `using-superRA/SKILL.md §Task Interface` (just authored by `agent-surface-redesign/01-core-in-using-superra`, approved) noting `task_read` also surfaces open comments. Coordinate: land it only after `agent-surface-redesign/01-core-in-using-superra` is approved (it is), and flag it for `agent-surface-redesign/09-coverage-audit` so its git-snapshot baseline accounts for the added clause.
+- `03-document-cli` documents the comment CLI in `task-tree/SKILL.md` / its references — which `agent-surface-redesign/02-task-tree-slim` redesigned into a lean router. **Run `03` after `agent-surface-redesign/02-task-tree-slim` is approved** so the doc lands in the new structure (a reference, e.g. `references/commands.md`, with a one-line body pointer) instead of being clobbered. Flag the added command surface for `agent-surface-redesign/09-coverage-audit`.
 
 **Contributor gates (every child):** apply the repo `CLAUDE.md` "Teach the Protocol" DRY/Necessity gate to any prose; scope all edits/commits to your assigned worktree (its absolute path is supplied in the dispatch `Worktree:` field — sibling worktrees of this repo exist, do not touch them); `skill-creator` is not registered in this harness, so do not attempt to load it. Run tests with `~/.venv/bin/python` (it has `pyyaml`); the *runtime* read path, however, must not require it.
 
@@ -43,3 +43,4 @@ The task-tree comment feature is now visible to the agent loop. Previously a res
 ## Review Notes
 
 > 1. [MAJOR] The objective's placement and sequencing protocol references sibling `lean-interface` and its `05-coverage-audit`; no such sibling exists — it was renamed [agent-surface-redesign](../agent-surface-redesign/task.md) and the audit is `09-coverage-audit`. The stale-content checklist requires rewriting sibling references that assume a superseded structure; replace the `lean-interface/*` references with the current sibling paths.
+>    → implemented: updated all `lean-interface` references to `agent-surface-redesign` and `05-coverage-audit` to `09-coverage-audit` in the Sequencing section
