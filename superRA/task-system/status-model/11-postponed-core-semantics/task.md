@@ -51,20 +51,20 @@ Core `postponed` semantics wired into the task-system library. All edits in `ski
 
 ### `_task_io.py`
 
-- **Enum:** added `"postponed"` to `VALID_STATUSES` ([_task_io.py:20](../../../../skills/task-system/scripts/_task_io.py#L20)). Confirmed it flows to `parse_task` ([line 283](../../../../skills/task-system/scripts/_task_io.py#L283)), `validate_frontmatter` ([line 602](../../../../skills/task-system/scripts/_task_io.py#L602)), `task_check.py` (imports the constant), and the `task_update.py --status` argparse choices — verified via `task_update.py --help` showing `postponed` in the `--status` choice list.
-- **Frontier leaf exclusion:** `_collect_frontier` early return now triggers for both parked statuses — `if task.status in ("archived", "postponed"): return` ([_task_io.py:539](../../../../skills/task-system/scripts/_task_io.py#L539)).
-- **Frontier branch skip:** branch children whose `effective_status()` is in `("archived", "postponed")` are skipped ([_task_io.py:549](../../../../skills/task-system/scripts/_task_io.py#L549)).
-- **Dependency satisfaction — deliberately unchanged.** The satisfying set stays `("approved", "archived")` ([_task_io.py:565](../../../../skills/task-system/scripts/_task_io.py#L565)); `postponed` is NOT added, so a dependent of a postponed task gets `deps_met = False` and is blocked. Updated the inline comment to state postponed deliberately blocks dependents.
-- **Rollup `compute_status`:** `postponed` excluded from the active set alongside `archived`; all-parked branch returns `"postponed"` if any child is postponed else `"archived"` ([_task_io.py:463-466](../../../../skills/task-system/scripts/_task_io.py#L463)). Docstring updated to describe both rules.
+- **Enum:** added `"postponed"` to `VALID_STATUSES` ([_task_io.py:20](../../../../../skills/task-system/scripts/_task_io.py#L20)). Confirmed it flows to `parse_task` ([line 283](../../../../../skills/task-system/scripts/_task_io.py#L283)), `validate_frontmatter` ([line 602](../../../../../skills/task-system/scripts/_task_io.py#L602)), `task_check.py` (imports the constant), and the `task_update.py --status` argparse choices — verified via `task_update.py --help` showing `postponed` in the `--status` choice list.
+- **Frontier leaf exclusion:** `_collect_frontier` early return now triggers for both parked statuses — `if task.status in ("archived", "postponed"): return` ([_task_io.py:539](../../../../../skills/task-system/scripts/_task_io.py#L539)).
+- **Frontier branch skip:** branch children whose `effective_status()` is in `("archived", "postponed")` are skipped ([_task_io.py:549](../../../../../skills/task-system/scripts/_task_io.py#L549)).
+- **Dependency satisfaction — deliberately unchanged.** The satisfying set stays `("approved", "archived")` ([_task_io.py:565](../../../../../skills/task-system/scripts/_task_io.py#L565)); `postponed` is NOT added, so a dependent of a postponed task gets `deps_met = False` and is blocked. Updated the inline comment to state postponed deliberately blocks dependents.
+- **Rollup `compute_status`:** `postponed` excluded from the active set alongside `archived`; all-parked branch returns `"postponed"` if any child is postponed else `"archived"` ([_task_io.py:463-466](../../../../../skills/task-system/scripts/_task_io.py#L463)). Docstring updated to describe both rules.
 
 ### `task_update.py`
 
-- **Cascade allow-list:** added `"postponed"` to `_CASCADE_ALLOWED` ([task_update.py:24](../../../../skills/task-system/scripts/task_update.py#L24)) and the `--cascade` help text ([task_update.py:38](../../../../skills/task-system/scripts/task_update.py#L38)).
+- **Cascade allow-list:** added `"postponed"` to `_CASCADE_ALLOWED` ([task_update.py:24](../../../../../skills/task-system/scripts/task_update.py#L24)) and the `--cascade` help text ([task_update.py:38](../../../../../skills/task-system/scripts/task_update.py#L38)).
 - **Cascade skip rule (line ~128) — verified, no change.** The rule `if leaf.status == "archived" and status != "archived": continue` already parks non-archived leaves on `--cascade postponed` while leaving archived leaves untouched, and resumes (`not-started` overwrites) postponed leaves. Confirmed by the two cascade tests below; no edit needed.
 
 ### `task_check.py`
 
-- **Dependency diagnostic `postponed` branch.** `_check_deps_recursive` now mirrors the `archived` warning with a `postponed` branch ([task_check.py:157](../../../../skills/task-system/scripts/task_check.py#L157)): a task depending on a `postponed` sibling emits a `warning` — `depends on postponed task '<dep>' (blocked until resumed)`. This surfaces the case where the dependent is actively blocked off the frontier (`deps_met=False`) until the dependency is resumed, the inverse of the prior behavior where the `postponed` dependency was silent while the satisfied `archived` dependency warned.
+- **Dependency diagnostic `postponed` branch.** `_check_deps_recursive` now mirrors the `archived` warning with a `postponed` branch ([task_check.py:157](../../../../../skills/task-system/scripts/task_check.py#L157)): a task depending on a `postponed` sibling emits a `warning` — `depends on postponed task '<dep>' (blocked until resumed)`. This surfaces the case where the dependent is actively blocked off the frontier (`deps_met=False`) until the dependency is resumed, the inverse of the prior behavior where the `postponed` dependency was silent while the satisfied `archived` dependency warned.
 
 ### Tests (`test_task_system.py`)
 

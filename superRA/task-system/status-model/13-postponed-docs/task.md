@@ -2,8 +2,7 @@
 title: "Document the postponed status"
 status: approved
 depends_on:
-  - 01-core-semantics
-
+  - 11-postponed-core-semantics
 tags: []
 created: 2026-06-01
 ---
@@ -32,11 +31,11 @@ The authoritative behavior is in this feature's root `task.md` semantics table a
 
 ### Sites updated
 
-1. **[SKILL.md:80](../../../../skills/task-system/SKILL.md#L80)** — added `postponed` to the frontmatter status-enum row and noted that `archived` / `postponed` are set by the orchestrator / researcher (the rest of the lifecycle is implementer / reviewer). **[SKILL.md:112](../../../../skills/task-system/SKILL.md#L112)** — added `postponed` to the enum echo in the task-file format example.
-2. **[planning.md:122](../../../../skills/task-system/references/planning.md#L122)** — added `postponed` to the valid-values list and a clause distinguishing the two parked statuses: both are orchestrator / researcher scope decisions (not dispatch verdicts); `archived` lets dependents proceed while `postponed` parks the task off the frontier and **blocks its dependents** until resumed via `not-started`.
-3. **[internals.md:17](../../../../skills/task-system/references/internals.md#L17)** (`Task` dataclass status comment), **[internals.md:61](../../../../skills/task-system/references/internals.md#L61)** (`VALID_STATUSES`) — added `postponed` to both enum echoes. **[internals.md:50](../../../../skills/task-system/references/internals.md#L50)** (`compute_status`) — described parked-child exclusion from the active rollup set and the all-parked rule (rolls up to `postponed` if any child is postponed, else `archived`).
-4. **[agent-orchestration/SKILL.md:197](../../../../skills/agent-orchestration/SKILL.md#L197)** — added a terse `postponed` row to the Review Status Reference: meaning "Deferred and parked off the frontier; not deleted"; orchestrator action "Not dispatchable; its dependents are blocked until resumed. Set back to `not-started` to resume."
-5. **[RELEASE-NOTES.md:3](../../../../RELEASE-NOTES.md#L3)** — added an `## [Unreleased]` → `### Added` entry for `postponed` (the changelog's prior top section `[0.2.0]` is a cut release, and no `[Unreleased]` header existed). The bullet records the user-visible facts: new `status` frontmatter value, off-frontier + excluded-from-completion-% mirroring of `archived`, the dependency-blocking contrast with `archived`, all-parked rollup rule, the dashboard Postponed column/badge, and orchestrator/researcher-set with `not-started` resume. Version-manifest bump deliberately left untouched per the review (release-prep decision for the orchestrator).
+1. **[SKILL.md:80](../../../../../skills/task-system/SKILL.md#L80)** — added `postponed` to the frontmatter status-enum row and noted that `archived` / `postponed` are set by the orchestrator / researcher (the rest of the lifecycle is implementer / reviewer). **[SKILL.md:112](../../../../../skills/task-system/SKILL.md#L112)** — added `postponed` to the enum echo in the task-file format example.
+2. **[planning.md:122](../../../../../skills/task-system/references/planning.md#L122)** — added `postponed` to the valid-values list and a clause distinguishing the two parked statuses: both are orchestrator / researcher scope decisions (not dispatch verdicts); `archived` lets dependents proceed while `postponed` parks the task off the frontier and **blocks its dependents** until resumed via `not-started`.
+3. **[internals.md:17](../../../../../skills/task-system/references/internals.md#L17)** (`Task` dataclass status comment), **[internals.md:61](../../../../../skills/task-system/references/internals.md#L61)** (`VALID_STATUSES`) — added `postponed` to both enum echoes. **[internals.md:50](../../../../../skills/task-system/references/internals.md#L50)** (`compute_status`) — described parked-child exclusion from the active rollup set and the all-parked rule (rolls up to `postponed` if any child is postponed, else `archived`).
+4. **[agent-orchestration/SKILL.md:197](../../../../../skills/agent-orchestration/SKILL.md#L197)** — added a terse `postponed` row to the Review Status Reference: meaning "Deferred and parked off the frontier; not deleted"; orchestrator action "Not dispatchable; its dependents are blocked until resumed. Set back to `not-started` to resume."
+5. **[RELEASE-NOTES.md:3](../../../../../RELEASE-NOTES.md#L3)** — added an `## [Unreleased]` → `### Added` entry for `postponed` (the changelog's prior top section `[0.2.0]` is a cut release, and no `[Unreleased]` header existed). The bullet records the user-visible facts: new `status` frontmatter value, off-frontier + excluded-from-completion-% mirroring of `archived`, the dependency-blocking contrast with `archived`, all-parked rollup rule, the dashboard Postponed column/badge, and orchestrator/researcher-set with `not-started` resume. Version-manifest bump deliberately left untouched per the review (release-prep decision for the orchestrator).
 
 ### Coherence check
 

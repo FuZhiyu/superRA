@@ -2,8 +2,7 @@
 title: "Render postponed in CLI and dashboard"
 status: approved
 depends_on:
-  - 01-core-semantics
-
+  - 11-postponed-core-semantics
 tags: []
 created: 2026-06-01
 ---
@@ -44,17 +43,17 @@ Regenerate via the project's dashboard entry point (`plan_dashboard.py` / `super
 
 `postponed` now renders consistently across the CLI and the HTML dashboard, and is excluded from the completion-% denominator. Visual treatment: a muted slate distinct from `archived`'s grey — light `#dde3ea` / dark `#28323e` badge fill, mermaid/DAG fill `#cfd8e3`, CLI icon `⏸`. Every site below hard-codes the status set; each was edited explicitly, mirroring `archived`. All edits under `skills/task-system/scripts/`.
 
-### CLI — [task_query.py](../../../../skills/task-system/scripts/task_query.py)
+### CLI — [task_query.py](../../../../../skills/task-system/scripts/task_query.py)
 
-- **`STATUS_ICONS`:** added `"postponed": "⏸"` ([task_query.py:31](../../../../skills/task-system/scripts/task_query.py#L31)).
-- **Mermaid DAG:** added `"postponed": ":::postponed"` to the status→class map ([task_query.py:145](../../../../skills/task-system/scripts/task_query.py#L145)) and a matching `classDef postponed fill:#cfd8e3,stroke:#78909c,color:#37474f` ([task_query.py:169](../../../../skills/task-system/scripts/task_query.py#L169)).
+- **`STATUS_ICONS`:** added `"postponed": "⏸"` ([task_query.py:31](../../../../../skills/task-system/scripts/task_query.py#L31)).
+- **Mermaid DAG:** added `"postponed": ":::postponed"` to the status→class map ([task_query.py:145](../../../../../skills/task-system/scripts/task_query.py#L145)) and a matching `classDef postponed fill:#cfd8e3,stroke:#78909c,color:#37474f` ([task_query.py:169](../../../../../skills/task-system/scripts/task_query.py#L169)).
 
-### Dashboard templates — [templates/](../../../../skills/task-system/scripts/templates/)
+### Dashboard templates — [templates/](../../../../../skills/task-system/scripts/templates)
 
-- **[dag.html](../../../../skills/task-system/scripts/templates/dag.html):** `'postponed': '#cfd8e3'` in the `status_colors` map ([dag.html:29](../../../../skills/task-system/scripts/templates/dag.html#L29)).
-- **[base.html](../../../../skills/task-system/scripts/templates/base.html):** added `--st-post`/`--st-post-t` CSS vars in both light ([base.html:53](../../../../skills/task-system/scripts/templates/base.html#L53)) and dark ([base.html:88](../../../../skills/task-system/scripts/templates/base.html#L88)) themes; a `.badge-postponed` rule ([base.html:770](../../../../skills/task-system/scripts/templates/base.html#L770)); the `postponed` filter-dropdown option ([base.html:1140](../../../../skills/task-system/scripts/templates/base.html#L1140)); and `'#cfd8e3': 'postponed'` in the DAG reverse `DAG_FILL_STATUS` map ([base.html:2093](../../../../skills/task-system/scripts/templates/base.html#L2093)). `nodeMatchesStatus()` is status-agnostic (matches `el.dataset.status` against any value) and needed no edit. There is no separate static legend block — the per-node badges are the legend.
-- **[kanban.html](../../../../skills/task-system/scripts/templates/kanban.html):** added a `('postponed', 'Postponed')` column ([kanban.html:15](../../../../skills/task-system/scripts/templates/kanban.html#L15)).
-- **[summary_bar.html](../../../../skills/task-system/scripts/templates/summary_bar.html):** computes `postponed_leaves` and subtracts it from `active_leaves` alongside `archived_leaves`, so completion % = `approved / (leaves − archived − postponed)`; adds a `… postponed` count pill next to the archived count ([summary_bar.html:7](../../../../skills/task-system/scripts/templates/summary_bar.html#L7)).
+- **[dag.html](../../../../../skills/task-system/scripts/templates/dag.html):** `'postponed': '#cfd8e3'` in the `status_colors` map ([dag.html:29](../../../../../skills/task-system/scripts/templates/dag.html#L29)).
+- **[base.html](../../../../../skills/task-system/scripts/templates/base.html):** added `--st-post`/`--st-post-t` CSS vars in both light ([base.html:53](../../../../../skills/task-system/scripts/templates/base.html#L53)) and dark ([base.html:88](../../../../../skills/task-system/scripts/templates/base.html#L88)) themes; a `.badge-postponed` rule ([base.html:770](../../../../../skills/task-system/scripts/templates/base.html#L770)); the `postponed` filter-dropdown option ([base.html:1140](../../../../../skills/task-system/scripts/templates/base.html#L1140)); and `'#cfd8e3': 'postponed'` in the DAG reverse `DAG_FILL_STATUS` map ([base.html:2093](../../../../../skills/task-system/scripts/templates/base.html#L2093)). `nodeMatchesStatus()` is status-agnostic (matches `el.dataset.status` against any value) and needed no edit. There is no separate static legend block — the per-node badges are the legend.
+- **[kanban.html](../../../../../skills/task-system/scripts/templates/kanban.html):** added a `('postponed', 'Postponed')` column ([kanban.html:15](../../../../../skills/task-system/scripts/templates/kanban.html#L15)).
+- **[summary_bar.html](../../../../../skills/task-system/scripts/templates/summary_bar.html):** computes `postponed_leaves` and subtracts it from `active_leaves` alongside `archived_leaves`, so completion % = `approved / (leaves − archived − postponed)`; adds a `… postponed` count pill next to the archived count ([summary_bar.html:7](../../../../../skills/task-system/scripts/templates/summary_bar.html#L7)).
 
 ### Verification — rendered the real artifact
 
@@ -68,7 +67,7 @@ Built a fixture tree (postponed leaf, postponed branch with all children postpon
   - summary bar reads `1/2 approved` with a `3 postponed` pill — the 3 postponed leaves are excluded from the denominator (5 leaves − 3 postponed = 2 active);
   - DAG nodes are filled `#cfd8e3` and resolve back to `postponed` via `DAG_FILL_STATUS`.
 
-### Tests — [test_dashboard.py](../../../../skills/task-system/scripts/test_dashboard.py)
+### Tests — [test_dashboard.py](../../../../../skills/task-system/scripts/test_dashboard.py)
 
 - Updated the two kanban column-count tests for the new column (`test_kanban_returns_7_columns`, `test_kanban_has_7_status_columns`): 6 → 7.
 - Added a `postponed_plan_root` fixture and 3 tests: postponed excluded from the summary denominator + count-pill visible; the Postponed kanban column holds the postponed leaves; a postponed node renders the `badge-postponed`/`data-status="postponed"`.
