@@ -26,11 +26,11 @@ from _task_io import (
     VALID_STATUSES,
     Task,
     compute_status,
-    detect_cycles,
     parse_frontmatter,
     parse_task,
     resolve_plan_root_arg,
 )
+from _task_validate import detect_cycles, invalid_status_message
 
 
 # ---------------------------------------------------------------------------
@@ -79,10 +79,7 @@ def _check_status_recursive(
             task_path=task.path,
             category="status",
             severity="error",
-            message=(
-                f"invalid status {task.status!r}; "
-                f"expected one of {list(VALID_STATUSES)}"
-            ),
+            message=invalid_status_message(task.status),
         ))
 
     # Check for stale review_status / integration_status in raw frontmatter

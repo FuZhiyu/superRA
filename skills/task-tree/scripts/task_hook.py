@@ -148,13 +148,14 @@ def _reconcile(plan_root: Path, task_path: str | None) -> list[str]:
     """
     _ensure_scripts_on_path()
     import _task_io as task_io
+    import _task_validate as task_validate
     feedback: list[str] = []
 
     # Validate — collect warnings for model-visible JSON feedback.
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            validation_warnings = task_io.validate_plan(plan_root)
+            validation_warnings = task_validate.validate_plan(plan_root)
         if validation_warnings:
             for w in validation_warnings:
                 feedback.append(f"Validation warning in {plan_root}: {w}")
