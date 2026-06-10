@@ -3,16 +3,23 @@
 # requires-python = ">=3.10"
 # dependencies = ["pytest", "httpx", "pyyaml", "fastapi", "jinja2"]
 # ///
-"""Tests for the live dashboard server, comments system, SSE, and templates."""
+"""Tests for the live dashboard server, comments system, SSE, and templates.
+
+Also contains the canonical tests for plan_dashboard static export, server
+lifecycle, and the master-detail partials (moved from test_task_tree.py).
+"""
 
 from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
+import time
 from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
@@ -23,7 +30,9 @@ SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import _task_io
+import dashboard_artifact_workflow
 import plan_dashboard
+import cli
 from _comments import (
     add_comment,
     delete_comment,
@@ -34,38 +43,16 @@ from _comments import (
     split_into_blocks,
 )
 
+# Shared helpers — canonical definitions live in conftest.py.
+from conftest import _write_task_md, _write_tiny_png, _serve_plan
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
-def _write_task_md(path: Path, title: str, status: str, **kwargs):
-    """Write a task.md file with the unified status model."""
-    depends_on = kwargs.get("depends_on", [])
-    tags = kwargs.get("tags", [])
-    objective = kwargs.get("objective", "")
-    results = kwargs.get("results", "")
-    created = kwargs.get("created", "2026-01-01")
+def _workflow_lines(content: str) -> list[str]:
+    return [line.rstrip() for line in content.splitlines()]
 
-    if depends_on:
-        deps_yaml = "\n" + "".join(f"  - {d}\n" for d in depends_on)
-    else:
-        deps_yaml = " []"
-    if tags:
-        tags_yaml = "[" + ", ".join(tags) + "]"
-    else:
-        tags_yaml = "[]"
 
-    body = f"## Objective\n\n{objective}\n"
-    if results:
-        body += f"\n## Results\n\n{results}\n"
-
-    content = (
-        f'---\ntitle: "{title}"\nstatus: {status}\n'
-        f"depends_on:{deps_yaml}\n"
-        f"tags: {tags_yaml}\ncreated: {created}\n---\n\n{body}"
-    )
-    path.write_text(content, encoding="utf-8")
+def _line_index(lines: list[str], text: str) -> int:
+    return lines.index(text)
 
 
 # ---------------------------------------------------------------------------
@@ -2334,3 +2321,1459 @@ class TestWorktreeRootFollowing:
         assert "ROOT_PREFIX = resolved.split('/')" in fn
         # Non-empty guard preserves the baked-in roots in standalone mode.
         assert "if (resolved) {" in fn
+
+
+# ---------------------------------------------------------------------------
+# Dashboard export, standalone, and artifact-workflow tests
+# (moved from test_task_tree.py)
+# ---------------------------------------------------------------------------
+
+# --- Dashboard tests ---
+
+
+class TestDashboard:
+    """The static `generate` path renders base.html in standalone mode — one
+    template, server-less, with all fragments embedded inline."""
+
+    def test_generate_dashboard(self, plan_root):
+        output = plan_root / "dashboard.html"
+        ret = plan_dashboard.generate_dashboard(plan_root, output)
+        assert ret == output
+        assert output.exists()
+        html = output.read_text(encoding="utf-8")
+        # Rendered from base.html: real titles, not the old fallback string.
+        assert "Test Project" in html
+        assert "First Task" in html
+        # base.html's full feature set (absent from the deleted DASHBOARD_HTML).
+        assert "function renderMarkdown" in html
+        assert "katex" in html
+
+    def test_generate_defaults_output_into_plan_root(self, plan_root):
+        ret = plan_dashboard.generate_dashboard(plan_root)
+        assert ret == plan_root / "dashboard.html"
+        assert ret.exists()
+
+    def test_generate_is_standalone(self, plan_root):
+        html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
+        assert "window.STANDALONE = true" in html
+        assert "STANDALONE_FRAGMENTS =" in html
+
+    def test_generate_has_no_live_server_calls(self, plan_root):
+        """The export must make zero network/SSE calls for task data."""
+        html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
+        assert "sse-connect=" not in html
+        assert 'hx-ext="sse"' not in html
+        assert "EventSource(" not in html
+        assert "new WebSocket" not in html
+        # No live server-only affordances rendered.
+        assert 'id="worktree-selector"' not in html
+        assert 'id="sse-full-reload"' not in html
+
+    def test_generate_embeds_fragments_inline(self, plan_root):
+        """Every fragment the standalone client fetches is pre-rendered inline."""
+        second = plan_root / "02-second" / "task.md"
+        second.write_text(
+            second.read_text(encoding="utf-8")
+            + "\n## Planner Guidance\n\nTry the existing second-stage helper.\n",
+            encoding="utf-8",
+        )
+        html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
+        # Nav tree, per-node bodies, per-node child DAGs, and the kanban board.
+        assert "/nav" in html
+        assert "/node/01-first" in html
+        assert "/dag?root=02-second" in html
+        assert "/kanban" in html
+        # The embedded data carries the section markdown payloads.
+        assert "Found 100 rows" in html
+        assert "Planner Guidance" in html
+        assert "Try the existing second-stage helper." in html
+
+    def test_generate_embeds_internal_task_link_resolver(self, plan_root):
+        """In-tree task citations route to internal hash navigation: the resolver
+        and its task-path membership set must survive into the embedded output so
+        a future refactor can't silently drop the feature from the static export."""
+        html = plan_dashboard.generate_dashboard(plan_root).read_text("utf-8")
+        assert "resolveInternalTaskPath" in html
+        assert "TASK_PATHS" in html
+
+    def test_generate_accepts_repo_file_base_for_static_links(self, plan_root):
+        """GitHub artifact exports carry a repository blob base so standalone
+        file links and the task-file button open GitHub instead of local editor
+        links."""
+        out = plan_root / "dashboard.html"
+        plan_dashboard.generate_dashboard(
+            plan_root,
+            out,
+            repo_file_base="https://github.com/owner/repo/blob/abc123/",
+        )
+        html = out.read_text("utf-8")
+        assert 'var REPO_FILE_BASE = "https://github.com/owner/repo/blob/abc123";' in html
+        assert "function repoFileHref(path)" in html
+        assert "Open task.md on GitHub" in html
+
+    def test_cli_dashboard_export_forwards_repo_file_base(self, plan_root, monkeypatch):
+        calls = []
+
+        def fake_module_main(module_name, argv=None, *, pass_argv=True):
+            calls.append((module_name, argv, pass_argv))
+
+        monkeypatch.setattr(cli, "_module_main", fake_module_main)
+        cli.main([
+            "dashboard",
+            "export",
+            "--root",
+            str(plan_root),
+            "--repo-file-base",
+            "https://github.com/owner/repo/blob/abc123",
+        ])
+
+        assert calls == [(
+            "plan_dashboard",
+            [
+                "generate",
+                "--plan-root",
+                str(plan_root),
+                "--repo-file-base",
+                "https://github.com/owner/repo/blob/abc123",
+            ],
+            True,
+        )]
+
+    def test_dashboard_html_constant_removed(self):
+        """The duplicate hand-maintained template is gone — one source remains."""
+        src = (SCRIPTS_DIR / "plan_dashboard.py").read_text("utf-8")
+        assert "DASHBOARD_HTML" not in src
+
+    def test_vscode_file_links_translate_line_anchors(self):
+        """File links keep their GitHub-style line anchor as VS Code's :line form
+        so clicking jumps to the cited line (vscode://file ignores a #L fragment).
+        Guards the renderMarkdown anchor-translation logic against removal."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "match(/#L" in src
+        assert "repoFileHref(repoPathPrefix + href)" in src
+
+    def test_build_standalone_fragments_match_server_routes(self, plan_root):
+        """Pre-rendered fragments are byte-identical to the live route output."""
+        pytest.importorskip("httpx")
+        from fastapi.testclient import TestClient
+
+        plan_dashboard.PLAN_ROOT = plan_root
+        # Generate to set module state, then build the fragment map.
+        plan_dashboard.generate_dashboard(plan_root)
+        fragments = plan_dashboard._build_standalone_fragments()
+
+        with TestClient(plan_dashboard.app) as c:
+            assert fragments["/nav"] == c.get("/nav").text
+            assert fragments["/node/01-first"] == c.get("/node/01-first").text
+            assert fragments["/kanban"] == c.get("/kanban").text
+            assert (
+                fragments["/dag?root=02-second"]
+                == c.get("/dag", params={"root": "02-second"}).text
+            )
+
+    def test_standalone_dag_resolves_for_nested_path(self, plan_with_branches):
+        """The /dag fragment for a multi-segment (nested) task must be reachable
+        under the exact URL the standalone client builds.
+
+        The client fetches '/dag?root=' + encodeURIComponent(path); for a nested
+        path encodeURIComponent escapes '/' to %2F, so the request URL differs
+        from the bare map key. The fetch shim decodes before the map lookup —
+        this test locks that decode-then-lookup against the byte-identical
+        server route, reproducing the %2F mismatch a single-segment path hides.
+        """
+        pytest.importorskip("httpx")
+        from urllib.parse import quote
+
+        from fastapi.testclient import TestClient
+
+        plan_dashboard.PLAN_ROOT = plan_with_branches
+        plan_dashboard.generate_dashboard(plan_with_branches)
+        fragments = plan_dashboard._build_standalone_fragments()
+
+        nested = "01-data-prep/02-merge"
+        # The exact URL string the standalone client builds (JS encodeURIComponent
+        # escapes '/' to %2F; quote(safe='') matches it for slug characters).
+        client_url = "/dag?root=" + quote(nested, safe="")
+        assert "%2F" in client_url  # guard: the nested path really is encoded.
+        assert client_url not in fragments  # the map is keyed by the bare path.
+
+        # The shim decodes the client URL before the lookup; that must hit.
+        decoded_url = "/dag?root=" + nested
+        assert decoded_url in fragments
+
+        with TestClient(plan_dashboard.app) as c:
+            assert (
+                fragments[decoded_url]
+                == c.get("/dag", params={"root": nested}).text
+            )
+
+    def test_standalone_embeds_root_node_body(self, plan_with_branches):
+        """The root's OWN /node/ body must be embedded, not just descendants'.
+
+        collect_all_tasks excludes the root, so without including it the root
+        card fetches a missing /node/ fragment and renders "Could not load this
+        task" — and a leaf-only subtree export (a re-based root with no children)
+        embeds no node body at all.
+        """
+        plan_dashboard.PLAN_ROOT = plan_with_branches
+
+        # Whole tree: the root's /node/ (empty path) fragment is embedded.
+        whole = plan_dashboard.render_standalone_html(plan_with_branches, root=None)
+        assert '"/node/"' in whole
+
+        # Leaf subtree: the re-based root has the empty path; its body must be
+        # present and reachable (the exact case that rendered "Could not load").
+        leaf = plan_dashboard.render_standalone_html(
+            plan_with_branches, root="01-data-prep/02-merge"
+        )
+        assert '"/node/"' in leaf
+        assert "Merge Data" in leaf
+
+    def test_subtree_export_scopes_paths_to_subtree(self, plan_with_branches):
+        """A --root export re-bases every embedded task path so the subtree node
+        is the root: paths are relative to it and out-of-subtree siblings are
+        absent."""
+        out = plan_with_branches / "sub.html"
+        plan_dashboard.generate_dashboard(
+            plan_with_branches, out, root="01-data-prep"
+        )
+        html = out.read_text("utf-8")
+        # Re-based: the subtree's children appear under their relative paths.
+        assert 'set["01-load"] = true' in html
+        assert 'set["02-merge"] = true' in html
+        # The full tree path of the subtree root is gone (re-based to "").
+        assert 'set["01-data-prep' not in html
+        # The out-of-subtree sibling never enters the embedded path set.
+        assert 'set["02-estimation"] = true' not in html
+
+    def test_subtree_export_fragments_cover_only_subtree(self, plan_with_branches):
+        """The pre-rendered fragment map covers exactly the subtree, keyed by
+        re-based paths, with no whole-tree-only fragments leaking in."""
+        out = plan_with_branches / "sub.html"
+        plan_dashboard.generate_dashboard(
+            plan_with_branches, out, root="01-data-prep"
+        )
+        html = out.read_text("utf-8")
+        assert '"/node/01-load"' in html
+        assert '"/node/02-merge"' in html
+        # Out-of-subtree node fragment must not be embedded.
+        assert '"/node/02-estimation"' not in html
+        # No un-rebased full-path fragment keys survive.
+        assert '/node/01-data-prep/' not in html
+
+    def test_subtree_export_is_offline_clean(self, plan_with_branches):
+        """The subtree export inherits the standalone offline-clean property:
+        embedded data, no SSE/worktree controls."""
+        out = plan_with_branches / "sub.html"
+        plan_dashboard.generate_dashboard(
+            plan_with_branches, out, root="01-data-prep"
+        )
+        html = out.read_text("utf-8")
+        assert "window.STANDALONE = true" in html
+        assert "STANDALONE_FRAGMENTS =" in html
+        assert "sse-connect=" not in html
+        assert 'hx-ext="sse"' not in html
+        assert "EventSource(" not in html
+        assert 'id="worktree-selector"' not in html
+        assert 'id="sse-full-reload"' not in html
+
+    def test_subtree_export_unknown_root_raises(self, plan_with_branches):
+        with pytest.raises(KeyError):
+            plan_dashboard.generate_dashboard(
+                plan_with_branches, plan_with_branches / "x.html", root="no/such"
+            )
+
+    def test_whole_tree_export_unchanged_by_root_param(self, plan_root):
+        """generate_dashboard(root=None) is byte-identical to the bare call —
+        adding the subtree-scoping branch did not perturb the whole-tree path."""
+        a = plan_dashboard.generate_dashboard(plan_root, plan_root / "a.html")
+        b = plan_dashboard.generate_dashboard(
+            plan_root, plan_root / "b.html", root=None
+        )
+        assert a.read_text("utf-8") == b.read_text("utf-8")
+
+
+class TestDashboardArtifactWorkflow:
+    def test_sanitize_artifact_slug_matches_workflow_contract(self):
+        assert dashboard_artifact_workflow.sanitize_artifact_slug("Feature/Foo Bar") == "feature-foo-bar"
+        assert dashboard_artifact_workflow.sanitize_artifact_slug("analysis/task_tree.v2") == "analysis-task_tree.v2"
+        assert dashboard_artifact_workflow.sanitize_artifact_slug("!!!") == "ref"
+
+    def test_artifact_name_for_ref_uses_branch_stable_prefix(self):
+        assert (
+            dashboard_artifact_workflow.artifact_name_for_ref("Plan/GitHub Dashboard")
+            == "superra-dashboard-plan-github-dashboard-e5f9ea141877"
+        )
+
+    def test_artifact_name_resists_slug_collisions(self):
+        slash = dashboard_artifact_workflow.artifact_name_for_ref("feature/foo")
+        hyphen = dashboard_artifact_workflow.artifact_name_for_ref("feature-foo")
+        assert slash.startswith("superra-dashboard-feature-foo-")
+        assert hyphen.startswith("superra-dashboard-feature-foo-")
+        assert slash != hyphen
+
+    def test_render_workflow_has_cleanup_upload_and_export_contract(self):
+        workflow = dashboard_artifact_workflow.render_workflow()
+        assert dashboard_artifact_workflow.MANAGED_MARKER in workflow
+        assert "permissions:\n  contents: read\n  actions: write" in workflow
+        assert "concurrency:" in workflow
+        assert "superra-dashboard-artifact-${{ github.ref }}" in workflow
+        assert "shasum -a 256" in workflow
+        assert 'artifact_name=__ARTIFACT_PREFIX__-$slug-$ref_hash' not in workflow
+        assert "uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard export --root \"superRA\"" in workflow
+        assert '--repo-file-base "https://github.com/${{ github.repository }}/blob/${{ github.sha }}"' in workflow
+        assert "github.rest.actions.listArtifactsForRepo" in workflow
+        assert "github.rest.actions.deleteArtifact" in workflow
+        assert "actions/upload-artifact@v4" in workflow
+        assert "name: ${{ steps.artifact.outputs.artifact_name }}" in workflow
+        assert "retention-days: 14" in workflow
+        assert "upload-artifact" not in workflow.split("Delete previous artifact for this branch", 1)[0]
+
+    def test_render_workflow_applies_configurable_paths_and_retention(self):
+        config = dashboard_artifact_workflow.WorkflowConfig(
+            task_root="customRA",
+            output_path="build/custom-dashboard.html",
+            artifact_prefix="custom-dashboard",
+            retention_days=3,
+            fail_on_missing_task_root=False,
+            branch_patterns=("main", "analysis/**"),
+        )
+        workflow = dashboard_artifact_workflow.render_workflow(config)
+        assert 'uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard export --root "customRA"' in workflow
+        assert '--output "build/custom-dashboard.html"' in workflow
+        assert "custom-dashboard-$slug-$ref_hash" in workflow
+        assert "retention-days: 3" in workflow
+        assert "skipping dashboard artifact" in workflow
+        assert '      - "main"' in workflow
+        assert '      - "analysis/**"' in workflow
+
+    def test_install_workflow_creates_default_managed_file(self, tmp_path):
+        result = dashboard_artifact_workflow.install_workflow(
+            tmp_path,
+            preview_ref="feature/foo",
+        )
+        assert result.created is True
+        assert result.path == tmp_path / ".github/workflows/superra-dashboard-artifact.yml"
+        content = result.path.read_text(encoding="utf-8")
+        assert dashboard_artifact_workflow.MANAGED_MARKER in content
+        assert result.artifact_name_preview.startswith("superra-dashboard-feature-foo-")
+
+    def test_install_workflow_is_idempotent_for_managed_file(self, tmp_path):
+        first = dashboard_artifact_workflow.install_workflow(tmp_path)
+        second = dashboard_artifact_workflow.install_workflow(tmp_path)
+        assert first.created is True
+        assert second.created is False
+        assert first.path.read_text(encoding="utf-8") == second.path.read_text(encoding="utf-8")
+
+    def test_install_workflow_refuses_unmanaged_overwrite(self, tmp_path):
+        target = tmp_path / ".github/workflows/superra-dashboard-artifact.yml"
+        target.parent.mkdir(parents=True)
+        target.write_text("name: existing\n", encoding="utf-8")
+        with pytest.raises(FileExistsError):
+            dashboard_artifact_workflow.install_workflow(tmp_path)
+
+    def test_install_workflow_force_overwrites_unmanaged_file(self, tmp_path):
+        target = tmp_path / ".github/workflows/custom.yml"
+        target.parent.mkdir(parents=True)
+        target.write_text("name: existing\n", encoding="utf-8")
+        result = dashboard_artifact_workflow.install_workflow(
+            tmp_path,
+            workflow_path=".github/workflows/custom.yml",
+            force=True,
+        )
+        assert result.created is False
+        assert dashboard_artifact_workflow.MANAGED_MARKER in target.read_text(encoding="utf-8")
+
+    def test_cli_dashboard_artifact_setup_writes_configured_workflow(self, tmp_path, capsys):
+        cli.main([
+            "dashboard",
+            "artifact",
+            "setup",
+            "--repo-root",
+            str(tmp_path),
+            "--workflow-path",
+            ".github/workflows/custom.yml",
+            "--task-root",
+            "customRA",
+            "--output",
+            "build/dashboard.html",
+            "--artifact-prefix",
+            "custom-dashboard",
+            "--retention-days",
+            "5",
+            "--branch",
+            "main",
+            "--branch",
+            "analysis/**",
+            "--skip-missing-task-root",
+            "--preview-ref",
+            "Feature/Foo",
+        ])
+        target = tmp_path / ".github/workflows/custom.yml"
+        content = target.read_text(encoding="utf-8")
+        assert '--root "customRA"' in content
+        assert '--output "build/dashboard.html"' in content
+        assert "custom-dashboard-$slug-$ref_hash" in content
+        assert "retention-days: 5" in content
+        assert '      - "main"' in content
+        assert '      - "analysis/**"' in content
+        assert "skipping dashboard artifact" in content
+        out = capsys.readouterr().out
+        assert "Created" in out
+        assert "custom-dashboard-feature-foo-" in out
+
+    def test_cli_dashboard_artifact_setup_reports_guard_errors(self, tmp_path, capsys):
+        with pytest.raises(SystemExit) as excinfo:
+            cli.main([
+                "dashboard",
+                "artifact",
+                "setup",
+                "--repo-root",
+                str(tmp_path),
+                "--workflow-path",
+                "../escape.yml",
+            ])
+        assert excinfo.value.code == 1
+        assert "Error: Workflow path escapes repository root" in capsys.readouterr().err
+
+    def test_generated_workflow_static_contract(self, tmp_path):
+        result = dashboard_artifact_workflow.install_workflow(
+            tmp_path,
+            config=dashboard_artifact_workflow.WorkflowConfig(branch_patterns=("main", "feature/**")),
+        )
+        content = result.path.read_text(encoding="utf-8")
+        lines = _workflow_lines(content)
+        on_idx = _line_index(lines, "on:")
+        push_idx = _line_index(lines, "  push:")
+        branches_idx = _line_index(lines, "    branches:")
+        workflow_dispatch_idx = _line_index(lines, "  workflow_dispatch:")
+        permissions_idx = _line_index(lines, "permissions:")
+        assert on_idx < push_idx < branches_idx < workflow_dispatch_idx < permissions_idx
+        assert "permissions:" in lines
+        assert "  contents: read" in lines
+        assert "  actions: write" in lines
+        assert branches_idx < _line_index(lines, '      - "main"') < workflow_dispatch_idx
+        assert branches_idx < _line_index(lines, '      - "feature/**"') < workflow_dispatch_idx
+        assert "concurrency:" in lines
+        assert "      - name: Delete previous artifact for this branch" in lines
+        assert "      - name: Upload branch dashboard artifact" in lines
+        assert content.index("Delete previous artifact for this branch") < content.index("Upload branch dashboard artifact")
+
+    def test_dashboard_export_payload_path_from_minimal_tree(self, tmp_path):
+        repo = tmp_path / "repo"
+        task_root = repo / "superRA"
+        task_root.mkdir(parents=True)
+        _write_task_md(task_root / "task.md", "Artifact Smoke", "not-started", objective="Smoke tree.")
+        output = repo / ".superra-dashboard" / "dashboard.html"
+        output.parent.mkdir(parents=True)
+        cli.main([
+            "dashboard",
+            "export",
+            "--root",
+            str(task_root),
+            "--output",
+            str(output),
+        ])
+        html = output.read_text(encoding="utf-8")
+        assert "Artifact Smoke" in html
+        assert "window.STANDALONE = true" in html
+
+
+class TestStandaloneSelfContained:
+    """The standalone export embeds figures (base64 data URIs) and inlines the
+    vendored render libraries (markdown-it/texmath/KaTeX + woff2 fonts) so a
+    moved/offline single file renders figures and math with no CDN fetch.
+
+    These committed assertions are SOURCE-PRESENCE checks (the data URIs, inline
+    script/style bodies, and CDN-tag absence are in the output string). The
+    behavioral proof — that a browser actually decodes the figure and renders the
+    KaTeX DOM from a file:// open with the network blocked — is a separate
+    headless-Chromium check, recorded in the task's Results (not committed here,
+    since there is no browser harness in this suite).
+    """
+
+    @pytest.fixture
+    def fig_math_plan(self, tmp_path):
+        """A two-task plan: a root and one child whose body has a relative figure
+        and a `$...$` math expression — the minimum to exercise both embeddings."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Embed Project", "not-started",
+                       objective="Root overview.")
+        child = root / "01-figmath"
+        child.mkdir()
+        _write_tiny_png(child / "attachments" / "demo.png")
+        _write_task_md(
+            child / "task.md", "Figure and Math", "not-started",
+            objective="Math $e^{i\\pi}+1=0$ and a figure.\n\n"
+                      "![red square](attachments/demo.png)",
+        )
+        return root
+
+    def test_figure_embedded_as_data_uri(self, fig_math_plan):
+        """A relative figure in a task body is base64-embedded under the exact
+        client key, and its data URI carries the correct PNG MIME."""
+        out = fig_math_plan / "export.html"
+        plan_dashboard.generate_dashboard(
+            fig_math_plan, out, root="01-figmath"
+        )
+        html = out.read_text("utf-8")
+        # The map var is present and contains a PNG data URI for the figure.
+        assert "var STANDALONE_IMAGES =" in html
+        assert "data:image/png;base64," in html
+        # Re-based root key: the child becomes the root (path ""), so the figure
+        # key is the bare src, not a task-path-prefixed one.
+        assert "attachments/demo.png" in html
+
+    def test_image_map_keys_and_mime(self, fig_math_plan):
+        """_build_standalone_images keys by the client-computed string and picks
+        MIME by extension; the bytes round-trip through the data URI."""
+        import base64
+
+        full = plan_dashboard.walk_plan(fig_math_plan)
+        # Whole-tree (un-rebased) tree: the child keeps its real path "01-figmath",
+        # so the key is "01-figmath/attachments/demo.png".
+        images = plan_dashboard._build_standalone_images(full)
+        key = "01-figmath/attachments/demo.png"
+        assert key in images
+        assert images[key].startswith("data:image/png;base64,")
+        # Decoding the data URI yields a valid PNG (magic bytes).
+        b64 = images[key].split(",", 1)[1]
+        assert base64.b64decode(b64).startswith(b"\x89PNG\r\n\x1a\n")
+
+    def test_image_map_skips_remote_and_absolute(self, tmp_path):
+        """http(s)/absolute/data srcs are never embedded; only resolvable
+        relative figures are."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        child = root / "01-mixed"
+        child.mkdir()
+        _write_tiny_png(child / "local.png")
+        _write_task_md(
+            child / "task.md", "Mixed", "not-started",
+            objective="![a](local.png) ![b](https://x/y.png) "
+                      "![c](/abs.png) ![d](data:image/png;base64,AAAA)",
+        )
+        images = plan_dashboard._build_standalone_images(
+            plan_dashboard.walk_plan(root)
+        )
+        assert "01-mixed/local.png" in images
+        assert not any("https://x/y.png" in k for k in images)
+        assert not any(k.endswith("/abs.png") for k in images)
+        assert "01-mixed/data:image/png;base64,AAAA" not in images
+
+    def test_image_map_handles_html_img_tag(self, tmp_path):
+        """`<img src=...>` references are embedded the same as `![alt](src)`."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started")
+        child = root / "01-html"
+        child.mkdir()
+        _write_tiny_png(child / "pic.png")
+        _write_task_md(
+            child / "task.md", "Html", "not-started",
+            objective='An image: <img src="pic.png" alt="p">',
+        )
+        images = plan_dashboard._build_standalone_images(
+            plan_dashboard.walk_plan(root)
+        )
+        assert "01-html/pic.png" in images
+
+    def test_standalone_inlines_render_libraries(self, fig_math_plan):
+        """Standalone output inlines the vendored markdown-it/texmath/KaTeX JS and
+        the font-inlined KaTeX CSS — and drops the CDN tags for those three."""
+        out = fig_math_plan / "export.html"
+        plan_dashboard.generate_dashboard(fig_math_plan, out, root="01-figmath")
+        html = out.read_text("utf-8")
+        # Inline library bodies present (version banner / global from each lib).
+        assert "markdown-it 14.2.0" in html
+        assert "katex" in html.lower()
+        # KaTeX @font-face rewritten to a base64 woff2 data URI (inlined fonts).
+        assert "data:font/woff2;base64," in html
+        # The required CDN tags for these three are GONE in standalone.
+        assert "cdn.jsdelivr.net/npm/markdown-it@" not in html
+        assert "cdn.jsdelivr.net/npm/katex@" not in html
+        assert "cdn.jsdelivr.net/npm/markdown-it-texmath@" not in html
+        # Google Fonts + htmx/sse CDN tags may remain (allowed by scope).
+        assert "fonts.googleapis.com" in html
+        assert "htmx.org@2" in html
+
+    def test_img_loop_consults_standalone_images_first(self):
+        """The client img[src] loop looks up STANDALONE_IMAGES before its
+        relative-path fallback (guards the lookup against removal)."""
+        src = (SCRIPTS_DIR / "templates" / "base.html").read_text("utf-8")
+        assert "STANDALONE_IMAGES.hasOwnProperty(key)" in src
+
+    def test_inline_katex_css_uses_woff2_only(self):
+        """The CSS font-inlining rewrites every @font-face to one base64 woff2
+        data URI and emits no remaining url(fonts/...woff2) reference."""
+        assets = plan_dashboard._build_standalone_assets()
+        css = assets["katex_css"]
+        assert "data:font/woff2;base64," in css
+        # Every original url(fonts/KaTeX_*.woff2) is replaced by a data URI.
+        assert "url(fonts/KaTeX_" not in css
+        # All 20 KaTeX font faces are inlined.
+        assert css.count("data:font/woff2;base64,") == 20
+
+    def test_vendor_files_present(self):
+        """The vendored render libraries and the full woff2 font set exist so the
+        export build is hermetic (no fetch-at-build)."""
+        vendor = SCRIPTS_DIR / "vendor"
+        for name in ("markdown-it.min.js", "katex.min.js",
+                     "katex.min.css", "texmath.min.js", "README.md"):
+            assert (vendor / name).exists(), f"missing vendored {name}"
+        woff2 = list((vendor / "fonts").glob("KaTeX_*.woff2"))
+        assert len(woff2) == 20, f"expected 20 woff2 fonts, found {len(woff2)}"
+
+
+
+
+# ---------------------------------------------------------------------------
+# Master-detail server partials and lifecycle tests
+# (moved from test_task_tree.py)
+# ---------------------------------------------------------------------------
+
+# --- Master-detail server partials (/nav, /nav/{path}, /node/{path}) -------
+
+
+class TestMasterDetailPartials:
+    """Shape checks for the additive master-detail server endpoints."""
+
+    def _deep_plan(self, tmp_path):
+        """A plan tree deep enough (>=4 levels) to exercise lazy nav loading."""
+        root = tmp_path / "superRA"
+        root.mkdir()
+        _write_task_md(root / "task.md", "Root", "not-started",
+                       objective="Root objective.")
+        a = root / "01-a"
+        a.mkdir()
+        _write_task_md(a / "task.md", "A", "approved",
+                       objective="A obj.", results="Found 100 rows")
+        b = root / "02-b"
+        b.mkdir()
+        _write_task_md(b / "task.md", "B", "not-started",
+                       depends_on=["01-a"], tags=["analysis"],
+                       objective="B obj.")
+        x = b / "01-x"
+        x.mkdir()
+        _write_task_md(x / "task.md", "X", "approved", objective="X obj.")
+        y = b / "02-y"
+        y.mkdir()
+        _write_task_md(y / "task.md", "Y", "not-started",
+                       depends_on=["01-x"], objective="Y obj.")
+        deep = y / "01-deep"
+        deep.mkdir()
+        _write_task_md(deep / "task.md", "Deep", "not-started",
+                       objective="deep obj.")
+        deeper = deep / "01-deeper"
+        deeper.mkdir()
+        _write_task_md(deeper / "task.md", "Deeper", "not-started",
+                       objective="deeper obj.")
+        return root
+
+    def _client(self, plan_root):
+        pytest.importorskip("httpx")
+        from fastapi.testclient import TestClient
+        plan_dashboard.PLAN_ROOT = plan_root
+        return TestClient(plan_dashboard.app)
+
+    def test_nav_is_body_free(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            r = c.get("/nav")
+            assert r.status_code == 200
+            # Rows for the whole tree, but no body / section markup.
+            assert 'class="task-body"' not in r.text
+            assert 'class="section-content"' not in r.text
+            assert "data-section=" not in r.text
+            # Per-node attributes the rest of the system keys off are intact.
+            assert 'id="task-01-a"' in r.text
+            assert 'data-path="01-a"' in r.text
+            assert 'sse-swap="task:01-a"' in r.text
+            assert "badge-approved" in r.text
+
+    def test_nav_lazy_loads_deep_children(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            r = c.get("/nav")
+            # Depth >=3 children are not inlined: the depth-3 boundary node
+            # renders an EMPTY .task-children container (its child node is
+            # absent), which the sidebar's markLazyNodes() flags client-side
+            # for lazy load. No server-emitted needsLoad flag is shipped.
+            assert "needsLoad" not in r.text
+            assert 'id="02-b-02-y-01-deep-children"' in r.text
+            assert 'id="task-02-b-02-y-01-deep-01-deeper"' not in r.text
+
+    def test_nav_path_returns_deep_children_body_free(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            r = c.get("/nav/02-b/02-y/01-deep")
+            assert r.status_code == 200
+            assert 'id="task-02-b-02-y-01-deep-01-deeper"' in r.text
+            assert 'class="task-body"' not in r.text
+
+    def test_nav_path_missing_404(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            assert c.get("/nav/does-not-exist").status_code == 404
+
+    def test_node_is_body_only(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            r = c.get("/node/01-a")
+            assert r.status_code == 200
+            assert 'data-section="Objective"' in r.text
+            assert 'data-section="Results"' in r.text
+            assert '<script type="text/x-markdown">' in r.text
+            # No row, no children container.
+            assert 'class="task-row"' not in r.text
+            assert 'class="task-children"' not in r.text
+
+    def test_node_meta_pills(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            r = c.get("/node/02-b")
+            assert 'class="task-meta"' in r.text
+            assert "<strong>depends:</strong> 01-a" in r.text
+            assert "<strong>tags:</strong> analysis" in r.text
+
+    def test_node_sections_match_full_node(self, tmp_path):
+        """The body-only partial emits the same section markup as the full node."""
+        import re
+        with self._client(self._deep_plan(tmp_path)) as c:
+            node = c.get("/node/01-a").text
+            full = c.get("/task/").text  # children of root incl. the full 01-a node
+
+            def norm(s):
+                return [ln.strip() for ln in s.splitlines() if ln.strip()]
+
+            for sec in ("Objective", "Results"):
+                node_block = re.search(
+                    rf'<div data-section="{sec}">.*?</script>', node, re.S)
+                full_block = re.search(
+                    rf'<div data-section="{sec}">.*?</script>', full, re.S)
+                assert node_block is not None
+                assert full_block is not None
+                assert norm(node_block.group(0)) == norm(full_block.group(0))
+
+    def test_node_missing_404(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            assert c.get("/node/does-not-exist").status_code == 404
+
+    def test_existing_routes_unaffected(self, tmp_path):
+        with self._client(self._deep_plan(tmp_path)) as c:
+            for route in ("/", "/tree", "/dag", "/kanban"):
+                assert c.get(route).status_code == 200
+
+
+class TestIdleShutdown:
+    """Unit tests for the idle-shutdown mechanism (task 01).
+
+    Tests drive the pure decision function and the monitor coroutine with
+    sub-second timeouts so no test sleeps for real wall-clock seconds.
+    """
+
+    # ------------------------------------------------------------------
+    # _should_idle_exit — pure function, no side effects
+    # ------------------------------------------------------------------
+
+    def test_should_exit_when_zero_connections_and_timeout_reached(self):
+        assert plan_dashboard._should_idle_exit(0, 5.0, 5.0) is True
+
+    def test_should_not_exit_when_connections_present(self):
+        assert plan_dashboard._should_idle_exit(3, 999.0, 5.0) is False
+
+    def test_should_not_exit_before_timeout(self):
+        assert plan_dashboard._should_idle_exit(0, 4.9, 5.0) is False
+
+    def test_should_exit_exactly_at_timeout(self):
+        assert plan_dashboard._should_idle_exit(0, 5.0, 5.0) is True
+
+    def test_should_exit_after_timeout(self):
+        assert plan_dashboard._should_idle_exit(0, 10.0, 5.0) is True
+
+    # ------------------------------------------------------------------
+    # _open_connection_count — reads _worktree_clients
+    # ------------------------------------------------------------------
+
+    def test_connection_count_empty(self):
+        saved = plan_dashboard._worktree_clients.copy()
+        plan_dashboard._worktree_clients.clear()
+        try:
+            assert plan_dashboard._open_connection_count() == 0
+        finally:
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_clients.update(saved)
+
+    def test_connection_count_with_clients(self):
+        import asyncio
+
+        saved = plan_dashboard._worktree_clients.copy()
+        plan_dashboard._worktree_clients.clear()
+        try:
+            q1: asyncio.Queue[str] = asyncio.Queue()
+            q2: asyncio.Queue[str] = asyncio.Queue()
+            q3: asyncio.Queue[str] = asyncio.Queue()
+            plan_dashboard._worktree_clients["wt-a"] = {q1, q2}
+            plan_dashboard._worktree_clients["wt-b"] = {q3}
+            assert plan_dashboard._open_connection_count() == 3
+        finally:
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_clients.update(saved)
+
+    # ------------------------------------------------------------------
+    # _idle_monitor coroutine — driven with sub-second timeout
+    # ------------------------------------------------------------------
+
+    def test_monitor_exits_when_no_clients(self):
+        """Monitor sets should_exit after idle timeout with zero connections."""
+        import asyncio
+
+        class FakeServer:
+            should_exit = False
+
+        saved_clients = plan_dashboard._worktree_clients.copy()
+        saved_server = plan_dashboard._server
+        plan_dashboard._worktree_clients.clear()
+
+        fake = FakeServer()
+        plan_dashboard._server = fake  # type: ignore[assignment]
+        try:
+            asyncio.run(plan_dashboard._idle_monitor(timeout=0.05, poll=0.01))
+        finally:
+            plan_dashboard._server = saved_server
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_clients.update(saved_clients)
+
+        assert fake.should_exit is True
+
+    def test_monitor_does_not_exit_while_clients_present(self):
+        """Monitor resets its timer while connections are open and does not fire."""
+        import asyncio
+
+        class FakeServer:
+            should_exit = False
+
+        saved_clients = plan_dashboard._worktree_clients.copy()
+        saved_server = plan_dashboard._server
+
+        q: asyncio.Queue[str] = asyncio.Queue()
+        plan_dashboard._worktree_clients.clear()
+        plan_dashboard._worktree_clients["wt-a"] = {q}
+
+        fake = FakeServer()
+        plan_dashboard._server = fake  # type: ignore[assignment]
+
+        async def _run():
+            task = asyncio.create_task(
+                plan_dashboard._idle_monitor(timeout=0.05, poll=0.01)
+            )
+            # Let several poll cycles pass with a client present.
+            await asyncio.sleep(0.12)
+            assert not fake.should_exit, "should not have exited with a client"
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        try:
+            asyncio.run(_run())
+        finally:
+            plan_dashboard._server = saved_server
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_clients.update(saved_clients)
+
+    def test_monitor_exits_after_last_client_leaves(self):
+        """Timer starts (or restarts) once the last client disconnects."""
+        import asyncio
+
+        class FakeServer:
+            should_exit = False
+
+        saved_clients = plan_dashboard._worktree_clients.copy()
+        saved_server = plan_dashboard._server
+
+        q: asyncio.Queue[str] = asyncio.Queue()
+        plan_dashboard._worktree_clients.clear()
+        plan_dashboard._worktree_clients["wt-a"] = {q}
+
+        fake = FakeServer()
+        plan_dashboard._server = fake  # type: ignore[assignment]
+
+        async def _run():
+            task = asyncio.create_task(
+                plan_dashboard._idle_monitor(timeout=0.05, poll=0.01)
+            )
+            # Remove the client mid-run; monitor should now count down.
+            await asyncio.sleep(0.02)
+            plan_dashboard._worktree_clients.clear()
+            # Wait for idle window to complete.
+            await asyncio.sleep(0.12)
+            await task  # monitor coroutine should have returned normally
+
+        try:
+            asyncio.run(_run())
+        finally:
+            plan_dashboard._server = saved_server
+            plan_dashboard._worktree_clients.clear()
+            plan_dashboard._worktree_clients.update(saved_clients)
+
+        assert fake.should_exit is True
+
+
+class TestIdleShutdownLifespan:
+    """Drive the real serve()/lifespan/SSE path with a sub-second idle timeout.
+
+    These lock in the linchpin behavior the task-01 unit tests verify in
+    isolation: the actual ``uvicorn.Server`` self-exits while idle, stays up
+    while a client is connected, and the periodic heartbeat prunes a dead SSE
+    connection from the open-connection count.
+    """
+
+    def _free_port(self):
+        import socket as _socket
+
+        s = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+        s.bind(("localhost", 0))
+        port = s.getsockname()[1]
+        s.close()
+        return port
+
+    def test_server_self_exits_when_idle(self, tmp_path):
+        """A real serve() with a sub-second IDLE_TIMEOUT and no clients exits."""
+        pytest.importorskip("uvicorn")
+        import threading
+
+        plan_root = _serve_plan(tmp_path)
+        plan_dashboard.PLAN_ROOT = plan_root
+        port = self._free_port()
+
+        saved_timeout = plan_dashboard.IDLE_TIMEOUT
+        saved_hb = plan_dashboard.HEARTBEAT_INTERVAL
+        plan_dashboard.IDLE_TIMEOUT = 0.3
+        plan_dashboard.HEARTBEAT_INTERVAL = 0.1
+        t = threading.Thread(target=plan_dashboard.serve, args=(port,), daemon=True)
+        try:
+            t.start()
+            # Server must come up, then self-exit within the idle window.
+            assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+            t.join(timeout=5.0)
+            assert not t.is_alive(), "server did not self-exit while idle"
+            assert not plan_dashboard._port_serving(port)
+        finally:
+            plan_dashboard.IDLE_TIMEOUT = saved_timeout
+            plan_dashboard.HEARTBEAT_INTERVAL = saved_hb
+            if plan_dashboard._server is not None:
+                plan_dashboard._server.should_exit = True
+            t.join(timeout=5.0)
+
+    def test_server_stays_up_while_client_connected(self, tmp_path):
+        """An open /events client holds the server past several idle windows."""
+        pytest.importorskip("uvicorn")
+        pytest.importorskip("httpx")
+        import threading
+
+        import httpx
+
+        plan_root = _serve_plan(tmp_path)
+        plan_dashboard.PLAN_ROOT = plan_root
+        port = self._free_port()
+        url = f"http://localhost:{port}"
+
+        saved_timeout = plan_dashboard.IDLE_TIMEOUT
+        saved_hb = plan_dashboard.HEARTBEAT_INTERVAL
+        plan_dashboard.IDLE_TIMEOUT = 0.3
+        plan_dashboard.HEARTBEAT_INTERVAL = 0.1
+        t = threading.Thread(target=plan_dashboard.serve, args=(port,), daemon=True)
+        try:
+            t.start()
+            assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+
+            # Hold an SSE connection open across multiple idle windows.
+            with httpx.Client(timeout=5.0) as client:
+                with client.stream("GET", f"{url}/events") as resp:
+                    assert resp.status_code == 200
+                    it = resp.iter_lines()
+                    next(it)  # initial heartbeat — connection established
+                    time.sleep(1.0)  # >3 idle windows
+                    assert t.is_alive(), "server exited while a client was connected"
+                    assert plan_dashboard._port_serving(port)
+
+            # Client gone — server now self-exits within an idle window.
+            t.join(timeout=5.0)
+            assert not t.is_alive(), "server did not exit after client left"
+        finally:
+            plan_dashboard.IDLE_TIMEOUT = saved_timeout
+            plan_dashboard.HEARTBEAT_INTERVAL = saved_hb
+            if plan_dashboard._server is not None:
+                plan_dashboard._server.should_exit = True
+            t.join(timeout=5.0)
+
+    def test_heartbeat_prunes_dead_connection(self, tmp_path):
+        """A dropped SSE connection is removed from the count after a heartbeat.
+
+        Opens a streaming /events request, abandons it, and asserts the periodic
+        heartbeat write fails and the generator's finally drops the queue so the
+        open-connection count returns to zero.
+        """
+        pytest.importorskip("uvicorn")
+        pytest.importorskip("httpx")
+        import threading
+
+        import httpx
+
+        plan_root = _serve_plan(tmp_path)
+        plan_dashboard.PLAN_ROOT = plan_root
+        port = self._free_port()
+        url = f"http://localhost:{port}"
+
+        saved_timeout = plan_dashboard.IDLE_TIMEOUT
+        saved_hb = plan_dashboard.HEARTBEAT_INTERVAL
+        # Keep the server alive long enough to observe the prune, but use a tiny
+        # heartbeat so the dead-connection write happens quickly.
+        plan_dashboard.IDLE_TIMEOUT = 5.0
+        plan_dashboard.HEARTBEAT_INTERVAL = 0.1
+        t = threading.Thread(target=plan_dashboard.serve, args=(port,), daemon=True)
+        try:
+            t.start()
+            assert plan_dashboard._wait_for_bind(port, timeout=5.0)
+
+            client = httpx.Client(timeout=5.0)
+            stream_cm = client.stream("GET", f"{url}/events")
+            resp = stream_cm.__enter__()
+            assert resp.status_code == 200
+            next(resp.iter_lines())  # establish, registering the queue
+
+            # The connection is registered server-side.
+            deadline = time.monotonic() + 3.0
+            while plan_dashboard._open_connection_count() == 0 and time.monotonic() < deadline:
+                time.sleep(0.05)
+            assert plan_dashboard._open_connection_count() >= 1
+
+            # Abandon the connection hard, then wait for a heartbeat to prune it.
+            try:
+                resp.close()
+            except Exception:
+                pass
+            try:
+                stream_cm.__exit__(None, None, None)
+            except Exception:
+                pass
+            client.close()
+
+            deadline = time.monotonic() + 3.0
+            while plan_dashboard._open_connection_count() > 0 and time.monotonic() < deadline:
+                time.sleep(0.05)
+            assert plan_dashboard._open_connection_count() == 0, (
+                "dead connection was not pruned from the count"
+            )
+        finally:
+            plan_dashboard.IDLE_TIMEOUT = saved_timeout
+            plan_dashboard.HEARTBEAT_INTERVAL = saved_hb
+            if plan_dashboard._server is not None:
+                plan_dashboard._server.should_exit = True
+            t.join(timeout=5.0)
+
+
+class TestRuntimeFileKeying:
+    """PID/log files are keyed to the same repo identity as the port."""
+
+    def test_runtime_dir_uses_git_common_dir(self, tmp_path):
+        common = tmp_path / "common.git"
+        common.mkdir()
+        plan_root = tmp_path / "wt" / "superRA"
+        plan_root.mkdir(parents=True)
+        assert plan_dashboard._runtime_dir(plan_root, str(common)) == common
+        assert plan_dashboard._pid_file(plan_root, str(common)) == (
+            common / "superra-dashboard.pid"
+        )
+        assert plan_dashboard._log_file(plan_root, str(common)) == (
+            common / "superra-dashboard.log"
+        )
+
+    def test_runtime_dir_falls_back_to_plan_root(self, tmp_path):
+        plan_root = tmp_path / "superRA"
+        plan_root.mkdir()
+        assert plan_dashboard._runtime_dir(plan_root, None) == plan_root.resolve()
+        assert plan_dashboard._pid_file(plan_root, None) == (
+            plan_root.resolve() / "superra-dashboard.pid"
+        )
+
+    def test_shared_across_worktrees_of_one_repo(self, tmp_path):
+        """Two worktrees of the same repo resolve to one PID file."""
+        common = tmp_path / "common.git"
+        common.mkdir()
+        wt_a = tmp_path / "a" / "superRA"
+        wt_b = tmp_path / "b" / "superRA"
+        wt_a.mkdir(parents=True)
+        wt_b.mkdir(parents=True)
+        assert plan_dashboard._pid_file(wt_a, str(common)) == plan_dashboard._pid_file(
+            wt_b, str(common)
+        )
+
+
+class TestPidHelpers:
+    """PID-file read/health helpers used by idempotent launch and stop."""
+
+    def test_read_pid_missing_file(self, tmp_path):
+        assert plan_dashboard._read_pid(tmp_path / "nope.pid") is None
+
+    def test_read_pid_garbage(self, tmp_path):
+        p = tmp_path / "x.pid"
+        p.write_text("not-a-number", encoding="utf-8")
+        assert plan_dashboard._read_pid(p) is None
+
+    def test_read_pid_valid(self, tmp_path):
+        p = tmp_path / "x.pid"
+        p.write_text("12345\n", encoding="utf-8")
+        assert plan_dashboard._read_pid(p) == 12345
+
+    def test_read_pid_port_roundtrip(self, tmp_path):
+        p = tmp_path / "x.pid"
+        plan_dashboard._write_pid_port(p, 12345, 8123)
+        assert plan_dashboard._read_pid_port(p) == (12345, 8123)
+        assert plan_dashboard._read_pid(p) == 12345
+
+    def test_read_pid_port_legacy_pid_only(self, tmp_path):
+        """A legacy pid-only file parses as (pid, None)."""
+        p = tmp_path / "x.pid"
+        p.write_text("12345\n", encoding="utf-8")
+        assert plan_dashboard._read_pid_port(p) == (12345, None)
+
+    def test_pid_alive_self(self):
+        assert plan_dashboard._pid_alive(os.getpid()) is True
+
+    def test_pid_alive_dead(self):
+        # A very high PID is almost certainly not in use.
+        assert plan_dashboard._pid_alive(2_000_000_000) is False
+
+    def test_running_pid_stale_file_cleaned(self, tmp_path):
+        """A PID file naming a dead process is removed and None returned."""
+        p = tmp_path / "x.pid"
+        p.write_text("2000000000", encoding="utf-8")
+        port = TestIdleShutdownLifespan()._free_port()  # nothing serving here
+        assert plan_dashboard._running_pid(p, port) is None
+        assert not p.exists(), "stale PID file should be cleaned up"
+
+    def test_running_pid_alive_but_port_dead(self, tmp_path):
+        """A live PID whose port is not serving is treated as stale."""
+        p = tmp_path / "x.pid"
+        p.write_text(str(os.getpid()), encoding="utf-8")
+        port = TestIdleShutdownLifespan()._free_port()
+        assert plan_dashboard._running_pid(p, port) is None
+        assert not p.exists()
+
+    def test_running_pid_probes_recorded_port(self, tmp_path):
+        """Reuse probes the PID file's recorded port, not the passed-in port.
+
+        Mirrors the real case where a server bound a different port than a fresh
+        derivation would pick (the deterministic port was occupied at launch).
+        """
+        listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listener.bind(("localhost", 0))
+        listener.listen(1)
+        recorded_port = listener.getsockname()[1]
+        try:
+            p = tmp_path / "x.pid"
+            plan_dashboard._write_pid_port(p, os.getpid(), recorded_port)
+            other_port = TestIdleShutdownLifespan()._free_port()  # nothing serving
+            result = plan_dashboard._running_pid(p, other_port)
+            assert result == (os.getpid(), recorded_port)
+        finally:
+            listener.close()
+
+
+class TestBackgroundLaunch:
+    """End-to-end process-management tests for serve_background / stop_background.
+
+    Each test launches a real detached server with a sub-second idle timeout
+    (passed to the child via its ``--idle-timeout`` arg) so the test is
+    self-cleaning even if an assertion bails early.  Kept few and deterministic
+    per planner guidance.
+    """
+
+    def test_background_launch_returns_and_writes_pid(self, tmp_path):
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        try:
+            rc = plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            )
+            assert rc == 0
+            assert pid_path.exists(), "PID file should be written"
+            pid = plan_dashboard._read_pid(pid_path)
+            assert pid is not None and plan_dashboard._pid_alive(pid)
+            assert plan_dashboard._port_serving(port)
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_idempotent_second_launch_reuses_server(self, tmp_path):
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        try:
+            assert plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            ) == 0
+            pid1 = plan_dashboard._read_pid(pid_path)
+            # Second launch must reuse, not spawn a duplicate.
+            assert plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            ) == 0
+            pid2 = plan_dashboard._read_pid(pid_path)
+            assert pid1 == pid2, "second launch spawned a different process"
+            assert plan_dashboard._pid_alive(pid1)
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_background_launch_opens_browser_before_return(self, tmp_path, monkeypatch):
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        opened: list[str] = []
+        monkeypatch.setattr(plan_dashboard.webbrowser, "open", lambda url: opened.append(url))
+        try:
+            assert plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=True
+            ) == 0
+            assert opened == [f"http://localhost:{port}"]
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_idempotent_second_launch_opens_existing_server(self, tmp_path, monkeypatch):
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        opened: list[str] = []
+        monkeypatch.setattr(plan_dashboard.webbrowser, "open", lambda url: opened.append(url))
+        try:
+            assert plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            ) == 0
+            assert plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=True
+            ) == 0
+            assert opened == [f"http://localhost:{port}"]
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_stop_terminates_and_removes_pid(self, tmp_path):
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        assert plan_dashboard.serve_background(
+            plan_root, port, str(common), open_browser=False
+        ) == 0
+        pid = plan_dashboard._read_pid(pid_path)
+        rc = plan_dashboard.stop_background(plan_root, str(common))
+        assert rc == 0
+        assert not pid_path.exists(), "PID file should be removed on stop"
+        # Process should be gone.
+        deadline = time.monotonic() + 5.0
+        while plan_dashboard._pid_alive(pid) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert not plan_dashboard._pid_alive(pid)
+        assert not plan_dashboard._port_serving(port)
+
+    def test_stop_noop_when_nothing_running(self, tmp_path):
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        # No server, no PID file — clean no-op.
+        assert plan_dashboard.stop_background(plan_root, str(common)) == 0
+
+    def test_stale_pid_file_does_not_block_launch(self, tmp_path):
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        # Plant a stale PID file (dead process).
+        pid_path.write_text("2000000000", encoding="utf-8")
+        try:
+            rc = plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False
+            )
+            assert rc == 0, "stale PID file should not block a fresh launch"
+            pid = plan_dashboard._read_pid(pid_path)
+            assert pid is not None and pid != 2000000000
+            assert plan_dashboard._pid_alive(pid)
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_bind_failure_surfaces_nonzero(self, tmp_path):
+        """A child that cannot bind its port → non-zero exit, no PID file.
+
+        Occupies a port with a bound-but-not-listening socket: uvicorn cannot
+        bind it (address in use) and the child exits, while TCP connects are
+        refused so the supervisor's bind poll never sees a false "serving".  The
+        supervisor must time out, surface the error, and return non-zero rather
+        than leaving a dead background process.
+        """
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        # Bind but do not listen → port is occupied, connects are refused.
+        # Bind loopback to match the child's default --host 127.0.0.1 bind, so
+        # the child genuinely collides (a 0.0.0.0 blocker would not block a later
+        # 127.0.0.1 bind on macOS, letting the child bind loopback and "succeed").
+        blocker = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        blocker.bind(("127.0.0.1", 0))
+        port = blocker.getsockname()[1]
+        assert not plan_dashboard._port_serving(port), "blocker should refuse connects"
+        try:
+            rc = plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False, bind_timeout=3.0
+            )
+            assert rc != 0, "bind failure should produce a non-zero exit code"
+            # No PID file left naming a dead background process.
+            assert not plan_dashboard._pid_file(plan_root, str(common)).exists()
+        finally:
+            blocker.close()
+            plan_dashboard.stop_background(plan_root, str(common))
+
+    def test_background_server_self_exits_when_idle(self, tmp_path):
+        """A backgrounded server with no clients self-exits within the idle window.
+
+        Launches a real detached child with a short ``idle_timeout`` so the
+        self-exit happens in a couple of seconds, then asserts the process and
+        port are gone without an explicit stop.  This proves background-default
+        is safe to leak: the detached server self-cleans like any other.
+        """
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        port = TestIdleShutdownLifespan()._free_port()
+        pid_path = plan_dashboard._pid_file(plan_root, str(common))
+        try:
+            assert plan_dashboard.serve_background(
+                plan_root, port, str(common), open_browser=False, idle_timeout=0.5
+            ) == 0
+            pid = plan_dashboard._read_pid(pid_path)
+            assert pid is not None
+            # Genuinely detached and reachable from the parent process.
+            assert plan_dashboard._port_serving(port)
+            # No client opened — it self-exits within the (shrunk) idle window.
+            deadline = time.monotonic() + 10.0
+            while plan_dashboard._pid_alive(pid) and time.monotonic() < deadline:
+                time.sleep(0.1)
+            assert not plan_dashboard._pid_alive(pid), "background server did not self-exit"
+            assert not plan_dashboard._port_serving(port)
+        finally:
+            plan_dashboard.stop_background(plan_root, str(common))
+
+
+# ---------------------------------------------------------------------------
+# Canonical path basis: paths are relative to the resolved root, with forest
+# support (regression for the descend bug that dropped a leading segment when
+# <root>/task.md was absent).
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def forest_root(tmp_path):
+    """A rootless forest: a superRA/ dir with no umbrella task.md, holding two
+    independent top-level trees, each with descendants."""
+    root = tmp_path / "superRA"
+    root.mkdir()
+
+    # Tree A: 01-alpha with a child and grandchild.
+    a = root / "01-alpha"
+    a.mkdir()
+    _write_task_md(a / "task.md", "Alpha", "in-progress", objective="Alpha root.")
+    a1 = a / "01-model"
+    a1.mkdir()
+    _write_task_md(a1 / "task.md", "Alpha Model", "not-started", objective="Model.")
+    a1a = a1 / "01-derive"
+    a1a.mkdir()
+    _write_task_md(a1a / "task.md", "Derive", "not-started", objective="Derive it.")
+
+    # Tree B: 02-beta with a child.
+    b = root / "02-beta"
+    b.mkdir()
+    _write_task_md(b / "task.md", "Beta", "not-started", objective="Beta root.")
+    b1 = b / "01-data"
+    b1.mkdir()
+    _write_task_md(b1 / "task.md", "Beta Data", "not-started", objective="Data.")
+
+    return root
+
+
+class TestServeBindHost:
+    """The unauthenticated server must bind loopback by default and only open up
+    on an explicit ``--host`` opt-in.  Background-by-default makes an all-
+    interfaces bind a long-lived ambient exposure (file reads via /files, the
+    full task tree via /export, disk writes via the comment routes), so the
+    default must be 127.0.0.1.  These pin the bound host without standing up a
+    real socket by capturing the ``uvicorn.Config`` that ``serve()`` builds."""
+
+    def _capture_config(self, monkeypatch, **serve_kwargs):
+        pytest.importorskip("uvicorn")
+        import uvicorn
+
+        captured = {}
+
+        class _FakeServer:
+            def __init__(self, config):
+                captured["host"] = config.host
+
+            def run(self):
+                pass  # do not actually bind
+
+        monkeypatch.setattr(uvicorn, "Server", _FakeServer)
+        plan_dashboard.serve(12345, **serve_kwargs)
+        return captured["host"]
+
+    def test_serve_defaults_to_loopback(self, monkeypatch):
+        assert self._capture_config(monkeypatch) == "127.0.0.1"
+
+    def test_serve_honors_explicit_host(self, monkeypatch):
+        assert self._capture_config(monkeypatch, host="0.0.0.0") == "0.0.0.0"
+
+    def test_background_spawn_forwards_host(self, tmp_path, monkeypatch):
+        """serve_background must pass its --host through to the detached child so
+        the background path's bind matches the foreground path's."""
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        captured = {}
+
+        class _FakeProc:
+            pid = 999999
+
+            def poll(self):
+                return None
+
+        def _fake_popen(cmd, **kw):
+            captured["cmd"] = cmd
+            return _FakeProc()
+
+        monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _fake_popen)
+        # Stop the bind poll from waiting on a child that never starts.
+        monkeypatch.setattr(plan_dashboard, "_wait_for_bind", lambda *a, **k: True)
+        monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
+        plan_dashboard.serve_background(
+            plan_root, 23456, str(common), host="0.0.0.0", open_browser=False
+        )
+        cmd = captured["cmd"]
+        assert "--host" in cmd and cmd[cmd.index("--host") + 1] == "0.0.0.0"
+
+    def test_serve_cli_default_host_is_loopback(self):
+        """The CLI surface defaults --host to loopback (string assertion on the
+        argparse default, mirroring the help text)."""
+        ns = plan_dashboard.parse_args(["serve"])
+        assert ns.host == "127.0.0.1"

@@ -88,5 +88,5 @@ Added to [`test_task_tree.py`](../../../skills/task-tree/scripts/test_task_tree.
 ### Verification
 
 - `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts` → **631 passed, 2 skipped** (at the revise round; was 305 for this task's original landing).
-- `superra task check --category placement --root superRA` runs against the live tree and surfaces one genuine smell (`figure-attachments` root-level leaf beside root-level branches) as an advisory warning — no auto-mutation. An earlier run over-fired on shared `README.md` outputs, which drove the generic-basename exclusion.
+- `superra task check --category placement --root superRA` runs against the live tree and reports "All checks passed" (the depth-1 root check is exercised by the smell-3 test on a synthetic tree); advisory-only — no auto-mutation. An earlier run over-fired on shared `README.md` outputs, which drove the generic-basename exclusion.
 - DRY/Necessity gate (skill-creator unavailable, per dispatch) applied line by line to the doc edits: the rename cascade is documented once per existing surface where the hook's auto-behaviors already live, each phrased to the surface's audience (agent-facing vs implementation-facing); no new doc file or category prose surface created.

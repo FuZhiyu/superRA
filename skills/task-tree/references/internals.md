@@ -4,35 +4,9 @@ Load this reference when modifying the task-tree skill itself — scripts, data 
 
 ## Setup: the `superra` CLI
 
-The scripts here run as loose files via `uv run --script <file>` — there is no installable package and no `pyproject.toml`. Each entry script (`scripts/cli.py`, `scripts/plan_dashboard.py`, `scripts/task_hook.py`) carries a PEP 723 inline-metadata block as the single source of truth for its dependencies. `uv run --script` is script-scoped: it never provisions the caller's project environment and reads the file live each run, so a source edit lands on the next call with no cache-bust. The core is stdlib-only (the only third-party import, `pyyaml` in `_comments.py`, is lazy), so a `python3 <file>` fallback works almost everywhere; `cli.py` declares `pyyaml`, `plan_dashboard.py` declares the web stack, `task_hook.py` declares nothing.
+Bootstrap and end-user invocation are covered in `SKILL.md §CLI Setup`. Contributor run forms (local checkout) are owned by `CLAUDE.md §Local Task-Tree CLI Development`.
 
-**Canonical end-user / agent form: the task-tree wrapper.** A `superRA/` task tree carries a generated `superra` wrapper. It resolves the task-tree source dir and runs the relevant entry script via `uv run --script` (falling back to `python3`) — no install step, no project `.venv`, always the live source:
-
-```bash
-./superRA/superra task tree          # resolves the installed plugin and runs cli.py
-./superRA/superra dashboard          # routes to plan_dashboard.py (carries the web stack)
-superra wrapper init                 # (re)write the wrapper into the task root; idempotent
-```
-
-The resolver (single-sourced in `scripts/wrapper_resolver.py`, embedded identically into the generated wrapper and the `hooks/task-hook` shim) tries, in order: `CLAUDE_PLUGIN_ROOT` / `PLUGIN_ROOT` env var → a local checkout (so contributor edits win over a copied cache snapshot) → the Claude install recorded in `~/.claude/plugins/installed_plugins.json` → a bounded depth-3 glob of `~/.codex/plugins/cache` (highest semver) → a GitHub fallback that shallow-clones the repo to the user cache and runs the loose `cli.py` from inside the clone (the only pinned reference, fires only when nothing local resolves). Each candidate is tested for `scripts/cli.py`. It is a fast bounded lookup, never a full-disk search. The wrapper routes by first argument: `dashboard` → `plan_dashboard.py` (so the web stack never lands on the task hot path); everything else → `cli.py`.
-
-**Bootstrap (planner/main-only, fresh project).** The wrapper is what makes `superra` resolvable, so the first call — which creates the wrapper — cannot use a `superra` that does not exist yet. Run the loose entry script directly from the loaded skill directory (`<skill-dir>` = the directory containing `SKILL.md`; substitute the real path):
-
-```bash
-uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/superra
-```
-
-After the wrapper exists, every call (including from subagents) uses `./superRA/superra …`.
-
-**Never run bare `uv run superra` from a research project.** With no package there is no `superra` console entry, and `uv run` without `--script` would provision that project's environment — wrong. Use the wrapper, the bootstrap form above, or the checkout form below.
-
-**Contributor form (local checkout):** run the loose entry script from the edited source so changes are picked up live — see `CLAUDE.md §Local Task-Tree CLI Development`:
-
-```bash
-uv run --script skills/task-tree/scripts/cli.py task tree
-uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard export --root superRA --output dashboard.html
-python3 skills/task-tree/scripts/cli.py task tree   # uv-free fallback (stdlib core)
-```
+**Never run bare `uv run superra` from a research project.** With no package there is no `superra` console entry, and `uv run` without `--script` would provision that project's environment — wrong. Use the wrapper or the bootstrap form in `SKILL.md §CLI Setup`.
 
 ## Data Layer: `_task_io.py`
 
@@ -79,7 +53,7 @@ Key properties:
 | `write_task(task)` | Write a `Task` back to disk, preserving body content. Atomic: temp file + `os.replace`, so concurrent readers never see a half-written file. |
 | `walk_plan(plan_root)` | Recursively walk plan directory, return root `Task` with populated children. |
 | `resolve_path(plan_root, task_path)` | Resolve a relative task path to its directory. Rejects paths that escape the root. |
-| `compute_status(task)` | Roll up status from children, excluding parked (`archived` / `postponed`) children from the active set: all (active) approved -> approved; any revise -> revise; any in-progress/implemented -> in-progress; else not-started. When *every* child is parked the branch rolls up to `postponed` if any child is `postponed`, else `archived`. |
+| `compute_status(task)` | Roll up status from children. Parked-status exclusion and all-parked branch rules are specified in `task-file-contract.md §Field-by-Field Notes`. |
 | `compute_frontier(root)` | Return leaf tasks ready for dispatch — status is not-started/in-progress and all sibling deps are approved. |
 | `collect_all_tasks(root)` | Flatten the tree depth-first (excluding root). |
 
@@ -118,18 +92,27 @@ It does not use a YAML library — the parser is minimal and purpose-built.
 
 ## Hook Architecture
 
-`task_hook.py` is the task tree's PostToolUse hook, wired in `hooks/hooks.json` and `hooks/hooks-codex.json` under two matcher groups:
+`task_hook.py` is the task tree's PostToolUse hook, wired in `hooks/hooks.json` and `hooks/hooks-codex.json`. See `task_hook.py` for the gating regexes and plan-root discovery, and `hooks/hooks.json` / `hooks/hooks-codex.json` for the wiring.
 
-- **`Edit|Write` / `apply_patch`** — fires when a `task.md` is edited directly (reconciling from the edited file's plan root) and, more broadly, when **any `.md` under a task root** is edited (running the render-integrity check below). Codex's `Edit|Write` matcher covers `apply_patch`, and `task_hook.py` also accepts `tool_name: "apply_patch"` payloads.
-- **`Bash`** — fires when a shell command both references `superRA` or `.plan` and contains a filesystem-mutating verb (`mv`, `git mv`, `rm`, `rmdir`, `cp`, `mkdir`), so a plain `mv` reorganization of the tree stays validated. Read-only task-tree commands (`superra task tree`, `grep superRA`) fail the verb test and early-exit.
+**Matcher gating.** Two groups fire the hook:
+- **`Edit|Write` / `apply_patch`** — fires on any `.md` edited under a task root (runs render-integrity check) and on `task.md` edits specifically (also runs reconcile). Codex's matcher covers `apply_patch`; `task_hook.py` also accepts `tool_name: "apply_patch"` payloads.
+- **`Bash`** — fires when a shell command both references `superRA` or `.plan` and contains a filesystem-mutating verb (`mv`, `git mv`, `rm`, `rmdir`, `cp`, `mkdir`). Read-only commands fail the verb test and early-exit.
 
-On a match the hook runs a best-effort reconcile — `validate_plan`, `propagate_parent_status` — each in its own try/except, never blocking, always exit 0. Alongside the reconcile, every edited `.md` under a task root is run through the warn-only **render-integrity check** (`_markdown_integrity_feedback` imports `check()` from the sibling `report-in-markdown/scripts/md_integrity.py`): findings — display `$$` blocks not blank-line separated, TeX-only macros KaTeX cannot render — merge into the same feedback payload, and a checker failure is swallowed so it never breaks the hook. **On a same-parent `mv`/`git mv` rename it also auto-cascades sibling `depends_on`** via `_task_io.cascade_depends_on_rename` (the shared helper `task_rename.py` uses), classified by `_detect_same_parent_rename`: a two-operand move, no flags, same parent, differing slug, both inside a task root, destination is a task. It runs before reconcile so `validate_plan` sees the rewired edges and emits no spurious dangling-dependency warning, and is surfaced in the feedback payload. The auto-cascade is scoped to this lossless same-parent rename only — cross-parent moves (inexpressible in the sibling-only model), deletes of a depended-on task (drops a real edge), and merges (no `task merge` command; the human integrates nuance) instead warn via the normal dangling-dependency validation. The boundary is YAML metadata only — never task content, and display prefixes are never auto-renumbered. It does not regenerate the dashboard (only `superra dashboard export` does). Validation warnings and non-fatal reconcile failures go into a PostToolUse JSON payload with both top-level `additionalContext` and `hookSpecificOutput.additionalContext`; no-feedback paths stay silent for Claude-compatible invocations and emit `{}` when Codex requests parseable empty hook JSON. See `task_hook.py` for the gating regexes and plan-root discovery, and `hooks/hooks.json` / `hooks/hooks-codex.json` for the wiring.
+**Reconcile.** On a match the hook runs `validate_plan` and `propagate_parent_status`, each in its own try/except, never blocking, always exit 0.
 
-`hooks/task-hook` is the stable shell entry point the manifests invoke. It is a **generated** file: it embeds the same source-resolution chain as the task-tree wrapper (see §Setup) so the two cannot drift, then forwards stdin to the resolved `scripts/task_hook.py` via `uv run --script` (falling back to `python3 scripts/task_hook.py` when `uv` is unavailable, else no-op — it never blocks). Both the shim and the wrapper render from `scripts/wrapper_resolver.py`; regenerate the committed shim with `superra wrapper render-hook --output hooks/task-hook` rather than hand-editing it (a byte-identity test pins the committed shim to the generator).
+**Render-integrity check.** Every edited `.md` under a task root is run through `_markdown_integrity_feedback` (imports `check()` from `report-in-markdown/scripts/md_integrity.py`): findings (display `$$` blocks not blank-line separated, TeX-only KaTeX macros) merge into the feedback payload. Checker failure is swallowed and never breaks the hook.
 
-`parse_task()` is lenient at parse time: an invalid status enum is **warned** (via `warnings.warn`) and the raw value is preserved, so a single malformed `task.md` never crashes a reader's tree walk (dashboard, `task query`, `task read`). Strict status validation is owned by `task check` (`check_status_validity`), which reports an invalid enum as an `[ERROR]` finding.
+**Same-parent rename auto-cascade.** On a same-parent `mv`/`git mv` rename (`_detect_same_parent_rename`: two-operand move, no flags, same parent, differing slug, both inside a task root, destination is a task), the hook auto-cascades sibling `depends_on` via `_task_io.cascade_depends_on_rename` before reconcile so `validate_plan` sees the rewired edges. The boundary is YAML metadata only — task content and display prefixes are never touched. Cross-parent moves, task deletes, and merges warn via normal dangling-dependency validation instead.
 
-Codex shell interception remains incomplete, so Codex `Bash` coverage is best-effort reconcile support rather than a complete enforcement boundary. Cursor does not wire `task_hook.py`.
+**Dashboard.** The hook does not regenerate the dashboard. Only `superra dashboard export` writes a static file.
+
+**Feedback payload.** Validation warnings and non-fatal reconcile failures go into a PostToolUse JSON payload with both `additionalContext` and `hookSpecificOutput.additionalContext`. No-feedback paths stay silent for Claude-compatible invocations and emit `{}` when Codex requests parseable empty hook JSON.
+
+**Hook shim.** `hooks/task-hook` is the stable shell entry point the manifests invoke. It is a **generated** file that embeds the same source-resolution chain as the task-tree wrapper so the two cannot drift, then forwards stdin to `scripts/task_hook.py`. Both the shim and wrapper render from `scripts/wrapper_resolver.py`; regenerate the committed shim with `superra wrapper render-hook --output hooks/task-hook` rather than hand-editing it.
+
+**Lenient parse, strict check.** `parse_task()` warns on an invalid status enum and preserves the raw value (never crashes a tree walk). `task check` (`check_status_validity`) reports an invalid enum as `[ERROR]`.
+
+**Codex / Cursor coverage.** Codex shell interception remains incomplete: `Bash` coverage is best-effort, not a complete enforcement boundary. Cursor does not wire `task_hook.py`.
 
 ## Migration: `plan_migrate.py`
 
@@ -275,11 +258,20 @@ This mode is repo-access-gated by GitHub Actions artifact permissions but is not
 
 ## Script Inventory
 
+**Data layer (not invoked directly):**
+
 | Script | Purpose |
 |---|---|
-| `_task_io.py` | Shared data layer (not invoked directly) |
-| `_task_validate.py` | Validation suite — one owner per validity rule, single message source (not invoked directly) |
-| `_comments.py` | Comment sidecar data layer — load, re-anchor, resolve, and full-block extraction (not invoked directly) |
+| `_task_io.py` | Core data layer — parse, write, walk, frontier, status rollup, body section parsing |
+| `_task_validate.py` | Validation suite — one owner per validity rule, single message source |
+| `_comments.py` | Comment sidecar data layer — load, re-anchor, resolve, and full-block extraction |
+| `_worktree_discovery.py` | Worktree discovery — enumerate git worktrees, identify those with a task root |
+
+**Entry scripts (invoked via `cli.py` or directly):**
+
+| Script | Purpose |
+|---|---|
+| `cli.py` | Console entry point — routes `superra task *` and `superra dashboard *` sub-commands |
 | `task_read.py` | Context-aware task reading with ancestor chain, dependency status, and unresolved comments |
 | `task_comment.py` | Read and resolve task comments: `list`, `list-tree`, `resolve` |
 | `task_create.py` | Create a new task directory with template `task.md` |
@@ -288,7 +280,21 @@ This mode is repo-access-gated by GitHub Actions artifact permissions but is not
 | `task_query.py` | Query the tree: `--tree`, `--frontier`, `--dag`, `--json` |
 | `task_link.py` | Add or remove sibling dependencies |
 | `task_rename.py` | Rename a task directory (cascades to sibling `depends_on`) |
+| `task_check.py` | Read-only diagnostic — validates status, dependencies, and cycles; `--fix-status` auto-corrects status enums |
 | `plan_migrate.py` | Migrate from legacy PLAN.md/RESULTS.md or upgrade v1 -> v2 |
-| `plan_dashboard.py` | Live dashboard server (`serve`) and static generation (`generate`, deprecated) |
-| `wrapper_resolver.py` | Single-source bash source-resolution chain; renders the task-tree `superra` wrapper (`superra wrapper init`) and the committed `hooks/task-hook` shim (`superra wrapper render-hook`) |
-| `test_task_tree.py` | Test suite for `_task_io.py` |
+| `plan_dashboard.py` | Live dashboard server and static export (`generate`, deprecated; use `dashboard export`) |
+| `dashboard_artifact_workflow.py` | Render and install the GitHub Actions artifact-sharing workflow |
+| `task_hook.py` | PostToolUse hook — reconcile, render-integrity check, same-parent rename auto-cascade |
+| `wrapper_resolver.py` | Single-source resolution chain; renders the `superra` wrapper (`superra wrapper init`) and the `hooks/task-hook` shim (`superra wrapper render-hook`) |
+
+**Test modules (collected by pytest from `skills/task-tree/scripts/`):**
+
+| Module | Coverage |
+|---|---|
+| `test_task_tree.py` | Data layer, CLI scripts, migration, hooks, parser robustness, status model, tree validation |
+| `test_dashboard.py` | Dashboard server routes, SSE, templates, standalone export, server lifecycle, master-detail partials |
+| `test_cli.py` | `cli.py` command surface — argument parsing, routing, end-to-end command flows |
+| `test_multi_worktree.py` | Multi-worktree forest detection and per-worktree task-root resolution |
+| `test_worktree_selector.py` | Worktree selector UI and live refresh |
+| `tests/test_comments.py` | Comment surfacing on the agent read path (`_comments`, `task_read`, `task_comment`) |
+| `tests/test_state_preservation.py` | Dashboard state preservation across reloads |
