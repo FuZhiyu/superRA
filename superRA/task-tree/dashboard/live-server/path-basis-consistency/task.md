@@ -1,6 +1,6 @@
 ---
 title: "One task-path basis: the resolved root, with forest support"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-06-07
