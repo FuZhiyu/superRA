@@ -1,0 +1,75 @@
+# Task-Tree Command Surface
+
+Load this reference when you are an orchestrator or planner mutating a `superRA/` tree — scaffolding new tasks, restructuring, re-wiring dependencies, or running bulk status operations.
+
+All commands below run through the committed `./superRA/superra` wrapper. Bare `superra …` in the examples denotes that wrapper.
+
+**Single-field edits go through direct edit, not these CLIs.** To set one field on one task — including `status` — edit its `task.md` directly with Read/Edit (see `using-superRA/SKILL.md §Task Interface`); the PostToolUse hook validates and propagates. The commands below are convenience scaffolding for creating tasks from a template and for bulk or scripted changes — reach for them when direct edit would be tedious or error-prone.
+
+## Scaffold a new task
+
+Creates the directory, fills the template with current dates, and sets frontmatter defaults (`status: not-started`):
+
+```bash
+superra task create 01-data/03-filter \
+  --title "Filter Sample" \
+  --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
+  --guidance "Consider reusing Code/common_filters.py." \
+  --depends-on 02-merge
+```
+
+`--guidance` is optional and seeds an advisory `## Planner Guidance` section.
+
+## Bulk status operations
+
+```bash
+superra task status propagate
+superra task status cascade 01-data --status approved
+```
+
+## Append a result programmatically
+
+```bash
+superra task result add 01-data/01-load \
+  --finding "Loaded 4.7M rows across 12K funds"
+```
+
+## Manage dependencies
+
+Use this for explicit dependency edits:
+
+```bash
+superra task dep add 01-data/03-filter 02-merge
+
+superra task dep remove 01-data/03-filter 02-merge
+```
+
+## Move / rename a task
+
+Intentional task path changes use the task-tree CLI, not raw `mv` / `git mv`:
+
+```bash
+superra task move 01-data/01-load 01-data/01-load-raw
+superra task move 01-data/03-filter 02-analysis/01-filtered-sample
+```
+
+`superra task rename FROM TO` remains as a compatibility alias for same-parent renames.
+
+The move command carries the whole task directory, including `task.md`, `comments.yaml`, attachments, and descendants. Before moving, it resolves relative Markdown links in moved `.md` files against their old locations and rewrites them so they point at the same files after the move. For a same-parent rename, it also cascades sibling `depends_on: old-slug` to `new-slug`.
+
+Cross-parent moves are stricter because `depends_on` is sibling-only. The command aborts before mutation when an old sibling depends on the source slug, or when the moved task's own `depends_on` entries would not resolve under the destination parent. Rewire those edges first with `superra task dep add` / `dep remove` or a direct task edit, then rerun the move.
+
+The PostToolUse hook still revalidates raw filesystem moves and preserves the old same-parent auto-cascade guardrail, but it is not the canonical move mechanism. Use raw `mv` / `git mv` only for recovery from tool failure, then run `superra task check`.
+
+## Comments
+
+A researcher pins comments to `task.md` blocks via the dashboard. `superra task read <path>` already shows unresolved comments with their anchored blocks (see `using-superRA/SKILL.md §Task Interface`), so use these commands only for the standalone read/resolve loop:
+
+```bash
+superra task comment list <task>           # unresolved comments on a task, each with its full anchored block
+superra task comment list <task> --all     # include resolved comments
+superra task comment tree                  # unresolved-comment counts across the whole tree
+superra task comment resolve <task> <id>   # toggle a comment's resolved state
+```
+
+A comment is **unresolved** until toggled; `resolve` flips it (and back). Comments whose anchored block was edited or moved away render `[ORPHANED]` with the stored preview instead of a live block. Add `--json` to `list` / `tree` for scripted consumption.

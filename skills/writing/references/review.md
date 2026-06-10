@@ -36,7 +36,7 @@ When the scope spans more than one lane (language/style, structure, or any consi
 
 ## Review-as-planning
 
-When findings will drive subsequent edits, shape the report as a task list — each finding a task an implementer can pick up. Use the standard task format (`task-system/references/task-file-contract.md`) when findings survive across sessions or dispatches; a chat-only report suffices for same-session iteration. If the requester says "now go fix these", the findings list becomes the implementer's task list directly — don't re-author.
+When findings will drive subsequent edits, shape the report as a task list — each finding a task an implementer can pick up. Use the standard task format (`task-tree/references/task-file-contract.md`) when findings survive across sessions or dispatches; a chat-only report suffices for same-session iteration. If the requester says "now go fix these", the findings list becomes the implementer's task list directly — don't re-author.
 
 ## Intent comments as yardstick
 

@@ -4,7 +4,7 @@
 
 Before your first substantive response:
 
-- Check whether the CLI wrapper `./superRA/superra` exists; if not, bootstrap it following `superRA:task-system` §CLI Setup.
+- Check whether the CLI wrapper `./superRA/superra` exists; if not, bootstrap it following `superRA:task-tree` §CLI Setup.
 - Run `./superRA/superra task tree` for the full status summary.
 - If `PLAN.md` exists without a `superRA/` directory, offer migration via `superra task migrate from-plan`.
 

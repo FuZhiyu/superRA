@@ -1,6 +1,6 @@
-# Process Issues — Task-System Dogfood (2026-05-24)
+# Process Issues — Task-Tree Dogfood (2026-05-24)
 
-Branch: `better-handoff`. Context: building and dogfooding the `.plan/` task system across two phases (core task system + agent interface). Issues observed during implementation and review cycles.
+Branch: `better-handoff`. Context: building and dogfooding the `.plan/` task tree across two phases (core task tree + agent interface). Issues observed during implementation and review cycles.
 
 ---
 
@@ -23,7 +23,7 @@ Branch: `better-handoff`. Context: building and dogfooding the `.plan/` task sys
 
 ## 2. Parent task status not rolled up after all children approved
 
-**Summary.** When all child tasks under a parent reach `approved`, the parent's `status:` field stays at its previous value (`not-started` or `in-progress`). Observed on `agent-interface` (10/10 children approved, parent still `not-started`), `core-and-hooks` (2/2 children approved, parent still `not-started`), and `task-system` (all children approved, parent still `in-progress`).
+**Summary.** When all child tasks under a parent reach `approved`, the parent's `status:` field stays at its previous value (`not-started` or `in-progress`). Observed on `agent-interface` (10/10 children approved, parent still `not-started`), `core-and-hooks` (2/2 children approved, parent still `not-started`), and `task-tree` (all children approved, parent still `in-progress`).
 
 **Root cause.** No agent or hook automatically rolls up parent status. The `_task_io.py` library has rollup logic for `task_query.py` display, but CLI mutations (`task_update.py`) don't trigger parent rollup. The orchestrator is implicitly responsible but has no prompt telling it to check parent status after approving the last child.
 

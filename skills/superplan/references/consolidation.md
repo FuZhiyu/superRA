@@ -5,7 +5,7 @@ Load this reference when the task tree has accumulated structural debt — overl
 Consolidation is structure-level cleanup, distinct from:
 - `superplan §User Feedback and Changing the Task Tree` — individual reactive changes.
 - `superplan/references/task-tree-design.md` §Splitting Tasks — splitting heuristics, which consolidation applies retroactively.
-- `task-system/references/task-file-contract.md` §Stale Content Checklist — content-level cleanup within a task.
+- `task-tree/references/task-file-contract.md` §Stale Content Checklist — content-level cleanup within a task.
 
 ## When to Consolidate
 
@@ -107,11 +107,11 @@ Material merge, prune, restructure, mature/rename, and status-invalidating scope
 
 After approval:
 
-1. **Apply changes** with the task-system CLI (`superra task create` / `rename` / `dep add` / `dep remove`) plus direct edits for objective rewrites, in dependency order: links and restructures first, then merges and splits, then prunes last — so `depends_on` references are repointed before their targets disappear. Status cascading follows each action's rule in §Action Details.
+1. **Apply changes** with the task-tree CLI (`superra task create` / `rename` / `dep add` / `dep remove`) plus direct edits for objective rewrites, in dependency order: links and restructures first, then merges and splits, then prunes last — so `depends_on` references are repointed before their targets disappear. Status cascading follows each action's rule in §Action Details.
 
 2. **Verify** with `superra task tree` and `superra task dag`: no cycles, no broken `depends_on`, no orphans, structure matches the approved proposal.
 
-3. **Sweep for stale content** per `task-system/references/task-file-contract.md` §Stale Content Checklist — consolidation often strands references in objectives and results. Remove stale delta prose after scope expansion once the objective carries the current contract.
+3. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist — consolidation often strands references in objectives and results. Remove stale delta prose after scope expansion once the objective carries the current contract.
 
 4. **Commit atomically** — all changed task files in one commit titled `plan: consolidate task tree — <summary>`.
 

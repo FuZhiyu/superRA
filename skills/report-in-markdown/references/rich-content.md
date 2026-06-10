@@ -6,7 +6,7 @@ Load when writing markdown that contains figures. Rules apply at every stage.
 
 The caller supplies the target `attachments/` directory; substitute the actual path when embedding. If the caller specifies none, default to `attachments/` next to the output file:
 
-- Stage 1 task `## Results` → next to the task's `task.md` (see `task-system/references/task-file-contract.md` §Figure Embedding).
+- Stage 1 task `## Results` → next to the task's `task.md` (see `task-tree/references/task-file-contract.md` §Figure Embedding).
 - Matured task results → next to the task's `task.md`.
 - Standalone report → next to the report file.
 

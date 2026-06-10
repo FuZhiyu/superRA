@@ -247,7 +247,7 @@ Once per integration, between closing Integrate and entering Document, the orche
 
 ## Document
 
-Document matures selected task.md `## Results` sections from live dev log to reader-facing permanent record (Stage 2 maturation per `task-system/references/task-file-contract.md` §Results Shape).
+Document matures selected task.md `## Results` sections from live dev log to reader-facing permanent record (Stage 2 maturation per `task-tree/references/task-file-contract.md` §Results Shape).
 
 ### Step 1: Identify maturation scope
 
@@ -273,7 +273,7 @@ Agent(subagent_type: "superRA:implementer"):
   Tasks in scope: <task paths whose results need maturation>
 
   Additionally: mature each in-scope task's `## Results` section per
-    `task-system/references/task-file-contract.md` §Results Shape: fact-check against
+    `task-tree/references/task-file-contract.md` §Results Shape: fact-check against
     code outputs, restructure for reader clarity, materialize figures when
     needed using `report-in-markdown`, and ensure notation consistency across
     tasks. Edit task.md files in place. Land recoverable commits (one per
@@ -290,7 +290,7 @@ Agent(subagent_type: "superRA:reviewer"):
   Tasks in scope: <same task paths>
 
   Additionally: Review each in-scope task's `## Results` section per
-    `task-system/references/task-file-contract.md` §Results Shape, including Stage 2
+    `task-tree/references/task-file-contract.md` §Results Shape, including Stage 2
     maturation at the highest-touched-task narrative homes, retained leaf
     evidence, and task-local figure attachments.
     <prior-round adjudication notes if re-dispatching>

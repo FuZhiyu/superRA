@@ -68,7 +68,7 @@ ls ~/.codex/agents/superra_implementer.toml ~/.codex/agents/superra_reviewer.tom
 For hooks, run `/hooks` in Codex after installing the plugin. When plugin hooks
 are enabled, Codex should list superRA hooks from `hooks/hooks-codex.json`.
 The Codex hook list should include `autoload-superra`, `merge-guard`,
-task-system `PostToolUse` hooks, and `codex-plan-stop`.
+task-tree `PostToolUse` hooks, and `codex-plan-stop`.
 
 If the agents exist but Codex still cannot spawn them, restart Codex or start a fresh session.
 
@@ -81,7 +81,7 @@ uses reliable Codex-native events:
 |------|-------------|-------|
 | `autoload-superra` | `UserPromptSubmit` | Injects a reminder to load `superRA:using-superra` on superRA prompts. |
 | `merge-guard` | `PreToolUse` on `Bash` | Reminds agents to use `superRA:semantic-merge` before bare merge/rebase/cherry-pick commands. Codex shell interception is incomplete, so this is advisory coverage. |
-| `task-system` | `PostToolUse` on `Edit\|Write` and `Bash` | Reconciles `.plan/` or `superRA/` task trees after supported direct task edits and structural shell changes. Direct task edits are covered through `apply_patch`; structural task-tree shell changes are covered through `Bash`. Codex shell interception remains incomplete, so this is best-effort reconcile coverage rather than a complete enforcement boundary. |
+| `task-tree` | `PostToolUse` on `Edit\|Write` and `Bash` | Reconciles `.plan/` or `superRA/` task trees after supported direct task edits and structural shell changes. Direct task edits are covered through `apply_patch`; structural task-tree shell changes are covered through `Bash`. Codex shell interception remains incomplete, so this is best-effort reconcile coverage rather than a complete enforcement boundary. |
 | `codex-plan-stop` | `Stop` in plan mode | Replaces Claude Code's `ExitPlanMode` hook with a continuation prompt. |
 
 Claude-only `Skill` gates are not installed in Codex because Codex does not

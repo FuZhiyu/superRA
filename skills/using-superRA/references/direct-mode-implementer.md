@@ -53,7 +53,7 @@ Skipping any step is lying, not verifying. **Run the command, read the output, t
 - If I materially deviated from `## Planner Guidance`, did I explain the deviation and objective fit in `## Results`?
 - Does any artifact follow the domain/project format convention, with relative paths, reproducible by re-running?
 
-**3. Stale-content cleanup.** The task reads as a single current-state description, per `task-system` stale-content rules.
+**3. Stale-content cleanup.** The task reads as a single current-state description, per `task-tree` stale-content rules.
 
 **4. Domain checklist walk.** Walk the active domain skill's gated checklist, including operation-conditional sections matching what you did. Every `[BLOCKING]` item must pass — a blocking failure is fix-first, not a handoff. Address `[ADVISORY]` items where reasonable; flag them in your status return otherwise.
 

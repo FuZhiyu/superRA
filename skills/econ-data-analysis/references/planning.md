@@ -46,7 +46,7 @@ Create a task for each of these items and complete them in order:
 
    If WRDS or Refinitiv data skills are available, note them as tools for downloading.
 
-6. **Present the inventory and get researcher approval.** Use the Data Inventory format from `task-system/references/task-file-contract.md` §Task Anatomy. Ask the researcher to confirm before proceeding to task drafting.
+6. **Present the inventory and get researcher approval.** Use the Data Inventory format from `task-tree/references/task-file-contract.md` §Task Anatomy. Ask the researcher to confirm before proceeding to task drafting.
 
 ### Gate loopholes to close
 

@@ -12,16 +12,16 @@ When modifying superRA itself — skills, hooks, agents, harness adapters, or in
 - **Verify behavior, not just prose.** For skill or workflow changes, run at least one realistic harness session or script-level verification that exercises the changed path.
 - **Preserve user-facing/internal separation.** `README.md` explains what superRA is and why a researcher would use it. This file explains how contributors keep the internals coherent.
 
-## Local Task-System CLI Development
+## Local Task-Tree CLI Development
 
-When developing this checkout, run the task-system CLI from the live source via `uv run --script` on the loose entry scripts (there is no installable package; each entry script carries a PEP 723 dependency block):
+When developing this checkout, run the task-tree CLI from the live source via `uv run --script` on the loose entry scripts (there is no installable package; each entry script carries a PEP 723 dependency block):
 
 ```bash
-uv run --script skills/task-system/scripts/cli.py task frontier
-uv run --script skills/task-system/scripts/plan_dashboard.py dashboard
+uv run --script skills/task-tree/scripts/cli.py task frontier
+uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard
 ```
 
-`uv run --script` is script-scoped: it never provisions this repo's environment and reflects source edits on the next run with no cache-bust. The core is stdlib-only (lazy `pyyaml`), so `python3 skills/task-system/scripts/cli.py …` works as a uv-free fallback. The optional repo-local wrapper `./superRA/superra` follows the same rule by resolving the task-system source — preferring this checkout's `skills/task-system`, then an installed Claude/Codex plugin, then a shallow GitHub clone — and running the resolved entry script via `uv run --script` (python3 fallback); the resolution chain and run-line are single-sourced in `skills/task-system/scripts/wrapper_resolver.py`. To run the test suite, supply its deps with `--with`, e.g. `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-system/scripts`.
+`uv run --script` is script-scoped: it never provisions this repo's environment and reflects source edits on the next run with no cache-bust. The core is stdlib-only (lazy `pyyaml`), so `python3 skills/task-tree/scripts/cli.py …` works as a uv-free fallback. The optional repo-local wrapper `./superRA/superra` follows the same rule by resolving the task-tree source — preferring this checkout's `skills/task-tree`, then an installed Claude/Codex plugin, then a shallow GitHub clone — and running the resolved entry script via `uv run --script` (python3 fallback); the resolution chain and run-line are single-sourced in `skills/task-tree/scripts/wrapper_resolver.py`. To run the test suite, supply its deps with `--with`, e.g. `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`.
 
 ## Internal Design Philosophy
 
@@ -84,9 +84,9 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 | Result-protection techniques — key-result selection support, drift/regression test quality, red-green verification, expectation-update escalation | `result-protection` |
 | Codebase-coherence techniques — convention fit, utility reuse, PR-friendly diffs, Project Doc Audit walk-up, minimum net diff, and supplied Sync impact as justification evidence | `refactor-and-integrate` |
 | Universal task read/edit interface — read a task with injected context, edit body sections, shared editing principles, ownership-boundary principle | `using-superra` (§Task Interface) |
-| Tree tooling — concepts, query/frontier/DAG, dashboard, migration; full mutation command surface | `task-system/SKILL.md` (load-on-demand), commands in `references/commands.md` |
+| Tree tooling — concepts, query/frontier/DAG, dashboard, migration; full mutation command surface | `task-tree/SKILL.md` (load-on-demand), commands in `references/commands.md` |
 | Task-tree design — objective/guidance writing, splitting, placement, durable homes, scope expansion, update-task lifecycle, context distillation, retroactive task-tree creation | `superplan` (references/task-tree-design.md) |
-| Task-file contract — anatomy, field notes, results shape, status enum/lifecycle, body-section vocabulary, stale-content rules, planner-owned fields | `task-system` (references/task-file-contract.md) |
+| Task-file contract — anatomy, field notes, results shape, status enum/lifecycle, body-section vocabulary, stale-content rules, planner-owned fields | `task-tree` (references/task-file-contract.md) |
 | Markdown style guide rules — file-link citations plus figures, math, and tables | `report-in-markdown` |
 | Harness-specific tool names and runtime differences | Adapter references under `skills/using-superRA/references/` |
 | Canonical role behavior, including each role's concrete task ownership (what it owns + status transitions) | `agents/implementer.md` and `agents/reviewer.md` |
@@ -97,7 +97,7 @@ Use one source of truth per concern. Duplicated behavior text is a drift risk; w
 - **Flat skill layout.** Every skill lives at `skills/<name>/SKILL.md`. Grouping lives in `skills/CATEGORIES.md`, `README.md`, and the skill inventory, not in nested directories.
 - **Shared gated checklists.** Implementers and reviewers use the same checklist files. `[BLOCKING]` items must be fixed for approval; `[ADVISORY]` items may be reported as minor findings without blocking.
 - **Generated artifacts stay generated.** Direct-mode role references and Codex named-agent files are produced from canonical agent specs. Update the generator or source spec, then regenerate.
-- **Vendored assets are re-fetched, not generated.** CDN-mirrored third-party files under `skills/task-system/scripts/vendor/` are hand-managed and re-fetchable per their own `vendor/README.md`; do not treat them as generated-from-spec.
+- **Vendored assets are re-fetched, not generated.** CDN-mirrored third-party files under `skills/task-tree/scripts/vendor/` are hand-managed and re-fetchable per their own `vendor/README.md`; do not treat them as generated-from-spec.
 
 ## Skill Authoring Guidelines
 

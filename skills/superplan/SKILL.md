@@ -25,7 +25,7 @@ Task-tree design judgment — placement, task splitting, context distillation, u
 
 Before exploration or task design, assess three independent dimensions of the incoming work. Creating a task tree and updating one both pass through the same assessment.
 
-**1. Placement — where it goes.** If `superRA/` exists, place work by `references/task-tree-design.md` §Placing Work by Durable Home. If not, check for a legacy `PLAN.md` (offer migration via `task-system` §Migration) and otherwise make the work the first root-level task.
+**1. Placement — where it goes.** If `superRA/` exists, place work by `references/task-tree-design.md` §Placing Work by Durable Home. If not, check for a legacy `PLAN.md` (offer migration via `task-tree` §Migration) and otherwise make the work the first root-level task.
 
 **2. Depth tier — how deep.** Choose a tier (§Depth Tiers) that modulates how deeply the later phases run.
 
@@ -87,7 +87,7 @@ For objective writing and task splitting, see `references/task-tree-design.md` �
 
 ### Creating Tasks
 
-**First, create the task-tree wrapper.** Every downstream agent reads and edits tasks through the committed `<task-root>/superra` wrapper, so it must exist before any subagent is dispatched. A fresh project has no `superra` yet, so the first call goes through the loaded task-system skill directory (`<skill-dir>` = the directory holding its `SKILL.md`) and is committed with the tree:
+**First, create the task-tree wrapper.** Every downstream agent reads and edits tasks through the committed `<task-root>/superra` wrapper, so it must exist before any subagent is dispatched. A fresh project has no `superra` yet, so the first call goes through the loaded task-tree skill directory (`<skill-dir>` = the directory holding its `SKILL.md`) and is committed with the tree:
 
 ```bash
 uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/superra
@@ -103,13 +103,13 @@ Afterward every call uses `./superRA/superra …`:
   --depends-on 02-merge
 ```
 
-Or create the directories and write `task.md` files directly (`task-system/SKILL.md` §Task File Format).
+Or create the directories and write `task.md` files directly (`task-tree/SKILL.md` §Task File Format).
 
 **No checkboxes.** Tasks do not contain step checkboxes (`- [ ]` / `- [x]`). If a step needs independent tracking and review, it becomes a subtask.
 
 ### Task Dependencies
 
-Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-system/references/task-file-contract.md` §Field-by-Field Notes for semantics.
+Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-tree/references/task-file-contract.md` §Field-by-Field Notes for semantics.
 
 Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
 
@@ -122,7 +122,7 @@ Identify independent branches so the orchestrator can dispatch them in parallel 
 
 ### Task Anatomy
 
-For the canonical task structure — recursive task anatomy and field-by-field notes — see `task-system/references/task-file-contract.md`. Domain-specific top-level objective context comes from the domain skill's planning reference.
+For the canonical task structure — recursive task anatomy and field-by-field notes — see `task-tree/references/task-file-contract.md`. Domain-specific top-level objective context comes from the domain skill's planning reference.
 
 ### Create the `superRA/` Directory
 
@@ -179,7 +179,7 @@ Survey existing code, outputs, and notebooks, then create one task per logical u
 
 Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-flight work (a task's approach adjusted after seeing the data, expected results tuned to early findings) — handle these as inline edits to the task's body sections per the editing discipline in `agents/implementer.md` §Editing Etiquette; (b) **researcher-initiated scope changes** mid-session (new tasks, removed tasks, methodology pivots, sample redefinition) — these MUST be routed through §User Feedback and Changing the Task Tree below.
 
-**Results:** Each task's `## Results` section is the live findings record. See `task-system/references/task-file-contract.md` §Results Shape for the template and two-stage lifecycle.
+**Results:** Each task's `## Results` section is the live findings record. See `task-tree/references/task-file-contract.md` §Results Shape for the template and two-stage lifecycle.
 
 ### `superRA/` Is the Task Tracker
 
@@ -213,7 +213,7 @@ When the task tree changes — details updated, tasks added/removed/restructured
 1. **Confirm intent.** A passing remark in chat is not authorization. Use `AskUserQuestion` (or a plain-text question if the tool is not available) to confirm the researcher wants the change.
 2. **Update `superRA/` inline:** Place, rewrite, split, merge, or remove tasks by `references/task-tree-design.md` §Placing Work by Durable Home and §Objective rewrites on scope expansion. After task edits, rewrite any field in root task.md that no longer matches the new tree.
 3. **Update statuses** by orchestrator judgment. Reset `status` to `not-started` only for the changed task(s) and transitive downstream dependents whose inputs or assumptions shift; preserve unrelated `approved` tasks.
-4. **Sweep for stale content** per `task-system/references/task-file-contract.md` §Stale Content Checklist.
+4. **Sweep for stale content** per `task-tree/references/task-file-contract.md` §Stale Content Checklist.
 5. **Commit atomically** — all affected task.md files + any code touched by the change, in one commit. Title: `plan: <one-line scope change>`.
 6. **Resolve the next frontier.** Run `using-superRA/references/main-agent.md` §Workflow Frontier Resolver to choose the next workflow entry point.
 

@@ -10,7 +10,7 @@ created: 2026-06-08
 
 Ship a fast, warn-only markdown **render-integrity** check that catches the markdown patterns that silently fail to render in the superRA dashboard, and surface it two ways: (a) automatically, via the existing PostToolUse hook, after any agent Edit/Writes a markdown file under a task root; and (b) on demand, as a self-diagnose CLI an agent can run on any markdown file before committing. The same checker logic backs both surfaces.
 
-**Why this exists.** The dashboard renders task markdown with `markdown-it` + `markdown-it-texmath` configured `delimiters: 'dollars'` (the single source of truth is [base.html:1649](../../skills/task-system/scripts/templates/base.html#L1649)). Two classes of authoring mistake render as broken output with no error:
+**Why this exists.** The dashboard renders task markdown with `markdown-it` + `markdown-it-texmath` configured `delimiters: 'dollars'` (the single source of truth is [base.html:1649](../../skills/task-tree/scripts/templates/base.html#L1649)). Two classes of authoring mistake render as broken output with no error:
 
 1. **Display-math not blank-line separated.** In the `dollars` ruleset, a `$$ … $$` display block cannot interrupt an open paragraph. When a `$$` line directly touches the text line above it (no blank line between), `markdown-it` has already opened a paragraph and swallows the whole `$$ … $$` as literal paragraph text — it never renders as block math. Every display equation must have a blank line above and below the `$$` fence lines (no blank lines inserted *inside* the block).
 2. **TeX-only macros KaTeX does not define.** Operators like `\diag`, `\cov`, `\var`, `\corr`, `\plim`, `\argmin`, `\argmax`, `\Cov`, `\Var`, `\E` work in a LaTeX `.tex` document but are undefined in KaTeX and render as an error. They must be written with `\operatorname{...}` (e.g. `\operatorname{diag}`, `\operatorname{Cov}`).
@@ -31,8 +31,8 @@ Ship a fast, warn-only markdown **render-integrity** check that catches the mark
 
 ### Context
 
-- The dashboard texmath config is authoritative for what "renders" means: `md.use(texmath, { engine: katex, delimiters: 'dollars' })` at [base.html:1649](../../skills/task-system/scripts/templates/base.html#L1649). `dollars` = inline `$…$`, display `$$…$$`. Ground the blank-line rule in this, not in assumption — see the live-render verification in `01-checker-and-rules`.
-- The existing PostToolUse hook entry is [skills/task-system/scripts/task_hook.py](../../skills/task-system/scripts/task_hook.py). It already fires on Edit/Write/Bash/apply_patch for both harnesses, already emits non-blocking `additionalContext` feedback JSON via `_feedback_json`, and declares no dependencies. The hook integration extends this file — it does not add a new hook registration.
+- The dashboard texmath config is authoritative for what "renders" means: `md.use(texmath, { engine: katex, delimiters: 'dollars' })` at [base.html:1649](../../skills/task-tree/scripts/templates/base.html#L1649). `dollars` = inline `$…$`, display `$$…$$`. Ground the blank-line rule in this, not in assumption — see the live-render verification in `01-checker-and-rules`.
+- The existing PostToolUse hook entry is [skills/task-tree/scripts/task_hook.py](../../skills/task-tree/scripts/task_hook.py). It already fires on Edit/Write/Bash/apply_patch for both harnesses, already emits non-blocking `additionalContext` feedback JSON via `_feedback_json`, and declares no dependencies. The hook integration extends this file — it does not add a new hook registration.
 - `report-in-markdown` currently ships no scripts; its `## Math` section documents `$…$`/`$$…$$` but not the blank-line or KaTeX-macro rules. This work adds both the rules and the first bundled script to that skill.
 
 ### Conventions

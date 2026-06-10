@@ -41,7 +41,7 @@ If you see unfamiliar uncommitted changes and cannot tell whether they are legit
 
 Handoff runs through the `superRA/` task tree. Reading and editing your assigned task needs only this section.
 
-**Read** with the committed wrapper — `./superRA/superra task read <path>` — not a bare `Read` of the file: the wrapper injects inherited ancestor context, sibling dependency status, and any unresolved comments anchored to the task. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-system/planning-redesign`).
+**Read** with the committed wrapper — `./superRA/superra task read <path>` — not a bare `Read` of the file: the wrapper injects inherited ancestor context, sibling dependency status, and any unresolved comments anchored to the task. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-tree/planning-redesign`).
 
 **Edit** the `task.md` directly with Read/Edit. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own. Flipping a child task's status cascades up to every ancestor automatically via hooks; this is intended, do not undo it.
 
@@ -51,7 +51,7 @@ Handoff runs through the `superRA/` task tree. Reading and editing your assigned
 - Doc before report — findings, caveats, and evidence land in the task body before any status return.
 - Write the body sections you own (`## Results`, `## Review Notes`) as a self-contained account a reader can follow standalone, with links and embedded figures (see `report-in-markdown`). The change summary belongs in the commit, not the body.
 
-For tree-level operations (query/frontier/DAG, scaffolding, dashboard, migration), load `superRA:task-system`.
+For tree-level operations (query/frontier/DAG, scaffolding, dashboard, migration), load `superRA:task-tree`.
 
 ## Skill Inventory
 
@@ -71,7 +71,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 | Utility | `report-in-markdown` | Markdown style guide for any agent writing markdown — always-loaded alongside `using-superra`; on-demand references cover figures, LaTeX math, and tables; ships a render-integrity self-diagnose CLI (`scripts/check_markdown.py`). |
 | Utility | `semantic-merge` | Tools for semantic coherence in branch integration — intent investigation, role classification, conflict resolution, stale-reference detect-and-resolve, propagation-to-coherence — with workflow sync author/reviewer mode references and standalone merge mode. |
 | Utility | `worktree-data-sync` | Non-git data sync between existing worktrees (seed, diff, apply) and data teardown. Worktree lifecycle lives in `agent-orchestration/references/worktree-harness-fallback.md`. |
-| Utility | `task-system` | Load-on-demand tree tooling for the `superRA/` hierarchy — query/frontier/DAG, scaffolding and restructuring, dashboard, and legacy `PLAN.md` / `RESULTS.md` migration. The executing-agent read/edit interface is §Task Interface above, not this skill. |
+| Utility | `task-tree` | Load-on-demand tree tooling for the `superRA/` hierarchy — query/frontier/DAG, scaffolding and restructuring, dashboard, and legacy `PLAN.md` / `RESULTS.md` migration. The executing-agent read/edit interface is §Task Interface above, not this skill. |
 | Utility | `codex-superra-setup` | Generate and install the named `superra_implementer` / `superra_reviewer` Codex custom agents into `~/.codex/agents/` (global) or `.codex/agents/` (project). |
 | Utility | `zotero-paper-reader` | User-invocable standalone skill — search, retrieve, and analyze papers from a Zotero library, and generate citations from it (BibTeX export, `\cite`/`[@key]` insertion, master-`.bib` sync, bibliography rendering — Better BibTeX citekeys by default). Not loaded by workflow agents or the Manifest; invoke directly when reading, finding, or analyzing a paper, or when citing one. |
 | Utility | `mistral-pdf-to-markdown` | User-invocable standalone skill — convert a PDF to Markdown with image extraction via the Mistral OCR API (needs `MISTRAL_API_KEY`). The conversion step behind `zotero-paper-reader`; not loaded by workflow agents or the Manifest. |

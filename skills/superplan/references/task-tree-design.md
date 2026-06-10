@@ -1,6 +1,6 @@
 # Task Tree Design
 
-Load this reference when designing, changing, consolidating, or integration-checking a `superRA/` task tree. The file contract for `task.md` lives in `skills/task-system/references/task-file-contract.md`.
+Load this reference when designing, changing, consolidating, or integration-checking a `superRA/` task tree. The file contract for `task.md` lives in `skills/task-tree/references/task-file-contract.md`.
 
 ## Writing Objectives and Planner Guidance
 
@@ -62,7 +62,7 @@ Branch for independent review value, then use `depends_on` only for prerequisite
 
 The presumption is modify or merge the task that already owns the concern. Creating a new task — especially a root-level task — is the justified exception.
 
-Use motivating cases as evidence for the general rule: a semantic `task move` command belongs under the CLI command surface that will maintain it, while its restructuring provenance belongs in context; a niche status-model update such as `postponed-status` belongs under the status model / task-system concern that owns it, not as a level-1 workstream.
+Use motivating cases as evidence for the general rule: a semantic `task move` command belongs under the CLI command surface that will maintain it, while its restructuring provenance belongs in context; a niche status-model update such as `postponed-status` belongs under the status model / task-tree concern that owns it, not as a level-1 workstream.
 
 ### Recursive descent
 
