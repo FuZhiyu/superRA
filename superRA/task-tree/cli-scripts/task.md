@@ -1,6 +1,6 @@
 ---
 title: "CLI Scripts"
-status: approved
+status: revise
 depends_on:
   - core-data-layer
 tags: []
@@ -82,3 +82,9 @@ superra task hook post-tool-use
 - `task_rename.py` preserves task-tree invariants for same-parent renames and cross-parent moves
 - `task_query.py` provides tree (Unicode status icons), frontier (dispatch-ready leaves), DAG (Mermaid with classDef)
 - `tree_to_json()` includes `objective`, `results`, `decisions`, `review_notes` parsed from body sections
+
+## Review Notes
+
+> 1. [MAJOR] Stale superseded instruction at the subtree root, inherited by every dispatched agent via ancestor context: Scope ([task.md:28](task.md#L28)) pins the `superRA/superra` wrapper to `uv run --project skills/task-tree`, Validation ([task.md:65](task.md#L65)) uses the same form, and Results ([task.md:74](task.md#L74)) claim "root `CLAUDE.md` now instructs agents to use `uv run --project skills/task-tree ...`" — all superseded by the `cli-source-resolution` child's `uv run --script` model, which [CLAUDE.md §Local Task-Tree CLI Development](../../../CLAUDE.md) now teaches. Rewrite in place per the stale-content checklist (Scope is planner-owned; Results is implementer-owned).
+> 2. [MINOR] The `### Key Findings` block ([task.md:79](task.md#L79)) — "6 scripts, each 65–210 lines", `task_query.py` Unicode icons — is a leftover from the original flat-scripts era, stacked beneath three later result layers (diff self-check, local-dev follow-up, task-move); it no longer describes the codebase (~30 scripts). Replace rather than stack, per the results-shape contract.
+> 3. [MINOR] `### Command Target` ([task.md:32](task.md#L32)) is stale against the shipped surface: missing `wrapper init` / `wrapper render-hook`, `dashboard stop`, `dashboard artifact setup`, `task status fix`, and `task migrate upgrade-status`. Refresh, or mark it explicitly as the original plan-time target.
