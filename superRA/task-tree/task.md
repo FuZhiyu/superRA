@@ -22,7 +22,7 @@ Add a `task-tree` skill to superRA that replaces flat PLAN.md/RESULTS.md task tr
 
 **Output (see `skills/task-tree/references/internals.md §Script Inventory` for the full table):**
 - `skills/task-tree/SKILL.md` — skill definition + routing docs
-- `skills/task-tree/scripts/` — 15 production scripts (data layer, entry scripts, hook, wrapper resolver) + 7 test modules
+- `skills/task-tree/scripts/` — 18 production scripts (3 data-layer modules + 15 entry scripts, including the hook and wrapper resolver) + 7 test modules
 - Key entry scripts: `cli.py` (command router), `task_read.py`, `task_create.py`, `task_update.py`, `task_query.py`, `task_check.py`, `task_hook.py`, `plan_dashboard.py`, `plan_migrate.py`, `dashboard_artifact_workflow.py`
 
 **Pipeline:** `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts`
@@ -30,7 +30,7 @@ Add a `task-tree` skill to superRA that replaces flat PLAN.md/RESULTS.md task tr
 ## Results
 
 ### Key Findings
-- 15 production scripts + 7 test modules; 612 tests passing, 2 skipped
+- 18 production scripts (3 data-layer modules + 15 entry scripts) + 7 test modules; 612 tests passing, 2 skipped
 - Eliminated task/step distinction: everything is a task, leaf = no subdirectories
 - Structured ownership: `## Objective` (planner) / `## Results` (implementer, recursive)
 - Hook does validation/status propagation only — no auto-rebuild; dashboard renders on demand (live SSE server) or via explicit `superra dashboard export`
@@ -40,3 +40,4 @@ Add a `task-tree` skill to superRA that replaces flat PLAN.md/RESULTS.md task tr
 ## Review Notes
 
 1. **[MINOR]** [task.md:25](task.md#L25), [task.md:33](task.md#L33) — Objective Output says "15 production scripts (data layer, entry scripts, hook, wrapper resolver)" and Results says "15 production scripts + 7 test modules", but the live [internals.md §Script Inventory](../../skills/task-tree/references/internals.md#L248) table lists 3 data-layer scripts + 15 entry scripts = 18 production scripts total. The hook and wrapper_resolver are part of the 15 entry scripts already, so the parenthetical "(data layer, entry scripts, hook, wrapper resolver)" cannot sum to 15. Fix: change "15 production scripts" to "18 production scripts" in both Objective Output and Results (or rephrase as "15 entry scripts + 3 data-layer modules").
+   → implemented: corrected both lines to "18 production scripts (3 data-layer modules + 15 entry scripts)"; count verified against the live scripts directory (19 non-test .py files minus conftest.py = 18) ([task.md:25](task.md#L25), [task.md:33](task.md#L33))
