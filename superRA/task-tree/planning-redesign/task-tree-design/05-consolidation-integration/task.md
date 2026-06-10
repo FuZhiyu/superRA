@@ -48,3 +48,9 @@ Verification:
 - `python3 skills/report-in-markdown/scripts/check_markdown.py skills/superplan/references/consolidation.md skills/superintegrate/SKILL.md` passed with both files reported clean.
 - `./superRA/superra task check --category placement` passed with no issues in the current task tree.
 - Targeted `rg` confirmed the required behaviors are present: `Mature/Rename`, `Scope Expansion Rewrite`, `task check --category placement`, `approved or in-flight`, `clean-enough verdict is invalid`, `latest state`, and `status-consolidation`.
+
+## Review Notes
+
+*Retrospective audit note (user-requested). MINOR-only; status left `approved` — this deviation from notes-removed-at-approve is intentional.*
+
+1. **[MINOR]** [consolidation.md:20](../../../../../skills/superplan/references/consolidation.md#L20) — the "status-consolidation" example is superRA-repo-internal, baked into a generic skill shipped to downstream research projects where the name means nothing. Fix: replace with a domain-neutral illustration (the objective asked to cover the example in reasoning, not necessarily verbatim in the shipped prose).
