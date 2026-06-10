@@ -1,6 +1,6 @@
 ---
 title: "Replace ## Decisions with ## Revision Notes"
-status: revise
+status: implemented
 depends_on:
   - skill-rewrite
 tags: []
@@ -51,11 +51,11 @@ Implement the `## Revision Notes` mechanism across the task tree, agent specs, a
 
 ### Files Modified
 
-- [`skills/task-tree/references/planning.md`](skills/task-tree/references/planning.md) — Removed §User Decisions Log section entirely. Updated §Root task.md Anatomy: replaced `## Decisions` with `## Revision Notes` (with lifecycle description). Updated §Field-by-Field Notes: replaced `## Decisions` entry with `## Revision Notes` entry. Updated §Stale Content Checklist: replaced "Decisions section" reference with revision-note guidance.
-- [`skills/task-tree/SKILL.md`](skills/task-tree/SKILL.md) — Updated body sections table: replaced `## Decisions` row with `## Revision Notes` (owner: planner/orchestrator, purpose: temporary delta signal). Updated §Ownership Model: removed `## Decisions` from implementer-owned sections list.
-- [`agents/implementer.md`](agents/implementer.md) — Removed `## Decisions` from §What You Own body-sections list. Removed "record decisions in `## Decisions`" from §Update the Task and Commit.
-- [`agents/reviewer.md`](agents/reviewer.md) — No changes needed; reviewer already has correct ownership model (only writes `## Review Notes`).
-- [`skills/agent-orchestration/SKILL.md`](skills/agent-orchestration/SKILL.md) — Updated §Orchestrator Duties escalation: replaced "log in `## Decisions`" with "fold into objective + revision note". Updated §Handling Reviewer Feedback items 5 and limits: replaced all `## Decisions` / `§User Decisions Log` references with the new mechanism. Updated §Handling Implementer Status: replaced "log decision in `## Decisions`" with "fold into task objective".
+- [skills/task-tree/references/task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) — (historically `skills/task-tree/references/planning.md`, which was split into task-file-contract.md + task-tree-design.md) — Removed §User Decisions Log section entirely. Updated §Root task.md Anatomy: replaced `## Decisions` with `## Revision Notes` (with lifecycle description). Updated §Field-by-Field Notes: replaced `## Decisions` entry with `## Revision Notes` entry. Updated §Stale Content Checklist: replaced "Decisions section" reference with revision-note guidance.
+- [skills/task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md) — Updated body sections table: replaced `## Decisions` row with `## Revision Notes` (owner: planner/orchestrator, purpose: temporary delta signal). Updated §Ownership Model: removed `## Decisions` from implementer-owned sections list.
+- [agents/implementer.md](../../../../agents/implementer.md) — Removed `## Decisions` from §What You Own body-sections list. Removed "record decisions in `## Decisions`" from §Update the Task and Commit.
+- [agents/reviewer.md](../../../../agents/reviewer.md) — No changes needed; reviewer already has correct ownership model (only writes `## Review Notes`).
+- [skills/agent-orchestration/SKILL.md](../../../../skills/agent-orchestration/SKILL.md) — Updated §Orchestrator Duties escalation: replaced "log in `## Decisions`" with "fold into objective + revision note". Updated §Handling Reviewer Feedback items 5 and limits: replaced all `## Decisions` / `§User Decisions Log` references with the new mechanism. Updated §Handling Implementer Status: replaced "log decision in `## Decisions`" with "fold into task objective".
 
 ### Verification
 
@@ -72,4 +72,5 @@ Implement the `## Revision Notes` mechanism across the task tree, agent specs, a
 ## Review Notes
 
 1. **[MAJOR]** Broken Results links: citations like `[skills/task-tree/references/planning.md](skills/task-tree/references/planning.md)` are task-dir-relative (never resolved from this file), and the target has since been deleted — its content was split into [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) and [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md). Fix: correct relativity and annotate the dead target as historical.
+   → implemented: corrected all Results links to use `../../../../`-relative paths; annotated the split target as historical ([revision-notes/task.md](task.md))
 

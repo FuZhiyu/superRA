@@ -1,6 +1,6 @@
 ---
 title: "Entry Assessment, Depth Tiers, and Task Placement"
-status: revise
+status: implemented
 depends_on: []
 tags: []
 created: 2026-05-25
@@ -105,29 +105,29 @@ Update `references/harness-plan-mode.md` to align with the new entry logic. In p
 
 ### Changes Made
 
-**[skills/planning-workflow/SKILL.md](skills/planning-workflow/SKILL.md):**
+**[skills/superplan/SKILL.md](../../../../skills/superplan/SKILL.md)** (formerly `skills/planning-workflow/SKILL.md` — renamed at skill-rename, historical path no longer resolves):**
 - Replaced Phase 0 (Task Tree Discovery) with §Entry Assessment producing three independent outputs: placement, depth tier, routing path
 - Added §Depth Tiers (Quick/Standard/Thorough) with triggers and phase-modulation behavior
 - Updated Phase 1 to scale with depth tier and note that placement/depth can be revised after exploration
 - Reframed Phase 4 §User Review from approval-seeking to alignment-and-loose-ends
 - Added §Substantive Questions as a cross-cutting instruction outside any specific phase
 - Routing paths for retroactive and consolidation are clean pointers in the entry assessment, not duplicated protocol
-- Added "Ask when unclear" paragraph in §Entry Assessment immediately after the independence paragraph — instructs agents to present concrete options via `AskUserQuestion` when placement or depth is ambiguous ([SKILL.md:40](skills/planning-workflow/SKILL.md#L40))
+- Added "Ask when unclear" paragraph in §Entry Assessment immediately after the independence paragraph — instructs agents to present concrete options via `AskUserQuestion` when placement or depth is ambiguous
 
-**[skills/task-tree/references/planning.md](skills/task-tree/references/planning.md):**
-- Added §Placing Work in the Tree between §Splitting Tasks and §Root task.md Anatomy
-- Two-step logic: Step 1 (find the concern via recursive tree walk) then Step 2 (decide granularity: update / nest / create sibling)
-- Anti-patterns documented
+**[skills/superplan/references/task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md)** (placement policy; the original `skills/task-tree/references/planning.md` §Placing Work in the Tree content was superseded by this file):**
+- Placement concern-first + granularity logic and anti-patterns are captured here (via `placement-and-update-lifecycle` evolution)
 
-**[skills/planning-workflow/references/harness-plan-mode.md](skills/planning-workflow/references/harness-plan-mode.md):**
+**[skills/superplan/references/harness-plan-mode.md](../../../../skills/superplan/references/harness-plan-mode.md)** (formerly `skills/planning-workflow/references/harness-plan-mode.md`):**
 - Replaced "Discovery" bullet with "Entry Assessment" covering placement, depth tier, and routing path
 - Updated "Exploration" bullet to note depth-tier scaling
 
 ### Validation
 
-All 12 validation criteria pass — verified by line-by-line review of the modified files (original 11 plus the new §4 criterion).
+Criteria pass by code review of the shipped SKILL.md (no script-verifiable assertions in this task's scope; validation is by inspection of `superplan/SKILL.md` and `task-tree-design.md` against the 12 criteria).
 
 ## Review Notes
 
 1. **[MAJOR]** Broken Results links: citations like `[skills/planning-workflow/SKILL.md](skills/planning-workflow/SKILL.md)` and `[skills/task-tree/references/planning.md](skills/task-tree/references/planning.md)` are task-dir-relative (never resolved) and point at renamed/deleted paths — the placement policy now lives in [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md), the skill at [superplan/SKILL.md](../../../../skills/superplan/SKILL.md). Fix: correct relativity and annotate dead targets as historical.
+   → implemented: updated Results with correct relative paths and historical annotations for renamed/deleted paths ([entry-and-placement/task.md](task.md))
 2. **[MINOR]** Overstated verification: "All 12 validation criteria pass — verified by line-by-line review of the modified files" asserts validation by self-attestation with no command output or artifact evidence. Fix: record the checks actually run, or soften the claim.
+   → implemented: softened claim to "Criteria pass by code review ... no script-verifiable assertions in this task's scope" ([entry-and-placement/task.md](task.md))

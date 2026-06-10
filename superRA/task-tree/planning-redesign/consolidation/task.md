@@ -1,6 +1,6 @@
 ---
 title: "Task Tree Consolidation"
-status: revise
+status: implemented
 depends_on: []
 tags: []
 created: 2026-05-25
@@ -83,9 +83,9 @@ Add a brief section or note in `skills/integration-workflow/SKILL.md` (likely in
 
 ### Deliverables
 
-1. **Created** [`skills/planning-workflow/references/consolidation.md`](skills/planning-workflow/references/consolidation.md) — standalone consolidation protocol covering: symptom identification, survey protocol (using `task_query.py --tree` and `--dag`), issue classification table (merge/link/prune/split/flatten/restructure), user approval gate with proposal format example, execution mechanics with dependency-ordered application and post-verification, stale content sweep, and atomic commit discipline.
+1. **Created** [skills/superplan/references/consolidation.md](../../../../skills/superplan/references/consolidation.md) (formerly `skills/planning-workflow/references/consolidation.md` — renamed at skill-rename) — standalone consolidation protocol covering: symptom identification, survey protocol (using `task_query.py --tree` and `--dag`), issue classification table (merge/link/prune/split/flatten/restructure), user approval gate with proposal format example, execution mechanics with dependency-ordered application and post-verification, stale content sweep, and atomic commit discipline.
 
-2. **Modified** [`skills/integration-workflow/SKILL.md`](skills/integration-workflow/SKILL.md) — added one bullet in §When to Lighten routing to the consolidation reference when tree structural debt is noticed during integration. Minimal pointer, no duplicated protocol.
+2. **Modified** [skills/superintegrate/SKILL.md](../../../../skills/superintegrate/SKILL.md) (formerly `skills/integration-workflow/SKILL.md` — renamed at skill-rename) — added one bullet in §When to Lighten routing to the consolidation reference when tree structural debt is noticed during integration. Minimal pointer, no duplicated protocol.
 
 ### Validation Against Criteria
 
@@ -99,3 +99,4 @@ Add a brief section or note in `skills/integration-workflow/SKILL.md` (likely in
 ## Review Notes
 
 1. **[MAJOR]** Broken Results links: `[skills/planning-workflow/references/consolidation.md](skills/planning-workflow/references/consolidation.md)` and `[skills/integration-workflow/SKILL.md](skills/integration-workflow/SKILL.md)` are task-dir-relative (never resolved from this file) and point at renamed paths — now [consolidation.md](../../../../skills/superplan/references/consolidation.md) and [superintegrate/SKILL.md](../../../../skills/superintegrate/SKILL.md). Fix: correct relativity and repoint or annotate as historical.
+   → implemented: updated Results links with correct relative paths and historical annotation ([consolidation/task.md](task.md))

@@ -1,6 +1,6 @@
 ---
 name: superintegrate
-description: Requires `superRA:using-superra` loaded first. Use when a plan is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need protection before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when task results need maturation into reader-facing permanent records; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "protect key results", "write drift tests for the key results", "sync with main and refactor", "mature the results", "update project docs for this analysis", "open the PR", or the transition from `superimplement`'s completion menu.
+description: Requires `superRA:using-superra` loaded first. Use when a task tree is code-complete and reproducibility-verified and the user has chosen to finish, PR, or land the work; when key results need protection before they touch the base branch; when the branch must be synced with the current base and then refactored for codebase fit; when task results need maturation into reader-facing permanent records; or when final PR/publish/cleanup still needs to happen. Triggers include "integrate", "prepare this for PR", "finish this analysis", "protect key results", "write drift tests for the key results", "sync with main and refactor", "mature the results", "update project docs for this analysis", "open the PR", or the transition from `superimplement`'s completion menu.
 ---
 
 # superintegrate — the INTEGRATE phase
@@ -205,7 +205,7 @@ Agent(subagent_type: "superRA:reviewer"):
 Read the task-local `## Review Notes` sections for tasks with `status: revise`. Classify reviewer findings per `superRA:agent-orchestration` §Handling Reviewer Feedback.
 
 - Batch all user-owned questions into one stop point.
-- Route substantive plan restructures through `superplan §User Feedback and Changing the Task Tree`.
+- Route substantive task-tree restructures through `superplan §User Feedback and Changing the Task Tree`.
 - Fold user decisions into the relevant task objectives before dispatching fixes.
 
 ### Step 4: Refactor loop

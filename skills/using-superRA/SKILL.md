@@ -19,7 +19,7 @@ These apply whenever you write, review, or refactor code.
 
 SuperRA work moves through **PLAN -> IMPLEMENT -> INTEGRATE**:
 
-1. `superplan` creates or revises the `superRA/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a plan change invalidates.
+1. `superplan` creates or revises the `superRA/` task tree, records researcher decisions, and declares which task-local statuses or workflow rollups a task-tree change invalidates.
 2. `superimplement` executes task blocks through the implementer-reviewer loop, then verifies reproducibility and records the researcher's completion disposition before integration can begin.
 3. `superintegrate` protects key results, syncs and refactors against the integration base, matures documentation, and performs the final merge / PR / cleanup action.
 
@@ -59,7 +59,7 @@ Grouped Workflow / Domain / Utility / Meta. See `skills/CATEGORIES.md` for the f
 
 | Category | Skill | One-line purpose |
 |---|---|---|
-| Workflow | `superplan` | PLAN phase: scope check, task decomposition, plan draft. |
+| Workflow | `superplan` | PLAN phase: scope check, task decomposition, task tree creation. |
 | Workflow | `superimplement` | IMPLEMENT + VALIDATE: per-task dispatch, one-pass review, reproducibility, completion menu. |
 | Workflow | `superintegrate` | INTEGRATE: Protect, Sync, Integrate, Document, Finish. |
 | Workflow | `agent-orchestration` | Cross-stage dispatch patterns, Dispatch Templates, reviewer-feedback handling, Review Status Reference. |

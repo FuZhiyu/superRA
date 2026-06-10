@@ -13,7 +13,7 @@ description: "Requires `superRA:using-superra` loaded first. Use when starting n
 
 Owns the procedural shape of the **PLAN** phase: discovery of existing work, exploration, domain setup, task decomposition, self-review, and handoff. Output is a `superRA/` task tree for superimplement to consume.
 
-Write task objectives for a reader skilled at the craft but with zero context for this project. The `## Objective` / `## Planner Guidance` split — binding vs. suggested content — is in `references/task-tree-design.md` §Writing Objectives and Planner Guidance.
+The `## Objective` / `## Planner Guidance` split — binding vs. suggested content — is in `references/task-tree-design.md` §Writing Objectives and Planner Guidance.
 
 Task-tree design judgment — placement, task splitting, context distillation, update-task lifecycle, and retroactive task-tree creation — lives in `references/task-tree-design.md`.
 
@@ -29,7 +29,7 @@ Before exploration or task design, assess three independent dimensions of the in
 
 **2. Depth tier — how deep.** Choose a tier (§Depth Tiers) that modulates how deeply the later phases run.
 
-**3. Routing path — what mode.** Forward planning is the default. The one alternative is **retroactive documentation** — existing code/results need a `superRA/` record, detected when the work has code without task coverage; it runs the same phases but sets `status: implemented` (see `references/task-tree-design.md` §Retroactive Task-Tree Creation). Structural cleanup of an existing tree is not a routing mode — it is the separate `references/consolidation.md` pass, entered when the tree has structural debt rather than when new work needs placing.
+**3. Routing path — what mode.** Forward planning is the default. The one alternative is **retroactive documentation** — existing code/results need a `superRA/` record, detected when the work has code without task coverage; it runs the same phases (see `references/task-tree-design.md` §Retroactive Task-Tree Creation). Structural cleanup of an existing tree is not a routing mode — it is the separate `references/consolidation.md` pass, entered when the tree has structural debt rather than when new work needs placing.
 
 Placement and depth are independent: work can clearly belong under an existing task yet still need thorough planning, and an uncertain tree location does not make the work hard to plan. Exploration may force either to be revisited.
 
@@ -93,30 +93,15 @@ For objective writing and task splitting, see `references/task-tree-design.md` �
 uv run --script <skill-dir>/scripts/cli.py wrapper init   # writes superRA/superra
 ```
 
-Afterward every call uses `./superRA/superra …`:
-
-```bash
-./superRA/superra task create 01-data/03-filter \
-  --title "Filter Sample" \
-  --objective "Apply standard filters: drop obs before 2000, require non-missing returns." \
-  --guidance "Consider reusing Code/common_filters.py." \
-  --depends-on 02-merge
-```
-
-Or create the directories and write `task.md` files directly (`task-tree/SKILL.md` §Task File Format).
+Afterward every call uses `./superRA/superra …` (mutation commands: `task-tree/references/commands.md`), or create directories and write `task.md` files directly (`task-tree/SKILL.md` §Task File Format).
 
 **No checkboxes.** Tasks do not contain step checkboxes (`- [ ]` / `- [x]`). If a step needs independent tracking and review, it becomes a subtask.
 
 ### Task Dependencies
 
-Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-tree/references/task-file-contract.md` §Field-by-Field Notes for semantics.
+Each task declares dependencies in its `depends_on:` frontmatter field (sibling directory names). See `task-tree/references/task-file-contract.md` §Field-by-Field Notes and `references/task-tree-design.md` §Placing Work by Durable Home for semantics.
 
 Identify independent branches so the orchestrator can dispatch them in parallel (see `agent-orchestration` §Workload Balancing).
-
-**A task depends on another when it:**
-- reads the other task's output files;
-- needs a sample / variable / methodology decision finalized in the other task; or
-- runs sensitivity / robustness on the other task's baseline results.
 
 **After writing all tasks:** trace the dependency edges — no cycles, no references to nonexistent siblings; terminal task(s) produce the top-line results.
 
@@ -139,7 +124,7 @@ After writing the complete task tree:
 2. **Placeholder scan:** Search for vague objectives — "process the data", "clean up results", "finalize" without concrete success criteria. Fix them.
 3. **Pipeline consistency:** Do the artifact names in the pipeline file match the artifacts created in each task? Are they in the right order?
 4. **Validation coverage:** Does every transformative task have a corresponding validation criterion in its objective?
-5. **Objective/guidance split:** Are binding deliverables, constraints, decisions, fixed file expectations, and validation criteria in `## Objective`, with non-binding hints in `## Planner Guidance`?
+5. **Objective/guidance split:** See `references/task-tree-design.md` §Writing Objectives and Planner Guidance. Binding deliverables and constraints in `## Objective`; advisory hints in `## Planner Guidance`.
 6. **Handoff test:** If you stopped here and a new agent read the root task.md plus the ancestor chain of any leaf task, could they continue? Is there enough context?
 7. **Verification coverage (where applicable):** Does the task tree cover the active domain skill's verification / robustness requirements?
 8. **Dependency graph sanity:** Every task has `depends_on:` declared. No cycles. Independent branches are marked parallelizable.
@@ -149,7 +134,7 @@ Fix issues inline. No need to re-review — just fix and move on.
 
 ### Agent Review
 
-At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Choose between `Review mode: handoff-readiness` and `Review mode: design-review` per `references/thorough-planning.md` §Planning Review; use `agent-orchestration` §Dispatch Templates for the dispatch shape.
+At thorough depth, dispatch `Stage: planning-review` before presenting the tree to the user. Explicit handoff-review requests can enter the same step. Choose between `Review mode: handoff-readiness` and `Review mode: design-review` (defined in `references/planning-review.md` §Review Mode); use `agent-orchestration` §Dispatch Templates for the dispatch shape.
 
 REVISE findings must be fixed before proceeding to User Review — the user should see a structurally sound tree, not one with known issues.
 
@@ -169,9 +154,9 @@ Commit the `superRA/` directory atomically. Then hand off to `superRA:superimple
 
 At any point during planning, when you hit a genuine design tradeoff with distinct alternatives, present the options for the user to choose rather than assuming intent silently or asserting one and narrating your reasoning. Questions are a quality mechanism for tying loose ends, not process checkpoints.
 
-## Retroactive Plan Creation
+## Retroactive Task-Tree Creation
 
-Survey existing code, outputs, and notebooks, then create one task per logical unit of work done, each with `status: implemented` and its `## Objective` (the goal) and `## Results` (what was found) filled in. The full workflow is in `references/task-tree-design.md` §Retroactive Task-Tree Creation.
+Survey existing code, outputs, and notebooks and create one task per logical unit of work done. The full workflow — including how to set status for complete vs. unreviewed work — is in `references/task-tree-design.md` §Retroactive Task-Tree Creation.
 
 ## Living Task Tree
 
@@ -184,10 +169,6 @@ Distinguish two kinds of drift: (a) **agent-discovered refinements** during in-f
 ### `superRA/` Is the Task Tracker
 
 `superRA/` is the authoritative task tracker — its task files and frontmatter `status:` fields are the state of record, not chat, status reports, or `TodoWrite`. Any work that is part of the analysis (a new task, discovered subtask, methodology check, sensitivity run, refactor pass) lives in `superRA/` first; if losing a todo at session end would lose work the researcher cares about, it belongs there. `TodoWrite` is only a transient within-session view — it does not persist, so it cannot carry analysis tasks or coordinate work across sessions. When the two disagree, `superRA/` is right.
-
-## Revision Notes
-
-When a task is updated (scope change, methodology pivot, added/removed work), follow `references/task-tree-design.md` §Objective rewrites on scope expansion.
 
 ## User Feedback and Changing the Task Tree
 

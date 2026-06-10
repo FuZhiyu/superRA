@@ -115,7 +115,7 @@ Keep status out of the subject — it lives in `status:` frontmatter. The body i
 ## Escalation
 
 **STOP and report with BLOCKED or NEEDS_CONTEXT when:**
-- Inputs, assumptions, or verification results don't match expectations from the plan
+- Inputs, assumptions, or verification results don't match expectations from the task objective
 - A merge, filter, derivation step, or solver output produces an unexpected scope or logic change
 - Variables, parameters, or residuals have implausible magnitudes
 - You need context about upstream processing, notation, or modeling choices

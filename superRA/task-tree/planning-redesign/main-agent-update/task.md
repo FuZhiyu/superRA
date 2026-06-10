@@ -1,6 +1,6 @@
 ---
 title: "Update main-agent.md for .plan/-native operations"
-status: revise
+status: implemented
 depends_on:
   - skill-rewrite
 tags: []
@@ -45,7 +45,7 @@ The `revision-notes` sibling task handles the same concept change in all OTHER f
 
 ### Files Modified
 
-- [`skills/using-superRA/references/main-agent.md`](skills/using-superRA/references/main-agent.md) — Complete rewrite of all PLAN.md/RESULTS.md references to `.plan/` task-tree operations.
+- [skills/using-superRA/references/main-agent.md](../../../../skills/using-superRA/references/main-agent.md) — Complete rewrite of all PLAN.md/RESULTS.md references to `.plan/` task-tree operations.
 
 ### Changes by Section
 
@@ -72,3 +72,4 @@ The `revision-notes` sibling task handles the same concept change in all OTHER f
 ## Review Notes
 
 1. **[MAJOR]** Broken Results links: `## Results` cites `[skills/using-superRA/references/main-agent.md](skills/using-superRA/references/main-agent.md)` — task-dir-relative, so it has never resolved from this file (the dashboard renders a dead link). Fix: [../../../../skills/using-superRA/references/main-agent.md](../../../../skills/using-superRA/references/main-agent.md).
+   → implemented: updated file citation to use correct relative path ([main-agent-update/task.md](task.md))

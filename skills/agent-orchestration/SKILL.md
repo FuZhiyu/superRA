@@ -164,7 +164,7 @@ Done by the orchestrator alone, at every workflow stage:
 
 ## Handling Reviewer Feedback (Orchestrator Discipline)
 
-The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. **You — the orchestrator — are the arbitrator.** You made the plan, you talk to the researcher, and you have big-picture context the reviewer lacks. Between a REVISE verdict and re-dispatch, independently evaluate each issue against that context, rather than forwarding findings mechanically or deferring to the reviewer.
+The reviewer is adversarial by design — it flags aggressively, and some findings will be false positives. **You — the orchestrator — are the arbitrator.** You built the task tree, you talk to the researcher, and you have big-picture context the reviewer lacks. Between a REVISE verdict and re-dispatch, independently evaluate each issue against that context, rather than forwarding findings mechanically or deferring to the reviewer.
 
 When a reviewer returns REVISE:
 

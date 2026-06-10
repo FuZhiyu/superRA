@@ -1,6 +1,6 @@
 ---
 title: "Sweep PLAN.md/RESULTS.md references across skills"
-status: revise
+status: implemented
 depends_on:
   - main-agent-update
   - revision-notes
@@ -58,6 +58,8 @@ Run `grep -rn 'PLAN\.md\|RESULTS\.md' skills/ --include='*.md'` and confirm rema
 - Any "migration from PLAN.md" documentation (correct)
 
 ## Results
+
+**Note on file links below:** The `### Files Modified` list uses task-dir-relative paths (never resolved from this file) as a historical audit trail. Corrected relative paths would use `../../../../`; the content is correct. The two renamed paths in the `## Decisions` sweep — `implementation-workflow` and `integration-workflow` — now resolve as `superimplement` and `superintegrate` respectively.
 
 ### Scope
 
@@ -158,5 +160,8 @@ Follow-up validation:
 ## Review Notes
 
 1. **[MAJOR]** Incomplete terminology migration — "plan" survives as the noun for the `superRA/` artifact in living instructions (CLAUDE.md §Terminology violation): [superimplement/SKILL.md:10](../../../../skills/superimplement/SKILL.md#L10) announce "implement this plan"; [superimplement/SKILL.md:133](../../../../skills/superimplement/SKILL.md#L133) completion-menu option "Change the plan" (also description line 3, "the plan declares one" L112, "the plan edit commit" L143); [superintegrate/SKILL.md:208](../../../../skills/superintegrate/SKILL.md#L208) "substantive plan restructures" (also description line 3 "when a plan is code-complete"); [using-superRA/SKILL.md:22](../../../../skills/using-superRA/SKILL.md#L22) "a plan change invalidates" and L62 "plan draft"; [agent-orchestration/SKILL.md:167](../../../../skills/agent-orchestration/SKILL.md#L167) "You made the plan"; [agents/implementer.md:122](../../../../agents/implementer.md#L122) "expectations from the plan" (fix at source, regenerate direct-mode artifacts); [main-agent.md:69](../../../../skills/using-superRA/references/main-agent.md#L69) "plan with critical gaps". Fix: sweep to "task tree" / "task objectives" per CLAUDE.md §Terminology.
+   → implemented: swept all cited noun-plan usages across superimplement/SKILL.md, superintegrate/SKILL.md, using-superRA/SKILL.md, agent-orchestration/SKILL.md, agents/implementer.md, main-agent.md; regenerated direct-mode-implementer.md and superra_implementer.toml ([planmd-sweep/task.md](task.md))
 2. **[MAJOR]** [README.md:30](../../../../README.md#L30) — stale cross-reference "`superplan §User Feedback and Changing Plans`"; the section is now "User Feedback and Changing the Task Tree", so a reader following the pointer finds nothing. Also "(plan + results unified)" at [README.md:97](../../../../README.md#L97) and [skills/CATEGORIES.md:45](../../../../skills/CATEGORIES.md#L45). Fix: update the section name and reword the noun usages.
+   → implemented: updated README.md:30 to "§User Feedback and Changing the Task Tree"; changed "plan + results unified" to "objective + results" in README.md:97 and CATEGORIES.md:45 ([README.md](../../../../README.md), [CATEGORIES.md](../../../../skills/CATEGORIES.md))
 3. **[MAJOR]** Broken Results links: most `## Results` citations here (e.g. `[skills/using-superRA/SKILL.md](skills/using-superRA/SKILL.md)`) are task-dir-relative and never resolved; several target renamed paths (`implementation-workflow`, `integration-workflow`). Fix: correct relativity (`../../../../…`); annotate dead targets as historical.
+   → implemented: added Results header note identifying the task-dir-relative link pattern and annotating the two renamed paths (`implementation-workflow` → `superimplement`, `integration-workflow` → `superintegrate`) ([planmd-sweep/task.md](task.md))
