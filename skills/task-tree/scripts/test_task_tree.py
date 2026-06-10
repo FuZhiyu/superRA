@@ -19,6 +19,7 @@ SCRIPTS_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 import _task_io
+import _task_validate
 import dashboard_artifact_workflow
 from _task_io import parse_body_sections
 import plan_dashboard
@@ -220,9 +221,34 @@ class TestParseTask:
             "---\ntitle: T\nstatus: done\n---\n## Objective\n\nx\n",
             encoding="utf-8",
         )
-        with pytest.warns(UserWarning, match="Invalid status 'done'"):
+        with pytest.warns(UserWarning, match="invalid status 'done'"):
             task = _task_io.parse_task(task_md)
         assert task.status == "done"  # raw value preserved, not coerced
+
+    def test_out_of_root_parse_errors(self, tmp_path):
+        # A task dir outside the supplied plan_root must error, not silently
+        # fall back to path == "" and masquerade as the root.
+        outside = tmp_path / "elsewhere"
+        outside.mkdir()
+        (outside / "task.md").write_text(
+            "---\ntitle: Outside\nstatus: not-started\n---\n", encoding="utf-8"
+        )
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        with pytest.raises(ValueError, match="outside the supplied plan root"):
+            _task_io.parse_task(outside / "task.md", plan_root=root_dir)
+
+
+class TestWriteTask:
+    def test_write_is_atomic_no_tmp_left_behind(self, plan_root):
+        task = _task_io.parse_task(plan_root / "01-first" / "task.md", plan_root)
+        task.status = "in-progress"
+        _task_io.write_task(task)
+        # The temp file used by the atomic replace must not survive the write.
+        leftovers = list((plan_root / "01-first").glob("*.tmp"))
+        assert leftovers == []
+        reparsed = _task_io.parse_task(plan_root / "01-first" / "task.md", plan_root)
+        assert reparsed.status == "in-progress"
 
 
 class TestResolvePath:
@@ -295,6 +321,27 @@ class TestWalkPlan:
         assert load.slug == "01-load"
         assert load.is_leaf
 
+    def test_walk_skips_undecodable_file(self, tmp_path):
+        """An undecodable task.md is warned and skipped; the walk completes."""
+        import warnings as _warnings
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        good_dir = root_dir / "01-good"
+        good_dir.mkdir()
+        _write_task_md(good_dir / "task.md", "Good Task", "not-started")
+        bad_dir = root_dir / "02-bad"
+        bad_dir.mkdir()
+        (bad_dir / "task.md").write_bytes(b"\xff\xfe bad bytes not utf-8")
+
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            root = _task_io.walk_plan(root_dir)
+
+        assert len(root.children) == 1
+        assert root.children[0].slug == "01-good"
+        assert any("02-bad" in str(w.message) for w in caught)
+
 
 class TestComputeStatus:
     def test_leaf_status(self, plan_root):
@@ -349,6 +396,15 @@ class TestComputeFrontier:
         root = _task_io.walk_plan(root_dir)
         frontier = _task_io.compute_frontier(root)
         assert len(frontier) == 3
+
+    def test_synthetic_root_not_on_frontier(self, tmp_path):
+        # A childless root — including the fabricated "(no root task.md)"
+        # placeholder for a rootless forest — holds no dispatchable work.
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        root = _task_io.walk_plan(root_dir)  # no task.md, no children
+        assert root.title == "(no root task.md)"
+        assert _task_io.compute_frontier(root) == []
 
     def test_revise_status_excluded_from_frontier(self, plan_root):
         """A task with status 'revise' should NOT appear on the frontier.
@@ -492,9 +548,11 @@ class TestFrontmatterParsing:
         assert fm["depends_on"] == []
 
     def test_tilde_value(self):
+        # ~ (YAML null) is normalized to "" at the scalar level so it does
+        # not round-trip as the literal string "~" (which would be truthy).
         text = '---\nreview_status: ~\n---\nBody\n'
         fm, body = _task_io.parse_frontmatter(text)
-        assert fm["review_status"] == "~"
+        assert fm["review_status"] == ""
 
     def test_no_frontmatter(self):
         """Text with no frontmatter at all returns empty dict and full text."""
@@ -516,6 +574,38 @@ class TestFrontmatterParsing:
         fm, body = _task_io.parse_frontmatter(text)
         assert fm["title"] == "Part 1: Introduction"
         assert fm["status"] == "not-started"
+
+    def test_inline_list_respects_quoted_commas(self):
+        # A comma inside a quoted item is content, not a separator.
+        text = '---\ntags: ["a, b", c]\n---\nBody\n'
+        fm, _ = _task_io.parse_frontmatter(text)
+        assert fm["tags"] == ["a, b", "c"]
+
+    def test_crlf_frontmatter_parses(self):
+        """CRLF line endings are normalized so frontmatter is parsed correctly."""
+        text = "---\r\ntitle: \"CRLF Task\"\r\nstatus: not-started\r\n---\r\nBody\r\n"
+        fm, body = _task_io.parse_frontmatter(text)
+        assert fm["title"] == "CRLF Task"
+        assert fm["status"] == "not-started"
+        assert "Body" in body
+
+    def test_bom_frontmatter_parses(self):
+        """A leading UTF-8 BOM is stripped so frontmatter is parsed correctly."""
+        bom = "﻿"
+        text = bom + "---\ntitle: \"BOM Task\"\nstatus: not-started\n---\nBody\n"
+        fm, body = _task_io.parse_frontmatter(text)
+        assert fm["title"] == "BOM Task"
+        assert fm["status"] == "not-started"
+
+    def test_unmatched_dash_warns(self):
+        """A body that begins with '---' but has no valid fence emits a warning."""
+        import warnings as _warnings
+        text = "---\ntitle: No closing delimiter\n"
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            fm, body = _task_io.parse_frontmatter(text)
+        assert fm == {}
+        assert any("'---'" in str(w.message) for w in caught)
 
 
 # --- CLI script tests ---
@@ -1971,45 +2061,45 @@ class TestMigrationMapping:
 class TestValidateFrontmatter:
     def test_valid_task_no_warnings(self, plan_root):
         task = _task_io.parse_task(plan_root / "01-first" / "task.md")
-        warnings = _task_io.validate_frontmatter(task)
+        warnings = _task_validate.validate_frontmatter(task)
         assert warnings == []
 
     def test_bad_status_value(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         task.status = "done"  # invalid enum value
-        warnings = _task_io.validate_frontmatter(task)
+        warnings = _task_validate.validate_frontmatter(task)
         assert any("invalid status" in w for w in warnings)
         assert any("done" in w for w in warnings)
 
     def test_depends_on_not_list(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         task.depends_on = "01-first"  # string instead of list
-        warnings = _task_io.validate_frontmatter(task)
+        warnings = _task_validate.validate_frontmatter(task)
         assert any("depends_on" in w for w in warnings)
 
     def test_empty_title_warning(self, plan_root):
         task = _task_io.parse_task(plan_root / "01-first" / "task.md")
         task.title = ""
-        warnings = _task_io.validate_frontmatter(task)
+        warnings = _task_validate.validate_frontmatter(task)
         assert any("title" in w for w in warnings)
 
     def test_tags_not_list(self, plan_root):
         task = _task_io.parse_task(plan_root / "01-first" / "task.md")
         task.tags = "data"  # string instead of list
-        warnings = _task_io.validate_frontmatter(task)
+        warnings = _task_validate.validate_frontmatter(task)
         assert any("tags" in w for w in warnings)
 
 
 class TestValidateDependencies:
     def test_valid_dep_no_warnings(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
-        warnings = _task_io.validate_dependencies(task, ["01-first", "02-second", "03-third"])
+        warnings = _task_validate.validate_dependencies(task, ["01-first", "02-second", "03-third"])
         assert warnings == []
 
     def test_missing_sibling_ref(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         # Pass siblings that don't include 01-first
-        warnings = _task_io.validate_dependencies(task, ["02-second", "03-third"])
+        warnings = _task_validate.validate_dependencies(task, ["02-second", "03-third"])
         assert len(warnings) == 1
         assert "01-first" in warnings[0]
         assert "does not match" in warnings[0]
@@ -2017,13 +2107,13 @@ class TestValidateDependencies:
     def test_nonexistent_dep(self, plan_root):
         task = _task_io.parse_task(plan_root / "02-second" / "task.md")
         task.depends_on = ["nonexistent"]
-        warnings = _task_io.validate_dependencies(task, ["01-first", "02-second"])
+        warnings = _task_validate.validate_dependencies(task, ["01-first", "02-second"])
         assert any("nonexistent" in w for w in warnings)
 
     def test_no_deps_no_warnings(self, plan_root):
         task = _task_io.parse_task(plan_root / "01-first" / "task.md")
         assert task.depends_on == []
-        warnings = _task_io.validate_dependencies(task, ["01-first"])
+        warnings = _task_validate.validate_dependencies(task, ["01-first"])
         assert warnings == []
 
 
@@ -2048,7 +2138,7 @@ class TestDetectCycles:
             ("02-b", ["01-a"]),
             ("03-c", ["02-b"]),
         ])
-        warnings = _task_io.detect_cycles(tasks)
+        warnings = _task_validate.detect_cycles(tasks)
         assert warnings == []
 
     def test_simple_cycle(self, tmp_path):
@@ -2056,7 +2146,7 @@ class TestDetectCycles:
             ("01-a", ["02-b"]),
             ("02-b", ["01-a"]),
         ])
-        warnings = _task_io.detect_cycles(tasks)
+        warnings = _task_validate.detect_cycles(tasks)
         assert len(warnings) >= 1
         assert any("cycle" in w.lower() for w in warnings)
 
@@ -2066,7 +2156,7 @@ class TestDetectCycles:
             ("02-b", ["01-a"]),
             ("03-c", ["02-b"]),
         ])
-        warnings = _task_io.detect_cycles(tasks)
+        warnings = _task_validate.detect_cycles(tasks)
         assert any("cycle" in w.lower() for w in warnings)
         # Cycle description should mention the nodes involved
         cycle_msg = warnings[0]
@@ -2078,13 +2168,13 @@ class TestDetectCycles:
             ("02-b", []),
             ("03-c", []),
         ])
-        warnings = _task_io.detect_cycles(tasks)
+        warnings = _task_validate.detect_cycles(tasks)
         assert warnings == []
 
 
 class TestValidatePlan:
     def test_valid_plan_no_warnings(self, plan_root):
-        warnings = _task_io.validate_plan(plan_root)
+        warnings = _task_validate.validate_plan(plan_root)
         assert warnings == []
 
     def test_missing_dep_produces_warning(self, plan_root):
@@ -2093,7 +2183,7 @@ class TestValidatePlan:
         bad_dir.mkdir()
         _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
                        depends_on=["99-nonexistent"])
-        warnings = _task_io.validate_plan(plan_root)
+        warnings = _task_validate.validate_plan(plan_root)
         assert any("nonexistent" in w for w in warnings)
 
     def test_warnings_prefixed_with_task_path(self, plan_root):
@@ -2101,7 +2191,7 @@ class TestValidatePlan:
         bad_dir.mkdir()
         _write_task_md(bad_dir / "task.md", "Bad Task", "not-started",
                        depends_on=["99-nonexistent"])
-        warnings = _task_io.validate_plan(plan_root)
+        warnings = _task_validate.validate_plan(plan_root)
         # Each warning should be prefixed with the task path
         assert any(w.startswith("04-bad:") for w in warnings)
 
@@ -2115,7 +2205,7 @@ class TestValidatePlan:
         d2 = root_dir / "02-b"
         d2.mkdir()
         _write_task_md(d2 / "task.md", "B", "not-started", depends_on=["01-a"])
-        warnings = _task_io.validate_plan(root_dir)
+        warnings = _task_validate.validate_plan(root_dir)
         assert any("cycle" in w.lower() for w in warnings)
 
 
@@ -3169,49 +3259,49 @@ class TestValidateRevisionNotes:
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
             body="## Objective\n\nx\n\n## Revision Notes\n\nstale note\n",
         )
-        assert _task_io.validate_revision_notes(t)
+        assert _task_validate.validate_revision_notes(t)
 
     def test_approved_without_revnote_no_warn(self):
         t = _task_io.Task(
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
             body="## Objective\n\nx\n",
         )
-        assert _task_io.validate_revision_notes(t) == []
+        assert _task_validate.validate_revision_notes(t) == []
 
     def test_implemented_with_revnote_no_warn(self):
         t = _task_io.Task(
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="implemented",
             body="## Objective\n\nx\n\n## Revision Notes\n\nrework\n",
         )
-        assert _task_io.validate_revision_notes(t) == []
+        assert _task_validate.validate_revision_notes(t) == []
 
     def test_not_started_with_revnote_no_warn(self):
         t = _task_io.Task(
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="not-started",
             body="## Objective\n\nx\n\n## Revision Notes\n\nearly\n",
         )
-        assert _task_io.validate_revision_notes(t) == []
+        assert _task_validate.validate_revision_notes(t) == []
 
     def test_in_progress_with_revnote_no_warn(self):
         t = _task_io.Task(
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="in-progress",
             body="## Objective\n\nx\n\n## Revision Notes\n\nwip\n",
         )
-        assert _task_io.validate_revision_notes(t) == []
+        assert _task_validate.validate_revision_notes(t) == []
 
     def test_approved_with_fenced_header_no_warn(self):
         t = _task_io.Task(
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
             body="## Objective\n\n```\n## Revision Notes\n\nquoted\n```\n",
         )
-        assert _task_io.validate_revision_notes(t) == []
+        assert _task_validate.validate_revision_notes(t) == []
 
     def test_approved_with_empty_revnote_no_warn(self):
         t = _task_io.Task(
             path="01-t", dir_path=Path("/tmp/01-t"), title="T", status="approved",
             body="## Objective\n\nx\n\n## Revision Notes\n\n## Next\n\ny\n",
         )
-        assert _task_io.validate_revision_notes(t) == []
+        assert _task_validate.validate_revision_notes(t) == []
 
 
 class TestValidatePlanRevisionNotes:
@@ -3226,7 +3316,7 @@ class TestValidatePlanRevisionNotes:
         d.mkdir()
         self._write(d / "task.md",
                     _task_md_text("Task", "approved", revnote="stale note"))
-        warnings = _task_io.validate_plan(root)
+        warnings = _task_validate.validate_plan(root)
         assert any("Revision Notes" in w and w.startswith("01-task:")
                    for w in warnings)
 
@@ -3238,7 +3328,7 @@ class TestValidatePlanRevisionNotes:
         d.mkdir()
         self._write(d / "task.md",
                     _task_md_text("Task", "implemented", revnote="rework"))
-        warnings = _task_io.validate_plan(root)
+        warnings = _task_validate.validate_plan(root)
         assert not any("Revision Notes" in w for w in warnings)
 
     def test_validate_plan_silent_on_fenced_header(self, tmp_path):
@@ -3256,7 +3346,7 @@ class TestValidatePlanRevisionNotes:
             "tags: []\ncreated: 2026-01-01\n"
         )
         self._write(d / "task.md", f"---\n{fm}---\n\n{fenced}")
-        warnings = _task_io.validate_plan(root)
+        warnings = _task_validate.validate_plan(root)
         assert not any("Revision Notes" in w for w in warnings)
 
 
@@ -3371,7 +3461,7 @@ class TestPostponedSemantics:
         root_dir.mkdir()
         _write_task_md(root_dir / "task.md", "Parked", "postponed")
         task = _task_io.parse_task(root_dir / "task.md")
-        warnings_out = _task_io.validate_frontmatter(task)
+        warnings_out = _task_validate.validate_frontmatter(task)
         assert not any("status" in w for w in warnings_out)
 
     def test_postponed_leaf_excluded_from_frontier(self, tmp_path):

@@ -76,13 +76,22 @@ Key properties:
 | `parse_body_sections(body)` | Split body on `## ` headers into `{section_name: content}`. Fence-aware: `## ` lines inside a ``` ``` ``` / `~~~` block are body content, not headers. |
 | `serialize_frontmatter(fm)` | Serialize frontmatter dict back to YAML (without `---` delimiters). Field order is fixed. |
 | `parse_task(path)` | Parse a `task.md` file into a `Task` object. Tolerates an unknown status (warns, preserves raw value); strict status validation lives in `task check`. |
-| `write_task(task)` | Write a `Task` back to disk, preserving body content. |
+| `write_task(task)` | Write a `Task` back to disk, preserving body content. Atomic: temp file + `os.replace`, so concurrent readers never see a half-written file. |
 | `walk_plan(plan_root)` | Recursively walk plan directory, return root `Task` with populated children. |
 | `resolve_path(plan_root, task_path)` | Resolve a relative task path to its directory. Rejects paths that escape the root. |
 | `compute_status(task)` | Roll up status from children, excluding parked (`archived` / `postponed`) children from the active set: all (active) approved -> approved; any revise -> revise; any in-progress/implemented -> in-progress; else not-started. When *every* child is parked the branch rolls up to `postponed` if any child is `postponed`, else `archived`. |
 | `compute_frontier(root)` | Return leaf tasks ready for dispatch — status is not-started/in-progress and all sibling deps are approved. |
 | `collect_all_tasks(root)` | Flatten the tree depth-first (excluding root). |
+
+### Validation suite: `_task_validate.py`
+
+The validation rules live in their own module so each rule has one owner and one message source. `invalid_status_message(status)` is the single source for the status-validity message — `parse_task`'s lenient warning and `task check`'s strict `[ERROR]` finding both render it.
+
+| Function | Purpose |
+|---|---|
+| `invalid_status_message(status)` | The single message source for the status-validity rule. |
 | `validate_frontmatter(task)` | Validate status enums, title non-empty, list types. Returns list of warning strings. |
+| `validate_revision_notes(task)` | Warn when an `approved` task still carries a `## Revision Notes` section. |
 | `validate_dependencies(task, siblings)` | Check that all `depends_on` entries reference existing sibling directory names. |
 | `detect_cycles(tasks)` | DFS-based cycle detection among sibling tasks. Returns cycle description strings. |
 | `validate_plan(plan_root)` | Walk the entire plan tree, run all validations at each level. Returns aggregated prefixed warnings. |
@@ -269,6 +278,7 @@ This mode is repo-access-gated by GitHub Actions artifact permissions but is not
 | Script | Purpose |
 |---|---|
 | `_task_io.py` | Shared data layer (not invoked directly) |
+| `_task_validate.py` | Validation suite — one owner per validity rule, single message source (not invoked directly) |
 | `_comments.py` | Comment sidecar data layer — load, re-anchor, resolve, and full-block extraction (not invoked directly) |
 | `task_read.py` | Context-aware task reading with ancestor chain, dependency status, and unresolved comments |
 | `task_comment.py` | Read and resolve task comments: `list`, `list-tree`, `resolve` |

@@ -8,6 +8,7 @@ and status rollup for the directory-tree task tree.
 from __future__ import annotations
 
 import heapq
+import os
 import re
 import warnings
 from dataclasses import dataclass, field
@@ -16,6 +17,7 @@ from pathlib import Path
 
 
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---\n(.*)", re.DOTALL)
+BOM = "﻿"
 
 VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved", "archived", "postponed")
 TASK_ROOT_DIRNAME = "superRA"
@@ -127,18 +129,49 @@ class Task:
 
 
 def _parse_yaml_value(raw: str) -> str | list[str]:
-    """Parse a simple YAML value: scalar string, inline list, or multi-line list."""
+    """Parse a simple YAML value: scalar string, inline list, or multi-line list.
+
+    ``~`` (YAML null) is normalized to an empty string at the scalar level so
+    that ``script: ~`` yields ``Task.script == ""`` (falsy) rather than the
+    literal string ``"~"`` (truthy) which would round-trip as a bogus value.
+    """
     raw = raw.strip()
     if not raw or raw == "~":
-        return raw
+        return ""
 
     if raw.startswith("[") and raw.endswith("]"):
         inner = raw[1:-1]
         if not inner.strip():
             return []
-        return [v.strip().strip("\"'") for v in inner.split(",")]
+        return [v.strip().strip("\"'") for v in _split_inline_list(inner)]
 
     return raw.strip("\"'")
+
+
+def _split_inline_list(inner: str) -> list[str]:
+    """Split an inline-list body on commas outside quotes.
+
+    ``"a, b", c`` yields two items, not three: a comma inside a single- or
+    double-quoted span is item content, not a separator.
+    """
+    items: list[str] = []
+    buf: list[str] = []
+    quote: str | None = None
+    for ch in inner:
+        if quote is not None:
+            if ch == quote:
+                quote = None
+            buf.append(ch)
+        elif ch in "\"'":
+            quote = ch
+            buf.append(ch)
+        elif ch == ",":
+            items.append("".join(buf))
+            buf = []
+        else:
+            buf.append(ch)
+    items.append("".join(buf))
+    return items
 
 
 def _parse_yaml_list_continuation(lines: list[str], start: int) -> tuple[list[str], int]:
@@ -155,13 +188,30 @@ def _parse_yaml_list_continuation(lines: list[str], start: int) -> tuple[list[st
     return result, i
 
 
+def _normalize_text(text: str) -> str:
+    """Strip a UTF-8 BOM and normalize CRLF to LF so FRONTMATTER_RE matches."""
+    if text.startswith(BOM):
+        text = text[len(BOM):]
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
 def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
     """Parse YAML frontmatter and body from a task.md file.
 
-    Returns (frontmatter_dict, body_string).
+    Returns (frontmatter_dict, body_string).  Normalizes CRLF line endings
+    and a leading BOM before matching so hand-edited files on Windows or
+    editors that insert a BOM are handled correctly.
     """
+    text = _normalize_text(text)
     match = FRONTMATTER_RE.match(text)
     if not match:
+        if text.startswith("---"):
+            warnings.warn(
+                "task.md has a '---' line but could not be parsed as frontmatter "
+                "(possible CRLF/BOM mismatch or malformed fence); "
+                "treating as body-only.",
+                stacklevel=3,
+            )
         return {}, text
 
     fm_text = match.group(1)
@@ -228,29 +278,12 @@ def parse_body_sections(body: str) -> dict[str, str]:
 def _has_nonempty_section(body: str, section: str) -> bool:
     """True if ``body`` has a non-empty ``## <section>`` header outside fenced code.
 
-    Like ``parse_body_sections``, this is fence-aware: ``## `` lines that appear
-    inside a ``` ``` ``` / ``~~~`` fenced block are skipped, so a section header
-    that is merely quoted inside an Objective/Results code block does not count.
-    A section is non-empty when at least one non-blank line follows its header
-    before the next top-level header or end of file.
+    Delegates to ``parse_body_sections`` so header matching is identical in
+    both places: exact ``^## (.+)$`` regex outside a fence, same fence toggle
+    rules.  A section is non-empty when its parsed content has at least one
+    non-blank character.
     """
-    lines = body.split("\n")
-    in_fence = False
-    header_re = re.compile(rf"^##[ \t]+{re.escape(section)}[ \t]*$")
-    for i, line in enumerate(lines):
-        if re.match(r"^[ \t]*(```|~~~)", line):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        if header_re.match(line):
-            for nxt in lines[i + 1:]:
-                if re.match(r"^## ", nxt):
-                    break
-                if nxt.strip():
-                    return True
-            return False
-    return False
+    return bool(parse_body_sections(body).get(section, "").strip())
 
 
 def _quote_yaml_scalar(key: str, value: str) -> str:
@@ -262,7 +295,13 @@ def _quote_yaml_scalar(key: str, value: str) -> str:
 
 
 def serialize_frontmatter(fm: dict[str, str | list[str]]) -> str:
-    """Serialize a frontmatter dict back to YAML text (without --- delimiters)."""
+    """Serialize a frontmatter dict back to YAML text (without --- delimiters).
+
+    The frontmatter field set is closed (see
+    ``references/task-file-contract.md`` §Field-by-Field Notes): only the
+    canonical fields below are serialized, so unknown keys a hand edit adds
+    are dropped on the next CLI mutation.
+    """
     lines = []
     field_order = [
         "title", "status",
@@ -288,10 +327,6 @@ def serialize_frontmatter(fm: dict[str, str | list[str]]) -> str:
         if key not in fm:
             continue
         _serialize_field(key, fm[key])
-
-    for key, value in fm.items():
-        if key not in field_order:
-            _serialize_field(key, value)
 
     return "\n".join(lines) + "\n"
 
@@ -324,7 +359,10 @@ def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
         try:
             rel = task_dir.resolve().relative_to(root.resolve())
         except ValueError:
-            rel = Path(".")
+            raise ValueError(
+                f"Task dir {task_dir} is outside the supplied plan root {root}; "
+                f"refusing to parse it as the root task"
+            ) from None
         path = str(rel) if str(rel) != "." else ""
 
     title = str(fm.get("title", ""))
@@ -336,9 +374,11 @@ def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
     # invalid status as a finding; downstream rollup/icon lookups already fall
     # back safely on unrecognized values.
     if status not in VALID_STATUSES:
+        # Lazy import: _task_validate imports from this module at top level,
+        # so the message source is pulled in at call time to avoid a cycle.
+        from _task_validate import invalid_status_message
         warnings.warn(
-            f"Invalid status {status!r} in {task_md_path}; "
-            f"expected one of {list(VALID_STATUSES)}. "
+            f"{task_md_path}: {invalid_status_message(status)}. "
             f"Treating as-is; run `superra task check` to fix.",
             stacklevel=2,
         )
@@ -367,7 +407,12 @@ def parse_task(task_md_path: Path, plan_root: Path | None = None) -> Task:
 
 
 def write_task(task: Task) -> None:
-    """Write a Task back to its task.md file, preserving body content."""
+    """Write a Task back to its task.md file, preserving body content.
+
+    The write is atomic (temp file + ``os.replace``) so a concurrent reader —
+    e.g. the live dashboard's file watcher — never sees a half-written file,
+    and an interrupted multi-file update never leaves a truncated task.md.
+    """
     fm: dict[str, str | list[str]] = {}
     if task.title:
         fm["title"] = task.title
@@ -393,7 +438,9 @@ def write_task(task: Task) -> None:
     content = f"---\n{fm_text}---\n{task.body}"
 
     task_md = task.dir_path / "task.md"
-    task_md.write_text(content, encoding="utf-8")
+    tmp = task_md.with_suffix(".md.tmp")
+    tmp.write_text(content, encoding="utf-8")
+    os.replace(tmp, task_md)
 
 
 def cascade_depends_on_rename(parent_dir: Path, old_slug: str, new_slug: str) -> list[str]:
@@ -458,16 +505,21 @@ def _find_plan_root(task_dir: Path) -> Path | None:
             return current
 
 
+SYNTHETIC_ROOT_TITLE = "(no root task.md)"
+
+
 def walk_plan(plan_root: Path) -> Task:
     """Recursively walk a plan directory and build the task tree.
 
-    Returns the root Task with children populated.
+    Returns the root Task with children populated. A rootless forest (no
+    umbrella ``task.md``) gets a synthetic placeholder root carrying
+    ``SYNTHETIC_ROOT_TITLE``.
     """
     root_task_md = plan_root / "task.md"
     if root_task_md.exists():
         root = parse_task(root_task_md, plan_root)
     else:
-        root = Task(path="", dir_path=plan_root, title="(no root task.md)")
+        root = Task(path="", dir_path=plan_root, title=SYNTHETIC_ROOT_TITLE)
 
     root.children = _walk_children(plan_root, plan_root)
     return root
@@ -518,14 +570,28 @@ def _topological_sort(tasks: list[Task]) -> list[Task]:
 
 
 def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
-    """Find and parse child task directories, sorted topologically by depends_on."""
+    """Find and parse child task directories, sorted topologically by depends_on.
+
+    Per-file errors (``OSError``, ``UnicodeDecodeError``) are caught, warned,
+    and skipped so one unreadable or undecodable ``task.md`` does not abort the
+    whole walk for all readers (dashboard, ``task query``, ``task read``).
+    Mirrors the leniency design used for unknown status values.
+    """
     subdirs = sorted(
         [d for d in directory.iterdir() if d.is_dir() and (d / "task.md").exists()],
         key=lambda d: d.name,
     )
     parsed: list[Task] = []
     for subdir in subdirs:
-        child = parse_task(subdir / "task.md", plan_root)
+        try:
+            child = parse_task(subdir / "task.md", plan_root)
+        except (OSError, UnicodeDecodeError) as exc:
+            warnings.warn(
+                f"Skipping {subdir / 'task.md'}: {exc}; "
+                f"run `superra task check` to diagnose.",
+                stacklevel=2,
+            )
+            continue
         child.children = _walk_children(subdir, plan_root)
         parsed.append(child)
 
@@ -651,6 +717,8 @@ def compute_frontier(root: Task) -> list[Task]:
 def _collect_frontier(task: Task, frontier: list[Task], ancestors_ready: bool) -> None:
     """Recursively collect frontier tasks."""
     if task.is_leaf:
+        if task.is_root and task.title == SYNTHETIC_ROOT_TITLE:
+            return  # synthetic placeholder for a rootless forest, not real work
         if task.status in ("archived", "postponed"):
             return  # parked tasks never appear on the frontier
         if ancestors_ready and task.status in ("not-started", "in-progress"):
@@ -702,172 +770,3 @@ def _collect_all(task: Task, result: list[Task]) -> None:
 
 def today_str() -> str:
     return date.today().isoformat()
-
-
-# ---------------------------------------------------------------------------
-# Validation functions
-# ---------------------------------------------------------------------------
-
-
-def validate_frontmatter(task: Task) -> list[str]:
-    """Validate frontmatter fields of a Task.
-
-    Returns a list of warning strings for any violations.
-    """
-    warnings_out: list[str] = []
-
-    if task.status not in VALID_STATUSES:
-        warnings_out.append(
-            f"invalid status {task.status!r}; expected one of {VALID_STATUSES}"
-        )
-    if not isinstance(task.depends_on, list) or not all(
-        isinstance(v, str) for v in task.depends_on
-    ):
-        warnings_out.append("depends_on must be a list of strings")
-    if not isinstance(task.tags, list) or not all(
-        isinstance(v, str) for v in task.tags
-    ):
-        warnings_out.append("tags must be a list of strings")
-    if not task.title or not task.title.strip():
-        warnings_out.append("title must be a non-empty string")
-
-    return warnings_out
-
-
-def validate_revision_notes(task: Task) -> list[str]:
-    """Warn when an ``approved`` task still carries a ``## Revision Notes`` section.
-
-    The reviewer owns revision-note removal at approval, so an approved task
-    holding a non-empty note is a stale leak. Only ``approved`` warns:
-    ``implemented`` + a note is a legitimate mid-state (a reopened, reworked
-    task awaiting re-review), and earlier states never carry one. Detection is
-    fence-aware so a header quoted inside a code block does not trigger it.
-    """
-    if task.status != "approved":
-        return []
-    if not _has_nonempty_section(task.body, "Revision Notes"):
-        return []
-    return [
-        "approved task still carries a ## Revision Notes section; "
-        "the reviewer should remove it at approval"
-    ]
-
-
-def validate_dependencies(task: Task, siblings: list[str]) -> list[str]:
-    """Check that all depends_on entries reference existing sibling directory names.
-
-    siblings: list of sibling directory names at the same level as task.
-    Returns a list of warning strings for missing references.
-    """
-    sibling_set = set(siblings)
-    warnings_out: list[str] = []
-    for dep in task.depends_on:
-        if dep not in sibling_set:
-            warnings_out.append(
-                f"depends_on {dep!r} does not match any sibling task"
-            )
-    return warnings_out
-
-
-def detect_cycles(tasks: list[Task]) -> list[str]:
-    """Detect circular dependencies among a list of sibling Tasks using DFS.
-
-    Returns a list of cycle description strings.
-    """
-    slug_to_deps: dict[str, list[str]] = {}
-    slug_set = {t.slug for t in tasks}
-    for t in tasks:
-        # Only include deps that exist within this sibling group
-        slug_to_deps[t.slug] = [d for d in t.depends_on if d in slug_set]
-
-    warnings_out: list[str] = []
-    # DFS state: WHITE=0 (unvisited), GRAY=1 (in stack), BLACK=2 (done)
-    WHITE, GRAY, BLACK = 0, 1, 2
-    color: dict[str, int] = {slug: WHITE for slug in slug_to_deps}
-    stack: list[str] = []
-
-    def dfs(node: str) -> bool:
-        """Return True if a cycle was found from node."""
-        color[node] = GRAY
-        stack.append(node)
-        for neighbor in slug_to_deps.get(node, []):
-            if color[neighbor] == GRAY:
-                # Found a cycle — extract the cycle portion from the stack
-                cycle_start = stack.index(neighbor)
-                cycle = stack[cycle_start:] + [neighbor]
-                warnings_out.append("cycle detected: " + " -> ".join(cycle))
-                stack.pop()
-                color[node] = BLACK
-                return True
-            if color[neighbor] == WHITE:
-                if dfs(neighbor):
-                    stack.pop()
-                    color[node] = BLACK
-                    return True
-        stack.pop()
-        color[node] = BLACK
-        return False
-
-    for slug in sorted(slug_to_deps):
-        if color[slug] == WHITE:
-            dfs(slug)
-
-    return warnings_out
-
-
-def validate_plan(plan_root: Path) -> list[str]:
-    """Walk the entire plan tree and run all validations at each level.
-
-    Returns aggregated list of warning strings, each prefixed with the task path.
-    """
-    warnings_out: list[str] = []
-
-    def _validate_level(directory: Path) -> None:
-        subdirs = [
-            d for d in directory.iterdir()
-            if d.is_dir() and (d / "task.md").exists()
-        ]
-
-        tasks_at_level: list[Task] = []
-        for subdir in subdirs:
-            try:
-                task = parse_task(subdir / "task.md", plan_root)
-            except Exception as exc:
-                warnings_out.append(f"{subdir.name}: parse error: {exc}")
-                continue
-            tasks_at_level.append(task)
-
-        sibling_names = [t.slug for t in tasks_at_level]
-
-        for task in tasks_at_level:
-            prefix = task.path if task.path else task.slug
-
-            for w in validate_frontmatter(task):
-                warnings_out.append(f"{prefix}: {w}")
-
-            for w in validate_revision_notes(task):
-                warnings_out.append(f"{prefix}: {w}")
-
-            for w in validate_dependencies(task, sibling_names):
-                warnings_out.append(f"{prefix}: {w}")
-
-        for w in detect_cycles(tasks_at_level):
-            warnings_out.append(f"{directory.name}: {w}")
-
-        for subdir in subdirs:
-            _validate_level(subdir)
-
-    # Validate root task if present
-    root_task_md = plan_root / "task.md"
-    if root_task_md.exists():
-        try:
-            root_task = parse_task(root_task_md, plan_root)
-            for w in validate_frontmatter(root_task):
-                warnings_out.append(f"(root): {w}")
-            for w in validate_revision_notes(root_task):
-                warnings_out.append(f"(root): {w}")
-        except Exception as exc:
-            warnings_out.append(f"(root): parse error: {exc}")
-
-    _validate_level(plan_root)
-    return warnings_out

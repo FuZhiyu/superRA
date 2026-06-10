@@ -30,7 +30,7 @@
         {% set ns.current_lines = ns.current_lines + [line] %}
       {% endif %}
     {% elif line.startswith('## ') and not ns.in_fence %}
-      {% if ns.current_name %}
+      {% if ns.current_name is not none %}
         {% set _ = ns.all_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
       {% endif %}
       {% set ns.current_name = line[3:] %}
@@ -39,7 +39,7 @@
       {% set ns.current_lines = ns.current_lines + [line] %}
     {% endif %}
   {% endfor %}
-  {% if ns.current_name %}
+  {% if ns.current_name is not none %}
     {% set _ = ns.all_sections.append((ns.current_name, ns.current_lines | join('\n'))) %}
   {% endif %}
 
