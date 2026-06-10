@@ -1,6 +1,6 @@
 ---
 title: ".plan/-Native Planning"
-status: approved
+status: revise
 depends_on:
   - agent-protocols
   - handoff-doc
@@ -71,5 +71,5 @@ Updated `skills/planning-workflow/SKILL.md` for `.plan/`-native output:
 
 ## Review Notes
 
-> 1. [MINOR] [SKILL.md:167](../../skills/planning-workflow/SKILL.md#L167) says "prior APPROVED status invalidation" — inconsistent with the rest of the file which uses lowercase `approved` for frontmatter values. Should read "prior `approved` status invalidation" for consistency.
-
+> 1. [MAJOR] Stale `## Review Notes` survived approval, with a doubly broken citation (`../../skills/planning-workflow/SKILL.md#L167` — wrong link depth, resolving under `superRA/task-tree/`, and the skill was renamed `superplan`); an approved task carried an unverifiable open item. Replaced per the replace-don't-stack rule; remove this section at re-approval.
+> 2. [MINOR] `## Objective` targets `skills/planning-workflow/SKILL.md` as current; the skill is now [skills/superplan/SKILL.md](../../../../skills/superplan/SKILL.md). Add a "formerly planning-workflow" note (see `integ-workflow`'s pattern) or update the path.
