@@ -28,3 +28,9 @@ Three documentation files updated to surface the live dashboard and `.plan/serve
 1. **`internals.md` §Dashboard** ([internals.md:168](skills/task-tree/references/internals.md#L168)) — rewrote from static-generation description to live-server description; cross-references SKILL.md §Dashboard as authoritative; updated Script Inventory entry for `plan_dashboard.py` to mention `serve` and deprecated `generate`.
 2. **`SKILL.md` §Dashboard** — already updated by the serve-shortcut implementer with `.plan/serve` as primary command, `uv run` as agent-facing form, and explanation of the shortcut script. No further changes needed.
 3. **`README.md`** ([README.md:52](README.md#L52)) — added one-line dashboard mention in the workflow overview, between the invocation keywords and key principles sections.
+
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR item only; status stays `approved`.)*
+
+1. **MINOR** — the Results describe a doc surface that has since been superseded: `.plan/serve` no longer exists (root renamed to `superRA/`), and the README/SKILL.md dashboard docs now describe the background-by-default `superra dashboard` lifecycle ([README.md:54](../../../../README.md#L54)) per [serve-lifecycle](../serve-lifecycle/task.md)'s doc updates. Add a one-line supersession note so this approved record doesn't read as the current doc state. The Results' citation links are also repo-root-relative rather than task-relative (they resolve to `…/serve-docs/skills/…`); fix the `../` depth while editing.
