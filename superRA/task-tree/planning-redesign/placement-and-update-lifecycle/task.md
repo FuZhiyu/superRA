@@ -1,6 +1,6 @@
 ---
 title: "Cross-Stage Placement + the Update-Task Lifecycle"
-status: approved
+status: revise
 depends_on:
   - entry-and-placement
   - consolidation
@@ -104,3 +104,8 @@ The safe-execution + detection substrate (lossless `depends_on` rewire hook, adv
 - `superra task tree --root superRA` and `superra task read <this task>` both succeed (CLI unaffected — edits are skill prose).
 - DRY/Necessity gate applied line by line per the dispatch (skill-creator unavailable): no `placement.md` created (would duplicate the owner already pointed-at); superplan/superintegrate edits are pointers to §Placing Work, not paraphrases; the only restated content is the one-line "update task → Merge by default" cue at each stage's entry point, kept because the alternative is forcing a redundant cross-reference load at the decision site.
 - No stale "create a sibling" / two-step / same-level-only placement language remains in the touched files (grep confirms the sole surviving "same-level" mention is the corrected line that explicitly negates same-level-only scope).
+
+## Review Notes
+
+1. **[MAJOR]** Stale Results authority: the headline finding cites [`task-tree/references/planning.md` §Placing Work](../../../../skills/task-tree/references/planning.md) as the "authoritative placement rewrite", but that file was deleted by `task-tree-design/01-reference-ownership`; the placement policy now lives in [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md). The durable record points readers at a dead owner with no historical annotation. Fix: annotate the citations as historical and name the current owner.
+2. **[MINOR]** The Results promise "their fold-back happens at integration, per this task's own lifecycle rule" — that fold-back has not happened: this task and the superseded `entry-and-placement` sibling survive as standalone approved update tasks, the exact pattern this task's lifecycle rule expires at consolidation/integration. Fix: execute the merge/prune at the next consolidation gate.
