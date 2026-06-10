@@ -31,3 +31,9 @@ Consider a template file under skills/task-tree/scripts/templates or a task-tree
 
 - `uv run --project skills/task-tree --with pytest python -m pytest skills/task-tree/scripts/test_task_tree.py -k DashboardArtifactWorkflow` — 4 passed.
 - `uv run --project skills/task-tree --with pytest python -m pytest skills/task-tree/scripts/test_task_tree.py` — 240 passed, 11 skipped, 1 expected invalid-status warning from the existing diagnostic test.
+
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR item only; status stays `approved`.)*
+
+1. **MINOR** — the Results say the template exports through `uv run --project skills/task-tree superra dashboard export`, but the current [superra-dashboard-artifact.yml](../../../../../skills/task-tree/scripts/templates/superra-dashboard-artifact.yml) runs `uv run --script skills/task-tree/scripts/plan_dashboard.py dashboard export --root … --repo-file-base …` (changed when CLI source resolution moved to `uv run --script`). Refresh the command claim in place so the record matches the shipped template.
