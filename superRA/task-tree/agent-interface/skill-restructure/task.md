@@ -75,4 +75,5 @@ Also updated:
 
 ## Review Notes
 
-No blocking findings. Three-tier split is clean and well-targeted. SKILL.md (Tier 1) covers consumer needs: core concepts, reading, editing, ownership, format, command surface. `references/planning.md` (Tier 2) covers planner discipline. `references/internals.md` (Tier 3) accurately documents the data layer including new functions. CATEGORIES.md and README.md entries updated consistently.
+> 1. [MINOR] Prior `## Review Notes` (approval prose, no active items) survived approval; the contract removes the section content entirely at APPROVE. Replaced per the replace-don't-stack rule; remove this section at the next approval pass.
+> 2. [MINOR] Objective/Results present `references/planning.md` as a live deliverable; the file was since dissolved into [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) and `superplan/references/task-tree-design.md`. Lightly clean to historical framing.
