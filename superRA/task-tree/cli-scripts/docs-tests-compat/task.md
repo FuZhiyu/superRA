@@ -47,3 +47,12 @@ Apply the AGENTS.md DRY and Necessity gate to instruction edits. Replace path ex
 - `rg "superRA/serve|skills/task-tree/scripts|plan_dashboard.py|task_read.py|task_query.py|task_check.py" skills agents hooks README.md` — remaining hits are intentional compatibility or implementation references: task-tree internals inventory, script usage text, script/test comments, direct-script compatibility tests, and vendor/template implementation notes; no active normal-use instruction still teaches `superRA/serve` or `<skill-dir>/scripts/...`.
 - `python3 skills/task-tree/scripts/task_check.py --plan-root superRA` — all checks passed.
 - `git diff --check` — no whitespace errors.
+
+## Review Notes
+
+Retrospective audit notes (all MINOR; status unchanged per orchestrator instruction):
+
+> 1. [MINOR] Results ([task.md:40](task.md#L40)) claim "CLI tests now cover packaged dashboard export through `uv run --project ... superra`" — those assertions were replaced with `uv run --script` forms by the `cli-source-resolution` sibling; the Results describe tests that no longer exist. Refresh the claim or add a supersession pointer.
+> 2. [MINOR] [commands.md §Bulk status operations](../../../../skills/task-tree/references/commands.md#L23) omits `superra task status fix`, although the task-file contract assigns "bulk status ops" to commands.md. Add the line.
+> 3. [MINOR] [SKILL.md:89](../../../../skills/task-tree/SKILL.md#L89) paraphrases commands.md §Move semantics (carries directory state, rewrites links, validates edges) before pointing to it — the repo's DRY gate accepts a pointer, not a paraphrase. Trim to the pointer plus the no-raw-`mv` rule.
+> 4. [MINOR] [task-file-contract.md:36](../../../../skills/task-tree/references/task-file-contract.md#L36) §Hierarchy Management still leads with `task rename` as the mutation command, while commands.md teaches `task move` as canonical and `rename` as a same-parent compatibility alias. Align the wording.
