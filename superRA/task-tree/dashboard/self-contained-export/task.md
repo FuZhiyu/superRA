@@ -75,3 +75,9 @@ Vendored under [`skills/task-tree/scripts/vendor/`](../../../../skills/task-tree
 - The whole-tree default-output (`dashboard.html` written into `superRA`, gitignored) is not committed — regenerate-only.
 - The downloaded-file figure-portability limitation from `[subtree-export](../subtree-export/task.md)` is now **resolved** for embedded figures: figures travel as base64 data URIs, so a file moved to Downloads still shows them. The relative-path fallback only fires for srcs with no embedded bytes.
 - `plan_dashboard.py` and `base.html` are not in the generated-from-spec set; no `sync_codex_agents.py` run is needed.
+
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR item only; status stays `approved`.)*
+
+1. **MINOR** — version split-brain between serve and export: the live page loads floating major CDN tags ([base.html:21-24](../../../../skills/task-tree/scripts/templates/base.html#L21): `markdown-it@14`, `katex@0.16`, `texmath@1`) while the export inlines the exact pins recorded in [vendor/README.md](../../../../skills/task-tree/scripts/vendor/README.md) (14.2.0 / 0.16.47 / 1.0.0). The CDN can advance within a major silently, after which serve and export render with different library versions and the README's "pinned versions match the CDN tags" claim drifts; nothing couples the two beyond that sentence. Pin the CDN tags to the exact vendored versions and add a small guard test asserting the tag versions in `base.html` match the vendor README table.
