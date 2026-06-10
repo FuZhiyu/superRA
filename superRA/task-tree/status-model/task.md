@@ -1,6 +1,6 @@
 ---
 title: "Task status model"
-status: approved
+status: revise
 depends_on:
   - agent-interface
 tags:
@@ -149,3 +149,11 @@ Output: text (default) or `--json`. Exit code 0 if clean, 1 if issues found.
 The task tree now uses a single `status` field across task files, CLI commands, dashboard rendering, workflow protocols, migration tooling, and diagnostics. The status lifecycle is `not-started` -> `in-progress` -> `implemented` -> `approved`, with `revise` for review fix rounds and orchestrator/researcher scope decisions for `archived` and `postponed`.
 
 `postponed` was folded into this status-model owner during consolidation. Its implementation records are now the status-model subtasks for core semantics, rendering surfaces, and documentation: [11-postponed-core-semantics](11-postponed-core-semantics/task.md), [12-postponed-rendering-surfaces](12-postponed-rendering-surfaces/task.md), and [13-postponed-docs](13-postponed-docs/task.md). The key distinction is that `archived` satisfies dependents because the work is removed from scope, while `postponed` parks the work and blocks dependents until resumed.
+
+## Review Notes
+
+1. **MAJOR** — [task.md §Phase Inference](task.md) claims "No `## Workflow Status` section in task files. The dashboard computes and displays phase from tree state," but no phase computation exists anywhere in [plan_dashboard.py](../../../skills/task-tree/scripts/plan_dashboard.py), [task_query.py](../../../skills/task-tree/scripts/task_query.py), or the templates (`grep -rn phase skills/task-tree/scripts/` returns nothing outside tests). No subtask owned it — [07-dashboard](07-dashboard/task.md)'s objective never mentions phase — and `## Results` does not flag the gap, so this approved root rolls up spec scope that was never delivered. Fix: implement phase display under a new task, or rewrite §Phase Inference to say phase is inferred by orchestrators/readers from the status distribution and record in `## Results` that no tooling computes it.
+2. **MINOR** — Dual self-declared authority: the Design Spec header says "Authoritative reference for the task status model," while [CLAUDE.md §Ownership Boundaries](../../../CLAUDE.md) assigns "status enum/lifecycle" to [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md), which restates the lifecycle without pointing here. The two copies have already drifted (the contract omits `approved → revise`; see [05-task-tree-docs](05-task-tree-docs/task.md) `## Review Notes`). Fix: demote this spec to a design-time record that names the living contract as authoritative, or make the contract point here.
+3. **MINOR** — §Diagnostic Tool says "Three checks," but the live tool has a fourth `placement` category ([cli.py:479](../../../skills/task-tree/scripts/cli.py#L479)). Stale spec content; update the section or note that the spec describes the tool at design time only.
+4. **MINOR** — §State Machine transition ownership is enforced nowhere in code: only enum membership ([_task_io.py:719](../../../skills/task-tree/scripts/_task_io.py#L719)), the cascade allow-list, and the branch-status warning are checked, so e.g. `not-started → approved` in one edit passes silently and `task_check.py` has no transition diagnostic. If prose-only enforcement is the intended trade-off, state it in the spec; otherwise add a warn-only hook or `task_check` category for skipped states.
+5. **MINOR** — Rollup rule 4 ([_task_io.py:587](../../../skills/task-tree/scripts/_task_io.py#L587)) maps all-`implemented` children to an `in-progress` parent, so a subtree fully ready for review is indistinguishable at branch level from one still being worked — and with item 1 unimplemented, no surface compensates. Consider an `implemented` rollup case or deliver the phase display.
