@@ -1,6 +1,6 @@
 ---
 title: "Update main-agent.md for .plan/-native operations"
-status: approved
+status: revise
 depends_on:
   - skill-rewrite
 tags: []
@@ -68,3 +68,7 @@ The `revision-notes` sibling task handles the same concept change in all OTHER f
 - `grep -n 'PLAN\.md\|RESULTS\.md\|User Decisions Log\|## Decisions\|## Workflow Status\|Changing Plans' main-agent.md` returns only the backward-compatibility migration line (intentional).
 - No checkbox, unchecked, or "plan file" references remain.
 - All cross-references to planning-workflow use the updated section name (`§User Feedback and Changing the Task Tree`).
+
+## Review Notes
+
+1. **[MAJOR]** Broken Results links: `## Results` cites `[skills/using-superRA/references/main-agent.md](skills/using-superRA/references/main-agent.md)` — task-dir-relative, so it has never resolved from this file (the dashboard renders a dead link). Fix: [../../../../skills/using-superRA/references/main-agent.md](../../../../skills/using-superRA/references/main-agent.md).
