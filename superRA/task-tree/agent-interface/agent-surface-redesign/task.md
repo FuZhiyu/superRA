@@ -1,6 +1,6 @@
 ---
 title: "Agent-Facing Surface Redesign — Lean Relocation + Role-Spec Restructure"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -30,3 +30,7 @@ Redesign the agent-facing surfaces — the two role specs (`agents/implementer.m
 **Success criterion for the whole subtree:** a dispatched implementer or reviewer that loads only `using-superRA` (its single frontmatter preload) can correctly read and edit its assigned `task.md` without loading `task-tree`; no shared content is duplicated across more than one owner; and — the load-bearing invariant — **no knowledge is lost for any agent**. Removing a duplicate is fine (the single surviving copy must stay reachable); removing or stranding the only copy is not. Task `09-coverage-audit` proves this invariant against git snapshots of both phases' pre-round surfaces.
 
 ## Results
+
+## Review Notes
+
+> 1. [MAJOR] `## Results` is empty on this approved 9-child redesign parent. The objective promises "one coherent net delta", but no rollup exists and readers must reverse-engineer the outcome from nine children. Add the matured narrative with links to child evidence per the Results lifecycle in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) §Results Shape.
