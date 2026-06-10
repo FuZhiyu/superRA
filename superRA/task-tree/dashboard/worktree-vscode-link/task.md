@@ -1,6 +1,6 @@
 ---
 title: "Worktree-aware VS Code task links in the dashboard"
-status: implemented
+status: approved
 depends_on:
   - worktree-selector
   - vscode-line-anchors
@@ -51,7 +51,3 @@ Every `vscode://file/` link the dashboard emits now resolves against the **curre
 - **Delink guard.** `taskFileVscodeHref` carries no `/superRA/` literal — pinned by [test_dashboard.py:2060-2073](../../../../skills/task-tree/scripts/test_dashboard.py#L2060).
 - **Test suite.** The dashboard suite passes on the current tree (see the full-suite run recorded under [02-file-link-consistency](../live-server/path-basis-consistency/02-file-link-consistency/task.md) and serve-lifecycle).
 
-## Review Notes
-
-1. **MAJOR** — both the Objective and the Results describe retired mechanics as the current implementation: `POST /api/worktree/switch`, the server field `_current_worktree_path`, `fetchWorktrees()` assigning `PROJECT_ROOT = data.current`, and the `vscode://file/' + PROJECT_ROOT + '/superRA/' + …` href convention. None of this exists anymore: the switch endpoint and `current` field were removed by [multi-worktree-serving](../multi-worktree-serving/task.md) task 03 (`/api/worktrees` now returns `launch_wt_id` + per-entry `wt_id`/`plan_root`, [plan_dashboard.py:1149-1217](../../../../skills/task-tree/scripts/plan_dashboard.py#L1149)), and the hardcoded `superRA/` href base was delinked to `RESOLVED_ROOT`/`ROOT_PREFIX` by [02-file-link-consistency](../live-server/path-basis-consistency/02-file-link-consistency/task.md) — [test_dashboard.py:2060-2073](../../../../skills/task-tree/scripts/test_dashboard.py#L2060) now asserts the `/superRA/` literal is *absent* from `taskFileVscodeHref`. The worktree-following behavior this task delivered still exists (now via `_wtResolvedRoots` re-pointing `PROJECT_ROOT`/`RESOLVED_ROOT`/`ROOT_PREFIX` per `?wt=`, [base.html:3805-3830](../../../../skills/task-tree/scripts/templates/base.html#L3805)); per the stale-content checklist, rewrite the Results in place to the current mechanism with a one-line supersession note, so a reader verifying this approved task against the code does not find the claimed implementation absent.
-   → implemented: rewrote `## Results` (added a supersession blockquote; "What changed (current mechanism)" now describes the `?wt=` per-request follow via `_wtResolvedRoots`/`_wtProjectRoots` re-pointing `PROJECT_ROOT`/`RESOLVED_ROOT`/`ROOT_PREFIX`, and the `RESOLVED_ROOT`/`ROOT_PREFIX` href bases with no hardcoded `superRA/`) ([task.md:35](task.md)); also de-staled the §Objective "The bug"/"The fix"/"The button" paragraphs to the current mechanism with a supersession note ([task.md:13](task.md)).
