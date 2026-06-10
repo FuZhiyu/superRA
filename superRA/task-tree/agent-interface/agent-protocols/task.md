@@ -66,3 +66,8 @@ All three files updated for `.plan/`-native operation:
 - Review Status Reference table uses frontmatter field names (`review_status: approved`)
 - Decision logging points to task's `## Decisions` section instead of PLAN.md header
 
+## Review Notes
+
+> 1. [MINOR] `## Results` states reviewer.md instructs "Edit `review_status:` in frontmatter directly" ([task.md:58](task.md#L58)) as shipped role behavior; `review_status` was later removed from the schema (now a silently-ignored legacy field, [_task_io.py:345](../../../../skills/task-tree/scripts/_task_io.py#L345)) and from the spec — the reviewer now owns `status:` transitions. Lightly clean to historical framing.
+> 2. [MINOR] In the dispatch surface this task shipped, [agent-orchestration/SKILL.md:91](../../../../skills/agent-orchestration/SKILL.md#L91) narrates the assignee's bundle protocol (`superra task read` per path, task-local sections, independent status transitions and commits) already owned by the role specs, and [agent-orchestration/SKILL.md:93](../../../../skills/agent-orchestration/SKILL.md#L93) opens by restating contract-owned context inheritance. The orchestrator-actionable parts (bundle eligibility, no aggregate approval, name the dependency `## Results` in steering) suffice; trim the narration per the DRY/Necessity gate.
+> 3. [MINOR] The §Review Status Reference table ([agent-orchestration/SKILL.md:203](../../../../skills/agent-orchestration/SKILL.md#L203)) omits `archived` from the status enum it maps (the contract enum has seven values) and paraphrases contract-owned status semantics in its "Meaning" column. Add the missing row; keep the orchestrator-action column and lean on the contract for meaning.
