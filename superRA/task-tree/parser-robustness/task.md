@@ -1,6 +1,6 @@
 ---
 title: "Parser robustness: tolerate unknown status, fence-aware section parsing"
-status: revise
+status: implemented
 depends_on:  []
 tags: []
 created: 2026-06-03

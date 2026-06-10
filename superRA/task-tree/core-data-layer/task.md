@@ -1,6 +1,6 @@
 ---
 title: "Core Data Layer"
-status: revise
+status: implemented
 depends_on: []
 tags: []
 script: skills/task-tree/scripts/_task_io.py
