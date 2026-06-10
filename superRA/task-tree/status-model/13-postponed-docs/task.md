@@ -1,6 +1,6 @@
 ---
 title: "Document the postponed status"
-status: approved
+status: revise
 depends_on:
   - 11-postponed-core-semantics
 tags: []
@@ -47,3 +47,10 @@ The authoritative behavior is in this feature's root `task.md` semantics table a
 `~/.venv/bin/pytest skills/task-tree/scripts/test_task_tree.py -q` → **215 passed**, matching the `01-core-semantics` baseline after that task's `task_check` regression was added (this task is docs-only; no code touched here). The DRY/Necessity gate was self-applied line by line: each added line either completes a stale enum or conveys a behavior-shaping, non-default fact (parked statuses are orchestrator-set; `postponed` blocks dependents while `archived` does not; resume via `not-started`); the full semantics table stays in the feature root `task.md` rather than being paraphrased here. The `RELEASE-NOTES.md` bullet is a user-facing changelog summary, not a spec restatement.
 
 **Final diff self-check:** `git diff 876178e3..HEAD`; this task's surviving hunks are the prose-doc mirror (`skills/task-tree/SKILL.md`, `references/planning.md`, `references/internals.md`, `skills/agent-orchestration/SKILL.md`) plus the `RELEASE-NOTES.md` `[Unreleased]` entry added this turn. No suspicious hunks — the `skills/*` edits are doc-mirror prose of the implemented behavior owned by 01/02; no version-manifest change.
+
+## Review Notes
+
+The documentation edits themselves landed (the `postponed` prose is live in the contract, internals.md, and the orchestration table); the findings below are record-integrity issues from this task's fold-in to the status-model tree.
+
+1. **MAJOR** — Both the objective and `## Results` reference the pre-fold-in tree: "implemented in `01-core-semantics`," "the `01-core-semantics` baseline," "from tasks 01/02," and "the generated-artifact grep from the root `## Conventions`" — no `01-core-semantics` task or root `## Conventions` section exists anywhere under [the status-model tree](../task.md); the referenced tasks are now [11-postponed-core-semantics](../11-postponed-core-semantics/task.md) and [12-postponed-rendering-surfaces](../12-postponed-rendering-surfaces/task.md). In a tree whose siblings are numbered 01–13, "tasks 01/02" actively misidentifies [01-design](../01-design/task.md) and [02-data-layer](../02-data-layer/task.md) as the owners of the postponed implementation. Fix: replace the stale slugs in place with the current sibling names (Results); flag the objective's stale references to the orchestrator/planner for the same in-place replacement (objective is planner-owned). Same fold-in artifact class as [11-postponed-core-semantics](../11-postponed-core-semantics/task.md) `## Review Notes`.
+2. **MINOR** — Results item 2 cites `[planning.md:122](../../../../../skills/task-tree/references/planning.md#L122)` as an updated site, but `skills/task-tree/references/planning.md` no longer exists (content absorbed into [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md)); the surviving citations also share tasks 11/12's broken 5-up prefix (correct is 4-up), and the cited line anchors have drifted (the orchestration table is now near line 204, `VALID_STATUSES` in internals.md near line 93). Fix: repoint the planning.md citation to the contract and mechanically correct prefixes/anchors.
