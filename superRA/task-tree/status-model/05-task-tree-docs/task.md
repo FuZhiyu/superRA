@@ -1,6 +1,6 @@
 ---
 title: "Update task-tree skill docs"
-status: implemented
+status: approved
 depends_on:
   - 01-design
 tags:
@@ -52,15 +52,3 @@ All three task-tree documentation files updated to reflect the unified status mo
 - Removed `VALID_REVIEW_STATUSES` and `VALID_INTEGRATION_STATUSES` from enum constants; added `archived` to `VALID_STATUSES`
 - Updated migration status inference to describe the unified mapping: `integration_status` → `review_status` → checkbox inference priority chain
 
-## Review Notes
-
-Retrospective audit of the task-tree doc surfaces this task owns (current findings; some arose after this task's original approval as the docs evolved).
-
-1. **MAJOR** — [task-file-contract.md:19](../../../../skills/task-tree/references/task-file-contract.md#L19), the CLAUDE.md-designated owner of the status enum/lifecycle, omits the `approved → revise` transition that the parent [Design Spec](../task.md), [agents/reviewer.md:83](../../../../agents/reviewer.md#L83) ("you own `implemented/approved → revise`"), and [direct-mode-reviewer.md:87](../../../../skills/using-superRA/references/direct-mode-reviewer.md#L87) all carry. The owner copy is the incomplete one, so consumers of the authoritative doc get a narrower reviewer ownership than the agents actually exercise. Fix: add the integration-round `approved → revise` (reviewer-owned) to the contract's status line.
-   → implemented: added `approved` to `revise` (integration round, reviewer-owned) to task-file-contract.md line 19 ([task-file-contract.md:19](../../../../skills/task-tree/references/task-file-contract.md#L19)).
-2. **MAJOR** — [task-file-contract.md:19](../../../../skills/task-tree/references/task-file-contract.md#L19) says re-entry "tasks in the transitive downstream closure of a modified task have their status *cleared* by default" — cleared to what is undefined, and the other surfaces disagree concretely: [superplan/SKILL.md:215](../../../../skills/superplan/SKILL.md#L215) resets to `not-started` "by orchestrator judgment," while [task-tree-design.md:89](../../../../skills/superplan/references/task-tree-design.md#L89) and [consolidation.md:68](../../../../skills/superplan/references/consolidation.md#L68) set affected tasks to `revise`. `not-started` re-enters the frontier; `revise` awaits adjudication — materially different orchestrator behavior. Fix: pick one target status and one default-vs-judgment rule, state it in the contract, and have the superplan surfaces point to it (superplan-side fix tracked in [06-protocol-updates](../06-protocol-updates/task.md) `## Review Notes`).
-   → implemented: contract now says "orchestrator resets…to `not-started` by judgment" ([task-file-contract.md:19](../../../../skills/task-tree/references/task-file-contract.md#L19)); task-tree-design.md:89 and consolidation.md:68 updated to use `not-started` ([task-tree-design.md:89](../../../../skills/superplan/references/task-tree-design.md#L89), [consolidation.md:68](../../../../skills/superplan/references/consolidation.md#L68)).
-3. **MINOR** — [SKILL.md:20](../../../../skills/task-tree/SKILL.md#L20) "a parent is `approved` only when all children are `approved`" is false under parked-child exclusion: `compute_status` returns `approved` for 2 approved + 1 archived ([_task_io.py:578](../../../../skills/task-tree/scripts/_task_io.py#L578)). Fix: "all *active* (non-parked) children," or point to the contract instead of restating.
-   → implemented: rewrote SKILL.md:20 to "all active (non-parked) children are `approved`; `archived` and `postponed` children are excluded from the rollup computation" ([SKILL.md:20](../../../../skills/task-tree/SKILL.md#L20)).
-4. **MINOR** — [commands.md §Bulk status operations](../../../../skills/task-tree/references/commands.md) documents `status propagate` and `status cascade` but not `superra task status fix` ([cli.py:530](../../../../skills/task-tree/scripts/cli.py#L530)), despite commands.md owning the full mutation command surface per CLAUDE.md. Fix: add a one-line `status fix` entry.
-   → implemented: added `superra task status fix` to commands.md §Bulk status operations with a one-line description ([commands.md §Bulk status operations](../../../../skills/task-tree/references/commands.md)).

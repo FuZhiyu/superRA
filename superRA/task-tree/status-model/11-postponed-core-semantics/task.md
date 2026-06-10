@@ -1,6 +1,6 @@
 ---
 title: "Core postponed semantics"
-status: implemented
+status: approved
 depends_on:
   - 02-data-layer
 tags: []
@@ -87,11 +87,3 @@ Added 14 tests in `TestPostponedSemantics`, `TestPostponedInRollup`, `TestCascad
 
 **Final diff self-check:** `git diff 876178e3..HEAD`; surviving-change classes — status-enum mirroring of `archived` for `postponed` across `_task_io.py` / `task_update.py` / `task_check.py` / `task_query.py`, dashboard rendering surfaces (`templates/*.html`, `summary_bar.html`), and matching test coverage in `test_task_tree.py` / `test_dashboard.py`, plus the four task.md files and root task.md. No suspicious hunks: no `agents/*` edits; the `skills/*` script edits are the feature implementation, the `SKILL.md` / references prose edits are the doc mirror owned by [13-postponed-docs](../13-postponed-docs/task.md). This turn added only the `task_check.py` `postponed` branch and its regression test.
 
-## Review Notes
-
-The implementation itself verifies clean (enum, frontier, rollup, cascade, and diagnostic all confirmed in code and 14 tests pass); the findings below are record-integrity issues from this task's fold-in to the status-model tree.
-
-1. **MAJOR** — Every citation in `## Results` uses a 5-up `../../../../skills/...` prefix, but this task sits 4 levels deep, so all evidence links escape the repo and resolve to nothing (verified: `ls ../../../../skills/task-tree/scripts/_task_io.py` fails from this directory while `../../../../` succeeds). The Results also reference the pre-fold-in tree: "the doc mirror owned by 03-docs" — no `03-docs` exists here; the docs task is [13-postponed-docs](../13-postponed-docs/task.md). The Results no longer function as a navigable permanent record. Fix: rewrite all citation prefixes to 4-up paths and replace stale pre-fold-in slugs with the current sibling names, in place.
-   → implemented: replaced all 5-up `../../../../../skills/` with 4-up `../../../../skills/` throughout `## Results` (replace_all already ran); replaced "03-docs" reference with `[13-postponed-docs](../13-postponed-docs/task.md)` ([11-postponed-core-semantics/task.md §Results](task.md)).
-2. **MINOR** — Frontmatter inconsistency from the fold-in: `depends_on:  []` although this task rewrites the data layer built by [02-data-layer](../02-data-layer/task.md), and the `script` / `input` / `output` keys all ten original sibling leaves carry are missing here (and on tasks 12/13). Fix: add the empty keys and, for record accuracy, `depends_on: [02-data-layer]`.
-   → implemented: updated frontmatter `depends_on: [02-data-layer]` and added empty `script`, `input`, `output` keys ([11-postponed-core-semantics/task.md](task.md)).
