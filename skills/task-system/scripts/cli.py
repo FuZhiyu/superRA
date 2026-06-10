@@ -258,11 +258,30 @@ def _run_dep(args: argparse.Namespace) -> None:
     _module_main("task_link", argv)
 
 
-def _run_rename(args: argparse.Namespace) -> None:
+def _run_task_move(args: argparse.Namespace) -> None:
     argv = _checked_task_root_args(args.root, args.from_path, args.to_path) + [
         "--from", args.from_path, "--to", args.to_path,
     ]
     _module_main("task_rename", argv)
+
+
+def _run_move(args: argparse.Namespace) -> None:
+    _run_task_move(args)
+
+
+def _run_rename(args: argparse.Namespace) -> None:
+    root_value = _resolved_root_value(args.root)
+    plan_root = Path(root_value)
+    try:
+        from_parent = resolve_path(plan_root, args.from_path).parent
+        to_parent = resolve_path(plan_root, args.to_path).parent
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+    if from_parent != to_parent:
+        print("Error: task rename is same-parent only; use `task move` for cross-parent moves", file=sys.stderr)
+        sys.exit(1)
+    _run_task_move(args)
 
 
 def _run_comment(args: argparse.Namespace) -> None:
@@ -552,7 +571,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     _set_runner(dep_remove, _run_dep)
 
-    rename = task_sub.add_parser("rename", help="Rename a task within its parent")
+    move = task_sub.add_parser("move", help="Move or rename a task directory")
+    move.add_argument("from_path", help="Current task path")
+    move.add_argument("to_path", help="New task path")
+    move.add_argument(
+        "--root",
+        default=None,
+        help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
+    )
+    _set_runner(move, _run_move)
+
+    rename = task_sub.add_parser("rename", help="Compatibility alias for task move")
     rename.add_argument("from_path", help="Current task path")
     rename.add_argument("to_path", help="New task path")
     rename.add_argument(

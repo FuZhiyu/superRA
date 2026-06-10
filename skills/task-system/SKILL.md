@@ -86,5 +86,5 @@ Field-by-field anatomy and body-section ownership live in `references/task-file-
 | View the dashboard | `./superRA/superra dashboard` (background server, reuses a running one; `--foreground`, `dashboard stop`). Mechanics in `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
-A plain `mv` of a task directory carries the whole subtree, and the PostToolUse hook revalidates and propagates status. The rules for which moves auto-cascade `depends_on` versus strand a reference for re-wiring live in `references/commands.md §Rename / move a task`.
+Intentional task path changes go through `superra task move` (or `task rename` for same-parent compatibility), not raw `mv` / `git mv`. The move command preserves task-directory state, rewrites local Markdown links from pre-move context, and validates dependency edges before mutation. The PostToolUse hook is only a guardrail for accidental raw filesystem moves; see `references/commands.md §Move / rename a task`.
 <!-- no need to route back to using superra -->

@@ -49,7 +49,8 @@ superra task status propagate [--root superRA]
 superra task result add <path> [...]
 superra task dep add <path> <sibling-slug>
 superra task dep remove <path> <sibling-slug>
-superra task rename <from-path> <to-path>
+superra task move <from-path> <to-path>
+superra task rename <from-path> <to-path>  # same-parent compatibility alias
 superra task comment list <path> [--all] [--json]
 superra task comment resolve <path> <comment-id>
 superra task comment tree [--json]
@@ -72,10 +73,12 @@ superra task hook post-tool-use
 
 **Local development follow-up:** root `CLAUDE.md` now instructs agents to use `uv run --project skills/task-system ...` for this checkout, with `uvx --refresh --from ./skills/task-system ...` reserved for install-style smoke tests. The repo-local `superRA/superra` wrapper resolves its own repo root and dispatches through that local `uv run --project` path.
 
+**Task move command:** `superra task move FROM TO` is now the canonical path for intentional task path changes, while `superra task rename FROM TO` remains a same-parent compatibility alias. The move implementation carries the task directory, rewrites local Markdown links using pre-move context, cascades same-parent sibling `depends_on` rewrites, and rejects cross-parent moves that would strand old-sibling or moved-task dependencies. User guidance in `skills/task-system/SKILL.md` and `skills/task-system/references/commands.md` now teaches raw `mv` / `git mv` as recovery-only, with the PostToolUse hook documented as a guardrail rather than the canonical move mechanism. Focused CLI tests cover cross-parent link rewriting, dependency-stranding rejection, rootless forest destination moves, same-parent rename dependency cascading, and cross-parent rename rejection.
+
 ### Key Findings
 - 6 scripts, each 65–210 lines, all following argparse + function pattern
 - `task_create.py` validates parent exists, no duplicates, deps are existing siblings
 - `task_link.py` includes `_has_transitive_dep()` for cycle detection
-- `task_rename.py` uses parse-first approach (validate all siblings before renaming)
+- `task_rename.py` preserves task-tree invariants for same-parent renames and cross-parent moves
 - `task_query.py` provides tree (Unicode status icons), frontier (dispatch-ready leaves), DAG (Mermaid with classDef)
 - `tree_to_json()` includes `objective`, `results`, `decisions`, `review_notes` parsed from body sections
