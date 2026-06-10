@@ -17,7 +17,7 @@ user-invocable: true
 - Everything is a **task**. A leaf task is a directory with `task.md` but no subdirectories containing `task.md`.
 - The **filesystem hierarchy is the task hierarchy**. `walk_plan()` discovers children by scanning subdirectories.
 - **Dependencies are sibling-only.** `depends_on` values are sibling directory names within the same parent.
-- **Parent task status rolls up** from children automatically — a parent is `approved` only when all children are `approved`.
+- **Parent task status rolls up** from children automatically — a parent is `approved` only when all active (non-parked) children are `approved`; `archived` and `postponed` children are excluded from the rollup computation.
 - **DAG-derived ordering vs. display order.** The dependency DAG controls execution order. Numeric prefixes on directory names (e.g. `01-load`, `02-merge`) control display order only — these are independent.
 
 ## CLI Setup

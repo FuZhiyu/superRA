@@ -25,7 +25,10 @@ superra task create 01-data/03-filter \
 ```bash
 superra task status propagate
 superra task status cascade 01-data --status approved
+superra task status fix
 ```
+
+`status propagate` — walks the tree and flips stale branch statuses to match their computed rollup. `status cascade` — sets all descendant leaves to the given status (allowed values: `approved`, `not-started`, `archived`, `postponed`). `status fix` — rewrites branch task frontmatter `status` fields in place to match `compute_status()` from their children, fixing any stored-vs-computed mismatches without touching leaf tasks.
 
 ## Append a result programmatically
 

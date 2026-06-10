@@ -65,7 +65,7 @@ For each identified issue, classify the action:
 
 **Restructure:** Move the task directory to its new location. Update `depends_on` references in the old and new sibling scopes. Preserve the task's status and content.
 
-**Scope Expansion Rewrite:** Follow `superplan/references/task-tree-design.md` §Objective rewrites on scope expansion. Rewrite the owning `## Objective` as the current-state contract, update scope-defining `script` / `input` / `output` fields, set affected approved tasks and transitive downstream dependents to `revise` when their assumptions shift, and remove stale `## Revision Notes`, review notes, or delta prose that no longer describes current state.
+**Scope Expansion Rewrite:** Follow `superplan/references/task-tree-design.md` §Objective rewrites on scope expansion. Rewrite the owning `## Objective` as the current-state contract, update scope-defining `script` / `input` / `output` fields, reset affected approved tasks and transitive downstream dependents to `not-started` when their assumptions shift, and remove stale `## Revision Notes`, review notes, or delta prose that no longer describes current state.
 
 ## User Approval Gate
 
