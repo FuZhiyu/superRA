@@ -1,6 +1,6 @@
 ---
 title: "Rewrite planning-workflow SKILL.md"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-24
@@ -68,3 +68,12 @@ Other principles:
 - **`## Decisions` removal is scoped:** This task drops `## Decisions` from the SKILL.md (no longer created in Phase 3, no longer logged in the change protocol). The deeper removal from `planning.md` (§User Decisions Log, §Field-by-Field Notes, §Root task.md Anatomy) is owned by the `revision-notes` sibling task.
 - **Phase 3 merges old Phase 3 + Phase 4.** The old file-structure and task-decomposition phases were artificially split; the new Phase 3 covers artifact pipeline mapping, task structure, creation, and dependencies in one coherent section.
 - **Phase 4 adds user review gate.** The old Self-Review section is now Phase 4 with an explicit user-review step before commit — the task tree is presented to the user for approval, not auto-committed.
+
+## Review Notes
+
+1. **[MAJOR]** Paraphrase-drift contradiction on the surface this task owns: [superplan/SKILL.md:32](../../../../skills/superplan/SKILL.md#L32) and [superplan/SKILL.md:174](../../../../skills/superplan/SKILL.md#L174) both say retroactive mode "sets `status: implemented`" on created tasks, while the owning reference [task-tree-design.md:117](../../../../skills/superplan/references/task-tree-design.md#L117) distinguishes `approved` (complete and verified) from `implemented` (done, unreviewed). Fix: delete both status claims from SKILL.md; keep only the routing pointer to §Retroactive Task-Tree Creation.
+2. **[MAJOR]** Broken Results links: this task's `## Results` cite `[skills/planning-workflow/SKILL.md](skills/planning-workflow/SKILL.md)` and `[skills/task-tree/references/planning.md](skills/task-tree/references/planning.md)` — task-dir-relative (never resolved from this file) and pointing at renamed/deleted paths (`planning-workflow` → `superplan`; `planning.md` split into task-file-contract.md / task-tree-design.md). Fix: correct relativity (`../../../../…`) and annotate dead targets as historical.
+3. **[MINOR]** [superplan/SKILL.md:172](../../../../skills/superplan/SKILL.md#L172) — heading "## Retroactive Plan Creation" violates CLAUDE.md §Terminology ("plan is the verb") and mismatches the section it routes to (§Retroactive Task-Tree Creation). Fix: rename the heading.
+4. **[MINOR]** [superplan/SKILL.md:112](../../../../skills/superplan/SKILL.md#L112) — §Task Dependencies points to task-file-contract "for semantics", then defines the semantics itself ("A task depends on another when it…"), paraphrasing [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md) §Placing Work / §Parent and sibling context. Fix: move the when-does-a-task-depend list to one owner; point from SKILL.md.
+5. **[MINOR]** [superplan/SKILL.md:16](../../../../skills/superplan/SKILL.md#L16) — the "zero context for this project" line paraphrases [task-tree-design.md:18](../../../../skills/superplan/references/task-tree-design.md#L18) immediately before pointing at the same file; [superplan/SKILL.md:142](../../../../skills/superplan/SKILL.md#L142) — self-review item 5 re-enumerates the §Writing Objectives include-list. Fix: replace both with pointers.
+6. **[MINOR]** [superplan/SKILL.md:99](../../../../skills/superplan/SKILL.md#L99) — flag-by-flag `task create` example duplicates the mutation command surface owned by task-tree `references/commands.md` (keep the wrapper-init bootstrap ordering above it); [superplan/SKILL.md:188](../../../../skills/superplan/SKILL.md#L188) — §Revision Notes is a pointer-only stub triplicating routes already in §Living Task Tree (a) and §User Feedback step 2. Fix: delete the example and the stub section.
