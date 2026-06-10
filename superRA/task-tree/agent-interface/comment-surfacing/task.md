@@ -1,6 +1,6 @@
 ---
 title: "Surface Task Comments to the Agent Loop"
-status: revise
+status: implemented
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -10,7 +10,7 @@ created: 2026-06-01
 
 Make the task-tree **comment feature visible to the agent loop**. Today a researcher pins comments to `task.md` blocks via the dashboard, but agents never see them: `task_read.py` (the canonical agent read path) has zero comment handling, no role spec or workflow skill references `task_comment.py`, and the CLI is undocumented. Comments are a dashboard-only human feature. This subtree closes the discovery gap (surface unresolved comments on the read path + document the CLI) and the context-richness gap (show the *full anchored block*, not the ≤60-char preview).
 
-**Design source.** A planning agent verified both gaps and the mechanics against the code (see each child objective for cited `file:line`). Placement is a sibling of `lean-interface` under `task-tree/agent-interface/` (same concern: the agent-facing interface to the task tree).
+**Design source.** A planning agent verified both gaps and the mechanics against the code (see each child objective for cited `file:line`). Placement is a sibling of `agent-surface-redesign` under `task-tree/agent-interface/` (same concern: the agent-facing interface to the task tree).
 
 **Researcher decisions (confirmed, load-bearing):**
 - **Reliability:** comment surfacing in `task_read.py` MUST work under the documented `python3 task_read.py` invocation. In this environment bare `python3` has no `pyyaml` (the existing `_comments.py` does `import yaml` at module top and fails under `python3`; it only runs under `uv`/`~/.venv`). A best-effort "optional import, skip if missing" would silently surface nothing on the common path — not acceptable. The read path must not hard-depend on `pyyaml`.
@@ -44,3 +44,4 @@ The task-tree comment feature is now visible to the agent loop. Previously a res
 
 > 1. [MINOR] The Sequencing section was updated but the "Design source" paragraph ([task.md:13](task.md#L13)) still reads "Placement is a sibling of `lean-interface` under `task-tree/agent-interface/`" — the renamed sibling is `agent-surface-redesign`. Update that paragraph to match.
 >    → implemented: updated all `lean-interface` references to `agent-surface-redesign` and `05-coverage-audit` to `09-coverage-audit` in the Sequencing section
+>    → implemented (round 2): fixed the surviving "Design source" reference at [task.md:13](task.md#L13) — `lean-interface` → `agent-surface-redesign`
