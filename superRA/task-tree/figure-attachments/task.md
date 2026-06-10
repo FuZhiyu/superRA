@@ -1,6 +1,6 @@
 ---
 title: "Refactor figure attachments to task-local storage"
-status: approved
+status: revise
 depends_on:  []
 tags: []
 created: 2026-05-27
@@ -55,3 +55,8 @@ Current attachment guidance is task-local: task results embed figures from `atta
 ### Dashboard
 
 No code changes needed. `base.html` line 663 already computes `pathPrefix = '.plan/' + taskPath + '/'` and prepends it to relative image `src` attributes (line 678), so task-local `attachments/fig.png` resolves correctly to `/files/.plan/task-path/attachments/fig.png`.
+
+## Review Notes
+
+1. **MAJOR** — the §Dashboard claim ("No code changes needed. `base.html` line 663 already computes `pathPrefix = '.plan/' + taskPath + '/'` … resolves correctly to `/files/.plan/…`") is stale twice over and currently false: the task root was renamed `.plan/` → `superRA/`, and the `pathPrefix` variable was deleted by the resolved-root delink (commit `44fcc469`), leaving a dangling reference at [base.html:1834](../../../skills/task-tree/scripts/templates/base.html#L1834) — so served-mode figure resolution, the exact behavior this task's verification rests on, is broken today (`ReferenceError`; see the Review Notes on [02-file-link-consistency](../dashboard/live-server/path-basis-consistency/02-file-link-consistency/task.md)). Once that CRITICAL is fixed, rewrite the §Dashboard paragraph in place to the current mechanism (`/files/<ROOT_PREFIX>/<taskPath>/<src>` via `rootRel`/`taskDirRel`) — this item's final wording depends on that upstream fix.
+2. **MAJOR** — dead authority links: the Objective and §Design decisions cite `skills/task-tree/references/planning.md` (§Figure Embedding, §Results Shape) and the Results table links [planning.md](../../skills/task-tree/references/planning.md), but that file no longer exists — the figure-embedding/results-shape content now lives in [task-file-contract.md](../../skills/task-tree/references/task-file-contract.md) (§Figure Embedding, §Results Shape) and tree-design judgment in `skills/superplan/references/task-tree-design.md`. The Results-table link paths are also one `../` short (they resolve to `superRA/skills/…`). Replace the dead/wrong links in place so this task's record points at the current owners.
