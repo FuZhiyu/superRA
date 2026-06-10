@@ -1,6 +1,6 @@
 ---
 title: "Task-Path Argument Resolution — Tolerate Redundant Root Prefix"
-status: approved
+status: revise
 depends_on: []
 tags: [task-tree, cli, ergonomics]
 created: 2026-06-07
@@ -52,3 +52,7 @@ I did not add a separate per-verb "redundant prefix" hint message. Stripping the
 - `~/.venv/bin/python -m pytest skills/task-tree/scripts/test_task_tree.py` -> **291 passed**.
 - Red-green: with `_task_io.py` stashed, `test_redundant_root_prefix_is_stripped` fails with the doubled-path `AssertionError`; with the fix, it passes.
 - Real CLI: `uv run --project skills/task-tree superra task read superRA/task-tree/cli-scripts/path-arg-resolution --no-ancestors` now exits 0 and prints this task (previously a stderr-only doubled-path error).
+
+## Review Notes
+
+> 1. [CRITICAL] The headline Results claim ([task.md:41](task.md#L41)) — "every verb (`read`, `update`, `result add`, `status`, `dep`, `comment`) routes through `resolve_path`, the fix applies across the whole command surface at once" — is false; the defect this task was opened to fix is still live on every mutation verb. [`cli.py` `_checked_task_root_args`](../../../../skills/task-tree/scripts/cli.py#L77) calls `resolve_path` for validation only, discards the stripped result, and forwards the raw prefixed path to [`task_update.py:84`](../../../../skills/task-tree/scripts/task_update.py#L84), [`task_link.py:57`](../../../../skills/task-tree/scripts/task_link.py#L57), and [`task_add_result.py:52`](../../../../skills/task-tree/scripts/task_add_result.py#L52), which join `plan_root / task_path` naively. Reproduced on a scratch tree: `task update superRA/<path>`, `result add superRA/<path>`, `dep add superRA/<path>`, and `status cascade superRA/<path>` all exit 1 with the exact doubled-path stderr error (`Error: task not found: …/superRA/superRA/…`) and no prefix hint, failing both arms of this task's Validation; `task create superRA/<path>` fails with `parent directory does not exist: …/superRA/superRA`. Only `read`/`comment`/`move`/`rename` are prefix-tolerant. The regression tests ([`TestResolvePath`](../../../../skills/task-tree/scripts/test_task_tree.py#L228)) exercise the `resolve_path` unit only, so they cannot detect this. Fix: forward the stripped task-root-relative path from `_checked_task_root_args` to the delegated scripts (or move the `resolve_path` call into the mutators themselves), and add one end-to-end prefixed `task update` regression test.
