@@ -52,6 +52,4 @@ Created `skills/task-tree/scripts/task_read.py` (stdlib-only, argparse CLI). Sup
 
 ## Review Notes
 
-No blocking findings. All functionality verified: ancestor chain collection, human-readable and JSON rendering, `--no-ancestors` flag, plan-root auto-detection, sibling dependency display. Edge cases tested (single-segment paths, root ancestors, no-plan directories).
-
-MINOR observation: No automated tests for `task_read.py`. The objective did not require them and all functions verified manually.
+> 1. [MINOR] Prior `## Review Notes` survived approval, and its "no automated tests for `task_read.py`" observation is superseded — the `tests` sibling added `TestTaskRead` coverage (see [test_task_tree.py](../../../../skills/task-tree/scripts/test_task_tree.py)). Replaced per the replace-don't-stack rule; remove this section at the next approval pass.
