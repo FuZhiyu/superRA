@@ -48,3 +48,8 @@ All three parts implemented; full suite green (163 passed) and `git grep` finds 
 ## Notes
 
 Code (`task_hook.py` removal, `_task_io.py` warning rule) + tests + a one-line doc note only. No `agents/reviewer.md` change, no Codex/direct-mode regeneration. Standalone — no longer has a dependent doc task.
+
+## Review Notes
+
+> 1. [MINOR] The objective points to "see Revision Notes" for the 2026-05-31 warn-only decision, but that section was (correctly) removed at approval — a dangling internal pointer. Inline the one-line rationale in the objective.
+> 2. [MINOR] `## Results` cite the doc line added to `planning.md §Revision Notes lifecycle`; that file is gone — the surviving rule lives in [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) (`validate_plan` warning noted there). Repoint the citation.
