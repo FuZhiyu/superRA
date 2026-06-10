@@ -12,3 +12,6 @@ Enhance _task_io.py with validation functions and topological sort. Build PostTo
 
 ## Results
 
+## Review Notes
+
+> 1. [MINOR] `## Results` is empty on this approved branch — no rollup of the two children's outcomes. Add a one-to-two-line summary linking the children.
