@@ -1,6 +1,6 @@
 ---
 title: "Clean Up DRY Echoes and Meta-Commentary in Lean Task-Interface Surfaces"
-status: approved
+status: revise
 depends_on:
   - 02-task-tree-slim
   - 03-role-spec-slim
@@ -64,3 +64,10 @@ Done in Direct mode (orchestrator implemented + self-reviewed against the `CLAUD
 - `grep -rln "remove-superseded-content" agents/ skills/using-superRA/ .codex/` → empty (the hyphenated token lived only in the deleted echo; §Task Interface still states all four principles in prose at `using-superRA/SKILL.md:55-58`).
 - Status enum appears nowhere in `task-tree/SKILL.md`.
 - The 5 `<skill-dir>` placeholders and the script-invocation text are unchanged — script-path/packaging is deferred to a separate branch.
+
+## Review Notes
+
+> 1. [MAJOR] The DRY/Necessity sweep this task owns left gate-failing lines in both role specs: "For Codex agents: Load `using-superra` and `report-in-markdown` skill." ([implementer.md:13](../../../../../agents/implementer.md#L13)) and "For Codex agents: Load `using-superra` skill." ([reviewer.md:13](../../../../../agents/reviewer.md#L13)) restate the frontmatter `skills:` preload and the manifest baseline inside the canonical specs, and place harness-specific behavior outside the adapter references (CLAUDE.md §Codex and Harness Design) — the generator or `codex-instructions.md` is the right carrier. Remove from the specs and regenerate.
+> 2. [MAJOR] "Here is what you will receive" narration survives in both §Before You Start task-read steps: the parentheticals "(focused tree, ancestor objectives, sibling dependency status)" ([implementer.md:18](../../../../../agents/implementer.md#L18)) and "(its own injected context, objective, implementer results, and review notes)" ([reviewer.md:20](../../../../../agents/reviewer.md#L20)) duplicate `using-superra` §Task Interface's wrapper rationale and describe output the agent is about to read anyway. Delete the parentheticals; the load-bearing instruction ("read each assigned task via `superra task read`") stands alone.
+> 3. [MINOR] The review-notes example annotation "rejected — methodology specifies arithmetic returns per plan header Section 2" ([implementer.md:95](../../../../../agents/implementer.md#L95)) uses retired "plan header" vocabulary; per repo terminology cite an ancestor objective's scoped conventions instead. Propagates into both generated surfaces.
+> 4. [MINOR] `## Results` here claims `implementer.md §Editing Etiquette` carries the §Task Interface pointer; current implementer.md has no such heading (the pointer lives in the `## Handoff` lead; only reviewer.md retains `### Editing Etiquette`). Lightly clean the heading-level claim.
