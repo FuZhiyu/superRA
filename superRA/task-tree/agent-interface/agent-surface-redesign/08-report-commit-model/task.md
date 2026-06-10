@@ -1,6 +1,6 @@
 ---
 title: "Collapse Reporting onto Commit = Summary, Return = Status + SHA"
-status: approved
+status: revise
 depends_on:
   - 06-restructure-specs
 tags: []
@@ -61,3 +61,7 @@ This is a focused, surgical change to two sections per spec plus a small generat
 - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` → clean
 - `uv run pytest skills/codex-superra-setup/scripts/test_sync_codex_agents.py` → 7 passed
 - `python3 skills/task-tree/scripts/task_check.py --plan-root superRA` → all checks passed
+
+## Review Notes
+
+> 1. [MAJOR] The worktree-return line this task kept references "path B" / "path A" ([implementer.md:115](../../../../../agents/implementer.md#L115)) — terms defined nowhere in the repo (a whole-tree grep finds no other occurrence, including `agent-orchestration` and its worktree reference), so an implementer reading its spec cannot resolve when the field applies. The dangling vocabulary propagates into both generated surfaces. Replace with the concrete condition (e.g. "only when dispatched with a `Worktree:` field") and regenerate.
