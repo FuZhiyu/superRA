@@ -1,6 +1,6 @@
 ---
 title: "Add migration preparation instructions to task-tree"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-25
@@ -35,4 +35,8 @@ Added migration preparation instructions to two files, sourced directly from `pl
 
 - Kept SKILL.md section concise and checklist-oriented (agent reads at migration time); internals.md goes deeper on parser details per the dispatch guidance.
 - Did not modify `planning-workflow/SKILL.md` — Phase 0 already routes to `task-tree` §Migration, and the new subsection is adjacent to that anchor.
+
+## Review Notes
+
+1. **[MAJOR]** Broken Results links: `[SKILL.md:212-245](skills/task-tree/SKILL.md#L212)` and `[internals.md:111-158](skills/task-tree/references/internals.md#L111)` are task-dir-relative and have never resolved from this file; the cited line ranges have also drifted in the live files. Fix: [../../../../skills/task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md) / [../../../../skills/task-tree/references/internals.md](../../../../skills/task-tree/references/internals.md) and re-verify anchors.
 
