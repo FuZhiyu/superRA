@@ -1,6 +1,6 @@
 ---
 title: "Assign revision notes cleanup to reviewer"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-26
@@ -46,9 +46,3 @@ All six edits applied surgically to two files:
 5. [task-file-contract.md:13](../../../skills/task-tree/references/task-file-contract.md#L13) — Body Sections: specified reviewer removes `## Revision Notes` at approval.
 6. [task-file-contract.md:25](../../../skills/task-tree/references/task-file-contract.md#L25) — Field-by-Field Notes: made reviewer ownership explicit with `validate_plan` warning note.
 
-## Review Notes
-
-1. **[MAJOR]** [task.md:25](task.md#L25), [task.md:44-47](task.md#L44) — Objective and Results prescribe and cite edits to `skills/task-tree/references/planning.md` (L73/L129), a file that no longer exists; the `## Revision Notes` lifecycle and reviewer-ownership rule now live in [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) (Field-by-Field Notes) and [agents/reviewer.md](../../../agents/reviewer.md). The hard-coded reviewer.md line anchors (82/86/113/161) are likewise stale against the current 132-line file. An approved task whose Results point at a deleted file misleads anyone tracing this rule. Fix: replace the dead `planning.md` references with the current owners and drop or refresh the line anchors.
-   → implemented: replaced `planning.md` references in Objective and Results with current owners (`task-file-contract.md` and `agents/reviewer.md`); refreshed line anchors to match live 132-line reviewer.md ([task.md](task.md))
-2. **[MINOR]** [task.md:39-47](task.md#L39) — citation links are repo-root-relative (`agents/reviewer.md`, `skills/...`); `report-in-markdown` resolves links relative to the markdown file's directory, so from this task every one needs a `../../../` prefix. Fix the prefixes when applying item 1.
-   → implemented: updated all citation links in Results to use `../../../` prefix ([task.md:39-47](task.md#L39))
