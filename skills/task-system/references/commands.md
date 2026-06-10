@@ -36,7 +36,7 @@ superra task result add 01-data/01-load \
 
 ## Manage dependencies
 
-Also fixes a dangling `depends_on` after a manual move:
+Use this for explicit dependency edits:
 
 ```bash
 superra task dep add 01-data/03-filter 02-merge
@@ -44,15 +44,22 @@ superra task dep add 01-data/03-filter 02-merge
 superra task dep remove 01-data/03-filter 02-merge
 ```
 
-## Rename / move a task
+## Move / rename a task
 
-`superra task rename` is an atomic same-parent rename that cascades sibling `depends_on`:
+Intentional task path changes use the task-system CLI, not raw `mv` / `git mv`:
 
 ```bash
-superra task rename 01-data/01-load 01-data/01-load-raw
+superra task move 01-data/01-load 01-data/01-load-raw
+superra task move 01-data/03-filter 02-analysis/01-filtered-sample
 ```
 
-A plain `mv` of the task directory also works — it carries the `task.md`, `comments.yaml`, and whole subtree, and the PostToolUse hook revalidates and propagates status. For a **same-parent rename** (`mv superRA/a/x superRA/a/y`) the hook also auto-cascades sibling `depends_on: x` → `y` (surfaced in the hook feedback), so it needs no follow-up; `superra task rename` is just the explicit convenience for this case. A **cross-parent move** or a **delete** of a depended-on task is not auto-cascaded — both strand the reference, which validation flags as a dangling dependency to re-wire with `superra task dep add` / `dep remove` or a direct edit. Why the boundary stops at same-parent renames: `internals.md §Hook Architecture`.
+`superra task rename FROM TO` remains as a compatibility alias for same-parent renames.
+
+The move command carries the whole task directory, including `task.md`, `comments.yaml`, attachments, and descendants. Before moving, it resolves relative Markdown links in moved `.md` files against their old locations and rewrites them so they point at the same files after the move. For a same-parent rename, it also cascades sibling `depends_on: old-slug` to `new-slug`.
+
+Cross-parent moves are stricter because `depends_on` is sibling-only. The command aborts before mutation when an old sibling depends on the source slug, or when the moved task's own `depends_on` entries would not resolve under the destination parent. Rewire those edges first with `superra task dep add` / `dep remove` or a direct task edit, then rerun the move.
+
+The PostToolUse hook still revalidates raw filesystem moves and preserves the old same-parent auto-cascade guardrail, but it is not the canonical move mechanism. Use raw `mv` / `git mv` only for recovery from tool failure, then run `superra task check`.
 
 ## Comments
 

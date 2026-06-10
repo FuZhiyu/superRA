@@ -72,7 +72,7 @@ Use CRSP-style merge conventions. Validate row counts post-merge.
 > [MAJOR] Inner join used instead of left join
 ```
 
-Field-by-field anatomy and body-section ownership live in `references/planning.md §Field-by-Field Notes`.
+Field-by-field anatomy and body-section ownership live in `references/task-file-contract.md` §Field-by-Field Notes.
 
 ## Routing — operate on the tree
 
@@ -80,10 +80,11 @@ Field-by-field anatomy and body-section ownership live in `references/planning.m
 |---|---|
 | Create / rename / link / move tasks; bulk status propagation; append results programmatically | `references/commands.md` |
 | Read or resolve task comments (the read/resolve loop; comments also surface via `superra task read`) | `references/commands.md §Comments` |
-| Objective writing, task splitting, placement, results shape, stale-content, retroactive plans | `references/planning.md` |
+| Task-file anatomy, fields, status/dependencies, inherited context, results shape, stale-content, figure embedding | `references/task-file-contract.md` |
+| Objective writing, task splitting, placement, durable homes, update-task lifecycle, retroactive task-tree creation | `../superplan/references/task-tree-design.md` |
 | Migrate legacy `PLAN.md` + `RESULTS.md`, or upgrade `superRA/` v1 → v2 | `references/internals.md §Migration` |
 | View the dashboard | `./superRA/superra dashboard` (background server, reuses a running one; `--foreground`, `dashboard stop`). Mechanics in `references/internals.md §Dashboard` |
 | Modify the skill itself (data layer, hooks, scripts) | `references/internals.md`; hook coverage details live in `§Hook Architecture` |
 
-A plain `mv` of a task directory carries the whole subtree, and the PostToolUse hook revalidates and propagates status. The rules for which moves auto-cascade `depends_on` versus strand a reference for re-wiring live in `references/commands.md §Rename / move a task`.
+Intentional task path changes go through `superra task move` (or `task rename` for same-parent compatibility), not raw `mv` / `git mv`. The move command preserves task-directory state, rewrites local Markdown links from pre-move context, and validates dependency edges before mutation. The PostToolUse hook is only a guardrail for accidental raw filesystem moves; see `references/commands.md §Move / rename a task`.
 <!-- no need to route back to using superra -->

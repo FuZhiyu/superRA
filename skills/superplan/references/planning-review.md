@@ -8,6 +8,8 @@ Planning review evaluates the task tree before any implementation, so there is n
 
 The dispatch carries a `Review mode:` of **handoff-readiness** or **design-review** (defined in [thorough-planning.md](thorough-planning.md) §Planning Review).
 
+Both modes can return `[BLOCKING]` findings for poor tree design, not only unclear prose. Review against [task-tree-design.md](task-tree-design.md): durable ownership, depth vs. breadth, branching and dependency quality, parent/sibling context, update-task lifecycle, action-verb durability, and the `## Objective` / `## Planner Guidance` split.
+
 ## Verdict and Note Ownership
 
 Return **APPROVE** or **REVISE** without editing task `status:` — planning review never changes status.

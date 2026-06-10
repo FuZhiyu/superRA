@@ -18,17 +18,25 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 import cli
 
 
-def _write_task_md(path: Path, title: str, status: str = "not-started", results: str = "") -> None:
+def _write_task_md(
+    path: Path,
+    title: str,
+    status: str = "not-started",
+    results: str = "",
+    depends_on: list[str] | None = None,
+) -> None:
     body = "## Objective\n\nTest objective.\n"
     if results:
         body += f"\n## Results\n\n{results}\n"
+    deps = depends_on or []
+    deps_yaml = "\n" + "".join(f"  - {dep}\n" for dep in deps) if deps else " []"
     path.write_text(
         "\n".join(
             [
                 "---",
                 f'title: "{title}"',
                 f"status: {status}",
-                "depends_on: []",
+                f"depends_on:{deps_yaml}",
                 "tags: []",
                 "created: 2026-01-01",
                 "---",
@@ -174,6 +182,120 @@ def test_dep_add_rejects_path_like_dependency_slug(
     assert "dependency must be a sibling slug" in capsys.readouterr().err
     second = (task_root / "02-second" / "task.md").read_text(encoding="utf-8")
     assert "../outside" not in second
+
+
+def test_task_move_cross_parent_rewrites_relative_markdown_links(
+    task_root: Path,
+    tmp_path: Path,
+) -> None:
+    code = tmp_path / "Code" / "script.py"
+    code.parent.mkdir()
+    code.write_text("print('ok')\n", encoding="utf-8")
+
+    parent = task_root / "01-parent"
+    parent.mkdir()
+    _write_task_md(parent / "task.md", "Parent")
+    child = parent / "01-child"
+    child.mkdir()
+    _write_task_md(child / "task.md", "Child")
+    (child / "attachments").mkdir()
+    (child / "attachments" / "chart.png").write_text("png", encoding="utf-8")
+    task_md = child / "task.md"
+    task_md.write_text(
+        task_md.read_text(encoding="utf-8")
+        + "\nSee [script](../../../Code/script.py#L1) and ![chart](attachments/chart.png).\n",
+        encoding="utf-8",
+    )
+
+    cli.main(["task", "move", "01-parent/01-child", "03-child", "--root", str(task_root)])
+
+    assert not child.exists()
+    moved = task_root / "03-child"
+    assert moved.exists()
+    moved_text = (moved / "task.md").read_text(encoding="utf-8")
+    assert "[script](../../Code/script.py#L1)" in moved_text
+    assert "![chart](attachments/chart.png)" in moved_text
+    assert (moved / "attachments" / "chart.png").exists()
+
+
+def test_task_move_cross_parent_rejects_stranded_old_sibling_dependency(
+    task_root: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    parent = task_root / "01-parent"
+    parent.mkdir()
+    _write_task_md(parent / "task.md", "Parent")
+    child = parent / "01-child"
+    child.mkdir()
+    _write_task_md(child / "task.md", "Child")
+    dependent = parent / "02-dependent"
+    dependent.mkdir()
+    _write_task_md(dependent / "task.md", "Dependent", depends_on=["01-child"])
+    target_parent = task_root / "03-parent"
+    target_parent.mkdir()
+    _write_task_md(target_parent / "task.md", "Target Parent")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["task", "move", "01-parent/01-child", "03-parent/01-child", "--root", str(task_root)])
+
+    assert excinfo.value.code == 1
+    assert "would strand dependency" in capsys.readouterr().err
+    assert child.exists()
+    assert not (target_parent / "01-child").exists()
+
+
+def test_task_move_allows_rootless_forest_destination_root(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "superRA"
+    root.mkdir()
+    parent = root / "01-parent"
+    parent.mkdir()
+    _write_task_md(parent / "task.md", "Parent")
+    child = parent / "01-child"
+    child.mkdir()
+    _write_task_md(child / "task.md", "Child")
+
+    cli.main(["task", "move", "01-parent/01-child", "02-child", "--root", str(root)])
+
+    assert not child.exists()
+    assert (root / "02-child" / "task.md").exists()
+
+
+def test_task_rename_alias_cascades_same_parent_dependency(
+    task_root: Path,
+) -> None:
+    dependent = task_root / "03-dependent"
+    dependent.mkdir()
+    _write_task_md(dependent / "task.md", "Dependent", depends_on=["01-first"])
+
+    cli.main(["task", "rename", "01-first", "01-renamed", "--root", str(task_root)])
+
+    assert not (task_root / "01-first").exists()
+    assert (task_root / "01-renamed" / "task.md").exists()
+    dependent_text = (dependent / "task.md").read_text(encoding="utf-8")
+    assert "  - 01-renamed" in dependent_text
+    assert "01-first" not in dependent_text
+
+
+def test_task_rename_alias_rejects_cross_parent_move(
+    task_root: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    parent = task_root / "01-parent"
+    parent.mkdir()
+    _write_task_md(parent / "task.md", "Parent")
+    child = parent / "01-child"
+    child.mkdir()
+    _write_task_md(child / "task.md", "Child")
+
+    with pytest.raises(SystemExit) as excinfo:
+        cli.main(["task", "rename", "01-parent/01-child", "03-child", "--root", str(task_root)])
+
+    assert excinfo.value.code == 1
+    assert "same-parent only" in capsys.readouterr().err
+    assert child.exists()
+    assert not (task_root / "03-child").exists()
 
 
 def test_status_fix_routes_existing_update_fix_mode(

@@ -221,7 +221,7 @@ def check_placement(root: Task, is_forest: bool = False) -> list[Finding]:
     the "hooks warn, not auto-mutate" principle. These encode the positive
     root-task definition (root = whole workstream; branches carry no
     script/input/output) and the misplacement signal from the placement task in
-    `task-system/references/planning.md §Placing Work in the Tree`.
+    `superplan/references/task-tree-design.md §Placing Work by Durable Home`.
 
     When *is_forest* is true the root is a synthetic container (no umbrella
     ``<root>/task.md``) holding independent top-level trees, not a root task —
