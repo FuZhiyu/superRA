@@ -1,6 +1,6 @@
 ---
 title: "Review and Planning Protocol"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -39,3 +39,9 @@ Avoid broad rewrites of domain skills. The domain skills own the specific gates;
 - Accepted the integration review's DRY/Necessity findings: planning-review dispatch shape now lives in `agent-orchestration`, while `superplan` and its thorough-planning reference point to that owner; the reviewer role no longer describes planning-review dispatch fields.
 
 **Final diff self-check:** `git diff 75a86ccebd0ec37a0a9e904f0fd5b824752cf6f1..HEAD`; surviving change classes are the approved review/planning protocol edits, optional `## Planner Guidance` support in task creation/tests, generated Codex/direct-mode role artifacts, and the `superRA/task-tree/planning-redesign/review-planning-protocol` task records. Suspicious hunks are justified as follows: instruction edits under `agents/*` and `skills/*` implement the approved objective/guidance contract, broad reviewer protocol, planning-review mode, and guidance-deviation rationale requirement; `skills/agent-orchestration/SKILL.md` owns the planning-review dispatch-shape exception after integration review; generated artifacts under `.codex/agents/` and `skills/using-superRA/references/direct-mode-*` were regenerated from canonical role specs; task-record additions under `superRA/task-tree/planning-redesign/review-planning-protocol/` preserve approved task evidence after the incoming task-root rename. No unrelated hunks identified.
+
+## Review Notes
+
+1. **[MAJOR]** [task.md](task.md) — `## Results` of this approved parent is an integration-status dev log that still reads "(in progress)", with sync SHAs and merge anchors, and contains no rollup of the six approved children's outcomes. Stage-1 debris left as the permanent record. Fix: replace with a Key Findings rollup linking child `## Results`; drop the stale integration log.
+2. **[MAJOR]** Cross-skill contradiction at this protocol's edge: [superintegrate/SKILL.md:63](../../../../skills/superintegrate/SKILL.md#L63) (also lines 237, 245, 301, 324) instructs flipping checkboxes in "root task.md §Workflow Status", but [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) — owner of body-section vocabulary — never defines `## Workflow Status`, and [superplan/SKILL.md:108](../../../../skills/superplan/SKILL.md#L108) rules "No checkboxes" in tasks. INTEGRATE depends on a section PLAN forbids creating. Fix: define `## Workflow Status` in the contract (root-task integration record, exempt from the no-checkbox rule) or replace the checkbox flips with another durable record.
+3. **[MINOR]** Descendant Results (children 01, 04, 05, 06) cite the deleted `skills/task-tree/references/planning.md` as live markdown links; historical-provenance retention is documented only in `task-tree-design/01-reference-ownership`, not at these sites, and the dashboard renders them as dead links. Fix: annotate the citations as historical or repoint to the split owners ([task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md), [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md)).
