@@ -41,3 +41,7 @@ Added the shared accessor `anchored_block(comment, body) -> str | None` to [_com
 - **No-pyyaml import** (the load-bearing constraint): `python3 -c "import yaml"` → `ModuleNotFoundError`, confirming bare `python3` lacks pyyaml in this env; `python3 -c "from _comments import anchored_block, resolve_anchors, split_into_blocks"` → imports OK.
 - **Inline functional check under bare `python3`** (no pyyaml): in-block comment → full block text; comment with a stale index whose preview matches a moved block → re-anchored to the correct index and full text returned (`orphaned=False`); orphaned by missing section → `None`/`orphaned=True`; orphaned by no-preview-match → `None`/`orphaned=True`. All passed.
 - **No regression:** `~/.venv/bin/python -m pytest skills/task-tree/scripts/test_dashboard.py skills/task-tree/scripts/test_task_tree.py -q` → **264 passed**. `task_comment.py` and the yaml-backed load/save path still import and run under the venv.
+
+## Review Notes
+
+> 1. [MINOR] The degraded-read design assumes "mutation callers run under `uv` (pyyaml present) and never hit it" ([_comments.py:30](../../../../../skills/task-tree/scripts/_comments.py#L30)), but the committed wrapper falls back to bare `python3` when `uv` is absent, so a comment mutation against a legacy block-YAML sidecar raises `LegacyCommentFormatError` uncaught (traceback) instead of degrading. Catch it on the mutation path with the same visible note, or soften the docstring claim.
