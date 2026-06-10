@@ -46,3 +46,8 @@ Integration fix after `better-handoff` sync:
 - Clarified the root Sync Map: the sync preserved the base branch's committed template-backed dashboard exporter, but did not commit unrelated in-flight subtree Share/export work. That dirty work was stashed before revalidation so the metadata integration checks run against the committed tree.
 - Final Diff Self-Check for the integration range `f0c103664dc9e987a5c4bf6475aa2d5a910a21c4..HEAD`: surviving hunks are limited to the `codex-task-hooks` task tree, removal of `updated:` frontmatter from `.plan/**/task.md`, task-tree schema/writer/query/read/update/link/rename/result/migration cleanup, dashboard summary removal in `templates/summary_bar.html`, docs/examples/tests for the new schema, review/sync notes, and the approved task status. No exporter/share implementation hunks are part of this integration; that code belongs to the separate subtree-export workstream.
 - Clean-tree validation after stashing unrelated subtree Share/export work: `uv run pytest skills/task-tree/scripts/test_task_tree.py skills/task-tree/scripts/test_dashboard.py skills/task-tree/scripts/tests/test_state_preservation.py` passed: 288 tests; `python3 skills/task-tree/scripts/task_check.py --plan-root .plan` passed.
+
+## Review Notes
+
+> 1. [MINOR] `output:` frontmatter is a prose sentence ("same files with active updated-field behavior removed"), not file paths — scope-defining fields should be machine-meaningful; list the actual files or drop the field (planner-owned; flagging for the orchestrator).
+> 2. [MINOR] `.plan`-rooted phrasing stated as current (objective and Results); same terminology fix as the parent's item 2.
