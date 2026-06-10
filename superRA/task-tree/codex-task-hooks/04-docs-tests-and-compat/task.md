@@ -46,3 +46,8 @@ Validation: run `python3 -m json.tool hooks/hooks-codex.json`, `bash tests/hooks
 - Loaded `skill-creator` before editing [skills/task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md) and kept the added skill text to the task-hook behavior difference needed by this task.
 - Did not regenerate Codex named-agent artifacts because no canonical `agents/*.md` files changed.
 - Did not run `tests/hooks/test-codex-e2e-cli.sh`; it is an optional logged-in Codex smoke test that spends model turns. The script was updated to mirror the current installed hook set.
+
+## Review Notes
+
+> 1. [MINOR] The Codex e2e smoke test wires PostToolUse task-hook but asserts no task-hook evidence — [test-codex-e2e-cli.sh:101](../../../../tests/hooks/test-codex-e2e-cli.sh#L101) checks only UserPromptSubmit / merge-guard / Stop — so the "`Edit|Write` is a matcher alias for `apply_patch`" routing assumption rests on the consulted docs alone and is never exercised end-to-end. Add a task-edit step to the prompt and a task-hook evidence check.
+> 2. [MINOR] The repo's generated-artifact inventory ([CLAUDE.md](../../../../CLAUDE.md) §Codex and Harness Design / §Architectural Patterns) lists only the four sync_codex_agents outputs; the wrapper-generated [hooks/task-hook](../../../../hooks/task-hook) and `superRA/superra` (regenerated via `superra wrapper render-hook` / `superra wrapper init`) are surfaced nowhere contributors are told what is generated. Add them to the inventory.
