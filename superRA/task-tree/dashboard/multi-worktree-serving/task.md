@@ -79,3 +79,12 @@ The task dashboard now serves every worktree of a repository from one process on
 **Scope notes.** No `superintegrate` Sync ran (work is on the trunk `better-handoff`; nothing to merge). One pre-existing limitation left in place by scope: a macOS `/tmp`→`/private/tmp` symlink quirk in `relative_to` that predates this feature (task 01) and does not affect real worktrees under `/Users/...`.
 
 **Follow-up fix.** [06 — watcher-teardown CPU spin](06-watcher-teardown-spin/task.md) repaired a defect in this feature's per-worktree watcher teardown: `_stop_watcher`'s `task.cancel()` orphaned the watchfiles native `notify-rs` fsevents thread, leaving the event loop spinning at ~56%/core (and one un-`SIGTERM`-able zombie) per closed tab. Teardown is now cooperative via `awatch(..., stop_event=…)` so the native thread/fd closes cleanly; pinned by a deterministic red→green regression test.
+
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR items only; status stays `approved`.)*
+
+1. **MINOR** — the per-child rollup covers 01-04 and follow-up 06 but omits approved child [05 — selector live refresh](05-selector-live-refresh/task.md) (dropdown re-fetches `/api/worktrees` on open). Add it so the parent rollup is complete.
+2. **MINOR** — [plan_dashboard.py:818-828](../../../../skills/task-tree/scripts/plan_dashboard.py#L818): `_worktree_cache` is never evicted, so a deleted/pruned worktree keeps serving its last-built tree indefinitely (404s fire only for never-cached names). Consider re-validating a cached entry's `plan_root` existence on resolve, or evicting on discovery refresh.
+3. **MINOR** — [plan_dashboard.py:1161-1191](../../../../skills/task-tree/scripts/plan_dashboard.py#L1161): `/api/worktrees` runs full discovery twice per request (`discover_worktrees()` and again inside `_discovered_worktree_map()`), each spawning `git worktree list`, `git rev-parse`, and one `git log -1` per worktree. Build the id map from the already-discovered list.
+4. **MINOR** — the line-anchored citations in this Objective (e.g. `plan_dashboard.py:65-82`, `:757`, `:1295`) have rotted under later refactors of the same files; systemic across the subtree. Prefer symbol-name citations in durable task text, or refresh anchors at approval.
