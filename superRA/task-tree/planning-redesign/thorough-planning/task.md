@@ -1,6 +1,6 @@
 ---
 title: "Thorough Planning Reference"
-status: revise
+status: approved
 depends_on:
   - entry-and-placement
 tags: []
@@ -85,7 +85,7 @@ The earlier statement in SKILL.md §Depth Tiers that "Phase 4 (Review & Commit) 
 
 ### File Created
 
-[`skills/planning-workflow/references/thorough-planning.md`](skills/planning-workflow/references/thorough-planning.md) (126 lines) — the thorough planning reference, loaded when depth tier is "thorough."
+[skills/superplan/references/thorough-planning.md](../../../../skills/superplan/references/thorough-planning.md) (historically `skills/planning-workflow/references/thorough-planning.md`; `planning-workflow` was renamed to `superplan`) — the thorough planning reference, loaded when depth tier is "thorough." (Line count has drifted from original 126; see current file.)
 
 ### Coverage
 
@@ -98,10 +98,10 @@ Six sections in `thorough-planning.md` covering all required topics:
 5. **Incremental Refinement** — refinement rounds use quick-depth mechanics, references standard change protocol, targeted follow-up exploration for missed areas.
 6. **Agent Review** — reviewer agent dispatched in Phase 4 between self-review and user review; receives `.plan/` directory + exploration synthesis; evaluates self-review checklist + structural coherence; returns APPROVE/REVISE.
 
-Three edits to [`skills/planning-workflow/SKILL.md`](skills/planning-workflow/SKILL.md) for §6:
-- Added `### Agent Review (Thorough Depth Only)` subsection in §Phase 4 between Self-Review and User Review ([SKILL.md:153](skills/planning-workflow/SKILL.md#L153)).
-- Updated §Depth Tiers closing paragraph to note the thorough-only Phase 4 difference ([SKILL.md:50](skills/planning-workflow/SKILL.md#L50)).
-- Updated `thorough-planning.md` opening paragraph to reflect Phase 4 is no longer "unchanged" ([thorough-planning.md:5](skills/planning-workflow/references/thorough-planning.md#L5)).
+Three edits to [skills/superplan/SKILL.md](../../../../skills/superplan/SKILL.md) for §6 (historically `skills/planning-workflow/SKILL.md`; line numbers have drifted):
+- Added `### Agent Review (Thorough Depth Only)` subsection in §Phase 4 between Self-Review and User Review.
+- Updated §Depth Tiers closing paragraph to note the thorough-only Phase 4 difference.
+- Updated [thorough-planning.md](../../../../skills/superplan/references/thorough-planning.md) opening paragraph to reflect Phase 4 is no longer "unchanged".
 
 ### Validation
 
@@ -114,10 +114,4 @@ All 8 validation criteria pass:
 - Incremental refinement: explicitly composes with depth tiers (thorough initial, quick refinement)
 - Agent review step exists in both SKILL.md §Phase 4 and the thorough-planning reference
 - SKILL.md §Depth Tiers paragraph about Phase 4 being "the same at all tiers" is updated to note the thorough-only exception
-
-## Review Notes
-
-1. **[MAJOR]** Planning-review trigger stated twice on the surfaces this task created: [superplan/SKILL.md:152](../../../../skills/superplan/SKILL.md#L152) §Agent Review and [thorough-planning.md:90](../../../../skills/superplan/references/thorough-planning.md#L90) §Planning Review both carry "at thorough depth … explicit handoff-review requests enter/use the same step/mechanism", with mutual cross-pointers. Neither copy is authoritative and they can drift. Fix: SKILL §Agent Review keeps the choreography (trigger, REVISE-before-User-Review, skip rule) plus one pointer; delete the trigger restatement from thorough-planning.md.
-2. **[MAJOR]** Broken Results links: this task's `## Results` cite `[skills/planning-workflow/references/thorough-planning.md](skills/planning-workflow/references/thorough-planning.md)` and SKILL.md line anchors — task-dir-relative (never resolved) and pointing at the renamed `planning-workflow` path; the cited line numbers no longer match the live file. Fix: correct relativity to `../../../../skills/superplan/references/thorough-planning.md` and annotate stale anchors as historical.
-3. **[MINOR]** [thorough-planning.md:16](../../../../skills/superplan/references/thorough-planning.md#L16) (and the second occurrence at L49) — `subagent_type: "Explore"` embeds a Claude-Code-specific agent name in a non-adapter reference; the Ownership Boundaries table puts harness-specific tool names in `using-superRA/references/` adapters, and the inline hedge ("other harnesses may name … differently") is the wrapper-instruction anti-pattern. Fix: name the capability ("a read-only exploration agent") and let the harness adapter map it.
 

@@ -1,6 +1,6 @@
 ---
 title: "Add migration preparation instructions to task-tree"
-status: revise
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-25
@@ -27,16 +27,12 @@ Two additions (concise, agent-reads-at-migration-time style):
 
 Added migration preparation instructions to two files, sourced directly from `plan_migrate.py` parser logic:
 
-1. **[SKILL.md:212-245](skills/task-tree/SKILL.md#L212)** — `#### Preparing a PLAN.md for migration` subsection added adjacent to the existing migration command. Covers: quick compatibility check (`grep` command), what the script expects (heading patterns, metadata fields, status inference, dependency format, file lists), normalization checklist (5 items), and manual migration fallback for small/free-form files.
+1. [skills/task-tree/references/internals.md §Preparing a legacy PLAN.md for migration](../../../../skills/task-tree/references/internals.md) — `### Preparing a legacy PLAN.md for migration` subsection added (line numbers have drifted; see current file). Covers: quick compatibility check (`grep` command), what the script expects (heading patterns, metadata fields, status inference, dependency format, file lists), normalization checklist (5 items), and manual migration fallback for small/free-form files. Note: the SKILL.md subsection from original implementation moved into internals.md by a later consolidation.
 
-2. **[internals.md:111-158](skills/task-tree/references/internals.md#L111)** — `### Parser Expectations and Preparation` section added under the existing migration heading. Documents all regex patterns (`TASK_BLOCK_RE`, `RESULTS_SECTION_RE`, `FIELD_RE`), field extraction table, status inference cascade (review_status override then checkbox counting with exact match semantics), dependency resolution with silent-drop behavior, header extraction, slugification rules, and normalization-vs-manual decision guidance.
+2. [skills/task-tree/references/internals.md §Parser Expectations and Preparation](../../../../skills/task-tree/references/internals.md) — `### Parser Expectations and Preparation` section under the migration heading. Documents all regex patterns (`TASK_BLOCK_RE`, `RESULTS_SECTION_RE`, `FIELD_RE`), field extraction table, status inference cascade, dependency resolution, slugification rules, and normalization-vs-manual decision guidance.
 
 ### Decisions
 
-- Kept SKILL.md section concise and checklist-oriented (agent reads at migration time); internals.md goes deeper on parser details per the dispatch guidance.
-- Did not modify `planning-workflow/SKILL.md` — Phase 0 already routes to `task-tree` §Migration, and the new subsection is adjacent to that anchor.
-
-## Review Notes
-
-1. **[MAJOR]** Broken Results links: `[SKILL.md:212-245](skills/task-tree/SKILL.md#L212)` and `[internals.md:111-158](skills/task-tree/references/internals.md#L111)` are task-dir-relative and have never resolved from this file; the cited line ranges have also drifted in the live files. Fix: [../../../../skills/task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md) / [../../../../skills/task-tree/references/internals.md](../../../../skills/task-tree/references/internals.md) and re-verify anchors.
+- Kept the migration-prep content checklist-oriented (agent reads at migration time); internals.md goes deeper on parser details per the dispatch guidance.
+- Did not modify `superplan/SKILL.md` — Entry Assessment already routes to `task-tree` §Migration, and the new subsection is adjacent to that anchor.
 

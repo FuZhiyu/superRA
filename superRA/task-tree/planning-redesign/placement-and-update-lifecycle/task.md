@@ -1,6 +1,6 @@
 ---
 title: "Cross-Stage Placement + the Update-Task Lifecycle"
-status: revise
+status: approved
 depends_on:
   - entry-and-placement
   - consolidation
@@ -80,14 +80,14 @@ Codified cross-stage placement + the update-task lifecycle into the live skill f
 
 ### What landed
 
-**1. Authoritative placement rewrite — [`task-tree/references/planning.md` §Placing Work in the Tree](../../../../skills/task-tree/references/planning.md).** Replaced the passive "two-step: find concern, then granularity / create a sibling on any non-exact match" procedure with an explicit **recursive descent** keyed on the framing in the objective:
+**1. Authoritative placement rewrite** — originally written to `task-tree/references/planning.md §Placing Work in the Tree` (historical path — that file was deleted by `task-tree-design/01-reference-ownership`; the policy now lives in [task-tree-design.md §Placing Work by Durable Home](../../../../skills/superplan/references/task-tree-design.md)). Replaced the passive "two-step: find concern, then granularity / create a sibling on any non-exact match" procedure with an explicit **recursive descent** keyed on the framing in the objective:
 
 - Split **leaf vs branch first**. Branch: a child covers it → descend; no child covers it → add a new child (at the root, that child is a new root-level workstream — record which child's concern was read and why it does not cover the work). Leaf: simple → update-in-place and flip `approved`→`revise`; complex → nest a subtask.
 - "Create a sibling / new root-level task" is **not** a separate primitive — it is "add a child at the parent" evaluated at the root, so root misuse is controlled by the same justification requirement rather than a special case. This deletes the old "create a sibling on any non-exact match" exit that was the structural source of duplicate root tasks. Implemented exactly as the leaf/branch-primary form the dispatch specified — no flat update/nest/sibling pecking order.
 - Added the **positive root-task definition** (root = whole workstream; root misuse is a *consequence* of skipping the ladder) and the **cross-stage** framing (planning, consolidation, integration all load this one section).
 - Added the **update-task lifecycle** — the load-bearing rule — with the governing **asymmetric-aggressiveness / latest-state** principle, the merge-vs-spinout tradeoff, the planning-lenient / consolidation-strict rule of thumb, and the `integrate-cleanup`→`integ-workflow` worked example.
 
-**Placement decision (cross-stage framing):** chose **in-place reframe** of §Placing Work, not extraction into a new `placement.md`. Both the consolidation survey and the superintegrate gate already point at `task-tree/references/planning.md §Placing Work`, so keeping one authoritative section there gives every stage a single owner with no new file or link surface to maintain — the option the objective asked me to recommend (one placement owner the gate and superintegrate point at), and the lower-churn / DRY choice.
+**Placement decision (cross-stage framing):** chose **in-place reframe** of §Placing Work, not extraction into a new `placement.md`. The consolidation survey and the superintegrate gate now both point at `task-tree-design.md §Placing Work by Durable Home` as the authoritative single owner — the lower-churn / DRY choice; no new file or link surface to maintain.
 
 **2. Consolidation survey + Merge action whole-tree — [`skills/superplan/references/consolidation.md`](../../../../skills/superplan/references/consolidation.md).** Survey step 4 now compares **across levels** (each task/subtree's concern vs parent and other subtrees, via §Placing Work), not only same-level pairs — so whole-tree misplacement is visible. Step 5 + the issue table + Merge action detail now treat any **update task** as a Merge-by-default candidate, and the **Merge** action is extended from pairwise-only to **N-way merge into a subtree** (Merge+Split composite: one parent concern, distinct survivors as children, conservative status rollup, `depends_on` rewire). Merge stays **manual — no `task merge` command** — so the human controls nuance integration.
 
@@ -107,5 +107,4 @@ The safe-execution + detection substrate (lossless `depends_on` rewire hook, adv
 
 ## Review Notes
 
-1. **[MAJOR]** Stale Results authority: the headline finding cites [`task-tree/references/planning.md` §Placing Work](../../../../skills/task-tree/references/planning.md) as the "authoritative placement rewrite", but that file was deleted by `task-tree-design/01-reference-ownership`; the placement policy now lives in [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md). The durable record points readers at a dead owner with no historical annotation. Fix: annotate the citations as historical and name the current owner.
-2. **[MINOR]** The Results promise "their fold-back happens at integration, per this task's own lifecycle rule" — that fold-back has not happened: this task and the superseded `entry-and-placement` sibling survive as standalone approved update tasks, the exact pattern this task's lifecycle rule expires at consolidation/integration. Fix: execute the merge/prune at the next consolidation gate.
+1. **[MINOR]** The Results promise "their fold-back happens at integration, per this task's own lifecycle rule" — that fold-back has not happened: this task and the superseded `entry-and-placement` sibling survive as standalone approved update tasks, the exact pattern this task's lifecycle rule expires at consolidation/integration. Fix: execute the merge/prune at the next consolidation gate.

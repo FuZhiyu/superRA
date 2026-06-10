@@ -1,13 +1,13 @@
 ---
 name: superimplement
-description: Requires `superRA:using-superra` loaded first. Use when you have a `superRA/` task tree and are ready to implement its tasks; when a plan has been approved and you need per-task implementation with an implementer-reviewer pair; when resuming work on a plan where some tasks are `implemented`, some `revise`, and some not started; when an analysis is code-complete and you want to verify reproducibility and present completion options (merge / PR / keep / discard). Triggers include "execute the plan", "run task N", "implement this plan", "finish this analysis", a branch with an approved plan but no code yet, or a `revise` state that needs orchestrator adjudication before re-dispatch.
+description: Requires `superRA:using-superra` loaded first. Use when you have a `superRA/` task tree and are ready to implement its tasks; when a task tree has been approved and you need per-task implementation with an implementer-reviewer pair; when resuming work on a task tree where some tasks are `implemented`, some `revise`, and some not started; when an analysis is code-complete and you want to verify reproducibility and present completion options (merge / PR / keep / discard). Triggers include "execute the plan", "run task N", "implement this", "finish this analysis", a branch with an approved task tree but no code yet, or a `revise` state that needs orchestrator adjudication before re-dispatch.
 ---
 
 # superimplement — the IMPLEMENT phase
 
 Workflow skill for the **IMPLEMENT** and **VALIDATE** phases. Owns per-task dispatch, the implementer-reviewer loop with orchestrator-discipline filtering, end-to-end reproducibility verification, and the 4-option completion menu.
 
-**Announce at start:** "I'm using the superimplement skill to implement this plan."
+**Announce at start:** "I'm using the superimplement skill to implement the task tree."
 
 ## Execution Modes
 
@@ -109,7 +109,7 @@ After every task is `approved`, verify the work end-to-end before presenting com
 3. **Results recorded?** Read the completed task files. Treat missing, thin, or status-report-only major results as a failed gate: every completed task with substantive work needs findings, key numbers, caveats, and verification evidence in `## Results`. Parent `## Results` sections should summarize direct children selectively, not recursively copy every finding. Figure attachments in each task's `attachments/` directory are committed.
 
 4. **Reproducibility verification.**
-   - Multi-script pipeline runs end-to-end if the plan declares one.
+   - Multi-script pipeline runs end-to-end if the task tree declares one.
    - Outputs exist and were generated from committed code, not ad-hoc REPL state.
 
 5. **Deferred MINORs resolved?** Check task `## Review Notes` sections for any remaining MINOR items. If a MINOR was deferred across tasks and never addressed, resolve it now (dead code removal, missing documentation, format compliance) or document it as an accepted limitation in the relevant task's `## Results`.
@@ -130,7 +130,7 @@ Work complete and verified. Here are the results summary:
 What would you like to do?
 
 1. Proceed with integration
-2. Change the plan
+2. Change the task tree
 3. Keep the branch as-is (I'll handle it later)
 4. Discard this work
 ```
@@ -140,7 +140,7 @@ Fold the researcher's answer into the relevant task objective (rewriting it to b
 **Execute the user's choice:**
 
 - **Option 1 (Proceed with integration):** Invoke `superRA:superintegrate`.
-- **Option 2 (Change the plan):** Re-enter `superRA:superplan §User Feedback and Changing the Task Tree` — treat the researcher's scope change as the trigger; after the plan edit commit, run the main-agent Workflow Frontier Resolver to choose the next entry point.
+- **Option 2 (Change the task tree):** Re-enter `superRA:superplan §User Feedback and Changing the Task Tree` — treat the researcher's scope change as the trigger; after the task-tree edit commit, run the main-agent Workflow Frontier Resolver to choose the next entry point.
 - **Option 3 (Keep as-is):** Report the branch name and worktree path back to the user, then stop. Do not clean up.
 - **Option 4 (Discard):** Confirm with the user by typed input — they must type the word `discard` exactly. Resolve the base branch with `git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null` (ask via `AskUserQuestion` if ambiguous), then perform the teardown: `git checkout <base-branch>`, `git branch -D <analysis-branch>`, and — if the analysis was in a worktree, remove the worktree. Stop after the branch and worktree are removed. Report what was deleted.
 
@@ -155,8 +155,8 @@ Cross-stage orchestrator behavior lives in `superRA:agent-orchestration`.
 The autonomy contract is in `superRA:using-superra/references/main-agent.md` (main-agent only). This section lists the **superimplement-specific stop points** that plug into its pause classes.
 
 - **Step 4 completion menu.** User-defined workflow milestone (see Step 4 above for the four options).
-- **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, plan with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
-- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `superplan §User Feedback and Changing the Task Tree`; after the plan edit commit, run the Workflow Frontier Resolver. Pause class (2) in the autonomy contract.
+- **Hard blockers from domain signals.** Unexpected input-quality issues during initial description, scope changes from a merge (row count shifts), validation failure against domain expectation, task tree with critical gaps, pipeline file missing for a multi-script analysis, required input unavailable. Pause class (1) in the autonomy contract.
+- **Methodology / authority boundary decisions.** Methodology disagreement with a reviewer, CRITICAL severity issue the orchestrator wants to override, repeated reviewer disagreement across re-dispatches on the same point, validation failure of unclear domain significance, scope or definition call with no obvious right answer. **Researcher-initiated scope change** mid-execution — new task, removed task, methodology pivot, sample redefinition — route through `superplan §User Feedback and Changing the Task Tree`; after the task-tree edit commit, run the Workflow Frontier Resolver. Pause class (2) in the autonomy contract.
 
 Every stop above: stop and `AskUserQuestion` (plain text if unavailable); fold the answer into the relevant task objective **before** acting on it.
 

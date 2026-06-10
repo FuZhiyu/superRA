@@ -1,6 +1,6 @@
 ---
 title: "Replace ## Decisions with ## Revision Notes"
-status: revise
+status: approved
 depends_on:
   - skill-rewrite
 tags: []
@@ -51,11 +51,11 @@ Implement the `## Revision Notes` mechanism across the task tree, agent specs, a
 
 ### Files Modified
 
-- [`skills/task-tree/references/planning.md`](skills/task-tree/references/planning.md) — Removed §User Decisions Log section entirely. Updated §Root task.md Anatomy: replaced `## Decisions` with `## Revision Notes` (with lifecycle description). Updated §Field-by-Field Notes: replaced `## Decisions` entry with `## Revision Notes` entry. Updated §Stale Content Checklist: replaced "Decisions section" reference with revision-note guidance.
-- [`skills/task-tree/SKILL.md`](skills/task-tree/SKILL.md) — Updated body sections table: replaced `## Decisions` row with `## Revision Notes` (owner: planner/orchestrator, purpose: temporary delta signal). Updated §Ownership Model: removed `## Decisions` from implementer-owned sections list.
-- [`agents/implementer.md`](agents/implementer.md) — Removed `## Decisions` from §What You Own body-sections list. Removed "record decisions in `## Decisions`" from §Update the Task and Commit.
-- [`agents/reviewer.md`](agents/reviewer.md) — No changes needed; reviewer already has correct ownership model (only writes `## Review Notes`).
-- [`skills/agent-orchestration/SKILL.md`](skills/agent-orchestration/SKILL.md) — Updated §Orchestrator Duties escalation: replaced "log in `## Decisions`" with "fold into objective + revision note". Updated §Handling Reviewer Feedback items 5 and limits: replaced all `## Decisions` / `§User Decisions Log` references with the new mechanism. Updated §Handling Implementer Status: replaced "log decision in `## Decisions`" with "fold into task objective".
+- [skills/task-tree/references/task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) — (historically `skills/task-tree/references/planning.md`, which was split into task-file-contract.md + task-tree-design.md) — Removed §User Decisions Log section entirely. Updated §Root task.md Anatomy: replaced `## Decisions` with `## Revision Notes` (with lifecycle description). Updated §Field-by-Field Notes: replaced `## Decisions` entry with `## Revision Notes` entry. Updated §Stale Content Checklist: replaced "Decisions section" reference with revision-note guidance.
+- [skills/task-tree/SKILL.md](../../../../skills/task-tree/SKILL.md) — Updated body sections table: replaced `## Decisions` row with `## Revision Notes` (owner: planner/orchestrator, purpose: temporary delta signal). Updated §Ownership Model: removed `## Decisions` from implementer-owned sections list.
+- [agents/implementer.md](../../../../agents/implementer.md) — Removed `## Decisions` from §What You Own body-sections list. Removed "record decisions in `## Decisions`" from §Update the Task and Commit.
+- [agents/reviewer.md](../../../../agents/reviewer.md) — No changes needed; reviewer already has correct ownership model (only writes `## Review Notes`).
+- [skills/agent-orchestration/SKILL.md](../../../../skills/agent-orchestration/SKILL.md) — Updated §Orchestrator Duties escalation: replaced "log in `## Decisions`" with "fold into objective + revision note". Updated §Handling Reviewer Feedback items 5 and limits: replaced all `## Decisions` / `§User Decisions Log` references with the new mechanism. Updated §Handling Implementer Status: replaced "log decision in `## Decisions`" with "fold into task objective".
 
 ### Verification
 
@@ -68,8 +68,4 @@ Implement the `## Revision Notes` mechanism across the task tree, agent specs, a
 - `skills/task-tree/references/internals.md:30` — data model field `decisions: str # extracted from ## Decisions`. This is a code-level concern for whoever updates the Python scripts; not in this task's file list.
 - `skills/using-superRA/SKILL.md:43` — parenthetical mention of "User Decisions Log format" in §Handoff Docs. Not in this task's file list. The sibling `main-agent-update` task or a follow-up should address this.
 - Other files outside scope (implementation-workflow, integration-workflow, semantic-merge, result-protection, handoff-doc, direct-mode refs) still reference `## Decisions` and `§User Decisions Log`. These are not in this task's five-file scope.
-
-## Review Notes
-
-1. **[MAJOR]** Broken Results links: citations like `[skills/task-tree/references/planning.md](skills/task-tree/references/planning.md)` are task-dir-relative (never resolved from this file), and the target has since been deleted — its content was split into [task-file-contract.md](../../../../skills/task-tree/references/task-file-contract.md) and [task-tree-design.md](../../../../skills/superplan/references/task-tree-design.md). Fix: correct relativity and annotate the dead target as historical.
 

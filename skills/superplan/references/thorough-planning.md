@@ -13,11 +13,10 @@ During Phase 1, dispatch 2-4 exploration agents in parallel, each covering a dis
 - **History and prior work** — git log for the affected areas, past approaches, related tasks in `superRA/` if one exists.
 - **Domain-specific survey** — data inventory for analysis work, existing model notes for theory work, manuscript structure for writing work.
 
-**Dispatch shape.** Exploration agents skip the canonical task-scoped template — they have no task path or stage. Dispatch a read-only `subagent_type: "Explore"` agent (Claude Code's built-in read-only search agent; other harnesses may name lightweight read-only agents differently) with the exploration objective and scope as plain prose in the prompt body:
+**Dispatch shape.** Exploration agents skip the canonical task-scoped template — they have no task path or stage. Dispatch a read-only exploration agent (consult the harness adapter reference for the harness-specific agent type) with the exploration objective and scope as plain prose in the prompt body:
 
 ```
-Agent(subagent_type: "Explore"):
-  Map the data pipeline in `src/analysis/`: what scripts exist, what each
+Explore: Map the data pipeline in `src/analysis/`: what scripts exist, what each
   produces, what the dependency order is, and what data files they read.
   Focus on `src/analysis/` and `data/processed/`.
 ```
@@ -43,11 +42,10 @@ Most thorough planning uses parallel exploration but single-agent design — the
 
 Do not use it when the work is large but structurally straightforward (many tasks, one approach), when the "perspectives" are really parts of one sequential pipeline, or when a single pass with the exploration findings suffices.
 
-**Dispatch shape.** Design agents use the same lightweight read-only `Explore` shape as exploration agents. Put the design objective plus the relevant exploration findings and constraints in the prompt body, and ask for task titles, objectives, dependencies, and expected outputs as structured text with no files created:
+**Dispatch shape.** Design agents use the same lightweight read-only exploration shape. Put the design objective plus the relevant exploration findings and constraints in the prompt body, and ask for task titles, objectives, dependencies, and expected outputs as structured text with no files created:
 
 ```
-Agent(subagent_type: "Explore"):
-  Propose a task tree for rebuilding the data pipeline in `src/data/`.
+Explore: Propose a task tree for rebuilding the data pipeline in `src/data/`.
   Consider: the file inventory from exploration shows 12 raw CSVs and 3
   intermediate parquets; existing conventions use Julia scripts; the pipeline
   must produce a merged panel dataset. Return task titles, objectives,
@@ -87,14 +85,7 @@ Keep it to 3-5 files, one line each with a brief reason — a prioritization aid
 
 ## Planning Review
 
-At thorough depth, Phase 4 gains a planning-review step between self-review and user review (see `superplan §Agent Review`); explicit handoff-review requests use the same mechanism. Dispatch a canonical reviewer via `agent-orchestration` §Dispatch Templates, giving it the context behind the design decisions: the exploration synthesis for handoff-readiness, the relevant design rationale or domain context for design-review.
-
-**What each mode evaluates:**
-
-- **Handoff-readiness:** clarity, completeness, human readability, internal consistency, parent/sibling context, dependency sanity, objective/guidance split, and whether an implementer could execute the assigned task or subtree from the task files plus provided context.
-- **Design review:** objective fit of the proposed architecture, decomposition, durable ownership, depth vs. breadth, branching quality, update-task lifecycle, action-verb durability, assumptions, artifact pipeline, domain reasoning, and unresolved tradeoffs. Use `task-tree-design.md` for the full policy.
-
-The planner fixes the tree inline against the findings. The reviewer's own mechanics (verdict, note ownership, edit scope) live in [planning-review.md](planning-review.md).
+The planning-review step is owned by `superplan §Agent Review`. Provision the reviewer with the context behind the design decisions: the exploration synthesis for handoff-readiness, the relevant design rationale or domain context for design-review. The reviewer's mechanics (verdict, note ownership, edit scope) live in [planning-review.md](planning-review.md).
 
 ## Incremental Refinement
 

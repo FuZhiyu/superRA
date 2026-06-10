@@ -1,6 +1,6 @@
 ---
 title: "Extend Planning Review to Task-Tree Design"
-status: revise
+status: approved
 depends_on: 
   - 02-tree-design-protocol
 
@@ -51,6 +51,3 @@ Verification:
 - `python3 skills/report-in-markdown/scripts/check_markdown.py skills/superplan/references/planning-review.md skills/superplan/references/thorough-planning.md superRA/task-tree/planning-redesign/task-tree-design/04-planning-review/task.md`
 - `./superRA/superra task check`
 
-## Review Notes
-
-1. **[MAJOR]** DRY drift introduced by this task's edits: the design-review dimension list is enumerated in both [thorough-planning.md:95](../../../../../skills/superplan/references/thorough-planning.md#L95) and [planning-review.md:11](../../../../../skills/superplan/references/planning-review.md#L11), and the two lists already disagree (assumptions / artifact pipeline / domain reasoning / unresolved tradeoffs appear only in the planner-facing copy; parent-sibling context / dependency quality / objective-guidance split only in the reviewer-facing copy). Both defer to `task-tree-design.md` "for the full policy", so neither enumeration is authoritative — the exact paraphrase-drift the CLAUDE.md prose gate blocks. Compounding it, the reviewer's own mode definitions live in the planner-facing file: [planning-review.md:9](../../../../../skills/superplan/references/planning-review.md#L9) sends the dispatched reviewer to thorough-planning.md §Planning Review, which the `Stage: planning-review` manifest row does not load. Fix: move "what each mode evaluates" into planning-review.md (it is reviewer mechanics per the Ownership Boundaries row); reduce both dimension enumerations to a single pointer at [task-tree-design.md](../../../../../skills/superplan/references/task-tree-design.md); leave thorough-planning.md carrying only the planner-side trigger and context-provisioning.
