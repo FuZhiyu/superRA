@@ -1,6 +1,6 @@
 ---
 title: "task_check.py cleanup: collapse _walk_plan_tolerant"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-10
