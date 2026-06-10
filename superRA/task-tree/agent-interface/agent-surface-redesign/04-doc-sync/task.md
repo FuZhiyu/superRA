@@ -53,3 +53,7 @@ All four doc surfaces now describe the post-relocation structure consistently: e
 - `grep -rn "[Cc]onsumer-facing" skills/ README.md CLAUDE.md` → no matches (exit 1).
 - `grep -rn "primary handoff mechanism" skills/CATEGORIES.md README.md skills/using-superRA/SKILL.md` → no matches.
 - The only "every agent already loads" line ([using-superRA/SKILL.md:96](../../../../../skills/using-superRA/SKILL.md#L96)) correctly names `using-superra` + `report-in-markdown` as the two universal loads and attributes the task interface to §Task Interface, not task-tree.
+
+## Review Notes
+
+> 1. [MINOR] Doc-surface sweep gap: [claude-tools.md:15](../../../../../skills/using-superRA/references/claude-tools.md#L15) carries contributor policy ("Claude remains the primary harness. Keep the shared workflow behavior in canonical `skills/` and put harness-specific mapping rules in these adapter references…") inside an agent-facing adapter reference — it restates CLAUDE.md §Codex and Harness Design for the wrong audience and shapes no agent behavior. Drop the paragraph from the adapter.
