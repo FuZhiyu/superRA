@@ -3912,7 +3912,7 @@ class TestForestDetection:
     def test_task_check_paths_root_relative_on_forest(self, forest_root):
         """task_check's own walk reports root-relative paths (its happy path no
         longer descends past the resolved root)."""
-        root = task_check._walk_plan_tolerant(forest_root)
+        root = _task_io.walk_plan(forest_root)
         all_paths = {t.path for t in _task_io.collect_all_tasks(root)}
         assert "01-alpha/01-model/01-derive" in all_paths
         assert "02-beta/01-data" in all_paths

@@ -27,8 +27,8 @@ from _task_io import (
     Task,
     compute_status,
     parse_frontmatter,
-    parse_task,
     resolve_plan_root_arg,
+    walk_plan,
 )
 from _task_validate import detect_cycles, invalid_status_message
 
@@ -367,88 +367,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _walk_plan_tolerant(plan_root: Path) -> Task:
-    """Walk plan tree, catching parse errors so checks can still run.
-
-    Tasks with invalid status values are included with their raw status
-    preserved so that check_status_validity can report them.
-    """
-
-    def _tolerant_parse(task_md: Path) -> Task | None:
-        try:
-            return parse_task(task_md, plan_root)
-        except ValueError as exc:
-            # Build a partial task from raw frontmatter so the tree walk
-            # can continue.  The status check will flag the bad value.
-            text = task_md.read_text(encoding="utf-8")
-            fm, body = parse_frontmatter(text)
-
-            parent = task_md.parent
-            # Compute path relative to plan_root
-            try:
-                rel = parent.relative_to(plan_root)
-                path = str(rel) if str(rel) != "." else ""
-            except ValueError:
-                path = parent.name
-
-            raw_status = str(fm.get("status", "not-started"))
-            # Don't report here — check_status_validity will flag the
-            # invalid enum value in its own pass.
-
-            deps_raw = fm.get("depends_on", [])
-            if isinstance(deps_raw, str):
-                deps = [deps_raw] if deps_raw and deps_raw != "~" else []
-            else:
-                deps = deps_raw
-
-            tags_raw = fm.get("tags", [])
-            if isinstance(tags_raw, str):
-                tags = [tags_raw] if tags_raw and tags_raw != "~" else []
-            else:
-                tags = tags_raw
-
-            return Task(
-                path=path,
-                dir_path=parent,
-                title=str(fm.get("title", "")),
-                status=raw_status,
-                depends_on=deps,
-                tags=tags,
-                body=body,
-            )
-
-    def _walk_children(directory: Path) -> list[Task]:
-        subdirs = sorted(
-            [d for d in directory.iterdir()
-             if d.is_dir() and (d / "task.md").exists()],
-            key=lambda d: d.name,
-        )
-        children: list[Task] = []
-        for subdir in subdirs:
-            child = _tolerant_parse(subdir / "task.md")
-            if child is not None:
-                child.children = _walk_children(subdir)
-                children.append(child)
-        return children
-
-    root_task_md = plan_root / "task.md"
-    if root_task_md.exists():
-        root = _tolerant_parse(root_task_md)
-        if root is None:
-            root = Task(path="", dir_path=plan_root, title="(parse error)")
-    else:
-        root = Task(path="", dir_path=plan_root, title="(no root task.md)")
-
-    root.children = _walk_children(plan_root)
-    return root
-
-
 def run_checks(
     plan_root: Path,
     category: str | None = None,
 ) -> list[Finding]:
     """Run all (or filtered) checks and return findings."""
-    root = _walk_plan_tolerant(plan_root)
+    root = walk_plan(plan_root)
     findings: list[Finding] = []
 
     if category is None or category == "status":
