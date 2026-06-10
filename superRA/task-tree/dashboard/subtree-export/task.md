@@ -1,6 +1,6 @@
 ---
 title: "Export subtree dashboard to standalone HTML"
-status: approved
+status: revise
 depends_on:
   - unify-static-export
 tags: []
@@ -60,3 +60,9 @@ So the increment **re-bases** the subtree: [`_rebase_subtree(task, root_path)`](
 ### Known limitation
 
 Figures in a *downloaded* share file are non-portable (the prefix resolves against the embedded `.plan` tree's location, which isn't beside a file saved to Downloads) — the same single-file limitation the whole-tree export already has. The export is otherwise fully self-contained and offline.
+
+## Review Notes
+
+1. **MAJOR** — the §Known limitation above is stale and contradicts an approved sibling: [self-contained-export](../self-contained-export/task.md) base64-embeds figures into the export and its Results explicitly state the downloaded-file figure-portability limitation from *this* task is "now **resolved**" (figures travel as data URIs; the relative-path prefix is only a fallback for un-embeddable srcs). The stale-content checklist requires superseded results be rewritten in place — as written, a reader of this approved task believes share-file figures still break. Rewrite the §Known limitation to record the resolution (with a link to the sibling), keeping only the residual fallback caveat.
+2. **MINOR** — [plan_dashboard.py:1278-1302](../../../../skills/task-tree/scripts/plan_dashboard.py#L1278): the `GET /export` handler runs the fully synchronous `render_standalone_html` (tree walk + base64 of every embedded figure) inside an `async def`, blocking the event loop — and all SSE heartbeats — for the duration of a large export. Today this synchronicity is also what makes the module-state snapshot/restore safe; if offloading to a thread, make that snapshot concurrency-safe first.
+3. **MINOR** — [plan_dashboard.py:1304-1308](../../../../skills/task-tree/scripts/plan_dashboard.py#L1304): the `Content-Disposition` filename interpolates the unsanitized last segment of `?root=` into a quoted header value; a `"` in a slug breaks the header. Sanitize the slug (or percent-encode per RFC 5987) before embedding.
