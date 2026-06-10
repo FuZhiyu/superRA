@@ -58,3 +58,7 @@ The JSON-writer route handles *new* and *migrated* files, but the read path stil
 - `task_comment.py list` under bare `python3` shows full blocks with the orphaned fallback.
 - Full suite green under `~/.venv`: `test_task_tree.py` + `test_cli.py` + `test_dashboard.py` = 416 passed (JSON-format sidecar is transparent to the dashboard's YAML reader; the migrated in-repo files parse cleanly).
 - The no-pyyaml regression **test** is owned by sibling `04-tests`; this round verified the behavior manually as above.
+
+## Review Notes
+
+> 1. [MINOR] `## Results` cite migrated sidecars at `lean-interface/01-core-in-using-superra` / `lean-interface/02-task-tree-slim` and a cross-edit flagged "for `lean-interface/05-coverage-audit`"; those task paths do not exist post-rename (`agent-surface-redesign/…`, audit is `09-coverage-audit`). Update the paths.
