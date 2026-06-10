@@ -30,3 +30,10 @@ Likely implementation shape: add a packaged workflow template under skills/task-
 ## Sync Impact
 
 Synced with `better-handoff` after the dashboard serve-lifecycle work landed there. The artifact publisher remains a static-export workflow installer under `superra dashboard artifact setup`; plain `superra dashboard` keeps the incoming background server lifecycle and still auto-opens by default unless `--no-open` is used.
+
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR items only; status stays `approved`.)*
+
+1. **MINOR** — the parent `## Results` is a single `--repo-file-base` bullet and never states the headline deliverables the three approved children shipped: the managed workflow template with delete-before-upload artifact cleanup ([01-workflow-template](01-workflow-template/task.md)), the `superra dashboard artifact setup` installer CLI ([02-setup-cli](02-setup-cli/task.md)), and docs/smoke ([03-docs-and-smoke](03-docs-and-smoke/task.md)). Add a rollup linking down to the children.
+2. **MINOR** — the installed workflow's export step hardcodes `uv run --script skills/task-tree/scripts/plan_dashboard.py …` ([superra-dashboard-artifact.yml](../../../../skills/task-tree/scripts/templates/superra-dashboard-artifact.yml)), but `artifact setup --repo-root` installs into arbitrary repositories; a consumer repo that uses superRA as a plugin (no vendored `skills/task-tree/`) gets a workflow that fails at the export step with no setup-time warning. Verify the script path exists under the target repo at install time (warn or refuse), or make the CLI source line configurable.
