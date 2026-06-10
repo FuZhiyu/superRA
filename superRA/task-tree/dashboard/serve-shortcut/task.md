@@ -45,3 +45,9 @@ The generated `.plan/serve` script resolves `PLAN_DIR` from its own location, ch
 
 All 116 tests pass including the 3 new tests.
 
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR item only; status stays `approved`.)*
+
+1. **MINOR** — the `.plan/serve` shortcut this task shipped no longer exists in the repo: the task root was renamed to `superRA/`, the repo-local wrapper is now `superRA/superra` (resolution chain in [wrapper_resolver.py](../../../../skills/task-tree/scripts/wrapper_resolver.py)), and the launch surface is the background-by-default `superra dashboard` from [serve-lifecycle](../serve-lifecycle/task.md). The Results don't record the supersession, so an approved task still describes a generation mechanism that's gone. Add a one-line superseded-by note pointing at the wrapper and serve-lifecycle.
+
