@@ -59,3 +59,7 @@ A new documented command surface — the comment read/resolve loop (`superra tas
 ### Deviation from guidance
 
 The objective's commands referenced the bare-script form (`task_comment.py list <task>`, `list-tree`, `resolve`). The loop is in fact wired into the packaged `superra` CLI as `superra task comment list/tree/resolve` ([cli.py:537-565](../../../../../skills/task-tree/scripts/cli.py#L537-L565)), and `commands.md` documents every other command in the packaged `superra task …` form. I documented the packaged form for consistency with the surrounding reference; the underlying script is still named in the internals Script Inventory. This satisfies the objective (discoverable read/resolve loop, single owner per command) while fitting the lean-router convention.
+
+## Review Notes
+
+> 1. [MINOR] `## Results` reference `lean-interface/05-coverage-audit`; the sibling is now [agent-surface-redesign/09-coverage-audit](../../agent-surface-redesign/09-coverage-audit/task.md). Update the path.
