@@ -1,6 +1,6 @@
 ---
 title: "Task Edit Discipline — Manual Move + Edit-Path Guidance"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-30
@@ -29,3 +29,9 @@ Background facts that motivate the change, already established:
 In scope: `skills/task-tree/scripts/task_hook.py`, `skills/task-tree/scripts/_task_io.py` (the new `validate_plan` warning rule), `hooks/hooks.json`, the task-tree test suite, `skills/task-tree/SKILL.md`, and `skills/task-tree/references/planning.md` (one-line doc note). Out of scope and explicitly NOT to be expanded into here: the static `dashboard.html` generation cleanup, and bringing Codex/Cursor hook variants to task-validation parity (those variants do not wire `task_hook.py` at all today — see `move-hook` task).
 
 **No generated artifacts are affected.** With the revision-note work reduced to a non-destructive warning, `agents/reviewer.md` is no longer touched (the reviewer keeps the removal duty), so the generated reviewer references (`direct-mode-reviewer.md`, `.codex/agents/superra_reviewer.toml`) need no regeneration.
+
+## Review Notes
+
+> 1. [MAJOR] This approved parent of a closed 3-child workstream has no `## Results` section at all (body is Objective / Context / Scope boundary only) — zero recorded outcome violates the Results lifecycle in [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) §Results Shape. Add a rollup linking the three children.
+> 2. [MINOR] `## Context / Rationale` and `## Scope boundary` are top-level sections, so children never inherited them via `superra task read` (which injects only the ancestor `## Objective` and its nested `###` subsections); nest them as `###` under `## Objective` or fold them in.
+> 3. [MINOR] Stale claims stated as current: `.plan/` as the tree root; `skills/task-tree/SKILL.md` "How to Edit a Task" / command-surface sections that the later agent-surface redesign removed; "those variants do not wire `task_hook.py` at all today" — Codex now wires it ([hooks-codex.json](../../../hooks/hooks-codex.json)), only Cursor ([hooks-cursor.json](../../../hooks/hooks-cursor.json)) still lacks task-hook parity; and the objective's "validate → propagate-status → rebuild-dashboard reconcile" overstates the hook, which no longer rebuilds the dashboard ([task_hook.py:6](../../../skills/task-tree/scripts/task_hook.py#L6)). Rewrite in place.
