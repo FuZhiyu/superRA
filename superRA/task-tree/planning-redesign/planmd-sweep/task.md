@@ -1,6 +1,6 @@
 ---
 title: "Sweep PLAN.md/RESULTS.md references across skills"
-status: approved
+status: revise
 depends_on:
   - main-agent-update
   - revision-notes
@@ -154,3 +154,9 @@ Follow-up validation:
 - `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project` regenerated project Codex role artifacts, and `python3 skills/codex-superra-setup/scripts/sync_codex_agents.py --scope project --check` reported all generated files up to date.
 - `uv run pytest skills/task-tree/scripts/test_task_tree.py skills/task-tree/scripts/tests/test_state_preservation.py skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 200 tests after integration closeout.
 - **Final diff self-check:** `git diff 19457675bf570a079bc960765a1832736cddf918..HEAD`; surviving change classes are task-results protocol docs, task-tree consolidation into this task, final-form workflow removal, stale-reference sweep, generated implementer artifacts, and user-facing README / hook guidance. Suspicious hunks are justified by the approved task-results objective, the researcher-requested consolidation, generated-artifact regeneration, and the AGENTS.md DRY/Necessity gate for instruction edits; no unrelated hunks found. Final checks: `python3 skills/task-tree/scripts/task_check.py --plan-root .plan` passed, and `uv run pytest skills/task-tree/scripts/test_task_tree.py skills/task-tree/scripts/tests/test_state_preservation.py skills/codex-superra-setup/scripts/test_sync_codex_agents.py` passed: 205 tests.
+
+## Review Notes
+
+1. **[MAJOR]** Incomplete terminology migration — "plan" survives as the noun for the `superRA/` artifact in living instructions (CLAUDE.md §Terminology violation): [superimplement/SKILL.md:10](../../../../skills/superimplement/SKILL.md#L10) announce "implement this plan"; [superimplement/SKILL.md:133](../../../../skills/superimplement/SKILL.md#L133) completion-menu option "Change the plan" (also description line 3, "the plan declares one" L112, "the plan edit commit" L143); [superintegrate/SKILL.md:208](../../../../skills/superintegrate/SKILL.md#L208) "substantive plan restructures" (also description line 3 "when a plan is code-complete"); [using-superRA/SKILL.md:22](../../../../skills/using-superRA/SKILL.md#L22) "a plan change invalidates" and L62 "plan draft"; [agent-orchestration/SKILL.md:167](../../../../skills/agent-orchestration/SKILL.md#L167) "You made the plan"; [agents/implementer.md:122](../../../../agents/implementer.md#L122) "expectations from the plan" (fix at source, regenerate direct-mode artifacts); [main-agent.md:69](../../../../skills/using-superRA/references/main-agent.md#L69) "plan with critical gaps". Fix: sweep to "task tree" / "task objectives" per CLAUDE.md §Terminology.
+2. **[MAJOR]** [README.md:30](../../../../README.md#L30) — stale cross-reference "`superplan §User Feedback and Changing Plans`"; the section is now "User Feedback and Changing the Task Tree", so a reader following the pointer finds nothing. Also "(plan + results unified)" at [README.md:97](../../../../README.md#L97) and [skills/CATEGORIES.md:45](../../../../skills/CATEGORIES.md#L45). Fix: update the section name and reword the noun usages.
+3. **[MAJOR]** Broken Results links: most `## Results` citations here (e.g. `[skills/using-superRA/SKILL.md](skills/using-superRA/SKILL.md)`) are task-dir-relative and never resolved; several target renamed paths (`implementation-workflow`, `integration-workflow`). Fix: correct relativity (`../../../../…`); annotate dead targets as historical.
