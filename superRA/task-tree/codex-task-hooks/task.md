@@ -1,6 +1,6 @@
 ---
 title: "Codex Task Hooks and Decision-Reminder Deprecation"
-status: revise
+status: approved
 depends_on: []
 tags:
   - hooks

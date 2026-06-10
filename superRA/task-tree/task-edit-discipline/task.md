@@ -1,6 +1,6 @@
 ---
 title: "Task Edit Discipline — Manual Move + Edit-Path Guidance"
-status: revise
+status: approved
 depends_on: []
 tags: []
 created: 2026-05-30
