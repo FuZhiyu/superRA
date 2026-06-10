@@ -1,6 +1,6 @@
 ---
 title: "Surface Task Comments to the Agent Loop"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-06-01
@@ -39,3 +39,7 @@ The task-tree comment feature is now visible to the agent loop. Previously a res
 **Test coverage.** 17 tests in `skills/task-tree/scripts/tests/test_comments.py` cover the block accessor, `task_read` human + `--json` surfacing, the enriched CLI, and the load-bearing no-`pyyaml` reliability path (a `sys.meta_path` finder genuinely disables `import yaml`; mutation-verified to fail if the behavior regresses). The full task-tree suite stays green (534 passed). See [04-tests](04-tests/task.md).
 
 **Format-change decision (load-bearing).** Meeting the no-`pyyaml` requirement required changing the on-disk comment sidecar format from PyYAML block-style to JSON-in-`.yaml`, repo-wide; confirmed with the researcher during integration. The format is lossless and backward-readable, and the alternative — a hand-rolled stdlib YAML parser — was rejected as risking silent corruption of multi-line/unicode comment bodies.
+
+## Review Notes
+
+> 1. [MAJOR] The objective's placement and sequencing protocol references sibling `lean-interface` and its `05-coverage-audit`; no such sibling exists — it was renamed [agent-surface-redesign](../agent-surface-redesign/task.md) and the audit is `09-coverage-audit`. The stale-content checklist requires rewriting sibling references that assume a superseded structure; replace the `lean-interface/*` references with the current sibling paths.
