@@ -66,3 +66,9 @@ Light theme:
 Dark theme:
 
 ![Dashboard markdown links in dark theme rendered in lighter warm accent, legible on dark background](attachments/links-dark.png)
+
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR items only; status stays `approved`.)*
+
+1. **MINOR** — the Results' "two copies" framing is stale: the inline `DASHBOARD_HTML` constant this task patched (cited at `plan_dashboard.py#L1293`, an anchor that now points at unrelated code) was deleted by [unify-static-export](../unify-static-export/task.md), so there is one `.rendered-md a` rule in [base.html](../../../../skills/task-tree/scripts/templates/base.html) and no second copy to keep in sync. Add a one-line supersession note so future styling work doesn't go hunting for the removed duplicate.
