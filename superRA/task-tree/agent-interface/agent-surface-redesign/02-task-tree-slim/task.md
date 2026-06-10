@@ -86,3 +86,7 @@ Rewrote the `**Role-scoped references:**` block to the new map: executing agent 
 - DRY/Necessity gate applied line-by-line: dropped the redundant body `mv` prose paragraph that duplicated commands.md; the body now routes rather than restates, with single-task read/edit pointed (not copied) to `using-superRA §Task Interface`.
 
 **No knowledge lost (within this task's scope):** every command, concept, migration step, and dashboard detail removed from the body now lives in `references/commands.md` or `references/internals.md` (or was already in `planning.md`), reachable via the body's routing table. Task `09-coverage-audit` verifies this against a git snapshot.
+
+## Review Notes
+
+> 1. [MINOR] `## Results` defer a create/rename/link command-surface duplicate as "temporarily co-exists in planning.md by design" pending a separate dedup; `planning.md` no longer exists, so the caveat is resolved-by-deletion and now misleads readers (the 09 audit's units 20/23/24 and "planning.md whole, unchanged" lean on it). Rewrite the caveat as resolved, pointing at [commands.md](../../../../../skills/task-tree/references/commands.md) as the surviving home.
