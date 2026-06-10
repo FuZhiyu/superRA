@@ -43,3 +43,9 @@ File-link citations with GitHub-style line anchors now open VS Code at the cited
 - `test_vscode_file_links_translate_line_anchors` (source-presence guard against the logic being dropped) added to the dashboard suite.
 - Full suite green (see commit). The live `serve` template auto-reloads, so a dashboard reload picks up the fix; clicking a `#L<n>` citation opens VS Code at that line.
 
+## Review Notes
+
+*(Retrospective audit, 2026-06-10 — MINOR item only; status stays `approved`.)*
+
+1. **MINOR** — the committed coverage is the disclosed source-presence guard only; the node harness that actually exercised the anchor-translation rows was not committed, and the logic now lives inline in `renderMarkdown`'s file-link branch ([base.html:1801](../../../../skills/task-tree/scripts/templates/base.html#L1801)) where no JS runtime executes it in the suite. Commit the harness alongside the existing extracted-function node tests so the translation table stays executable, not just greppable.
+
