@@ -1,6 +1,6 @@
 ---
 title: "Worktree-aware VS Code task links in the dashboard"
-status: approved
+status: revise
 depends_on: [worktree-selector, vscode-line-anchors]
 tags: []
 created: 2026-06-02
@@ -56,3 +56,6 @@ Both emit sites read this one constant, so the fix repairs both: the per-task bu
 - **JS parse.** Generated a static dashboard and `node --check`'d all four inline `<script>` blocks (incl. the 1.75 MB app script carrying these changes) — all parse with no syntax error.
 - **Test suite.** `python -m pytest skills/task-tree/scripts/test_dashboard.py -q` → 81 passed.
 
+## Review Notes
+
+1. **MAJOR** — both the Objective and the Results describe retired mechanics as the current implementation: `POST /api/worktree/switch`, the server field `_current_worktree_path`, `fetchWorktrees()` assigning `PROJECT_ROOT = data.current`, and the `vscode://file/' + PROJECT_ROOT + '/superRA/' + …` href convention. None of this exists anymore: the switch endpoint and `current` field were removed by [multi-worktree-serving](../multi-worktree-serving/task.md) task 03 (`/api/worktrees` now returns `launch_wt_id` + per-entry `wt_id`/`plan_root`, [plan_dashboard.py:1149-1217](../../../../skills/task-tree/scripts/plan_dashboard.py#L1149)), and the hardcoded `superRA/` href base was delinked to `RESOLVED_ROOT`/`ROOT_PREFIX` by [02-file-link-consistency](../live-server/path-basis-consistency/02-file-link-consistency/task.md) — [test_dashboard.py:2060-2073](../../../../skills/task-tree/scripts/test_dashboard.py#L2060) now asserts the `/superRA/` literal is *absent* from `taskFileVscodeHref`. The worktree-following behavior this task delivered still exists (now via `_wtResolvedRoots` re-pointing `PROJECT_ROOT`/`RESOLVED_ROOT`/`ROOT_PREFIX` per `?wt=`, [base.html:3805-3830](../../../../skills/task-tree/scripts/templates/base.html#L3805)); per the stale-content checklist, rewrite the Results in place to the current mechanism with a one-line supersession note, so a reader verifying this approved task against the code does not find the claimed implementation absent.
