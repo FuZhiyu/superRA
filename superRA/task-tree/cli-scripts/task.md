@@ -1,6 +1,6 @@
 ---
 title: "CLI Scripts"
-status: in-progress
+status: approved
 depends_on:
   - core-data-layer
 tags: []
@@ -86,12 +86,3 @@ superra wrapper render-hook [--output PATH]
 - The shipped surface is the packaged `superra` command in [cli.py](../../../../skills/task-tree/scripts/cli.py), which routes to ~18 focused entry/helper modules under `skills/task-tree/scripts/` (e.g. `task_create.py`, `task_update.py`, `task_link.py`, `task_rename.py`, `task_query.py`, `task_read.py`, `task_add_result.py`, `task_comment.py`, `task_check.py`, `plan_migrate.py`, `plan_dashboard.py`, `task_hook.py`, `wrapper_resolver.py`), with shared internals in `_task_io.py`, `_comments.py`, `_worktree_discovery.py`.
 - Mutation invariants live in the mutator functions (single enforcement point regardless of entry surface): `resolve_path` containment + redundant-root-prefix tolerance, sibling-only dependency validation, cycle detection (`_has_transitive_dep`), and same-parent / cross-parent move invariants in `task_rename.py`.
 - Source resolution and run-line are single-sourced in `wrapper_resolver.py` (`uv run --script` + `python3` fallback), rendered into the committed `superRA/superra` wrapper and `hooks/task-hook` shim, both pinned by byte-identity tests.
-
-## Review Notes
-
-> 1. [MAJOR] Stale superseded instruction at the subtree root, inherited by every dispatched agent via ancestor context: Scope ([task.md:28](task.md#L28)) pins the `superRA/superra` wrapper to `uv run --project skills/task-tree`, Validation ([task.md:65](task.md#L65)) uses the same form, and Results ([task.md:74](task.md#L74)) claim "root `CLAUDE.md` now instructs agents to use `uv run --project skills/task-tree ...`" — all superseded by the `cli-source-resolution` child's `uv run --script` model, which [CLAUDE.md §Local Task-Tree CLI Development](../../../CLAUDE.md) now teaches. Rewrite in place per the stale-content checklist (Scope is planner-owned; Results is implementer-owned).
->    → implemented: rewrote the Scope wrapper line, both Validation lines, and the local-development-follow-up Results paragraph to the `uv run --script` model (record-repair authorized for this dispatch).
-> 2. [MINOR] The `### Key Findings` block ([task.md:79](task.md#L79)) — "6 scripts, each 65–210 lines", `task_query.py` Unicode icons — is a leftover from the original flat-scripts era, stacked beneath three later result layers (diff self-check, local-dev follow-up, task-move); it no longer describes the codebase (~30 scripts). Replace rather than stack, per the results-shape contract.
->    → implemented: replaced the stale Key Findings with a current-state description (~18 entry/helper modules routed via `cli.py`; mutation invariants in the mutator functions; resolution single-sourced in `wrapper_resolver.py`).
-> 3. [MINOR] `### Command Target` ([task.md:32](task.md#L32)) is stale against the shipped surface: missing `wrapper init` / `wrapper render-hook`, `dashboard stop`, `dashboard artifact setup`, `task status fix`, and `task migrate upgrade-status`. Refresh, or mark it explicitly as the original plan-time target.
->    → implemented: refreshed to a "Command Surface (shipped)" block verified against `cli.py --help`, adding `wrapper init`/`render-hook`, `dashboard stop`/`artifact setup`, `task status fix`, and `task migrate upgrade-status`.

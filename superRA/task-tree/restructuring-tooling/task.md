@@ -1,6 +1,6 @@
 ---
 title: "Safe Restructuring Tooling — Dep-Rewire Hook + Placement Detector"
-status: implemented
+status: approved
 depends_on: []
 tags:
   - task-tree
@@ -90,10 +90,3 @@ Added to [`test_task_tree.py`](../../../skills/task-tree/scripts/test_task_tree.
 - `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-tree/scripts` → **631 passed, 2 skipped** (at the revise round; was 305 for this task's original landing).
 - `superra task check --category placement --root superRA` runs against the live tree and surfaces one genuine smell (`figure-attachments` root-level leaf beside root-level branches) as an advisory warning — no auto-mutation. An earlier run over-fired on shared `README.md` outputs, which drove the generic-basename exclusion.
 - DRY/Necessity gate (skill-creator unavailable, per dispatch) applied line by line to the doc edits: the rename cascade is documented once per existing surface where the hook's auto-behaviors already live, each phrased to the surface's audience (agent-facing vs implementation-facing); no new doc file or category prose surface created.
-
-## Review Notes
-
-> 1. [MAJOR] Objective ([task.md:21](task.md#L21)) and Results ([task.md:56](task.md#L56)) assert "No `task merge` / `task move` command", but the `cli-scripts` subtree has since shipped `superra task move` as the *canonical* path-change mechanism ([commands.md §Move / rename a task](../../../skills/task-tree/references/commands.md#L47)). An approved task asserting a command must not exist while a sibling ships it is the stale sibling-objective case the task-file contract requires rewriting in place; scope both mentions to `task merge` only (the merge prohibition still holds).
->    → implemented: scoped both the Objective/Scope mention and the Results mention to `task merge` only, noting cross-parent moves use the shipped `task move` command (record-repair authorized for this dispatch).
-> 2. [MAJOR] The scope item ([task.md:25](task.md#L25)) requires documenting the rename auto-cascade in "the agent-facing §Task Interface / commit-hygiene surface in `using-superRA`, and `task-tree` SKILL" (also researcher comment #2 in comments.yaml), but [using-superRA/SKILL.md §Task Interface](../../../skills/using-superRA/SKILL.md#L46) mentions only the status-cascade hook behavior — no rename dep-cascade — and Results list only the task-tree surfaces (SKILL.md, commands.md, internals.md) without recording the deviation. Add the one-line mention in §Task Interface or record the deviation with its rationale in Results.
->    → implemented: added the rename dep-cascade to the §Task Interface line that already documents the status cascade ([using-superRA/SKILL.md:46](../../../skills/using-superRA/SKILL.md#L46)); recorded it in Results item 4.
