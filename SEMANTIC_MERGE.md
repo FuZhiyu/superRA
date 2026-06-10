@@ -1,34 +1,33 @@
 # Semantic Merge Record
 
-**Operation:** `merge --squash`
+**Operation:** `merge --no-ff`
 **Current branch:** `better-handoff`
-**Incoming ref:** `analysis/codex-task-hooks`
-**Governing baseline:** `9ca25479f7cb588aec3d758f0bb27d66e4c8aded`
-**Merge commit:** Squash commit containing this record
-**Propagation commits:** `None`
+**Incoming ref:** `better-handoff-impl/semantic-move-hook-json-agent/parallel/posttooluse-empty-json`
+**Governing baseline:** `8f5dd1d5b22954294b22651e41f95751a2e69466`
+**Merge commit:** Pending until commit
+**Propagation commits:** Task-tree fold and stale-reference fix included in the merge commit
 
 ## Current Branch Intent
 
-`better-handoff` already carried the lean task-system skill surface, packaged `superra` CLI, and stable `hooks/task-hook` wrapper for task-tree reconciliation.
+`better-handoff` already carried the approved Codex task-hook integration: decision-reminder hook removal, Codex task-system `PostToolUse` wiring, `updated` metadata removal, stable hook-wrapper packaging, and approved task-tree evidence under `superRA/task-system/codex-task-hooks`.
 
 ## Incoming Intent
 
-`analysis/codex-task-hooks` removes the decision-reminder hook, wires Codex task-tree `PostToolUse` reconciliation for task edits and structural shell changes, teaches `task_hook.py` to handle Codex `apply_patch` payloads and `.plan` roots, updates hook docs, and adds regression coverage.
+The incoming parallel branch fixes a Codex harness edge case: no-feedback task-hook paths that emitted empty stdout must emit parseable empty hook JSON (`{}`) for Codex, while Claude-compatible no-feedback paths stay silent and feedback paths still return `additionalContext`.
 
 ## Resolution Thesis
 
-The squash keeps current branch packaging conventions while taking the incoming Codex hook behavior. Claude and Codex manifests both use stable hook entry points; Codex `PostToolUse` now routes through `hooks/run-hook.cmd task-hook` instead of pointing directly at source scripts. The deprecated `ask-user-question-logger` hook is removed from manifests, tests, docs, and the hook directory.
+The merge keeps current branch packaging and approved hook-task structure while taking the incoming parseable-empty-output behavior. The temporary update task is folded into the durable `codex-task-hooks` parent per the update-task lifecycle, and the active internals reference is updated so no stale "silent no-feedback" claim remains.
 
 ## File / Script Impact Map
 
 | Path or path cluster | Incoming intent | Resolution | Codebase context |
 |---|---|---|---|
-| `hooks/hooks-codex.json` | Add Codex `PostToolUse` task-tree reconcile hooks. | Added `Edit|Write` and `Bash` matchers, routed through `run-hook.cmd task-hook`. | Preserves current packaged-wrapper convention. |
-| `hooks/hooks.json`, `hooks/hooks-cursor.json`, `hooks/ask-user-question-logger` | Remove decision-reminder hook. | Removed `AskUserQuestion` / Cursor entries and deleted the script. | User-decision logging remains workflow discipline, not hook reminder behavior. |
-| `skills/task-system/scripts/task_hook.py` | Accept Codex `apply_patch` payloads and `.plan` structural shell references. | Kept incoming parser and handler additions. | Existing hook remains best-effort and non-blocking. |
-| `skills/task-system/SKILL.md`, `skills/task-system/references/internals.md` | Document Codex task-hook coverage. | Kept `SKILL.md` lean; documented details in `internals.md §Hook Architecture`. | Matches DRY/Necessity gate for skill text. |
-| `tests/**`, `skills/task-system/scripts/test_task_system.py` | Cover Codex task hook wiring and behavior. | Preserved incoming behavior tests and adapted manifest assertions to the stable wrapper. | Avoids stale direct-script path expectations. |
-| `superRA/task-system/codex-task-hooks/**`, `superRA/task.md` | Carry task-tree implementation, integration, and documentation evidence. | Preserved Codex hook task evidence; dropped stale incoming Sync Map block from an older base-sync. | Root integration notes remain current-branch history plus Codex hook closure evidence. |
+| `hooks/hooks-codex.json` | Export Codex empty-JSON mode for task-hook commands and fail open with `{}` when no plugin root exists. | Kept incoming manifest behavior. | Preserves current `run-hook.cmd task-hook` packaging. |
+| `skills/task-system/scripts/task_hook.py` | Add `SUPERRA_TASK_HOOK_EMPTY_JSON` and a shared success-exit helper so no-feedback Codex paths emit `{}`. | Kept incoming behavior, including automatic empty-JSON mode for `apply_patch`; feedback JSON remains unchanged. | Existing hook remains best-effort and non-blocking. |
+| `skills/task-system/scripts/test_task_system.py` | Cover parseable empty JSON for Codex no-feedback Edit/Write, Bash, empty stdin, manifest fallback, and `apply_patch`. | Preserved incoming regression coverage and Claude silent no-op checks. | Protects the harness-specific output contract. |
+| `skills/task-system/references/internals.md` | Avoid stale documentation that all valid/ignored no-feedback paths stay silent. | Updated the active hook architecture reference to distinguish Claude silence from Codex `{}` output. | Scope-limited stale-reference fix. |
+| `superRA/task-system/codex-task-hooks/**`, `superRA/task.md` | Record the implemented update task. | Folded the temporary `06-posttooluse-empty-json` task into the durable approved parent and recorded the merge in the root Sync Map. | Prunes integration-stage update-task structure. |
 
 ## User Decisions
 
@@ -36,14 +35,14 @@ None.
 
 ## Checks
 
-- `python3 -m json.tool hooks/hooks-codex.json`, `hooks/hooks.json`, `hooks/hooks-cursor.json` — pass.
-- `bash tests/hooks/test-codex-hooks.sh` — pass, 14/14.
-- `uv run pytest skills/task-system/scripts/test_task_system.py` — pass, 233 tests.
-- `python3 skills/task-system/scripts/task_check.py --plan-root superRA` — pass.
-- `git diff --cached --check` — pass.
-- Anchored conflict-marker sweep — pass for merge markers.
-- `bash tests/check-harness-compatibility.sh` — fails on the pre-existing assertion `using-superRA manifest must reference theory-modeling`; `skills/using-superRA/SKILL.md` is outside this squash's touched hook surface.
+- `python3 -m json.tool hooks/hooks-codex.json` — pass.
+- `uv run --script skills/task-system/scripts/cli.py task check --root superRA` — pass.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" hooks skills/task-system superRA SEMANTIC_MERGE.md` — pass.
+- `uv run --with pytest --with pyyaml --with fastapi --with jinja2 --with 'uvicorn[standard]' --with watchfiles --with httpx python -m pytest skills/task-system/scripts/test_task_system.py -v` — pass, 328 tests.
+- `bash tests/hooks/test-codex-hooks.sh` — pass, 15/15 after updating stale no-feedback assertions for Codex `{}`.
+- `git diff --check` — pass.
+- `bash tests/check-harness-compatibility.sh` — fails on the pre-existing assertion `using-superRA manifest must reference theory-modeling`; `skills/using-superRA/SKILL.md` is outside this merge's touched hook-output surface, and the same residual check failure was already recorded in the previous semantic merge record.
 
 ## Codebase Context
 
-This squash intentionally synthesizes the incoming Codex hook implementation with the current branch's packaged hook-wrapper design.
+This merge intentionally synthesizes the incoming Codex hook-output fix with the current branch's packaged hook-wrapper design and approved task-tree structure.
