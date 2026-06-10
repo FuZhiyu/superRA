@@ -61,3 +61,7 @@ Slimmed both role specs' `### Editing Etiquette` to a pointer at `superRA:using-
 - Heading walk of both specs confirms every role-specific section survived; only the shared editing-principles block was removed.
 
 DRY/Necessity gate self-applied to the two new pointer lines: each names the four shared principles only as a contents label so the reader knows what moved and where — the authoritative statements live in §Task Interface, not restated here.
+
+## Review Notes
+
+> 1. [MINOR] `## Results` claim `agents/implementer.md §Editing Etiquette` carries the §Task Interface pointer; the current spec has no such heading — the pointer lives in the `## Handoff` lead ([implementer.md:62](../../../../../agents/implementer.md#L62)); only reviewer.md retains `### Editing Etiquette`. Lightly clean to match the shipped heading structure.
