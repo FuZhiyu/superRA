@@ -46,3 +46,7 @@ Updated `skills/implementation-workflow/SKILL.md` for `.plan/`-native operation.
 - **Red Flags:** pointer-based dispatch references task path and `task_read.py`; status references use lowercase frontmatter values
 
 Removed: all RESULTS.md management, step-checkbox tracking, PLAN.md task block references, "find your pre-allocated section" guidance.
+
+## Review Notes
+
+> 1. [MINOR] Objective says "Update `skills/implementation-workflow/SKILL.md`" stated as current; the skill is now [skills/superimplement/SKILL.md](../../../../skills/superimplement/SKILL.md). Add the rename note (integ-workflow shows the "formerly …" pattern) or update the path.
