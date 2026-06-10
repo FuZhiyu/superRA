@@ -1,6 +1,6 @@
 ---
 title: "Background-by-default serving with idle auto-shutdown"
-status: approved
+status: revise
 depends_on:
   - multi-worktree-serving
 tags: []
@@ -85,3 +85,8 @@ The dashboard server is now self-managing, so launching it is fire-and-forget fo
 **[02 — background launch + stop](02-background-launch/task.md)** (approved). A thin supervisor spawns that in-process server detached (new session, stdio to a log file under the git common dir), waits for bind, writes a `<pid> <port>` PID file, and prints URL + PID + log path. Idempotent reuse probes the **recorded bound port** — necessary because `_default_port` walks to the next free port when its derived port is occupied, so a later launch's freshly derived port can differ from what the running server actually bound. Bind failure surfaces a non-zero exit with the log tail rather than leaking a dead background process; `stop` terminates (SIGTERM→SIGKILL) and clears the PID file. PID/log files are keyed to the git common dir, shared across the repo's worktrees, matching one-server-per-repo. Docs (SKILL.md §Dashboard, internals.md, README.md) updated to the new lifecycle.
 
 **Verification.** Full task-tree suite green from live source — **484 passed** (461 baseline + 23 new across `TestIdleShutdownLifespan`, `TestRuntimeFileKeying`, `TestPidHelpers`, `TestBackgroundLaunch`). The real `superra dashboard` CLI path was driven end-to-end: background launch returns in ~0.8 s, idempotent reuse (same PID, no duplicate), `stop` + clean no-op second stop, `--foreground` blocking with idle self-exit, and detachment surviving the launching subshell's exit — with no leaked dashboard processes.
+
+## Review Notes
+
+1. **MAJOR** — [plan_dashboard.py:1727](../../../../skills/task-tree/scripts/plan_dashboard.py#L1727): the single in-process serve path both child tasks ship through binds `host="0.0.0.0"` with no authentication, while every printed URL, doc surface, and design decision in this subtree says `http://localhost:<port>`. A LAN peer can read any file under the project root via `/files/{path}` — and via `?wt=` under per-request resolution, any discovered worktree of the repo ([plan_dashboard.py:1011-1025](../../../../skills/task-tree/scripts/plan_dashboard.py#L1011)) — download the full task tree via `/export`, and write `comments.yaml` files to disk through the unauthenticated comment POST/PATCH/DELETE routes. Background-by-default makes this a long-lived ambient exposure (up to the idle window after every use). No design decision here or in [multi-worktree-serving](../multi-worktree-serving/task.md) records choosing all-interfaces binding. Fix: default `uvicorn.Config(..., host="127.0.0.1")` with an explicit opt-in flag (e.g. `--host`) for deliberate LAN serving, and record the decision.
+2. **MINOR** — the Objective's "`.plan/serve` wrapper needs no change ([.plan/serve](../../../../.plan/serve))" links a file that no longer exists (root renamed to `superRA/`; the shortcut is superseded by `superra dashboard` itself). Rewrite the sentence (orchestrator/planner-owned text; flagging the stale reference).
