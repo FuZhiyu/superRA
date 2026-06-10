@@ -49,3 +49,11 @@ Incorporate the motivating examples as evidence without making them special-case
 - `python3 skills/report-in-markdown/scripts/check_markdown.py skills/superplan/SKILL.md skills/superplan/references/task-tree-design.md superRA/task-tree/planning-redesign/task-tree-design/02-tree-design-protocol/task.md` passed: all three files reported `clean`.
 - `./superRA/superra task check` passed: `All checks passed. No issues found.`
 - `rg -n "task-tree/references/planning|references/planning\\.md" skills/superplan skills/task-tree skills/using-superRA agents README.md AGENTS.md -g '*.md' -g '*.toml'` returned no matches for the old task-tree planning reference in the active ownership surfaces checked.
+
+## Review Notes
+
+*Retrospective audit notes (user-requested). MINOR-only; status left `approved` — this deviation from notes-removed-at-approve is intentional.*
+
+1. **[MINOR]** [task-tree-design.md:32](../../../../../skills/superplan/references/task-tree-design.md#L32) restates "the tree is recursive / the top task is not a special semantic owner", already carried by [task-file-contract.md:9](../../../../../skills/task-tree/references/task-file-contract.md#L9). One owner; the other points.
+2. **[MINOR]** [task-tree-design.md:65](../../../../../skills/superplan/references/task-tree-design.md#L65) bakes superRA-repo-internal motivating examples (`task move`, `postponed-status`) into a generic skill shipped to downstream research projects, where these names mean nothing. Fix: translate to domain-neutral illustrations.
+3. **[MINOR]** [task-tree-design.md:28](../../../../../skills/superplan/references/task-tree-design.md#L28) — "Existing task files without `## Planner Guidance` remain valid" duplicates the contract's optional-section rule; keep only the do-not-bulk-migrate behavior. [task-tree-design.md:121](../../../../../skills/superplan/references/task-tree-design.md#L121) — retroactive step 7 ("Run `superra dashboard`") fails the Necessity test: it shapes no tree-creation behavior.
