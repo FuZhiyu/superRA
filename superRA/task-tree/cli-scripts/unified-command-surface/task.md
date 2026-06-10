@@ -1,6 +1,6 @@
 ---
 title: "Unify task-tree command surface"
-status: approved
+status: revise
 depends_on:
   - uv-package
 tags: []
@@ -55,3 +55,9 @@ Prefer delegating to existing functions first, then tightening APIs only where c
 - `uvx --no-cache --from ./skills/task-tree superra task migrate upgrade-status --dry-run --root superRA` — ran and reported all task files already use unified status.
 
 Plain `uvx --from ./skills/task-tree ...` reused a cached local wheel with the previous parser during verification. `--no-cache` forced a current-source rebuild and is the reliable package-entry verification form until the package version changes.
+
+## Review Notes
+
+> 1. [MAJOR] The scope item "Ensure mutation commands continue to validate task-root containment and sibling-only dependencies" is enforced only in the `cli.py` shim, not in the mutators it delegates to — and the direct scripts remain a shipped compatibility surface. Reproduced: [`task_update.py:84`](../../../../skills/task-tree/scripts/task_update.py#L84) with `--path ../outside` rewrote a `task.md` outside the root (rc=0); [`task_add_result.py:52`](../../../../skills/task-tree/scripts/task_add_result.py#L52) appended a finding to it; [`task_link.py:57`](../../../../skills/task-tree/scripts/task_link.py#L57) with `--depends-on ../outside` wrote a literal path edge into `depends_on` frontmatter. Containment exists in only two mutators (`task_create.py`, `task_rename.py`). Fix: move the `resolve_path` containment and the sibling-slug check into the mutator functions so there is one enforcement point regardless of entry surface.
+> 2. [MAJOR] The unified surface is an argv-reserialization shim: every `_run_*` handler in [cli.py](../../../../skills/task-tree/scripts/cli.py#L217) defines a second argparse parser, then re-serializes flags back into the legacy script's parser via `_module_main`, giving each verb two parsers that can drift — item 1 and the `path-arg-resolution` CRITICAL (prefix tolerance enforced in only one layer) are both instances. Error output also leaks the internal surface: `superra task update x --status bogus` prints usage for `--plan-root`/`--path`/`--cascade`, flags the public command does not expose. Fix: call the mutator functions (`update_task`, `link_task`, …) directly instead of round-tripping through argv, and validate at that single layer.
+> 3. [MINOR] [`_resolved_root_value`](../../../../skills/task-tree/scripts/cli.py#L68) masks autodetect failure by guessing `"superRA"`, so the packaged CLI errors with `parent directory does not exist: superRA` in a rootless directory while the direct scripts print the clean `could not auto-detect task root. Use --plan-root.` — make the failure messages consistent.
