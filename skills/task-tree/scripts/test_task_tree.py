@@ -295,6 +295,27 @@ class TestWalkPlan:
         assert load.slug == "01-load"
         assert load.is_leaf
 
+    def test_walk_skips_undecodable_file(self, tmp_path):
+        """An undecodable task.md is warned and skipped; the walk completes."""
+        import warnings as _warnings
+        root_dir = tmp_path / "superRA"
+        root_dir.mkdir()
+        _write_task_md(root_dir / "task.md", "Root", "not-started")
+        good_dir = root_dir / "01-good"
+        good_dir.mkdir()
+        _write_task_md(good_dir / "task.md", "Good Task", "not-started")
+        bad_dir = root_dir / "02-bad"
+        bad_dir.mkdir()
+        (bad_dir / "task.md").write_bytes(b"\xff\xfe bad bytes not utf-8")
+
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            root = _task_io.walk_plan(root_dir)
+
+        assert len(root.children) == 1
+        assert root.children[0].slug == "01-good"
+        assert any("02-bad" in str(w.message) for w in caught)
+
 
 class TestComputeStatus:
     def test_leaf_status(self, plan_root):
@@ -492,9 +513,11 @@ class TestFrontmatterParsing:
         assert fm["depends_on"] == []
 
     def test_tilde_value(self):
+        # ~ (YAML null) is normalized to "" at the scalar level so it does
+        # not round-trip as the literal string "~" (which would be truthy).
         text = '---\nreview_status: ~\n---\nBody\n'
         fm, body = _task_io.parse_frontmatter(text)
-        assert fm["review_status"] == "~"
+        assert fm["review_status"] == ""
 
     def test_no_frontmatter(self):
         """Text with no frontmatter at all returns empty dict and full text."""
@@ -516,6 +539,32 @@ class TestFrontmatterParsing:
         fm, body = _task_io.parse_frontmatter(text)
         assert fm["title"] == "Part 1: Introduction"
         assert fm["status"] == "not-started"
+
+    def test_crlf_frontmatter_parses(self):
+        """CRLF line endings are normalized so frontmatter is parsed correctly."""
+        text = "---\r\ntitle: \"CRLF Task\"\r\nstatus: not-started\r\n---\r\nBody\r\n"
+        fm, body = _task_io.parse_frontmatter(text)
+        assert fm["title"] == "CRLF Task"
+        assert fm["status"] == "not-started"
+        assert "Body" in body
+
+    def test_bom_frontmatter_parses(self):
+        """A leading UTF-8 BOM is stripped so frontmatter is parsed correctly."""
+        bom = "﻿"
+        text = bom + "---\ntitle: \"BOM Task\"\nstatus: not-started\n---\nBody\n"
+        fm, body = _task_io.parse_frontmatter(text)
+        assert fm["title"] == "BOM Task"
+        assert fm["status"] == "not-started"
+
+    def test_unmatched_dash_warns(self):
+        """A body that begins with '---' but has no valid fence emits a warning."""
+        import warnings as _warnings
+        text = "---\ntitle: No closing delimiter\n"
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            fm, body = _task_io.parse_frontmatter(text)
+        assert fm == {}
+        assert any("'---'" in str(w.message) for w in caught)
 
 
 # --- CLI script tests ---

@@ -16,6 +16,7 @@ from pathlib import Path
 
 
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---\n(.*)", re.DOTALL)
+BOM = "﻿"
 
 VALID_STATUSES = ("not-started", "in-progress", "implemented", "revise", "approved", "archived", "postponed")
 TASK_ROOT_DIRNAME = "superRA"
@@ -127,10 +128,15 @@ class Task:
 
 
 def _parse_yaml_value(raw: str) -> str | list[str]:
-    """Parse a simple YAML value: scalar string, inline list, or multi-line list."""
+    """Parse a simple YAML value: scalar string, inline list, or multi-line list.
+
+    ``~`` (YAML null) is normalized to an empty string at the scalar level so
+    that ``script: ~`` yields ``Task.script == ""`` (falsy) rather than the
+    literal string ``"~"`` (truthy) which would round-trip as a bogus value.
+    """
     raw = raw.strip()
     if not raw or raw == "~":
-        return raw
+        return ""
 
     if raw.startswith("[") and raw.endswith("]"):
         inner = raw[1:-1]
@@ -155,13 +161,30 @@ def _parse_yaml_list_continuation(lines: list[str], start: int) -> tuple[list[st
     return result, i
 
 
+def _normalize_text(text: str) -> str:
+    """Strip a UTF-8 BOM and normalize CRLF to LF so FRONTMATTER_RE matches."""
+    if text.startswith(BOM):
+        text = text[len(BOM):]
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
 def parse_frontmatter(text: str) -> tuple[dict[str, str | list[str]], str]:
     """Parse YAML frontmatter and body from a task.md file.
 
-    Returns (frontmatter_dict, body_string).
+    Returns (frontmatter_dict, body_string).  Normalizes CRLF line endings
+    and a leading BOM before matching so hand-edited files on Windows or
+    editors that insert a BOM are handled correctly.
     """
+    text = _normalize_text(text)
     match = FRONTMATTER_RE.match(text)
     if not match:
+        if text.startswith("---"):
+            warnings.warn(
+                "task.md has a '---' line but could not be parsed as frontmatter "
+                "(possible CRLF/BOM mismatch or malformed fence); "
+                "treating as body-only.",
+                stacklevel=3,
+            )
         return {}, text
 
     fm_text = match.group(1)
@@ -228,29 +251,12 @@ def parse_body_sections(body: str) -> dict[str, str]:
 def _has_nonempty_section(body: str, section: str) -> bool:
     """True if ``body`` has a non-empty ``## <section>`` header outside fenced code.
 
-    Like ``parse_body_sections``, this is fence-aware: ``## `` lines that appear
-    inside a ``` ``` ``` / ``~~~`` fenced block are skipped, so a section header
-    that is merely quoted inside an Objective/Results code block does not count.
-    A section is non-empty when at least one non-blank line follows its header
-    before the next top-level header or end of file.
+    Delegates to ``parse_body_sections`` so header matching is identical in
+    both places: exact ``^## (.+)$`` regex outside a fence, same fence toggle
+    rules.  A section is non-empty when its parsed content has at least one
+    non-blank character.
     """
-    lines = body.split("\n")
-    in_fence = False
-    header_re = re.compile(rf"^##[ \t]+{re.escape(section)}[ \t]*$")
-    for i, line in enumerate(lines):
-        if re.match(r"^[ \t]*(```|~~~)", line):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
-        if header_re.match(line):
-            for nxt in lines[i + 1:]:
-                if re.match(r"^## ", nxt):
-                    break
-                if nxt.strip():
-                    return True
-            return False
-    return False
+    return bool(parse_body_sections(body).get(section, "").strip())
 
 
 def _quote_yaml_scalar(key: str, value: str) -> str:
@@ -518,14 +524,28 @@ def _topological_sort(tasks: list[Task]) -> list[Task]:
 
 
 def _walk_children(directory: Path, plan_root: Path) -> list[Task]:
-    """Find and parse child task directories, sorted topologically by depends_on."""
+    """Find and parse child task directories, sorted topologically by depends_on.
+
+    Per-file errors (``OSError``, ``UnicodeDecodeError``) are caught, warned,
+    and skipped so one unreadable or undecodable ``task.md`` does not abort the
+    whole walk for all readers (dashboard, ``task query``, ``task read``).
+    Mirrors the leniency design used for unknown status values.
+    """
     subdirs = sorted(
         [d for d in directory.iterdir() if d.is_dir() and (d / "task.md").exists()],
         key=lambda d: d.name,
     )
     parsed: list[Task] = []
     for subdir in subdirs:
-        child = parse_task(subdir / "task.md", plan_root)
+        try:
+            child = parse_task(subdir / "task.md", plan_root)
+        except (OSError, UnicodeDecodeError) as exc:
+            warnings.warn(
+                f"Skipping {subdir / 'task.md'}: {exc}; "
+                f"run `superra task check` to diagnose.",
+                stacklevel=2,
+            )
+            continue
         child.children = _walk_children(subdir, plan_root)
         parsed.append(child)
 
