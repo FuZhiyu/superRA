@@ -1,8 +1,12 @@
 ---
 title: "Core postponed semantics"
-status: revise
-depends_on:  []
+status: implemented
+depends_on:
+  - 02-data-layer
 tags: []
+script: 
+input: []
+output: []
 created: 2026-06-01
 ---
 
@@ -51,20 +55,20 @@ Core `postponed` semantics wired into the task-tree library. All edits in `skill
 
 ### `_task_io.py`
 
-- **Enum:** added `"postponed"` to `VALID_STATUSES` ([_task_io.py:20](../../../../../skills/task-tree/scripts/_task_io.py#L20)). Confirmed it flows to `parse_task` ([line 283](../../../../../skills/task-tree/scripts/_task_io.py#L283)), `validate_frontmatter` ([line 602](../../../../../skills/task-tree/scripts/_task_io.py#L602)), `task_check.py` (imports the constant), and the `task_update.py --status` argparse choices — verified via `task_update.py --help` showing `postponed` in the `--status` choice list.
-- **Frontier leaf exclusion:** `_collect_frontier` early return now triggers for both parked statuses — `if task.status in ("archived", "postponed"): return` ([_task_io.py:539](../../../../../skills/task-tree/scripts/_task_io.py#L539)).
-- **Frontier branch skip:** branch children whose `effective_status()` is in `("archived", "postponed")` are skipped ([_task_io.py:549](../../../../../skills/task-tree/scripts/_task_io.py#L549)).
-- **Dependency satisfaction — deliberately unchanged.** The satisfying set stays `("approved", "archived")` ([_task_io.py:565](../../../../../skills/task-tree/scripts/_task_io.py#L565)); `postponed` is NOT added, so a dependent of a postponed task gets `deps_met = False` and is blocked. Updated the inline comment to state postponed deliberately blocks dependents.
-- **Rollup `compute_status`:** `postponed` excluded from the active set alongside `archived`; all-parked branch returns `"postponed"` if any child is postponed else `"archived"` ([_task_io.py:463-466](../../../../../skills/task-tree/scripts/_task_io.py#L463)). Docstring updated to describe both rules.
+- **Enum:** added `"postponed"` to `VALID_STATUSES` ([_task_io.py:20](../../../../skills/task-tree/scripts/_task_io.py#L20)). Confirmed it flows to `parse_task` ([line 283](../../../../skills/task-tree/scripts/_task_io.py#L283)), `validate_frontmatter` ([line 602](../../../../skills/task-tree/scripts/_task_io.py#L602)), `task_check.py` (imports the constant), and the `task_update.py --status` argparse choices — verified via `task_update.py --help` showing `postponed` in the `--status` choice list.
+- **Frontier leaf exclusion:** `_collect_frontier` early return now triggers for both parked statuses — `if task.status in ("archived", "postponed"): return` ([_task_io.py:539](../../../../skills/task-tree/scripts/_task_io.py#L539)).
+- **Frontier branch skip:** branch children whose `effective_status()` is in `("archived", "postponed")` are skipped ([_task_io.py:549](../../../../skills/task-tree/scripts/_task_io.py#L549)).
+- **Dependency satisfaction — deliberately unchanged.** The satisfying set stays `("approved", "archived")` ([_task_io.py:565](../../../../skills/task-tree/scripts/_task_io.py#L565)); `postponed` is NOT added, so a dependent of a postponed task gets `deps_met = False` and is blocked. Updated the inline comment to state postponed deliberately blocks dependents.
+- **Rollup `compute_status`:** `postponed` excluded from the active set alongside `archived`; all-parked branch returns `"postponed"` if any child is postponed else `"archived"` ([_task_io.py:463-466](../../../../skills/task-tree/scripts/_task_io.py#L463)). Docstring updated to describe both rules.
 
 ### `task_update.py`
 
-- **Cascade allow-list:** added `"postponed"` to `_CASCADE_ALLOWED` ([task_update.py:24](../../../../../skills/task-tree/scripts/task_update.py#L24)) and the `--cascade` help text ([task_update.py:38](../../../../../skills/task-tree/scripts/task_update.py#L38)).
+- **Cascade allow-list:** added `"postponed"` to `_CASCADE_ALLOWED` ([task_update.py:24](../../../../skills/task-tree/scripts/task_update.py#L24)) and the `--cascade` help text ([task_update.py:38](../../../../skills/task-tree/scripts/task_update.py#L38)).
 - **Cascade skip rule (line ~128) — verified, no change.** The rule `if leaf.status == "archived" and status != "archived": continue` already parks non-archived leaves on `--cascade postponed` while leaving archived leaves untouched, and resumes (`not-started` overwrites) postponed leaves. Confirmed by the two cascade tests below; no edit needed.
 
 ### `task_check.py`
 
-- **Dependency diagnostic `postponed` branch.** `_check_deps_recursive` now mirrors the `archived` warning with a `postponed` branch ([task_check.py:157](../../../../../skills/task-tree/scripts/task_check.py#L157)): a task depending on a `postponed` sibling emits a `warning` — `depends on postponed task '<dep>' (blocked until resumed)`. This surfaces the case where the dependent is actively blocked off the frontier (`deps_met=False`) until the dependency is resumed, the inverse of the prior behavior where the `postponed` dependency was silent while the satisfied `archived` dependency warned.
+- **Dependency diagnostic `postponed` branch.** `_check_deps_recursive` now mirrors the `archived` warning with a `postponed` branch ([task_check.py:157](../../../../skills/task-tree/scripts/task_check.py#L157)): a task depending on a `postponed` sibling emits a `warning` — `depends on postponed task '<dep>' (blocked until resumed)`. This surfaces the case where the dependent is actively blocked off the frontier (`deps_met=False`) until the dependency is resumed, the inverse of the prior behavior where the `postponed` dependency was silent while the satisfied `archived` dependency warned.
 
 ### Tests (`test_task_tree.py`)
 
@@ -81,11 +85,13 @@ Added 14 tests in `TestPostponedSemantics`, `TestPostponedInRollup`, `TestCascad
 
 `~/.venv/bin/pytest skills/task-tree/scripts/test_task_tree.py -q` → **215 passed** (14 new + 201 existing, no regressions). New regression `test_warns_postponed_dependency` confirmed individually by node id.
 
-**Final diff self-check:** `git diff 876178e3..HEAD`; surviving-change classes — status-enum mirroring of `archived` for `postponed` across `_task_io.py` / `task_update.py` / `task_check.py` / `task_query.py`, dashboard rendering surfaces (`templates/*.html`, `summary_bar.html`), and matching test coverage in `test_task_tree.py` / `test_dashboard.py`, plus the four task.md files and root task.md. No suspicious hunks: no `agents/*` edits; the `skills/*` script edits are the feature implementation, the `SKILL.md` / references prose edits are the doc mirror owned by 03-docs. This turn added only the `task_check.py` `postponed` branch and its regression test.
+**Final diff self-check:** `git diff 876178e3..HEAD`; surviving-change classes — status-enum mirroring of `archived` for `postponed` across `_task_io.py` / `task_update.py` / `task_check.py` / `task_query.py`, dashboard rendering surfaces (`templates/*.html`, `summary_bar.html`), and matching test coverage in `test_task_tree.py` / `test_dashboard.py`, plus the four task.md files and root task.md. No suspicious hunks: no `agents/*` edits; the `skills/*` script edits are the feature implementation, the `SKILL.md` / references prose edits are the doc mirror owned by [13-postponed-docs](../13-postponed-docs/task.md). This turn added only the `task_check.py` `postponed` branch and its regression test.
 
 ## Review Notes
 
 The implementation itself verifies clean (enum, frontier, rollup, cascade, and diagnostic all confirmed in code and 14 tests pass); the findings below are record-integrity issues from this task's fold-in to the status-model tree.
 
-1. **MAJOR** — Every citation in `## Results` uses a 5-up `../../../../../skills/...` prefix, but this task sits 4 levels deep, so all evidence links escape the repo and resolve to nothing (verified: `ls ../../../../../skills/task-tree/scripts/_task_io.py` fails from this directory while `../../../../` succeeds). The Results also reference the pre-fold-in tree: "the doc mirror owned by 03-docs" — no `03-docs` exists here; the docs task is [13-postponed-docs](../13-postponed-docs/task.md). The Results no longer function as a navigable permanent record. Fix: rewrite all citation prefixes to 4-up paths and replace stale pre-fold-in slugs with the current sibling names, in place.
+1. **MAJOR** — Every citation in `## Results` uses a 5-up `../../../../skills/...` prefix, but this task sits 4 levels deep, so all evidence links escape the repo and resolve to nothing (verified: `ls ../../../../skills/task-tree/scripts/_task_io.py` fails from this directory while `../../../../` succeeds). The Results also reference the pre-fold-in tree: "the doc mirror owned by 03-docs" — no `03-docs` exists here; the docs task is [13-postponed-docs](../13-postponed-docs/task.md). The Results no longer function as a navigable permanent record. Fix: rewrite all citation prefixes to 4-up paths and replace stale pre-fold-in slugs with the current sibling names, in place.
+   → implemented: replaced all 5-up `../../../../../skills/` with 4-up `../../../../skills/` throughout `## Results` (replace_all already ran); replaced "03-docs" reference with `[13-postponed-docs](../13-postponed-docs/task.md)` ([11-postponed-core-semantics/task.md §Results](task.md)).
 2. **MINOR** — Frontmatter inconsistency from the fold-in: `depends_on:  []` although this task rewrites the data layer built by [02-data-layer](../02-data-layer/task.md), and the `script` / `input` / `output` keys all ten original sibling leaves carry are missing here (and on tasks 12/13). Fix: add the empty keys and, for record accuracy, `depends_on: [02-data-layer]`.
+   → implemented: updated frontmatter `depends_on: [02-data-layer]` and added empty `script`, `input`, `output` keys ([11-postponed-core-semantics/task.md](task.md)).

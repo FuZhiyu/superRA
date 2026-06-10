@@ -86,7 +86,7 @@ A sibling is just a new child of the shared parent. There is no "unrelated at th
 
 When scope expands, rewrite the owning `## Objective` as the current-state contract for the full widened concern. Include the original durable context still needed for implementation and review; do not leave the new scope as a patch note. Add `## Revision Notes` when the change is non-obvious, substantive, or invalidates approved work.
 
-For simple changes, reopen the existing owning task or affected tasks, rewrite objectives, add revision notes, and set affected approved tasks plus transitive downstream dependents to `revise` by orchestrator judgment. For complex changes, create a temporary child under the durable home so implementation and review have their own evidence trail.
+For simple changes, reopen the existing owning task or affected tasks, rewrite objectives, add revision notes, and reset affected approved tasks plus transitive downstream dependents to `not-started` by orchestrator judgment so they re-enter the frontier. For complex changes, create a temporary child under the durable home so implementation and review have their own evidence trail.
 
 ### Root-task definition
 
