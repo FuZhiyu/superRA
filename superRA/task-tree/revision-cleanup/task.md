@@ -1,6 +1,6 @@
 ---
 title: "Assign revision notes cleanup to reviewer"
-status: approved
+status: revise
 depends_on: []
 tags: []
 created: 2026-05-26
@@ -45,3 +45,8 @@ All six edits applied surgically to two files:
 
 5. [planning.md:73](skills/task-tree/references/planning.md#L73) — Root anatomy: changed passive "cleaned out when re-implemented and approved" to "The reviewer removes this section when approving the task."
 6. [planning.md:129](skills/task-tree/references/planning.md#L129) — Field notes: same change — made reviewer ownership explicit.
+
+## Review Notes
+
+1. **[MAJOR]** [task.md:25](task.md#L25), [task.md:44-47](task.md#L44) — Objective and Results prescribe and cite edits to `skills/task-tree/references/planning.md` (L73/L129), a file that no longer exists; the `## Revision Notes` lifecycle and reviewer-ownership rule now live in [task-file-contract.md](../../../skills/task-tree/references/task-file-contract.md) (Field-by-Field Notes) and [agents/reviewer.md](../../../agents/reviewer.md). The hard-coded reviewer.md line anchors (82/86/113/161) are likewise stale against the current 132-line file. An approved task whose Results point at a deleted file misleads anyone tracing this rule. Fix: replace the dead `planning.md` references with the current owners and drop or refresh the line anchors.
+2. **[MINOR]** [task.md:39-47](task.md#L39) — citation links are repo-root-relative (`agents/reviewer.md`, `skills/...`); `report-in-markdown` resolves links relative to the markdown file's directory, so from this task every one needs a `../../../` prefix. Fix the prefixes when applying item 1.
