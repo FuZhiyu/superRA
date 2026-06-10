@@ -53,3 +53,9 @@ Use `importlib.resources` or an equivalent package-data mechanism for dashboard 
 - `~/.venv/bin/python -m pytest skills/task-tree/scripts/test_task_tree.py::TestTaskCreate skills/task-tree/scripts/test_task_tree.py::TestTaskHook -v` passed 24 tests.
 - `uvx --from ./skills/task-tree superra task hook post-tool-use`
 - `uvx --from ./skills/task-tree superra task create root-task --root "$tmpdir/superRA" --title "Root Task"` on a fresh temporary task tree, followed by `test ! -e "$tmpdir/superRA/serve"`.
+
+## Review Notes
+
+Retrospective audit note (MINOR; status unchanged per orchestrator instruction):
+
+> 1. [MINOR] The entire deliverable described here — `pyproject.toml`, the `superra_task_tree` package namespace, package-data assets, the `0.1.2` version bump — was removed by the `cli-source-resolution` sibling (`uv run --script` model; no installable package). The supersession is recorded only in [that sibling's Results](../cli-source-resolution/task.md), so a reader of this approved task sees artifacts that no longer exist. Add a one-line supersession pointer at the top of `## Results`.
