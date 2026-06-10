@@ -1,6 +1,6 @@
 ---
 title: "Review and Planning Protocol"
-status: implemented
+status: approved
 depends_on: []
 tags: []
 created: 2026-06-01
