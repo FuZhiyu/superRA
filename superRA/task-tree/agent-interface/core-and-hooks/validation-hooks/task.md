@@ -68,3 +68,7 @@ Note: `.claude/` is gitignored in this project. The task spec's "add to `.claude
 - Valid plan edit (`.plan/task.md`): runs validation silently, rebuilds dashboard, exits 0.
 - Invalid-status task.md: prints validation warning to stderr, dashboard rebuild catches the parse error non-fatally, exits 0.
 - All 53 existing `test_task_tree.py` tests pass.
+
+## Review Notes
+
+> 1. [MINOR] `## Results` claim the hooks.json command is `python3 "${CLAUDE_PLUGIN_ROOT}/skills/task-tree/scripts/task_hook.py"`; current [hooks/hooks.json](../../../../../hooks/hooks.json) routes both `Edit|Write` and `Bash` through `"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" task-hook`. Update or mark historical.
