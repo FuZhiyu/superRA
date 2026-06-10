@@ -29,6 +29,7 @@ Make the dashboard server **self-managing** so launching it is fire-and-forget f
 7. **Idempotent launch.** Before spawning, check the PID file and port for this repo: if a healthy dashboard is already serving, **do not spawn a second** — open a browser tab (unless `--no-open`) and report "already running". A stale PID file (process gone) is cleaned up and a fresh server is spawned. This pairs with the existing one-port-per-repo derivation.
 8. **`stop` subcommand.** `stop` reads the PID file and terminates the background server for this repo; it is a no-op (clean exit) when nothing is running.
 9. **PID/log files are per-repo, under the git common dir.** Both are keyed to the same repo identity as the port (`git_common_dir`, [plan_dashboard.py:1607](../../../../skills/task-tree/scripts/plan_dashboard.py#L1607)) and stored under that common dir (e.g. `<git-common-dir>/superra-dashboard.pid` / `.log`), so they are repo-scoped, shared across the repo's worktrees (matching one-server-per-repo), and cleaned with the repo. Fall back to plan-root keying when there is no git common dir, mirroring `_default_port`.
+10. **Bind loopback by default; `--host` is the LAN opt-in.** The server is unauthenticated and exposes project files (`/files/{path}`), the full task tree (`/export`), and disk-writing comment routes. Background-by-default makes any binding a long-lived ambient surface, so it must default to `127.0.0.1` (loopback only), consistent with every printed `http://localhost:<port>` URL. An explicit `--host` flag (e.g. `--host 0.0.0.0`) is the deliberate opt-in for trusted-LAN serving; it threads through both the foreground `serve()` and the detached background child so the two bind identically. (Recorded post-implementation: the original serve path bound `0.0.0.0` with no opt-in — corrected to this loopback default.)
 
 ### Conventions
 
@@ -49,7 +50,7 @@ The launch behavior is documented in three places that the [serve-docs](../serve
 - `skills/task-tree/references/internals.md` §Dashboard — cross-references SKILL.md; note the self-exit-on-idle lifecycle.
 - `README.md` — the one-line dashboard mention stays accurate (launch returns immediately; server self-exits when idle).
 
-The `.plan/serve` wrapper ([.plan/serve](../../../../.plan/serve)) needs no change — `exec uv run … serve` simply returns faster under background-default.
+There is no separate serve wrapper to update: launching goes through `superra dashboard` itself, which returns faster under background-default (the legacy `.plan/serve` shortcut is gone with the `.plan/` → `superRA/` rename).
 
 ## Validation
 
@@ -86,7 +87,3 @@ The dashboard server is now self-managing, so launching it is fire-and-forget fo
 
 **Verification.** Full task-tree suite green from live source — **484 passed** (461 baseline + 23 new across `TestIdleShutdownLifespan`, `TestRuntimeFileKeying`, `TestPidHelpers`, `TestBackgroundLaunch`). The real `superra dashboard` CLI path was driven end-to-end: background launch returns in ~0.8 s, idempotent reuse (same PID, no duplicate), `stop` + clean no-op second stop, `--foreground` blocking with idle self-exit, and detachment surviving the launching subshell's exit — with no leaked dashboard processes.
 
-## Review Notes
-
-1. **MAJOR** — [plan_dashboard.py:1727](../../../../skills/task-tree/scripts/plan_dashboard.py#L1727): the single in-process serve path both child tasks ship through binds `host="0.0.0.0"` with no authentication, while every printed URL, doc surface, and design decision in this subtree says `http://localhost:<port>`. A LAN peer can read any file under the project root via `/files/{path}` — and via `?wt=` under per-request resolution, any discovered worktree of the repo ([plan_dashboard.py:1011-1025](../../../../skills/task-tree/scripts/plan_dashboard.py#L1011)) — download the full task tree via `/export`, and write `comments.yaml` files to disk through the unauthenticated comment POST/PATCH/DELETE routes. Background-by-default makes this a long-lived ambient exposure (up to the idle window after every use). No design decision here or in [multi-worktree-serving](../multi-worktree-serving/task.md) records choosing all-interfaces binding. Fix: default `uvicorn.Config(..., host="127.0.0.1")` with an explicit opt-in flag (e.g. `--host`) for deliberate LAN serving, and record the decision.
-2. **MINOR** — the Objective's "`.plan/serve` wrapper needs no change ([.plan/serve](../../../../.plan/serve))" links a file that no longer exists (root renamed to `superRA/`; the shortcut is superseded by `superra dashboard` itself). Rewrite the sentence (orchestrator/planner-owned text; flagging the stale reference).

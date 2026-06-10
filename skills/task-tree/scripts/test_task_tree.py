@@ -4924,8 +4924,11 @@ class TestBackgroundLaunch:
         common = tmp_path / "common.git"
         common.mkdir()
         # Bind but do not listen → port is occupied, connects are refused.
+        # Bind loopback to match the child's default --host 127.0.0.1 bind, so
+        # the child genuinely collides (a 0.0.0.0 blocker would not block a later
+        # 127.0.0.1 bind on macOS, letting the child bind loopback and "succeed").
         blocker = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        blocker.bind(("0.0.0.0", 0))
+        blocker.bind(("127.0.0.1", 0))
         port = blocker.getsockname()[1]
         assert not plan_dashboard._port_serving(port), "blocker should refuse connects"
         try:
@@ -4969,6 +4972,73 @@ class TestBackgroundLaunch:
             assert not plan_dashboard._port_serving(port)
         finally:
             plan_dashboard.stop_background(plan_root, str(common))
+
+
+class TestServeBindHost:
+    """The unauthenticated server must bind loopback by default and only open up
+    on an explicit ``--host`` opt-in.  Background-by-default makes an all-
+    interfaces bind a long-lived ambient exposure (file reads via /files, the
+    full task tree via /export, disk writes via the comment routes), so the
+    default must be 127.0.0.1.  These pin the bound host without standing up a
+    real socket by capturing the ``uvicorn.Config`` that ``serve()`` builds."""
+
+    def _capture_config(self, monkeypatch, **serve_kwargs):
+        pytest.importorskip("uvicorn")
+        import uvicorn
+
+        captured = {}
+
+        class _FakeServer:
+            def __init__(self, config):
+                captured["host"] = config.host
+
+            def run(self):
+                pass  # do not actually bind
+
+        monkeypatch.setattr(uvicorn, "Server", _FakeServer)
+        plan_dashboard.serve(12345, **serve_kwargs)
+        return captured["host"]
+
+    def test_serve_defaults_to_loopback(self, monkeypatch):
+        assert self._capture_config(monkeypatch) == "127.0.0.1"
+
+    def test_serve_honors_explicit_host(self, monkeypatch):
+        assert self._capture_config(monkeypatch, host="0.0.0.0") == "0.0.0.0"
+
+    def test_background_spawn_forwards_host(self, tmp_path, monkeypatch):
+        """serve_background must pass its --host through to the detached child so
+        the background path's bind matches the foreground path's."""
+        pytest.importorskip("uvicorn")
+        plan_root = _serve_plan(tmp_path)
+        common = tmp_path / "common.git"
+        common.mkdir()
+        captured = {}
+
+        class _FakeProc:
+            pid = 999999
+
+            def poll(self):
+                return None
+
+        def _fake_popen(cmd, **kw):
+            captured["cmd"] = cmd
+            return _FakeProc()
+
+        monkeypatch.setattr(plan_dashboard.subprocess, "Popen", _fake_popen)
+        # Stop the bind poll from waiting on a child that never starts.
+        monkeypatch.setattr(plan_dashboard, "_wait_for_bind", lambda *a, **k: True)
+        monkeypatch.setattr(plan_dashboard, "_running_pid", lambda *a, **k: None)
+        plan_dashboard.serve_background(
+            plan_root, 23456, str(common), host="0.0.0.0", open_browser=False
+        )
+        cmd = captured["cmd"]
+        assert "--host" in cmd and cmd[cmd.index("--host") + 1] == "0.0.0.0"
+
+    def test_serve_cli_default_host_is_loopback(self):
+        """The CLI surface defaults --host to loopback (string assertion on the
+        argparse default, mirroring the help text)."""
+        ns = plan_dashboard.parse_args(["serve"])
+        assert ns.host == "127.0.0.1"
 
 
 # ---------------------------------------------------------------------------

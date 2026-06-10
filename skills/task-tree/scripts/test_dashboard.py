@@ -298,6 +298,32 @@ class TestServerRoutes:
         resp = client.get("/export", params={"root": "no/such"})
         assert resp.status_code == 404
 
+    def test_export_filename_is_sanitized(self, client):
+        """The download filename is interpolated into a quoted Content-Disposition
+        value, so the slug must be restricted to filename-safe chars — a stray `"`
+        (or path/control char) cannot break out of the header. The route's slug
+        comes from a task slug, but defense-in-depth keeps the header safe even if
+        an unusual slug ever reaches it (mirrors the route's sanitize regex)."""
+        import re as _re
+
+        # The header for a normal export carries only the safe charset between the
+        # wrapping quotes (no raw quote injection possible).
+        cd = client.get("/export").headers.get("content-disposition", "")
+        m = _re.search(r'filename="([^"]*)"', cd)
+        assert m, f"no quoted filename in: {cd!r}"
+        name = m.group(1)
+        assert _re.fullmatch(r"[A-Za-z0-9._-]+", name), f"unsafe filename: {name!r}"
+        assert name.endswith("-dashboard.html")
+        # The sanitizing transform the route applies neutralizes a hostile slug.
+        sanitize = lambda s: _re.sub(r"[^A-Za-z0-9._-]", "-", s or "").strip("-") or "plan"
+        assert sanitize('evil"drop') == "evil-drop"  # the `"` cannot escape the header
+        assert sanitize("a/b") == "a-b"  # path separators neutralized
+        assert sanitize("") == "plan"
+        # Whatever the slug, the result is always header-safe (the property that
+        # matters), even if dots survive (they are filename-safe).
+        for hostile in ('x"y', "../../etc/passwd", "a;b\nc", "  "):
+            assert _re.fullmatch(r"[A-Za-z0-9._-]+", sanitize(hostile))
+
     def test_export_does_not_disturb_live_state(self, client):
         """Rendering an export must restore the live server's module state so
         subsequent live routes are unaffected."""
@@ -1893,6 +1919,111 @@ class TestChildFlowClientLogic:
 
 
 # ---------------------------------------------------------------------------
+# renderMarkdown image-rewrite (node-backed, behavioral)
+#
+# The server-mode `<img src>` rewrite is a code path inside renderMarkdown that
+# string-presence assertions cannot exercise — an undefined identifier there
+# (the deleted `pathPrefix`) sails through a green string suite but throws a
+# ReferenceError at runtime, aborting the expand handler.  This harness extracts
+# the real renderMarkdown source out of base.html and runs it under node against
+# a minimal DOM/markdown shim, so the image branch actually executes and its
+# rewritten `src` is asserted.  Passing sectionName=null skips the block-wrap
+# loop (and its richer DOM needs); a body with only a relative image exercises
+# the `/files/` branch and nothing else.  Skipped when node is unavailable.
+# ---------------------------------------------------------------------------
+
+_RENDER_MD_SHIM = r"""
+// Minimal markdown-it stub: emit the one relative-image we feed in as HTML.
+var md = { render: function (text) {
+  var m = text.match(/!\[[^\]]*\]\(([^)]+)\)/);
+  return m ? '<img src="' + m[1] + '">' : '<p>' + text + '</p>';
+} };
+// Minimal DOM: a div whose innerHTML setter parses <img src> / <a href> into
+// element stubs, and whose querySelectorAll returns them for the rewrite loop.
+function makeEl(tag) {
+  return {
+    tagName: tag.toUpperCase(), _attrs: {}, _imgs: [], _as: [],
+    set innerHTML(html) {
+      var self = this; this._imgs = []; this._as = [];
+      var im; var ire = /<img[^>]*\bsrc="([^"]*)"[^>]*>/g;
+      while ((im = ire.exec(html))) {
+        (function (val) {
+          self._imgs.push({
+            _src: val,
+            getAttribute: function (n) { return n === 'src' ? this._src : null; },
+            setAttribute: function (n, v) { if (n === 'src') this._src = v; },
+          });
+        })(im[1]);
+      }
+      this._html = html;
+    },
+    get innerHTML() {
+      var out = '';
+      for (var i = 0; i < this._imgs.length; i++) {
+        out += '<img src="' + this._imgs[i]._src + '">';
+      }
+      return out;
+    },
+    querySelectorAll: function (sel) {
+      if (sel === 'img[src]') return this._imgs;
+      if (sel === 'a[href]') return this._as;
+      return [];
+    },
+  };
+}
+var document = { createElement: function (t) { return makeEl(t); } };
+var window = { STANDALONE: false };
+function resolveInternalTaskPath() { return null; }
+function repoFileHref(p) { return p; }
+"""
+
+
+@pytest.mark.skipif(_NODE is None, reason="node not available")
+class TestRenderMarkdownImageRewrite:
+    def _run(self, root_prefix, task_path, src, repo_file_base=""):
+        defs = _extract_js_defs(["renderMarkdown"])
+        harness = (
+            _RENDER_MD_SHIM
+            + "var RESOLVED_ROOT = '/abs/root';\n"
+            + "var ROOT_PREFIX = " + json.dumps(root_prefix) + ";\n"
+            + "var REPO_FILE_BASE = " + json.dumps(repo_file_base) + ";\n"
+            + defs + "\n"
+            + "var body = '![fig](" + src + ")';\n"
+            + "var html = renderMarkdown(body, null, " + json.dumps(task_path) + ");\n"
+            + "var m = html.match(/<img src=\"([^\"]*)\">/);\n"
+            + "console.log(JSON.stringify({src: m ? m[1] : null}));\n"
+        )
+        proc = subprocess.run(
+            [_NODE, "-e", harness], capture_output=True, text=True, timeout=20
+        )
+        # A ReferenceError (the shipped `pathPrefix` bug) surfaces here as a
+        # nonzero exit with the error on stderr — exactly the failure mode a
+        # string-presence test cannot see.
+        assert proc.returncode == 0, f"node failed (ReferenceError?):\n{proc.stderr}"
+        return json.loads(proc.stdout.strip().splitlines()[-1])
+
+    def test_server_image_src_uses_root_prefix_and_task_path(self):
+        """Server mode rewrites a relative image to
+        /files/<ROOT_PREFIX>/<taskPath>/<src> — the resolved-root basis, so the
+        /files/ route (which resolves under project_root = resolved-root parent)
+        finds the file."""
+        out = self._run("superRA", "01-alpha/01-model", "attachments/fig.png")
+        assert out["src"] == "/files/superRA/01-alpha/01-model/attachments/fig.png"
+
+    def test_server_image_src_for_nondefault_root(self):
+        """A non-`superRA` resolved root carries its own basename into the
+        /files/ path — no hardcoded `superRA/` segment."""
+        out = self._run("tasks", "01-alpha", "fig.png")
+        assert out["src"] == "/files/tasks/01-alpha/fig.png"
+
+    def test_server_image_src_for_root_body(self):
+        """The root body (empty taskPath) drops the task-dir segment but keeps the
+        root prefix: /files/<ROOT_PREFIX>/<src>."""
+        out = self._run("superRA", "", "fig.png")
+        assert out["src"] == "/files/superRA/fig.png"
+
+
+# ---------------------------------------------------------------------------
 # Sidebar state preservation: the active page stays expanded to its children,
 # and manually-opened branches survive a structural full-reload instead of
 # folding back to the root. Wiring-level regression checks (the functions are
@@ -2072,6 +2203,13 @@ class TestFileLinkConsistency:
         # The old hardcoded prefixes are gone from the builders.
         assert "'superRA/' + path + '/task.md'" not in BASE_HTML
         assert "pathPrefix = taskPath ? 'superRA/'" not in BASE_HTML
+        # Forward guard: the surviving server-mode image rewrite must use the
+        # resolved-root basis (repoPathPrefix), not the deleted `pathPrefix`.
+        # Without this, the def-deletion check above guards the regression
+        # backwards and a dangling `pathPrefix` reference ships green
+        # (TestRenderMarkdownImageRewrite executes it; this pins the source).
+        assert "'/files/' + repoPathPrefix + src" in BASE_HTML
+        assert "'/files/' + pathPrefix + src" not in BASE_HTML
 
     # --- Forest render / route / link -------------------------------------
 

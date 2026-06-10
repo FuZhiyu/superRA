@@ -1831,7 +1831,11 @@ function renderMarkdown(text, sectionName, taskPath) {
           img.setAttribute('src', rel);
         }
       } else {
-        img.setAttribute('src', '/files/' + pathPrefix + src);
+        /* Server mode: the /files/ route resolves relative to project_root
+           (= resolved-root parent), so the path must carry the root's
+           repo-relative name plus the task dir — the same repoPathPrefix the
+           GitHub/relative-link branch builds (ROOT_PREFIX + '/' + taskPath + '/'). */
+        img.setAttribute('src', '/files/' + repoPathPrefix + src);
       }
     }
   });

@@ -130,6 +130,10 @@ def _run_dashboard(args: argparse.Namespace) -> None:
         argv = ["serve", "--root", root]
         if args.port is not None:
             argv.extend(["--port", str(args.port)])
+        # Default loopback; only forward a non-default --host (deliberate LAN
+        # opt-in) so the unauthenticated server stays off-host by default.
+        if getattr(args, "host", "127.0.0.1") != "127.0.0.1":
+            argv.extend(["--host", args.host])
         if args.no_open:
             argv.append("--no-open")
         if args.foreground:
@@ -344,6 +348,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
     )
     dashboard.add_argument("--port", type=int, default=None, help="Server port")
+    dashboard.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help=(
+            "Interface to bind (default: 127.0.0.1, loopback only). "
+            "The server is unauthenticated; pass --host 0.0.0.0 only to "
+            "deliberately expose it on a trusted LAN."
+        ),
+    )
     dashboard.add_argument("--no-open", action="store_true", help="Skip auto-opening the browser")
     dashboard.add_argument(
         "--foreground",

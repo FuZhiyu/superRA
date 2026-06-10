@@ -1,6 +1,6 @@
 ---
 title: "Export subtree dashboard to standalone HTML"
-status: revise
+status: approved
 depends_on:
   - unify-static-export
 tags: []
@@ -57,12 +57,11 @@ So the increment **re-bases** the subtree: [`_rebase_subtree(task, root_path)`](
 - **Whole-tree unchanged.** `generate_dashboard(root=None)` is byte-identical to the bare call (regression-locked by a test). `.plan/dashboard.html` regenerates without error (gitignored — regenerate-only, not committed).
 - **Tests.** `uv run pytest skills/task-tree/scripts/test_task_tree.py skills/task-tree/scripts/test_dashboard.py skills/task-tree/scripts/tests/` → **298 passed**. New: 5 subtree-build tests in `TestDashboard` (path-set scoping, fragment scoping, offline-clean, unknown-root, whole-tree-unchanged) and 5 route tests in `TestServerRoutes` (attachment, subtree scope+filename, unknown-root 404, live-state-undisturbed, Share-button wired).
 
-### Known limitation
+### Accepted limitation: synchronous export render
 
-Figures in a *downloaded* share file are non-portable (the prefix resolves against the embedded `.plan` tree's location, which isn't beside a file saved to Downloads) — the same single-file limitation the whole-tree export already has. The export is otherwise fully self-contained and offline.
+`GET /export` runs the synchronous `render_standalone_html` on the event loop, pausing SSE heartbeats for the duration of a large export. This is deliberate: the module-state snapshot/restore around the render is only safe because nothing else runs concurrently. Offloading to a thread requires making that snapshot concurrency-safe first — deferred as a follow-up rather than fixed here.
 
-## Review Notes
+### Figure portability (resolved by a sibling)
 
-1. **MAJOR** — the §Known limitation above is stale and contradicts an approved sibling: [self-contained-export](../self-contained-export/task.md) base64-embeds figures into the export and its Results explicitly state the downloaded-file figure-portability limitation from *this* task is "now **resolved**" (figures travel as data URIs; the relative-path prefix is only a fallback for un-embeddable srcs). The stale-content checklist requires superseded results be rewritten in place — as written, a reader of this approved task believes share-file figures still break. Rewrite the §Known limitation to record the resolution (with a link to the sibling), keeping only the residual fallback caveat.
-2. **MINOR** — [plan_dashboard.py:1278-1302](../../../../skills/task-tree/scripts/plan_dashboard.py#L1278): the `GET /export` handler runs the fully synchronous `render_standalone_html` (tree walk + base64 of every embedded figure) inside an `async def`, blocking the event loop — and all SSE heartbeats — for the duration of a large export. Today this synchronicity is also what makes the module-state snapshot/restore safe; if offloading to a thread, make that snapshot concurrency-safe first.
-3. **MINOR** — [plan_dashboard.py:1304-1308](../../../../skills/task-tree/scripts/plan_dashboard.py#L1304): the `Content-Disposition` filename interpolates the unsanitized last segment of `?root=` into a quoted header value; a `"` in a slug breaks the header. Sanitize the slug (or percent-encode per RFC 5987) before embedding.
+An earlier cut of this task left figures in a *downloaded* share file non-portable (the relative prefix resolved against the embedded tree's location, not beside a file saved to Downloads). That limitation is now **resolved** by [self-contained-export](../self-contained-export/task.md): the standalone export base64-embeds each figure as a data URI, so figures travel inside the single file and render offline from anywhere. The relative-path prefix described above survives only as a *fallback* for srcs that cannot be embedded. The export is otherwise fully self-contained and offline.
+
