@@ -55,3 +55,9 @@ Keep hook compatibility separate from user dashboard launch. Hooks may need a ha
 - Focused grep for `superRA/serve` generation instructions across `skills`, `agents`, `hooks`, and `.codex` — no matches.
 - `rg -n 'python3 "\$\{CLAUDE_PLUGIN_ROOT\}/skills/task-tree/scripts/task_hook\.py"|skills/task-tree/scripts/task_hook\.py' hooks skills agents .codex --glob '!**/.git/**'` — no matches.
 - `test ! -e superRA/serve` — passed.
+
+## Review Notes
+
+Retrospective audit note (MINOR; status unchanged per orchestrator instruction):
+
+> 1. [MINOR] Results cite [hooks/task-hook:21](../../../../hooks/task-hook#L21) / [hooks/task-hook:37](../../../../hooks/task-hook#L37) for the `uvx --from <plugin>/skills/task-tree` shim behavior, but the file now contains the `uv run --script` resolver shim from `cli-source-resolution` — the line-anchored citations point at unrelated code. Refresh the links or mark the paragraph as superseded.
