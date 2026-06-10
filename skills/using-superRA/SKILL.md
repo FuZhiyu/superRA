@@ -43,7 +43,7 @@ Handoff runs through the `superRA/` task tree. Reading and editing your assigned
 
 **Read** with the committed wrapper — `./superRA/superra task read <path>` — not a bare `Read` of the file: the wrapper injects inherited ancestor context, sibling dependency status, and any unresolved comments anchored to the task. Every `<path>` is **relative to the task root and omits the `superRA/` prefix** (e.g. `task-tree/planning-redesign`).
 
-**Edit** the `task.md` directly with Read/Edit. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own. Flipping a child task's status cascades up to every ancestor automatically via hooks; this is intended, do not undo it.
+**Edit** the `task.md` directly with Read/Edit. Edit only what your role owns; raise another role's content rather than overwriting it — per-role ownership is in each role spec's §What You Own. Two hook auto-behaviors are intended, do not undo them: flipping a child task's status cascades up to every ancestor, and a same-parent rename of a task re-points its siblings' `depends_on` edges to the new slug.
 
 **Editing principles:**
 

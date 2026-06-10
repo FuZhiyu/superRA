@@ -24,7 +24,12 @@ from pathlib import Path
 from typing import Callable
 
 if __package__:
-    from ._task_io import TASK_ROOT_DIRNAME, resolve_path, resolve_plan_root_arg
+    from ._task_io import (
+        TASK_ROOT_DIRNAME,
+        VALID_STATUSES,
+        resolve_path,
+        resolve_plan_root_arg,
+    )
     from .dashboard_artifact_workflow import (
         DEFAULT_ARTIFACT_PREFIX,
         DEFAULT_OUTPUT_PATH,
@@ -36,7 +41,12 @@ if __package__:
     )
 else:  # pragma: no cover - exercised by direct script users, not package imports
     sys.path.insert(0, str(Path(__file__).parent))
-    from _task_io import TASK_ROOT_DIRNAME, resolve_path, resolve_plan_root_arg
+    from _task_io import (
+        TASK_ROOT_DIRNAME,
+        VALID_STATUSES,
+        resolve_path,
+        resolve_plan_root_arg,
+    )
     from dashboard_artifact_workflow import (
         DEFAULT_ARTIFACT_PREFIX,
         DEFAULT_OUTPUT_PATH,
@@ -48,11 +58,15 @@ else:  # pragma: no cover - exercised by direct script users, not package import
     )
 
 
-def _module_main(module_name: str, argv: list[str] | None = None, *, pass_argv: bool = True) -> None:
+def _load(module_name: str):
+    """Import a sibling task-tree module (package- or script-relative)."""
     if __package__:
-        module = importlib.import_module(f"{__package__}.{module_name}")
-    else:
-        module = importlib.import_module(module_name)
+        return importlib.import_module(f"{__package__}.{module_name}")
+    return importlib.import_module(module_name)
+
+
+def _module_main(module_name: str, argv: list[str] | None = None, *, pass_argv: bool = True) -> None:
+    module = _load(module_name)
     if pass_argv:
         module.main(argv)
     else:
@@ -74,16 +88,20 @@ def _resolved_root_value(root: str | None) -> str:
     return TASK_ROOT_DIRNAME
 
 
-def _checked_task_root_args(root: str | None, *task_paths: str) -> list[str]:
-    root_value = _resolved_root_value(root)
-    plan_root = Path(root_value)
-    for task_path in task_paths:
-        try:
-            resolve_path(plan_root, task_path)
-        except ValueError as exc:
-            print(f"Error: {exc}", file=sys.stderr)
-            sys.exit(1)
-    return ["--plan-root", root_value]
+def _plan_root(root: str | None) -> Path:
+    """Resolved task root as a Path for direct mutator-function calls.
+
+    Mirrors the direct scripts: on autodetect failure with no explicit root,
+    exit 1 with the same ``could not auto-detect task root`` message instead of
+    guessing ``superRA`` and surfacing a downstream ``directory does not exist``.
+    """
+    if root is not None:
+        return Path(root)
+    detected = resolve_plan_root_arg(None)
+    if detected is None:
+        print("Error: could not auto-detect task root. Use --root.", file=sys.stderr)
+        sys.exit(1)
+    return Path(detected)
 
 
 def _check_sibling_slug(sibling_slug: str) -> None:
@@ -134,7 +152,23 @@ def _run_dashboard(args: argparse.Namespace) -> None:
             argv.append("--no-open")
         if args.foreground:
             argv.append("--foreground")
-    _module_main("plan_dashboard", argv)
+    try:
+        _module_main("plan_dashboard", argv)
+    except ImportError as exc:
+        # cli.py's PEP 723 block deliberately omits the dashboard web stack so
+        # the task hot path stays light; the wrapper routes `dashboard` straight
+        # to plan_dashboard.py (which declares those deps). Reached only when a
+        # caller runs `uv run --script .../cli.py dashboard …` directly.
+        script = Path(__file__).with_name("plan_dashboard.py")
+        print(
+            f"Error: the dashboard needs the web stack ({exc.name}), which "
+            f"cli.py does not declare.\n"
+            f"Run it through the `superra` wrapper, or invoke the dashboard "
+            f"entry script directly:\n"
+            f"  uv run --script {script} {' '.join(argv)}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 def _run_dashboard_artifact(args: argparse.Namespace) -> None:
@@ -204,31 +238,41 @@ def _run_check(args: argparse.Namespace) -> None:
 
 
 def _run_create(args: argparse.Namespace) -> None:
-    argv = ["--plan-root", _resolved_root_value(args.root), "--path", args.path, "--title", args.title]
-    _append_optional(argv, "--objective", args.objective)
-    _append_optional(argv, "--guidance", args.guidance)
-    _append_many(argv, "--depends-on", args.depends_on)
-    _append_optional(argv, "--script", args.script)
-    _append_many(argv, "--input", args.input)
-    _append_many(argv, "--output", args.output)
-    _module_main("task_create", argv)
+    plan_root = _plan_root(args.root)
+    _load("task_create").create_task(
+        plan_root=plan_root,
+        task_path=args.path,
+        title=args.title,
+        objective=args.objective or "",
+        guidance=args.guidance or "",
+        depends_on=args.depends_on,
+        script=args.script or "",
+        input_files=args.input,
+        output_files=args.output,
+    )
 
 
 def _run_update(args: argparse.Namespace) -> None:
-    argv = _checked_task_root_args(args.root, args.path) + ["--path", args.path]
-    _append_optional(argv, "--status", args.status)
-    _append_optional(argv, "--title", args.title)
-    _append_repeated(argv, "--add-tag", args.add_tag)
-    _append_repeated(argv, "--remove-tag", args.remove_tag)
-    _append_optional(argv, "--script", args.script)
-    _module_main("task_update", argv)
+    plan_root = _plan_root(args.root)
+    _load("task_update").update_task(
+        plan_root=plan_root,
+        task_path=args.path,
+        status=args.status,
+        title=args.title,
+        add_tags=args.add_tag,
+        remove_tags=args.remove_tag,
+        script=args.script,
+    )
 
 
 def _run_status_cascade(args: argparse.Namespace) -> None:
-    argv = _checked_task_root_args(args.root, args.path) + [
-        "--path", args.path, "--status", args.status, "--cascade",
-    ]
-    _module_main("task_update", argv)
+    plan_root = _plan_root(args.root)
+    _load("task_update").update_task(
+        plan_root=plan_root,
+        task_path=args.path,
+        status=args.status,
+        cascade=True,
+    )
 
 
 def _run_status_propagate(args: argparse.Namespace) -> None:
@@ -242,27 +286,31 @@ def _run_status_fix(args: argparse.Namespace) -> None:
 
 
 def _run_result_add(args: argparse.Namespace) -> None:
-    argv = _checked_task_root_args(args.root, args.path) + ["--path", args.path]
-    _append_optional(argv, "--finding", args.finding)
-    _append_optional(argv, "--figure", args.figure)
-    _append_optional(argv, "--figure-caption", args.figure_caption)
-    _append_optional(argv, "--note", args.note)
-    _module_main("task_add_result", argv)
+    plan_root = _plan_root(args.root)
+    _load("task_add_result").add_result(
+        plan_root=plan_root,
+        task_path=args.path,
+        finding=args.finding,
+        figure=args.figure,
+        figure_caption=args.figure_caption or "",
+        note=args.note,
+    )
 
 
 def _run_dep(args: argparse.Namespace) -> None:
     _check_sibling_slug(args.sibling_slug)
-    argv = _checked_task_root_args(args.root, args.path) + ["--path", args.path, "--depends-on", args.sibling_slug]
-    if args.dep_command == "remove":
-        argv.append("--remove")
-    _module_main("task_link", argv)
+    plan_root = _plan_root(args.root)
+    _load("task_link").link_task(
+        plan_root=plan_root,
+        task_path=args.path,
+        depends_on=args.sibling_slug,
+        remove=args.dep_command == "remove",
+    )
 
 
 def _run_task_move(args: argparse.Namespace) -> None:
-    argv = _checked_task_root_args(args.root, args.from_path, args.to_path) + [
-        "--from", args.from_path, "--to", args.to_path,
-    ]
-    _module_main("task_rename", argv)
+    plan_root = _plan_root(args.root)
+    _load("task_rename").rename_task(plan_root, args.from_path, args.to_path)
 
 
 def _run_move(args: argparse.Namespace) -> None:
@@ -502,7 +550,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
     )
-    update.add_argument("--status", help="Set task status")
+    update.add_argument("--status", choices=VALID_STATUSES, help="Set task status")
     update.add_argument("--title", help="Set task title")
     update.add_argument("--add-tag", action="append", default=[], help="Add a tag")
     update.add_argument("--remove-tag", action="append", default=[], help="Remove a tag")
@@ -518,7 +566,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=f"Path to the task root directory (default: auto-detect, preferring {TASK_ROOT_DIRNAME})",
     )
-    cascade.add_argument("--status", required=True, help="Status to cascade")
+    cascade.add_argument("--status", required=True, choices=VALID_STATUSES, help="Status to cascade")
     _set_runner(cascade, _run_status_cascade)
     propagate = status_sub.add_parser("propagate", help="Propagate parent statuses from children")
     propagate.add_argument(

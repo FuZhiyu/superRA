@@ -67,8 +67,9 @@ def matches(rec):
 chosen = next((r for r in records if matches(r)), None)
 if chosen is None:
     chosen = next((r for r in records if r.get("projectPath") in (None, "")), None)
-if chosen is None and records:
-    chosen = records[0]
+# Deliberately no records[0] fallback: an arbitrary record may belong to another
+# project and resolve to a stale/wrong install path. Fall through to the next
+# resolution branch instead of guessing.
 path = (chosen or {}).get("installPath")
 if not path:
     sys.exit(1)
@@ -131,9 +132,14 @@ _superra_resolve_source() {
     fi
   fi
 
-  # 5. GitHub fallback (the only pin; needs network on first clone).
-  printf 'GIT:%s@%s\n' "https://github.com/FuZhiyu/superRA.git" "main"
-  return 0
+  # 5. GitHub fallback (the only pin; needs network on first clone). Fail fast
+  #    while the pinned ref does not yet carry skills/task-tree — cloning the
+  #    whole repo only to fail the cli.py test is pure waste.
+  if [ "0" = "1" ]; then
+    printf 'GIT:%s@%s\n' "https://github.com/FuZhiyu/superRA.git" "main"
+    return 0
+  fi
+  return 1
 }
 
 _superra_github_clone() {
@@ -147,11 +153,25 @@ _superra_github_clone() {
   local clone="$cache_root/superRA-main"
   mkdir -p "$cache_root" || return 1
   if [ -d "$clone/.git" ]; then
-    git -C "$clone" fetch --depth 1 origin "main" >/dev/null 2>&1 || true
-    git -C "$clone" reset --hard "origin/main" >/dev/null 2>&1 || true
+    # TTL-gate the refresh: only fetch when the clone's last refresh is older
+    # than the window, so a reused clone is not a network round-trip on every
+    # `superra` call / PostToolUse hook fire. The stamp file records last fetch.
+    local stamp="$clone/.superra-fetch-stamp" now ts age
+    now="$(date +%s 2>/dev/null || echo 0)"
+    ts=0
+    [ -f "$stamp" ] && ts="$(cat "$stamp" 2>/dev/null || echo 0)"
+    age=$(( now - ts ))
+    if [ "$now" = "0" ] || [ "$ts" = "0" ] || [ "$age" -ge "86400" ]; then
+      git -C "$clone" fetch --depth 1 origin "main" >/dev/null 2>&1 || true
+      git -C "$clone" reset --hard "origin/main" >/dev/null 2>&1 || true
+      [ "$now" != "0" ] && printf '%s\n' "$now" > "$stamp" 2>/dev/null || true
+    fi
   else
     rm -rf "$clone"
     git clone --depth 1 --branch "main" "https://github.com/FuZhiyu/superRA.git" "$clone" >/dev/null 2>&1 || return 1
+    # Stamp a fresh clone so the TTL window starts now, not at the next call.
+    local fresh; fresh="$(date +%s 2>/dev/null || echo 0)"
+    [ "$fresh" != "0" ] && printf '%s\n' "$fresh" > "$clone/.superra-fetch-stamp" 2>/dev/null || true
   fi
   [ -f "$clone/skills/task-tree/scripts/cli.py" ] || return 1
   printf '%s\n' "$clone/skills/task-tree"
@@ -162,7 +182,7 @@ _superra_resolve_dir() {
   # if that is the only branch that resolves. Prints the dir; returns non-zero
   # if nothing resolves.
   local resolved kind value
-  resolved="$(_superra_resolve_source)"
+  resolved="$(_superra_resolve_source)" || return 1
   kind="${resolved%%:*}"
   value="${resolved#*:}"
   if [ "$kind" = "DIR" ]; then

@@ -8,7 +8,19 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _task_io import TASK_ROOT_DIRNAME, parse_task, resolve_plan_root_arg, write_task
+from _task_io import (
+    TASK_ROOT_DIRNAME,
+    parse_task,
+    resolve_path,
+    resolve_plan_root_arg,
+    strip_root_prefix,
+    write_task,
+)
+
+
+def _is_sibling_slug(slug: str) -> bool:
+    """True if *slug* names a sibling (a bare directory name), not a path or escape."""
+    return bool(slug) and slug not in {".", ".."} and "/" not in slug and "\\" not in slug
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -54,7 +66,19 @@ def link_task(
     depends_on: str,
     remove: bool = False,
 ) -> None:
-    task_md = plan_root / task_path / "task.md"
+    # Single enforcement point (see task_update): containment + prefix tolerance
+    # on the task path, and sibling-only validation on the dependency slug — so a
+    # literal ``../outside`` edge cannot be written through any entry surface.
+    if not _is_sibling_slug(depends_on):
+        print(f"Error: dependency must be a sibling slug: {depends_on!r}", file=sys.stderr)
+        sys.exit(1)
+    try:
+        task_dir = resolve_path(plan_root, task_path)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+    task_path = strip_root_prefix(plan_root, task_path)
+    task_md = task_dir / "task.md"
     if not task_md.exists():
         print(f"Error: task not found: {task_md}", file=sys.stderr)
         sys.exit(1)
@@ -69,7 +93,7 @@ def link_task(
         write_task(task)
         print(f"Removed dependency {depends_on} from {task_path}")
     else:
-        parent_dir = (plan_root / task_path).parent
+        parent_dir = task_dir.parent
         dep_dir = parent_dir / depends_on
         if not dep_dir.exists() or not (dep_dir / "task.md").exists():
             print(f"Error: sibling dependency not found: {dep_dir}/task.md", file=sys.stderr)
@@ -79,7 +103,7 @@ def link_task(
             print(f"Already depends on {depends_on}")
             return
 
-        source_slug = (plan_root / task_path).name
+        source_slug = task_dir.name
         if _has_transitive_dep(parent_dir, depends_on, source_slug):
             print(
                 f"Error: adding {depends_on} as dependency of {task_path} "

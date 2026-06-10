@@ -38,8 +38,12 @@ Resolution priority (returns the dir containing ``scripts/cli.py``):
      ``uv run --script <clone>/skills/task-tree/scripts/cli.py``. This is the
      only network step and only fires when nothing local resolves.
 
-Speed gate: env read + one file test + one manifest read + one fixed-depth
-glob. No full-disk search.
+Speed gate: each branch is O(1) work — an env read, a few file tests (the
+canonical ``task-tree`` plus the legacy ``task-system`` alias, so up to two per
+branch), one manifest read (a python3 heredoc) for the Claude branch, and one
+fixed-depth glob for the Codex branch. No full-disk search. The first matching
+branch short-circuits, so a resolved local checkout never reaches the manifest
+read or the glob.
 """
 
 from __future__ import annotations
@@ -67,6 +71,17 @@ GITHUB_SUBDIR = CANONICAL_SKILL_SUBDIR
 # which is acceptable because the fallback only fires when no local install
 # exists at all. Do NOT repoint to a feature/trunk branch.
 GITHUB_REF = "main"
+
+# Flip to "1" once GITHUB_REF actually carries CANONICAL_SKILL_SUBDIR. Until
+# then the GitHub branch fails fast (no shallow clone) rather than cloning the
+# whole repo only to fail the cli.py existence test — the clone is pure waste
+# while the pinned ref lacks the subdir.
+GITHUB_REF_HAS_SUBDIR = "0"
+
+# TTL (seconds) gating the refresh `git fetch` once a clone exists. Without it,
+# every `superra` call and every PostToolUse hook fire in fallback mode is a
+# network round-trip; with it, a reused clone refreshes at most once per window.
+GITHUB_FETCH_TTL_SECONDS = "86400"
 
 # The canonical resolution chain. `_superra_resolve_source` prints the resolved
 # local package dir on stdout prefixed with "DIR:" and exits 0, OR prints the
@@ -122,8 +137,9 @@ def matches(rec):
 chosen = next((r for r in records if matches(r)), None)
 if chosen is None:
     chosen = next((r for r in records if r.get("projectPath") in (None, "")), None)
-if chosen is None and records:
-    chosen = records[0]
+# Deliberately no records[0] fallback: an arbitrary record may belong to another
+# project and resolve to a stale/wrong install path. Fall through to the next
+# resolution branch instead of guessing.
 path = (chosen or {}).get("installPath")
 if not path:
     sys.exit(1)
@@ -186,9 +202,14 @@ _superra_resolve_source() {
     fi
   fi
 
-  # 5. GitHub fallback (the only pin; needs network on first clone).
-  printf 'GIT:%s@%s\n' "__GITHUB_REPO__" "__GITHUB_REF__"
-  return 0
+  # 5. GitHub fallback (the only pin; needs network on first clone). Fail fast
+  #    while the pinned ref does not yet carry skills/task-tree — cloning the
+  #    whole repo only to fail the cli.py test is pure waste.
+  if [ "__GITHUB_REF_HAS_SUBDIR__" = "1" ]; then
+    printf 'GIT:%s@%s\n' "__GITHUB_REPO__" "__GITHUB_REF__"
+    return 0
+  fi
+  return 1
 }
 
 _superra_github_clone() {
@@ -202,11 +223,25 @@ _superra_github_clone() {
   local clone="$cache_root/superRA-__GITHUB_REF__"
   mkdir -p "$cache_root" || return 1
   if [ -d "$clone/.git" ]; then
-    git -C "$clone" fetch --depth 1 origin "__GITHUB_REF__" >/dev/null 2>&1 || true
-    git -C "$clone" reset --hard "origin/__GITHUB_REF__" >/dev/null 2>&1 || true
+    # TTL-gate the refresh: only fetch when the clone's last refresh is older
+    # than the window, so a reused clone is not a network round-trip on every
+    # `superra` call / PostToolUse hook fire. The stamp file records last fetch.
+    local stamp="$clone/.superra-fetch-stamp" now ts age
+    now="$(date +%s 2>/dev/null || echo 0)"
+    ts=0
+    [ -f "$stamp" ] && ts="$(cat "$stamp" 2>/dev/null || echo 0)"
+    age=$(( now - ts ))
+    if [ "$now" = "0" ] || [ "$ts" = "0" ] || [ "$age" -ge "__GITHUB_FETCH_TTL_SECONDS__" ]; then
+      git -C "$clone" fetch --depth 1 origin "__GITHUB_REF__" >/dev/null 2>&1 || true
+      git -C "$clone" reset --hard "origin/__GITHUB_REF__" >/dev/null 2>&1 || true
+      [ "$now" != "0" ] && printf '%s\n' "$now" > "$stamp" 2>/dev/null || true
+    fi
   else
     rm -rf "$clone"
     git clone --depth 1 --branch "__GITHUB_REF__" "__GITHUB_REPO__" "$clone" >/dev/null 2>&1 || return 1
+    # Stamp a fresh clone so the TTL window starts now, not at the next call.
+    local fresh; fresh="$(date +%s 2>/dev/null || echo 0)"
+    [ "$fresh" != "0" ] && printf '%s\n' "$fresh" > "$clone/.superra-fetch-stamp" 2>/dev/null || true
   fi
   [ -f "$clone/__GITHUB_SUBDIR__/scripts/cli.py" ] || return 1
   printf '%s\n' "$clone/__GITHUB_SUBDIR__"
@@ -217,7 +252,7 @@ _superra_resolve_dir() {
   # if that is the only branch that resolves. Prints the dir; returns non-zero
   # if nothing resolves.
   local resolved kind value
-  resolved="$(_superra_resolve_source)"
+  resolved="$(_superra_resolve_source)" || return 1
   kind="${resolved%%:*}"
   value="${resolved#*:}"
   if [ "$kind" = "DIR" ]; then
@@ -262,6 +297,10 @@ _superra_run() {
 # ---- end superRA task-tree source resolver ----
 '''.replace("__GITHUB_REPO__", GITHUB_REPO).replace("__GITHUB_REF__", GITHUB_REF).replace(
     "__GITHUB_SUBDIR__", GITHUB_SUBDIR
+).replace(
+    "__GITHUB_REF_HAS_SUBDIR__", GITHUB_REF_HAS_SUBDIR
+).replace(
+    "__GITHUB_FETCH_TTL_SECONDS__", GITHUB_FETCH_TTL_SECONDS
 )
 
 

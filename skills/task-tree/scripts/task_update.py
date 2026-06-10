@@ -15,7 +15,9 @@ from _task_io import (
     compute_status,
     parse_task,
     propagate_parent_status,
+    resolve_path,
     resolve_plan_root_arg,
+    strip_root_prefix,
     walk_plan,
     write_task,
 )
@@ -81,7 +83,16 @@ def update_task(
     remove_tags: list[str] | None = None,
     script: str | None = None,
 ) -> None:
-    task_dir = plan_root / task_path
+    # Single containment + prefix-tolerance enforcement point for this mutator,
+    # regardless of entry surface (packaged CLI or direct script). resolve_path
+    # rejects ``../`` escapes and strips a redundant leading task-root segment;
+    # canonicalize task_path so downstream joins (propagate_parent_status) agree.
+    try:
+        task_dir = resolve_path(plan_root, task_path)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+    task_path = strip_root_prefix(plan_root, task_path)
     task_md = task_dir / "task.md"
     if not task_md.exists():
         print(f"Error: task not found: {task_md}", file=sys.stderr)
