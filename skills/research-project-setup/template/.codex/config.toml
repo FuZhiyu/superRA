@@ -1,0 +1,42 @@
+# Codex project-scope config.
+# Declares the superRA plugin and registers superra_implementer / superra_reviewer
+# as named agents. Their TOMLs are written into .codex/agents/ by setup_mac.sh,
+# which delegates to superRA's codex-superra-setup installer.
+
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+writable_roots = [
+    "./Data",
+    "./Notes",
+    "./Output",
+    "/tmp",
+    "/private/tmp",
+    "/var/folders",
+    "~/.venvs",
+    "~/.cache",
+    "~/.local/share/uv",
+]
+
+[features]
+multi_agent = true
+
+# superRA marketplace + plugin (project-scope declaration).
+# If your Codex install requires marketplace registration at the global scope,
+# run once: `codex plugin marketplace add FuZhiyu/superRA`.
+[marketplaces.superra]
+source_type = "git"
+source = "https://github.com/FuZhiyu/superRA.git"
+
+[plugins."superra@superra"]
+enabled = true
+
+# Named superRA agents — TOML files in .codex/agents/ are produced by
+# setup_mac.sh on first run (via sync_codex_agents.py --scope project).
+[agents.superra_implementer]
+description = "superRA implementer — executes a single PLAN.md task per dispatch with the implementer-reviewer protocol."
+config_file = "agents/superra_implementer.toml"
+
+[agents.superra_reviewer]
+description = "superRA reviewer — independent verification with two-verdict APPROVE/REVISE protocol."
+config_file = "agents/superra_reviewer.toml"

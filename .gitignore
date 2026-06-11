@@ -1,6 +1,10 @@
 .worktrees/
 .private-journal/
 .claude/
+# Whitelist the bundled project-template .claude/ skeleton so scaffolded
+# projects inherit settings.json + agents + skills.
+!skills/research-project-setup/template/.claude/
+!skills/research-project-setup/template/.claude/**
 .DS_Store
 node_modules/
 __pycache__/
