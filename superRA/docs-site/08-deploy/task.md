@@ -13,14 +13,14 @@ created: 2026-06-10
 
 Stand up the site build and publish it:
 
-- A GitHub Actions workflow that builds the site — doc-mode export of the docs tree as the main site entry plus the two showcase exports — and deploys to GitHub Pages. Triggers: `workflow_dispatch` (runnable from this branch for verification now) plus push to the default branch (active once the workstream lands).
+- A GitHub Actions workflow that builds the site — doc-mode export of the docs tree as the main site entry plus the two showcase exports — and deploys to GitHub Pages. Triggers: `workflow_dispatch` plus push to the default branch (the push trigger goes live once the workstream lands). GitHub registers `workflow_dispatch` only for workflow files present on the default branch, so in-branch verification requires seeding the workflow file onto `main` first, then dispatching with `--ref` pointing at this branch.
 - A single committed local build script that produces the identical site output for local preview, used by the workflow (the pipeline entry point for this workstream).
 - The build fails loudly on export errors or missing inputs; no silent partial deploys.
 - The live site URL recorded where users discover it: repo About, `.claude-plugin`/`.codex-plugin` manifest homepage fields, and handed to `09-readme-front-door` for the README links.
 
-**Stop point:** enabling GitHub Pages (Actions source) on the repo is a researcher/admin action — request it before the deploy verification and record the outcome here.
+**Stop point:** two researcher/admin actions gate the deploy verification — enabling GitHub Pages (Actions source) and seeding the workflow file onto the default branch (a push to `main` outside the normal squash-merge landing). Request both before verification and record the outcomes here. If the researcher declines to touch `main` early, the in-branch criterion is the fallback below and the live-URL validation defers to landing.
 
-Validation, in-branch: the local build script succeeds, and a `workflow_dispatch` run from this branch deploys a real Pages site where the landing page, sidebar nav, search, highlighted code blocks, deep links, and both showcase exports work — verified by loading the published URL. The push-trigger path is verified after the workstream lands on the default branch (note it in `## Results` as a landing-time follow-up).
+Validation, in-branch: the local build script succeeds, and — per the stop-point outcome — either a `workflow_dispatch --ref <this branch>` run deploys a real Pages site where the landing page, sidebar nav, search, highlighted code blocks, deep links, and both showcase exports work (verified by loading the published URL), or, on the fallback path, the exported site artifact is verified locally and the live-URL check is recorded in `## Results` as a landing-time follow-up. The push-trigger path is verified after the workstream lands on the default branch.
 
 ## Planner Guidance
 
