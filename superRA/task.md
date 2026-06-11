@@ -25,6 +25,15 @@ Workstream rollup (as of 2026-06-10):
 - [zotero-skills](zotero-skills/task.md) — Zotero paper-reading, BibTeX/citation support, and the vendored `mistral-pdf-to-markdown` skill; landed via PRs #31/#33.
 - Closed integrations are listed one line each under ## Integration Notes, linking down to the per-task records that carry full detail.
 
+## Workflow Status
+
+Integration of `better-handoff` onto `origin/main` (2026-06-10). `BASE_REF=origin/main`, `BASE_HEAD_SHA=03b68d6b` (already an ancestor of HEAD — Sync no-op; governing diff `03b68d6b..HEAD`).
+
+- [x] Drift tests created — Protect decision: behavioral contracts are the key results for this tooling branch; protection = the full 646-test suite, including the fix-round regression locks (`TestServeBindHost`, `TestCliPrefixTolerantMutations`, `TestRenderMarkdownImageRewrite`, `test_committed_hook_shim_matches_generator`, `TestWriteTask` atomicity, `TestNoAutoRebuild`). Suite green on HEAD.
+- [ ] Integrated
+- [ ] Docs finalized
+- [ ] Final action (PR)
+
 ## Integration Notes
 
 - [task-tree/skill-definition/task-tree-rename](task-tree/skill-definition/task-tree-rename/task.md): 2026-06-10 — branch `rename-task-tree` synced through `19322cf3`, integration review APPROVED, full suite + generated-artifact + stale-name checks green; Consolidation Gate clean-enough.
