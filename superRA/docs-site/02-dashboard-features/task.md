@@ -21,4 +21,4 @@ Shared constraints binding on every child:
 
 These features land in `skills/task-tree/scripts/` — the same surface as the existing dashboard work under the `task-tree/dashboard` workstream. They are placed here because they ship with, and are motivated by, the docs site; their durable home for future maintenance remains the task-tree skill's scripts.
 
-**Open placement decision (researcher review pending):** durable-home policy would put these three tasks under `task-tree/dashboard`; they sit here to keep the docs workstream self-contained on this branch. The researcher confirms the placement — or a fold-into-`task-tree/dashboard` disposition at integration — at plan review; record the outcome here.
+**Placement (researcher-confirmed 2026-06-11):** these three tasks stay here, keeping the docs workstream self-contained on this branch, even though durable-home policy would put them under `task-tree/dashboard`. No fold-back required at integration.
