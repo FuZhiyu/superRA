@@ -1,6 +1,6 @@
 ---
 title: "Landing Page + Concept (Explanation) Pages"
-status: implemented
+status: approved
 depends_on:
   - 01-information-architecture
 tags: []
